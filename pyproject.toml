@@ -30,7 +30,7 @@ Source = "https://github.com/nestor-home/nestor"
 Issues = "https://github.com/nestor-home/nestor/issues"
 
 [dependency-groups]
-dev = ["pytest==9.1.1", "pytest-asyncio==1.4.1", "ruff==0.17.3", "ty==0.0.94", "pre-commit==4.7.0"]
+dev = ["pytest==9.1.1", "pytest-asyncio==1.4.1", "pytest-cov==7.1.0", "ruff==0.17.3", "ty==0.0.94", "pre-commit==4.7.0"]
 
 [tool.uv.build-backend]
 module-name = "nestor"
@@ -38,6 +38,14 @@ module-name = "nestor"
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+addopts = ["--import-mode=importlib", "--cov=nestor", "--cov-report=term-missing:skip-covered"]
+
+[tool.coverage.run]
+branch = true
+
+[tool.coverage.report]
+fail_under = 95
+exclude_also = ["raise NotImplementedError", "\\.\\.\\.$"]
 
 [tool.ruff]
 line-length = 120

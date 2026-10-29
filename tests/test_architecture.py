@@ -1,42 +1,72 @@
 """Architecture rules that must hold as the codebase grows.
 
-The core never depends on a vendor: third-party packages may only be imported from
-`nestor.adapters`, where each adapter owns its SDK.
+Layers, from the most stable to the most specific:
+    core      → standard library only
+    modules   → core
+    runtime   → core, modules
+    testing   → core, modules (the test kit ships with the package: no third-party imports)
+    adapters  → anything: each adapter owns its vendor SDK
 """
 
 import ast
 import sys
 from pathlib import Path
 
-SRC = Path(__file__).resolve().parents[1] / "src" / "nestor"
-ADAPTERS = SRC / "adapters"
-# Third-party packages the core may use (validation, typing…). Each addition is a design decision.
-CORE_ALLOWED: set[str] = set()
+import pytest
+
+SRC = Path(__file__).resolve().parents[1] / "src"
+PACKAGE = SRC / "nestor"
+ALLOWED_INTERNAL = {
+    "core": {"core"},
+    "modules": {"core", "modules"},
+    "runtime": {"core", "modules", "runtime"},
+    "testing": {"core", "modules", "testing"},
+}
+# Third-party packages allowed outside adapters (validation, typing…). Each addition is a design decision.
+THIRD_PARTY_ALLOWED: set[str] = set()
 
 
-def imported_roots(path: Path) -> set[str]:
+def imports(path: Path) -> set[str]:
     tree = ast.parse(path.read_text(), filename=str(path))
-    roots = set()
+    found = set()
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
-            roots |= {alias.name.split(".")[0] for alias in node.names}
+            found |= {alias.name for alias in node.names}
         elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
-            roots.add(node.module.split(".")[0])
-    return roots
+            found.add(node.module)
+    return found
 
 
-def test_core_imports_no_vendor_package():
-    offenders = {}
-    for path in SRC.rglob("*.py"):
-        if ADAPTERS in path.parents:
-            continue
-        foreign = imported_roots(path) - set(sys.stdlib_module_names) - {"nestor"} - CORE_ALLOWED
-        if foreign:
-            offenders[str(path.relative_to(SRC))] = sorted(foreign)
-    assert not offenders, f"vendor imports outside nestor.adapters: {offenders}"
+def violations(path: Path, package: Path = PACKAGE) -> list[str]:
+    layer = path.relative_to(package).parts[0]
+    if layer not in ALLOWED_INTERNAL:  # adapters, package root
+        return []
+    wrong = []
+    for name in imports(path):
+        parts = name.split(".")
+        if parts[0] == "nestor":
+            if len(parts) > 1 and parts[1] not in ALLOWED_INTERNAL[layer]:
+                wrong.append(f"{name} (layer {layer!r} may not depend on {parts[1]!r})")
+        elif parts[0] not in sys.stdlib_module_names and parts[0] not in THIRD_PARTY_ALLOWED:
+            wrong.append(f"{name} (third-party import outside nestor.adapters)")
+    return wrong
 
 
-def test_the_guard_catches_a_vendor_import(tmp_path):
-    module = tmp_path / "leaky.py"
-    module.write_text("import elevenlabs\nfrom pipecat.frames import Frame\nimport asyncio\n")
-    assert imported_roots(module) - set(sys.stdlib_module_names) == {"elevenlabs", "pipecat"}
+def test_layers_only_depend_on_more_stable_layers() -> None:
+    found = {str(p.relative_to(SRC)): v for p in PACKAGE.rglob("*.py") if (v := violations(p))}
+    assert not found, found
+
+
+@pytest.mark.parametrize(
+    ("layer", "source", "expected"),
+    [
+        ("core", "from nestor.modules.cognition import Executor", "may not depend on 'modules'"),
+        ("modules", "import elevenlabs", "third-party import"),
+        ("testing", "from pipecat.frames import Frame", "third-party import"),
+    ],
+)
+def test_the_guard_catches_a_forbidden_import(tmp_path: Path, layer: str, source: str, expected: str) -> None:
+    fake = tmp_path / "nestor" / layer / "leaky.py"
+    fake.parent.mkdir(parents=True)
+    fake.write_text(source + "\n")
+    assert any(expected in v for v in violations(fake, package=tmp_path / "nestor"))

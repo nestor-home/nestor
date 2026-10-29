@@ -9,3 +9,5 @@ build/
 .ruff_cache/
 .env
 data/
+.coverage
+.coverage.*
