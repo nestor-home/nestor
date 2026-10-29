@@ -1,0 +1,18 @@
+name: Publish
+
+# Publishes to PyPI through Trusted Publishing (OIDC): no token is stored in the repository.
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv build
+      - run: uv publish --trusted-publishing always --check-url https://pypi.org/simple/

@@ -1,0 +1,54 @@
+[build-system]
+requires = ["uv_build>=0.13.6,<0.14"]
+build-backend = "uv_build"
+
+[project]
+name = "nestor-home"
+version = "0.0.1"
+description = "Open-source framework for intelligent home assistants: fast voice agent, Home Assistant, memory, delegation, initiative and pluggable embodiment."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Mathis Lambert" }]
+requires-python = ">=3.12"
+dependencies = []
+keywords = ["home assistant", "voice assistant", "agent", "robotics", "home automation"]
+classifiers = [
+    "Development Status :: 1 - Planning",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Home Automation",
+    "Typing :: Typed",
+]
+
+[project.urls]
+Homepage = "https://nestor.mathislambert.fr"
+Source = "https://github.com/nestor-home/nestor"
+Issues = "https://github.com/nestor-home/nestor/issues"
+
+[dependency-groups]
+dev = ["pytest==9.1.1", "pytest-asyncio==1.4.1", "ruff==0.17.3", "ty==0.0.94", "pre-commit==4.7.0"]
+
+[tool.uv.build-backend]
+module-name = "nestor"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
+
+[tool.ty.environment]
+python-version = "3.12"
+
+[tool.ty.rules]
+# Strict by default: an unresolved import or a possibly-unbound name is an error, not a warning.
+possibly-unresolved-reference = "error"
