@@ -183,7 +183,7 @@ async def test_a_conversation_threads_its_turns_and_the_journal_keeps_one(tmp_pa
     now = utc_now()
     async with Harness(tmp_path, replies=("Il est midi.", "Dans le salon.", "Bonsoir.")) as admin:
         agent = admin.nestor.agent
-        agent.conversations = Conversations(admin.nestor.journal, ends_after_s=300, clock=lambda: now)
+        agent.conversations = Conversations(admin.nestor.journal, ends_after_s=lambda a: 300, clock=lambda: now)
         said = InboundMessage(address=TELEGRAM, sender=Sender("user"), text="Quelle heure est-il ?")
         await agent.respond(said).collect()
         await agent.respond(replace(said, text="Où ça ?")).collect()

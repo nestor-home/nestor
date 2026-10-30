@@ -9,10 +9,10 @@ from nestor.adapters.channels.voice.providers import ElevenLabsSettings, ElevenL
 from nestor.adapters.channels.voice.session import SessionSettings
 from nestor.core import Component
 from nestor.core.i18n import Message
-from nestor.runtime.plugins import AdapterSettings, Family, Plugin, Services
+from nestor.runtime.plugins import ChannelSettings, Family, Plugin, Services
 
 
-class VoiceSettings(AdapterSettings):
+class VoiceSettings(ChannelSettings):
     room: str = Field(min_length=1)  # the conversation: `<channel>:<room>`, kept across reconnections
     speech: ElevenLabsSettings
     style: str = ""  # how the assistant writes for this voice (e.g. the expression tags it performs)
@@ -48,6 +48,7 @@ def build(settings: VoiceSettings, name: str, services: Services) -> Component:
         ),
         clips=settings.fallback_clips,
         send_timeout_s=settings.send_timeout_s,
+        conversation_ends_after_s=settings.conversation_ends_after_s,
     )
 
 

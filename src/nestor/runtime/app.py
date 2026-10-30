@@ -31,7 +31,7 @@ from nestor.modules.cognition.delegation.assistant import Delegation
 from nestor.modules.cognition.delegation.service import TaskManager
 from nestor.modules.cognition.tools import Toolbox, ToolProvider
 from nestor.modules.connectors import ConnectedInbound, Connections, Connector, ConnectorTools, TokenEndpoint
-from nestor.modules.conversation import Agent, ChannelProfile, Conversations, Persona
+from nestor.modules.conversation import Agent, ChannelProfile, Persona
 from nestor.modules.home import PresenceSource
 from nestor.modules.household import Household, Person
 from nestor.modules.initiative import (
@@ -164,9 +164,10 @@ class Nestor:
             journal=self.journal,
             household=self.household,
             toolbox=Toolbox(self.journal, providers=[delegation, memory, watch_tools, *self.tools, *connector_tools]),
-            channels={c.channel_id: ChannelProfile(c.medium, c.style) for c in self.channels},
+            channels={
+                c.channel_id: ChannelProfile(c.medium, c.style, c.conversation_ends_after_s) for c in self.channels
+            },
             context=[delegation, memory, watch_tools],
-            conversations=Conversations(self.journal, ends_after_s=config.conversation.ends_after_s),
         )
         initiative = config.initiative
         quiet_hours = QuietHours.parse(initiative.quiet_hours) if initiative.quiet_hours else None

@@ -5,18 +5,19 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from nestor.core import ContractError, Event, PersonId, ProviderError, utc_now
+from nestor.core import Event, PersonId, ProviderError, utc_now
 from nestor.core.events import JSON
-from nestor.modules.channels import Exchange
+from nestor.modules.channels import Address, Exchange, Medium
 from nestor.modules.cognition import TaskStarted
 from nestor.modules.cognition.delegation.assistant import Delegation
 from nestor.modules.cognition.delegation.service import TaskManager
 from nestor.modules.cognition.model import Role, ToolCall
 from nestor.modules.cognition.tools import ToolCalled, ToolCompleted
 from nestor.modules.conversation import (
+    Agent,
     AnswerCut,
     AssistantTurn,
-    Conversations,
+    ChannelProfile,
     FallbackReason,
     FallbackSpoken,
     UserTurn,
@@ -48,49 +49,94 @@ def clock() -> Clock:
     return Clock()
 
 
-@pytest.fixture
-def conversations(journal: Journal, clock: Clock) -> Conversations:
-    return Conversations(journal, ends_after_s=300, clock=clock)
-
-
 async def conversation_of_each_turn(journal: Journal) -> list[str | None]:
     return [t.exchange.conversation_id if t.exchange else None for t in await journal.history(UserTurn)]
 
 
-async def test_a_quick_follow_up_stays_in_the_conversation_and_sees_it(
-    make_agent: MakeAgent, journal: Journal, clock: Clock, conversations: Conversations
+WHOLE_EXCHANGE = ["Quelle température ?", "Il fait 21 degrés.", "Et dehors ?"]
+
+
+async def two_turns(agent: Agent, address: Address, sender: str, pause: timedelta, clock: Clock) -> None:
+    await agent.respond(message("Quelle température ?", address, sender)).collect()
+    clock.now += pause
+    await agent.respond(message("Et dehors ?", address, sender)).collect()
+
+
+async def test_a_spoken_follow_up_within_five_minutes_stays_in_the_conversation(
+    make_agent: MakeAgent, journal: Journal, clock: Clock
 ) -> None:
-    model = ScriptedModel("Il fait 21 degrés.", "Dans le salon.")
-    agent = make_agent(model=model, conversations=conversations)
-    await agent.respond(message("Quelle température ?")).collect()
-    clock.now += timedelta(seconds=299)
-    await agent.respond(message("Où ça ?")).collect()
+    model = ScriptedModel("Il fait 21 degrés.", "Douze.")
+    await two_turns(make_agent(model=model, clock=clock), VOICE, "mic", timedelta(minutes=4), clock)
 
     first, second = await conversation_of_each_turn(journal)
     assert first == second
     assert [m.content for m in model.requests[1].messages[1:]] == [
         "Quelle température ?",
         "Il fait 21 degrés.",
-        "Où ça ?",
+        "Et dehors ?",
     ]
 
 
-async def test_a_turn_after_the_silence_opens_a_new_conversation_without_the_earlier_turns(
-    make_agent: MakeAgent, journal: Journal, clock: Clock, conversations: Conversations
+async def test_a_spoken_turn_after_six_minutes_opens_a_new_conversation_without_the_earlier_turns(
+    make_agent: MakeAgent, journal: Journal, clock: Clock
 ) -> None:
-    model = ScriptedModel("Il fait 21 degrés.", "Bonjour.")
-    agent = make_agent(model=model, conversations=conversations)
-    await agent.respond(message("Quelle température ?")).collect()
-    clock.now += timedelta(seconds=301)
-    await agent.respond(message("Bonjour")).collect()
+    model = ScriptedModel("Il fait 21 degrés.", "Douze.")
+    await two_turns(make_agent(model=model, clock=clock), VOICE, "mic", timedelta(minutes=6), clock)
 
     first, second = await conversation_of_each_turn(journal)
     assert first != second
-    assert [m.content for m in model.requests[1].messages[1:]] == ["Bonjour"]
+    assert [m.content for m in model.requests[1].messages[1:]] == ["Et dehors ?"]
+
+
+async def test_a_written_reply_two_hours_later_stays_in_the_conversation_and_sees_it(
+    make_agent: MakeAgent, journal: Journal, clock: Clock
+) -> None:
+    model = ScriptedModel("Il fait 21 degrés.", "Douze.")
+    await two_turns(make_agent(model=model, clock=clock), TELEGRAM, "42", timedelta(hours=2), clock)
+
+    first, second = await conversation_of_each_turn(journal)
+    assert first == second
+    assert [m.content for m in model.requests[1].messages[1:]] == [
+        "Quelle température ?",
+        "Il fait 21 degrés.",
+        "Et dehors ?",
+    ]
+
+
+async def test_a_written_reply_the_next_morning_opens_a_new_conversation(
+    make_agent: MakeAgent, journal: Journal, clock: Clock
+) -> None:
+    await two_turns(make_agent("Oui.", "Oui.", clock=clock), TELEGRAM, "42", timedelta(hours=9), clock)
+
+    first, second = await conversation_of_each_turn(journal)
+    assert first != second
+
+
+async def test_a_channel_without_a_profile_gets_the_default_of_writing(
+    make_agent: MakeAgent, journal: Journal, clock: Clock
+) -> None:
+    web = Address("web", "x")
+    agent = make_agent("Oui.", "Oui.", "Oui.", clock=clock)
+    await two_turns(agent, web, "inconnu", timedelta(hours=3), clock)
+    clock.now += timedelta(hours=5)
+    await agent.respond(message("Encore", web, "inconnu")).collect()
+
+    first, second, third = await conversation_of_each_turn(journal)
+    assert first == second != third
+
+
+async def test_a_channel_may_set_its_own_window(make_agent: MakeAgent, journal: Journal, clock: Clock) -> None:
+    channels = {"telegram": ChannelProfile(Medium.WRITTEN, conversation_ends_after_s=60)}
+    await two_turns(
+        make_agent("Oui.", "Oui.", clock=clock, channels=channels), TELEGRAM, "42", timedelta(minutes=2), clock
+    )
+
+    first, second = await conversation_of_each_turn(journal)
+    assert first != second
 
 
 async def test_the_silence_counts_from_the_end_of_the_reply(
-    make_agent: MakeAgent, journal: Journal, clock: Clock, conversations: Conversations
+    make_agent: MakeAgent, journal: Journal, clock: Clock
 ) -> None:
     class Slow(ScriptedModel):
         """Six minutes go by while it answers the first message."""
@@ -101,19 +147,15 @@ async def test_the_silence_counts_from_the_end_of_the_reply(
             if len(self.requests) == 1:
                 clock.now += timedelta(minutes=6)
 
-    agent = make_agent(model=Slow("Voilà le résumé.", "De rien."), conversations=conversations)
-    await agent.respond(message("Résume ce long document")).collect()
-    clock.now += timedelta(seconds=60)
-    await agent.respond(message("Merci")).collect()
+    agent = make_agent(model=Slow("Voilà le résumé.", "De rien."), clock=clock)
+    await two_turns(agent, VOICE, "mic", timedelta(minutes=1), clock)
 
     first, second = await conversation_of_each_turn(journal)
     assert first == second
 
 
-async def test_sessions_hold_their_own_conversations(
-    make_agent: MakeAgent, journal: Journal, conversations: Conversations
-) -> None:
-    agent = make_agent("Oui.", "Oui.", conversations=conversations)
+async def test_sessions_hold_their_own_conversations(make_agent: MakeAgent, journal: Journal) -> None:
+    agent = make_agent("Oui.", "Oui.")
     await agent.respond(message("Salut")).collect()
     await agent.respond(message("Salut", VOICE, "mic")).collect()
 
@@ -122,11 +164,11 @@ async def test_sessions_hold_their_own_conversations(
 
 
 async def test_the_open_conversation_survives_a_restart(make_agent: MakeAgent, journal: Journal, clock: Clock) -> None:
-    await make_agent("Noté.", conversations=Conversations(journal, clock=clock)).respond(message("Note ça")).collect()
+    await make_agent("Noté.", clock=clock).respond(message("Note ça", VOICE, "mic")).collect()
     clock.now += timedelta(seconds=30)
-    await make_agent("Oui.", conversations=Conversations(journal, clock=clock)).respond(message("Et ça")).collect()
+    await make_agent("Oui.", clock=clock).respond(message("Et ça", VOICE, "mic")).collect()
     clock.now += timedelta(minutes=10)
-    await make_agent("Oui.", conversations=Conversations(journal, clock=clock)).respond(message("Plus tard")).collect()
+    await make_agent("Oui.", clock=clock).respond(message("Plus tard", VOICE, "mic")).collect()
 
     first, second, third = await conversation_of_each_turn(journal)
     assert first == second != third
@@ -178,24 +220,19 @@ async def test_a_fallback_and_a_cut_belong_to_the_turn_they_happened_in(
 
 
 async def test_a_composed_message_sees_only_the_open_conversation(
-    make_agent: MakeAgent, journal: Journal, clock: Clock, conversations: Conversations
+    make_agent: MakeAgent, journal: Journal, clock: Clock
 ) -> None:
-    await make_agent("Je lance l'analyse.", conversations=conversations).respond(message("Analyse")).collect()
+    await make_agent("Je lance l'analyse.", clock=clock).respond(message("Analyse")).collect()
     model = ScriptedModel("C'est fini.", "C'est fini.")
-    agent = make_agent(model=model, conversations=conversations)
+    agent = make_agent(model=model, clock=clock)
     await agent.compose(TELEGRAM, MATHIS, "Task finished.")
-    clock.now += timedelta(minutes=6)
+    clock.now += timedelta(hours=5)
     await agent.compose(TELEGRAM, MATHIS, "Task finished.")
 
     soon, late = ([m.role for m in r.messages] for r in model.requests)
     assert soon == [Role.SYSTEM, Role.USER, Role.ASSISTANT, Role.SYSTEM]
     assert late == [Role.SYSTEM, Role.SYSTEM]
     assert len(await journal.history(UserTurn)) == 1, "composing is not a turn"
-
-
-def test_a_conversation_lasts_some_time() -> None:
-    with pytest.raises(ContractError):
-        Conversations(Journal.__new__(Journal), ends_after_s=0)
 
 
 # Records written before conversations were counted.

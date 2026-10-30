@@ -1,11 +1,12 @@
 """A household, a journal and an agent wired with doubles: the conversation without any provider."""
 
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Mapping
+from datetime import datetime
 
 import pytest
 
 from nestor.adapters.i18n import FluentLocalizer, catalogue_dirs
-from nestor.core import PersonId
+from nestor.core import PersonId, utc_now
 from nestor.modules.channels import Address, InboundMessage, Medium, Sender
 from nestor.modules.cognition.tools import Tool, Toolbox
 from nestor.modules.conversation import (
@@ -13,7 +14,6 @@ from nestor.modules.conversation import (
     AgentSettings,
     ChannelProfile,
     ContextProvider,
-    Conversations,
     Persona,
 )
 from nestor.modules.household import Account, Household, Person
@@ -46,7 +46,8 @@ def make_agent(journal: Journal) -> MakeAgent:
         tools: Iterable[Tool] = (),
         context: Iterable[ContextProvider] = (),
         settings: AgentSettings | None = None,
-        conversations: Conversations | None = None,
+        clock: Callable[[], datetime] = utc_now,
+        channels: Mapping[str, ChannelProfile] | None = None,
     ) -> Agent:
         return Agent(
             model=model or ScriptedModel(*replies),
@@ -55,10 +56,10 @@ def make_agent(journal: Journal) -> MakeAgent:
             household=Household([MATHIS]),
             toolbox=Toolbox(journal, tools),
             localizer=FluentLocalizer(catalogue_dirs(["nestor"])),
-            channels={"voice": ChannelProfile(Medium.SPOKEN, style="Use [laughs] sparingly.")},
+            channels=channels or {"voice": ChannelProfile(Medium.SPOKEN, style="Use [laughs] sparingly.")},
             context=context,
             settings=settings,
-            conversations=conversations,
+            clock=clock,
         )
 
     return make

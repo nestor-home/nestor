@@ -6,10 +6,20 @@ point group, so a third-party plugin needs no change here.
 
 from nestor.runtime.app import Nestor
 from nestor.runtime.config import ConfigError, NestorConfig, load_config
-from nestor.runtime.plugins import AdapterSettings, Distribution, Family, Plugged, Plugin, Registry, Services
+from nestor.runtime.plugins import (
+    AdapterSettings,
+    ChannelSettings,
+    Distribution,
+    Family,
+    Plugged,
+    Plugin,
+    Registry,
+    Services,
+)
 
 __all__ = [
     "AdapterSettings",
+    "ChannelSettings",
     "ConfigError",
     "Distribution",
     "Family",

@@ -9,6 +9,7 @@ import asyncio
 import contextlib
 from collections.abc import AsyncIterator, Callable, Iterable, Mapping
 from dataclasses import dataclass
+from datetime import datetime
 
 from nestor.core import ContractError, PersonId, ProviderError, utc_now
 from nestor.core.i18n import Localizer
@@ -37,10 +38,15 @@ from nestor.modules.journal import Journal
 
 @dataclass(frozen=True, slots=True)
 class ChannelProfile:
-    """What the agent needs to know about a channel to write for it."""
+    """What the agent needs to know about a channel to write for it, and to tell its conversations apart."""
 
     medium: Medium = Medium.WRITTEN
     style: str = ""
+    conversation_ends_after_s: float | None = None  # None: the medium's default
+
+    @property
+    def ends_conversation_after_s(self) -> float:
+        return self.conversation_ends_after_s or self.medium.conversation_ends_after_s
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -89,10 +95,12 @@ class Agent(Assistant):
         localizer: Localizer,
         context: Iterable[ContextProvider] = (),
         settings: AgentSettings | None = None,
-        conversations: Conversations | None = None,
+        clock: Callable[[], datetime] = utc_now,
     ) -> None:
         self.model, self.persona, self.journal = model, persona, journal
-        self.conversations = conversations or Conversations(journal)
+        self.conversations = Conversations(
+            journal, ends_after_s=lambda address: self.channel(address).ends_conversation_after_s, clock=clock
+        )
         self.localizer = localizer
         self.household, self.toolbox = household, toolbox
         self._channels = dict(channels or {})

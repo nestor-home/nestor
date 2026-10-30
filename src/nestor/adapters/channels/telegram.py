@@ -18,7 +18,7 @@ from pydantic import BaseModel, Field, SecretStr, TypeAdapter, ValidationError
 from nestor.core import Component, ContractError, ProviderError
 from nestor.core.i18n import Message
 from nestor.modules.channels import Address, Assistant, Channel, InboundMessage, Sender
-from nestor.runtime.plugins import AdapterSettings, Family, Plugin, Services
+from nestor.runtime.plugins import ChannelSettings, Family, Plugin, Services
 
 logger = logging.getLogger(__name__)
 
@@ -221,8 +221,9 @@ class TelegramChannel(Channel):
         max_retry_delay_s: float = 60.0,
         apology: str = "",
         transport: httpx.AsyncBaseTransport | None = None,
+        conversation_ends_after_s: float | None = None,
     ) -> None:
-        super().__init__(channel_id)
+        super().__init__(channel_id, conversation_ends_after_s=conversation_ends_after_s)
         self._api = BotApi(token, api_base=api_base, timeout_s=request_timeout_s, transport=transport)
         self._poll_timeout_s = poll_timeout_s
         self._request_timeout_s = request_timeout_s
@@ -344,7 +345,7 @@ class TelegramChannel(Channel):
         return task.result() if task.done() else None
 
 
-class TelegramSettings(AdapterSettings):
+class TelegramSettings(ChannelSettings):
     token: SecretStr
     api_base: str = "https://api.telegram.org"
     poll_timeout_s: int = Field(default=30, ge=1, le=50)
@@ -362,6 +363,7 @@ def build(settings: TelegramSettings, name: str, services: Services) -> Componen
         apology=settings.apology
         if settings.apology is not None
         else services.localizer.format(Message.of("telegram-apology"), services.locale),
+        conversation_ends_after_s=settings.conversation_ends_after_s,
     )
 
 

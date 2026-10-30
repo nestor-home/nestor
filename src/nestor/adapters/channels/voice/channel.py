@@ -69,8 +69,9 @@ class VoiceChannel(Channel, SatelliteHost):
         session: SessionSettings,
         clips: Path | None = None,
         send_timeout_s: float = 30.0,
+        conversation_ends_after_s: float | None = None,
     ) -> None:
-        super().__init__(channel_id)
+        super().__init__(channel_id, conversation_ends_after_s=conversation_ends_after_s)
         self.style = style
         self.room = self._default_room = room  # the browser's room; satellites bring their own
         self._speech = speech

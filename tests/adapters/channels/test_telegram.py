@@ -408,3 +408,15 @@ async def test_the_apology_is_the_households_language_unless_configured(
     channel = plugin.create({"token": TOKEN, **configured}, "bot", services)
     assert isinstance(channel, TelegramChannel) and channel._apology == said
     await channel.close()
+
+
+@pytest.mark.parametrize(("configured", "seconds"), [({}, 4 * 3600.0), ({"conversation_ends_after_s": 86400}, 86400.0)])
+async def test_a_written_conversation_lasts_hours_unless_configured(
+    tmp_path: Path, configured: dict[str, int], seconds: float
+) -> None:
+    services = Services(data_dir=tmp_path, localizer=EchoLocalizer(), locale=Locale("fr-FR"))
+    channel = plugin.create({"token": TOKEN, **configured}, "bot", services)
+    assert channel.conversation_ends_after_s == seconds
+    await channel.close()
+    with pytest.raises(ContractError):
+        plugin.create({"token": TOKEN, "conversation_ends_after_s": 0}, "bot", services)

@@ -32,7 +32,6 @@ from nestor.modules.journal import Journal
 from nestor.modules.system import ConfigChanged
 from nestor.runtime.config import (
     AdminConfig,
-    ConversationConfig,
     InitiativeConfig,
     NestorConfig,
     PersonaConfig,
@@ -71,7 +70,6 @@ SLOTS = (
 SECTIONS: Mapping[str, Any] = {
     "persona": PersonaConfig,
     "household": PersonConfig,  # a list of them
-    "conversation": ConversationConfig,
     "initiative": InitiativeConfig,
     "admin": AdminConfig,
 }

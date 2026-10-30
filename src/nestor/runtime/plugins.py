@@ -13,7 +13,7 @@ from importlib.metadata import entry_points
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from nestor.core import Component, ContractError
 from nestor.core.i18n import Locale, Localizer
@@ -36,6 +36,13 @@ class AdapterSettings(BaseModel):
     """Base of every adapter's configuration: unknown keys are errors, not silently ignored."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
+
+
+class ChannelSettings(AdapterSettings):
+    """Base of a channel's configuration: what every channel lets a household adjust."""
+
+    # silence after which the next turn opens a new conversation; None: the default of the channel's medium
+    conversation_ends_after_s: float | None = Field(default=None, gt=0, json_schema_extra={"advanced": True})
 
 
 @dataclass(frozen=True, slots=True)

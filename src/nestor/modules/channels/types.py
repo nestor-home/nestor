@@ -9,10 +9,22 @@ from nestor.core.events import JSON
 
 
 class Medium(StrEnum):
-    """How the user receives answers: it decides their form (length, no Markdown when spoken)."""
+    """How the user receives answers: it decides their form (length, no Markdown when spoken), and how
+    long a conversation lasts without a turn."""
 
     SPOKEN = "spoken"
     WRITTEN = "written"
+
+    @property
+    def conversation_ends_after_s(self) -> float:
+        """The silence after which the next turn opens a new conversation, unless a channel says otherwise.
+
+        Spoken: 5 minutes, Home Assistant Assist's timeout; people speak in the moment and walk away.
+        Written: 4 hours; a message chat is picked up again later in the day (after a meeting, after
+        lunch), as a messaging thread is. A night's sleep is longer, so the next morning opens a new
+        conversation without any clock rule.
+        """
+        return 300.0 if self is Medium.SPOKEN else 4 * 3600.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -46,7 +58,7 @@ class Exchange:
     """Where an effect belongs in the dialogue, as Home Assistant's Assist counts it.
 
     `conversation_id` groups the turns of one session that follow each other closely: it ends after a
-    while without any (`conversation.ends_after_s`). `turn_id` is one message and all it caused (tool
+    while without any (`Channel.conversation_ends_after_s`). `turn_id` is one message and all it caused (tool
     calls, memories, tasks, the reply), or one unprompted message.
     """
 

@@ -44,7 +44,7 @@ class SlotOut(BaseModel):
 
 
 class ConfigSchemaOut(BaseModel):
-    sections: dict[str, dict[str, Any]]  # persona, household (one person), conversation, initiative, admin, data_dir
+    sections: dict[str, dict[str, Any]]  # persona, household (one person), initiative, admin, data_dir
     section_titles: dict[str, str]
     slots: dict[str, SlotOut]  # model, triage_model, channels, executors, tools, inbound, presence, connectors
 

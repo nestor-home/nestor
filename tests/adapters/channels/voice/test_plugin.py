@@ -56,3 +56,12 @@ def test_the_transcription_fallback_is_in_the_households_language_unless_configu
     services = Services(tmp_path, localizer=EchoLocalizer(), locale=Locale("fr-FR"))
     channel = plugin.create({"room": "salon", "speech": SPEECH, **configured}, "voice", services)
     assert isinstance(channel, VoiceChannel) and channel._session.stt_phrase == said
+
+
+@pytest.mark.parametrize(("configured", "seconds"), [({}, 300.0), ({"conversation_ends_after_s": 120}, 120.0)])
+def test_a_spoken_conversation_lasts_five_minutes_as_in_assist_unless_configured(
+    tmp_path: Path, configured: dict[str, int], seconds: float
+) -> None:
+    services = Services(tmp_path, localizer=EchoLocalizer(), locale=Locale("fr-FR"))
+    channel = plugin.create({"room": "salon", "speech": SPEECH, **configured}, "voice", services)
+    assert isinstance(channel, VoiceChannel) and channel.conversation_ends_after_s == seconds

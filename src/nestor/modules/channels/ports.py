@@ -8,7 +8,7 @@ speech-to-speech model each implement `Channel`, so every channel reaches the sa
 from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
 
-from nestor.core import Component, PersonId
+from nestor.core import Component, ContractError, PersonId
 from nestor.modules.channels.types import Address, InboundMessage, Medium, Sender
 
 
@@ -47,15 +47,26 @@ class Channel(Component, ABC):
     - `serve` receives messages until the channel is closed and answers each one through the assistant;
     - `send` delivers an unprompted message (task result, initiative) and raises `ProviderError` when
       it cannot — a voice channel with nobody connected cannot;
-    - senders the channel cannot authenticate are dropped before reaching the assistant.
+    - senders the channel cannot authenticate are dropped before reaching the assistant;
+    - `conversation_ends_after_s` is how long a conversation on it lasts without a turn: what its
+      medium suggests, unless its configuration says otherwise.
     """
 
     medium: Medium = Medium.WRITTEN
     style: str = ""  # how to write for this channel (e.g. expression tags the voice understands)
     room: str | None = None  # where a spoken channel is heard (a home area id), if it is a satellite
 
-    def __init__(self, channel_id: str) -> None:
+    def __init__(self, channel_id: str, *, conversation_ends_after_s: float | None = None) -> None:
+        if conversation_ends_after_s is not None and conversation_ends_after_s <= 0:
+            raise ContractError("a conversation must last more than 0 s without a turn")
         self.channel_id = channel_id
+        self._conversation_ends_after_s = conversation_ends_after_s
+
+    @property
+    def conversation_ends_after_s(self) -> float:
+        """The silence after which the next turn opens a new conversation: the configured one, or the
+        default of the channel's medium."""
+        return self._conversation_ends_after_s or self.medium.conversation_ends_after_s
 
     @abstractmethod
     async def serve(self, assistant: Assistant) -> None: ...

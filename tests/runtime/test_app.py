@@ -126,14 +126,10 @@ async def test_initiative_settings_reach_the_courier(tmp_path: Path) -> None:
     assert nestor.courier.policy.quiet_hours is not None and nestor.presence is None
 
 
-def test_how_long_a_conversation_lasts_is_configured_and_checked(tmp_path: Path) -> None:
-    from nestor.runtime import ConfigError
-
-    base = CONFIG.format(data_dir=tmp_path, replies=[])
-    nestor = Nestor(parse_config(base + "conversation: {ends_after_s: 600}\n", {}), Fakes().registry())
-    assert nestor.agent.conversations.ends_after.total_seconds() == 600
-    with pytest.raises(ConfigError, match="ends_after_s"):
-        parse_config(base + "conversation: {ends_after_s: 0}\n", {})
+async def test_each_channel_brings_its_conversation_window_to_the_agent(tmp_path: Path) -> None:
+    nestor = Nestor(config(tmp_path, []), Fakes().registry())
+    profile = nestor.agent.channel(Address("memory", "x"))
+    assert profile.ends_conversation_after_s == 4 * 3600, "a written channel's default"
 
 
 def test_malformed_quiet_hours_are_a_configuration_error(tmp_path: Path) -> None:
