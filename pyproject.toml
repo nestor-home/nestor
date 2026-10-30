@@ -42,6 +42,7 @@ nestor = "nestor.runtime.cli:main"
 openai-compatible = "nestor.adapters.models.openai_compatible:plugin"
 hermes = "nestor.adapters.executors.hermes:plugin"
 telegram = "nestor.adapters.channels.telegram:plugin"
+home-assistant = "nestor.adapters.home.home_assistant:plugin"
 
 [project.urls]
 Homepage = "https://nestor.mathislambert.fr"
