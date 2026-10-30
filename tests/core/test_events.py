@@ -16,6 +16,7 @@ import nestor.modules.cognition
 import nestor.modules.cognition.tools
 import nestor.modules.conversation
 import nestor.modules.home
+import nestor.modules.identity
 import nestor.modules.initiative
 import nestor.modules.memory  # noqa: F401  (importing a module registers its events)
 from nestor.core import ContractError, Event, SessionId
