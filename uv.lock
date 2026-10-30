@@ -190,6 +190,15 @@ wheels = [
 ]
 
 [[package]]
+name = "aioimaplib"
+version = "2.0.3"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/d1/8e/8bb051d41c1b285cfb389c5728ba22e572db47952d6b19c2eee42d5780b2/aioimaplib-2.0.3.tar.gz", hash = "sha256:0a7c3e558af754a7ca8b5927be07c4ab6a0b7cd963174ca4290f6b0d51d4616b", size = 35840, upload-time = "2026-10-13T05:18:11.019Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/34/34/cfe20c82f447cf6224decb165ad9887e6c079cd1e21fffa2f9da41191b18/aioimaplib-2.0.3-py3-none-any.whl", hash = "sha256:799273d22cd1b57d8d2fba18376dc4a861ca5b90c548ffb53a003f2506ff64bc", size = 35246, upload-time = "2026-10-13T05:18:12.256Z" },
+]
+
+[[package]]
 name = "aiortc"
 version = "1.15.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1892,10 +1901,16 @@ name = "nestor-home"
 version = "0.0.1"
 source = { editable = "." }
 dependencies = [
+    { name = "aioimaplib" },
+    { name = "cryptography" },
+    { name = "fastapi" },
     { name = "httpx" },
+    { name = "jinja2" },
     { name = "mcp" },
     { name = "pydantic" },
+    { name = "python-multipart" },
     { name = "pyyaml" },
+    { name = "uvicorn" },
     { name = "websockets" },
 ]
 
@@ -1918,11 +1933,17 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "aioimaplib", specifier = ">=2.0.3" },
+    { name = "cryptography", specifier = ">=50.0.2" },
+    { name = "fastapi", specifier = ">=0.162.0" },
     { name = "httpx", specifier = ">=0.28.1" },
+    { name = "jinja2", specifier = ">=3.1.6" },
     { name = "mcp", specifier = ">=2.3" },
     { name = "pipecat-ai", extras = ["elevenlabs", "webrtc", "runner"], marker = "extra == 'voice'", specifier = "==1.14.0" },
     { name = "pydantic", specifier = ">=2.12" },
+    { name = "python-multipart", specifier = ">=0.0.32" },
     { name = "pyyaml", specifier = ">=6.0.3" },
+    { name = "uvicorn", specifier = ">=0.54.0" },
     { name = "websockets", specifier = ">=17" },
 ]
 provides-extras = ["voice"]
