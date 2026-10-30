@@ -1,15 +1,15 @@
-"""Development signalling: the Pipecat prebuilt browser client talking WebRTC to the channel.
+"""The voice channel's HTTP server: WebRTC signalling for satellites and the development browser.
 
-It serves the client at `/client` and implements what it calls: `POST /start` opens a session,
-`POST`/`PATCH` `/sessions/{id}/api/offer` (or `/api/offer`) negotiate the peer connection. Each
-connection gets its own voice session. This is a satellite for development; a proper satellite
-protocol replaces it later.
+Route sets plug into one FastAPI app served by `uvicorn` inside the channel:
+- `SatelliteGateway` (`satellites.gateway`): pairing and authenticated offers for paired devices;
+- `BrowserRoutes`: the Pipecat prebuilt client at `/client`, unauthenticated — development on a
+  trusted LAN only, enabled by `allow_unpaired_browser`.
 """
 
 import asyncio
-import logging
 import uuid
-from collections.abc import Callable, Coroutine
+from abc import ABC, abstractmethod
+from collections.abc import Callable, Coroutine, Sequence
 from typing import Any
 
 import uvicorn
@@ -25,9 +25,44 @@ from pipecat.transports.smallwebrtc.request_handler import (
 )
 from pipecat.transports.smallwebrtc.transport import SmallWebRTCTransport
 
-logger = logging.getLogger(__name__)
-
 type SessionHook = Callable[[BaseTransport], Coroutine[Any, Any, None]]
+
+
+class Routes(ABC):
+    """A set of endpoints and the sessions they started."""
+
+    def __init__(self) -> None:
+        self.handler = SmallWebRTCRequestHandler()  # one per route set: peers of one set are invisible to others
+        self._running: set[asyncio.Task[None]] = set()
+
+    @abstractmethod
+    def install(self, app: FastAPI) -> None: ...
+
+    def spawn(self, session: Coroutine[Any, Any, None], name: str) -> None:
+        task = asyncio.create_task(session, name=name)
+        self._running.add(task)
+        task.add_done_callback(self._running.discard)
+
+    async def close(self) -> None:
+        """Hang up every peer and wait for their sessions."""
+        await self.handler.close()
+        await asyncio.gather(*self._running, return_exceptions=True)
+
+
+def offer_of(body: dict[str, Any]) -> SmallWebRTCRequest:
+    return SmallWebRTCRequest(
+        sdp=body["sdp"], type=body["type"], pc_id=body.get("pc_id"), restart_pc=body.get("restart_pc")
+    )
+
+
+def patch_of(body: dict[str, Any]) -> SmallWebRTCPatchRequest:
+    return SmallWebRTCPatchRequest(
+        pc_id=body["pc_id"], candidates=[IceCandidate(**c) for c in body.get("candidates", [])]
+    )
+
+
+def audio_transport(connection: SmallWebRTCConnection) -> SmallWebRTCTransport:
+    return SmallWebRTCTransport(connection, TransportParams(audio_in_enabled=True, audio_out_enabled=True))
 
 
 class _Server(uvicorn.Server):
@@ -44,39 +79,50 @@ class _NoSignals:
 
 
 class SignallingServer:
-    """`attach` runs a voice session on a new transport until it ends; `detach` ends it."""
-
-    def __init__(self, *, host: str, port: int, attach: SessionHook, detach: SessionHook) -> None:
-        self._attach, self._detach = attach, detach
-        self._handler = SmallWebRTCRequestHandler()
-        self._sessions: set[str] = set()
-        self._running: set[asyncio.Task[None]] = set()
-        self.app = self._routes()
-        self._server = _Server(
-            uvicorn.Config(self.app, host=host, port=port, log_config=None, lifespan="off", timeout_graceful_shutdown=2)
+    def __init__(self, *, host: str, port: int, routes: Sequence[Routes]) -> None:
+        self._routes = tuple(routes)
+        self.app = FastAPI(title="Nestor voice satellites")
+        for route_set in self._routes:
+            route_set.install(self.app)
+        config = uvicorn.Config(
+            self.app, host=host, port=port, log_config=None, lifespan="off", timeout_graceful_shutdown=2
         )
+        self._server = _Server(config)
 
     async def serve(self) -> None:
-        """Serve until `stop`; then close every peer connection and wait for their sessions."""
+        """Serve until `stop`; then hang up every peer and wait for their sessions."""
         try:
             await self._server.serve()
         finally:
-            await self._handler.close()
-            await asyncio.gather(*self._running, return_exceptions=True)
+            for route_set in self._routes:
+                await route_set.close()
 
     def stop(self) -> None:
         self._server.should_exit = True
 
-    def _routes(self) -> FastAPI:
+    @property
+    def started(self) -> bool:
+        """Whether it accepts connections yet."""
+        return self._server.started
+
+
+class BrowserRoutes(Routes):
+    """What the Pipecat prebuilt client calls: `POST /start`, then `POST`/`PATCH`
+    `/sessions/{id}/api/offer` (or `/api/offer`). Nobody is authenticated: LAN development only."""
+
+    def __init__(self, *, attach: SessionHook, detach: SessionHook) -> None:
+        super().__init__()
+        self._attach, self._detach = attach, detach
+        self._sessions: set[str] = set()
+
+    def install(self, app: FastAPI) -> None:
         from pipecat_ai_prebuilt.frontend import PipecatPrebuiltUI
 
-        app = FastAPI(title="Nestor voice satellite (development)")
         app.mount("/client", PipecatPrebuiltUI)
         app.add_api_route("/", lambda: RedirectResponse("/client/"), methods=["GET"], include_in_schema=False)
         app.add_api_route("/start", self._start, methods=["POST"])
         app.add_api_route("/api/offer", self._offer, methods=["POST", "PATCH"])
         app.add_api_route("/sessions/{session_id}/api/offer", self._session_offer, methods=["POST", "PATCH"])
-        return app
 
     async def _start(self) -> dict[str, str]:
         session_id = str(uuid.uuid4())
@@ -91,23 +137,15 @@ class SignallingServer:
     async def _offer(self, request: Request) -> Any:
         body = await request.json()
         if request.method == "PATCH":
-            candidates = [IceCandidate(**c) for c in body.get("candidates", [])]
-            await self._handler.handle_patch_request(
-                SmallWebRTCPatchRequest(pc_id=body["pc_id"], candidates=candidates)
-            )
+            await self.handler.handle_patch_request(patch_of(body))
             return {"status": "success"}
-        offer = SmallWebRTCRequest(
-            sdp=body["sdp"], type=body["type"], pc_id=body.get("pc_id"), restart_pc=body.get("restart_pc")
-        )
-        return await self._handler.handle_web_request(offer, self._connected)
+        return await self.handler.handle_web_request(offer_of(body), self._connected)
 
     async def _connected(self, connection: SmallWebRTCConnection) -> None:
-        transport = SmallWebRTCTransport(connection, TransportParams(audio_in_enabled=True, audio_out_enabled=True))
+        transport = audio_transport(connection)
 
         async def disconnected(_transport: BaseTransport, _client: object) -> None:
             await self._detach(transport)
 
         transport.add_event_handler("on_client_disconnected", disconnected)
-        task = asyncio.create_task(self._attach(transport), name=f"voice session {connection.pc_id}")
-        self._running.add(task)
-        task.add_done_callback(self._running.discard)
+        self.spawn(self._attach(transport), name=f"browser session {connection.pc_id}")

@@ -63,6 +63,11 @@ class Channel(Component, ABC):
     @abstractmethod
     async def send(self, to: Address, text: str) -> None: ...
 
+    @property
+    def rooms(self) -> frozenset[str]:
+        """Rooms where a spoken channel can be heard right now: its satellites' rooms; by default `room`."""
+        return frozenset({self.room}) if self.room else frozenset()
+
     def reachable(self, to: Address) -> bool:
         """Whether `send` can deliver now (a voice channel needs someone connected). Cheap; `send`
         may still fail."""

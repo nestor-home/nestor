@@ -16,7 +16,10 @@ class VoiceSettings(AdapterSettings):
     speech: ElevenLabsSettings
     style: str = ""  # how the assistant writes for this voice (e.g. the expression tags it performs)
     host: str = "localhost"
-    port: int | None = Field(default=7860, ge=0, le=65535)  # development signalling server; `None` disables it
+    port: int | None = Field(default=7860, ge=0, le=65535)  # satellites and browser; `None` disables the server
+    # The Pipecat browser client at /client, with no pairing: anyone who reaches the port talks to the
+    # assistant. Development on a trusted LAN only; turn it off once real satellites are paired.
+    allow_unpaired_browser: bool = True
     stt_fallback: str = DEFAULT_STT_PHRASE  # said when the transcription fails
     fallback_clips: Path | None = None  # `stt.wav` and `tts.wav`, played when the synthesis is down
     quiet_s: float = Field(default=0.5, ge=0)  # silence before an unprompted message is spoken
@@ -31,6 +34,7 @@ def build(settings: VoiceSettings, name: str, services: Services) -> Component:
         style=settings.style,
         host=settings.host,
         port=settings.port,
+        allow_unpaired_browser=settings.allow_unpaired_browser,
         session=SessionSettings(stt_phrase=settings.stt_fallback, quiet_s=settings.quiet_s),
         clips=settings.fallback_clips,
         send_timeout_s=settings.send_timeout_s,

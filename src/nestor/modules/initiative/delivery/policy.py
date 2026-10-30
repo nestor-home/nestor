@@ -69,7 +69,9 @@ class DeliveryPolicy:
     ) -> Plan:
         channels = tuple(channels)
         spoken_ids = {c.channel_id for c in channels if c.medium is Medium.SPOKEN}
-        satellites = {c.room: Address(c.channel_id, c.room) for c in channels if c.channel_id in spoken_ids and c.room}
+        satellites = {
+            room: Address(c.channel_id, room) for c in channels if c.channel_id in spoken_ids for room in c.rooms
+        }
         reach = person.reach if person else None
         fallback = reach or origin
         local = now.astimezone(ZoneInfo(self.timezone)).time()

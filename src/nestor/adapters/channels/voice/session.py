@@ -17,9 +17,11 @@ from pipecat.workers.runner import WorkerRunner
 
 from nestor.adapters.channels.voice.bridge import AssistantBridge, PlayedText
 from nestor.adapters.channels.voice.eager import ResponseWatcher
+from nestor.adapters.channels.voice.embodiment import Embodiment
 from nestor.adapters.channels.voice.providers import IN_SAMPLE_RATE, Speech
 from nestor.adapters.channels.voice.resilience import Injector, Outage, SpeechFallbacks
 from nestor.adapters.channels.voice.turns import TurnSettings, user_turns
+from nestor.modules.behavior import Body
 from nestor.modules.channels import Address, Assistant, Sender
 
 logger = logging.getLogger(__name__)
@@ -48,7 +50,11 @@ class VoiceSession:
         address: Address,
         sender: Sender,
         settings: SessionSettings,
+        body: Body | None = None,
+        rtvi: bool = True,
     ) -> None:
+        """`body` is animated in sync with the played audio; `rtvi` speaks the Pipecat client protocol
+        on the data channel (the browser client needs it, satellites speak the Nestor protocol)."""
         self.address = address
         played = PlayedText()
         self._bridge = AssistantBridge(
@@ -72,13 +78,15 @@ class VoiceSession:
         latency = UserBotLatencyObserver()
         latency.add_event_handler("on_latency_breakdown", self._log_latency)
         fallbacks = SpeechFallbacks(say, play, stt_phrase=settings.stt_phrase, clips=settings.clips)
+        embodiment = [Embodiment(body, transport.output())] if body is not None else []
         self._worker = PipelineWorker(
             pipeline,
             params=PipelineParams(
                 audio_in_sample_rate=IN_SAMPLE_RATE, audio_out_sample_rate=OUT_SAMPLE_RATE, enable_metrics=True
             ),
-            observers=[latency, fallbacks],
+            observers=[latency, fallbacks, *embodiment],
             idle_timeout_secs=None,
+            enable_rtvi=rtvi,
         )
         self._runner = WorkerRunner(handle_sigint=False)
 

@@ -113,3 +113,30 @@ def test_quiet_hours_may_wrap_past_midnight(hours: str, inside: str, outside: st
 def test_malformed_quiet_hours_are_refused() -> None:
     with pytest.raises(ContractError, match="HH:MM-HH:MM"):
         QuietHours.parse("tard")
+
+
+def test_one_voice_channel_may_serve_several_rooms() -> None:
+    class Gateway(InMemoryChannel):
+        medium = Medium.SPOKEN
+
+        @property
+        def rooms(self) -> frozenset[str]:
+            return frozenset({"cuisine", "bureau"})
+
+    presence = at(Granularity.PERSON_ROOM, home=True, room="cuisine")
+    result = POLICY.plan(MATHIS, channels=[Gateway("voice")], presence=presence, origin=None, now=NOON)
+    assert result.spoken == Address("voice", "cuisine")
+
+
+def test_a_main_satellite_nobody_is_connected_to_means_a_message() -> None:
+    class Offline(InMemoryChannel):
+        medium = Medium.SPOKEN
+
+        @property
+        def rooms(self) -> frozenset[str]:
+            return frozenset()
+
+    result = POLICY.plan(
+        MATHIS, channels=[Offline("voice")], presence=at(Granularity.HOME, home=True), origin=None, now=NOON
+    )
+    assert (result.spoken, result.written) == (None, TELEGRAM)

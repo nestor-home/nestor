@@ -35,6 +35,7 @@ from nestor.modules.initiative.watches.assistant import WatchTools
 from nestor.modules.journal import Journal
 from nestor.modules.memory import Memories
 from nestor.modules.memory.assistant import MemoryTools
+from nestor.modules.satellites import Pairing, SatelliteHost
 from nestor.runtime.config import AdapterConfig, ConfigError, NestorConfig
 from nestor.runtime.plugins import Family, Registry, Services
 
@@ -110,6 +111,10 @@ class Nestor:
             connected = [inbound] if inbound.kinds else []
         self.sources = [*self.inbound, *connected]
 
+        self.pairing = Pairing(self.journal)
+        for channel in self.channels:
+            if isinstance(channel, SatelliteHost):
+                channel.host_satellites(self.pairing, self.journal)
         self.tasks = TaskManager(self.journal, self.executors)
         delegation = Delegation(self.tasks)
         self.memories = Memories(self.journal, SQLiteMemoryStore(self.database))
@@ -161,6 +166,7 @@ class Nestor:
         )
         return [
             self.database,
+            self.pairing,
             *connections,
             self.model,
             *triage,

@@ -5,7 +5,7 @@ buffers are Pipecat's real components.
 """
 
 import asyncio
-from collections.abc import AsyncGenerator, AsyncIterator
+from collections.abc import AsyncGenerator, AsyncIterator, Callable
 
 import numpy as np
 from pipecat.frames.frames import (
@@ -124,14 +124,16 @@ class ToneTTS(EagerSentenceFlush, TTSService):
 
 
 class FakeSpeech(Speech):
-    def __init__(self, stt: STTService, tts: TTSService) -> None:
+    """Hands out the given services, or builds new ones per session when given factories."""
+
+    def __init__(self, stt: STTService | Callable[[], STTService], tts: TTSService | Callable[[], TTSService]) -> None:
         self._stt, self._tts = stt, tts
 
     def stt(self) -> STTService:
-        return self._stt
+        return self._stt if isinstance(self._stt, STTService) else self._stt()
 
     def tts(self) -> TTSService:
-        return self._tts
+        return self._tts if isinstance(self._tts, TTSService) else self._tts()
 
 
 class TimedReply(Reply):

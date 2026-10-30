@@ -11,7 +11,7 @@ from aiortc.mediastreams import AudioStreamTrack
 from pipecat.transports.base_transport import BaseTransport
 
 from nestor.adapters.channels.voice import VoiceChannel
-from nestor.adapters.channels.voice.server import SignallingServer
+from nestor.adapters.channels.voice.server import BrowserRoutes, SignallingServer
 from nestor.modules.channels import Address
 
 from .doubles import FakeAssistant, FakeSpeech, ScriptedSTT, ToneTTS
@@ -26,7 +26,7 @@ def client_of(server: SignallingServer) -> httpx.AsyncClient:
 
 
 async def test_the_root_leads_to_the_prebuilt_client() -> None:
-    server = SignallingServer(host="localhost", port=0, attach=_ignore, detach=_ignore)
+    server = SignallingServer(host="localhost", port=0, routes=[BrowserRoutes(attach=_ignore, detach=_ignore)])
     async with client_of(server) as client:
         root = await client.get("/")
         page = await client.get("/client/")
@@ -35,7 +35,7 @@ async def test_the_root_leads_to_the_prebuilt_client() -> None:
 
 
 async def test_start_opens_a_session_and_offers_need_one() -> None:
-    server = SignallingServer(host="localhost", port=0, attach=_ignore, detach=_ignore)
+    server = SignallingServer(host="localhost", port=0, routes=[BrowserRoutes(attach=_ignore, detach=_ignore)])
     async with client_of(server) as client:
         started = await client.post("/start", json={"transport": "webrtc"})
         unknown = await client.post(f"/sessions/{uuid.uuid4()}/api/offer", json={"sdp": "", "type": "offer"})
