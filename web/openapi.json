@@ -3515,6 +3515,642 @@
         }
       }
     },
+    "/api/v1/satellites/pairing-methods": {
+      "get": {
+        "tags": [
+          "satellites"
+        ],
+        "summary": "Pairing Methods",
+        "description": "Every pairing method, for a device that has not contacted Nestor yet.",
+        "operationId": "pairingMethods",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MethodsOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/satellites/additions": {
+      "get": {
+        "tags": [
+          "satellites"
+        ],
+        "summary": "List Additions",
+        "description": "The additions in progress.",
+        "operationId": "listAdditions",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdditionsOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "satellites"
+        ],
+        "summary": "Start Addition",
+        "operationId": "startAddition",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdditionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StartedOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/satellites/additions/{addition_id}": {
+      "get": {
+        "tags": [
+          "satellites"
+        ],
+        "summary": "Get Addition",
+        "description": "One addition, in progress or over: poll it to follow its `stage`.",
+        "operationId": "getAddition",
+        "parameters": [
+          {
+            "name": "addition_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Addition Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdditionOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Bad Gateway"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "satellites"
+        ],
+        "summary": "Cancel Addition",
+        "description": "Cancel an addition in progress: its enrollment code no longer pairs anything.",
+        "operationId": "cancelAddition",
+        "parameters": [
+          {
+            "name": "addition_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Addition Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Bad Gateway"
+          }
+        }
+      }
+    },
+    "/api/v1/satellites/pending/{pairing_id}/identify": {
+      "post": {
+        "tags": [
+          "satellites"
+        ],
+        "summary": "Identify Pending",
+        "description": "Ask a pending device to make itself noticed (it hears it within a second or so).",
+        "operationId": "identifyPending",
+        "parameters": [
+          {
+            "name": "pairing_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Pairing Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Bad Gateway"
+          }
+        }
+      }
+    },
     "/api/v1/satellites/{device_id}": {
       "get": {
         "tags": [
@@ -3632,8 +4268,114 @@
           "satellites"
         ],
         "summary": "Revoke Satellite",
-        "description": "The device can no longer connect; pairing it again needs a new code.",
+        "description": "The device can no longer connect; pairing it again needs a new proof.",
         "operationId": "revokeSatellite",
+        "parameters": [
+          {
+            "name": "device_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Device Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Bad Gateway"
+          }
+        }
+      }
+    },
+    "/api/v1/satellites/{device_id}/identify": {
+      "post": {
+        "tags": [
+          "satellites"
+        ],
+        "summary": "Identify Satellite",
+        "description": "Ask a paired, connected satellite to make itself noticed.",
+        "operationId": "identifySatellite",
         "parameters": [
           {
             "name": "device_id",
@@ -3738,6 +4480,7 @@
           "satellites"
         ],
         "summary": "Approve Satellite",
+        "description": "Type the device code a pending device presents; the first proof accepted wins.",
         "operationId": "approveSatellite",
         "requestBody": {
           "content": {
@@ -7302,6 +8045,194 @@
         ],
         "title": "AccountOut"
       },
+      "AdditionIn": {
+        "properties": {
+          "method": {
+            "$ref": "#/components/schemas/PairingMethod"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "room": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Room"
+          },
+          "capabilities": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capabilities"
+          },
+          "ttl_s": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 604800.0,
+                "minimum": 60.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ttl S"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "method"
+        ],
+        "title": "AdditionIn"
+      },
+      "AdditionOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "method": {
+            "$ref": "#/components/schemas/MethodOut"
+          },
+          "stage": {
+            "$ref": "#/components/schemas/Stage"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "room": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Room"
+          },
+          "capabilities": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/CapabilityOut"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capabilities"
+          },
+          "candidates": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Candidates"
+          },
+          "device_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Device Id"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PersonRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          },
+          "expires_in_s": {
+            "type": "integer",
+            "title": "Expires In S"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "method",
+          "stage",
+          "name",
+          "room",
+          "capabilities",
+          "candidates",
+          "device_id",
+          "created_by",
+          "created_at",
+          "expires_at",
+          "expires_in_s"
+        ],
+        "title": "AdditionOut"
+      },
+      "AdditionsOut": {
+        "properties": {
+          "additions": {
+            "items": {
+              "$ref": "#/components/schemas/AdditionOut"
+            },
+            "type": "array",
+            "title": "Additions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "additions"
+        ],
+        "title": "AdditionsOut"
+      },
       "AgentActivityOut": {
         "properties": {
           "state": {
@@ -7392,6 +8323,27 @@
               }
             ],
             "title": "Pairing Id"
+          },
+          "addition_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Addition Id"
+          },
+          "method": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PairingMethod"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "capabilities": {
             "anyOf": [
@@ -9256,6 +10208,54 @@
         "title": "MessageOut",
         "description": "A message as data: a front with its own Fluent catalogue renders `id` with `args` itself."
       },
+      "MethodOut": {
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/PairingMethod"
+          },
+          "proof": {
+            "type": "string",
+            "title": "Proof"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "hint": {
+            "type": "string",
+            "title": "Hint"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "proof",
+          "label",
+          "hint"
+        ],
+        "title": "MethodOut",
+        "description": "A pairing method, in the reader's language."
+      },
+      "MethodsOut": {
+        "properties": {
+          "methods": {
+            "items": {
+              "$ref": "#/components/schemas/MethodOut"
+            },
+            "type": "array",
+            "title": "Methods"
+          },
+          "recommended": {
+            "$ref": "#/components/schemas/PairingMethod"
+          }
+        },
+        "type": "object",
+        "required": [
+          "methods",
+          "recommended"
+        ],
+        "title": "MethodsOut"
+      },
       "NestorOut": {
         "properties": {
           "version": {
@@ -9340,6 +10340,18 @@
         ],
         "title": "OutcomeOut"
       },
+      "PairingMethod": {
+        "type": "string",
+        "enum": [
+          "device_code.display",
+          "device_code.speech",
+          "enrollment.input",
+          "enrollment.provisioning",
+          "enrollment.qr"
+        ],
+        "title": "PairingMethod",
+        "description": "How a person can pair this device; it declares those it supports, the person picks one."
+      },
       "PasswordChangeIn": {
         "properties": {
           "current_password": {
@@ -9389,6 +10401,20 @@
             "type": "array",
             "title": "Capabilities"
           },
+          "methods": {
+            "items": {
+              "$ref": "#/components/schemas/MethodOut"
+            },
+            "type": "array",
+            "title": "Methods"
+          },
+          "recommended_method": {
+            "$ref": "#/components/schemas/PairingMethod"
+          },
+          "can_identify": {
+            "type": "boolean",
+            "title": "Can Identify"
+          },
           "sdk": {
             "anyOf": [
               {
@@ -9421,6 +10447,9 @@
           "pairing_id",
           "device",
           "capabilities",
+          "methods",
+          "recommended_method",
+          "can_identify",
           "sdk",
           "sdk_version",
           "expires_in_s"
@@ -9750,6 +10779,17 @@
             "type": "string",
             "title": "Id"
           },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
           "model": {
             "type": "string",
             "title": "Model"
@@ -9798,6 +10838,10 @@
             "type": "array",
             "title": "Capabilities"
           },
+          "can_identify": {
+            "type": "boolean",
+            "title": "Can Identify"
+          },
           "paired_at": {
             "type": "string",
             "format": "date-time",
@@ -9840,12 +10884,14 @@
         "type": "object",
         "required": [
           "id",
+          "name",
           "model",
           "room",
           "brand",
           "sdk",
           "sdk_version",
           "capabilities",
+          "can_identify",
           "paired_at",
           "last_seen_at",
           "approved_by",
@@ -9868,12 +10914,20 @@
             },
             "type": "array",
             "title": "Paired"
+          },
+          "additions": {
+            "items": {
+              "$ref": "#/components/schemas/AdditionOut"
+            },
+            "type": "array",
+            "title": "Additions"
           }
         },
         "type": "object",
         "required": [
           "pending",
-          "paired"
+          "paired",
+          "additions"
         ],
         "title": "SatellitesOut"
       },
@@ -10072,6 +11126,54 @@
           "kinds"
         ],
         "title": "SlotOut"
+      },
+      "Stage": {
+        "type": "string",
+        "enum": [
+          "waiting",
+          "device_seen",
+          "paired",
+          "cancelled",
+          "expired"
+        ],
+        "title": "Stage",
+        "description": "Where an addition stands, for the front's progress."
+      },
+      "StartedOut": {
+        "properties": {
+          "addition": {
+            "$ref": "#/components/schemas/AdditionOut"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "uri": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Uri"
+          }
+        },
+        "type": "object",
+        "required": [
+          "addition",
+          "code",
+          "uri"
+        ],
+        "title": "StartedOut"
       },
       "Status": {
         "type": "string",

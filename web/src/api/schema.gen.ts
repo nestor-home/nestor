@@ -533,6 +533,91 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/satellites/pairing-methods": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Pairing Methods
+         * @description Every pairing method, for a device that has not contacted Nestor yet.
+         */
+        get: operations["pairingMethods"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/satellites/additions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Additions
+         * @description The additions in progress.
+         */
+        get: operations["listAdditions"];
+        put?: never;
+        /** Start Addition */
+        post: operations["startAddition"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/satellites/additions/{addition_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Addition
+         * @description One addition, in progress or over: poll it to follow its `stage`.
+         */
+        get: operations["getAddition"];
+        put?: never;
+        post?: never;
+        /**
+         * Cancel Addition
+         * @description Cancel an addition in progress: its enrollment code no longer pairs anything.
+         */
+        delete: operations["cancelAddition"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/satellites/pending/{pairing_id}/identify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Identify Pending
+         * @description Ask a pending device to make itself noticed (it hears it within a second or so).
+         */
+        post: operations["identifyPending"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/satellites/{device_id}": {
         parameters: {
             query?: never;
@@ -549,9 +634,29 @@ export interface paths {
         post?: never;
         /**
          * Revoke Satellite
-         * @description The device can no longer connect; pairing it again needs a new code.
+         * @description The device can no longer connect; pairing it again needs a new proof.
          */
         delete: operations["revokeSatellite"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/satellites/{device_id}/identify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Identify Satellite
+         * @description Ask a paired, connected satellite to make itself noticed.
+         */
+        post: operations["identifySatellite"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -566,7 +671,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Approve Satellite */
+        /**
+         * Approve Satellite
+         * @description Type the device code a pending device presents; the first proof accepted wins.
+         */
         post: operations["approveSatellite"];
         delete?: never;
         options?: never;
@@ -1028,6 +1136,53 @@ export interface components {
             /** Last Seen At */
             last_seen_at: string | null;
         };
+        /** AdditionIn */
+        AdditionIn: {
+            method: components["schemas"]["PairingMethod"];
+            /** Name */
+            name?: string | null;
+            /** Room */
+            room?: string | null;
+            /** Capabilities */
+            capabilities?: string[] | null;
+            /** Ttl S */
+            ttl_s?: number | null;
+        };
+        /** AdditionOut */
+        AdditionOut: {
+            /** Id */
+            id: string;
+            method: components["schemas"]["MethodOut"];
+            stage: components["schemas"]["Stage"];
+            /** Name */
+            name: string | null;
+            /** Room */
+            room: string | null;
+            /** Capabilities */
+            capabilities: components["schemas"]["CapabilityOut"][] | null;
+            /** Candidates */
+            candidates: string[];
+            /** Device Id */
+            device_id: string | null;
+            created_by: components["schemas"]["PersonRef"] | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /** Expires In S */
+            expires_in_s: number;
+        };
+        /** AdditionsOut */
+        AdditionsOut: {
+            /** Additions */
+            additions: components["schemas"]["AdditionOut"][];
+        };
         /**
          * AgentActivityOut
          * @description What the agent is doing now, from what really runs: `GET /agent/activity`, and `event: activity` on
@@ -1072,6 +1227,9 @@ export interface components {
             code: string;
             /** Pairing Id */
             pairing_id?: string | null;
+            /** Addition Id */
+            addition_id?: string | null;
+            method?: components["schemas"]["PairingMethod"] | null;
             /** Capabilities */
             capabilities?: string[] | null;
         };
@@ -1677,6 +1835,25 @@ export interface components {
                 [key: string]: string | number;
             };
         };
+        /**
+         * MethodOut
+         * @description A pairing method, in the reader's language.
+         */
+        MethodOut: {
+            id: components["schemas"]["PairingMethod"];
+            /** Proof */
+            proof: string;
+            /** Label */
+            label: string;
+            /** Hint */
+            hint: string;
+        };
+        /** MethodsOut */
+        MethodsOut: {
+            /** Methods */
+            methods: components["schemas"]["MethodOut"][];
+            recommended: components["schemas"]["PairingMethod"];
+        };
         /** NestorOut */
         NestorOut: {
             /** Version */
@@ -1707,6 +1884,12 @@ export interface components {
             /** Duration S */
             duration_s: number;
         };
+        /**
+         * PairingMethod
+         * @description How a person can pair this device; it declares those it supports, the person picks one.
+         * @enum {string}
+         */
+        PairingMethod: "device_code.display" | "device_code.speech" | "enrollment.input" | "enrollment.provisioning" | "enrollment.qr";
         /** PasswordChangeIn */
         PasswordChangeIn: {
             /** Current Password */
@@ -1726,6 +1909,11 @@ export interface components {
             device: components["schemas"]["DeviceOut"];
             /** Capabilities */
             capabilities: components["schemas"]["CapabilityOut"][];
+            /** Methods */
+            methods: components["schemas"]["MethodOut"][];
+            recommended_method: components["schemas"]["PairingMethod"];
+            /** Can Identify */
+            can_identify: boolean;
             /** Sdk */
             sdk: string | null;
             /** Sdk Version */
@@ -1835,6 +2023,8 @@ export interface components {
         SatelliteOut: {
             /** Id */
             id: string;
+            /** Name */
+            name: string | null;
             /** Model */
             model: string;
             /** Room */
@@ -1847,6 +2037,8 @@ export interface components {
             sdk_version: string | null;
             /** Capabilities */
             capabilities: components["schemas"]["CapabilityOut"][];
+            /** Can Identify */
+            can_identify: boolean;
             /**
              * Paired At
              * Format: date-time
@@ -1864,6 +2056,8 @@ export interface components {
             pending: components["schemas"]["PendingOut"][];
             /** Paired */
             paired: components["schemas"]["SatelliteOut"][];
+            /** Additions */
+            additions: components["schemas"]["AdditionOut"][];
         };
         /**
          * ScheduledDeliveryOut
@@ -1934,6 +2128,20 @@ export interface components {
                     [key: string]: unknown;
                 };
             };
+        };
+        /**
+         * Stage
+         * @description Where an addition stands, for the front's progress.
+         * @enum {string}
+         */
+        Stage: "waiting" | "device_seen" | "paired" | "cancelled" | "expired";
+        /** StartedOut */
+        StartedOut: {
+            addition: components["schemas"]["AdditionOut"];
+            /** Code */
+            code: string | null;
+            /** Uri */
+            uri: string | null;
         };
         /**
          * Status
@@ -5065,6 +5273,564 @@ export interface operations {
             };
         };
     };
+    pairingMethods: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MethodsOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    listAdditions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdditionsOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    startAddition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdditionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StartedOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    getAddition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                addition_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdditionOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    cancelAddition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                addition_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    identifyPending: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pairing_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
     getSatellite: {
         parameters: {
             query?: never;
@@ -5160,6 +5926,98 @@ export interface operations {
         };
     };
     revokeSatellite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                device_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    identifySatellite: {
         parameters: {
             query?: never;
             header?: never;
