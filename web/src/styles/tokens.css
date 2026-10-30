@@ -1,0 +1,67 @@
+/*
+ * Nestor's identity, in one place: paper and ink, one ember accent, three quiet semantic colours.
+ *
+ * Every colour is written once as `light-dark(<paper>, <ink>)`: the theme only flips
+ * `color-scheme` (see theme.tsx), so a colour tweak is a one-line change here.
+ * Contrast (WCAG 2.x) is checked against --paper, --paper-raised and --paper-sunken in both themes:
+ * --ink and --ink-muted pass AA for body text, --ember and the semantic colours pass AA for text,
+ * --ink-faint is for decoration and large mono labels only (≥ 3:1).
+ */
+
+:root {
+  color-scheme: light dark;
+
+  /* surfaces */
+  --paper: light-dark(#f5f0e6, #16130f);
+  --paper-raised: light-dark(#fbf8f1, #1d1915);
+  --paper-sunken: light-dark(#ece5d7, #100e0b);
+
+  /* ink */
+  --ink: light-dark(#1d1913, #eee7da);
+  --ink-muted: light-dark(#62584c, #a89e8f);
+  --ink-faint: light-dark(#857a6c, #7d7467);
+
+  /* hairlines */
+  --rule: light-dark(#ddd4c4, #2e2922);
+  --rule-strong: light-dark(#c4b8a4, #4a4238);
+
+  /* the one accent: ember */
+  --ember: light-dark(#ad401d, #e8835c);
+  --ember-soft: light-dark(#f3dfd3, #3a2219);
+  --on-ember: light-dark(#fbf8f1, #16130f);
+
+  /* semantic, used sparingly */
+  --sage: light-dark(#46663f, #93b487);
+  --sage-soft: light-dark(#e1e8d9, #1f2a1c);
+  --amber: light-dark(#8a5d0b, #ddaa4e);
+  --amber-soft: light-dark(#f1e5c8, #33280f);
+  --brick: light-dark(#a1322a, #e77a69);
+  --brick-soft: light-dark(#f2dbd6, #3a1c18);
+
+  /* two quiet hues that only tell event kinds apart in the journal */
+  --kind-task: light-dark(#4a5a7c, #9fb0d4);
+  --kind-watch: light-dark(#7a4a68, #cf9dbd);
+
+  /* type */
+  --font-display: "Fraunces Variable", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --font-ui: "Instrument Sans Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  /* Fraunces' soft axis takes the edge off without going cute */
+  --display-variation: "SOFT" 60, "WONK" 0;
+
+  /* shape */
+  --radius: 4px;
+  --hairline: 1px;
+
+  /* motion */
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --duration: 140ms;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}

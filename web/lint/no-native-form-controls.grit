@@ -1,0 +1,18 @@
+language js
+
+// Features use the ui components (shadcn on Base UI), never native selects, checkboxes, radios or
+// date inputs: their look, keyboard behaviour and labels differ from the rest of the admin.
+or {
+  `<select $attrs>$children</select>`,
+  `<input $attrs />` where {
+    $attrs <: contains or {
+      `type="checkbox"`,
+      `type="radio"`,
+      `type="date"`,
+      `type="datetime-local"`,
+      `type="time"`
+    }
+  }
+} as $node where {
+  register_diagnostic(span=$node, message="Use the ui components (Select, Checkbox, RadioGroup, Calendar) instead of a native form control.")
+}

@@ -1,0 +1,14 @@
+language js
+
+// cmdk writes data-selected="true|false" and data-disabled="true|false" on every item: a presence
+// variant (`data-selected:`) matches them all and every item looks selected. Only the files built
+// on cmdk (command.tsx; no other file may import it) are concerned: Base UI sets presence attributes.
+or {
+  JsStringLiteralExpression(),
+  JsxString(),
+  JsTemplateExpression()
+} as $node where {
+  $filename <: r".*command\.tsx",
+  $node <: r"(?s).*data-(?:selected|disabled)(?:/[a-z-]+)?:.*",
+  register_diagnostic(span=$node, message="cmdk sets data-selected and data-disabled to true or false on every item: write data-[selected=true]: or data-[disabled=true]:, not a presence variant.")
+}

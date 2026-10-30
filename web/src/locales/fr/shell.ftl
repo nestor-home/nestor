@@ -1,0 +1,73 @@
+## Le cadre de chaque écran : navigation, ligne d'état, menu du compte, palette de commandes.
+
+nav-today = Aujourd'hui
+nav-journal = Journal
+nav-group-household = Foyer
+nav-people = Personnes
+nav-memories = Souvenirs
+nav-watches = Veilles
+nav-tasks = Tâches
+nav-group-installation = Installation
+nav-connections = Connexions
+nav-satellites = Satellites
+nav-system = Système
+nav-accounts = Comptes
+
+shell-skip = Aller au contenu
+shell-home-link = Nestor — { $assistant }
+shell-sections = Sections
+shell-account-menu = Menu du compte
+shell-theme = Thème
+shell-theme-system = Comme le système
+shell-theme-light = Clair
+shell-theme-dark = Sombre
+shell-language = Langue
+shell-sign-out = Se déconnecter
+shell-display = Affichage
+shell-theme-to-light = Passer en clair
+shell-theme-to-dark = Passer en sombre
+
+shell-live-open = en direct
+shell-live-connecting = connexion…
+shell-live-closed = hors ligne
+shell-live-hint = Le journal arrive en direct depuis Nestor
+shell-ticker-tasks = { $count ->
+    [0] aucune tâche en cours
+    [one] 1 tâche en cours
+   *[other] { $count } tâches en cours
+}
+shell-ticker-watches = { $count ->
+    [one] 1 veille
+   *[other] { $count } veilles
+}
+shell-ticker-satellites = { $online }/{ $total } satellites
+shell-ticker-attention = { $count ->
+    [one] 1 chose à regarder
+   *[other] { $count } choses à regarder
+}
+shell-version = nestor { $version }
+shell-go-to = Aller à…
+shell-palette-description = Chercher une section, une personne, un service
+shell-palette-placeholder = Aller à… (section, personne, connexion)
+shell-palette-empty = Rien de ce nom.
+shell-palette-theme-keywords = thème clair sombre
+
+attention-reauth = { $account } est à réautoriser
+attention-connection-error = { $account } ne répond plus
+attention-tools-hidden = Ses outils sont masqués en attendant.
+attention-reconnect = Reconnecter
+attention-pairing = { $device } attend d'être appairé
+attention-pairing-detail = { $model }, pièce « { $room } » : tapez le code qu'il affiche.
+attention-approve = Approuver
+attention-satellite-offline = { $device } est hors ligne
+attention-satellite-offline-detail = Personne ne peut être entendu ni prévenu à voix haute dans la pièce « { $room } ».
+attention-understand = Comprendre
+attention-task-failed = La tâche « { $objective } » a échoué
+attention-component-down = { $name } est en panne
+shell-sidebar-toggle = Afficher ou masquer la barre latérale
+shell-sidebar-collapse = Réduire
+shell-sidebar-expand = Déplier
+shell-open-menu = Ouvrir le menu
+shell-agent-online = en ligne
+shell-agent-offline = hors ligne
+shell-agent-label = { $assistant }, { $state }

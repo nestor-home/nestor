@@ -1,0 +1,16 @@
+language js
+
+// A listbox, menu, combobox or tab list is a ui component (Base UI or cmdk handle focus, keys and
+// ARIA); writing the role by hand gives a widget that looks right and behaves wrong.
+or {
+  `role="listbox"`,
+  `role="option"`,
+  `role="menu"`,
+  `role="menuitem"`,
+  `role="menubar"`,
+  `role="combobox"`,
+  `role="tablist"`,
+  `role="tab"`
+} as $node where {
+  register_diagnostic(span=$node, message="Use the ui component (Select, Combobox, DropdownMenu, Tabs…) rather than a hand-written ARIA widget.")
+}

@@ -1,0 +1,40 @@
+/** The API's own shapes, from `web/openapi.json` (`pnpm api:generate`). Only src/api and the mocks use them. */
+import type { components, paths } from "./schema.gen";
+
+type S = components["schemas"];
+
+export type { paths };
+export type AccountDto = S["AccountOut"];
+export type AgentDto = S["AgentOut"];
+export type ApprovalDto = S["ApprovalIn"];
+export type AuthorizationDto = S["AuthorizationOut"];
+export type CapabilityDto = S["CapabilityOut"];
+export type ComponentDto = S["ComponentOut"];
+export type ConnectionDetailDto = S["ConnectionDetail"];
+export type ConnectionDto = S["ConnectionOut"];
+export type ConnectorDto = S["ConnectorOut"];
+export type ErrorDto = S["ErrorOut"];
+export type FacetsDto = S["JournalFacets"];
+export type InvitationCreatedDto = S["InvitationCreated"];
+export type InvitationDto = S["InvitationOut"];
+export type InvitationPreviewDto = S["InvitationPreview"];
+export type JournalEntryDto = S["JournalEntryOut"];
+export type JournalItemDto = S["JournalItem"];
+export type JournalPageDto = S["JournalPage"];
+export type LanguagesDto = S["LanguagesOut"];
+export type MeDto = S["MeOut"];
+export type MemoryDto = S["MemoryOut"];
+export type PendingDto = S["PendingOut"];
+export type PersonDto = S["PersonOut"];
+export type PersonRefDto = S["PersonRef"];
+export type SatelliteDto = S["SatelliteOut"];
+export type SatellitesDto = S["SatellitesOut"];
+export type SystemDto = S["SystemOut"];
+export type TaskDto = S["TaskOut"];
+export type TasksDto = S["TasksOut"];
+export type ToolDto = S["ToolOut"];
+export type WatchDto = S["WatchOut"];
+export type WatchesDto = S["WatchesOut"];
+export type ScopeDto = S["Scope"];
+export type RoleDto = S["Role"];
+export type JournalKindDto = JournalItemDto["kind"];

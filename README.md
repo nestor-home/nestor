@@ -37,6 +37,31 @@ uv run pre-commit install
 uv run ruff check && uv run ty check && uv run pytest
 ```
 
+### Admin (`web/`)
+
+The admin is a React single-page app (Vite, TanStack Router and Query, Tailwind, shadcn/ui on Base UI,
+Project Fluent), built into `src/nestor/admin/static/app/` and served by Nestor itself. It needs Node 22
+and pnpm.
+
+```bash
+cd web
+pnpm install
+pnpm dev                                   # on the mock API (MSW), typed against web/openapi.json
+NESTOR_API=http://localhost:8080 pnpm dev  # against a running Nestor instead of the mocks
+pnpm lint && pnpm typecheck && pnpm test && pnpm build
+pnpm api:generate                          # regenerate the client after the API changed
+pnpm e2e                                   # Playwright on the mocks, light and dark
+NESTOR_URL=http://localhost:8080 E2E_LOGIN=… E2E_PASSWORD=… pnpm e2e:live  # on a throwaway instance
+```
+
+On the mocks, sign in as `mathis` (owner) or `lea` (admin) with the password `nestor`; satellites
+pair with the code `424242`. The visual identity lives in `web/src/styles/tokens.css`, the logo slot
+in `web/src/components/wordmark.tsx`, the admin's texts in `web/src/locales/{en,fr}/*.ftl` (the
+server's own messages come from `GET /api/v1/i18n/{locale}`). `pnpm lint` also runs the project's
+Biome plugins (`web/lint/*.grit`): no native form controls or hand-written ARIA widgets in features,
+no Base UI or cmdk imports outside `components/ui`, no presence variants on cmdk attributes, no
+boolean `data-*` attributes that render `"false"`.
+
 ## License
 
 [MIT](LICENSE)

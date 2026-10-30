@@ -1,0 +1,8 @@
+language js
+
+// React writes data-x={false} as data-x="false", which a presence variant (`data-x:`) still matches.
+// Pass `cond || undefined`, or give the attribute a string the styles compare (`data-[x=true]:`).
+JsxAttribute() as $node where {
+  $node <: r"(?s)data-[a-z-]+=\{\s*(?:!|[^}]*(?:===|!==|\s<\s|\s>\s|<=|>=)).*\}",
+  register_diagnostic(span=$node, message="This boolean data attribute renders the string false when false, which presence variants still match: write cond || undefined, or a string value the styles compare.")
+}
