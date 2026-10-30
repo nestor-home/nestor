@@ -1,0 +1,19 @@
+# docker compose run --rm nestor init   then   docker compose up -d
+# /data holds nestor.yaml, the database and blobs; secrets come from .env (created by `nestor init`).
+services:
+  nestor:
+    image: ghcr.io/nestor-home/nestor:latest
+    build: .
+    restart: unless-stopped
+    env_file: [.env]
+    volumes: ["./data:/data"]
+    ports:
+      - "8080:8080"  # admin
+      - "7860:7860"  # voice (development satellite)
+
+  # Continuous replication of the database to a NAS or S3 (optional): uncomment and fill litestream.yml.
+  # litestream:
+  #   image: litestream/litestream  # pin the current release tag
+  #   restart: unless-stopped
+  #   command: replicate
+  #   volumes: ["./data:/data", "./litestream.yml:/etc/litestream.yml:ro"]

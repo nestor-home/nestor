@@ -4,8 +4,8 @@ from nestor.modules.channels import Assistant
 from nestor.runtime.plugins import AdapterSettings, Family, Plugin, Registry, Services
 from nestor.testing.channels import InMemoryChannel
 from nestor.testing.cognition import FakeRemote, ScriptedModel, ScriptedRemoteExecutor
-from nestor.testing.initiative import Inbox, QueuedSource
 from nestor.testing.cognition.model import Reply
+from nestor.testing.initiative import Inbox, QueuedSource
 
 
 class ModelSettings(AdapterSettings):

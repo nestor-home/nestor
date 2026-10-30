@@ -2,7 +2,7 @@
 
 import asyncio
 import contextlib
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from datetime import timedelta
 
 import pytest
@@ -92,7 +92,7 @@ class Home:
     @contextlib.asynccontextmanager
     async def keeper(
         self, keeper_class: type[WatchKeeper] = WatchKeeper, **kwargs: float
-    ) -> AsyncIterator[WatchKeeper]:
+    ) -> AsyncGenerator[WatchKeeper]:
         """A fresh book and keeper over the same journal: a new instance plays a restart."""
         book = WatchBook(self.journal, kinds=("mail",))
         sources = [QueuedSource(self.inbox)]
