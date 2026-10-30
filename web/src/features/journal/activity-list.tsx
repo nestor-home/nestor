@@ -51,14 +51,14 @@ export function ActivityList({
                   </span>
                   {item.reason ? (
                     <span className="block truncate text-sm text-ink-muted">
-                      <span className="font-mono text-[0.7rem] text-ember">{t("jr-why")} </span>
+                      <span className="text-[0.85rem] text-ember">{t("jr-why")} </span>
                       {why(item)}
                     </span>
                   ) : item.detail ? (
                     <span className="block truncate text-sm text-ink-muted">{item.detail}</span>
                   ) : null}
                 </span>
-                <span className="flex items-center gap-2 font-mono text-[0.7rem] text-ink-faint">
+                <span className="flex items-center gap-2 text-[0.85rem] text-ink-faint">
                   {item.brand ? <KindMark kind={item.brand} className="size-3" /> : null}
                   <Ago iso={item.at} />
                 </span>
@@ -70,7 +70,7 @@ export function ActivityList({
       <Link
         to="/journal"
         search={clean(search)}
-        className="mt-3 inline-flex items-center gap-1 font-mono text-xs text-ink-muted hover:text-ink"
+        className="mt-3 inline-flex items-center gap-1 text-[0.85rem] text-ink-muted hover:text-ink"
       >
         {t("jr-all-in-journal")} <ArrowRight className="size-3" aria-hidden="true" />
       </Link>

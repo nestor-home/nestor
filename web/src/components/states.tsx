@@ -5,9 +5,8 @@ import { Button } from "@/components/ui/button";
 import { tr } from "@/i18n/runtime";
 import { cn } from "@/lib/utils";
 import { AgentFigure } from "./agent-figure";
-import { Dither } from "./dither";
 
-/** Nothing to show: a dithered square, said plainly, with what would make something appear. */
+/** Nothing to show: the agent beside it, said plainly, with what would make something appear. */
 export function Empty({
   children,
   hint,
@@ -20,13 +19,11 @@ export function Empty({
   className?: string;
 }) {
   return (
-    <div
-      className={cn("flex items-start gap-4 rounded-md border border-dashed border-rule-strong px-5 py-5", className)}
-    >
-      <AgentFigure state="idle" size="md" className="text-ink-faint" />
-      <div>
-        <p className="text-sm text-ink">{children}</p>
-        {hint ? <p className="mt-1 text-sm text-ink-muted">{hint}</p> : null}
+    <div className={cn("flex items-center gap-4 py-6", className)}>
+      <AgentFigure state="idle" size="md" />
+      <div className="min-w-0">
+        <p className="text-[1.02rem] text-ink">{children}</p>
+        {hint ? <p className="mt-1 max-w-xl text-ink-muted">{hint}</p> : null}
         {action ? <div className="mt-3">{action}</div> : null}
       </div>
     </div>
@@ -50,7 +47,7 @@ export function Failure({ error, retry, className }: { error: unknown; retry?: (
 export function Loading({ lines = 3, label }: { lines?: number; label?: string }) {
   return (
     <div role="status" aria-live="polite" className="space-y-3">
-      <span className="flex items-center gap-2 font-mono text-[0.7rem] text-ink-muted">
+      <span className="flex items-center gap-2">
         <AgentFigure state="thinking" size="sm" />
         <span className="sr-only">{label ?? tr("loading")}</span>
       </span>
@@ -58,10 +55,8 @@ export function Loading({ lines = 3, label }: { lines?: number; label?: string }
         <div
           // biome-ignore lint/suspicious/noArrayIndexKey: static placeholders
           key={i}
-          className="loading-row h-14 overflow-hidden rounded-md border border-rule"
-        >
-          <Dither shape="ramp-right" from={0.18} to={0.02} className="size-full text-ink-faint" />
-        </div>
+          className="loading-row h-12 overflow-hidden rounded-md bg-paper-sunken/70"
+        />
       ))}
     </div>
   );

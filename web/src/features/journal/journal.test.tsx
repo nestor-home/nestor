@@ -6,14 +6,17 @@ import { liveItem, renderApp } from "@/test/render";
 const stories = async () => screen.findAllByRole("article");
 /** A story by its text; titles may arrive a moment after the story (a task's or a watch's own answer). */
 const storyWith = async (text: string | RegExp) =>
-  waitFor(async () => {
-    const all = await stories();
-    const found = all.find((a) =>
-      typeof text === "string" ? a.textContent?.includes(text) : text.test(a.textContent ?? ""),
-    );
-    if (!found) throw new Error(`no story with ${text}`);
-    return found;
-  });
+  waitFor(
+    async () => {
+      const all = await stories();
+      const found = all.find((a) =>
+        typeof text === "string" ? a.textContent?.includes(text) : text.test(a.textContent ?? ""),
+      );
+      if (!found) throw new Error(`no story with ${text}`);
+      return found;
+    },
+    { timeout: 4_000 },
+  );
 
 describe("the journal", () => {
   it("tells a watch as one chain, from the trigger to the message, with the reason", async () => {

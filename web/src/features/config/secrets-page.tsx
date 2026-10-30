@@ -67,7 +67,7 @@ function SecretRow({ secret: s }: { secret: Secret }) {
       <KeyRound className="mt-1 size-4 text-ink-faint" aria-hidden="true" />
       <div className="min-w-0 flex-1">
         <p className="font-mono text-[0.85rem] [overflow-wrap:anywhere] text-ink">{s.name}</p>
-        <p className="mt-0.5 font-mono text-xs text-ink-muted">
+        <p className="mt-0.5 text-[0.85rem] text-ink-muted">
           {s.set ? (
             t("cfg-secret-set", { preview: s.preview ?? "•••" })
           ) : (
@@ -81,7 +81,7 @@ function SecretRow({ secret: s }: { secret: Secret }) {
               {s.used_by.map((path, i) => (
                 <span key={path}>
                   {i > 0 ? ", " : null}
-                  <code className="font-mono text-[0.72rem] text-ink">{path}</code>
+                  <code className="text-[0.85rem] text-ink">{path}</code>
                 </span>
               ))}
             </>

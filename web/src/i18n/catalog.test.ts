@@ -188,4 +188,20 @@ describe("the copy says something", () => {
     }
     expect(found).toEqual([]);
   });
+
+  it("rarely uses an em dash: a period, a colon, parentheses or a middle dot say it better", () => {
+    // the ids allowed one, each with its reason (none today)
+    const allowed = new Set<string>([]);
+    const found: string[] = [];
+    for (const locale of LOCALES) {
+      for (const [file, text] of Object.entries(sourcesOf(locale))) {
+        for (const line of text.split("\n")) {
+          if (!line.includes("\u2014") || line.startsWith("#")) continue;
+          const id = line.match(/^([a-z][\w-]*) =/)?.[1] ?? line.trim();
+          if (!allowed.has(id)) found.push(`${locale}/${file}: ${id}`);
+        }
+      }
+    }
+    expect(found).toEqual([]);
+  });
 });

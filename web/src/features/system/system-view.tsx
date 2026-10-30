@@ -34,7 +34,7 @@ export function SystemView() {
   const unwell = components.filter((c) => c.health === "down" || c.health === "degraded");
   return (
     <>
-      <p className="-mt-4 mb-10 flex flex-wrap gap-x-4 gap-y-1 font-mono text-xs text-ink-muted">
+      <p className="-mt-4 mb-10 flex flex-wrap gap-x-4 gap-y-1 text-[0.85rem] text-ink-muted">
         <span>nestor {nestor.version}</span>
         <span>{agent.name}</span>
         <span className={unwell.length ? "text-amber" : "text-sage"}>
@@ -75,7 +75,7 @@ function ComponentRow({ component: c }: { component: Component }) {
           </p>
         ) : null}
       </div>
-      <p className="hidden font-mono text-[0.72rem] text-ink-muted sm:block">
+      <p className="hidden text-[0.85rem] text-ink-muted sm:block">
         {c.version ?? "—"}
         {c.capabilities.length ? <span className="block text-ink-faint">{c.capabilities.join(" · ")}</span> : null}
       </p>

@@ -106,20 +106,6 @@ export function nodeOf(item: JournalItem, satellites: readonly Satellite[]): str
   return null;
 }
 
-/**
- * Positions on the half of an ellipse, as percentages of the map: `side` -1 (left) or 1 (right).
- * Evenly spaced vertically (nodes are wider than tall), following the curve horizontally.
- */
-export function arc(count: number, side: -1 | 1, rx = 33, ry = 44): { x: number; y: number }[] {
-  if (!count) return [];
-  const spread = Math.min(ry * 2 - 12, 19 * (count - 1)); // the vertical extent, in % of the height
-  return Array.from({ length: count }, (_, i) => {
-    const y = count === 1 ? 50 : 50 - spread / 2 + (spread * i) / (count - 1);
-    const dy = (y - 50) / ry;
-    return { x: 50 + side * rx * Math.sqrt(Math.max(0, 1 - dy * dy)), y };
-  });
-}
-
 // -- the day -------------------------------------------------------------------------------------
 
 export type MarkKind = "conversation" | "delivery" | "task" | "watch" | "memory" | "problem";

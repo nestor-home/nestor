@@ -1,6 +1,6 @@
 ## Signing in and accepting an invitation.
 
-auth-footer = nestor — an open runtime for home agents
+auth-footer = nestor · an open runtime for home agents
 auth-login-title = Sign in
 auth-password = Password
 auth-sign-in = Sign in

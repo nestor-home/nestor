@@ -26,6 +26,17 @@ globalThis.ResizeObserver ??= class {
   unobserve() {}
   disconnect() {}
 };
+// the character's animation loop has nothing to show in jsdom: tests run as with reduced motion
+globalThis.matchMedia ??= ((query: string) => ({
+  matches: query.includes("prefers-reduced-motion"),
+  media: query,
+  onchange: null,
+  addEventListener: () => undefined,
+  removeEventListener: () => undefined,
+  addListener: () => undefined,
+  removeListener: () => undefined,
+  dispatchEvent: () => false,
+})) as typeof globalThis.matchMedia;
 // no canvas in jsdom: the dither texture simply does not draw
 HTMLCanvasElement.prototype.getContext = (() => null) as typeof HTMLCanvasElement.prototype.getContext;
 

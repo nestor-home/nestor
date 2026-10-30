@@ -32,7 +32,7 @@ export function WatchesList() {
           className="mb-8"
           hint={t("watch-no-source-hint", { assistant: me.assistant })}
           action={
-            <Link to="/connections/catalogue" className="font-mono text-xs text-ember hover:underline">
+            <Link to="/connections/catalogue" className="text-[0.85rem] text-ember hover:underline">
               {t("watch-connect-mailbox")}
             </Link>
           }
@@ -54,13 +54,13 @@ export function WatchesList() {
                 >
                   <span className="min-w-0">
                     <span className="block text-ink">{w.what}</span>
-                    <span className="mt-0.5 flex flex-wrap gap-x-3 font-mono text-[0.7rem] text-ink-muted">
+                    <span className="mt-0.5 flex flex-wrap gap-x-3 text-[0.85rem] text-ink-muted">
                       <span>{t("watch-for", { name: name(w.owner) })}</span>
                       <span>{w.kinds.join(", ")}</span>
                       <span>{w.once ? t("watch-once") : t("watch-every-time")}</span>
                     </span>
                   </span>
-                  <span className="font-mono text-xs text-ink-muted">
+                  <span className="text-[0.85rem] text-ink-muted">
                     {w.last_triggered_at ? (
                       <>
                         {t("watch-triggered-count", { count: w.triggered })} · <Ago iso={w.last_triggered_at} />
@@ -121,7 +121,7 @@ function Loaded({ watch: w, trail }: { watch: Watch; trail: Crumb[] }) {
         crumbs={<Crumbs trail={trail} />}
         title={w.what}
         meta={
-          <p className="flex flex-wrap gap-x-3 font-mono text-xs text-ink-muted">
+          <p className="flex flex-wrap gap-x-3 text-[0.85rem] text-ink-muted">
             <span>{t("watch-for", { name: name(w.owner) })}</span>
             <span>{t("watch-created", { when: moment(w.created_at) })}</span>
             {w.until ? <span>{t("watch-until", { when: moment(w.until) })}</span> : null}
@@ -178,7 +178,7 @@ function Loaded({ watch: w, trail }: { watch: Watch; trail: Crumb[] }) {
                 <MessageSquareText className="size-4" aria-hidden="true" />
                 {t("watch-a-conversation")}
                 {w.origin.channel ? (
-                  <span className="inline-flex items-center gap-1 font-mono text-xs text-ink-muted">
+                  <span className="inline-flex items-center gap-1 text-[0.85rem] text-ink-muted">
                     <KindMark kind={w.origin.channel} className="size-3" label={false} />
                     {w.origin.channel}
                   </span>

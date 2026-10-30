@@ -1,0 +1,448 @@
+/* biome-ignore-all lint/complexity/noImportantStyles: reduced motion must win over every state's animation */
+/* biome-ignore-all lint/style/noDescendingSpecificity: rules are grouped by state, in the order a reader looks for them */
+/*
+ * Nestor's states, in CSS only. Colours come from the page's tokens (--ink, --paper, --ember);
+ * the controller (controller.ts) writes four numbers as custom properties: where it looks
+ * (--nestor-gx, --nestor-gy, in drawing units), how much it turns (--nestor-turn, -1..1) and
+ * leans (--nestor-lean, degrees). Everything moves by transform or opacity.
+ */
+
+.nestor {
+  --nestor-ink: var(--ink, #1d1913);
+  --nestor-paper: var(--paper, #f5f0e6);
+  --nestor-ember: var(--ember, #ad401d);
+  --nestor-gx: 0;
+  --nestor-gy: 0;
+  --nestor-turn: 0;
+  --nestor-lean: 0;
+  /* a state's own offset of the gaze, added to where the controller makes it look */
+  --nestor-sgx: 0;
+  --nestor-sgy: 0;
+  --nestor-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  display: block;
+  flex-shrink: 0;
+  overflow: visible;
+}
+
+.nestor * {
+  transform-box: view-box;
+}
+
+/* parts */
+.nestor .nestor-skin,
+.nestor .nestor-tuft {
+  fill: var(--nestor-ink);
+}
+.nestor .nestor-bow {
+  fill: var(--nestor-paper);
+}
+.nestor .nestor-iris {
+  fill: var(--nestor-paper);
+}
+.nestor .nestor-lid {
+  fill: var(--nestor-ink);
+  transform: scaleY(0);
+  transform-box: fill-box;
+  transform-origin: 50% 0;
+  transition: transform 90ms ease-out;
+}
+.nestor .nestor-happy,
+.nestor .nestor-shut {
+  fill: none;
+  stroke: var(--nestor-paper);
+  stroke-width: 3.6;
+  stroke-linecap: round;
+  opacity: 0;
+}
+.nestor .nestor-brow {
+  fill: none;
+  stroke: var(--nestor-paper);
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  transition:
+    opacity 200ms var(--nestor-ease),
+    transform 260ms var(--nestor-ease);
+}
+.nestor .nestor-mouth {
+  fill: var(--nestor-ember);
+  transform-box: fill-box;
+  transform-origin: 50% 0;
+  transition: transform 200ms var(--nestor-ease);
+}
+.nestor .nestor-ground {
+  fill: var(--nestor-ink);
+  opacity: 0.08;
+}
+.nestor .nestor-thoughts rect {
+  fill: var(--nestor-ink);
+  opacity: 0;
+}
+.nestor .nestor-spinner {
+  fill: none;
+  stroke: var(--nestor-ember);
+  stroke-width: 3;
+  stroke-linecap: round;
+  opacity: 0;
+  transform-origin: 104px 30px;
+}
+.nestor .nestor-sound {
+  fill: none;
+  stroke: var(--nestor-ember);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  opacity: 0;
+}
+
+/* the body: lean (controller), then breath (state) */
+.nestor .nestor-figure {
+  transform-origin: 60px 108px;
+  transform: rotate(calc(var(--nestor-lean) * 1deg));
+}
+.nestor .nestor-breath {
+  transform-origin: 60px 108px;
+}
+.nestor .nestor-tuft {
+  transform-origin: 56px 22px;
+  transition: transform 320ms var(--nestor-ease);
+}
+.nestor .nestor-face {
+  transform: translate(calc(var(--nestor-turn) * 4px), 0);
+}
+.nestor .nestor-eyes {
+  transform: translate(
+    calc((var(--nestor-gx) + var(--nestor-sgx)) * 1px),
+    calc((var(--nestor-gy) + var(--nestor-sgy)) * 1px)
+  );
+}
+/* turned three quarters, the far eye narrows */
+.nestor .nestor-eye-l {
+  transform-origin: 46.5px 61px;
+  transform: scaleX(calc(1 - max(0, var(--nestor-turn)) * 0.18));
+}
+.nestor .nestor-eye-r {
+  transform-origin: 72.5px 61px;
+  transform: scaleX(calc(1 - max(0, var(--nestor-turn) * -1) * 0.18));
+}
+
+/* without a controller, transitions do the easing */
+.nestor:not([data-live]) .nestor-face,
+.nestor:not([data-live]) .nestor-eyes,
+.nestor:not([data-live]) .nestor-figure {
+  transition: transform 380ms var(--nestor-ease);
+}
+
+/* a blink (the controller adds the class; static characters blink with an animation) */
+.nestor.nestor-blink .nestor-lid {
+  transform: scaleY(1);
+}
+.nestor:not([data-live]):is([data-state="idle"], [data-state="thinking"], [data-state="speaking"]) .nestor-lid {
+  animation: nestor-blink 5.2s infinite;
+}
+
+/* ── states ─────────────────────────────────────────────────────────────────────────────── */
+
+.nestor:is([data-state="idle"], [data-state="thinking"], [data-state="working"], [data-state="concerned"])
+  .nestor-breath {
+  animation: nestor-breathe 3.8s ease-in-out infinite;
+}
+
+.nestor[data-state="listening"] .nestor-breath {
+  animation: nestor-breathe 3s ease-in-out infinite;
+}
+.nestor[data-state="listening"] .nestor-tuft {
+  transform: rotate(-20deg) translateY(-1px);
+}
+.nestor[data-state="listening"] .nestor-sound {
+  opacity: 0.85;
+  animation: nestor-sound 2.4s ease-in-out infinite;
+}
+
+.nestor[data-state="thinking"] {
+  --nestor-sgx: 3;
+  --nestor-sgy: -4;
+}
+.nestor[data-state="thinking"] .nestor-thoughts rect {
+  animation: nestor-think 1.4s infinite;
+}
+.nestor[data-state="thinking"] .nestor-thoughts rect:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.nestor[data-state="thinking"] .nestor-thoughts rect:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+.nestor[data-state="speaking"] .nestor-mouth {
+  animation: nestor-speak 1.1s infinite;
+}
+.nestor[data-state="speaking"] .nestor-breath {
+  animation: nestor-nod 1.1s ease-in-out infinite;
+}
+
+.nestor[data-state="laughing"] .nestor-iris,
+.nestor[data-state="laughing"] .nestor-lid {
+  opacity: 0;
+}
+.nestor[data-state="laughing"] .nestor-happy {
+  opacity: 1;
+}
+.nestor[data-state="laughing"] .nestor-mouth {
+  transform: scale(1.25, 1.9);
+}
+.nestor[data-state="laughing"] .nestor-breath {
+  animation: nestor-laugh 0.42s ease-in-out infinite;
+}
+.nestor[data-state="laughing"] .nestor-tuft {
+  animation: nestor-wiggle 0.42s ease-in-out infinite;
+}
+
+.nestor[data-state="sleeping"] .nestor-iris,
+.nestor[data-state="sleeping"] .nestor-lid {
+  opacity: 0;
+}
+.nestor[data-state="sleeping"] .nestor-shut {
+  opacity: 1;
+}
+.nestor[data-state="sleeping"] .nestor-tuft {
+  transform: rotate(16deg);
+}
+.nestor[data-state="sleeping"] .nestor-mouth {
+  transform: scale(0.75, 0.6);
+}
+.nestor[data-state="sleeping"] .nestor-breath {
+  animation: nestor-breathe 6s ease-in-out infinite;
+}
+
+/* working: eyes down on the task, half-lidded, a spinner at its side */
+.nestor[data-state="working"] {
+  --nestor-sgy: 3;
+}
+.nestor[data-state="working"] .nestor-lid {
+  transform: scaleY(0.4);
+}
+.nestor[data-state="working"] .nestor-spinner {
+  opacity: 1;
+  animation: nestor-spin 1.1s linear infinite;
+}
+
+/* concerned: brows up in the middle, a smaller mouth, eyes a little up */
+.nestor[data-state="concerned"] {
+  --nestor-sgy: -1.5;
+}
+.nestor[data-state="concerned"] .nestor-brow {
+  opacity: 1;
+}
+.nestor[data-state="concerned"] .nestor-brow-l {
+  transform: rotate(-14deg);
+}
+.nestor[data-state="concerned"] .nestor-brow-r {
+  transform: rotate(14deg);
+}
+.nestor[data-state="concerned"] .nestor-mouth {
+  transform: scale(0.6, 0.8);
+}
+.nestor[data-state="concerned"] .nestor-tuft {
+  transform: rotate(8deg);
+}
+
+/* small sizes keep only the silhouette, the eyes and the mouth */
+.nestor--tiny .nestor-breath,
+.nestor--tiny .nestor-mouth {
+  animation: none !important;
+}
+
+@keyframes nestor-breathe {
+  0%,
+  100% {
+    transform: scale(1, 1);
+  }
+  50% {
+    transform: scale(1.012, 1.028);
+  }
+}
+@keyframes nestor-blink {
+  0%,
+  93%,
+  100% {
+    transform: scaleY(0);
+  }
+  95.5% {
+    transform: scaleY(1);
+  }
+}
+@keyframes nestor-think {
+  0%,
+  100% {
+    opacity: 0.15;
+  }
+  40% {
+    opacity: 1;
+  }
+}
+@keyframes nestor-sound {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.95;
+  }
+}
+@keyframes nestor-speak {
+  0% {
+    transform: scaleY(1);
+  }
+  15% {
+    transform: scaleY(2.6);
+  }
+  30% {
+    transform: scaleY(1.3);
+  }
+  48% {
+    transform: scaleY(2.2);
+  }
+  64% {
+    transform: scaleY(0.9);
+  }
+  82% {
+    transform: scaleY(2.4);
+  }
+  100% {
+    transform: scaleY(1);
+  }
+}
+@keyframes nestor-nod {
+  0%,
+  100% {
+    transform: rotate(0deg) translateY(0);
+  }
+  30% {
+    transform: rotate(-1.4deg) translateY(-1px);
+  }
+  65% {
+    transform: rotate(1deg) translateY(0.5px);
+  }
+}
+@keyframes nestor-laugh {
+  0%,
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+  50% {
+    transform: translateY(-3px) scale(1.02, 0.97);
+  }
+}
+@keyframes nestor-wiggle {
+  50% {
+    transform: rotate(-10deg);
+  }
+}
+@keyframes nestor-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes nestor-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-5px);
+  }
+}
+@keyframes nestor-bow {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  45% {
+    transform: rotate(9deg) translateY(2px);
+  }
+}
+
+/* one-off gestures the controller plays */
+.nestor.nestor-bob .nestor-figure {
+  animation: nestor-bob 0.7s var(--nestor-ease) 2;
+}
+.nestor.nestor-greet .nestor-figure {
+  animation: nestor-bow 1.1s var(--nestor-ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nestor *,
+  .nestor.nestor-bob .nestor-figure,
+  .nestor.nestor-greet .nestor-figure {
+    animation: none !important;
+    transition: none !important;
+  }
+  .nestor[data-state="thinking"] .nestor-thoughts rect,
+  .nestor[data-state="listening"] .nestor-sound {
+    opacity: 0.8;
+  }
+  .nestor[data-state="speaking"] .nestor-mouth {
+    transform: scaleY(2);
+  }
+}
+
+/* ── the bow tie on the character: paper wings, ember knot ─────────────────────────────── */
+.nestor .nestor-bow .nestor-bow-wing {
+  fill: var(--nestor-paper);
+}
+.nestor .nestor-bow .nestor-bow-knot {
+  fill: var(--nestor-ember);
+}
+
+/* ── the bow tie alone, and the logo ───────────────────────────────────────────────────── */
+.nestor-tie {
+  display: inline-block;
+  overflow: visible;
+}
+.nestor-tie .nestor-tie-wing {
+  fill: var(--nestor-tie-wing, var(--ember, #ad401d));
+}
+.nestor-tie .nestor-tie-knot {
+  fill: var(--nestor-tie-knot, var(--ember, #ad401d));
+}
+
+.nestor-logo {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.1em;
+  color: var(--ink, #1d1913);
+  font-family: var(--font-display, "Fraunces Variable", Georgia, serif);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variation-settings:
+    "SOFT" 100,
+    "opsz" 72;
+  white-space: nowrap;
+}
+.nestor-logo-cursor {
+  display: inline-block;
+  width: 0.36em;
+  height: 0.62em;
+  background: var(--ember, #ad401d);
+  transform: translateY(0.02em);
+}
+.nestor-logo-tie {
+  display: inline-flex;
+  line-height: 0;
+  margin-left: -0.03em;
+  transform: translateY(-0.05em);
+}
+.nestor-logo-tie .nestor-tie {
+  width: 0.62em;
+  height: auto;
+}
+.nestor-logo--lockup {
+  align-items: center;
+  gap: 0.25em;
+}
+.nestor-logo-character {
+  display: inline-flex;
+  margin-right: 0.08em;
+}

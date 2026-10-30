@@ -1,10 +1,9 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
-import { Dither } from "./dither";
 
 /**
- * A screen's heading: breadcrumbs when the screen is deep, the serif title, a sentence only when
- * it tells something needed, and the signature dithered rule fading in from the right.
+ * A screen's heading: breadcrumbs when the screen is deep, the serif title at the site's scale, a
+ * sentence only when it tells something needed.
  */
 export function PageHeader({
   title,
@@ -20,23 +19,15 @@ export function PageHeader({
   meta?: ReactNode;
 }) {
   return (
-    <header className="relative mb-10">
+    <header className="mb-10 md:mb-14">
       {crumbs}
-      <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-4 pb-6">
-        <div className="min-w-0 max-w-2xl">
-          <h1 className="text-[1.9rem] leading-[1.05] font-normal [overflow-wrap:anywhere] text-ink sm:text-[2.4rem]">
-            {title}
-          </h1>
+      <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
+        <div className="min-w-0 max-w-3xl">
+          <h1 className="display-2 [overflow-wrap:anywhere] text-ink">{title}</h1>
           {meta ? <div className="mt-3">{meta}</div> : null}
-          {children ? (
-            <p className="mt-3 text-[0.95rem] leading-relaxed text-pretty text-ink-muted">{children}</p>
-          ) : null}
+          {children ? <p className="lede mt-4 max-w-2xl">{children}</p> : null}
         </div>
         {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
-      </div>
-      <div className="relative h-3">
-        <div className="absolute inset-x-0 top-0 h-px bg-rule" />
-        <Dither shape="ramp-right" from={0} to={0.55} className="absolute top-px right-0 h-2.5 w-2/5 text-ink/70" />
       </div>
     </header>
   );
@@ -60,13 +51,11 @@ export function Section({
 }) {
   const headingId = id ?? `section-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
   return (
-    <section aria-labelledby={headingId} className={cn("mb-12", className)}>
-      <div className="mb-4 flex items-end justify-between gap-4 border-b border-rule pb-2">
-        <h2 id={headingId} className="flex items-baseline gap-3 text-[1.3rem] font-normal text-ink">
+    <section aria-labelledby={headingId} className={cn("mb-14", className)}>
+      <div className="mb-5 flex items-end justify-between gap-4">
+        <h2 id={headingId} className="display-3 flex items-baseline gap-2.5 text-ink">
           {title}
-          {count !== undefined ? (
-            <span className="font-mono text-xs font-normal text-ink-faint tabular">{count}</span>
-          ) : null}
+          {count !== undefined ? <span className="font-sans text-sm text-ink-faint tabular">{count}</span> : null}
         </h2>
         {aside}
       </div>

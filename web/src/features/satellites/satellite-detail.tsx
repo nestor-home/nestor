@@ -70,7 +70,7 @@ export function SatelliteFrame({ id, children }: { id: string; children: ReactNo
           </span>
         }
         meta={
-          <p className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-xs text-ink-muted">
+          <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.85rem] text-ink-muted">
             {s.connected === null ? null : s.connected ? (
               <Status tone="ok">{t("sat-state-connected")}</Status>
             ) : (

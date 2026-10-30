@@ -15,7 +15,7 @@ nav-accounts = Accounts
 nav-config = Configuration
 
 shell-skip = Skip to content
-shell-home-link = Nestor — { $assistant }
+shell-home-link = { $assistant } · Nestor
 shell-sections = Sections
 shell-account-menu = Account menu
 shell-theme = Theme
@@ -32,19 +32,6 @@ shell-live-open = live
 shell-live-connecting = connecting…
 shell-live-closed = offline
 shell-live-hint = The journal arrives live from Nestor
-shell-ticker-tasks = { $count ->
-    [one] 1 task running
-   *[other] { $count } tasks running
-}
-shell-ticker-watches = { $count ->
-    [one] 1 watch
-   *[other] { $count } watches
-}
-shell-ticker-satellites = { $online }/{ $total } satellites
-shell-ticker-attention = { $count ->
-    [one] 1 thing to look at
-   *[other] { $count } things to look at
-}
 shell-version = nestor { $version }
 shell-go-to = Go to…
 shell-palette-description = Find a section, a person, a service

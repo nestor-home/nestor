@@ -2,9 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowUp } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { journalFacetsQuery } from "@/api";
-import { Dither } from "@/components/dither";
 import { Empty, Failure, Loading } from "@/components/states";
-import { Kbd } from "@/components/status";
 import { Button } from "@/components/ui/button";
 import { useLive } from "@/features/shell/live";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -69,16 +67,7 @@ export function JournalView({ search, onSearch }: { search: JournalSearch; onSea
         ) : (
           <FilterBar facets={facets.data} search={search} onChange={set} />
         )}
-        <p className="flex items-center gap-4 font-mono text-[0.7rem] text-ink-muted">
-          <span className="hidden items-center gap-1 text-ink-faint lg:flex">
-            <Kbd>j</Kbd>
-            <Kbd>k</Kbd>
-            <span>{t("jr-keys-browse")}</span>
-            <Kbd>/</Kbd>
-            <span>{t("jr-keys-search")}</span>
-            <Kbd>p</Kbd>
-            <span>{t("jr-keys-pause")}</span>
-          </span>
+        <p className="text-sm text-ink-muted">
           {facets.data ? (
             <span aria-live="polite" className="tabular">
               {t("jr-event-count", { count: facets.data.total })}
@@ -176,7 +165,7 @@ function NowMarker({ following, queued, flush }: { following: boolean; queued: n
   const { status } = useLive();
   return (
     <div className="mb-5 flex items-center gap-3">
-      <span className="inline-flex items-center gap-2 font-mono text-[0.72rem] text-ember">
+      <span className="inline-flex items-center gap-2 text-sm text-ember">
         <span
           aria-hidden="true"
           className={
@@ -187,7 +176,7 @@ function NowMarker({ following, queued, flush }: { following: boolean; queued: n
         />
         {following ? t("jr-now") : t("jr-paused")}
       </span>
-      <Dither shape="ramp-left" from={0.6} to={0} className="h-2 flex-1 text-ember/70" />
+      <span aria-hidden="true" className="h-px flex-1 bg-rule" />
       {queued ? (
         <Button variant="accent" size="sm" onClick={flush}>
           <ArrowUp />

@@ -3,52 +3,54 @@ import { describe, expect, it } from "vitest";
 import { db } from "@/mocks/db";
 import { liveItem, renderApp } from "@/test/render";
 
-const mind = () => screen.findByRole("region", { name: "Ce que Richie perçoit en ce moment" });
+const band = (name: string | RegExp) => screen.findByRole("region", { name });
 
-describe("the home: inside the agent's mind", () => {
-  it("shows the house as the agent perceives it and what it reaches, each a link", async () => {
+describe("the home: the agent first, then the house, the work, the day", () => {
+  it("says what the agent attends to, and lists the house, the work and what comes next in full", async () => {
     renderApp("/");
-    const map = await mind();
-    expect(await within(map).findAllByRole("link", { name: /^salon : Mathis, Jules/ })).not.toHaveLength(0);
-    expect(within(map).getAllByRole("link", { name: "Hors de la maison : Léa" })[0]).toHaveAttribute("href", "/people");
-    expect((await within(map).findAllByRole("link", { name: /^Tâche : Préparer le dossier/ }))[0]).toHaveAttribute(
+    expect(await screen.findByRole("heading", { level: 1, name: /Bonsoir|Bonjour|Bonne nuit/ })).toBeInTheDocument();
+    const house = await band("La maison");
+    expect(within(house).getByRole("link", { name: /Salon\s*Mathis, Jules/ })).toHaveAttribute(
       "href",
-      "/tasks/t-4410aa",
+      "/journal?room=salon",
     );
-    expect(within(map).getAllByRole("link", { name: /Richie, travaille/ })[0]).toBeInTheDocument();
+    expect(within(house).getByRole("link", { name: /Dehors\s*Léa/ })).toHaveAttribute("href", "/people");
+    const now = await band("En ce moment");
+    // full titles, never cut
+    expect(
+      await within(now).findByText("Préparer le dossier de remboursement de la mutuelle pour les lunettes de Jules."),
+    ).toBeInTheDocument();
+    expect(
+      within(await band("À venir")).getByText(/Heures calmes de 22:30 à 07:30|Silence jusqu'à 07:30/),
+    ).toBeInTheDocument();
+    expect((await band(/^Ce que j'attends de vous/)).querySelectorAll("li").length).toBeGreaterThan(0);
   });
 
-  it("takes in what arrives live: the agent listens, the day gets a new mark", async () => {
+  it("takes in what arrives live: the agent listens, today gets a new moment", async () => {
     const { stream } = renderApp("/");
-    await mind();
-    const day = await screen.findByRole("list", { name: /moments aujourd'hui/ });
-    const before = within(day).getAllByRole("listitem").length;
+    const today = await screen.findByRole("list", { name: "Aujourd'hui" });
+    await waitFor(() => expect(within(today).getAllByRole("listitem").length).toBeGreaterThan(0));
     stream.emit(liveItem({ uid: "live-1", room: "cuisine", links: { session: "s-live" }, people: ["lea"] }));
-    expect((await screen.findAllByRole("link", { name: /Richie, à l'écoute/ }))[0]).toBeInTheDocument();
-    await waitFor(() => expect(within(day).getAllByRole("listitem")).toHaveLength(before + 1));
-    const mark = within(day)
-      .getAllByRole("link", { name: /conversation avec Léa/ })
-      .find((a) => a.getAttribute("href") === "/journal?session=s-live");
-    expect(mark).toBeDefined();
+    expect(await screen.findByText(/J'écoute Léa \(cuisine\)/)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(within(today).getAllByRole("link")[0]).toHaveAttribute("href", "/journal?session=s-live"),
+    );
+    expect(within(today).getAllByRole("link")[0]).toHaveTextContent("Conversation avec Léa (1 tour)");
   });
 
-  it("says when to expect silence, from the quiet hours of the file", async () => {
-    renderApp("/");
-    expect(await screen.findByText(/Heures calmes de 22:30 à 07:30|Silence jusqu'à 07:30/)).toBeInTheDocument();
-  });
-
-  it("is calm when nothing needs a person: the agent at rest, no attention band", async () => {
+  it("is calm when nothing needs a person: the agent available, nothing asked of you", async () => {
     for (const c of db.connections) c.status = "connected";
     db.pairing = [];
     for (const s of db.satellites) s.connected = true;
     for (const t of db.tasks) if (t.status === "running" || t.status === "failed") t.status = "completed";
     db.journal = db.journal.filter((e) => !e.type.endsWith("delivery_failed"));
     for (const c of db.system.components) c.health = "ok";
-    (db.config.document.initiative as Record<string, unknown>).quiet_hours = null; // not asleep either
+    (db.config.document.initiative as Record<string, unknown>).quiet_hours = null;
     renderApp("/");
-    const map = await mind();
-    await waitFor(() => expect(within(map).getAllByText(/Tout est calme/)[0]).toBeInTheDocument());
-    expect(within(map).getAllByText("au repos")[0]).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: /Ce qui demande votre attention/ })).not.toBeInTheDocument();
+    expect(await screen.findByText("Tout est calme. Je suis là si besoin.")).toBeInTheDocument();
+    expect(screen.getByText(/Richie · disponible/)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByRole("heading", { name: /Ce que j'attends de vous/ })).not.toBeInTheDocument(),
+    );
   });
 });

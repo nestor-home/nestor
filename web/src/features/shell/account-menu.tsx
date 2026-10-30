@@ -68,9 +68,7 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
           <>
             <span className="min-w-0 flex-1">
               <span className="block truncate text-sm text-ink">{me.account.person_name ?? me.account.login}</span>
-              <span className="block truncate font-mono text-[0.68rem] text-ink-muted">
-                {roleLabel(me.account.role)}
-              </span>
+              <span className="block truncate text-[0.85rem] text-ink-muted">{roleLabel(me.account.role)}</span>
             </span>
             <ChevronsUpDown className="size-4 text-ink-faint" aria-hidden="true" />
           </>

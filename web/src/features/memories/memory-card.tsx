@@ -33,7 +33,7 @@ export function MemoryCard({ memory, editable }: { memory: Memory; editable: boo
         {memory.text}
       </p>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="flex flex-wrap items-center gap-x-2.5 gap-y-1 font-mono text-[0.7rem] text-ink-muted">
+        <p className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[0.85rem] text-ink-muted">
           <span>
             {t("mem-about-label")}{" "}
             {memory.about ? (

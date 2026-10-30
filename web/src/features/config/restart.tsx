@@ -5,11 +5,10 @@
  */
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
-import { ChevronRight, RotateCw } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { ApiError, api, type Me, meQuery, messageOf, setCsrfToken } from "@/api";
 import { AgentFigure } from "@/components/agent-figure";
-import { Dither } from "@/components/dither";
 import { useNotify } from "@/components/notices";
 import {
   AlertDialog,
@@ -118,11 +117,7 @@ export function RestartBanner() {
 
   if (phase !== "idle") {
     return (
-      <div
-        role="status"
-        className="relative mb-8 flex items-center gap-3 overflow-hidden rounded-md border border-rule bg-paper-raised px-4 py-3"
-      >
-        <Dither shape="ramp-right" from={0} to={0.35} className="absolute inset-y-0 right-0 w-1/3 text-ink/40" />
+      <div role="status" className="mb-10 flex items-center gap-4 rounded-lg bg-paper-sunken/70 px-5 py-4">
         <AgentFigure state="sleeping" size="md" className="relative" />
         <p className="relative text-sm text-ink">
           {t("cfg-restarting", { agent: me.agent.name })}
@@ -136,22 +131,16 @@ export function RestartBanner() {
   if (!me.restart_required) return null;
   const count = me.pending_changes.length;
   return (
-    <Collapsible className="relative mb-8 overflow-hidden rounded-md border border-rule bg-paper-raised">
-      <Dither
-        shape="ramp-right"
-        from={0}
-        to={0.25}
-        className="pointer-events-none absolute top-0 right-0 h-full w-1/4 text-ink/30"
-      />
+    <Collapsible className="mb-10 rounded-lg bg-paper-sunken/70">
       <div className="relative flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
-        <RotateCw className="size-4 text-ember" aria-hidden="true" />
+        <AgentFigure state="concerned" size="sm" />
         <div className="min-w-0 flex-1">
           <p className="text-sm text-ink">
             {t("cfg-restart-required")}
-            <span className="text-ink-muted"> — {t("cfg-pending", { count })}</span>
+            <span className="text-ink-muted"> · {t("cfg-pending", { count })}</span>
           </p>
           {count ? (
-            <CollapsibleTrigger className="group/pending mt-0.5 inline-flex items-center gap-1 font-mono text-[0.7rem] text-ink-muted hover:text-ink">
+            <CollapsibleTrigger className="group/pending mt-0.5 inline-flex items-center gap-1 text-[0.82rem] text-ink-muted hover:text-ink">
               <ChevronRight
                 className="size-3 transition-transform group-data-panel-open/pending:rotate-90"
                 aria-hidden="true"

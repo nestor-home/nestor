@@ -1,6 +1,6 @@
 ## Connexion et acceptation d'une invitation.
 
-auth-footer = nestor — un runtime ouvert pour les agents de la maison
+auth-footer = nestor · un runtime ouvert pour les agents de la maison
 auth-login-title = Connexion
 auth-password = Mot de passe
 auth-sign-in = Se connecter

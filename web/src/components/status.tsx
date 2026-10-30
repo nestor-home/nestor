@@ -27,7 +27,7 @@ const ICON: Record<StatusTone, LucideIcon | null> = {
 export function Status({ tone, children, className }: { tone: StatusTone; children: ReactNode; className?: string }) {
   const Icon = ICON[tone];
   return (
-    <span className={cn("inline-flex items-center gap-1.5 font-mono text-xs whitespace-nowrap", TONE[tone], className)}>
+    <span className={cn("inline-flex items-center gap-1.5 text-[0.85rem] whitespace-nowrap", TONE[tone], className)}>
       {Icon ? (
         <Icon className="size-3.5" aria-hidden="true" />
       ) : (
@@ -53,7 +53,7 @@ export function Tag({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-sm border border-rule px-1.5 py-px font-mono text-[0.7rem] leading-4 text-ink-muted",
+        "inline-flex items-center gap-1 rounded-sm border border-rule px-1.5 py-px text-[0.85rem] leading-4 text-ink-muted",
         tone === "accent" && "border-ember/40 text-ember",
         tone === "attention" && "border-amber/50 text-amber",
         tone === "error" && "border-brick/50 text-brick",

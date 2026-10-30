@@ -76,7 +76,7 @@
 
   html {
     font-family: var(--font-ui);
-    font-size: 15px;
+    font-size: 16px;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
@@ -104,8 +104,13 @@
     font-family: var(--font-display);
     font-variation-settings: var(--display-variation);
     font-optical-sizing: auto;
-    letter-spacing: -0.01em;
+    font-weight: 400;
+    letter-spacing: -0.015em;
     text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
   }
 
   /* one stroke for every icon, aligned with the hairlines */
@@ -119,8 +124,7 @@
 
   code,
   kbd,
-  samp,
-  time {
+  samp {
     font-family: var(--font-data);
   }
 
@@ -149,13 +153,62 @@
     border-top: 1px solid var(--rule);
   }
 
+  /* a quiet caption above a group: sentence case, never shouting */
   .label-mono {
-    font-family: var(--font-data);
-    font-size: 0.72rem;
+    font-family: var(--font-ui);
+    font-size: 0.82rem;
     font-weight: 500;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
     color: var(--ink-muted);
+  }
+
+  /* the site's type scale (nestor-web/src/styles/global.css) */
+  .display-1 {
+    font-family: var(--font-display);
+    font-size: clamp(2.6rem, 6vw, 4.6rem);
+    line-height: 0.98;
+    letter-spacing: -0.032em;
+    font-variation-settings:
+      "SOFT" 60,
+      "WONK" 0,
+      "opsz" 144;
+  }
+
+  .display-2 {
+    font-family: var(--font-display);
+    font-size: clamp(2.1rem, 4vw, 3rem);
+    line-height: 1.02;
+    letter-spacing: -0.026em;
+    font-variation-settings:
+      "SOFT" 60,
+      "WONK" 0,
+      "opsz" 120;
+  }
+
+  .display-3 {
+    font-family: var(--font-display);
+    font-size: clamp(1.3rem, 2vw, 1.55rem);
+    line-height: 1.15;
+    letter-spacing: -0.015em;
+  }
+
+  .lede {
+    font-size: clamp(1.02rem, 1.4vw, 1.15rem);
+    line-height: 1.55;
+    color: var(--ink-muted);
+  }
+
+  /* what the agent says, as on the site */
+  .bubble-say {
+    position: relative;
+    max-width: 21rem;
+    padding: 0.65rem 0.9rem;
+    border-radius: 12px;
+    border-bottom-left-radius: 3px;
+    background: var(--paper-raised);
+    color: var(--ink);
+    border: 1px solid var(--rule-strong);
+    font-size: 0.98rem;
+    line-height: 1.42;
   }
 
   /* the signature corner ticks: four short ink strokes at the corners of a key surface */

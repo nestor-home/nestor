@@ -1,50 +1,51 @@
 /**
- * "Aujourd'hui": looking into the agent's mind right now. One centrepiece (what it perceives and
- * reaches, live), then tight bands: what it does and intends, its day, what needs a person (only
- * when something does), and what it learnt.
+ * "Aujourd'hui": the agent first (its figure, what it says right now), then in one reading order
+ * what it waits for from you, the house as it perceives it, what it is doing, what comes next,
+ * its day so far and what it learnt. Plain lists, full titles, no decoration that says nothing.
  */
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, BookMarked, Moon, Radar, Workflow } from "lucide-react";
-import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { ArrowRight } from "lucide-react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import {
-  configQuery,
-  connectionsQuery,
   type JournalItem,
   journalLatestQuery,
   memoriesQuery,
+  type Person,
   peopleQuery,
   satellitesQuery,
-  systemQuery,
   tasksQuery,
   watchesQuery,
 } from "@/api";
+import type { NestorController } from "@/character";
+import { AgentFigure } from "@/components/agent-figure";
 import { Ago } from "@/components/ago";
-import { buttonVariants } from "@/components/ui/button";
+import { BowTie } from "@/components/bow-tie";
+import { Dither } from "@/components/dither";
 import { useAgentPresence } from "@/features/agent/presence";
 import { useAttention } from "@/features/shell/attention";
 import { useLiveItems } from "@/features/shell/live";
 import { useT } from "@/i18n";
-import { tr } from "@/i18n/runtime";
-import { BrandMark, brandOf, KindMark } from "@/lib/brands";
+import { activeLocale, tr } from "@/i18n/runtime";
+import { brandName, brandOf } from "@/lib/brands";
 import { hourMinute, startOfToday } from "@/lib/dates";
 import { say } from "@/lib/messages";
 import { usePeopleNames } from "@/lib/people";
 import { useCan, useMe } from "@/lib/session";
 import { cn } from "@/lib/utils";
-import { AgentMind } from "./agent-mind";
-import { DayRibbon } from "./day-ribbon";
-import { elsewhere, isQuiet, lineOf, marksOf, merge, nodeOf, type Reach, roomsOf } from "./mind";
+import { elsewhere, isQuiet, lineOf, type Mark, marksOf, merge, nodeOf, type RoomNode, roomsOf } from "./mind";
 
 function greeting(now = new Date()): string {
   const h = now.getHours();
   return tr(h < 5 ? "home-greeting-night" : h < 18 ? "home-greeting-day" : "home-greeting-evening");
 }
 
-/**
- * A clock for what fades with time: every second while something just happened (the agent's state,
- * glows), every minute otherwise (the present on the day's ribbon).
- */
+/** Its own eye movements when nothing holds its attention (a constant: the controller lives once). */
+const LIVE = { saccades: true };
+
+const clock = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+
+/** A clock for what fades with time: every second just after a live event, else every minute. */
 function useNow(busy: boolean): number {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -60,51 +61,31 @@ export function HomeView() {
   const canTasks = useCan("tasks:read");
   const canWatches = useCan("watches:read");
   const canSatellites = useCan("satellites:read");
-  const canConnections = useCan("connections:read");
   const canPeople = useCan("people:read");
-  const canConfig = useCan("config:manage");
-  const today = startOfToday();
-  const day = useQuery(journalLatestQuery({ from: today }, 200));
+  const name = usePeopleNames();
+  const day = useQuery(journalLatestQuery({ from: startOfToday() }, 200));
   const people = useQuery({ ...peopleQuery, enabled: canPeople });
   const satellites = useQuery({ ...satellitesQuery, enabled: canSatellites });
-  const system = useQuery({ ...systemQuery, enabled: canSatellites });
   const tasks = useQuery({ ...tasksQuery, enabled: canTasks });
   const watches = useQuery({ ...watchesQuery, enabled: canWatches });
-  const connections = useQuery({ ...connectionsQuery, enabled: canConnections });
-  // quiet hours are a setting of the file: read when the account may read it, never guessed
-  const config = useQuery({ ...configQuery, enabled: canConfig });
   const { items: attention } = useAttention();
+  const { state, latest, quiet } = useAgentPresence();
 
-  // what arrives live joins the day, makes the agent ripple and its node glow
+  // what arrives live joins the day at once
   const [live, setLive] = useState<JournalItem[]>([]);
-  const [pulses, setPulses] = useState<Record<string, number>>({});
   const [lastLive, setLastLive] = useState(0);
-  const now = useNow(Date.now() - lastLive < 30_000);
-  const paired = satellites.data?.paired ?? [];
   useLiveItems((item) => {
     setLive((current) => [item, ...current].slice(0, 100));
     setLastLive(Date.now());
-    const node = nodeOf(item, paired);
-    setPulses((current) => ({ ...current, agent: Date.now(), ...(node ? { [node]: Date.now() } : {}) }));
   });
+  const now = useNow(Date.now() - lastLive < 30_000);
   const items = useMemo(() => merge(day.data?.items ?? [], live), [day.data, live]);
-
+  const paired = satellites.data?.paired ?? [];
   const running = tasks.data?.running ?? [];
-  const { state, latest, quiet } = useAgentPresence();
-  const name = usePeopleNames();
   const rooms = roomsOf({ people: people.data ?? [], satellites: paired, items });
   const { away } = elsewhere(people.data ?? []);
-  const reach: Reach | null =
-    canSatellites || canTasks || canWatches || canConnections
-      ? {
-          channels: (system.data?.components ?? []).filter((c) => c.slot === "channel"),
-          tasks: running,
-          watches: watches.data?.watches ?? [],
-          connections: connections.data ?? [],
-        }
-      : null;
-  const initiative = (config.data?.document.initiative ?? null) as Record<string, unknown> | null;
-  const clock = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+  const marks = useMemo(() => marksOf(items), [items]);
+  const date = new Date(now);
   const line = lineOf(
     latest,
     state,
@@ -112,82 +93,139 @@ export function HomeView() {
     name,
     now,
   );
-  const marks = useMemo(() => marksOf(items), [items]);
-  const date = new Date(now);
+  const focus = latest ? nodeOf(latest, paired) : null;
+  const upcoming = (watches.data?.watches.length ?? 0) > 0 || Boolean(quiet);
 
   return (
-    <div className="grid gap-12 [&>*]:min-w-0">
-      <div className="grid gap-5 [&>*]:min-w-0">
-        <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
-          <h1 className="text-[1.9rem] leading-[1.05] font-normal sm:text-[2.3rem]">
-            {t("home-hello", { greeting: greeting(date), name: me.account.person_name ?? me.account.login })}
-          </h1>
-          <p className="font-mono text-xs text-ink-muted">
-            {t("home-today", {
-              conversations: marks.filter((m) => m.kind === "conversation").length,
-              spoken: marks.filter((m) => m.kind === "delivery").length,
-            })}
-          </p>
-        </header>
-        <AgentMind
-          agent={me.agent}
-          state={state}
-          calm={attention.length === 0}
-          rooms={rooms}
-          away={away}
-          reach={reach}
-          pulses={pulses}
-          now={now}
-          line={t(line.id, line.args)}
-          focus={latest ? nodeOf(latest, paired) : null}
-        />
-      </div>
-
-      <Band title={t("home-doing")}>
-        <div className="grid gap-8 md:grid-cols-2">
-          <Doing items={items} running={running} now={now} />
-          <Intends watches={reach?.watches ?? []} quiet={quiet} mainRoom={initiative?.main_room} now={date} />
-        </div>
-      </Band>
-
-      <Band
-        title={t("home-day")}
-        aside={
-          <Link
-            to="/journal"
-            className="inline-flex items-center gap-1 font-mono text-xs text-ink-muted hover:text-ink"
-          >
-            {t("home-all-journal")} <ArrowRight className="size-3" aria-hidden="true" />
-          </Link>
-        }
-      >
-        <DayRibbon marks={marks} quiet={quiet} now={date} />
-      </Band>
+    <div className="grid gap-16 md:gap-20">
+      <Hero
+        greeting={t("home-hello", { greeting: greeting(date), name: me.account.person_name ?? me.account.login })}
+        date={new Intl.DateTimeFormat(activeLocale(), { weekday: "long", day: "numeric", month: "long" }).format(date)}
+        agent={me.agent.name}
+        state={state}
+        line={t(line.id, line.args)}
+        focus={focus}
+      />
 
       {attention.length ? (
-        <Band title={t("home-attention-title")} count={attention.length}>
-          <ul className="divide-y divide-rule border-y border-rule">
+        <Band title={t("home-needs")} count={attention.length}>
+          <ul className="grid gap-x-12 gap-y-5 md:grid-cols-2">
             {attention.map((a) => (
-              <li key={a.key} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5">
+              <li key={a.key} className="grid grid-cols-[1.1rem_1fr] gap-x-3">
                 <a.icon
-                  className={cn("size-4 shrink-0", a.tone === "error" ? "text-brick" : "text-amber")}
+                  className={cn("mt-1 size-4", a.tone === "error" ? "text-brick" : "text-amber")}
                   aria-hidden="true"
                 />
-                <p className="min-w-0 flex-1 text-sm text-ink">
-                  {a.title}
-                  {a.detail ? <span className="text-ink-muted"> — {a.detail}</span> : null}
-                </p>
-                <Link {...a.link} className={buttonVariants({ variant: "outline", size: "sm" })}>
-                  {a.action}
-                </Link>
+                <div className="min-w-0">
+                  <p className="text-[1.02rem] leading-snug text-ink">{a.title}</p>
+                  {a.detail ? <p className="mt-1 text-[0.92rem] text-ink-muted">{a.detail}</p> : null}
+                  <Link
+                    {...a.link}
+                    className="mt-1.5 inline-flex items-center gap-1 text-[0.92rem] font-medium text-ember hover:underline"
+                  >
+                    {a.action} <ArrowRight className="size-3.5" aria-hidden="true" />
+                  </Link>
+                </div>
               </li>
             ))}
           </ul>
         </Band>
       ) : null}
 
+      <div className={cn("grid gap-14 md:gap-10", upcoming ? "md:grid-cols-3" : "md:grid-cols-2")}>
+        {canPeople ? <House rooms={rooms} away={away} focus={focus} /> : null}
+        <Now running={running} items={items} now={now} />
+        {upcoming ? (
+          <Next watches={watches.data?.watches ?? []} quiet={quiet} minute={date.getHours() * 60 + date.getMinutes()} />
+        ) : null}
+      </div>
+
+      <Today marks={marks} />
       <Knows />
     </div>
+  );
+}
+
+/** The agent, alive, saying what it attends to; the greeting beside it. */
+function Hero({
+  greeting,
+  date,
+  agent,
+  state,
+  line,
+  focus,
+}: {
+  greeting: string;
+  date: string;
+  agent: string;
+  state: ReturnType<typeof useAgentPresence>["state"];
+  line: string;
+  focus: string | null;
+}) {
+  const t = useT();
+  const controller = useRef<NestorController | null>(null);
+  const [ready, setReady] = useState(false);
+  // it looks toward what it attends to: the room of the latest event, if it is on the page
+  useEffect(() => {
+    if (!ready) return;
+    const target = focus ? document.querySelector(`[data-focus="${CSS.escape(focus)}"]`) : null;
+    if (target) controller.current?.lookAt(target);
+    else controller.current?.center();
+  }, [focus, ready]);
+  return (
+    <section
+      aria-labelledby="hello"
+      className="grid items-center gap-8 md:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]"
+    >
+      <div>
+        <p className="mb-4 text-ink-muted first-letter:uppercase">{date}</p>
+        <h1 id="hello" className="display-1 text-ink">
+          {greeting}
+        </h1>
+      </div>
+      <div className="flex items-center gap-4 md:justify-center md:gap-6">
+        <Link
+          to="/journal"
+          aria-label={t("home-figure-label", { agent, state: t(`home-state-${state}`) })}
+          className="relative shrink-0 rounded-full"
+        >
+          {/* a soft dithered disc behind it, as on the site: atmosphere, never on its body */}
+          <Dither
+            shape="vignette"
+            from={0.16}
+            to={0}
+            dot={3}
+            className="pointer-events-none absolute top-1/2 left-1/2 size-[150%] -translate-x-1/2 -translate-y-[46%] overflow-hidden rounded-full text-ink/[0.16]"
+          />
+          <span className="relative hidden md:block">
+            <AgentFigure
+              state={state}
+              size="hero"
+              ground
+              live={LIVE}
+              onReady={(c) => {
+                controller.current = c;
+                setReady(true);
+              }}
+            />
+          </span>
+          <span className="relative md:hidden">
+            <AgentFigure state={state} size="lg" ground />
+          </span>
+        </Link>
+        <p aria-live="polite" className="bubble-say mb-10 self-end md:mb-24">
+          <span className="mb-0.5 block font-mono text-[0.68rem] text-ink-muted">
+            {agent} · {t(`home-state-${state}`)}
+          </span>
+          {line}
+        </p>
+      </div>
+      <div className="flex items-center gap-4 text-rule-strong md:col-span-2" aria-hidden="true">
+        <span className="h-px flex-1 bg-rule" />
+        <BowTie size={22} />
+        <span className="h-px flex-1 bg-rule" />
+      </div>
+    </section>
   );
 }
 
@@ -205,10 +243,10 @@ function Band({
   const id = `band-${title.toLowerCase().replace(/[^\p{L}0-9]+/gu, "-")}`;
   return (
     <section aria-labelledby={id}>
-      <div className="mb-4 flex items-baseline justify-between gap-4">
-        <h2 id={id} className="flex items-baseline gap-3 font-serif text-[1.35rem] font-normal text-ink">
+      <div className="mb-6 flex items-baseline justify-between gap-4">
+        <h2 id={id} className="display-3 flex items-baseline gap-2.5 text-ink">
           {title}
-          {count !== undefined ? <span className="font-mono text-xs text-ink-faint tabular">{count}</span> : null}
+          {count !== undefined ? <span className="font-sans text-sm text-ink-faint tabular">{count}</span> : null}
         </h2>
         {aside}
       </div>
@@ -217,134 +255,211 @@ function Band({
   );
 }
 
-/** Now: the tasks running and the conversations under way. */
-function Doing({ items, running, now }: { items: JournalItem[]; running: Reach["tasks"]; now: number }) {
+const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+/** Rooms with who is there; who is away. */
+function House({ rooms, away, focus }: { rooms: RoomNode[]; away: Person[]; focus: string | null }) {
+  const t = useT();
+  return (
+    <Band title={t("home-house")}>
+      <ul className="grid gap-4">
+        {rooms.map((r) => {
+          const offline = r.satellites.filter((s) => s.connected === false).length;
+          return (
+            <li key={r.key} data-focus={r.key}>
+              <Link to="/journal" search={{ room: r.room }} className="group block">
+                <span
+                  className={cn(
+                    "text-[1.05rem] text-ink group-hover:underline",
+                    focus === r.key && "underline decoration-ember decoration-2 underline-offset-4",
+                  )}
+                >
+                  {capital(r.room)}
+                </span>
+                <span className="mt-0.5 block text-[0.92rem] text-ink-muted">
+                  {r.people.length ? r.people.map((p) => p.name).join(", ") : t("home-room-nobody")}
+                  {offline ? <span className="text-amber"> · {t("home-room-offline", { count: offline })}</span> : null}
+                </span>
+              </Link>
+            </li>
+          );
+        })}
+        {away.length ? (
+          <li>
+            <Link to="/people" className="group block">
+              <span className="text-[1.05rem] text-ink group-hover:underline">{t("home-away")}</span>
+              <span className="mt-0.5 block text-[0.92rem] text-ink-muted">{away.map((p) => p.name).join(", ")}</span>
+            </Link>
+          </li>
+        ) : null}
+      </ul>
+    </Band>
+  );
+}
+
+/** Tasks running and conversations under way, full titles. */
+function Now({
+  running,
+  items,
+  now,
+}: {
+  running: { id: string; objective: string; executor: string; steps: string[]; started_at: string }[];
+  items: JournalItem[];
+  now: number;
+}) {
   const t = useT();
   const name = usePeopleNames();
-  const recent = new Map<string, JournalItem>();
+  const talks = new Map<string, JournalItem>();
   for (const i of items) {
     if (i.kind !== "conversation" || !i.links.session) continue;
     if (now - new Date(i.at).getTime() > 15 * 60_000) continue;
-    if (!recent.has(i.links.session)) recent.set(i.links.session, i);
+    if (!talks.has(i.links.session)) talks.set(i.links.session, i);
   }
-  const talks = [...recent.values()];
   return (
-    <div>
-      <p className="label-mono mb-2">{t("home-now")}</p>
-      {running.length || talks.length ? (
-        <ul className="grid gap-3">
+    <Band title={t("home-now")}>
+      {running.length || talks.size ? (
+        <ul className="grid gap-5">
           {running.map((task) => {
             const brand = brandOf(task.executor);
             return (
               <li key={task.id}>
-                <Link
-                  to="/tasks/$taskId"
-                  params={{ taskId: task.id }}
-                  className="group grid grid-cols-[1rem_1fr] gap-x-2"
-                >
-                  <Workflow className="mt-0.5 size-4 text-kind-task" aria-hidden="true" />
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm text-ink group-hover:text-ember">{task.objective}</span>
-                    <span className="mt-0.5 flex items-center gap-1.5 font-mono text-[0.68rem] text-ink-muted">
-                      {brand ? <BrandMark brand={brand} className="size-3" label={false} /> : null}
-                      <span className="truncate">{task.steps.at(-1) ?? t("home-task-starting")}</span>
-                      <span className="shrink-0">
-                        · <Ago iso={task.started_at} />
-                      </span>
-                    </span>
+                <Link to="/tasks/$taskId" params={{ taskId: task.id }} className="group block">
+                  <span className="text-[1.05rem] leading-snug text-ink group-hover:underline">{task.objective}</span>
+                  <span className="mt-1 block text-[0.92rem] text-ink-muted">
+                    {task.steps.at(-1) ?? t("home-task-starting")}
+                    {brand ? ` · ${brandName(brand)}` : ""} · <Ago iso={task.started_at} />
                   </span>
                 </Link>
               </li>
             );
           })}
-          {talks.map((i) => (
+          {[...talks.values()].map((i) => (
             <li key={i.links.session}>
-              <Link
-                to="/journal"
-                search={{ session: i.links.session }}
-                className="group grid grid-cols-[1rem_1fr] gap-x-2"
-              >
-                <KindMark kind={i.channels[0] ?? "voice"} className="mt-0.5 size-4 text-ink" label={false} />
-                <span className="min-w-0">
-                  <span className="block truncate text-sm text-ink group-hover:text-ember">
-                    {i.people.length
-                      ? t("home-talking", {
-                          people: i.people.map((p) => name(p)).join(", "),
-                          where: i.room ?? i.channels[0] ?? "",
-                        })
-                      : t("home-talking-someone", { where: i.room ?? i.channels[0] ?? "" })}
-                  </span>
-                  <span className="mt-0.5 block truncate font-mono text-[0.68rem] text-ink-muted">
-                    {i.detail || say(i)}
-                  </span>
+              <Link to="/journal" search={{ session: i.links.session }} className="group block">
+                <span className="text-[1.05rem] text-ink group-hover:underline">
+                  {i.people.length
+                    ? t("home-talking", { people: i.people.map((p) => name(p)).join(", ") })
+                    : t("home-talking-someone")}
                 </span>
+                <span className="mt-1 block text-[0.92rem] text-ink-muted">{i.detail || say(i)}</span>
               </Link>
             </li>
           ))}
         </ul>
       ) : (
-        <p className="text-sm text-ink-muted">{t("home-nothing-now")}</p>
+        <p className="text-ink-muted">{t("home-nothing-now")}</p>
       )}
-    </div>
+    </Band>
   );
 }
 
-/** Next: what it waits for, and when it will keep quiet. */
-function Intends({
+/** What comes next: the quiet hours, the watches waiting. */
+function Next({
   watches,
   quiet,
-  mainRoom,
-  now,
+  minute,
 }: {
-  watches: Reach["watches"];
+  watches: { id: string; what: string; last_triggered_at: string | null }[];
   quiet: { from: number; to: number } | null;
-  mainRoom: unknown;
-  now: Date;
+  minute: number;
 }) {
   const t = useT();
-  const minute = now.getHours() * 60 + now.getMinutes();
-  const clock = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
   return (
-    <div>
-      <p className="label-mono mb-2">{t("home-next")}</p>
-      <ul className="grid gap-3">
+    <Band title={t("home-next")}>
+      <ul className="grid gap-5">
         {quiet ? (
-          <li className="grid grid-cols-[1rem_1fr] gap-x-2">
-            <Moon className="mt-0.5 size-4 text-ink-muted" aria-hidden="true" />
-            <span className="text-sm text-ink">
+          <li>
+            <span className="text-[1.05rem] text-ink">
               {isQuiet(quiet, minute)
                 ? t("home-quiet-now", { until: clock(quiet.to) })
                 : t("home-quiet-later", { from: clock(quiet.from), to: clock(quiet.to) })}
-              {typeof mainRoom === "string" ? (
-                <span className="block font-mono text-[0.68rem] text-ink-muted">
-                  {t("home-main-room", { room: mainRoom })}
-                </span>
-              ) : null}
             </span>
           </li>
         ) : null}
-        {watches.slice(0, 4).map((w) => (
+        {watches.map((w) => (
           <li key={w.id}>
-            <Link to="/watches/$watchId" params={{ watchId: w.id }} className="group grid grid-cols-[1rem_1fr] gap-x-2">
-              <Radar className="mt-0.5 size-4 text-kind-watch" aria-hidden="true" />
-              <span className="min-w-0">
-                <span className="block truncate text-sm text-ink group-hover:text-ember">{w.what}</span>
-                <span className="mt-0.5 block font-mono text-[0.68rem] text-ink-muted">
-                  {w.last_triggered_at ? (
-                    <>
-                      {t("home-watch-triggered")} <Ago iso={w.last_triggered_at} />
-                    </>
-                  ) : (
-                    t("home-watch-waiting", { sources: w.kinds.join(", ") || "—" })
-                  )}
+            <Link to="/watches/$watchId" params={{ watchId: w.id }} className="group block">
+              <span className="text-[1.05rem] leading-snug text-ink group-hover:underline">{w.what}</span>
+              {w.last_triggered_at ? (
+                <span className="mt-1 block text-[0.92rem] text-ink-muted">
+                  {t("home-watch-triggered")} <Ago iso={w.last_triggered_at} />
                 </span>
-              </span>
+              ) : null}
             </Link>
           </li>
         ))}
-        {!quiet && !watches.length ? <li className="text-sm text-ink-muted">{t("home-nothing-next")}</li> : null}
       </ul>
-    </div>
+    </Band>
+  );
+}
+
+const MARK_TONE: Record<Mark["kind"], string> = {
+  conversation: "bg-ink",
+  delivery: "bg-ember",
+  task: "bg-kind-task",
+  watch: "bg-kind-watch",
+  memory: "bg-sage",
+  problem: "bg-brick",
+};
+
+/** Today's notable moments, newest first, each a way into the journal. */
+function Today({ marks }: { marks: Mark[] }) {
+  const t = useT();
+  const name = usePeopleNames();
+  const latest = [...marks].reverse().slice(0, 8);
+  return (
+    <Band
+      title={t("home-today")}
+      aside={
+        <Link to="/journal" className="inline-flex items-center gap-1 text-[0.92rem] text-ink-muted hover:text-ink">
+          {t("home-all-journal")} <ArrowRight className="size-3.5" aria-hidden="true" />
+        </Link>
+      }
+    >
+      {latest.length ? (
+        <ol className="grid" aria-label={t("home-today")}>
+          {latest.map((m) => {
+            const text =
+              m.kind === "conversation"
+                ? m.people.length
+                  ? t("home-moment-conversation", { people: m.people.map((p) => name(p)).join(", "), count: m.count })
+                  : t("home-moment-conversation-someone", { count: m.count })
+                : m.item.detail && m.kind === "delivery"
+                  ? m.item.detail
+                  : say(m.item);
+            return (
+              <li key={m.key}>
+                <Link
+                  to="/journal"
+                  search={
+                    m.item.links.session && m.kind === "conversation"
+                      ? { session: m.item.links.session }
+                      : { event: m.item.id }
+                  }
+                  className="group grid grid-cols-[3.2rem_0.6rem_1fr] items-baseline gap-x-3 py-2.5"
+                >
+                  <time dateTime={m.at} className="font-mono text-[0.85rem] text-ink-muted tabular">
+                    {hourMinute(m.at)}
+                  </time>
+                  <span
+                    aria-hidden="true"
+                    className={cn("size-2 translate-y-[-1px] rounded-full", MARK_TONE[m.kind])}
+                  />
+                  <span className="min-w-0 text-ink group-hover:underline">
+                    {text}
+                    {m.kind === "delivery" && (m.room || m.channels[0]) ? (
+                      <span className="text-ink-muted"> · {m.room ?? m.channels[0]}</span>
+                    ) : null}
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
+        </ol>
+      ) : (
+        <p className="text-ink-muted">{t("home-today-empty")}</p>
+      )}
+    </Band>
   );
 }
 
@@ -360,23 +475,19 @@ function Knows() {
     <Band
       title={t("home-knows")}
       aside={
-        <Link to="/memories" className="inline-flex items-center gap-1 font-mono text-xs text-ink-muted hover:text-ink">
-          {t("home-all-memories")} <ArrowRight className="size-3" aria-hidden="true" />
+        <Link to="/memories" className="inline-flex items-center gap-1 text-[0.92rem] text-ink-muted hover:text-ink">
+          {t("home-all-memories")} <ArrowRight className="size-3.5" aria-hidden="true" />
         </Link>
       }
     >
-      <ul className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
+      <ul className="grid gap-x-12 gap-y-6 md:grid-cols-2">
         {latest.map((m) => (
-          <li key={m.id} className="grid grid-cols-[1rem_1fr] gap-x-2">
-            <BookMarked
-              className={cn("mt-1 size-4", m.updated_at >= today ? "text-sage" : "text-ink-faint")}
-              aria-hidden="true"
-            />
-            <Link to="/memories" search={m.about ? { about: m.about } : {}} className="group min-w-0">
-              <span className="block text-[0.95rem] leading-snug text-pretty text-ink group-hover:text-ember">
+          <li key={m.id}>
+            <Link to="/memories" search={m.about ? { about: m.about } : {}} className="group block">
+              <span className="block font-serif text-[1.2rem] leading-snug text-ink group-hover:underline">
                 {m.text}
               </span>
-              <span className="mt-1 block font-mono text-[0.68rem] text-ink-muted">
+              <span className="mt-1.5 block text-[0.88rem] text-ink-muted">
                 {m.about ? `${name(m.about)} · ` : ""}
                 {m.updated_at >= today ? (
                   t("home-learnt-today", { time: hourMinute(m.updated_at) })

@@ -13,7 +13,7 @@ export function LiveIndicator({ compact = false }: { compact?: boolean }) {
       <span
         role="img"
         aria-label={t(SAID[status])}
-        title={`${t(SAID[status])} — ${t("shell-live-hint")}`}
+        title={`${t(SAID[status])} · ${t("shell-live-hint")}`}
         className="grid size-9 place-items-center"
       >
         <span

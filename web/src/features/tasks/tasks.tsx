@@ -27,7 +27,7 @@ export function TaskStatusMark({ status }: { status: TaskStatus }) {
 function Executor({ name }: { name: string }) {
   const brand = brandOf(name);
   return (
-    <span className="inline-flex items-center gap-1.5 font-mono text-xs text-ink-muted">
+    <span className="inline-flex items-center gap-1.5 text-[0.85rem] text-ink-muted">
       {brand ? <BrandMark brand={brand} className="size-3.5" label={false} /> : null}
       {name}
     </span>
@@ -73,7 +73,7 @@ function TaskRows({ tasks }: { tasks: Task[] }) {
           >
             <span className="min-w-0">
               <span className="block text-ink">{task.objective}</span>
-              <span className="mt-0.5 flex flex-wrap items-center gap-x-3 font-mono text-[0.7rem] text-ink-muted">
+              <span className="mt-0.5 flex flex-wrap items-center gap-x-3 text-[0.85rem] text-ink-muted">
                 <Executor name={task.executor} />
                 {task.requested_by ? <span>{t("task-for", { name: name(task.requested_by) })}</span> : null}
                 <span>
@@ -131,7 +131,7 @@ export function TaskDetail({ id }: { id: string }) {
         crumbs={<Crumbs trail={trail} />}
         title={task.objective}
         meta={
-          <p className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-xs text-ink-muted">
+          <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.85rem] text-ink-muted">
             <TaskStatusMark status={task.status} />
             <Executor name={task.executor} />
             {task.requested_by ? <span>{t("task-requested-by", { name: name(task.requested_by) })}</span> : null}
@@ -179,7 +179,7 @@ export function TaskDetail({ id }: { id: string }) {
                   <MessageSquareText className="size-4" aria-hidden="true" />
                   {t("task-a-conversation")}
                   {task.origin.channel ? (
-                    <span className="inline-flex items-center gap-1 font-mono text-xs text-ink-muted">
+                    <span className="inline-flex items-center gap-1 text-[0.85rem] text-ink-muted">
                       <KindMark kind={task.origin.channel} className="size-3" label={false} />
                       {task.origin.channel}
                     </span>

@@ -63,11 +63,12 @@ no Base UI or cmdk imports outside `components/ui`, no presence variants on cmdk
 boolean `data-*` attributes that render `"false"`.
 
 Copy: a text earns its place only if it tells the person something they need (a consequence, a rule,
-the next step, how to fix an error); no description that restates its title, no "here you can…"
-intro — `web/src/i18n/catalog.test.ts` fails on both. The agent speaks in the first person only where
+the next step, how to fix an error). No description that restates its title, no "here you can…"
+intro, and almost no em dashes (a period, a colon, parentheses or a middle dot instead):
+`web/src/i18n/catalog.test.ts` fails on all three. The agent speaks in the first person only where
 it speaks (its line on the home page, empty states, toasts after what it does); system texts stay
-neutral. Its figure (`web/src/components/agent-figure.tsx`) stands in for the shared character module
-(`web/src/character/`) with the same props, until that module lands.
+neutral. Its figure is the shared character module (`web/src/character/`), shown through
+`web/src/components/agent-figure.tsx`.
 
 ## License
 

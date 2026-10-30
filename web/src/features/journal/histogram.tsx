@@ -75,7 +75,6 @@ export function Histogram({
       </svg>
       <figcaption className="mt-1 flex justify-between font-mono text-[0.66rem] text-ink-faint tabular">
         <span>{moment(histogram.from)}</span>
-        <span className="hidden sm:inline">{t("jr-histogram-hint")}</span>
         <span>{moment(histogram.to)}</span>
       </figcaption>
     </figure>

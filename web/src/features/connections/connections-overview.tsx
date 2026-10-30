@@ -49,11 +49,11 @@ export function ConnectedAccounts() {
             <KindMark kind={c.brand ?? c.kind} className="size-5 text-ink" />
             <span className="min-w-0">
               <span className="block truncate text-ink">{c.account}</span>
-              <span className="block font-mono text-xs text-ink-muted">
+              <span className="block text-[0.85rem] text-ink-muted">
                 {c.title} · {name(c.owner)}
               </span>
             </span>
-            <span className="hidden font-mono text-xs text-ink-muted sm:block">
+            <span className="hidden text-[0.85rem] text-ink-muted sm:block">
               {c.status === "connected" ? (
                 <>
                   {t("conn-calls-today", { count: c.calls_today })}
@@ -97,7 +97,7 @@ export function Catalogue({ onConnect }: { onConnect: (kind: string) => void }) 
               </span>
               <div className="min-w-0 flex-1">
                 <h2 className="text-lg leading-tight font-normal">{c.title}</h2>
-                <p className="mt-0.5 font-mono text-[0.7rem] text-ink-muted">
+                <p className="mt-0.5 text-[0.85rem] text-ink-muted">
                   {authLabel(c.auth)}
                   {c.inbound.length ? ` · ${t("conn-feeds-watches")}` : ""}
                   {plugged ? ` · ${t("conn-accounts-count", { count: plugged })}` : ""}

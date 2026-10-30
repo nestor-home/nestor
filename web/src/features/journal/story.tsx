@@ -206,7 +206,7 @@ function stepKey(step: Step): string {
 /** A tree branch drawn in mono, like `tree`: structure without coloured strips. */
 function Branch({ last }: { last: boolean }) {
   return (
-    <span aria-hidden="true" className="w-4 shrink-0 font-mono text-[0.75rem] leading-6 text-ink-faint select-none">
+    <span aria-hidden="true" className="w-4 shrink-0 text-[0.85rem] leading-6 text-ink-faint select-none">
       {last ? "└" : "├"}
     </span>
   );
@@ -285,7 +285,7 @@ function StepRow({
                 return <Icon className={cn("size-3.5", kindStyle(item.kind).tone)} aria-hidden="true" />;
               })()}
               {say(item)}
-              {item.detail ? <span className="text-ink-muted">— {item.detail}</span> : null}
+              {item.detail ? <span className="text-ink-muted">· {item.detail}</span> : null}
             </span>
           )}
         </span>
@@ -305,7 +305,7 @@ function CallRow({ call, last, open }: { call: ToolCall; last: boolean; open: (i
       <Collapsible className="min-w-0 flex-1">
         <div className="flex items-center gap-2 py-0.5">
           <CollapsibleTrigger
-            className="group/call inline-flex items-center gap-1.5 rounded-sm font-mono text-[0.78rem] text-ink hover:text-ember"
+            className="group/call inline-flex items-center gap-1.5 rounded-sm text-[0.85rem] text-ink hover:text-ember"
             aria-label={t("jr-call-details", { tool: call.name })}
           >
             <ChevronRight
@@ -316,17 +316,17 @@ function CallRow({ call, last, open }: { call: ToolCall; last: boolean; open: (i
             {call.name}
           </CollapsibleTrigger>
           {seconds !== undefined && seconds !== null ? (
-            <span className="font-mono text-[0.68rem] text-ink-faint tabular">{duration(seconds)}</span>
+            <span className="text-[0.85rem] text-ink-faint tabular">{duration(seconds)}</span>
           ) : null}
           {ok === undefined ? (
-            <span className="font-mono text-[0.68rem] text-amber">{t("jr-call-running")}</span>
+            <span className="text-[0.85rem] text-amber">{t("jr-call-running")}</span>
           ) : ok ? (
-            <span className="font-mono text-[0.68rem] text-sage">{t("jr-call-ok")}</span>
+            <span className="text-[0.85rem] text-sage">{t("jr-call-ok")}</span>
           ) : (
-            <span className="font-mono text-[0.68rem] text-brick">{t("jr-call-failed")}</span>
+            <span className="text-[0.85rem] text-brick">{t("jr-call-failed")}</span>
           )}
         </div>
-        <CollapsibleContent className="mb-1 grid gap-1 rounded-sm bg-paper-sunken px-3 py-2 font-mono text-[0.72rem] text-ink-muted">
+        <CollapsibleContent className="mb-1 grid gap-1 rounded-sm bg-paper-sunken px-3 py-2 text-[0.85rem] text-ink-muted">
           {call.started ? (
             <button
               type="button"
@@ -398,7 +398,7 @@ function ChainCard({ chain, density, open, isNew }: Props & { chain: Chain }) {
     <Frame fresh={fresh} story={chain}>
       <StoryHeader story={chain} kind={kind} title={title} link={link} />
       {density === "compact" ? (
-        <p className="mt-1.5 flex flex-wrap items-center gap-x-1.5 font-mono text-[0.72rem]">
+        <p className="mt-1.5 flex flex-wrap items-center gap-x-1.5 text-[0.85rem]">
           {chain.items.map((item, i) => {
             const look = stepLook(item);
             return (
@@ -460,9 +460,7 @@ function ChainStep({
   const delivered = item.type.endsWith(".delivered");
   return (
     <li className="relative grid grid-cols-[2.75rem_1.5rem_1fr] gap-x-2 pb-2 last:pb-0">
-      {day ? (
-        <span className="col-span-3 pb-1 font-mono text-[0.66rem] text-ink-faint first-letter:uppercase">{day}</span>
-      ) : null}
+      {day ? <span className="col-span-3 pb-1 text-[0.85rem] text-ink-faint first-letter:uppercase">{day}</span> : null}
       <Clock iso={item.at} className="pt-1.5" />
       <span className="relative flex justify-center">
         {last ? null : <span aria-hidden="true" className="absolute top-6 -bottom-2 w-px bg-rule-strong" />}
@@ -472,7 +470,7 @@ function ChainStep({
       </span>
       <Entry item={item} open={open} label={t("jr-entry-label", { text: look.label, detail: say(item) })}>
         <span className="flex flex-wrap items-baseline gap-x-2">
-          <span className={cn("font-mono text-[0.72rem]", look.tone)}>{look.label}</span>
+          <span className={cn("text-[0.85rem]", look.tone)}>{look.label}</span>
           {delivered || item.type.endsWith("delivery_failed") ? (
             <span className="inline-flex items-center gap-1 font-mono text-[0.7rem] text-ink-muted">
               {item.channels.map((c) => (

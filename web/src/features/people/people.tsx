@@ -62,11 +62,11 @@ export function PeopleList() {
             </span>
             <span>
               <span className="block text-ink">{p.name}</span>
-              <span className="block font-mono text-[0.7rem] text-ink-muted">
+              <span className="block text-[0.85rem] text-ink-muted">
                 {p.account ? t("people-has-account") : t("people-no-account")}
               </span>
             </span>
-            <span className="hidden flex-wrap gap-x-3 font-mono text-[0.7rem] text-ink-muted sm:flex">
+            <span className="hidden flex-wrap gap-x-3 text-[0.85rem] text-ink-muted sm:flex">
               {p.channels.map((c) => (
                 <span key={c} className="inline-flex items-center gap-1">
                   <KindMark kind={c} className="size-3" label={false} />
@@ -109,7 +109,7 @@ export function PersonFrame({ id, children }: { id: string; children: ReactNode 
         crumbs={<Crumbs trail={trail} />}
         title={person.name}
         meta={
-          <p className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-xs text-ink-muted">
+          <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.85rem] text-ink-muted">
             <PresenceMark presence={person.presence} />
             {person.presence?.since ? (
               <span>
@@ -227,7 +227,7 @@ export function PersonConnections({ person: p }: { person: Person }) {
       <Empty
         hint={t("people-connections-hint")}
         action={
-          <Link to="/connections/catalogue" className="font-mono text-xs text-ember hover:underline">
+          <Link to="/connections/catalogue" className="text-[0.85rem] text-ember hover:underline">
             {t("people-open-catalogue")}
           </Link>
         }
@@ -248,7 +248,7 @@ export function PersonConnections({ person: p }: { person: Person }) {
             <KindMark kind={c.brand ?? c.kind} className="size-5" />
             <span>
               <span className="block text-ink">{c.account}</span>
-              <span className="font-mono text-[0.7rem] text-ink-muted">{c.title}</span>
+              <span className="text-[0.85rem] text-ink-muted">{c.title}</span>
             </span>
             <ConnectionStatusMark status={c.status} />
           </Link>

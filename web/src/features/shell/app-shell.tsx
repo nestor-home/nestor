@@ -201,12 +201,12 @@ function AgentHeader({ collapsed, onNavigate }: { collapsed: boolean; onNavigate
         aria-label={t("shell-agent-label", { assistant: me.assistant, state })}
         className="flex items-center gap-3 rounded-sm"
       >
-        <AgentFigure state={figure} size="md" />
+        <AgentFigure state={figure} size="md" live />
         <span className="min-w-0">
           <span className="block truncate font-serif text-[1.75rem] leading-none text-ink [font-variation-settings:'SOFT'_100,'opsz'_72]">
             {me.assistant}
           </span>
-          <span className="mt-1.5 flex items-center gap-2 font-mono text-[0.7rem] text-ink-muted" aria-live="polite">
+          <span className="mt-1.5 flex items-center gap-2 text-[0.85rem] text-ink-muted" aria-live="polite">
             {dot}
             {online ? t(`home-state-${figure}`) : state}
           </span>
@@ -254,6 +254,7 @@ function MobileBar({ onSearch }: { onSearch: () => void }) {
   const t = useT();
   const me = useMe();
   const { toggleSidebar, isMobile } = useSidebar();
+  const { state: figure } = useAgentPresence();
   if (!isMobile) return null;
   return (
     <div className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-rule bg-paper/95 px-2 pt-[env(safe-area-inset-top)] backdrop-blur-[2px] md:hidden">
@@ -261,7 +262,10 @@ function MobileBar({ onSearch }: { onSearch: () => void }) {
         <PanelLeft />
       </Button>
       <Link to="/" aria-label={t("shell-home-link", { assistant: me.assistant })} className="rounded-sm px-1">
-        <span className="font-serif text-[1.35rem] leading-none text-ink">{me.assistant}</span>
+        <span className="flex items-center gap-2">
+          <AgentFigure state={figure} size="sm" />
+          <span className="font-serif text-[1.35rem] leading-none text-ink">{me.assistant}</span>
+        </span>
       </Link>
       <div className="ml-auto flex items-center gap-1">
         <LiveIndicator compact />

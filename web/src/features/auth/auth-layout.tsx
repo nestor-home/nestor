@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import { AgentFigure } from "@/components/agent-figure";
-import { Dither } from "@/components/dither";
 import { Wordmark } from "@/components/wordmark";
 import { useT } from "@/i18n";
 
@@ -22,11 +21,8 @@ export function AuthLayout({ title, intro, children }: { title: string; intro?: 
         <footer className="font-mono text-[0.7rem] text-ink-faint">{t("auth-footer")}</footer>
       </div>
       <div aria-hidden="true" className="relative hidden border-l border-rule bg-paper-sunken lg:block">
-        <Dither shape="ramp-up" from={0} to={0.75} dot={3} className="absolute inset-0 size-full text-ink/25" />
         <div className="absolute inset-0 grid place-items-center">
-          <span className="rounded-full bg-paper-sunken p-6">
-            <AgentFigure state="idle" size="hero" />
-          </span>
+          <AgentFigure state="idle" size="hero" ground live />
         </div>
       </div>
     </div>

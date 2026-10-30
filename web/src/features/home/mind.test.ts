@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { liveItem } from "@/test/render";
-import { agentState, arc, isQuiet, marksOf, merge, quietHours } from "./mind";
+import { agentState, isQuiet, marksOf, merge, quietHours } from "./mind";
 
 const at = (minutesAgo: number, now = Date.parse("2026-10-30T15:00:00Z")) =>
   new Date(now - minutesAgo * 60_000).toISOString();
@@ -49,17 +49,5 @@ describe("quiet hours", () => {
     expect(isQuiet(q, 12 * 60)).toBe(false);
     expect(quietHours(null)).toBeNull();
     expect(quietHours("tonight")).toBeNull();
-  });
-});
-
-describe("the map", () => {
-  it("spaces nodes evenly down each side, mirrored", () => {
-    const left = arc(5, -1);
-    const right = arc(5, 1);
-    const gaps = left.slice(1).map((p, i) => p.y - (left[i]?.y ?? 0));
-    expect(new Set(gaps.map((g) => g.toFixed(3))).size).toBe(1);
-    expect(left.every((p) => p.x < 50)).toBe(true);
-    for (const [i, p] of right.entries()) expect(100 - p.x).toBeCloseTo(left[i]?.x ?? 0);
-    expect(arc(1, 1)).toEqual([{ x: 83, y: 50 }]);
   });
 });

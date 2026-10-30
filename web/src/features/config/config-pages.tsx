@@ -207,7 +207,7 @@ function OneSlot({ slotKey, slot, main }: { slotKey: string; slot: ConfigSlot; m
           <div className="mb-5 flex items-center gap-2.5">
             <KindMark kind={kind} className="size-5 text-ink" label={false} />
             <p className="font-serif text-lg text-ink">{kindTitle(kind)}</p>
-            <span className="font-mono text-xs text-ink-faint">{kind}</span>
+            <span className="text-[0.85rem] text-ink-faint">{kind}</span>
           </div>
           {schema ? (
             <ObjectFields schema={schema} root={schema} path={[slotKey]} />
@@ -365,7 +365,7 @@ function KindPicker({
                 <KindMark kind={kind} className="size-5 text-ink" label={false} />
                 <span className="min-w-0 flex-1">
                   <span className="block text-sm text-ink">{kindTitle(kind)}</span>
-                  <span className="block font-mono text-[0.7rem] text-ink-faint">
+                  <span className="block text-[0.85rem] text-ink-faint">
                     {kind} · {t("cfg-required-fields", { count: requiredCount(schema) })}
                   </span>
                 </span>
@@ -421,14 +421,12 @@ function ItemCard({
       <button type="button" onClick={onEdit} className="group min-w-0 flex-1 text-left">
         <span className="flex flex-wrap items-baseline gap-x-2">
           <span className="text-[0.95rem] text-ink group-hover:underline group-hover:underline-offset-4">{title}</span>
-          <span className="font-mono text-[0.7rem] text-ink-faint">{subtitle}</span>
+          <span className="text-[0.85rem] text-ink-faint">{subtitle}</span>
         </span>
-        {detail ? (
-          <span className="mt-0.5 block truncate font-mono text-[0.72rem] text-ink-muted">{detail}</span>
-        ) : null}
+        {detail ? <span className="mt-0.5 block truncate text-[0.85rem] text-ink-muted">{detail}</span> : null}
       </button>
       {problems || missing ? (
-        <span className="inline-flex items-center gap-1 font-mono text-[0.7rem] text-brick">
+        <span className="inline-flex items-center gap-1 text-[0.85rem] text-brick">
           <CircleAlert className="size-3.5" aria-hidden="true" />
           {missing ? t("cfg-kind-missing-short") : t("cfg-problems", { count: problems })}
         </span>
@@ -496,7 +494,7 @@ function ItemSheet({
       title={title}
       description={
         mark ? (
-          <span className="inline-flex items-center gap-1.5 font-mono text-xs">
+          <span className="inline-flex items-center gap-1.5 text-[0.85rem]">
             <KindMark kind={mark} className="size-3.5" label={false} /> {mark}
           </span>
         ) : undefined

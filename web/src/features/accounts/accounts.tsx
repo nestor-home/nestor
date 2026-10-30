@@ -130,7 +130,7 @@ function AccountRow({ account, accounts }: { account: Account; accounts: Account
           {account.id === me.account.id ? <Tag tone="accent">{t("acc-you")}</Tag> : null}
           {account.disabled ? <Status tone="idle">{t("acc-disabled")}</Status> : null}
         </span>
-        <span className="block truncate font-mono text-[0.7rem] text-ink-muted">
+        <span className="block truncate text-[0.85rem] text-ink-muted">
           {account.login} · {roleLabel(account.role)}
         </span>
       </Link>
@@ -154,7 +154,7 @@ function AccountRow({ account, accounts }: { account: Account; accounts: Account
       </div>
       <ArrowRight className="hidden size-3.5 text-ink-faint sm:block" aria-hidden="true" />
       {lastOwner && editable ? (
-        <p id={`${account.id}-last-owner`} className="font-mono text-[0.7rem] text-amber sm:col-span-3">
+        <p id={`${account.id}-last-owner`} className="text-[0.85rem] text-amber sm:col-span-3">
           {lastOwnerText()}
         </p>
       ) : null}
@@ -194,7 +194,7 @@ function InvitationRow({ invitation }: { invitation: Invitation }) {
     <li className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5">
       <div>
         <p className="text-sm">{invitation.person_name ?? roleLabel(invitation.role)}</p>
-        <p className="font-mono text-[0.7rem] text-ink-muted">
+        <p className="text-[0.85rem] text-ink-muted">
           {t("acc-invitation-pending", {
             role: roleLabel(invitation.role),
             person: invitation.person ? name(invitation.person) : "",
@@ -245,7 +245,7 @@ export function AccountDetail({ id }: { id: string }) {
         crumbs={<Crumbs trail={trail} />}
         title={account.person_name ?? account.login}
         meta={
-          <p className="flex flex-wrap items-center gap-x-3 font-mono text-xs text-ink-muted">
+          <p className="flex flex-wrap items-center gap-x-3 text-[0.85rem] text-ink-muted">
             <span>{account.login}</span>
             {account.disabled ? (
               <Status tone="idle">{t("acc-disabled")}</Status>

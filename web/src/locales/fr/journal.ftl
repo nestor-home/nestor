@@ -5,7 +5,7 @@ jr-loading = Chargement du journal…
 jr-empty = Rien dans le journal pour ces filtres.
 jr-empty-hint = Élargissez la période ou retirez un filtre.
 jr-older = Plus ancien
-jr-beginning = — début du journal —
+jr-beginning = Début du journal
 jr-now = maintenant
 jr-paused = en pause
 jr-new-events = { $count ->
@@ -20,7 +20,7 @@ jr-event-count = { $count ->
     [one] 1 événement
    *[other] { NUMBER($count) } événements
 }
-jr-day-list = Journal — { $day }
+jr-day-list = Journal du { $day }
 
 jr-search-label = Chercher dans le journal
 jr-search-placeholder = Chercher : colis, facture, Jules…
@@ -39,9 +39,6 @@ jr-density-compact = Compact
 jr-pause = Pause
 jr-resume = Reprendre
 jr-pause-hint = Mettre le direct en pause (p)
-jr-keys-browse = parcourir
-jr-keys-search = chercher
-jr-keys-pause = pause
 
 jr-facet-kind = Type
 jr-facet-person = Personne
@@ -56,7 +53,6 @@ jr-histogram-label = { $count ->
     [one] 1 événement
    *[other] { $count } événements
 } entre { $from } et { $to }
-jr-histogram-hint = glisser pour zoomer
 
 jr-story-thread = Conversation
 jr-story-chain = Enchaînement
