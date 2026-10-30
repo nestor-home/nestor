@@ -126,14 +126,22 @@ class Pairing(Component):
         return PairingState(status=request.status, satellite=request.satellite)
 
     async def approve(
-        self, code: str, *, by: PersonId | None = None, capabilities: Iterable[Capability] | None = None
+        self,
+        code: str,
+        *,
+        by: PersonId | None = None,
+        capabilities: Iterable[Capability] | None = None,
+        pairing_id: str | None = None,
     ) -> Satellite:
         """Confirm the code a device shows. `capabilities` narrows what it may do (all it declared by
-        default); pairing a device again replaces its previous token."""
+        default); pairing a device again replaces its previous token. With `pairing_id` (the request the
+        person typed the code on), a code shown by another device is refused."""
         self._expire()
         request = next(
             (r for r in self._requests.values() if r.status is PairingStatus.PENDING and r.ticket.code == code), None
         )
+        if request is not None and pairing_id is not None and request.ticket.id != pairing_id:
+            request = None
         if request is None:
             raise PairingRefused("no device is waiting with this code (wrong or expired)")
         allowed = request.manifest.names if capabilities is None else request.manifest.names & set(capabilities)

@@ -41,7 +41,12 @@ async def approve(request: Request, session: Checked) -> Response:
     if not CODE.match(code):
         return await _page(request, session, status=400, error="Le code est fait de 6 chiffres, lus sur l'appareil.")
     try:
-        satellite = await admin.nestor.pairing.approve(code, by=PersonId(by) if by else None, capabilities=granted)
+        satellite = await admin.nestor.pairing.approve(
+            code,
+            by=PersonId(by) if by else None,
+            capabilities=granted,
+            pairing_id=str(form.get("pairing", "")) or None,  # the code must be the one shown by this device
+        )
     except PairingRefused:
         return await _page(
             request, session, status=400, error="Aucun appareil n'attend ce code : il est faux ou a expiré."

@@ -16,6 +16,7 @@
     <form method="post" action="/satellites/approve">
       <input type="hidden" name="csrf" value="{{ csrf }}">
       <label for="code-{{ request.id }}">Code affiché par l'appareil</label>
+      <input type="hidden" name="pairing" value="{{ request.id }}">
       <input id="code-{{ request.id }}" name="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required>
       <fieldset class="capabilities">
         <legend>Ce qu'il pourra faire</legend>

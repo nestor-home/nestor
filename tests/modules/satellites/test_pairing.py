@@ -80,6 +80,15 @@ async def test_a_wrong_code_approves_nothing(pairing: Pairing) -> None:
     assert not pairing.satellites()
 
 
+async def test_a_code_typed_on_another_devices_request_is_refused(pairing: Pairing) -> None:
+    kitchen = Manifest(Device("pi-cuisine", "raspberry-pi", "cuisine"), REACHY.capabilities)
+    salon, cuisine = await pairing.request(REACHY), await pairing.request(kitchen)
+    with pytest.raises(PairingRefused):
+        await pairing.approve(cuisine.code, pairing_id=salon.id)
+    satellite = await pairing.approve(salon.code, pairing_id=salon.id)
+    assert satellite.id == "reachy-salon" and pairing.poll(cuisine.id).status is PairingStatus.PENDING
+
+
 async def test_a_pairing_expires_after_ten_minutes(pairing: Pairing, clock: Clock) -> None:
     ticket = await pairing.request(REACHY)
     clock.now += timedelta(minutes=10)
