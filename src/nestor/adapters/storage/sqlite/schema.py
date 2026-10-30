@@ -23,4 +23,30 @@ CREATE TRIGGER events_are_never_deleted BEFORE DELETE ON events
 BEGIN SELECT RAISE(ABORT, 'the event log is append-only'); END;
 """
 
-MIGRATIONS: tuple[str, ...] = (EVENTS,)
+MEMORIES = """
+CREATE TABLE memories (
+    id TEXT PRIMARY KEY,
+    text TEXT NOT NULL,
+    about TEXT,
+    source TEXT,
+    told_by TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+) STRICT;
+CREATE INDEX memories_by_update ON memories (updated_at);
+-- Accent-insensitive full-text index kept in step with the table.
+CREATE VIRTUAL TABLE memories_text USING fts5 (
+    text, content = 'memories', content_rowid = 'rowid', tokenize = 'unicode61 remove_diacritics 2'
+);
+CREATE TRIGGER memories_indexed AFTER INSERT ON memories
+BEGIN INSERT INTO memories_text (rowid, text) VALUES (new.rowid, new.text); END;
+CREATE TRIGGER memories_unindexed AFTER DELETE ON memories
+BEGIN INSERT INTO memories_text (memories_text, rowid, text) VALUES ('delete', old.rowid, old.text); END;
+CREATE TRIGGER memories_reindexed AFTER UPDATE ON memories
+BEGIN
+    INSERT INTO memories_text (memories_text, rowid, text) VALUES ('delete', old.rowid, old.text);
+    INSERT INTO memories_text (rowid, text) VALUES (new.rowid, new.text);
+END;
+"""
+
+MIGRATIONS: tuple[str, ...] = (EVENTS, MEMORIES)

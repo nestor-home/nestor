@@ -88,6 +88,7 @@ class NestorConfig(Section):
     model: AdapterConfig
     executors: tuple[AdapterConfig, ...] = ()
     channels: tuple[AdapterConfig, ...] = Field(min_length=1)
+    tools: tuple[AdapterConfig, ...] = ()  # tool providers (an MCP server: Home Assistant, Linear…)
     presence: AdapterConfig | None = None
     initiative: InitiativeConfig = InitiativeConfig()
 

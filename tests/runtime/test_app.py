@@ -164,3 +164,14 @@ def test_the_command_line_reports_a_valid_configuration(tmp_path: Path, capsys: 
     )
     assert main(["-c", str(path), "check"]) == 0
     assert "OK — 0 executor(s), channels: telegram" in capsys.readouterr().out
+
+
+async def test_memories_persist_in_the_database(tmp_path: Path) -> None:
+    fakes = Fakes()
+    fakes.script = [ToolCall("c1", "remember", {"text": "Le chat s'appelle Biscotte", "about": "household"}), "Noté."]
+    async with Nestor(config(tmp_path, []), fakes.registry()) as nestor:
+        serving = asyncio.create_task(nestor.serve())
+        await fakes.channels[0].ask("Retiens que le chat s'appelle Biscotte")
+        serving.cancel()
+    async with Nestor(config(tmp_path, []), Fakes().registry()) as restarted:
+        assert [m.text for m in await restarted.memories.recall("chat")] == ["Le chat s'appelle Biscotte"]

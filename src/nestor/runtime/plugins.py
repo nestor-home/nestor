@@ -25,6 +25,7 @@ class Family(StrEnum):
     EXECUTOR = "executor"
     CHANNEL = "channel"
     PRESENCE = "presence"
+    TOOLS = "tools"
 
 
 class AdapterSettings(BaseModel):

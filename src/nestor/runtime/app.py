@@ -7,18 +7,20 @@ from collections.abc import Sequence
 from contextlib import AsyncExitStack
 from typing import Self, cast
 
-from nestor.adapters.storage.sqlite import SQLiteDatabase, SQLiteEventLog
+from nestor.adapters.storage.sqlite import SQLiteDatabase, SQLiteEventLog, SQLiteMemoryStore
 from nestor.core import Component, ContractError
 from nestor.modules.channels import Channel
 from nestor.modules.cognition import ConversationModel, Executor
 from nestor.modules.cognition.delegation.assistant import Delegation
 from nestor.modules.cognition.delegation.service import TaskManager
-from nestor.modules.cognition.tools import Toolbox
+from nestor.modules.cognition.tools import Toolbox, ToolProvider
 from nestor.modules.conversation import Agent, ChannelProfile, Persona
 from nestor.modules.home import PresenceSource
 from nestor.modules.household import Household
 from nestor.modules.initiative import Courier, DeliveryPolicy, QuietHours, TaskAnnouncer
 from nestor.modules.journal import Journal
+from nestor.modules.memory import Memories
+from nestor.modules.memory.assistant import MemoryTools
 from nestor.runtime.config import AdapterConfig, NestorConfig
 from nestor.runtime.plugins import Family, Registry, Services
 
@@ -46,6 +48,7 @@ class Nestor:
         ]
         if len({c.channel_id for c in self.channels}) != len(self.channels):
             raise ContractError("two channels have the same name: give each a distinct `name`")
+        self.tools = [_build(registry, Family.TOOLS, c, c.name or c.kind, services, ToolProvider) for c in config.tools]
         self.presence = (
             _build(registry, Family.PRESENCE, config.presence, "presence", services, PresenceSource)
             if config.presence
@@ -54,14 +57,16 @@ class Nestor:
 
         self.tasks = TaskManager(self.journal, self.executors)
         delegation = Delegation(self.tasks)
+        self.memories = Memories(self.journal, SQLiteMemoryStore(self.database))
+        memory = MemoryTools(self.memories, self.household)
         self.agent = Agent(
             model=self.model,
             persona=Persona(**config.persona.model_dump()),
             journal=self.journal,
             household=self.household,
-            toolbox=Toolbox(self.journal, providers=[delegation]),
+            toolbox=Toolbox(self.journal, providers=[delegation, memory, *self.tools]),
             channels={c.channel_id: ChannelProfile(c.medium, c.style) for c in self.channels},
-            context=[delegation],
+            context=[delegation, memory],
         )
         initiative = config.initiative
         self.courier = Courier(
