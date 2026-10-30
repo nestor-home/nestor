@@ -194,6 +194,11 @@ class Nestor:
         )
         self._stack = AsyncExitStack()
 
+    def satellite_url(self, seen_as: str) -> str | None:
+        """Where devices reach the first host that serves satellites (for pairing URIs), if any."""
+        hosts = (c for c in self.channels if isinstance(c, SatelliteHost))
+        return next((url for host in hosts if (url := host.satellite_url(seen_as))), None)
+
     @property
     def components(self) -> Sequence[Component]:
         """In start order; they are closed in reverse."""

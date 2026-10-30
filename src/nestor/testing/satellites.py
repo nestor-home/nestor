@@ -2,7 +2,8 @@
 
 `ProtocolProbe` plays the core on one connection of the satellite under test: it waits for a valid
 `hello` from the paired device, answers `welcome`, sends one intent of each kind the device may
-receive and expects each to be acknowledged in time, and checks that every message it receives,
+receive (`intent.identify` only to a device allowed `device.identify`) and expects each to be
+acknowledged in time, and checks that every message it receives,
 observations included, follows the contract. The transport (WebRTC data channel, WebSocket…) only
 has to implement `SatelliteSession`; the realtime profile's black-box core lives with the WebRTC
 gateway (`nestor.adapters.channels.voice.satellites.conformance`).
@@ -14,9 +15,9 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any
 
-from nestor.core import Capability, ContractError
+from nestor.core import Capability, ContractError, PersonId
 from nestor.modules.behavior import EXPRESSION, HEAD_MOTION, Behavior, Expression
-from nestor.modules.satellites import PERSON_DETECTION, SPEECH_ACTIVITY, Satellite, wire
+from nestor.modules.satellites import IDENTIFY, PERSON_DETECTION, SPEECH_ACTIVITY, Manifest, Pairing, Satellite, wire
 
 # What a satellite must have been allowed before it reports an observation of that kind.
 OBSERVATION_NEEDS: dict[type[wire.Message], Capability] = {
@@ -104,6 +105,8 @@ def _intents_for(capabilities: frozenset[Capability]) -> list[wire.Message]:
         intents.append(wire.ExpressionIntent(expression=Expression.JOY, intensity=0.8))
     if HEAD_MOTION in capabilities:
         intents.append(wire.BeatIntent())
+    if IDENTIFY in capabilities:
+        intents.append(wire.IdentifyIntent())
     intents.append(wire.BehaviorIntent(behavior=Behavior.IDLE))
     return intents
 
@@ -155,3 +158,10 @@ class _Reader:
             self._acks.add(message.of)
         elif (needed := OBSERVATION_NEEDS.get(type(message))) and needed not in self._satellite.capabilities:
             self._invalid.append(f"{message.message_type} needs the {needed} capability")
+
+
+async def pair_by_code(pairing: Pairing, manifest: Manifest, *, by: PersonId | None = None) -> Satellite:
+    """Pair `manifest`'s device the way a person does with its device code: it asks, they type the code."""
+    ticket = await pairing.request(manifest)
+    assert ticket.device_code is not None
+    return await pairing.approve(ticket.device_code, pairing_id=ticket.id, by=by)

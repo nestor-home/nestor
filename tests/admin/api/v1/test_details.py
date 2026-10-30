@@ -12,6 +12,7 @@ from nestor.modules.channels import Address
 from nestor.modules.connectors import Status
 from nestor.modules.initiative import Watch
 from nestor.modules.satellites import Device, Manifest
+from nestor.testing.satellites import pair_by_code
 
 from ...harness import Harness
 
@@ -59,7 +60,7 @@ async def test_a_task_a_watch_a_satellite_and_an_account_open_one_by_one(tmp_pat
         await asyncio.sleep(0.01)
         await nestor.tasks.cancel(mine.id)
         watch = await nestor.watch_book.create(Watch(what="le colis", owner=MATHIS))
-        await nestor.pairing.approve((await nestor.pairing.request(Manifest(Device("mic", "esp32", "bureau")))).code)
+        await pair_by_code(nestor.pairing, Manifest(Device("mic", "esp32", "bureau")))
         owner, guest = await admin.api(), await admin.api("mathilde")
 
         ended = (await owner.get(f"/api/v1/tasks/{mine.id}")).json()

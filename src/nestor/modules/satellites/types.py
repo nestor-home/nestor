@@ -12,19 +12,76 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Any
 
-from nestor.core import Capability, ContractError
+from nestor.core import Capability, ContractError, PersonId
 
-PROTOCOL = "nestor.satellite/1"
+PROTOCOL = "nestor.satellite/2"
+_PROTOCOL = re.compile(r"^nestor\.satellite/\d+$")
 
 AUDIO_CAPTURE = Capability("audio.capture")
 AUDIO_PLAYBACK = Capability("audio.playback")
 PERSON_DETECTION = Capability("vision.person_detection")
 SPEECH_ACTIVITY = Capability("audio.speech_activity")
+IDENTIFY = Capability("device.identify")  # it can make itself noticed (blink, wiggle, chime): an aid, never a proof
 
 _SLUG = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")  # device ids and rooms end up in addresses (`voice:salon`)
 _CAPABILITY = re.compile(r"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$")
 MAX_CAPABILITIES = 32
+MAX_NAME = 64
+
+
+def check_room(room: str) -> str:
+    if not _SLUG.match(room):
+        raise ContractError(f"room {room!r} must be a lowercase slug (a-z, 0-9, - and _)")
+    return room
+
+
+def check_capability(name: str) -> Capability:
+    if not _CAPABILITY.match(name):
+        raise ContractError(f"invalid capability {name!r}: expected 'family.feature'")
+    return Capability(name)
+
+
 MAX_SDK = 64
+
+
+class ProtocolUnsupported(ContractError):
+    """The device speaks another version of the satellite protocol: it must be updated."""
+
+
+class Proof(StrEnum):
+    """Which way the pairing proof travelled."""
+
+    DEVICE_CODE = "device_code"  # the device presented a code, a person typed it in the admin
+    ENROLLMENT_CODE = "enrollment_code"  # a person made a code in the admin and gave it to the device
+
+
+class PairingMethod(StrEnum):
+    """How a person can pair this device; it declares those it supports, the person picks one."""
+
+    DISPLAY = "device_code.display"  # it shows its device code on a screen
+    SPEECH = "device_code.speech"  # it says its device code aloud
+    INPUT = "enrollment.input"  # an enrollment code can be typed on it
+    PROVISIONING = "enrollment.provisioning"  # an enrollment code or URI can be set in its configuration
+    QR = "enrollment.qr"  # it scans the QR code of a pairing URI
+
+    @property
+    def proof(self) -> Proof:
+        return Proof.DEVICE_CODE if self.value.startswith("device_code.") else Proof.ENROLLMENT_CODE
+
+
+# The order the admin recommends them in: what asks the least of the person first.
+RECOMMENDED = (
+    PairingMethod.DISPLAY,
+    PairingMethod.SPEECH,
+    PairingMethod.QR,
+    PairingMethod.INPUT,
+    PairingMethod.PROVISIONING,
+)
+
+
+def recommended(methods: "frozenset[PairingMethod] | tuple[PairingMethod, ...]") -> PairingMethod:
+    """The method to highlight among those a device supports (all of them for an unknown device)."""
+    return next((m for m in RECOMMENDED if m in methods), PairingMethod.PROVISIONING)
 
 
 @dataclass(frozen=True, slots=True)
@@ -105,6 +162,7 @@ class Manifest:
 
     device: Device
     capabilities: tuple[DeclaredCapability, ...] = ()
+    pairing_methods: tuple[PairingMethod, ...] = (PairingMethod.PROVISIONING,)
     protocol: str = PROTOCOL
     sdk: Sdk | None = None  # the software it runs; optional
 
@@ -118,16 +176,22 @@ class Manifest:
             "protocol": self.protocol,
             "device": device | ({"brand": self.device.brand} if self.device.brand else {}),
             "capabilities": [{"name": c.name, **c.params} for c in self.capabilities],
+            "pairing_methods": [m.value for m in self.pairing_methods],
         }
         return data | ({"sdk": {"name": self.sdk.name, "version": self.sdk.version}} if self.sdk else {})
 
     @classmethod
     def from_json(cls, data: object) -> "Manifest":
         """Validate a manifest received from a device; anything unexpected is a `ContractError`."""
-        if not isinstance(data, dict) or set(data) - {"protocol", "device", "capabilities", "sdk"}:
-            raise ContractError("a manifest is an object with protocol, device, capabilities and an optional sdk")
-        if data.get("protocol") != PROTOCOL:
-            raise ContractError(f"unsupported protocol {data.get('protocol')!r}, expected {PROTOCOL!r}")
+        if not isinstance(data, dict) or set(data) - _MANIFEST_KEYS:
+            raise ContractError(
+                "a manifest is an object with protocol, device, capabilities, pairing_methods and an optional sdk"
+            )
+        protocol = data.get("protocol")
+        if isinstance(protocol, str) and _PROTOCOL.match(protocol) and protocol != PROTOCOL:
+            raise ProtocolUnsupported(f"the device speaks {protocol}, this core only {PROTOCOL}: update the device")
+        if protocol != PROTOCOL:
+            raise ContractError(f"unsupported protocol {protocol!r}, expected {PROTOCOL!r}")
         device = Device.from_json(data.get("device"))
         capabilities = data.get("capabilities", [])
         if not isinstance(capabilities, list) or len(capabilities) > MAX_CAPABILITIES:
@@ -141,7 +205,7 @@ class Manifest:
         if len({c.name for c in declared}) != len(declared):
             raise ContractError("a capability is declared twice")
         sdk = Sdk.from_json(data["sdk"]) if "sdk" in data else None
-        return cls(device, tuple(declared), sdk=sdk)
+        return cls(device, tuple(declared), _methods(data.get("pairing_methods")), sdk=sdk)
 
     @staticmethod
     def json_schema() -> dict[str, Any]:
@@ -151,6 +215,12 @@ class Manifest:
                 "protocol": {"const": PROTOCOL},
                 "device": Device.json_schema(),
                 "sdk": Sdk.json_schema(),
+                "pairing_methods": {
+                    "type": "array",
+                    "items": {"enum": [m.value for m in PairingMethod]},
+                    "minItems": 1,
+                    "uniqueItems": True,
+                },
                 "capabilities": {
                     "type": "array",
                     "maxItems": MAX_CAPABILITIES,
@@ -161,9 +231,21 @@ class Manifest:
                     },
                 },
             },
-            "required": ["protocol", "device"],
+            "required": ["protocol", "device", "pairing_methods"],
             "additionalProperties": False,
         }
+
+
+_MANIFEST_KEYS = {"protocol", "device", "capabilities", "pairing_methods", "sdk"}
+
+
+def _methods(data: object) -> tuple[PairingMethod, ...]:
+    values = {m.value for m in PairingMethod}
+    if not isinstance(data, list) or not data or any(not isinstance(m, str) or m not in values for m in data):
+        raise ContractError(f"pairing_methods must list at least one of {', '.join(sorted(values))}")
+    if len(set(data)) != len(data):
+        raise ContractError("a pairing method is declared twice")
+    return tuple(PairingMethod(m) for m in data)
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -179,22 +261,25 @@ class Satellite:
     brand: str | None = None
     sdk: str | None = None
     sdk_version: str | None = None
+    name: str | None = None  # what the household calls it, given when it was added
 
 
 class PairingStatus(StrEnum):
-    PENDING = "pending"  # waiting for a household member to confirm the code
-    APPROVED = "approved"  # the token is handed out with this status, once
+    PENDING = "pending"  # waiting for a proof: the device code typed in the admin, or an enrollment code
+    APPROVED = "approved"  # a proof was accepted; the token is handed out with this status, once
     CLAIMED = "claimed"  # the device already received its token
     EXPIRED = "expired"  # too late, unknown or superseded: ask again
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class PairingTicket:
-    """What the device gets when it asks to pair: it shows `code` and polls `id`."""
+    """What the device gets when it asks to pair: it polls `id`, and presents `device_code` while pending
+    (an approved ticket, paired with an enrollment code, has none)."""
 
     id: str
-    code: str
+    status: PairingStatus
     expires_at: datetime
+    device_code: str | None = None
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -202,15 +287,56 @@ class PairingState:
     status: PairingStatus
     token: str | None = None  # only with the first APPROVED answer
     satellite: Satellite | None = None
+    identify: bool = False  # a person asked a pending device to make itself noticed, once
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class PendingPairing:
-    """A device waiting for approval, as the admin shows it — never with its code, which proves the
-    approver can see the device."""
+    """A device waiting for a proof, as the admin shows it: never with its code, which proves the
+    approver can see or hear the device."""
 
     id: str
     device: Device
     capabilities: frozenset[Capability]
+    methods: tuple[PairingMethod, ...]
     expires_at: datetime
     sdk: Sdk | None = None
+
+    @property
+    def can_identify(self) -> bool:
+        return IDENTIFY in self.capabilities
+
+
+class AdditionStatus(StrEnum):
+    ACTIVE = "active"  # waiting for its device
+    COMPLETED = "completed"  # its device is paired
+    CANCELLED = "cancelled"
+    EXPIRED = "expired"
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class Addition:
+    """A person adding a satellite from the admin, with the method they chose. With an enrollment
+    method it holds the enrollment code, by its hash only, which pairs one device; with a device code
+    method it waits for the person to type the code a device presents. Either way the device is paired
+    named `name`, into `room` when set, allowed `capabilities` at most when set."""
+
+    id: str
+    method: PairingMethod
+    created_at: datetime
+    expires_at: datetime
+    status: AdditionStatus = AdditionStatus.ACTIVE
+    code_hash: str | None = None  # enrollment methods only
+    name: str | None = None
+    room: str | None = None
+    capabilities: frozenset[Capability] | None = None
+    created_by: PersonId | None = None
+    device_id: str | None = None  # the device it paired, once completed
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class StartedAddition:
+    """A new addition and, for an enrollment method, its code in clear this once."""
+
+    addition: Addition
+    code: str | None = None

@@ -7,7 +7,17 @@ from referencing import Registry, Resource
 
 from nestor.core import Capability, ContractError
 from nestor.modules.behavior import Behavior, Expression
-from nestor.modules.satellites import Device, Manifest, Sdk, wire
+from nestor.modules.satellites import (
+    Device,
+    Manifest,
+    PairingMethod,
+    PairingState,
+    PairingStatus,
+    PairingTicket,
+    ProtocolUnsupported,
+    Sdk,
+    wire,
+)
 from nestor.modules.satellites.types import DeclaredCapability
 
 MANIFEST = Manifest(
@@ -23,15 +33,16 @@ MESSAGES: list[wire.Message] = [
     wire.BehaviorIntent(behavior=Behavior.LISTENING),
     wire.ExpressionIntent(expression=Expression.JOY, intensity=0.7),
     wire.BeatIntent(),
+    wire.IdentifyIntent(),
 ]
 
 
-def validator(message_type: str) -> Any:
+def validator(name: str) -> Any:
     published = wire.schemas()
     registry = Registry().with_resources(
         (schema["$id"], Resource.from_contents(schema)) for schema in published.values()
     )
-    return Draft202012Validator(published[f"{message_type}.json"], registry=registry)
+    return Draft202012Validator(published[f"{name}.json"], registry=registry)
 
 
 def test_every_message_type_is_covered_here() -> None:
@@ -82,7 +93,8 @@ OFF_CONTRACT = {
     "unknown expression": _with(wire.ExpressionIntent(expression=Expression.JOY), expression="anger"),
     "unexpected field": _with(wire.Ack(of="x"), extra=1),
     "missing field": {**wire.encode(wire.Ack(of="x")), "payload": {}},
-    "other protocol": _manifest(protocol="nestor.satellite/2"),
+    "other protocol": _manifest(protocol="nestor.satellite/1"),
+    "no pairing method": _manifest(pairing_methods=[]),
     "device id with a colon": _manifest(device={"id": "voice:salon", "model": "m", "room": "salon"}),
     "capability without a family": _manifest(capabilities=[{"name": "camera"}]),
     "unexpected manifest key": _manifest(firmware="1.2"),
@@ -152,3 +164,60 @@ def test_a_message_type_is_defined_once() -> None:
 
         class _Again(wire.Message, message_type="ack", direction=wire.Direction.TO_CORE):
             of: str
+
+
+# Pairing bodies.
+
+
+def test_a_pairing_request_with_its_enrollment_code_matches_its_schema() -> None:
+    sent = {"manifest": MANIFEST.to_json(), "enrollment_code": "K7QF-2M9X", "method": "enrollment.qr"}
+    validator("pairing.request").validate(sent)
+    asked = wire.PairingRequest.from_json(sent)
+    assert (asked.manifest, asked.enrollment_code, asked.method) == (MANIFEST, "K7QF-2M9X", PairingMethod.QR)
+    assert wire.PairingRequest.from_json({"manifest": MANIFEST.to_json()}).enrollment_code is None
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        {"manifest": MANIFEST.to_json(), "enrollment_code": "K7QF2M9X"},
+        {"manifest": MANIFEST.to_json(), "method": "enrollment.qr"},
+        {"manifest": MANIFEST.to_json(), "enrollment_code": "K7QF2M9X", "method": "device_code.display"},
+        {"manifest": MANIFEST.to_json(), "enrollment_code": "", "method": "enrollment.qr"},
+        {"manifest": MANIFEST.to_json(), "extra": 1},
+        MANIFEST.to_json(),
+    ],
+    ids=["code alone", "method alone", "device code method", "empty code", "unknown key", "a bare manifest"],
+)
+def test_an_off_contract_pairing_request_is_refused(body: dict[str, Any]) -> None:
+    assert not validator("pairing.request").is_valid(body)
+    with pytest.raises(ContractError):
+        wire.PairingRequest.from_json(body)
+
+
+def test_another_protocol_version_is_refused_as_such() -> None:
+    old = MANIFEST.to_json() | {"protocol": "nestor.satellite/1"}
+    with pytest.raises(ProtocolUnsupported):
+        wire.PairingRequest.from_json({"manifest": old})
+    with pytest.raises(ContractError):
+        Manifest.from_json(MANIFEST.to_json() | {"protocol": "acme/1"})
+
+
+@pytest.mark.parametrize(
+    "methods", [[], ["enrollment.provisioning", "enrollment.provisioning"], ["fax"], "enrollment.qr"]
+)
+def test_a_manifest_declares_its_pairing_methods_once_each(methods: Any) -> None:
+    with pytest.raises(ContractError):
+        Manifest.from_json(MANIFEST.to_json() | {"pairing_methods": methods})
+
+
+def test_the_answers_match_their_schemas() -> None:
+    from datetime import UTC, datetime
+
+    at = datetime(2026, 10, 30, tzinfo=UTC)
+    ticket = PairingTicket(id="p", status=PairingStatus.PENDING, expires_at=at, device_code="042917")
+    validator("pairing.ticket").validate(wire.ticket_json(ticket))
+    validator("pairing.state").validate(wire.state_json(PairingState(status=PairingStatus.PENDING, identify=True)))
+    validator("pairing.error").validate(wire.error_json("enrollment_refused", "no", reason="used"))
+    validator("pairing.error").validate(wire.error_json("too_many_attempts", "wait", retry_after_s=12.4))
+    validator("pairing.enrollment").validate({"enrollment_code": "K7QF2M9X", "method": "enrollment.input"})

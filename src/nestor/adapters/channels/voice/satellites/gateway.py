@@ -1,12 +1,14 @@
-"""HTTP side of the satellite protocol, realtime profile (WebRTC).
+"""HTTP side of the satellite protocol `nestor.satellite/2`, realtime profile (WebRTC).
 
-    POST  /satellites/pair                 manifest            → 201 {pairing_id, code, expires_at}
-    GET   /satellites/pair/{pairing_id}                        → {status, token?, device_id?, room?, capabilities?}
+    POST  /satellites/pairings                         pairing.request     → 201 pairing.ticket
+    POST  /satellites/pairings/{pairing_id}/enrollment pairing.enrollment  → 200 pairing.state
+    GET   /satellites/pairings/{pairing_id}                                → 200 pairing.state
     POST  /satellites/{device_id}/offer    Bearer token, SDP   → SDP answer {sdp, type, pc_id}
     PATCH /satellites/{device_id}/offer    Bearer token, ICE   → {status}
 
-The token comes once, with the first `approved` answer. Offers without a valid token for that
-device are refused (401), and a device can only renegotiate its own peer connections (403).
+Errors follow `pairing.error`. The token comes once, with the first `approved` answer. Offers without
+a valid token for that device are refused (401), and a device can only renegotiate its own peer
+connections (403). Wrong enrollment codes are counted per client address.
 """
 
 import logging
@@ -19,9 +21,20 @@ from pipecat.transports.smallwebrtc.connection import SmallWebRTCConnection
 
 from nestor.adapters.channels.voice.server import Routes, offer_of, patch_of
 from nestor.core import ContractError
-from nestor.modules.satellites import Manifest, Pairing, PairingRefused, Satellite
+from nestor.modules.satellites import (
+    EnrollmentRefused,
+    NotPending,
+    Pairing,
+    ProtocolUnsupported,
+    Satellite,
+    TooManyAttempts,
+    TooManyPending,
+    wire,
+)
 
 logger = logging.getLogger(__name__)
+
+PENDING_RETRY_S = 30  # when too many devices wait: about the time a person takes to approve one
 
 type SatelliteHook = Callable[[SmallWebRTCConnection, Satellite], Coroutine[Any, Any, None]]
 
@@ -36,32 +49,34 @@ class SatelliteGateway(Routes):
         self._owners: dict[str, str] = {}  # peer connection id → device id
 
     def install(self, app: FastAPI) -> None:
-        app.add_api_route("/satellites/pair", self._pair, methods=["POST"], status_code=201)
-        app.add_api_route("/satellites/pair/{pairing_id}", self._poll, methods=["GET"])
+        app.add_api_route("/satellites/pairings", self._pair, methods=["POST"], status_code=201)
+        app.add_api_route("/satellites/pairings/{pairing_id}/enrollment", self._enroll, methods=["POST"])
+        app.add_api_route("/satellites/pairings/{pairing_id}", self._poll, methods=["GET"])
         app.add_api_route("/satellites/{device_id}/offer", self._offer, methods=["POST", "PATCH"])
 
     async def _pair(self, request: Request) -> Any:
         try:
-            ticket = await self._pairing.request(Manifest.from_json(await request.json()))
-        except PairingRefused as refused:
-            return JSONResponse({"detail": str(refused)}, status_code=429)
-        except (ContractError, ValueError) as invalid:
-            return JSONResponse({"detail": str(invalid)}, status_code=422)
-        logger.info("satellite pairing requested (%s): confirm the code the device shows", ticket.id)
-        return {"pairing_id": ticket.id, "code": ticket.code, "expires_at": ticket.expires_at.isoformat()}
+            asked = wire.PairingRequest.from_json(await request.json())
+            ticket = await self._pairing.request(
+                asked.manifest, enrollment_code=asked.enrollment_code, method=asked.method, source=_client(request)
+            )
+        except Exception as error:
+            return _refusal(error)
+        logger.info("satellite pairing %s: %s", ticket.id, ticket.status.value)
+        return wire.ticket_json(ticket)
+
+    async def _enroll(self, pairing_id: str, request: Request) -> Any:
+        try:
+            proof = wire.EnrollmentProof.from_json(await request.json())
+            state = await self._pairing.enroll(
+                pairing_id, proof.enrollment_code, method=proof.method, source=_client(request)
+            )
+        except Exception as error:
+            return _refusal(error)
+        return wire.state_json(state)
 
     async def _poll(self, pairing_id: str) -> dict[str, Any]:
-        state = self._pairing.poll(pairing_id)
-        answer: dict[str, Any] = {"status": state.status.value}
-        if state.token is not None:
-            answer["token"] = state.token
-        if state.satellite is not None:
-            answer |= {
-                "device_id": state.satellite.id,
-                "room": state.satellite.room,
-                "capabilities": sorted(state.satellite.capabilities),
-            }
-        return answer
+        return wire.state_json(self._pairing.poll(pairing_id))
 
     async def _offer(self, device_id: str, request: Request) -> Any:
         satellite = self._authenticate(device_id, request)
@@ -93,3 +108,28 @@ class SatelliteGateway(Routes):
         if satellite is None:
             raise HTTPException(401, "pair this device first", headers={"WWW-Authenticate": 'Bearer realm="nestor"'})
         return satellite
+
+
+def _client(request: Request) -> str:
+    return request.client.host if request.client else "unknown"
+
+
+def _refusal(error: Exception) -> JSONResponse:
+    match error:
+        case TooManyAttempts(retry_after_s=wait):
+            code, headers = "too_many_attempts", {"Retry-After": str(round(wait))}
+            body = wire.error_json(code, str(error), retry_after_s=wait)
+        case EnrollmentRefused(reason=reason):
+            code, headers, body = "enrollment_refused", {}, wire.error_json("enrollment_refused", str(error),
+                                                                             reason=reason)  # fmt: skip
+        case TooManyPending():
+            code, headers = "too_many_pending", {"Retry-After": str(PENDING_RETRY_S)}
+            body = wire.error_json(code, str(error), retry_after_s=PENDING_RETRY_S)
+        case NotPending() | ProtocolUnsupported():
+            code = "not_pending" if isinstance(error, NotPending) else "protocol_unsupported"
+            headers, body = {}, wire.error_json(code, str(error))
+        case ContractError() | ValueError():
+            code, headers, body = "invalid_request", {}, wire.error_json("invalid_request", str(error))
+        case _:
+            raise error
+    return JSONResponse(body, status_code=wire.ERRORS[code], headers=headers)

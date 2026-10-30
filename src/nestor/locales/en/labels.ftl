@@ -66,6 +66,19 @@ capability-audio-speech_activity = speech detection
 capability-vision-person_detection = person detection (no image sent)
 capability-expression-emotion = expressions
 capability-motion-head = head movements
+capability-device-identify = identify (light, motion or sound)
+
+# Pairing methods (`pairing-method-<method, dots as dashes>`), and what the person does.
+pairing-method-device_code-display = Code on its screen
+pairing-method-device_code-display-hint = Type the code the device shows.
+pairing-method-device_code-speech = Code said aloud
+pairing-method-device_code-speech-hint = Type the code the device says.
+pairing-method-enrollment-qr = QR code
+pairing-method-enrollment-qr-hint = Show the QR code to the device's camera.
+pairing-method-enrollment-input = Code typed on the device
+pairing-method-enrollment-input-hint = Type this code on the device.
+pairing-method-enrollment-provisioning = Configuration
+pairing-method-enrollment-provisioning-hint = Give the device the pairing address, in NESTOR_PAIRING_URI or its settings.
 
 # Why a connection needs authorising again, or is in error.
 connection-refresh-refused = The service refused to renew the access: it was revoked or has expired. Connect the account again.

@@ -55,7 +55,9 @@ async def test_the_command_line_pairs_and_revokes_through_the_running_admin(
         async with server:
             path = token_path(tmp_path)
             assert stat.S_IMODE(path.stat().st_mode) == 0o600 and read_token(path)
-            assert await run("-c", str(config), "satellites", "approve", ticket.code, "--only", "audio.capture") == 0
+            assert ticket.device_code is not None
+            approve = ("satellites", "approve", ticket.device_code, "--only", "audio.capture")
+            assert await run("-c", str(config), *approve) == 0
             assert "paired reachy-salon (reachy-mini) in salon: may use audio.capture" in capsys.readouterr().out
             (satellite,) = admin.nestor.pairing.satellites()
             assert satellite.capabilities == {Capability("audio.capture")}
@@ -65,6 +67,16 @@ async def test_the_command_line_pairs_and_revokes_through_the_running_admin(
             assert await run("-c", str(config), "satellites", "revoke", "reachy-salon") == 0
             assert "revoked reachy-salon" in capsys.readouterr().out
             assert admin.nestor.pairing.satellites() == []
+
+            assert await run("-c", str(config), "satellites", "add", "--room", "bureau", "--name", "Capteur") == 0
+            said = capsys.readouterr().out
+            (addition,) = admin.nestor.pairing.additions()
+            assert (addition.room, addition.name, addition.method.value) == (
+                "bureau",
+                "Capteur",
+                "enrollment.provisioning",
+            )
+            assert "enrollment code " in said and "-" in said.split("enrollment code ")[1][:9]
 
             path.write_text("stale-token")
             assert await run("-c", str(config), "satellites", "revoke", "reachy-salon") == 2
@@ -94,9 +106,9 @@ async def test_the_command_line_says_when_nestor_is_not_running(
 def test_the_command_line_writes_the_wire_schemas(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     assert main(["satellites", "schemas", "--out", str(tmp_path / "schemas")]) == 0
     written = sorted(p.name for p in (tmp_path / "schemas").iterdir())
-    assert "manifest.json" in written and "hello.json" in written
+    assert {"manifest.json", "hello.json", "intent.identify.json", "pairing.request.json"} <= set(written)
     manifest = json.loads((tmp_path / "schemas" / "manifest.json").read_text())
-    assert manifest["properties"]["protocol"]["const"] == "nestor.satellite/1"
+    assert manifest["properties"]["protocol"]["const"] == "nestor.satellite/2"
     assert f"wrote {tmp_path / 'schemas' / 'manifest.json'}" in capsys.readouterr().out
 
 

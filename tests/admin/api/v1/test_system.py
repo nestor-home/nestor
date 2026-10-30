@@ -9,6 +9,7 @@ from nestor.modules.channels import Medium
 from nestor.modules.satellites import DeclaredCapability, Device, Manifest, Sdk
 from nestor.runtime import Distribution, Registry
 from nestor.testing.channels import InMemoryChannel
+from nestor.testing.satellites import pair_by_code
 
 from ...harness import Harness
 
@@ -37,7 +38,7 @@ class Voice(InMemoryChannel):
 async def test_the_system_lists_every_plugged_component_and_paired_satellite(tmp_path: Path) -> None:
     async with Harness(tmp_path) as admin:
         pairing = admin.nestor.pairing
-        await pairing.approve((await pairing.request(REACHY)).code)
+        await pair_by_code(pairing, REACHY)
         api = await admin.api()
         system = (await api.get("/api/v1/system")).json()
         assert system["nestor"] == {"version": metadata.version("nestor-home")}

@@ -64,7 +64,20 @@ capability-audio-playback = haut-parleur
 capability-audio-speech_activity = détection de parole
 capability-vision-person_detection = détection de personnes (sans image transmise)
 capability-expression-emotion = expressions
+capability-device-identify = se signaler (lumière, mouvement ou son)
 capability-motion-head = mouvements de tête
+
+# Méthodes d'appairage (`pairing-method-<méthode, points en tirets>`), et ce que fait la personne.
+pairing-method-device_code-display = Code sur son écran
+pairing-method-device_code-display-hint = Saisissez le code affiché par l'appareil.
+pairing-method-device_code-speech = Code dit à voix haute
+pairing-method-device_code-speech-hint = Saisissez le code que dit l'appareil.
+pairing-method-enrollment-qr = QR code
+pairing-method-enrollment-qr-hint = Montrez le QR code à la caméra de l'appareil.
+pairing-method-enrollment-input = Code saisi sur l'appareil
+pairing-method-enrollment-input-hint = Saisissez ce code sur l'appareil.
+pairing-method-enrollment-provisioning = Configuration
+pairing-method-enrollment-provisioning-hint = Donnez à l'appareil l'adresse d'appairage, dans NESTOR_PAIRING_URI ou ses réglages.
 
 # Pourquoi une connexion doit être réautorisée, ou est en erreur.
 connection-refresh-refused = Le service a refusé de renouveler l'accès : il a été révoqué ou a expiré. Reconnectez le compte.

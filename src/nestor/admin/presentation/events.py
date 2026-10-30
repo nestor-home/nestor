@@ -55,8 +55,14 @@ from nestor.modules.journal import Entry
 from nestor.modules.memory import MemoryCorrected, MemoryForgotten, MemoryRecorded
 from nestor.modules.satellites import (
     PersonDetected,
+    SatelliteAdditionCancelled,
+    SatelliteAdditionCompleted,
+    SatelliteAdditionExpired,
+    SatelliteAdditionStarted,
     SatelliteConnected,
     SatelliteDisconnected,
+    SatelliteEnrollmentRefused,
+    SatelliteIdentifyRequested,
     SatellitePaired,
     SatellitePairingRequested,
     SatelliteRevoked,
@@ -98,7 +104,19 @@ CATEGORIES = (
     Category("presence", (PresenceChanged,)),
     Category(
         "satellite",
-        (SatellitePairingRequested, SatellitePaired, SatelliteRevoked, SatelliteConnected, SatelliteDisconnected),
+        (
+            SatellitePairingRequested,
+            SatellitePaired,
+            SatelliteRevoked,
+            SatelliteConnected,
+            SatelliteDisconnected,
+            SatelliteAdditionStarted,
+            SatelliteAdditionCompleted,
+            SatelliteAdditionCancelled,
+            SatelliteAdditionExpired,
+            SatelliteEnrollmentRefused,
+            SatelliteIdentifyRequested,
+        ),
     ),
     Category("observation", (PersonDetected, SpeechActivityObserved, SpeakerIdentified)),
     Category(
@@ -284,9 +302,30 @@ class EventDescriber:
             ),
             SatellitePaired: lambda e: self._line(
                 e,
-                Message.of("journal-satellite-paired", device=e.device.id, room=e.device.room),
+                Message.of("journal-satellite-paired", device=e.device.id, room=e.device.room, proof=e.proof.value),
                 detail_message=self._capabilities("journal-detail-allowed", e.capabilities),
                 people=[e.approved_by],
+            ),
+            SatelliteAdditionStarted: lambda e: self._line(
+                e,
+                Message.of("journal-satellite-addition-started", proof=e.method.proof.value),
+                people=[e.created_by],
+                room=e.room,
+            ),
+            SatelliteAdditionCompleted: lambda e: self._line(
+                e, Message.of("journal-satellite-addition-completed", device=e.device_id)
+            ),
+            SatelliteAdditionCancelled: lambda e: self._line(
+                e, Message.of("journal-satellite-addition-cancelled"), people=[e.cancelled_by]
+            ),
+            SatelliteAdditionExpired: lambda e: self._line(e, Message.of("journal-satellite-addition-expired")),
+            SatelliteEnrollmentRefused: lambda e: self._line(
+                e,
+                Message.of("journal-satellite-enrollment-refused", device=e.device_id, reason=e.reason),
+                tone=Tone.WARNING,
+            ),
+            SatelliteIdentifyRequested: lambda e: self._line(
+                e, Message.of("journal-satellite-identify-requested", device=e.device_id), people=[e.requested_by]
             ),
             SatelliteRevoked: lambda e: self._line(
                 e,

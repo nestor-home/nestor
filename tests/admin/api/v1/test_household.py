@@ -8,6 +8,7 @@ from nestor.modules.accounts import Role
 from nestor.modules.channels import Address
 from nestor.modules.cognition import TaskStatus
 from nestor.modules.initiative import Watch
+from nestor.testing.satellites import pair_by_code
 
 from ...harness import Harness
 
@@ -154,7 +155,7 @@ async def test_resources_say_where_they_come_from_and_what_became_of_them(tmp_pa
         await nestor.journal.publish(
             ToolCalled(source="toolbox", address=TELEGRAM, call_id="c1", name="imap_search", arguments={})
         )
-        await nestor.pairing.approve((await nestor.pairing.request(Manifest(Device("mic", "esp32", "bureau")))).code)
+        await pair_by_code(nestor.pairing, Manifest(Device("mic", "esp32", "bureau")))
         await nestor.journal.publish(SatelliteConnected(source="voice", device_id="mic", room="bureau"))
 
         api = await admin.api()

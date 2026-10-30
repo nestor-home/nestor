@@ -140,7 +140,10 @@ journal-detail-declares = { $count ->
     [0] Declares: nothing
    *[other] Declares: { $capabilities }
 }
-journal-satellite-paired = Satellite { $device } paired (room “{ $room }”)
+journal-satellite-paired = { $proof ->
+    [enrollment_code] Satellite { $device } paired with an enrollment code (room “{ $room }”)
+   *[device_code] Satellite { $device } paired with its code (room “{ $room }”)
+}
 journal-detail-allowed = { $count ->
     [0] Allowed: nothing
    *[other] Allowed: { $capabilities }
@@ -148,6 +151,20 @@ journal-detail-allowed = { $count ->
 journal-satellite-revoked = Satellite { $device } revoked
 journal-satellite-connected = Satellite { $device } connected (room “{ $room }”)
 journal-satellite-disconnected = Satellite { $device } disconnected (room “{ $room }”)
+journal-satellite-addition-started = { $proof ->
+    [enrollment_code] Enrollment code made to add a satellite
+   *[device_code] Adding a satellite by the code it presents
+}
+journal-satellite-addition-completed = Satellite { $device } added
+journal-satellite-addition-cancelled = Satellite addition cancelled
+journal-satellite-addition-expired = Satellite addition expired unused
+journal-satellite-enrollment-refused = { $reason ->
+    [expired] { $device } presented an expired enrollment code
+    [used] { $device } presented an enrollment code already used
+    [cancelled] { $device } presented a cancelled enrollment code
+   *[unknown] { $device } presented a wrong enrollment code
+}
+journal-satellite-identify-requested = { $device } asked to make itself noticed
 journal-person-detected = { $count ->
     [one] { $count } person seen by { $device } (room “{ $room }”)
    *[other] { $count } people seen by { $device } (room “{ $room }”)

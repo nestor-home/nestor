@@ -56,6 +56,10 @@ class SatelliteLink:
         """Message types of the intents still waiting for their ack."""
         return [kind for _, kind in self._unacknowledged.values()]
 
+    def identify(self) -> None:
+        """Ask the device to make itself noticed (it declared and was allowed `device.identify`)."""
+        self.send(wire.IdentifyIntent())
+
     def send(self, message: wire.Message) -> None:
         self._forget_overdue()
         data = wire.encode(message)

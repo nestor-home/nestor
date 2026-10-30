@@ -1,6 +1,7 @@
 """A minimal satellite driver in Python, written only against the published protocol.
 
-It pairs (and "shows" its code in `code`), connects with its token, says `hello` on the `nestor`
+It pairs (with the enrollment code it was launched with, else by "showing" its device code in
+`code`, falling back to it when the enrollment code is refused), connects with its token, says `hello` on the `nestor`
 data channel, acknowledges every intent, plays the audio it receives, reports one observation, and
 reconnects when the core hangs up. Its faults can be switched on to prove the conformance suite
 catches them.
@@ -16,8 +17,9 @@ import httpx
 from aiortc import RTCConfiguration, RTCPeerConnection, RTCSessionDescription
 from aiortc.mediastreams import AudioStreamTrack, MediaStreamError, MediaStreamTrack
 
+from nestor.adapters.channels.voice.satellites.conformance import Launch
 from nestor.modules.behavior import Behavior
-from nestor.modules.satellites import PERSON_DETECTION, Device, Manifest, wire
+from nestor.modules.satellites import PERSON_DETECTION, Device, Manifest, PairingMethod, parse_pairing_uri, wire
 
 
 @dataclass(frozen=True, slots=True)
@@ -29,6 +31,10 @@ class Faults:
     honest_hello: bool = True  # say hello with its own device id
     reconnects: bool = True
     valid_messages: bool = True
+    reads_uri: bool = True  # pairs with the enrollment code of its launch
+    falls_back: bool = True  # asks for a device code once its enrollment code is refused
+    retries_refused: bool = False  # presents a refused enrollment code again
+    honours_retry_after: bool = True
 
 
 class ReferenceSatellite:
@@ -45,10 +51,15 @@ class ReferenceSatellite:
         self.intents: list[wire.Message] = []
         self.audio_frames = 0
         self.connections = 0
+        self.identified = 0
+        self.enrollment_code: str | None = None
 
-    async def __call__(self, url: str) -> None:
-        """The driver entry point the conformance suite launches."""
-        self.url = url
+    async def __call__(self, launch: Launch) -> None:
+        """The driver entry point the conformance suite launches: a fresh device each time."""
+        self.url, self.token, self.code = launch.url, None, None
+        self.enrollment_code = None
+        if launch.pairing_uri and self.faults.reads_uri:
+            _, self.enrollment_code = parse_pairing_uri(launch.pairing_uri)
         await self.run()
 
     async def run(self) -> None:
@@ -62,18 +73,41 @@ class ReferenceSatellite:
                     await asyncio.Event().wait()
 
     async def _pair(self, http: httpx.AsyncClient) -> str:
-        ticket = (await http.post("/satellites/pair", json=self.manifest.to_json())).json()
-        self.code = ticket["code"]
-        self.code_shown.set()
-        if not self.faults.claims_token:
-            await asyncio.Event().wait()
+        code = self.enrollment_code
         while True:
-            state = (await http.get(f"/satellites/pair/{ticket['pairing_id']}")).json()
+            body: dict[str, Any] = {"manifest": self.manifest.to_json()}
+            if code is not None:
+                body |= {"enrollment_code": code, "method": PairingMethod.PROVISIONING.value}
+            response = await http.post("/satellites/pairings", json=body)
+            if response.status_code == 429:
+                await asyncio.sleep(float(response.headers["Retry-After"]) if self.faults.honours_retry_after else 0.1)
+                continue
+            if response.status_code == 403:  # the enrollment code is refused: never again
+                if not self.faults.falls_back:
+                    await asyncio.Event().wait()
+                code = code if self.faults.retries_refused else None
+                await asyncio.sleep(0.1)
+                continue
+            ticket = response.raise_for_status().json()
+            if "device_code" in ticket:
+                self.code = ticket["device_code"]
+                self.code_shown.set()
+            if not self.faults.claims_token:
+                await asyncio.Event().wait()
+            state = await self._poll(http, ticket["pairing_id"])
+            if state is not None:
+                return state
+
+    async def _poll(self, http: httpx.AsyncClient, pairing_id: str) -> str | None:
+        while True:
+            state = (await http.get(f"/satellites/pairings/{pairing_id}")).json()
+            if state.get("identify"):
+                self.identified += 1
             if state["status"] == "approved":
                 self.token = state["token"]
                 return state["token"]
             if state["status"] == "expired":
-                raise RuntimeError("pairing expired")
+                return None
             await asyncio.sleep(0.1)
 
     async def _connect_once(self, http: httpx.AsyncClient, token: str) -> None:
@@ -93,7 +127,7 @@ class ReferenceSatellite:
                 send(wire.SpeechActivityObservation(active=True))
                 return
             device = self.manifest.device if self.faults.honest_hello else Device("someone-else", "x", "salon")
-            send(wire.Hello(manifest=Manifest(device, self.manifest.capabilities)))
+            send(wire.Hello(manifest=Manifest(device, self.manifest.capabilities, self.manifest.pairing_methods)))
 
         @channel.on("message")
         def received(raw: str) -> None:
@@ -113,6 +147,8 @@ class ReferenceSatellite:
                     send(wire.BeatIntent())  # only the core sends intents
             else:
                 self.intents.append(message)
+                if isinstance(message, wire.IdentifyIntent):
+                    self.identified += 1
                 if self.faults.acks:
                     send(wire.Ack(of=envelope.id))
                 if self.observe and message == wire.BehaviorIntent(behavior=Behavior.IDLE):
@@ -151,9 +187,11 @@ class ReferenceSatellite:
                 self.audio_frames += 1
 
 
-if __name__ == "__main__":  # a driver process: `python -m ….reference <core url> <manifest json>`
+if __name__ == "__main__":  # a driver process: `python -m ….reference <core url> <state> <manifest json>`
+    import os
     import sys
+    from pathlib import Path
 
-    url, manifest = sys.argv[1], Manifest.from_json(json.loads(sys.argv[2]))
+    launch = Launch(sys.argv[1], os.environ.get("NESTOR_PAIRING_URI"), Path(sys.argv[2]))
     with contextlib.suppress(KeyboardInterrupt):
-        asyncio.run(ReferenceSatellite(url, manifest).run())
+        asyncio.run(ReferenceSatellite(launch.url, Manifest.from_json(json.loads(sys.argv[3])))(launch))

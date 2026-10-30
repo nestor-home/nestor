@@ -139,7 +139,10 @@ journal-detail-declares = { $count ->
     [0] Déclare : rien
    *[other] Déclare : { $capabilities }
 }
-journal-satellite-paired = Satellite { $device } appairé (pièce « { $room } »)
+journal-satellite-paired = { $proof ->
+    [enrollment_code] Satellite { $device } appairé avec un code d'ajout (pièce « { $room } »)
+   *[device_code] Satellite { $device } appairé avec son code (pièce « { $room } »)
+}
 journal-detail-allowed = { $count ->
     [0] Autorisé : rien
    *[other] Autorisé : { $capabilities }
@@ -147,6 +150,20 @@ journal-detail-allowed = { $count ->
 journal-satellite-revoked = Satellite { $device } révoqué
 journal-satellite-connected = Satellite { $device } connecté (pièce « { $room } »)
 journal-satellite-disconnected = Satellite { $device } déconnecté (pièce « { $room } »)
+journal-satellite-addition-started = { $proof ->
+    [enrollment_code] Code d'ajout créé pour un satellite
+   *[device_code] Ajout d'un satellite par le code qu'il présente
+}
+journal-satellite-addition-completed = Satellite { $device } ajouté
+journal-satellite-addition-cancelled = Ajout de satellite annulé
+journal-satellite-addition-expired = Ajout de satellite expiré sans servir
+journal-satellite-enrollment-refused = { $reason ->
+    [expired] { $device } a présenté un code d'ajout expiré
+    [used] { $device } a présenté un code d'ajout déjà utilisé
+    [cancelled] { $device } a présenté un code d'ajout annulé
+   *[unknown] { $device } a présenté un mauvais code d'ajout
+}
+journal-satellite-identify-requested = { $device } invité à se signaler
 journal-person-detected = { $count ->
     [one] { $count } personne vue par { $device } (pièce « { $room } »)
    *[other] { $count } personnes vues par { $device } (pièce « { $room } »)

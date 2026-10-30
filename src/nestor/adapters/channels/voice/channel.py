@@ -10,6 +10,7 @@ most recent session of the room.
 """
 
 import asyncio
+import contextlib
 import logging
 from collections.abc import Mapping
 from dataclasses import replace
@@ -64,6 +65,7 @@ class VoiceChannel(Channel, SatelliteHost):
         host: str = "localhost",
         port: int | None = None,
         allow_unpaired_browser: bool = True,
+        public_url: str | None = None,
         session: SessionSettings,
         clips: Path | None = None,
         send_timeout_s: float = 30.0,
@@ -73,6 +75,7 @@ class VoiceChannel(Channel, SatelliteHost):
         self.room = self._default_room = room  # the browser's room; satellites bring their own
         self._speech = speech
         self._host, self._port = host, port
+        self._public_url = public_url  # how satellites reach this server, when its own address does not tell
         self._allow_unpaired_browser = allow_unpaired_browser
         self._session = session
         self._clips_folder = clips
@@ -87,6 +90,14 @@ class VoiceChannel(Channel, SatelliteHost):
 
     def host_satellites(self, pairing: Pairing, journal: Journal) -> None:
         self._hosting = (pairing, journal)
+
+    def satellite_url(self, seen_as: str) -> str | None:
+        if self._port is None or self._hosting is None:
+            return None
+        if self._public_url:
+            return self._public_url.rstrip("/")
+        host = seen_as if self._host in ("0.0.0.0", "::", "") else self._host
+        return f"http://{f'[{host}]' if ':' in host else host}:{self._port}"
 
     async def start(self) -> None:
         self._settings = replace(self._session, clips=load_clips(self._clips_folder))
@@ -178,8 +189,10 @@ class VoiceChannel(Channel, SatelliteHost):
         transport.add_event_handler("on_client_disconnected", disconnected)
         link = SatelliteLink(connection, satellite, journal)
         body = RemoteBody(link)
+        pairing = self._hosting[0] if self._hosting else None
         try:
-            await self.attach(transport, room=satellite.room, body=body)
+            with pairing.online(satellite.id, link.identify) if pairing else contextlib.nullcontext():
+                await self.attach(transport, room=satellite.room, body=body)
         finally:
             await body.close()
             await link.close()

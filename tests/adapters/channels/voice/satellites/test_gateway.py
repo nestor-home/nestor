@@ -17,8 +17,9 @@ from nestor.modules.behavior import Behavior, Expression
 from nestor.modules.channels import Address
 from nestor.modules.journal import Journal
 from nestor.modules.satellites import (
-    Manifest,
+    AttemptLimiter,
     Pairing,
+    PairingMethod,
     PersonDetected,
     Satellite,
     SatelliteConnected,
@@ -79,6 +80,8 @@ async def test_a_paired_satellite_speaks_in_its_room_and_its_body_follows_the_pl
         await asyncio.wait_for(satellite.welcomed.wait(), 10)
         await _until(lambda: channel.reachable(KITCHEN))
         assert channel.rooms == {"cuisine"}
+        await pairing.identify("enceinte-cuisine")
+        await _until(lambda: satellite.identified == 1)
         assert not channel.reachable(Address("voice", "salon")), "the satellite speaks in its paired room"
 
         await channel.send(KITCHEN, "[laughs] Ah, celle-là je ne l'avais pas vue.")
@@ -144,12 +147,13 @@ async def _offer(client: httpx.AsyncClient, device_id: str, token: str | None, *
 async def test_a_device_without_a_valid_token_is_refused() -> None:
     async with home() as (channel, pairing, _, url), httpx.AsyncClient(base_url=url) as client:
         ticket = await pairing.request(MANIFEST)
-        satellite = await pairing.approve(ticket.code)
+        assert ticket.device_code is not None
+        satellite = await pairing.approve(ticket.device_code)
         token = pairing.poll(ticket.id).token
         assert token
 
         assert (await _offer(client, satellite.id, None)).status_code == 401
-        assert (await _offer(client, satellite.id, "nst1_guessed")).status_code == 401
+        assert (await _offer(client, satellite.id, "nst2_guessed")).status_code == 401
         assert (await _offer(client, "reachy-salon", token)).status_code == 401, "a token opens its own device only"
         foreign = await _offer(client, satellite.id, token, pc_id="SmallWebRTCConnection#0-someone-else")
         assert foreign.status_code == 403
@@ -177,31 +181,98 @@ def _gateway_client(pairing: Pairing) -> httpx.AsyncClient:
 async def test_pairing_over_http_hands_out_the_token_once() -> None:
     pairing = Pairing(Journal(MemoryEventLog()))
     async with _gateway_client(pairing) as client:
-        asked = await client.post("/satellites/pair", json=MANIFEST.to_json())
+        asked = await client.post("/satellites/pairings", json={"manifest": MANIFEST.to_json()})
         assert asked.status_code == 201
         ticket = asked.json()
-        poll = f"/satellites/pair/{ticket['pairing_id']}"
+        assert ticket["status"] == "pending" and len(ticket["device_code"]) == 6
+        poll = f"/satellites/pairings/{ticket['pairing_id']}"
+        await pairing.identify_pending(ticket["pairing_id"])
+        assert (await client.get(poll)).json() == {"status": "pending", "identify": True}
         assert (await client.get(poll)).json() == {"status": "pending"}
 
-        await pairing.approve(ticket["code"])
+        await pairing.approve(ticket["device_code"])
         approved, claimed = (await client.get(poll)).json(), (await client.get(poll)).json()
-    assert approved["status"] == "approved" and approved["token"].startswith("nst1_")
+    assert approved["status"] == "approved" and approved["token"].startswith("nst2_")
     assert approved["room"] == "cuisine" and "expression.emotion" in approved["capabilities"]
     assert claimed["status"] == "claimed" and "token" not in claimed
 
 
+async def test_a_device_with_an_enrollment_code_is_approved_in_its_first_answer() -> None:
+    pairing = Pairing(Journal(MemoryEventLog()))
+    started = await pairing.start_addition(PairingMethod.PROVISIONING)
+    async with _gateway_client(pairing) as client:
+        body = {"manifest": MANIFEST.to_json(), "enrollment_code": started.code, "method": "enrollment.provisioning"}
+        ticket = (await client.post("/satellites/pairings", json=body)).json()
+        assert ticket["status"] == "approved" and "device_code" not in ticket
+        state = (await client.get(f"/satellites/pairings/{ticket['pairing_id']}")).json()
+        assert state["status"] == "approved" and state["token"]
+
+        again = await client.post("/satellites/pairings", json=body)
+    assert again.status_code == 403
+    assert again.json() | {"detail": ""} == {"error": "enrollment_refused", "reason": "used", "detail": ""}
+
+
+async def test_a_pending_device_proves_itself_with_an_enrollment_code_once() -> None:
+    pairing = Pairing(Journal(MemoryEventLog()))
+    started = await pairing.start_addition(PairingMethod.PROVISIONING)
+    async with _gateway_client(pairing) as client:
+        ticket = (await client.post("/satellites/pairings", json={"manifest": MANIFEST.to_json()})).json()
+        enroll = f"/satellites/pairings/{ticket['pairing_id']}/enrollment"
+        proof = {"enrollment_code": started.code, "method": "enrollment.provisioning"}
+        approved = await client.post(enroll, json=proof)
+        assert approved.status_code == 200 and approved.json()["status"] == "approved"
+        late = await client.post(enroll, json=proof)
+        assert late.status_code == 409 and late.json()["error"] == "not_pending"
+        invalid = await client.post(enroll, json={"enrollment_code": started.code})
+        assert invalid.status_code == 422 and invalid.json()["error"] == "invalid_request"
+
+
+async def test_wrong_enrollment_codes_are_rate_limited_with_retry_after() -> None:
+    pairing = Pairing(Journal(MemoryEventLog()), limiter=AttemptLimiter(per_source=1))
+    async with _gateway_client(pairing) as client:
+        body = {"manifest": MANIFEST.to_json(), "enrollment_code": "ZZZZZZZZ", "method": "enrollment.provisioning"}
+        assert (await client.post("/satellites/pairings", json=body)).json()["reason"] == "unknown"
+        limited = await client.post("/satellites/pairings", json=body)
+    assert limited.status_code == 429 and limited.json()["error"] == "too_many_attempts"
+    assert int(limited.headers["retry-after"]) == limited.json()["retry_after_s"] >= 1
+
+
 @pytest.mark.parametrize(
-    ("body", "status"),
-    [({"protocol": "nestor.satellite/1"}, 422), ({**MANIFEST.to_json(), "protocol": "mqtt"}, 422)],
-    ids=["no device", "other protocol"],
+    ("body", "error"),
+    [
+        ({"manifest": {"protocol": "nestor.satellite/2"}}, "invalid_request"),
+        ({"manifest": {**MANIFEST.to_json(), "protocol": "nestor.satellite/1"}}, "protocol_unsupported"),
+        (MANIFEST.to_json(), "invalid_request"),
+    ],
+    ids=["no device", "protocol 1", "a bare manifest"],
 )
-async def test_an_invalid_manifest_is_refused(body: dict[str, Any], status: int) -> None:
+async def test_an_invalid_request_is_refused(body: dict[str, Any], error: str) -> None:
     async with _gateway_client(Pairing(Journal(MemoryEventLog()))) as client:
-        assert (await client.post("/satellites/pair", json=body)).status_code == status
+        answer = await client.post("/satellites/pairings", json=body)
+    assert (answer.status_code, answer.json()["error"]) == (422, error)
 
 
 async def test_too_many_waiting_devices_are_told_to_come_back_later() -> None:
     async with _gateway_client(Pairing(Journal(MemoryEventLog()), max_pending=1)) as client:
-        await client.post("/satellites/pair", json=MANIFEST.to_json())
-        other = Manifest.from_json({**MANIFEST.to_json(), "device": {"id": "x", "model": "esp32", "room": "salon"}})
-        assert (await client.post("/satellites/pair", json=other.to_json())).status_code == 429
+        await client.post("/satellites/pairings", json={"manifest": MANIFEST.to_json()})
+        other = {**MANIFEST.to_json(), "device": {"id": "x", "model": "esp32", "room": "salon"}}
+        answer = await client.post("/satellites/pairings", json={"manifest": other})
+    assert answer.status_code == 429 and answer.json()["error"] == "too_many_pending" and answer.headers["retry-after"]
+
+
+def test_the_voice_channel_says_where_satellites_reach_it() -> None:
+    def channel(host: str, port: int | None, public_url: str | None = None) -> VoiceChannel:
+        replay = ReplayTransport([])
+        speech = FakeSpeech(lambda: ScriptedSTT(replay, []), lambda: ToneTTS(replay.clock))
+        settings = SessionSettings(stt_phrase=".")
+        voice = VoiceChannel(
+            "voice", room="salon", speech=speech, session=settings, host=host, port=port, public_url=public_url
+        )
+        voice.host_satellites(Pairing(Journal(MemoryEventLog())), Journal(MemoryEventLog()))
+        return voice
+
+    assert channel("0.0.0.0", 7860).satellite_url("nestor.local") == "http://nestor.local:7860"
+    assert channel("::", 7860).satellite_url("fd00::4") == "http://[fd00::4]:7860"
+    assert channel("192.168.1.4", 7870).satellite_url("nestor.local") == "http://192.168.1.4:7870"
+    assert channel("0.0.0.0", 7860, "https://n.example.org/").satellite_url("x") == "https://n.example.org"
+    assert channel("0.0.0.0", None).satellite_url("nestor.local") is None

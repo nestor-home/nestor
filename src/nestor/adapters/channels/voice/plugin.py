@@ -21,6 +21,9 @@ class VoiceSettings(AdapterSettings):
     # The Pipecat browser client at /client, with no pairing: anyone who reaches the port talks to the
     # assistant. Development on a trusted LAN only; turn it off once real satellites are paired.
     allow_unpaired_browser: bool = True
+    # How satellites reach this server ("http://nestor.local:7860"), for pairing URIs; by default its
+    # host and port, or the admin's host name when it listens on every interface.
+    public_url: str | None = Field(default=None, pattern=r"^https?://")
     stt_fallback: str | None = None  # said when the transcription fails; default: `voice-stt-down`
     fallback_clips: Path | None = None  # `stt.wav` and `tts.wav`, played when the synthesis is down
     quiet_s: float = Field(default=0.5, ge=0)  # silence before an unprompted message is spoken
@@ -36,6 +39,7 @@ def build(settings: VoiceSettings, name: str, services: Services) -> Component:
         host=settings.host,
         port=settings.port,
         allow_unpaired_browser=settings.allow_unpaired_browser,
+        public_url=settings.public_url,
         session=SessionSettings(
             stt_phrase=settings.stt_fallback
             if settings.stt_fallback is not None

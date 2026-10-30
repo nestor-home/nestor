@@ -14,6 +14,7 @@ from nestor.modules.channels import Address
 from nestor.modules.conversation import AssistantTurn, UserTurn
 from nestor.modules.initiative import DeliveryConsidered
 from nestor.modules.memory import MemoryRecorded
+from nestor.testing.satellites import pair_by_code
 
 from ...harness import EventStream, Harness
 
@@ -256,7 +257,7 @@ async def test_the_important_events_are_told_in_the_readers_language(tmp_path: P
             Device("reachy-salon", "reachy-mini", "salon"),
             tuple(DeclaredCapability(Capability(c)) for c in ("audio.capture", "audio.playback")),
         )
-        await pairing.approve((await pairing.request(reachy)).code, by=mathis)
+        await pair_by_code(pairing, reachy, by=mathis)
         await pairing.revoke("reachy-salon", by=mathis)
         for event in (
             AssistantTurn(source="agent", address=MATHIS_CHAT, text="Je surveille.", interrupted=True),
@@ -322,7 +323,7 @@ async def test_the_important_events_are_told_in_the_readers_language(tmp_path: P
             "Connexion c1 à réautoriser",
             "Le satellite reachy-salon (reachy-mini, pièce « salon ») demande l'appairage",
             "Déclare : micro, haut-parleur",
-            "Satellite reachy-salon appairé (pièce « salon »)",
+            "Satellite reachy-salon appairé avec son code (pièce « salon »)",
             "Autorisé : micro, haut-parleur",
             "Satellite reachy-salon révoqué",
             "Satellite reachy-salon connecté",

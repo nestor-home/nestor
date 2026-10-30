@@ -18,6 +18,7 @@ from nestor.admin import AdminServer, openapi_text, read_token, token_path
 from nestor.core import Component, NestorError, PersonId
 from nestor.init import initialise, slug
 from nestor.modules.accounts import Role
+from nestor.modules.satellites import PairingMethod
 from nestor.modules.satellites.wire import SCHEMAS, write_schemas
 from nestor.runtime.app import Nestor, open_accounts, run_until_stopped
 from nestor.runtime.config import SECRET_KEY, NestorConfig, load_config
@@ -46,7 +47,12 @@ def main(argv: list[str] | None = None) -> int:
     satellites = commands.add_parser("satellites", help="pair satellites with the running instance").add_subparsers(
         dest="action", required=True
     )
-    approve = satellites.add_parser("approve", help="approve the device showing this 6-digit code")
+    add = satellites.add_parser("add", help="make an enrollment code (and its pairing URI) to add a satellite")
+    add.add_argument("--room", help="the room to pair it into (default: the one it declares)")
+    add.add_argument("--name", help="what the household calls it")
+    add.add_argument("--method", default="enrollment.provisioning", choices=ENROLLMENT_METHODS,
+                     help="how the device gets the code (default: enrollment.provisioning)")  # fmt: skip
+    approve = satellites.add_parser("approve", help="approve the device presenting this 6-digit code")
     approve.add_argument("code")
     approve.add_argument("--only", help="capabilities to grant, comma-separated (default: all it declared)")
     satellites.add_parser("revoke", help="unpair a satellite").add_argument("device_id")
@@ -188,12 +194,22 @@ def _secrets(args: argparse.Namespace) -> int:
     return asyncio.run(run())
 
 
+ENROLLMENT_METHODS = [m.value for m in PairingMethod if m.proof.value == "enrollment_code"]
+
+
 def _satellites(args: argparse.Namespace) -> int:
     if args.action == "schemas":
         for path in write_schemas(args.out or SCHEMAS):
             print(f"wrote {path}")
         return 0
     config = load_config(args.config)
+    if args.action == "add":
+        asked = {"method": args.method} | {k: v for k in ("room", "name") if (v := getattr(args, k)) is not None}
+        started = _call(config, "POST", "/api/v1/satellites/additions", asked)
+        print(f"enrollment code {started['code']}, valid until {started['addition']['expires_at']}")
+        if started.get("uri"):
+            print(f"pairing URI: {started['uri']}  (NESTOR_PAIRING_URI on the device)")
+        return 0
     if args.action == "approve":
         body: dict[str, object] = {"code": args.code}
         if args.only is not None:
