@@ -22,6 +22,8 @@ class Whereabouts:
 
     home: bool | None = None
     room: str | None = None  # area id, only from a PERSON_ROOM source
+    # when these whereabouts started, when the source knows; not part of what they are (equality ignores it)
+    since: datetime | None = field(default=None, compare=False)
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

@@ -75,7 +75,15 @@ class InvitationAcceptIn(Input):
 async def list_accounts(request: Request, caller: Manager) -> list[AccountOut]:
     admin = state(request)
     people = People(admin.nestor.household)
-    return [AccountOut.of(a, people, caller.phrasebook) for a in admin.accounts.listed()]
+    return [AccountOut.of(a, people, caller.phrasebook, admin.accounts) for a in admin.accounts.listed()]
+
+
+@router.get("/accounts/{account_id}")
+async def get_account(request: Request, caller: Manager, account_id: str) -> AccountOut:
+    admin = state(request)
+    return AccountOut.of(
+        admin.accounts.get(account_id), People(admin.nestor.household), caller.phrasebook, admin.accounts
+    )
 
 
 @router.put("/accounts/{account_id}/role")
@@ -83,7 +91,7 @@ async def change_account_role(request: Request, caller: Manager, account_id: str
     """409 `last_owner` when it would leave no owner."""
     admin = state(request)
     account = await admin.accounts.change_role(account_id, body.role, by=caller.principal)
-    return AccountOut.of(account, People(admin.nestor.household), caller.phrasebook)
+    return AccountOut.of(account, People(admin.nestor.household), caller.phrasebook, admin.accounts)
 
 
 @router.post("/accounts/{account_id}/disable")
@@ -92,14 +100,14 @@ async def disable_account(request: Request, caller: Manager, account_id: str) ->
     admin = state(request)
     account = await admin.accounts.disable(account_id, by=caller.principal)
     admin.sessions.revoke(account.id)
-    return AccountOut.of(account, People(admin.nestor.household), caller.phrasebook)
+    return AccountOut.of(account, People(admin.nestor.household), caller.phrasebook, admin.accounts)
 
 
 @router.post("/accounts/{account_id}/enable")
 async def enable_account(request: Request, caller: Manager, account_id: str) -> AccountOut:
     admin = state(request)
     account = await admin.accounts.enable(account_id, by=caller.principal)
-    return AccountOut.of(account, People(admin.nestor.household), caller.phrasebook)
+    return AccountOut.of(account, People(admin.nestor.household), caller.phrasebook, admin.accounts)
 
 
 @router.put("/accounts/{account_id}/password", status_code=204)

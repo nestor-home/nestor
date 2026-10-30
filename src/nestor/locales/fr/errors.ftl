@@ -51,3 +51,14 @@ error-memory-shared = Seule l'administration du foyer modifie les souvenirs comm
 error-empty-memory = Pour effacer un souvenir, oubliez-le.
 error-journal-entry-unknown = Cette entrée du journal n'existe pas, ou ne vous concerne pas.
 error-cross-origin = Requête refusée : elle ne vient pas de cette administration.
+error-person-unknown = Cette personne ne fait pas partie du foyer.
+error-config-unavailable = Cette instance n'a pas démarré depuis un fichier de configuration : rien à modifier.
+error-no-secret-key = NESTOR_SECRET_KEY n'est pas définie : impossible de garder des secrets sans elle.
+error-config-invalid = La configuration est inutilisable ({ $count ->
+    [one] un problème
+   *[other] { $count } problèmes
+}) : rien n'a été écrit.
+error-config-history-unknown = Cette configuration antérieure n'existe pas.
+error-secret-in-use = Ce secret sert encore à { $paths } : retirez d'abord ces références.
+error-secret-unknown = Ce secret n'est pas défini.
+error-restart-unconfirmed = Confirmez le redémarrage : chaque conversation sera interrompue un instant.

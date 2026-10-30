@@ -22,7 +22,7 @@ from nestor.modules.accounts import (
 )
 from nestor.modules.household import Household, Person
 from nestor.modules.journal import Journal, LogQuery
-from nestor.testing.accounts import InMemoryVerifierStore
+from nestor.testing.accounts import InMemoryActivityStore, InMemoryVerifierStore
 from nestor.testing.journal import MemoryEventLog
 
 PASSWORD = "correct horse battery"
@@ -33,13 +33,13 @@ class Book:
     """An account book on an in-memory journal, with a clock the test moves."""
 
     def __init__(self) -> None:
-        self.log, self.verifiers = MemoryEventLog(), InMemoryVerifierStore()
+        self.log, self.verifiers, self.activity = MemoryEventLog(), InMemoryVerifierStore(), InMemoryActivityStore()
         self.journal = Journal(self.log)
         self.now = utc_now()
         self.accounts = self.reopen()
 
     def reopen(self) -> Accounts:
-        return Accounts(self.journal, self.verifiers, HOUSEHOLD, clock=lambda: self.now)
+        return Accounts(self.journal, self.verifiers, HOUSEHOLD, self.activity, clock=lambda: self.now)
 
     async def owner(self, login: str = "mathis", person: str | None = "mathis") -> Principal:
         account = await self.accounts.create(
@@ -295,3 +295,19 @@ async def test_a_reading_language_is_ones_own_choice_or_an_administrators(book: 
     assert reopened.get(member.id).locale == "en"
     await book.accounts.set_locale(member.id, None, by=member.principal())
     assert book.accounts.get(member.id).locale is None
+
+
+async def test_an_account_is_seen_at_each_sign_in_and_written_at_most_once_a_minute(book: Book) -> None:
+    owner = await book.owner()
+    assert book.accounts.last_seen(owner.account_id or "") is None
+    signed_in = book.now
+    await book.accounts.authenticate("mathis", PASSWORD)
+    book.now += timedelta(seconds=30)
+    await book.accounts.touch(owner.account_id or "")
+    assert book.accounts.last_seen(owner.account_id or "") == book.now
+    assert await book.activity.seen() == {owner.account_id: signed_in}, "not written again within the minute"
+    book.now += timedelta(seconds=31)
+    await book.accounts.touch(owner.account_id or "")
+    reopened = book.reopen()
+    await reopened.start()
+    assert reopened.last_seen(owner.account_id or "") == book.now

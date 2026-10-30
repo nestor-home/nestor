@@ -104,9 +104,13 @@ async def test_the_household_lists_people_with_presence_connections_and_accounts
         await connections.connect("imap", MATHILDE, {"server": "s", "password": "p"})
         people = {p["id"]: p for p in (await (await admin.api()).get("/api/v1/household/people")).json()}
         mathis = people["mathis"]
-        assert mathis["presence"] == {"home": True, "room": "salon"} and mathis["reach"] == "memory:main"
+        assert mathis["presence"] == {"home": True, "room": "salon", "since": None} and mathis["reach"] == "memory:main"
         assert mathis["channel_accounts"] == ["memory:user"] and mathis["account"]["role"] == "owner"
-        assert people["lucie"]["account"] is None and people["lucie"]["presence"] == {"home": None, "room": None}
+        assert people["lucie"]["account"] is None and people["lucie"]["presence"] == {
+            "home": None,
+            "room": None,
+            "since": None,
+        }
         assert [len(p["connections"]) for p in people.values()] == [1, 1, 0]
 
         seen_by_member = {

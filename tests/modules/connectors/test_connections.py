@@ -9,6 +9,7 @@ import urllib.parse
 import pytest
 
 from nestor.core import ContractError, PersonId, ProviderError
+from nestor.core.i18n import Message
 from nestor.modules.channels import Address
 from nestor.modules.cognition.tools import ToolContext, ToolFailed
 from nestor.modules.connectors import (
@@ -132,7 +133,8 @@ async def test_a_refused_refresh_asks_the_person_to_reconnect_and_hides_the_tool
         await search.run({"query": "x"}, CONTEXT)
     assert setup.connections.connections[connection_id].status is Status.NEEDS_REAUTH
     assert ConnectorTools(setup.connections).tools() == []
-    assert (await setup.journal.history(ConnectionChanged))[-1].reason == "refresh refused by the provider"
+    assert (await setup.journal.history(ConnectionChanged))[-1].reason == Message.of("connection-refresh-refused")
+    assert setup.connections.connections[connection_id].status_reason == Message.of("connection-refresh-refused")
 
 
 async def test_a_provider_outage_during_refresh_does_not_disconnect() -> None:

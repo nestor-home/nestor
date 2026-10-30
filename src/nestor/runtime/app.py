@@ -4,7 +4,8 @@ import asyncio
 import contextlib
 import logging
 import os
-from collections.abc import AsyncGenerator, Iterable, Mapping, Sequence
+import signal
+from collections.abc import AsyncGenerator, Callable, Iterable, Mapping, Sequence
 from contextlib import AsyncExitStack
 from pathlib import Path
 from typing import Self, cast
@@ -12,6 +13,7 @@ from typing import Self, cast
 from nestor.adapters.i18n import FluentLocalizer, catalogue_dirs
 from nestor.adapters.oauth import HttpxTokenEndpoint
 from nestor.adapters.storage.sqlite import (
+    SQLiteActivityStore,
     SQLiteDatabase,
     SQLiteEventLog,
     SQLiteMemoryStore,
@@ -73,18 +75,24 @@ class Nestor:
         *,
         environ: Mapping[str, str] | None = None,
         token_endpoint: TokenEndpoint | None = None,
+        source: Path | None = None,
     ) -> None:
         self.config = config
-        registry = registry or Registry.installed()
+        self.source = source  # the configuration file it was loaded from, when it was (the admin edits it)
+        self.registry = registry = registry or Registry.installed()
+        self.restart = Restart()
         self.localizer = FluentLocalizer(catalogue_dirs(["nestor", *registry.packages()]), default=Locale("en"))
         services = Services(data_dir=config.data_dir, localizer=self.localizer, locale=Locale(config.persona.locale))
         self.plugged: list[Plugged] = []  # every adapter built from the configuration, in build order
         environ = os.environ if environ is None else environ
+        self.environ: Mapping[str, str] = environ
 
         self.database = SQLiteDatabase(database_path(config.data_dir))
         self.journal = Journal(SQLiteEventLog(self.database))
         self.household = Household(p.to_person() for p in config.household)
-        self.accounts = Accounts(self.journal, SQLiteVerifierStore(self.database), self.household)
+        self.accounts = Accounts(
+            self.journal, SQLiteVerifierStore(self.database), self.household, SQLiteActivityStore(self.database)
+        )
 
         self.model = _build(self.plugged, registry, Family.MODEL, config.model, "model", services, ConversationModel)
         self.executors = [
@@ -122,17 +130,17 @@ class Nestor:
         self.token_endpoint: TokenEndpoint | None = None
         self.connections: Connections | None = None
         connected: list[InboundEventSource] = []
+        secret = environ.get(SECRET_KEY)
+        # the vault: connectors' tokens and the configuration's secrets; without the instance key, neither
+        self.vault = SQLiteVault(self.database, secret) if secret else None
         if self.connectors:
-            secret = environ.get(SECRET_KEY)
-            if not secret:
+            if self.vault is None:
                 raise ConfigError(
                     f"{SECRET_KEY} is not set: connectors keep their tokens encrypted with it. Generate one with "
                     f"{GENERATE} and set it in the environment, never in the configuration file"
                 )
             self.token_endpoint = token_endpoint or HttpxTokenEndpoint()
-            self.connections = Connections(
-                self.journal, SQLiteVault(self.database, secret), self.token_endpoint, self.connectors
-            )
+            self.connections = Connections(self.journal, self.vault, self.token_endpoint, self.connectors)
             inbound = ConnectedInbound(self.connections)
             connected = [inbound] if inbound.kinds else []
         self.sources = [*self.inbound, *connected]
@@ -186,14 +194,13 @@ class Nestor:
         """In start order; they are closed in reverse."""
         presence = [self.presence] if self.presence else []
         triage = [self.triage_model] if self.triage_model is not self.model else []
-        connections = (
-            [self.connections.vault, self.token_endpoint, self.connections]
-            if self.token_endpoint and self.connections
-            else []
-        )
+        connections = [self.token_endpoint, self.connections] if self.token_endpoint and self.connections else []
+        vault = [self.vault] if self.vault else []
         return [
             self.database,
+            *vault,
             self.accounts.verifiers,
+            self.accounts.activity,
             self.accounts,
             self.pairing,
             *connections,
@@ -274,17 +281,33 @@ async def open_accounts(data_dir: Path, people: Iterable[Person]) -> AsyncGenera
     """The account book kept in `data_dir`, without the rest of Nestor (for the command line: a running
     instance sees the change at its next start)."""
     database = SQLiteDatabase(database_path(data_dir))
-    accounts = Accounts(Journal(SQLiteEventLog(database)), SQLiteVerifierStore(database), Household(people))
+    accounts = Accounts(
+        Journal(SQLiteEventLog(database)),
+        SQLiteVerifierStore(database),
+        Household(people),
+        SQLiteActivityStore(database),
+    )
     async with database, accounts:
         yield accounts
+
+
+class Restart:
+    """A restart asked for by a person (never automatically): Nestor stops as on SIGTERM — channels close,
+    remote tasks detach and are followed again after — then the command line re-executes itself."""
+
+    def __init__(self, stop: Callable[[], None] | None = None) -> None:
+        self.requested = False
+        self._stop = stop or (lambda: os.kill(os.getpid(), signal.SIGTERM))
+
+    def request(self) -> None:
+        self.requested = True
+        self._stop()
 
 
 async def run_until_stopped(nestor: Nestor, extras: Sequence[Component] = ()) -> None:
     """Serve until SIGINT/SIGTERM, then close everything cleanly (remote tasks keep running).
 
     `extras` run alongside, started once Nestor is and closed before it (the admin web server)."""
-    import signal
-
     loop = asyncio.get_running_loop()
     stop = asyncio.Event()
     for sig in (signal.SIGINT, signal.SIGTERM):

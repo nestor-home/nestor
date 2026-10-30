@@ -3,12 +3,12 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from nestor.admin.presentation import Phrasebook
 from nestor.core import Health, PersonId
 from nestor.core.i18n import Message
-from nestor.modules.accounts import Account, Role
+from nestor.modules.accounts import Account, Accounts, Role
 from nestor.modules.household import Household
 from nestor.runtime import Nestor
 
@@ -19,9 +19,22 @@ class Input(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class ProblemOut(BaseModel):
+    """What is wrong in an edited configuration, located by its path in the document."""
+
+    path: list[str | int]  # `["channels", 0, "token"]`; empty: the document as a whole
+    code: str  # missing, extra, invalid, unknown_kind, reference (an environment variable), secret
+    message_id: str  # `config-error-<code>`, with `args` {path, detail}
+    args: dict[str, str | int | float]
+    message: str
+
+
 class ErrorDetail(BaseModel):
-    code: str
-    message: str  # in French, shown as is
+    code: str  # for programs: `invalid_credentials`, `last_owner`…
+    message_id: str  # `error-<code with dashes>`, for a front rendering with its own catalogue
+    args: dict[str, str | int | float]
+    message: str  # rendered in the reader's language, shown as is
+    problems: list[ProblemOut] | None = None  # a configuration refused: what is wrong, where
 
 
 class ErrorOut(BaseModel):
@@ -116,7 +129,11 @@ class JournalItem(BaseModel):
     message: MessageOut  # the summary; deliveries carry `args.follow_up` ("yes" / "no")
     text: str
     detail: str  # raw content (what was said, a tool's output): never translated; "" without
-    detail_message: MessageOut | None  # a detail that is a sentence of Nestor's ("Planned: …")
+    detail_message: MessageOut | None = Field(  # a detail that is a sentence of Nestor's ("Planned: …")
+        examples=[
+            {"id": "journal-detail-plan", "args": {"way": "both", "spoken": "voice:salon", "written": "telegram:7"}}
+        ]
+    )
     detail_text: str  # what to show as detail: `detail_message` rendered, else `detail`
     reason: ReasonOut | None  # why the assistant decided to speak, when it did
     tone: Tone
@@ -139,9 +156,10 @@ class AccountOut(BaseModel):
     disabled: bool
     created_at: datetime
     locale: str | None  # the language it chose; None: the household's
+    last_seen_at: datetime | None  # its last sign-in or request (to the minute); None: never since it was opened
 
     @classmethod
-    def of(cls, account: Account, people: People, words: Phrasebook) -> "AccountOut":
+    def of(cls, account: Account, people: People, words: Phrasebook, accounts: Accounts) -> "AccountOut":
         return cls(
             id=account.id,
             login=account.login,
@@ -151,6 +169,7 @@ class AccountOut(BaseModel):
             disabled=account.disabled,
             created_at=account.created_at,
             locale=account.locale,
+            last_seen_at=accounts.last_seen(account.id),
         )
 
 

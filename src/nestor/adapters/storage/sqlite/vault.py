@@ -6,9 +6,11 @@ row is bound to its `(owner, name)` as associated data, so a sealed value moved 
 not open.
 """
 
+import contextlib
 import json
 import os
 import sqlite3
+from pathlib import Path
 
 from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives import hashes
@@ -35,8 +37,7 @@ class SQLiteVault(CredentialVault):
             )
         self.database = database
         self._owns_database = owns_database
-        key = HKDF(algorithm=hashes.SHA256(), length=32, salt=None, info=b"nestor credential vault v1")
-        self._cipher = AESGCM(key.derive(secret.encode()))
+        self._cipher = _cipher(secret)
 
     async def start(self) -> None:
         if self._owns_database:
@@ -68,17 +69,47 @@ class SQLiteVault(CredentialVault):
         row = await self.database.read(query)
         if row is None:
             return None
-        sealed = row[0]
-        try:
-            plain = self._cipher.decrypt(sealed[:_NONCE], sealed[_NONCE:], _bound(owner, name))
-        except InvalidTag:
-            raise ContractError(
-                f"secret {name!r} of {owner!r} cannot be opened: NESTOR_SECRET_KEY changed since it was stored"
-            ) from None
-        return {str(k): str(v) for k, v in json.loads(plain).items()}
+        return _open(self._cipher, row[0], owner, name)
 
     async def forget(self, owner: str) -> None:
         await self.database.write(lambda c: c.execute("DELETE FROM secrets WHERE owner = ?", (owner,)))
+
+
+class SealedReader:
+    """Reads the vault without the event loop, before Nestor starts (resolving `${secret:…}` while the
+    configuration loads). WAL lets it read while a running instance writes."""
+
+    def __init__(self, path: Path, secret: str) -> None:
+        if len(secret) < MIN_SECRET_LENGTH:
+            raise ContractError(f"the vault secret must be at least {MIN_SECRET_LENGTH} characters")
+        self.path, self._cipher = path, _cipher(secret)
+
+    def get(self, owner: str, name: str) -> Secrets | None:
+        if not self.path.exists():
+            return None
+        with contextlib.closing(sqlite3.connect(f"file:{self.path}?mode=ro", uri=True)) as connection:
+            try:
+                row = connection.execute(
+                    "SELECT sealed FROM secrets WHERE owner = ? AND name = ?", (owner, name)
+                ).fetchone()
+            except sqlite3.OperationalError:  # a database the migrations have not reached yet
+                return None
+        return _open(self._cipher, row[0], owner, name) if row else None
+
+
+def _cipher(secret: str) -> AESGCM:
+    key = HKDF(algorithm=hashes.SHA256(), length=32, salt=None, info=b"nestor credential vault v1")
+    return AESGCM(key.derive(secret.encode()))
+
+
+def _open(cipher: AESGCM, sealed: bytes, owner: str, name: str) -> Secrets:
+    try:
+        plain = cipher.decrypt(sealed[:_NONCE], sealed[_NONCE:], _bound(owner, name))
+    except InvalidTag:
+        raise ContractError(
+            f"secret {name!r} of {owner!r} cannot be opened: NESTOR_SECRET_KEY changed since it was stored"
+        ) from None
+    return {str(k): str(v) for k, v in json.loads(plain).items()}
 
 
 def _bound(owner: str, name: str) -> bytes:

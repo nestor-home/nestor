@@ -11,6 +11,7 @@ scope-name = { $scope ->
     [accounts-manage] gérer les comptes
     [accounts-owners-manage] gérer les propriétaires
     [system-read] voir ce qui est branché
+    [config-manage] modifier la configuration et redémarrer
     [household-read] voir le foyer
     [household-connections-manage] gérer toutes les connexions
     [own-connections-manage] gérer ses propres connexions
@@ -64,3 +65,8 @@ capability-audio-speech_activity = détection de parole
 capability-vision-person_detection = détection de personnes (sans image transmise)
 capability-expression-emotion = expressions
 capability-motion-head = mouvements de tête
+
+# Pourquoi une connexion doit être réautorisée, ou est en erreur.
+connection-refresh-refused = Le service a refusé de renouveler l'accès : il a été révoqué ou a expiré. Reconnectez le compte.
+connection-no-refresh-token = L'accès a expiré et le service n'a donné aucun moyen de le renouveler. Reconnectez le compte.
+connection-reason-other = { $detail }

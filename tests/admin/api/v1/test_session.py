@@ -21,7 +21,9 @@ async def test_signing_in_returns_who_is_signed_in_with_scopes_and_csrf_token(tm
             "name": "Mathis",
         }
         assert "accounts.owners.manage" in me["scopes"] and me["assistant"] == "Richie" and me["csrf_token"]
-        assert (await api.get("/api/v1/me")).json() == me
+        again = (await api.get("/api/v1/me")).json()
+        assert again["account"].pop("last_seen_at") >= me["account"].pop("last_seen_at")
+        assert again == me
 
 
 async def test_a_member_is_told_only_its_own_scopes(tmp_path: Path) -> None:

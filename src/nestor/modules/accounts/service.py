@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 
 from nestor.core import Component, ContractError, Event, PersonId, new_id, utc_now
 from nestor.core.i18n import Locale
+from nestor.modules.accounts.activity import ActivityStore
 from nestor.modules.accounts.credentials import Token, VerifierStore, decoy, hash_password, verify_password
 from nestor.modules.accounts.errors import AccountConflict, InvitationRefused, LastOwner, UnknownAccount, WrongPassword
 from nestor.modules.accounts.events import (
@@ -31,6 +32,7 @@ from nestor.modules.household import Household
 from nestor.modules.journal import Journal
 
 INVITATION_TTL = timedelta(hours=48)
+SEEN_EVERY = timedelta(minutes=1)
 _PERSONAL = (Role.MEMBER, Role.GUEST)
 _REFUSALS = {
     InvitationStatus.ACCEPTED: "this invitation has already been used",
@@ -47,11 +49,14 @@ class Accounts(Component):
         journal: Journal,
         verifiers: VerifierStore,
         household: Household,
+        activity: ActivityStore,
         *,
         invitation_ttl: timedelta = INVITATION_TTL,
         clock: Callable[[], datetime] = utc_now,
     ) -> None:
-        self.journal, self.verifiers, self.household = journal, verifiers, household
+        self.journal, self.verifiers, self.household, self.activity = journal, verifiers, household, activity
+        self._seen: dict[str, datetime] = {}  # the last moment each account was seen
+        self._written: dict[str, datetime] = {}  # the last moment written to the store
         self._ttl, self._clock = invitation_ttl, clock
         self.accounts: dict[str, Account] = {}
         self.invitations: dict[str, Invitation] = {}
@@ -60,6 +65,8 @@ class Accounts(Component):
     async def start(self) -> None:
         self.accounts.clear()
         self.invitations.clear()
+        self._seen = dict(await self.activity.seen())
+        self._written = dict(self._seen)
         for event in await self.journal.history(
             AccountCreated,
             AccountRoleChanged,
@@ -95,6 +102,18 @@ class Accounts(Component):
     def now(self) -> datetime:
         return self._clock()
 
+    def last_seen(self, account_id: str) -> datetime | None:
+        return self._seen.get(account_id)
+
+    async def touch(self, account_id: str) -> None:
+        """The account was just seen (a sign-in, an authenticated request); written at most once a minute."""
+        now = self._clock()
+        self._seen[account_id] = now
+        written = self._written.get(account_id)
+        if written is None or now - written >= SEEN_EVERY:
+            self._written[account_id] = now
+            await self.activity.record(account_id, now)
+
     # -- signing in -----------------------------------------------------------------------------------
 
     async def authenticate(self, login: str, password: str, *, client: str = "") -> Account | None:
@@ -122,7 +141,11 @@ class Accounts(Component):
                 reason=reason,
             )
         )
-        return None if reason else account
+        if reason:
+            return None
+        assert account is not None
+        await self.touch(account.id)
+        return account
 
     # -- creating -------------------------------------------------------------------------------------
 

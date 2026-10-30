@@ -263,7 +263,7 @@ class EventDescriber:
             ConnectionChanged: lambda e: self._line(
                 e,
                 Message.of("journal-connection-changed", connection=e.connection_id, status=e.status),
-                detail=e.reason,
+                detail_message=e.reason,
                 tone=Tone.NORMAL if e.status == "connected" else Tone.WARNING,
             ),
             ConnectionRemoved: lambda e: self._line(

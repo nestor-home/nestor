@@ -277,7 +277,12 @@ async def test_the_important_events_are_told_in_the_readers_language(tmp_path: P
             WatchCreated(
                 source="watch-book", watch_id="w3", what="le colis", keywords=("Colissimo",), kinds=(), once=True
             ),
-            ConnectionChanged(source="connections", connection_id="c1", status=Status.NEEDS_REAUTH, reason="refused"),
+            ConnectionChanged(
+                source="connections",
+                connection_id="c1",
+                status=Status.NEEDS_REAUTH,
+                reason=Message.of("connection-refresh-refused"),
+            ),
             SatelliteConnected(source="voice", device_id="reachy-salon", room="salon"),
             SatelliteDisconnected(source="voice", device_id="reachy-salon", room="salon"),
             PersonDetected(source="voice", device_id="reachy-salon", room="salon", count=2, confidence=0.87),

@@ -1,10 +1,17 @@
 """Passwords are salted scrypt hashes; single-use tokens keep only their digest; verifier stores keep both."""
 
+from datetime import datetime
+
 import pytest
 
 from nestor.core import ContractError
-from nestor.modules.accounts import Token, VerifierStore, hash_password, verify_password
-from nestor.testing.accounts import InMemoryVerifierStore, VerifierStoreContract
+from nestor.modules.accounts import ActivityStore, Token, VerifierStore, hash_password, verify_password
+from nestor.testing.accounts import (
+    ActivityStoreContract,
+    InMemoryActivityStore,
+    InMemoryVerifierStore,
+    VerifierStoreContract,
+)
 
 
 def test_a_password_hash_verifies_only_its_password() -> None:
@@ -50,3 +57,21 @@ async def test_the_contract_rejects_a_store_that_never_forgets() -> None:
 
     with pytest.raises(AssertionError):
         await Broken().test_a_verifier_comes_back_until_it_is_replaced_or_forgotten()
+
+
+class TestInMemoryActivityStore(ActivityStoreContract):
+    def store(self) -> ActivityStore:
+        return InMemoryActivityStore()
+
+
+async def test_the_contract_rejects_a_store_that_moves_back_in_time() -> None:
+    class Forgetting(InMemoryActivityStore):
+        async def record(self, account_id: str, at: datetime) -> None:
+            self.moments[account_id] = at
+
+    class Broken(ActivityStoreContract):
+        def store(self) -> ActivityStore:
+            return Forgetting()
+
+    with pytest.raises(AssertionError):
+        await Broken().test_the_latest_moment_of_each_account_is_kept()

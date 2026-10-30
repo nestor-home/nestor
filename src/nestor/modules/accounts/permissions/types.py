@@ -20,6 +20,7 @@ class Scope(StrEnum):
     OWN_CONNECTIONS = "own.connections.manage"  # the connections of the account's own person
     SATELLITES_MANAGE = "satellites.manage"  # pair and revoke devices
     SYSTEM_READ = "system.read"  # what is plugged in, its versions and health
+    CONFIG_MANAGE = "config.manage"  # edit the configuration and its secrets, restart the instance
     JOURNAL_READ_ALL = "journal.read.all"
     JOURNAL_READ_OWN = "journal.read.own"  # what concerns the account's person, their conversations
     MEMORY_MANAGE_ALL = "memory.manage.all"

@@ -25,7 +25,7 @@ from nestor.modules.accounts import Account, Principal, Scope
 
 UNSAFE = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 CSRF_HEADER = "X-CSRF-Token"
-LOCAL = Principal(scopes=frozenset({Scope.SATELLITES_MANAGE}))  # the command line on this machine
+LOCAL = Principal(scopes=frozenset({Scope.SATELLITES_MANAGE, Scope.CONFIG_MANAGE}))  # the command line here
 
 
 @dataclass(frozen=True, slots=True)
@@ -85,6 +85,7 @@ async def signed_in(request: Request) -> Caller:
         given = request.headers.get(CSRF_HEADER, "")
         if not hmac.compare_digest(given.encode(), session.csrf.encode()):
             raise ApiError(403, "csrf_failed")
+    await admin.accounts.touch(account.id)
     phrasebook = Phrasebook(admin.nestor.localizer, account_locale(admin, account))
     return Caller(account.principal(), phrasebook, account, session)
 

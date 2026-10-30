@@ -31,6 +31,8 @@ class MeOut(BaseModel):
     csrf_token: str  # send it back in `X-CSRF-Token` on every POST, PUT, PATCH and DELETE
     assistant: str  # the assistant's name, for the front's header (also `agent.name`)
     agent: AgentOut
+    restart_required: bool  # the configuration was written since the instance started
+    pending_changes: list[str]
 
 
 class LocaleIn(Input):
@@ -114,10 +116,12 @@ def _me(admin: AdminState, account: Account, session: Session) -> MeOut:
     locale = account_locale(admin, account)
     words = Phrasebook(admin.nestor.localizer, locale)
     return MeOut(
-        account=AccountOut.of(account, People(admin.nestor.household), words),
+        account=AccountOut.of(account, People(admin.nestor.household), words, admin.accounts),
         locale=locale,
         scopes=sorted(account.principal().scopes),
         csrf_token=session.csrf,
         assistant=admin.nestor.config.persona.name,
         agent=AgentOut.of(admin.nestor),
+        restart_required=bool(admin.pending_changes),
+        pending_changes=admin.pending_changes,
     )

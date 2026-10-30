@@ -33,6 +33,7 @@ class State(_Payload):
     state: str
     attributes: dict[str, Any] = {}
     last_updated: datetime
+    last_changed: datetime | None = None  # when the state itself last changed (attributes aside)
 
 
 class Area(_Payload):
@@ -136,10 +137,16 @@ class Installation:
     def _whereabouts(self, person: PersonId, entity: str) -> Whereabouts:
         state = self._state(entity)
         home = None if state is None or state in UNKNOWN_STATES else state == "home"
-        room = None
+        room, since = None, self._changed(entity)
         if home and self.granularity is Granularity.PERSON_ROOM and (tracker := self._mapping.rooms.get(person)):
             room = self._areas.resolve(self._state(tracker))
-        return Whereabouts(home=home, room=room)
+            moved = self._changed(tracker)
+            since = max(since, moved) if since and moved and room else since
+        return Whereabouts(home=home, room=room, since=since)
+
+    def _changed(self, entity: str) -> datetime | None:
+        state = self._states.get(entity)
+        return None if state is None else state.last_changed or state.last_updated
 
     def _state(self, entity: str) -> str | None:
         state = self._states.get(entity)

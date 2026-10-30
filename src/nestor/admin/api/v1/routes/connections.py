@@ -16,7 +16,7 @@ from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 
 from nestor.admin.api.v1.errors import ApiError, not_found
-from nestor.admin.api.v1.models import Input, People, PersonRef
+from nestor.admin.api.v1.models import Input, MessageOut, People, PersonRef, ReasonOut
 from nestor.admin.api.v1.security import Caller, allowed
 from nestor.admin.connecting import Connecting
 from nestor.admin.presentation import Phrasebook
@@ -50,6 +50,7 @@ class ConnectionOut(BaseModel):
     owner: PersonRef | None  # None: the whole household
     status: Status
     status_label: str
+    status_reason: ReasonOut | None  # why it needs authorising again or is in error
     confirm_writes: bool
     disabled_tools: list[str]
     created_at: datetime
@@ -120,6 +121,9 @@ def connection_out(admin: AdminState, connection: Connection, words: Phrasebook,
         owner=People(admin.nestor.household).ref(connection.owner),
         status=connection.status,
         status_label=words.connection_status(connection.status),
+        status_reason=ReasonOut(message=MessageOut.of(reason), text=words.text(reason))
+        if (reason := connection.status_reason) and connection.status is not Status.CONNECTED
+        else None,
         confirm_writes=connection.confirm_writes,
         disabled_tools=sorted(connection.disabled_tools),
         created_at=connection.created_at,

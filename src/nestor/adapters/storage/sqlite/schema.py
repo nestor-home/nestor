@@ -67,4 +67,11 @@ CREATE TABLE verifiers (
 ) STRICT;
 """
 
-MIGRATIONS: tuple[str, ...] = (EVENTS, MEMORIES, SECRETS, VERIFIERS)
+ACTIVITY = """
+CREATE TABLE account_activity (
+    account_id TEXT PRIMARY KEY,
+    seen_at TEXT NOT NULL  -- UTC, fixed width: the last sign-in or authenticated request
+) STRICT;
+"""
+
+MIGRATIONS: tuple[str, ...] = (EVENTS, MEMORIES, SECRETS, VERIFIERS, ACTIVITY)

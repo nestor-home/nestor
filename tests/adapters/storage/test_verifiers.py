@@ -4,9 +4,9 @@ from pathlib import Path
 
 import pytest
 
-from nestor.adapters.storage.sqlite import SQLiteDatabase, SQLiteVerifierStore
-from nestor.modules.accounts import VerifierStore
-from nestor.testing.accounts import VerifierStoreContract
+from nestor.adapters.storage.sqlite import SQLiteActivityStore, SQLiteDatabase, SQLiteVerifierStore
+from nestor.modules.accounts import ActivityStore, VerifierStore
+from nestor.testing.accounts import ActivityStoreContract, VerifierStoreContract
 
 
 class TestSQLiteVerifierStore(VerifierStoreContract):
@@ -23,3 +23,12 @@ async def test_verifiers_survive_a_restart(tmp_path: Path) -> None:
         await store.put("account:a", "scrypt$kept")
     async with SQLiteVerifierStore(SQLiteDatabase(tmp_path / "n.db"), owns_database=True) as store:
         assert await store.get("account:a") == "scrypt$kept"
+
+
+class TestSQLiteActivityStore(ActivityStoreContract):
+    @pytest.fixture(autouse=True)
+    def _directory(self, tmp_path: Path) -> None:
+        self.path = tmp_path / "nestor.db"
+
+    def store(self) -> ActivityStore:
+        return SQLiteActivityStore(SQLiteDatabase(self.path), owns_database=True)

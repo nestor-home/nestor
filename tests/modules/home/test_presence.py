@@ -1,8 +1,11 @@
 """Presence: what the home knows, and which rooms a person may be in."""
 
 from collections.abc import Iterable
+from datetime import timedelta
 
-from nestor.core import PersonId
+import pytest
+
+from nestor.core import PersonId, utc_now
 from nestor.modules.home import Granularity, Presence, Whereabouts
 from nestor.testing.home import PresenceSourceContract, StaticPresence
 
@@ -11,7 +14,7 @@ MATHIS, MATHILDE = PersonId("mathis"), PersonId("mathilde")
 
 class TestStaticPresence(PresenceSourceContract):
     def source(self) -> StaticPresence:
-        return StaticPresence().set("mathis", home=True).set("mathilde", home=False)
+        return StaticPresence().set("mathis", home=True, since=utc_now()).set("mathilde", home=False)
 
     def expected(self) -> dict[PersonId, Whereabouts]:
         return {MATHIS: Whereabouts(home=True), MATHILDE: Whereabouts(home=False)}
@@ -31,6 +34,19 @@ def test_the_contract_rejects_rooms_beyond_the_granularity() -> None:
         assert "beyond the granularity" in str(error)
     else:
         raise AssertionError("the contract accepted rooms from a home-only source")
+
+
+def test_the_contract_rejects_whereabouts_dated_in_the_future() -> None:
+    class Prophetic(TestStaticPresence):
+        def source(self) -> StaticPresence:
+            return StaticPresence().set("mathis", home=True, since=utc_now() + timedelta(days=1))
+
+    with pytest.raises(AssertionError):
+        Prophetic().test_since_when_is_a_moment_of_the_past()
+
+
+def test_since_when_is_not_what_whereabouts_are() -> None:
+    assert Whereabouts(home=True, since=utc_now()) == Whereabouts(home=True)
 
 
 def presence(granularity: Granularity, people: dict[PersonId, Whereabouts], occupied: Iterable[str] = ()) -> Presence:

@@ -355,6 +355,20 @@ async def test_room_trackers_place_people_in_areas_named_by_id_name_or_alias(
     }
 
 
+async def test_whereabouts_date_from_the_last_change_of_the_person_or_of_their_room(
+    home: FakeHomeAssistant, started: Any
+) -> None:
+    arrived = home.state("person.alice", "home")["last_changed"]
+    moved = home.state("sensor.alice_room", "kitchen")["last_changed"]
+    left = home.state("person.bob", "not_home")["last_changed"]
+    home.state("sensor.bob_area", "kitchen")
+    mapping = PresenceMapping(people=ALICE_AND_BOB.people, rooms={ALICE: "sensor.alice_room", BOB: "sensor.bob_area"})
+    source = await started(home.source(mapping))
+    presence = source.presence()
+    assert presence.of(ALICE).since == datetime.fromisoformat(moved) > datetime.fromisoformat(arrived)
+    assert presence.of(BOB).since == datetime.fromisoformat(left), "someone away is not dated by a stale tracker"
+
+
 @pytest.mark.parametrize(("person", "tracker"), [("home", "not_home"), ("home", "Garage"), ("not_home", "Kitchen")])
 async def test_a_room_is_only_given_for_someone_home_in_a_known_area(
     home: FakeHomeAssistant, started: Any, person: str, tracker: str

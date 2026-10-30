@@ -7,6 +7,7 @@ import argparse
 import asyncio
 import getpass
 import logging
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -19,7 +20,8 @@ from nestor.init import initialise, slug
 from nestor.modules.accounts import Role
 from nestor.modules.satellites.wire import SCHEMAS, write_schemas
 from nestor.runtime.app import Nestor, open_accounts, run_until_stopped
-from nestor.runtime.config import NestorConfig, load_config
+from nestor.runtime.config import SECRET_KEY, NestorConfig, load_config
+from nestor.runtime.secrets import ConfigFile, open_secrets, preview
 
 OPENAPI = Path("web") / "openapi.json"
 
@@ -50,6 +52,16 @@ def main(argv: list[str] | None = None) -> int:
     satellites.add_parser("revoke", help="unpair a satellite").add_argument("device_id")
     schemas = satellites.add_parser("schemas", help="write the wire protocol's JSON Schemas")
     schemas.add_argument("--out", type=Path, default=None, help="folder (default: the package's schemas)")
+    commands.add_parser("restart", help="restart the running instance (applies the configuration written since)")
+    secrets = commands.add_parser("secrets", help="the configuration's secrets, kept in the encrypted vault")
+    actions = secrets.add_subparsers(dest="action", required=True)
+    actions.add_parser("list", help="every secret: set or not, a preview, the configuration fields using it")
+    setting = actions.add_parser("set", help="set a secret (asked for without echo; never as an argument)")
+    setting.add_argument("name")
+    setting.add_argument("--from-stdin", action="store_true", help="read the value from standard input (scripts)")
+    deleting = actions.add_parser("delete", help="forget a secret")
+    deleting.add_argument("name")
+    deleting.add_argument("--force", action="store_true", help="even while the configuration refers to it")
     args = parser.parse_args(argv)
 
     logging.basicConfig(
@@ -64,7 +76,13 @@ def main(argv: list[str] | None = None) -> int:
             return _init(args.config)
         if args.command == "satellites":
             return _satellites(args)
-        nestor = Nestor(load_config(args.config))
+        if args.command == "secrets":
+            return _secrets(args)
+        if args.command == "restart":
+            _call(load_config(args.config), "POST", "/api/v1/system/restart", {"confirm": True})
+            print("restarting: the instance stops cleanly, then starts again")
+            return 0
+        nestor = Nestor(load_config(args.config), source=args.config)
         extras = _admin_server(nestor)
         if args.command == "check":
             names = ", ".join(c.channel_id for c in nestor.channels)
@@ -72,6 +90,8 @@ def main(argv: list[str] | None = None) -> int:
             print(f"{args.config}: OK — {len(nestor.executors)} executor(s), channels: {names}{admin}")
             return 0
         asyncio.run(run_until_stopped(nestor, extras))
+        if nestor.restart.requested:  # asked for by a person: the same command line again
+            os.execv(sys.executable, sys.orig_argv)
     except NestorError as error:
         print(f"nestor: {error}", file=sys.stderr)
         return 2
@@ -131,6 +151,41 @@ def _openapi(out: Path) -> int:
     out.write_text(openapi_text())
     print(f"wrote {out}")
     return 0
+
+
+def _secrets(args: argparse.Namespace) -> int:
+    """Directly on the vault of the configuration's data folder: no running instance is needed."""
+    file = ConfigFile(args.config, os.environ)
+    used = file.used()
+
+    async def run() -> int:
+        async with open_secrets(file.data_dir, os.environ.get(SECRET_KEY)) as secrets:
+            if args.action == "list":
+                for name in sorted({*await secrets.names(), *used}):
+                    value = await secrets.value(name)
+                    state = f"set     {preview(value)}" if value else "not set"
+                    where = ", ".join(used.get(name, [])) or "unused"
+                    print(f"{name}  {state}  ({where})")
+                return 0
+            if args.action == "set":
+                value = sys.stdin.read().rstrip("\n") if args.from_stdin else getpass.getpass(f"{args.name}: ")
+                await secrets.set(args.name, value, by="cli")
+                print(f"secret {args.name} set (restart Nestor for the configuration to use a new value)")
+                return 0
+            if used.get(args.name) and not args.force:
+                print(
+                    f"nestor: {args.name} is still used by {', '.join(used[args.name])}: remove those references, "
+                    "or pass --force",
+                    file=sys.stderr,
+                )
+                return 2
+            if not await secrets.delete(args.name, by="cli"):
+                print(f"nestor: no secret {args.name}", file=sys.stderr)
+                return 2
+            print(f"secret {args.name} deleted")
+            return 0
+
+    return asyncio.run(run())
 
 
 def _satellites(args: argparse.Namespace) -> int:

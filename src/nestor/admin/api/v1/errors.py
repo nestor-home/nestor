@@ -4,6 +4,7 @@ the reader's language. A message never holds a secret.
 """
 
 from collections.abc import Mapping
+from typing import Any
 
 from fastapi import Request
 from fastapi.exceptions import RequestValidationError
@@ -28,9 +29,17 @@ from nestor.modules.accounts import (
 class ApiError(Exception):
     """`code` is snake_case; its message is `error-<code with dashes>`, with `args`."""
 
-    def __init__(self, status: int, code: str, *, headers: Mapping[str, str] | None = None, **args: Argument) -> None:
+    def __init__(
+        self,
+        status: int,
+        code: str,
+        *,
+        headers: Mapping[str, str] | None = None,
+        problems: list[dict[str, Any]] | None = None,
+        **args: Argument,
+    ) -> None:
         super().__init__(f"{status} {code}")
-        self.status, self.code, self.headers = status, code, dict(headers or {})
+        self.status, self.code, self.headers, self.problems = status, code, dict(headers or {}), problems
         self.message = Message(f"error-{code.replace('_', '-')}", args)
 
 
@@ -82,6 +91,7 @@ def respond(error: ApiError, localizer: Localizer, locale: Locale) -> JSONRespon
             "message_id": error.message.id,
             "args": dict(error.message.args),
             "message": localizer.format(error.message, locale),
+            **({"problems": error.problems} if error.problems is not None else {}),
         }
     }
     return JSONResponse(body, status_code=error.status, headers=error.headers or None)

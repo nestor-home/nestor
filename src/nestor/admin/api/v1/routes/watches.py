@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from nestor.admin.api.v1.errors import not_found
 from nestor.admin.api.v1.models import People, PersonRef
 from nestor.admin.api.v1.security import Caller, allowed
-from nestor.admin.state import state
+from nestor.admin.state import AdminState, state
 from nestor.modules.accounts import Scope
 from nestor.modules.initiative import Watch, WatchTriggered
 
@@ -49,37 +49,53 @@ def _reaches(caller: Caller, watch: Watch) -> bool:
     return caller.principal.reaches(watch.owner, every=Scope.WATCHES_MANAGE_ALL, own=Scope.WATCHES_MANAGE_OWN)
 
 
-@router.get("/watches")
-async def list_watches(request: Request, caller: Manager) -> WatchesOut:
-    nestor = state(request).nestor
-    people = People(nestor.household)
-    book = nestor.watch_book
-    watches = sorted(book.watches.values(), key=lambda w: w.created_at, reverse=True)
+async def _triggers(admin: AdminState) -> tuple[Counter[str], dict[str, datetime]]:
     triggers: Counter[str] = Counter()
     last: dict[str, datetime] = {}
-    for event in await nestor.journal.history(WatchTriggered):
+    for event in await admin.nestor.journal.history(WatchTriggered):
         triggers[event.watch_id] += 1
         last[event.watch_id] = event.at
+    return triggers, last
+
+
+def _watch(w: Watch, people: People, triggers: Counter[str], last: dict[str, datetime]) -> WatchOut:
+    return WatchOut(
+        id=w.id,
+        what=w.what,
+        keywords=list(w.keywords),
+        kinds=list(w.kinds),
+        owner=people.ref(w.owner),
+        once=w.once,
+        created_at=w.created_at,
+        until=w.until,
+        origin=OriginOut(session=str(w.created_in), channel=w.created_in.channel) if w.created_in else None,
+        triggered=triggers[w.id],
+        last_triggered_at=last.get(w.id),
+    )
+
+
+@router.get("/watches")
+async def list_watches(request: Request, caller: Manager) -> WatchesOut:
+    admin = state(request)
+    people = People(admin.nestor.household)
+    book = admin.nestor.watch_book
+    watches = sorted(book.watches.values(), key=lambda w: w.created_at, reverse=True)
+    triggers, last = await _triggers(admin)
     return WatchesOut(
-        watches=[
-            WatchOut(
-                id=w.id,
-                what=w.what,
-                keywords=list(w.keywords),
-                kinds=list(w.kinds),
-                owner=people.ref(w.owner),
-                once=w.once,
-                created_at=w.created_at,
-                until=w.until,
-                origin=OriginOut(session=str(w.created_in), channel=w.created_in.channel) if w.created_in else None,
-                triggered=triggers[w.id],
-                last_triggered_at=last.get(w.id),
-            )
-            for w in watches
-            if _reaches(caller, w)
-        ],
+        watches=[_watch(w, people, triggers, last) for w in watches if _reaches(caller, w)],
         kinds=sorted(book.kinds),
     )
+
+
+@router.get("/watches/{watch_id}")
+async def get_watch(request: Request, caller: Manager, watch_id: str) -> WatchOut:
+    """One active watch; 404 when unknown, ended or out of reach."""
+    admin = state(request)
+    watch = admin.nestor.watch_book.watches.get(watch_id)
+    if watch is None or not _reaches(caller, watch):
+        raise not_found("watch_unknown")
+    triggers, last = await _triggers(admin)
+    return _watch(watch, People(admin.nestor.household), triggers, last)
 
 
 @router.post("/watches/{watch_id}/cancel", status_code=204)

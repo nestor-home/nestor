@@ -51,3 +51,14 @@ error-memory-shared = Only the household's administration changes shared memorie
 error-empty-memory = To erase a memory, forget it.
 error-journal-entry-unknown = This journal entry does not exist, or is not yours to read.
 error-cross-origin = Request refused: it does not come from this admin.
+error-person-unknown = This person is not part of the household.
+error-config-unavailable = This instance was not started from a configuration file: there is nothing to edit.
+error-no-secret-key = NESTOR_SECRET_KEY is not set: secrets cannot be kept without it.
+error-config-invalid = The configuration cannot be used ({ $count ->
+    [one] one problem
+   *[other] { $count } problems
+}): nothing was written.
+error-config-history-unknown = This earlier configuration does not exist.
+error-secret-in-use = This secret is still used by { $paths }: remove those references first.
+error-secret-unknown = This secret is not set.
+error-restart-unconfirmed = Confirm the restart: every conversation will be interrupted for a moment.

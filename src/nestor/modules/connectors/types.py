@@ -62,11 +62,12 @@ class Connection:
     status: Status = Status.CONNECTED
     disabled_tools: frozenset[str] = frozenset()
     confirm_writes: bool = True  # tools that write or send ask the person first
+    status_reason: Message | None = None  # why it needs authorising again or is in error
     id: str = field(default_factory=lambda: new_id()[:10])
     created_at: datetime = field(default_factory=utc_now)
 
-    def with_status(self, status: Status) -> "Connection":
-        return replace(self, status=status)
+    def with_status(self, status: Status, reason: Message | None = None) -> "Connection":
+        return replace(self, status=status, status_reason=reason)
 
 
 type Secrets = Mapping[str, str]

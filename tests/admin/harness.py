@@ -3,18 +3,21 @@
 import asyncio
 import json
 import urllib.parse
-from collections.abc import MutableMapping
+from collections.abc import MutableMapping, Sequence
 from dataclasses import replace
+from enum import StrEnum
 from pathlib import Path
 from types import TracebackType
 from typing import Any, Self
 
 import httpx
+from pydantic import Field, SecretStr
 
 from nestor.admin import AdminSettings, create_app
 from nestor.core import PersonId
 from nestor.core.i18n import Message
 from nestor.modules.accounts import Account, Role
+from nestor.modules.cognition.tools import Tool, ToolProvider
 from nestor.modules.connectors import AuthKind, SecretField
 from nestor.runtime import AdapterSettings, Family, Nestor, Plugin, Registry
 from nestor.runtime.config import parse_config
@@ -27,7 +30,7 @@ PASSWORD = "correct horse battery"
 OWNER = "mathis"  # the owner's login, opened with every harness
 SECRET_KEY = "s" * 43
 CLIENT_SECRET = "gocspx-household-client-secret"
-CONFIG = """
+CONFIG = """# The test household's assistant (this comment must survive an edit from the admin).
 data_dir: {data_dir}
 persona: {{name: Richie, character: Tu es Richie., timezone: Europe/Paris}}
 household:
@@ -44,6 +47,33 @@ admin: {admin}
 
 class NoSettings(AdapterSettings):
     pass
+
+
+class Units(StrEnum):
+    METRIC = "metric"
+    IMPERIAL = "imperial"
+
+
+class WeatherAccount(AdapterSettings):
+    login: str
+    password: SecretStr
+
+
+class WeatherSettings(AdapterSettings):
+    """A third-party plugin's settings: a secret, a nested secret, a choice, an advanced field."""
+
+    api_key: SecretStr
+    city: str
+    units: Units = Units.METRIC
+    account: WeatherAccount | None = None
+    retries: int = Field(default=2, json_schema_extra={"advanced": True})
+
+
+class Weather(ToolProvider):
+    name = "weather"
+
+    def tools(self) -> Sequence[Tool]:
+        return ()
 
 
 class Api:
@@ -122,11 +152,15 @@ class Harness:
         text = CONFIG.format(data_dir=tmp_path, admin=admin)
         if not connectors:
             text += "connectors: []\n"
+        self.config_path = tmp_path / "harness.yaml"  # what the admin edits
+        self.config_path.parent.mkdir(parents=True, exist_ok=True)
+        self.config_path.write_text(text)
         self.nestor = Nestor(
             parse_config(text, {}),
             self.registry(),
-            environ={"NESTOR_SECRET_KEY": SECRET_KEY},
+            environ={"NESTOR_SECRET_KEY": SECRET_KEY, "WEATHER_CITY": "Paris"},
             token_endpoint=self.provider,
+            source=self.config_path,
         )
         self.settings = AdminSettings(
             public_url=public_url, front_dir=front_dir or tmp_path / "no-front", heartbeat_s=heartbeat_s
@@ -154,6 +188,7 @@ class Harness:
                 Plugin(Family.PRESENCE, "static", NoSettings, lambda s, n, x: self.presence),
                 Plugin(Family.CONNECTOR, "mailbox", NoSettings, lambda s, n, x: self.mail),
                 Plugin(Family.CONNECTOR, "imap", NoSettings, lambda s, n, x: self.imap),
+                Plugin(Family.TOOLS, "weather", WeatherSettings, lambda s, n, x: Weather()),
             ]
         )
 

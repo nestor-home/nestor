@@ -114,6 +114,20 @@ async def list_satellites(request: Request, caller: Pairer) -> SatellitesOut:
     )
 
 
+@router.get("/satellites/{device_id}")
+async def get_satellite(request: Request, caller: Pairer, device_id: str) -> SatelliteOut:
+    """One paired satellite; 404 when it is not (or no longer) paired."""
+    admin = state(request)
+    satellite = next((s for s in admin.nestor.pairing.satellites() if s.id == device_id), None)
+    if satellite is None:
+        raise not_found("satellite_unknown")
+    approvals = {e.device.id: e for e in await admin.nestor.journal.history(SatellitePaired)}
+    approved = approvals[device_id].approved_by if device_id in approvals else None
+    people = People(admin.nestor.household)
+    seen = await last_seen(admin)
+    return _satellite(satellite, people.ref(approved), live_rooms(admin), caller.phrasebook, seen.get(device_id))
+
+
 @router.post("/satellites/approvals", status_code=201)
 async def approve_satellite(request: Request, caller: Pairer, body: ApprovalIn) -> SatelliteOut:
     admin = state(request)

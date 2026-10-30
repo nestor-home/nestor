@@ -16,6 +16,7 @@ from dataclasses import dataclass, replace
 from datetime import datetime
 
 from nestor.core import Component, ContractError, PersonId, ProviderError, utc_now
+from nestor.core.i18n import Message
 from nestor.modules.connectors.events import ConnectionChanged, ConnectionCreated, ConnectionRemoved
 from nestor.modules.connectors.ports import Access, Connector, CredentialVault, TokenEndpoint
 from nestor.modules.connectors.types import AuthKind, Connection, OAuthSpec, Secrets, Status, Tokens
@@ -60,6 +61,7 @@ class Connections(Component):
                     status=event.status,
                     disabled_tools=frozenset(event.disabled_tools),
                     confirm_writes=event.confirm_writes,
+                    status_reason=event.reason,
                 )
             elif isinstance(event, ConnectionRemoved):
                 self.connections.pop(event.connection_id, None)
@@ -169,7 +171,7 @@ class Connections(Component):
         if not tokens.expired(utc_now()):
             return tokens.access_token
         if tokens.refresh_token is None:
-            await self._mark(connection, Status.NEEDS_REAUTH, "access expired and no refresh token")
+            await self._mark(connection, Status.NEEDS_REAUTH, Message.of("connection-no-refresh-token"))
             raise ProviderError(connection.kind, "authorisation expired: connect again", transient=False)
         try:
             fresh = await self.tokens.refresh(
@@ -177,7 +179,7 @@ class Connections(Component):
             )
         except ProviderError as error:
             if not error.transient:
-                await self._mark(connection, Status.NEEDS_REAUTH, "refresh refused by the provider")
+                await self._mark(connection, Status.NEEDS_REAUTH, Message.of("connection-refresh-refused"))
             raise
         kept = replace(fresh, refresh_token=fresh.refresh_token or tokens.refresh_token)
         await self._save_tokens(connection.id, kept)
@@ -202,11 +204,11 @@ class Connections(Component):
         self.connections[connection.id] = connection
         return connection
 
-    async def _mark(self, connection: Connection, status: Status, reason: str) -> None:
+    async def _mark(self, connection: Connection, status: Status, reason: Message) -> None:
         if connection.id in self.connections:
-            await self._record_change(self.connections[connection.id].with_status(status), reason)
+            await self._record_change(self.connections[connection.id].with_status(status, reason))
 
-    async def _record_change(self, connection: Connection, reason: str = "") -> None:
+    async def _record_change(self, connection: Connection) -> None:
         await self.journal.publish(
             ConnectionChanged(
                 source=self.name,
@@ -214,7 +216,7 @@ class Connections(Component):
                 status=connection.status,
                 disabled_tools=tuple(sorted(connection.disabled_tools)),
                 confirm_writes=connection.confirm_writes,
-                reason=reason,
+                reason=connection.status_reason,
             )
         )
         self.connections[connection.id] = connection

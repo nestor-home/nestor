@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from nestor.core import PersonId, ProviderError
+from nestor.core.i18n import Message
 from nestor.modules.accounts import Role
 from nestor.modules.connectors import ConnectorTools, Status
 from nestor.modules.connectors import service as connections_service
@@ -194,7 +195,9 @@ async def test_a_broken_connection_is_reconnected_with_its_settings_and_kept_unt
         connections = admin.nestor.connections
         assert connections
         await connections.configure(old_id, disabled_tools=["mailbox_send"])
-        await connections._mark(connections.connections[old_id], Status.NEEDS_REAUTH, "refresh refused")
+        await connections._mark(
+            connections.connections[old_id], Status.NEEDS_REAUTH, Message.of("connection-refresh-refused")
+        )
 
         refused = query(await begin(api, person="mathis", replaces=old_id))["state"]
         await admin.come_back(state=refused, error="access_denied")
@@ -226,7 +229,11 @@ async def test_a_secret_based_service_connects_with_its_fields_typed_once(tmp_pa
         assert stored == {"server": "imap.free.fr", "password": "app-pass-777"}
         assert not any("app-pass-777" in seen for seen in admin.seen)
 
-        await admin.nestor.connections._mark(admin.nestor.connections.connections[detail["id"]], Status.ERROR, "x")
+        await admin.nestor.connections._mark(
+            admin.nestor.connections.connections[detail["id"]],
+            Status.ERROR,
+            Message.of("connection-reason-other", detail="x"),
+        )
         replaced = await api.post(
             "/api/v1/connectors/imap/connections",
             {"replaces": detail["id"], "values": {"server": "imap.free.fr", "password": "new"}},
