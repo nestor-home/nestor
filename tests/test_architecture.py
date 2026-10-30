@@ -3,7 +3,7 @@
 Layers, from the most stable to the most specific:
     core      → standard library only
     modules   → core
-    runtime   → core, modules
+    runtime   → core, modules, adapters (it assembles them)
     testing   → core, modules (the test kit ships with the package: no third-party imports)
     adapters  → anything: each adapter owns its vendor SDK
 """
@@ -19,11 +19,13 @@ PACKAGE = SRC / "nestor"
 ALLOWED_INTERNAL = {
     "core": {"core"},
     "modules": {"core", "modules"},
-    "runtime": {"core", "modules", "runtime"},
+    "runtime": {"core", "modules", "runtime", "adapters"},  # composes the built-in storage
     "testing": {"core", "modules", "testing"},
 }
-# Third-party packages allowed outside adapters (validation, typing…). Each addition is a design decision.
-THIRD_PARTY_ALLOWED: set[str] = set()
+# Third-party packages allowed outside adapters, per layer. Each addition is a design decision.
+THIRD_PARTY_ALLOWED: dict[str, set[str]] = {
+    "runtime": {"pydantic", "yaml"},  # validated configuration; never seen by modules
+}
 
 
 def imports(path: Path) -> set[str]:
@@ -47,7 +49,7 @@ def violations(path: Path, package: Path = PACKAGE) -> list[str]:
         if parts[0] == "nestor":
             if len(parts) > 1 and parts[1] not in ALLOWED_INTERNAL[layer]:
                 wrong.append(f"{name} (layer {layer!r} may not depend on {parts[1]!r})")
-        elif parts[0] not in sys.stdlib_module_names and parts[0] not in THIRD_PARTY_ALLOWED:
+        elif parts[0] not in sys.stdlib_module_names and parts[0] not in THIRD_PARTY_ALLOWED.get(layer, set()):
             wrong.append(f"{name} (third-party import outside nestor.adapters)")
     return wrong
 

@@ -11,7 +11,11 @@ license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "Mathis Lambert" }]
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "httpx>=0.28.1",
+    "pydantic>=2.12",
+    "pyyaml>=6.0.3",
+]
 keywords = ["home assistant", "voice assistant", "agent", "robotics", "home automation"]
 classifiers = [
     "Development Status :: 1 - Planning",
@@ -24,13 +28,35 @@ classifiers = [
     "Typing :: Typed",
 ]
 
+[project.optional-dependencies]
+# Realtime voice channel (Pipecat cascade, WebRTC, ElevenLabs). Version pinned: the channel relies on
+# Pipecat internals covered by its tests.
+voice = ["pipecat-ai[elevenlabs,webrtc,runner]==1.14.0"]
+
+[project.scripts]
+nestor = "nestor.runtime.cli:main"
+
+[project.entry-points."nestor.adapters"]
+openai-compatible = "nestor.adapters.models.openai_compatible:plugin"
+hermes = "nestor.adapters.executors.hermes:plugin"
+telegram = "nestor.adapters.channels.telegram:plugin"
+
 [project.urls]
 Homepage = "https://nestor.mathislambert.fr"
 Source = "https://github.com/nestor-home/nestor"
 Issues = "https://github.com/nestor-home/nestor/issues"
 
 [dependency-groups]
-dev = ["pytest==9.1.1", "pytest-asyncio==1.4.1", "pytest-cov==7.1.0", "ruff==0.17.3", "ty==0.0.94", "pre-commit==4.7.0"]
+dev = [
+    "pytest==9.1.1",
+    "pytest-asyncio==1.4.1",
+    "pytest-cov==7.1.0",
+    "ruff==0.17.3",
+    "ty==0.0.94",
+    "pre-commit==4.7.0",
+    "types-pyyaml>=6.0.12.20261030",
+    "respx>=0.22",
+]
 
 [tool.uv.build-backend]
 module-name = "nestor"
@@ -38,7 +64,8 @@ module-name = "nestor"
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
-addopts = ["--import-mode=importlib", "--cov=nestor", "--cov-report=term-missing:skip-covered"]
+addopts = ["--import-mode=importlib", "--cov=nestor", "--cov-report=term-missing:skip-covered", "-m", "not live"]
+markers = ["live: calls a real provider (network, keys, cost); run with `pytest -m live`"]
 
 [tool.coverage.run]
 branch = true

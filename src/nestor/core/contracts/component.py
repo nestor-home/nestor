@@ -1,7 +1,7 @@
 """Base class of everything plugged into Nestor (adapters, executors, bodies…)."""
 
 from types import TracebackType
-from typing import ClassVar, Self
+from typing import Self
 
 from nestor.core.contracts.capabilities import Capabilities
 
@@ -13,7 +13,7 @@ class Component:
     Use it as an async context manager so `close` runs even when the body fails.
     """
 
-    name: ClassVar[str] = "component"
+    name: str = "component"  # a class default; the runtime gives each configured instance its own name
     capabilities: Capabilities = Capabilities()
 
     async def start(self) -> None:
