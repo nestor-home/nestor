@@ -345,6 +345,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/agent/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Agent Activity
+         * @description Listening beats speaking, then thinking, working (delegated tasks), sleeping (quiet hours), idle.
+         *     The journal's stream sends the same as `event: activity` on every change.
+         */
+        get: operations["getAgentActivity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agent/initiative": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Agent Initiative */
+        get: operations["getAgentInitiative"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/connectors": {
         parameters: {
             query?: never;
@@ -991,6 +1029,31 @@ export interface components {
             last_seen_at: string | null;
         };
         /**
+         * AgentActivityOut
+         * @description What the agent is doing now, from what really runs: `GET /agent/activity`, and `event: activity` on
+         *     the journal's stream at its start and on every change.
+         */
+        AgentActivityOut: {
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "idle" | "listening" | "thinking" | "speaking" | "working" | "sleeping";
+            /**
+             * Since
+             * Format: date-time
+             */
+            since: string;
+            /** Replies */
+            replies: number;
+            /** Tasks */
+            tasks: number;
+            /** Listening Rooms */
+            listening_rooms: string[];
+            /** Quiet */
+            quiet: boolean;
+        };
+        /**
          * AgentOut
          * @description The assistant itself, as the front's sidebar shows it.
          */
@@ -1344,6 +1407,12 @@ export interface components {
             at: string;
             /** Size */
             size: number;
+        };
+        /** InitiativeOut */
+        InitiativeOut: {
+            quiet_hours: components["schemas"]["QuietHoursOut"] | null;
+            /** Upcoming */
+            upcoming: components["schemas"]["ScheduledDeliveryOut"][];
         };
         /** InvitationAcceptIn */
         InvitationAcceptIn: {
@@ -1721,6 +1790,17 @@ export interface components {
             /** Message */
             message: string;
         };
+        /** QuietHoursOut */
+        QuietHoursOut: {
+            /** Start */
+            start: string;
+            /** End */
+            end: string;
+            /** Timezone */
+            timezone: string;
+            /** Active */
+            active: boolean;
+        };
         /** ReasonOut */
         ReasonOut: {
             message: components["schemas"]["MessageOut"];
@@ -1786,11 +1866,31 @@ export interface components {
             paired: components["schemas"]["SatelliteOut"][];
         };
         /**
+         * ScheduledDeliveryOut
+         * @description A written follow-up of something said aloud: sent at `due_at` unless someone answers first.
+         */
+        ScheduledDeliveryOut: {
+            /** About */
+            about: string;
+            /** Delivery */
+            delivery: string;
+            person: components["schemas"]["PersonRef"] | null;
+            /** Spoken On */
+            spoken_on: string;
+            /** Written On */
+            written_on: string;
+            /**
+             * Due At
+             * Format: date-time
+             */
+            due_at: string;
+        };
+        /**
          * Scope
          * @description What an action needs. Code checks scopes, never roles: the role table is the only place they meet.
          * @enum {string}
          */
-        Scope: "accounts.manage" | "accounts.owners.manage" | "household.read" | "household.connections.manage" | "own.connections.manage" | "satellites.manage" | "system.read" | "config.manage" | "journal.read.all" | "journal.read.own" | "memory.manage.all" | "memory.manage.own" | "tasks.manage" | "tasks.manage.own" | "watches.manage.all" | "watches.manage.own";
+        Scope: "accounts.manage" | "accounts.owners.manage" | "household.read" | "agent.read" | "household.connections.manage" | "own.connections.manage" | "satellites.manage" | "system.read" | "config.manage" | "journal.read.all" | "journal.read.own" | "memory.manage.all" | "memory.manage.own" | "tasks.manage" | "tasks.manage.own" | "watches.manage.all" | "watches.manage.own";
         /** SecretIn */
         SecretIn: {
             /** Value */
@@ -3833,6 +3933,190 @@ export interface operations {
             };
         };
     };
+    getAgentActivity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentActivityOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    getAgentInitiative: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InitiativeOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
     listConnectors: {
         parameters: {
             query?: never;
@@ -5310,7 +5594,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Server-Sent Events: `event: item`, `id: <position>`, `data: <JournalItem as JSON>` (the schema `JournalItem`); comment lines as heartbeats. Same filters as the list. Resumes after `Last-Event-ID` (or `after`), else starts with new entries. */
+            /** @description Server-Sent Events: `event: item`, `id: <position>`, `data: <JournalItem as JSON>` (the schema `JournalItem`); comment lines as heartbeats. Same filters as the list. Resumes after `Last-Event-ID` (or `after`), else starts with new entries. With `agent.read`, also `event: activity`, `data: <AgentActivityOut as JSON>` (no `id`, the filters do not apply): once at the start, then on every change of what the agent is doing. */
             200: {
                 headers: {
                     [name: string]: unknown;

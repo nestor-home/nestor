@@ -13,6 +13,7 @@ from nestor.admin.api.v1.errors import ApiError, localized, translate
 from nestor.admin.api.v1.models import ErrorOut
 from nestor.admin.api.v1.routes import (
     accounts,
+    agent,
     config,
     connections,
     connectors,
@@ -41,6 +42,7 @@ def router() -> APIRouter:
         i18n,
         accounts,
         household,
+        agent,
         connectors,
         connections,
         satellites,

@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 
 from nestor.admin.api.v1.errors import ApiError, not_found
 from nestor.admin.api.v1.feed import Audience, Feed, Filters
-from nestor.admin.api.v1.models import JournalItem, People
+from nestor.admin.api.v1.models import AgentActivityOut, JournalItem, People
 from nestor.admin.api.v1.security import Caller, allowed
 from nestor.admin.presentation import CATEGORIES, OTHER_KEY
 from nestor.admin.state import AdminState, state
@@ -160,7 +160,9 @@ def _histogram(moments: list[datetime], filters: Filters) -> HistogramOut:
             "description": (
                 "Server-Sent Events: `event: item`, `id: <position>`, `data: <JournalItem as JSON>` (the schema "
                 "`JournalItem`); comment lines as heartbeats. Same filters as the list. Resumes after "
-                "`Last-Event-ID` (or `after`), else starts with new entries."
+                "`Last-Event-ID` (or `after`), else starts with new entries. With `agent.read`, also "
+                "`event: activity`, `data: <AgentActivityOut as JSON>` (no `id`, the filters do not apply): "
+                "once at the start, then on every change of what the agent is doing."
             ),
             "content": {"text/event-stream": {"schema": {"type": "string"}}},
         }
@@ -185,30 +187,40 @@ async def stream_journal(
 
 
 async def _events(admin: AdminState, caller: Caller, feed: Feed, position: int) -> AsyncIterator[str]:
-    """New entries as they are written, until the client leaves, its session ends or the server stops.
-    The journal subscription only wakes the loop: entries are read from the log, so none is missed."""
+    """New entries as they are written, and the agent's activity as it changes, until the client leaves,
+    its session ends or the server stops. The journal subscription only wakes the loop: entries are read
+    from the log, so none is missed."""
     subscription = admin.nestor.journal.subscribe()
     closing = asyncio.ensure_future(admin.closing.wait())
+    monitor = admin.nestor.activity if caller.principal.can(Scope.AGENT_READ) else None
+    sent: AgentActivityOut | None = None
+    waits: set[asyncio.Future[Any]] = set()
     try:
         yield "retry: 3000\n\n"
         while True:
+            changed = asyncio.ensure_future(monitor.changes().wait()) if monitor else None  # before reading it
+            if monitor is not None and (activity := AgentActivityOut.of(monitor.current())) != sent:
+                sent = activity
+                yield f"event: activity\ndata: {json.dumps(activity.model_dump(mode='json'))}\n\n"
             items, position, more = await feed.after(position)
             for item in items:
                 yield f"id: {item.position}\nevent: item\ndata: {json.dumps(item.model_dump(mode='json'))}\n\n"
-            if more:
-                continue
-            if not _still_signed_in(admin, caller) or closing.done():
+            if more or (not _still_signed_in(admin, caller) or closing.done()):
+                if changed:
+                    changed.cancel()
+                if more:
+                    continue
                 return
             woken = asyncio.ensure_future(subscription.next())
-            done, _ = await asyncio.wait(
-                {woken, closing}, timeout=admin.settings.heartbeat_s, return_when=asyncio.FIRST_COMPLETED
-            )
+            waits = {woken, closing} | ({changed} if changed else set())
+            done, _ = await asyncio.wait(waits, timeout=admin.settings.heartbeat_s, return_when=asyncio.FIRST_COMPLETED)
+            for pending in waits - {closing} - done:
+                pending.cancel()
             if not done:
-                woken.cancel()
                 yield ": heartbeat\n\n"
-            elif woken not in done:
-                woken.cancel()
     finally:
+        for pending in waits:
+            pending.cancel()
         closing.cancel()
         subscription.close()
 

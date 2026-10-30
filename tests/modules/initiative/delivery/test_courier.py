@@ -87,3 +87,18 @@ async def test_someone_away_gets_a_message_straight_away() -> None:
     async with sender:
         assert await sender.deliver(MATHIS, "Le colis est arrivé.", about="watch colis") == TELEGRAM
     assert voice.sent == [] and len(telegram.sent) == 1
+
+
+async def test_a_pending_follow_up_is_listed_until_it_is_sent() -> None:
+    sender, _, _, _ = courier(StaticPresence().set("mathis", home=True), follow_up_after_s=0.05)
+    async with sender:
+        await sender.deliver(MATHIS, "Le colis est arrivé.", about="watch colis")
+        (pending,) = sender.scheduled()
+        assert (pending.about, pending.person, pending.spoken, pending.written) == (
+            "watch colis",
+            "mathis",
+            SALON,
+            TELEGRAM,
+        )
+        await asyncio.sleep(0.1)
+        assert sender.scheduled() == ()

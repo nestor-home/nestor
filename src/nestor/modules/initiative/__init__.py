@@ -12,6 +12,7 @@ from nestor.modules.initiative.delivery import (
     DeliveryConsidered,
     DeliveryFailed,
     DeliveryPolicy,
+    FollowUp,
     Plan,
     QuietHours,
 )
@@ -35,6 +36,7 @@ __all__ = [
     "DeliveryConsidered",
     "DeliveryFailed",
     "DeliveryPolicy",
+    "FollowUp",
     "InboundEventSource",
     "Incoming",
     "Plan",

@@ -171,6 +171,7 @@ async def test_the_live_stream_beats_while_idle_and_ends_with_its_session(tmp_pa
         api = await admin.api()
         async with EventStream(api) as stream:
             await stream.frame()
+            assert (await stream.activity())["state"] == "idle", "what the agent does comes first"
             assert await stream.frame() == ": heartbeat"
             assert admin.owner
             admin.app.state.admin.sessions.revoke(admin.owner.id)

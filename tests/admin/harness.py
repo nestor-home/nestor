@@ -17,6 +17,7 @@ from nestor.admin import AdminSettings, create_app
 from nestor.core import PersonId
 from nestor.core.i18n import Message
 from nestor.modules.accounts import Account, Role
+from nestor.modules.channels import Medium
 from nestor.modules.cognition.tools import Tool, ToolProvider
 from nestor.modules.connectors import AuthKind, SecretField
 from nestor.runtime import AdapterSettings, Family, Nestor, Plugin, Registry
@@ -70,6 +71,13 @@ class WeatherSettings(AdapterSettings):
     units: Units = Units.METRIC
     account: WeatherAccount | None = None
     retries: int = Field(default=2, json_schema_extra={"advanced": True})
+
+
+class Speaker(InMemoryChannel):
+    """A satellite heard in the salon: a spoken channel the courier can speak through."""
+
+    medium = Medium.SPOKEN
+    room = "salon"
 
 
 class Weather(ToolProvider):
@@ -133,6 +141,8 @@ class Harness:
         replies: tuple[str, ...] = (),
         front_dir: Path | None = None,
         heartbeat_s: float = 15.0,
+        quiet_hours: str | None = None,
+        speaker: bool = False,
     ) -> None:
         self.confirms_stop, self.replies = confirms_stop, replies
         self.provider = FakeProvider()
@@ -155,6 +165,13 @@ class Harness:
         text = CONFIG.format(data_dir=tmp_path, admin=admin)
         if not connectors:
             text += "connectors: []\n"
+        if quiet_hours:
+            text += f"initiative: {{quiet_hours: '{quiet_hours}'}}\n"
+        if speaker:
+            text = text.replace(
+                "channels: [{kind: memory, name: telegram}]",
+                "channels: [{kind: memory, name: telegram}, {kind: speaker, name: voice}]",
+            )
         self.config_path = tmp_path / "harness.yaml"  # what the admin edits
         self.config_path.parent.mkdir(parents=True, exist_ok=True)
         self.config_path.write_text(text)
@@ -180,6 +197,7 @@ class Harness:
             [
                 Plugin(Family.MODEL, "scripted", NoSettings, lambda s, n, x: ScriptedModel(*self.replies)),
                 Plugin(Family.CHANNEL, "memory", NoSettings, lambda s, name, x: InMemoryChannel(name)),
+                Plugin(Family.CHANNEL, "speaker", NoSettings, lambda s, name, x: Speaker(name)),
                 Plugin(
                     Family.EXECUTOR,
                     "remote",
@@ -308,13 +326,21 @@ class EventStream:
         return await asyncio.wait_for(self._frames.get(), timeout_s)
 
     async def event(self, timeout_s: float = 2.0) -> tuple[str, dict[str, Any]]:
-        """The next journal event (its id and item), skipping heartbeats and the retry hint."""
+        """The next journal event (its id and item), skipping heartbeats, the retry hint and activity."""
         while True:
             frame = await self.frame(timeout_s)
             fields = dict(line.split(": ", 1) for line in frame.splitlines() if not line.startswith(":"))
-            if "data" in fields:
-                assert fields["event"] == "item"
+            if fields.get("event") == "item":
                 return fields["id"], json.loads(fields["data"])
+
+    async def activity(self, timeout_s: float = 2.0) -> dict[str, Any]:
+        """The next activity event, skipping entries and heartbeats."""
+        while True:
+            frame = await self.frame(timeout_s)
+            fields = dict(line.split(": ", 1) for line in frame.splitlines() if not line.startswith(":"))
+            if fields.get("event") == "activity":
+                assert "id" not in fields, "an activity event must not move the stream's resumption point"
+                return json.loads(fields["data"])
 
     async def __aexit__(self, *exc: object) -> None:
         self._leave.set()

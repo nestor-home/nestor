@@ -16,6 +16,7 @@ class Scope(StrEnum):
     ACCOUNTS_MANAGE = "accounts.manage"  # list accounts, invite, change roles, disable
     OWNERS_MANAGE = "accounts.owners.manage"  # the same on owners, and making someone an owner
     HOUSEHOLD_READ = "household.read"  # the household's people and where they are
+    AGENT_READ = "agent.read"  # what the agent is doing now, its quiet hours and the messages it will send
     HOUSEHOLD_CONNECTIONS = "household.connections.manage"  # every connection, OAuth clients, shared services
     OWN_CONNECTIONS = "own.connections.manage"  # the connections of the account's own person
     SATELLITES_MANAGE = "satellites.manage"  # pair and revoke devices

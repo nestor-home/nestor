@@ -6,6 +6,7 @@ from nestor.modules.accounts.permissions.types import Role, Scope
 
 _OWN = frozenset({Scope.JOURNAL_READ_OWN, Scope.MEMORY_MANAGE_OWN})
 _MEMBER = _OWN | {
+    Scope.AGENT_READ,
     Scope.HOUSEHOLD_READ,
     Scope.OWN_CONNECTIONS,
     Scope.TASKS_MANAGE_OWN,

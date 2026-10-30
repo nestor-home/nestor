@@ -19,6 +19,8 @@ ROUTES = [
     ("POST", "/api/v1/invitations", {"role": "guest", "person": "lucie"}, MANAGERS),
     ("POST", "/api/v1/invitations", {"role": "owner"}, {OWNER}),
     ("GET", "/api/v1/household/people", None, HOUSEHOLD),
+    ("GET", "/api/v1/agent/activity", None, HOUSEHOLD),
+    ("GET", "/api/v1/agent/initiative", None, HOUSEHOLD),
     ("GET", "/api/v1/connectors", None, HOUSEHOLD),
     ("PUT", "/api/v1/connectors/mailbox/client", {"client_id": "c", "client_secret": "s"}, MANAGERS),
     ("GET", "/api/v1/connections", None, HOUSEHOLD),

@@ -8,3 +8,10 @@ class FallbackReason(StrEnum):
     MODEL_SLOW = "model_slow"
     RECOGNITION_UNAVAILABLE = "recognition_unavailable"
     SYNTHESIS_UNAVAILABLE = "synthesis_unavailable"
+
+
+class ReplyPhase(StrEnum):
+    """Where an answer being produced stands."""
+
+    THINKING = "thinking"  # nothing said yet, or tools running between two rounds
+    SPEAKING = "speaking"  # its words are coming out to the channel

@@ -4,8 +4,10 @@ when a spoken announcement gets no reaction (a closed door, the shower)."""
 import asyncio
 import contextlib
 from collections.abc import Iterable, Mapping
+from dataclasses import dataclass
+from datetime import datetime, timedelta
 
-from nestor.core import Component, ProviderError, utc_now
+from nestor.core import Component, PersonId, ProviderError, utc_now
 from nestor.modules.channels import Address, Channel
 from nestor.modules.conversation import Agent, AssistantTurn, UserTurn
 from nestor.modules.home import PresenceSource
@@ -15,6 +17,17 @@ from nestor.modules.initiative.delivery.policy import DeliveryPolicy, Plan
 from nestor.modules.journal import Journal
 
 FOLLOW_UP = "You said this aloud a moment ago but nobody reacted; write it now, briefly, as a message."
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class FollowUp:
+    """A message the courier will write at `due_at` unless someone answers what it said aloud."""
+
+    about: str  # as journaled: `task 3f2a completed`, `watch w1`
+    person: PersonId | None
+    spoken: Address  # where it was said
+    written: Address  # where it will be written
+    due_at: datetime
 
 
 class Courier(Component):
@@ -35,7 +48,11 @@ class Courier(Component):
         self.policy = policy or DeliveryPolicy()
         self.presence = presence
         self.follow_up_after_s = follow_up_after_s
-        self._follow_ups: set[asyncio.Task[None]] = set()
+        self._follow_ups: dict[asyncio.Task[None], FollowUp] = {}
+
+    def scheduled(self) -> tuple[FollowUp, ...]:
+        """The written follow-ups still waiting, soonest first (they do not survive a restart)."""
+        return tuple(sorted(self._follow_ups.values(), key=lambda f: f.due_at))
 
     async def close(self) -> None:
         for task in tuple(self._follow_ups):
@@ -111,5 +128,11 @@ class Courier(Component):
                 await self._send(person, written, f"{instruction}\n\n{FOLLOW_UP}", f"{about} (follow-up)")
 
         task = asyncio.create_task(follow_up(), name=f"follow-up {about}")
-        self._follow_ups.add(task)
-        task.add_done_callback(self._follow_ups.discard)
+        self._follow_ups[task] = FollowUp(
+            about=about,
+            person=person.id if person else None,
+            spoken=spoken,
+            written=written,
+            due_at=since + timedelta(seconds=self.follow_up_after_s),
+        )
+        task.add_done_callback(lambda done: self._follow_ups.pop(done, None))

@@ -2184,6 +2184,209 @@
         }
       }
     },
+    "/api/v1/agent/activity": {
+      "get": {
+        "tags": [
+          "agent"
+        ],
+        "summary": "Get Agent Activity",
+        "description": "Listening beats speaking, then thinking, working (delegated tasks), sleeping (quiet hours), idle.\nThe journal's stream sends the same as `event: activity` on every change.",
+        "operationId": "getAgentActivity",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentActivityOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/agent/initiative": {
+      "get": {
+        "tags": [
+          "agent"
+        ],
+        "summary": "Get Agent Initiative",
+        "operationId": "getAgentInitiative",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InitiativeOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/connectors": {
       "get": {
         "tags": [
@@ -4385,7 +4588,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Server-Sent Events: `event: item`, `id: <position>`, `data: <JournalItem as JSON>` (the schema `JournalItem`); comment lines as heartbeats. Same filters as the list. Resumes after `Last-Event-ID` (or `after`), else starts with new entries.",
+            "description": "Server-Sent Events: `event: item`, `id: <position>`, `data: <JournalItem as JSON>` (the schema `JournalItem`); comment lines as heartbeats. Same filters as the list. Resumes after `Last-Event-ID` (or `after`), else starts with new entries. With `agent.read`, also `event: activity`, `data: <AgentActivityOut as JSON>` (no `id`, the filters do not apply): once at the start, then on every change of what the agent is doing.",
             "content": {
               "text/event-stream": {
                 "schema": {
@@ -7099,6 +7302,57 @@
         ],
         "title": "AccountOut"
       },
+      "AgentActivityOut": {
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "idle",
+              "listening",
+              "thinking",
+              "speaking",
+              "working",
+              "sleeping"
+            ],
+            "title": "State"
+          },
+          "since": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Since"
+          },
+          "replies": {
+            "type": "integer",
+            "title": "Replies"
+          },
+          "tasks": {
+            "type": "integer",
+            "title": "Tasks"
+          },
+          "listening_rooms": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Listening Rooms"
+          },
+          "quiet": {
+            "type": "boolean",
+            "title": "Quiet"
+          }
+        },
+        "type": "object",
+        "required": [
+          "state",
+          "since",
+          "replies",
+          "tasks",
+          "listening_rooms",
+          "quiet"
+        ],
+        "title": "AgentActivityOut",
+        "description": "What the agent is doing now, from what really runs: `GET /agent/activity`, and `event: activity` on\nthe journal's stream at its start and on every change."
+      },
       "AgentOut": {
         "properties": {
           "name": {
@@ -8138,6 +8392,33 @@
           "size"
         ],
         "title": "HistoryEntryOut"
+      },
+      "InitiativeOut": {
+        "properties": {
+          "quiet_hours": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QuietHoursOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "upcoming": {
+            "items": {
+              "$ref": "#/components/schemas/ScheduledDeliveryOut"
+            },
+            "type": "array",
+            "title": "Upcoming"
+          }
+        },
+        "type": "object",
+        "required": [
+          "quiet_hours",
+          "upcoming"
+        ],
+        "title": "InitiativeOut"
       },
       "InvitationAcceptIn": {
         "properties": {
@@ -9359,6 +9640,34 @@
         "title": "ProblemOut",
         "description": "What is wrong in an edited configuration, located by its path in the document."
       },
+      "QuietHoursOut": {
+        "properties": {
+          "start": {
+            "type": "string",
+            "title": "Start"
+          },
+          "end": {
+            "type": "string",
+            "title": "End"
+          },
+          "timezone": {
+            "type": "string",
+            "title": "Timezone"
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active"
+          }
+        },
+        "type": "object",
+        "required": [
+          "start",
+          "end",
+          "timezone",
+          "active"
+        ],
+        "title": "QuietHoursOut"
+      },
       "ReasonOut": {
         "properties": {
           "message": {
@@ -9568,12 +9877,59 @@
         ],
         "title": "SatellitesOut"
       },
+      "ScheduledDeliveryOut": {
+        "properties": {
+          "about": {
+            "type": "string",
+            "title": "About"
+          },
+          "delivery": {
+            "type": "string",
+            "title": "Delivery"
+          },
+          "person": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PersonRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "spoken_on": {
+            "type": "string",
+            "title": "Spoken On"
+          },
+          "written_on": {
+            "type": "string",
+            "title": "Written On"
+          },
+          "due_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Due At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "about",
+          "delivery",
+          "person",
+          "spoken_on",
+          "written_on",
+          "due_at"
+        ],
+        "title": "ScheduledDeliveryOut",
+        "description": "A written follow-up of something said aloud: sent at `due_at` unless someone answers first."
+      },
       "Scope": {
         "type": "string",
         "enum": [
           "accounts.manage",
           "accounts.owners.manage",
           "household.read",
+          "agent.read",
           "household.connections.manage",
           "own.connections.manage",
           "satellites.manage",

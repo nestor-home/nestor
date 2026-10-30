@@ -24,6 +24,7 @@ from nestor.adapters.storage.sqlite.vault import GENERATE
 from nestor.core import Component, ContractError
 from nestor.core.i18n import Locale
 from nestor.modules.accounts import Accounts
+from nestor.modules.activity import ActivityMonitor
 from nestor.modules.channels import Channel
 from nestor.modules.cognition import ConversationModel, Executor
 from nestor.modules.cognition.delegation.assistant import Delegation
@@ -167,12 +168,13 @@ class Nestor:
             context=[delegation, memory, watch_tools],
         )
         initiative = config.initiative
+        quiet_hours = QuietHours.parse(initiative.quiet_hours) if initiative.quiet_hours else None
         self.courier = Courier(
             self.journal,
             self.agent,
             self.channels,
             policy=DeliveryPolicy(
-                quiet_hours=QuietHours.parse(initiative.quiet_hours) if initiative.quiet_hours else None,
+                quiet_hours=quiet_hours,
                 main_room=initiative.main_room,
                 timezone=config.persona.timezone,
             ),
@@ -186,6 +188,9 @@ class Nestor:
             self.courier,
             Triage(self.triage_model, language=config.persona.language),
             self.sources,
+        )
+        self.activity = ActivityMonitor(
+            self.journal, self.agent.replies, self.tasks, quiet_hours=quiet_hours, timezone=config.persona.timezone
         )
         self._stack = AsyncExitStack()
 
@@ -216,6 +221,7 @@ class Nestor:
             self.watch_book,
             *self.sources,
             self.watches,
+            self.activity,
         ]
 
     async def __aenter__(self) -> Self:

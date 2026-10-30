@@ -9,6 +9,7 @@ from nestor.admin.presentation import Phrasebook
 from nestor.core import Health, PersonId
 from nestor.core.i18n import Message
 from nestor.modules.accounts import Account, Accounts, Role
+from nestor.modules.activity import AgentActivity
 from nestor.modules.household import Household
 from nestor.runtime import Nestor
 
@@ -184,3 +185,26 @@ class AgentOut(BaseModel):
         required = [nestor.model, *nestor.channels]
         degraded = any(c.health() is not Health.STARTED for c in required)
         return cls(name=nestor.config.persona.name, status="degraded" if degraded else "online")
+
+
+class AgentActivityOut(BaseModel):
+    """What the agent is doing now, from what really runs: `GET /agent/activity`, and `event: activity` on
+    the journal's stream at its start and on every change."""
+
+    state: Literal["idle", "listening", "thinking", "speaking", "working", "sleeping"]
+    since: datetime  # when it entered this state (as this instance saw it: its start at the earliest)
+    replies: int  # answers being produced now
+    tasks: int  # delegated tasks running
+    listening_rooms: list[str]  # where a satellite hears someone speak
+    quiet: bool  # within the quiet hours now
+
+    @classmethod
+    def of(cls, activity: AgentActivity) -> "AgentActivityOut":
+        return cls(
+            state=activity.state.value,
+            since=activity.since,
+            replies=activity.replies,
+            tasks=activity.tasks,
+            listening_rooms=list(activity.listening_rooms),
+            quiet=activity.quiet,
+        )

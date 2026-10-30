@@ -7,7 +7,7 @@ tools it calls, round after round. Everything observable goes to the journal.
 
 import asyncio
 import contextlib
-from collections.abc import AsyncIterator, Iterable, Mapping
+from collections.abc import AsyncIterator, Callable, Iterable, Mapping
 from dataclasses import dataclass
 
 from nestor.core import ContractError, PersonId, ProviderError, utc_now
@@ -29,7 +29,7 @@ from nestor.modules.conversation.events import AnswerCut, AssistantTurn, Fallbac
 from nestor.modules.conversation.history import recent_history
 from nestor.modules.conversation.persona import Persona
 from nestor.modules.conversation.ports import ContextProvider
-from nestor.modules.conversation.types import FallbackReason
+from nestor.modules.conversation.types import FallbackReason, ReplyPhase
 from nestor.modules.household import Household, Person
 from nestor.modules.journal import Journal
 
@@ -47,6 +47,32 @@ class AgentSettings:
     max_tool_rounds: int = 6
     history_events: int = 60
     slow_after_s: float = 4.0  # spoken channels say a filler when the first words take longer
+
+
+class LiveReplies:
+    """The answers being produced right now and where each stands. Listeners are called on every
+    change, synchronously: they must only take note (what the agent is doing is read from here)."""
+
+    def __init__(self) -> None:
+        self._phases: dict[int, ReplyPhase] = {}
+        self._listeners: list[Callable[[], object]] = []
+
+    def phases(self) -> tuple[ReplyPhase, ...]:
+        return tuple(self._phases.values())
+
+    def listen(self, listener: Callable[[], object]) -> Callable[[], None]:
+        """Call `listener` on every change; returns what stops it."""
+        self._listeners.append(listener)
+        return lambda: self._listeners.remove(listener) if listener in self._listeners else None
+
+    def set(self, reply: object, phase: ReplyPhase | None) -> None:
+        """`reply` is now in `phase`; `None` once it is over."""
+        before = self._phases.pop(id(reply), None) if phase is None else self._phases.get(id(reply))
+        if phase is not None:
+            self._phases[id(reply)] = phase
+        if before is not phase:
+            for listener in tuple(self._listeners):
+                listener()
 
 
 class Agent(Assistant):
@@ -69,6 +95,7 @@ class Agent(Assistant):
         self._channels = dict(channels or {})
         self._context = tuple(context)
         self.settings = settings or AgentSettings()
+        self.replies = LiveReplies()  # what it is answering right now
 
     def identify(self, address: Address, sender: Sender) -> PersonId | None:
         person = self.household.identify(address.channel, sender.id)
@@ -154,6 +181,7 @@ class AgentReply(Reply):
         self._chunks.put_nowait(None)
 
     async def _produce(self) -> None:
+        self._agent.replies.set(self, ReplyPhase.THINKING)
         try:
             if self._user is not None:
                 await self._agent.journal.publish(
@@ -169,6 +197,7 @@ class AgentReply(Reply):
             if self._record:
                 await self._log_answer("".join(self._said), interrupted=False)
         finally:
+            self._agent.replies.set(self, None)
             self._chunks.put_nowait(None)
 
     async def _answer(self) -> None:
@@ -189,6 +218,7 @@ class AgentReply(Reply):
             if not calls:
                 return
             messages.append(Message(role=Role.ASSISTANT, content=text, tool_calls=calls))
+            agent.replies.set(self, ReplyPhase.THINKING)
             outputs = await asyncio.gather(*(agent.toolbox.call(call, context) for call in calls))
             messages += [
                 Message(role=Role.TOOL, content=o, tool_call_id=c.id) for c, o in zip(calls, outputs, strict=True)
@@ -243,6 +273,8 @@ class AgentReply(Reply):
     def _say(self, text: str) -> None:
         self._said.append(text)
         self._chunks.put_nowait(text)
+        if self._record:  # a composed message is only words to send later: still thinking
+            self._agent.replies.set(self, ReplyPhase.SPEAKING)
 
     async def _log_answer(self, text: str, *, interrupted: bool) -> None:
         turn = AssistantTurn(
