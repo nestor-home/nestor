@@ -2,10 +2,14 @@
 pairing URIs, pending devices without their code, approval with the pairing id, identify, narrowed
 capabilities, revocation, and the local command line's bearer token."""
 
+import asyncio
 import re
 from pathlib import Path
 
+import pytest
+
 from nestor.core import Capability
+from nestor.modules.accounts import Role
 from nestor.modules.channels import Medium
 from nestor.modules.journal import Journal
 from nestor.modules.satellites import (
@@ -17,7 +21,9 @@ from nestor.modules.satellites import (
     PairingMethod,
     PairingStatus,
     PairingTicket,
+    SatelliteAdditionCompleted,
     SatelliteHost,
+    SatellitePaired,
 )
 from nestor.testing.channels import InMemoryChannel
 from nestor.testing.satellites import pair_by_code
@@ -211,6 +217,36 @@ async def test_a_device_code_addition_sees_waiting_devices_and_pairs_the_one_who
         assert paired.status_code == 201 and paired.json()["room"] == "cuisine"
         again = await api.post("/api/v1/satellites/approvals", approval)
         assert (again.status_code, again.json()["error"]["code"]) == (409, "addition_over")
+
+
+@pytest.mark.parametrize("same_device", [False, True], ids=["two devices", "one device"])
+async def test_two_people_typing_codes_for_one_addition_at_once_pair_one_device(
+    tmp_path: Path, same_device: bool
+) -> None:
+    async with Harness(tmp_path) as admin:
+        await admin.account("lea", Role.ADMIN)
+        mathis, lea = await admin.api(), await admin.api("lea")
+        addition = (await mathis.post("/api/v1/satellites/additions", {"method": "device_code.speech"})).json()
+        reachy = await admin.nestor.pairing.request(REACHY)
+        other = reachy if same_device else await admin.nestor.pairing.request(MIC)
+        approvals = [
+            {"code": code(ticket), "pairing_id": ticket.id, "addition_id": addition["addition"]["id"]}
+            for ticket in (reachy, other)
+        ]
+
+        answers = await asyncio.gather(
+            mathis.post("/api/v1/satellites/approvals", approvals[0]),
+            lea.post("/api/v1/satellites/approvals", approvals[1]),
+        )
+
+        [won] = [a for a in answers if a.status_code == 201]
+        [lost] = [a for a in answers if a.status_code != 201]
+        assert lost.json()["error"]["code"] in {"addition_over", "pairing_refused"}
+        journal = admin.nestor.journal
+        [paired] = await journal.history(SatellitePaired)
+        [completed] = await journal.history(SatelliteAdditionCompleted)
+        assert paired.device.id == completed.device_id == won.json()["id"]
+        assert [s.id for s in admin.nestor.pairing.satellites()] == [won.json()["id"]]
 
 
 async def test_an_addition_can_be_cancelled_once(tmp_path: Path) -> None:

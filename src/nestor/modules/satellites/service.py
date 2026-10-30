@@ -304,13 +304,13 @@ class Pairing(Component):
         declared by default); `method` says how the person got the code. With `pairing_id` (the request
         the person typed the code on), a code presented by another device is refused. With
         `addition_id`, the addition the person started gives its method, name, room and capabilities."""
+        await self._expire_additions()  # the last await before the claim: two approvals cannot interleave past it
         self._expire()
         addition = None
         if addition_id is not None:
-            await self._expire_additions()
             addition = self._additions.get(addition_id)
             if addition is None or addition.status is not AdditionStatus.ACTIVE:
-                raise PairingRefused("this addition is over (paired, cancelled or expired)", reason="addition_over")
+                raise _addition_over()
             method = addition.method
         if method is not None and method.proof is not Proof.DEVICE_CODE:
             raise ContractError(f"{method} does not pair with a device code")
@@ -323,8 +323,10 @@ class Pairing(Component):
         if request is None:
             raise PairingRefused("no device is waiting with this code (wrong or expired)", reason="wrong_code")
         allowed = request.manifest.names if capabilities is None else request.manifest.names & set(capabilities)
-        if addition is not None and addition.capabilities is not None:
-            allowed = allowed & addition.capabilities
+        if addition is not None:
+            addition = self._claim(addition, request.manifest.device.id)
+            if addition.capabilities is not None:
+                allowed = allowed & addition.capabilities
         request.status = PairingStatus.APPROVED  # taken now: an enrollment code sent meanwhile is refused
         return await self._pair(request, allowed, Proof.DEVICE_CODE, method, by=by, addition=addition)
 
@@ -469,8 +471,7 @@ class Pairing(Component):
         if pending is not None and pending.status is not PairingStatus.PENDING:
             raise NotPending("this pairing is no longer waiting for a proof")
         if found is not None and found.status is AdditionStatus.ACTIVE:
-            self._finish(found.id, AdditionStatus.COMPLETED, device_id=manifest.device.id)
-            return found
+            return self._claim(found, manifest.device.id)
         self._limiter.failed(source, now)
         reason = _REFUSALS[found.status] if found is not None else "unknown"
         await self.journal.publish(
@@ -498,8 +499,7 @@ class Pairing(Component):
         device = request.manifest.device
         if addition is not None and addition.room is not None:
             device = Device(device.id, device.model, addition.room, device.brand)
-        if addition is not None:
-            self._finish(addition.id, AdditionStatus.COMPLETED, device_id=device.id)
+        if addition is not None:  # claimed by the caller, before anything awaited
             completed = SatelliteAdditionCompleted(
                 source=self.name, addition_id=addition.id, pairing_id=request.ticket.id, device_id=device.id
             )
@@ -526,6 +526,16 @@ class Pairing(Component):
         request.token, request.satellite = token, satellite
         return satellite
 
+    def _claim(self, addition: Addition, device_id: str) -> Addition:
+        """Take an addition in progress for one device: the only way one completes, checked and marked
+        in a single step that never awaits. Of two proofs racing for it, exactly one gets it; the other
+        is told it is over, and nothing of it reaches the journal."""
+        current = self._additions.get(addition.id)
+        if current is None or current.status is not AdditionStatus.ACTIVE:
+            raise _addition_over()
+        self._additions[addition.id] = replace(current, status=AdditionStatus.COMPLETED, device_id=device_id)
+        return current
+
     def _finish(self, addition_id: str, status: AdditionStatus, *, device_id: str | None = None) -> None:
         if addition := self._additions.get(addition_id):
             self._additions[addition_id] = replace(addition, status=status, device_id=device_id)
@@ -546,6 +556,10 @@ class Pairing(Component):
                     del self._requests[key]  # reported once, then forgotten
                 else:
                     request.status, request.token = PairingStatus.EXPIRED, None
+
+
+def _addition_over() -> PairingRefused:
+    return PairingRefused("this addition is over (paired, cancelled or expired)", reason="addition_over")
 
 
 def _satellite(event: SatellitePaired) -> Satellite:

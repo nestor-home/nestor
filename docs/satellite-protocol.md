@@ -181,7 +181,9 @@ minute to 7 days).
   name, room and capabilities apply.
 
 An addition ends when its device is paired (`completed`), when a person cancels it, or when it
-expires. At most 32 are in progress at once.
+expires. At most 32 are in progress at once. An addition pairs one device: the core claims it in one
+step, so two people typing codes for it at the same instant pair one device, and the other is told
+the addition is over.
 
 ## 4. Codes and URI
 
