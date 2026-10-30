@@ -5,6 +5,7 @@ import type {
   AcceptInvitation,
   Account,
   AccountChange,
+  AgentActivity,
   Approval,
   ConfigDocument,
   ConfigPreview,
@@ -19,6 +20,7 @@ import type {
   HistoryDocument,
   HistoryEntry,
   Id,
+  Initiative,
   Invitation,
   InvitationCreated,
   InvitationPreview,
@@ -129,6 +131,12 @@ export const api = {
       return false;
     }
   },
+
+  // the agent
+  activity: async (signal?: AbortSignal): Promise<AgentActivity> =>
+    await unwrap(client.GET("/api/v1/agent/activity", { signal })),
+  initiative: async (signal?: AbortSignal): Promise<Initiative> =>
+    await unwrap(client.GET("/api/v1/agent/initiative", { signal })),
 
   // configuration
   configSchema: async (): Promise<ConfigSchema> =>

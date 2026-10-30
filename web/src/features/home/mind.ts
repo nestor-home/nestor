@@ -6,6 +6,7 @@
 
 import type { Agent, Component, Connection, JournalItem, Person, Satellite, Task, Watch } from "@/api";
 import type { FigureState } from "@/components/agent-figure";
+import { is } from "@/lib/events";
 
 export type AgentState = FigureState;
 
@@ -27,18 +28,11 @@ export function agentState(items: readonly JournalItem[], context: Context | num
   const latest = items.reduce<JournalItem | null>((a, b) => (!a || b.at > a.at ? b : a), null);
   if (latest) {
     const age = now - new Date(latest.at).getTime();
-    const t = latest.type;
-    if (
-      (t.endsWith("assistant_turn") || t.endsWith(".delivered") || t.endsWith("fallback_spoken")) &&
-      age < HOLD_MS.speaking
-    )
+    if ((is(latest, "answer") || is(latest, "delivered") || is(latest, "fallback")) && age < HOLD_MS.speaking)
       return "speaking";
-    if (
-      (t.endsWith("tool_called") || t.endsWith("delivery_considered") || t.endsWith("watch_triaged")) &&
-      age < HOLD_MS.thinking
-    )
+    if ((is(latest, "toolCalled") || is(latest, "considered") || is(latest, "watchTriaged")) && age < HOLD_MS.thinking)
       return "thinking";
-    if ((t.endsWith("user_turn") || t.endsWith("speech_activity")) && age < HOLD_MS.listening) return "listening";
+    if ((is(latest, "userTurn") || is(latest, "speech")) && age < HOLD_MS.listening) return "listening";
   }
   if (running > 0) return "working";
   if (troubled) return "concerned";
@@ -148,7 +142,6 @@ export function marksOf(items: readonly JournalItem[]): Mark[] {
     room: item.room,
   });
   for (const item of sorted) {
-    const t = item.type;
     if (item.kind === "conversation" && item.links.session) {
       const known = sessions.get(item.links.session);
       if (known) {
@@ -159,11 +152,14 @@ export function marksOf(items: readonly JournalItem[]): Mark[] {
       const m = mark("conversation", item);
       sessions.set(item.links.session, m);
       marks.push(m);
-    } else if (t.endsWith(".delivered")) marks.push(mark("delivery", item));
-    else if (t.endsWith("task_started")) marks.push(mark("task", item));
-    else if (t.endsWith("watch_triggered")) marks.push(mark("watch", item));
-    else if (t.endsWith("memory.recorded")) marks.push(mark("memory", item));
-    else if (t.endsWith("delivery_failed") || (t.endsWith("task_ended") && item.tone === "warning"))
+    } else if (is(item, "delivered")) marks.push(mark("delivery", item));
+    else if (is(item, "taskStarted")) marks.push(mark("task", item));
+    else if (is(item, "watchTriggered")) marks.push(mark("watch", item));
+    else if (is(item, "memory")) marks.push(mark("memory", item));
+    else if (
+      is(item, "deliveryFailed") ||
+      (is(item, "taskEnded") && (item.tone === "warning" || item.outcome?.ok === false))
+    )
       marks.push(mark("problem", item));
   }
   return marks;
@@ -218,20 +214,19 @@ export function lineOf(
 ): Line {
   const people = (i: JournalItem) => i.people.map(names).join(", ");
   if (latest && now - new Date(latest.at).getTime() < RECENT_MS) {
-    const t = latest.type;
     const where = latest.room ?? latest.channels[0] ?? "";
-    if (t.endsWith(".delivered") && latest.people.length)
+    if (is(latest, "delivered") && latest.people.length)
       return { id: "home-say-delivered", args: { people: people(latest), where } };
-    if (t.endsWith("user_turn") && latest.people.length)
+    if (is(latest, "userTurn") && latest.people.length)
       return { id: "home-say-listening", args: { people: people(latest), where } };
-    if (t.endsWith("assistant_turn") && latest.people.length)
+    if (is(latest, "answer") && latest.people.length)
       return { id: "home-say-answering", args: { people: people(latest) } };
-    if (t.endsWith("tool_called") && latest.tool) return { id: "home-say-tool", args: { tool: latest.tool } };
-    if (t.endsWith("presence_changed") && latest.people.length)
+    if (is(latest, "toolCalled") && latest.tool) return { id: "home-say-tool", args: { tool: latest.tool } };
+    if (is(latest, "presence") && latest.people.length)
       return latest.room
         ? { id: "home-say-presence-room", args: { people: people(latest), room: latest.room } }
         : { id: "home-say-presence-away", args: { people: people(latest) } };
-    if (t.endsWith("memory.recorded")) return { id: "home-say-memory", args: { people: people(latest) || "—" } };
+    if (is(latest, "memory")) return { id: "home-say-memory", args: { people: people(latest) || "—" } };
   }
   const task = context.tasks[0];
   if (state === "working" && task)

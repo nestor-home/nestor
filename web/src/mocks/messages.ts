@@ -65,7 +65,7 @@ const TITLES: [RegExp, (m: RegExpMatchArray) => Message][] = [
   [/^Tri : pertinent, à signaler aujourd'hui$/, () => msg("journal-watch-triaged-urgent")],
   [/^Tri : pertinent pour (.+)$/, (m) => msg("journal-watch-triaged", { name: m[1] ?? "" })],
   [
-    /^Décision d(?:e parler|'écrire) à (\S+) — (.+?)( \(relance\))?$/,
+    /^Décision d(?:e parler|'écrire) à (\S+) : (.+?)( \(relance\))?$/,
     (m) =>
       msg("journal-delivery-considered", {
         name: m[1] ?? "",
@@ -75,7 +75,7 @@ const TITLES: [RegExp, (m: RegExpMatchArray) => Message][] = [
       }),
   ],
   [
-    /^Message transmis (à voix haute|par écrit) — (.+?)( \(relance\))?$/,
+    /^Message transmis (à voix haute|par écrit) : (.+?)( \(relance\))?$/,
     (m) =>
       msg("journal-delivered", {
         spoken: m[1] === "à voix haute" ? "yes" : "no",
@@ -84,7 +84,7 @@ const TITLES: [RegExp, (m: RegExpMatchArray) => Message][] = [
       }),
   ],
   [
-    /^Message non transmis( à voix haute)? — (.+)$/,
+    /^Message non transmis( à voix haute)? : (.+)$/,
     (m) => msg("journal-delivery-failed", { spoken: m[1] ? "yes" : "no", ...subject(m[2] ?? "") }),
   ],
   [/^Connexion (\S+) à réautoriser$/, (m) => msg("journal-connection-needs-reauth", { account: m[1] ?? "" })],

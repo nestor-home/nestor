@@ -52,7 +52,7 @@ export function PeopleList() {
           <Link
             to="/people/$personId"
             params={{ personId: p.id }}
-            className="group grid grid-cols-[2.25rem_minmax(0,1fr)_auto] items-center gap-x-4 px-5 py-3.5 hover:bg-paper-sunken/60 sm:grid-cols-[2.25rem_minmax(0,1fr)_minmax(0,1fr)_12rem_1rem]"
+            className="group grid grid-cols-[2.25rem_minmax(0,1fr)] items-center gap-x-4 gap-y-1 px-5 py-3.5 hover:bg-paper-sunken/60 sm:grid-cols-[2.25rem_minmax(0,1fr)_minmax(0,1fr)_12rem_1rem]"
           >
             <span
               aria-hidden="true"
@@ -74,7 +74,9 @@ export function PeopleList() {
                 </span>
               ))}
             </span>
-            <PresenceMark presence={p.presence} />
+            <span className="col-start-2 sm:col-start-auto">
+              <PresenceMark presence={p.presence} />
+            </span>
             <ArrowRight className="hidden size-3.5 text-ink-faint group-hover:text-ink sm:block" aria-hidden="true" />
           </Link>
         </li>

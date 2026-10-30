@@ -581,6 +581,29 @@ export const handlers = [
     save();
     return noContent();
   }),
+  // -- the agent --------------------------------------------------------------------------------
+  http.get(`${API}/agent/activity`, ({ request }) => guard(request) ?? HttpResponse.json(activityOut())),
+
+  http.get(`${API}/agent/initiative`, ({ request }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    const hours = quietOf();
+    const soon = new Date(Date.now() + 25 * 60_000).toISOString();
+    return HttpResponse.json({
+      quiet_hours: hours,
+      upcoming: [
+        {
+          about: "watch w-2b77",
+          delivery: "watch:w-2b77",
+          person: { id: "mathis", name: "Mathis" },
+          spoken_on: "voice:bureau",
+          written_on: "telegram:mathis",
+          due_at: soon,
+        },
+      ],
+    } satisfies In<"InitiativeOut">);
+  }),
+
   // -- configuration ----------------------------------------------------------------------------
   http.get("/health", () => (restarting() ? HttpResponse.error() : HttpResponse.json({ status: "ok" }))),
 
@@ -767,7 +790,8 @@ function plug(
  * to create an SSE handler where there is no EventSource (Node); tests drive a fake stream instead.
  */
 export function liveJournal() {
-  return sse<{ item: string }>(`${API}/journal/stream`, ({ client, request }) => {
+  return sse<{ item: string; activity: string }>(`${API}/journal/stream`, ({ client, request }) => {
+    client.send({ event: "activity", data: JSON.stringify(activityOut()) });
     let turn = 0;
     const timer = setInterval(() => {
       const next = LIVE[turn++ % LIVE.length];
@@ -816,4 +840,32 @@ function writeConfig(document: In<"DocumentIn">["document"]) {
     restart_required: true,
     pending_changes: db.config.pending_changes,
   } satisfies In<"WrittenOut">);
+}
+
+/** The quiet hours of the mock file, as `GET /agent/initiative` tells them. */
+function quietOf(): In<"QuietHoursOut"> | null {
+  const text = (db.config.document.initiative as { quiet_hours?: unknown } | undefined)?.quiet_hours;
+  const m = typeof text === "string" ? text.match(/^(\d{1,2}:\d{2})-(\d{1,2}:\d{2})$/) : null;
+  if (!m?.[1] || !m[2]) return null;
+  const [start, end] = [m[1], m[2]];
+  const minute = (t: string) => Number(t.split(":")[0]) * 60 + Number(t.split(":")[1]);
+  const now = new Date();
+  const at = now.getHours() * 60 + now.getMinutes();
+  const [from, to] = [minute(start), minute(end)];
+  const active = from <= to ? at >= from && at < to : at >= from || at < to;
+  return { start, end, timezone: "Europe/Paris", active };
+}
+
+/** What the agent is doing, from the mock state: working while a task runs, asleep in the quiet hours. */
+export function activityOut(): In<"AgentActivityOut"> {
+  const tasks = db.tasks.filter((t) => t.status === "running").length;
+  const quiet = quietOf()?.active ?? false;
+  return {
+    state: tasks ? "working" : quiet ? "sleeping" : "idle",
+    since: new Date(Date.now() - 12 * 60_000).toISOString(),
+    replies: 0,
+    tasks,
+    listening_rooms: [],
+    quiet,
+  };
 }

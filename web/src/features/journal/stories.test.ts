@@ -42,6 +42,64 @@ describe("stories", () => {
     ).toEqual(["call:c2", "spawn:ts", "event:a"]);
   });
 
+  it("pairs a message with its reply when only the reply carries the turn (the server's shapes)", () => {
+    const s = { session: "telegram" };
+    const items = [
+      ev({
+        id: "u1",
+        type: "conversation.turn.user",
+        message: { id: "journal-user-said", args: {} },
+        kind: "conversation",
+        links: s,
+      }),
+      ev({
+        id: "k1",
+        type: "agent.tool.called",
+        message: { id: "journal-tool-called", args: {} },
+        kind: "tool",
+        tool: "task_status",
+        links: { ...s, call: "k" },
+      }),
+      ev({
+        id: "k2",
+        type: "agent.tool.completed",
+        message: { id: "journal-tool-completed", args: {} },
+        kind: "tool",
+        tool: "task_status",
+        outcome: { ok: true, duration_s: 0.4 },
+        links: { ...s, call: "k" },
+      }),
+      ev({
+        id: "a1",
+        type: "conversation.turn.assistant",
+        message: { id: "journal-assistant-answered", args: {} },
+        kind: "conversation",
+        links: { ...s, turn: "r1" },
+      }),
+      ev({
+        id: "u2",
+        type: "conversation.turn.user",
+        message: { id: "journal-user-said", args: {} },
+        kind: "conversation",
+        links: s,
+      }),
+      ev({
+        id: "a2",
+        type: "conversation.turn.assistant",
+        message: { id: "journal-assistant-answered", args: {} },
+        kind: "conversation",
+        links: { ...s, turn: "r2" },
+      }),
+    ];
+    const thread = buildStories(items)[0] as Thread;
+    expect(
+      thread.turns.map((t) => [t.user?.id, t.steps.map((st) => (st.type === "call" ? "call" : st.item.id))]),
+    ).toEqual([
+      ["u1", ["call", "a1"]],
+      ["u2", ["a2"]],
+    ]);
+  });
+
   it("chains a watch from its trigger to the follow-up, wherever the steps were said", () => {
     const w = { watch: "W" };
     const items = [

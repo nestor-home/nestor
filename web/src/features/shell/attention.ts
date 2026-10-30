@@ -5,6 +5,7 @@ import { CircleAlert, Hourglass, KeyRound, MessageSquareOff, RadioTower, ServerC
 import { connectionsQuery, journalLatestQuery, satellitesQuery, systemQuery, tasksQuery } from "@/api";
 import { tr } from "@/i18n/runtime";
 import { startOfToday } from "@/lib/dates";
+import { is } from "@/lib/events";
 import { say } from "@/lib/messages";
 import { useCan } from "@/lib/session";
 
@@ -76,10 +77,9 @@ export function useAttention(): { items: Attention[]; ready: boolean } {
   const today = spoken.data?.items ?? [];
   const recovered = new Set<string>();
   for (const f of today) {
-    if (!f.type.endsWith("delivery_failed") || !f.links.delivery || recovered.has(f.links.delivery)) continue;
+    if (!is(f, "deliveryFailed") || !f.links.delivery || recovered.has(f.links.delivery)) continue;
     recovered.add(f.links.delivery);
-    if (today.some((d) => d.type.endsWith(".delivered") && d.links.delivery === f.links.delivery && d.at >= f.at))
-      continue;
+    if (today.some((d) => is(d, "delivered") && d.links.delivery === f.links.delivery && d.at >= f.at)) continue;
     items.push({
       key: `delivery-${f.id}`,
       icon: MessageSquareOff,

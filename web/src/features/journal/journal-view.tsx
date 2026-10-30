@@ -129,10 +129,12 @@ function Stories({
       ) : (
         byDay(stories).map(([day, group]) => (
           <section key={day} aria-label={day} className="mb-8">
-            <h2 className="sticky top-10 z-[1] mb-2 flex items-center gap-3 bg-paper/95 py-1.5 font-mono text-[0.72rem] text-ink-muted backdrop-blur-[2px]">
+            <h2 className="sticky top-14 z-[1] mb-3 flex items-center gap-3 bg-paper/95 py-2 font-sans text-[0.92rem] font-medium text-ink backdrop-blur-[2px]">
               <span className="first-letter:uppercase">{day}</span>
               <span aria-hidden="true" className="h-px flex-1 bg-rule" />
-              <span className="tabular">{t("jr-story-count", { count: group.length })}</span>
+              <span className="text-[0.85rem] font-normal text-ink-muted tabular">
+                {t("jr-story-count", { count: group.length })}
+              </span>
             </h2>
             <ol
               aria-label={t("jr-day-list", { day })}
@@ -140,7 +142,13 @@ function Stories({
             >
               {group.map((story) => (
                 <li key={story.key}>
-                  <StoryCard story={story} density={density} open={open} isNew={isNew} />
+                  <StoryCard
+                    story={story}
+                    density={density}
+                    open={open}
+                    isNew={isNew}
+                    unfolded={Boolean(search.session)}
+                  />
                 </li>
               ))}
             </ol>

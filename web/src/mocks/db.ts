@@ -19,6 +19,7 @@ import type { ConfigDb } from "./config";
 import * as config from "./config";
 import { day } from "./day";
 import * as fixtures from "./fixtures";
+import { stress, stressed } from "./stress";
 
 export interface Db {
   signedIn: string | null; // account id
@@ -38,14 +39,15 @@ export interface Db {
   config: ConfigDb;
 }
 
-const KEY = "nestor.mock.db.v6"; // bumped when the shape changes
+/** Bumped when the shape changes; the stress fixture keeps its own copy. */
+const KEY = () => (stressed() ? "nestor.mock.db.v6.stress" : "nestor.mock.db.v6");
 
 export function fresh(): Db {
   const connections = fixtures.connections();
   const journal = day();
   const learnt = journal.find((e) => e.links.memory === "m-07")?.id ?? null;
   const memories = fixtures.memories().map((m) => (m.learnt_event === "LEARNT" ? { ...m, learnt_event: learnt } : m));
-  return {
+  const state: Db = {
     signedIn: "acc-mathis",
     people: fixtures.people(),
     accounts: fixtures.accounts(),
@@ -62,6 +64,8 @@ export function fresh(): Db {
     system: fixtures.system(),
     config: config.fresh(),
   };
+  if (stressed()) stress(state);
+  return state;
 }
 
 export let db: Db = fresh();
@@ -72,7 +76,7 @@ export function reset(next: Db = fresh()): void {
 
 export function load(): void {
   try {
-    const saved = sessionStorage.getItem(KEY);
+    const saved = sessionStorage.getItem(KEY());
     if (saved) db = JSON.parse(saved) as Db;
   } catch {
     db = fresh();
@@ -81,7 +85,7 @@ export function load(): void {
 
 export function save(): void {
   try {
-    sessionStorage.setItem(KEY, JSON.stringify(db));
+    sessionStorage.setItem(KEY(), JSON.stringify(db));
   } catch {
     // storage unavailable: the state lasts until the next reload
   }

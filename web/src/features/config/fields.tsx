@@ -394,6 +394,7 @@ function SecretControl({ id, node, root, path, required, label }: ControlProps) 
         autoFocus={replacing}
         value={typed}
         placeholder={t("cfg-secret-placeholder")}
+        aria-label={label}
         className="font-mono text-[0.82rem]"
         {...described(id, node, field.invalid)}
         onChange={(e) => {
@@ -514,6 +515,8 @@ function MapControl({ id, node, root, path, required, label }: ControlProps) {
   const write = (next: [string, unknown][]) =>
     next.length || required ? field.set(Object.fromEntries(next)) : field.clear();
   const valueControl = controlOf(valueSchema, root);
+  // each value a secret (MCP headers): shown as set, kept or replaced key by key
+  const secretValues = valueControl === "secret" || Boolean(node["x-nestor"]?.secret_values);
   const options = (resolve(valueSchema, root).schema.enum ?? []).map((v) => ({ value: String(v), label: String(v) }));
   return (
     <div className="grid gap-1.5">
@@ -543,17 +546,17 @@ function MapControl({ id, node, root, path, required, label }: ControlProps) {
                     className="sm:max-w-44"
                     onChange={setValue}
                   />
-                ) : valueControl === "secret" ? (
-                  <Input
-                    id={`${rowId}-value`}
-                    type="password"
-                    autoComplete="new-password"
-                    value={isTyped(value) ? value.value : typeof value === "string" ? value : ""}
-                    placeholder={isShown(value) ? t("cfg-secret-set", { preview: value.preview ?? "•••" }) : undefined}
-                    aria-label={t("cfg-map-value", { field: label, key: key || index + 1 })}
-                    className="font-mono text-[0.82rem]"
-                    onChange={(e) => setValue(e.target.value)}
-                  />
+                ) : secretValues ? (
+                  <div className="min-w-0 flex-1">
+                    <SecretControl
+                      id={`${rowId}-value`}
+                      node={valueSchema}
+                      root={root}
+                      path={[...path, key]}
+                      required={false}
+                      label={t("cfg-map-value", { field: label, key: key || index + 1 })}
+                    />
+                  </div>
                 ) : (
                   <Input
                     id={`${rowId}-value`}

@@ -38,21 +38,21 @@ journal-subject = { $subject ->
 journal-delivery-considered = Décision de { $written ->
     [yes] écrire
    *[no] parler
-} à { $name } — { journal-subject }{ $follow_up ->
+} à { $name } : { journal-subject }{ $follow_up ->
     [yes] {" "}(relance)
    *[no] {""}
 }
 journal-delivered = Message transmis { $spoken ->
     [yes] à voix haute
    *[no] par écrit
-} — { journal-subject }{ $follow_up ->
+} : { journal-subject }{ $follow_up ->
     [yes] {" "}(relance)
    *[no] {""}
 }
 journal-delivery-failed = Message non transmis{ $spoken ->
     [yes] {" "}à voix haute
    *[no] {""}
-} — { journal-subject }
+} : { journal-subject }
 journal-connection-needs-reauth = Connexion { $account } à réautoriser
 journal-connection-created = Compte { $account } connecté ({ $service })
 journal-pairing-requested = Le satellite { $device } ({ $model }, pièce « { $room } ») demande l'appairage

@@ -57,7 +57,7 @@ describe("tasks and watches", () => {
     const chain = articles.find((a) => a.textContent?.includes("déclenchée")) as HTMLElement;
     // the conversation where Léa answered is linked to the watch too, as its own thread
     expect(articles.some((a) => a.textContent?.includes("J'irai le chercher en rentrant"))).toBe(true);
-    expect(chain).toHaveTextContent("pourquoi Léa est dans la pièce « salon »");
+    expect(chain).toHaveTextContent("pourquoi : Léa est dans la pièce « salon »");
     expect(chain).toHaveTextContent("relance");
     expect(chain).toHaveTextContent("pas de réponse depuis 30 min");
   });

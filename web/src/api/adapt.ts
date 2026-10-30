@@ -74,6 +74,7 @@ const SCOPES: Record<ScopeDto, Scope[]> = {
   "watches.manage.all": ["watches:read", "watches:write"],
   "watches.manage.own": ["watches:read", "watches:write"],
   "config.manage": ["config:manage"],
+  "agent.read": ["agent:read"],
 };
 
 export function scopes(dto: ScopeDto[]): Scope[] {

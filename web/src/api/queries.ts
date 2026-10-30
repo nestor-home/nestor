@@ -25,6 +25,8 @@ export const keys = {
   task: (id: Id) => ["tasks", id] as const,
   watches: ["watches"] as const,
   watch: (id: Id) => ["watches", id] as const,
+  activity: ["agent", "activity"] as const,
+  initiative: ["agent", "initiative"] as const,
   config: ["config"] as const,
   configSchema: ["config", "schema"] as const,
   configHistory: ["config", "history"] as const,
@@ -102,6 +104,18 @@ export const watchesQuery = queryOptions({ queryKey: keys.watches, queryFn: api.
 export const watchQuery = (id: Id) => queryOptions({ queryKey: keys.watch(id), queryFn: () => api.watch(id) });
 export const memoriesQuery = (query: MemoryQuery) =>
   queryOptions({ queryKey: keys.memories(query), queryFn: () => api.memories(query) });
+
+/** Kept current by the stream's `activity` events; fetched once, and again after a reconnect. */
+export const activityQuery = queryOptions({
+  queryKey: keys.activity,
+  queryFn: ({ signal }) => api.activity(signal),
+  staleTime: Number.POSITIVE_INFINITY,
+});
+export const initiativeQuery = queryOptions({
+  queryKey: keys.initiative,
+  queryFn: ({ signal }) => api.initiative(signal),
+  refetchInterval: 60_000,
+});
 
 export const configSchemaQuery = queryOptions({
   queryKey: keys.configSchema,

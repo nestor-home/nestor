@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 test("the journal opens and shows why the assistant spoke", async ({ page }) => {
   await page.goto("/journal");
   await expect(page.getByRole("heading", { name: "Journal", level: 1 })).toBeVisible();
-  await expect(page.getByText("pourquoi", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText(/^pourquoi :/).first()).toBeVisible();
 });
 
 test("every section of the navigation answers", async ({ page }) => {

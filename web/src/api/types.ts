@@ -30,7 +30,8 @@ export type Scope =
   | "people:read"
   | "accounts:read"
   | "accounts:write"
-  | "config:manage";
+  | "config:manage"
+  | "agent:read";
 
 export interface Account {
   id: Id;
@@ -424,6 +425,33 @@ export interface SystemInfo {
   components: Component[];
 }
 
+// -- the agent -------------------------------------------------------------------------------
+
+/** What the agent is doing now (`GET /agent/activity`, and `event: activity` on the stream). */
+export interface AgentActivity {
+  state: "idle" | "listening" | "thinking" | "speaking" | "working" | "sleeping";
+  since: Instant;
+  replies: number;
+  tasks: number;
+  listening_rooms: string[];
+  quiet: boolean;
+}
+
+/** A written follow-up of something said aloud: sent at `due_at` unless someone answers first. */
+export interface UpcomingDelivery {
+  about: string;
+  delivery: string;
+  person: { id: Id; name: string } | null;
+  spoken_on: string; // `voice:salon`
+  written_on: string; // `telegram:7`
+  due_at: Instant;
+}
+
+export interface Initiative {
+  quiet_hours: { start: string; end: string; timezone: string; active: boolean } | null;
+  upcoming: UpcomingDelivery[];
+}
+
 // -- configuration -----------------------------------------------------------------------------
 
 /** A JSON Schema as `/config/schema` sends it, with Nestor's `x-nestor` annotations. */
@@ -452,6 +480,8 @@ export interface JsonSchema {
     title?: string;
     help?: string | null;
     secret?: boolean;
+    /** a map whose values are secrets (MCP headers): each value is kept or replaced on its own */
+    secret_values?: boolean;
     advanced?: boolean;
     group?: string;
   };

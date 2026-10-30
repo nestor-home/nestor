@@ -69,6 +69,19 @@ jr-tool-count = { $count ->
     [one] 1 tool
    *[other] { $count } tools
 }
+jr-turn-count = { $count ->
+    [one] 1 turn
+   *[other] { $count } turns
+}
+jr-more-turns = { $count ->
+    [one] Show the other turn
+   *[other] Show the { $count } other turns
+}
+jr-cut-by = Interrupted by: “{ $heard }”
+jr-between-details = What happened: { $what }
+jr-details = details
+jr-fallback = fallback answer
+jr-memory-kept = memory saved
 jr-interrupted = interrupted
 jr-call-details = Tool { $tool }: details
 jr-call-running = running
@@ -86,6 +99,7 @@ jr-why = why
 
 step-task-started = handed over
 step-task-progressed = step
+step-task-delivered = result delivered
 step-task-completed = completed
 step-task-failed = failed
 step-watch-created = created

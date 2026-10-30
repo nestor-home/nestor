@@ -8,6 +8,7 @@ import { Link } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import {
+  initiativeQuery,
   type JournalItem,
   journalLatestQuery,
   memoriesQuery,
@@ -15,6 +16,7 @@ import {
   peopleQuery,
   satellitesQuery,
   tasksQuery,
+  type UpcomingDelivery,
   watchesQuery,
 } from "@/api";
 import type { NestorController } from "@/character";
@@ -22,7 +24,7 @@ import { AgentFigure } from "@/components/agent-figure";
 import { Ago } from "@/components/ago";
 import { BowTie } from "@/components/bow-tie";
 import { Dither } from "@/components/dither";
-import { useAgentPresence } from "@/features/agent/presence";
+import { type Quiet, useAgentPresence } from "@/features/agent/presence";
 import { useAttention } from "@/features/shell/attention";
 import { useLiveItems } from "@/features/shell/live";
 import { useT } from "@/i18n";
@@ -33,7 +35,7 @@ import { say } from "@/lib/messages";
 import { usePeopleNames } from "@/lib/people";
 import { useCan, useMe } from "@/lib/session";
 import { cn } from "@/lib/utils";
-import { elsewhere, isQuiet, lineOf, type Mark, marksOf, merge, nodeOf, type RoomNode, roomsOf } from "./mind";
+import { elsewhere, lineOf, type Mark, marksOf, merge, nodeOf, type RoomNode, roomsOf } from "./mind";
 
 function greeting(now = new Date()): string {
   const h = now.getHours();
@@ -89,12 +91,14 @@ export function HomeView() {
   const line = lineOf(
     latest,
     state,
-    { tasks: running, troubled: attention.length, quietUntil: quiet ? clock(quiet.to) : null },
+    { tasks: running, troubled: attention.length, quietUntil: quiet?.active ? clock(quiet.to) : null },
     name,
     now,
   );
   const focus = latest ? nodeOf(latest, paired) : null;
-  const upcoming = (watches.data?.watches.length ?? 0) > 0 || Boolean(quiet);
+  const initiative = useQuery({ ...initiativeQuery, enabled: useCan("agent:read") });
+  const later = initiative.data?.upcoming ?? [];
+  const upcoming = (watches.data?.watches.length ?? 0) > 0 || Boolean(quiet) || later.length > 0;
 
   return (
     <div className="grid gap-16 md:gap-20">
@@ -135,9 +139,7 @@ export function HomeView() {
       <div className={cn("grid gap-14 md:gap-10", upcoming ? "md:grid-cols-3" : "md:grid-cols-2")}>
         {canPeople ? <House rooms={rooms} away={away} focus={focus} /> : null}
         <Now running={running} items={items} now={now} />
-        {upcoming ? (
-          <Next watches={watches.data?.watches ?? []} quiet={quiet} minute={date.getHours() * 60 + date.getMinutes()} />
-        ) : null}
+        {upcoming ? <Next watches={watches.data?.watches ?? []} quiet={quiet} upcoming={later} /> : null}
       </div>
 
       <Today marks={marks} />
@@ -187,7 +189,7 @@ function Hero({
         <Link
           to="/journal"
           aria-label={t("home-figure-label", { agent, state: t(`home-state-${state}`) })}
-          className="relative shrink-0 rounded-full"
+          className="relative shrink-0 rounded-full p-5 md:p-8"
         >
           {/* a soft dithered disc behind it, as on the site: atmosphere, never on its body */}
           <Dither
@@ -195,7 +197,7 @@ function Hero({
             from={0.16}
             to={0}
             dot={3}
-            className="pointer-events-none absolute top-1/2 left-1/2 size-[150%] -translate-x-1/2 -translate-y-[46%] overflow-hidden rounded-full text-ink/[0.16]"
+            className="pointer-events-none absolute inset-0 overflow-hidden rounded-full text-ink/[0.16]"
           />
           <span className="relative hidden md:block">
             <AgentFigure
@@ -357,11 +359,11 @@ function Now({
 function Next({
   watches,
   quiet,
-  minute,
+  upcoming,
 }: {
   watches: { id: string; what: string; last_triggered_at: string | null }[];
-  quiet: { from: number; to: number } | null;
-  minute: number;
+  quiet: Quiet | null;
+  upcoming: UpcomingDelivery[];
 }) {
   const t = useT();
   return (
@@ -370,12 +372,31 @@ function Next({
         {quiet ? (
           <li>
             <span className="text-[1.05rem] text-ink">
-              {isQuiet(quiet, minute)
+              {quiet.active
                 ? t("home-quiet-now", { until: clock(quiet.to) })
                 : t("home-quiet-later", { from: clock(quiet.from), to: clock(quiet.to) })}
             </span>
           </li>
         ) : null}
+        {upcoming.map((u) => (
+          <li key={`${u.delivery}:${u.due_at}`}>
+            <Link to="/journal" search={{ q: u.delivery }} className="group block">
+              <span className="text-[1.05rem] leading-snug text-ink group-hover:underline">
+                {u.person
+                  ? t("home-upcoming", {
+                      person: u.person.name,
+                      channel: u.written_on.split(":")[0] ?? u.written_on,
+                      time: hourMinute(u.due_at),
+                    })
+                  : t("home-upcoming-someone", {
+                      channel: u.written_on.split(":")[0] ?? u.written_on,
+                      time: hourMinute(u.due_at),
+                    })}
+              </span>
+              <span className="mt-1 block text-[0.92rem] text-ink-muted">{t("home-upcoming-unless")}</span>
+            </Link>
+          </li>
+        ))}
         {watches.map((w) => (
           <li key={w.id}>
             <Link to="/watches/$watchId" params={{ watchId: w.id }} className="group block">

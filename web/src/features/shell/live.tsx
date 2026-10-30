@@ -29,10 +29,14 @@ export function LiveProvider({ stream, children }: { stream: JournalStream; chil
 
   useEffect(
     () =>
-      stream.subscribe((item) => {
-        for (const listener of listeners.current) listener(item);
-        for (const queryKey of STALE[item.kind] ?? []) void queryClient.invalidateQueries({ queryKey });
-      }, setStatus),
+      stream.subscribe(
+        (item) => {
+          for (const listener of listeners.current) listener(item);
+          for (const queryKey of STALE[item.kind] ?? []) void queryClient.invalidateQueries({ queryKey });
+        },
+        setStatus,
+        (activity) => queryClient.setQueryData(keys.activity, activity),
+      ),
     [stream, queryClient],
   );
 

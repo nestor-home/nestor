@@ -8,6 +8,7 @@
  * Stories are ordered by their latest event, so a story that moves comes back to the top.
  */
 import type { Id, JournalItem } from "@/api";
+import { is, starts } from "@/lib/events";
 
 export interface ToolCall {
   call: Id;
@@ -23,6 +24,8 @@ export type Step =
 
 export interface Turn {
   id: Id;
+  /** the server's turn id, from the first event that carries one (a user's message may not) */
+  link?: Id;
   user: JournalItem | null; // null when the thread starts mid-way (older page not loaded)
   steps: Step[];
 }
@@ -80,7 +83,7 @@ export function buildStories(items: readonly JournalItem[]): Story[] {
   for (const item of items) {
     const turn = item.links.turn;
     if (!turn || storyKey(item).startsWith("session:")) continue;
-    if (!item.type.endsWith("_started") && !item.type.endsWith("_created")) continue;
+    if (!starts(item)) continue;
     spawned.set(turn, [...(spawned.get(turn) ?? []), item]);
   }
 
@@ -107,16 +110,17 @@ function turnsOf(items: JournalItem[], spawned: Map<Id, JournalItem[]>): Turn[] 
   const calls = new Map<Id, ToolCall>();
   let current: Turn | null = null;
   for (const item of items) {
-    const isUser = item.type.endsWith("user_turn");
+    const isUser = is(item, "userTurn");
     const turnId = item.links.turn ?? item.id;
-    if (isUser || !current || (item.links.turn && item.links.turn !== current.id)) {
-      current = { id: turnId, user: isUser ? item : null, steps: [] };
+    if (isUser || !current || (item.links.turn && current.link && item.links.turn !== current.link)) {
+      current = { id: turnId, link: item.links.turn, user: isUser ? item : null, steps: [] };
       turns.push(current);
       if (isUser) {
         for (const spawn of spawned.get(turnId) ?? []) current.steps.push({ type: "spawn", item: spawn });
         continue;
       }
     }
+    if (item.links.turn && !current.link) current.link = item.links.turn;
     const callId = item.links.call;
     if (callId && item.kind === "tool") {
       let call = calls.get(callId);
@@ -125,7 +129,7 @@ function turnsOf(items: JournalItem[], spawned: Map<Id, JournalItem[]>): Turn[] 
         calls.set(callId, call);
         current.steps.push({ type: "call", call });
       }
-      if (item.outcome) call.ended = item;
+      if (is(item, "toolDone") || item.outcome) call.ended = item;
       else call.started = item;
       continue;
     }

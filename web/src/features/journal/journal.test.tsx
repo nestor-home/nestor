@@ -25,17 +25,19 @@ describe("the journal", () => {
     for (const step of ["déclenchée", "triée", "décision", "non transmis", "écrit"]) {
       expect(within(chain).getByText(step)).toBeInTheDocument();
     }
-    expect(chain).toHaveTextContent("pourquoi Mathis est dans la pièce « bureau »");
+    expect(chain).toHaveTextContent("pourquoi : Mathis est dans la pièce « bureau »");
   });
 
-  it("threads a conversation with its tool calls, collapsed until asked", async () => {
+  it("reads a conversation as a transcript, what happened in between folded into one line", async () => {
     const user = userEvent.setup();
     renderApp("/journal");
     const thread = await storyWith("éteins la lumière de la cuisine");
-    const call = within(thread).getByRole("button", { name: "Outil ha_turn_off : détails" });
-    expect(within(thread).getByText("ok")).toBeInTheDocument();
-    expect(within(thread).queryByText(/light\.cuisine : off/)).not.toBeInTheDocument();
-    await user.click(call);
+    expect(within(thread).getByText("Richie, éteins la lumière de la cuisine.")).toBeInTheDocument();
+    expect(within(thread).getByText("C'est éteint.")).toBeInTheDocument();
+    const between = within(thread).getByRole("button", { name: /Ce qui s'est passé : 1 outil · .*réponse de secours/ });
+    expect(within(thread).queryByRole("button", { name: "Outil ha_turn_off : détails" })).not.toBeInTheDocument();
+    await user.click(between);
+    expect(within(thread).getByRole("button", { name: "Outil ha_turn_off : détails" })).toBeVisible();
     expect(within(thread).getByText(/light\.cuisine : off/)).toBeVisible();
     expect(thread).toHaveTextContent("Réponse de secours : modèle trop lent");
   });

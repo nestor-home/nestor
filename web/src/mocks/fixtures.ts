@@ -28,6 +28,7 @@ const OWN: ScopeDto[] = ["journal.read.own", "memory.manage.own"];
 const MEMBER: ScopeDto[] = [
   ...OWN,
   "household.read",
+  "agent.read",
   "own.connections.manage",
   "tasks.manage.own",
   "watches.manage.own",

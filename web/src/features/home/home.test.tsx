@@ -53,4 +53,24 @@ describe("the home: the agent first, then the house, the work, the day", () => {
       expect(screen.queryByRole("heading", { name: /Ce que j'attends de vous/ })).not.toBeInTheDocument(),
     );
   });
+
+  it("shows what the agent says it is doing, as the stream tells it", async () => {
+    const { stream } = renderApp("/");
+    expect(await screen.findByText(/Richie · travaille/)).toBeInTheDocument();
+    stream.activity({
+      state: "listening",
+      since: new Date().toISOString(),
+      replies: 1,
+      tasks: 2,
+      listening_rooms: ["salon"],
+      quiet: false,
+    });
+    expect(await screen.findByText(/Richie · à l'écoute/)).toBeInTheDocument();
+  });
+
+  it("says when it will write, from the agent's initiative", async () => {
+    renderApp("/");
+    const next = await band("À venir");
+    expect(await within(next).findByText(/Je l'écrirai à Mathis sur telegram à \d\d:\d\d\./)).toBeInTheDocument();
+  });
 });

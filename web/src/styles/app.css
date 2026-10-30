@@ -86,6 +86,20 @@
     background: var(--paper);
     color: var(--ink);
     font-feature-settings: "ss01", "cv11";
+    /* real text holds URLs, ids and 60-letter words: they break where they must instead of pushing
+       their box (and min-content shrinks with them, so flex and grid children never overflow) */
+    overflow-wrap: anywhere;
+  }
+
+  /* clock times and short data never break inside */
+  time {
+    overflow-wrap: normal;
+    white-space: nowrap;
+  }
+
+  /* grid children never grow past their track because of their content */
+  .grid > * {
+    min-width: 0;
   }
 
   ::selection {
@@ -341,5 +355,26 @@
     .mind-breathe {
       animation: none;
     }
+  }
+
+  /* code, arguments, results, raw records: as written, scrolling inside their own box */
+  .code-block {
+    max-width: 100%;
+    overflow-x: auto;
+    margin: 0;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius);
+    background: var(--paper-sunken);
+    color: var(--ink-muted);
+    font-family: var(--font-data);
+    font-size: 0.78rem;
+    line-height: 1.5;
+    white-space: pre;
+  }
+
+  /* prose a person reads: long words, URLs and ids wrap instead of pushing the layout */
+  .prose-wrap {
+    overflow-wrap: anywhere;
+    min-width: 0;
   }
 }

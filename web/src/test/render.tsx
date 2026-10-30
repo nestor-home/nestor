@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryHistory, RouterProvider } from "@tanstack/react-router";
 import { act, render } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { type JournalItem, type JournalStream, type LiveStatus, setCsrfToken } from "@/api";
+import { type AgentActivity, type JournalItem, type JournalStream, type LiveStatus, setCsrfToken } from "@/api";
 import { NoticeProvider } from "@/components/notices";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { I18nProvider } from "@/i18n";
@@ -14,10 +14,16 @@ import { createAppRouter } from "@/router";
 export function fakeStream() {
   let deliver: ((item: JournalItem) => void) | undefined;
   let report: ((status: LiveStatus) => void) | undefined;
-  const stream: JournalStream & { emit: (item: JournalItem) => void; status: (s: LiveStatus) => void } = {
-    subscribe(onItem, onStatus) {
+  let tell: ((activity: AgentActivity) => void) | undefined;
+  const stream: JournalStream & {
+    emit: (item: JournalItem) => void;
+    status: (s: LiveStatus) => void;
+    activity: (a: AgentActivity) => void;
+  } = {
+    subscribe(onItem, onStatus, onActivity) {
       deliver = onItem;
       report = onStatus;
+      tell = onActivity;
       onStatus("open");
       return () => {
         deliver = undefined;
@@ -25,6 +31,7 @@ export function fakeStream() {
     },
     emit: (item) => act(() => deliver?.(item)),
     status: (s) => act(() => report?.(s)),
+    activity: (a) => act(() => tell?.(a)),
   };
   return stream;
 }
@@ -72,15 +79,37 @@ export function renderWithProviders(ui: ReactNode) {
   };
 }
 
+/** The message id a test event's type stands for, as the server names it. */
+const MESSAGE_OF: Record<string, string> = {
+  user_turn: "journal-user-said",
+  assistant_turn: "journal-assistant-answered",
+  answer_cut: "journal-answer-cut",
+  tool_called: "journal-tool-called",
+  tool_completed: "journal-tool-completed",
+  task_started: "journal-task-started",
+  task_progressed: "journal-task-progressed",
+  task_ended: "journal-task-ended",
+  watch_created: "journal-watch-created",
+  watch_triggered: "journal-watch-triggered",
+  watch_triaged: "journal-watch-triaged",
+  delivery_considered: "journal-delivery-considered",
+  delivered: "journal-delivered",
+  delivery_failed: "journal-delivery-failed",
+  recorded: "journal-memory-recorded",
+  presence_changed: "journal-presence-changed",
+};
+
 export function liveItem(overrides: Partial<JournalItem> = {}): JournalItem {
+  const type = overrides.type ?? "conversation.user_turn";
+  const id = MESSAGE_OF[type.split(".").at(-1) ?? ""] ?? "journal-other";
   return {
+    message: { id, args: { name: "Jules" } },
     id: String(100_000 + Math.floor(Math.random() * 900_000)),
     uid: `live-${Math.random().toString(36).slice(2)}`,
     kind_label: "Conversations",
     at: new Date().toISOString(),
     type: "conversation.user_turn",
     kind: "conversation",
-    message: { id: "journal-user-said", args: { name: "Jules" } },
     text: "Jules a dit",
     detail: "",
     reason: null,

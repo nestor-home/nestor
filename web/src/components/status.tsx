@@ -27,7 +27,7 @@ const ICON: Record<StatusTone, LucideIcon | null> = {
 export function Status({ tone, children, className }: { tone: StatusTone; children: ReactNode; className?: string }) {
   const Icon = ICON[tone];
   return (
-    <span className={cn("inline-flex items-center gap-1.5 text-[0.85rem] whitespace-nowrap", TONE[tone], className)}>
+    <span className={cn("inline-flex min-w-0 items-center gap-1.5 text-[0.85rem]", TONE[tone], className)}>
       {Icon ? (
         <Icon className="size-3.5" aria-hidden="true" />
       ) : (

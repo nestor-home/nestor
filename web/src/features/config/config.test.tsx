@@ -182,4 +182,20 @@ describe("the configuration", () => {
     renderApp("/config/persona");
     expect(await screen.findByRole("heading", { name: "Section réservée" })).toBeInTheDocument();
   });
+
+  it("keeps or replaces each secret of a map on its own (MCP headers)", async () => {
+    const user = userEvent.setup();
+    renderApp("/config/tools");
+    await user.click(await screen.findByRole("button", { name: "Modifier maison" }));
+    const sheet = await screen.findByRole("dialog", { name: "maison" });
+    expect(within(sheet).getByText(/défini · lam•••2f/)).toBeInTheDocument();
+    expect(sheet).not.toHaveTextContent("lambert-maison-7d2f");
+    await user.click(within(sheet).getByRole("button", { name: /Remplacer Headers, valeur de X-Household/ }));
+    await user.type(within(sheet).getByLabelText("Headers, valeur de X-Household"), "new-household-key");
+    await user.click(within(sheet).getByRole("button", { name: "Terminé" }));
+    await user.click(await screen.findByRole("button", { name: "1 modification" }));
+    const changes = await screen.findByRole("dialog", { name: "Modifications" });
+    expect(within(changes).getByText("tools.0.headers.X-Household")).toBeInTheDocument();
+    expect(within(changes).getByText("secret modifié")).toBeInTheDocument();
+  });
 });

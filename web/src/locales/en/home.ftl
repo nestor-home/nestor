@@ -56,6 +56,9 @@ home-nothing-now = Nothing under way. I'm waiting to be spoken to.
 home-next = Coming up
 home-quiet-now = Silence until { $until }, unless urgent.
 home-quiet-later = Quiet hours from { $from } to { $to }.
+home-upcoming = I'll write it to { $person } on { $channel } at { $time }.
+home-upcoming-someone = I'll write it on { $channel } at { $time }.
+home-upcoming-unless = Unless someone answers before then.
 home-watch-triggered = triggered
 
 ## Its day, what it knows

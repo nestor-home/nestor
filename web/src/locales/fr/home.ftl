@@ -56,6 +56,9 @@ home-nothing-now = Rien en cours. J'attends qu'on me parle.
 home-next = À venir
 home-quiet-now = Silence jusqu'à { $until }, sauf urgence.
 home-quiet-later = Heures calmes de { $from } à { $to }.
+home-upcoming = Je l'écrirai à { $person } sur { $channel } à { $time }.
+home-upcoming-someone = Je l'écrirai sur { $channel } à { $time }.
+home-upcoming-unless = Sauf si quelqu'un répond d'ici là.
 home-watch-triggered = déclenchée
 
 ## Sa journée, ce qu'il sait

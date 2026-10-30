@@ -97,6 +97,7 @@ export function document(): ConfigDocument {
         transport: "sse",
         token: vault("tools.maison.token"),
         risks: { HassTurnOff: "write", HassLockUnlock: "sensitive" },
+        headers: { "X-Household": "lambert-maison-7d2f" },
       },
     ],
     presence: {
@@ -176,7 +177,13 @@ export function secretsOf(doc: ConfigDocument): { path: Path; name: string }[] {
       const walk = (node: JsonSchema, value: Record<string, unknown>, path: string[]) => {
         for (const [name, child] of Object.entries(node.properties ?? {})) {
           const resolved = resolve(child, kind);
-          if (isSecret(resolved) && value[name] !== undefined && value[name] !== null) {
+          const map = value[name];
+          if (resolved["x-nestor"]?.secret_values && isObject(map)) {
+            // a map of secrets (MCP headers): each value is kept apart, under its own key
+            for (const key of Object.keys(map)) {
+              found.push({ path: [...where, ...path, name, key], name: [...label, ...path, name, key].join(".") });
+            }
+          } else if (isSecret(resolved) && value[name] !== undefined && value[name] !== null) {
             found.push({ path: [...where, ...path, name], name: [...label, ...path, name].join(".") });
           } else if (resolved.properties && isObject(value[name])) {
             walk(resolved, value[name] as Record<string, unknown>, [...path, name]);
