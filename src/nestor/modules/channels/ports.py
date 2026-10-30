@@ -52,6 +52,7 @@ class Channel(Component, ABC):
 
     medium: Medium = Medium.WRITTEN
     style: str = ""  # how to write for this channel (e.g. expression tags the voice understands)
+    room: str | None = None  # where a spoken channel is heard (a home area id), if it is a satellite
 
     def __init__(self, channel_id: str) -> None:
         self.channel_id = channel_id

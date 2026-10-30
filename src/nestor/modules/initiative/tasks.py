@@ -4,7 +4,6 @@ import asyncio
 import contextlib
 
 from nestor.core import Component
-from nestor.modules.channels import Address
 from nestor.modules.cognition.delegation import Notify, TaskDelivered, TaskEnded, TaskStarted, TaskStatus
 from nestor.modules.household import Household, Person
 from nestor.modules.initiative.delivery import Courier
@@ -48,8 +47,9 @@ class TaskAnnouncer(Component):
         address = await self.courier.deliver(
             person,
             _instruction(started, ended, person, written=written),
-            candidates=_candidates(started, person),
             about=f"task {ended.task_id} {ended.status.value}",
+            origin=started.origin,
+            written=written,
         )
         if address is not None:
             await self.journal.publish(
@@ -62,16 +62,11 @@ class TaskAnnouncer(Component):
                 await self.announce(event)
 
 
-def _candidates(started: TaskStarted, person: Person | None) -> list[Address]:
-    reach = [person.reach] if person and person.reach else []
-    return [*reach, started.origin] if started.notify is Notify.MESSAGE else [started.origin, *reach]
-
-
 def _instruction(started: TaskStarted, ended: TaskEnded, person: Person | None, *, written: bool) -> str:
     outcome = f"Result: {ended.result}" if ended.status is TaskStatus.COMPLETED else f"Failure: {ended.error}"
     who = person.name if person else "the person"
+    asked = " (they asked for it in writing)" if written else ""
     return (
         f"A task you delegated has ended ({ended.status.value}).\nObjective: {started.objective}\n{outcome}\n"
-        f"Tell {who} now, unprompted and briefly, in your own words{' (they asked for it in writing)' if written else ''}. "
-        "Do not mention internal identifiers."
+        f"Tell {who} now, unprompted and briefly, in your own words{asked}. Do not mention internal identifiers."
     )

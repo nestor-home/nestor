@@ -3,7 +3,7 @@
 import pytest
 
 from nestor.core import PersonId, ProviderError
-from nestor.modules.channels import Address
+from nestor.modules.channels import Address, Medium
 from nestor.modules.cognition import Notify, TaskDelivered, TaskEnded, TaskStarted, TaskStatus
 from nestor.modules.cognition.tools import Toolbox
 from nestor.modules.conversation import Agent, AssistantTurn, Persona
@@ -25,7 +25,10 @@ MATHIS = Person(
 
 
 class VoiceChannel(InMemoryChannel):
-    """A voice channel nobody may be listening to."""
+    """A voice satellite in the living room, nobody may be listening to."""
+
+    medium = Medium.SPOKEN
+    room = "salon"
 
     def __init__(self, *, connected: bool = True, broken: bool = False) -> None:
         super().__init__("voice")
