@@ -238,7 +238,9 @@ async def test_a_cut_after_the_answer_was_written_rewrites_the_history(make_agen
     assert [m.content for m in model.requests[0].messages[1:]] == ["Dis", "Une réponse", "Stop"]
 
 
-async def test_a_composed_message_uses_the_conversation_and_is_logged(make_agent: MakeAgent, journal: Journal) -> None:
+async def test_a_composed_message_uses_the_conversation_and_is_left_to_its_sender(
+    make_agent: MakeAgent, journal: Journal
+) -> None:
     await make_agent("Je lance l'analyse.").respond(message("Analyse le dépôt")).collect()
     model = ScriptedModel("L'analyse est finie : trois soucis trouvés.")
 
@@ -248,11 +250,13 @@ async def test_a_composed_message_uses_the_conversation_and_is_logged(make_agent
     last = model.requests[0].messages[-1]
     assert (last.role, last.content) == (Role.SYSTEM, "Task finished: 3 issues found.")
     assert [t.text for t in await journal.history(UserTurn)] == ["Analyse le dépôt"]
-    assert (await journal.history(AssistantTurn))[-1].text == text
+    assert [t.text for t in await journal.history(AssistantTurn)] == ["Je lance l'analyse."]
 
 
-async def test_an_answer_to_a_delivery_sees_the_delivery(make_agent: MakeAgent) -> None:
-    await make_agent("Ton analyse est prête : tout est vert.").compose(TELEGRAM, MATHIS, "Deliver the result.")
+async def test_an_answer_to_a_delivery_sees_the_delivery(make_agent: MakeAgent, journal: Journal) -> None:
+    await journal.publish(
+        AssistantTurn(source="courier", session=TELEGRAM.session, address=TELEGRAM, text="Ton analyse est prête.")
+    )
     model = ScriptedModel("Rien d'autre.")
     await make_agent(model=model).respond(message("Rien d'autre ?")).collect()
 

@@ -79,9 +79,9 @@ class Agent(Assistant):
         """Write an unprompted message for this conversation (a task result, an announcement).
 
         `instruction` tells the agent what to convey; the text is written in the persona's voice,
-        with the conversation's history, and logged as an assistant turn like any answer.
+        with the conversation's history. It is not logged: whoever delivers it logs it once sent.
         """
-        return await AgentReply(self, address, person, instruction=instruction).collect()
+        return await AgentReply(self, address, person, instruction=instruction, record=False).collect()
 
     def channel(self, address: Address) -> ChannelProfile:
         return self._channels.get(address.channel, ChannelProfile())
@@ -115,9 +115,10 @@ class AgentReply(Reply):
         *,
         user: str | None = None,
         instruction: str | None = None,
+        record: bool = True,
     ) -> None:
         self._agent, self._address, self._person = agent, address, person
-        self._user, self._instruction = user, instruction
+        self._user, self._instruction, self._record = user, instruction, record
         self._chunks: asyncio.Queue[str | None] = asyncio.Queue()
         self._said: list[str] = []
         self._worker: asyncio.Task[None] | None = None
@@ -162,7 +163,8 @@ class AgentReply(Reply):
                     )
                 )
             await self._answer()
-            await self._log_answer("".join(self._said), interrupted=False)
+            if self._record:
+                await self._log_answer("".join(self._said), interrupted=False)
         finally:
             self._chunks.put_nowait(None)
 

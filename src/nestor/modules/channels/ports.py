@@ -61,3 +61,8 @@ class Channel(Component, ABC):
 
     @abstractmethod
     async def send(self, to: Address, text: str) -> None: ...
+
+    def reachable(self, to: Address) -> bool:
+        """Whether `send` can deliver now (a voice channel needs someone connected). Cheap; `send`
+        may still fail."""
+        return to.channel == self.channel_id

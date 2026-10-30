@@ -30,8 +30,9 @@ src/nestor/
 │   ├── cognition/
 │   │   ├── model/        the central agent's language model
 │   │   ├── tools/        direct tools, the toolbox that runs and logs them
-│   │   └── delegation/   executors for long tasks
+│   │   └── delegation/   executors, durable tasks rebuilt from the journal, delegation tools
 │   ├── household/        people and their accounts on channels
+│   ├── initiative/       unprompted messages: the courier, task announcements (watches next)
 │   ├── behavior/         attitude and expressions, translated by the plugged body
 │   └── journal/          the append-only event log, live subscriptions, blobs
 ├── runtime/              composition: configuration, adapter registry, bus, lifecycle
