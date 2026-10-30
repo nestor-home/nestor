@@ -42,9 +42,11 @@ class AdminServer(Component):
     @property
     def port(self) -> int:
         """The port actually listened on (useful when configured as 0)."""
-        if self._server is None or not self._server.servers:
+        # uvicorn only creates `servers` once it has started listening: until then, the configured port.
+        listening = getattr(self._server, "servers", None) if self._server is not None else None
+        if not listening:
             return self.settings.port
-        return self._server.servers[0].sockets[0].getsockname()[1]
+        return listening[0].sockets[0].getsockname()[1]
 
     async def start(self) -> None:
         if self._serving is not None:
