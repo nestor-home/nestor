@@ -128,8 +128,9 @@ request ──▶ pending                         ├──▶ approved ──(f
   address given separately, and SHOULD accept both from a command-line flag and its configuration
   file.
 - **P2.** With no enrollment code, a device MUST request a pairing and present its device code through
-  every output it has: on a screen (`device_code.display`), aloud (`device_code.speech`: digits one
-  by one, said twice, in the device's language), and always in its log. A device with neither screen
+  every output it has: on a screen (`device_code.display`), aloud (`device_code.speech`: a short
+  sentence, then the digits one by one with a pause between them, the whole said twice, in the
+  device's language, without needing the network), and always in its log. A device with neither screen
   nor voice MUST log the device code and say, in the log, that an enrollment code is the way to pair
   it. It then polls the pairing about once a second until it is approved or expires; when it
   expires, it requests again.
@@ -140,8 +141,9 @@ request ──▶ pending                         ├──▶ approved ──(f
   - if the device code was typed first, the enrollment answers `not_pending` and the enrollment code
     is **not** spent: the device keeps polling and gets its token;
   - if the enrollment code was accepted first, the device code typed afterwards is refused.
-  On `approved`, the device stops presenting its device code.
-- **P5.** An enrollment code refused with `enrollment_refused` MUST NOT be presented again. The device
+  On `approved`, the device stops presenting its device code at once (a voice falls silent).
+- **P5.** An enrollment code refused with `enrollment_refused` MUST NOT be presented again, even after
+  the device restarts: it keeps the refused codes with its token (a hash of each is enough). The device
   MUST say so in its log (and on its outputs, translated), then fall back to a device code (P2) so a
   person can still pair it.
 - **P6.** On `429`, a device MUST wait at least `Retry-After` seconds before trying again.
