@@ -1,12 +1,17 @@
-"""`nestor` command line: run the assistant, or check a configuration."""
+"""`nestor` command line: run the assistant, check a configuration, hash the admin password.
+
+It sits at the top of the package, above both the runtime and the admin interface it starts.
+"""
 
 import argparse
 import asyncio
+import getpass
 import logging
 import sys
 from pathlib import Path
 
-from nestor.core import NestorError
+from nestor.admin import AdminServer, hash_password
+from nestor.core import Component, NestorError
 from nestor.runtime.app import Nestor, run_until_stopped
 from nestor.runtime.config import load_config
 
@@ -18,19 +23,39 @@ def main(argv: list[str] | None = None) -> int:
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("run", help="serve every configured channel")
     commands.add_parser("check", help="validate the configuration and build the adapters, without starting them")
+    commands.add_parser("admin-password", help="hash an admin password for the `admin.password_hash` setting")
     args = parser.parse_args(argv)
 
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s"
     )
     try:
+        if args.command == "admin-password":
+            return _admin_password()
         nestor = Nestor(load_config(args.config))
+        extras = _admin_server(nestor)
         if args.command == "check":
             names = ", ".join(c.channel_id for c in nestor.channels)
-            print(f"{args.config}: OK — {len(nestor.executors)} executor(s), channels: {names}")
+            admin = f", admin on {nestor.config.admin.host}:{nestor.config.admin.port}" if nestor.config.admin else ""
+            print(f"{args.config}: OK — {len(nestor.executors)} executor(s), channels: {names}{admin}")
             return 0
-        asyncio.run(run_until_stopped(nestor))
+        asyncio.run(run_until_stopped(nestor, extras))
     except NestorError as error:
         print(f"nestor: {error}", file=sys.stderr)
         return 2
+    return 0
+
+
+def _admin_server(nestor: Nestor) -> list[Component]:
+    if nestor.config.admin is None:
+        return []
+    return [AdminServer.from_config(nestor)]
+
+
+def _admin_password() -> int:
+    password = getpass.getpass("Admin password: ")
+    if getpass.getpass("Again: ") != password:
+        print("nestor: the two passwords differ", file=sys.stderr)
+        return 2
+    print(hash_password(password))
     return 0

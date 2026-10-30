@@ -3,17 +3,21 @@
 import asyncio
 import contextlib
 import logging
-from collections.abc import Sequence
+import os
+from collections.abc import Mapping, Sequence
 from contextlib import AsyncExitStack
 from typing import Self, cast
 
-from nestor.adapters.storage.sqlite import SQLiteDatabase, SQLiteEventLog, SQLiteMemoryStore
+from nestor.adapters.oauth import HttpxTokenEndpoint
+from nestor.adapters.storage.sqlite import SQLiteDatabase, SQLiteEventLog, SQLiteMemoryStore, SQLiteVault
+from nestor.adapters.storage.sqlite.vault import GENERATE
 from nestor.core import Component, ContractError
 from nestor.modules.channels import Channel
 from nestor.modules.cognition import ConversationModel, Executor
 from nestor.modules.cognition.delegation.assistant import Delegation
 from nestor.modules.cognition.delegation.service import TaskManager
 from nestor.modules.cognition.tools import Toolbox, ToolProvider
+from nestor.modules.connectors import ConnectedInbound, Connections, Connector, ConnectorTools, TokenEndpoint
 from nestor.modules.conversation import Agent, ChannelProfile, Persona
 from nestor.modules.home import PresenceSource
 from nestor.modules.household import Household
@@ -31,19 +35,33 @@ from nestor.modules.initiative.watches.assistant import WatchTools
 from nestor.modules.journal import Journal
 from nestor.modules.memory import Memories
 from nestor.modules.memory.assistant import MemoryTools
-from nestor.runtime.config import AdapterConfig, NestorConfig
+from nestor.runtime.config import AdapterConfig, ConfigError, NestorConfig
 from nestor.runtime.plugins import Family, Registry, Services
 
 log = logging.getLogger("nestor")
 
+SECRET_KEY = "NESTOR_SECRET_KEY"
+
 
 class Nestor:
-    """Build with `Nestor(config)`, then `async with nestor: await nestor.serve()`."""
+    """Build with `Nestor(config)`, then `async with nestor: await nestor.serve()`.
 
-    def __init__(self, config: NestorConfig, registry: Registry | None = None) -> None:
+    `environ` is where secrets are read from (the process environment by default); `token_endpoint`
+    replaces the HTTP OAuth client (tests use a fake provider).
+    """
+
+    def __init__(
+        self,
+        config: NestorConfig,
+        registry: Registry | None = None,
+        *,
+        environ: Mapping[str, str] | None = None,
+        token_endpoint: TokenEndpoint | None = None,
+    ) -> None:
         self.config = config
         registry = registry or Registry.installed()
         services = Services(data_dir=config.data_dir)
+        environ = os.environ if environ is None else environ
 
         self.database = SQLiteDatabase(config.data_dir / "nestor.db")
         self.journal = Journal(SQLiteEventLog(self.database))
@@ -73,18 +91,38 @@ class Nestor:
             else None
         )
 
+        self.connectors = _connectors(registry, config, services)
+        self.token_endpoint: TokenEndpoint | None = None
+        self.connections: Connections | None = None
+        connected: list[InboundEventSource] = []
+        if self.connectors:
+            secret = environ.get(SECRET_KEY)
+            if not secret:
+                raise ConfigError(
+                    f"{SECRET_KEY} is not set: connectors keep their tokens encrypted with it. Generate one with "
+                    f"{GENERATE} and set it in the environment, never in the configuration file"
+                )
+            self.token_endpoint = token_endpoint or HttpxTokenEndpoint()
+            self.connections = Connections(
+                self.journal, SQLiteVault(self.database, secret), self.token_endpoint, self.connectors
+            )
+            inbound = ConnectedInbound(self.connections)
+            connected = [inbound] if inbound.kinds else []
+        self.sources = [*self.inbound, *connected]
+
         self.tasks = TaskManager(self.journal, self.executors)
         delegation = Delegation(self.tasks)
         self.memories = Memories(self.journal, SQLiteMemoryStore(self.database))
         memory = MemoryTools(self.memories, self.household)
-        self.watch_book = WatchBook(self.journal, kinds=(k for source in self.inbound for k in source.kinds))
+        self.watch_book = WatchBook(self.journal, kinds=(k for source in self.sources for k in source.kinds))
         watch_tools = WatchTools(self.watch_book)
+        connector_tools = [ConnectorTools(self.connections)] if self.connections else []
         self.agent = Agent(
             model=self.model,
             persona=Persona(**config.persona.model_dump()),
             journal=self.journal,
             household=self.household,
-            toolbox=Toolbox(self.journal, providers=[delegation, memory, watch_tools, *self.tools]),
+            toolbox=Toolbox(self.journal, providers=[delegation, memory, watch_tools, *self.tools, *connector_tools]),
             channels={c.channel_id: ChannelProfile(c.medium, c.style) for c in self.channels},
             context=[delegation, memory, watch_tools],
         )
@@ -107,7 +145,7 @@ class Nestor:
             self.household,
             self.courier,
             Triage(self.triage_model, language=config.persona.language),
-            self.inbound,
+            self.sources,
         )
         self._stack = AsyncExitStack()
 
@@ -116,18 +154,25 @@ class Nestor:
         """In start order; they are closed in reverse."""
         presence = [self.presence] if self.presence else []
         triage = [self.triage_model] if self.triage_model is not self.model else []
+        connections = (
+            [self.connections.vault, self.token_endpoint, self.connections]
+            if self.token_endpoint and self.connections
+            else []
+        )
         return [
             self.database,
+            *connections,
             self.model,
             *triage,
             *self.executors,
+            *self.tools,
             *presence,
             self.tasks,
             *self.channels,
             self.courier,
             self.announcer,
             self.watch_book,
-            *self.inbound,
+            *self.sources,
             self.watches,
         ]
 
@@ -156,6 +201,21 @@ class Nestor:
             log.exception("channel %s stopped", channel.channel_id)
 
 
+def _connectors(registry: Registry, config: NestorConfig, services: Services) -> list[Connector]:
+    """The configured connectors; by default every installed one when the admin is on (it is where they are used)."""
+    if config.connectors is not None:
+        chosen = config.connectors
+    elif config.admin is not None:
+        chosen = tuple(AdapterConfig(kind=kind) for kind in registry.kinds(Family.CONNECTOR))
+    else:
+        chosen = ()
+    connectors = [_build(registry, Family.CONNECTOR, c, c.name or c.kind, services, Connector) for c in chosen]
+    kinds = [c.info.kind for c in connectors]
+    if len(set(kinds)) != len(kinds):
+        raise ContractError("two connectors declare the same kind: configure each service once")
+    return connectors
+
+
 def _build[C](
     registry: Registry, family: Family, config: AdapterConfig, name: str, services: Services, expected: type[C]
 ) -> C:
@@ -165,8 +225,10 @@ def _build[C](
     return cast(C, component)
 
 
-async def run_until_stopped(nestor: Nestor) -> None:
-    """Serve until SIGINT/SIGTERM, then close everything cleanly (remote tasks keep running)."""
+async def run_until_stopped(nestor: Nestor, extras: Sequence[Component] = ()) -> None:
+    """Serve until SIGINT/SIGTERM, then close everything cleanly (remote tasks keep running).
+
+    `extras` run alongside, started once Nestor is and closed before it (the admin web server)."""
     import signal
 
     loop = asyncio.get_running_loop()
@@ -174,7 +236,9 @@ async def run_until_stopped(nestor: Nestor) -> None:
     for sig in (signal.SIGINT, signal.SIGTERM):
         with contextlib.suppress(NotImplementedError):
             loop.add_signal_handler(sig, stop.set)
-    async with nestor:
+    async with nestor, AsyncExitStack() as stack:
+        for extra in extras:
+            await stack.enter_async_context(extra)
         serving = asyncio.create_task(nestor.serve())
         await asyncio.wait({serving, asyncio.create_task(stop.wait())}, return_when=asyncio.FIRST_COMPLETED)
         serving.cancel()

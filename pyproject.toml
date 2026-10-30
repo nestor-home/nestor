@@ -42,7 +42,7 @@ classifiers = [
 voice = ["pipecat-ai[elevenlabs,webrtc,runner]==1.14.0"]
 
 [project.scripts]
-nestor = "nestor.runtime.cli:main"
+nestor = "nestor.cli:main"
 
 [project.entry-points."nestor.adapters"]
 openai-compatible = "nestor.adapters.models.openai_compatible:plugin"
@@ -51,6 +51,8 @@ telegram = "nestor.adapters.channels.telegram:plugin"
 voice = "nestor.adapters.channels.voice:plugin"
 home-assistant = "nestor.adapters.home.home_assistant:plugin"
 mcp = "nestor.adapters.tools.mcp.plugin:plugin"
+google = "nestor.adapters.connectors.google:plugin"
+imap = "nestor.adapters.connectors.imap:plugin"
 
 [project.urls]
 Homepage = "https://nestor.mathislambert.fr"

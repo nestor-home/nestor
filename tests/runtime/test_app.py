@@ -12,7 +12,7 @@ from nestor.modules.cognition import Outcome, TaskDelivered
 from nestor.modules.cognition.model import ToolCall
 from nestor.modules.conversation import AssistantTurn
 from nestor.runtime import Nestor, Registry
-from nestor.runtime.cli import main
+from nestor.cli import main
 from nestor.runtime.config import parse_config
 from nestor.runtime.plugins import Family, Plugin
 

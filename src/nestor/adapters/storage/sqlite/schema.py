@@ -49,4 +49,14 @@ BEGIN
 END;
 """
 
-MIGRATIONS: tuple[str, ...] = (EVENTS, MEMORIES)
+SECRETS = """
+CREATE TABLE secrets (
+    owner TEXT NOT NULL,
+    name TEXT NOT NULL,
+    sealed BLOB NOT NULL,  -- nonce + AES-GCM ciphertext of the JSON object, bound to (owner, name)
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY (owner, name)
+) STRICT;
+"""
+
+MIGRATIONS: tuple[str, ...] = (EVENTS, MEMORIES, SECRETS)

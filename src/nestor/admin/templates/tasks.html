@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Tâches{% endblock %}
+{% block content %}
+<h1>Tâches</h1>
+<p class="muted">Le travail long que {{ assistant }} a confié à ses exécutants.</p>
+<h2>En cours</h2>
+{% if running %}
+<ul class="cards">
+  {% for task in running %}
+  <li class="card">
+    <p class="title">{{ task.objective }}</p>
+    <p class="muted small">Tâche {{ task.id }} · {{ task.executor }} · demandée {% if task.requested_by %}par {{ names.get(task.requested_by, task.requested_by) }} {% endif %}{{ task.started_at | when }}</p>
+    {% if task.steps %}
+    <ol class="steps">{% for step in task.steps[-5:] %}<li>{{ step }}</li>{% endfor %}</ol>
+    {% endif %}
+    <form method="post" action="/tasks/{{ task.id }}/cancel">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <button type="submit" class="danger">Arrêter</button>
+    </form>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="empty">Aucune tâche en cours.</p>
+{% endif %}
+<h2>Récemment terminées</h2>
+{% if recent %}
+<table>
+  <thead><tr><th>Tâche</th><th>Objectif</th><th>État</th><th>Résultat</th></tr></thead>
+  <tbody>
+  {% for task in recent %}
+  <tr>
+    <td>{{ task.id }}<br><span class="muted small">{{ task.started_at | when }}</span></td>
+    <td>{{ task.objective }}</td>
+    <td><span class="status status-{{ task.status }}">{{ label(task.status) }}</span></td>
+    <td class="detail">{{ task.outcome.result or task.outcome.error or "" }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="empty">Aucune tâche terminée.</p>
+{% endif %}
+{% endblock %}

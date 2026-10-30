@@ -118,19 +118,24 @@ class Connections(Component):
         connector = self.connector(kind)
         if connector.info.auth is AuthKind.OAUTH2:
             raise ContractError(f"{kind} connects through OAuth: use begin/complete")
-        missing = [f.name for f in connector.info.fields if not secrets.get(f.name)]
+        filled = {f.name: secrets.get(f.name) or f.default or "" for f in connector.info.fields}
+        missing = [name for name, value in filled.items() if not value]
         if missing:
             raise ContractError(f"missing: {', '.join(missing)}")
         connection = Connection(kind=kind, owner=owner, account="")
-        await self.vault.put(connection.id, "secrets", dict(secrets))
+        await self.vault.put(connection.id, "secrets", {**secrets, **filled})
         return await self._identify_and_record(connection)
 
-    async def disconnect(self, connection_id: str) -> None:
-        """Revoke at the provider when possible, then forget every secret and the connection itself."""
+    async def disconnect(self, connection_id: str, *, revoke: bool = True) -> None:
+        """Revoke at the provider when possible, then forget every secret and the connection itself.
+
+        `revoke=False` only forgets: when a reconnection replaced it, revoking the old token could revoke
+        the whole grant at the provider (Google does), new tokens included.
+        """
         connection = self._existing(connection_id)
         spec = self.connectors[connection.kind].info.oauth if connection.kind in self.connectors else None
         tokens = await self.vault.get(connection_id, "tokens")
-        if spec and spec.revoke_url and tokens:
+        if revoke and spec and spec.revoke_url and tokens:
             token = tokens["refresh_token"] or tokens["access_token"]
             # forgetting locally matters more than a failed courtesy call
             with contextlib.suppress(ProviderError):

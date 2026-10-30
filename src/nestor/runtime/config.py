@@ -70,6 +70,16 @@ class InitiativeConfig(Section):
         return value
 
 
+class AdminConfig(Section):
+    """The admin web interface; without this section, Nestor serves none."""
+
+    password_hash: str  # printed by `nestor admin-password`
+    host: str = "127.0.0.1"
+    port: int = Field(default=8080, ge=0, le=65535)
+    public_url: str | None = None  # how the household's browsers reach it: "https://nestor.example.org"
+    relay_url: str = "https://nestor.mathislambert.fr/redirect/oauth"  # OAuth redirect when not served over HTTPS
+
+
 class AdapterConfig(BaseModel):
     """`kind` picks the plugin; the other keys are its settings, validated by the plugin."""
 
@@ -93,6 +103,9 @@ class NestorConfig(Section):
     inbound: tuple[AdapterConfig, ...] = ()  # sources watches can watch (a mailbox…)
     presence: AdapterConfig | None = None
     initiative: InitiativeConfig = InitiativeConfig()
+    admin: AdminConfig | None = None
+    # services accounts are plugged into from the admin; by default every installed one when the admin is on
+    connectors: tuple[AdapterConfig, ...] | None = None
 
 
 def load_config(path: Path | str, environ: dict[str, str] | None = None) -> NestorConfig:

@@ -1,0 +1,5 @@
+<label for="person">Compte de</label>
+<select id="person" name="person">
+  {% for person in people %}<option value="{{ person.id }}">{{ person.name }}</option>{% endfor %}
+  <option value="">Tout le foyer</option>
+</select>

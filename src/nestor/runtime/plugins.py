@@ -16,6 +16,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, ValidationError
 
 from nestor.core import Component, ContractError
+from nestor.modules.connectors import Connector
 
 ENTRY_POINTS = "nestor.adapters"
 
@@ -27,6 +28,7 @@ class Family(StrEnum):
     PRESENCE = "presence"
     TOOLS = "tools"
     INBOUND = "inbound"
+    CONNECTOR = "connector"  # builds a `Connector`: a service the household plugs accounts into from the admin
 
 
 class AdapterSettings(BaseModel):
@@ -47,9 +49,11 @@ class Plugin[S: AdapterSettings]:
     family: Family
     kind: str
     settings: type[S]
-    build: Callable[[S, str, Services], Component]  # settings, the instance name, services
+    build: Callable[[S, str, Services], Component | Connector]  # settings, the instance name, services
 
-    def create(self, raw: Mapping[str, Any], name: str, services: Services) -> Component:
+    def create(self, raw: Mapping[str, Any], name: str, services: Services) -> Any:
+        """The built adapter (a `Connector` for the connector family, a `Component` otherwise); the
+        runtime checks it is what the family expects."""
         try:
             settings = self.settings.model_validate(raw)
         except ValidationError as error:
@@ -80,11 +84,15 @@ class Registry:
             raise ContractError(f"two plugins provide the {plugin.family} kind {plugin.kind!r}")
         self._plugins[key] = plugin
 
+    def kinds(self, family: Family) -> list[str]:
+        """The kinds installed for a family, sorted."""
+        return sorted(k for f, k in self._plugins if f is family)
+
     def get(self, family: Family, kind: str) -> Plugin[Any]:
         try:
             return self._plugins[(family, kind)]
         except KeyError:
-            known = ", ".join(sorted(k for f, k in self._plugins if f is family)) or "none installed"
+            known = ", ".join(self.kinds(family)) or "none installed"
             raise ContractError(f"unknown {family} kind {kind!r} (available: {known})") from None
 
 

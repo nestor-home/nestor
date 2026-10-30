@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Veilles{% endblock %}
+{% block content %}
+<h1>Veilles</h1>
+<p class="muted">Ce que {{ assistant }} surveille pour le foyer. Sources disponibles : {{ kinds | join(", ") if kinds else "aucune — connectez une boîte mail pour pouvoir surveiller ce qui arrive" }}.</p>
+{% if watches %}
+<ul class="cards">
+  {% for watch in watches %}
+  <li class="card">
+    <p class="title">{{ watch.what }}</p>
+    <p class="muted small">
+      Pour {{ names.get(watch.owner, watch.owner) if watch.owner else "tout le foyer" }}
+      · {{ watch.kinds | join(", ") }}
+      {% if watch.keywords %}· mots-clés : {{ watch.keywords | join(", ") }}{% endif %}
+      · {{ "une seule fois" if watch.once else "à chaque fois" }}
+      · créée {{ watch.created_at | when }}{% if watch.until %} · jusqu'au {{ watch.until | when }}{% endif %}
+    </p>
+    <form method="post" action="/watches/{{ watch.id }}/cancel">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <button type="submit" class="danger">Annuler la veille</button>
+    </form>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="empty">Aucune veille active.</p>
+{% endif %}
+{% endblock %}

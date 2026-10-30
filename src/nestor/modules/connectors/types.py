@@ -29,6 +29,7 @@ class SecretField:
     name: str
     label: str
     secret: bool = True  # never shown back once saved
+    default: str | None = None  # an optional field: this value when left empty
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

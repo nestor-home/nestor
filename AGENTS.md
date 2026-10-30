@@ -39,7 +39,9 @@ src/nestor/
 │   │   └── watches/      durable watches, inbound sources, triage
 │   ├── behavior/         attitude and expressions, translated by the plugged body
 │   └── journal/          the append-only event log, live subscriptions, blobs
-├── runtime/              composition: configuration, adapter registry, bus, lifecycle
+├── runtime/              composition: configuration, adapter registry, lifecycle
+├── admin/                the web admin (connections, supervision) over the assembled Nestor
+├── cli.py                the `nestor` command, above runtime and admin
 ├── adapters/             adapters/<family>/<vendor>/ — the only place for third-party SDKs
 │   └── storage/          SQLite (one WAL database, migrations in schema.py), blobs on disk
 └── testing/              doubles and contract suites, mirroring modules/ (shipped with the package)
@@ -56,8 +58,9 @@ module into sub-packages as soon as it holds more than one concept (`cognition/m
 New modules (memory, home, initiative, channels, identity, perception) and the `runtime/` and
 `adapters/` packages are created when their first ticket lands, not before.
 
-Layers only depend on more stable ones: `core` ← `modules` ← `runtime`; `testing` sees `core` and
-`modules`; adapters may import anything and are the only place for third-party SDKs.
+Layers only depend on more stable ones: `core` ← `modules` ← `runtime` ← `admin`; `testing` sees `core`
+and `modules`; adapters may import anything and are the only place for third-party SDKs; the
+runtime may assemble the built-in storage adapters, and the admin may use FastAPI and Jinja2.
 `tests/test_architecture.py` enforces it.
 
 ## Architecture rules

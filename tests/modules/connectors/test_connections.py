@@ -202,6 +202,24 @@ async def test_a_secret_based_service_connects_with_its_fields() -> None:
     assert await setup.vault.get(connection.id, "secrets") == {"password": "app-password"}
 
 
+async def test_optional_fields_take_their_default() -> None:
+    from nestor.modules.connectors import ConnectorInfo, SecretField
+
+    setup = Setup()
+    setup.imap.info = ConnectorInfo(
+        kind="imap",
+        title="IMAP",
+        description="",
+        auth=AuthKind.SECRET,
+        fields=(
+            SecretField(name="password", label="Mot de passe"),
+            SecretField(name="folder", label="Dossier", secret=False, default="INBOX"),
+        ),
+    )
+    connection = await setup.connections.connect("imap", MATHIS, {"password": "x", "folder": ""})
+    assert await setup.vault.get(connection.id, "secrets") == {"password": "x", "folder": "INBOX"}
+
+
 async def test_inbound_items_flow_from_connections_plugged_in_while_running() -> None:
     setup = Setup()
     inbound = ConnectedInbound(setup.connections)

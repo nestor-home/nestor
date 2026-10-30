@@ -4,6 +4,7 @@ Layers, from the most stable to the most specific:
     core      → standard library only
     modules   → core
     runtime   → core, modules, adapters (it assembles them)
+    admin     → core, modules, runtime (the web interface over an assembled Nestor)
     testing   → core, modules (the test kit ships with the package: no third-party imports)
     adapters  → anything: each adapter owns its vendor SDK
 """
@@ -21,10 +22,12 @@ ALLOWED_INTERNAL = {
     "modules": {"core", "modules"},
     "runtime": {"core", "modules", "runtime", "adapters"},  # composes the built-in storage
     "testing": {"core", "modules", "testing"},
+    "admin": {"core", "modules", "runtime", "admin"},  # the web interface over an assembled Nestor
 }
 # Third-party packages allowed outside adapters, per layer. Each addition is a design decision.
 THIRD_PARTY_ALLOWED: dict[str, set[str]] = {
     "runtime": {"pydantic", "yaml"},  # validated configuration; never seen by modules
+    "admin": {"fastapi", "starlette", "jinja2", "uvicorn"},  # server-rendered pages served next to Nestor
 }
 
 

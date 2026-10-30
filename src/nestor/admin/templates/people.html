@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Foyer{% endblock %}
+{% block content %}
+<h1>Foyer</h1>
+<p class="muted">Les personnes que {{ assistant }} sert. Elles se déclarent dans la configuration ; leurs comptes de services se connectent depuis <a href="/connections">Connexions</a>.</p>
+<ul class="cards">
+  {% for person in people %}
+  <li class="card">
+    <h2>{{ person.name }}</h2>
+    {% set where = whereabouts.get(person.id) %}
+    {% if where %}
+    <p class="muted small">{% if where.home is none %}Présence inconnue{% elif where.home %}À la maison{% if where.room %} ({{ where.room }}){% endif %}{% else %}Absent·e{% endif %}</p>
+    {% endif %}
+    <dl>
+      <dt>Reconnu sur</dt>
+      <dd>{{ person.accounts | join(", ") if person.accounts else "aucun canal" }}</dd>
+      <dt>Joignable sur</dt>
+      <dd>{{ person.reach or "—" }}</dd>
+      <dt>Comptes connectés</dt>
+      <dd>{% for c in owned.get(person.id, []) %}<a href="/connections/{{ c.id }}">{{ c.account }}</a>{% if not loop.last %}, {% endif %}{% else %}aucun{% endfor %}</dd>
+    </dl>
+    <p class="small"><a href="/journal?person={{ person.id }}">Son journal</a> · <a href="/memories?about={{ person.id }}">Ses souvenirs</a></p>
+  </li>
+  {% endfor %}
+</ul>
+{% endblock %}

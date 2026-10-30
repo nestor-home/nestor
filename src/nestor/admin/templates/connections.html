@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Connexions{% endblock %}
+{% block content %}
+<h1>Connexions</h1>
+<p class="muted">Branchez les services du foyer : {{ assistant }} y gagne des outils et peut surveiller ce qui arrive. Les jetons sont chiffrés et ne sont jamais montrés au modèle.</p>
+
+<h2>Comptes connectés</h2>
+{% if accounts %}
+<table>
+  <thead><tr><th>Compte</th><th>Service</th><th>Pour</th><th>État</th><th></th></tr></thead>
+  <tbody>
+  {% for account in accounts %}
+    <tr>
+      <td>{{ account.account }}</td>
+      <td>{{ account.kind }}</td>
+      <td>{{ owner(account) }}</td>
+      <td><span class="status status-{{ account.status }}">{{ statuses[account.status] }}</span></td>
+      <td><a href="/connections/{{ account.id }}">Gérer</a></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="empty">Aucun compte connecté pour l'instant.</p>
+{% endif %}
+
+<h2>Catalogue</h2>
+{% if connectors %}
+<ul class="catalogue">
+  {% for connector in connectors %}
+  <li class="card">
+    <h3>{{ connector.info.title }}</h3>
+    <p>{{ connector.info.description }}</p>
+    <p class="muted small">Autorisation : {{ auth[connector.info.auth] }}{% if connector.info.inbound %} · peut alimenter les veilles ({{ connector.info.inbound | join(", ") }}){% endif %}</p>
+    <a class="button" href="/connectors/{{ connector.info.kind }}">Connecter</a>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="empty">Aucun connecteur n'est installé sur cette instance.</p>
+{% endif %}
+{% endblock %}
