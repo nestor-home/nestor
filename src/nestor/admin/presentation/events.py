@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
 
+from nestor.admin.presentation.capabilities import french_capability
 from nestor.admin.presentation.reasons import french_reason, french_subject, french_task_status, french_watch_end
 from nestor.core import ContractError, Event, PersonId
 from nestor.modules.channels import Address
@@ -36,6 +37,15 @@ from nestor.modules.initiative import (
 )
 from nestor.modules.journal import Entry
 from nestor.modules.memory import MemoryCorrected, MemoryForgotten, MemoryRecorded
+from nestor.modules.satellites import (
+    PersonDetected,
+    SatelliteConnected,
+    SatelliteDisconnected,
+    SatellitePaired,
+    SatellitePairingRequested,
+    SatelliteRevoked,
+    SpeechActivityObserved,
+)
 
 DETAIL_LIMIT = 600
 
@@ -70,6 +80,12 @@ CATEGORIES = (
     Category("memory", "Souvenirs", (MemoryRecorded, MemoryCorrected, MemoryForgotten)),
     Category("connections", "Connexions", (ConnectionCreated, ConnectionChanged, ConnectionRemoved)),
     Category("presence", "Présence", (PresenceChanged,)),
+    Category(
+        "satellites",
+        "Satellites",
+        (SatellitePairingRequested, SatellitePaired, SatelliteRevoked, SatelliteConnected, SatelliteDisconnected),
+    ),
+    Category("observations", "Observations", (PersonDetected, SpeechActivityObserved)),
 )
 OTHER = "Autres"
 
@@ -128,6 +144,27 @@ class EventDescriber:
             ConnectionChanged: self._connection_changed,
             ConnectionRemoved: lambda e: self._line(e, f"Connexion {e.connection_id} supprimée"),
             PresenceChanged: self._presence,
+            SatellitePairingRequested: lambda e: self._line(
+                e,
+                f"Le satellite {e.device.id} ({e.device.model}, pièce « {e.device.room} ») demande l'appairage",
+                detail=f"Déclare : {_capabilities(e.capabilities)}",
+            ),
+            SatellitePaired: lambda e: self._line(
+                e,
+                f"Satellite {e.device.id} appairé (pièce « {e.device.room} »)",
+                detail=f"Autorisé : {_capabilities(e.capabilities)}",
+                people=[e.approved_by],
+            ),
+            SatelliteRevoked: lambda e: self._line(
+                e, f"Satellite {e.device_id} révoqué", people=[e.revoked_by], tone=Tone.WARNING
+            ),
+            SatelliteConnected: lambda e: self._line(e, f"Satellite {e.device_id} connecté (pièce « {e.room} »)"),
+            SatelliteDisconnected: lambda e: self._line(e, f"Satellite {e.device_id} déconnecté (pièce « {e.room} »)"),
+            PersonDetected: self._person_detected,
+            SpeechActivityObserved: lambda e: self._line(
+                e,
+                f"{'Parole détectée' if e.active else 'Fin de parole'} près de {e.device_id} (pièce « {e.room} »)",
+            ),
         }
 
     def describe(self, entry: Entry) -> Line:
@@ -238,6 +275,11 @@ class EventDescriber:
             where = "n'est plus localisé·e"
         return self._line(e, f"{name} {where}", people=[e.person])
 
+    def _person_detected(self, e: PersonDetected) -> Line:
+        seen = "personne vue" if e.count == 1 else "personnes vues"
+        title = f"{e.count} {seen} par {e.device_id} (pièce « {e.room} »)"
+        return self._line(e, title, detail=f"Confiance : {e.confidence:.0%}")
+
     def _line(
         self,
         event: Event,
@@ -261,3 +303,7 @@ class EventDescriber:
             channels=frozenset(a.channel for a in channels if a),
             tone=tone,
         )
+
+
+def _capabilities(names: tuple[str, ...]) -> str:
+    return ", ".join(french_capability(n) for n in names) or "rien"

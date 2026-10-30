@@ -16,6 +16,7 @@ HERE = Path(__file__).parent
 NAVIGATION = (
     ("/journal", "Journal"),
     ("/connections", "Connexions"),
+    ("/satellites", "Satellites"),
     ("/tasks", "Tâches"),
     ("/watches", "Veilles"),
     ("/memories", "Souvenirs"),

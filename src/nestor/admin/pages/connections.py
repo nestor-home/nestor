@@ -14,8 +14,9 @@ from typing import Annotated
 from fastapi import APIRouter, Form, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
-from nestor.admin.auth import Checked, Flow, LoggedIn, Session
+from nestor.admin.auth import Flow, Session
 from nestor.admin.errors import Refused
+from nestor.admin.guard import Checked, LoggedIn
 from nestor.admin.settings import CALLBACK_PATH
 from nestor.admin.state import AdminState, state
 from nestor.core import ContractError, PersonId, ProviderError

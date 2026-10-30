@@ -13,9 +13,11 @@ from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException
 
-from nestor.admin.auth.guard import LoginRequired, current
+from nestor.admin.api import ApiRefused, api_refused
+from nestor.admin.api import satellites as satellites_api
 from nestor.admin.errors import Refused
-from nestor.admin.pages import connections, journal, login, memories, people, tasks, watches
+from nestor.admin.guard import LoginRequired, current
+from nestor.admin.pages import connections, journal, login, memories, people, satellites, tasks, watches
 from nestor.admin.rendering import HERE
 from nestor.admin.settings import AdminSettings
 from nestor.admin.state import AdminState, state
@@ -36,8 +38,9 @@ def create_app(nestor: Nestor, settings: AdminSettings) -> FastAPI:
     app = FastAPI(title="Nestor — administration", docs_url=None, redoc_url=None, openapi_url=None)
     app.state.admin = AdminState(nestor, settings)
     app.mount("/static", StaticFiles(directory=HERE / "static"), name="static")
-    for page in (login, journal, connections, tasks, watches, memories, people):
+    for page in (login, journal, connections, satellites, tasks, watches, memories, people):
         app.include_router(page.router)
+    app.include_router(satellites_api)
 
     @app.get("/health", include_in_schema=False)
     async def health() -> dict[str, str]:
@@ -55,6 +58,7 @@ def create_app(nestor: Nestor, settings: AdminSettings) -> FastAPI:
             response.headers["Cache-Control"] = "no-store"
         return response
 
+    app.add_exception_handler(ApiRefused, api_refused)
     app.add_exception_handler(LoginRequired, _login_required)
     app.add_exception_handler(Refused, _refused)
     app.add_exception_handler(ContractError, _contract_error)

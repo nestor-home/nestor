@@ -121,3 +121,5 @@ tr:last-child td { border-bottom: 0; }
   td { border: 0; padding: .2rem .75rem; }
   tr { border-bottom: 1px solid var(--line); padding: .5rem 0; }
 }
+fieldset.capabilities { border: 1px solid var(--line); border-radius: var(--radius); margin: .8rem 0 0; padding: .2rem .9rem .6rem; }
+fieldset.capabilities legend { font-weight: 500; padding: 0 .3rem; }

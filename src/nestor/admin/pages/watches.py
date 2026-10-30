@@ -3,8 +3,8 @@
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
-from nestor.admin.auth import Checked, LoggedIn
 from nestor.admin.errors import Refused
+from nestor.admin.guard import Checked, LoggedIn
 from nestor.admin.state import state
 
 router = APIRouter()

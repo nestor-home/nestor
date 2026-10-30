@@ -5,8 +5,16 @@ A layer above the runtime: it is built on an assembled `Nestor` and served next 
 """
 
 from nestor.admin.app import create_app
-from nestor.admin.auth import hash_password, verify_password
+from nestor.admin.auth import hash_password, read_token, token_path, verify_password
 from nestor.admin.server import AdminServer
 from nestor.admin.settings import AdminSettings
 
-__all__ = ["AdminServer", "AdminSettings", "create_app", "hash_password", "verify_password"]
+__all__ = [
+    "AdminServer",
+    "AdminSettings",
+    "create_app",
+    "hash_password",
+    "read_token",
+    "token_path",
+    "verify_password",
+]

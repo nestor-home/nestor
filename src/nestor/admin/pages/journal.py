@@ -6,7 +6,7 @@ from urllib.parse import urlencode
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 
-from nestor.admin.auth import LoggedIn
+from nestor.admin.guard import LoggedIn
 from nestor.admin.presentation import CATEGORIES, EventDescriber
 from nestor.admin.state import state
 from nestor.core import PersonId

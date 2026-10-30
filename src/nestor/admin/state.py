@@ -17,6 +17,7 @@ class AdminState:
         self.sessions = SessionStore(ttl_s=settings.session_ttl_s)
         self.throttle = LoginThrottle()
         self.pages = Pages(assistant=nestor.config.persona.name, timezone=nestor.config.persona.timezone)
+        self.api_token: str | None = None  # issued by the server at startup; the API is closed until then
 
     def base_url(self, request: Request) -> str:
         """The admin's own address, as the household's browsers reach it."""

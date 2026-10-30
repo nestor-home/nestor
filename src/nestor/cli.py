@@ -1,4 +1,4 @@
-"""`nestor` command line: run the assistant, check a configuration, hash the admin password.
+"""`nestor` command line: run the assistant, check a configuration, hash the admin password, pair satellites.
 
 It sits at the top of the package, above both the runtime and the admin interface it starts.
 """
@@ -9,12 +9,16 @@ import getpass
 import logging
 import sys
 from pathlib import Path
+from typing import Any
 
-from nestor.admin import AdminServer, hash_password
+import httpx
+
+from nestor.admin import AdminServer, hash_password, read_token, token_path
 from nestor.core import Component, NestorError
 from nestor.init import initialise
+from nestor.modules.satellites.wire import SCHEMAS, write_schemas
 from nestor.runtime.app import Nestor, run_until_stopped
-from nestor.runtime.config import load_config
+from nestor.runtime.config import NestorConfig, load_config
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -26,6 +30,15 @@ def main(argv: list[str] | None = None) -> int:
     commands.add_parser("check", help="validate the configuration and build the adapters, without starting them")
     commands.add_parser("admin-password", help="hash an admin password for the `admin.password_hash` setting")
     commands.add_parser("init", help="write a first configuration and its secrets (never overwrites)")
+    satellites = commands.add_parser("satellites", help="pair satellites with the running instance").add_subparsers(
+        dest="action", required=True
+    )
+    approve = satellites.add_parser("approve", help="approve the device showing this 6-digit code")
+    approve.add_argument("code")
+    approve.add_argument("--only", help="capabilities to grant, comma-separated (default: all it declared)")
+    satellites.add_parser("revoke", help="unpair a satellite").add_argument("device_id")
+    schemas = satellites.add_parser("schemas", help="write the wire protocol's JSON Schemas")
+    schemas.add_argument("--out", type=Path, default=None, help="folder (default: the package's schemas)")
     args = parser.parse_args(argv)
 
     logging.basicConfig(
@@ -36,6 +49,8 @@ def main(argv: list[str] | None = None) -> int:
             return _admin_password()
         if args.command == "init":
             return _init(args.config)
+        if args.command == "satellites":
+            return _satellites(args)
         nestor = Nestor(load_config(args.config))
         extras = _admin_server(nestor)
         if args.command == "check":
@@ -86,3 +101,45 @@ def _admin_password() -> int:
         return 2
     print(hash_password(password))
     return 0
+
+
+def _satellites(args: argparse.Namespace) -> int:
+    if args.action == "schemas":
+        for path in write_schemas(args.out or SCHEMAS):
+            print(f"wrote {path}")
+        return 0
+    config = load_config(args.config)
+    if args.action == "approve":
+        body: dict[str, object] = {"code": args.code}
+        if args.only is not None:
+            body["capabilities"] = [c.strip() for c in args.only.split(",") if c.strip()]
+        answer = _call(config, "/api/satellites/approve", body)
+        granted = ", ".join(answer["capabilities"]) or "nothing"
+        print(f"paired {answer['device']} ({answer['model']}) in {answer['room']}: may use {granted}")
+    else:
+        _call(config, f"/api/satellites/{args.device_id}/revoke", {})
+        print(f"revoked {args.device_id}")
+    return 0
+
+
+def _call(config: NestorConfig, path: str, body: dict[str, object]) -> dict[str, Any]:
+    """POST to the running instance's admin API with the token it wrote at startup."""
+    if config.admin is None:
+        raise NestorError("the configuration has no `admin` section: satellites are paired through the admin")
+    host = "127.0.0.1" if config.admin.host in ("0.0.0.0", "::", "") else config.admin.host
+    url = f"http://{host}:{config.admin.port}{path}"
+    token = read_token(token_path(config.data_dir))
+    try:
+        response = httpx.post(url, json=body, headers={"Authorization": f"Bearer {token}"}, timeout=10)
+    except httpx.HTTPError:
+        raise NestorError(f"Nestor is not running (no admin answering at {host}:{config.admin.port})") from None
+    try:
+        answer = response.json()
+    except ValueError:
+        answer = {}
+    if response.status_code == 401:
+        raise NestorError("the admin refused the token: is this the instance that wrote it? restart it if unsure")
+    if response.status_code >= 400 or not isinstance(answer, dict):
+        error = answer.get("error") if isinstance(answer, dict) else None
+        raise NestorError(str(error or f"the admin answered HTTP {response.status_code}"))
+    return answer

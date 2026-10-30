@@ -7,8 +7,9 @@ from typing import Annotated
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
-from nestor.admin.auth import Checked, Session, current, forget, remember, verify_password
+from nestor.admin.auth import Session, verify_password
 from nestor.admin.errors import Refused
+from nestor.admin.guard import Checked, current, forget, remember
 from nestor.admin.state import state
 
 router = APIRouter()

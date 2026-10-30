@@ -8,6 +8,7 @@ from collections.abc import Generator
 import uvicorn
 
 from nestor.admin.app import create_app
+from nestor.admin.auth.api_token import issue_token, token_path
 from nestor.admin.settings import AdminSettings
 from nestor.core import Component, ContractError, ProviderError
 from nestor.runtime import Nestor
@@ -27,6 +28,7 @@ class AdminServer(Component):
     def __init__(self, nestor: Nestor, settings: AdminSettings) -> None:
         self.settings = settings
         self.app = create_app(nestor, settings)
+        self.token_file = token_path(nestor.config.data_dir)
         self._server: _Server | None = None
         self._serving: asyncio.Task[None] | None = None
 
@@ -50,6 +52,7 @@ class AdminServer(Component):
         config = uvicorn.Config(
             self.app, host=self.settings.host, port=self.settings.port, lifespan="off", log_level="warning"
         )
+        self.app.state.admin.api_token = issue_token(self.token_file)
         self._server = server = _Server(config)
         self._serving = serving = asyncio.create_task(self._serve(server), name="admin server")
         while not server.started:
@@ -68,6 +71,8 @@ class AdminServer(Component):
             return
         server.should_exit = True
         await asyncio.gather(serving, return_exceptions=True)
+        self.app.state.admin.api_token = None
+        self.token_file.unlink(missing_ok=True)
 
     @staticmethod
     async def _serve(server: uvicorn.Server) -> None:

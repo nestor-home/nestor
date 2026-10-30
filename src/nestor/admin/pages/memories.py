@@ -6,8 +6,8 @@ from urllib.parse import urlencode
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
-from nestor.admin.auth import Checked, LoggedIn
 from nestor.admin.errors import Refused
+from nestor.admin.guard import Checked, LoggedIn
 from nestor.admin.state import state
 from nestor.core import ContractError, PersonId
 

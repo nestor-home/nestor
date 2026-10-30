@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 
-from nestor.admin.auth import LoggedIn
+from nestor.admin.guard import LoggedIn
 from nestor.admin.state import state
 from nestor.core import PersonId
 from nestor.modules.connectors import Connection
