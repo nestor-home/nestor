@@ -7,7 +7,7 @@ from referencing import Registry, Resource
 
 from nestor.core import Capability, ContractError
 from nestor.modules.behavior import Behavior, Expression
-from nestor.modules.satellites import Device, Manifest, wire
+from nestor.modules.satellites import Device, Manifest, Sdk, wire
 from nestor.modules.satellites.types import DeclaredCapability
 
 MANIFEST = Manifest(
@@ -52,7 +52,9 @@ def test_a_manifest_keeps_the_parameters_of_its_capabilities() -> None:
 
 
 def test_a_manifest_may_name_its_maker_and_its_software() -> None:
-    manifest = Manifest(Device("reachy", "reachy-mini", "salon", brand="pollen-robotics"), sdk="nestor-reachy 0.1.0")
+    manifest = Manifest(
+        Device("reachy", "reachy-mini", "salon", brand="pollen-robotics"), sdk=Sdk("nestor-reachy", "0.1.0")
+    )
     data = wire.encode(wire.Hello(manifest=manifest))
     assert validator("hello").is_valid(data)
     decoded = wire.decode(data).message
@@ -84,7 +86,9 @@ OFF_CONTRACT = {
     "device id with a colon": _manifest(device={"id": "voice:salon", "model": "m", "room": "salon"}),
     "capability without a family": _manifest(capabilities=[{"name": "camera"}]),
     "unexpected manifest key": _manifest(firmware="1.2"),
-    "empty sdk": _manifest(sdk=""),
+    "sdk as text": _manifest(sdk="nestor-reachy 0.1.0"),
+    "sdk without a version": _manifest(sdk={"name": "nestor-reachy"}),
+    "empty sdk version": _manifest(sdk={"name": "nestor-reachy", "version": ""}),
     "brand that is not a slug": _manifest(
         device={"id": "d", "model": "m", "room": "salon", "brand": "Pollen Robotics"}
     ),

@@ -49,3 +49,5 @@ error-watch-unknown = Cette veille n'existe pas ou est déjà terminée.
 error-memory-unknown = Ce souvenir n'existe pas ou plus.
 error-memory-shared = Seule l'administration du foyer modifie les souvenirs communs.
 error-empty-memory = Pour effacer un souvenir, oubliez-le.
+error-journal-entry-unknown = Cette entrée du journal n'existe pas, ou ne vous concerne pas.
+error-cross-origin = Requête refusée : elle ne vient pas de cette administration.

@@ -1,4 +1,4 @@
-"""Pairing satellites from the server-rendered pages and the command line (the API: `api/v1/test_satellites`)."""
+"""Pairing satellites from the command line, through the running admin (the API itself: `api/v1/test_satellites`)."""
 
 import asyncio
 import json
@@ -11,20 +11,12 @@ import respx
 
 from nestor.admin import AdminServer, AdminSettings, read_token, token_path
 from nestor.cli import main
-from nestor.core import Capability, PersonId
-from nestor.modules.channels import Medium
+from nestor.core import Capability
 from nestor.modules.satellites import (
     DeclaredCapability,
     Device,
     Manifest,
-    PairingStatus,
-    PersonDetected,
-    SatelliteConnected,
-    SatelliteDisconnected,
-    SatelliteRevoked,
-    SpeechActivityObserved,
 )
-from nestor.testing.channels import InMemoryChannel
 
 from .harness import CONFIG, Harness
 
@@ -36,143 +28,6 @@ REACHY = Manifest(
         DeclaredCapability(Capability("vision.person_detection")),
     ),
 )
-
-
-async def test_a_waiting_device_is_listed_without_its_code(tmp_path: Path) -> None:
-    async with Harness(tmp_path) as admin:
-        await admin.login()
-        ticket = await admin.nestor.pairing.request(REACHY)
-        page = (await admin.get("/satellites")).text
-        assert "reachy-salon" in page and "reachy-mini" in page and "salon" in page
-        assert "détection de personnes" in page and 'value="audio.playback" checked' in page
-        assert "expire dans" in page
-        assert ticket.code not in page
-
-
-async def test_the_right_code_pairs_the_device_which_then_gets_its_token(tmp_path: Path) -> None:
-    async with Harness(tmp_path) as admin:
-        await admin.login()
-        pairing = admin.nestor.pairing
-        ticket = await pairing.request(REACHY)
-        await admin.get("/satellites")
-        everything = ["audio.capture", "audio.playback", "vision.person_detection"]
-        response = await admin.post(
-            "/satellites/approve",
-            {"code": f" {ticket.code[:3]} {ticket.code[3:]}", "capability": everything, "by": "mathis"},
-        )
-        assert response.headers["location"] == "/satellites"
-
-        state = pairing.poll(ticket.id)
-        assert state.status is PairingStatus.APPROVED and state.token
-        assert pairing.authenticate("reachy-salon", state.token) is not None
-        page = (await admin.get("/satellites")).text
-        assert "Satellite reachy-salon (pièce « salon ») appairé" in page and "par Mathis" in page
-        assert "Aucun appareil n'attend" in page
-
-
-async def test_a_wrong_code_shows_an_error_and_pairs_nothing(tmp_path: Path) -> None:
-    async with Harness(tmp_path) as admin:
-        await admin.login()
-        ticket = await admin.nestor.pairing.request(REACHY)
-        await admin.get("/satellites")
-        wrong = "000000" if ticket.code != "000000" else "111111"
-        for code, said in ((wrong, "faux ou a expiré"), ("12ab", "6 chiffres")):
-            response = await admin.post("/satellites/approve", {"code": code, "capability": ["audio.capture"]})
-            assert response.status_code == 400 and said in response.text
-        assert admin.nestor.pairing.satellites() == []
-        assert admin.nestor.pairing.poll(ticket.id).status is PairingStatus.PENDING
-        stranger = await admin.post("/satellites/approve", {"code": ticket.code, "by": "intruder"})
-        assert stranger.status_code == 400 and admin.nestor.pairing.satellites() == []
-
-
-async def test_capabilities_left_unchecked_are_not_granted(tmp_path: Path) -> None:
-    async with Harness(tmp_path) as admin:
-        await admin.login()
-        ticket = await admin.nestor.pairing.request(REACHY)
-        await admin.get("/satellites")
-        await admin.post(
-            "/satellites/approve", {"code": ticket.code, "capability": ["audio.capture", "audio.playback"]}
-        )
-        (satellite,) = admin.nestor.pairing.satellites()
-        assert satellite.capabilities == {Capability("audio.capture"), Capability("audio.playback")}
-        page = (await admin.get("/satellites")).text
-        assert "haut-parleur" in page and "détection de personnes" not in page
-
-
-async def test_a_paired_satellite_is_revoked_after_confirmation(tmp_path: Path) -> None:
-    async with Harness(tmp_path) as admin:
-        await admin.login()
-        pairing = admin.nestor.pairing
-        await pairing.approve((await pairing.request(REACHY)).code)
-        await admin.get("/satellites")
-        unconfirmed = await admin.post("/satellites/reachy-salon/revoke")
-        assert unconfirmed.status_code == 400 and len(pairing.satellites()) == 1
-
-        response = await admin.post("/satellites/reachy-salon/revoke", {"confirm": "yes"})
-        assert response.headers["location"] == "/satellites"
-        assert pairing.satellites() == []
-        assert len(await admin.nestor.journal.history(SatelliteRevoked)) == 1
-        assert "révoqué" in (await admin.get("/satellites")).text
-        assert (await admin.post("/satellites/reachy-salon/revoke", {"confirm": "yes"})).status_code == 404
-
-
-class Voice(InMemoryChannel):
-    """A spoken channel with a live session in the salon, as the voice channel reports it."""
-
-    medium = Medium.SPOKEN
-
-    @property
-    def rooms(self) -> frozenset[str]:
-        return frozenset({"salon"})
-
-
-async def test_paired_satellites_show_whether_their_room_is_connected(tmp_path: Path) -> None:
-    async with Harness(tmp_path) as admin:
-        await admin.login()
-        pairing = admin.nestor.pairing
-        await pairing.approve((await pairing.request(REACHY)).code)
-        unknown = (await admin.get("/satellites")).text.split("Appairés")[1]
-        assert "connecté" not in unknown and "hors ligne" not in unknown, "no spoken channel: nobody can tell"
-        admin.nestor.channels.append(Voice())
-        assert '<span class="status">connecté</span>' in (await admin.get("/satellites")).text
-        await pairing.approve((await pairing.request(Manifest(Device("mic-bureau", "esp32", "bureau")))).code)
-        assert "hors ligne" in (await admin.get("/satellites")).text
-
-
-async def test_the_journal_tells_satellite_events_in_french(tmp_path: Path) -> None:
-    async with Harness(tmp_path) as admin:
-        await admin.login()
-        pairing = admin.nestor.pairing
-        await pairing.approve((await pairing.request(REACHY)).code, by=PersonId("mathis"))
-        await pairing.revoke("reachy-salon", by=PersonId("mathis"))
-        journal = admin.nestor.journal
-        for event in (
-            SatelliteConnected(source="voice", device_id="reachy-salon", room="salon"),
-            SatelliteDisconnected(source="voice", device_id="reachy-salon", room="salon"),
-            PersonDetected(source="voice", device_id="reachy-salon", room="salon", count=2, confidence=0.87),
-            PersonDetected(source="voice", device_id="reachy-salon", room="salon", count=1, confidence=0.5),
-            SpeechActivityObserved(source="voice", device_id="reachy-salon", room="salon", active=True),
-            SpeechActivityObserved(source="voice", device_id="reachy-salon", room="salon", active=False),
-        ):
-            await journal.publish(event)
-        page = (await admin.get("/journal")).text
-        for said in (
-            "Le satellite reachy-salon (reachy-mini, pièce « salon ») demande l&#39;appairage",
-            "Déclare : micro, haut-parleur, détection de personnes",
-            "Satellite reachy-salon appairé (pièce « salon »)",
-            "Satellite reachy-salon révoqué",
-            "Satellite reachy-salon connecté",
-            "Satellite reachy-salon déconnecté",
-            "2 personnes vues par reachy-salon",
-            "Confiance : 87\u00a0%",
-            "1 personne vue par reachy-salon",
-            "Parole détectée près de reachy-salon",
-            "Fin de parole près de reachy-salon",
-        ):
-            assert said in page, said
-        observations = (await admin.get("/journal", type="observation")).text
-        assert "Parole détectée" in observations and "appairé" not in observations
-        assert "Satellite reachy-salon révoqué" in (await admin.get("/journal", person="mathis")).text
 
 
 # -- the command line against a running instance ----------------------------------------------------------

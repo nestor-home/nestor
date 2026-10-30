@@ -30,6 +30,7 @@ class LogQuery:
     since: datetime | None = None
     until: datetime | None = None
     after: int = 0  # position cursor: entries strictly after it
+    before: int | None = None  # position cursor: entries strictly before it (paging back, newest first)
     limit: int | None = None
     newest_first: bool = False
 

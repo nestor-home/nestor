@@ -2,8 +2,8 @@
 
 - `/api/v1/…`: the JSON API (accounts, sessions, every resource), the only thing the front talks to;
 - `/connections/callback`: where OAuth providers send the browser back, then on to the front;
-- `/health`, `/static/…` (the OAuth relay page);
-- the server-rendered pages of `nestor.admin.pages`, until the front replaces them;
+- `/health`, and `/static/relay/…`: the OAuth relay page, a standalone page that a public host serves
+  for admins reached over plain HTTP (it forwards the provider's answer to `/connections/callback`);
 - every other GET: the web front (`nestor.admin.front`).
 """
 
@@ -15,16 +15,16 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException
 
-from nestor.admin import front, pages
+from nestor.admin import front
 from nestor.admin.api import v1
 from nestor.admin.api.v1.openapi import operation_id
 from nestor.admin.settings import AdminSettings
-from nestor.admin.state import AdminState, state
+from nestor.admin.state import AdminState
 from nestor.core import ContractError, ProviderError
 from nestor.modules.accounts import AccessDenied
 from nestor.runtime import Nestor
 
-STATIC = Path(__file__).parent / "static"
+RELAY = Path(__file__).parent / "static" / "relay"
 CACHED = ("/static/", "/assets/")
 SECURITY_HEADERS = {
     "Content-Security-Policy": (
@@ -45,15 +45,14 @@ def create_app(nestor: Nestor, settings: AdminSettings) -> FastAPI:
         generate_unique_id_function=operation_id,
     )
     app.state.admin = AdminState(nestor, settings)
-    app.mount("/static", StaticFiles(directory=STATIC), name="static")
+    app.mount("/static/relay", StaticFiles(directory=RELAY), name="relay")
     app.include_router(v1.router())
-    app.include_router(v1.browser)  # before the pages' `/connections/{id}`
+    app.include_router(v1.browser)
 
     @app.get("/health", include_in_schema=False)
     async def health() -> dict[str, str]:
         return {"status": "ok"}
 
-    pages.install(app)
     app.include_router(front.router)  # last: it answers every GET left
 
     @app.middleware("http")
@@ -70,8 +69,5 @@ def create_app(nestor: Nestor, settings: AdminSettings) -> FastAPI:
 
 
 async def _error(request: Request, error: Exception) -> Response:
-    """JSON for the API (and wherever no page renders errors), an HTML page for the server-rendered pages."""
-    page_errors = state(request).page_errors
-    if request.url.path.startswith("/api/") or page_errors is None:
-        return v1.localized(request, error)
-    return await page_errors(request, error)
+    """Every error is the API's JSON, in the reader's language."""
+    return v1.localized(request, error)

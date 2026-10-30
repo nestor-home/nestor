@@ -11,7 +11,7 @@ from nestor.admin.api.v1.language import reader_locale
 from nestor.admin.api.v1.models import AccountOut, Input, People, PersonRef
 from nestor.admin.api.v1.passwords import checked_login, checked_password
 from nestor.admin.api.v1.routes.session import MeOut, open_session
-from nestor.admin.api.v1.security import Caller, allowed
+from nestor.admin.api.v1.security import Caller, allowed, same_origin
 from nestor.admin.presentation import Phrasebook
 from nestor.admin.state import AdminState, state
 from nestor.core import PersonId
@@ -143,7 +143,7 @@ async def revoke_invitation(request: Request, caller: Manager, invitation_id: st
     return Response(status_code=204)
 
 
-@router.post("/invitations/inspect")
+@router.post("/invitations/inspect", dependencies=[Depends(same_origin)])
 async def inspect_invitation(request: Request, body: InvitationTokenIn) -> InvitationPreview:
     """What an invitation offers, before accepting it (no session needed)."""
     admin = state(request)
@@ -157,7 +157,7 @@ async def inspect_invitation(request: Request, body: InvitationTokenIn) -> Invit
     )
 
 
-@router.post("/invitations/accept", status_code=201)
+@router.post("/invitations/accept", status_code=201, dependencies=[Depends(same_origin)])
 async def accept_invitation(request: Request, response: Response, body: InvitationAcceptIn) -> MeOut:
     """Open the account with a login and a password of one's choice; the new account is signed in."""
     admin = state(request)

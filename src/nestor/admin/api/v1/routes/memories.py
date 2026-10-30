@@ -14,10 +14,11 @@ from pydantic import BaseModel
 from nestor.admin.api.v1.errors import ApiError, not_found
 from nestor.admin.api.v1.models import Input, People, PersonRef
 from nestor.admin.api.v1.security import Caller, allowed
-from nestor.admin.state import state
+from nestor.admin.state import AdminState, state
 from nestor.core import PersonId
 from nestor.modules.accounts import Scope
-from nestor.modules.memory import Memory
+from nestor.modules.journal import LogQuery
+from nestor.modules.memory import Memory, MemoryRecorded
 
 router = APIRouter(tags=["memories"])
 Keeper = Annotated[Caller, Depends(allowed(Scope.MEMORY_MANAGE_ALL, Scope.MEMORY_MANAGE_OWN))]
@@ -29,6 +30,8 @@ class MemoryOut(BaseModel):
     about: PersonRef | None  # None: the whole household
     told_by: PersonRef | None
     learnt_in: str | None  # the conversation it was learnt in
+    session: str | None  # that conversation's session, to open its thread in the journal
+    learnt_event: int | None  # the journal position of the entry that recorded it
     created_at: datetime
     updated_at: datetime
     editable: bool  # this account may correct or forget it
@@ -48,13 +51,23 @@ def _edits(caller: Caller, memory: Memory) -> bool:
     return caller.principal.reaches(memory.about, every=Scope.MEMORY_MANAGE_ALL, own=Scope.MEMORY_MANAGE_OWN)
 
 
-def _memory(caller: Caller, memory: Memory, people: People) -> MemoryOut:
+async def recorded(admin: AdminState) -> dict[str, int]:
+    """The journal position where each memory was recorded."""
+    entries = await admin.nestor.journal.log.read(LogQuery(types=frozenset({MemoryRecorded.event_type})))
+    return {
+        str(payload.get("memory_id")): e.position for e in entries if isinstance(payload := e.record["payload"], dict)
+    }
+
+
+def _memory(caller: Caller, memory: Memory, people: People, positions: dict[str, int]) -> MemoryOut:
     return MemoryOut(
         id=memory.id,
         text=memory.text,
         about=people.ref(memory.about),
         told_by=people.ref(memory.told_by),
         learnt_in=str(memory.source) if memory.source else None,
+        session=memory.source.session if memory.source else None,
+        learnt_event=positions.get(memory.id),
         created_at=memory.created_at,
         updated_at=memory.updated_at,
         editable=_edits(caller, memory),
@@ -83,7 +96,8 @@ async def list_memories(
         else await memories.recent(about=person, limit=limit)
     )
     people = People(nestor.household)
-    return [_memory(caller, m, people) for m in found if _reads(caller, m)]
+    positions = await recorded(state(request))
+    return [_memory(caller, m, people, positions) for m in found if _reads(caller, m)]
 
 
 @router.patch("/memories/{memory_id}")
@@ -93,7 +107,7 @@ async def correct_memory(request: Request, caller: Keeper, memory_id: str, body:
     if not body.text.strip():
         raise ApiError(400, "empty_memory")
     corrected = await nestor.memories.correct(memory.id, body.text, by=caller.person)
-    return _memory(caller, corrected, People(nestor.household))
+    return _memory(caller, corrected, People(nestor.household), await recorded(state(request)))
 
 
 @router.delete("/memories/{memory_id}", status_code=204)

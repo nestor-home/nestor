@@ -121,3 +121,50 @@ async def test_without_a_presence_source_nobody_is_located(tmp_path: Path) -> No
         admin.nestor.presence = None
         people = (await (await admin.api()).get("/api/v1/household/people")).json()
         assert all(p["presence"] is None for p in people)
+
+
+async def test_resources_say_where_they_come_from_and_what_became_of_them(tmp_path: Path) -> None:
+    from nestor.modules.cognition.delegation.events import TaskDelivered
+    from nestor.modules.cognition.tools import ToolCalled
+    from nestor.modules.initiative import Delivered, WatchTriggered
+    from nestor.modules.satellites import Device, Manifest, SatelliteConnected
+
+    async with Harness(tmp_path) as admin:
+        nestor = admin.nestor
+        quick = await nestor.tasks.delegate("Vite fait", origin=TELEGRAM, requested_by=MATHIS)
+        other = await nestor.tasks.delegate("Autre", origin=TELEGRAM, requested_by=MATHIS)
+        await nestor.tasks.cancel(quick.id)
+        await nestor.tasks.cancel(other.id)
+        await nestor.journal.publish(TaskDelivered(source="tasks", task_id=quick.id, address=TELEGRAM))
+        await nestor.journal.publish(
+            Delivered(source="courier", address=Address("telegram", "9"), about=f"task {other.id} cancelled")
+        )
+        watch = await nestor.watch_book.create(Watch(what="le colis", owner=MATHIS, created_in=TELEGRAM))
+        for item in ("i1", "i2"):
+            await nestor.journal.publish(
+                WatchTriggered(source="keeper", watch_id=watch.id, item_id=item, item_title="Colis", summary="")
+            )
+        memory = await nestor.memories.remember("Mathis aime le thé", about=MATHIS, source=TELEGRAM)
+        assert nestor.connections
+        connection = await nestor.connections.connect("imap", MATHIS, {"server": "s", "password": "p"})
+        await nestor.journal.publish(
+            ToolCalled(source="toolbox", address=TELEGRAM, call_id="c1", name="imap_search", arguments={})
+        )
+        await nestor.pairing.approve((await nestor.pairing.request(Manifest(Device("mic", "esp32", "bureau")))).code)
+        await nestor.journal.publish(SatelliteConnected(source="voice", device_id="mic", room="bureau"))
+
+        api = await admin.api()
+        tasks = {t["id"]: t for t in (await api.get("/api/v1/tasks")).json()["recent"]}
+        assert tasks[quick.id]["origin"] == {"session": "telegram:42", "channel": "telegram"}
+        assert tasks[quick.id]["delivered"]["channel"] == "telegram" and tasks[quick.id]["delivered"]["room"] is None
+        assert tasks[other.id]["delivered"]["channel"] == "telegram"
+        (listed,) = (await api.get("/api/v1/watches")).json()["watches"]
+        assert listed["triggered"] == 2 and listed["last_triggered_at"] and listed["origin"]["session"] == "telegram:42"
+        (remembered,) = (await api.get("/api/v1/memories", q="thé")).json()
+        assert remembered["session"] == "telegram:42" and remembered["learnt_event"]
+        entry = (await api.get(f"/api/v1/journal/{remembered['learnt_event']}")).json()
+        assert entry["item"]["links"]["memory"] == memory.id
+        used = (await api.get(f"/api/v1/connections/{connection.id}")).json()
+        assert used["calls_today"] == 1 and used["last_used_at"] and used["watches"] == 1
+        (satellite,) = (await api.get("/api/v1/satellites")).json()["paired"]
+        assert satellite["last_seen_at"] and satellite["sdk"] is None

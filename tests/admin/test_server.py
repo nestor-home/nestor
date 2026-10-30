@@ -108,9 +108,9 @@ def test_the_command_line_checks_a_configuration_with_the_admin(
         .replace("presence: {kind: static}\n", "")
     )
     monkeypatch.setenv("NESTOR_SECRET_KEY", "k" * 40)
+    assert main(["-c", str(path), "check"]) == 2
+    assert "password_hash is gone" in (err := capsys.readouterr().err) and "nestor accounts create-owner" in err
+
+    path.write_text(path.read_text().replace("{'password_hash': 'scrypt$left-from-before'}", "{port: 8080}"))
     assert main(["-c", str(path), "check"]) == 0
-    out = capsys.readouterr().out
-    assert "admin on 127.0.0.1:8080" in out
-    assert "admin.password_hash is no longer used; run `nestor accounts create-owner`" in out, (
-        "an older file still loads"
-    )
+    assert "admin on 127.0.0.1:8080" in capsys.readouterr().out

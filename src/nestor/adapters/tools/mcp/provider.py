@@ -52,6 +52,7 @@ from mcp.types.version import MODERN_PROTOCOL_VERSIONS
 
 from nestor import __version__
 from nestor.core import Health, ProviderError
+from nestor.core.i18n import Message
 from nestor.modules.cognition.model import ToolSpec
 from nestor.modules.cognition.tools import Risk, Tool, ToolContext, ToolFailed, ToolProvider
 
@@ -198,6 +199,9 @@ class McpToolProvider(ToolProvider):
         """Unavailable while the server does not answer: its tools are missing."""
         session = self._session
         return Health.STARTED if session is not None and session.alive else Health.UNAVAILABLE
+
+    def health_detail(self) -> Message | None:
+        return None if self.health() is Health.STARTED else Message.of("health-mcp-unreachable", server=self.name)
 
     def tools(self) -> Sequence[Tool]:
         session = self._session

@@ -37,12 +37,7 @@ class AdminServer(Component):
         config = nestor.config.admin
         if config is None:
             raise ContractError("the configuration has no admin section")
-        if config.password_hash is not None:
-            log.warning(
-                "admin.password_hash is no longer used: accounts replaced it. Create the first owner with "
-                "`nestor accounts create-owner`, then remove the line"
-            )
-        return cls(nestor, AdminSettings(**config.model_dump(exclude={"password_hash"})))
+        return cls(nestor, AdminSettings(**config.model_dump()))
 
     @property
     def port(self) -> int:

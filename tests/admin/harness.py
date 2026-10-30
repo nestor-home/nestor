@@ -1,8 +1,7 @@
-"""A Nestor assembled with doubles, its admin, and browsers talking to it in the same event loop."""
+"""A Nestor assembled with doubles, its admin, and browsers calling its API in the same event loop."""
 
 import asyncio
 import json
-import re
 import urllib.parse
 from collections.abc import MutableMapping
 from dataclasses import replace
@@ -52,7 +51,11 @@ class Api:
 
     def __init__(self, harness: "Harness") -> None:
         self.harness = harness
-        self.client = httpx.AsyncClient(transport=httpx.ASGITransport(app=harness.app), base_url=harness.base_url)
+        self.client = httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=harness.app),
+            base_url=harness.base_url,
+            headers={"Origin": harness.base_url},  # what a browser sends on every POST from the admin's pages
+        )
         self.csrf = ""
 
     async def sign_in(self, login: str, password: str = PASSWORD) -> httpx.Response:
@@ -131,8 +134,6 @@ class Harness:
         self.app = create_app(self.nestor, self.settings)
         self.base_url = public_url or "http://admin.test"
         self.browser = httpx.AsyncClient(transport=httpx.ASGITransport(app=self.app), base_url=self.base_url)
-        self.csrf = ""
-        self.pages: list[str] = []  # every page served, to check that no secret is ever rendered
         self.seen: list[str] = []  # every API response, likewise
         self._apis: list[Api] = []
         self.owner: Account | None = None
@@ -184,33 +185,6 @@ class Harness:
             response = await api.sign_in(login)
             assert response.status_code == 200, response.text
         return api
-
-    # -- the server-rendered pages ---------------------------------------------------------------------------
-
-    async def get(self, path: str, **params: str) -> httpx.Response:
-        response = await self.browser.get(path, params=params)
-        self._seen(response)
-        return response
-
-    async def post(
-        self, path: str, data: dict[str, str | list[str]] | None = None, *, csrf: bool = True
-    ) -> httpx.Response:
-        body = {"csrf": self.csrf, **(data or {})} if csrf else dict(data or {})
-        response = await self.browser.post(path, data=body)
-        self._seen(response)
-        return response
-
-    async def login(self, password: str = PASSWORD, *, login: str = OWNER) -> httpx.Response:
-        await self.get("/login")
-        response = await self.post("/login", {"login": login, "password": password})
-        if response.status_code == 303:
-            await self.get("/journal")  # the signed-in session has its own CSRF token
-        return response
-
-    def _seen(self, response: httpx.Response) -> None:
-        self.pages.append(f"{response.headers.get('location', '')}\n{response.text}")
-        if found := re.search(r'name="csrf" value="([^"]+)"', response.text):
-            self.csrf = found.group(1)
 
     # -- what the provider's consent page does -------------------------------------------------------
 
@@ -301,7 +275,7 @@ class EventStream:
             frame = await self.frame(timeout_s)
             fields = dict(line.split(": ", 1) for line in frame.splitlines() if not line.startswith(":"))
             if "data" in fields:
-                assert fields["event"] == "journal"
+                assert fields["event"] == "item"
                 return fields["id"], json.loads(fields["data"])
 
     async def __aexit__(self, *exc: object) -> None:

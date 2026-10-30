@@ -37,6 +37,7 @@ def _matches(entry: Entry, query: LogQuery) -> bool:
     at = datetime.fromisoformat(str(record["at"]))
     return (
         entry.position > query.after
+        and (query.before is None or entry.position < query.before)
         and (query.types is None or entry.type in query.types)
         and (query.session is None or record["session"] == query.session)
         and (query.since is None or at >= query.since)
@@ -118,6 +119,14 @@ class EventLogContract:
         assert labels(first + rest) == [f"p{i}" for i in range(5)]
         assert labels(latest) == ["p4"]
         assert all(e.position < rest[0].position for e in before)
+
+    async def test_paging_back_from_a_position_lists_what_came_before_newest_first(self) -> None:
+        async with self.event_log() as log:
+            positions = [await log.append(Probe(source="test", label=f"p{i}")) for i in range(5)]
+            page = await log.read(LogQuery(before=positions[3], newest_first=True, limit=2))
+            between = await log.read(LogQuery(after=positions[0], before=positions[3]))
+        assert labels(page) == ["p2", "p1"]
+        assert labels(between) == ["p1", "p2"]
 
     async def test_an_empty_log_reads_as_empty(self) -> None:
         async with self.event_log() as log:

@@ -3,6 +3,7 @@
 `watches.manage.all` reaches every watch; `watches.manage.own` those kept for the account's person.
 """
 
+from collections import Counter
 from datetime import datetime
 from typing import Annotated
 
@@ -14,10 +15,15 @@ from nestor.admin.api.v1.models import People, PersonRef
 from nestor.admin.api.v1.security import Caller, allowed
 from nestor.admin.state import state
 from nestor.modules.accounts import Scope
-from nestor.modules.initiative import Watch
+from nestor.modules.initiative import Watch, WatchTriggered
 
 router = APIRouter(tags=["watches"])
 Manager = Annotated[Caller, Depends(allowed(Scope.WATCHES_MANAGE_ALL, Scope.WATCHES_MANAGE_OWN))]
+
+
+class OriginOut(BaseModel):
+    session: str  # the conversation it was asked in
+    channel: str
 
 
 class WatchOut(BaseModel):
@@ -29,6 +35,9 @@ class WatchOut(BaseModel):
     once: bool  # ends at the first match
     created_at: datetime
     until: datetime | None
+    origin: OriginOut | None  # None when it was not asked in a conversation
+    triggered: int  # how many items matched it so far
+    last_triggered_at: datetime | None
 
 
 class WatchesOut(BaseModel):
@@ -46,6 +55,11 @@ async def list_watches(request: Request, caller: Manager) -> WatchesOut:
     people = People(nestor.household)
     book = nestor.watch_book
     watches = sorted(book.watches.values(), key=lambda w: w.created_at, reverse=True)
+    triggers: Counter[str] = Counter()
+    last: dict[str, datetime] = {}
+    for event in await nestor.journal.history(WatchTriggered):
+        triggers[event.watch_id] += 1
+        last[event.watch_id] = event.at
     return WatchesOut(
         watches=[
             WatchOut(
@@ -57,6 +71,9 @@ async def list_watches(request: Request, caller: Manager) -> WatchesOut:
                 once=w.once,
                 created_at=w.created_at,
                 until=w.until,
+                origin=OriginOut(session=str(w.created_in), channel=w.created_in.channel) if w.created_in else None,
+                triggered=triggers[w.id],
+                last_triggered_at=last.get(w.id),
             )
             for w in watches
             if _reaches(caller, w)

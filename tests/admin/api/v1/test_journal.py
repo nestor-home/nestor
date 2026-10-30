@@ -1,4 +1,4 @@
-"""The journal through the API: items already said in French, pages, filters, privacy between members,
+"""The journal through the API: items already said in French, pages, facets, privacy between members,
 and the live stream (Server-Sent Events) with its scopes, heartbeats and resumption."""
 
 import asyncio
@@ -51,11 +51,14 @@ async def test_items_are_said_in_french_with_the_reason_of_a_decision(tmp_path: 
                 person=PersonId("mathis"),
             )
         )
-        (item,) = (await (await admin.api()).get("/api/v1/journal", kind="delivery")).json()["items"]
+        (item,) = (await (await admin.api()).get("/api/v1/journal", kinds="delivery")).json()["items"]
         assert item["text"] == "Décision de parler à Mathis — veille w1"
         assert item["message"]["id"] == "journal-delivery-considered" and item["message"]["args"]["id"] == "w1"
-        assert item["reason"] == {"id": "delivery-in-room", "args": {"person": "Mathis", "room": "salon"}}
-        assert item["reason_text"] == "Mathis est dans la pièce « salon »" and item["tone"] == "decision"
+        assert item["reason"] == {
+            "message": {"id": "delivery-in-room", "args": {"person": "Mathis", "room": "salon"}},
+            "text": "Mathis est dans la pièce « salon »",
+        }
+        assert item["tone"] == "decision" and item["links"]["delivery"] == "watch:w1" and item["links"]["watch"] == "w1"
         assert item["detail_text"] == "Prévu : à voix haute sur voice:salon" and item["detail"] == ""
         assert (item["kind"], item["kind_label"]) == ("delivery", "Prises de parole")
         assert item["people"] == [{"id": "mathis", "name": "Mathis"}] and item["channels"] == ["voice"]
@@ -65,7 +68,7 @@ async def test_sign_ins_are_in_the_journal_without_secrets(tmp_path: Path) -> No
     async with Harness(tmp_path) as admin:
         api = await admin.api()
         await (await admin.api(None)).sign_in("mathis", "not the password")
-        items = (await api.get("/api/v1/journal", kind="account")).json()["items"]
+        items = (await api.get("/api/v1/journal", kinds="account")).json()["items"]
         summaries = [i["text"] for i in items]
         assert summaries[:3] == [
             "Connexion refusée au compte mathis : mot de passe incorrect",
@@ -82,14 +85,16 @@ async def test_pages_go_back_in_time_without_gaps_or_repeats(tmp_path: Path) -> 
         seen, before = [], None
         while True:
             page = (
-                await api.get("/api/v1/journal", kind="conversation", limit=3, **({"before": before} if before else {}))
+                await api.get(
+                    "/api/v1/journal", kinds="conversation", limit=3, **({"before": before} if before else {})
+                )
             ).json()
             seen += [i["detail"] for i in page["items"]]
             before = page["next_before"]
             if before is None:
                 break
         assert seen == [f"message {n}" for n in reversed(range(7))]
-        assert (await api.get("/api/v1/journal", before=10**9)).json() == {"items": [], "next_before": None}
+        assert (await api.get("/api/v1/journal", before=1)).json() == {"items": [], "next_before": None}
 
 
 async def test_filters_keep_one_person_or_one_channel(tmp_path: Path) -> None:
@@ -99,12 +104,12 @@ async def test_filters_keep_one_person_or_one_channel(tmp_path: Path) -> None:
         mathilde = (await api.get("/api/v1/journal", person="mathilde")).json()["items"]
         assert {i["detail"] for i in mathilde} == {"Rappelle-moi le dentiste", "Mathilde a peur des araignées"}
         assert len((await api.get("/api/v1/journal", channel="telegram")).json()["items"]) == 4
-        unknown = await api.get("/api/v1/journal", kind="gossip")
+        unknown = await api.get("/api/v1/journal", kinds="gossip")
         assert unknown.status_code == 400 and unknown.json()["error"]["code"] == "unknown_kind"
-        filters = (await api.get("/api/v1/journal/filters")).json()
-        assert {"key": "account", "label": "Comptes"} in filters["kinds"]
-        assert filters["channels"] == [{"id": "telegram", "brand": None}]
-        assert filters["people"][0] == {"id": "mathis", "name": "Mathis"}
+        facets = (await api.get("/api/v1/journal/facets")).json()
+        assert {"key": "conversation", "label": "Conversations", "count": 4} in facets["kinds"]
+        assert facets["channels"] == [{"key": "telegram", "label": "telegram", "count": 4}]
+        assert {"key": "mathilde", "label": "Mathilde", "count": 2} in facets["people"]
 
 
 async def test_a_member_reads_their_own_conversations_not_another_members(tmp_path: Path) -> None:
@@ -144,16 +149,16 @@ async def test_the_live_stream_respects_the_readers_scopes(tmp_path: Path) -> No
 async def test_the_live_stream_resumes_after_the_last_event_it_sent(tmp_path: Path) -> None:
     async with Harness(tmp_path) as admin:
         api = await admin.api()
-        async with EventStream(api, "/api/v1/journal/stream?kind=conversation") as stream:
+        async with EventStream(api, "/api/v1/journal/stream?kinds=conversation") as stream:
             await stream.frame()
             await admin.nestor.journal.publish(turn(MATHIS_CHAT, "un", "mathis"))
             last, _ = await stream.event()
         await admin.nestor.journal.publish(turn(MATHIS_CHAT, "deux", "mathis"))  # while disconnected
         await admin.nestor.journal.publish(turn(MATHIS_CHAT, "trois", "mathis"))
-        async with EventStream(api, "/api/v1/journal/stream?kind=conversation", Last_Event_ID=last) as stream:
+        async with EventStream(api, "/api/v1/journal/stream?kinds=conversation", Last_Event_ID=last) as stream:
             await stream.frame()
             assert [(await stream.event())[1]["detail"] for _ in range(2)] == ["deux", "trois"]
-        async with EventStream(api, f"/api/v1/journal/stream?after={last}&kind=conversation") as stream:
+        async with EventStream(api, f"/api/v1/journal/stream?after={last}&kinds=conversation") as stream:
             await stream.frame()
             assert (await stream.event())[1]["detail"] == "deux"
 
@@ -203,8 +208,124 @@ async def test_items_carry_the_ids_that_link_them_into_threads(tmp_path: Path) -
         items = {i["type"]: i for i in (await (await admin.api()).get("/api/v1/journal")).json()["items"]}
         user, called = items["conversation.turn.user"], items["agent.tool.called"]
         completed, pairing = items["agent.tool.completed"], items["satellite.pairing.requested"]
-        assert user["session"] == "telegram:7" and user["kind"] == "conversation" and user["id"] == said.id
-        assert called["call_id"] == completed["call_id"] == "c1" and called["session"] == "telegram:7"
-        assert completed["session"] is None and completed["kind"] == "tool"
-        assert pairing["device_id"] == "mic-bureau" and pairing["pairing_id"] and pairing["kind"] == "satellite"
-        assert user["task_id"] is None and user["device_id"] is None
+        assert user["links"]["session"] == "telegram:7" and user["kind"] == "conversation" and user["id"] == said.id
+        assert (
+            called["links"]["call"] == completed["links"]["call"] == "c1" and called["links"]["session"] == "telegram:7"
+        )
+        assert completed["links"]["session"] is None and completed["kind"] == "tool"
+        assert called["tool"] == completed["tool"] == "light" and completed["outcome"] == {
+            "ok": True,
+            "duration_s": 0.1,
+        }
+        assert completed["cause"] == called["position"]
+        assert (
+            pairing["links"]["satellite"] == "mic-bureau"
+            and pairing["kind"] == "satellite"
+            and pairing["room"] == "bureau"
+        )
+        assert user["links"]["task"] is None and user["links"]["satellite"] is None
+
+
+async def test_the_important_events_are_told_in_the_readers_language(tmp_path: Path) -> None:
+    from nestor.core import Capability
+    from nestor.modules.cognition import TaskEnded, TaskStarted, TaskStatus
+    from nestor.modules.cognition.tools import ToolCalled, ToolCompleted
+    from nestor.modules.connectors import ConnectionChanged, Status
+    from nestor.modules.conversation import AnswerCut, FallbackReason, FallbackSpoken
+    from nestor.modules.home import PresenceChanged
+    from nestor.modules.initiative import Delivered, DeliveryFailed, WatchCreated, WatchEnded, WatchTriggered
+    from nestor.modules.memory import MemoryCorrected
+    from nestor.modules.satellites import (
+        DeclaredCapability,
+        Device,
+        Manifest,
+        PersonDetected,
+        SatelliteConnected,
+        SatelliteDisconnected,
+        SpeechActivityObserved,
+    )
+
+    mathis = PersonId("mathis")
+    async with Harness(tmp_path) as admin:
+        pairing = admin.nestor.pairing
+        reachy = Manifest(
+            Device("reachy-salon", "reachy-mini", "salon"),
+            tuple(DeclaredCapability(Capability(c)) for c in ("audio.capture", "audio.playback")),
+        )
+        await pairing.approve((await pairing.request(reachy)).code, by=mathis)
+        await pairing.revoke("reachy-salon", by=mathis)
+        for event in (
+            AssistantTurn(source="agent", address=MATHIS_CHAT, text="Je surveille.", interrupted=True),
+            FallbackSpoken(source="agent", address=MATHIS_CHAT, reason=FallbackReason.MODEL_SLOW),
+            AnswerCut(source="agent", turn="t1", heard="Je surv"),
+            ToolCalled(source="toolbox", address=MATHIS_CHAT, call_id="c1", name="create_watch", arguments={}),
+            ToolCompleted(source="toolbox", call_id="c1", name="create_watch", output="ok", ok=True, duration_s=0.2),
+            ToolCompleted(source="toolbox", call_id="c2", name="mailbox_send", output="no", ok=False, duration_s=1),
+            WatchTriggered(
+                source="keeper", watch_id="w1", item_id="i", item_title="Colis livré", summary="", urgent=True
+            ),
+            WatchEnded(source="watch-book", watch_id="w1", reason="matched"),
+            Delivered(source="courier", address=MATHIS_CHAT, about="watch w1", person=mathis),
+            DeliveryFailed(source="courier", about="watch w2", tried=(), person=mathis),
+            MemoryCorrected(source="memory", memory_id="m1", text="Le chat s'appelle Biscotte"),
+            PresenceChanged(source="presence", person=mathis, home=True, room="salon"),
+            PresenceChanged(source="presence", person=mathis, home=False),
+            PresenceChanged(source="presence", person=mathis, home=True),
+            PresenceChanged(source="presence", person=PersonId("ghost"), home=None),
+            TaskStarted(source="tasks", task_id="t1", objective="Analyse", executor="hermes", origin=MATHIS_CHAT),
+            TaskEnded(source="tasks", task_id="t1", status=TaskStatus.FAILED, error="quota", duration_s=12),
+            WatchCreated(
+                source="watch-book", watch_id="w3", what="le colis", keywords=("Colissimo",), kinds=(), once=True
+            ),
+            ConnectionChanged(source="connections", connection_id="c1", status=Status.NEEDS_REAUTH, reason="refused"),
+            SatelliteConnected(source="voice", device_id="reachy-salon", room="salon"),
+            SatelliteDisconnected(source="voice", device_id="reachy-salon", room="salon"),
+            PersonDetected(source="voice", device_id="reachy-salon", room="salon", count=2, confidence=0.87),
+            PersonDetected(source="voice", device_id="reachy-salon", room="salon", count=1, confidence=0.5),
+            SpeechActivityObserved(source="voice", device_id="reachy-salon", room="salon", active=True),
+            SpeechActivityObserved(source="voice", device_id="reachy-salon", room="salon", active=False),
+            turn(MATHIS_CHAT, "bla " * 400, "mathis"),
+        ):
+            await admin.nestor.journal.publish(event)
+        found = (await (await admin.api()).get("/api/v1/journal", limit=200)).json()["items"]
+        said = "\n".join(f"{i['text']}\n{i['detail_text']}" for i in found)
+        for sentence in (
+            "Richie a répondu (interrompu)",
+            "Réponse de secours : modèle trop lent",
+            "Réponse coupée par la personne",
+            "Entendu : Je surv",
+            "Outil create_watch appelé",
+            "Outil create_watch terminé en 0,2 s",
+            "Outil mailbox_send en échec",
+            "Veille w1 déclenchée par « Colis livré » — urgent",
+            "Veille w1 trouvée",
+            "Message transmis — veille w1",
+            "Message non transmis — veille w2",
+            "Essayé : aucun canal disponible",
+            "Souvenir corrigé",
+            "Mathis est dans la pièce « salon »",
+            "Mathis n'est plus à la maison",
+            "Mathis est à la maison",
+            "ghost n'est plus localisé·e",
+            "Tâche t1 confiée à hermes",
+            "Tâche t1 en échec (12 s)",
+            "Mots-clés : Colissimo",
+            "Connexion c1 à réautoriser",
+            "Le satellite reachy-salon (reachy-mini, pièce « salon ») demande l'appairage",
+            "Déclare : micro, haut-parleur",
+            "Satellite reachy-salon appairé (pièce « salon »)",
+            "Autorisé : micro, haut-parleur",
+            "Satellite reachy-salon révoqué",
+            "Satellite reachy-salon connecté",
+            "Satellite reachy-salon déconnecté",
+            "2 personnes vues par reachy-salon",
+            "Confiance : 87\N{NO-BREAK SPACE}%",
+            "1 personne vue par reachy-salon",
+            "Parole détectée près de reachy-salon",
+            "Fin de parole près de reachy-salon",
+            "bla …",
+        ):
+            assert sentence in said, sentence
+        interrupted = next(i for i in found if i["detail"] == "Je surveille.")
+        assert interrupted["message"]["id"] == "journal-assistant-interrupted"
+        assert {i["room"] for i in found if i["kind"] == "observation"} == {"salon"}

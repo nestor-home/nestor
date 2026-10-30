@@ -49,3 +49,5 @@ error-watch-unknown = This watch does not exist or has already ended.
 error-memory-unknown = This memory does not exist (or no longer).
 error-memory-shared = Only the household's administration changes shared memories.
 error-empty-memory = To erase a memory, forget it.
+error-journal-entry-unknown = This journal entry does not exist, or is not yours to read.
+error-cross-origin = Request refused: it does not come from this admin.

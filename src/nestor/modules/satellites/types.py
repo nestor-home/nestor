@@ -65,6 +65,33 @@ class Device:
 
 
 @dataclass(frozen=True, slots=True)
+class Sdk:
+    """The software a device runs, as it names it: `nestor-satellite-python` `0.2.0`."""
+
+    name: str
+    version: str
+
+    @classmethod
+    def from_json(cls, data: object) -> "Sdk":
+        if not isinstance(data, dict) or set(data) != {"name", "version"}:
+            raise ContractError("sdk must have exactly a name and a version")
+        for key in ("name", "version"):
+            if not isinstance(data[key], str) or not 0 < len(data[key]) <= MAX_SDK:
+                raise ContractError(f"sdk {key} must be a non-empty string of at most {MAX_SDK} characters")
+        return cls(data["name"], data["version"])
+
+    @staticmethod
+    def json_schema() -> dict[str, Any]:
+        text = {"type": "string", "minLength": 1, "maxLength": MAX_SDK}
+        return {
+            "type": "object",
+            "properties": {"name": text, "version": text},
+            "required": ["name", "version"],
+            "additionalProperties": False,
+        }
+
+
+@dataclass(frozen=True, slots=True)
 class DeclaredCapability:
     """A capability the device claims, with its own parameters (`{"name": "audio.capture", "formats": [...]}`)."""
 
@@ -79,7 +106,7 @@ class Manifest:
     device: Device
     capabilities: tuple[DeclaredCapability, ...] = ()
     protocol: str = PROTOCOL
-    sdk: str | None = None  # the software it runs, as it names it ("nestor-satellite-python 0.2.0"); optional
+    sdk: Sdk | None = None  # the software it runs; optional
 
     @property
     def names(self) -> frozenset[Capability]:
@@ -92,7 +119,7 @@ class Manifest:
             "device": device | ({"brand": self.device.brand} if self.device.brand else {}),
             "capabilities": [{"name": c.name, **c.params} for c in self.capabilities],
         }
-        return data | ({"sdk": self.sdk} if self.sdk else {})
+        return data | ({"sdk": {"name": self.sdk.name, "version": self.sdk.version}} if self.sdk else {})
 
     @classmethod
     def from_json(cls, data: object) -> "Manifest":
@@ -113,9 +140,7 @@ class Manifest:
             declared.append(DeclaredCapability(Capability(name), {k: v for k, v in entry.items() if k != "name"}))
         if len({c.name for c in declared}) != len(declared):
             raise ContractError("a capability is declared twice")
-        sdk = data.get("sdk")
-        if sdk is not None and (not isinstance(sdk, str) or not 0 < len(sdk) <= MAX_SDK):
-            raise ContractError(f"sdk must be a non-empty string of at most {MAX_SDK} characters")
+        sdk = Sdk.from_json(data["sdk"]) if "sdk" in data else None
         return cls(device, tuple(declared), sdk=sdk)
 
     @staticmethod
@@ -125,7 +150,7 @@ class Manifest:
             "properties": {
                 "protocol": {"const": PROTOCOL},
                 "device": Device.json_schema(),
-                "sdk": {"type": "string", "minLength": 1, "maxLength": MAX_SDK},
+                "sdk": Sdk.json_schema(),
                 "capabilities": {
                     "type": "array",
                     "maxItems": MAX_CAPABILITIES,
@@ -153,6 +178,7 @@ class Satellite:
     paired_at: datetime
     brand: str | None = None
     sdk: str | None = None
+    sdk_version: str | None = None
 
 
 class PairingStatus(StrEnum):
@@ -187,4 +213,4 @@ class PendingPairing:
     device: Device
     capabilities: frozenset[Capability]
     expires_at: datetime
-    sdk: str | None = None
+    sdk: Sdk | None = None

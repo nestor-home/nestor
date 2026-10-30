@@ -14,6 +14,7 @@ from nestor.admin.api.v1.errors import ApiError
 from nestor.admin.api.v1.models import Input, People
 from nestor.admin.api.v1.routes.connections import (
     ConnectionDetail,
+    Usage,
     connecting_of,
     connection_detail,
     connections_of,
@@ -137,7 +138,7 @@ async def connect_with_secrets(request: Request, caller: Plugging, kind: str, bo
     except ProviderError as failure:
         raise ApiError(502, "provider_refused", detail=str(failure)) from None
     connection = await connecting_of(admin).settled(connection, replaced.id if replaced else None)
-    return connection_detail(admin, connection, caller.phrasebook)
+    return connection_detail(admin, connection, caller.phrasebook, await Usage.of(admin))
 
 
 async def _connector_out(admin: AdminState, request: Request, connector: Connector, caller: Caller) -> ConnectorOut:

@@ -5,8 +5,11 @@ and everyone else's need `household.connections.manage`. A connection out of rea
 missing, never as forbidden: its existence is not disclosed.
 """
 
-from datetime import datetime
+from collections import Counter
+from dataclasses import dataclass
+from datetime import datetime, time
 from typing import Annotated
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, Query, Request, Response
 from fastapi.responses import RedirectResponse
@@ -19,12 +22,13 @@ from nestor.admin.connecting import Connecting
 from nestor.admin.presentation import Phrasebook
 from nestor.admin.settings import CALLBACK_PATH
 from nestor.admin.state import AdminState, state
-from nestor.core import ContractError, PersonId, ProviderError
+from nestor.core import ContractError, PersonId, ProviderError, utc_now
 from nestor.modules.accounts import Principal, Scope
-from nestor.modules.cognition.tools import Risk
+from nestor.modules.cognition.tools import Risk, ToolCalled
 from nestor.modules.connectors import Connection, Connections, Status
 
 router = APIRouter(tags=["connections"])
+USAGE_SCAN = 5000  # tool calls read, newest first, to say when each tool was last used
 browser = APIRouter(include_in_schema=False)  # where the provider sends the browser back
 Connector = Annotated[Caller, Depends(allowed(Scope.HOUSEHOLD_CONNECTIONS, Scope.OWN_CONNECTIONS))]
 
@@ -49,6 +53,9 @@ class ConnectionOut(BaseModel):
     confirm_writes: bool
     disabled_tools: list[str]
     created_at: datetime
+    last_used_at: datetime | None  # the last call of one of its tools
+    calls_today: int  # calls of its tools since midnight, in the household's timezone
+    watches: int  # active watches fed by what it brings in (its person's, or everyone's for a shared one)
 
 
 class ConnectionDetail(ConnectionOut):
@@ -76,9 +83,34 @@ def connecting_of(admin: AdminState) -> Connecting:
     return admin.connecting
 
 
-def connection_out(admin: AdminState, connection: Connection, words: Phrasebook) -> ConnectionOut:
+@dataclass(frozen=True, slots=True)
+class Usage:
+    """Tool calls by tool name: the last one, and how many today. Tools are named per connector
+    (`<kind>_<action>`), so two accounts of one service share their counts."""
+
+    last: dict[str, datetime]
+    today: Counter[str]
+
+    @classmethod
+    async def of(cls, admin: AdminState) -> "Usage":
+        nestor = admin.nestor
+        zone = ZoneInfo(nestor.config.persona.timezone)
+        midnight = datetime.combine(utc_now().astimezone(zone).date(), time(), zone)
+        calls = await nestor.journal.history(ToolCalled, newest_first=True, limit=USAGE_SCAN)
+        last: dict[str, datetime] = {}
+        today: Counter[str] = Counter()
+        for call in calls:
+            last.setdefault(call.name, call.at)
+            if call.at >= midnight:
+                today[call.name] += 1
+        return cls(last, today)
+
+
+def connection_out(admin: AdminState, connection: Connection, words: Phrasebook, usage: Usage) -> ConnectionOut:
     connections = connections_of(admin)
     connector = connections.connectors.get(connection.kind)
+    names = {t.name for t in connector.tools(connection, connections.access(connection))} if connector else set()
+    inbound = set(connector.info.inbound) if connector else set()
     return ConnectionOut(
         id=connection.id,
         kind=connection.kind,
@@ -91,15 +123,22 @@ def connection_out(admin: AdminState, connection: Connection, words: Phrasebook)
         confirm_writes=connection.confirm_writes,
         disabled_tools=sorted(connection.disabled_tools),
         created_at=connection.created_at,
+        last_used_at=max((usage.last[n] for n in names if n in usage.last), default=None),
+        calls_today=sum(usage.today[n] for n in names),
+        watches=sum(
+            1
+            for w in admin.nestor.watch_book.watches.values()
+            if set(w.kinds) & inbound and (connection.owner is None or w.owner == connection.owner)
+        ),
     )
 
 
-def connection_detail(admin: AdminState, connection: Connection, words: Phrasebook) -> ConnectionDetail:
+def connection_detail(admin: AdminState, connection: Connection, words: Phrasebook, usage: Usage) -> ConnectionDetail:
     connections = connections_of(admin)
     connector = connections.connectors.get(connection.kind)
     tools = connector.tools(connection, connections.access(connection)) if connector else ()
     return ConnectionDetail(
-        **connection_out(admin, connection, words).model_dump(),
+        **connection_out(admin, connection, words, usage).model_dump(),
         tools=[
             ToolOut(
                 name=t.name,
@@ -124,13 +163,17 @@ def reachable(admin: AdminState, caller: Caller, connection_id: str) -> Connecti
 async def list_connections(request: Request, caller: Connector) -> list[ConnectionOut]:
     admin = state(request)
     connections = sorted(connections_of(admin).connections.values(), key=lambda c: c.created_at)
-    return [connection_out(admin, c, caller.phrasebook) for c in connections if reaches(caller.principal, c.owner)]
+    usage = await Usage.of(admin)
+    return [
+        connection_out(admin, c, caller.phrasebook, usage) for c in connections if reaches(caller.principal, c.owner)
+    ]
 
 
 @router.get("/connections/{connection_id}")
 async def get_connection(request: Request, caller: Connector, connection_id: str) -> ConnectionDetail:
     admin = state(request)
-    return connection_detail(admin, reachable(admin, caller, connection_id), caller.phrasebook)
+    connection = reachable(admin, caller, connection_id)
+    return connection_detail(admin, connection, caller.phrasebook, await Usage.of(admin))
 
 
 @router.patch("/connections/{connection_id}")
@@ -141,13 +184,13 @@ async def configure_connection(
     admin = state(request)
     connection = reachable(admin, caller, connection_id)
     if body.disabled_tools is not None:
-        known = {t.name for t in connection_detail(admin, connection, caller.phrasebook).tools}
+        known = {t.name for t in connection_detail(admin, connection, caller.phrasebook, await Usage.of(admin)).tools}
         if unknown := set(body.disabled_tools) - known:
             raise ApiError(400, "unknown_tool", tools=", ".join(sorted(unknown)))
     updated = await connections_of(admin).configure(
         connection.id, disabled_tools=body.disabled_tools, confirm_writes=body.confirm_writes
     )
-    return connection_detail(admin, updated, caller.phrasebook)
+    return connection_detail(admin, updated, caller.phrasebook, await Usage.of(admin))
 
 
 @router.delete("/connections/{connection_id}", status_code=204)

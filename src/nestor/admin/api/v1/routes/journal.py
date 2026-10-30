@@ -3,22 +3,27 @@
 import asyncio
 import json
 from collections.abc import AsyncIterator
-from typing import Annotated
+from datetime import datetime
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Header, Query, Request
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
-from nestor.admin.api.v1.errors import ApiError
+from nestor.admin.api.v1.errors import ApiError, not_found
 from nestor.admin.api.v1.feed import Audience, Feed, Filters
-from nestor.admin.api.v1.models import JournalItem, PersonRef
+from nestor.admin.api.v1.models import JournalItem, People
 from nestor.admin.api.v1.security import Caller, allowed
-from nestor.admin.presentation import CATEGORIES
+from nestor.admin.presentation import CATEGORIES, OTHER_KEY
 from nestor.admin.state import AdminState, state
+from nestor.core import PersonId, utc_now
 from nestor.modules.accounts import Scope
 
 router = APIRouter(tags=["journal"])
 Reader = Annotated[Caller, Depends(allowed(Scope.JOURNAL_READ_ALL, Scope.JOURNAL_READ_OWN))]
+KINDS = frozenset(c.key for c in CATEGORIES) | {OTHER_KEY}
+BUCKETS_S = (60, 300, 900, 1800, 3600, 3 * 3600, 6 * 3600, 12 * 3600, 86400, 7 * 86400, 30 * 86400)
+MAX_BUCKETS = 60
 
 
 class JournalPage(BaseModel):
@@ -26,56 +31,125 @@ class JournalPage(BaseModel):
     next_before: int | None  # pass it as `before` for the next (older) page; None at the beginning
 
 
-class KindOut(BaseModel):
+class FacetOut(BaseModel):
     key: str
     label: str
+    count: int  # entries kept by every other filter: a facet ignores its own selection
 
 
-class ChannelOut(BaseModel):
-    id: str  # the configured channel name, as journal items list it
-    brand: str | None
+class HistogramOut(BaseModel):
+    from_: datetime = Field(serialization_alias="from")
+    to: datetime
+    bucket_s: int
+    counts: list[int]  # entries kept by every filter, per bucket from `from`
 
 
-class JournalFilters(BaseModel):
-    kinds: list[KindOut]
-    people: list[PersonRef]
-    channels: list[ChannelOut]
+class JournalFacets(BaseModel):
+    total: int  # entries kept by every filter
+    truncated: bool  # counted over the newest entries in range only (see the API documentation)
+    kinds: list[FacetOut]
+    people: list[FacetOut]
+    channels: list[FacetOut]
+    rooms: list[FacetOut]
+    histogram: HistogramOut
 
 
-def _filters(kind: str, person: str, channel: str) -> Filters:
-    if kind and kind not in {c.key for c in CATEGORIES}:
-        raise ApiError(400, "unknown_kind", kind=kind)
-    return Filters(category=kind, person=person, channel=channel)
+class JournalEntryOut(BaseModel):
+    item: JournalItem
+    record: dict[str, Any]  # the raw logged record: type, version, id, at, source, session, payload
+
+
+def journal_filters(
+    kinds: Annotated[str, Query(description="kind keys, comma-separated")] = "",
+    person: str = "",
+    channel: str = "",
+    room: str = "",
+    q: Annotated[str, Query(description="words in the rendered text or the raw content")] = "",
+    from_: Annotated[datetime | None, Query(alias="from")] = None,
+    to: datetime | None = None,
+    tone: Annotated[Literal["", "normal", "decision", "warning"], Query()] = "",
+    session: str = "",
+    task: str = "",
+    watch: str = "",
+    connection: str = "",
+    satellite: str = "",
+) -> Filters:
+    chosen = frozenset(k.strip() for k in kinds.split(",") if k.strip())
+    if unknown := chosen - KINDS:
+        raise ApiError(400, "unknown_kind", kind=", ".join(sorted(unknown)))
+    return Filters(
+        kinds=chosen,
+        person=person,
+        channel=channel,
+        room=room,
+        q=q.strip(),
+        since=from_,
+        until=to,
+        tone=tone,
+        session=session,
+        task=task,
+        watch=watch,
+        connection=connection,
+        satellite=satellite,
+    )
+
+
+Chosen = Annotated[Filters, Depends(journal_filters)]
+
+
+async def _feed(request: Request, caller: Caller, filters: Filters) -> Feed:
+    admin = state(request)
+    audience = await Audience.of(caller.principal, admin.nestor.journal.log)
+    return Feed(admin, audience, filters, caller.phrasebook)
 
 
 @router.get("/journal")
 async def list_journal(
     request: Request,
     caller: Reader,
-    kind: str = "",
-    person: str = "",
-    channel: str = "",
-    before: Annotated[int | None, Query(ge=1)] = None,
+    filters: Chosen,
+    before: Annotated[int | None, Query(ge=1, description="a position: entries strictly before it")] = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
 ) -> JournalPage:
-    """`kind` is a key of `GET /journal/filters` kinds; `person` a person id; `channel` a channel name."""
-    admin = state(request)
-    audience = await Audience.of(caller.principal, admin.nestor.journal.log)
-    feed = Feed(admin, audience, _filters(kind, person, channel), caller.phrasebook)
+    """Newest first. `kinds` are keys of the facets; `person` a person id; `channel` a channel name; `from`
+    and `to` bound the time (`to` excluded); `session`, `task`, `watch`, `connection` and `satellite` keep
+    one thread."""
+    feed = await _feed(request, caller, filters)
     items, cursor = await feed.page(before=before, limit=limit)
     return JournalPage(items=items, next_before=cursor)
 
 
-@router.get("/journal/filters")
-async def get_journal_filters(request: Request, caller: Reader) -> JournalFilters:
-    nestor = state(request).nestor
-    return JournalFilters(
-        kinds=[KindOut(key=c.key, label=caller.phrasebook.kind(c.key)) for c in CATEGORIES],
-        people=[PersonRef(id=p.id, name=p.name) for p in nestor.household.people],
-        channels=[
-            ChannelOut(id=c.channel_id, brand=c.brand) for c in sorted(nestor.channels, key=lambda c: c.channel_id)
+@router.get("/journal/facets")
+async def get_journal_facets(request: Request, caller: Reader, filters: Chosen) -> JournalFacets:
+    """Counts for the same filters, over the newest 10 000 entries of the range."""
+    feed = await _feed(request, caller, filters)
+    facets = await feed.facets()
+    words, people = caller.phrasebook, People(state(request).nestor.household)
+    return JournalFacets(
+        total=facets.total,
+        truncated=facets.truncated,
+        kinds=[FacetOut(key=k, label=words.kind(k), count=n) for k, n in facets.kinds.most_common()],
+        people=[
+            FacetOut(key=k, label=ref.name if (ref := people.ref(PersonId(k))) else k, count=n)
+            for k, n in facets.people.most_common()
         ],
+        channels=[FacetOut(key=k, label=k, count=n) for k, n in facets.channels.most_common()],
+        rooms=[FacetOut(key=k, label=k, count=n) for k, n in facets.rooms.most_common()],
+        histogram=_histogram(facets.moments, filters),
     )
+
+
+def _histogram(moments: list[datetime], filters: Filters) -> HistogramOut:
+    start = filters.since or (min(moments) if moments else utc_now())
+    end = filters.until or (max(moments) if moments else start)
+    span = max(1.0, (end - start).total_seconds())
+    bucket = next((b for b in BUCKETS_S if span / b <= MAX_BUCKETS), BUCKETS_S[-1])
+    counts = [0] * (int(span // bucket) + 1)
+    for moment in moments:
+        index = int((moment - start).total_seconds() // bucket)
+        if 0 <= index < len(counts):
+            counts[index] += 1
+    return HistogramOut(from_=start, to=end, bucket_s=bucket, counts=counts)
 
 
 @router.get(
@@ -84,9 +158,9 @@ async def get_journal_filters(request: Request, caller: Reader) -> JournalFilter
     responses={
         200: {
             "description": (
-                "Server-Sent Events: `event: journal`, `id: <position>`, `data: <JournalItem as JSON>` (the schema "
-                "`JournalItem`); comment "
-                "lines as heartbeats. Resumes after `Last-Event-ID` (or `after`), else starts with new entries."
+                "Server-Sent Events: `event: item`, `id: <position>`, `data: <JournalItem as JSON>` (the schema "
+                "`JournalItem`); comment lines as heartbeats. Same filters as the list. Resumes after "
+                "`Last-Event-ID` (or `after`), else starts with new entries."
             ),
             "content": {"text/event-stream": {"schema": {"type": "string"}}},
         }
@@ -95,16 +169,12 @@ async def get_journal_filters(request: Request, caller: Reader) -> JournalFilter
 async def stream_journal(
     request: Request,
     caller: Reader,
-    kind: str = "",
-    person: str = "",
-    channel: str = "",
+    filters: Chosen,
     after: Annotated[int | None, Query(ge=0)] = None,
     last_event_id: Annotated[str | None, Header()] = None,
 ) -> StreamingResponse:
     admin = state(request)
-    filters = _filters(kind, person, channel)
-    audience = await Audience.of(caller.principal, admin.nestor.journal.log)
-    feed = Feed(admin, audience, filters, caller.phrasebook)
+    feed = await _feed(request, caller, filters)
     resume = last_event_id if last_event_id and last_event_id.isdigit() else None
     start = int(resume) if resume else after if after is not None else await feed.last_position()
     return StreamingResponse(
@@ -124,7 +194,7 @@ async def _events(admin: AdminState, caller: Caller, feed: Feed, position: int) 
         while True:
             items, position, more = await feed.after(position)
             for item in items:
-                yield f"id: {item.position}\nevent: journal\ndata: {json.dumps(item.model_dump(mode='json'))}\n\n"
+                yield f"id: {item.position}\nevent: item\ndata: {json.dumps(item.model_dump(mode='json'))}\n\n"
             if more:
                 continue
             if not _still_signed_in(admin, caller) or closing.done():
@@ -141,6 +211,17 @@ async def _events(admin: AdminState, caller: Caller, feed: Feed, position: int) 
     finally:
         closing.cancel()
         subscription.close()
+
+
+@router.get("/journal/{position}")
+async def get_journal_entry(request: Request, caller: Reader, position: int) -> JournalEntryOut:
+    """One entry, with its raw record; 404 when it does not exist or is out of reach."""
+    feed = await _feed(request, caller, Filters())
+    found = await feed.get(position)
+    if found is None:
+        raise not_found("journal_entry_unknown")
+    item, entry = found
+    return JournalEntryOut(item=item, record=dict(entry.record))
 
 
 def _still_signed_in(admin: AdminState, caller: Caller) -> bool:

@@ -43,7 +43,8 @@ src/nestor/
 │   ├── behavior/         attitude and expressions, translated by the plugged body
 │   └── journal/          the append-only event log, live subscriptions, blobs
 ├── runtime/              composition: configuration, adapter registry, lifecycle
-├── admin/                the web admin (connections, supervision) over the assembled Nestor
+├── admin/                the admin over the assembled Nestor: accounts sign in to a JSON API (`api/v1`) that
+│                         the web front of `web/` is built on; it also serves that front once built
 ├── cli.py                the `nestor` command, above runtime and admin
 ├── adapters/             adapters/<family>/<vendor>/ — the only place for third-party SDKs
 │   └── storage/          SQLite (one WAL database, migrations in schema.py), blobs on disk
@@ -63,7 +64,7 @@ New modules (memory, home, initiative, channels, identity, perception) and the `
 
 Layers only depend on more stable ones: `core` ← `modules` ← `runtime` ← `admin`; `testing` sees `core`
 and `modules`; adapters may import anything and are the only place for third-party SDKs; the
-runtime may assemble the built-in storage adapters, and the admin may use FastAPI and Jinja2.
+runtime may assemble the built-in storage adapters, and the admin may use FastAPI and pydantic.
 `tests/test_architecture.py` enforces it.
 
 ## Architecture rules

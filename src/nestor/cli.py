@@ -70,8 +70,6 @@ def main(argv: list[str] | None = None) -> int:
             names = ", ".join(c.channel_id for c in nestor.channels)
             admin = f", admin on {nestor.config.admin.host}:{nestor.config.admin.port}" if nestor.config.admin else ""
             print(f"{args.config}: OK — {len(nestor.executors)} executor(s), channels: {names}{admin}")
-            if nestor.config.admin and nestor.config.admin.password_hash is not None:
-                print("note: admin.password_hash is no longer used; run `nestor accounts create-owner`, then remove it")
             return 0
         asyncio.run(run_until_stopped(nestor, extras))
     except NestorError as error:

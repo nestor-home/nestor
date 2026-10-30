@@ -3,7 +3,7 @@
 import pytest
 
 from nestor.core import ContractError, Event, ProviderError, SessionId
-from nestor.modules.journal import Journal, LogQuery
+from nestor.modules.journal import Entry, Journal, LogQuery
 from nestor.testing.journal import (
     BlobStoreContract,
     EventLogContract,
@@ -55,6 +55,21 @@ async def test_the_contract_rejects_a_log_that_accepts_duplicates() -> None:
 
     with pytest.raises(AssertionError, match="ContractError was not raised"):
         await Suite().test_an_event_is_logged_only_once()
+
+
+async def test_the_contract_rejects_a_log_that_ignores_the_before_cursor() -> None:
+    from dataclasses import replace
+
+    class Unbounded(MemoryEventLog):
+        async def read(self, query: LogQuery) -> list[Entry]:
+            return await super().read(replace(query, before=None))
+
+    class Suite(EventLogContract):
+        def event_log(self) -> MemoryEventLog:
+            return Unbounded()
+
+    with pytest.raises(AssertionError):
+        await Suite().test_paging_back_from_a_position_lists_what_came_before_newest_first()
 
 
 async def test_subscribers_receive_published_events_of_their_types() -> None:

@@ -20,7 +20,13 @@ from nestor.admin.state import AdminState, state
 from nestor.core import Capability, ContractError, utc_now
 from nestor.modules.accounts import Scope
 from nestor.modules.channels import Medium
-from nestor.modules.satellites import PairingRefused, Satellite, SatellitePaired
+from nestor.modules.satellites import (
+    PairingRefused,
+    Satellite,
+    SatelliteConnected,
+    SatelliteDisconnected,
+    SatellitePaired,
+)
 
 router = APIRouter(tags=["satellites"])
 Pairer = Annotated[Caller, Depends(allowed(Scope.SATELLITES_MANAGE, local=True))]
@@ -44,7 +50,8 @@ class PendingOut(BaseModel):
     pairing_id: str
     device: DeviceOut
     capabilities: list[CapabilityOut]  # what it declares; all are offered, checked by default
-    sdk: str | None
+    sdk: str | None  # the software it declares
+    sdk_version: str | None
     expires_in_s: int
 
 
@@ -54,8 +61,10 @@ class SatelliteOut(BaseModel):
     room: str
     brand: str | None
     sdk: str | None  # the software it declared
+    sdk_version: str | None
     capabilities: list[CapabilityOut]  # what it may use
     paired_at: datetime
+    last_seen_at: datetime | None  # when it last connected or disconnected; None: never since pairing
     approved_by: PersonRef | None
     connected: bool | None  # its room can be heard right now; None without a spoken channel to tell
 
@@ -79,20 +88,26 @@ async def list_satellites(request: Request, caller: Pairer) -> SatellitesOut:
     now = utc_now()
     live = live_rooms(admin)
     people = People(admin.nestor.household)
+    seen = await last_seen(admin)
     return SatellitesOut(
         pending=[
             PendingOut(
                 pairing_id=p.id,
                 device=DeviceOut(id=p.device.id, model=p.device.model, room=p.device.room, brand=p.device.brand),
                 capabilities=_capabilities(p.capabilities, caller.phrasebook),
-                sdk=p.sdk,
+                sdk=p.sdk.name if p.sdk else None,
+                sdk_version=p.sdk.version if p.sdk else None,
                 expires_in_s=max(0, int((p.expires_at - now).total_seconds())),
             )
             for p in pairing.pending()
         ],
         paired=[
             _satellite(
-                s, people.ref(approvals[s.id].approved_by) if s.id in approvals else None, live, caller.phrasebook
+                s,
+                people.ref(approvals[s.id].approved_by) if s.id in approvals else None,
+                live,
+                caller.phrasebook,
+                seen.get(s.id),
             )
             for s in pairing.satellites()
         ],
@@ -129,8 +144,18 @@ async def revoke_satellite(request: Request, caller: Pairer, device_id: str) -> 
     return Response(status_code=204)
 
 
+async def last_seen(admin: AdminState) -> dict[str, datetime]:
+    """When each device last connected or disconnected (the latest wins)."""
+    events = await admin.nestor.journal.history(SatelliteConnected, SatelliteDisconnected)
+    return {e.device_id: e.at for e in events}
+
+
 def _satellite(
-    satellite: Satellite, approved_by: PersonRef | None, live: frozenset[str] | None, words: Phrasebook
+    satellite: Satellite,
+    approved_by: PersonRef | None,
+    live: frozenset[str] | None,
+    words: Phrasebook,
+    seen: datetime | None = None,
 ) -> SatelliteOut:
     return SatelliteOut(
         id=satellite.id,
@@ -138,8 +163,10 @@ def _satellite(
         room=satellite.room,
         brand=satellite.brand,
         sdk=satellite.sdk,
+        sdk_version=satellite.sdk_version,
         capabilities=_capabilities(satellite.capabilities, words),
         paired_at=satellite.paired_at,
+        last_seen_at=seen,
         approved_by=approved_by,
         connected=satellite.room in live if live is not None else None,
     )

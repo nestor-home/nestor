@@ -1,7 +1,7 @@
 """Admin sessions, kept in memory: a restart signs everyone out, which is acceptable for one household.
 
 The cookie carries a random session id and its HMAC signature; everything else (the account, the
-CSRF token, messages to show) stays on the server. A session belongs to one account and can be
+CSRF token) stays on the server. A session belongs to one account and can be
 revoked with every other session of that account.
 """
 
@@ -10,7 +10,7 @@ import hmac
 import secrets
 import time
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 
 @dataclass(slots=True, kw_only=True)
@@ -18,19 +18,7 @@ class Session:
     id: str
     csrf: str
     expires_at: float
-    account_id: str | None = None  # None: anonymous (the legacy login form's own CSRF token)
-    notices: list[str] = field(default_factory=list)  # shown once, on the next server-rendered page
-
-    @property
-    def authenticated(self) -> bool:
-        return self.account_id is not None
-
-    def notify(self, text: str) -> None:
-        self.notices.append(text)
-
-    def take_notices(self) -> list[str]:
-        notices, self.notices = self.notices, []
-        return notices
+    account_id: str
 
 
 class SessionStore:
@@ -39,7 +27,7 @@ class SessionStore:
         self._key = secrets.token_bytes(32)
         self._sessions: dict[str, Session] = {}
 
-    def open(self, account_id: str | None = None) -> Session:
+    def open(self, account_id: str) -> Session:
         """A new session, always with a fresh id: a session id planted before signing in is worth nothing."""
         self._evict()
         session = Session(
@@ -88,7 +76,4 @@ class SessionStore:
         for session_id in [i for i, s in self._sessions.items() if s.expires_at <= now]:
             del self._sessions[session_id]
         while len(self._sessions) >= self._limit:
-            # oldest first (dicts keep insertion order), anonymous ones before signed-in ones: opening
-            # the login page many times must not sign the household out
-            anonymous = next((i for i, s in self._sessions.items() if not s.authenticated), None)
-            del self._sessions[anonymous or next(iter(self._sessions))]
+            del self._sessions[next(iter(self._sessions))]  # the oldest (dicts keep insertion order)

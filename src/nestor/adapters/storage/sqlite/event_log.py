@@ -64,6 +64,9 @@ class SQLiteEventLog(EventLog):
     async def read(self, query: LogQuery) -> list[Entry]:
         where: list[str] = ["position > ?"]
         params: list[object] = [query.after]
+        if query.before is not None:
+            where.append("position < ?")
+            params.append(query.before)
         if query.types is not None:
             where.append(f"type IN ({', '.join('?' * len(query.types))})")
             params.extend(sorted(query.types))

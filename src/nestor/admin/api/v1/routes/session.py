@@ -7,9 +7,9 @@ from pydantic import BaseModel
 
 from nestor.admin.api.v1.errors import ApiError
 from nestor.admin.api.v1.language import account_locale
-from nestor.admin.api.v1.models import AccountOut, Input, People
+from nestor.admin.api.v1.models import AccountOut, AgentOut, Input, People
 from nestor.admin.api.v1.passwords import checked_password
-from nestor.admin.api.v1.security import Caller, signed_in
+from nestor.admin.api.v1.security import Caller, same_origin, signed_in
 from nestor.admin.auth import Session
 from nestor.admin.presentation import Phrasebook
 from nestor.admin.state import AdminState, state
@@ -29,7 +29,8 @@ class MeOut(BaseModel):
     locale: str  # the language it reads in: its choice, else the household's (`account.locale` is the choice)
     scopes: list[Scope]  # what the front may offer; the API checks them again on every request
     csrf_token: str  # send it back in `X-CSRF-Token` on every POST, PUT, PATCH and DELETE
-    assistant: str  # the assistant's name, for the front's header
+    assistant: str  # the assistant's name, for the front's header (also `agent.name`)
+    agent: AgentOut
 
 
 class LocaleIn(Input):
@@ -41,7 +42,7 @@ class PasswordChangeIn(Input):
     new_password: str
 
 
-@router.post("/session", status_code=200)
+@router.post("/session", status_code=200, dependencies=[Depends(same_origin)])
 async def create_session(request: Request, response: Response, body: LoginIn) -> MeOut:
     """Sign in. Throttled per client: after 5 failures, 429 with `Retry-After` for 15 minutes."""
     admin = state(request)
@@ -118,4 +119,5 @@ def _me(admin: AdminState, account: Account, session: Session) -> MeOut:
         scopes=sorted(account.principal().scopes),
         csrf_token=session.csrf,
         assistant=admin.nestor.config.persona.name,
+        agent=AgentOut.of(admin.nestor),
     )

@@ -28,8 +28,7 @@ ALLOWED_INTERNAL = {
 # Third-party packages allowed outside adapters, per layer. Each addition is a design decision.
 THIRD_PARTY_ALLOWED: dict[str, set[str]] = {
     "runtime": {"pydantic", "yaml"},  # validated configuration; never seen by modules
-    # the JSON API (pydantic response models) served next to Nestor; jinja2 until the server-rendered pages go
-    "admin": {"fastapi", "starlette", "pydantic", "jinja2", "uvicorn"},
+    "admin": {"fastapi", "starlette", "pydantic", "uvicorn"},  # the JSON API served next to Nestor
 }
 
 
@@ -79,9 +78,9 @@ def test_the_guard_catches_a_forbidden_import(tmp_path: Path, layer: str, source
     assert any(expected in v for v in violations(fake, package=tmp_path / "nestor"))
 
 
-# What people read is in `locales/*.ftl`, rendered by a `Localizer`: never a sentence in Python. The
-# server-rendered admin pages are the one exception left: they go away, whole, with the web front.
-SENTENCE_FREE_EXCEPTIONS = ("testing/", "admin/pages/")
+# What people read is in `locales/*.ftl`, rendered by a `Localizer`: never a sentence in Python (test
+# doubles aside: their data is French on purpose).
+SENTENCE_FREE_EXCEPTIONS = ("testing/",)
 _FRENCH = re.compile(r"[àâçéèêëîïôûùüÿœæÀÂÇÉÈÊËÎÏÔÛÙÜŸŒ«»]")
 
 

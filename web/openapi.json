@@ -3311,18 +3311,51 @@
           "journal"
         ],
         "summary": "List Journal",
-        "description": "`kind` is a key of `GET /journal/filters` kinds; `person` a person id; `channel` a channel name.",
+        "description": "Newest first. `kinds` are keys of the facets; `person` a person id; `channel` a channel name; `from`\nand `to` bound the time (`to` excluded); `session`, `task`, `watch`, `connection` and `satellite` keep\none thread.",
         "operationId": "listJournal",
         "parameters": [
           {
-            "name": "kind",
+            "name": "before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "a position: entries strictly before it",
+              "title": "Before"
+            },
+            "description": "a position: entries strictly before it"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "kinds",
             "in": "query",
             "required": false,
             "schema": {
               "type": "string",
+              "description": "kind keys, comma-separated",
               "default": "",
-              "title": "Kind"
-            }
+              "title": "Kinds"
+            },
+            "description": "kind keys, comma-separated"
           },
           {
             "name": "person",
@@ -3345,32 +3378,125 @@
             }
           },
           {
-            "name": "before",
+            "name": "room",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Room"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "words in the rendered text or the raw content",
+              "default": "",
+              "title": "Q"
+            },
+            "description": "words in the rendered text or the raw content"
+          },
+          {
+            "name": "from",
             "in": "query",
             "required": false,
             "schema": {
               "anyOf": [
                 {
-                  "type": "integer",
-                  "minimum": 1
+                  "type": "string",
+                  "format": "date-time"
                 },
                 {
                   "type": "null"
                 }
               ],
-              "title": "Before"
+              "title": "From"
             }
           },
           {
-            "name": "limit",
+            "name": "to",
             "in": "query",
             "required": false,
             "schema": {
-              "type": "integer",
-              "maximum": 200,
-              "minimum": 1,
-              "default": 50,
-              "title": "Limit"
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
+          {
+            "name": "tone",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "",
+                "normal",
+                "decision",
+                "warning"
+              ],
+              "type": "string",
+              "default": "",
+              "title": "Tone"
+            }
+          },
+          {
+            "name": "session",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Session"
+            }
+          },
+          {
+            "name": "task",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Task"
+            }
+          },
+          {
+            "name": "watch",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Watch"
+            }
+          },
+          {
+            "name": "connection",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Connection"
+            }
+          },
+          {
+            "name": "satellite",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Satellite"
             }
           }
         ],
@@ -3468,124 +3594,26 @@
         }
       }
     },
-    "/api/v1/journal/filters": {
+    "/api/v1/journal/facets": {
       "get": {
         "tags": [
           "journal"
         ],
-        "summary": "Get Journal Filters",
-        "operationId": "getJournalFilters",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/JournalFilters"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflict",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Unprocessable Entity",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Too Many Requests",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "Bad Gateway",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/journal/stream": {
-      "get": {
-        "tags": [
-          "journal"
-        ],
-        "summary": "Stream Journal",
-        "operationId": "streamJournal",
+        "summary": "Get Journal Facets",
+        "description": "Counts for the same filters, over the newest 10 000 entries of the range.",
+        "operationId": "getJournalFacets",
         "parameters": [
           {
-            "name": "kind",
+            "name": "kinds",
             "in": "query",
             "required": false,
             "schema": {
               "type": "string",
+              "description": "kind keys, comma-separated",
               "default": "",
-              "title": "Kind"
-            }
+              "title": "Kinds"
+            },
+            "description": "kind keys, comma-separated"
           },
           {
             "name": "person",
@@ -3608,6 +3636,231 @@
             }
           },
           {
+            "name": "room",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Room"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "words in the rendered text or the raw content",
+              "default": "",
+              "title": "Q"
+            },
+            "description": "words in the rendered text or the raw content"
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
+          {
+            "name": "tone",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "",
+                "normal",
+                "decision",
+                "warning"
+              ],
+              "type": "string",
+              "default": "",
+              "title": "Tone"
+            }
+          },
+          {
+            "name": "session",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Session"
+            }
+          },
+          {
+            "name": "task",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Task"
+            }
+          },
+          {
+            "name": "watch",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Watch"
+            }
+          },
+          {
+            "name": "connection",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Connection"
+            }
+          },
+          {
+            "name": "satellite",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Satellite"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JournalFacets"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Bad Gateway"
+          }
+        }
+      }
+    },
+    "/api/v1/journal/stream": {
+      "get": {
+        "tags": [
+          "journal"
+        ],
+        "summary": "Stream Journal",
+        "operationId": "streamJournal",
+        "parameters": [
+          {
             "name": "after",
             "in": "query",
             "required": false,
@@ -3622,6 +3875,160 @@
                 }
               ],
               "title": "After"
+            }
+          },
+          {
+            "name": "kinds",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "kind keys, comma-separated",
+              "default": "",
+              "title": "Kinds"
+            },
+            "description": "kind keys, comma-separated"
+          },
+          {
+            "name": "person",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Person"
+            }
+          },
+          {
+            "name": "channel",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Channel"
+            }
+          },
+          {
+            "name": "room",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Room"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "words in the rendered text or the raw content",
+              "default": "",
+              "title": "Q"
+            },
+            "description": "words in the rendered text or the raw content"
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
+          {
+            "name": "tone",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "",
+                "normal",
+                "decision",
+                "warning"
+              ],
+              "type": "string",
+              "default": "",
+              "title": "Tone"
+            }
+          },
+          {
+            "name": "session",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Session"
+            }
+          },
+          {
+            "name": "task",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Task"
+            }
+          },
+          {
+            "name": "watch",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Watch"
+            }
+          },
+          {
+            "name": "connection",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Connection"
+            }
+          },
+          {
+            "name": "satellite",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Satellite"
             }
           },
           {
@@ -3643,11 +4050,124 @@
         ],
         "responses": {
           "200": {
-            "description": "Server-Sent Events: `event: journal`, `id: <position>`, `data: <JournalItem as JSON>` (the schema `JournalItem`); comment lines as heartbeats. Resumes after `Last-Event-ID` (or `after`), else starts with new entries.",
+            "description": "Server-Sent Events: `event: item`, `id: <position>`, `data: <JournalItem as JSON>` (the schema `JournalItem`); comment lines as heartbeats. Same filters as the list. Resumes after `Last-Event-ID` (or `after`), else starts with new entries.",
             "content": {
               "text/event-stream": {
                 "schema": {
                   "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Bad Gateway"
+          }
+        }
+      }
+    },
+    "/api/v1/journal/{position}": {
+      "get": {
+        "tags": [
+          "journal"
+        ],
+        "summary": "Get Journal Entry",
+        "description": "One entry, with its raw record; 404 when it does not exist or is out of reach.",
+        "operationId": "getJournalEntry",
+        "parameters": [
+          {
+            "name": "position",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Position"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JournalEntryOut"
                 }
               }
             }
@@ -4685,6 +5205,29 @@
         ],
         "title": "AccountOut"
       },
+      "AgentOut": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "online",
+              "degraded"
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "status"
+        ],
+        "title": "AgentOut",
+        "description": "The assistant itself, as the front's sidebar shows it."
+      },
       "ApprovalIn": {
         "properties": {
           "code": {
@@ -4810,31 +5353,6 @@
         ],
         "title": "CapabilityOut"
       },
-      "ChannelOut": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "brand": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Brand"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "brand"
-        ],
-        "title": "ChannelOut"
-      },
       "ClientIn": {
         "properties": {
           "client_id": {
@@ -4856,17 +5374,17 @@
       },
       "ComponentOut": {
         "properties": {
-          "family": {
+          "slot": {
             "type": "string",
-            "title": "Family"
-          },
-          "kind": {
-            "type": "string",
-            "title": "Kind"
+            "title": "Slot"
           },
           "name": {
             "type": "string",
             "title": "Name"
+          },
+          "adapter": {
+            "type": "string",
+            "title": "Adapter"
           },
           "brand": {
             "anyOf": [
@@ -4918,6 +5436,17 @@
               }
             ]
           },
+          "health_detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Health Detail"
+          },
           "details": {
             "additionalProperties": {
               "type": "string"
@@ -4928,14 +5457,15 @@
         },
         "type": "object",
         "required": [
-          "family",
-          "kind",
+          "slot",
           "name",
+          "adapter",
           "brand",
           "version",
           "distribution",
           "capabilities",
           "health",
+          "health_detail",
           "details"
         ],
         "title": "ComponentOut"
@@ -5002,6 +5532,26 @@
             "format": "date-time",
             "title": "Created At"
           },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At"
+          },
+          "calls_today": {
+            "type": "integer",
+            "title": "Calls Today"
+          },
+          "watches": {
+            "type": "integer",
+            "title": "Watches"
+          },
           "tools": {
             "items": {
               "$ref": "#/components/schemas/ToolOut"
@@ -5023,6 +5573,9 @@
           "confirm_writes",
           "disabled_tools",
           "created_at",
+          "last_used_at",
+          "calls_today",
+          "watches",
           "tools"
         ],
         "title": "ConnectionDetail"
@@ -5088,6 +5641,26 @@
             "type": "string",
             "format": "date-time",
             "title": "Created At"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At"
+          },
+          "calls_today": {
+            "type": "integer",
+            "title": "Calls Today"
+          },
+          "watches": {
+            "type": "integer",
+            "title": "Watches"
           }
         },
         "type": "object",
@@ -5102,7 +5675,10 @@
           "status_label",
           "confirm_writes",
           "disabled_tools",
-          "created_at"
+          "created_at",
+          "last_used_at",
+          "calls_today",
+          "watches"
         ],
         "title": "ConnectionOut"
       },
@@ -5228,6 +5804,37 @@
         ],
         "title": "CorrectionIn"
       },
+      "DeliveredOut": {
+        "properties": {
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "At"
+          },
+          "channel": {
+            "type": "string",
+            "title": "Channel"
+          },
+          "room": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Room"
+          }
+        },
+        "type": "object",
+        "required": [
+          "at",
+          "channel",
+          "room"
+        ],
+        "title": "DeliveredOut"
+      },
       "DeviceOut": {
         "properties": {
           "id": {
@@ -5293,6 +5900,29 @@
         ],
         "title": "ErrorOut"
       },
+      "FacetOut": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "count"
+        ],
+        "title": "FacetOut"
+      },
       "FieldOut": {
         "properties": {
           "name": {
@@ -5337,6 +5967,39 @@
         ],
         "title": "Health",
         "description": "What a running component can tell about itself."
+      },
+      "HistogramOut": {
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date-time",
+            "title": "From"
+          },
+          "to": {
+            "type": "string",
+            "format": "date-time",
+            "title": "To"
+          },
+          "bucket_s": {
+            "type": "integer",
+            "title": "Bucket S"
+          },
+          "counts": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Counts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "from",
+          "to",
+          "bucket_s",
+          "counts"
+        ],
+        "title": "HistogramOut"
       },
       "InvitationAcceptIn": {
         "properties": {
@@ -5520,43 +6183,87 @@
         ],
         "title": "InvitationTokenIn"
       },
-      "JournalFilters": {
+      "JournalEntryOut": {
         "properties": {
+          "item": {
+            "$ref": "#/components/schemas/JournalItem"
+          },
+          "record": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Record"
+          }
+        },
+        "type": "object",
+        "required": [
+          "item",
+          "record"
+        ],
+        "title": "JournalEntryOut"
+      },
+      "JournalFacets": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "truncated": {
+            "type": "boolean",
+            "title": "Truncated"
+          },
           "kinds": {
             "items": {
-              "$ref": "#/components/schemas/KindOut"
+              "$ref": "#/components/schemas/FacetOut"
             },
             "type": "array",
             "title": "Kinds"
           },
           "people": {
             "items": {
-              "$ref": "#/components/schemas/PersonRef"
+              "$ref": "#/components/schemas/FacetOut"
             },
             "type": "array",
             "title": "People"
           },
           "channels": {
             "items": {
-              "$ref": "#/components/schemas/ChannelOut"
+              "$ref": "#/components/schemas/FacetOut"
             },
             "type": "array",
             "title": "Channels"
+          },
+          "rooms": {
+            "items": {
+              "$ref": "#/components/schemas/FacetOut"
+            },
+            "type": "array",
+            "title": "Rooms"
+          },
+          "histogram": {
+            "$ref": "#/components/schemas/HistogramOut"
           }
         },
         "type": "object",
         "required": [
+          "total",
+          "truncated",
           "kinds",
           "people",
-          "channels"
+          "channels",
+          "rooms",
+          "histogram"
         ],
-        "title": "JournalFilters"
+        "title": "JournalFacets"
       },
       "JournalItem": {
         "properties": {
           "position": {
             "type": "integer",
             "title": "Position"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
           },
           "at": {
             "type": "string",
@@ -5617,16 +6324,12 @@
           "reason": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/MessageOut"
+                "$ref": "#/components/schemas/ReasonOut"
               },
               {
                 "type": "null"
               }
             ]
-          },
-          "reason_text": {
-            "type": "string",
-            "title": "Reason Text"
           },
           "tone": {
             "type": "string",
@@ -5651,7 +6354,7 @@
             "type": "array",
             "title": "Channels"
           },
-          "session": {
+          "room": {
             "anyOf": [
               {
                 "type": "string"
@@ -5660,9 +6363,9 @@
                 "type": "null"
               }
             ],
-            "title": "Session"
+            "title": "Room"
           },
-          "task_id": {
+          "tool": {
             "anyOf": [
               {
                 "type": "string"
@@ -5671,9 +6374,19 @@
                 "type": "null"
               }
             ],
-            "title": "Task Id"
+            "title": "Tool"
           },
-          "watch_id": {
+          "outcome": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OutcomeOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "brand": {
             "anyOf": [
               {
                 "type": "string"
@@ -5682,115 +6395,27 @@
                 "type": "null"
               }
             ],
-            "title": "Watch Id"
+            "title": "Brand"
           },
-          "call_id": {
+          "links": {
+            "$ref": "#/components/schemas/LinksOut"
+          },
+          "cause": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "integer"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Call Id"
-          },
-          "turn": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Turn"
-          },
-          "item_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Item Id"
-          },
-          "connection_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Connection Id"
-          },
-          "device_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Device Id"
-          },
-          "pairing_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Pairing Id"
-          },
-          "memory_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Memory Id"
-          },
-          "account_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Account Id"
-          },
-          "invitation_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Invitation Id"
-          },
-          "id": {
-            "type": "string",
-            "title": "Id"
+            "title": "Cause"
           }
         },
         "type": "object",
         "required": [
           "position",
+          "id",
           "at",
           "type",
           "kind",
@@ -5801,26 +6426,18 @@
           "detail_message",
           "detail_text",
           "reason",
-          "reason_text",
           "tone",
           "people",
           "channels",
-          "session",
-          "task_id",
-          "watch_id",
-          "call_id",
-          "turn",
-          "item_id",
-          "connection_id",
-          "device_id",
-          "pairing_id",
-          "memory_id",
-          "account_id",
-          "invitation_id",
-          "id"
+          "room",
+          "tool",
+          "outcome",
+          "brand",
+          "links",
+          "cause"
         ],
         "title": "JournalItem",
-        "description": "One journal entry: each sentence as a message (`id` + `args`, for a front with the catalogue) and\nas `*text`, rendered by the server in the reader's language (so a plugin's events read well even\nwhen the front has no message for them)."
+        "description": "One journal entry: each sentence as a message (`id` + `args`, for a front with the catalogue) and\nas text rendered by the server in the reader's language (so a plugin's events read well even when\nthe front has no message for them)."
       },
       "JournalPage": {
         "properties": {
@@ -5850,24 +6467,6 @@
         ],
         "title": "JournalPage"
       },
-      "KindOut": {
-        "properties": {
-          "key": {
-            "type": "string",
-            "title": "Key"
-          },
-          "label": {
-            "type": "string",
-            "title": "Label"
-          }
-        },
-        "type": "object",
-        "required": [
-          "key",
-          "label"
-        ],
-        "title": "KindOut"
-      },
       "LanguagesOut": {
         "properties": {
           "locales": {
@@ -5893,6 +6492,123 @@
           "household"
         ],
         "title": "LanguagesOut"
+      },
+      "LinksOut": {
+        "properties": {
+          "session": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session"
+          },
+          "turn": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Turn"
+          },
+          "call": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Call"
+          },
+          "task": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task"
+          },
+          "watch": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Watch"
+          },
+          "delivery": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delivery"
+          },
+          "connection": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Connection"
+          },
+          "satellite": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Satellite"
+          },
+          "memory": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Memory"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session",
+          "turn",
+          "call",
+          "task",
+          "watch",
+          "delivery",
+          "connection",
+          "satellite",
+          "memory"
+        ],
+        "title": "LinksOut",
+        "description": "What threads entries together; the front builds threads and chains from these only."
       },
       "LocaleIn": {
         "properties": {
@@ -5957,6 +6673,9 @@
           "assistant": {
             "type": "string",
             "title": "Assistant"
+          },
+          "agent": {
+            "$ref": "#/components/schemas/AgentOut"
           }
         },
         "type": "object",
@@ -5965,7 +6684,8 @@
           "locale",
           "scopes",
           "csrf_token",
-          "assistant"
+          "assistant",
+          "agent"
         ],
         "title": "MeOut"
       },
@@ -6010,6 +6730,28 @@
             ],
             "title": "Learnt In"
           },
+          "session": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session"
+          },
+          "learnt_event": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Learnt Event"
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",
@@ -6032,6 +6774,8 @@
           "about",
           "told_by",
           "learnt_in",
+          "session",
+          "learnt_event",
           "created_at",
           "updated_at",
           "editable"
@@ -6070,6 +6814,19 @@
         "title": "MessageOut",
         "description": "A message as data: a front with its own Fluent catalogue renders `id` with `args` itself."
       },
+      "NestorOut": {
+        "properties": {
+          "version": {
+            "type": "string",
+            "title": "Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version"
+        ],
+        "title": "NestorOut"
+      },
       "OAuthClientOut": {
         "properties": {
           "registered": {
@@ -6104,6 +6861,42 @@
           "relayed"
         ],
         "title": "OAuthClientOut"
+      },
+      "OriginOut": {
+        "properties": {
+          "session": {
+            "type": "string",
+            "title": "Session"
+          },
+          "channel": {
+            "type": "string",
+            "title": "Channel"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session",
+          "channel"
+        ],
+        "title": "OriginOut"
+      },
+      "OutcomeOut": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "duration_s": {
+            "type": "number",
+            "title": "Duration S"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ok",
+          "duration_s"
+        ],
+        "title": "OutcomeOut"
       },
       "PasswordChangeIn": {
         "properties": {
@@ -6165,6 +6958,17 @@
             ],
             "title": "Sdk"
           },
+          "sdk_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sdk Version"
+          },
           "expires_in_s": {
             "type": "integer",
             "title": "Expires In S"
@@ -6176,6 +6980,7 @@
           "device",
           "capabilities",
           "sdk",
+          "sdk_version",
           "expires_in_s"
         ],
         "title": "PendingOut"
@@ -6298,6 +7103,23 @@
         ],
         "title": "PresenceOut"
       },
+      "ReasonOut": {
+        "properties": {
+          "message": {
+            "$ref": "#/components/schemas/MessageOut"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message",
+          "text"
+        ],
+        "title": "ReasonOut"
+      },
       "Risk": {
         "type": "string",
         "enum": [
@@ -6366,6 +7188,17 @@
             ],
             "title": "Sdk"
           },
+          "sdk_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sdk Version"
+          },
           "capabilities": {
             "items": {
               "$ref": "#/components/schemas/CapabilityOut"
@@ -6377,6 +7210,18 @@
             "type": "string",
             "format": "date-time",
             "title": "Paired At"
+          },
+          "last_seen_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Seen At"
           },
           "approved_by": {
             "anyOf": [
@@ -6407,8 +7252,10 @@
           "room",
           "brand",
           "sdk",
+          "sdk_version",
           "capabilities",
           "paired_at",
+          "last_seen_at",
           "approved_by",
           "connected"
         ],
@@ -6507,9 +7354,11 @@
       },
       "SystemOut": {
         "properties": {
-          "version": {
-            "type": "string",
-            "title": "Version"
+          "nestor": {
+            "$ref": "#/components/schemas/NestorOut"
+          },
+          "agent": {
+            "$ref": "#/components/schemas/AgentOut"
           },
           "components": {
             "items": {
@@ -6521,7 +7370,8 @@
         },
         "type": "object",
         "required": [
-          "version",
+          "nestor",
+          "agent",
           "components"
         ],
         "title": "SystemOut"
@@ -6558,8 +7408,17 @@
             ]
           },
           "origin": {
-            "type": "string",
-            "title": "Origin"
+            "$ref": "#/components/schemas/OriginOut"
+          },
+          "delivered": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeliveredOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "started_at": {
             "type": "string",
@@ -6605,6 +7464,7 @@
           "status_label",
           "requested_by",
           "origin",
+          "delivered",
           "started_at",
           "steps",
           "result",
@@ -6732,6 +7592,32 @@
               }
             ],
             "title": "Until"
+          },
+          "origin": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OriginOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "triggered": {
+            "type": "integer",
+            "title": "Triggered"
+          },
+          "last_triggered_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Triggered At"
           }
         },
         "type": "object",
@@ -6743,7 +7629,10 @@
           "owner",
           "once",
           "created_at",
-          "until"
+          "until",
+          "origin",
+          "triggered",
+          "last_triggered_at"
         ],
         "title": "WatchOut"
       },

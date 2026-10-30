@@ -153,7 +153,8 @@ class Pairing(Component):
             capabilities=tuple(sorted(allowed)),
             token_hash=hash_token(token),
             approved_by=by,
-            sdk=request.manifest.sdk,
+            sdk=request.manifest.sdk.name if request.manifest.sdk else None,
+            sdk_version=request.manifest.sdk.version if request.manifest.sdk else None,
         )
         await self.journal.publish(event)
         satellite = self._satellites[event.device.id] = _satellite(event)
@@ -194,4 +195,5 @@ def _satellite(event: SatellitePaired) -> Satellite:
         paired_at=event.at,
         brand=event.device.brand,
         sdk=event.sdk,
+        sdk_version=event.sdk_version,
     )

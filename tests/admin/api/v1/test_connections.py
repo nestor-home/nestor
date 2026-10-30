@@ -298,3 +298,32 @@ async def test_no_secret_is_ever_returned(tmp_path: Path) -> None:
         for seen in admin.seen:
             for secret in (CLIENT_SECRET, tokens["access_token"], tokens["refresh_token"]):
                 assert secret not in seen
+
+
+@pytest.mark.parametrize(
+    ("public_url", "direct"),
+    [
+        ("https://nestor.example", True),
+        ("http://localhost:8080", True),
+        ("http://127.0.0.1:8080", True),
+        ("http://[::1]:8080", True),
+        ("http://192.168.1.20:8080", False),
+        ("http://nestor.local:8080", False),
+    ],
+)
+async def test_the_provider_comes_back_directly_only_over_https_or_to_this_machine(
+    tmp_path: Path, public_url: str, direct: bool
+) -> None:
+    async with Harness(tmp_path, public_url=public_url) as admin:
+        api = await admin.api()
+        await register(api)
+        sent = query(await begin(api))
+        assert sent["redirect_uri"] == (f"{public_url}/connections/callback" if direct else RELAY)
+        assert ("." in sent["state"]) is not direct, "only the relay needs to be told where this admin is"
+
+
+async def test_the_relay_page_is_served_as_a_standalone_page(tmp_path: Path) -> None:
+    async with Harness(tmp_path) as admin:
+        page = await admin.browser.get("/static/relay/oauth.html")
+        assert page.status_code == 200 and "relay.js" in page.text
+        assert (await admin.browser.get("/static/admin.css")).status_code != 200

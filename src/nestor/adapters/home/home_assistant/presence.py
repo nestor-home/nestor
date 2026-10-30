@@ -24,6 +24,7 @@ from nestor.adapters.home.home_assistant.installation import (
     parse,
 )
 from nestor.core import Health, ProviderError
+from nestor.core.i18n import Message
 from nestor.modules.home import Granularity, Presence, PresenceSource, Whereabouts
 
 logger = logging.getLogger(__name__)
@@ -92,6 +93,9 @@ class HomeAssistantPresence(PresenceSource):
     def health(self) -> Health:
         """Unavailable while disconnected: everyone is unknown until it reconnects."""
         return Health.STARTED if self._installation is not None else Health.UNAVAILABLE
+
+    def health_detail(self) -> Message | None:
+        return None if self._installation is not None else Message.of("health-home-assistant-disconnected")
 
     def presence(self) -> Presence:
         if self._installation is None:

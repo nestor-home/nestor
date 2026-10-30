@@ -20,10 +20,8 @@ journal-user-said = { $known ->
     [no] Quelqu'un a dit
    *[yes] { $person } a dit
 }
-journal-assistant-answered = { $interrupted ->
-    [yes] { $assistant } a répondu (interrompu)
-   *[no] { $assistant } a répondu
-}
+journal-assistant-answered = { $assistant } a répondu
+journal-assistant-interrupted = { $assistant } a répondu (interrompu)
 journal-fallback = Réponse de secours : { $reason ->
     [model_unavailable] modèle indisponible
     [model_slow] modèle trop lent

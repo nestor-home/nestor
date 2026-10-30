@@ -26,6 +26,7 @@ from nestor.modules.satellites.types import (
     PairingTicket,
     PendingPairing,
     Satellite,
+    Sdk,
 )
 
 __all__ = [
@@ -51,6 +52,7 @@ __all__ = [
     "SatellitePaired",
     "SatellitePairingRequested",
     "SatelliteRevoked",
+    "Sdk",
     "SpeechActivityObserved",
     "hash_token",
 ]

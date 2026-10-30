@@ -1,10 +1,9 @@
 """What every route shares: the running Nestor, the settings, sessions, throttling, pending OAuth flows."""
 
 import asyncio
-from collections.abc import Awaitable, Callable
 from typing import cast
 
-from fastapi import Request, Response
+from fastapi import Request
 
 from nestor.admin.auth import LoginThrottle, PendingFlows, SessionCookie, SessionStore
 from nestor.admin.connecting import Connecting
@@ -23,7 +22,6 @@ class AdminState:
         self.connecting = Connecting(nestor.connections, settings, self.flows) if nestor.connections else None
         self.api_token: str | None = None  # issued by the server at startup; the CLI routes are closed until then
         self.closing = asyncio.Event()  # set when the server stops: live streams end instead of holding it
-        self.page_errors: Callable[[Request, Exception], Awaitable[Response]] | None = None  # set by the pages
 
     def base_url(self, request: Request) -> str:
         """The admin's own address, as the household's browsers reach it."""

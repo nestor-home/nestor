@@ -6,6 +6,7 @@ from types import TracebackType
 from typing import Self
 
 from nestor.core.contracts.capabilities import Capabilities
+from nestor.core.i18n import Message
 
 
 class Health(StrEnum):
@@ -30,6 +31,10 @@ class Component:
     def health(self) -> Health:
         """Whether it can serve right now; a component that cannot tell says it runs."""
         return Health.STARTED
+
+    def health_detail(self) -> Message | None:
+        """Why it is degraded or unavailable, for people (a message of the component's catalogue)."""
+        return None
 
     def details(self) -> Mapping[str, str]:
         """What people may want to know about it (its model, its speech service…), never a secret."""

@@ -6,10 +6,11 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict
 
 from nestor.admin.presentation import Phrasebook
-from nestor.core import PersonId
+from nestor.core import Health, PersonId
 from nestor.core.i18n import Message
 from nestor.modules.accounts import Account, Role
 from nestor.modules.household import Household
+from nestor.runtime import Nestor
 
 
 class Input(BaseModel):
@@ -75,55 +76,58 @@ Kind = Literal[
 ]
 
 
+class LinksOut(BaseModel):
+    """What threads entries together; the front builds threads and chains from these only."""
+
+    session: str | None  # the conversation (`channel:conversation`)
+    turn: str | None  # an assistant turn's event id (its own, or the one an answer cut refers to)
+    call: str | None  # a tool call: called, then completed
+    task: str | None
+    watch: str | None
+    delivery: (
+        str | None
+    )  # what an unprompted message is about (`watch:w1`, `task:3f2a`): considered, delivered, followed up
+    connection: str | None
+    satellite: str | None  # a device id
+    memory: str | None
+
+
+class OutcomeOut(BaseModel):
+    ok: bool
+    duration_s: float
+
+
+class ReasonOut(BaseModel):
+    message: MessageOut
+    text: str
+
+
 class JournalItem(BaseModel):
     """One journal entry: each sentence as a message (`id` + `args`, for a front with the catalogue) and
-    as `*text`, rendered by the server in the reader's language (so a plugin's events read well even
-    when the front has no message for them)."""
+    as text rendered by the server in the reader's language (so a plugin's events read well even when
+    the front has no message for them)."""
 
-    position: int  # grows with every entry: the cursor of pages and of the live stream (`Last-Event-ID`)
+    position: int  # grows with every entry: the cursor of pages, of the stream (`Last-Event-ID`), of `cause`
+    id: str  # the event's own id
     at: datetime
     type: str  # the event type, e.g. `conversation.turn.user`
     kind: Kind
-    kind_label: str  # rendered, as `GET /journal/filters` lists it
-    message: MessageOut  # the summary
+    kind_label: str
+    message: MessageOut  # the summary; deliveries carry `args.follow_up` ("yes" / "no")
     text: str
     detail: str  # raw content (what was said, a tool's output): never translated; "" without
     detail_message: MessageOut | None  # a detail that is a sentence of Nestor's ("Planned: …")
     detail_text: str  # what to show as detail: `detail_message` rendered, else `detail`
-    reason: MessageOut | None  # why the assistant decided to speak, when it did
-    reason_text: str
+    reason: ReasonOut | None  # why the assistant decided to speak, when it did
     tone: Tone
     people: list[PersonRef]
     channels: list[str]
-    # What links entries together (threads, causal chains); each is None when the event has none.
-    session: str | None  # the conversation (`channel:conversation`) it belongs to
-    task_id: str | None
-    watch_id: str | None
-    call_id: str | None  # a tool call: `agent.tool.called` and its `agent.tool.completed`
-    turn: str | None  # the `conversation.turn.assistant` entry id an answer cut refers to
-    item_id: str | None  # the inbound item (a mail) a watch triggered on
-    connection_id: str | None
-    device_id: str | None  # a satellite
-    pairing_id: str | None
-    memory_id: str | None
-    account_id: str | None
-    invitation_id: str | None
-    id: str  # the event's own id (what `turn` refers to)
-
-
-LINKS = (
-    "task_id",
-    "watch_id",
-    "call_id",
-    "turn",
-    "item_id",
-    "connection_id",
-    "device_id",
-    "pairing_id",
-    "memory_id",
-    "account_id",
-    "invitation_id",
-)
+    room: str | None
+    tool: str | None  # the tool called
+    outcome: OutcomeOut | None  # of a tool call or a task
+    brand: str | None  # of the channel, connector, satellite or executor it came through
+    links: LinksOut
+    cause: int | None  # the position of the entry that caused this one, when known
 
 
 class AccountOut(BaseModel):
@@ -148,3 +152,16 @@ class AccountOut(BaseModel):
             created_at=account.created_at,
             locale=account.locale,
         )
+
+
+class AgentOut(BaseModel):
+    """The assistant itself, as the front's sidebar shows it."""
+
+    name: str  # the persona's name ("Richie")
+    status: Literal["online", "degraded"]  # degraded: its model or one of its channels cannot serve now
+
+    @classmethod
+    def of(cls, nestor: Nestor) -> "AgentOut":
+        required = [nestor.model, *nestor.channels]
+        degraded = any(c.health() is not Health.STARTED for c in required)
+        return cls(name=nestor.config.persona.name, status="degraded" if degraded else "online")

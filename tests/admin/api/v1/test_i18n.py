@@ -23,10 +23,8 @@ async def test_an_account_reads_in_the_household_language_until_it_chooses_anoth
         assert chosen["locale"] == "en" and chosen["account"]["role_label"] == "owner"
         missing = await api.get("/api/v1/memories/nope")
         assert missing.json()["error"]["message"] == "This does not exist (or no longer)."
-        assert (await api.get("/api/v1/journal/filters")).json()["kinds"][0] == {
-            "key": "conversation",
-            "label": "Conversations",
-        }
+        kinds = (await api.get("/api/v1/journal/facets")).json()["kinds"]
+        assert {"key": "account", "label": "Accounts", "count": 3} in kinds
         (changed,) = await admin.nestor.journal.history(AccountLocaleChanged)
         assert changed.locale == "en"
         assert (await api.put("/api/v1/me/locale", {"locale": None})).json()["locale"] == "fr"
@@ -37,8 +35,8 @@ async def test_the_household_reads_the_journal_each_in_their_language(tmp_path: 
         await admin.account("lucie", Role.ADMIN, "lucie")
         lucie = await admin.api("lucie")
         await lucie.put("/api/v1/me/locale", {"locale": "en"})
-        english = (await lucie.get("/api/v1/journal", kind="account")).json()["items"]
-        french = (await (await admin.api()).get("/api/v1/journal", kind="account")).json()["items"]
+        english = (await lucie.get("/api/v1/journal", kinds="account")).json()["items"]
+        french = (await (await admin.api()).get("/api/v1/journal", kinds="account")).json()["items"]
         assert english[-1]["text"] == "Account mathis opened (owner)"
         assert french[-1]["text"] == "Compte mathis ouvert (propriétaire)"
         assert (
@@ -97,3 +95,17 @@ async def test_a_plugin_describes_its_events_in_its_own_catalogue_or_they_show_t
             "id": "journal-testing-described",
             "args": {"note": "le colis", "type": "testing.described"},
         }
+
+
+async def test_an_entry_no_installed_code_can_read_still_shows_its_type(tmp_path: Path) -> None:
+    async with Harness(tmp_path) as admin:
+        await admin.nestor.database.write(
+            lambda c: c.execute(
+                "INSERT INTO events (id, type, version, at, source, session, payload) "
+                "VALUES (?, ?, 1, ?, 's', NULL, ?)",
+                ("e1", "plugin.gone", "2026-10-30T10:00:00.000000Z", '{"x": 1}'),
+            )
+        )
+        items = (await (await admin.api()).get("/api/v1/journal", kinds="other")).json()["items"]
+        gone = next(i for i in items if i["type"] == "plugin.gone")
+        assert (gone["kind"], gone["text"]) == ("other", "plugin.gone")

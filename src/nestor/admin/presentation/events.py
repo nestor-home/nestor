@@ -124,6 +124,9 @@ class Line:
     people: frozenset[PersonId] = field(default_factory=frozenset)
     channels: frozenset[str] = field(default_factory=frozenset)
     tone: Tone = Tone.NORMAL
+    room: str | None = None  # where it happened, when the event says
+    tool: str | None = None  # the tool called
+    outcome: tuple[bool, float] | None = None  # (succeeded, seconds) of a tool call or a task
 
 
 def unknown_message(event_type: str, fields: Mapping[str, object] | None = None) -> Message:
@@ -147,6 +150,13 @@ def subject(about: str) -> dict[str, str]:
     }
 
 
+def _room(event: Event) -> str | None:
+    """The room an event names: its own `room`, or its device's (satellite events)."""
+    room = getattr(event, "room", None)
+    device = getattr(event, "device", None)
+    return room if isinstance(room, str) else getattr(device, "room", None)
+
+
 def _yes(flag: bool) -> str:
     return "yes" if flag else "no"
 
@@ -163,7 +173,10 @@ class EventDescriber:
             UserTurn: self._user_turn,
             AssistantTurn: lambda e: self._line(
                 e,
-                Message.of("journal-assistant-answered", assistant=self.assistant, interrupted=_yes(e.interrupted)),
+                Message.of(
+                    "journal-assistant-interrupted" if e.interrupted else "journal-assistant-answered",
+                    assistant=self.assistant,
+                ),
                 detail=e.text,
                 channels=[e.address],
             ),
@@ -179,6 +192,7 @@ class EventDescriber:
                 detail=json.dumps(dict(e.arguments), ensure_ascii=False, default=str),
                 people=[e.person],
                 channels=[e.address],
+                tool=e.name,
             ),
             ToolCompleted: self._tool_completed,
             TaskStarted: lambda e: self._line(
@@ -198,6 +212,7 @@ class EventDescriber:
                 Message.of("journal-task-ended", task=e.task_id, status=e.status, seconds=e.duration_s),
                 detail=e.error or e.result or "",
                 tone=Tone.WARNING if e.status == "failed" else Tone.NORMAL,
+                outcome=(e.status == "completed", e.duration_s),
             ),
             TaskDelivered: lambda e: self._line(
                 e, Message.of("journal-task-delivered", task=e.task_id), channels=[e.address]
@@ -352,10 +367,12 @@ class EventDescriber:
         )
 
     def _tool_completed(self, e: ToolCompleted) -> Line:
+        outcome = (e.ok, e.duration_s)
         if e.ok:
             message = Message.of("journal-tool-completed", tool=e.name, seconds=e.duration_s)
-            return self._line(e, message, detail=e.output)
-        return self._line(e, Message.of("journal-tool-failed", tool=e.name), detail=e.output, tone=Tone.WARNING)
+            return self._line(e, message, detail=e.output, tool=e.name, outcome=outcome)
+        message = Message.of("journal-tool-failed", tool=e.name)
+        return self._line(e, message, detail=e.output, tone=Tone.WARNING, tool=e.name, outcome=outcome)
 
     def _considered(self, e: DeliveryConsidered) -> Line:
         way = {(True, True): "both", (True, False): "spoken", (False, True): "written"}.get(
@@ -382,7 +399,7 @@ class EventDescriber:
         else:
             where = "unknown"
         message = Message.of("journal-presence-changed", person=self.name(e.person), where=where, room=e.room or "")
-        return self._line(e, message, people=[e.person])
+        return self._line(e, message, people=[e.person], room=e.room)
 
     def _capabilities(self, id: str, names: tuple[str, ...]) -> Message:
         labels = ", ".join(self.phrasebook.capability(n) for n in names)
@@ -418,6 +435,9 @@ class EventDescriber:
         people: Iterable[PersonId | None] = (),
         channels: Iterable[Address | None] = (),
         tone: Tone = Tone.NORMAL,
+        room: str | None = None,
+        tool: str | None = None,
+        outcome: tuple[bool, float] | None = None,
     ) -> Line:
         if len(detail) > DETAIL_LIMIT:
             detail = detail[:DETAIL_LIMIT] + "…"
@@ -432,4 +452,7 @@ class EventDescriber:
             people=frozenset(p for p in people if p),
             channels=frozenset(a.channel for a in channels if a),
             tone=tone,
+            room=room or _room(event),
+            tool=tool,
+            outcome=outcome,
         )

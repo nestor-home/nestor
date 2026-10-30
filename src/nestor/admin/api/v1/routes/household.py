@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
 
 from nestor.admin.api.v1.models import AccountOut, People
-from nestor.admin.api.v1.routes.connections import ConnectionOut, connection_out, reaches
+from nestor.admin.api.v1.routes.connections import ConnectionOut, Usage, connection_out, reaches
 from nestor.admin.api.v1.security import Caller, allowed
 from nestor.admin.state import state
 from nestor.modules.accounts import Scope
@@ -38,6 +38,7 @@ async def list_people(request: Request, caller: Reader) -> list[PersonOut]:
     presence = nestor.presence.presence() if nestor.presence else None
     connections = list(nestor.connections.connections.values()) if nestor.connections else []
     accounts = caller.principal.can(Scope.ACCOUNTS_MANAGE)
+    usage = await Usage.of(admin)
     listed = []
     for person in nestor.household.people:
         whereabouts = presence.of(person.id) if presence else None
@@ -50,7 +51,7 @@ async def list_people(request: Request, caller: Reader) -> list[PersonOut]:
                 reach=str(person.reach) if person.reach else None,
                 presence=PresenceOut(home=whereabouts.home, room=whereabouts.room) if whereabouts else None,
                 connections=[
-                    connection_out(admin, c, caller.phrasebook)
+                    connection_out(admin, c, caller.phrasebook, usage)
                     for c in connections
                     if c.owner == person.id and reaches(caller.principal, c.owner)
                 ],

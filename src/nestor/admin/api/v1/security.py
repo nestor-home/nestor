@@ -8,6 +8,7 @@ a body must be JSON: an HTML form from another site can send neither JSON nor cu
 """
 
 import hmac
+import urllib.parse
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 
@@ -55,6 +56,23 @@ async def json_only(request: Request) -> None:
     media = request.headers.get("content-type", "").split(";")[0].strip().lower()
     if has_body and media != "application/json":
         raise ApiError(415, "unsupported_media_type")
+
+
+def _origin(url: str) -> str:
+    parts = urllib.parse.urlsplit(url)
+    return f"{parts.scheme}://{parts.netloc}".casefold()
+
+
+async def same_origin(request: Request) -> None:
+    """For the calls made before any session exists (signing in, opening an invitation): they must come
+    from the admin's own pages — `Origin`, else `Referer`, names the admin's address. Browsers send
+    `Origin` on every POST; a page of another site cannot forge it."""
+    expected = _origin(state(request).base_url(request))
+    origin = request.headers.get("origin")
+    referer = request.headers.get("referer")
+    seen = origin if origin is not None else referer
+    if seen is None or _origin(seen) != expected:
+        raise ApiError(403, "cross_origin")
 
 
 async def signed_in(request: Request) -> Caller:

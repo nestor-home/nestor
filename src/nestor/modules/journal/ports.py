@@ -12,7 +12,8 @@ class EventLog(Component, ABC):
     Contract (checked by `nestor.testing.journal.EventLogContract`):
     - `append` is durable when it returns and gives a position greater than every previous one;
     - an event id is logged once: appending it again is a `ContractError`;
-    - `read` returns entries matching every criterion of the query, in log order (or reversed);
+    - `read` returns entries matching every criterion of the query (positions strictly between
+      `after` and `before`), in log order (or reversed), at most `limit` of them from that end;
     - entries are never rewritten; records keep the exact payload that was appended.
     """
 

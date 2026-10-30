@@ -41,7 +41,7 @@ def test_a_new_home_gets_a_valid_configuration_and_private_secrets(tmp_path: Pat
     loaded = load_config(config, secrets)
     assert loaded.persona.name == "Richie"
     assert loaded.household[0].id == "mathis-lambert"
-    assert loaded.admin is not None and loaded.admin.password_hash is None
+    assert loaded.admin is not None
     owner = sign_in(loaded, "Mathis@Example.org")
     assert owner is not None and (owner.role, owner.person) == (Role.OWNER, "mathis-lambert")
     assert PASSWORD not in config.read_text()
@@ -102,7 +102,7 @@ persona: {{name: Richie, character: Tu es Richie.}}
 household: [{{id: mathis, name: Mathis}}, {{id: lucie, name: Lucie}}]
 model: {{kind: openai-compatible, api_key: k, model: m, base_url: "http://x"}}
 channels: [{{kind: telegram, token: "1:a"}}]
-admin: {{port: 8080, password_hash: "scrypt$from-before-accounts"}}
+admin: {{port: 8080}}
 """
 
 

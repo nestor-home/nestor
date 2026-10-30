@@ -151,3 +151,20 @@ async def test_an_unknown_api_address_answers_in_json(tmp_path: Path) -> None:
         assert missing.status_code == 404 and missing.json()["error"]["code"] == "not_found"
         wrong_method = await api.send("PUT", "/api/v1/journal")
         assert wrong_method.status_code == 405 and wrong_method.json()["error"]["code"] == "method_not_allowed"
+
+
+async def test_responses_forbid_framing_caching_and_referrers(tmp_path: Path) -> None:
+    async with Harness(tmp_path) as admin:
+        headers = (await (await admin.api()).get("/api/v1/me")).headers
+        assert headers["x-frame-options"] == "DENY" and headers["referrer-policy"] == "no-referrer"
+        assert "frame-ancestors 'none'" in headers["content-security-policy"]
+        assert headers["cache-control"] == "no-store"
+
+
+async def test_only_the_api_the_callback_the_relay_and_the_front_are_served(tmp_path: Path) -> None:
+    async with Harness(tmp_path) as admin:
+        for old in ("/login", "/journal", "/connections", "/satellites"):
+            response = await admin.browser.get(old)
+            assert response.status_code == 503 and "pnpm build" in response.text, "the front, not built here"
+        posted = await admin.browser.post("/api/satellites/approve", json={"code": "123456"})
+        assert posted.status_code == 405 and posted.json()["error"]["code"] == "method_not_allowed", "gone"
