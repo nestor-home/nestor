@@ -10,9 +10,21 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
 
+from nestor.admin.presentation.accounts import french_login_failure, french_role
 from nestor.admin.presentation.capabilities import french_capability
 from nestor.admin.presentation.reasons import french_reason, french_subject, french_task_status, french_watch_end
 from nestor.core import ContractError, Event, PersonId
+from nestor.modules.accounts import (
+    AccountCreated,
+    AccountDisabled,
+    AccountEnabled,
+    AccountInvited,
+    AccountLogin,
+    AccountPasswordChanged,
+    AccountRoleChanged,
+    Accounts,
+    InvitationRevoked,
+)
 from nestor.modules.channels import Address
 from nestor.modules.cognition import (
     TaskAttached,
@@ -69,25 +81,40 @@ class Category:
 
 CATEGORIES = (
     Category("conversation", "Conversations", (UserTurn, AssistantTurn, FallbackSpoken, AnswerCut)),
-    Category("initiative", "Prises de parole", (DeliveryConsidered, Delivered, DeliveryFailed)),
-    Category("tools", "Outils", (ToolCalled, ToolCompleted)),
+    Category("delivery", "Prises de parole", (DeliveryConsidered, Delivered, DeliveryFailed)),
+    Category("tool", "Outils", (ToolCalled, ToolCompleted)),
     Category(
-        "tasks",
+        "task",
         "Tâches",
         (TaskStarted, TaskAttached, TaskProgressed, TaskCancelRequested, TaskEnded, TaskDelivered),
     ),
-    Category("watches", "Veilles", (WatchCreated, WatchTriggered, WatchEnded)),
+    Category("watch", "Veilles", (WatchCreated, WatchTriggered, WatchEnded)),
     Category("memory", "Souvenirs", (MemoryRecorded, MemoryCorrected, MemoryForgotten)),
-    Category("connections", "Connexions", (ConnectionCreated, ConnectionChanged, ConnectionRemoved)),
+    Category("connection", "Connexions", (ConnectionCreated, ConnectionChanged, ConnectionRemoved)),
     Category("presence", "Présence", (PresenceChanged,)),
     Category(
-        "satellites",
+        "satellite",
         "Satellites",
         (SatellitePairingRequested, SatellitePaired, SatelliteRevoked, SatelliteConnected, SatelliteDisconnected),
     ),
-    Category("observations", "Observations", (PersonDetected, SpeechActivityObserved)),
+    Category("observation", "Observations", (PersonDetected, SpeechActivityObserved)),
+    Category(
+        "account",
+        "Comptes",
+        (
+            AccountCreated,
+            AccountRoleChanged,
+            AccountDisabled,
+            AccountEnabled,
+            AccountPasswordChanged,
+            AccountInvited,
+            InvitationRevoked,
+            AccountLogin,
+        ),
+    ),
 )
 OTHER = "Autres"
+OTHER_KEY = "other"
 
 _FALLBACKS = {
     "model_unavailable": "modèle indisponible",
@@ -101,19 +128,20 @@ _CONNECTION_STATUS = {"connected": "connectée", "needs_reauth": "à réautorise
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Line:
     at: datetime
-    category: str
+    category: str  # its label
     title: str
     detail: str = ""
     reason: str = ""  # the decision's reason, shown prominently
     people: frozenset[PersonId] = field(default_factory=frozenset)
     channels: frozenset[str] = field(default_factory=frozenset)
     tone: Tone = Tone.NORMAL
+    category_key: str = OTHER_KEY
 
 
 class EventDescriber:
-    def __init__(self, household: Household, assistant: str) -> None:
-        self.household, self.assistant = household, assistant
-        self._categories = {e: c.label for c in CATEGORIES for e in c.events}
+    def __init__(self, household: Household, assistant: str, accounts: Accounts | None = None) -> None:
+        self.household, self.assistant, self.accounts = household, assistant, accounts
+        self._categories = {e: c for c in CATEGORIES for e in c.events}
         self._describers: Mapping[type[Event], Callable[..., Line]] = {
             UserTurn: self._user_turn,
             AssistantTurn: self._assistant_turn,
@@ -165,6 +193,26 @@ class EventDescriber:
                 e,
                 f"{'Parole détectée' if e.active else 'Fin de parole'} près de {e.device_id} (pièce « {e.room} »)",
             ),
+            AccountCreated: lambda e: self._line(
+                e, f"Compte {e.login} ouvert ({french_role(e.role)})", people=[e.person]
+            ),
+            AccountRoleChanged: lambda e: self._account_line(
+                e, e.account_id, f"Compte {self.login(e.account_id)} : rôle {french_role(e.role)}"
+            ),
+            AccountDisabled: lambda e: self._account_line(
+                e, e.account_id, f"Compte {self.login(e.account_id)} désactivé", tone=Tone.WARNING
+            ),
+            AccountEnabled: lambda e: self._account_line(
+                e, e.account_id, f"Compte {self.login(e.account_id)} réactivé"
+            ),
+            AccountPasswordChanged: lambda e: self._account_line(
+                e, e.account_id, f"Mot de passe du compte {self.login(e.account_id)} changé"
+            ),
+            AccountInvited: lambda e: self._line(
+                e, f"Invitation ({french_role(e.role)}) pour {self.name(e.person)}", people=[e.person]
+            ),
+            InvitationRevoked: lambda e: self._line(e, f"Invitation {e.invitation_id} retirée"),
+            AccountLogin: self._login,
         }
 
     def describe(self, entry: Entry) -> Line:
@@ -174,6 +222,10 @@ class EventDescriber:
             return Line(at=datetime.fromisoformat(str(entry.record["at"])), category=OTHER, title=entry.type)
         describer = self._describers.get(type(event))
         return describer(event) if describer else self._line(event, event.event_type)
+
+    def login(self, account_id: str | None) -> str:
+        account = self.accounts.accounts.get(account_id or "") if self.accounts else None
+        return account.login if account else str(account_id or "inconnu")
 
     def name(self, person: PersonId | None) -> str:
         if person is None:
@@ -280,6 +332,17 @@ class EventDescriber:
         title = f"{e.count} {seen} par {e.device_id} (pièce « {e.room} »)"
         return self._line(e, title, detail=f"Confiance : {e.confidence:.0%}")
 
+    def _login(self, e: AccountLogin) -> Line:
+        if e.succeeded:
+            return self._account_line(e, e.account_id, f"Connexion de {self.login(e.account_id)}")
+        who = f" au compte {self.login(e.account_id)}" if e.account_id else ""
+        title = f"Connexion refusée{who} : {french_login_failure(e.reason)}"
+        return self._account_line(e, e.account_id, title, tone=Tone.WARNING)
+
+    def _account_line(self, event: Event, account_id: str | None, title: str, *, tone: Tone = Tone.NORMAL) -> Line:
+        account = self.accounts.accounts.get(account_id or "") if self.accounts else None
+        return self._line(event, title, people=[account.person if account else None], tone=tone)
+
     def _line(
         self,
         event: Event,
@@ -293,9 +356,11 @@ class EventDescriber:
     ) -> Line:
         if len(detail) > DETAIL_LIMIT:
             detail = detail[:DETAIL_LIMIT] + "…"
+        category = self._categories.get(type(event))
         return Line(
             at=event.at,
-            category=self._categories.get(type(event), OTHER),
+            category=category.label if category else OTHER,
+            category_key=category.key if category else OTHER_KEY,
             title=title,
             detail=detail,
             reason=reason,

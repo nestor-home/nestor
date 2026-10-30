@@ -18,6 +18,7 @@ SCOPES = ("openid", "email", "https://www.googleapis.com/auth/gmail.readonly")
 
 INFO = ConnectorInfo(
     kind="google",
+    brand="google",
     title="Google (Gmail)",
     description="Search and read Gmail; new inbox mail can feed watches. Read only.",
     auth=AuthKind.OAUTH2,
@@ -38,6 +39,7 @@ class GoogleConnector(Connector, Component):
     """Tools and `identify` share one HTTP client, opened on first use; each inbound feed has its own."""
 
     name = "google"
+    brand = "google"
     info = INFO
 
     def __init__(

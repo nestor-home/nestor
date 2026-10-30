@@ -6,8 +6,9 @@ from urllib.parse import urlencode
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
-from nestor.admin.errors import Refused
-from nestor.admin.guard import Checked, LoggedIn
+from nestor.admin.pages.errors import Refused
+from nestor.admin.pages.guard import Checked, LoggedIn
+from nestor.admin.pages.rendering import pages_of
 from nestor.admin.state import state
 from nestor.core import ContractError, PersonId
 
@@ -26,7 +27,7 @@ async def memories_page(request: Request, session: LoggedIn, q: str = "", about:
         if q.strip()
         else await memories.recent(about=person, limit=SHOWN)
     )
-    return admin.pages.render(
+    return pages_of(request).render(
         request,
         "memories.html",
         session,

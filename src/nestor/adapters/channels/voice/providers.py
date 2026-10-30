@@ -24,6 +24,8 @@ IN_SAMPLE_RATE = 16000
 class Speech(ABC):
     """Builds fresh speech services for each voice session."""
 
+    brand: str | None = None  # the speech provider, as a slug ("elevenlabs")
+
     @abstractmethod
     def stt(self) -> STTService: ...
 
@@ -48,6 +50,8 @@ class ElevenLabsDialogueTTS(EagerSentenceFlush, ElevenLabsDialogueTTSService):
 
 
 class ElevenLabsSpeech(Speech):
+    brand = "elevenlabs"
+
     def __init__(self, settings: ElevenLabsSettings) -> None:
         self._settings = settings
 

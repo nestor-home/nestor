@@ -1,23 +1,19 @@
 """Connectors and connections: the catalogue, the household's OAuth clients, connecting, per-tool settings.
 
-Like Home Assistant's Application Credentials, the household registers its own OAuth client with each
-provider. The provider sends the browser back to the admin's `/connections/callback` when the admin
-is served over HTTPS; otherwise to a public relay page (`relay_url`) that only forwards the browser
-here. The relay learns where to forward from the `state` it receives — `<state>.<base64url(callback)>`
-— and never sees a token: the code it forwards is worthless without the PKCE verifier kept by Nestor.
+The provider sends the browser back to `/connections/callback` (`nestor.admin.api.v1`), which then
+shows the new connection at `/connections/<id>`; see `nestor.admin.connecting` for the relay.
 """
 
-import base64
-import urllib.parse
 from typing import Annotated
 
-from fastapi import APIRouter, Form, Query, Request
+from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
-from nestor.admin.auth import Flow, Session
-from nestor.admin.errors import Refused
-from nestor.admin.guard import Checked, LoggedIn
-from nestor.admin.settings import CALLBACK_PATH
+from nestor.admin.auth import Session
+from nestor.admin.connecting import Connecting
+from nestor.admin.pages.errors import Refused
+from nestor.admin.pages.guard import Checked, LoggedIn
+from nestor.admin.pages.rendering import pages_of
 from nestor.admin.state import AdminState, state
 from nestor.core import ContractError, PersonId, ProviderError
 from nestor.modules.cognition.tools import Risk
@@ -39,7 +35,7 @@ async def catalogue(request: Request, session: LoggedIn) -> HTMLResponse:
     connections = admin.nestor.connections
     connectors = list(connections.connectors.values()) if connections else []
     accounts = sorted(connections.connections.values(), key=lambda c: c.created_at) if connections else []
-    return admin.pages.render(
+    return pages_of(request).render(
         request,
         "connections.html",
         session,
@@ -49,58 +45,6 @@ async def catalogue(request: Request, session: LoggedIn) -> HTMLResponse:
         statuses=STATUS,
         auth=AUTH,
     )
-
-
-# -- the provider sends the browser back here (declared before /connections/{id}) ------------------
-
-
-@router.get(CALLBACK_PATH)
-async def callback(
-    request: Request,
-    session: LoggedIn,
-    state_: Annotated[str, Query(alias="state")] = "",
-    code: str = "",
-    error: str = "",
-) -> Response:
-    admin = state(request)
-    connections = _connections(admin)
-    issued = state_.split(".", 1)[0]
-    flow = session.flows.pop(issued, None)
-    if flow is None:
-        raise Refused(
-            400,
-            "Demande d'autorisation inconnue ou expirée",
-            "Ce retour ne correspond à aucune connexion lancée depuis cette session. Recommencez depuis le catalogue.",
-            back="/connections",
-        )
-    back = f"/connectors/{flow.kind}"
-    if error == "access_denied":
-        raise Refused(
-            400,
-            "Autorisation refusée",
-            "L'accès a été refusé sur la page du service : rien n'a été connecté.",
-            back=back,
-        )
-    if error or not code:
-        raise Refused(
-            400,
-            "Le service a renvoyé une erreur",
-            f"Erreur indiquée par le service : « {error or 'aucun code'} ».",
-            back=back,
-        )
-    try:
-        connection = await connections.complete(issued, code)
-    except ContractError:
-        raise Refused(
-            400, "Demande d'autorisation expirée", "Plus de dix minutes se sont écoulées : recommencez.", back=back
-        ) from None
-    except ProviderError as failure:
-        raise Refused(
-            502, "Échange refusé par le service", f"{failure}. Vérifiez le client OAuth puis recommencez.", back=back
-        ) from None
-    connection = await _settled(connections, connection, flow)
-    session.notify(f"Compte {connection.account} connecté.")
-    return RedirectResponse(f"/connections/{connection.id}", status_code=303)
 
 
 # -- one connector: setup guide, OAuth client, connecting ------------------------------------------------
@@ -139,7 +83,7 @@ async def connect(request: Request, session: Checked, kind: str) -> Response:
     connector = _connector(connections, kind)
     form = await request.form()
     owner = _person(admin, str(form.get("person", "")))
-    replaced = _replaced(connections, kind, str(form.get("replaces", "")))
+    replaced = _connecting(admin).replaced(kind, str(form.get("replaces", "")))
     if connector.info.auth is AuthKind.OAUTH2:
         return await _authorize(request, admin, session, connections, kind, owner, replaced)
     values = {f.name: str(form.get(f.name, "")).strip() for f in connector.info.fields}
@@ -166,8 +110,7 @@ async def connect(request: Request, session: Checked, kind: str) -> Response:
             error=f"Le service a refusé la connexion : {failure}.",
             values=values,
         )
-    flow = Flow(kind=kind, owner=owner, replaces=replaced.id if replaced else None)
-    connection = await _settled(connections, connection, flow)
+    connection = await _connecting(admin).settled(connection, replaced.id if replaced else None)
     session.notify(f"Compte {connection.account} connecté.")
     return RedirectResponse(f"/connections/{connection.id}", status_code=303)
 
@@ -182,7 +125,7 @@ async def connection_page(request: Request, session: LoggedIn, connection_id: st
     connection = _connection(connections, connection_id)
     connector = connections.connectors.get(connection.kind)
     tools = connector.tools(connection, connections.access(connection)) if connector else ()
-    return admin.pages.render(
+    return pages_of(request).render(
         request,
         "connection.html",
         session,
@@ -249,7 +192,7 @@ async def _connector_page(
     client = await connections.vault.get(f"client:{kind}", "client") if oauth else None
     base = admin.base_url(request)
     shown = {f.name: v for f, v in ((f, (values or {}).get(f.name, "")) for f in info.fields) if not f.secret}
-    return admin.pages.render(
+    return pages_of(request).render(
         request,
         "connector.html",
         session,
@@ -275,32 +218,18 @@ async def _authorize(
     owner: PersonId | None,
     replaced: Connection | None,
 ) -> Response:
-    base = admin.base_url(request)
-    redirect_uri = admin.settings.redirect_uri(base)
     if not await connections.has_client(kind):
         return await _connector_page(request, session, kind, status=400, error="Enregistrez d'abord le client OAuth.")
-    url = await connections.begin(kind, owner, redirect_uri)
-    parts = urllib.parse.urlsplit(url)
-    query = urllib.parse.parse_qsl(parts.query, keep_blank_values=True)
-    issued = dict(query)["state"]
-    # the broken connection stays until the new one works: a refused consent loses nothing
-    session.flows[issued] = Flow(kind=kind, owner=owner, replaces=replaced.id if replaced else None)
-    if redirect_uri != f"{base}{CALLBACK_PATH}":  # through the relay: tell it where this admin is
-        target = base64.urlsafe_b64encode(f"{base}{CALLBACK_PATH}".encode()).rstrip(b"=").decode()
-        query = [(k, f"{v}.{target}" if k == "state" else v) for k, v in query]
-        url = urllib.parse.urlunsplit(parts._replace(query=urllib.parse.urlencode(query)))
+    url = await _connecting(admin).begin(
+        kind, owner, base_url=admin.base_url(request), account_id=session.account_id, replaces=replaced
+    )
     return RedirectResponse(url, status_code=303)
 
 
-async def _settled(connections: Connections, connection: Connection, flow: Flow) -> Connection:
-    """The new connection, with the settings of the one it replaces (which is then forgotten)."""
-    old = connections.connections.get(flow.replaces) if flow.replaces else None
-    if old is None:
-        return connection
-    await connections.disconnect(old.id, revoke=False)  # revoking could take the new grant down with it
-    return await connections.configure(
-        connection.id, disabled_tools=old.disabled_tools, confirm_writes=old.confirm_writes
-    )
+def _connecting(admin: AdminState) -> Connecting:
+    _connections(admin)
+    assert admin.connecting is not None  # built whenever connections are
+    return admin.connecting
 
 
 def _connections(admin: AdminState) -> Connections:
@@ -324,14 +253,6 @@ def _connection(connections: Connections, connection_id: str) -> Connection:
         raise Refused(
             404, "Connexion inconnue", "Cette connexion n'existe pas ou a été supprimée.", back="/connections"
         )
-    return connection
-
-
-def _replaced(connections: Connections, kind: str, connection_id: str) -> Connection | None:
-    """The broken connection being reconnected; a working one is never replaced."""
-    connection = connections.connections.get(connection_id) if connection_id else None
-    if connection is None or connection.kind != kind or connection.status is Status.CONNECTED:
-        return None
     return connection
 
 

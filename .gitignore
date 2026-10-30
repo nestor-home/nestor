@@ -11,3 +11,7 @@ build/
 data/
 .coverage
 .coverage.*
+
+# the admin SPA build (web/), produced by `pnpm build`
+src/nestor/admin/static/app/
+src/nestor/admin/static/app/

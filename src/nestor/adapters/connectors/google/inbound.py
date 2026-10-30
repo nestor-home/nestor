@@ -69,6 +69,7 @@ class HistoryCursor:
 
 class GmailInbound(InboundEventSource):
     name = "gmail-inbound"
+    brand = "gmail"
     kinds = ("mail",)
 
     def __init__(

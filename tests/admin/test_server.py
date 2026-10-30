@@ -17,12 +17,12 @@ from nestor.runtime import ConfigError, Nestor
 from nestor.runtime.app import run_until_stopped
 from nestor.runtime.config import parse_config
 
-from .harness import CONFIG, PASSWORD_HASH, Harness
+from .harness import CONFIG, Harness
 
 
 async def test_the_admin_listens_while_nestor_runs(tmp_path: Path) -> None:
     async with Harness(tmp_path) as admin:
-        server = AdminServer(admin.nestor, AdminSettings(password_hash=PASSWORD_HASH, port=0))
+        server = AdminServer(admin.nestor, AdminSettings(port=0))
         async with server:
             await server.start()  # idempotent
             async with httpx.AsyncClient() as client:
@@ -37,7 +37,7 @@ async def test_a_busy_port_is_reported_clearly(tmp_path: Path) -> None:
         busy.listen()
         port = busy.getsockname()[1]
         async with Harness(tmp_path) as admin:
-            server = AdminServer(admin.nestor, AdminSettings(password_hash=PASSWORD_HASH, port=port))
+            server = AdminServer(admin.nestor, AdminSettings(port=port))
             with pytest.raises(ProviderError, match=f"cannot listen on 127.0.0.1:{port}"):
                 await server.start()
             assert server.port == port
@@ -71,7 +71,7 @@ def test_without_an_admin_section_there_is_no_server(tmp_path: Path) -> None:
 
 
 def test_connectors_need_the_instance_secret_key(tmp_path: Path) -> None:
-    config = parse_config(CONFIG.format(data_dir=tmp_path, admin={"password_hash": PASSWORD_HASH}), {})
+    config = parse_config(CONFIG.format(data_dir=tmp_path, admin={}), {})
     with pytest.raises(ConfigError, match=r"NESTOR_SECRET_KEY is not set.*secrets\.token_urlsafe"):
         Nestor(config, Harness(tmp_path).registry(), environ={})
 
@@ -96,36 +96,21 @@ async def test_a_mail_arriving_in_a_connected_mailbox_triggers_a_watch(tmp_path:
         assert isinstance(event, WatchTriggered) and event.summary == "Colis livré."
 
 
-def test_the_command_line_prints_a_password_hash(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
-) -> None:
-    from nestor.admin import verify_password
-
-    answers = iter(["correct horse battery", "correct horse battery"])
-    monkeypatch.setattr("getpass.getpass", lambda prompt="": next(answers))
-    assert main(["admin-password"]) == 0
-    assert verify_password("correct horse battery", capsys.readouterr().out.strip())
-
-    answers = iter(["correct horse battery", "typo"])
-    assert main(["admin-password"]) == 2
-    assert "differ" in capsys.readouterr().err
-
-
 def test_the_command_line_checks_a_configuration_with_the_admin(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     path = tmp_path / "nestor.yaml"
     path.write_text(
-        CONFIG.format(data_dir=tmp_path, admin={"password_hash": "not-a-hash"})
+        CONFIG.format(data_dir=tmp_path, admin={"password_hash": "scrypt$left-from-before"})
         .replace("kind: scripted", "kind: openai-compatible, api_key: k, model: m, base_url: 'http://x'")
         .replace("[{kind: remote, name: hermes}]", "[]")
         .replace("[{kind: memory, name: telegram}]", "[{kind: telegram, token: '1:a'}]")
         .replace("presence: {kind: static}\n", "")
     )
     monkeypatch.setenv("NESTOR_SECRET_KEY", "k" * 40)
-    assert main(["-c", str(path), "check"]) == 2
-    assert "nestor admin-password" in capsys.readouterr().err
-
-    path.write_text(path.read_text().replace("not-a-hash", PASSWORD_HASH))
     assert main(["-c", str(path), "check"]) == 0
-    assert "admin on 127.0.0.1:8080" in capsys.readouterr().out
+    out = capsys.readouterr().out
+    assert "admin on 127.0.0.1:8080" in out
+    assert "admin.password_hash is no longer used; run `nestor accounts create-owner`" in out, (
+        "an older file still loads"
+    )

@@ -61,9 +61,29 @@ class Plugin[S: AdapterSettings]:
         return self.build(settings, name, services)
 
 
+@dataclass(frozen=True, slots=True)
+class Distribution:
+    """The installed package a plugin comes from (`nestor-home` for the built-in ones)."""
+
+    name: str
+    version: str
+
+
+@dataclass(frozen=True, slots=True)
+class Plugged:
+    """One configured adapter as the runtime built it: what the admin's system page lists."""
+
+    family: Family
+    kind: str
+    name: str
+    component: Component | Connector
+    origin: Distribution | None
+
+
 class Registry:
     def __init__(self, plugins: Iterable[Plugin[Any]] = ()) -> None:
         self._plugins: dict[tuple[Family, str], Plugin[Any]] = {}
+        self._origins: dict[tuple[Family, str], Distribution] = {}
         for plugin in plugins:
             self.register(plugin)
 
@@ -75,14 +95,21 @@ class Registry:
             plugin = entry.load()
             if not isinstance(plugin, Plugin):
                 raise ContractError(f"entry point {entry.name!r} ({entry.value}) is not a nestor Plugin")
-            registry.register(plugin)
+            dist = entry.dist
+            registry.register(plugin, Distribution(dist.name, dist.version) if dist is not None else None)
         return registry
 
-    def register(self, plugin: Plugin[Any]) -> None:
+    def register(self, plugin: Plugin[Any], origin: Distribution | None = None) -> None:
         key = (plugin.family, plugin.kind)
         if key in self._plugins:
             raise ContractError(f"two plugins provide the {plugin.family} kind {plugin.kind!r}")
         self._plugins[key] = plugin
+        if origin is not None:
+            self._origins[key] = origin
+
+    def origin(self, family: Family, kind: str) -> Distribution | None:
+        """Where an installed plugin comes from; `None` for one registered by code (tests)."""
+        return self._origins.get((family, kind))
 
     def kinds(self, family: Family) -> list[str]:
         """The kinds installed for a family, sorted."""

@@ -15,7 +15,7 @@ from websockets.exceptions import ConnectionClosed
 
 from nestor.adapters.home.home_assistant import HomeAssistantPresence, PresenceMapping, plugin
 from nestor.adapters.home.home_assistant.client import websocket_url
-from nestor.core import ContractError, PersonId, ProviderError
+from nestor.core import ContractError, Health, PersonId, ProviderError
 from nestor.modules.home import Granularity, Presence, Whereabouts
 from nestor.runtime import Services
 from nestor.testing.home import PresenceSourceContract
@@ -434,12 +434,14 @@ async def test_a_lost_connection_makes_everyone_unknown_until_home_assistant_is_
     await settle(lambda: home.attempts >= 3)  # retrying, with a delay
     presence = source.presence()
     assert people_of(presence) == {ALICE: Whereabouts()}
+    assert source.health() is Health.UNAVAILABLE and source.brand == "homeassistant"
     assert presence.occupied_rooms == frozenset()
     assert source.granularity is Granularity.OCCUPIED_ROOMS  # what the installation offers, once back
     home.state("person.alice", "not_home")  # changed while Nestor was not listening
     home.available = True
     await settle(lambda: source.presence().of(ALICE) == Whereabouts(home=False))
     assert source.presence().occupied_rooms == {"kitchen"}
+    assert source.health() is Health.STARTED
 
 
 async def test_a_refused_token_fails_start_clearly_without_revealing_it(

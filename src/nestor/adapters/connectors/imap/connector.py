@@ -15,6 +15,7 @@ from nestor.modules.initiative import InboundEventSource
 
 INFO = ConnectorInfo(
     kind="imap",
+    brand="imap",
     title="Boîte mail (IMAP)",
     description="Search and read a mailbox over IMAP; new mail can feed watches. Read only.",
     auth=AuthKind.SECRET,
@@ -34,6 +35,7 @@ class ImapConnector(Connector, Component):
     """Each tool call opens its own short session; each inbound feed keeps one open (IDLE)."""
 
     name = "imap"
+    brand = "imap"
     info = INFO
 
     def __init__(

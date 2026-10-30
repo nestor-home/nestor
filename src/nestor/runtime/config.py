@@ -71,9 +71,10 @@ class InitiativeConfig(Section):
 
 
 class AdminConfig(Section):
-    """The admin web interface; without this section, Nestor serves none."""
+    """The admin web interface; without this section, Nestor serves none. Who may sign in is not
+    configured here: accounts live in the database (`nestor init`, `nestor accounts create-owner`)."""
 
-    password_hash: str  # printed by `nestor admin-password`
+    password_hash: str | None = None  # obsolete since accounts: still read so that older files load, then ignored
     host: str = "127.0.0.1"
     port: int = Field(default=8080, ge=0, le=65535)
     public_url: str | None = None  # how the household's browsers reach it: "https://nestor.example.org"

@@ -3,7 +3,8 @@
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 
-from nestor.admin.guard import LoggedIn
+from nestor.admin.pages.guard import LoggedIn
+from nestor.admin.pages.rendering import pages_of
 from nestor.admin.state import state
 from nestor.core import PersonId
 from nestor.modules.connectors import Connection
@@ -19,7 +20,7 @@ async def people_page(request: Request, session: LoggedIn) -> HTMLResponse:
     for connection in nestor.connections.connections.values() if nestor.connections else ():
         owned.setdefault(connection.owner, []).append(connection)
     presence = nestor.presence.presence() if nestor.presence else None
-    return admin.pages.render(
+    return pages_of(request).render(
         request,
         "people.html",
         session,

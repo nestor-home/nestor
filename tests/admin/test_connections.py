@@ -1,13 +1,15 @@
-"""Plugging services in from the admin: catalogue, the household's OAuth client, consent, tools, unplugging."""
+"""Plugging services in from the server-rendered pages: catalogue, OAuth client, consent, tools, unplugging.
+
+The callback itself and its failures are the API's: `api/v1/test_connections`."""
 
 import base64
 import urllib.parse
 from pathlib import Path
 
+import httpx
 import pytest
 
 from nestor.modules.connectors import ConnectorTools, Status
-from nestor.modules.connectors import service as connections_service
 
 from .harness import CLIENT_SECRET, Harness
 
@@ -34,7 +36,12 @@ async def connect_mailbox(admin: Harness) -> str:
     back = admin.consent(await start_flow(admin))
     response = await admin.get("/connections/callback", **back)
     assert response.status_code == 303, response.text
-    return response.headers["location"].rsplit("/", 1)[1]
+    return shown(response)
+
+
+def shown(response: httpx.Response) -> str:
+    """The connection a redirect shows: `/connections/<id>?connected=1`."""
+    return urllib.parse.urlsplit(response.headers["location"]).path.rsplit("/", 1)[1]
 
 
 def query(url: str) -> dict[str, str]:
@@ -80,7 +87,6 @@ async def test_a_full_oauth_flow_through_the_relay(tmp_path: Path) -> None:
         assert response.status_code == 303
         page = (await admin.get(response.headers["location"])).text
         assert "mathis@example.com" in page and "connectée" in page and "mailbox_search" in page
-        assert "Compte mathis@example.com connecté" in page
         listed = (await admin.get("/connections")).text
         assert "mathis@example.com" in listed and "Mathis" in listed
         assert admin.mail.tokens_seen, "the connector identified the account with a real token"
@@ -95,60 +101,9 @@ async def test_over_https_the_provider_comes_back_to_the_admin_directly(tmp_path
         assert sent["redirect_uri"] == "https://nestor.example.org/connections/callback"
         assert "." not in sent["state"]
         response = await admin.get("/connections/callback", **admin.consent(authorize))
-        connection_id = response.headers["location"].rsplit("/", 1)[1]
+        connection_id = shown(response)
         assert admin.nestor.connections and admin.nestor.connections.connections[connection_id].owner is None
         assert "compte de Tout le foyer" in (await admin.get(f"/connections/{connection_id}")).text
-
-
-async def test_refused_consent_connects_nothing(tmp_path: Path) -> None:
-    async with Harness(tmp_path) as admin:
-        await admin.login()
-        await register_client(admin)
-        state = query(await start_flow(admin))["state"]
-        response = await admin.get("/connections/callback", state=state, error="access_denied")
-        assert response.status_code == 400 and "Autorisation refusée" in response.text
-        assert admin.nestor.connections and admin.nestor.connections.connections == {}
-        again = await admin.get("/connections/callback", state=state, code="late")
-        assert again.status_code == 400 and "inconnue ou expirée" in again.text
-
-
-async def test_a_provider_error_on_return_is_shown(tmp_path: Path) -> None:
-    async with Harness(tmp_path) as admin:
-        await admin.login()
-        await register_client(admin)
-        state = query(await start_flow(admin))["state"]
-        response = await admin.get("/connections/callback", state=state, error="server_error")
-        assert response.status_code == 400 and "server_error" in response.text
-
-
-async def test_a_callback_from_another_session_is_refused(tmp_path: Path) -> None:
-    async with Harness(tmp_path) as admin:
-        await admin.login()
-        await register_client(admin)
-        back = admin.consent(await start_flow(admin))
-        admin.browser.cookies.clear()
-        await admin.login()  # someone else, logged in too
-        response = await admin.get("/connections/callback", **back)
-        assert response.status_code == 400 and "inconnue ou expirée" in response.text
-
-
-async def test_an_expired_authorisation_request_says_so(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    async with Harness(tmp_path) as admin:
-        await admin.login()
-        await register_client(admin)
-        back = admin.consent(await start_flow(admin))
-        monkeypatch.setattr(connections_service, "PENDING_TTL_S", -1.0)
-        response = await admin.get("/connections/callback", **back)
-        assert response.status_code == 400 and "Demande d&#39;autorisation expirée" in response.text
-
-
-async def test_a_code_the_provider_refuses_to_exchange_is_reported(tmp_path: Path) -> None:
-    async with Harness(tmp_path) as admin:
-        await admin.login()
-        await register_client(admin)
-        state = query(await start_flow(admin))["state"]
-        response = await admin.get("/connections/callback", state=state, code="forged-code")
-        assert response.status_code == 502 and "invalid_grant" in response.text
 
 
 async def test_connecting_without_a_client_or_for_a_stranger_is_refused(tmp_path: Path) -> None:
@@ -271,7 +226,7 @@ async def test_a_connection_needing_reauthorisation_is_reconnected_with_its_sett
         assert old_id in connections.connections, "the broken connection stays until the new one works"
         revoked_before = list(admin.provider.revoked)
         response = await admin.get("/connections/callback", **admin.consent(authorize))
-        new_id = response.headers["location"].rsplit("/", 1)[1]
+        new_id = shown(response)
 
         assert list(connections.connections) == [new_id]
         assert connections.connections[new_id].status is Status.CONNECTED
@@ -329,7 +284,6 @@ async def test_unknown_connectors_and_connections_are_not_found(tmp_path: Path) 
         await admin.login()
         assert (await admin.get("/connectors/slack")).status_code == 404
         assert (await admin.get("/connections/nope")).status_code == 404
-        assert (await admin.get("/nowhere")).status_code == 404
 
 
 async def test_without_connectors_the_catalogue_says_so(tmp_path: Path) -> None:
@@ -366,7 +320,7 @@ async def test_a_broken_connector_or_vault_shows_an_error_page_not_a_crash(tmp_p
 async def test_a_form_address_opened_as_a_page_is_refused_politely(tmp_path: Path) -> None:
     async with Harness(tmp_path) as admin:
         await admin.login()
-        response = await admin.get("/logout")
+        response = await admin.post("/journal")
         assert response.status_code == 405 and "ne s&#39;utilise pas ainsi" in response.text
 
 
@@ -392,8 +346,7 @@ async def test_an_account_of_someone_no_longer_in_the_household_is_still_listed(
     ],
 )
 def test_the_provider_comes_back_directly_only_over_https_or_to_this_machine(base: str, direct: bool) -> None:
-    from nestor.admin import hash_password
     from nestor.admin.settings import CALLBACK_PATH, DEFAULT_RELAY, AdminSettings
 
-    settings = AdminSettings(password_hash=hash_password("un-long-mot-de-passe"))
+    settings = AdminSettings()
     assert settings.redirect_uri(base) == (f"{base}{CALLBACK_PATH}" if direct else DEFAULT_RELAY)

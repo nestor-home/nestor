@@ -1,4 +1,4 @@
-"""Pairing satellites from the admin, its JSON API and the command line."""
+"""Pairing satellites from the server-rendered pages and the command line (the API: `api/v1/test_satellites`)."""
 
 import asyncio
 import json
@@ -26,7 +26,7 @@ from nestor.modules.satellites import (
 )
 from nestor.testing.channels import InMemoryChannel
 
-from .harness import CONFIG, PASSWORD_HASH, Harness
+from .harness import CONFIG, Harness
 
 REACHY = Manifest(
     Device("reachy-salon", "reachy-mini", "salon"),
@@ -170,58 +170,9 @@ async def test_the_journal_tells_satellite_events_in_french(tmp_path: Path) -> N
             "Fin de parole près de reachy-salon",
         ):
             assert said in page, said
-        observations = (await admin.get("/journal", type="observations")).text
+        observations = (await admin.get("/journal", type="observation")).text
         assert "Parole détectée" in observations and "appairé" not in observations
         assert "Satellite reachy-salon révoqué" in (await admin.get("/journal", person="mathis")).text
-
-
-# -- the JSON API --------------------------------------------------------------------------------------
-
-
-async def test_the_api_refuses_a_missing_or_wrong_token_and_ignores_the_session(tmp_path: Path) -> None:
-    async with Harness(tmp_path) as admin:
-        state = admin.app.state.admin
-        ticket = await admin.nestor.pairing.request(REACHY)
-        closed = await admin.browser.post("/api/satellites/approve", json={"code": ticket.code})
-        assert closed.status_code == 401, "no token issued yet: the API is closed"
-        state.api_token = "the-right-token"
-        await admin.login()  # a browser session must not open the API
-        for headers in ({}, {"Authorization": "Bearer wrong"}, {"Authorization": "Basic the-right-token"}):
-            response = await admin.browser.post("/api/satellites/approve", json={"code": ticket.code}, headers=headers)
-            assert response.status_code == 401 and response.json() == {"error": "missing or wrong admin token"}
-        assert admin.nestor.pairing.satellites() == []
-        admin.browser.cookies.clear()
-        page = await admin.browser.get("/journal", headers={"Authorization": "Bearer the-right-token"})
-        assert page.status_code == 303, "the token never opens a page"
-
-
-async def test_the_api_approves_narrows_and_revokes_with_the_token(tmp_path: Path) -> None:
-    async with Harness(tmp_path) as admin:
-        admin.app.state.admin.api_token = "tok"
-        bearer = {"Authorization": "Bearer tok"}
-        ticket = await admin.nestor.pairing.request(REACHY)
-        api = admin.browser
-        bad = [b"not json", b'{"code": 123}', b'{"code": "1", "x": 1}', b'{"code": "1", "capabilities": "all"}']
-        for body in bad:
-            response = await api.post("/api/satellites/approve", content=body, headers=bearer)
-            assert response.status_code == 400 and "error" in response.json()
-        wrong = await api.post("/api/satellites/approve", json={"code": "nope"}, headers=bearer)
-        assert wrong.status_code == 400 and "wrong or expired" in wrong.json()["error"]
-
-        response = await api.post(
-            "/api/satellites/approve", json={"code": ticket.code, "capabilities": ["audio.capture"]}, headers=bearer
-        )
-        assert response.json() == {
-            "device": "reachy-salon",
-            "model": "reachy-mini",
-            "room": "salon",
-            "capabilities": ["audio.capture"],
-        }
-        assert (await api.post("/api/satellites/reachy-salon/revoke", headers=bearer)).json() == {
-            "revoked": "reachy-salon"
-        }
-        missing = await api.post("/api/satellites/reachy-salon/revoke", headers=bearer)
-        assert missing.status_code == 404 and admin.nestor.pairing.satellites() == []
 
 
 # -- the command line against a running instance ----------------------------------------------------------
@@ -242,9 +193,9 @@ async def test_the_command_line_pairs_and_revokes_through_the_running_admin(
 ) -> None:
     port = free_port()
     config = tmp_path / "nestor.yaml"
-    config.write_text(CONFIG.format(data_dir=tmp_path, admin={"password_hash": PASSWORD_HASH, "port": port}))
+    config.write_text(CONFIG.format(data_dir=tmp_path, admin={"port": port}))
     async with Harness(tmp_path) as admin:
-        server = AdminServer(admin.nestor, AdminSettings(password_hash=PASSWORD_HASH, port=port))
+        server = AdminServer(admin.nestor, AdminSettings(port=port))
         ticket = await admin.nestor.pairing.request(REACHY)
         async with server:
             path = token_path(tmp_path)
@@ -255,7 +206,7 @@ async def test_the_command_line_pairs_and_revokes_through_the_running_admin(
             assert satellite.capabilities == {Capability("audio.capture")}
 
             assert await run("-c", str(config), "satellites", "approve", "000000") == 2
-            assert "no device is waiting" in capsys.readouterr().err
+            assert "Aucun appareil n'attend ce code" in capsys.readouterr().err
             assert await run("-c", str(config), "satellites", "revoke", "reachy-salon") == 0
             assert "revoked reachy-salon" in capsys.readouterr().out
             assert admin.nestor.pairing.satellites() == []
@@ -270,7 +221,7 @@ async def test_the_command_line_says_when_nestor_is_not_running(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     config = tmp_path / "nestor.yaml"
-    config.write_text(CONFIG.format(data_dir=tmp_path, admin={"password_hash": PASSWORD_HASH, "port": free_port()}))
+    config.write_text(CONFIG.format(data_dir=tmp_path, admin={"port": free_port()}))
     assert await run("-c", str(config), "satellites", "approve", "123456") == 2
     assert "no admin token" in capsys.readouterr().err
     token_path(tmp_path).write_text("left-over")
@@ -299,9 +250,9 @@ def test_the_command_line_reports_an_answer_that_is_not_the_admin(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     port = free_port()
-    respx.post(f"http://127.0.0.1:{port}/api/satellites/x/revoke").respond(502, text="<html>Bad gateway</html>")
+    respx.delete(f"http://127.0.0.1:{port}/api/v1/satellites/x").respond(502, text="<html>Bad gateway</html>")
     config = tmp_path / "nestor.yaml"
-    config.write_text(CONFIG.format(data_dir=tmp_path, admin={"password_hash": PASSWORD_HASH, "port": port}))
+    config.write_text(CONFIG.format(data_dir=tmp_path, admin={"port": port}))
     token_path(tmp_path).write_text("tok")
     assert main(["-c", str(config), "satellites", "revoke", "x"]) == 2
     assert "the admin answered HTTP 502" in capsys.readouterr().err

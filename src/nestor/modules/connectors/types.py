@@ -44,6 +44,7 @@ class ConnectorInfo:
     fields: tuple[SecretField, ...] = ()  # SECRET auth, and non-OAuth settings (server URL…)
     setup: str = ""  # step-by-step guide shown before connecting (create an OAuth client…)
     inbound: tuple[str, ...] = ()  # kinds of items it can feed watches with ("mail")
+    brand: str | None = None  # the vendor, as a slug people recognise ("google")
 
 
 class Status(StrEnum):

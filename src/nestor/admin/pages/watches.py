@@ -3,8 +3,9 @@
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
-from nestor.admin.errors import Refused
-from nestor.admin.guard import Checked, LoggedIn
+from nestor.admin.pages.errors import Refused
+from nestor.admin.pages.guard import Checked, LoggedIn
+from nestor.admin.pages.rendering import pages_of
 from nestor.admin.state import state
 
 router = APIRouter()
@@ -14,7 +15,7 @@ router = APIRouter()
 async def watches_page(request: Request, session: LoggedIn) -> HTMLResponse:
     admin = state(request)
     book = admin.nestor.watch_book
-    return admin.pages.render(
+    return pages_of(request).render(
         request,
         "watches.html",
         session,

@@ -21,6 +21,7 @@ class SatellitePaired(Event, event_type="satellite.paired"):
     capabilities: tuple[Capability, ...]  # what it may do, a subset of what it declared
     token_hash: str  # SHA-256 of a 256-bit random token: enough to check it, useless to forge it
     approved_by: PersonId | None = None
+    sdk: str | None = None  # the software it declared at pairing
 
 
 class SatelliteRevoked(Event, event_type="satellite.revoked"):

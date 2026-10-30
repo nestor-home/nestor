@@ -1,9 +1,19 @@
 """Base class of everything plugged into Nestor (adapters, executors, bodies…)."""
 
+from collections.abc import Mapping
+from enum import StrEnum
 from types import TracebackType
 from typing import Self
 
 from nestor.core.contracts.capabilities import Capabilities
+
+
+class Health(StrEnum):
+    """What a running component can tell about itself."""
+
+    STARTED = "started"
+    DEGRADED = "degraded"  # works, partly (a fallback in use, some of what it offers missing)
+    UNAVAILABLE = "unavailable"  # started but cannot serve now (server unreachable, disconnected)
 
 
 class Component:
@@ -15,6 +25,15 @@ class Component:
 
     name: str = "component"  # a class default; the runtime gives each configured instance its own name
     capabilities: Capabilities = Capabilities()
+    brand: str | None = None  # the vendor or protocol behind it, as a slug people recognise ("telegram")
+
+    def health(self) -> Health:
+        """Whether it can serve right now; a component that cannot tell says it runs."""
+        return Health.STARTED
+
+    def details(self) -> Mapping[str, str]:
+        """What people may want to know about it (its model, its speech service…), never a secret."""
+        return {}
 
     async def start(self) -> None:
         """Acquire resources (connections, sessions). The default component has none."""

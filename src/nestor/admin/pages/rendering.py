@@ -2,17 +2,17 @@
 
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from fastapi import Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
-from nestor.admin.auth.sessions import Session
+from nestor.admin.auth import Session
 from nestor.admin.presentation import french_time
 from nestor.core import utc_now
 
-HERE = Path(__file__).parent
+TEMPLATES = Path(__file__).parents[1] / "templates"
 NAVIGATION = (
     ("/journal", "Journal"),
     ("/connections", "Connexions"),
@@ -27,7 +27,7 @@ NAVIGATION = (
 class Pages:
     def __init__(self, *, assistant: str, timezone: str) -> None:
         self.assistant, self.timezone = assistant, timezone
-        self.templates = Jinja2Templates(directory=HERE / "templates")
+        self.templates = Jinja2Templates(directory=TEMPLATES)
         self.templates.env.filters["when"] = self.when
 
     def when(self, moment: datetime | None) -> str:
@@ -45,3 +45,7 @@ class Pages:
             "navigation": NAVIGATION,
         }
         return self.templates.TemplateResponse(request, template, context, status_code=status)
+
+
+def pages_of(request: Request) -> Pages:
+    return cast(Pages, request.app.state.pages)

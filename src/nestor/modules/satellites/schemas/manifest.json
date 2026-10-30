@@ -23,6 +23,10 @@
         "room": {
           "type": "string",
           "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$"
+        },
+        "brand": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$"
         }
       },
       "required": [
@@ -31,6 +35,11 @@
         "room"
       ],
       "additionalProperties": false
+    },
+    "sdk": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
     },
     "capabilities": {
       "type": "array",

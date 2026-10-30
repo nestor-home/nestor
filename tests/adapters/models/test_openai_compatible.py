@@ -463,3 +463,16 @@ class TestOpenRouterLive(ConversationModelContract):
 
     def unavailable_model(self) -> ConversationModel:
         return self.model(api_key="sk-or-v1-invalid")
+
+
+@pytest.mark.parametrize(
+    ("base_url", "brand"),
+    [
+        ("https://openrouter.ai/api/v1", "openrouter"),
+        ("https://api.openai.com/v1", "openai"),
+        ("http://localhost:8000", None),
+    ],
+)
+def test_the_model_names_its_provider_and_its_model(base_url: str, brand: str | None) -> None:
+    built = model(base_url=base_url)
+    assert built.brand == brand and built.details() == {"model": "vendor/model"}

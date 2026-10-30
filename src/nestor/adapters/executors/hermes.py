@@ -46,6 +46,7 @@ class HermesExecutor(RemoteExecutor):
     """
 
     name = "hermes"
+    brand = "hermes"
 
     def __init__(
         self,

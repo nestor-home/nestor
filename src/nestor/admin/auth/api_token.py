@@ -1,7 +1,7 @@
 """The admin API token: a random bearer token written at startup into `<data_dir>/admin.token`.
 
-Only the local `nestor` command line reads it (the file is readable by its owner alone). It opens
-the JSON API and nothing else: pages keep their session cookie and CSRF tokens.
+Only the local `nestor` command line reads it (the file is readable by its owner alone). It opens the
+satellite pairing routes of the API and nothing else: browsers sign in with an account.
 """
 
 import os

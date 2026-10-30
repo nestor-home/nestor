@@ -59,4 +59,12 @@ CREATE TABLE secrets (
 ) STRICT;
 """
 
-MIGRATIONS: tuple[str, ...] = (EVENTS, MEMORIES, SECRETS)
+VERIFIERS = """
+CREATE TABLE verifiers (
+    owner TEXT PRIMARY KEY,  -- account:<id>, invitation:<id>
+    verifier TEXT NOT NULL,  -- a scrypt hash or a SHA-256 digest, never the secret itself
+    updated_at TEXT NOT NULL
+) STRICT;
+"""
+
+MIGRATIONS: tuple[str, ...] = (EVENTS, MEMORIES, SECRETS, VERIFIERS)

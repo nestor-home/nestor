@@ -34,7 +34,7 @@ from pydantic import SecretStr
 
 from nestor.adapters.tools.mcp import BearerToken, McpSettings, McpToolProvider, McpTransport
 from nestor.adapters.tools.mcp.plugin import plugin
-from nestor.core import ProviderError
+from nestor.core import Health, ProviderError
 from nestor.modules.channels import Address
 from nestor.modules.cognition.model import ToolCall
 from nestor.modules.cognition.tools import Risk, Tool, Toolbox, ToolCalled, ToolCompleted, ToolContext, ToolFailed
@@ -470,6 +470,7 @@ async def test_a_server_that_never_answers_times_out_at_start(caplog: LogCapture
 async def test_an_unreachable_server_at_start_leaves_its_tools_missing(caplog: LogCapture) -> None:
     async with McpToolProvider(f"http://127.0.0.1:{free_port()}/mcp", name="home", retry_after_s=60) as provider:
         assert provider.tools() == ()
+        assert provider.health() is Health.UNAVAILABLE and provider.brand == "mcp"
 
     assert "home: MCP server unavailable" in caplog.text and "unreachable" in caplog.text
 
@@ -477,6 +478,7 @@ async def test_an_unreachable_server_at_start_leaves_its_tools_missing(caplog: L
 async def test_a_dropped_server_empties_the_list_and_calls_fail_clearly(served_home: Served) -> None:
     async with provider_for(served_home, retry_after_s=60) as provider:
         turn_on = tool(provider, "turn_on")
+        assert provider.health() is Health.STARTED
         await served_home.stop()
 
         with pytest.raises(ToolFailed, match="home is unreachable"):

@@ -27,7 +27,8 @@ ALLOWED_INTERNAL = {
 # Third-party packages allowed outside adapters, per layer. Each addition is a design decision.
 THIRD_PARTY_ALLOWED: dict[str, set[str]] = {
     "runtime": {"pydantic", "yaml"},  # validated configuration; never seen by modules
-    "admin": {"fastapi", "starlette", "jinja2", "uvicorn"},  # server-rendered pages served next to Nestor
+    # the JSON API (pydantic response models) served next to Nestor; jinja2 until the server-rendered pages go
+    "admin": {"fastapi", "starlette", "pydantic", "jinja2", "uvicorn"},
 }
 
 

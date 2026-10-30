@@ -8,6 +8,7 @@ Tested against OpenRouter only; other servers are expected to work but remain un
 """
 
 import json
+import urllib.parse
 from collections.abc import AsyncGenerator, AsyncIterator, Callable, Iterator, Mapping
 from contextlib import aclosing
 from dataclasses import dataclass, field
@@ -39,6 +40,7 @@ _FINISH_REASONS = {
     "length": FinishReason.LENGTH,
 }
 _RETRYABLE_STATUSES = frozenset({408, 409, 425, 429})
+_BRANDS = {"openrouter.ai": "openrouter", "openai.com": "openai", "mistral.ai": "mistral", "anthropic.com": "anthropic"}
 _MAX_DETAIL = 300
 
 
@@ -76,6 +78,11 @@ class OpenAICompatibleModel(ConversationModel):
         self._timeout = httpx.Timeout(read_timeout_s, connect=connect_timeout_s)
         self._provider = provider
         self._client: httpx.AsyncClient | None = None
+        host = urllib.parse.urlsplit(base_url).hostname or ""
+        self.brand = next((b for suffix, b in _BRANDS.items() if host == suffix or host.endswith(f".{suffix}")), None)
+
+    def details(self) -> Mapping[str, str]:
+        return {"model": self._model}
 
     async def start(self) -> None:
         self._client = httpx.AsyncClient(

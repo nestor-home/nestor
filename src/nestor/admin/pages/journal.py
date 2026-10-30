@@ -6,7 +6,8 @@ from urllib.parse import urlencode
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 
-from nestor.admin.guard import LoggedIn
+from nestor.admin.pages.guard import LoggedIn
+from nestor.admin.pages.rendering import pages_of
 from nestor.admin.presentation import CATEGORIES, EventDescriber
 from nestor.admin.state import state
 from nestor.core import PersonId
@@ -45,7 +46,7 @@ async def journal_page(
     chosen = {k: v for k, v in filters.items() if v}
     more = len(lines) == PAGE or len(entries) == SCANNED
     older = f"/journal?{urlencode({**chosen, 'before': cursor.isoformat()})}" if more and cursor else None
-    return admin.pages.render(
+    return pages_of(request).render(
         request,
         "journal.html",
         session,

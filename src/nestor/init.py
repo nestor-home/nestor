@@ -1,9 +1,13 @@
-"""`nestor init`: a first configuration and its secrets, never overwriting what exists."""
+"""`nestor init`: a first configuration, its secrets and its owner account, never overwriting what exists."""
 
+import asyncio
 import secrets
 from pathlib import Path
 
-from nestor.admin import hash_password
+from nestor.core import ContractError, PersonId
+from nestor.modules.accounts import MIN_LENGTH, Role, normalise_login
+from nestor.modules.household import Person
+from nestor.runtime.app import database_path, open_accounts
 
 TEMPLATE = """# Nestor configuration — every ${{NAME}} comes from the environment (.env next to this file).
 data_dir: {data_dir}
@@ -47,10 +51,9 @@ channels:
 #     url: ${{HOME_ASSISTANT_MCP_URL}}
 #     token: ${{HOME_ASSISTANT_TOKEN}}
 
-admin:
+admin:                             # who signs in is in the database: `nestor accounts create-owner`
   host: 0.0.0.0
   port: 8080
-  password_hash: "{password_hash}"
 """
 
 ENV = """# Secrets for Nestor. Never commit this file.
@@ -65,9 +68,11 @@ def slug(text: str) -> str:
     return kept or "me"
 
 
-def initialise(config: Path, *, name: str, person: str, password: str) -> list[Path]:
-    """Write the configuration and its `.env` when absent; returns what was written."""
-    password_hash = hash_password(password)  # refuse a weak password before writing anything
+def initialise(config: Path, *, name: str, person: str, login: str, password: str) -> list[Path]:
+    """Write the configuration, its `.env` and the owner account when absent; returns what was written."""
+    if len(password) < MIN_LENGTH:  # refuse a weak password or login before writing anything
+        raise ContractError(f"choose a password of at least {MIN_LENGTH} characters")
+    normalise_login(login)
     written: list[Path] = []
     config.parent.mkdir(parents=True, exist_ok=True)
     env = config.parent / ".env"
@@ -82,8 +87,15 @@ def initialise(config: Path, *, name: str, person: str, password: str) -> list[P
                 name=name,
                 person=person,
                 person_id=slug(person),
-                password_hash=password_hash,
             )
         )
         written.append(config)
+        asyncio.run(_owner(config.parent.resolve() / "state", person, login, password))
+        written.append(database_path(config.parent.resolve() / "state"))
     return written
+
+
+async def _owner(data_dir: Path, person: str, login: str, password: str) -> None:
+    first = Person(id=PersonId(slug(person)), name=person)
+    async with open_accounts(data_dir, [first]) as accounts:
+        await accounts.create(login=login, password=password, role=Role.OWNER, person=first.id)

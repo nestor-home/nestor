@@ -51,6 +51,14 @@ def test_a_manifest_keeps_the_parameters_of_its_capabilities() -> None:
     assert sent["payload"]["manifest"]["capabilities"] == [{"name": "audio.capture", "formats": ["opus/48000"]}]
 
 
+def test_a_manifest_may_name_its_maker_and_its_software() -> None:
+    manifest = Manifest(Device("reachy", "reachy-mini", "salon", brand="pollen-robotics"), sdk="nestor-reachy 0.1.0")
+    data = wire.encode(wire.Hello(manifest=manifest))
+    assert validator("hello").is_valid(data)
+    decoded = wire.decode(data).message
+    assert isinstance(decoded, wire.Hello) and decoded.manifest == manifest
+
+
 def _with(message: wire.Message, **payload: Any) -> dict[str, Any]:
     data = wire.encode(message)
     data["payload"] = {**data["payload"], **payload}
@@ -76,6 +84,10 @@ OFF_CONTRACT = {
     "device id with a colon": _manifest(device={"id": "voice:salon", "model": "m", "room": "salon"}),
     "capability without a family": _manifest(capabilities=[{"name": "camera"}]),
     "unexpected manifest key": _manifest(firmware="1.2"),
+    "empty sdk": _manifest(sdk=""),
+    "brand that is not a slug": _manifest(
+        device={"id": "d", "model": "m", "room": "salon", "brand": "Pollen Robotics"}
+    ),
 }
 
 

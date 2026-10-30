@@ -23,7 +23,7 @@ from nestor.adapters.home.home_assistant.installation import (
     StateChanged,
     parse,
 )
-from nestor.core import ProviderError
+from nestor.core import Health, ProviderError
 from nestor.modules.home import Granularity, Presence, PresenceSource, Whereabouts
 
 logger = logging.getLogger(__name__)
@@ -63,6 +63,7 @@ class HomeAssistantPresence(PresenceSource):
     """
 
     name = "home-assistant"
+    brand = "homeassistant"
 
     def __init__(
         self,
@@ -87,6 +88,10 @@ class HomeAssistantPresence(PresenceSource):
     @property
     def granularity(self) -> Granularity:
         return self._granularity
+
+    def health(self) -> Health:
+        """Unavailable while disconnected: everyone is unknown until it reconnects."""
+        return Health.STARTED if self._installation is not None else Health.UNAVAILABLE
 
     def presence(self) -> Presence:
         if self._installation is None:

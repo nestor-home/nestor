@@ -205,6 +205,7 @@ class TelegramChannel(Channel):
     """
 
     name = "telegram"
+    brand = "telegram"
 
     def __init__(
         self,

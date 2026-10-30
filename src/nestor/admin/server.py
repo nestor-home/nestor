@@ -37,7 +37,12 @@ class AdminServer(Component):
         config = nestor.config.admin
         if config is None:
             raise ContractError("the configuration has no admin section")
-        return cls(nestor, AdminSettings(**config.model_dump()))
+        if config.password_hash is not None:
+            log.warning(
+                "admin.password_hash is no longer used: accounts replaced it. Create the first owner with "
+                "`nestor accounts create-owner`, then remove the line"
+            )
+        return cls(nestor, AdminSettings(**config.model_dump(exclude={"password_hash"})))
 
     @property
     def port(self) -> int:
@@ -52,7 +57,11 @@ class AdminServer(Component):
         config = uvicorn.Config(
             self.app, host=self.settings.host, port=self.settings.port, lifespan="off", log_level="warning"
         )
-        self.app.state.admin.api_token = issue_token(self.token_file)
+        admin = self.app.state.admin
+        admin.closing.clear()
+        admin.api_token = issue_token(self.token_file)
+        if not admin.accounts.owners():
+            log.warning("no account can sign in to the admin yet: run `nestor accounts create-owner`")
         self._server = server = _Server(config)
         self._serving = serving = asyncio.create_task(self._serve(server), name="admin server")
         while not server.started:
@@ -69,6 +78,7 @@ class AdminServer(Component):
         self._server = self._serving = None
         if server is None or serving is None:
             return
+        self.app.state.admin.closing.set()  # live streams end, so that the server can stop
         server.should_exit = True
         await asyncio.gather(serving, return_exceptions=True)
         self.app.state.admin.api_token = None

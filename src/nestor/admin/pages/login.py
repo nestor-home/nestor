@@ -1,15 +1,15 @@
-"""Logging in with the household password, and out."""
+"""Signing in with an account, and out (server-rendered pages)."""
 
-import asyncio
 import hmac
 from typing import Annotated
 
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
-from nestor.admin.auth import Session, verify_password
-from nestor.admin.errors import Refused
-from nestor.admin.guard import Checked, current, forget, remember
+from nestor.admin.auth import Session
+from nestor.admin.pages.errors import Refused
+from nestor.admin.pages.guard import Checked, current
+from nestor.admin.pages.rendering import pages_of
 from nestor.admin.state import state
 
 router = APIRouter()
@@ -22,14 +22,15 @@ async def login_page(request: Request, next: str = "/") -> Response:
     if session is not None and session.authenticated:
         return RedirectResponse(_safe(next), status_code=303)
     session = session or admin.sessions.open()
-    response = admin.pages.render(request, "login.html", session, next=_safe(next))
-    remember(response, request, session)
+    response = pages_of(request).render(request, "login.html", session, next=_safe(next))
+    admin.cookie.give(response, session, secure=admin.secure(request))
     return response
 
 
 @router.post("/login")
 async def login(
     request: Request,
+    login: Annotated[str, Form()] = "",
     password: Annotated[str, Form()] = "",
     csrf: Annotated[str, Form()] = "",
     next: Annotated[str, Form()] = "/",
@@ -42,14 +43,15 @@ async def login(
     if wait := admin.throttle.wait_s(client):
         minutes = max(1, round(wait / 60))
         return _again(request, anonymous, next, 429, f"Trop d'essais. Réessayez dans {minutes} min.")
-    if not await asyncio.to_thread(verify_password, password, admin.settings.password_hash):
+    account = await admin.accounts.authenticate(login, password, client=client)
+    if account is None:
         admin.throttle.failed(client)
-        return _again(request, anonymous, next, 401, "Mot de passe incorrect.")
+        return _again(request, anonymous, next, 401, "Identifiant ou mot de passe incorrect.")
     admin.throttle.succeeded(client)
-    admin.sessions.close(anonymous)  # a fresh id once logged in: a planted session id is worth nothing
-    session = admin.sessions.open(authenticated=True)
+    admin.sessions.close(anonymous)  # a fresh id once signed in: a planted session id is worth nothing
+    session = admin.sessions.open(account.id)
     response = RedirectResponse(_safe(next), status_code=303)
-    remember(response, request, session)
+    admin.cookie.give(response, session, secure=admin.secure(request))
     return response
 
 
@@ -57,12 +59,12 @@ async def login(
 async def logout(request: Request, session: Checked) -> Response:
     state(request).sessions.close(session)
     response = RedirectResponse("/login", status_code=303)
-    forget(response)
+    state(request).cookie.clear(response)
     return response
 
 
 def _again(request: Request, session: Session, next: str, status: int, error: str) -> HTMLResponse:
-    return state(request).pages.render(request, "login.html", session, status=status, next=_safe(next), error=error)
+    return pages_of(request).render(request, "login.html", session, status=status, next=_safe(next), error=error)
 
 
 def _safe(target: str) -> str:

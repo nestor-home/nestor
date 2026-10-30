@@ -51,7 +51,7 @@ from mcp.types import Tool as RemoteTool
 from mcp.types.version import MODERN_PROTOCOL_VERSIONS
 
 from nestor import __version__
-from nestor.core import ProviderError
+from nestor.core import Health, ProviderError
 from nestor.modules.cognition.model import ToolSpec
 from nestor.modules.cognition.tools import Risk, Tool, ToolContext, ToolFailed, ToolProvider
 
@@ -191,6 +191,13 @@ class McpToolProvider(ToolProvider):
             if not error.transient:
                 raise ProviderError(self.name, str(error), transient=False) from None
             logger.warning("%s: MCP server unavailable, its tools are missing until it answers (%s)", self.name, error)
+
+    brand = "mcp"
+
+    def health(self) -> Health:
+        """Unavailable while the server does not answer: its tools are missing."""
+        session = self._session
+        return Health.STARTED if session is not None and session.alive else Health.UNAVAILABLE
 
     def tools(self) -> Sequence[Tool]:
         session = self._session

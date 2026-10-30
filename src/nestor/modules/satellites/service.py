@@ -85,7 +85,7 @@ class Pairing(Component):
         self._expire()
         return [
             PendingPairing(id=r.ticket.id, device=r.manifest.device, capabilities=r.manifest.names,
-                           expires_at=r.ticket.expires_at)
+                           expires_at=r.ticket.expires_at, sdk=r.manifest.sdk)
             for r in self._requests.values()
             if r.status is PairingStatus.PENDING
         ]  # fmt: skip
@@ -153,6 +153,7 @@ class Pairing(Component):
             capabilities=tuple(sorted(allowed)),
             token_hash=hash_token(token),
             approved_by=by,
+            sdk=request.manifest.sdk,
         )
         await self.journal.publish(event)
         satellite = self._satellites[event.device.id] = _satellite(event)
@@ -191,4 +192,6 @@ def _satellite(event: SatellitePaired) -> Satellite:
         capabilities=frozenset(event.capabilities),
         token_hash=event.token_hash,
         paired_at=event.at,
+        brand=event.device.brand,
+        sdk=event.sdk,
     )

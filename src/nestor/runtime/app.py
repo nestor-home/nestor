@@ -4,14 +4,22 @@ import asyncio
 import contextlib
 import logging
 import os
-from collections.abc import Mapping, Sequence
+from collections.abc import AsyncGenerator, Iterable, Mapping, Sequence
 from contextlib import AsyncExitStack
+from pathlib import Path
 from typing import Self, cast
 
 from nestor.adapters.oauth import HttpxTokenEndpoint
-from nestor.adapters.storage.sqlite import SQLiteDatabase, SQLiteEventLog, SQLiteMemoryStore, SQLiteVault
+from nestor.adapters.storage.sqlite import (
+    SQLiteDatabase,
+    SQLiteEventLog,
+    SQLiteMemoryStore,
+    SQLiteVault,
+    SQLiteVerifierStore,
+)
 from nestor.adapters.storage.sqlite.vault import GENERATE
 from nestor.core import Component, ContractError
+from nestor.modules.accounts import Accounts
 from nestor.modules.channels import Channel
 from nestor.modules.cognition import ConversationModel, Executor
 from nestor.modules.cognition.delegation.assistant import Delegation
@@ -20,7 +28,7 @@ from nestor.modules.cognition.tools import Toolbox, ToolProvider
 from nestor.modules.connectors import ConnectedInbound, Connections, Connector, ConnectorTools, TokenEndpoint
 from nestor.modules.conversation import Agent, ChannelProfile, Persona
 from nestor.modules.home import PresenceSource
-from nestor.modules.household import Household
+from nestor.modules.household import Household, Person
 from nestor.modules.initiative import (
     Courier,
     DeliveryPolicy,
@@ -37,11 +45,16 @@ from nestor.modules.memory import Memories
 from nestor.modules.memory.assistant import MemoryTools
 from nestor.modules.satellites import Pairing, SatelliteHost
 from nestor.runtime.config import AdapterConfig, ConfigError, NestorConfig
-from nestor.runtime.plugins import Family, Registry, Services
+from nestor.runtime.plugins import Family, Plugged, Registry, Services
 
 log = logging.getLogger("nestor")
 
 SECRET_KEY = "NESTOR_SECRET_KEY"
+DATABASE = "nestor.db"
+
+
+def database_path(data_dir: Path) -> Path:
+    return data_dir / DATABASE
 
 
 class Nestor:
@@ -62,37 +75,47 @@ class Nestor:
         self.config = config
         registry = registry or Registry.installed()
         services = Services(data_dir=config.data_dir)
+        self.plugged: list[Plugged] = []  # every adapter built from the configuration, in build order
         environ = os.environ if environ is None else environ
 
-        self.database = SQLiteDatabase(config.data_dir / "nestor.db")
+        self.database = SQLiteDatabase(database_path(config.data_dir))
         self.journal = Journal(SQLiteEventLog(self.database))
         self.household = Household(p.to_person() for p in config.household)
+        self.accounts = Accounts(self.journal, SQLiteVerifierStore(self.database), self.household)
 
-        self.model = _build(registry, Family.MODEL, config.model, "model", services, ConversationModel)
+        self.model = _build(self.plugged, registry, Family.MODEL, config.model, "model", services, ConversationModel)
         self.executors = [
-            _build(registry, Family.EXECUTOR, c, c.name or c.kind, services, Executor) for c in config.executors
+            _build(self.plugged, registry, Family.EXECUTOR, c, c.name or c.kind, services, Executor)
+            for c in config.executors
         ]
         self.channels = [
-            _build(registry, Family.CHANNEL, c, c.name or c.kind, services, Channel) for c in config.channels
+            _build(self.plugged, registry, Family.CHANNEL, c, c.name or c.kind, services, Channel)
+            for c in config.channels
         ]
         if len({c.channel_id for c in self.channels}) != len(self.channels):
             raise ContractError("two channels have the same name: give each a distinct `name`")
-        self.tools = [_build(registry, Family.TOOLS, c, c.name or c.kind, services, ToolProvider) for c in config.tools]
+        self.tools = [
+            _build(self.plugged, registry, Family.TOOLS, c, c.name or c.kind, services, ToolProvider)
+            for c in config.tools
+        ]
         self.triage_model = (
-            _build(registry, Family.MODEL, config.triage_model, "triage-model", services, ConversationModel)
+            _build(
+                self.plugged, registry, Family.MODEL, config.triage_model, "triage-model", services, ConversationModel
+            )
             if config.triage_model
             else self.model
         )
         self.inbound = [
-            _build(registry, Family.INBOUND, c, c.name or c.kind, services, InboundEventSource) for c in config.inbound
+            _build(self.plugged, registry, Family.INBOUND, c, c.name or c.kind, services, InboundEventSource)
+            for c in config.inbound
         ]
         self.presence = (
-            _build(registry, Family.PRESENCE, config.presence, "presence", services, PresenceSource)
+            _build(self.plugged, registry, Family.PRESENCE, config.presence, "presence", services, PresenceSource)
             if config.presence
             else None
         )
 
-        self.connectors = _connectors(registry, config, services)
+        self.connectors = _connectors(self.plugged, registry, config, services)
         self.token_endpoint: TokenEndpoint | None = None
         self.connections: Connections | None = None
         connected: list[InboundEventSource] = []
@@ -166,6 +189,8 @@ class Nestor:
         )
         return [
             self.database,
+            self.accounts.verifiers,
+            self.accounts,
             self.pairing,
             *connections,
             self.model,
@@ -207,7 +232,9 @@ class Nestor:
             log.exception("channel %s stopped", channel.channel_id)
 
 
-def _connectors(registry: Registry, config: NestorConfig, services: Services) -> list[Connector]:
+def _connectors(
+    plugged: list[Plugged], registry: Registry, config: NestorConfig, services: Services
+) -> list[Connector]:
     """The configured connectors; by default every installed one when the admin is on (it is where they are used)."""
     if config.connectors is not None:
         chosen = config.connectors
@@ -215,7 +242,7 @@ def _connectors(registry: Registry, config: NestorConfig, services: Services) ->
         chosen = tuple(AdapterConfig(kind=kind) for kind in registry.kinds(Family.CONNECTOR))
     else:
         chosen = ()
-    connectors = [_build(registry, Family.CONNECTOR, c, c.name or c.kind, services, Connector) for c in chosen]
+    connectors = [_build(plugged, registry, Family.CONNECTOR, c, c.name or c.kind, services, Connector) for c in chosen]
     kinds = [c.info.kind for c in connectors]
     if len(set(kinds)) != len(kinds):
         raise ContractError("two connectors declare the same kind: configure each service once")
@@ -223,12 +250,29 @@ def _connectors(registry: Registry, config: NestorConfig, services: Services) ->
 
 
 def _build[C](
-    registry: Registry, family: Family, config: AdapterConfig, name: str, services: Services, expected: type[C]
+    plugged: list[Plugged],
+    registry: Registry,
+    family: Family,
+    config: AdapterConfig,
+    name: str,
+    services: Services,
+    expected: type[C],
 ) -> C:
     component = registry.get(family, config.kind).create(config.settings(), name, services)
     if not isinstance(component, expected):
         raise ContractError(f"plugin {config.kind!r} built a {type(component).__name__}, not a {expected.__name__}")
+    plugged.append(Plugged(family, config.kind, name, component, registry.origin(family, config.kind)))
     return cast(C, component)
+
+
+@contextlib.asynccontextmanager
+async def open_accounts(data_dir: Path, people: Iterable[Person]) -> AsyncGenerator[Accounts]:
+    """The account book kept in `data_dir`, without the rest of Nestor (for the command line: a running
+    instance sees the change at its next start)."""
+    database = SQLiteDatabase(database_path(data_dir))
+    accounts = Accounts(Journal(SQLiteEventLog(database)), SQLiteVerifierStore(database), Household(people))
+    async with database, accounts:
+        yield accounts
 
 
 async def run_until_stopped(nestor: Nestor, extras: Sequence[Component] = ()) -> None:

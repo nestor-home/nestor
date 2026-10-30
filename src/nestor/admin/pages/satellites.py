@@ -11,8 +11,9 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from nestor.admin.auth import Session
-from nestor.admin.errors import Refused
-from nestor.admin.guard import Checked, LoggedIn
+from nestor.admin.pages.errors import Refused
+from nestor.admin.pages.guard import Checked, LoggedIn
+from nestor.admin.pages.rendering import pages_of
 from nestor.admin.presentation import french_capability
 from nestor.admin.state import AdminState, state
 from nestor.core import Capability, ContractError, PersonId, utc_now
@@ -74,7 +75,7 @@ async def _page(request: Request, session: Session, *, status: int = 200, error:
     pairing = admin.nestor.pairing
     approvals = {e.device.id: e for e in await admin.nestor.journal.history(SatellitePaired)}  # the latest wins
     now = utc_now()
-    return admin.pages.render(
+    return pages_of(request).render(
         request,
         "satellites.html",
         session,

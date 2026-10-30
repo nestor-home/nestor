@@ -11,6 +11,7 @@ most recent session of the room.
 
 import asyncio
 import logging
+from collections.abc import Mapping
 from dataclasses import replace
 from pathlib import Path
 
@@ -46,7 +47,12 @@ class VoiceChannel(Channel, SatelliteHost):
     """
 
     name = "voice"
+    brand = "webrtc"
     medium = Medium.SPOKEN
+
+    def details(self) -> Mapping[str, str]:
+        known = {"speech": self._speech.brand}
+        return {role: brand for role, brand in known.items() if brand}
 
     def __init__(
         self,

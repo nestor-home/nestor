@@ -24,6 +24,7 @@ SPEECH_ACTIVITY = Capability("audio.speech_activity")
 _SLUG = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")  # device ids and rooms end up in addresses (`voice:salon`)
 _CAPABILITY = re.compile(r"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$")
 MAX_CAPABILITIES = 32
+MAX_SDK = 64
 
 
 @dataclass(frozen=True, slots=True)
@@ -31,24 +32,33 @@ class Device:
     id: str
     model: str
     room: str
+    brand: str | None = None  # its maker, as a slug ("pollen-robotics"); optional
 
     @classmethod
     def from_json(cls, data: object) -> "Device":
-        if not isinstance(data, dict) or set(data) != {"id", "model", "room"}:
-            raise ContractError("device must have exactly id, model and room")
+        if not isinstance(data, dict) or not {"id", "model", "room"} <= set(data) <= {"id", "model", "room", "brand"}:
+            raise ContractError("device must have id, model and room, and may have a brand")
         for name in ("id", "room"):
             if not isinstance(data[name], str) or not _SLUG.match(data[name]):
                 raise ContractError(f"device {name} {data[name]!r} must be a lowercase slug (a-z, 0-9, - and _)")
         if not isinstance(data["model"], str) or not 0 < len(data["model"]) <= 64:
             raise ContractError("device model must be a non-empty string of at most 64 characters")
-        return cls(data["id"], data["model"], data["room"])
+        brand = data.get("brand")
+        if brand is not None and (not isinstance(brand, str) or not _SLUG.match(brand)):
+            raise ContractError(f"device brand {brand!r} must be a lowercase slug (a-z, 0-9, - and _)")
+        return cls(data["id"], data["model"], data["room"], brand)
 
     @staticmethod
     def json_schema() -> dict[str, Any]:
         slug = {"type": "string", "pattern": _SLUG.pattern}
         return {
             "type": "object",
-            "properties": {"id": slug, "model": {"type": "string", "minLength": 1, "maxLength": 64}, "room": slug},
+            "properties": {
+                "id": slug,
+                "model": {"type": "string", "minLength": 1, "maxLength": 64},
+                "room": slug,
+                "brand": slug,
+            },
             "required": ["id", "model", "room"],
             "additionalProperties": False,
         }
@@ -69,23 +79,26 @@ class Manifest:
     device: Device
     capabilities: tuple[DeclaredCapability, ...] = ()
     protocol: str = PROTOCOL
+    sdk: str | None = None  # the software it runs, as it names it ("nestor-satellite-python 0.2.0"); optional
 
     @property
     def names(self) -> frozenset[Capability]:
         return frozenset(c.name for c in self.capabilities)
 
     def to_json(self) -> dict[str, Any]:
-        return {
+        device = {"id": self.device.id, "model": self.device.model, "room": self.device.room}
+        data: dict[str, Any] = {
             "protocol": self.protocol,
-            "device": {"id": self.device.id, "model": self.device.model, "room": self.device.room},
+            "device": device | ({"brand": self.device.brand} if self.device.brand else {}),
             "capabilities": [{"name": c.name, **c.params} for c in self.capabilities],
         }
+        return data | ({"sdk": self.sdk} if self.sdk else {})
 
     @classmethod
     def from_json(cls, data: object) -> "Manifest":
         """Validate a manifest received from a device; anything unexpected is a `ContractError`."""
-        if not isinstance(data, dict) or set(data) - {"protocol", "device", "capabilities"}:
-            raise ContractError("a manifest is an object with protocol, device and capabilities")
+        if not isinstance(data, dict) or set(data) - {"protocol", "device", "capabilities", "sdk"}:
+            raise ContractError("a manifest is an object with protocol, device, capabilities and an optional sdk")
         if data.get("protocol") != PROTOCOL:
             raise ContractError(f"unsupported protocol {data.get('protocol')!r}, expected {PROTOCOL!r}")
         device = Device.from_json(data.get("device"))
@@ -100,7 +113,10 @@ class Manifest:
             declared.append(DeclaredCapability(Capability(name), {k: v for k, v in entry.items() if k != "name"}))
         if len({c.name for c in declared}) != len(declared):
             raise ContractError("a capability is declared twice")
-        return cls(device, tuple(declared))
+        sdk = data.get("sdk")
+        if sdk is not None and (not isinstance(sdk, str) or not 0 < len(sdk) <= MAX_SDK):
+            raise ContractError(f"sdk must be a non-empty string of at most {MAX_SDK} characters")
+        return cls(device, tuple(declared), sdk=sdk)
 
     @staticmethod
     def json_schema() -> dict[str, Any]:
@@ -109,6 +125,7 @@ class Manifest:
             "properties": {
                 "protocol": {"const": PROTOCOL},
                 "device": Device.json_schema(),
+                "sdk": {"type": "string", "minLength": 1, "maxLength": MAX_SDK},
                 "capabilities": {
                     "type": "array",
                     "maxItems": MAX_CAPABILITIES,
@@ -134,6 +151,8 @@ class Satellite:
     capabilities: frozenset[Capability]
     token_hash: str
     paired_at: datetime
+    brand: str | None = None
+    sdk: str | None = None
 
 
 class PairingStatus(StrEnum):
@@ -168,3 +187,4 @@ class PendingPairing:
     device: Device
     capabilities: frozenset[Capability]
     expires_at: datetime
+    sdk: str | None = None

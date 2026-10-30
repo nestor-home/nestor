@@ -19,6 +19,7 @@ def test_the_channel_is_named_after_its_instance_and_speaks_in_its_room(tmp_path
     assert isinstance(channel, VoiceChannel)
     assert (channel.channel_id, channel.medium, channel.style) == ("voix", Medium.SPOKEN, "Use [laughs] sparingly.")
     assert not channel.reachable(Address("voix", "salon")), "nobody is connected yet"
+    assert (channel.brand, channel.details()) == ("webrtc", {"speech": "elevenlabs"})
 
 
 @pytest.mark.parametrize(

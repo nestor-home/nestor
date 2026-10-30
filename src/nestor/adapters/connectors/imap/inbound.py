@@ -46,6 +46,7 @@ class ImapTiming:
 
 
 class ImapInbound(InboundEventSource):
+    brand = "imap"
     kinds = ("mail",)
 
     def __init__(
