@@ -11,6 +11,7 @@ config-error-secret = { $path }: the secret { $detail } is not set.
 
 config-section-persona = Persona
 config-section-household = Household
+config-section-conversation = Conversations
 config-section-initiative = Initiative
 config-section-admin = Admin
 config-section-data_dir = Data
@@ -48,6 +49,8 @@ config-persona-timezone = Time zone
 config-household-accounts = Accounts on channels
 config-household-accounts-help = How each channel knows this person: telegram:123456789, voice:*.
 config-household-reach = Where to write to them
+config-conversation-ends_after_s = New conversation after (seconds)
+config-conversation-ends_after_s-help = A message sent this long after the last turn starts a new conversation: the assistant no longer replays the earlier turns. Memories stay.
 config-initiative-quiet_hours = Quiet hours
 config-initiative-quiet_hours-help = For example 22:30-07:30: nothing is said aloud then, unless urgent.
 config-initiative-main_room = Main room

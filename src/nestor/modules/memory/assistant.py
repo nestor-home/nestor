@@ -83,7 +83,11 @@ class MemoryTools(ToolProvider, ContextProvider):
 
     async def _remember(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
         memory = await self.memories.remember(
-            str(arguments["text"]), about=self._about(arguments), source=context.address, told_by=context.person
+            str(arguments["text"]),
+            about=self._about(arguments),
+            source=context.address,
+            told_by=context.person,
+            exchange=context.exchange,
         )
         return {"memory_id": memory.id, "remembered": memory.text}
 
@@ -93,14 +97,18 @@ class MemoryTools(ToolProvider, ContextProvider):
 
     async def _correct(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
         try:
-            memory = await self.memories.correct(str(arguments["memory_id"]), str(arguments["text"]), by=context.person)
+            memory = await self.memories.correct(
+                str(arguments["memory_id"]), str(arguments["text"]), by=context.person, exchange=context.exchange
+            )
         except ContractError as error:
             raise ToolFailed(str(error)) from None
         return {"memory_id": memory.id, "now": memory.text}
 
     async def _forget(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
         try:
-            memory = await self.memories.forget(str(arguments["memory_id"]), by=context.person)
+            memory = await self.memories.forget(
+                str(arguments["memory_id"]), by=context.person, exchange=context.exchange
+            )
         except ContractError as error:
             raise ToolFailed(str(error)) from None
         return {"forgotten": memory.text}

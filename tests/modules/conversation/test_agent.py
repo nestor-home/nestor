@@ -91,7 +91,7 @@ async def test_the_agent_calls_tools_and_answers_with_their_result(make_agent: M
     agent = make_agent(ToolCall("c1", "light_on", {"room": "salon"}), answer, tools=[tool("light_on", light)])
 
     assert await agent.respond(message("Allume le salon")).collect() == "C'est allumé dans le salon."
-    assert contexts == [ToolContext(address=TELEGRAM, person=PersonId("mathis"))]
+    assert [(c.address, c.person) for c in contexts] == [(TELEGRAM, PersonId("mathis"))]
     called, completed = (await journal.history(ToolCalled))[0], (await journal.history(ToolCompleted))[0]
     assert (called.name, called.arguments, called.person) == ("light_on", {"room": "salon"}, "mathis")
     assert completed.ok and json.loads(completed.output) == {"room": "salon", "state": "on"}
@@ -285,11 +285,19 @@ async def test_a_composed_message_uses_the_conversation_and_is_left_to_its_sende
 
 
 async def test_an_answer_to_a_delivery_sees_the_delivery(make_agent: MakeAgent, journal: Journal) -> None:
-    await journal.publish(
-        AssistantTurn(source="courier", session=TELEGRAM.session, address=TELEGRAM, text="Ton analyse est prête.")
-    )
     model = ScriptedModel("Rien d'autre.")
-    await make_agent(model=model).respond(message("Rien d'autre ?")).collect()
+    agent = make_agent(model=model)
+    delivered = await agent.conversations.turn(TELEGRAM)  # what the courier does
+    await journal.publish(
+        AssistantTurn(
+            source="courier",
+            session=TELEGRAM.session,
+            address=TELEGRAM,
+            text="Ton analyse est prête.",
+            exchange=delivered,
+        )
+    )
+    await agent.respond(message("Rien d'autre ?")).collect()
 
     assert [m.role for m in model.requests[0].messages[1:]] == [Role.ASSISTANT, Role.USER]
 

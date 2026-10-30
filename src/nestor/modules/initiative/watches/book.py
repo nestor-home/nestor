@@ -3,6 +3,7 @@
 from collections.abc import Iterable
 
 from nestor.core import Component, utc_now
+from nestor.modules.channels import Exchange
 from nestor.modules.initiative.watches.events import WatchCreated, WatchEnded
 from nestor.modules.initiative.watches.types import Watch
 from nestor.modules.journal import Journal
@@ -23,7 +24,7 @@ class WatchBook(Component):
                 self.watches[created.watch_id] = _watch(created)
         await self.expire()
 
-    async def create(self, watch: Watch) -> Watch:
+    async def create(self, watch: Watch, *, exchange: Exchange | None = None) -> Watch:
         await self.journal.publish(
             WatchCreated(
                 source=self.name,
@@ -36,6 +37,7 @@ class WatchBook(Component):
                 owner=watch.owner,
                 created_in=watch.created_in,
                 until=watch.until,
+                exchange=exchange,
             )
         )
         self.watches[watch.id] = watch

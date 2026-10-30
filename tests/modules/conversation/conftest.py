@@ -8,7 +8,14 @@ from nestor.adapters.i18n import FluentLocalizer, catalogue_dirs
 from nestor.core import PersonId
 from nestor.modules.channels import Address, InboundMessage, Medium, Sender
 from nestor.modules.cognition.tools import Tool, Toolbox
-from nestor.modules.conversation import Agent, AgentSettings, ChannelProfile, ContextProvider, Persona
+from nestor.modules.conversation import (
+    Agent,
+    AgentSettings,
+    ChannelProfile,
+    ContextProvider,
+    Conversations,
+    Persona,
+)
 from nestor.modules.household import Account, Household, Person
 from nestor.modules.journal import Journal
 from nestor.testing.cognition.model import Reply, ScriptedModel
@@ -39,6 +46,7 @@ def make_agent(journal: Journal) -> MakeAgent:
         tools: Iterable[Tool] = (),
         context: Iterable[ContextProvider] = (),
         settings: AgentSettings | None = None,
+        conversations: Conversations | None = None,
     ) -> Agent:
         return Agent(
             model=model or ScriptedModel(*replies),
@@ -50,6 +58,7 @@ def make_agent(journal: Journal) -> MakeAgent:
             channels={"voice": ChannelProfile(Medium.SPOKEN, style="Use [laughs] sparingly.")},
             context=context,
             settings=settings,
+            conversations=conversations,
         )
 
     return make

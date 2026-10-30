@@ -262,7 +262,7 @@ async def test_the_important_events_are_told_in_the_readers_language(tmp_path: P
         for event in (
             AssistantTurn(source="agent", address=MATHIS_CHAT, text="Je surveille.", interrupted=True),
             FallbackSpoken(source="agent", address=MATHIS_CHAT, reason=FallbackReason.MODEL_SLOW),
-            AnswerCut(source="agent", turn="t1", heard="Je surv"),
+            AnswerCut(source="agent", answer="t1", heard="Je surv"),
             ToolCalled(source="toolbox", address=MATHIS_CHAT, call_id="c1", name="create_watch", arguments={}),
             ToolCompleted(source="toolbox", call_id="c1", name="create_watch", output="ok", ok=True, duration_s=0.2),
             ToolCompleted(source="toolbox", call_id="c2", name="mailbox_send", output="no", ok=False, duration_s=1),

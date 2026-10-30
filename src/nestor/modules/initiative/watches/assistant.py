@@ -79,7 +79,8 @@ class WatchTools(ToolProvider, ContextProvider):
                 owner=context.person,
                 created_in=context.address,
                 until=utc_now() + timedelta(days=int(days)) if isinstance(days, int) else None,
-            )
+            ),
+            exchange=context.exchange,
         )
         return {"watch_id": watch.id, "watching": watch.what}
 

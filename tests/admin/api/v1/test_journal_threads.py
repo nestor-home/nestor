@@ -1,6 +1,7 @@
 """The journal as threads: causes chaining entries, the position cursor, every filter, facets that
 ignore their own selection, one entry with its record — and sign-in only from the admin's own pages."""
 
+from dataclasses import replace
 from datetime import timedelta
 from pathlib import Path
 from typing import Any
@@ -8,10 +9,10 @@ from typing import Any
 from nestor.core import PersonId, utc_now
 from nestor.core.i18n import Message
 from nestor.modules.accounts import Role
-from nestor.modules.channels import Address
+from nestor.modules.channels import Address, InboundMessage, Sender
 from nestor.modules.cognition import TaskEnded, TaskStarted, TaskStatus
 from nestor.modules.cognition.delegation.events import TaskDelivered
-from nestor.modules.conversation import UserTurn
+from nestor.modules.conversation import Conversations, UserTurn
 from nestor.modules.home import PresenceChanged
 from nestor.modules.initiative import Delivered, DeliveryConsidered, WatchCreated, WatchTriggered
 from nestor.modules.memory import MemoryRecorded
@@ -176,3 +177,29 @@ async def test_signing_in_only_works_from_the_admins_own_pages(tmp_path: Path) -
             "/api/v1/invitations/inspect", json={"token": "x"}, headers={"Origin": "https://evil.example"}
         )
         assert inspect.json()["error"]["code"] == "cross_origin"
+
+
+async def test_a_conversation_threads_its_turns_and_the_journal_keeps_one(tmp_path: Path) -> None:
+    now = utc_now()
+    async with Harness(tmp_path, replies=("Il est midi.", "Dans le salon.", "Bonsoir.")) as admin:
+        agent = admin.nestor.agent
+        agent.conversations = Conversations(admin.nestor.journal, ends_after_s=300, clock=lambda: now)
+        said = InboundMessage(address=TELEGRAM, sender=Sender("user"), text="Quelle heure est-il ?")
+        await agent.respond(said).collect()
+        await agent.respond(replace(said, text="Où ça ?")).collect()
+        now += timedelta(minutes=6)
+        await agent.respond(replace(said, text="Bonsoir")).collect()
+        api = await admin.api()
+
+        everything = by_type(await items(api, session=TELEGRAM.session))
+        asked, follow_up, later = everything["conversation.turn.user"]
+        replies = everything["conversation.turn.assistant"]
+        first = asked["links"]["conversation"]
+        assert first and follow_up["links"]["conversation"] == first != later["links"]["conversation"]
+        assert [r["links"]["turn"] for r in replies] == [t["links"]["turn"] for t in (asked, follow_up, later)]
+        assert all(r["cause"] == t["position"] for r, t in zip(replies, (asked, follow_up, later), strict=True))
+
+        kept = await items(api, conversation=first)
+        assert {i["position"] for i in kept} == {asked["position"], follow_up["position"]} | {
+            r["position"] for r in replies[:2]
+        }

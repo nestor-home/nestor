@@ -1,5 +1,7 @@
 """A conversation's recent history, rebuilt from the journal for the model."""
 
+from collections.abc import Sequence
+
 from nestor.core import Event
 from nestor.modules.channels import Address
 from nestor.modules.cognition.model import Message, Role, ToolCall
@@ -10,18 +12,24 @@ from nestor.modules.journal import Journal
 HISTORY_EVENTS = (UserTurn, AssistantTurn, AnswerCut, ToolCalled, ToolCompleted)
 
 
-async def recent_history(journal: Journal, address: Address, *, max_events: int = 60) -> tuple[Message, ...]:
-    """The last exchanges of this conversation, whatever the process that held them (restarts included)."""
+async def recent_history(
+    journal: Journal, address: Address, conversation: str | None, *, max_events: int = 60
+) -> tuple[Message, ...]:
+    """The last turns of this conversation, whatever the process that held them (restarts included);
+    nothing without one. Earlier conversations of the session are not replayed, as in Assist."""
+    if conversation is None:
+        return ()
     events = await journal.history(*HISTORY_EVENTS, session=address.session, newest_first=True, limit=max_events)
-    return to_messages(list(reversed(events)))
+    ours = [e for e in reversed(events) if (x := e.exchange) is not None and x.conversation_id == conversation]
+    return to_messages(ours)
 
 
-def to_messages(events: list[Event]) -> tuple[Message, ...]:
+def to_messages(events: Sequence[Event]) -> tuple[Message, ...]:
     """Turn log events into model messages. A tool call without its result (crash midway, or cut by
     the window) is dropped, since models refuse unanswered calls. The history may open on an
     assistant message: an unprompted delivery the user is now answering."""
     results = {e.call_id: e for e in events if isinstance(e, ToolCompleted)}
-    heard = {e.turn: e.heard for e in events if isinstance(e, AnswerCut)}
+    heard = {e.answer: e.heard for e in events if isinstance(e, AnswerCut)}
     messages: list[Message] = []
     for event in events:
         if isinstance(event, UserTurn):

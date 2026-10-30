@@ -4592,7 +4592,7 @@
           "journal"
         ],
         "summary": "List Journal",
-        "description": "Newest first. `kinds` are keys of the facets; `person` a person id; `channel` a channel name; `from`\nand `to` bound the time (`to` excluded); `session`, `task`, `watch`, `connection` and `satellite` keep\none thread.",
+        "description": "Newest first. `kinds` are keys of the facets; `person` a person id; `channel` a channel name; `from`\nand `to` bound the time (`to` excluded); `session`, `conversation`, `task`, `watch`, `connection` and\n`satellite` keep one thread.",
         "operationId": "listJournal",
         "parameters": [
           {
@@ -4738,6 +4738,16 @@
               "type": "string",
               "default": "",
               "title": "Session"
+            }
+          },
+          {
+            "name": "conversation",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Conversation"
             }
           },
           {
@@ -4996,6 +5006,16 @@
               "type": "string",
               "default": "",
               "title": "Session"
+            }
+          },
+          {
+            "name": "conversation",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Conversation"
             }
           },
           {
@@ -5270,6 +5290,16 @@
               "type": "string",
               "default": "",
               "title": "Session"
+            }
+          },
+          {
+            "name": "conversation",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Conversation"
             }
           },
           {
@@ -9887,6 +9917,17 @@
             ],
             "title": "Session"
           },
+          "conversation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conversation"
+          },
           "turn": {
             "anyOf": [
               {
@@ -9979,6 +10020,7 @@
         "type": "object",
         "required": [
           "session",
+          "conversation",
           "turn",
           "call",
           "task",

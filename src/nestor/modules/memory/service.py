@@ -1,7 +1,7 @@
 """Remembering, recalling, correcting and forgetting — every change logged before it applies."""
 
 from nestor.core import ContractError, PersonId
-from nestor.modules.channels import Address
+from nestor.modules.channels import Address, Exchange
 from nestor.modules.journal import Journal
 from nestor.modules.memory.events import MemoryCorrected, MemoryForgotten, MemoryRecorded
 from nestor.modules.memory.ports import MemoryStore
@@ -19,6 +19,7 @@ class Memories:
         about: PersonId | None = None,
         source: Address | None = None,
         told_by: PersonId | None = None,
+        exchange: Exchange | None = None,
     ) -> Memory:
         text = text.strip()
         if not text:
@@ -33,21 +34,26 @@ class Memories:
                 about=about,
                 learnt_in=source,
                 told_by=told_by,
+                exchange=exchange,
             )
         )
         await self.store.put(memory)
         return memory
 
-    async def correct(self, memory_id: str, text: str, *, by: PersonId | None = None) -> Memory:
+    async def correct(
+        self, memory_id: str, text: str, *, by: PersonId | None = None, exchange: Exchange | None = None
+    ) -> Memory:
         memory = await self._existing(memory_id)
         corrected = memory.corrected(text.strip())
-        await self.journal.publish(MemoryCorrected(source="memory", memory_id=memory_id, text=corrected.text, by=by))
+        await self.journal.publish(
+            MemoryCorrected(source="memory", memory_id=memory_id, text=corrected.text, by=by, exchange=exchange)
+        )
         await self.store.put(corrected)
         return corrected
 
-    async def forget(self, memory_id: str, *, by: PersonId | None = None) -> Memory:
+    async def forget(self, memory_id: str, *, by: PersonId | None = None, exchange: Exchange | None = None) -> Memory:
         memory = await self._existing(memory_id)
-        await self.journal.publish(MemoryForgotten(source="memory", memory_id=memory_id, by=by))
+        await self.journal.publish(MemoryForgotten(source="memory", memory_id=memory_id, by=by, exchange=exchange))
         await self.store.delete(memory_id)
         return memory
 

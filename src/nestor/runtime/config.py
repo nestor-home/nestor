@@ -16,6 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_valida
 
 from nestor.core import NestorError, PersonId
 from nestor.modules.channels import Address
+from nestor.modules.conversation import ENDS_AFTER_S
 from nestor.modules.household import Account, Person
 from nestor.modules.initiative import QuietHours
 
@@ -72,6 +73,11 @@ class PersonConfig(Section):
             accounts=tuple(Account.parse(a) for a in self.accounts),
             reach=Address.parse(self.reach) if self.reach else None,
         )
+
+
+class ConversationConfig(Section):
+    # a turn this long after the last one opens a new conversation, without the earlier turns (as Assist)
+    ends_after_s: float = Field(default=ENDS_AFTER_S, gt=0)
 
 
 class InitiativeConfig(Section):
@@ -131,6 +137,7 @@ class NestorConfig(Section):
     tools: tuple[AdapterConfig, ...] = ()  # tool providers (an MCP server: Home Assistant, Linear…)
     inbound: tuple[AdapterConfig, ...] = ()  # sources watches can watch (a mailbox…)
     presence: AdapterConfig | None = None
+    conversation: ConversationConfig = ConversationConfig()
     initiative: InitiativeConfig = InitiativeConfig()
     admin: AdminConfig | None = None
     # services accounts are plugged into from the admin; by default every installed one when the admin is on

@@ -36,6 +36,7 @@ class Toolbox:
                 name=call.name,
                 arguments=dict(call.arguments),
                 person=context.person,
+                exchange=context.exchange,
             )
         )
         started = time.monotonic()
@@ -49,6 +50,7 @@ class Toolbox:
                 output=output,
                 ok=ok,
                 duration_s=round(time.monotonic() - started, 3),
+                exchange=context.exchange,
             )
         )
         return output

@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 from nestor.core import Component, ContractError, Event, PersonId, new_id, utc_now
-from nestor.modules.channels import Address
+from nestor.modules.channels import Address, Exchange
 from nestor.modules.cognition.delegation.events import (
     TaskAttached,
     TaskCancelRequested,
@@ -115,6 +115,7 @@ class TaskManager(Component):
         requested_by: PersonId | None = None,
         notify: Notify = Notify.AUTO,
         executor: str | None = None,
+        exchange: Exchange | None = None,
     ) -> Task:
         if self._writer is None:
             raise ContractError("the task manager must be started before delegating")
@@ -130,6 +131,7 @@ class TaskManager(Component):
             origin=origin,
             requested_by=requested_by,
             notify=notify,
+            exchange=exchange,
         )
         await self.journal.publish(event)
         task = self.tasks[event.task_id] = _task(event, None)

@@ -93,8 +93,9 @@ Kind = Literal[
 class LinksOut(BaseModel):
     """What threads entries together; the front builds threads and chains from these only."""
 
-    session: str | None  # the conversation (`channel:conversation`)
-    turn: str | None  # an assistant turn's event id (its own, or the one an answer cut refers to)
+    session: str | None  # where people talk (`channel:conversation`, e.g. `telegram:42`, `voice:salon`)
+    conversation: str | None  # one conversation in the session: turns within its inactivity window
+    turn: str | None  # one message and all it caused: the user's message, tool calls, memories, tasks, the reply
     call: str | None  # a tool call: called, then completed
     task: str | None
     watch: str | None

@@ -44,6 +44,12 @@ def _payload(entry: Entry) -> dict[str, JSON]:
     return payload if isinstance(payload, dict) else {}
 
 
+def _exchange(entry: Entry) -> dict[str, JSON]:
+    """The conversation and turn an entry belongs to (`exchange`), empty when it belongs to none."""
+    exchange = _payload(entry).get("exchange")
+    return exchange if isinstance(exchange, dict) else {}
+
+
 def _text(value: JSON) -> str | None:
     return value if isinstance(value, str) and value else None
 
@@ -61,6 +67,7 @@ class Filters:
     since: datetime | None = None
     until: datetime | None = None
     session: str = ""
+    conversation: str = ""
     task: str = ""
     watch: str = ""
     connection: str = ""
@@ -108,6 +115,7 @@ class Filters:
             failed.add("q")
         links = item.links
         for wanted, got in (
+            (self.conversation, links.conversation),
             (self.task, links.task),
             (self.watch, links.watch),
             (self.connection, links.connection),
@@ -184,11 +192,15 @@ def _cause_rule(entry: Entry) -> _Rule | None:
     if kind == WatchEnded.event_type:
         return of(WatchTriggered, "watch_id")
     if kind == AnswerCut.event_type:
-        turn = payload.get("turn")
-        return _Rule(frozenset({AssistantTurn.event_type}), lambda c: c.record.get("id") == turn)
+        cut = entry.event()
+        answer = cut.answer if isinstance(cut, AnswerCut) else None  # read through `upgrade`: v1 named it `turn`
+        return _Rule(frozenset({AssistantTurn.event_type}), lambda c: c.record.get("id") == answer)
     if kind == AssistantTurn.event_type:
-        session = entry.record.get("session")
-        return _Rule(frozenset({UserTurn.event_type}), lambda c: c.record.get("session") == session)
+        turn = _exchange(entry).get("turn_id")
+        if turn is None:  # recorded before turns were counted (v1): the session's last message
+            session = entry.record.get("session")
+            return _Rule(frozenset({UserTurn.event_type}), lambda c: c.record.get("session") == session)
+        return _Rule(frozenset({UserTurn.event_type}), lambda c: _exchange(c).get("turn_id") == turn)
     if kind in (Delivered.event_type, DeliveryFailed.event_type):
         return of(DeliveryConsidered, "about")
     if kind == DeliveryConsidered.event_type:
@@ -277,10 +289,11 @@ class Feed:
                 delivery = f"{about['subject']}:{about['id']}"
                 task = about["id"] if about["subject"] == "task" else None
                 watch = about["id"] if about["subject"] == "watch" else None
-        turn = str(entry.record["id"]) if entry.type == AssistantTurn.event_type else _text(payload.get("turn"))
+        exchange = _exchange(entry)
         return LinksOut(
             session=_text(entry.record.get("session")),
-            turn=turn,
+            conversation=_text(exchange.get("conversation_id")),
+            turn=_text(exchange.get("turn_id")),
             call=_text(payload.get("call_id")),
             task=_text(payload.get("task_id")) or task,
             watch=_text(payload.get("watch_id")) or watch,

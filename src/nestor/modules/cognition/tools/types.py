@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 from nestor.core import NestorError, PersonId
-from nestor.modules.channels import Address
+from nestor.modules.channels import Address, Exchange
 from nestor.modules.cognition.model import ToolSpec
 
 type ToolOutput = str | Mapping[str, object] | list[object]
@@ -19,10 +19,12 @@ class Risk(StrEnum):
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ToolContext:
-    """Who asked, and in which conversation."""
+    """Who asked, and in which conversation: `exchange` is the turn the call belongs to, for the events
+    the tool writes."""
 
     address: Address
     person: PersonId | None = None
+    exchange: Exchange | None = None
 
 
 class ToolFailed(NestorError):

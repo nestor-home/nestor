@@ -5,6 +5,7 @@ from datetime import datetime
 from enum import StrEnum
 
 from nestor.core import ContractError, SessionId, new_id, utc_now
+from nestor.core.events import JSON
 
 
 class Medium(StrEnum):
@@ -38,6 +39,25 @@ class Address:
     def session(self) -> SessionId:
         """One session per conversation, whoever speaks in it (a group chat is one session)."""
         return SessionId(str(self))
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class Exchange:
+    """Where an effect belongs in the dialogue, as Home Assistant's Assist counts it.
+
+    `conversation_id` groups the turns of one session that follow each other closely: it ends after a
+    while without any (`conversation.ends_after_s`). `turn_id` is one message and all it caused (tool
+    calls, memories, tasks, the reply), or one unprompted message.
+    """
+
+    conversation_id: str
+    turn_id: str
+
+
+def before_exchanges(payload: dict[str, JSON]) -> dict[str, JSON]:
+    """The payload of a version 1 record of an event that gained `exchange` in version 2: written
+    before conversations were counted, it belongs to none."""
+    return {**payload, "exchange": None}
 
 
 @dataclass(frozen=True, slots=True)

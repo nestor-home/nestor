@@ -111,7 +111,10 @@ class Courier(Component):
             await channel.send(address, text)
         except ProviderError:
             return None
-        await self.journal.publish(AssistantTurn(source=self.name, session=address.session, address=address, text=text))
+        exchange = await self.agent.conversations.turn(address)  # an unprompted message is a turn of its own
+        await self.journal.publish(
+            AssistantTurn(source=self.name, session=address.session, address=address, text=text, exchange=exchange)
+        )
         await self.journal.publish(
             Delivered(source=self.name, address=address, about=about, person=person.id if person else None)
         )

@@ -692,8 +692,8 @@ export interface paths {
         /**
          * List Journal
          * @description Newest first. `kinds` are keys of the facets; `person` a person id; `channel` a channel name; `from`
-         *     and `to` bound the time (`to` excluded); `session`, `task`, `watch`, `connection` and `satellite` keep
-         *     one thread.
+         *     and `to` bound the time (`to` excluded); `session`, `conversation`, `task`, `watch`, `connection` and
+         *     `satellite` keep one thread.
          */
         get: operations["listJournal"];
         put?: never;
@@ -1750,6 +1750,8 @@ export interface components {
         LinksOut: {
             /** Session */
             session: string | null;
+            /** Conversation */
+            conversation: string | null;
             /** Turn */
             turn: string | null;
             /** Call */
@@ -6222,6 +6224,7 @@ export interface operations {
                 to?: string | null;
                 tone?: "" | "normal" | "decision" | "warning";
                 session?: string;
+                conversation?: string;
                 task?: string;
                 watch?: string;
                 connection?: string;
@@ -6330,6 +6333,7 @@ export interface operations {
                 to?: string | null;
                 tone?: "" | "normal" | "decision" | "warning";
                 session?: string;
+                conversation?: string;
                 task?: string;
                 watch?: string;
                 connection?: string;
@@ -6439,6 +6443,7 @@ export interface operations {
                 to?: string | null;
                 tone?: "" | "normal" | "decision" | "warning";
                 session?: string;
+                conversation?: string;
                 task?: string;
                 watch?: string;
                 connection?: string;

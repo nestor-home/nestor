@@ -69,6 +69,7 @@ def journal_filters(
     to: datetime | None = None,
     tone: Annotated[Literal["", "normal", "decision", "warning"], Query()] = "",
     session: str = "",
+    conversation: str = "",
     task: str = "",
     watch: str = "",
     connection: str = "",
@@ -87,6 +88,7 @@ def journal_filters(
         until=to,
         tone=tone,
         session=session,
+        conversation=conversation,
         task=task,
         watch=watch,
         connection=connection,
@@ -112,8 +114,8 @@ async def list_journal(
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
 ) -> JournalPage:
     """Newest first. `kinds` are keys of the facets; `person` a person id; `channel` a channel name; `from`
-    and `to` bound the time (`to` excluded); `session`, `task`, `watch`, `connection` and `satellite` keep
-    one thread."""
+    and `to` bound the time (`to` excluded); `session`, `conversation`, `task`, `watch`, `connection` and
+    `satellite` keep one thread."""
     feed = await _feed(request, caller, filters)
     items, cursor = await feed.page(before=before, limit=limit)
     return JournalPage(items=items, next_before=cursor)

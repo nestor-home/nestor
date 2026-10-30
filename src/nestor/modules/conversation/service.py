@@ -12,7 +12,7 @@ from dataclasses import dataclass
 
 from nestor.core import ContractError, PersonId, ProviderError, utc_now
 from nestor.core.i18n import Localizer
-from nestor.modules.channels import Address, Assistant, InboundMessage, Medium, Reply, Sender
+from nestor.modules.channels import Address, Assistant, Exchange, InboundMessage, Medium, Reply, Sender
 from nestor.modules.cognition.model import (
     ConversationModel,
     Finished,
@@ -25,6 +25,7 @@ from nestor.modules.cognition.model import (
     ToolCallRequested,
 )
 from nestor.modules.cognition.tools import Toolbox, ToolContext
+from nestor.modules.conversation.conversations import Conversations
 from nestor.modules.conversation.events import AnswerCut, AssistantTurn, FallbackSpoken, UserTurn
 from nestor.modules.conversation.history import recent_history
 from nestor.modules.conversation.persona import Persona
@@ -88,8 +89,10 @@ class Agent(Assistant):
         localizer: Localizer,
         context: Iterable[ContextProvider] = (),
         settings: AgentSettings | None = None,
+        conversations: Conversations | None = None,
     ) -> None:
         self.model, self.persona, self.journal = model, persona, journal
+        self.conversations = conversations or Conversations(journal)
         self.localizer = localizer
         self.household, self.toolbox = household, toolbox
         self._channels = dict(channels or {})
@@ -154,6 +157,7 @@ class AgentReply(Reply):
         self._worker: asyncio.Task[None] | None = None
         self._interrupted = False
         self._logged: AssistantTurn | None = None
+        self._exchange: Exchange | None = None  # the turn this reply belongs to, once it started
 
     async def __aiter__(self) -> AsyncIterator[str]:
         if self._worker is not None:
@@ -176,39 +180,57 @@ class AgentReply(Reply):
             await self._log_answer(heard, interrupted=True)
         else:
             await self._agent.journal.publish(
-                AnswerCut(source="agent", session=self._address.session, turn=self._logged.id, heard=heard)
+                AnswerCut(
+                    source="agent",
+                    session=self._address.session,
+                    answer=self._logged.id,
+                    heard=heard,
+                    exchange=self._exchange,
+                )
             )
         self._chunks.put_nowait(None)
 
     async def _produce(self) -> None:
-        self._agent.replies.set(self, ReplyPhase.THINKING)
+        agent = self._agent
+        agent.replies.set(self, ReplyPhase.THINKING)
         try:
+            if self._record:
+                self._exchange = await agent.conversations.turn(self._address)
+                conversation: str | None = self._exchange.conversation_id
+            else:  # a composed message: the open conversation's turns, if any
+                conversation = await agent.conversations.current(self._address)
             if self._user is not None:
-                await self._agent.journal.publish(
+                await agent.journal.publish(
                     UserTurn(
                         source="agent",
                         session=self._address.session,
                         address=self._address,
                         text=self._user,
                         person=self._person.id if self._person else None,
+                        exchange=self._exchange,
                     )
                 )
-            await self._answer()
+            await self._answer(conversation)
             if self._record:
                 await self._log_answer("".join(self._said), interrupted=False)
         finally:
             self._agent.replies.set(self, None)
             self._chunks.put_nowait(None)
 
-    async def _answer(self) -> None:
+    async def _answer(self, conversation: str | None) -> None:
         agent = self._agent
+        history = await recent_history(
+            agent.journal, self._address, conversation, max_events=agent.settings.history_events
+        )
         messages = [
             Message(role=Role.SYSTEM, content=await agent.instructions(self._address, self._person)),
-            *await recent_history(agent.journal, self._address, max_events=agent.settings.history_events),
+            *history,
         ]
         if self._instruction is not None:
             messages.append(Message(role=Role.SYSTEM, content=self._instruction))
-        context = ToolContext(address=self._address, person=self._person.id if self._person else None)
+        context = ToolContext(
+            address=self._address, person=self._person.id if self._person else None, exchange=self._exchange
+        )
         for _ in range(agent.settings.max_tool_rounds):
             try:
                 text, calls = await self._round(messages)
@@ -267,7 +289,13 @@ class AgentReply(Reply):
         agent = self._agent
         self._say(agent.localizer.format(agent.persona.fallback(reason), agent.persona.locale))
         await self._agent.journal.publish(
-            FallbackSpoken(source="agent", session=self._address.session, address=self._address, reason=reason)
+            FallbackSpoken(
+                source="agent",
+                session=self._address.session,
+                address=self._address,
+                reason=reason,
+                exchange=self._exchange,
+            )
         )
 
     def _say(self, text: str) -> None:
@@ -278,7 +306,14 @@ class AgentReply(Reply):
 
     async def _log_answer(self, text: str, *, interrupted: bool) -> None:
         turn = AssistantTurn(
-            source="agent", session=self._address.session, address=self._address, text=text, interrupted=interrupted
+            source="agent",
+            session=self._address.session,
+            address=self._address,
+            text=text,
+            interrupted=interrupted,
+            exchange=self._exchange,
         )
         await self._agent.journal.publish(turn)
         self._logged = turn
+        if self._exchange is not None:
+            self._agent.conversations.ended(self._exchange, self._address)
