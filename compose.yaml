@@ -1,11 +1,11 @@
-# docker compose run --rm nestor init   then   docker compose up -d
-# /data holds nestor.yaml, the database and blobs; secrets come from .env (created by `nestor init`).
+# docker compose run --rm nestor init   then fill data/.env   then   docker compose up -d
+# ./data holds nestor.yaml, its .env (secrets, created by `nestor init`) and the state.
 services:
   nestor:
     image: ghcr.io/nestor-home/nestor:latest
     build: .
     restart: unless-stopped
-    env_file: [.env]
+    env_file: [{path: ./data/.env, required: false}]
     volumes: ["./data:/data"]
     ports:
       - "8080:8080"  # admin
