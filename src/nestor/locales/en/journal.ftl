@@ -163,7 +163,10 @@ journal-account-role-changed = Account { $login }: role { role-name }
 journal-account-disabled = Account { $login } disabled
 journal-account-enabled = Account { $login } enabled again
 journal-account-password-changed = Password of account { $login } changed
-journal-account-locale-changed = Account { $login } now reads in { $locale }
+journal-account-locale-changed = { $chosen ->
+    [no] Account { $login } now reads in the household's language
+   *[yes] Account { $login } now reads in { $locale }
+}
 journal-account-invited = { $known ->
     [no] Invitation ({ role-name })
    *[yes] Invitation ({ role-name }) for { $person }

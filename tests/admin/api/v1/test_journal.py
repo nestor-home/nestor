@@ -4,6 +4,9 @@ and the live stream (Server-Sent Events) with its scopes, heartbeats and resumpt
 import asyncio
 from pathlib import Path
 
+import pytest
+
+from nestor.admin.presentation import EventDescriber
 from nestor.core import PersonId
 from nestor.core.i18n import Message
 from nestor.modules.accounts import Role
@@ -334,3 +337,41 @@ async def test_the_important_events_are_told_in_the_readers_language(tmp_path: P
         interrupted = next(i for i in found if i["detail"] == "Je surveille.")
         assert interrupted["message"]["id"] == "journal-assistant-interrupted"
         assert {i["room"] for i in found if i["kind"] == "observation"} == {"salon"}
+
+
+async def test_going_back_to_the_households_language_is_told_and_never_breaks_the_journal(tmp_path: Path) -> None:
+    async with Harness(tmp_path) as admin:
+        api = await admin.api()
+        await api.put("/api/v1/me/locale", {"locale": "en"})
+        await api.put("/api/v1/me/locale", {"locale": None})
+        page = await api.get("/api/v1/journal", kinds="account")
+        assert page.status_code == 200, page.text
+        reset, chosen = page.json()["items"][:2]
+        assert reset["text"] == "Le compte mathis lit désormais dans la langue du foyer"
+        assert reset["message"] == {
+            "id": "journal-account-locale-changed",
+            "args": {"login": "mathis", "role": "owner", "locale": "", "chosen": "no"},
+        }
+        assert chosen["text"] == "Le compte mathis lit désormais en en"
+        facets = await api.get("/api/v1/journal/facets")
+        assert facets.status_code == 200 and facets.json()["total"] >= 4
+
+
+async def test_an_entry_that_cannot_be_described_shows_its_type_and_the_rest_still_reads(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def broken(self: EventDescriber, event: UserTurn) -> None:
+        raise RuntimeError("a bug in one describer")
+
+    monkeypatch.setattr(EventDescriber, "_user_turn", broken)
+    async with Harness(tmp_path) as admin:
+        await conversations(admin)
+        api = await admin.api()
+        page = await api.get("/api/v1/journal", kinds="conversation")
+        assert page.status_code == 200, page.text
+        items = page.json()["items"]
+        said = [i for i in items if i["type"] == UserTurn.event_type]
+        assert {i["text"] for i in said} == {"conversation.turn.user"}
+        assert all(i["kind"] == "conversation" and i["tone"] == "warning" for i in said)
+        assert "Il est midi." in {i["detail"] for i in items}, "the entries around it read as usual"
+        assert (await api.get("/api/v1/journal/facets")).status_code == 200

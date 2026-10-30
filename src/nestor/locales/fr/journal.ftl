@@ -162,7 +162,10 @@ journal-account-role-changed = Compte { $login } : rôle { role-name }
 journal-account-disabled = Compte { $login } désactivé
 journal-account-enabled = Compte { $login } réactivé
 journal-account-password-changed = Mot de passe du compte { $login } changé
-journal-account-locale-changed = Le compte { $login } lit désormais en { $locale }
+journal-account-locale-changed = { $chosen ->
+    [no] Le compte { $login } lit désormais dans la langue du foyer
+   *[yes] Le compte { $login } lit désormais en { $locale }
+}
 journal-account-invited = { $known ->
     [no] Invitation ({ role-name })
    *[yes] Invitation ({ role-name }) pour { $person }

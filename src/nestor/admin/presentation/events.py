@@ -6,6 +6,7 @@ by shipping that message. Raw content (what someone said, a tool's output) stays
 """
 
 import json
+import logging
 import re
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, field
@@ -61,6 +62,7 @@ from nestor.modules.satellites import (
     SpeechActivityObserved,
 )
 
+log = logging.getLogger(__name__)
 DETAIL_LIMIT = 600
 OTHER_KEY = "other"
 _SUBJECT = re.compile(r"^(?:task (?P<task>\S+) (?P<status>\w+)|watch (?P<watch>\S+))(?P<follow> \(follow-up\))?$")
@@ -314,7 +316,11 @@ class EventDescriber:
             AccountEnabled: lambda e: self._account(e, e.account_id, "journal-account-enabled"),
             AccountPasswordChanged: lambda e: self._account(e, e.account_id, "journal-account-password-changed"),
             AccountLocaleChanged: lambda e: self._account(
-                e, e.account_id, "journal-account-locale-changed", locale=e.locale
+                e,
+                e.account_id,
+                "journal-account-locale-changed",
+                locale=e.locale or "",
+                chosen=_yes(e.locale is not None),  # no: back to the household's language
             ),
             AccountInvited: lambda e: self._line(
                 e,
@@ -328,17 +334,29 @@ class EventDescriber:
         }
 
     def describe(self, entry: Entry) -> Line:
+        """Never raises: a stored event is always shown, at worst by its type (a bug in describing one
+        entry must not hide the rest of the journal)."""
+        at = datetime.fromisoformat(str(entry.record["at"]))
         try:
             event = entry.event()
         except ContractError:  # written by a plugin no longer installed, or by a newer version
             payload = entry.record.get("payload")
             fields = payload if isinstance(payload, dict) else {}
-            at = datetime.fromisoformat(str(entry.record["at"]))
             return Line(at=at, kind=OTHER_KEY, message=unknown_message(entry.type, fields))
-        describer = self._describers.get(type(event))
-        if describer:
-            return describer(event)
-        return self._line(event, unknown_message(event.event_type, event.to_record()["payload"]))  # ty: ignore[invalid-argument-type]
+        try:
+            describer = self._describers.get(type(event))
+            if describer:
+                return describer(event)
+            return self._line(event, unknown_message(event.event_type, event.to_record()["payload"]))  # ty: ignore[invalid-argument-type]
+        except Exception:
+            log.exception("cannot describe journal entry %s (%s)", entry.position, entry.type)
+            category = self._categories.get(type(event))
+            return Line(
+                at=at,
+                kind=category.key if category else OTHER_KEY,
+                message=Message.of("journal-other", type=entry.type),
+                tone=Tone.WARNING,
+            )
 
     def login(self, account_id: str | None) -> str:
         account = self.accounts.accounts.get(account_id or "") if self.accounts else None

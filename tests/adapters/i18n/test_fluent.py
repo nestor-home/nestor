@@ -102,3 +102,9 @@ def test_broken_catalogues_and_a_missing_default_are_refused(tmp_path: Path) -> 
 
 def test_catalogue_discovery_skips_packages_without_catalogues() -> None:
     assert len(catalogue_dirs(["nestor", "nestor", "json", "no_such_package_here"])) == 1
+
+
+def test_a_message_refuses_an_argument_fluent_cannot_format() -> None:
+    with pytest.raises(ContractError, match="locale"):
+        Message.of("journal-account-locale-changed", login="mathis", locale=None)  # ty: ignore[invalid-argument-type]
+    assert Message.of("x", count=0, ratio=0.5, word="").args == {"count": 0, "ratio": 0.5, "word": ""}

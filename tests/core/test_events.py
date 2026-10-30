@@ -35,7 +35,10 @@ def sample(hint: Any) -> Any:
     if origin is tuple:
         return (sample(args[0]),)
     if origin in (dict, typing.Mapping, __import__("collections.abc").abc.Mapping):
-        return {"pièce": "salon", "niveaux": [1, 2]}
+        value = getattr(args[1], "__value__", args[1]) if args else Any  # a `type` alias: what it stands for
+        if value in (Any, object):
+            return {"pièce": "salon", "niveaux": [1, 2]}
+        return {"pièce": sample(value)}  # typed values: a message's arguments
     if isinstance(hint, type) and issubclass(hint, enum.Enum):
         return list(hint)[-1]
     if dataclasses.is_dataclass(hint):
