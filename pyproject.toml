@@ -48,6 +48,7 @@ nestor = "nestor.runtime.cli:main"
 openai-compatible = "nestor.adapters.models.openai_compatible:plugin"
 hermes = "nestor.adapters.executors.hermes:plugin"
 telegram = "nestor.adapters.channels.telegram:plugin"
+voice = "nestor.adapters.channels.voice:plugin"
 home-assistant = "nestor.adapters.home.home_assistant:plugin"
 mcp = "nestor.adapters.tools.mcp.plugin:plugin"
 

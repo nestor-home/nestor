@@ -588,13 +588,13 @@ async def test_the_plugin_builds_a_provider_from_its_configuration(served_home: 
 
 @pytest.mark.live
 async def test_live_home_assistant_exposes_its_assist_tools() -> None:
-    url, token = os.environ.get("HA_URL"), os.environ.get("HA_TOKEN")
+    url, token = os.environ.get("HOME_ASSISTANT_MCP_URL"), os.environ.get("HOME_ASSISTANT_TOKEN")
     if not url or not token:
-        pytest.skip("HA_URL and HA_TOKEN are not set")
-    async with McpToolProvider(f"{url.rstrip('/')}/api/mcp", name="home", auth=BearerToken(token)) as provider:
-        names = {t.name for t in provider.tools()}
-        assert "GetLiveContext" in names
-        assert await call(provider, "GetLiveContext")
+        pytest.skip("HOME_ASSISTANT_MCP_URL and HOME_ASSISTANT_TOKEN are not set")
+    async with McpToolProvider(url, name="home", auth=BearerToken(token)) as provider:
+        # Home Assistant prefixes tool names with their domain: homeassistant__GetLiveContext (verified 30/10/2026).
+        live = next(t.name for t in provider.tools() if t.name.endswith("GetLiveContext"))
+        assert "Live Context" in await call(provider, live)
 
 
 def free_port() -> int:
