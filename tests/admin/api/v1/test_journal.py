@@ -55,7 +55,7 @@ async def test_items_are_said_in_french_with_the_reason_of_a_decision(tmp_path: 
             )
         )
         (item,) = (await (await admin.api()).get("/api/v1/journal", kinds="delivery")).json()["items"]
-        assert item["text"] == "Décision de parler à Mathis — veille w1"
+        assert item["text"] == "Décision de parler à Mathis : veille w1"
         assert item["message"]["id"] == "journal-delivery-considered" and item["message"]["args"]["id"] == "w1"
         assert item["reason"] == {
             "message": {"id": "delivery-in-room", "args": {"person": "Mathis", "room": "salon"}},
@@ -305,10 +305,10 @@ async def test_the_important_events_are_told_in_the_readers_language(tmp_path: P
             "Outil create_watch appelé",
             "Outil create_watch terminé en 0,2 s",
             "Outil mailbox_send en échec",
-            "Veille w1 déclenchée par « Colis livré » — urgent",
+            "Veille w1 déclenchée par « Colis livré » (urgent)",
             "Veille w1 trouvée",
-            "Message transmis — veille w1",
-            "Message non transmis — veille w2",
+            "Message transmis : veille w1",
+            "Message non transmis : veille w2",
             "Essayé : aucun canal disponible",
             "Souvenir corrigé",
             "Mathis est dans la pièce « salon »",

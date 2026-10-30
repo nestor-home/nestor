@@ -52,7 +52,7 @@ journal-task-delivered = Result of task { $task } passed on
 journal-delivery-considered = { $known ->
     [no] Decided to speak up
    *[yes] Decided to speak to { $person }
-} — { $subject ->
+}: { $subject ->
     [task] task { $id } { $status ->
         [completed] completed
         [failed] failed
@@ -65,7 +65,7 @@ journal-delivery-considered = { $known ->
     [yes] {" "}(follow-up)
    *[no] {""}
 }
-journal-delivered = Message passed on — { $subject ->
+journal-delivered = Message passed on: { $subject ->
     [task] task { $id } { $status ->
         [completed] completed
         [failed] failed
@@ -78,7 +78,7 @@ journal-delivered = Message passed on — { $subject ->
     [yes] {" "}(follow-up)
    *[no] {""}
 }
-journal-delivery-failed = Message not passed on — { $subject ->
+journal-delivery-failed = Message not passed on: { $subject ->
     [task] task { $id } { $status ->
         [completed] completed
         [failed] failed
@@ -105,7 +105,7 @@ journal-detail-tried = { $count ->
 journal-watch-created = Watch created: { $what }
 journal-detail-keywords = Keywords: { $keywords }
 journal-watch-triggered = { $urgent ->
-    [yes] Watch { $watch } triggered by “{ $item }” — urgent
+    [yes] Watch { $watch } triggered by “{ $item }” (urgent)
    *[no] Watch { $watch } triggered by “{ $item }”
 }
 journal-watch-ended = Watch { $watch } { $reason ->
@@ -186,4 +186,54 @@ journal-login-failed = { $known ->
         [disabled] account disabled
        *[other] { $reason }
     }
+}
+
+journal-observation-speaker-identified = { $known ->
+    [no] Voice not recognised
+   *[yes] Voice of { $person } recognised
+}
+journal-identity-enrolled = Voice profile recorded for { $person }
+journal-identity-forgotten = Voice profile of { $person } deleted
+
+journal-behavior-changed = Attitude: { $behavior ->
+    [idle] at rest
+    [listening] listening
+    [thinking] thinking
+    [speaking] speaking
+   *[other] { $behavior }
+}
+journal-expression-requested = Expression: { $expression ->
+    [joy] joy
+    [sigh] sigh
+    [thoughtful] thoughtful
+    [whisper] whisper
+    [excited] excited
+    [ahem] ahem
+   *[other] { $expression }
+}
+
+journal-config-changed = { $restored ->
+    [yes] Earlier configuration restored { $via ->
+        [cli] from the command line
+       *[admin] by { $login }
+    }
+   *[no] Configuration changed { $via ->
+        [cli] from the command line
+       *[admin] by { $login }
+    }
+}
+journal-detail-settings = { $count ->
+    [one] Setting: { $paths }
+   *[other] Settings: { $paths }
+}
+journal-secret-changed = { $removed ->
+    [yes] Secret { $name } deleted
+   *[no] Secret { $name } set
+} { $via ->
+    [cli] from the command line
+   *[admin] by { $login }
+}
+journal-system-restart-requested = Restart requested { $via ->
+    [cli] from the command line
+   *[admin] by { $login }
 }

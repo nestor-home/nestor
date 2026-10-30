@@ -51,7 +51,7 @@ journal-task-delivered = Résultat de la tâche { $task } transmis
 journal-delivery-considered = { $known ->
     [no] Décision de parler
    *[yes] Décision de parler à { $person }
-} — { $subject ->
+} : { $subject ->
     [task] tâche { $id } { $status ->
         [completed] terminée
         [failed] en échec
@@ -64,7 +64,7 @@ journal-delivery-considered = { $known ->
     [yes] {" "}(relance)
    *[no] {""}
 }
-journal-delivered = Message transmis — { $subject ->
+journal-delivered = Message transmis : { $subject ->
     [task] tâche { $id } { $status ->
         [completed] terminée
         [failed] en échec
@@ -77,7 +77,7 @@ journal-delivered = Message transmis — { $subject ->
     [yes] {" "}(relance)
    *[no] {""}
 }
-journal-delivery-failed = Message non transmis — { $subject ->
+journal-delivery-failed = Message non transmis : { $subject ->
     [task] tâche { $id } { $status ->
         [completed] terminée
         [failed] en échec
@@ -104,7 +104,7 @@ journal-detail-tried = { $count ->
 journal-watch-created = Veille créée : { $what }
 journal-detail-keywords = Mots-clés : { $keywords }
 journal-watch-triggered = { $urgent ->
-    [yes] Veille { $watch } déclenchée par « { $item } » — urgent
+    [yes] Veille { $watch } déclenchée par « { $item } » (urgent)
    *[no] Veille { $watch } déclenchée par « { $item } »
 }
 journal-watch-ended = Veille { $watch } { $reason ->
@@ -185,4 +185,54 @@ journal-login-failed = { $known ->
         [disabled] compte désactivé
        *[other] { $reason }
     }
+}
+
+journal-observation-speaker-identified = { $known ->
+    [no] Voix non reconnue
+   *[yes] Voix de { $person } reconnue
+}
+journal-identity-enrolled = Empreinte vocale enregistrée pour { $person }
+journal-identity-forgotten = Empreinte vocale de { $person } supprimée
+
+journal-behavior-changed = Attitude : { $behavior ->
+    [idle] au repos
+    [listening] à l'écoute
+    [thinking] réfléchit
+    [speaking] parle
+   *[other] { $behavior }
+}
+journal-expression-requested = Expression : { $expression ->
+    [joy] joie
+    [sigh] soupir
+    [thoughtful] pensif
+    [whisper] chuchotement
+    [excited] enthousiasme
+    [ahem] raclement de gorge
+   *[other] { $expression }
+}
+
+journal-config-changed = { $restored ->
+    [yes] Configuration précédente restaurée { $via ->
+        [cli] depuis la ligne de commande
+       *[admin] par { $login }
+    }
+   *[no] Configuration modifiée { $via ->
+        [cli] depuis la ligne de commande
+       *[admin] par { $login }
+    }
+}
+journal-detail-settings = { $count ->
+    [one] Réglage : { $paths }
+   *[other] Réglages : { $paths }
+}
+journal-secret-changed = { $removed ->
+    [yes] Secret { $name } supprimé
+   *[no] Secret { $name } enregistré
+} { $via ->
+    [cli] depuis la ligne de commande
+   *[admin] par { $login }
+}
+journal-system-restart-requested = Redémarrage demandé { $via ->
+    [cli] depuis la ligne de commande
+   *[admin] par { $login }
 }

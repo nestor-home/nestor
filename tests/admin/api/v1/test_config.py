@@ -273,3 +273,32 @@ async def test_secret_headers_are_masked_kept_replaced_and_removed_key_by_key(tm
         text = admin.config_path.read_text()
         assert "hdr-literal" not in text and "hdr-replaced" not in text and "tk-literal-token-1234" in text
         assert not any(v in seen for seen in admin.seen for v in ("hdr-", "hk-typed", "tk-literal"))
+
+
+async def test_the_journal_tells_who_changed_the_configuration_its_secrets_and_asked_for_a_restart(
+    tmp_path: Path,
+) -> None:
+    async with Harness(tmp_path) as admin:
+        admin.app.state.admin.restart = lambda: None
+        api = await admin.api()
+        edited = await document(api)
+        edited["persona"]["name"] = "Nestor"
+        edited["tools"] = [weather()]
+        await api.put("/api/v1/config", {"document": edited})
+        await api.post("/api/v1/system/restart", {"confirm": True})
+        await admin.nestor.journal.publish(SecretChanged(source="cli", name="spare", by="cli", removed=True))
+        items = (await api.get("/api/v1/journal", kinds="other")).json()["items"]
+        told = {i["type"]: i for i in items}
+        assert told["config.changed"]["text"] == "Configuration modifiée par mathis"
+        assert (
+            told["config.changed"]["detail_text"]
+            == "Réglages : tools.0.api_key, tools.0.city, tools.0.kind, persona.name"
+        )
+        assert told["config.changed"]["people"] == [{"id": "mathis", "name": "Mathis"}]
+        assert told["system.restart.requested"]["text"] == "Redémarrage demandé par mathis"
+        assert told["system.restart.requested"]["tone"] == "warning"
+        secrets = [i["text"] for i in items if i["type"] == "secret.changed"]
+        assert secrets == [
+            "Secret spare supprimé depuis la ligne de commande",
+            "Secret tools.weather.api_key enregistré par mathis",
+        ]

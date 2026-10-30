@@ -9,7 +9,7 @@ import json
 import logging
 import re
 from collections.abc import Callable, Iterable, Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime
 from enum import StrEnum
 
@@ -42,6 +42,7 @@ from nestor.modules.connectors import ConnectionChanged, ConnectionCreated, Conn
 from nestor.modules.conversation import AnswerCut, AssistantTurn, FallbackSpoken, UserTurn
 from nestor.modules.home import PresenceChanged
 from nestor.modules.household import Household
+from nestor.modules.identity import SpeakerEnrolled, SpeakerForgotten, SpeakerIdentified
 from nestor.modules.initiative import (
     Delivered,
     DeliveryConsidered,
@@ -61,10 +62,12 @@ from nestor.modules.satellites import (
     SatelliteRevoked,
     SpeechActivityObserved,
 )
+from nestor.modules.system import ConfigChanged, RestartRequested, SecretChanged
 
 log = logging.getLogger(__name__)
 DETAIL_LIMIT = 600
 OTHER_KEY = "other"
+CLI = "cli"  # who did it, for an effect asked from the command line rather than by an account
 _SUBJECT = re.compile(r"^(?:task (?P<task>\S+) (?P<status>\w+)|watch (?P<watch>\S+))(?P<follow> \(follow-up\))?$")
 
 
@@ -97,7 +100,7 @@ CATEGORIES = (
         "satellite",
         (SatellitePairingRequested, SatellitePaired, SatelliteRevoked, SatelliteConnected, SatelliteDisconnected),
     ),
-    Category("observation", (PersonDetected, SpeechActivityObserved)),
+    Category("observation", (PersonDetected, SpeechActivityObserved, SpeakerIdentified)),
     Category(
         "account",
         (
@@ -331,6 +334,21 @@ class EventDescriber:
                 e, Message.of("journal-invitation-revoked", invitation=e.invitation_id)
             ),
             AccountLogin: self._login,
+            SpeakerIdentified: lambda e: self._line(
+                e,
+                Message.of("journal-observation-speaker-identified", **self._person(e.person)),
+                detail_message=Message.of("journal-detail-confidence", confidence=e.confidence),
+                people=[e.person],
+            ),
+            SpeakerEnrolled: lambda e: self._line(
+                e, Message.of("journal-identity-enrolled", person=self.name(e.person)), people=[e.person]
+            ),
+            SpeakerForgotten: lambda e: self._line(
+                e, Message.of("journal-identity-forgotten", person=self.name(e.person)), people=[e.person]
+            ),
+            ConfigChanged: self._config_changed,
+            SecretChanged: lambda e: self._by(e, e.by, "journal-secret-changed", name=e.name, removed=_yes(e.removed)),
+            RestartRequested: lambda e: self._by(e, e.by, "journal-system-restart-requested", tone=Tone.WARNING),
         }
 
     def describe(self, entry: Entry) -> Line:
@@ -434,6 +452,16 @@ class EventDescriber:
             reason=e.reason,
             known=_yes(e.account_id is not None),
         )
+
+    def _config_changed(self, e: ConfigChanged) -> Line:
+        paths = Message.of("journal-detail-settings", paths=", ".join(e.changed_paths), count=len(e.changed_paths))
+        line = self._by(e, e.by, "journal-config-changed", restored=_yes(e.restored is not None))
+        return replace(line, detail_message=paths if e.changed_paths else None)
+
+    def _by(self, event: Event, by: str, id: str, *, tone: Tone = Tone.NORMAL, **args: str) -> Line:
+        """What a person did from the admin (`by` an account id), or someone from the command line."""
+        cli = by == CLI
+        return self._account(event, None if cli else by, id, tone=tone, via="cli" if cli else "admin", **args)
 
     def _account(self, event: Event, account_id: str | None, id: str, *, tone: Tone = Tone.NORMAL, **args: str) -> Line:
         account = self.accounts.accounts.get(account_id or "") if self.accounts else None
