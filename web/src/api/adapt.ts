@@ -1,10 +1,14 @@
 /** From the API's DTOs (generated) to what screens read (types.ts). The only place both meet. */
+
+import { rendered } from "@/lib/messages";
 import type {
   AccountDto,
   ComponentDto,
+  ConfigSchemaDto,
   ConnectionDetailDto,
   ConnectionDto,
   ConnectorDto,
+  DiffDto,
   FacetsDto,
   InvitationDto,
   InvitationPreviewDto,
@@ -15,15 +19,21 @@ import type {
   PendingDto,
   PersonDto,
   PersonRefDto,
+  PreviewDto,
   SatelliteDto,
   ScopeDto,
   SystemDto,
   TaskDto,
   WatchDto,
+  WrittenDto,
 } from "./dto";
 import type {
   Account,
   Component,
+  ConfigDiff,
+  ConfigPreview,
+  ConfigSchema,
+  ConfigWritten,
   Connection,
   ConnectionDetail,
   Connector,
@@ -63,6 +73,7 @@ const SCOPES: Record<ScopeDto, Scope[]> = {
   "tasks.manage.own": ["tasks:read", "tasks:write"],
   "watches.manage.all": ["watches:read", "watches:write"],
   "watches.manage.own": ["watches:read", "watches:write"],
+  "config.manage": ["config:manage"],
 };
 
 export function scopes(dto: ScopeDto[]): Scope[] {
@@ -80,6 +91,7 @@ export function account(dto: AccountDto): Account {
     locale: dto.locale,
     disabled: dto.disabled,
     created_at: dto.created_at,
+    last_seen_at: dto.last_seen_at,
   };
 }
 
@@ -91,6 +103,8 @@ export function me(dto: MeDto): Me {
     csrf_token: dto.csrf_token,
     assistant: dto.agent?.name ?? dto.assistant,
     agent: dto.agent,
+    restart_required: dto.restart_required,
+    pending_changes: dto.pending_changes,
   };
 }
 
@@ -123,7 +137,7 @@ export function person(dto: PersonDto): Person {
     name: dto.name,
     channels: dto.channel_accounts,
     reach: dto.reach,
-    presence: dto.presence ? { home: dto.presence.home, room: dto.presence.room, since: null } : null,
+    presence: dto.presence ? { home: dto.presence.home, room: dto.presence.room, since: dto.presence.since } : null,
     account: dto.account?.id ?? null,
     account_login: dto.account?.login ?? null,
   };
@@ -199,7 +213,7 @@ export function connection(dto: ConnectionDto): Connection {
     owner: ref(dto.owner),
     status: dto.status,
     status_label: dto.status_label,
-    status_reason: null,
+    status_reason: rendered(dto.status_reason) || null,
     confirm_writes: dto.confirm_writes,
     disabled_tools: dto.disabled_tools,
     created_at: dto.created_at,
@@ -249,7 +263,7 @@ export function task(dto: TaskDto): Task {
     status_label: dto.status_label,
     requested_by: ref(dto.requested_by),
     started_at: dto.started_at,
-    ended_at: null,
+    ended_at: dto.ended_at,
     steps: dto.steps,
     result: dto.result,
     error: dto.error,
@@ -307,5 +321,34 @@ export function component(dto: ComponentDto, index: number): Component {
 }
 
 export function system(dto: SystemDto): SystemInfo {
-  return { nestor: dto.nestor, agent: dto.agent, components: dto.components.map(component) };
+  return {
+    nestor: dto.nestor,
+    agent: dto.agent,
+    restart_required: dto.restart_required,
+    pending_changes: dto.pending_changes,
+    components: dto.components.map(component),
+  };
+}
+
+/** The schemas travel as free JSON: the screens read them as JSON Schema with `x-nestor`. */
+export function configSchema(dto: ConfigSchemaDto): ConfigSchema {
+  return dto as unknown as ConfigSchema;
+}
+
+function diff(dto: DiffDto): ConfigDiff {
+  const change = (c: DiffDto["added"][number]) => ({
+    path: c.path,
+    before: c.before ?? null,
+    after: c.after ?? null,
+    secret: c.secret,
+  });
+  return { added: dto.added.map(change), removed: dto.removed.map(change), changed: dto.changed.map(change) };
+}
+
+export function configPreview(dto: PreviewDto): ConfigPreview {
+  return { valid: dto.valid, problems: dto.problems, diff: diff(dto.diff) };
+}
+
+export function written(dto: WrittenDto): ConfigWritten {
+  return { diff: diff(dto.diff), restart_required: dto.restart_required, pending_changes: dto.pending_changes };
 }

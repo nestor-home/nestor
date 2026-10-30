@@ -5,6 +5,7 @@
 import { delay, HttpResponse, http, type JsonBodyType, sse } from "msw";
 import type { Connection, JournalItem } from "@/api";
 import type { components } from "@/api/schema.gen";
+import * as config from "./config";
 import { db, save } from "./db";
 import {
   accountDto,
@@ -23,7 +24,7 @@ import {
   watchDto,
 } from "./dto";
 import { inEnglish } from "./english";
-import { ASSISTANT, KIND_LABELS, LIVE, ROLE_LABEL, tools as toolsOf } from "./fixtures";
+import { KIND_LABELS, LIVE, ROLE_LABEL, tools as toolsOf } from "./fixtures";
 import { facets, filtersOf, matching, withoutRecord } from "./journal";
 import { errorText, type Lang, localize, toItem } from "./messages";
 
@@ -59,6 +60,8 @@ const NOUNS: Record<string, Record<Lang, string>> = {
   task: { fr: "Tâche", en: "Task" },
   memory: { fr: "Souvenir", en: "Memory" },
   invitation: { fr: "Invitation", en: "Invitation" },
+  satellite: { fr: "Satellite", en: "Satellite" },
+  watch: { fr: "Veille", en: "Watch" },
 };
 
 const notFound = (what: keyof typeof NOUNS) =>
@@ -69,10 +72,16 @@ const signedIn = () => db.accounts.find((a) => a.id === db.signedIn) ?? null;
 /** Every call but sign-in and invitations needs the session; unsafe ones also the CSRF header. */
 function guard(request: Request): Response | null {
   listen(request);
+  if (restarting()) return HttpResponse.error();
   if (!signedIn()) return fail(401, "unauthenticated", "error-session-expired");
   if (request.method !== "GET" && request.headers.get("X-CSRF-Token") !== CSRF) return fail(403, "csrf", "error-csrf");
   return null;
 }
+
+/** While the instance restarts nothing answers; it comes back a little later. */
+let downUntil = 0;
+const restarting = () => Date.now() < downUntil;
+export const RESTART_MS = 2_500;
 
 const owners = () => db.accounts.filter((a) => a.role === "owner" && !a.disabled);
 
@@ -105,6 +114,7 @@ export const handlers = [
   // -- session ----------------------------------------------------------------------------------
   http.get(`${API}/me`, async ({ request }) => {
     listen(request);
+    if (restarting()) return HttpResponse.error();
     await delay(120);
     const account = signedIn();
     return account ? json(meDto(account, lang)) : fail(401, "unauthenticated", "error-session-expired");
@@ -181,6 +191,7 @@ export const handlers = [
       locale: lang,
       disabled: false,
       created_at: new Date().toISOString(),
+      last_seen_at: new Date().toISOString(),
     };
     db.accounts.push(account);
     invitation.status = "accepted";
@@ -192,6 +203,12 @@ export const handlers = [
 
   // -- accounts ---------------------------------------------------------------------------------
   http.get(`${API}/accounts`, ({ request }) => guard(request) ?? json(db.accounts.map(accountDto))),
+  http.get(`${API}/accounts/:id`, ({ request, params }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    const account = db.accounts.find((a) => a.id === params.id);
+    return account ? json(accountDto(account)) : notFound("account");
+  }),
   http.get(
     `${API}/invitations`,
     ({ request }) => guard(request) ?? json(db.invitations.filter((i) => i.status === "pending").map(invitationDto)),
@@ -274,6 +291,12 @@ export const handlers = [
 
   // -- household --------------------------------------------------------------------------------
   http.get(`${API}/household/people`, ({ request }) => guard(request) ?? json(db.people.map(personDto))),
+  http.get(`${API}/household/people/:id`, ({ request, params }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    const person = db.people.find((p) => p.id === params.id);
+    return person ? json(personDto(person)) : fail(404, "person_unknown", "error-person-unknown");
+  }),
 
   // -- journal ----------------------------------------------------------------------------------
   http.get(`${API}/journal/facets`, async ({ request }) => {
@@ -317,7 +340,9 @@ export const handlers = [
       guard(request) ??
       json({
         nestor: db.system.nestor,
-        agent: { name: ASSISTANT, status: "online" },
+        agent: { name: db.system.agent.name, status: "online" },
+        restart_required: db.config.restart_required,
+        pending_changes: db.config.pending_changes,
         components: db.system.components.map(componentDto),
       } satisfies In<"SystemOut">),
   ),
@@ -425,6 +450,13 @@ export const handlers = [
     } satisfies In<"SatellitesOut">);
   }),
 
+  http.get(`${API}/satellites/:id`, ({ request, params }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    const satellite = db.satellites.find((x) => x.id === params.id);
+    return satellite ? json(satelliteDto(satellite)) : notFound("satellite");
+  }),
+
   http.post(`${API}/satellites/approvals`, async ({ request }) => {
     const refused = guard(request);
     if (refused) return refused;
@@ -472,6 +504,13 @@ export const handlers = [
     } satisfies In<"TasksOut">);
   }),
 
+  http.get(`${API}/tasks/:id`, ({ request, params }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    const task = db.tasks.find((t) => t.id === params.id);
+    return task ? json(taskDto(task)) : notFound("task");
+  }),
+
   http.post(`${API}/tasks/:id/cancel`, async ({ request, params }) => {
     const refused = guard(request);
     if (refused) return refused;
@@ -490,6 +529,13 @@ export const handlers = [
     if (refused) return refused;
     const kinds = [...new Set(db.connectors.flatMap((c) => c.inbound))];
     return json({ watches: db.watches.map(watchDto), kinds } satisfies In<"WatchesOut">);
+  }),
+
+  http.get(`${API}/watches/:id`, ({ request, params }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    const watch = db.watches.find((w) => w.id === params.id);
+    return watch ? json(watchDto(watch)) : notFound("watch");
   }),
 
   http.post(`${API}/watches/:id/cancel`, ({ request, params }) => {
@@ -532,6 +578,132 @@ export const handlers = [
     const refused = guard(request);
     if (refused) return refused;
     db.memories = db.memories.filter((m) => m.id !== params.id);
+    save();
+    return noContent();
+  }),
+  // -- configuration ----------------------------------------------------------------------------
+  http.get("/health", () => (restarting() ? HttpResponse.error() : HttpResponse.json({ status: "ok" }))),
+
+  http.post(`${API}/system/restart`, async ({ request }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    const body = (await request.json()) as In<"RestartIn">;
+    if (!body.confirm) return fail(400, "restart_unconfirmed", "error-restart-unconfirmed");
+    // what a restart applies: the file as written; nothing is pending any more
+    const name = (db.config.document.persona as { name?: string } | undefined)?.name;
+    if (name) db.system.agent.name = name;
+    db.config.restart_required = false;
+    db.config.pending_changes = [];
+    save();
+    downUntil = Date.now() + RESTART_MS;
+    db.signedIn = null; // sessions live in the process's memory: everyone signs in again
+    return json({ restarting: true } satisfies In<"RestartOut">, { status: 202 });
+  }),
+
+  http.get(`${API}/config/schema`, ({ request }) => guard(request) ?? HttpResponse.json(config.SCHEMAS[lang])),
+
+  http.get(
+    `${API}/config`,
+    ({ request }) =>
+      guard(request) ??
+      HttpResponse.json({
+        document: config.masked(db.config.document),
+        path: db.config.path,
+        restart_required: db.config.restart_required,
+        pending_changes: db.config.pending_changes,
+      } satisfies In<"ConfigOut">),
+  ),
+
+  http.post(`${API}/config/preview`, async ({ request }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    const { document } = (await request.json()) as In<"DocumentIn">;
+    await delay(150);
+    const { doc, pending } = config.prepared(document, db.config.document);
+    const problems = config.problems(db.config, doc, pending, lang);
+    return HttpResponse.json({
+      valid: !problems.length,
+      problems,
+      diff: config.diff(db.config.document, doc, pending),
+    } satisfies In<"PreviewOut">);
+  }),
+
+  http.put(`${API}/config`, async ({ request }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    const { document } = (await request.json()) as In<"DocumentIn">;
+    await delay(300);
+    return writeConfig(document);
+  }),
+
+  http.get(
+    `${API}/config/history`,
+    ({ request }) =>
+      guard(request) ??
+      HttpResponse.json(
+        db.config.history.map((h) => ({
+          id: h.id,
+          at: h.at,
+          size: JSON.stringify(h.document).length,
+        })) satisfies In<"HistoryEntryOut">[],
+      ),
+  ),
+
+  http.get(`${API}/config/history/:id`, ({ request, params }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    const entry = db.config.history.find((h) => h.id === params.id);
+    if (!entry) return fail(404, "config_history_unknown", "error-config-history-unknown");
+    return HttpResponse.json({
+      id: entry.id,
+      at: entry.at,
+      document: config.masked(entry.document),
+    } satisfies In<"HistoryDocumentOut">);
+  }),
+
+  http.post(`${API}/config/history/:id/restore`, async ({ request, params }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    const entry = db.config.history.find((h) => h.id === params.id);
+    if (!entry) return fail(404, "config_history_unknown", "error-config-history-unknown");
+    await delay(300);
+    return writeConfig(config.masked(entry.document));
+  }),
+
+  http.get(`${API}/config/secrets`, ({ request }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    const used = config.usedSecrets(db.config.document);
+    const names = [...new Set([...Object.keys(db.config.vault), ...Object.keys(used)])].sort();
+    return HttpResponse.json(names.map(secretOut) satisfies In<"SecretOut">[]);
+  }),
+
+  http.get(`${API}/config/secrets/:name`, ({ request, params }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    return HttpResponse.json(secretOut(String(params.name)) satisfies In<"SecretOut">);
+  }),
+
+  http.put(`${API}/config/secrets/:name`, async ({ request, params }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    const { value } = (await request.json()) as In<"SecretIn">;
+    await delay(200);
+    if (!value) return fail(422, "invalid", "error-invalid-request");
+    db.config.vault[String(params.name)] = { value, at: new Date().toISOString() };
+    save();
+    return HttpResponse.json(secretOut(String(params.name)) satisfies In<"SecretOut">);
+  }),
+
+  http.delete(`${API}/config/secrets/:name`, async ({ request, params }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    const name = String(params.name);
+    const used = config.usedSecrets(db.config.document)[name] ?? [];
+    const force = new URL(request.url).searchParams.get("force") === "true";
+    if (used.length && !force) return fail(409, "secret_in_use", "error-secret-in-use", { paths: used.join(", ") });
+    if (!(name in db.config.vault)) return fail(404, "secret_unknown", "error-secret-unknown");
+    delete db.config.vault[name];
     save();
     return noContent();
   }),
@@ -603,4 +775,45 @@ export function liveJournal() {
     }, 9_000);
     request.signal.addEventListener("abort", () => clearInterval(timer));
   });
+}
+
+function secretOut(name: string): In<"SecretOut"> {
+  const kept = db.config.vault[name];
+  return {
+    name,
+    set: Boolean(kept),
+    preview: kept ? config.preview(kept.value) : null,
+    used_by: config.usedSecrets(db.config.document)[name] ?? [],
+  };
+}
+
+/** Validated as Nestor does; the previous file goes to the history; a person restarts later. */
+function writeConfig(document: In<"DocumentIn">["document"]) {
+  const { doc, pending } = config.prepared(document, db.config.document);
+  const problems = config.problems(db.config, doc, pending, lang);
+  if (problems.length) {
+    const args = { count: problems.length };
+    const message = errorText(lang, "error-config-invalid", args);
+    return HttpResponse.json(
+      { error: { code: "config_invalid", message_id: "error-config-invalid", args, message, problems } },
+      { status: 422 },
+    );
+  }
+  const diff = config.diff(db.config.document, doc, pending);
+  const now = new Date();
+  const stamp = `${now
+    .toISOString()
+    .replace(/[-:]/g, "")
+    .replace(/\.(\d{3})Z$/, "$1")}000Z`;
+  db.config.history.unshift({ id: stamp, at: now.toISOString(), document: db.config.document });
+  for (const [name, value] of Object.entries(pending)) db.config.vault[name] = { value, at: now.toISOString() };
+  db.config.document = doc;
+  db.config.pending_changes = [...new Set([...db.config.pending_changes, ...config.changedPaths(diff)])].sort();
+  db.config.restart_required = true;
+  save();
+  return HttpResponse.json({
+    diff,
+    restart_required: true,
+    pending_changes: db.config.pending_changes,
+  } satisfies In<"WrittenOut">);
 }

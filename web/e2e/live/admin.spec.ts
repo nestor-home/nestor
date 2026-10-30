@@ -107,3 +107,39 @@ test("the language switches from French to English and back, server texts includ
   await expect(page.getByRole("link", { name: "Aujourd'hui" })).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("lang", "fr");
 });
+
+/** Renames the agent through the configuration, restarts it by hand, and checks the new name is live. */
+async function rename(page: Page, from: string, to: string) {
+  await page.goto("/config/persona");
+  const name = page.getByRole("textbox", { name: /^(Nom|Name)$/ });
+  await expect(name).toHaveValue(from);
+  await name.fill(to);
+  const bar = page.getByRole("region", { name: /Modifications non enregistrées|Unsaved changes/ });
+  await expect(bar.getByRole("button", { name: /1 modification|1 change/ })).toBeVisible();
+  await bar.getByRole("button", { name: /^(Enregistrer|Save)$/ }).click();
+  await expect(page.getByText(/Redémarrage requis|Restart required/)).toBeVisible();
+  // saved, not applied: the running agent keeps its name until a person restarts it
+  await expect(page.getByRole("link", { name: new RegExp(from) }).first()).toBeVisible();
+  await page.getByRole("button", { name: /Redémarrer…|Restart…/ }).click();
+  await page.getByRole("button", { name: /Redémarrer maintenant|Restart now/ }).click();
+  await expect(page.getByText(/Je redémarre, à tout de suite|Restarting, back in a moment/)).toBeVisible();
+  // sessions live in the process's memory: the new process asks to sign in again, then comes back here
+  await expect(page.getByRole("heading", { name: /Connexion|Sign in/ })).toBeVisible({ timeout: 60_000 });
+  await page.getByLabel(/Identifiant|Login/).fill(login);
+  await page.getByLabel(/Mot de passe|Password/).fill(password);
+  await page.getByRole("button", { name: /Se connecter|Sign in/ }).click();
+  await expect(page).toHaveURL(/\/config\/persona$/);
+  await expect(page.getByRole("textbox", { name: /^(Nom|Name)$/ })).toHaveValue(to);
+  await expect(page.getByText(/Redémarrage requis|Restart required/)).toBeHidden();
+  await expect(page.getByRole("link", { name: new RegExp(`^${to}`) }).first()).toBeVisible();
+}
+
+test("a configuration change applies once a person restarts", async ({ page }) => {
+  test.setTimeout(150_000);
+  await signIn(page);
+  await page.goto("/config/persona");
+  const current = await page.getByRole("textbox", { name: /^(Nom|Name)$/ }).inputValue();
+  const next = current === "Alfred" ? "Alfred Pennyworth" : "Alfred";
+  await rename(page, current, next);
+  await rename(page, next, current); // leave the throwaway instance as it was
+});

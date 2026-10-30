@@ -47,6 +47,7 @@ export const NAV: NavGroup[] = [
       item("/satellites", "nav-satellites", "satellites:read", "s"),
       item("/system", "nav-system", "satellites:read", "y"),
       item("/accounts", "nav-accounts", "accounts:read", "a"),
+      item("/config", "nav-config", "config:manage", "f"),
     ],
   },
 ];

@@ -1,4 +1,5 @@
 /** The mock backend's state. In the browser it survives reloads (OAuth navigates away and back). */
+
 import type {
   Account,
   Connection,
@@ -14,6 +15,8 @@ import type {
   Tool,
   Watch,
 } from "@/api";
+import type { ConfigDb } from "./config";
+import * as config from "./config";
 import { day } from "./day";
 import * as fixtures from "./fixtures";
 
@@ -32,9 +35,10 @@ export interface Db {
   watches: Watch[];
   memories: Memory[];
   system: SystemInfo;
+  config: ConfigDb;
 }
 
-const KEY = "nestor.mock.db.v5"; // bumped when the shape changes
+const KEY = "nestor.mock.db.v6"; // bumped when the shape changes
 
 export function fresh(): Db {
   const connections = fixtures.connections();
@@ -56,6 +60,7 @@ export function fresh(): Db {
     watches: fixtures.watches(),
     memories,
     system: fixtures.system(),
+    config: config.fresh(),
   };
 }
 

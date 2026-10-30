@@ -2,7 +2,6 @@
 
 auth-footer = nestor — un runtime ouvert pour les agents de la maison
 auth-login-title = Connexion
-auth-login-intro = Entrez l'identifiant et le mot de passe de votre compte d'administration.
 auth-password = Mot de passe
 auth-sign-in = Se connecter
 auth-signing-in = Connexion…

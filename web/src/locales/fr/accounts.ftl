@@ -1,7 +1,7 @@
 ## Comptes d'administration, rôles et invitations.
 
 acc-title = Comptes
-acc-intro = La reconnaissance d'une voix ou d'un visage ne remplace jamais un compte : les actions sensibles passent par ici.
+acc-intro = Reconnaître une voix ou un visage ne remplace jamais un compte.
 acc-tab-accounts = Comptes
 acc-tab-invitations = Invitations
 acc-invite = Inviter…

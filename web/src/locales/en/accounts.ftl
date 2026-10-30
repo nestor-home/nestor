@@ -1,7 +1,7 @@
 ## Admin accounts, roles and invitations.
 
 acc-title = Accounts
-acc-intro = Recognising a voice or a face never replaces an account: sensitive actions go through here.
+acc-intro = Recognising a voice or a face never replaces an account.
 acc-tab-accounts = Accounts
 acc-tab-invitations = Invitations
 acc-invite = Invite…

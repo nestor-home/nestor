@@ -2,7 +2,6 @@
 
 auth-footer = nestor — an open runtime for home agents
 auth-login-title = Sign in
-auth-login-intro = Enter the login and password of your admin account.
 auth-password = Password
 auth-sign-in = Sign in
 auth-signing-in = Signing in…

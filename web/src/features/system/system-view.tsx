@@ -9,7 +9,7 @@ import { BrandMark, brandOf } from "@/lib/brands";
 const SLOTS: { slot: Slot; title: string; hint?: string }[] = [
   { slot: "model", title: "sys-slot-model" },
   { slot: "speech", title: "sys-slot-speech" },
-  { slot: "executor", title: "sys-slot-executor", hint: "sys-slot-executor-hint" },
+  { slot: "executor", title: "sys-slot-executor" },
   { slot: "channel", title: "sys-slot-channel" },
   { slot: "presence", title: "sys-slot-presence" },
   { slot: "tools", title: "sys-slot-tools" },

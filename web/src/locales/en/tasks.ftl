@@ -1,10 +1,9 @@
 ## Tasks: long work handed to executors, from the request to the delivery.
 
 task-title = Tasks
-task-intro = Long work handed to the executors, from the moment it was asked for to its delivery.
 task-running = Running
 task-running-empty = No task running.
-task-running-empty-hint = Ask for something long: comparing offers, preparing a file.
+task-running-empty-hint = Hand me something long: comparing offers, preparing a file.
 task-done = Finished
 task-done-empty = No finished task.
 task-for = for { $name }
@@ -16,7 +15,7 @@ task-cancel = Stop
 task-cancel-action = Stop…
 task-cancel-title = Stop this task?
 task-cancel-description = The executor is told to stop; what is already done stays done.
-task-cancel-notice = Stop requested for task { $id }.
+task-cancel-notice = Stopping task { $id }.
 task-story = How it went
 task-story-empty = The journal keeps no trace of this task.
 task-error = error

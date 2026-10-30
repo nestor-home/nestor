@@ -1,11 +1,9 @@
 ## Memories: what the assistant keeps.
 
 mem-title = Memories
-mem-intro = What { $assistant } remembers. Correct what is wrong, forget what should not stay.
 mem-empty = No memory yet.
-mem-empty-hint = It keeps what it is asked to remember, and what it learns in conversation.
+mem-empty-hint = I keep what I'm asked to remember, and what I learn in conversation.
 mem-empty-search = No memory matches.
-mem-empty-search-hint = Try another word.
 mem-search = Search
 mem-search-placeholder = handball, boiler…
 mem-search-submit = Search
@@ -17,11 +15,11 @@ mem-learnt-where = where it learnt it
 mem-correct = Correct…
 mem-correct-title = Correct the memory
 mem-correct-description = The correction replaces the text; the old version stays in the journal.
-mem-corrected = Memory corrected.
+mem-corrected = Corrected.
 mem-forget = Forget…
 mem-forget-title = Forget this memory?
 mem-forget-confirm = Forget
 mem-forget-text = “{ $text }” will no longer be used. Forgetting it is written to the journal.
-mem-forgotten = Memory forgotten.
+mem-forgotten = Forgotten.
 mem-text = Memory text
 mem-save-hint = ⌘↵ to save

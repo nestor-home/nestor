@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { ArrowRight, MessageSquareText } from "lucide-react";
-import { api, keys, type Watch, watchesQuery } from "@/api";
+import { api, isMissing, keys, type Watch, watchesQuery, watchQuery } from "@/api";
 import { Ago } from "@/components/ago";
 import { Confirm } from "@/components/confirm";
 import { type Crumb, Crumbs } from "@/components/crumbs";
@@ -85,15 +85,15 @@ export function WatchesList() {
 
 export function WatchDetail({ id }: { id: string }) {
   const t = useT();
-  const watches = useQuery(watchesQuery);
+  const found = useQuery(watchQuery(id));
   const trail: Crumb[] = [{ label: t("watch-title"), link: { to: "/watches" } }, { label: id }];
-  if (watches.isPending) return <Loading lines={4} />;
-  const watch = watches.data?.watches.find((w) => w.id === id);
+  if (found.isPending) return <Loading lines={4} />;
+  const watch = found.data;
   if (!watch) {
     return (
       <>
         <Crumbs trail={trail} />
-        {watches.isError ? <Failure error={watches.error} /> : <Empty>{t("watch-unknown")}</Empty>}
+        {isMissing(found.error) ? <Empty>{t("watch-unknown")}</Empty> : <Failure error={found.error} />}
       </>
     );
   }

@@ -6,7 +6,7 @@ watch-no-source-hint = { $assistant } ne peut rien surveiller sans source : une 
 watch-connect-mailbox = connectez une boîte mail
 watch-active = Actives
 watch-active-empty = Aucune veille active.
-watch-active-empty-hint = Demandez-le simplement : « préviens-moi quand le colis arrive ».
+watch-active-empty-hint = Demandez-moi : « préviens-moi quand le colis arrive ».
 watch-for = pour { $name }
 watch-once = une seule fois
 watch-every-time = à chaque fois
@@ -16,7 +16,7 @@ watch-triggered-count = { $count ->
 }
 watch-never-triggered = jamais déclenchée
 watch-unknown = Cette veille n'existe pas ou a été annulée.
-watch-cancelled-notice = Veille annulée.
+watch-cancelled-notice = D'accord, je ne surveille plus ça.
 watch-created = créée { $when }
 watch-until = jusqu'au { $when }
 watch-cancel = Annuler la veille

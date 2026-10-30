@@ -35,7 +35,7 @@ import type {
   WatchDto,
 } from "@/api/dto";
 import { db } from "./db";
-import { ASSISTANT, SCOPES } from "./fixtures";
+import { SCOPES } from "./fixtures";
 
 export function personRef(id: string | null | undefined): PersonRefDto | null {
   if (!id) return null;
@@ -52,6 +52,7 @@ export function accountDto(a: Account): AccountDto {
     disabled: a.disabled,
     created_at: a.created_at,
     locale: a.locale,
+    last_seen_at: a.last_seen_at,
   };
 }
 
@@ -61,8 +62,10 @@ export function meDto(a: Account, lang: string): MeDto {
     locale: a.locale ?? lang,
     scopes: SCOPES[a.role],
     csrf_token: "mock-csrf-token",
-    assistant: ASSISTANT,
-    agent: { name: ASSISTANT, status: "online" },
+    assistant: db.system.agent.name,
+    agent: { name: db.system.agent.name, status: "online" },
+    restart_required: db.config.restart_required,
+    pending_changes: db.config.pending_changes,
   };
 }
 
@@ -86,7 +89,7 @@ export function personDto(p: Person): PersonDto {
     name: p.name,
     channel_accounts: p.channels,
     reach: p.reach,
-    presence: p.presence ? { home: p.presence.home, room: p.presence.room } : null,
+    presence: p.presence ? { home: p.presence.home, room: p.presence.room, since: p.presence.since } : null,
     connections: db.connections.filter((c) => c.owner === p.id).map(connectionDto),
     account: account ? accountDto(account) : null,
   };
@@ -131,6 +134,9 @@ export function connectionDto(c: Connection): ConnectionDto {
     owner: personRef(c.owner),
     status: c.status,
     status_label: c.status_label,
+    status_reason: c.status_reason
+      ? { message: { id: "connection-status-reason", args: {} }, text: c.status_reason }
+      : null,
     confirm_writes: c.confirm_writes,
     disabled_tools: tools.filter((t) => !t.enabled).map((t) => t.name),
     created_at: c.created_at,
@@ -191,6 +197,7 @@ export function taskDto(t: Task): TaskDto {
     origin: { session: t.origin?.session ?? "", channel: t.origin?.channel ?? "" },
     delivered: t.delivered,
     started_at: t.started_at,
+    ended_at: t.ended_at,
     steps: t.steps,
     result: t.result,
     error: t.error,

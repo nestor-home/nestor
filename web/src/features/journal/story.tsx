@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ArrowUpRight, ChevronRight, Scissors } from "lucide-react";
 import type { ReactNode } from "react";
-import { type JournalItem, tasksQuery, watchesQuery } from "@/api";
+import { type JournalItem, taskQuery, watchQuery } from "@/api";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useT } from "@/i18n";
 import { KindMark } from "@/lib/brands";
@@ -357,12 +357,11 @@ function CallRow({ call, last, open }: { call: ToolCall; last: boolean; open: (i
 
 function useChainTitle(chain: Chain): { title: string; link: ReactNode; kind: string } {
   const t = useT();
-  const tasks = useQuery({ ...tasksQuery, refetchInterval: false });
-  const watches = useQuery({ ...watchesQuery });
   const { type, id } = chain.subject;
+  const task = useQuery({ ...taskQuery(id), enabled: type === "task", refetchInterval: false, retry: false });
+  const watch = useQuery({ ...watchQuery(id), enabled: type === "watch", retry: false }).data;
   if (type === "task") {
-    const task = [...(tasks.data?.running ?? []), ...(tasks.data?.recent ?? [])].find((t) => t.id === id);
-    const objective = task?.objective ?? chain.items.find((i) => i.type.endsWith("task_started"))?.detail;
+    const objective = task.data?.objective ?? chain.items.find((i) => i.type.endsWith("task_started"))?.detail;
     return {
       kind: "task",
       title: t("jr-chain-task", { what: objective ?? id }),
@@ -374,7 +373,6 @@ function useChainTitle(chain: Chain): { title: string; link: ReactNode; kind: st
     };
   }
   if (type === "watch") {
-    const watch = watches.data?.watches.find((w) => w.id === id);
     return {
       kind: "watch",
       title: t("jr-chain-watch", { what: watch?.what ?? id }),

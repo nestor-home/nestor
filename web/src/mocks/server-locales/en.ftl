@@ -79,3 +79,21 @@ error-provider-refused = The service refused the connection: the server rejected
 error-pairing-refused = No device is waiting for this code: it is wrong or has expired.
 error-memory-empty = A memory cannot be empty: forget it instead.
 error-invitation-person = A member's or a guest's account belongs to a person of the household.
+
+## Configuration (copied from Nestor's locales/en/config.ftl and errors.ftl)
+config-error-missing = { $path }: required.
+config-error-extra = { $path }: unknown setting.
+config-error-invalid = { $path }: { $detail }
+config-error-unknown-kind = { $path }: no plugin “{ $detail }” is installed.
+config-error-reference = { $path }: the environment variable { $detail } is not set.
+config-error-secret = { $path }: the secret { $detail } is not set.
+error-config-unavailable = This instance was not started from a configuration file: there is nothing to edit.
+error-no-secret-key = NESTOR_SECRET_KEY is not set: secrets cannot be kept without it.
+error-config-invalid = The configuration cannot be used ({ $count ->
+    [one] one problem
+   *[other] { $count } problems
+}): nothing was written.
+error-config-history-unknown = This earlier configuration does not exist.
+error-secret-in-use = This secret is still used by { $paths }: remove those references first.
+error-secret-unknown = This secret is not set.
+error-restart-unconfirmed = Confirm the restart: every conversation will be interrupted for a moment.

@@ -1,5 +1,6 @@
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { PanelLeft, Search } from "lucide-react";
+import { AgentFigure } from "@/components/agent-figure";
 import { Kbd } from "@/components/status";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +21,8 @@ import {
 } from "@/components/ui/sidebar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Wordmark } from "@/components/wordmark";
+import { AgentPresenceProvider, useAgentPresence } from "@/features/agent/presence";
+import { RestartBanner } from "@/features/config/restart";
 import { useAccountLocale, useT } from "@/i18n";
 import { useMe } from "@/lib/session";
 import { cn } from "@/lib/utils";
@@ -49,26 +52,29 @@ export function AppShell() {
 
   return (
     <SidebarProvider>
-      <a
-        href="#content"
-        className="sr-only z-50 rounded-md bg-ink px-3 py-2 text-paper focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
-      >
-        {t("shell-skip")}
-      </a>
-      <Navigation />
-      <SidebarInset className="min-w-0 bg-paper">
-        <MobileBar onSearch={() => palette.setOpen(() => true)} />
-        <Ticker onSearch={() => palette.setOpen(() => true)} />
-        <div
-          id="content"
-          className="min-w-0 px-4 pt-8 pb-[calc(4rem+env(safe-area-inset-bottom))] sm:px-6 md:px-10 md:pt-10 lg:px-14"
+      <AgentPresenceProvider>
+        <a
+          href="#content"
+          className="sr-only z-50 rounded-md bg-ink px-3 py-2 text-paper focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
         >
-          <div className="mx-auto max-w-6xl">
-            <Outlet />
+          {t("shell-skip")}
+        </a>
+        <Navigation />
+        <SidebarInset className="min-w-0 bg-paper">
+          <MobileBar onSearch={() => palette.setOpen(() => true)} />
+          <Ticker onSearch={() => palette.setOpen(() => true)} />
+          <div
+            id="content"
+            className="min-w-0 px-4 pt-8 pb-[calc(4rem+env(safe-area-inset-bottom))] sm:px-6 md:px-10 md:pt-10 lg:px-14"
+          >
+            <div className="mx-auto max-w-6xl">
+              <RestartBanner />
+              <Outlet />
+            </div>
           </div>
-        </div>
-      </SidebarInset>
-      <CommandPalette open={palette.open} onOpenChange={(open) => palette.setOpen(() => open)} />
+        </SidebarInset>
+        <CommandPalette open={palette.open} onOpenChange={(open) => palette.setOpen(() => open)} />
+      </AgentPresenceProvider>
     </SidebarProvider>
   );
 }
@@ -151,6 +157,7 @@ function AgentHeader({ collapsed, onNavigate }: { collapsed: boolean; onNavigate
   const t = useT();
   const me = useMe();
   const { status } = useLive();
+  const { state: figure } = useAgentPresence();
   const online = status === "open";
   const state = t(
     online ? "shell-agent-online" : status === "connecting" ? "shell-live-connecting" : "shell-agent-offline",
@@ -173,12 +180,12 @@ function AgentHeader({ collapsed, onNavigate }: { collapsed: boolean; onNavigate
               to="/"
               onClick={onNavigate}
               aria-label={t("shell-agent-label", { assistant: me.assistant, state })}
-              className="relative mx-auto grid size-9 place-items-center rounded-md font-serif text-xl text-ink hover:bg-paper-sunken"
+              className="relative mx-auto grid size-9 place-items-center rounded-md hover:bg-paper-sunken"
             />
           }
         >
-          {me.assistant.slice(0, 1).toUpperCase()}
-          <span className="absolute top-1 right-1">{dot}</span>
+          <AgentFigure state={figure} size="sm" className="size-7" />
+          <span className="absolute top-0.5 right-0.5">{dot}</span>
         </TooltipTrigger>
         <TooltipContent side="right">
           {me.assistant} · {state}
@@ -192,16 +199,19 @@ function AgentHeader({ collapsed, onNavigate }: { collapsed: boolean; onNavigate
         to="/"
         onClick={onNavigate}
         aria-label={t("shell-agent-label", { assistant: me.assistant, state })}
-        className="block rounded-sm"
+        className="flex items-center gap-3 rounded-sm"
       >
-        <span className="block font-serif text-[1.75rem] leading-none text-ink [font-variation-settings:'SOFT'_100,'opsz'_72]">
-          {me.assistant}
+        <AgentFigure state={figure} size="md" />
+        <span className="min-w-0">
+          <span className="block truncate font-serif text-[1.75rem] leading-none text-ink [font-variation-settings:'SOFT'_100,'opsz'_72]">
+            {me.assistant}
+          </span>
+          <span className="mt-1.5 flex items-center gap-2 font-mono text-[0.7rem] text-ink-muted" aria-live="polite">
+            {dot}
+            {online ? t(`home-state-${figure}`) : state}
+          </span>
         </span>
       </Link>
-      <p className="mt-2 flex items-center gap-2 font-mono text-[0.7rem] text-ink-muted" aria-live="polite">
-        {dot}
-        {state}
-      </p>
       <p className="mt-4 flex items-center gap-1.5 text-ink-faint">
         <Wordmark className="text-[0.95rem] text-ink-muted" />
       </p>

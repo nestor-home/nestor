@@ -10,7 +10,7 @@ function System() {
   const t = useT();
   return (
     <Guard scope="satellites:read">
-      <PageHeader title={t("sys-title")}>{t("sys-intro")}</PageHeader>
+      <PageHeader title={t("sys-title")} />
       <SystemView />
     </Guard>
   );

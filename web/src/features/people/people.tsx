@@ -2,7 +2,16 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, BookMarked, Gauge, House, MessageSquareText, Plug } from "lucide-react";
 import type { ReactNode } from "react";
-import { accountsQuery, connectionsQuery, journalFacetsQuery, type Person, type Presence, peopleQuery } from "@/api";
+import {
+  accountsQuery,
+  connectionsQuery,
+  isMissing,
+  journalFacetsQuery,
+  type Person,
+  type Presence,
+  peopleQuery,
+  personQuery,
+} from "@/api";
 import { Ago } from "@/components/ago";
 import { type Crumb, Crumbs } from "@/components/crumbs";
 import { PageHeader, Section } from "@/components/page";
@@ -75,8 +84,8 @@ export function PeopleList() {
 }
 
 export function usePerson(id: string): { person: Person | undefined; pending: boolean; error: unknown } {
-  const people = useQuery(peopleQuery);
-  return { person: people.data?.find((p) => p.id === id), pending: people.isPending, error: people.error };
+  const found = useQuery(personQuery(id));
+  return { person: found.data, pending: found.isPending, error: isMissing(found.error) ? null : found.error };
 }
 
 export function PersonFrame({ id, children }: { id: string; children: ReactNode }) {

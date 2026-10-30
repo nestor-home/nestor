@@ -37,6 +37,8 @@ export default defineConfig({
             },
           },
           "/connections/callback": { target: process.env.NESTOR_API, changeOrigin: true },
+          // the restart flow asks whether the instance answers again
+          "/health": { target: process.env.NESTOR_API, changeOrigin: true },
         }
       : {},
   },

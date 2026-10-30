@@ -1,10 +1,9 @@
 ## Tâches : le travail long confié aux exécutants, de la demande à la remise.
 
 task-title = Tâches
-task-intro = Le travail long confié aux exécutants, du moment où il a été demandé à sa remise.
 task-running = En cours
 task-running-empty = Aucune tâche en cours.
-task-running-empty-hint = Demandez-lui quelque chose de long : comparer des offres, préparer un dossier.
+task-running-empty-hint = Confiez-moi quelque chose de long : comparer des offres, préparer un dossier.
 task-done = Terminées
 task-done-empty = Aucune tâche terminée.
 task-for = pour { $name }
@@ -16,7 +15,7 @@ task-cancel = Arrêter
 task-cancel-action = Arrêter…
 task-cancel-title = Arrêter cette tâche ?
 task-cancel-description = L'exécutant reçoit l'ordre d'arrêter ; ce qui est déjà fait le reste.
-task-cancel-notice = Arrêt demandé pour la tâche { $id }.
+task-cancel-notice = J'arrête la tâche { $id }.
 task-story = Déroulé
 task-story-empty = Le journal ne garde aucune trace de cette tâche.
 task-error = erreur

@@ -4,10 +4,12 @@ import { ArrowRight, MailPlus, Users } from "lucide-react";
 import {
   type Account,
   type AccountChange,
+  accountQuery,
   accountsQuery,
   api,
   type Invitation,
   invitationsQuery,
+  isMissing,
   keys,
   type Role,
 } from "@/api";
@@ -219,22 +221,20 @@ function InvitationRow({ invitation }: { invitation: Invitation }) {
 
 export function AccountDetail({ id }: { id: string }) {
   const t = useT();
-  const accounts = useQuery(accountsQuery);
+  const found = useQuery(accountQuery(id));
+  const accounts = useQuery(accountsQuery); // whether this is the last owner
   const me = useMe();
   const name = usePeopleNames();
   const editable = useCan("accounts:write");
-  const trail: Crumb[] = [
-    { label: t("acc-title"), link: { to: "/accounts" } },
-    { label: accounts.data?.find((a) => a.id === id)?.login ?? id },
-  ];
-  const account = accounts.data?.find((a) => a.id === id);
+  const account = found.data;
+  const trail: Crumb[] = [{ label: t("acc-title"), link: { to: "/accounts" } }, { label: account?.login ?? id }];
   const change = useChange(account ?? ({ id } as Account));
-  if (accounts.isPending) return <Loading lines={3} />;
+  if (found.isPending) return <Loading lines={3} />;
   if (!account) {
     return (
       <>
         <Crumbs trail={trail} />
-        {accounts.isError ? <Failure error={accounts.error} /> : <Empty>{t("acc-not-found")}</Empty>}
+        {isMissing(found.error) ? <Empty>{t("acc-not-found")}</Empty> : <Failure error={found.error} />}
       </>
     );
   }

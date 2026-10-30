@@ -6,11 +6,18 @@ import type {
   Account,
   AccountChange,
   Approval,
+  ConfigDocument,
+  ConfigPreview,
+  ConfigSchema,
+  ConfigState,
+  ConfigWritten,
   ConnectionDetail,
   Connector,
   ConnectRequest,
   ConnectResult,
   Credentials,
+  HistoryDocument,
+  HistoryEntry,
   Id,
   Invitation,
   InvitationCreated,
@@ -27,9 +34,12 @@ import type {
   Person,
   Satellite,
   Satellites,
+  Secret,
   SystemInfo,
+  Task,
   Tasks,
   ToolSettings,
+  Watch,
   Watches,
 } from "./types";
 
@@ -55,6 +65,8 @@ export const api = {
 
   // accounts
   accounts: async (): Promise<Account[]> => (await unwrap(client.GET("/api/v1/accounts"))).map(adapt.account),
+  account: async (id: Id): Promise<Account> =>
+    adapt.account(await unwrap(client.GET("/api/v1/accounts/{account_id}", { params: { path: { account_id: id } } }))),
   invitations: async (): Promise<Invitation[]> =>
     (await unwrap(client.GET("/api/v1/invitations"))).map(adapt.invitation),
   invite: async (body: NewInvitation): Promise<InvitationCreated> => {
@@ -77,6 +89,10 @@ export const api = {
 
   // household
   people: async (): Promise<Person[]> => (await unwrap(client.GET("/api/v1/household/people"))).map(adapt.person),
+  person: async (id: Id): Promise<Person> =>
+    adapt.person(
+      await unwrap(client.GET("/api/v1/household/people/{person_id}", { params: { path: { person_id: id } } })),
+    ),
 
   // journal
   journal: async (filters: JournalFilters, before?: Id, signal?: AbortSignal, limit?: number): Promise<JournalPage> => {
@@ -102,6 +118,40 @@ export const api = {
 
   // system
   system: async (): Promise<SystemInfo> => adapt.system(await unwrap(client.GET("/api/v1/system"))),
+  /** Asks for a restart: always a person's explicit, confirmed action. */
+  restart: (): Promise<void> =>
+    unwrap(client.POST("/api/v1/system/restart", { body: { confirm: true } })).then(() => undefined),
+  /** Whether the instance answers at all (outside the API: it is up before a session is). */
+  health: async (signal?: AbortSignal): Promise<boolean> => {
+    try {
+      return (await globalThis.fetch("/health", { cache: "no-store", signal })).ok;
+    } catch {
+      return false;
+    }
+  },
+
+  // configuration
+  configSchema: async (): Promise<ConfigSchema> =>
+    adapt.configSchema(await unwrap(client.GET("/api/v1/config/schema"))),
+  config: async (): Promise<ConfigState> => await unwrap(client.GET("/api/v1/config")),
+  previewConfig: async (document: ConfigDocument, signal?: AbortSignal): Promise<ConfigPreview> =>
+    adapt.configPreview(await unwrap(client.POST("/api/v1/config/preview", { body: { document }, signal }))),
+  writeConfig: async (document: ConfigDocument): Promise<ConfigWritten> =>
+    adapt.written(await unwrap(client.PUT("/api/v1/config", { body: { document } }))),
+  configHistory: async (): Promise<HistoryEntry[]> => await unwrap(client.GET("/api/v1/config/history")),
+  configVersion: async (id: Id): Promise<HistoryDocument> =>
+    await unwrap(client.GET("/api/v1/config/history/{entry_id}", { params: { path: { entry_id: id } } })),
+  restoreConfig: async (id: Id): Promise<ConfigWritten> =>
+    adapt.written(
+      await unwrap(client.POST("/api/v1/config/history/{entry_id}/restore", { params: { path: { entry_id: id } } })),
+    ),
+  secrets: async (): Promise<Secret[]> => await unwrap(client.GET("/api/v1/config/secrets")),
+  setSecret: async (name: string, value: string): Promise<Secret> =>
+    await unwrap(client.PUT("/api/v1/config/secrets/{name}", { params: { path: { name } }, body: { value } })),
+  deleteSecret: (name: string, force = false): Promise<void> =>
+    unwrap(client.DELETE("/api/v1/config/secrets/{name}", { params: { path: { name }, query: { force } } })).then(
+      () => undefined,
+    ),
 
   // connectors and connections
   connectors: async (): Promise<Connector[]> => (await unwrap(client.GET("/api/v1/connectors"))).map(adapt.connector),
@@ -146,6 +196,10 @@ export const api = {
     const now = Date.now();
     return { pending: all.pending.map((p) => adapt.pending(p, now)), paired: all.paired.map(adapt.satellite) };
   },
+  satellite: async (device: string): Promise<Satellite> =>
+    adapt.satellite(
+      await unwrap(client.GET("/api/v1/satellites/{device_id}", { params: { path: { device_id: device } } })),
+    ),
   approve: async (pairing: Id, body: Approval): Promise<Satellite> =>
     adapt.satellite(
       await unwrap(client.POST("/api/v1/satellites/approvals", { body: { ...body, pairing_id: pairing } })),
@@ -160,12 +214,16 @@ export const api = {
     const all = await unwrap(client.GET("/api/v1/tasks"));
     return { running: all.running.map(adapt.task), recent: all.recent.map(adapt.task) };
   },
+  task: async (id: Id): Promise<Task> =>
+    adapt.task(await unwrap(client.GET("/api/v1/tasks/{task_id}", { params: { path: { task_id: id } } }))),
   cancelTask: (id: Id): Promise<void> =>
     unwrap(client.POST("/api/v1/tasks/{task_id}/cancel", { params: { path: { task_id: id } } })).then(() => undefined),
   watches: async (): Promise<Watches> => {
     const all = await unwrap(client.GET("/api/v1/watches"));
     return { watches: all.watches.map(adapt.watch), sources: all.kinds };
   },
+  watch: async (id: Id): Promise<Watch> =>
+    adapt.watch(await unwrap(client.GET("/api/v1/watches/{watch_id}", { params: { path: { watch_id: id } } }))),
   cancelWatch: (id: Id): Promise<void> =>
     unwrap(client.POST("/api/v1/watches/{watch_id}/cancel", { params: { path: { watch_id: id } } })).then(
       () => undefined,

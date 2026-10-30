@@ -228,4 +228,65 @@
   .just-arrived {
     animation: arrive 1.6s var(--ease);
   }
+
+  /* the agent's mind on the home page: transform and opacity only; reduced motion keeps a still map */
+  @keyframes mind-ripple {
+    from {
+      opacity: 0.55;
+      transform: scale(1);
+    }
+    to {
+      opacity: 0;
+      transform: scale(1.9);
+    }
+  }
+
+  @keyframes mind-turn {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @keyframes mind-flash {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+
+  .mind-ripple {
+    animation: mind-ripple 1.6s var(--ease) both;
+  }
+
+  .mind-turn {
+    animation: mind-turn 24s linear infinite;
+  }
+
+  .mind-turn-fast {
+    animation: mind-turn 6s linear infinite;
+  }
+
+  .mind-breathe {
+    animation: breathe 3.2s var(--ease) infinite;
+  }
+
+  .mind-flash {
+    animation: mind-flash 3s var(--ease) both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mind-ripple,
+    .mind-flash {
+      animation: none;
+      opacity: 0;
+    }
+
+    .mind-turn,
+    .mind-turn-fast,
+    .mind-breathe {
+      animation: none;
+    }
+  }
 }

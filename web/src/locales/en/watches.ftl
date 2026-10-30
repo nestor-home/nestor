@@ -6,7 +6,7 @@ watch-no-source-hint = { $assistant } cannot watch anything without a source: a 
 watch-connect-mailbox = connect a mailbox
 watch-active = Active
 watch-active-empty = No active watch.
-watch-active-empty-hint = Just ask: “tell me when the parcel arrives”.
+watch-active-empty-hint = Just ask me: “tell me when the parcel arrives”.
 watch-for = for { $name }
 watch-once = once
 watch-every-time = every time
@@ -16,7 +16,7 @@ watch-triggered-count = { $count ->
 }
 watch-never-triggered = never triggered
 watch-unknown = This watch does not exist or was cancelled.
-watch-cancelled-notice = Watch cancelled.
+watch-cancelled-notice = All right, I'll stop watching that.
 watch-created = created { $when }
 watch-until = until { $when }
 watch-cancel = Cancel the watch

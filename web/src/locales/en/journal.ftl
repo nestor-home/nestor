@@ -1,10 +1,9 @@
 ## The journal: stories (conversations, chains, lone events), filters, live edge, event drawer.
 
 jr-title = Journal
-jr-intro = Every conversation with its tools, every time it spoke up with its reason, every task until it is handed back.
 jr-loading = Loading the journal…
 jr-empty = Nothing in the journal for these filters.
-jr-empty-hint = Widen the time range or drop a filter; new events appear here as they arrive.
+jr-empty-hint = Widen the time range or drop a filter.
 jr-older = Older
 jr-beginning = — beginning of the journal —
 jr-now = now

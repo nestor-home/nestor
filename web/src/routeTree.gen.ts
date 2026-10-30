@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
+import { Route as AppConfigRouteImport } from './routes/_app/config'
 import { Route as AppJournalRouteImport } from './routes/_app/journal'
 import { Route as AppMemoriesRouteImport } from './routes/_app/memories'
 import { Route as AppSystemRouteImport } from './routes/_app/system'
@@ -19,6 +20,10 @@ import { Route as InvitationTokenRouteImport } from './routes/invitation.$token'
 import { Route as AppAccountsIndexRouteImport } from './routes/_app/accounts/index'
 import { Route as AppAccountsAccountIdRouteImport } from './routes/_app/accounts/$accountId'
 import { Route as AppAccountsInvitationsRouteImport } from './routes/_app/accounts/invitations'
+import { Route as AppConfigIndexRouteImport } from './routes/_app/config/index'
+import { Route as AppConfigSectionRouteImport } from './routes/_app/config/$section'
+import { Route as AppConfigHistoryRouteImport } from './routes/_app/config/history'
+import { Route as AppConfigSecretsRouteImport } from './routes/_app/config/secrets'
 import { Route as AppConnectionsIndexRouteImport } from './routes/_app/connections/index'
 import { Route as AppConnectionsConnectionIdRouteImport } from './routes/_app/connections/$connectionId'
 import { Route as AppConnectionsCatalogueRouteImport } from './routes/_app/connections/catalogue'
@@ -58,6 +63,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppRoute,
 } as any)
+const AppConfigRoute = AppConfigRouteImport.update({
+  id: '/config',
+  path: '/config',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppJournalRoute = AppJournalRouteImport.update({
   id: '/journal',
   path: '/journal',
@@ -92,6 +102,26 @@ const AppAccountsInvitationsRoute = AppAccountsInvitationsRouteImport.update({
   id: '/accounts/invitations',
   path: '/accounts/invitations',
   getParentRoute: () => AppRoute,
+} as any)
+const AppConfigIndexRoute = AppConfigIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppConfigRoute,
+} as any)
+const AppConfigSectionRoute = AppConfigSectionRouteImport.update({
+  id: '/$section',
+  path: '/$section',
+  getParentRoute: () => AppConfigRoute,
+} as any)
+const AppConfigHistoryRoute = AppConfigHistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
+  getParentRoute: () => AppConfigRoute,
+} as any)
+const AppConfigSecretsRoute = AppConfigSecretsRouteImport.update({
+  id: '/secrets',
+  path: '/secrets',
+  getParentRoute: () => AppConfigRoute,
 } as any)
 const AppConnectionsIndexRoute = AppConnectionsIndexRouteImport.update({
   id: '/connections/',
@@ -230,12 +260,16 @@ const AppSatellitesSatelliteIdCapabilitiesRoute =
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/login': typeof LoginRoute
+  '/config': typeof AppConfigRouteWithChildren
   '/journal': typeof AppJournalRoute
   '/memories': typeof AppMemoriesRoute
   '/system': typeof AppSystemRoute
   '/invitation/$token': typeof InvitationTokenRoute
   '/accounts/$accountId': typeof AppAccountsAccountIdRoute
   '/accounts/invitations': typeof AppAccountsInvitationsRoute
+  '/config/$section': typeof AppConfigSectionRoute
+  '/config/history': typeof AppConfigHistoryRoute
+  '/config/secrets': typeof AppConfigSecretsRoute
   '/connections/$connectionId': typeof AppConnectionsConnectionIdRouteWithChildren
   '/connections/catalogue': typeof AppConnectionsCatalogueRoute
   '/connections/failed': typeof AppConnectionsFailedRoute
@@ -244,6 +278,7 @@ export interface FileRoutesByFullPath {
   '/tasks/$taskId': typeof AppTasksTaskIdRoute
   '/watches/$watchId': typeof AppWatchesWatchIdRoute
   '/accounts/': typeof AppAccountsIndexRoute
+  '/config/': typeof AppConfigIndexRoute
   '/connections/': typeof AppConnectionsIndexRoute
   '/people/': typeof AppPeopleIndexRoute
   '/satellites/': typeof AppSatellitesIndexRoute
@@ -271,11 +306,15 @@ export interface FileRoutesByTo {
   '/': typeof AppIndexRoute
   '/accounts/$accountId': typeof AppAccountsAccountIdRoute
   '/accounts/invitations': typeof AppAccountsInvitationsRoute
+  '/config/$section': typeof AppConfigSectionRoute
+  '/config/history': typeof AppConfigHistoryRoute
+  '/config/secrets': typeof AppConfigSecretsRoute
   '/connections/catalogue': typeof AppConnectionsCatalogueRoute
   '/connections/failed': typeof AppConnectionsFailedRoute
   '/tasks/$taskId': typeof AppTasksTaskIdRoute
   '/watches/$watchId': typeof AppWatchesWatchIdRoute
   '/accounts': typeof AppAccountsIndexRoute
+  '/config': typeof AppConfigIndexRoute
   '/connections': typeof AppConnectionsIndexRoute
   '/people': typeof AppPeopleIndexRoute
   '/satellites': typeof AppSatellitesIndexRoute
@@ -298,6 +337,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/_app/config': typeof AppConfigRouteWithChildren
   '/_app/journal': typeof AppJournalRoute
   '/_app/memories': typeof AppMemoriesRoute
   '/_app/system': typeof AppSystemRoute
@@ -305,6 +345,9 @@ export interface FileRoutesById {
   '/_app/': typeof AppIndexRoute
   '/_app/accounts/$accountId': typeof AppAccountsAccountIdRoute
   '/_app/accounts/invitations': typeof AppAccountsInvitationsRoute
+  '/_app/config/$section': typeof AppConfigSectionRoute
+  '/_app/config/history': typeof AppConfigHistoryRoute
+  '/_app/config/secrets': typeof AppConfigSecretsRoute
   '/_app/connections/$connectionId': typeof AppConnectionsConnectionIdRouteWithChildren
   '/_app/connections/catalogue': typeof AppConnectionsCatalogueRoute
   '/_app/connections/failed': typeof AppConnectionsFailedRoute
@@ -313,6 +356,7 @@ export interface FileRoutesById {
   '/_app/tasks/$taskId': typeof AppTasksTaskIdRoute
   '/_app/watches/$watchId': typeof AppWatchesWatchIdRoute
   '/_app/accounts/': typeof AppAccountsIndexRoute
+  '/_app/config/': typeof AppConfigIndexRoute
   '/_app/connections/': typeof AppConnectionsIndexRoute
   '/_app/people/': typeof AppPeopleIndexRoute
   '/_app/satellites/': typeof AppSatellitesIndexRoute
@@ -336,12 +380,16 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/config'
     | '/journal'
     | '/memories'
     | '/system'
     | '/invitation/$token'
     | '/accounts/$accountId'
     | '/accounts/invitations'
+    | '/config/$section'
+    | '/config/history'
+    | '/config/secrets'
     | '/connections/$connectionId'
     | '/connections/catalogue'
     | '/connections/failed'
@@ -350,6 +398,7 @@ export interface FileRouteTypes {
     | '/tasks/$taskId'
     | '/watches/$watchId'
     | '/accounts/'
+    | '/config/'
     | '/connections/'
     | '/people/'
     | '/satellites/'
@@ -377,11 +426,15 @@ export interface FileRouteTypes {
     | '/'
     | '/accounts/$accountId'
     | '/accounts/invitations'
+    | '/config/$section'
+    | '/config/history'
+    | '/config/secrets'
     | '/connections/catalogue'
     | '/connections/failed'
     | '/tasks/$taskId'
     | '/watches/$watchId'
     | '/accounts'
+    | '/config'
     | '/connections'
     | '/people'
     | '/satellites'
@@ -403,6 +456,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_app'
     | '/login'
+    | '/_app/config'
     | '/_app/journal'
     | '/_app/memories'
     | '/_app/system'
@@ -410,6 +464,9 @@ export interface FileRouteTypes {
     | '/_app/'
     | '/_app/accounts/$accountId'
     | '/_app/accounts/invitations'
+    | '/_app/config/$section'
+    | '/_app/config/history'
+    | '/_app/config/secrets'
     | '/_app/connections/$connectionId'
     | '/_app/connections/catalogue'
     | '/_app/connections/failed'
@@ -418,6 +475,7 @@ export interface FileRouteTypes {
     | '/_app/tasks/$taskId'
     | '/_app/watches/$watchId'
     | '/_app/accounts/'
+    | '/_app/config/'
     | '/_app/connections/'
     | '/_app/people/'
     | '/_app/satellites/'
@@ -464,6 +522,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/config': {
+      id: '/_app/config'
+      path: '/config'
+      fullPath: '/config'
+      preLoaderRoute: typeof AppConfigRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/journal': {
@@ -514,6 +579,34 @@ declare module '@tanstack/react-router' {
       fullPath: '/accounts/invitations'
       preLoaderRoute: typeof AppAccountsInvitationsRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/_app/config/': {
+      id: '/_app/config/'
+      path: '/'
+      fullPath: '/config/'
+      preLoaderRoute: typeof AppConfigIndexRouteImport
+      parentRoute: typeof AppConfigRoute
+    }
+    '/_app/config/$section': {
+      id: '/_app/config/$section'
+      path: '/$section'
+      fullPath: '/config/$section'
+      preLoaderRoute: typeof AppConfigSectionRouteImport
+      parentRoute: typeof AppConfigRoute
+    }
+    '/_app/config/history': {
+      id: '/_app/config/history'
+      path: '/history'
+      fullPath: '/config/history'
+      preLoaderRoute: typeof AppConfigHistoryRouteImport
+      parentRoute: typeof AppConfigRoute
+    }
+    '/_app/config/secrets': {
+      id: '/_app/config/secrets'
+      path: '/secrets'
+      fullPath: '/config/secrets'
+      preLoaderRoute: typeof AppConfigSecretsRouteImport
+      parentRoute: typeof AppConfigRoute
     }
     '/_app/connections/': {
       id: '/_app/connections/'
@@ -686,6 +779,24 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AppConfigRouteChildren {
+  AppConfigSectionRoute: typeof AppConfigSectionRoute
+  AppConfigHistoryRoute: typeof AppConfigHistoryRoute
+  AppConfigSecretsRoute: typeof AppConfigSecretsRoute
+  AppConfigIndexRoute: typeof AppConfigIndexRoute
+}
+
+const AppConfigRouteChildren: AppConfigRouteChildren = {
+  AppConfigSectionRoute: AppConfigSectionRoute,
+  AppConfigHistoryRoute: AppConfigHistoryRoute,
+  AppConfigSecretsRoute: AppConfigSecretsRoute,
+  AppConfigIndexRoute: AppConfigIndexRoute,
+}
+
+const AppConfigRouteWithChildren = AppConfigRoute._addFileChildren(
+  AppConfigRouteChildren,
+)
+
 interface AppConnectionsConnectionIdRouteChildren {
   AppConnectionsConnectionIdActivityRoute: typeof AppConnectionsConnectionIdActivityRoute
   AppConnectionsConnectionIdSettingsRoute: typeof AppConnectionsConnectionIdSettingsRoute
@@ -748,6 +859,7 @@ const AppSatellitesSatelliteIdRouteWithChildren =
   )
 
 interface AppRouteChildren {
+  AppConfigRoute: typeof AppConfigRouteWithChildren
   AppJournalRoute: typeof AppJournalRoute
   AppMemoriesRoute: typeof AppMemoriesRoute
   AppSystemRoute: typeof AppSystemRoute
@@ -770,6 +882,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppConfigRoute: AppConfigRouteWithChildren,
   AppJournalRoute: AppJournalRoute,
   AppMemoriesRoute: AppMemoriesRoute,
   AppSystemRoute: AppSystemRoute,

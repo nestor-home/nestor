@@ -1,5 +1,5 @@
 /** Every screen, and its main overlays open, passes axe: names, roles, labels, no nested controls. */
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it } from "vitest";
 import { expectAccessible } from "@/test/axe";
@@ -23,6 +23,15 @@ const SCREENS: [string, string | RegExp][] = [
   ["/satellites/reachy-salon", /reachy-salon/],
   ["/system", "Système"],
   ["/accounts", "Comptes"],
+  ["/config/persona", "Configuration"],
+  ["/config/household", "Configuration"],
+  ["/config/model", "Configuration"],
+  ["/config/channels", "Configuration"],
+  ["/config/tools", "Configuration"],
+  ["/config/inbound", "Configuration"],
+  ["/config/admin", "Configuration"],
+  ["/config/secrets", "Configuration"],
+  ["/config/history", "Configuration"],
 ];
 
 describe("accessibility of every screen", () => {
@@ -46,6 +55,17 @@ describe("accessibility of every screen", () => {
     const [entry] = await screen.findAllByRole("button", { name: /a dit/ });
     if (entry) await user.click(entry);
     await screen.findByRole("heading", { name: "Enregistrement brut" });
+    await settle(queryClient);
+    await expectAccessible();
+  });
+
+  it("a component's sheet, with a problem shown at its field", async () => {
+    const user = userEvent.setup();
+    const { queryClient } = renderApp("/config/channels");
+    await user.click(await screen.findByRole("button", { name: "Modifier Voix" }));
+    const sheet = await screen.findByRole("dialog", { name: "Voix" });
+    await user.clear(within(sheet).getByRole("textbox", { name: "Pièce" }));
+    await within(sheet).findByText("Pièce : ne peut pas être vide");
     await settle(queryClient);
     await expectAccessible();
   });

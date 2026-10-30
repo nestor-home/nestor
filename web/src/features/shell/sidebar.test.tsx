@@ -27,9 +27,10 @@ describe("the sidebar", () => {
     await user.click(screen.getByRole("button", { name: "Réduire" }));
     expect(sidebarState()).toBe("collapsed");
     expect(localStorage.getItem(SIDEBAR_STORAGE_KEY)).toBe("collapsed");
-    // the section names stay for assistive technologies, the agent shows its initial
+    // the section names stay for assistive technologies, the agent shows its figure
     expect(screen.getByRole("link", { name: "Journal" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Richie, en ligne" })).toHaveTextContent("R");
+    const agent = screen.getByRole("link", { name: "Richie, en ligne" });
+    expect(agent.querySelector("svg[data-state]")).not.toBeNull();
     first.unmount();
 
     renderApp("/journal");

@@ -1,7 +1,7 @@
 ## Connexions : comptes connectés, catalogue, connecter un service, les pages d'une connexion.
 
 conn-title = Connexions
-conn-intro = Les jetons sont chiffrés et jamais montrés au modèle ; { $assistant } n'utilise que les outils que vous activez.
+conn-intro = Jetons chiffrés, jamais montrés au modèle ; seuls les outils activés servent.
 conn-connect-service = Connecter un service
 conn-tab-accounts = Comptes connectés
 conn-tab-catalogue = Catalogue

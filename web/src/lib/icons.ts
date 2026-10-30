@@ -24,6 +24,7 @@ import {
   ScanFace,
   ScrollText,
   Server,
+  SlidersHorizontal,
   Smile,
   Sun,
   Users,
@@ -86,4 +87,5 @@ export const SECTION_ICON = {
   "/satellites": RadioTower,
   "/system": Server,
   "/accounts": KeyRound,
+  "/config": SlidersHorizontal,
 } satisfies Record<string, LucideIcon>;

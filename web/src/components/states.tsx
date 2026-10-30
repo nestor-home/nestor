@@ -4,6 +4,7 @@ import { messageOf } from "@/api";
 import { Button } from "@/components/ui/button";
 import { tr } from "@/i18n/runtime";
 import { cn } from "@/lib/utils";
+import { AgentFigure } from "./agent-figure";
 import { Dither } from "./dither";
 
 /** Nothing to show: a dithered square, said plainly, with what would make something appear. */
@@ -22,7 +23,7 @@ export function Empty({
     <div
       className={cn("flex items-start gap-4 rounded-md border border-dashed border-rule-strong px-5 py-5", className)}
     >
-      <Dither shape="vignette" from={0.5} to={0.05} dot={2} className="size-10 shrink-0 text-ink-faint" />
+      <AgentFigure state="idle" size="md" className="text-ink-faint" />
       <div>
         <p className="text-sm text-ink">{children}</p>
         {hint ? <p className="mt-1 text-sm text-ink-muted">{hint}</p> : null}
@@ -49,7 +50,10 @@ export function Failure({ error, retry, className }: { error: unknown; retry?: (
 export function Loading({ lines = 3, label }: { lines?: number; label?: string }) {
   return (
     <div role="status" aria-live="polite" className="space-y-3">
-      <span className="sr-only">{label ?? tr("loading")}</span>
+      <span className="flex items-center gap-2 font-mono text-[0.7rem] text-ink-muted">
+        <AgentFigure state="thinking" size="sm" />
+        <span className="sr-only">{label ?? tr("loading")}</span>
+      </span>
       {Array.from({ length: lines }, (_, i) => (
         <div
           // biome-ignore lint/suspicious/noArrayIndexKey: static placeholders

@@ -1,10 +1,9 @@
 ## Le journal : histoires (conversations, enchaînements, événements seuls), filtres, direct, tiroir.
 
 jr-title = Journal
-jr-intro = Chaque conversation avec ses outils, chaque prise de parole avec sa raison, chaque tâche jusqu'à sa remise.
 jr-loading = Chargement du journal…
 jr-empty = Rien dans le journal pour ces filtres.
-jr-empty-hint = Élargissez la période ou retirez un filtre ; les nouveaux événements apparaîtront ici dès qu'ils arrivent.
+jr-empty-hint = Élargissez la période ou retirez un filtre.
 jr-older = Plus ancien
 jr-beginning = — début du journal —
 jr-now = maintenant

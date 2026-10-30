@@ -1,11 +1,9 @@
 ## Souvenirs : ce que l'assistant retient.
 
 mem-title = Souvenirs
-mem-intro = Ce que { $assistant } retient. Corrigez ce qui est faux, oubliez ce qui ne doit pas rester.
 mem-empty = Aucun souvenir pour l'instant.
-mem-empty-hint = Il retient ce qu'on lui demande de retenir, et ce qu'il apprend en conversation.
+mem-empty-hint = Je retiens ce qu'on me demande, et ce que j'apprends en conversation.
 mem-empty-search = Aucun souvenir ne correspond.
-mem-empty-search-hint = Essayez un autre mot.
 mem-search = Rechercher
 mem-search-placeholder = handball, chaudière…
 mem-search-submit = Chercher
@@ -17,11 +15,11 @@ mem-learnt-where = où il l'a appris
 mem-correct = Corriger…
 mem-correct-title = Corriger le souvenir
 mem-correct-description = La correction remplace le texte ; l'ancienne version reste dans le journal.
-mem-corrected = Souvenir corrigé.
+mem-corrected = C'est corrigé.
 mem-forget = Oublier…
 mem-forget-title = Oublier ce souvenir ?
 mem-forget-confirm = Oublier
 mem-forget-text = « { $text } » ne sera plus utilisé. L'oubli est inscrit au journal.
-mem-forgotten = Souvenir oublié.
+mem-forgotten = C'est oublié.
 mem-text = Texte du souvenir
 mem-save-hint = ⌘↵ pour enregistrer

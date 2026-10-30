@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Activity, Cpu, Gauge } from "lucide-react";
 import type { ReactNode } from "react";
-import { api, keys, type Satellite, satellitesQuery } from "@/api";
+import { api, isMissing, keys, type Satellite, satelliteQuery } from "@/api";
 import { Ago } from "@/components/ago";
 import { Confirm } from "@/components/confirm";
 import { type Crumb, Crumbs } from "@/components/crumbs";
@@ -40,12 +40,8 @@ function means(capability: string): string | null {
 }
 
 export function useSatellite(id: string): { satellite: Satellite | undefined; pending: boolean; error: unknown } {
-  const satellites = useQuery(satellitesQuery);
-  return {
-    satellite: satellites.data?.paired.find((s) => s.id === id),
-    pending: satellites.isPending,
-    error: satellites.error,
-  };
+  const found = useQuery(satelliteQuery(id));
+  return { satellite: found.data, pending: found.isPending, error: isMissing(found.error) ? null : found.error };
 }
 
 export function SatelliteFrame({ id, children }: { id: string; children: ReactNode }) {

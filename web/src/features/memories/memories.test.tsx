@@ -22,7 +22,7 @@ describe("memories", () => {
     await user.clear(text);
     await user.type(text, "Jules est allergique aux arachides et aux noix de cajou.");
     await user.keyboard("{Meta>}{Enter}{/Meta}");
-    expect(await screen.findByText("Souvenir corrigé.")).toBeInTheDocument();
+    expect(await screen.findByText("C'est corrigé.")).toBeInTheDocument();
     expect(db.memories.find((m) => m.id === "m-01")?.text).toContain("noix de cajou");
   });
 

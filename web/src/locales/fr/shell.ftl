@@ -12,6 +12,7 @@ nav-connections = Connexions
 nav-satellites = Satellites
 nav-system = Système
 nav-accounts = Comptes
+nav-config = Configuration
 
 shell-skip = Aller au contenu
 shell-home-link = Nestor — { $assistant }

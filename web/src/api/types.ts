@@ -29,7 +29,8 @@ export type Scope =
   | "memories:write"
   | "people:read"
   | "accounts:read"
-  | "accounts:write";
+  | "accounts:write"
+  | "config:manage";
 
 export interface Account {
   id: Id;
@@ -41,6 +42,7 @@ export interface Account {
   locale: string | null; // null: the household's language
   disabled: boolean;
   created_at: Instant;
+  last_seen_at: Instant | null;
 }
 
 /** A message the server owns: its catalogue id and arguments, and its text in the account's locale. */
@@ -61,6 +63,8 @@ export interface Agent {
 
 export interface Me {
   locale: string; // the language the server speaks to this account
+  restart_required: boolean; // the configuration changed since Nestor started
+  pending_changes: string[]; // which parts, as paths: "persona.name"
   account: Account;
   scopes: Scope[];
   csrf_token: string;
@@ -119,7 +123,7 @@ export interface AccountChange {
 export interface Presence {
   home: boolean | null; // null: unknown
   room: string | null;
-  since: Instant | null; // not sent yet by the server
+  since: Instant | null;
 }
 
 export interface Person {
@@ -253,7 +257,7 @@ export interface Connection {
   owner: Id | null;
   status: ConnectionStatus;
   status_label: string;
-  status_reason: string | null; // not sent yet by the server
+  status_reason: string | null; // why it needs a look, in the reader's language
   confirm_writes: boolean;
   disabled_tools: string[];
   created_at: Instant;
@@ -344,7 +348,7 @@ export interface Task {
   status_label: string;
   requested_by: Id | null;
   started_at: Instant;
-  ended_at: Instant | null; // not sent yet by the server
+  ended_at: Instant | null;
   steps: string[];
   result: string | null;
   error: string | null;
@@ -415,11 +419,133 @@ export interface Component {
 export interface SystemInfo {
   nestor: { version: string };
   agent: Agent;
+  restart_required: boolean;
+  pending_changes: string[];
   components: Component[];
+}
+
+// -- configuration -----------------------------------------------------------------------------
+
+/** A JSON Schema as `/config/schema` sends it, with Nestor's `x-nestor` annotations. */
+export interface JsonSchema {
+  type?: string | string[];
+  title?: string;
+  description?: string;
+  properties?: Record<string, JsonSchema>;
+  required?: string[];
+  additionalProperties?: boolean | JsonSchema;
+  items?: JsonSchema;
+  anyOf?: JsonSchema[];
+  enum?: (string | number)[];
+  const?: unknown;
+  default?: unknown;
+  format?: string;
+  writeOnly?: boolean;
+  minimum?: number;
+  maximum?: number;
+  exclusiveMinimum?: number;
+  minLength?: number;
+  $ref?: string;
+  $defs?: Record<string, JsonSchema>;
+  "x-nestor"?: {
+    field?: string;
+    title?: string;
+    help?: string | null;
+    secret?: boolean;
+    advanced?: boolean;
+    group?: string;
+  };
+}
+
+export interface ConfigSlot {
+  family: string;
+  many: boolean;
+  required: boolean;
+  title: string;
+  kinds: Record<string, JsonSchema>;
+}
+
+export interface ConfigSchema {
+  sections: Record<string, JsonSchema>;
+  section_titles: Record<string, string>;
+  slots: Record<string, ConfigSlot>;
+}
+
+/** A secret as the configuration shows it: never its value. */
+export interface SecretShown {
+  set: boolean;
+  preview: string | null;
+}
+
+export type ConfigDocument = Record<string, unknown>;
+
+export interface ConfigState {
+  document: ConfigDocument;
+  path: string;
+  restart_required: boolean;
+  pending_changes: string[];
+}
+
+export interface ConfigProblem {
+  path: (string | number)[];
+  code: string;
+  message_id: string;
+  args: Record<string, string | number>;
+  message: string;
+}
+
+export interface ConfigChange {
+  path: string;
+  before: unknown;
+  after: unknown;
+  secret: boolean;
+}
+
+export interface ConfigDiff {
+  added: ConfigChange[];
+  removed: ConfigChange[];
+  changed: ConfigChange[];
+}
+
+export interface ConfigPreview {
+  valid: boolean;
+  problems: ConfigProblem[];
+  diff: ConfigDiff;
+}
+
+export interface ConfigWritten {
+  diff: ConfigDiff;
+  restart_required: boolean;
+  pending_changes: string[];
+}
+
+export interface HistoryEntry {
+  id: Id;
+  at: Instant;
+  size: number;
+}
+
+export interface HistoryDocument {
+  id: Id;
+  at: Instant;
+  document: ConfigDocument;
+}
+
+export interface Secret {
+  name: string;
+  set: boolean;
+  preview: string | null;
+  used_by: string[]; // configuration paths that reference it
 }
 
 // -- errors ---------------------------------------------------------------------------------------
 
 export interface ErrorBody {
-  error: { code: string; message_id?: string; args?: Record<string, string | number>; message: string };
+  error: {
+    code: string;
+    message_id?: string;
+    args?: Record<string, string | number>;
+    message: string;
+    problems?: ConfigProblem[] | null;
+  };
 }

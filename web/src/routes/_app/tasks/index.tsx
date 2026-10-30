@@ -10,7 +10,7 @@ function Tasks() {
   const t = useT();
   return (
     <Guard scope="tasks:read">
-      <PageHeader title={t("task-title")}>{t("task-intro")}</PageHeader>
+      <PageHeader title={t("task-title")} />
       <TasksList />
     </Guard>
   );

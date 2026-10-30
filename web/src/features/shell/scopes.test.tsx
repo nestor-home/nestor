@@ -36,8 +36,8 @@ describe("what the scopes allow", () => {
     expect(await sections()).toEqual(ALL);
   });
 
-  it("hides accounts from an administrator, and explains it on a direct visit", async () => {
-    signInAs("admin");
+  it("hides accounts from a guest, and explains it on a direct visit", async () => {
+    signInAs("guest");
     renderApp("/accounts");
     expect(await sections()).not.toContain("Comptes");
     expect(await screen.findByRole("heading", { name: "Section réservée" })).toBeInTheDocument();

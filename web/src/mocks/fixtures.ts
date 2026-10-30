@@ -20,37 +20,37 @@ import type { ScopeDto } from "@/api/dto";
 
 export const ASSISTANT = "Richie";
 
-const minutes = (n: number, from = Date.now()) => new Date(from - n * 60_000).toISOString();
+export const minutes = (n: number, from = Date.now()) => new Date(from - n * 60_000).toISOString();
 const ahead = (seconds: number) => new Date(Date.now() + seconds * 1000).toISOString();
 
 /** The server's scopes for each role (what `/me` sends; adapt.ts groups them for the screens). */
+const OWN: ScopeDto[] = ["journal.read.own", "memory.manage.own"];
+const MEMBER: ScopeDto[] = [
+  ...OWN,
+  "household.read",
+  "own.connections.manage",
+  "tasks.manage.own",
+  "watches.manage.own",
+];
+const ADMIN: ScopeDto[] = [
+  ...MEMBER,
+  "accounts.manage",
+  "household.connections.manage",
+  "satellites.manage",
+  "system.read",
+  "config.manage",
+  "journal.read.all",
+  "memory.manage.all",
+  "tasks.manage",
+  "watches.manage.all",
+];
+
+/** Nestor's grants table (`permissions/grants.py`): owners hold every scope. */
 export const SCOPES: Record<Role, ScopeDto[]> = {
-  owner: [
-    "accounts.manage",
-    "accounts.owners.manage",
-    "household.read",
-    "household.connections.manage",
-    "own.connections.manage",
-    "satellites.manage",
-    "system.read",
-    "journal.read.all",
-    "memory.manage.all",
-    "tasks.manage",
-    "watches.manage.all",
-  ],
-  admin: [
-    "household.read",
-    "household.connections.manage",
-    "own.connections.manage",
-    "satellites.manage",
-    "system.read",
-    "journal.read.all",
-    "memory.manage.all",
-    "tasks.manage",
-    "watches.manage.all",
-  ],
-  member: ["household.read", "own.connections.manage", "journal.read.own", "memory.manage.own"],
-  guest: ["journal.read.own"],
+  owner: [...ADMIN, "accounts.owners.manage"],
+  admin: ADMIN,
+  member: MEMBER,
+  guest: OWN,
 };
 
 export const ROLE_LABEL: Record<Role, string> = {
@@ -121,6 +121,7 @@ export function accounts(): Account[] {
     locale,
     disabled,
     created_at: minutes(ago),
+    last_seen_at: disabled ? minutes(60 * 24 * 12) : minutes(login === "mathis" ? 1 : 60 * 20),
   });
   return [
     account("acc-mathis", "mathis", "owner", "mathis", "Mathis", "fr", false, 60 * 24 * 40),
@@ -642,6 +643,8 @@ export function system(): SystemInfo {
   return {
     nestor: { version: "0.9.0" },
     agent: { name: ASSISTANT, status: "online" },
+    restart_required: false,
+    pending_changes: [],
     components: [
       component({
         id: "model",

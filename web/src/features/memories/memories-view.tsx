@@ -18,9 +18,7 @@ export function MemoryList({ query }: { query: MemoryQuery }) {
   if (memories.isError) return <Failure error={memories.error} retry={() => void memories.refetch()} />;
   if (memories.data.length === 0) {
     return (
-      <Empty hint={query.q ? t("mem-empty-search-hint") : t("mem-empty-hint")}>
-        {query.q ? t("mem-empty-search") : t("mem-empty")}
-      </Empty>
+      <Empty hint={query.q ? undefined : t("mem-empty-hint")}>{query.q ? t("mem-empty-search") : t("mem-empty")}</Empty>
     );
   }
   return (

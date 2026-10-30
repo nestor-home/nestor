@@ -4,14 +4,16 @@ import { describe, expect, it } from "vitest";
 import { liveItem, renderApp } from "@/test/render";
 
 const stories = async () => screen.findAllByRole("article");
-const storyWith = async (text: string | RegExp) => {
-  const all = await stories();
-  const found = all.find((a) =>
-    typeof text === "string" ? a.textContent?.includes(text) : text.test(a.textContent ?? ""),
-  );
-  if (!found) throw new Error(`no story with ${text}`);
-  return found;
-};
+/** A story by its text; titles may arrive a moment after the story (a task's or a watch's own answer). */
+const storyWith = async (text: string | RegExp) =>
+  waitFor(async () => {
+    const all = await stories();
+    const found = all.find((a) =>
+      typeof text === "string" ? a.textContent?.includes(text) : text.test(a.textContent ?? ""),
+    );
+    if (!found) throw new Error(`no story with ${text}`);
+    return found;
+  });
 
 describe("the journal", () => {
   it("tells a watch as one chain, from the trigger to the message, with the reason", async () => {

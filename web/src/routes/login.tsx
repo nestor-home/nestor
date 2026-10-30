@@ -26,7 +26,7 @@ function Login() {
   const navigate = useNavigate();
   const t = useT();
   return (
-    <AuthLayout title={t("auth-login-title")} intro={t("auth-login-intro")}>
+    <AuthLayout title={t("auth-login-title")}>
       <LoginForm onSignedIn={() => void navigate({ href: safeNext(next), replace: true })} />
     </AuthLayout>
   );

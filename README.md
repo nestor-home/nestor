@@ -62,6 +62,13 @@ Biome plugins (`web/lint/*.grit`): no native form controls or hand-written ARIA 
 no Base UI or cmdk imports outside `components/ui`, no presence variants on cmdk attributes, no
 boolean `data-*` attributes that render `"false"`.
 
+Copy: a text earns its place only if it tells the person something they need (a consequence, a rule,
+the next step, how to fix an error); no description that restates its title, no "here you can…"
+intro — `web/src/i18n/catalog.test.ts` fails on both. The agent speaks in the first person only where
+it speaks (its line on the home page, empty states, toasts after what it does); system texts stay
+neutral. Its figure (`web/src/components/agent-figure.tsx`) stands in for the shared character module
+(`web/src/character/`) with the same props, until that module lands.
+
 ## License
 
 [MIT](LICENSE)

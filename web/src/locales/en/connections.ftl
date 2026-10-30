@@ -1,7 +1,7 @@
 ## Connections: connected accounts, the catalogue, connecting a service, one connection's pages.
 
 conn-title = Connections
-conn-intro = Tokens are encrypted and never shown to the model; { $assistant } only uses the tools you switch on.
+conn-intro = Tokens are encrypted and never shown to the model; only the tools you switch on are used.
 conn-connect-service = Connect a service
 conn-tab-accounts = Connected accounts
 conn-tab-catalogue = Catalogue

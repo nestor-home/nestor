@@ -1,7 +1,7 @@
 import createClient from "openapi-fetch";
 import { activeLocale, hasMessage, tr } from "@/i18n/runtime";
 import type { paths } from "./dto";
-import type { ErrorBody } from "./types";
+import type { ConfigProblem, ErrorBody } from "./types";
 
 export const API_BASE = "/api/v1";
 
@@ -13,15 +13,23 @@ export class ApiError extends Error {
     message: string,
     readonly messageId: string | null = null,
     readonly args: Record<string, string | number> = {},
+    readonly problems: ConfigProblem[] = [], // where a refused configuration goes wrong
   ) {
     super(message);
     this.name = "ApiError";
+  }
+
+  get notFound(): boolean {
+    return this.status === 404;
   }
 
   get unauthenticated(): boolean {
     return this.status === 401;
   }
 }
+
+/** A 404: the thing asked for does not exist (or not for this reader). */
+export const isMissing = (error: unknown): boolean => error instanceof ApiError && error.status === 404;
 
 let csrfToken: string | null = null;
 
@@ -77,7 +85,14 @@ export async function unwrap<T>(call: Promise<{ data?: T; error?: unknown; respo
 function toError(status: number, data: unknown): ApiError {
   const error = (data as Partial<ErrorBody> | undefined)?.error;
   if (error?.message) {
-    return new ApiError(status, error.code ?? "error", error.message, error.message_id ?? null, error.args ?? {});
+    return new ApiError(
+      status,
+      error.code ?? "error",
+      error.message,
+      error.message_id ?? null,
+      error.args ?? {},
+      error.problems ?? [],
+    );
   }
   if (status === 401)
     return new ApiError(status, "unauthenticated", tr("error-unauthenticated"), "error-unauthenticated");

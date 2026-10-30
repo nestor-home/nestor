@@ -16,7 +16,7 @@ function Journal() {
   const navigate = useNavigate({ from: Route.fullPath });
   return (
     <Guard scope="journal:read">
-      <PageHeader title={t("jr-title")}>{t("jr-intro")}</PageHeader>
+      <PageHeader title={t("jr-title")} />
       <JournalView search={search} onSearch={(next) => void navigate({ search: next, replace: !("event" in next) })} />
     </Guard>
   );

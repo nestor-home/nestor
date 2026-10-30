@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, MessageSquareText, Volume2 } from "lucide-react";
-import { api, keys, type Task, type TaskStatus, tasksQuery } from "@/api";
+import { api, isMissing, keys, type Task, type TaskStatus, taskQuery, tasksQuery } from "@/api";
 import { Ago } from "@/components/ago";
 import { Confirm } from "@/components/confirm";
 import { type Crumb, Crumbs } from "@/components/crumbs";
@@ -101,7 +101,7 @@ function TaskRows({ tasks }: { tasks: Task[] }) {
 
 export function TaskDetail({ id }: { id: string }) {
   const t = useT();
-  const tasks = useQuery(tasksQuery);
+  const found = useQuery(taskQuery(id));
   const name = usePeopleNames();
   const canCancel = useCan("tasks:write");
   const queryClient = useQueryClient();
@@ -114,13 +114,13 @@ export function TaskDetail({ id }: { id: string }) {
     },
   });
   const trail: Crumb[] = [{ label: t("task-title"), link: { to: "/tasks" } }, { label: id }];
-  if (tasks.isPending) return <Loading lines={4} />;
-  const task = [...(tasks.data?.running ?? []), ...(tasks.data?.recent ?? [])].find((x) => x.id === id);
+  if (found.isPending) return <Loading lines={4} />;
+  const task = found.data;
   if (!task) {
     return (
       <>
         <Crumbs trail={trail} />
-        {tasks.isError ? <Failure error={tasks.error} /> : <Empty>{t("task-unknown")}</Empty>}
+        {isMissing(found.error) ? <Empty>{t("task-unknown")}</Empty> : <Failure error={found.error} />}
       </>
     );
   }

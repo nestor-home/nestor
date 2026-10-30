@@ -145,3 +145,47 @@ describe("components", () => {
     expect(french).toEqual([]);
   });
 });
+
+/** The plain text of each message of a locale (placeables kept as written). */
+function texts(locale: (typeof LOCALES)[number]): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const text of Object.values(sourcesOf(locale))) {
+    for (const line of text.split("\n")) {
+      const m = line.match(/^([a-z][\w-]*) = (.*)$/);
+      if (m?.[1] && m[2] !== undefined) out.set(m[1], m[2]);
+    }
+  }
+  return out;
+}
+
+const OPENERS =
+  /^(ici,? vous pouvez|gérez|cette page|sur cette page|here you can|manage|this page|on this page|welcome)/i;
+const normal = (s: string) =>
+  s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .replace(/[^\p{L}\p{N} ]+/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+describe("the copy says something", () => {
+  it("never restates a title in its description, nor opens on filler", () => {
+    const found: string[] = [];
+    for (const locale of LOCALES) {
+      const all = texts(locale);
+      for (const [id, text] of all) {
+        const m = id.match(/^(.*)-(intro|description|hint|text|subtitle)$/);
+        if (!m) continue;
+        if (OPENERS.test(text.trim())) found.push(`${locale}: ${id} opens on filler`);
+        const title = all.get(`${m[1]}-title`);
+        if (!title || title.includes("{")) continue;
+        const t = normal(title);
+        const d = normal(text);
+        if (t.length >= 4 && (d === t || d.startsWith(`${t} `) || d.startsWith(`${t}.`)))
+          found.push(`${locale}: ${id} restates ${m[1]}-title`);
+      }
+    }
+    expect(found).toEqual([]);
+  });
+});
