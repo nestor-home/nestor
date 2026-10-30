@@ -30,9 +30,11 @@ src/nestor/
 │   ├── cognition/
 │   │   ├── model/        the central agent's language model
 │   │   └── delegation/   executors for long tasks
-│   └── behavior/         attitude and expressions, translated by the plugged body
+│   ├── behavior/         attitude and expressions, translated by the plugged body
+│   └── journal/          the append-only event log, live subscriptions, blobs
 ├── runtime/              composition: configuration, adapter registry, bus, lifecycle
 ├── adapters/             adapters/<family>/<vendor>/ — the only place for third-party SDKs
+│   └── storage/          SQLite (one WAL database, migrations in schema.py), blobs on disk
 └── testing/              doubles and contract suites, mirroring modules/ (shipped with the package)
 tests/                    mirrors src/nestor
 ```
