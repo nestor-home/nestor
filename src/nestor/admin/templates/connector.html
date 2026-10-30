@@ -1,9 +1,9 @@
 {% extends "base.html" %}
-{% block title %}{{ info.title }}{% endblock %}
+{% block title %}{{ info.title | say }}{% endblock %}
 {% block content %}
-<p class="crumbs"><a href="/connections">Connexions</a> › {{ info.title }}</p>
-<h1>{{ info.title }}</h1>
-<p>{{ info.description }}</p>
+<p class="crumbs"><a href="/connections">Connexions</a> › {{ info.title | say }}</p>
+<h1>{{ info.title | say }}</h1>
+<p>{{ info.description | say }}</p>
 {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
 {% if replaces %}<p class="notice">Reconnexion : l'ancien accès sera remplacé et ses réglages conservés.</p>{% endif %}
 
@@ -28,7 +28,7 @@
     {% else %}
     <p class="muted">Chaque foyer déclare sa propre application auprès du fournisseur : aucun secret n'est partagé entre instances.</p>
     {% endif %}
-    {% if info.setup %}<div class="guide">{{ info.setup }}</div>{% endif %}
+    {% if info.setup %}<div class="guide">{{ info.setup | say }}</div>{% endif %}
     <p>URI de redirection à déclarer chez le fournisseur :</p>
     <p><code class="copy">{{ redirect_uri }}</code></p>
     {% if relayed %}
@@ -49,13 +49,13 @@
 {% else %}
   <section class="card">
     <h2>Connecter un compte</h2>
-    {% if info.setup %}<div class="guide">{{ info.setup }}</div>{% endif %}
+    {% if info.setup %}<div class="guide">{{ info.setup | say }}</div>{% endif %}
     <form method="post" action="/connectors/{{ info.kind }}/connect">
       <input type="hidden" name="csrf" value="{{ csrf }}">
       <input type="hidden" name="replaces" value="{{ replaces }}">
       {% include "_person.html" %}
       {% for field in info.fields %}
-      <label for="field-{{ field.name }}">{{ field.label }}</label>
+      <label for="field-{{ field.name }}">{{ field.label | say }}</label>
       {% if field.secret %}
       <input id="field-{{ field.name }}" name="{{ field.name }}" type="password" autocomplete="new-password">
       {% else %}

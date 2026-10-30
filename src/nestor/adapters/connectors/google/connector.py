@@ -7,9 +7,9 @@ import httpx
 from nestor.adapters.connectors.common import Backoff
 from nestor.adapters.connectors.google.api import GmailApi, new_client
 from nestor.adapters.connectors.google.inbound import Every, GmailInbound
-from nestor.adapters.connectors.google.setup import SETUP
 from nestor.adapters.connectors.google.tools import GmailTools
 from nestor.core import Component, ProviderError
+from nestor.core.i18n import Message
 from nestor.modules.cognition.tools import Tool
 from nestor.modules.connectors import Access, AuthKind, Connection, Connector, ConnectorInfo, OAuthSpec
 from nestor.modules.initiative import InboundEventSource
@@ -19,8 +19,8 @@ SCOPES = ("openid", "email", "https://www.googleapis.com/auth/gmail.readonly")
 INFO = ConnectorInfo(
     kind="google",
     brand="google",
-    title="Google (Gmail)",
-    description="Search and read Gmail; new inbox mail can feed watches. Read only.",
+    title=Message.of("connector-google-title"),
+    description=Message.of("connector-google-description"),
     auth=AuthKind.OAUTH2,
     oauth=OAuthSpec(
         authorize_url="https://accounts.google.com/o/oauth2/v2/auth",
@@ -30,7 +30,7 @@ INFO = ConnectorInfo(
         extra_authorize={"access_type": "offline", "prompt": "consent", "include_granted_scopes": "true"},
         client_credentials=True,
     ),
-    setup=SETUP,
+    setup=Message.of("connector-google-setup"),
     inbound=("mail",),
 )
 

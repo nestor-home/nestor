@@ -50,11 +50,11 @@ async def list_people(request: Request, caller: Reader) -> list[PersonOut]:
                 reach=str(person.reach) if person.reach else None,
                 presence=PresenceOut(home=whereabouts.home, room=whereabouts.room) if whereabouts else None,
                 connections=[
-                    connection_out(admin, c)
+                    connection_out(admin, c, caller.phrasebook)
                     for c in connections
                     if c.owner == person.id and reaches(caller.principal, c.owner)
                 ],
-                account=AccountOut.of(account, people) if account else None,
+                account=AccountOut.of(account, people, caller.phrasebook) if account else None,
             )
         )
     return listed

@@ -38,11 +38,16 @@ async def test_wrong_credentials_are_refused_with_a_uniform_error(tmp_path: Path
             response = await api.sign_in(login, password)
             assert response.status_code == 401
             assert response.json() == {
-                "error": {"code": "invalid_credentials", "message": "Identifiant ou mot de passe incorrect."}
+                "error": {
+                    "code": "invalid_credentials",
+                    "message_id": "error-invalid-credentials",
+                    "args": {},
+                    "message": "Identifiant ou mot de passe incorrect.",
+                }
             }
         assert (await api.get("/api/v1/me")).json()["error"]["code"] == "unauthenticated"
         attempts = await admin.nestor.journal.history(AccountLogin)
-        assert [a.reason for a in attempts] == ["wrong password", "unknown login"]
+        assert [a.reason for a in attempts] == ["wrong-password", "unknown-login"]
 
 
 async def test_guessing_is_throttled_even_for_the_right_password(tmp_path: Path) -> None:

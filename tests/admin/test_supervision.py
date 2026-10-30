@@ -7,8 +7,10 @@ from pathlib import Path
 
 import pytest
 
-from nestor.admin.presentation import french_reason, french_subject, french_time
+from nestor.adapters.i18n import FluentLocalizer, catalogue_dirs
+from nestor.admin.presentation import subject
 from nestor.core import PersonId
+from nestor.core.i18n import Message
 from nestor.modules.channels import Address, Medium
 from nestor.modules.cognition import TaskEnded, TaskStarted, TaskStatus
 from nestor.modules.cognition.tools import ToolCalled, ToolCompleted
@@ -46,7 +48,7 @@ class Satellite(InMemoryChannel):
         self.room = room
 
 
-def plans() -> list[str]:
+def plans() -> list[Message]:
     """Every reason the real delivery policy gives, so a new wording shows up here."""
     person = Person(id=MATHIS, name="Mathis", reach=Address("telegram", "main"))
     channels = [Satellite("voice", "salon"), InMemoryChannel("telegram")]
@@ -71,27 +73,26 @@ def plans() -> list[str]:
     reasons += [
         policy.plan(person, channels=channels, presence=p.presence(), origin=None, now=NOON).reason for p in presences
     ]
-    return sorted(set(reasons))
+    return list({repr(r): r for r in reasons}.values())
 
 
-@pytest.mark.parametrize("reason", plans())
-def test_every_delivery_reason_of_the_policy_is_said_in_french(reason: str) -> None:
-    said = french_reason(reason)
-    assert said != reason
-    assert not any(word in said.split() for word in ("is", "the", "no", "away", "home,"))
+@pytest.mark.parametrize("locale", ["en", "fr-FR"])
+@pytest.mark.parametrize("reason", plans(), ids=lambda m: m.id)
+def test_every_delivery_reason_of_the_policy_has_its_sentence_in_each_language(reason: Message, locale: str) -> None:
+    said = FluentLocalizer(catalogue_dirs(["nestor"])).format(reason, locale)
+    assert said != reason.id and all(str(v) in said for v in reason.args.values())
 
 
-def test_delivery_subjects_are_said_in_french_and_unknown_ones_kept() -> None:
-    assert french_subject("task 3f2a1c completed") == "tâche 3f2a1c terminée"
-    assert french_subject("watch 9d81 (follow-up)") == "veille 9d81 (relance)"
-    assert french_subject("anniversaire") == "anniversaire"
-    assert french_reason("a reason nobody wrote yet") == "a reason nobody wrote yet"
-
-
-def test_dates_are_said_the_french_way_in_the_assistants_timezone() -> None:
-    assert french_time(NOON, "Europe/Paris", now=NOON) == "aujourd'hui 12:00"
-    assert french_time(NOON - timedelta(days=2), "Europe/Paris", now=NOON) == "28 oct. 12:00"
-    assert french_time(NOON - timedelta(days=365), "Europe/Paris", now=NOON) == "30 oct. 2025 12:00"
+def test_a_delivery_subject_becomes_arguments_and_an_unknown_one_is_kept() -> None:
+    assert subject("task 3f2a1c completed") == {
+        "subject": "task",
+        "id": "3f2a1c",
+        "status": "completed",
+        "follow_up": "no",
+        "about": "task 3f2a1c completed",
+    }
+    assert subject("watch 9d81 (follow-up)")["follow_up"] == "yes"
+    assert subject("anniversaire")["subject"] == "other"
 
 
 async def test_the_journal_says_why_the_assistant_spoke_in_french(tmp_path: Path) -> None:
@@ -146,7 +147,10 @@ async def test_the_journal_tells_the_important_events_in_french(tmp_path: Path) 
             TaskStarted(source="tasks", task_id="t1", objective="Analyse", executor="hermes", origin=TELEGRAM),
             TaskEnded(source="tasks", task_id="t1", status=TaskStatus.FAILED, error="quota", duration_s=12),
             DeliveryConsidered(
-                source="courier", about="watch w1", reason="Mathis is in the salon", spoken=Address("voice", "salon")
+                source="courier",
+                about="watch w1",
+                reason=Message.of("delivery-in-room", person="Mathis", room="salon"),
+                spoken=Address("voice", "salon"),
             ),
             WatchCreated(
                 source="watch-book", watch_id="w3", what="le colis", keywords=("Colissimo",), kinds=(), once=True
@@ -163,7 +167,7 @@ async def test_the_journal_tells_the_important_events_in_french(tmp_path: Path) 
             "Réponse de secours : modèle trop lent",
             "Réponse coupée par la personne",
             "Outil create_watch appelé",
-            "Outil create_watch terminé en 0.2 s",
+            "Outil create_watch terminé en 0,2 s",
             "Outil mailbox_send en échec",
             "Veille w1 déclenchée par « Colis livré » — urgent",
             "Veille w1 trouvée",

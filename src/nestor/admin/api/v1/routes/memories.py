@@ -11,7 +11,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query, Request, Response
 from pydantic import BaseModel
 
-from nestor.admin.api.v1.errors import FORBIDDEN, ApiError, not_found
+from nestor.admin.api.v1.errors import ApiError, not_found
 from nestor.admin.api.v1.models import Input, People, PersonRef
 from nestor.admin.api.v1.security import Caller, allowed
 from nestor.admin.state import state
@@ -73,7 +73,7 @@ async def list_memories(
     nestor = state(request).nestor
     if not caller.principal.can(Scope.MEMORY_MANAGE_ALL):
         if about and about != caller.person:
-            raise ApiError(403, "forbidden", FORBIDDEN)
+            raise ApiError(403, "forbidden")
         about = caller.person or ""
     person = PersonId(about) if about else None
     memories = nestor.memories
@@ -91,7 +91,7 @@ async def correct_memory(request: Request, caller: Keeper, memory_id: str, body:
     nestor = state(request).nestor
     memory = await _editable(request, caller, memory_id)
     if not body.text.strip():
-        raise ApiError(400, "empty_memory", "Pour effacer un souvenir, oubliez-le.")
+        raise ApiError(400, "empty_memory")
     corrected = await nestor.memories.correct(memory.id, body.text, by=caller.person)
     return _memory(caller, corrected, People(nestor.household))
 
@@ -106,7 +106,7 @@ async def forget_memory(request: Request, caller: Keeper, memory_id: str) -> Res
 async def _editable(request: Request, caller: Caller, memory_id: str) -> Memory:
     memory = await state(request).nestor.memories.store.get(memory_id)
     if memory is None or not _reads(caller, memory):
-        raise not_found("Ce souvenir n'existe pas ou plus.")
+        raise not_found("memory_unknown")
     if not _edits(caller, memory):
-        raise ApiError(403, "forbidden", "Seule l'administration du foyer modifie les souvenirs communs.")
+        raise ApiError(403, "memory_shared")
     return memory

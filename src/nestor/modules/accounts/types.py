@@ -6,6 +6,7 @@ from datetime import datetime
 from enum import StrEnum
 
 from nestor.core import ContractError, PersonId
+from nestor.core.i18n import Locale
 from nestor.modules.accounts.permissions import GRANTS, Principal, Role
 
 _LOGIN = re.compile(r"^[a-z0-9][a-z0-9._+@-]{1,99}$")
@@ -34,6 +35,7 @@ class Account:
     person: PersonId | None = None
     disabled: bool = False
     created_at: datetime
+    locale: Locale | None = None  # the language it reads the admin in; None: the household's
 
     def principal(self) -> Principal:
         scopes = frozenset() if self.disabled else GRANTS[self.role]

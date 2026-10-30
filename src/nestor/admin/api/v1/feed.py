@@ -8,8 +8,8 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import cast
 
-from nestor.admin.api.v1.models import LINKS, JournalItem, Kind, People
-from nestor.admin.presentation import CATEGORIES, EventDescriber, Line
+from nestor.admin.api.v1.models import LINKS, JournalItem, Kind, MessageOut, People
+from nestor.admin.presentation import CATEGORIES, EventDescriber, Line, Phrasebook
 from nestor.admin.state import AdminState
 from nestor.core import PersonId
 from nestor.modules.accounts import Principal, Scope
@@ -68,11 +68,11 @@ class Audience:
 
 
 class Feed:
-    def __init__(self, admin: AdminState, audience: Audience, filters: Filters) -> None:
+    def __init__(self, admin: AdminState, audience: Audience, filters: Filters, words: Phrasebook) -> None:
         nestor = admin.nestor
         self.log = nestor.journal.log
-        self.audience, self.filters = audience, filters
-        self.describer = EventDescriber(nestor.household, nestor.config.persona.name, admin.accounts)
+        self.audience, self.filters, self.words = audience, filters, words
+        self.describer = EventDescriber(nestor.household, nestor.config.persona.name, words, admin.accounts)
         self.people = People(nestor.household)
 
     def item(self, entry: Entry) -> JournalItem | None:
@@ -89,16 +89,21 @@ class Feed:
         if isinstance(device_id, str):
             links["device_id"] = device_id  # pairing events carry the whole device
         session = entry.record.get("session")
+        message, text = self.words.summary(line.message)
         return JournalItem(
             position=entry.position,
             id=str(entry.record["id"]),
             at=line.at,
             type=entry.type,
-            kind=cast(Kind, line.category_key),
-            kind_label=line.category,
-            summary=line.title,
+            kind=cast(Kind, line.kind),
+            kind_label=self.words.kind(line.kind),
+            message=MessageOut.of(message),
+            text=text,
             detail=line.detail,
-            reason=line.reason,
+            detail_message=MessageOut.of(line.detail_message) if line.detail_message else None,
+            detail_text=self.words.text(line.detail_message) if line.detail_message else line.detail,
+            reason=MessageOut.of(line.reason) if line.reason else None,
+            reason_text=self.words.text(line.reason) if line.reason else "",
             tone=line.tone.value,
             people=[ref for p in sorted(line.people) if (ref := self.people.ref(p))],
             channels=sorted(line.channels),

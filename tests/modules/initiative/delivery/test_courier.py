@@ -3,6 +3,7 @@
 import asyncio
 
 from nestor.core import PersonId
+from nestor.core.i18n import Message
 from nestor.modules.channels import Address, Medium
 from nestor.modules.cognition.tools import Toolbox
 from nestor.modules.conversation import Agent, Persona, UserTurn
@@ -13,6 +14,7 @@ from nestor.modules.journal import Journal
 from nestor.testing.channels import InMemoryChannel
 from nestor.testing.cognition import ScriptedModel
 from nestor.testing.home import StaticPresence
+from nestor.testing.i18n import EchoLocalizer
 from nestor.testing.journal import MemoryEventLog
 
 TELEGRAM = Address("telegram", "42")
@@ -34,6 +36,7 @@ def courier(
         persona=Persona(name="Richie", character="Tu es Richie."),
         journal=journal,
         household=Household([MATHIS]),
+        localizer=EchoLocalizer(),
         toolbox=Toolbox(journal),
     )
     voice, telegram = Satellite("voice"), InMemoryChannel("telegram")
@@ -60,7 +63,7 @@ async def test_an_unanswered_announcement_is_followed_by_a_message() -> None:
     assert [a for a, _ in voice.sent] == [SALON]
     assert [a for a, _ in telegram.sent] == [TELEGRAM]
     considered = (await journal.history(DeliveryConsidered))[0]
-    assert considered.reason == "Mathis is home, room unknown: main satellite"
+    assert considered.reason == Message.of("delivery-home-main-satellite", person="Mathis", room="salon")
 
 
 async def test_a_reaction_cancels_the_follow_up() -> None:

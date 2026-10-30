@@ -11,6 +11,7 @@ from collections.abc import AsyncIterator, Iterable, Mapping
 from dataclasses import dataclass
 
 from nestor.core import ContractError, PersonId, ProviderError, utc_now
+from nestor.core.i18n import Localizer
 from nestor.modules.channels import Address, Assistant, InboundMessage, Medium, Reply, Sender
 from nestor.modules.cognition.model import (
     ConversationModel,
@@ -58,10 +59,12 @@ class Agent(Assistant):
         household: Household,
         toolbox: Toolbox,
         channels: Mapping[str, ChannelProfile] | None = None,
+        localizer: Localizer,
         context: Iterable[ContextProvider] = (),
         settings: AgentSettings | None = None,
     ) -> None:
         self.model, self.persona, self.journal = model, persona, journal
+        self.localizer = localizer
         self.household, self.toolbox = household, toolbox
         self._channels = dict(channels or {})
         self._context = tuple(context)
@@ -231,7 +234,8 @@ class AgentReply(Reply):
     async def _fall_back(self, reason: FallbackReason) -> None:
         if reason is FallbackReason.MODEL_UNAVAILABLE and self._said:
             self._say(" ")  # keep what was said, then excuse the cut
-        self._say(self._agent.persona.fallback(reason))
+        agent = self._agent
+        self._say(agent.localizer.format(agent.persona.fallback(reason), agent.persona.locale))
         await self._agent.journal.publish(
             FallbackSpoken(source="agent", session=self._address.session, address=self._address, reason=reason)
         )

@@ -44,7 +44,7 @@ class JournalFilters(BaseModel):
 
 def _filters(kind: str, person: str, channel: str) -> Filters:
     if kind and kind not in {c.key for c in CATEGORIES}:
-        raise ApiError(400, "unknown_kind", f"Catégorie inconnue : {kind}.")
+        raise ApiError(400, "unknown_kind", kind=kind)
     return Filters(category=kind, person=person, channel=channel)
 
 
@@ -61,7 +61,7 @@ async def list_journal(
     """`kind` is a key of `GET /journal/filters` kinds; `person` a person id; `channel` a channel name."""
     admin = state(request)
     audience = await Audience.of(caller.principal, admin.nestor.journal.log)
-    feed = Feed(admin, audience, _filters(kind, person, channel))
+    feed = Feed(admin, audience, _filters(kind, person, channel), caller.phrasebook)
     items, cursor = await feed.page(before=before, limit=limit)
     return JournalPage(items=items, next_before=cursor)
 
@@ -70,7 +70,7 @@ async def list_journal(
 async def get_journal_filters(request: Request, caller: Reader) -> JournalFilters:
     nestor = state(request).nestor
     return JournalFilters(
-        kinds=[KindOut(key=c.key, label=c.label) for c in CATEGORIES],
+        kinds=[KindOut(key=c.key, label=caller.phrasebook.kind(c.key)) for c in CATEGORIES],
         people=[PersonRef(id=p.id, name=p.name) for p in nestor.household.people],
         channels=[
             ChannelOut(id=c.channel_id, brand=c.brand) for c in sorted(nestor.channels, key=lambda c: c.channel_id)
@@ -104,7 +104,7 @@ async def stream_journal(
     admin = state(request)
     filters = _filters(kind, person, channel)
     audience = await Audience.of(caller.principal, admin.nestor.journal.log)
-    feed = Feed(admin, audience, filters)
+    feed = Feed(admin, audience, filters, caller.phrasebook)
     resume = last_event_id if last_event_id and last_event_id.isdigit() else None
     start = int(resume) if resume else after if after is not None else await feed.last_position()
     return StreamingResponse(

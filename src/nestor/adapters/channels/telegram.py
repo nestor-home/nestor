@@ -16,6 +16,7 @@ import httpx
 from pydantic import BaseModel, Field, SecretStr, TypeAdapter, ValidationError
 
 from nestor.core import Component, ContractError, ProviderError
+from nestor.core.i18n import Message
 from nestor.modules.channels import Address, Assistant, Channel, InboundMessage, Sender
 from nestor.runtime.plugins import AdapterSettings, Family, Plugin, Services
 
@@ -218,7 +219,7 @@ class TelegramChannel(Channel):
         typing_interval_s: float = 4.0,
         retry_delay_s: float = 1.0,
         max_retry_delay_s: float = 60.0,
-        apology: str = "Sorry, something went wrong. Please try again.",
+        apology: str = "",
         transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
         super().__init__(channel_id)
@@ -348,7 +349,7 @@ class TelegramSettings(AdapterSettings):
     api_base: str = "https://api.telegram.org"
     poll_timeout_s: int = Field(default=30, ge=1, le=50)
     request_timeout_s: float = Field(default=10.0, gt=0)
-    apology: str = "Sorry, something went wrong. Please try again."
+    apology: str | None = None  # what the bot says when an answer fails; default: `telegram-apology`, "" for silence
 
 
 def build(settings: TelegramSettings, name: str, services: Services) -> Component:
@@ -358,7 +359,9 @@ def build(settings: TelegramSettings, name: str, services: Services) -> Componen
         api_base=settings.api_base,
         poll_timeout_s=settings.poll_timeout_s,
         request_timeout_s=settings.request_timeout_s,
-        apology=settings.apology,
+        apology=settings.apology
+        if settings.apology is not None
+        else services.localizer.format(Message.of("telegram-apology"), services.locale),
     )
 
 

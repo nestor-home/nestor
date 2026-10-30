@@ -16,9 +16,11 @@ from websockets.exceptions import ConnectionClosed
 from nestor.adapters.home.home_assistant import HomeAssistantPresence, PresenceMapping, plugin
 from nestor.adapters.home.home_assistant.client import websocket_url
 from nestor.core import ContractError, Health, PersonId, ProviderError
+from nestor.core.i18n import Locale
 from nestor.modules.home import Granularity, Presence, Whereabouts
 from nestor.runtime import Services
 from nestor.testing.home import PresenceSourceContract
+from nestor.testing.i18n import EchoLocalizer
 
 TOKEN = "eyJhbGciOiJIUzI1NiJ9.long-lived-test-token.c2lnbmF0dXJl"
 ALICE, BOB = PersonId("alice"), PersonId("bob")
@@ -551,7 +553,7 @@ async def test_the_plugin_builds_a_source_from_its_configuration(
         "rooms": {"alice": "sensor.alice_area"},
         "occupancy_sensors": ["binary_sensor.kitchen_motion"],
     }
-    source = plugin.create(raw, "home", Services(data_dir=tmp_path))
+    source = plugin.create(raw, "home", Services(data_dir=tmp_path, localizer=EchoLocalizer(), locale=Locale("fr-FR")))
     assert isinstance(source, HomeAssistantPresence) and source.name == "home"
     await started(source)
     presence = source.presence()
@@ -576,4 +578,4 @@ def test_a_reverse_proxy_prefix_is_kept_in_the_websocket_url() -> None:
 def test_the_plugin_rejects_an_inconsistent_configuration(tmp_path: Path, change: dict[str, Any], message: str) -> None:
     raw = {"url": "http://ha.local:8123", "token": TOKEN, "people": {"alice": "person.alice"}, **change}
     with pytest.raises(ContractError, match=message):
-        plugin.create(raw, "home", Services(data_dir=tmp_path))
+        plugin.create(raw, "home", Services(data_dir=tmp_path, localizer=EchoLocalizer(), locale=Locale("fr-FR")))

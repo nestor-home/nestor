@@ -16,6 +16,7 @@ from nestor.admin.api.v1.errors import ApiError, not_found
 from nestor.admin.api.v1.models import Input, People, PersonRef
 from nestor.admin.api.v1.security import Caller, allowed
 from nestor.admin.connecting import Connecting
+from nestor.admin.presentation import Phrasebook
 from nestor.admin.settings import CALLBACK_PATH
 from nestor.admin.state import AdminState, state
 from nestor.core import ContractError, PersonId, ProviderError
@@ -26,9 +27,6 @@ from nestor.modules.connectors import Connection, Connections, Status
 router = APIRouter(tags=["connections"])
 browser = APIRouter(include_in_schema=False)  # where the provider sends the browser back
 Connector = Annotated[Caller, Depends(allowed(Scope.HOUSEHOLD_CONNECTIONS, Scope.OWN_CONNECTIONS))]
-
-STATUS = {Status.CONNECTED: "connectée", Status.NEEDS_REAUTH: "à réautoriser", Status.ERROR: "erreur"}
-RISK = {Risk.READ: "lecture", Risk.WRITE: "écriture", Risk.SENSITIVE: "sensible"}
 
 
 class ToolOut(BaseModel):
@@ -68,7 +66,7 @@ def reaches(principal: Principal, owner: PersonId | None) -> bool:
 
 def connections_of(admin: AdminState) -> Connections:
     if admin.nestor.connections is None:
-        raise ApiError(404, "no_connectors", "Aucun connecteur n'est installé sur cette instance.")
+        raise ApiError(404, "no_connectors")
     return admin.nestor.connections
 
 
@@ -78,36 +76,36 @@ def connecting_of(admin: AdminState) -> Connecting:
     return admin.connecting
 
 
-def connection_out(admin: AdminState, connection: Connection) -> ConnectionOut:
+def connection_out(admin: AdminState, connection: Connection, words: Phrasebook) -> ConnectionOut:
     connections = connections_of(admin)
     connector = connections.connectors.get(connection.kind)
     return ConnectionOut(
         id=connection.id,
         kind=connection.kind,
         brand=connector.info.brand if connector else None,
-        title=connector.info.title if connector else connection.kind,
+        title=words.text(connector.info.title) if connector else connection.kind,
         account=connection.account,
         owner=People(admin.nestor.household).ref(connection.owner),
         status=connection.status,
-        status_label=STATUS[connection.status],
+        status_label=words.connection_status(connection.status),
         confirm_writes=connection.confirm_writes,
         disabled_tools=sorted(connection.disabled_tools),
         created_at=connection.created_at,
     )
 
 
-def connection_detail(admin: AdminState, connection: Connection) -> ConnectionDetail:
+def connection_detail(admin: AdminState, connection: Connection, words: Phrasebook) -> ConnectionDetail:
     connections = connections_of(admin)
     connector = connections.connectors.get(connection.kind)
     tools = connector.tools(connection, connections.access(connection)) if connector else ()
     return ConnectionDetail(
-        **connection_out(admin, connection).model_dump(),
+        **connection_out(admin, connection, words).model_dump(),
         tools=[
             ToolOut(
                 name=t.name,
                 description=t.spec.description,
                 risk=t.risk,
-                risk_label=RISK[t.risk],
+                risk_label=words.risk(t.risk),
                 enabled=t.name not in connection.disabled_tools,
             )
             for t in tools
@@ -118,7 +116,7 @@ def connection_detail(admin: AdminState, connection: Connection) -> ConnectionDe
 def reachable(admin: AdminState, caller: Caller, connection_id: str) -> Connection:
     connection = connections_of(admin).connections.get(connection_id)
     if connection is None or not reaches(caller.principal, connection.owner):
-        raise not_found("Cette connexion n'existe pas ou a été supprimée.")
+        raise not_found("connection_unknown")
     return connection
 
 
@@ -126,13 +124,13 @@ def reachable(admin: AdminState, caller: Caller, connection_id: str) -> Connecti
 async def list_connections(request: Request, caller: Connector) -> list[ConnectionOut]:
     admin = state(request)
     connections = sorted(connections_of(admin).connections.values(), key=lambda c: c.created_at)
-    return [connection_out(admin, c) for c in connections if reaches(caller.principal, c.owner)]
+    return [connection_out(admin, c, caller.phrasebook) for c in connections if reaches(caller.principal, c.owner)]
 
 
 @router.get("/connections/{connection_id}")
 async def get_connection(request: Request, caller: Connector, connection_id: str) -> ConnectionDetail:
     admin = state(request)
-    return connection_detail(admin, reachable(admin, caller, connection_id))
+    return connection_detail(admin, reachable(admin, caller, connection_id), caller.phrasebook)
 
 
 @router.patch("/connections/{connection_id}")
@@ -143,13 +141,13 @@ async def configure_connection(
     admin = state(request)
     connection = reachable(admin, caller, connection_id)
     if body.disabled_tools is not None:
-        known = {t.name for t in connection_detail(admin, connection).tools}
+        known = {t.name for t in connection_detail(admin, connection, caller.phrasebook).tools}
         if unknown := set(body.disabled_tools) - known:
-            raise ApiError(400, "unknown_tool", f"Outils inconnus : {', '.join(sorted(unknown))}.")
+            raise ApiError(400, "unknown_tool", tools=", ".join(sorted(unknown)))
     updated = await connections_of(admin).configure(
         connection.id, disabled_tools=body.disabled_tools, confirm_writes=body.confirm_writes
     )
-    return connection_detail(admin, updated)
+    return connection_detail(admin, updated, caller.phrasebook)
 
 
 @router.delete("/connections/{connection_id}", status_code=204)

@@ -14,6 +14,7 @@ import respx
 from nestor.adapters.models import OpenAICompatibleModel
 from nestor.adapters.models.openai_compatible import plugin
 from nestor.core import ContractError, ProviderError
+from nestor.core.i18n import Locale
 from nestor.modules.cognition import (
     ConversationModel,
     Finished,
@@ -29,6 +30,7 @@ from nestor.modules.cognition import (
 )
 from nestor.runtime.plugins import Services
 from nestor.testing.cognition import ConversationModelContract
+from nestor.testing.i18n import EchoLocalizer
 
 BASE_URL = "https://llm.test/api/v1"
 COMPLETIONS = f"{BASE_URL}/chat/completions"
@@ -416,7 +418,9 @@ async def test_the_plugin_builds_a_model_from_its_configuration(api: respx.MockR
     route = api.post(COMPLETIONS).mock(return_value=streamed(*TEXT_REPLY))
     raw = {"base_url": BASE_URL, "api_key": KEY, "model": "vendor/model", "extra_body": {"temperature": 0.2}}
 
-    async with plugin.create(raw, "main", Services(data_dir=tmp_path)) as m:
+    async with plugin.create(
+        raw, "main", Services(data_dir=tmp_path, localizer=EchoLocalizer(), locale=Locale("fr-FR"))
+    ) as m:
         assert isinstance(m, ConversationModel)
         outputs = [o async for o in m.stream(HELLO)]
 
@@ -429,7 +433,7 @@ async def test_the_plugin_builds_a_model_from_its_configuration(api: respx.MockR
 )
 def test_the_plugin_refuses_a_configuration_without_a_key(raw: dict[str, object], tmp_path: Path) -> None:
     with pytest.raises(ContractError, match="api_key"):
-        plugin.create(raw, "main", Services(data_dir=tmp_path))
+        plugin.create(raw, "main", Services(data_dir=tmp_path, localizer=EchoLocalizer(), locale=Locale("fr-FR")))
 
 
 OPENROUTER_KEY = os.environ.get("OPENROUTER_API_KEY", "")

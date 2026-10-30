@@ -14,6 +14,7 @@ import httpx
 
 from nestor.admin import AdminSettings, create_app
 from nestor.core import PersonId
+from nestor.core.i18n import Message
 from nestor.modules.accounts import Account, Role
 from nestor.modules.connectors import AuthKind, SecretField
 from nestor.runtime import AdapterSettings, Family, Nestor, Plugin, Registry
@@ -27,7 +28,6 @@ PASSWORD = "correct horse battery"
 OWNER = "mathis"  # the owner's login, opened with every harness
 SECRET_KEY = "s" * 43
 CLIENT_SECRET = "gocspx-household-client-secret"
-SETUP = "1. Créez un projet dans la console du fournisseur.\n2. Ajoutez un client OAuth « application Web »."
 CONFIG = """
 data_dir: {data_dir}
 persona: {{name: Richie, character: Tu es Richie., timezone: Europe/Paris}}
@@ -101,12 +101,17 @@ class Harness:
         self.confirms_stop, self.replies = confirms_stop, replies
         self.provider = FakeProvider()
         self.mail = ScriptedConnector()
-        self.mail.info = replace(self.mail.info, title="Messagerie", setup=SETUP)
+        self.mail.info = replace(
+            self.mail.info, title=Message.of("harness-mailbox-title"), setup=Message.of("harness-mailbox-setup")
+        )
         self.imap = ScriptedConnector("imap", auth=AuthKind.SECRET, account="mathilde@free.fr")
         self.imap.info = replace(
             self.imap.info,
-            title="Boîte IMAP",
-            fields=(SecretField(name="server", label="Serveur", secret=False), *self.imap.info.fields),
+            title=Message.of("harness-imap-title"),
+            fields=(
+                SecretField(name="server", label=Message.of("harness-imap-field-server"), secret=False),
+                *self.imap.info.fields,
+            ),
         )
         self.remote = FakeRemote()
         self.presence = StaticPresence().set("mathis", home=True, room="salon")

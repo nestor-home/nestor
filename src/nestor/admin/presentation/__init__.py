@@ -1,10 +1,17 @@
-"""How the admin says things: journal events, delivery reasons and dates in French."""
+"""How the admin says things: journal entries as messages, and names rendered in a reader's locale.
+No sentence lives here: they are in `nestor/locales/*/*.ftl`."""
 
-from nestor.admin.presentation.accounts import french_role
-from nestor.admin.presentation.capabilities import french_capability
-from nestor.admin.presentation.dates import french_time
-from nestor.admin.presentation.events import CATEGORIES, OTHER_KEY, Category, EventDescriber, Line, Tone
-from nestor.admin.presentation.reasons import french_reason, french_subject, french_task_status, french_watch_end
+from nestor.admin.presentation.events import (
+    CATEGORIES,
+    OTHER_KEY,
+    Category,
+    EventDescriber,
+    Line,
+    Tone,
+    subject,
+    unknown_message,
+)
+from nestor.admin.presentation.phrasebook import Phrasebook, capability_message
 
 __all__ = [
     "CATEGORIES",
@@ -12,12 +19,9 @@ __all__ = [
     "Category",
     "EventDescriber",
     "Line",
+    "Phrasebook",
     "Tone",
-    "french_capability",
-    "french_reason",
-    "french_role",
-    "french_subject",
-    "french_task_status",
-    "french_time",
-    "french_watch_end",
+    "capability_message",
+    "subject",
+    "unknown_message",
 ]

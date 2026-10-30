@@ -13,24 +13,30 @@ from dataclasses import dataclass
 
 from fastapi import Request
 
-from nestor.admin.api.v1.errors import FORBIDDEN, ApiError
+from nestor.admin.api.v1.errors import ApiError
+from nestor.admin.api.v1.language import accepted, account_locale
 from nestor.admin.auth import Session
+from nestor.admin.presentation import Phrasebook
 from nestor.admin.state import state
 from nestor.core import PersonId
+from nestor.core.i18n import Locale
 from nestor.modules.accounts import Account, Principal, Scope
 
 UNSAFE = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 CSRF_HEADER = "X-CSRF-Token"
 LOCAL = Principal(scopes=frozenset({Scope.SATELLITES_MANAGE}))  # the command line on this machine
 
-UNAUTHENTICATED = ApiError(401, "unauthenticated", "Connectez-vous pour continuer.")
-
 
 @dataclass(frozen=True, slots=True)
 class Caller:
     principal: Principal
+    phrasebook: Phrasebook  # what the caller reads, in their language
     account: Account | None = None  # None for the command line
     session: Session | None = None
+
+    @property
+    def locale(self) -> Locale:
+        return self.phrasebook.locale
 
     @property
     def person(self) -> PersonId | None:
@@ -48,7 +54,7 @@ async def json_only(request: Request) -> None:
     has_body = request.headers.get("content-length", "0") != "0" or "transfer-encoding" in request.headers
     media = request.headers.get("content-type", "").split(";")[0].strip().lower()
     if has_body and media != "application/json":
-        raise ApiError(415, "unsupported_media_type", "Le corps de la requête doit être du JSON.")
+        raise ApiError(415, "unsupported_media_type")
 
 
 async def signed_in(request: Request) -> Caller:
@@ -56,25 +62,26 @@ async def signed_in(request: Request) -> Caller:
     session = admin.cookie.read(request)
     account = admin.accounts.accounts.get(session.account_id or "") if session else None
     if session is None or account is None or account.disabled:
-        raise UNAUTHENTICATED
+        raise ApiError(401, "unauthenticated")
     if request.method in UNSAFE:
         given = request.headers.get(CSRF_HEADER, "")
         if not hmac.compare_digest(given.encode(), session.csrf.encode()):
-            raise ApiError(403, "csrf_failed", "Requête refusée : rechargez la page et recommencez.")
-    return Caller(account.principal(), account, session)
+            raise ApiError(403, "csrf_failed")
+    phrasebook = Phrasebook(admin.nestor.localizer, account_locale(admin, account))
+    return Caller(account.principal(), phrasebook, account, session)
 
 
 async def signed_in_or_local(request: Request) -> Caller:
     authorization = request.headers.get("authorization")
     if authorization is None:
         return await signed_in(request)
-    expected = state(request).api_token
+    admin = state(request)
+    expected = admin.api_token
     scheme, _, given = authorization.partition(" ")
     if expected is None or scheme.lower() != "bearer" or not hmac.compare_digest(given.strip(), expected):
-        raise ApiError(
-            401, "unauthenticated", "Jeton d'administration absent ou faux.", headers={"WWW-Authenticate": "Bearer"}
-        )
-    return Caller(LOCAL)
+        raise ApiError(401, "bad_token", headers={"WWW-Authenticate": "Bearer"})
+    locale = accepted(admin, request.headers.get("accept-language", ""))
+    return Caller(LOCAL, Phrasebook(admin.nestor.localizer, locale))
 
 
 def allowed(*scopes: Scope, local: bool = False) -> Callable[[Request], Awaitable[Caller]]:
@@ -83,7 +90,7 @@ def allowed(*scopes: Scope, local: bool = False) -> Callable[[Request], Awaitabl
     async def caller(request: Request) -> Caller:
         found = await (signed_in_or_local if local else signed_in)(request)
         if not any(found.principal.can(scope) for scope in scopes):
-            raise ApiError(403, "forbidden", FORBIDDEN)
+            raise ApiError(403, "forbidden")
         return found
 
     return caller

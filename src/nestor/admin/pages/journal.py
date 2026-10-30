@@ -30,7 +30,9 @@ async def journal_page(
     entries = await nestor.journal.log.read(
         LogQuery(types=category.types if category else None, until=until, limit=SCANNED, newest_first=True)
     )
-    describer = EventDescriber(nestor.household, nestor.config.persona.name)
+    describer = EventDescriber(
+        nestor.household, nestor.config.persona.name, pages_of(request).phrasebook, admin.accounts
+    )
     lines, cursor = [], None
     for entry in entries:
         line = describer.describe(entry)

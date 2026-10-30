@@ -84,7 +84,7 @@ async def test_a_revoked_satellite_is_gone(tmp_path: Path) -> None:
         assert (await api.delete("/api/v1/satellites/reachy-salon")).status_code == 204
         assert pairing.satellites() == []
         again = await api.delete("/api/v1/satellites/reachy-salon")
-        assert again.status_code == 404 and again.json()["error"]["code"] == "not_found"
+        assert again.status_code == 404 and again.json()["error"]["code"] == "satellite_unknown"
 
 
 async def test_the_command_line_token_opens_pairing_and_nothing_else(tmp_path: Path) -> None:

@@ -73,5 +73,5 @@ async def _error(request: Request, error: Exception) -> Response:
     """JSON for the API (and wherever no page renders errors), an HTML page for the server-rendered pages."""
     page_errors = state(request).page_errors
     if request.url.path.startswith("/api/") or page_errors is None:
-        return v1.respond(v1.translate(error))
+        return v1.localized(request, error)
     return await page_errors(request, error)

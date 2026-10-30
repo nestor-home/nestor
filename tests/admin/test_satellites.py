@@ -164,7 +164,7 @@ async def test_the_journal_tells_satellite_events_in_french(tmp_path: Path) -> N
             "Satellite reachy-salon connecté",
             "Satellite reachy-salon déconnecté",
             "2 personnes vues par reachy-salon",
-            "Confiance : 87%",
+            "Confiance : 87\u00a0%",
             "1 personne vue par reachy-salon",
             "Parole détectée près de reachy-salon",
             "Fin de parole près de reachy-salon",

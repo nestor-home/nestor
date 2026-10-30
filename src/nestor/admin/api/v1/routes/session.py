@@ -6,10 +6,12 @@ from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel
 
 from nestor.admin.api.v1.errors import ApiError
+from nestor.admin.api.v1.language import account_locale
 from nestor.admin.api.v1.models import AccountOut, Input, People
 from nestor.admin.api.v1.passwords import checked_password
 from nestor.admin.api.v1.security import Caller, signed_in
 from nestor.admin.auth import Session
+from nestor.admin.presentation import Phrasebook
 from nestor.admin.state import AdminState, state
 from nestor.modules.accounts import Account, Scope
 
@@ -24,9 +26,14 @@ class LoginIn(Input):
 
 class MeOut(BaseModel):
     account: AccountOut
+    locale: str  # the language it reads in: its choice, else the household's (`account.locale` is the choice)
     scopes: list[Scope]  # what the front may offer; the API checks them again on every request
     csrf_token: str  # send it back in `X-CSRF-Token` on every POST, PUT, PATCH and DELETE
     assistant: str  # the assistant's name, for the front's header
+
+
+class LocaleIn(Input):
+    locale: str | None  # one of `GET /i18n` locales; None: back to the household's language
 
 
 class PasswordChangeIn(Input):
@@ -41,13 +48,11 @@ async def create_session(request: Request, response: Response, body: LoginIn) ->
     client = request.client.host if request.client else "unknown"
     if wait := admin.throttle.wait_s(client):
         minutes = max(1, round(wait / 60))
-        raise ApiError(
-            429, "throttled", f"Trop d'essais. Réessayez dans {minutes} min.", headers={"Retry-After": str(round(wait))}
-        )
+        raise ApiError(429, "throttled", headers={"Retry-After": str(round(wait))}, minutes=minutes)
     account = await admin.accounts.authenticate(body.login, body.password, client=client)
     if account is None:
         admin.throttle.failed(client)
-        raise ApiError(401, "invalid_credentials", "Identifiant ou mot de passe incorrect.")
+        raise ApiError(401, "invalid_credentials")
     admin.throttle.succeeded(client)
     if previous := admin.cookie.read(request):
         admin.sessions.close(previous)
@@ -83,6 +88,19 @@ async def change_my_password(request: Request, caller: SignedIn, body: PasswordC
     return Response(status_code=204)
 
 
+@router.put("/me/locale")
+async def change_my_locale(request: Request, caller: SignedIn, body: LocaleIn) -> MeOut:
+    """Choose the language the admin is shown in."""
+    admin = state(request)
+    assert caller.account and caller.session
+    available = {str(locale).casefold(): locale for locale in admin.nestor.localizer.locales}
+    chosen = available.get(body.locale.casefold()) if body.locale is not None else None
+    if body.locale is not None and chosen is None:
+        raise ApiError(400, "unknown_locale")
+    account = await admin.accounts.set_locale(caller.account.id, chosen, by=caller.principal)
+    return _me(admin, account, caller.session)
+
+
 def open_session(request: Request, response: Response, account: Account) -> MeOut:
     """A fresh session for `account`, its cookie on `response`."""
     admin = state(request)
@@ -92,8 +110,11 @@ def open_session(request: Request, response: Response, account: Account) -> MeOu
 
 
 def _me(admin: AdminState, account: Account, session: Session) -> MeOut:
+    locale = account_locale(admin, account)
+    words = Phrasebook(admin.nestor.localizer, locale)
     return MeOut(
-        account=AccountOut.of(account, People(admin.nestor.household)),
+        account=AccountOut.of(account, People(admin.nestor.household), words),
+        locale=locale,
         scopes=sorted(account.principal().scopes),
         csrf_token=session.csrf,
         assistant=admin.nestor.config.persona.name,

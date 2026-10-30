@@ -16,6 +16,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, ValidationError
 
 from nestor.core import Component, ContractError
+from nestor.core.i18n import Locale, Localizer
 from nestor.modules.connectors import Connector
 
 ENTRY_POINTS = "nestor.adapters"
@@ -42,6 +43,8 @@ class Services:
     """What the runtime lends to adapter factories."""
 
     data_dir: Path
+    localizer: Localizer  # renders what adapters say to people (a channel's apology, a setup guide…)
+    locale: Locale  # the household's language (the persona's locale)
 
 
 @dataclass(frozen=True, slots=True)
@@ -98,6 +101,10 @@ class Registry:
             dist = entry.dist
             registry.register(plugin, Distribution(dist.name, dist.version) if dist is not None else None)
         return registry
+
+    def packages(self) -> tuple[str, ...]:
+        """Top-level packages providing plugins: where their `locales/` catalogues are looked for."""
+        return tuple(dict.fromkeys(p.build.__module__.partition(".")[0] for p in self._plugins.values()))
 
     def register(self, plugin: Plugin[Any], origin: Distribution | None = None) -> None:
         key = (plugin.family, plugin.kind)

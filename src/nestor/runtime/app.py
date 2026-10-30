@@ -9,6 +9,7 @@ from contextlib import AsyncExitStack
 from pathlib import Path
 from typing import Self, cast
 
+from nestor.adapters.i18n import FluentLocalizer, catalogue_dirs
 from nestor.adapters.oauth import HttpxTokenEndpoint
 from nestor.adapters.storage.sqlite import (
     SQLiteDatabase,
@@ -19,6 +20,7 @@ from nestor.adapters.storage.sqlite import (
 )
 from nestor.adapters.storage.sqlite.vault import GENERATE
 from nestor.core import Component, ContractError
+from nestor.core.i18n import Locale
 from nestor.modules.accounts import Accounts
 from nestor.modules.channels import Channel
 from nestor.modules.cognition import ConversationModel, Executor
@@ -74,7 +76,8 @@ class Nestor:
     ) -> None:
         self.config = config
         registry = registry or Registry.installed()
-        services = Services(data_dir=config.data_dir)
+        self.localizer = FluentLocalizer(catalogue_dirs(["nestor", *registry.packages()]), default=Locale("en"))
+        services = Services(data_dir=config.data_dir, localizer=self.localizer, locale=Locale(config.persona.locale))
         self.plugged: list[Plugged] = []  # every adapter built from the configuration, in build order
         environ = os.environ if environ is None else environ
 
@@ -147,7 +150,8 @@ class Nestor:
         connector_tools = [ConnectorTools(self.connections)] if self.connections else []
         self.agent = Agent(
             model=self.model,
-            persona=Persona(**config.persona.model_dump()),
+            persona=Persona(**{**config.persona.model_dump(), "locale": Locale(config.persona.locale)}),
+            localizer=self.localizer,
             journal=self.journal,
             household=self.household,
             toolbox=Toolbox(self.journal, providers=[delegation, memory, watch_tools, *self.tools, *connector_tools]),

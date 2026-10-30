@@ -48,7 +48,9 @@ async def test_an_invited_person_opens_their_account_and_is_signed_in(tmp_path: 
             "/api/v1/invitations/accept", {"token": token, "login": "other", "password": PASSWORD}
         )
         assert again.status_code == 400 and again.json()["error"] == {
-            "code": "invitation_refused",
+            "code": "invitation_used",
+            "message_id": "error-invitation-used",
+            "args": {},
             "message": "Cette invitation a déjà servi.",
         }
         assert (await owner.get("/api/v1/invitations")).json()[0]["status"] == "accepted"

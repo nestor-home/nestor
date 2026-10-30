@@ -14,9 +14,11 @@ import pytest
 
 from nestor.adapters.channels.telegram import MESSAGE_LIMIT, TelegramChannel, plugin, split_text
 from nestor.core import ContractError, ProviderError
+from nestor.core.i18n import Locale
 from nestor.modules.channels import Address, InboundMessage, Sender
 from nestor.runtime import Services
 from nestor.testing.channels import ScriptedAssistant
+from nestor.testing.i18n import EchoLocalizer
 
 TOKEN = "123456:secret-token"
 ADA, BOB, STRANGER = 7, 8, 9
@@ -363,7 +365,9 @@ async def test_only_addresses_of_this_channel_are_reachable(api: FakeBotApi) -> 
 
 
 async def test_the_plugin_names_the_channel_after_its_configured_instance(tmp_path: Path) -> None:
-    channel = plugin.create({"token": TOKEN}, "family-bot", Services(data_dir=tmp_path))
+    channel = plugin.create(
+        {"token": TOKEN}, "family-bot", Services(data_dir=tmp_path, localizer=EchoLocalizer(), locale=Locale("fr-FR"))
+    )
     assert isinstance(channel, TelegramChannel)
     assert channel.channel_id == "family-bot"
     assert TOKEN not in repr(plugin.settings.model_validate({"token": TOKEN}))
@@ -392,3 +396,15 @@ def test_split_text_cuts_a_word_longer_than_the_limit() -> None:
 def test_split_text_counts_characters_as_telegram_does() -> None:
     parts = split_text("🙂" * 5, limit=4)  # an emoji is two UTF-16 units
     assert parts == ["🙂🙂", "🙂🙂", "🙂"]
+
+
+@pytest.mark.parametrize(
+    ("configured", "said"), [({}, "telegram-apology"), ({"apology": ""}, ""), ({"apology": "Oups."}, "Oups.")]
+)
+async def test_the_apology_is_the_households_language_unless_configured(
+    tmp_path: Path, configured: dict[str, str], said: str
+) -> None:
+    services = Services(data_dir=tmp_path, localizer=EchoLocalizer(), locale=Locale("fr-FR"))
+    channel = plugin.create({"token": TOKEN, **configured}, "bot", services)
+    assert isinstance(channel, TelegramChannel) and channel._apology == said
+    await channel.close()

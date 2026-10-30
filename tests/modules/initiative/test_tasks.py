@@ -12,6 +12,7 @@ from nestor.modules.initiative import Courier, Delivered, DeliveryFailed, TaskAn
 from nestor.modules.journal import Journal
 from nestor.testing.channels import InMemoryChannel
 from nestor.testing.cognition import ScriptedModel
+from nestor.testing.i18n import EchoLocalizer
 from nestor.testing.journal import MemoryEventLog
 
 TELEGRAM = Address("telegram", "42")
@@ -53,6 +54,7 @@ class Home:
             persona=Persona(name="Richie", character="Tu es Richie."),
             journal=self.journal,
             household=self.household,
+            localizer=EchoLocalizer(),
             toolbox=Toolbox(self.journal),
         )
         self.voice = voice or VoiceChannel()

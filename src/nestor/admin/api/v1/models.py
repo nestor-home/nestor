@@ -5,8 +5,9 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
-from nestor.admin.presentation import french_role
+from nestor.admin.presentation import Phrasebook
 from nestor.core import PersonId
+from nestor.core.i18n import Message
 from nestor.modules.accounts import Account, Role
 from nestor.modules.household import Household
 
@@ -46,6 +47,17 @@ class People:
         return PersonId(person) in self._names
 
 
+class MessageOut(BaseModel):
+    """A message as data: a front with its own Fluent catalogue renders `id` with `args` itself."""
+
+    id: str
+    args: dict[str, str | int | float]
+
+    @classmethod
+    def of(cls, message: Message) -> "MessageOut":
+        return cls(id=message.id, args=dict(message.args))
+
+
 Tone = Literal["normal", "decision", "warning"]
 Kind = Literal[
     "conversation",
@@ -64,16 +76,22 @@ Kind = Literal[
 
 
 class JournalItem(BaseModel):
-    """One journal entry, already said in French: the front shows `summary`, `detail` and `reason` as is."""
+    """One journal entry: each sentence as a message (`id` + `args`, for a front with the catalogue) and
+    as `*text`, rendered by the server in the reader's language (so a plugin's events read well even
+    when the front has no message for them)."""
 
     position: int  # grows with every entry: the cursor of pages and of the live stream (`Last-Event-ID`)
     at: datetime
     type: str  # the event type, e.g. `conversation.turn.user`
     kind: Kind
-    kind_label: str  # in French, as `GET /journal/filters` lists it
-    summary: str
-    detail: str
-    reason: str  # why the assistant decided to speak, when it did
+    kind_label: str  # rendered, as `GET /journal/filters` lists it
+    message: MessageOut  # the summary
+    text: str
+    detail: str  # raw content (what was said, a tool's output): never translated; "" without
+    detail_message: MessageOut | None  # a detail that is a sentence of Nestor's ("Planned: …")
+    detail_text: str  # what to show as detail: `detail_message` rendered, else `detail`
+    reason: MessageOut | None  # why the assistant decided to speak, when it did
+    reason_text: str
     tone: Tone
     people: list[PersonRef]
     channels: list[str]
@@ -116,15 +134,17 @@ class AccountOut(BaseModel):
     person: PersonRef | None
     disabled: bool
     created_at: datetime
+    locale: str | None  # the language it chose; None: the household's
 
     @classmethod
-    def of(cls, account: Account, people: People) -> "AccountOut":
+    def of(cls, account: Account, people: People, words: Phrasebook) -> "AccountOut":
         return cls(
             id=account.id,
             login=account.login,
             role=account.role,
-            role_label=french_role(account.role),
+            role_label=words.role(account.role),
             person=people.ref(account.person),
             disabled=account.disabled,
             created_at=account.created_at,
+            locale=account.locale,
         )

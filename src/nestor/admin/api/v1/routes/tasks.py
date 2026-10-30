@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from nestor.admin.api.v1.errors import not_found
 from nestor.admin.api.v1.models import People, PersonRef
 from nestor.admin.api.v1.security import Caller, allowed
-from nestor.admin.presentation import french_task_status
+from nestor.admin.presentation import Phrasebook
 from nestor.admin.state import state
 from nestor.modules.accounts import Scope
 from nestor.modules.cognition import TaskStatus
@@ -51,14 +51,14 @@ def _reaches(caller: Caller, task: Task) -> bool:
     return caller.principal.reaches(task.requested_by, every=Scope.TASKS_MANAGE, own=Scope.TASKS_MANAGE_OWN)
 
 
-def _task(task: Task, people: People) -> TaskOut:
+def _task(task: Task, people: People, words: Phrasebook) -> TaskOut:
     outcome = task.outcome
     return TaskOut(
         id=task.id,
         objective=task.objective,
         executor=task.executor,
         status=task.status,
-        status_label=french_task_status(task.status),
+        status_label=words.task_status(task.status),
         requested_by=people.ref(task.requested_by),
         origin=str(task.origin),
         started_at=task.started_at,
@@ -74,8 +74,8 @@ async def list_tasks(request: Request, caller: Manager) -> TasksOut:
     people = People(nestor.household)
     manager = nestor.tasks
     return TasksOut(
-        running=[_task(t, people) for t in manager.running() if _reaches(caller, t)],
-        recent=[_task(t, people) for t in reversed(manager.recent(RECENT)) if _reaches(caller, t)],
+        running=[_task(t, people, caller.phrasebook) for t in manager.running() if _reaches(caller, t)],
+        recent=[_task(t, people, caller.phrasebook) for t in reversed(manager.recent(RECENT)) if _reaches(caller, t)],
     )
 
 
@@ -85,6 +85,8 @@ async def cancel_task(request: Request, caller: Manager, task_id: str) -> Cancel
     nestor = state(request).nestor
     task = nestor.tasks.tasks.get(task_id)
     if task is None or task.status is not TaskStatus.RUNNING or not _reaches(caller, task):
-        raise not_found("Cette tâche n'existe pas ou est déjà terminée.")
+        raise not_found("task_unknown")
     outcome = await nestor.tasks.cancel(task_id)
-    return CancelOut(task=_task(task, People(nestor.household)), confirmed=outcome.status is TaskStatus.CANCELLED)
+    return CancelOut(
+        task=_task(task, People(nestor.household), caller.phrasebook), confirmed=outcome.status is TaskStatus.CANCELLED
+    )

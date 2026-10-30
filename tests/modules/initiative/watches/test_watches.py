@@ -30,6 +30,7 @@ from nestor.modules.journal import Journal
 from nestor.testing.channels import InMemoryChannel
 from nestor.testing.cognition import ScriptedModel
 from nestor.testing.home import StaticPresence
+from nestor.testing.i18n import EchoLocalizer
 from nestor.testing.initiative import InboundEventSourceContract, Inbox, QueuedSource
 from nestor.testing.journal import MemoryEventLog
 
@@ -76,6 +77,7 @@ class Home:
             persona=Persona(name="Richie", character="Tu es Richie."),
             journal=self.journal,
             household=self.household,
+            localizer=EchoLocalizer(),
             toolbox=Toolbox(self.journal),
         )
         self.courier = Courier(
@@ -119,7 +121,7 @@ async def test_a_watched_parcel_is_announced_where_the_person_is_and_the_watch_e
     assert [e.reason for e in await home.journal.history(WatchEnded)] == ["matched"]
     triggered = (await home.journal.history(WatchTriggered))[0]
     assert triggered.summary == "Ton colis Colissimo est livré."
-    assert "main satellite" in (await home.journal.history(DeliveryConsidered))[0].reason
+    assert (await home.journal.history(DeliveryConsidered))[0].reason.id == "delivery-home-main-satellite"
     assert len(home.triage_model.requests) == 1, "an ended watch must not cost a triage"
 
 
@@ -234,6 +236,7 @@ async def test_the_agent_creates_lists_and_cancels_watches_through_its_tools() -
         persona=Persona(name="Richie", character="Tu es Richie."),
         journal=home.journal,
         household=home.household,
+        localizer=EchoLocalizer(),
         toolbox=Toolbox(home.journal, providers=[tools]),
         context=[tools],
     )

@@ -52,7 +52,7 @@ async def test_the_catalogue_lists_the_installed_connectors(tmp_path: Path) -> N
     async with Harness(tmp_path) as admin:
         await admin.login()
         page = (await admin.get("/connections")).text
-        assert "Messagerie" in page and "Boîte IMAP" in page and "Read and send mail" in page
+        assert "Messagerie" in page and "Boîte IMAP" in page and "Lire et envoyer des mails" in page
         assert "Aucun compte connecté" in page
 
 
@@ -128,7 +128,7 @@ async def test_a_secret_based_service_connects_through_its_form(tmp_path: Path) 
         assert 'type="password"' in page and "Serveur" in page and "client OAuth" not in page
 
         missing = await admin.post("/connectors/imap/connect", {"person": "mathilde", "server": "imap.free.fr"})
-        assert missing.status_code == 400 and "Champs manquants : App password" in missing.text
+        assert missing.status_code == 400 and "Champs manquants : Mot de passe d&#39;application" in missing.text
         assert 'value="imap.free.fr"' in missing.text, "what was typed is kept, except passwords"
 
         response = await admin.post(

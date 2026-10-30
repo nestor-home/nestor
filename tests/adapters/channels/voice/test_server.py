@@ -12,6 +12,7 @@ from pipecat.transports.base_transport import BaseTransport
 
 from nestor.adapters.channels.voice import VoiceChannel
 from nestor.adapters.channels.voice.server import BrowserRoutes, SignallingServer
+from nestor.adapters.channels.voice.session import SessionSettings
 from nestor.modules.channels import Address
 
 from .doubles import FakeAssistant, FakeSpeech, ScriptedSTT, ToneTTS
@@ -65,7 +66,10 @@ class Satellite:
         self.port = _free_port()
         replay = ReplayTransport([])
         speech = FakeSpeech(ScriptedSTT(replay, []), ToneTTS(replay.clock))
-        self.channel = VoiceChannel("voice", room="salon", speech=speech, host="127.0.0.1", port=self.port)
+        session = SessionSettings(stt_phrase="Je t'entends mal.")
+        self.channel = VoiceChannel(
+            "voice", room="salon", speech=speech, session=session, host="127.0.0.1", port=self.port
+        )
         self.peer = RTCPeerConnection(RTCConfiguration(iceServers=[]))  # local only: no STUN lookup
 
     async def connect(self) -> None:

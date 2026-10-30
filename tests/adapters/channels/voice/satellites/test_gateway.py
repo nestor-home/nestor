@@ -12,6 +12,7 @@ from pipecat.transports.smallwebrtc.connection import SmallWebRTCConnection
 from nestor.adapters.channels.voice import VoiceChannel
 from nestor.adapters.channels.voice.satellites import SatelliteGateway
 from nestor.adapters.channels.voice.server import SignallingServer
+from nestor.adapters.channels.voice.session import SessionSettings
 from nestor.modules.behavior import Behavior, Expression
 from nestor.modules.channels import Address
 from nestor.modules.journal import Journal
@@ -49,7 +50,13 @@ async def home(*, allow_unpaired_browser: bool = False) -> AsyncGenerator[tuple[
     replay = ReplayTransport([])
     speech = FakeSpeech(lambda: ScriptedSTT(replay, []), lambda: ToneTTS(replay.clock, secs_per_char=0.02))
     channel = VoiceChannel(
-        "voice", room="salon", speech=speech, host="127.0.0.1", port=port, allow_unpaired_browser=allow_unpaired_browser
+        "voice",
+        room="salon",
+        speech=speech,
+        session=SessionSettings(stt_phrase="Je t'entends mal."),
+        host="127.0.0.1",
+        port=port,
+        allow_unpaired_browser=allow_unpaired_browser,
     )
     channel.host_satellites(pairing, journal)
     async with pairing, channel:

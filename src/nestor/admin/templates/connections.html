@@ -29,8 +29,8 @@
 <ul class="catalogue">
   {% for connector in connectors %}
   <li class="card">
-    <h3>{{ connector.info.title }}</h3>
-    <p>{{ connector.info.description }}</p>
+    <h3>{{ connector.info.title | say }}</h3>
+    <p>{{ connector.info.description | say }}</p>
     <p class="muted small">Autorisation : {{ auth[connector.info.auth] }}{% if connector.info.inbound %} · peut alimenter les veilles ({{ connector.info.inbound | join(", ") }}){% endif %}</p>
     <a class="button" href="/connectors/{{ connector.info.kind }}">Connecter</a>
   </li>

@@ -8,7 +8,7 @@
     <select name="type">
       <option value="">Tout</option>
       {% for category in categories %}
-      <option value="{{ category.key }}"{% if filters.type == category.key %} selected{% endif %}>{{ category.label }}</option>
+      <option value="{{ category.key }}"{% if filters.type == category.key %} selected{% endif %}>{{ category.key | kind }}</option>
       {% endfor %}
     </select>
   </label>
@@ -36,13 +36,13 @@
   <li class="tone-{{ line.tone }}">
     <div class="meta">
       <time datetime="{{ line.at.isoformat() }}">{{ line.at | when }}</time>
-      <span class="tag">{{ line.category }}</span>
+      <span class="tag">{{ line.kind | kind }}</span>
       {% for person in line.people | sort %}<span class="tag person">{{ names.get(person, person) }}</span>{% endfor %}
       {% for channel in line.channels | sort %}<span class="tag channel">{{ channel }}</span>{% endfor %}
     </div>
-    <p class="title">{{ line.title }}</p>
-    {% if line.reason %}<p class="reason"><strong>Pourquoi :</strong> {{ line.reason }}</p>{% endif %}
-    {% if line.detail %}<p class="detail">{{ line.detail }}</p>{% endif %}
+    <p class="title">{{ (line.message | summary)[1] }}</p>
+    {% if line.reason %}<p class="reason"><strong>Pourquoi :</strong> {{ line.reason | say }}</p>{% endif %}
+    {% if line.detail_message %}<p class="detail">{{ line.detail_message | say }}</p>{% elif line.detail %}<p class="detail">{{ line.detail }}</p>{% endif %}
   </li>
   {% endfor %}
 </ol>

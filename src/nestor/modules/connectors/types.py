@@ -6,6 +6,7 @@ from datetime import datetime
 from enum import StrEnum
 
 from nestor.core import PersonId, new_id, utc_now
+from nestor.core.i18n import Message
 
 
 class AuthKind(StrEnum):
@@ -27,7 +28,7 @@ class OAuthSpec:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class SecretField:
     name: str
-    label: str
+    label: Message  # `connector-<kind>-field-<name>`, from the connector's catalogue
     secret: bool = True  # never shown back once saved
     default: str | None = None  # an optional field: this value when left empty
 
@@ -37,12 +38,12 @@ class ConnectorInfo:
     """What the admin catalogue shows, and what the connector needs to be connected."""
 
     kind: str  # "google", "imap", "mcp"
-    title: str
-    description: str
+    title: Message  # texts are messages, shipped in the connector package's `locales/` catalogues
+    description: Message
     auth: AuthKind
     oauth: OAuthSpec | None = None
     fields: tuple[SecretField, ...] = ()  # SECRET auth, and non-OAuth settings (server URL…)
-    setup: str = ""  # step-by-step guide shown before connecting (create an OAuth client…)
+    setup: Message | None = None  # step-by-step guide shown before connecting (create an OAuth client…)
     inbound: tuple[str, ...] = ()  # kinds of items it can feed watches with ("mail")
     brand: str | None = None  # the vendor, as a slug people recognise ("google")
 

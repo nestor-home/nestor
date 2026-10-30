@@ -15,7 +15,7 @@ from pydantic import BaseModel
 from nestor.admin.api.v1.errors import ApiError, not_found
 from nestor.admin.api.v1.models import Input, People, PersonRef
 from nestor.admin.api.v1.security import Caller, allowed
-from nestor.admin.presentation import french_capability
+from nestor.admin.presentation import Phrasebook
 from nestor.admin.state import AdminState, state
 from nestor.core import Capability, ContractError, utc_now
 from nestor.modules.accounts import Scope
@@ -30,7 +30,7 @@ CODE = re.compile(r"^\d{6}$")
 
 class CapabilityOut(BaseModel):
     name: str
-    label: str  # in French
+    label: str  # rendered in the reader's language; its technical name when no catalogue names it
 
 
 class DeviceOut(BaseModel):
@@ -84,14 +84,16 @@ async def list_satellites(request: Request, caller: Pairer) -> SatellitesOut:
             PendingOut(
                 pairing_id=p.id,
                 device=DeviceOut(id=p.device.id, model=p.device.model, room=p.device.room, brand=p.device.brand),
-                capabilities=_capabilities(p.capabilities),
+                capabilities=_capabilities(p.capabilities, caller.phrasebook),
                 sdk=p.sdk,
                 expires_in_s=max(0, int((p.expires_at - now).total_seconds())),
             )
             for p in pairing.pending()
         ],
         paired=[
-            _satellite(s, people.ref(approvals[s.id].approved_by) if s.id in approvals else None, live)
+            _satellite(
+                s, people.ref(approvals[s.id].approved_by) if s.id in approvals else None, live, caller.phrasebook
+            )
             for s in pairing.satellites()
         ],
     )
@@ -102,7 +104,7 @@ async def approve_satellite(request: Request, caller: Pairer, body: ApprovalIn) 
     admin = state(request)
     code = re.sub(r"\s", "", body.code)
     if not CODE.match(code):
-        raise ApiError(400, "invalid_code", "Le code est fait de 6 chiffres, lus sur l'appareil.")
+        raise ApiError(400, "invalid_code")
     try:
         satellite = await admin.nestor.pairing.approve(
             code,
@@ -111,8 +113,10 @@ async def approve_satellite(request: Request, caller: Pairer, body: ApprovalIn) 
             pairing_id=body.pairing_id,
         )
     except PairingRefused:
-        raise ApiError(400, "pairing_refused", "Aucun appareil n'attend ce code : il est faux ou a expiré.") from None
-    return _satellite(satellite, People(admin.nestor.household).ref(caller.person), live_rooms(admin))
+        raise ApiError(400, "pairing_refused") from None
+    return _satellite(
+        satellite, People(admin.nestor.household).ref(caller.person), live_rooms(admin), caller.phrasebook
+    )
 
 
 @router.delete("/satellites/{device_id}", status_code=204)
@@ -121,26 +125,28 @@ async def revoke_satellite(request: Request, caller: Pairer, device_id: str) -> 
     try:
         await state(request).nestor.pairing.revoke(device_id, by=caller.person)
     except ContractError:
-        raise not_found("Ce satellite n'est pas ou plus appairé.") from None
+        raise not_found("satellite_unknown") from None
     return Response(status_code=204)
 
 
-def _satellite(satellite: Satellite, approved_by: PersonRef | None, live: frozenset[str] | None) -> SatelliteOut:
+def _satellite(
+    satellite: Satellite, approved_by: PersonRef | None, live: frozenset[str] | None, words: Phrasebook
+) -> SatelliteOut:
     return SatelliteOut(
         id=satellite.id,
         model=satellite.model,
         room=satellite.room,
         brand=satellite.brand,
         sdk=satellite.sdk,
-        capabilities=_capabilities(satellite.capabilities),
+        capabilities=_capabilities(satellite.capabilities, words),
         paired_at=satellite.paired_at,
         approved_by=approved_by,
         connected=satellite.room in live if live is not None else None,
     )
 
 
-def _capabilities(names: frozenset[Capability] | tuple[Capability, ...]) -> list[CapabilityOut]:
-    return [CapabilityOut(name=n, label=french_capability(n)) for n in sorted(names)]
+def _capabilities(names: frozenset[Capability] | tuple[Capability, ...], words: Phrasebook) -> list[CapabilityOut]:
+    return [CapabilityOut(name=n, label=words.capability(n)) for n in sorted(names)]
 
 
 def live_rooms(admin: AdminState) -> frozenset[str] | None:

@@ -5,6 +5,7 @@ import asyncio
 from pathlib import Path
 
 from nestor.core import PersonId
+from nestor.core.i18n import Message
 from nestor.modules.accounts import Role
 from nestor.modules.channels import Address
 from nestor.modules.conversation import AssistantTurn, UserTurn
@@ -45,14 +46,17 @@ async def test_items_are_said_in_french_with_the_reason_of_a_decision(tmp_path: 
             DeliveryConsidered(
                 source="courier",
                 about="watch w1",
-                reason="Mathis is in the salon",
+                reason=Message.of("delivery-in-room", person="Mathis", room="salon"),
                 spoken=Address("voice", "salon"),
                 person=PersonId("mathis"),
             )
         )
         (item,) = (await (await admin.api()).get("/api/v1/journal", kind="delivery")).json()["items"]
-        assert item["summary"] == "Décision de parler à Mathis — veille w1"
-        assert item["reason"] == "Mathis est dans la pièce « salon »" and item["tone"] == "decision"
+        assert item["text"] == "Décision de parler à Mathis — veille w1"
+        assert item["message"]["id"] == "journal-delivery-considered" and item["message"]["args"]["id"] == "w1"
+        assert item["reason"] == {"id": "delivery-in-room", "args": {"person": "Mathis", "room": "salon"}}
+        assert item["reason_text"] == "Mathis est dans la pièce « salon »" and item["tone"] == "decision"
+        assert item["detail_text"] == "Prévu : à voix haute sur voice:salon" and item["detail"] == ""
         assert (item["kind"], item["kind_label"]) == ("delivery", "Prises de parole")
         assert item["people"] == [{"id": "mathis", "name": "Mathis"}] and item["channels"] == ["voice"]
 
@@ -62,7 +66,7 @@ async def test_sign_ins_are_in_the_journal_without_secrets(tmp_path: Path) -> No
         api = await admin.api()
         await (await admin.api(None)).sign_in("mathis", "not the password")
         items = (await api.get("/api/v1/journal", kind="account")).json()["items"]
-        summaries = [i["summary"] for i in items]
+        summaries = [i["text"] for i in items]
         assert summaries[:3] == [
             "Connexion refusée au compte mathis : mot de passe incorrect",
             "Connexion de mathis",
@@ -111,7 +115,7 @@ async def test_a_member_reads_their_own_conversations_not_another_members(tmp_pa
         details = {i["detail"] for i in items}
         assert {"Rappelle-moi le dentiste", "C'est noté.", "Mathilde a peur des araignées"} <= details
         assert "Quelle heure est-il ?" not in details and "Il est midi." not in details
-        assert "Connexion de mathis" not in {i["summary"] for i in items}
+        assert "Connexion de mathis" not in {i["text"] for i in items}
         everything = (await (await admin.api()).get("/api/v1/journal")).json()["items"]
         assert "Il est midi." in {i["detail"] for i in everything}
 
@@ -123,7 +127,7 @@ async def test_the_live_stream_sends_new_entries_with_their_position(tmp_path: P
             assert await stream.frame() == "retry: 3000"
             await admin.nestor.journal.publish(turn(MATHIS_CHAT, "Bonjour", "mathis"))
             position, item = await stream.event()
-            assert stream.status == 200 and item["summary"] == "Mathis a dit" and item["detail"] == "Bonjour"
+            assert stream.status == 200 and item["text"] == "Mathis a dit" and item["detail"] == "Bonjour"
             assert int(position) == item["position"]
 
 

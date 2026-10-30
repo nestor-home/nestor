@@ -10,17 +10,21 @@ from fastapi import FastAPI, Request, Response
 from fastapi.responses import RedirectResponse
 from starlette.exceptions import HTTPException
 
+from nestor.admin.api.v1.language import household_locale
 from nestor.admin.pages import connections, journal, login, memories, people, satellites, tasks, watches
 from nestor.admin.pages.errors import Refused
 from nestor.admin.pages.guard import LoginRequired, current
 from nestor.admin.pages.rendering import Pages, pages_of
+from nestor.admin.presentation import Phrasebook
 from nestor.admin.state import AdminState
 from nestor.core import ProviderError
 
 
 def install(app: FastAPI) -> None:
     admin = cast(AdminState, app.state.admin)
-    app.state.pages = Pages(assistant=admin.nestor.config.persona.name, timezone=admin.nestor.config.persona.timezone)
+    persona = admin.nestor.config.persona
+    phrasebook = Phrasebook(admin.nestor.localizer, household_locale(admin))
+    app.state.pages = Pages(assistant=persona.name, timezone=persona.timezone, phrasebook=phrasebook)
     admin.page_errors = _page_error
     for page in (login, journal, connections, satellites, tasks, watches, memories, people):
         app.include_router(page.router, include_in_schema=False)

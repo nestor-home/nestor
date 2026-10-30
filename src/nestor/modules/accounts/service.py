@@ -11,6 +11,7 @@ from dataclasses import replace
 from datetime import datetime, timedelta
 
 from nestor.core import Component, ContractError, Event, PersonId, new_id, utc_now
+from nestor.core.i18n import Locale
 from nestor.modules.accounts.credentials import Token, VerifierStore, decoy, hash_password, verify_password
 from nestor.modules.accounts.errors import AccountConflict, InvitationRefused, LastOwner, UnknownAccount, WrongPassword
 from nestor.modules.accounts.events import (
@@ -18,6 +19,7 @@ from nestor.modules.accounts.events import (
     AccountDisabled,
     AccountEnabled,
     AccountInvited,
+    AccountLocaleChanged,
     AccountLogin,
     AccountPasswordChanged,
     AccountRoleChanged,
@@ -59,7 +61,13 @@ class Accounts(Component):
         self.accounts.clear()
         self.invitations.clear()
         for event in await self.journal.history(
-            AccountCreated, AccountRoleChanged, AccountDisabled, AccountEnabled, AccountInvited, InvitationRevoked
+            AccountCreated,
+            AccountRoleChanged,
+            AccountDisabled,
+            AccountEnabled,
+            AccountLocaleChanged,
+            AccountInvited,
+            InvitationRevoked,
         ):
             self._apply(event)
 
@@ -98,9 +106,9 @@ class Accounts(Component):
         stored = await self.verifiers.get(_verifier(account.id)) if account else None
         matches = await asyncio.to_thread(verify_password, password, stored or decoy())
         if account is None:
-            reason = "unknown login"
+            reason = "unknown-login"
         elif stored is None or not matches:
-            reason = "wrong password"
+            reason = "wrong-password"
         elif account.disabled:
             reason = "disabled"
         else:
@@ -210,6 +218,17 @@ class Accounts(Component):
                 AccountPasswordChanged(source=self.name, account_id=account.id, by=by.account_id if by else None)
             )
 
+    async def set_locale(self, account_id: str, locale: Locale | None, *, by: Principal) -> Account:
+        """One's own reading language (`None`: the household's); which ones exist is the caller's to check."""
+        async with self._lock:
+            account = self.get(account_id)
+            if by.account_id != account.id:
+                _may_touch(by, account)
+            if account.locale == locale:
+                return account
+            await self._publish(AccountLocaleChanged(source=self.name, account_id=account.id, locale=locale))
+            return self.accounts[account.id]
+
     async def change_role(self, account_id: str, role: Role, *, by: Principal) -> Account:
         async with self._lock:
             account = self.get(account_id)
@@ -315,6 +334,9 @@ class Accounts(Component):
                 accounts[event.account_id] = replace(accounts[event.account_id], disabled=True)
             case AccountEnabled() if event.account_id in accounts:
                 accounts[event.account_id] = replace(accounts[event.account_id], disabled=False)
+            case AccountLocaleChanged() if event.account_id in accounts:
+                locale = Locale(event.locale) if event.locale else None
+                accounts[event.account_id] = replace(accounts[event.account_id], locale=locale)
             case AccountInvited():
                 invitations[event.invitation_id] = Invitation(
                     id=event.invitation_id,

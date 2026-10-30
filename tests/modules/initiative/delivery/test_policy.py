@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 import pytest
 
 from nestor.core import ContractError, PersonId
+from nestor.core.i18n import Message
 from nestor.modules.channels import Address, Medium
 from nestor.modules.home import Granularity, Presence, Whereabouts
 from nestor.modules.household import Person
@@ -47,13 +48,13 @@ def at(
 def test_in_a_room_with_a_satellite_it_is_said_there_then_written_if_unanswered() -> None:
     result = plan(at(Granularity.PERSON_ROOM, home=True, room="bureau"))
     assert (result.spoken, result.written, result.follow_up) == (Address("voice-bureau", "bureau"), TELEGRAM, True)
-    assert "bureau" in result.reason
+    assert result.reason == Message.of("delivery-in-room", person="Mathis", room="bureau")
 
 
 def test_home_without_room_sensors_uses_the_main_satellite() -> None:
     result = plan(at(Granularity.HOME, home=True))
     assert result.spoken == Address("voice", "salon") and result.written == TELEGRAM
-    assert "main satellite" in result.reason
+    assert result.reason == Message.of("delivery-home-main-satellite", person="Mathis", room="salon")
 
 
 def test_alone_at_home_with_occupancy_sensors_the_occupied_room_is_used() -> None:
@@ -69,7 +70,11 @@ def test_occupied_rooms_without_any_satellite_mean_a_message() -> None:
 
 def test_away_means_a_message() -> None:
     result = plan(at(Granularity.HOME, home=False))
-    assert (result.spoken, result.written, result.reason) == (None, TELEGRAM, "Mathis is away")
+    assert (result.spoken, result.written, result.reason) == (
+        None,
+        TELEGRAM,
+        Message.of("delivery-away", person="Mathis"),
+    )
 
 
 def test_unknown_whereabouts_and_no_main_satellite_mean_a_message() -> None:

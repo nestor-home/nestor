@@ -1,10 +1,11 @@
 """The agent's persona and the instructions built from it for each turn."""
 
 from collections.abc import Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+from nestor.core.i18n import Locale, Message
 from nestor.modules.channels import Medium
 from nestor.modules.conversation.types import FallbackReason
 from nestor.modules.household import Person
@@ -17,11 +18,13 @@ WRITTEN = """You are writing in a chat. Be concise and natural; light formatting
 
 HONESTY = """Never claim something was done without its result. If you cannot do something, say so plainly."""
 
-DEFAULT_FALLBACKS: Mapping[FallbackReason, str] = {
-    FallbackReason.MODEL_UNAVAILABLE: "Désolé, j'ai un trou de connexion. Tu peux répéter ?",
-    FallbackReason.MODEL_SLOW: "Hmm, je rame un peu, laisse-moi une seconde.",
-    FallbackReason.RECOGNITION_UNAVAILABLE: "Je ne t'entends plus très bien, ma connexion fait des siennes.",
-    FallbackReason.SYNTHESIS_UNAVAILABLE: "Ma voix a un souci, je reviens dès que possible.",
+FRENCH = Locale("fr-FR")
+
+FALLBACKS: Mapping[FallbackReason, Message] = {
+    FallbackReason.MODEL_UNAVAILABLE: Message.of("fallback-model-unavailable"),
+    FallbackReason.MODEL_SLOW: Message.of("fallback-model-slow"),
+    FallbackReason.RECOGNITION_UNAVAILABLE: Message.of("fallback-recognition-unavailable"),
+    FallbackReason.SYNTHESIS_UNAVAILABLE: Message.of("fallback-synthesis-unavailable"),
 }
 
 
@@ -31,9 +34,9 @@ class Persona:
 
     name: str
     character: str
-    language: str = "French"
+    locale: Locale = FRENCH  # BCP 47: the fixed phrases the assistant says (fallbacks…)
+    language: str = "French"  # how the instructions name the language the model must write in
     timezone: str = "Europe/Paris"
-    fallbacks: Mapping[FallbackReason, str] = field(default_factory=lambda: dict(DEFAULT_FALLBACKS))
 
     def instructions(
         self,
@@ -57,5 +60,5 @@ class Persona:
         ]
         return "\n\n".join(line for line in lines if line)
 
-    def fallback(self, reason: FallbackReason) -> str:
-        return self.fallbacks.get(reason) or DEFAULT_FALLBACKS[reason]
+    def fallback(self, reason: FallbackReason) -> Message:
+        return FALLBACKS[reason]

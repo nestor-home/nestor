@@ -10,6 +10,7 @@ Layers, from the most stable to the most specific:
 """
 
 import ast
+import re
 import sys
 from pathlib import Path
 
@@ -76,3 +77,70 @@ def test_the_guard_catches_a_forbidden_import(tmp_path: Path, layer: str, source
     fake.parent.mkdir(parents=True)
     fake.write_text(source + "\n")
     assert any(expected in v for v in violations(fake, package=tmp_path / "nestor"))
+
+
+# What people read is in `locales/*.ftl`, rendered by a `Localizer`: never a sentence in Python. The
+# server-rendered admin pages are the one exception left: they go away, whole, with the web front.
+SENTENCE_FREE_EXCEPTIONS = ("testing/", "admin/pages/")
+_FRENCH = re.compile(r"[àâçéèêëîïôûùüÿœæÀÂÇÉÈÊËÎÏÔÛÙÜŸŒ«»]")
+
+
+def sentences(path: Path) -> list[str]:
+    """String literals, docstrings aside, that look like a French sentence (accents and a space)."""
+    tree = ast.parse(path.read_text(), filename=str(path))
+    docstrings = {
+        id(node.body[0].value)
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Module | ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef)
+        and node.body
+        and isinstance(node.body[0], ast.Expr)
+        and isinstance(node.body[0].value, ast.Constant)
+    }
+    return [
+        node.value
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Constant)
+        and isinstance(node.value, str)
+        and id(node) not in docstrings
+        and " " in node.value.strip()
+        and _FRENCH.search(node.value)
+    ]
+
+
+def test_no_sentence_for_people_is_written_in_python() -> None:
+    found = {
+        str(p.relative_to(SRC)): s
+        for p in PACKAGE.rglob("*.py")
+        if not str(p.relative_to(PACKAGE)).startswith(SENTENCE_FREE_EXCEPTIONS) and (s := sentences(p))
+    }
+    assert not found, found
+
+
+def test_the_sentence_guard_catches_one(tmp_path: Path) -> None:
+    leaky = tmp_path / "leaky.py"
+    leaky.write_text('"""Docstrings may quote « un exemple »."""\nAPOLOGY = "Désolé, ça n\'a pas marché."\n')
+    assert sentences(leaky) == ["Désolé, ça n'a pas marché."]
+
+
+def used_message_ids(path: Path) -> set[str]:
+    """Ids named in code: `Message.of("id")`, `Message("id", …)`, and API error codes (`error-<code>`)."""
+    found: set[str] = set()
+    for node in ast.walk(ast.parse(path.read_text(), filename=str(path))):
+        if not isinstance(node, ast.Call) or not node.args:
+            continue
+        name = ast.unparse(node.func)
+        literals = [a.value for a in node.args if isinstance(a, ast.Constant) and isinstance(a.value, str)]
+        if name in ("Message.of", "Message") and isinstance(node.args[0], ast.Constant) and literals:
+            found.add(literals[0])
+        elif (name == "ApiError" and len(literals) == 1) or (name == "not_found" and literals):
+            found.add(f"error-{literals[0].replace('_', '-')}")
+    return found
+
+
+def test_every_message_the_code_names_is_in_the_catalogue() -> None:
+    catalogue = "\n".join(f.read_text() for f in (PACKAGE / "locales" / "en").glob("*.ftl"))
+    defined = {line.split(" =")[0] for line in catalogue.splitlines() if " =" in line and not line.startswith(" ")}
+    shipped = [p for p in PACKAGE.rglob("*.py") if not str(p.relative_to(PACKAGE)).startswith("testing/")]
+    used = set().union(*(used_message_ids(p) for p in shipped))
+    assert used, "the scan finds the messages"
+    assert not used - defined, sorted(used - defined)

@@ -3,14 +3,15 @@
 from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
+from zoneinfo import ZoneInfo
 
 from fastapi import Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from nestor.admin.auth import Session
-from nestor.admin.presentation import french_time
-from nestor.core import utc_now
+from nestor.admin.presentation import Phrasebook
+from nestor.core.i18n import Message
 
 TEMPLATES = Path(__file__).parents[1] / "templates"
 NAVIGATION = (
@@ -25,13 +26,21 @@ NAVIGATION = (
 
 
 class Pages:
-    def __init__(self, *, assistant: str, timezone: str) -> None:
-        self.assistant, self.timezone = assistant, timezone
+    """Rendered in the household's language (these pages predate accounts' own choices)."""
+
+    def __init__(self, *, assistant: str, timezone: str, phrasebook: Phrasebook) -> None:
+        self.assistant, self.timezone, self.phrasebook = assistant, timezone, phrasebook
         self.templates = Jinja2Templates(directory=TEMPLATES)
         self.templates.env.filters["when"] = self.when
+        self.templates.env.filters["say"] = phrasebook.text
+        self.templates.env.filters["kind"] = phrasebook.kind
+        self.templates.env.filters["summary"] = phrasebook.summary
 
     def when(self, moment: datetime | None) -> str:
-        return french_time(moment, self.timezone, now=utc_now()) if moment else ""
+        if moment is None:
+            return ""
+        local = moment.astimezone(ZoneInfo(self.timezone)).replace(tzinfo=None)
+        return self.phrasebook.text(Message("admin-when", {"at": local}))  # ty: ignore[invalid-argument-type]
 
     def render(
         self, request: Request, template: str, session: Session | None, *, status: int = 200, **context: Any

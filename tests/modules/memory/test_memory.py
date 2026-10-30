@@ -14,6 +14,7 @@ from nestor.modules.journal import Journal
 from nestor.modules.memory import Memories, MemoryCorrected, MemoryForgotten, MemoryRecorded
 from nestor.modules.memory.assistant import MemoryTools
 from nestor.testing.cognition import ScriptedModel
+from nestor.testing.i18n import EchoLocalizer
 from nestor.testing.journal import MemoryEventLog
 from nestor.testing.memory import InMemoryMemoryStore, MemoryStoreContract
 
@@ -77,6 +78,7 @@ def agent(journal: Journal, tools: MemoryTools, model: ScriptedModel) -> Agent:
         persona=Persona(name="Richie", character="Tu es Richie."),
         journal=journal,
         household=HOUSEHOLD,
+        localizer=EchoLocalizer(),
         toolbox=Toolbox(journal, providers=[tools]),
         context=[tools],
     )

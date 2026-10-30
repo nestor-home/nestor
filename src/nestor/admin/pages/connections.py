@@ -66,7 +66,11 @@ async def register_client(
     connections = _connections(state(request))
     connector = _connector(connections, kind)
     if connector.info.auth is not AuthKind.OAUTH2:
-        raise Refused(400, "Pas de client OAuth", f"{connector.info.title} ne se connecte pas par OAuth.")
+        raise Refused(
+            400,
+            "Pas de client OAuth",
+            f"{pages_of(request).phrasebook.text(connector.info.title)} ne se connecte pas par OAuth.",
+        )
     if not client_id.strip() or not client_secret.strip():
         return await _connector_page(
             request, session, kind, status=400, error="Indiquez l'identifiant et le secret du client OAuth."
@@ -90,7 +94,8 @@ async def connect(request: Request, session: Checked, kind: str) -> Response:
     try:
         connection = await connections.connect(kind, owner, values)
     except ContractError:
-        missing = ", ".join(f.label for f in connector.info.fields if not values[f.name])
+        words = pages_of(request).phrasebook
+        missing = ", ".join(words.text(f.label) for f in connector.info.fields if not values[f.name])
         return await _connector_page(
             request,
             session,

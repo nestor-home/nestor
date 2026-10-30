@@ -70,6 +70,6 @@ async def cancel_watch(request: Request, caller: Manager, watch_id: str) -> Resp
     book = state(request).nestor.watch_book
     watch = book.watches.get(watch_id)
     if watch is None or not _reaches(caller, watch):
-        raise not_found("Cette veille n'existe pas ou est déjà terminée.")
+        raise not_found("watch_unknown")
     await book.end(watch_id, "cancelled")
     return Response(status_code=204)

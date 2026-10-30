@@ -14,7 +14,6 @@ from nestor.admin.auth import Session
 from nestor.admin.pages.errors import Refused
 from nestor.admin.pages.guard import Checked, LoggedIn
 from nestor.admin.pages.rendering import pages_of
-from nestor.admin.presentation import french_capability
 from nestor.admin.state import AdminState, state
 from nestor.core import Capability, ContractError, PersonId, utc_now
 from nestor.modules.channels import Medium
@@ -87,7 +86,7 @@ async def _page(request: Request, session: Session, *, status: int = 200, error:
         live=_live_rooms(admin),
         people=admin.nestor.household.people,
         names={p.id: p.name for p in admin.nestor.household.people},
-        label=french_capability,
+        label=pages_of(request).phrasebook.capability,
     )
 
 

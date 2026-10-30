@@ -214,7 +214,7 @@ async def test_a_secret_based_service_connects_with_its_fields_typed_once(tmp_pa
         await admin.account("mathilde", Role.MEMBER, "mathilde")
         api = await admin.api("mathilde")
         missing = await api.post("/api/v1/connectors/imap/connections", {"values": {"server": "imap.free.fr"}})
-        assert missing.json()["error"]["message"] == "Champs manquants : App password."
+        assert missing.json()["error"]["message"] == "Champs manquants : Mot de passe d'application."
         created = await api.post(
             "/api/v1/connectors/imap/connections", {"values": {"server": "imap.free.fr", "password": "app-pass-777"}}
         )

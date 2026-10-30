@@ -236,7 +236,10 @@ async def test_closing_the_channel_ends_its_sessions_and_their_pending_messages(
 async def test_a_session_cannot_start_before_the_channel_serves_an_assistant() -> None:
     transport = ReplayTransport([])
     channel = VoiceChannel(
-        "voice", room="salon", speech=FakeSpeech(ScriptedSTT(transport, []), ToneTTS(transport.clock))
+        "voice",
+        room="salon",
+        speech=FakeSpeech(ScriptedSTT(transport, []), ToneTTS(transport.clock)),
+        session=SessionSettings(stt_phrase=STT_PHRASE),
     )
     async with channel:
         with pytest.raises(ContractError):

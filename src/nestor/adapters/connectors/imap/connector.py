@@ -6,9 +6,9 @@ from nestor.adapters.connectors.common import Backoff
 from nestor.adapters.connectors.imap.account import ClientFactory, ImapAccount, session
 from nestor.adapters.connectors.imap.aioimap import AioImapClient
 from nestor.adapters.connectors.imap.inbound import ImapInbound, ImapTiming
-from nestor.adapters.connectors.imap.setup import SETUP
 from nestor.adapters.connectors.imap.tools import ImapTools
 from nestor.core import Component
+from nestor.core.i18n import Message
 from nestor.modules.cognition.tools import Tool
 from nestor.modules.connectors import Access, AuthKind, Connection, Connector, ConnectorInfo, SecretField
 from nestor.modules.initiative import InboundEventSource
@@ -16,17 +16,17 @@ from nestor.modules.initiative import InboundEventSource
 INFO = ConnectorInfo(
     kind="imap",
     brand="imap",
-    title="Boîte mail (IMAP)",
-    description="Search and read a mailbox over IMAP; new mail can feed watches. Read only.",
+    title=Message.of("connector-imap-title"),
+    description=Message.of("connector-imap-description"),
     auth=AuthKind.SECRET,
     fields=(
-        SecretField(name="host", label="Serveur IMAP (ex. imap.free.fr)", secret=False),
-        SecretField(name="port", label="Port", secret=False, default="993"),
-        SecretField(name="username", label="Identifiant (souvent l'adresse complète)", secret=False),
-        SecretField(name="password", label="Mot de passe d'application"),
-        SecretField(name="folder", label="Dossier surveillé", secret=False, default="INBOX"),
+        SecretField(name="host", label=Message.of("connector-imap-field-host"), secret=False),
+        SecretField(name="port", label=Message.of("connector-imap-field-port"), secret=False, default="993"),
+        SecretField(name="username", label=Message.of("connector-imap-field-username"), secret=False),
+        SecretField(name="password", label=Message.of("connector-imap-field-password")),
+        SecretField(name="folder", label=Message.of("connector-imap-field-folder"), secret=False, default="INBOX"),
     ),
-    setup=SETUP,
+    setup=Message.of("connector-imap-setup"),
     inbound=("mail",),
 )
 

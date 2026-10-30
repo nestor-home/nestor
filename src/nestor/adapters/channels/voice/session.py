@@ -27,13 +27,12 @@ from nestor.modules.channels import Address, Assistant, Sender
 logger = logging.getLogger(__name__)
 
 OUT_SAMPLE_RATE = 24000
-DEFAULT_STT_PHRASE = "I can't hear you very well, my connection is playing up."
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class SessionSettings:
     turns: TurnSettings = field(default_factory=TurnSettings)
-    stt_phrase: str = DEFAULT_STT_PHRASE
+    stt_phrase: str  # said when the transcription fails (`voice-stt-down` in the household's language)
     clips: Mapping[Outage, OutputAudioRawFrame] = field(default_factory=dict)
     quiet_s: float = 0.5  # silence required before an unprompted message is spoken
 

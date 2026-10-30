@@ -5,7 +5,7 @@
 <h1>{{ connection.account }}</h1>
 <p>
   <span class="status status-{{ connection.status }}">{{ statuses[connection.status] }}</span>
-  {{ connector.info.title if connector else connection.kind }} · compte de {{ owner }} · connecté {{ connection.created_at | when }}
+  {{ connector.info.title | say if connector else connection.kind }} · compte de {{ owner }} · connecté {{ connection.created_at | when }}
 </p>
 {% if connection.status != "connected" %}
 <section class="card warning">

@@ -5,20 +5,22 @@ is the application's `index.html`, which routes in the browser. Without a build,
 to make one instead of a blank screen.
 """
 
+import html
 from pathlib import Path
 
 from fastapi import APIRouter, Request
 from fastapi.responses import FileResponse, HTMLResponse, Response
 
 from nestor.admin.api.v1 import ApiError
+from nestor.admin.api.v1.language import reader_locale
+from nestor.admin.presentation import Phrasebook
 from nestor.admin.state import state
+from nestor.core.i18n import Message
 
 IMMUTABLE = "public, max-age=31536000, immutable"
 MISSING = """<!doctype html>
-<html lang="fr"><head><meta charset="utf-8"><title>Administration indisponible</title></head>
-<body><h1>L'interface d'administration n'est pas construite</h1>
-<p>Construisez-la depuis le dépôt : <code>cd web &amp;&amp; pnpm install &amp;&amp; pnpm build</code>,
-puis rechargez cette page. L'API reste disponible sous <code>/api/v1</code>.</p></body></html>
+<html lang="{lang}"><head><meta charset="utf-8"><title>{title}</title></head>
+<body><h1>{title}</h1><p>{text}</p></body></html>
 """
 
 
@@ -39,12 +41,15 @@ class Front:
             return Response("Fichier introuvable.", status_code=404, media_type="text/plain; charset=utf-8")
         return FileResponse(found, headers={"Cache-Control": IMMUTABLE})
 
-    def page(self, path: str) -> Response:
+    def page(self, path: str, words: Phrasebook) -> Response:
         if path.split("/", 1)[0] == "api":
-            raise ApiError(404, "not_found", "Cette adresse n'existe pas.")
+            raise ApiError(404, "not_found")
         index = self.file("index.html")
         if index is None:
-            return HTMLResponse(MISSING, status_code=503)
+            title, text = (
+                html.escape(words.text(Message.of(i))) for i in ("admin-front-missing-title", "admin-front-missing")
+            )
+            return HTMLResponse(MISSING.format(lang=words.locale, title=title, text=text), status_code=503)
         found = self.file(path) if path and path != "index.html" else None
         return FileResponse(found or index)
 
@@ -60,4 +65,6 @@ async def asset(request: Request, path: str) -> Response:
 @router.get("/{path:path}")
 async def page(request: Request, path: str) -> Response:
     """Registered last: every GET no other route answered."""
-    return Front(state(request).settings.front_dir).page(path)
+    admin = state(request)
+    words = Phrasebook(admin.nestor.localizer, reader_locale(request))
+    return Front(admin.settings.front_dir).page(path, words)

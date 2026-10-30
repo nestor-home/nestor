@@ -35,11 +35,13 @@ from pydantic import SecretStr
 from nestor.adapters.tools.mcp import BearerToken, McpSettings, McpToolProvider, McpTransport
 from nestor.adapters.tools.mcp.plugin import plugin
 from nestor.core import Health, ProviderError
+from nestor.core.i18n import Locale
 from nestor.modules.channels import Address
 from nestor.modules.cognition.model import ToolCall
 from nestor.modules.cognition.tools import Risk, Tool, Toolbox, ToolCalled, ToolCompleted, ToolContext, ToolFailed
 from nestor.modules.journal import Journal
 from nestor.runtime import Family, Services
+from nestor.testing.i18n import EchoLocalizer
 from nestor.testing.journal import MemoryEventLog
 
 type LogCapture = pytest.LogCaptureFixture
@@ -577,7 +579,9 @@ def test_settings_keep_header_values_secret() -> None:
 async def test_the_plugin_builds_a_provider_from_its_configuration(served_home: Served, tmp_path: Any) -> None:
     raw = {"url": served_home.url(), "token": TOKEN, "include": ["turn_on"], "risks": {"turn_on": "sensitive"}}
 
-    provider = plugin.create(raw, "home", Services(data_dir=tmp_path))
+    provider = plugin.create(
+        raw, "home", Services(data_dir=tmp_path, localizer=EchoLocalizer(), locale=Locale("fr-FR"))
+    )
 
     assert plugin.family is Family.TOOLS and isinstance(provider, McpToolProvider)
     async with provider:

@@ -4,6 +4,7 @@ from collections.abc import Callable, Iterable
 
 import pytest
 
+from nestor.adapters.i18n import FluentLocalizer, catalogue_dirs
 from nestor.core import PersonId
 from nestor.modules.channels import Address, InboundMessage, Medium, Sender
 from nestor.modules.cognition.tools import Tool, Toolbox
@@ -45,6 +46,7 @@ def make_agent(journal: Journal) -> MakeAgent:
             journal=journal,
             household=Household([MATHIS]),
             toolbox=Toolbox(journal, tools),
+            localizer=FluentLocalizer(catalogue_dirs(["nestor"])),
             channels={"voice": ChannelProfile(Medium.SPOKEN, style="Use [laughs] sparingly.")},
             context=context,
             settings=settings,

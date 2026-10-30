@@ -13,9 +13,11 @@ import pytest
 
 from nestor.adapters.executors.hermes import HermesExecutor, HermesSettings, plugin
 from nestor.core import ContractError, ProviderError
+from nestor.core.i18n import Locale
 from nestor.modules.cognition import Progress, TaskStatus
 from nestor.runtime import Services
 from nestor.testing.cognition import RemoteExecutorContract
+from nestor.testing.i18n import EchoLocalizer
 
 BASE_URL = "https://hermes.test/v1"
 API_KEY = "test-key"
@@ -338,7 +340,9 @@ async def test_close_can_be_called_twice() -> None:
 
 async def test_the_plugin_builds_an_executor_described_by_its_configuration(tmp_path: Any) -> None:
     raw = {"base_url": BASE_URL, "api_key": API_KEY, "model": "Richie", "description": "search the web"}
-    executor = plugin.create(raw, "hermes", Services(data_dir=tmp_path))
+    executor = plugin.create(
+        raw, "hermes", Services(data_dir=tmp_path, localizer=EchoLocalizer(), locale=Locale("fr-FR"))
+    )
     assert isinstance(executor, HermesExecutor) and executor.description == "search the web"
     assert API_KEY not in repr(HermesSettings.model_validate(raw))
 

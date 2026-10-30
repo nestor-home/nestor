@@ -203,17 +203,18 @@ async def test_a_secret_based_service_connects_with_its_fields() -> None:
 
 
 async def test_optional_fields_take_their_default() -> None:
+    from nestor.core.i18n import Message
     from nestor.modules.connectors import ConnectorInfo, SecretField
 
     setup = Setup()
     setup.imap.info = ConnectorInfo(
         kind="imap",
-        title="IMAP",
-        description="",
+        title=Message.of("connector-imap-title"),
+        description=Message.of("connector-imap-description"),
         auth=AuthKind.SECRET,
         fields=(
-            SecretField(name="password", label="Mot de passe"),
-            SecretField(name="folder", label="Dossier", secret=False, default="INBOX"),
+            SecretField(name="password", label=Message.of("connector-imap-field-password")),
+            SecretField(name="folder", label=Message.of("connector-imap-field-folder"), secret=False, default="INBOX"),
         ),
     )
     connection = await setup.connections.connect("imap", MATHIS, {"password": "x", "folder": ""})

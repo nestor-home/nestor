@@ -4,6 +4,7 @@ from collections.abc import Mapping, Sequence
 from datetime import timedelta
 
 from nestor.core import ProviderError, new_id, utc_now
+from nestor.core.i18n import Message
 from nestor.modules.cognition.model import ToolSpec
 from nestor.modules.cognition.tools import Risk, Tool, ToolContext
 from nestor.modules.connectors import (
@@ -99,11 +100,13 @@ class ScriptedConnector(Connector):
     def __init__(self, kind: str = "mailbox", *, auth: AuthKind = AuthKind.OAUTH2, account: str = "mathis@example.com"):
         self.info = ConnectorInfo(
             kind=kind,
-            title="Mailbox",
-            description="Read and send mail",
+            title=Message.of("connector-scripted-title"),
+            description=Message.of("connector-scripted-description"),
             auth=auth,
             oauth=OAUTH if auth is AuthKind.OAUTH2 else None,
-            fields=(SecretField(name="password", label="App password"),) if auth is AuthKind.SECRET else (),
+            fields=(SecretField(name="password", label=Message.of("connector-scripted-field-password")),)
+            if auth is AuthKind.SECRET
+            else (),
             inbound=("mail",),
         )
         self.account = account

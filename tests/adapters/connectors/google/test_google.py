@@ -15,6 +15,7 @@ import pytest
 from nestor.adapters.connectors.common import Backoff
 from nestor.adapters.connectors.google import INFO, Every, GmailInbound, GoogleConnector, GoogleSettings, plugin
 from nestor.core import PersonId, ProviderError
+from nestor.core.i18n import Locale
 from nestor.modules.channels import Address
 from nestor.modules.cognition.tools import Risk, ToolContext, ToolFailed
 from nestor.modules.connectors import Access, AuthKind, Connection, Connections, ConnectorTools, Secrets
@@ -22,6 +23,7 @@ from nestor.modules.initiative import Incoming
 from nestor.modules.journal import Journal
 from nestor.runtime import Services
 from nestor.testing.connectors import FakeProvider, MemoryVault
+from nestor.testing.i18n import EchoLocalizer
 from nestor.testing.initiative import InboundEventSourceContract
 from nestor.testing.journal import MemoryEventLog
 
@@ -609,7 +611,11 @@ def _with_token(request: httpx.Request) -> httpx.Request:
 
 
 def test_the_plugin_builds_a_named_connector_from_its_settings(tmp_path: Any) -> None:
-    connector = plugin.create({"poll_interval_s": 120}, "gmail", Services(data_dir=tmp_path))
+    connector = plugin.create(
+        {"poll_interval_s": 120},
+        "gmail",
+        Services(data_dir=tmp_path, localizer=EchoLocalizer(), locale=Locale("fr-FR")),
+    )
     assert isinstance(connector, GoogleConnector)
     assert (connector.name, connector.poll_interval_s, connector.info.kind) == ("gmail", 120, "google")
 

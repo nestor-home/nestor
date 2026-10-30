@@ -32,11 +32,13 @@ from nestor.adapters.connectors.imap import (
     plugin,
 )
 from nestor.core import PersonId, ProviderError
+from nestor.core.i18n import Locale
 from nestor.modules.channels import Address
 from nestor.modules.cognition.tools import Risk, ToolContext, ToolFailed
 from nestor.modules.connectors import Access, AuthKind, Connection, Secrets
 from nestor.modules.initiative import Incoming
 from nestor.runtime import Services
+from nestor.testing.i18n import EchoLocalizer
 from nestor.testing.initiative import InboundEventSourceContract
 
 MATHILDE = PersonId("mathilde")
@@ -782,7 +784,11 @@ async def test_over_the_wire_a_server_that_stops_answering_times_out() -> None:
 
 
 def test_the_plugin_builds_a_named_connector_from_its_settings(tmp_path: Any) -> None:
-    connector = plugin.create({"poll_s": 120, "idle_s": 600}, "mailbox", Services(data_dir=tmp_path))
+    connector = plugin.create(
+        {"poll_s": 120, "idle_s": 600},
+        "mailbox",
+        Services(data_dir=tmp_path, localizer=EchoLocalizer(), locale=Locale("fr-FR")),
+    )
     assert isinstance(connector, ImapConnector)
     assert (connector.name, connector.timing.poll_s, connector.timing.idle_s) == ("mailbox", 120, 600)
     inbound_source = connector.inbound(CONNECTION, FakeAccess())

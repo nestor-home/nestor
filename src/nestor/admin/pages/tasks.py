@@ -6,7 +6,6 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from nestor.admin.pages.errors import Refused
 from nestor.admin.pages.guard import Checked, LoggedIn
 from nestor.admin.pages.rendering import pages_of
-from nestor.admin.presentation import french_task_status
 from nestor.admin.state import state
 from nestor.modules.cognition import TaskStatus
 
@@ -27,7 +26,7 @@ async def tasks_page(request: Request, session: LoggedIn) -> HTMLResponse:
         running=manager.running(),
         recent=list(reversed(manager.recent(RECENT))),
         names=names,
-        label=french_task_status,
+        label=pages_of(request).phrasebook.task_status,
     )
 
 

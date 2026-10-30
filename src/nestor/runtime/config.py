@@ -31,7 +31,8 @@ class Section(BaseModel):
 class PersonaConfig(Section):
     name: str
     character: str
-    language: str = "French"
+    locale: str = "fr-FR"  # BCP 47: the household's language, for every fixed phrase and the admin default
+    language: str = "French"  # how the model's instructions name the language it must write in
     timezone: str = "Europe/Paris"
 
 

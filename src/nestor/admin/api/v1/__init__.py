@@ -9,13 +9,14 @@ from typing import Any
 from fastapi import APIRouter, Depends, FastAPI
 
 from nestor.admin.api.v1 import openapi
-from nestor.admin.api.v1.errors import ApiError, respond, translate
+from nestor.admin.api.v1.errors import ApiError, localized, translate
 from nestor.admin.api.v1.models import ErrorOut
 from nestor.admin.api.v1.routes import (
     accounts,
     connections,
     connectors,
     household,
+    i18n,
     journal,
     memories,
     satellites,
@@ -36,6 +37,7 @@ def router() -> APIRouter:
     api = APIRouter(prefix=PREFIX, dependencies=[Depends(json_only)], responses=ERRORS)
     for resource in (
         session,
+        i18n,
         accounts,
         household,
         connectors,
@@ -71,4 +73,14 @@ def openapi_text() -> str:
 
 browser = connections.browser  # `/connections/callback`, outside the API prefix
 
-__all__ = ["CSRF_HEADER", "PREFIX", "ApiError", "api_app", "browser", "openapi_text", "respond", "router", "translate"]
+__all__ = [
+    "CSRF_HEADER",
+    "PREFIX",
+    "ApiError",
+    "api_app",
+    "browser",
+    "localized",
+    "openapi_text",
+    "router",
+    "translate",
+]

@@ -69,9 +69,9 @@ async def test_an_owner_from_the_command_line_signs_in_with_any_case_of_their_lo
 @pytest.mark.parametrize(
     ("login", "password", "reason"),
     [
-        ("mathis", "wrong password!", "wrong password"),
-        ("nobody", PASSWORD, "unknown login"),
-        ("not a login!", PASSWORD, "unknown login"),
+        ("mathis", "wrong password!", "wrong-password"),
+        ("nobody", PASSWORD, "unknown-login"),
+        ("not a login!", PASSWORD, "unknown-login"),
     ],
 )
 async def test_a_failed_sign_in_is_journaled_without_the_password(
@@ -273,3 +273,25 @@ def test_an_invitation_status_follows_time() -> None:
     )
     assert invitation.status(now) is InvitationStatus.PENDING
     assert invitation.status(now + timedelta(hours=1)) is InvitationStatus.EXPIRED
+
+
+async def test_a_reading_language_is_ones_own_choice_or_an_administrators(book: Book) -> None:
+    from nestor.core.i18n import Locale
+
+    owner = await book.owner()
+    member = await book.accounts.create(login="lucie", password=PASSWORD, role=Role.MEMBER, person=PersonId("lucie"))
+    chosen = await book.accounts.set_locale(member.id, Locale("en"), by=member.principal())
+    assert chosen.locale == "en"
+    before = len(await book.log.read(LogQuery()))
+    await book.accounts.set_locale(member.id, Locale("en"), by=owner)
+    assert len(await book.log.read(LogQuery())) == before, "unchanged: nothing written"
+    other = await book.accounts.create(
+        login="mathilde", password=PASSWORD, role=Role.MEMBER, person=PersonId("mathilde")
+    )
+    with pytest.raises(AccessDenied):
+        await book.accounts.set_locale(other.id, Locale("en"), by=member.principal())
+    reopened = book.reopen()
+    await reopened.start()
+    assert reopened.get(member.id).locale == "en"
+    await book.accounts.set_locale(member.id, None, by=member.principal())
+    assert book.accounts.get(member.id).locale is None

@@ -64,7 +64,7 @@ class VoiceChannel(Channel, SatelliteHost):
         host: str = "localhost",
         port: int | None = None,
         allow_unpaired_browser: bool = True,
-        session: SessionSettings | None = None,
+        session: SessionSettings,
         clips: Path | None = None,
         send_timeout_s: float = 30.0,
     ) -> None:
@@ -74,7 +74,7 @@ class VoiceChannel(Channel, SatelliteHost):
         self._speech = speech
         self._host, self._port = host, port
         self._allow_unpaired_browser = allow_unpaired_browser
-        self._session = session or SessionSettings()
+        self._session = session
         self._clips_folder = clips
         self._send_timeout_s = send_timeout_s
         self._settings: SessionSettings | None = None

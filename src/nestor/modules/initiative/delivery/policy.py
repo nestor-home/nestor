@@ -13,6 +13,7 @@ from datetime import datetime, time
 from zoneinfo import ZoneInfo
 
 from nestor.core import ContractError
+from nestor.core.i18n import Message
 from nestor.modules.channels import Address, Channel, Medium
 from nestor.modules.home import Presence
 from nestor.modules.household import Person
@@ -42,7 +43,7 @@ class QuietHours:
 class Plan:
     spoken: Address | None
     written: Address | None
-    reason: str
+    reason: Message  # why, rendered in the reader's language by a Localizer
 
     @property
     def follow_up(self) -> bool:
@@ -77,27 +78,35 @@ class DeliveryPolicy:
         local = now.astimezone(ZoneInfo(self.timezone)).time()
 
         if written:
-            return Plan(spoken=None, written=fallback, reason="asked for it in writing")
+            return Plan(spoken=None, written=fallback, reason=Message.of("delivery-asked-in-writing"))
         if self.quiet_hours and self.quiet_hours.contains(local) and not urgent:
-            return Plan(spoken=None, written=reach, reason="quiet hours: nothing spoken")
+            return Plan(spoken=None, written=reach, reason=Message.of("delivery-quiet-hours"))
         if person is None or presence is None:
             back = origin if origin and origin.channel in spoken_ids else None
             return Plan(
                 spoken=back,
                 written=reach or (None if back else origin),
-                reason="no presence information: back to the conversation it came from",
+                reason=Message.of("delivery-no-presence"),
             )
         if presence.of(person.id).home is False:
-            return Plan(spoken=None, written=fallback, reason=f"{person.name} is away")
+            return Plan(spoken=None, written=fallback, reason=Message.of("delivery-away", person=person.name))
         rooms = presence.rooms_where(person.id)
         if rooms:
             here = sorted(r for r in rooms if r in satellites)
             if here:
-                return Plan(spoken=satellites[here[0]], written=reach, reason=f"{person.name} is in the {here[0]}")
-            return Plan(spoken=None, written=fallback, reason=f"{person.name} is in a room without a satellite")
+                return Plan(
+                    spoken=satellites[here[0]],
+                    written=reach,
+                    reason=Message.of("delivery-in-room", person=person.name, room=here[0]),
+                )
+            return Plan(
+                spoken=None, written=fallback, reason=Message.of("delivery-room-without-satellite", person=person.name)
+            )
         if presence.of(person.id).home and self.main_room in satellites:
             room = self.main_room
             return Plan(
-                spoken=satellites[room], written=reach, reason=f"{person.name} is home, room unknown: main satellite"
+                spoken=satellites[room],
+                written=reach,
+                reason=Message.of("delivery-home-main-satellite", person=person.name, room=room),
             )
-        return Plan(spoken=None, written=fallback, reason=f"no satellite where {person.name} may be")
+        return Plan(spoken=None, written=fallback, reason=Message.of("delivery-no-satellite", person=person.name))

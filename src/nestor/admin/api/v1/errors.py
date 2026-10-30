@@ -1,13 +1,20 @@
-"""Errors of the API: always `{"error": {"code", "message"}}`, the code for programs, the message in
-French for the person. A message never holds a secret."""
+"""Errors of the API: always `{"error": {"code", "message_id", "args", "message"}}` — the code for
+programs, the message id and arguments for a front with its own catalogue, the message rendered in
+the reader's language. A message never holds a secret.
+"""
 
 from collections.abc import Mapping
 
+from fastapi import Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException
 
+from nestor.admin.api.v1.language import reader_locale
+from nestor.admin.state import state
 from nestor.core import ContractError, ProviderError
+from nestor.core.i18n import Locale, Localizer, Message
+from nestor.core.i18n.types import Argument
 from nestor.modules.accounts import (
     AccessDenied,
     AccountConflict,
@@ -19,22 +26,25 @@ from nestor.modules.accounts import (
 
 
 class ApiError(Exception):
-    def __init__(self, status: int, code: str, message: str, *, headers: Mapping[str, str] | None = None) -> None:
-        super().__init__(f"{status} {code}: {message}")
-        self.status, self.code, self.message, self.headers = status, code, message, dict(headers or {})
+    """`code` is snake_case; its message is `error-<code with dashes>`, with `args`."""
+
+    def __init__(self, status: int, code: str, *, headers: Mapping[str, str] | None = None, **args: Argument) -> None:
+        super().__init__(f"{status} {code}")
+        self.status, self.code, self.headers = status, code, dict(headers or {})
+        self.message = Message(f"error-{code.replace('_', '-')}", args)
 
 
-def not_found(what: str) -> ApiError:
-    return ApiError(404, "not_found", what)
+def not_found(what: str = "not_found") -> ApiError:
+    """404 with the message that says what is missing (`connection_unknown`…)."""
+    return ApiError(404, what)
 
 
-FORBIDDEN = "Votre compte n'a pas accès à cette fonction."
 _INVITATIONS = {
-    "this invitation has already been used": "Cette invitation a déjà servi.",
-    "this invitation has expired: ask for a new one": "Cette invitation a expiré : demandez-en une nouvelle.",
-    "this invitation was withdrawn": "Cette invitation a été retirée.",
+    "this invitation has already been used": "invitation_used",
+    "this invitation has expired: ask for a new one": "invitation_expired",
+    "this invitation was withdrawn": "invitation_revoked",
 }
-_HTTP = {404: ("not_found", "Cette adresse n'existe pas."), 405: ("method_not_allowed", "Méthode non permise.")}
+_HTTP = {404: "not_found", 405: "method_not_allowed"}
 
 
 def translate(error: Exception) -> ApiError:
@@ -43,30 +53,40 @@ def translate(error: Exception) -> ApiError:
         case ApiError():
             return error
         case AccessDenied():
-            return ApiError(403, "forbidden", FORBIDDEN)
+            return ApiError(403, "forbidden")
         case UnknownAccount():
-            return not_found("Ce compte ou cette invitation n'existe pas.")
+            return not_found()
         case LastOwner():
-            return ApiError(409, "last_owner", "Le foyer doit garder au moins un propriétaire : nommez-en un autre.")
+            return ApiError(409, "last_owner")
         case AccountConflict():
-            return ApiError(409, "conflict", "Cet identifiant est déjà pris, ou cette personne a déjà un compte.")
+            return ApiError(409, "conflict")
         case InvitationRefused():
-            message = _INVITATIONS.get(str(error), "Cette invitation est inconnue.")
-            return ApiError(400, "invitation_refused", message)
+            return ApiError(400, _INVITATIONS.get(str(error), "invitation_unknown"))
         case WrongPassword():
-            return ApiError(400, "wrong_password", "Le mot de passe actuel est incorrect.")
+            return ApiError(400, "wrong_password")
         case ProviderError():
-            return ApiError(502, "provider_error", f"Le service n'a pas pu répondre : {error}.")
+            return ApiError(502, "provider_error", detail=str(error))
         case ContractError():
-            return ApiError(400, "invalid", f"Action impossible : {error}.")
+            return ApiError(400, "invalid", detail=str(error))
         case RequestValidationError():
-            fields = ", ".join(".".join(str(p) for p in e["loc"][1:]) or "corps" for e in error.errors())
-            return ApiError(422, "invalid_request", f"Requête invalide ({fields}).")
+            fields = ", ".join(".".join(str(p) for p in e["loc"][1:]) or "body" for e in error.errors())
+            return ApiError(422, "invalid_request", fields=fields)
     assert isinstance(error, HTTPException), error  # the last type the application hands here
-    code, message = _HTTP.get(error.status_code, ("http_error", "Requête refusée."))
-    return ApiError(error.status_code, code, message)
+    return ApiError(error.status_code, _HTTP.get(error.status_code, "http_error"))
 
 
-def respond(error: ApiError) -> JSONResponse:
-    body = {"error": {"code": error.code, "message": error.message}}
+def respond(error: ApiError, localizer: Localizer, locale: Locale) -> JSONResponse:
+    body = {
+        "error": {
+            "code": error.code,
+            "message_id": error.message.id,
+            "args": dict(error.message.args),
+            "message": localizer.format(error.message, locale),
+        }
+    }
     return JSONResponse(body, status_code=error.status, headers=error.headers or None)
+
+
+def localized(request: Request, error: Exception) -> JSONResponse:
+    """The error, in the language of whoever made the request."""
+    return respond(translate(error), state(request).nestor.localizer, reader_locale(request))

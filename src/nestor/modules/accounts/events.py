@@ -36,6 +36,11 @@ class AccountPasswordChanged(Event, event_type="account.password.changed"):
     by: str | None = None  # the account itself, an administrator resetting it, or the command line
 
 
+class AccountLocaleChanged(Event, event_type="account.locale.changed"):
+    account_id: str
+    locale: str | None  # BCP 47; None: back to the household's language
+
+
 class AccountInvited(Event, event_type="account.invited"):
     invitation_id: str
     role: Role
@@ -56,4 +61,4 @@ class AccountLogin(Event, event_type="account.login"):
     succeeded: bool
     account_id: str | None = None
     client: str = ""
-    reason: str = ""  # why it failed: "wrong password", "unknown login", "disabled"
+    reason: str = ""  # why it failed: "wrong-password", "unknown-login", "disabled"

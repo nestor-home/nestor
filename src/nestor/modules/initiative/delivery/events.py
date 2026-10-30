@@ -1,6 +1,7 @@
 """Events of unprompted messages: every decision with its reason, every delivery and failure."""
 
 from nestor.core import Event, PersonId
+from nestor.core.i18n import Message
 from nestor.modules.channels import Address
 
 
@@ -20,7 +21,7 @@ class DeliveryConsidered(Event, event_type="initiative.considered"):
     """The delivery decision and its reason: what answers "why did it speak to me?"."""
 
     about: str
-    reason: str
+    reason: Message
     spoken: Address | None = None
     written: Address | None = None
     person: PersonId | None = None
