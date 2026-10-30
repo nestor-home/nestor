@@ -1,4 +1,4 @@
-"""Events of unprompted messages: every delivery, and every failure to deliver, with its reason."""
+"""Events of unprompted messages: every decision with its reason, every delivery and failure."""
 
 from nestor.core import Event, PersonId
 from nestor.modules.channels import Address

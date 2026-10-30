@@ -6,7 +6,7 @@ import contextlib
 from nestor.core import Component
 from nestor.modules.cognition.delegation import Notify, TaskDelivered, TaskEnded, TaskStarted, TaskStatus
 from nestor.modules.household import Household, Person
-from nestor.modules.initiative.delivery import Courier
+from nestor.modules.initiative.delivery.courier import Courier
 from nestor.modules.journal import Journal, Subscription
 
 

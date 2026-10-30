@@ -26,6 +26,7 @@ class Family(StrEnum):
     CHANNEL = "channel"
     PRESENCE = "presence"
     TOOLS = "tools"
+    INBOUND = "inbound"
 
 
 class AdapterSettings(BaseModel):

@@ -7,6 +7,7 @@ from typing import Any
 import pytest
 
 from nestor.core import ContractError
+from nestor.modules.channels import Address
 from nestor.modules.cognition import Outcome, TaskDelivered
 from nestor.modules.cognition.model import ToolCall
 from nestor.modules.conversation import AssistantTurn
@@ -175,3 +176,25 @@ async def test_memories_persist_in_the_database(tmp_path: Path) -> None:
         serving.cancel()
     async with Nestor(config(tmp_path, []), Fakes().registry()) as restarted:
         assert [m.text for m in await restarted.memories.recall("chat")] == ["Le chat s'appelle Biscotte"]
+
+
+async def test_a_watch_created_in_conversation_is_announced_when_its_mail_arrives(tmp_path: Path) -> None:
+    from nestor.modules.initiative import Incoming, WatchTriggered
+
+    fakes = Fakes()
+    fakes.script = [
+        ToolCall("c1", "create_watch", {"what": "le colis", "keywords": ["Colissimo"]}),
+        "Je te préviens.",
+        '{"matches": true, "urgent": false, "summary": "Colis livré."}',
+        "Ton colis est arrivé.",
+    ]
+    text = CONFIG.format(data_dir=tmp_path, replies=[]) + "inbound: [{kind: inbox}]\n"
+    async with Nestor(parse_config(text, {}), fakes.registry()) as nestor:
+        serving = asyncio.create_task(nestor.serve())
+        assert await fakes.channels[0].ask("Préviens-moi quand le colis arrive") == "Je te préviens."
+        triggered = nestor.journal.subscribe(WatchTriggered)
+        fakes.inbox.deliver(Incoming(source="inbox", kind="mail", title="Votre colis Colissimo est livré"))
+        await triggered.next(timeout_s=2)
+        await asyncio.sleep(0.05)
+        serving.cancel()
+    assert fakes.channels[0].sent == [(Address("memory", "main"), "Ton colis est arrivé.")]

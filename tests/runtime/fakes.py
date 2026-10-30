@@ -4,6 +4,7 @@ from nestor.modules.channels import Assistant
 from nestor.runtime.plugins import AdapterSettings, Family, Plugin, Registry, Services
 from nestor.testing.channels import InMemoryChannel
 from nestor.testing.cognition import FakeRemote, ScriptedModel, ScriptedRemoteExecutor
+from nestor.testing.initiative import Inbox, QueuedSource
 from nestor.testing.cognition.model import Reply
 
 
@@ -28,10 +29,12 @@ class Fakes:
         self.models: list[ScriptedModel] = []
         self.channels: list[InMemoryChannel] = []
         self.remote = FakeRemote()
+        self.inbox = Inbox()
 
     def registry(self) -> Registry:
         crashing = Plugin(Family.CHANNEL, "crashing", NoSettings, lambda s, name, x: CrashingChannel(name))
-        return Registry([self.model_plugin(), self.channel_plugin(), self.executor_plugin(), crashing])
+        inbox = Plugin(Family.INBOUND, "inbox", NoSettings, lambda s, name, x: QueuedSource(self.inbox))
+        return Registry([self.model_plugin(), self.channel_plugin(), self.executor_plugin(), crashing, inbox])
 
     def model_plugin(self) -> Plugin[ModelSettings]:
         return Plugin(Family.MODEL, "scripted", ModelSettings, self._model)

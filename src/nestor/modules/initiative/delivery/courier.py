@@ -10,8 +10,8 @@ from nestor.modules.channels import Address, Channel
 from nestor.modules.conversation import Agent, AssistantTurn, UserTurn
 from nestor.modules.home import PresenceSource
 from nestor.modules.household import Person
-from nestor.modules.initiative.events import Delivered, DeliveryConsidered, DeliveryFailed
-from nestor.modules.initiative.policy import DeliveryPolicy, Plan
+from nestor.modules.initiative.delivery.events import Delivered, DeliveryConsidered, DeliveryFailed
+from nestor.modules.initiative.delivery.policy import DeliveryPolicy, Plan
 from nestor.modules.journal import Journal
 
 FOLLOW_UP = "You said this aloud a moment ago but nobody reacted; write it now, briefly, as a message."

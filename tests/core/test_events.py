@@ -6,6 +6,7 @@ import json
 import types
 import typing
 from dataclasses import fields
+from datetime import UTC, datetime
 from typing import Any, get_args, get_origin, get_type_hints
 
 import pytest
@@ -13,7 +14,10 @@ import pytest
 import nestor.modules.behavior
 import nestor.modules.cognition
 import nestor.modules.cognition.tools
-import nestor.modules.conversation  # noqa: F401  (importing a module registers its events)
+import nestor.modules.conversation
+import nestor.modules.home
+import nestor.modules.initiative
+import nestor.modules.memory  # noqa: F401  (importing a module registers its events)
 from nestor.core import ContractError, Event, SessionId
 from nestor.modules.cognition import TaskEnded, TaskStatus
 
@@ -36,7 +40,13 @@ def sample(hint: Any) -> Any:
     if dataclasses.is_dataclass(hint):
         hints = get_type_hints(hint)
         return hint(**{f.name: sample(hints[f.name]) for f in dataclasses.fields(hint)})
-    samples: dict[Any, Any] = {str: "texte accentué", float: 1.25, int: 3, bool: True}
+    samples: dict[Any, Any] = {
+        str: "texte accentué",
+        float: 1.25,
+        int: 3,
+        bool: True,
+        datetime: datetime(2026, 10, 30, 18, 30, tzinfo=UTC),
+    }
     return samples[hint]
 
 

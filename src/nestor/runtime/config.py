@@ -88,7 +88,9 @@ class NestorConfig(Section):
     model: AdapterConfig
     executors: tuple[AdapterConfig, ...] = ()
     channels: tuple[AdapterConfig, ...] = Field(min_length=1)
+    triage_model: AdapterConfig | None = None  # small model sorting incoming items; defaults to `model`
     tools: tuple[AdapterConfig, ...] = ()  # tool providers (an MCP server: Home Assistant, Linear…)
+    inbound: tuple[AdapterConfig, ...] = ()  # sources watches can watch (a mailbox…)
     presence: AdapterConfig | None = None
     initiative: InitiativeConfig = InitiativeConfig()
 

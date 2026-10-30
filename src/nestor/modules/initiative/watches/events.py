@@ -1,0 +1,30 @@
+"""Events of watches: created, triggered by an item, ended (matched, cancelled, expired)."""
+
+from datetime import datetime
+
+from nestor.core import Event, PersonId
+from nestor.modules.channels import Address
+
+
+class WatchCreated(Event, event_type="watch.created"):
+    watch_id: str
+    what: str
+    keywords: tuple[str, ...]
+    kinds: tuple[str, ...]
+    once: bool
+    owner: PersonId | None = None
+    created_in: Address | None = None
+    until: datetime | None = None
+
+
+class WatchTriggered(Event, event_type="watch.triggered"):
+    watch_id: str
+    item_id: str
+    item_title: str
+    summary: str
+    urgent: bool = False
+
+
+class WatchEnded(Event, event_type="watch.ended"):
+    watch_id: str
+    reason: str

@@ -17,7 +17,17 @@ from nestor.modules.cognition.tools import Toolbox, ToolProvider
 from nestor.modules.conversation import Agent, ChannelProfile, Persona
 from nestor.modules.home import PresenceSource
 from nestor.modules.household import Household
-from nestor.modules.initiative import Courier, DeliveryPolicy, QuietHours, TaskAnnouncer
+from nestor.modules.initiative import (
+    Courier,
+    DeliveryPolicy,
+    InboundEventSource,
+    QuietHours,
+    TaskAnnouncer,
+    Triage,
+    WatchBook,
+    WatchKeeper,
+)
+from nestor.modules.initiative.watches.assistant import WatchTools
 from nestor.modules.journal import Journal
 from nestor.modules.memory import Memories
 from nestor.modules.memory.assistant import MemoryTools
@@ -49,6 +59,14 @@ class Nestor:
         if len({c.channel_id for c in self.channels}) != len(self.channels):
             raise ContractError("two channels have the same name: give each a distinct `name`")
         self.tools = [_build(registry, Family.TOOLS, c, c.name or c.kind, services, ToolProvider) for c in config.tools]
+        self.triage_model = (
+            _build(registry, Family.MODEL, config.triage_model, "triage-model", services, ConversationModel)
+            if config.triage_model
+            else self.model
+        )
+        self.inbound = [
+            _build(registry, Family.INBOUND, c, c.name or c.kind, services, InboundEventSource) for c in config.inbound
+        ]
         self.presence = (
             _build(registry, Family.PRESENCE, config.presence, "presence", services, PresenceSource)
             if config.presence
@@ -59,14 +77,16 @@ class Nestor:
         delegation = Delegation(self.tasks)
         self.memories = Memories(self.journal, SQLiteMemoryStore(self.database))
         memory = MemoryTools(self.memories, self.household)
+        self.watch_book = WatchBook(self.journal, kinds=(k for source in self.inbound for k in source.kinds))
+        watch_tools = WatchTools(self.watch_book)
         self.agent = Agent(
             model=self.model,
             persona=Persona(**config.persona.model_dump()),
             journal=self.journal,
             household=self.household,
-            toolbox=Toolbox(self.journal, providers=[delegation, memory, *self.tools]),
+            toolbox=Toolbox(self.journal, providers=[delegation, memory, watch_tools, *self.tools]),
             channels={c.channel_id: ChannelProfile(c.medium, c.style) for c in self.channels},
-            context=[delegation, memory],
+            context=[delegation, memory, watch_tools],
         )
         initiative = config.initiative
         self.courier = Courier(
@@ -82,21 +102,33 @@ class Nestor:
             follow_up_after_s=initiative.follow_up_after_s,
         )
         self.announcer = TaskAnnouncer(self.journal, self.household, self.courier)
+        self.watches = WatchKeeper(
+            self.watch_book,
+            self.household,
+            self.courier,
+            Triage(self.triage_model, language=config.persona.language),
+            self.inbound,
+        )
         self._stack = AsyncExitStack()
 
     @property
     def components(self) -> Sequence[Component]:
         """In start order; they are closed in reverse."""
         presence = [self.presence] if self.presence else []
+        triage = [self.triage_model] if self.triage_model is not self.model else []
         return [
             self.database,
             self.model,
+            *triage,
             *self.executors,
             *presence,
             self.tasks,
             *self.channels,
             self.courier,
             self.announcer,
+            self.watch_book,
+            *self.inbound,
+            self.watches,
         ]
 
     async def __aenter__(self) -> Self:
