@@ -1,4 +1,4 @@
-"""Cognition: the central agent's model, its tools and the executors it delegates to."""
+"""Cognition: the central agent's model, its tools (`cognition.tools`) and the executors it delegates to."""
 
 from nestor.modules.cognition.delegation import (
     Executor,

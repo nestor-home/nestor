@@ -48,7 +48,7 @@ class ScriptedModel(ConversationModel):
                 await asyncio.sleep(self._word_delay_s)
                 yield TextDelta(word if i == 0 else f" {word}")
             yield Finished(FinishReason.STOP)
-        except GeneratorExit:
+        except (GeneratorExit, asyncio.CancelledError):  # closed early, or its consumer was cancelled
             self.interrupted += 1
             raise
 

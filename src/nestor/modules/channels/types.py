@@ -2,8 +2,16 @@
 
 from dataclasses import dataclass, field
 from datetime import datetime
+from enum import StrEnum
 
 from nestor.core import ContractError, SessionId, new_id, utc_now
+
+
+class Medium(StrEnum):
+    """How the user receives answers: it decides their form (length, no Markdown when spoken)."""
+
+    SPOKEN = "spoken"
+    WRITTEN = "written"
 
 
 @dataclass(frozen=True, slots=True)

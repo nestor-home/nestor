@@ -4,7 +4,21 @@ Every channel — realtime voice included — reaches the same assistant through
 `nestor.modules.channels`, so voice and messaging share one assistant and one memory.
 """
 
-from nestor.modules.conversation.events import AssistantTurn, FallbackSpoken, UserTurn
+from nestor.modules.conversation.events import AnswerCut, AssistantTurn, FallbackSpoken, UserTurn
+from nestor.modules.conversation.persona import Persona
+from nestor.modules.conversation.ports import ContextProvider
+from nestor.modules.conversation.service import Agent, AgentSettings, ChannelProfile
 from nestor.modules.conversation.types import FallbackReason
 
-__all__ = ["AssistantTurn", "FallbackReason", "FallbackSpoken", "UserTurn"]
+__all__ = [
+    "Agent",
+    "AgentSettings",
+    "AnswerCut",
+    "AssistantTurn",
+    "ChannelProfile",
+    "ContextProvider",
+    "FallbackReason",
+    "FallbackSpoken",
+    "Persona",
+    "UserTurn",
+]

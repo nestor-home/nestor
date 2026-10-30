@@ -12,6 +12,7 @@ import pytest
 
 import nestor.modules.behavior
 import nestor.modules.cognition
+import nestor.modules.cognition.tools
 import nestor.modules.conversation  # noqa: F401  (importing a module registers its events)
 from nestor.core import ContractError, Event, SessionId
 from nestor.modules.cognition import TaskEnded, TaskStatus
@@ -28,6 +29,8 @@ def sample(hint: Any) -> Any:
         return sample(next(a for a in args if a is not type(None)))
     if origin is tuple:
         return (sample(args[0]),)
+    if origin in (dict, typing.Mapping, __import__("collections.abc").abc.Mapping):
+        return {"pièce": "salon", "niveaux": [1, 2]}
     if isinstance(hint, type) and issubclass(hint, enum.Enum):
         return list(hint)[-1]
     if dataclasses.is_dataclass(hint):

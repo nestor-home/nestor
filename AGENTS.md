@@ -26,10 +26,12 @@ src/nestor/
 │   └── exceptions.py     error hierarchy
 ├── modules/              domain modules
 │   ├── channels/         entry points (voice, messaging, web) and the assistant they reach
-│   ├── conversation/     turns, replies, fallbacks — whatever the channel
+│   ├── conversation/     the central agent (Agent), persona, history rebuilt from the journal
 │   ├── cognition/
 │   │   ├── model/        the central agent's language model
+│   │   ├── tools/        direct tools, the toolbox that runs and logs them
 │   │   └── delegation/   executors for long tasks
+│   ├── household/        people and their accounts on channels
 │   ├── behavior/         attitude and expressions, translated by the plugged body
 │   └── journal/          the append-only event log, live subscriptions, blobs
 ├── runtime/              composition: configuration, adapter registry, bus, lifecycle

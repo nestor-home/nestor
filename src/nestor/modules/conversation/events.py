@@ -24,3 +24,10 @@ class FallbackSpoken(Event, event_type="conversation.fallback"):
 
     address: Address
     reason: FallbackReason
+
+
+class AnswerCut(Event, event_type="conversation.turn.cut"):
+    """The user cut in while a fully written answer was still being spoken: only `heard` reached them."""
+
+    turn: str  # id of the AssistantTurn
+    heard: str
