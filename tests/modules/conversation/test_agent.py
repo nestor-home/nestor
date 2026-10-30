@@ -8,7 +8,17 @@ import pytest
 
 from nestor.core import ContractError, PersonId, ProviderError
 from nestor.modules.channels import Address, Sender
-from nestor.modules.cognition.model import ModelOutput, ModelRequest, Role, TextDelta, ToolCall, ToolSpec
+from nestor.modules.cognition.model import (
+    Finished,
+    FinishReason,
+    ModelOutput,
+    ModelRequest,
+    Role,
+    TextDelta,
+    ToolCall,
+    ToolCallRequested,
+    ToolSpec,
+)
 from nestor.modules.cognition.tools import Tool, ToolCalled, ToolCompleted, ToolContext, ToolFailed
 from nestor.modules.conversation import (
     AgentSettings,
@@ -85,6 +95,27 @@ async def test_the_agent_calls_tools_and_answers_with_their_result(make_agent: M
     called, completed = (await journal.history(ToolCalled))[0], (await journal.history(ToolCompleted))[0]
     assert (called.name, called.arguments, called.person) == ("light_on", {"room": "salon"}, "mathis")
     assert completed.ok and json.loads(completed.output) == {"room": "salon", "state": "on"}
+
+
+async def test_text_around_a_tool_call_reads_as_one_answer(make_agent: MakeAgent) -> None:
+    class Announcing(ScriptedModel):
+        """Says a sentence, then calls a tool in the same round (what real models do)."""
+
+        async def stream(self, request: ModelRequest) -> AsyncGenerator[ModelOutput]:
+            self.requests.append(request)
+            if len(self.requests) == 1:
+                yield TextDelta("Je regarde.")
+                yield ToolCallRequested(ToolCall("c1", "light_on"))
+                yield Finished(FinishReason.TOOL_CALLS)
+            else:
+                yield TextDelta("C'est allumé.")
+                yield Finished(FinishReason.STOP)
+
+    async def light(arguments: Mapping[str, object], context: ToolContext) -> str:
+        return "on"
+
+    answer = await make_agent(model=Announcing(), tools=[tool("light_on", light)]).respond(message("Allume")).collect()
+    assert answer == "Je regarde. C'est allumé."
 
 
 async def test_a_tool_round_is_part_of_the_history(make_agent: MakeAgent) -> None:
@@ -205,7 +236,7 @@ async def test_a_slow_model_gets_a_filler_on_voice_only(make_agent: MakeAgent, j
         .collect()
     )
 
-    assert spoken == "Hmm, je rame un peu, laisse-moi une seconde.Voilà."
+    assert spoken == "Hmm, je rame un peu, laisse-moi une seconde. Voilà."
     assert written == "Voilà."
     assert [e.reason for e in await journal.history(FallbackSpoken)] == [FallbackReason.MODEL_SLOW]
 

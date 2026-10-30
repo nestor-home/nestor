@@ -47,7 +47,7 @@ class Persona:
         local = now.astimezone(ZoneInfo(self.timezone))
         lines = [
             self.character.strip(),
-            f"Always answer in {self.language}.",
+            f"Always write in {self.language}, every sentence, including what you say before using a tool.",
             SPOKEN if medium is Medium.SPOKEN else WRITTEN,
             style.strip(),
             HONESTY,

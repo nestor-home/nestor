@@ -206,8 +206,11 @@ class AgentReply(Reply):
                     if filler:
                         filler.cancel()
                         filler = None
-                    text.append(output.text)
-                    self._say(output.text)
+                    chunk = output.text
+                    if not text and self._said and not self._said[-1][-1:].isspace() and not chunk[:1].isspace():
+                        chunk = f" {chunk}"  # a new round after a tool call: keep its first word apart
+                    text.append(chunk)
+                    self._say(chunk)
                 elif isinstance(output, ToolCallRequested):
                     calls.append(output.call)
                 elif isinstance(output, Finished) and output.reason is not FinishReason.TOOL_CALLS:
