@@ -5,17 +5,23 @@
 - Forms are generated from the pydantic models: the core sections, and every installed plugin's
   settings by family and kind, so a third-party plugin gets its form for free.
 - Secret fields never reach the file: a value typed in a form goes to the vault, the YAML gets
-  `${secret:<name>}`; a blank field keeps what is there.
+  `${secret:<name>}`; a blank field keeps what is there. A secret is a `SecretStr` (optional or not),
+  or each value of a `dict[str, SecretStr]` (HTTP headers): such a map is masked, kept and replaced
+  key by key.
 - An edit is validated before it is written (references resolved, models validated, Nestor built
   without starting); every write keeps the previous file in `<data_dir>/config-history/`.
 """
 
 import io
+import re
+import types
+import typing
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
+from enum import StrEnum
 from pathlib import Path
-from typing import Any
+from typing import Any, get_args, get_origin
 
 from pydantic import BaseModel, SecretStr, ValidationError
 from ruamel.yaml import YAML
@@ -37,6 +43,7 @@ from nestor.runtime.plugins import Family, Registry
 from nestor.runtime.secrets import ConfigSecrets, preview
 
 HISTORY = "config-history"
+_UNSAFE = re.compile(r"[^A-Za-z0-9_.-]")  # what a vault name cannot hold (a header key may)
 type Path_ = tuple[str | int, ...]
 
 
@@ -68,23 +75,47 @@ SECTIONS: Mapping[str, Any] = {
 }
 
 
-def secret_fields(model: type[BaseModel], prefix: Path_ = ()) -> set[Path_]:
-    """The paths of a settings model's `SecretStr` fields, nested models included."""
-    found: set[Path_] = set()
+class SecretShape(StrEnum):
+    VALUE = "value"  # one secret: `SecretStr`, or `SecretStr | None`
+    MAP = "map"  # a mapping whose every value is a secret: `dict[str, SecretStr]`
+
+
+def secret_fields(model: type[BaseModel], prefix: Path_ = ()) -> dict[Path_, SecretShape]:
+    """The paths of a settings model's secrets and their shape, nested models included."""
+    found: dict[Path_, SecretShape] = {}
     for name, info in model.model_fields.items():
         annotation = info.annotation
-        options = getattr(annotation, "__args__", (annotation,))
-        if SecretStr in options:
-            found.add((*prefix, name))
+        options = get_args(annotation) if get_origin(annotation) in (typing.Union, types.UnionType) else (annotation,)
         for option in options:
-            if isinstance(option, type) and issubclass(option, BaseModel):
+            if option is SecretStr:
+                found[(*prefix, name)] = SecretShape.VALUE
+            elif get_origin(option) in (dict, Mapping) and get_args(option)[1:] == (SecretStr,):
+                found[(*prefix, name)] = SecretShape.MAP
+            elif isinstance(option, type) and issubclass(option, BaseModel):
                 found |= secret_fields(option, (*prefix, name))
     return found
 
 
+def _secret(node: Any) -> bool:
+    """A write-only string in a JSON Schema (`SecretStr`), possibly optional (`anyOf` with null)."""
+    if not isinstance(node, dict):
+        return False
+    if node.get("format") == "password" or node.get("writeOnly") is True:
+        return True
+    return any(_secret(option) for option in node.get("anyOf") or ())
+
+
+def _secret_values(node: Any) -> bool:
+    """A map whose values are secrets (`dict[str, SecretStr]`), possibly optional."""
+    if not isinstance(node, dict):
+        return False
+    return _secret(node.get("additionalProperties")) or any(_secret_values(o) for o in node.get("anyOf") or ())
+
+
 def annotate(schema: dict[str, Any], scope: str, advanced: Iterable[str] = ()) -> dict[str, Any]:
     """Adds `x-nestor` to every property: its title and help message ids (`config-<scope>-<field>`,
-    `…-help`), whether it is secret (a `SecretStr`), advanced, and its group."""
+    `…-help`), whether it is `secret` (a `SecretStr`, optional or not) or holds `secret_values` (a map
+    whose every value is one), advanced, and its group."""
 
     def walk(node: Any, group: str) -> None:
         if isinstance(node, dict):
@@ -95,7 +126,8 @@ def annotate(schema: dict[str, Any], scope: str, advanced: Iterable[str] = ()) -
                         "title_id": f"config-{group}-{name}",
                         "help_id": f"config-{group}-{name}-help",
                         "fallback_title_id": f"config-field-{name}",
-                        "secret": prop.get("format") == "password" or prop.get("writeOnly") is True,
+                        "secret": _secret(prop),
+                        "secret_values": _secret_values(prop),
                         "advanced": bool(prop.pop("advanced", False)) or name in advanced,
                         "group": group,
                     }
@@ -148,7 +180,8 @@ class ConfigSchema:
         return annotate(schema, f"{slot.family.value}-{kind}")
 
     def secrets_of(self, document: Mapping[str, Any]) -> dict[Path_, str]:
-        """Every secret field the document sets, with the vault name a typed value is kept under."""
+        """Every secret the document sets, with the vault name a typed value is kept under; a map of
+        secrets gives one per key (`tools.home.headers.X-Api-Key`)."""
         found: dict[Path_, str] = {}
         for slot, index, entry in entries(document):
             try:
@@ -156,12 +189,15 @@ class ConfigSchema:
             except NestorError:
                 continue
             where: Path_ = (slot.key, index) if slot.many else (slot.key,)
-            label = str(entry.get("name") or entry.get("kind")) if slot.many else slot.key
-            for path in secret_fields(model):
-                if _get(entry, path) is not None:
-                    found[(*where, *path)] = ".".join(
-                        [*(([slot.key, label]) if slot.many else [label]), *map(str, path)]
-                    )
+            label = [slot.key, str(entry.get("name") or entry.get("kind"))] if slot.many else [slot.key]
+            for path, shape in secret_fields(model).items():
+                value = _get(entry, path)
+                name = ".".join([*label, *map(str, path)])
+                if shape is SecretShape.VALUE and value is not None:
+                    found[(*where, *path)] = name
+                elif shape is SecretShape.MAP and isinstance(value, dict):
+                    for key in value:
+                        found[(*where, *path, key)] = f"{name}.{_UNSAFE.sub('_', str(key))}"
         return found
 
 

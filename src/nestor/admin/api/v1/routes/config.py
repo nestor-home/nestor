@@ -3,8 +3,16 @@
 The file the command line reads stays the only truth; nothing is applied until a person restarts the
 instance (`POST /system/restart`). Forms are built from `GET /config/schema`: every property carries
 `x-nestor` — `title` and `help` rendered in the reader's language (with their message ids), whether it
-is `secret` (write-only: shown as `{set, preview}`, typed as `{value}`, blank keeps it) or `advanced`,
-and its `group`.
+is `advanced`, its `group`, and how it holds secrets:
+
+- `secret`: the value is one (a `SecretStr`, optional or not). The document shows a literal one as
+  `{"set": true, "preview": "sk-…4f2"}` and a reference as written (`${secret:name}`); send back that
+  echo, `{}` or `{"value": ""}` to keep it, `{"value": "…"}` or plain text to replace it (it goes to the
+  vault, the file gets a reference), a reference to point elsewhere, or leave the key out to remove it.
+- `secret_values`: the property is a map (`additionalProperties`) whose every value is such a secret
+  (HTTP headers). The document shows `{"Authorization": {"set": true, "preview": "Bea…001"}}`; each key
+  is kept, replaced or removed on its own, the same way, and a new key comes as `{"value": "…"}`. A
+  typed value is kept in the vault as `<slot>.<name>.<field>.<key>`.
 """
 
 from datetime import datetime

@@ -60,10 +60,13 @@ class WeatherAccount(AdapterSettings):
 
 
 class WeatherSettings(AdapterSettings):
-    """A third-party plugin's settings: a secret, a nested secret, a choice, an advanced field."""
+    """A third-party plugin's settings: a secret, an optional one, secret headers, a nested secret, a
+    choice, an advanced field."""
 
     api_key: SecretStr
     city: str
+    token: SecretStr | None = None
+    headers: dict[str, SecretStr] = Field(default_factory=dict)
     units: Units = Units.METRIC
     account: WeatherAccount | None = None
     retries: int = Field(default=2, json_schema_extra={"advanced": True})

@@ -40,6 +40,9 @@ async def test_the_schema_gives_every_section_and_every_installed_plugin_its_for
         assert properties["retries"]["x-nestor"]["advanced"]
         assert properties["name"]["x-nestor"]["title"] == "Nom", "a field no catalogue names gets the generic title"
         assert properties["city"]["x-nestor"]["title"] == "City", "or its own name"
+        token, headers = properties["token"]["x-nestor"], properties["headers"]["x-nestor"]
+        assert token["secret"] and not token["secret_values"], "an optional secret is a secret"
+        assert headers["secret_values"] and not headers["secret"], "a map of secrets is masked value by value"
         nested = tool["$defs"]["WeatherAccount"]["properties"]["password"]["x-nestor"]
         assert nested["secret"], "nested settings are annotated too"
         assert tool["$defs"]["Units"]["enum"] == ["metric", "imperial"]
@@ -215,3 +218,58 @@ async def test_without_a_file_or_a_key_there_is_nothing_to_edit(tmp_path: Path) 
         api = await admin.api()
         assert (await api.get("/api/v1/config")).json()["error"]["code"] == "config_unavailable"
         assert (await api.get("/api/v1/config/secrets")).json()["error"]["code"] == "no_secret_key"
+
+
+async def test_secret_headers_are_masked_kept_replaced_and_removed_key_by_key(tmp_path: Path) -> None:
+    async with Harness(tmp_path) as admin:
+        admin.config_path.write_text(
+            admin.config_path.read_text()
+            + "tools:\n  - kind: weather\n    api_key: ${secret:spare}\n    city: Lyon\n"
+            + "    token: tk-literal-token-1234\n"
+            + "    headers: {Authorization: Bearer hdr-literal-0001, X-Gone: gone-literal-0002}\n"
+        )
+        api = await admin.api()
+        await api.put("/api/v1/config/secrets/spare", {"value": KEY})
+        shown = await document(api)
+        tool = shown["tools"][0]
+        assert tool["token"] == {"set": True, "preview": "tk-…234"}
+        assert tool["headers"] == {
+            "Authorization": {"set": True, "preview": "Bea…001"},
+            "X-Gone": {"set": True, "preview": "gon…002"},
+        }
+
+        tool["headers"] = {
+            "Authorization": tool["headers"]["Authorization"],  # echoed: kept as it is
+            "X-Api-Key": {"value": "hk-typed-in-the-form"},  # new
+        }
+        preview = (await api.post("/api/v1/config/preview", {"document": shown})).json()
+        assert preview["valid"], preview["problems"]
+        diff = preview["diff"]
+        assert {"path": "tools.0.headers.X-Api-Key", "before": None, "after": None, "secret": True} in diff["added"]
+        assert {"path": "tools.0.headers.X-Gone", "before": None, "after": None, "secret": True} in diff["removed"]
+        assert all(c["path"] != "tools.0.headers.Authorization" for c in diff["changed"]), "an echo changes nothing"
+
+        assert (await api.put("/api/v1/config", {"document": shown})).status_code == 200
+        text = admin.config_path.read_text()
+        assert "Bearer hdr-literal-0001" in text and "tk-literal-token-1234" in text, "what was echoed stays"
+        assert "gone-literal-0002" not in text and "X-Gone" not in text
+        assert "${secret:tools.weather.headers.X-Api-Key}" in text and "hk-typed" not in text
+        secrets = admin.app.state.admin.secrets
+        assert await secrets.value("tools.weather.headers.X-Api-Key") == "hk-typed-in-the-form"
+
+        shown = await document(api)
+        assert shown["tools"][0]["headers"]["X-Api-Key"] == "${secret:tools.weather.headers.X-Api-Key}"
+        shown["tools"][0]["headers"]["Authorization"] = {"value": "Bearer hdr-replaced-0003"}
+        shown["tools"][0]["token"] = {"value": ""}  # blank: kept
+        written = (await api.put("/api/v1/config", {"document": shown})).json()
+        changed = {c["path"]: c for c in written["diff"]["changed"]}
+        assert changed["tools.0.headers.Authorization"] == {
+            "path": "tools.0.headers.Authorization",
+            "before": None,
+            "after": None,
+            "secret": True,
+        }
+        assert await secrets.value("tools.weather.headers.Authorization") == "Bearer hdr-replaced-0003"
+        text = admin.config_path.read_text()
+        assert "hdr-literal" not in text and "hdr-replaced" not in text and "tk-literal-token-1234" in text
+        assert not any(v in seen for seen in admin.seen for v in ("hdr-", "hk-typed", "tk-literal"))
