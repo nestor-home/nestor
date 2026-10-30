@@ -317,14 +317,15 @@ describe("ui components in their canonical composition", () => {
       </>,
     );
     screen.getByRole("tab", { name: "Aperçu" }).focus();
+    // Base UI moves focus and commits state on the next frame: wait for it as a person would
     await user.keyboard("{ArrowRight}");
-    expect(screen.getByRole("tab", { name: "Outils" })).toHaveFocus();
+    await waitFor(() => expect(screen.getByRole("tab", { name: "Outils" })).toHaveFocus());
     await user.keyboard("{Enter}");
-    expect(screen.getByRole("tab", { name: "Outils" })).toHaveAttribute("aria-selected", "true");
+    await waitFor(() => expect(screen.getByRole("tab", { name: "Outils" })).toHaveAttribute("aria-selected", "true"));
     await user.click(screen.getByRole("checkbox", { name: /Demander confirmation/ }));
-    expect(screen.getByRole("checkbox", { name: /Demander confirmation/ })).toBeChecked();
+    await waitFor(() => expect(screen.getByRole("checkbox", { name: /Demander confirmation/ })).toBeChecked());
     await user.click(screen.getByRole("switch", { name: /mail_send/ }));
-    expect(screen.getByRole("switch", { name: /mail_send/ })).toBeChecked();
+    await waitFor(() => expect(screen.getByRole("switch", { name: /mail_send/ })).toBeChecked());
     await expectAccessible();
   });
 });

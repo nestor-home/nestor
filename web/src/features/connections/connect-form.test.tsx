@@ -1,8 +1,10 @@
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { http } from "msw";
 import { describe, expect, it, vi } from "vitest";
 import { I18nProvider } from "@/i18n";
 import { connectors } from "@/mocks/fixtures";
+import { server } from "@/mocks/server";
 import { renderWithProviders } from "@/test/render";
 import { ConnectForm } from "./connect-form";
 
@@ -31,8 +33,19 @@ describe("connecting an account", () => {
     await user.keyboard("{Enter}");
     await waitFor(() => expect(owner).toHaveValue("Léa"));
 
+    // hold the server's answer to see the form while it waits, then let it through
+    let release = () => {};
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.use(
+      http.post("/api/v1/connectors/:kind/authorizations", async () => {
+        await held;
+      }),
+    );
     await user.click(screen.getByRole("button", { name: "Connecter" }));
-    expect(screen.getByRole("button", { name: "Connexion…" })).toBeDisabled();
+    expect(await screen.findByRole("button", { name: "Connexion…" })).toBeDisabled();
+    release();
     await waitFor(() =>
       expect(leave).toHaveBeenCalledWith(expect.stringMatching(/^\/connections\/c-.+\?connected=1$/)),
     );

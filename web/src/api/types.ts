@@ -147,8 +147,9 @@ export type Tone = "normal" | "decision" | "warning";
  * announced → followed up; a task started → progressing → ended → delivered) from these only.
  */
 export interface EventLinks {
-  session?: Id;
-  turn?: Id;
+  session?: Id; // where people talk: `telegram:42`, `voice:salon`
+  conversation?: Id; // one conversation in the session: turns within its inactivity window
+  turn?: Id; // one message and all it caused
   call?: Id;
   task?: Id;
   watch?: Id;
@@ -162,7 +163,7 @@ export interface JournalItem {
   id: Id; // the position in the journal, as a string: the cursor and the drawer's `event=`
   uid: Id; // the event's own id
   at: Instant;
-  type: string; // "conversation.user_turn"
+  type: string; // "conversation.turn.user"
   kind: string; // "conversation", "delivery", "tool", "task", "watch"…
   kind_label: string;
   message: Message;
@@ -199,6 +200,7 @@ export interface JournalFilters {
   to?: Instant;
   tone?: Tone;
   session?: Id;
+  conversation?: Id;
   task?: Id;
   watch?: Id;
   connection?: Id;
@@ -305,15 +307,72 @@ export interface Capability {
   label: string;
 }
 
+export type PairingMethodId =
+  | "device_code.display"
+  | "device_code.speech"
+  | "enrollment.input"
+  | "enrollment.provisioning"
+  | "enrollment.qr";
+
+/** A way to prove a person meant to pair a device, in the reader's language. */
+export interface PairingMethod {
+  id: PairingMethodId;
+  proof: "device_code" | "enrollment_code";
+  label: string;
+  hint: string; // what the person does, in one sentence
+}
+
+export interface PairingMethods {
+  methods: PairingMethod[]; // recommended order
+  recommended: PairingMethodId;
+}
+
+/** A device asking to be paired, waiting for a proof. */
 export interface PairingRequest {
   id: Id; // the pairing id
   device: { id: string; model: string; room: string; brand: string | null; sdk: string | null };
   capabilities: Capability[];
+  methods: PairingMethod[]; // the recommended one first
+  recommended_method: PairingMethodId;
+  can_identify: boolean;
   expires_at: Instant; // computed from `expires_in_s` when received
+}
+
+export type AdditionStage = "waiting" | "device_seen" | "paired" | "cancelled" | "expired";
+
+/** A satellite being added from the admin, with the method a person picked. */
+export interface Addition {
+  id: Id;
+  method: PairingMethod;
+  stage: AdditionStage;
+  name: string | null;
+  room: string | null;
+  capabilities: Capability[] | null;
+  candidates: Id[]; // pending devices that may be this one (device code methods)
+  device_id: string | null;
+  created_by: Id | null;
+  created_at: Instant;
+  expires_at: Instant; // computed from `expires_in_s` when received
+}
+
+export interface NewAddition {
+  method: PairingMethodId;
+  name?: string;
+  room?: string;
+  capabilities?: string[];
+}
+
+/** The enrollment code and its pairing URI are only in this answer. */
+export interface StartedAddition {
+  addition: Addition;
+  code: string | null; // grouped: `K7QF-2M9X`
+  uri: string | null; // null when no host serves satellites
 }
 
 export interface Satellite {
   id: string;
+  name: string | null;
+  can_identify: boolean;
   model: string;
   room: string;
   capabilities: Capability[];
@@ -330,11 +389,13 @@ export interface Satellite {
 export interface Satellites {
   pending: PairingRequest[];
   paired: Satellite[];
+  additions: Addition[];
 }
 
 export interface Approval {
   code: string;
-  capabilities: string[];
+  capabilities?: string[];
+  addition_id?: Id; // when the approval completes an addition
 }
 
 // -- tasks, watches, memories ---------------------------------------------------------------------

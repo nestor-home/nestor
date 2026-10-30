@@ -147,7 +147,7 @@ function Stories({
                     density={density}
                     open={open}
                     isNew={isNew}
-                    unfolded={Boolean(search.session)}
+                    unfolded={Boolean(search.conversation || search.session)}
                   />
                 </li>
               ))}

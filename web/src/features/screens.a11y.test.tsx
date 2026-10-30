@@ -8,6 +8,7 @@ import { renderApp, settle } from "@/test/render";
 const SCREENS: [string, string | RegExp][] = [
   ["/", /Bonjour|Bonsoir|Bonne nuit/],
   ["/journal", "Journal"],
+  ["/journal?conversation=conv-s-elec", "Journal"],
   ["/people", "Personnes"],
   ["/people/lea", "Léa"],
   ["/memories", "Souvenirs"],
@@ -20,11 +21,12 @@ const SCREENS: [string, string | RegExp][] = [
   ["/connections/c-gmail-mathis", /mathis\.lambert27@gmail\.com/],
   ["/connections/c-gmail-mathis/tools", /mathis\.lambert27@gmail\.com/],
   ["/satellites", "Satellites"],
-  ["/satellites/reachy-salon", /reachy-salon/],
+  ["/satellites/reachy-salon", /Reachy du salon/],
   ["/system", "Système"],
   ["/accounts", "Comptes"],
   ["/config/persona", "Configuration"],
   ["/config/household", "Configuration"],
+  ["/config/conversation", "Configuration"],
   ["/config/model", "Configuration"],
   ["/config/channels", "Configuration"],
   ["/config/tools", "Configuration"],
@@ -66,6 +68,21 @@ describe("accessibility of every screen", () => {
     const sheet = await screen.findByRole("dialog", { name: "Voix" });
     await user.clear(within(sheet).getByRole("textbox", { name: "Pièce" }));
     await within(sheet).findByText("Pièce : ne peut pas être vide");
+    await settle(queryClient);
+    await expectAccessible();
+  });
+
+  it("the add-a-satellite sheet, choosing then following an enrollment code", async () => {
+    const user = userEvent.setup();
+    const { queryClient } = renderApp("/satellites");
+    await user.click(await screen.findByRole("button", { name: "Ajouter un satellite" }));
+    const sheet = await screen.findByRole("dialog", { name: "Ajouter un satellite" });
+    await within(sheet).findByRole("button", { name: /^QR code/ });
+    await settle(queryClient);
+    await expectAccessible();
+    await user.click(within(sheet).getByRole("button", { name: /^QR code/ }));
+    await user.click(within(sheet).getByRole("button", { name: "Commencer" }));
+    await within(sheet).findByRole("img", { name: /QR code de l'adresse/ });
     await settle(queryClient);
     await expectAccessible();
   });

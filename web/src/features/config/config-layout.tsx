@@ -23,7 +23,7 @@ import { cn } from "@/lib/utils";
 import { Changes } from "./changes";
 import { ConfigEditorProvider, changeCount, useConfigEditor } from "./editor";
 import { changedKeys, problemsUnder } from "./schema";
-import { GROUP_LABEL, PAGES, pageOfKey, pageTitle } from "./sections";
+import { GROUP_LABEL, pageOfKey, pagesFor, pageTitle } from "./sections";
 
 /** The Configuration area: its sub-navigation, the page, and the bar that saves the one draft. */
 export function ConfigLayout() {
@@ -81,43 +81,49 @@ function SubNav() {
   const { schema } = useConfigEditor();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const marks = usePageMarks();
-  const groups = [...new Set(PAGES.map((p) => p.group))];
+  const pages = pagesFor(schema);
+  const groups = [...new Set(pages.map((p) => p.group))];
   return (
     <nav aria-label={t("cfg-nav")} className="sticky top-6 grid gap-5">
       {groups.map((group) => (
         <div key={group}>
           <p className="label-mono mb-1.5 px-2 text-[0.66rem]">{t(GROUP_LABEL[group])}</p>
           <ul className="grid gap-px">
-            {PAGES.filter((p) => p.group === group).map((page) => {
-              const to = `/config/${page.slug}`;
-              const here = path === to;
-              const mark = marks(page.keys);
-              return (
-                <li key={page.slug}>
-                  <Link
-                    to={to}
-                    aria-current={here ? "page" : undefined}
-                    className={cn(
-                      "flex h-8 items-center gap-2 rounded-md px-2 text-[0.85rem] text-ink-muted hover:bg-paper-sunken hover:text-ink",
-                      here && "bg-paper-sunken text-ink",
-                    )}
-                  >
-                    <page.icon className={cn("size-3.5", here ? "text-ember" : "text-ink-faint")} aria-hidden="true" />
-                    <span className="min-w-0 flex-1 truncate">{pageTitle(page, schema, t)}</span>
-                    {mark.problems ? (
-                      <span className="font-mono text-[0.68rem] text-brick tabular">
-                        {mark.problems}
-                        <span className="sr-only"> {t("cfg-problems", { count: mark.problems })}</span>
-                      </span>
-                    ) : mark.changed ? (
-                      <span className="size-1.5 rounded-full bg-ember" title={t("cfg-modified")}>
-                        <span className="sr-only">{t("cfg-modified")}</span>
-                      </span>
-                    ) : null}
-                  </Link>
-                </li>
-              );
-            })}
+            {pages
+              .filter((p) => p.group === group)
+              .map((page) => {
+                const to = `/config/${page.slug}`;
+                const here = path === to;
+                const mark = marks(page.keys);
+                return (
+                  <li key={page.slug}>
+                    <Link
+                      to={to}
+                      aria-current={here ? "page" : undefined}
+                      className={cn(
+                        "flex h-8 items-center gap-2 rounded-md px-2 text-[0.85rem] text-ink-muted hover:bg-paper-sunken hover:text-ink",
+                        here && "bg-paper-sunken text-ink",
+                      )}
+                    >
+                      <page.icon
+                        className={cn("size-3.5", here ? "text-ember" : "text-ink-faint")}
+                        aria-hidden="true"
+                      />
+                      <span className="min-w-0 flex-1 truncate">{pageTitle(page, schema, t)}</span>
+                      {mark.problems ? (
+                        <span className="font-mono text-[0.68rem] text-brick tabular">
+                          {mark.problems}
+                          <span className="sr-only"> {t("cfg-problems", { count: mark.problems })}</span>
+                        </span>
+                      ) : mark.changed ? (
+                        <span className="size-1.5 rounded-full bg-ember" title={t("cfg-modified")}>
+                          <span className="sr-only">{t("cfg-modified")}</span>
+                        </span>
+                      ) : null}
+                    </Link>
+                  </li>
+                );
+              })}
           </ul>
         </div>
       ))}
@@ -131,7 +137,11 @@ function MobileNav() {
   return (
     <TabNav
       label={t("cfg-nav")}
-      tabs={PAGES.map((page) => ({ to: `/config/${page.slug}`, label: pageTitle(page, schema, t), icon: page.icon }))}
+      tabs={pagesFor(schema).map((page) => ({
+        to: `/config/${page.slug}`,
+        label: pageTitle(page, schema, t),
+        icon: page.icon,
+      }))}
     />
   );
 }
@@ -149,7 +159,7 @@ function SaveBar() {
   const problems = editor.problems.length;
   const first = editor.problems[0];
   const goToProblem = () => {
-    const page = first ? pageOfKey(String(first.path[0] ?? "")) : undefined;
+    const page = first ? pageOfKey(String(first.path[0] ?? ""), editor.schema) : undefined;
     if (page) void navigate({ to: `/config/${page.slug}` });
   };
   const save = async () => {

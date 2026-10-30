@@ -68,7 +68,7 @@ export function day(now = Date.now()): JournalEvent[] {
   // -- earlier days: a quieter background, single events ------------------------------------------
   const BACKGROUND: Omit<Draft, "ago">[] = [
     {
-      type: "home.presence_changed",
+      type: "presence.changed",
       kind: "presence",
       title: "Mathis est dans la pièce « cuisine »",
       people: ["mathis"],
@@ -76,7 +76,7 @@ export function day(now = Date.now()): JournalEvent[] {
       record: { person: "mathis", home: true, room: "cuisine" },
     },
     {
-      type: "satellites.person_detected",
+      type: "observation.person.detected",
       kind: "observation",
       title: "1 personne vue par reachy-salon (pièce « salon »)",
       detail: "Confiance : 91 %",
@@ -85,7 +85,7 @@ export function day(now = Date.now()): JournalEvent[] {
       record: { count: 1, confidence: 0.91 },
     },
     {
-      type: "conversation.user_turn",
+      type: "conversation.turn.user",
       kind: "conversation",
       title: "Odile a dit",
       detail: "Bonjour Richie, rappelle à Léa que je viens dimanche.",
@@ -95,7 +95,7 @@ export function day(now = Date.now()): JournalEvent[] {
       record: { text: "Bonjour Richie, rappelle à Léa que je viens dimanche." },
     },
     {
-      type: "conversation.assistant_turn",
+      type: "conversation.turn.assistant",
       kind: "conversation",
       title: "Richie a répondu",
       detail: "Bien reçu, je lui dirai ce soir.",
@@ -103,21 +103,21 @@ export function day(now = Date.now()): JournalEvent[] {
       links: { session: "s-odile" },
     },
     {
-      type: "satellites.speech_activity",
+      type: "observation.speech.activity",
       kind: "observation",
       title: "Parole détectée près de reachy-bureau (pièce « bureau »)",
       room: "bureau",
       links: { satellite: "reachy-bureau" },
     },
     {
-      type: "home.presence_changed",
+      type: "presence.changed",
       kind: "presence",
       title: "Jules est dans la pièce « chambre de Jules »",
       people: ["jules"],
       room: "chambre de Jules",
     },
     {
-      type: "tools.tool_called",
+      type: "agent.tool.called",
       kind: "tool",
       title: "Outil ha_get_state appelé",
       detail: '{"entity_id": "sensor.temperature_salon"}',
@@ -126,7 +126,7 @@ export function day(now = Date.now()): JournalEvent[] {
       links: { call: "c-bg", connection: "c-mcp-ha" },
     },
     {
-      type: "tools.tool_completed",
+      type: "agent.tool.completed",
       kind: "tool",
       title: "Outil ha_get_state terminé en 0,3 s",
       detail: "19,5 °C",
@@ -148,7 +148,7 @@ export function day(now = Date.now()): JournalEvent[] {
   // -- yesterday: a watch is born, a task fails ---------------------------------------------------
   const born = ev({
     ago: 60 * 28,
-    type: "conversation.user_turn",
+    type: "conversation.turn.user",
     kind: "conversation",
     title: "Léa a dit",
     detail: "Préviens-moi quand mon colis Vinted arrive au point relais.",
@@ -158,7 +158,7 @@ export function day(now = Date.now()): JournalEvent[] {
   });
   ev({
     ago: 60 * 28 - 0.2,
-    type: "initiative.watch_created",
+    type: "watch.created",
     kind: "watch",
     title: "Veille créée : le colis Vinted de Léa",
     detail: "Mots-clés : Mondial Relay, Vinted, disponible",
@@ -169,7 +169,7 @@ export function day(now = Date.now()): JournalEvent[] {
   });
   ev({
     ago: 60 * 28 - 0.3,
-    type: "conversation.assistant_turn",
+    type: "conversation.turn.assistant",
     kind: "conversation",
     title: "Richie a répondu",
     detail: "Je surveille ta boîte : je te préviens dès qu'il est disponible.",
@@ -178,7 +178,7 @@ export function day(now = Date.now()): JournalEvent[] {
   });
   ev({
     ago: 60 * 26 - 9,
-    type: "cognition.task_ended",
+    type: "task.ended",
     kind: "task",
     title: "Tâche a04f12 en échec (9 min)",
     detail: "Le site demande une connexion par SMS : impossible sans Léa.",
@@ -191,7 +191,7 @@ export function day(now = Date.now()): JournalEvent[] {
   // -- this morning -------------------------------------------------------------------------------
   ev({
     ago: 412,
-    type: "home.presence_changed",
+    type: "presence.changed",
     kind: "presence",
     title: "Mathis est dans la pièce « cuisine »",
     people: ["mathis"],
@@ -200,7 +200,7 @@ export function day(now = Date.now()): JournalEvent[] {
   });
   ev({
     ago: 405,
-    type: "home.presence_changed",
+    type: "presence.changed",
     kind: "presence",
     title: "Léa est dans la pièce « salon »",
     people: ["lea"],
@@ -211,7 +211,7 @@ export function day(now = Date.now()): JournalEvent[] {
   const s1 = { session: "s-matin" };
   const u1 = ev({
     ago: 398,
-    type: "conversation.user_turn",
+    type: "conversation.turn.user",
     kind: "conversation",
     title: "Léa a dit",
     detail: "Richie, qu'est-ce que j'ai aujourd'hui ?",
@@ -223,7 +223,7 @@ export function day(now = Date.now()): JournalEvent[] {
   });
   ev({
     ago: 397.9,
-    type: "tools.tool_called",
+    type: "agent.tool.called",
     kind: "tool",
     title: "Outil calendar_list appelé",
     detail: '{"day": "today", "calendar": "lea"}',
@@ -236,7 +236,7 @@ export function day(now = Date.now()): JournalEvent[] {
   });
   ev({
     ago: 397.8,
-    type: "tools.tool_completed",
+    type: "agent.tool.completed",
     kind: "tool",
     title: "Outil calendar_list terminé en 0,7 s",
     detail: "2 événements : « Point équipe » 10:00, « Yoga » 19:00",
@@ -247,7 +247,7 @@ export function day(now = Date.now()): JournalEvent[] {
   });
   ev({
     ago: 397.7,
-    type: "conversation.assistant_turn",
+    type: "conversation.turn.assistant",
     kind: "conversation",
     title: "Richie a répondu",
     detail: "Un point d'équipe à 10 h, puis ton yoga à 19 h. Rien d'autre.",
@@ -261,7 +261,7 @@ export function day(now = Date.now()): JournalEvent[] {
   const s2 = { session: "s-elec" };
   const u2 = ev({
     ago: 352,
-    type: "conversation.user_turn",
+    type: "conversation.turn.user",
     kind: "conversation",
     title: "Mathis a dit",
     detail: "Tu peux comparer les offres d'électricité verte ? Base-toi sur mes dernières factures.",
@@ -271,7 +271,7 @@ export function day(now = Date.now()): JournalEvent[] {
   });
   ev({
     ago: 351.9,
-    type: "tools.tool_called",
+    type: "agent.tool.called",
     kind: "tool",
     title: "Outil mail_search appelé",
     detail: '{"query": "from:edf facture", "limit": 2}',
@@ -284,7 +284,7 @@ export function day(now = Date.now()): JournalEvent[] {
   });
   ev({
     ago: 351.8,
-    type: "tools.tool_completed",
+    type: "agent.tool.completed",
     kind: "tool",
     title: "Outil mail_search terminé en 0,8 s",
     detail: "2 courriels : « Votre facture de septembre », « Votre facture d'août ».",
@@ -295,7 +295,7 @@ export function day(now = Date.now()): JournalEvent[] {
   });
   const started = ev({
     ago: 351.6,
-    type: "cognition.task_started",
+    type: "task.started",
     kind: "task",
     title: "Tâche 3f2a1c confiée à hermes",
     detail: "Comparer trois offres d'électricité verte et résumer les écarts de prix annuels.",
@@ -307,7 +307,7 @@ export function day(now = Date.now()): JournalEvent[] {
   });
   ev({
     ago: 351.5,
-    type: "conversation.assistant_turn",
+    type: "conversation.turn.assistant",
     kind: "conversation",
     title: "Richie a répondu",
     detail: "C'est parti : je te préviens dès que j'ai les chiffres.",
@@ -316,7 +316,7 @@ export function day(now = Date.now()): JournalEvent[] {
   });
   ev({
     ago: 340,
-    type: "cognition.task_progressed",
+    type: "task.progress",
     kind: "task",
     title: "Tâche 3f2a1c : nouvelle étape",
     detail: "Lecture des deux dernières factures : 6 800 kWh/an, heures creuses.",
@@ -326,7 +326,7 @@ export function day(now = Date.now()): JournalEvent[] {
   });
   ev({
     ago: 318,
-    type: "cognition.task_progressed",
+    type: "task.progress",
     kind: "task",
     title: "Tâche 3f2a1c : nouvelle étape",
     detail: "Grilles tarifaires d'Ekwateur, Enercoop et Ilek récupérées.",
@@ -335,7 +335,7 @@ export function day(now = Date.now()): JournalEvent[] {
   });
   ev({
     ago: 290,
-    type: "cognition.task_progressed",
+    type: "task.progress",
     kind: "task",
     title: "Tâche 3f2a1c : nouvelle étape",
     detail: "Calcul sur un an, abonnement compris.",
@@ -344,7 +344,7 @@ export function day(now = Date.now()): JournalEvent[] {
   });
   const ended = ev({
     ago: 251,
-    type: "cognition.task_ended",
+    type: "task.ended",
     kind: "task",
     title: "Tâche 3f2a1c terminée (1 h 41)",
     detail: "Ilek est 38 € moins cher par an ; Enercoop 112 € plus cher ; Ekwateur au même prix.",
@@ -354,7 +354,7 @@ export function day(now = Date.now()): JournalEvent[] {
   });
   ev({
     ago: 250.6,
-    type: "initiative.delivery_considered",
+    type: "initiative.considered",
     kind: "delivery",
     title: "Décision de parler à Mathis : tâche 3f2a1c terminée",
     reason: "Mathis est dans la pièce « bureau »",
@@ -371,7 +371,7 @@ export function day(now = Date.now()): JournalEvent[] {
     ago: 250.4,
     type: "initiative.delivered",
     kind: "delivery",
-    title: "Message transmis à voix haute : tâche 3f2a1c",
+    title: "Message transmis : tâche 3f2a1c",
     detail: "« Mathis, j'ai fini la comparaison : Ilek te ferait gagner 38 € par an. »",
     people: ["mathis"],
     channels: [VOICE],
@@ -383,7 +383,7 @@ export function day(now = Date.now()): JournalEvent[] {
   const w = { watch: "w-9d41" };
   const trig = ev({
     ago: 230,
-    type: "initiative.watch_triggered",
+    type: "watch.triggered",
     kind: "watch",
     title: "Veille 9d41 déclenchée par « Votre colis est disponible »",
     detail: "Mondial Relay : colis disponible au Tabac de la Place jusqu'au 6 nov.",
@@ -393,22 +393,12 @@ export function day(now = Date.now()): JournalEvent[] {
     record: { item: { kind: "mail", from: "noreply@mondialrelay.fr", subject: "Votre colis est disponible" } },
   });
   ev({
-    ago: 229.8,
-    type: "initiative.watch_triaged",
-    kind: "watch",
-    title: "Tri : pertinent pour Léa",
-    detail: "Le colis Vinted attendu est arrivé au point relais ; rien d'urgent.",
-    people: ["lea"],
-    links: w,
-    cause: trig,
-    record: { verdict: "relevant", urgent: false, model: "claude-haiku-4.5" },
-  });
-  ev({
     ago: 229.6,
-    type: "initiative.delivery_considered",
+    type: "initiative.considered",
     kind: "delivery",
     title: "Décision de parler à Léa : veille 9d41",
     reason: "Léa est dans la pièce « salon »",
+    cause: trig,
     detail: "Prévu : à voix haute sur voice (salon)",
     people: ["lea"],
     channels: [VOICE],
@@ -420,7 +410,7 @@ export function day(now = Date.now()): JournalEvent[] {
     ago: 229.4,
     type: "initiative.delivered",
     kind: "delivery",
-    title: "Message transmis à voix haute : veille 9d41",
+    title: "Message transmis : veille 9d41",
     detail: "« Léa, ton colis Vinted t'attend au Tabac de la Place. »",
     people: ["lea"],
     channels: [VOICE],
@@ -429,17 +419,17 @@ export function day(now = Date.now()): JournalEvent[] {
   });
   ev({
     ago: 205,
-    type: "home.presence_changed",
+    type: "presence.changed",
     kind: "presence",
     title: "Léa n'est plus à la maison",
     people: ["lea"],
   });
   ev({
     ago: 199.6,
-    type: "initiative.delivery_considered",
+    type: "initiative.considered",
     kind: "delivery",
     title: "Décision de parler à Léa : veille 9d41 (relance)",
-    reason: "pas de réponse depuis 30 min, et Léa n'est pas à la maison",
+    reason: "Léa n'est pas à la maison",
     detail: "Prévu : par écrit sur telegram",
     people: ["lea"],
     channels: ["telegram"],
@@ -450,7 +440,7 @@ export function day(now = Date.now()): JournalEvent[] {
     ago: 199.4,
     type: "initiative.delivered",
     kind: "delivery",
-    title: "Message transmis par écrit : veille 9d41 (relance)",
+    title: "Message transmis : veille 9d41 (relance)",
     detail: "« Ton colis est au Tabac de la Place jusqu'au 6 novembre. »",
     people: ["lea"],
     channels: ["telegram"],
@@ -459,7 +449,7 @@ export function day(now = Date.now()): JournalEvent[] {
   const s3 = { session: "s-colis" };
   ev({
     ago: 190,
-    type: "conversation.user_turn",
+    type: "conversation.turn.user",
     kind: "conversation",
     title: "Léa a dit",
     detail: "Merci ! J'irai le chercher en rentrant.",
@@ -469,7 +459,7 @@ export function day(now = Date.now()): JournalEvent[] {
   });
   ev({
     ago: 189.9,
-    type: "conversation.assistant_turn",
+    type: "conversation.turn.assistant",
     kind: "conversation",
     title: "Richie a répondu",
     detail: "Parfait. Je garde la veille ouverte jusqu'à ce qu'il soit retiré.",
@@ -480,7 +470,7 @@ export function day(now = Date.now()): JournalEvent[] {
   // Gmail stops answering: a failed tool call, then the connection needs a reconnect
   ev({
     ago: 171,
-    type: "tools.tool_called",
+    type: "agent.tool.called",
     kind: "tool",
     title: "Outil mail_search appelé",
     detail: '{"query": "mutuelle remboursement", "limit": 5}',
@@ -491,7 +481,7 @@ export function day(now = Date.now()): JournalEvent[] {
   });
   const failed = ev({
     ago: 170.9,
-    type: "tools.tool_completed",
+    type: "agent.tool.completed",
     kind: "tool",
     title: "Outil mail_search en échec",
     detail: "Google a refusé le jeton d'accès (invalid_grant).",
@@ -503,7 +493,7 @@ export function day(now = Date.now()): JournalEvent[] {
   });
   ev({
     ago: 170.8,
-    type: "connectors.connection_changed",
+    type: "connection.changed",
     kind: "connection",
     title: "Connexion mathis.lambert27@gmail.com à réautoriser",
     detail: "Google a refusé le renouvellement du jeton : reconnectez le compte.",
@@ -518,7 +508,7 @@ export function day(now = Date.now()): JournalEvent[] {
   const s4 = { session: "s-jules" };
   ev({
     ago: 150,
-    type: "conversation.user_turn",
+    type: "conversation.turn.user",
     kind: "conversation",
     title: "Jules a dit",
     detail: "Richie, c'est quand mon entraînement de hand ?",
@@ -529,7 +519,7 @@ export function day(now = Date.now()): JournalEvent[] {
   });
   ev({
     ago: 149.9,
-    type: "conversation.assistant_turn",
+    type: "conversation.turn.assistant",
     kind: "conversation",
     title: "Richie a répondu (interrompu)",
     detail: "Mercredi à 14 h, comme chaque semaine. N'oublie pas ta gourde et…",
@@ -540,7 +530,7 @@ export function day(now = Date.now()): JournalEvent[] {
   });
   ev({
     ago: 149.85,
-    type: "conversation.answer_cut",
+    type: "conversation.turn.cut",
     kind: "conversation",
     title: "Réponse coupée par Jules",
     detail: "Entendu : « stop, c'est bon »",
@@ -551,7 +541,7 @@ export function day(now = Date.now()): JournalEvent[] {
   });
   const u5 = ev({
     ago: 149.5,
-    type: "conversation.user_turn",
+    type: "conversation.turn.user",
     kind: "conversation",
     title: "Jules a dit",
     detail: "Et tu peux retenir que maintenant c'est à 15 h ?",
@@ -573,7 +563,7 @@ export function day(now = Date.now()): JournalEvent[] {
   });
   ev({
     ago: 149.3,
-    type: "conversation.assistant_turn",
+    type: "conversation.turn.assistant",
     kind: "conversation",
     title: "Richie a répondu",
     detail: "C'est noté : mercredi, 15 h.",
@@ -584,7 +574,7 @@ export function day(now = Date.now()): JournalEvent[] {
 
   ev({
     ago: 120,
-    type: "satellites.pairing_requested",
+    type: "satellite.pairing.requested",
     kind: "satellite",
     title: "Le satellite esp32-cuisine (ESP32-S3 Box, pièce « cuisine ») demande l'appairage",
     detail: "Déclare : micro, haut-parleur",
@@ -596,7 +586,7 @@ export function day(now = Date.now()): JournalEvent[] {
   const w2 = { watch: "w-2b77" };
   const trig2 = ev({
     ago: 96,
-    type: "initiative.watch_triggered",
+    type: "watch.triggered",
     kind: "watch",
     title: "Veille 2b77 déclenchée par « Sortie au musée vendredi »",
     detail: "L'école Jean-Moulin demande une autorisation signée avant jeudi.",
@@ -604,21 +594,12 @@ export function day(now = Date.now()): JournalEvent[] {
     links: { ...w2, connection: "c-gmail-mathis" },
   });
   ev({
-    ago: 95.8,
-    type: "initiative.watch_triaged",
-    kind: "watch",
-    title: "Tri : pertinent, à signaler aujourd'hui",
-    detail: "Autorisation parentale à rendre avant jeudi.",
-    links: w2,
-    cause: trig2,
-    record: { verdict: "relevant", urgent: true },
-  });
-  ev({
     ago: 95.6,
-    type: "initiative.delivery_considered",
+    type: "initiative.considered",
     kind: "delivery",
     title: "Décision de parler à Mathis : veille 2b77",
     reason: "Mathis est dans la pièce « bureau »",
+    cause: trig2,
     detail: "Prévu : à voix haute sur voice (bureau) puis par écrit sur telegram",
     people: ["mathis"],
     channels: [VOICE, "telegram"],
@@ -628,9 +609,9 @@ export function day(now = Date.now()): JournalEvent[] {
   });
   ev({
     ago: 95.5,
-    type: "initiative.delivery_failed",
+    type: "initiative.undeliverable",
     kind: "delivery",
-    title: "Message non transmis à voix haute : veille 2b77",
+    title: "Message non transmis : veille 2b77",
     detail: "Essayé : voice (bureau). Le satellite reachy-bureau ne répond plus.",
     people: ["mathis"],
     channels: [VOICE],
@@ -642,7 +623,7 @@ export function day(now = Date.now()): JournalEvent[] {
     ago: 95.4,
     type: "initiative.delivered",
     kind: "delivery",
-    title: "Message transmis par écrit : veille 2b77",
+    title: "Message transmis : veille 2b77",
     detail: "« L'école demande l'autorisation pour la sortie de vendredi, avant jeudi. »",
     people: ["mathis"],
     channels: ["telegram"],
@@ -652,10 +633,10 @@ export function day(now = Date.now()): JournalEvent[] {
   // a reminder Odile never received
   ev({
     ago: 80,
-    type: "initiative.delivery_considered",
+    type: "initiative.considered",
     kind: "delivery",
     title: "Décision d'écrire à Odile : rappel du déjeuner",
-    reason: "aucune information de présence : retour à la conversation d'origine",
+    reason: "présence inconnue : retour à la conversation d'origine",
     detail: "Prévu : par écrit sur telegram",
     people: ["odile"],
     channels: ["telegram"],
@@ -664,7 +645,7 @@ export function day(now = Date.now()): JournalEvent[] {
   });
   ev({
     ago: 79.9,
-    type: "initiative.delivery_failed",
+    type: "initiative.undeliverable",
     kind: "delivery",
     title: "Message non transmis : rappel du déjeuner",
     detail: "Telegram : le bot a été bloqué par la destinataire.",
@@ -678,7 +659,7 @@ export function day(now = Date.now()): JournalEvent[] {
   const s5 = { session: "s-lumiere" };
   const u6 = ev({
     ago: 61,
-    type: "conversation.user_turn",
+    type: "conversation.turn.user",
     kind: "conversation",
     title: "Mathis a dit",
     detail: "Richie, éteins la lumière de la cuisine.",
@@ -689,7 +670,7 @@ export function day(now = Date.now()): JournalEvent[] {
   });
   ev({
     ago: 60.95,
-    type: "conversation.fallback_spoken",
+    type: "conversation.fallback",
     kind: "conversation",
     title: "Réponse de secours : modèle trop lent",
     detail: "« Une seconde… »",
@@ -701,7 +682,7 @@ export function day(now = Date.now()): JournalEvent[] {
   });
   ev({
     ago: 60.9,
-    type: "tools.tool_called",
+    type: "agent.tool.called",
     kind: "tool",
     title: "Outil ha_turn_off appelé",
     detail: '{"entity_id": "light.cuisine"}',
@@ -714,7 +695,7 @@ export function day(now = Date.now()): JournalEvent[] {
   });
   ev({
     ago: 60.88,
-    type: "tools.tool_completed",
+    type: "agent.tool.completed",
     kind: "tool",
     title: "Outil ha_turn_off terminé en 0,4 s",
     detail: "light.cuisine : off",
@@ -725,7 +706,7 @@ export function day(now = Date.now()): JournalEvent[] {
   });
   ev({
     ago: 60.85,
-    type: "conversation.assistant_turn",
+    type: "conversation.turn.assistant",
     kind: "conversation",
     title: "Richie a répondu",
     detail: "C'est éteint.",
@@ -738,7 +719,7 @@ export function day(now = Date.now()): JournalEvent[] {
   const s6 = { session: "s-mutuelle" };
   const u7 = ev({
     ago: 31,
-    type: "conversation.user_turn",
+    type: "conversation.turn.user",
     kind: "conversation",
     title: "Mathis a dit",
     detail: "Prépare le dossier de remboursement de la mutuelle pour les lunettes de Jules.",
@@ -748,7 +729,7 @@ export function day(now = Date.now()): JournalEvent[] {
   });
   ev({
     ago: 30.9,
-    type: "cognition.task_started",
+    type: "task.started",
     kind: "task",
     title: "Tâche 4410aa confiée à hermes",
     detail: "Préparer le dossier de remboursement des lunettes de Jules.",
@@ -760,7 +741,7 @@ export function day(now = Date.now()): JournalEvent[] {
   });
   ev({
     ago: 30.8,
-    type: "conversation.assistant_turn",
+    type: "conversation.turn.assistant",
     kind: "conversation",
     title: "Richie a répondu",
     detail: "Je m'en occupe. Il me faudra la facture de l'opticien.",
@@ -769,7 +750,7 @@ export function day(now = Date.now()): JournalEvent[] {
   });
   ev({
     ago: 18,
-    type: "cognition.task_progressed",
+    type: "task.progress",
     kind: "task",
     title: "Tâche 4410aa : nouvelle étape",
     detail: "Formulaire de la mutuelle téléchargé.",
@@ -778,7 +759,7 @@ export function day(now = Date.now()): JournalEvent[] {
   });
   ev({
     ago: 9,
-    type: "cognition.task_progressed",
+    type: "task.progress",
     kind: "task",
     title: "Tâche 4410aa : nouvelle étape",
     detail: "En attente de la facture : Gmail est à reconnecter.",
@@ -789,7 +770,7 @@ export function day(now = Date.now()): JournalEvent[] {
   const s7 = { session: "s-courses" };
   const u8 = ev({
     ago: 12,
-    type: "conversation.user_turn",
+    type: "conversation.turn.user",
     kind: "conversation",
     title: "Léa a dit",
     detail: "Fais-moi la liste de courses de la semaine à partir de mes menus.",
@@ -799,7 +780,7 @@ export function day(now = Date.now()): JournalEvent[] {
   });
   ev({
     ago: 11.9,
-    type: "cognition.task_started",
+    type: "task.started",
     kind: "task",
     title: "Tâche 88b07e confiée à codex",
     detail: "Préparer la liste de courses de la semaine à partir des menus de Léa.",
@@ -811,7 +792,7 @@ export function day(now = Date.now()): JournalEvent[] {
   });
   ev({
     ago: 11.8,
-    type: "conversation.assistant_turn",
+    type: "conversation.turn.assistant",
     kind: "conversation",
     title: "Richie a répondu",
     detail: "Je prépare ça et je te l'envoie ici.",
@@ -820,7 +801,7 @@ export function day(now = Date.now()): JournalEvent[] {
   });
   ev({
     ago: 6,
-    type: "cognition.task_progressed",
+    type: "task.progress",
     kind: "task",
     title: "Tâche 88b07e : nouvelle étape",
     detail: "Lecture du serveur MCP « Recettes de Léa ».",
@@ -830,7 +811,7 @@ export function day(now = Date.now()): JournalEvent[] {
 
   ev({
     ago: 4,
-    type: "satellites.person_detected",
+    type: "observation.person.detected",
     kind: "observation",
     title: "2 personnes vues par reachy-salon (pièce « salon »)",
     detail: "Confiance : 87 %",
@@ -839,7 +820,7 @@ export function day(now = Date.now()): JournalEvent[] {
   });
   ev({
     ago: 2,
-    type: "home.presence_changed",
+    type: "presence.changed",
     kind: "presence",
     title: "Jules est dans la pièce « salon »",
     people: ["jules"],
@@ -848,6 +829,17 @@ export function day(now = Date.now()): JournalEvent[] {
 
   // positions, as the journal numbers its entries: oldest first, causes pointing at positions
   events.sort((a, b) => (a.at < b.at ? -1 : 1));
+  // as the server stamps them: each session's talk is one conversation (Assist's model), and every
+  // event of a turn (the message, its tool calls, memories, tasks, the reply) carries the turn's id
+  const turnOf = new Map<string, string>();
+  for (const e of events) {
+    const session = e.links.session;
+    if (!session) continue;
+    e.links = { ...e.links, conversation: `conv-${session}` };
+    if (e.message.id === "journal-user-said") turnOf.set(session, e.links.turn ?? `turn-${e.uid}`);
+    const turn = e.links.turn ?? turnOf.get(session);
+    if (turn) e.links = { ...e.links, turn };
+  }
   const position = new Map(events.map((e, i) => [e.uid, String(i + 1)]));
   for (const e of events) {
     e.id = position.get(e.uid) ?? e.id;
@@ -860,7 +852,7 @@ export function day(now = Date.now()): JournalEvent[] {
 export const LIVE: Omit<JournalItem, "id" | "at" | "uid" | "kind_label">[] = ([] as LiveDraft[])
   .concat([
     {
-      type: "cognition.task_progressed",
+      type: "task.progress",
       kind: "task",
       title: "Tâche 88b07e : nouvelle étape",
       detail: "Liste regroupée par rayon : 34 articles.",
@@ -875,7 +867,7 @@ export const LIVE: Omit<JournalItem, "id" | "at" | "uid" | "kind_label">[] = ([]
       brand: "codex",
     },
     {
-      type: "satellites.speech_activity",
+      type: "observation.speech.activity",
       kind: "observation",
       title: "Parole détectée près de reachy-salon (pièce « salon »)",
       detail: "",
@@ -890,7 +882,7 @@ export const LIVE: Omit<JournalItem, "id" | "at" | "uid" | "kind_label">[] = ([]
       brand: null,
     },
     {
-      type: "conversation.user_turn",
+      type: "conversation.turn.user",
       kind: "conversation",
       title: "Jules a dit",
       detail: "Richie, tu peux mettre de la musique ?",
@@ -905,7 +897,7 @@ export const LIVE: Omit<JournalItem, "id" | "at" | "uid" | "kind_label">[] = ([]
       brand: "voice",
     },
     {
-      type: "conversation.assistant_turn",
+      type: "conversation.turn.assistant",
       kind: "conversation",
       title: "Richie a répondu",
       detail: "Je lance ta playlist du mercredi.",

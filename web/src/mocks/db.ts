@@ -7,6 +7,7 @@ import type {
   Invitation,
   JournalEvent,
   Memory,
+  PairingMethodId,
   PairingRequest,
   Person,
   Satellite,
@@ -21,6 +22,20 @@ import { day } from "./day";
 import * as fixtures from "./fixtures";
 import { stress, stressed } from "./stress";
 
+/** An addition as the mock server keeps it (the enrollment code in clear: it is the mock's). */
+export interface MockAddition {
+  id: string;
+  method: PairingMethodId;
+  name: string | null;
+  room: string | null;
+  capabilities: string[] | null;
+  created_at: string;
+  expires_at: string;
+  status: "active" | "completed" | "cancelled" | "expired";
+  device_id: string | null;
+  code: string | null;
+}
+
 export interface Db {
   signedIn: string | null; // account id
   people: Person[];
@@ -31,6 +46,7 @@ export interface Db {
   connections: Connection[];
   tools: Record<string, Tool[]>; // by connection id
   pairing: PairingRequest[];
+  additions: MockAddition[];
   satellites: Satellite[];
   tasks: Task[];
   watches: Watch[];
@@ -40,7 +56,7 @@ export interface Db {
 }
 
 /** Bumped when the shape changes; the stress fixture keeps its own copy. */
-const KEY = () => (stressed() ? "nestor.mock.db.v6.stress" : "nestor.mock.db.v6");
+const KEY = () => (stressed() ? "nestor.mock.db.v7.stress" : "nestor.mock.db.v7");
 
 export function fresh(): Db {
   const connections = fixtures.connections();
@@ -57,6 +73,7 @@ export function fresh(): Db {
     connections,
     tools: Object.fromEntries(connections.map((c) => [c.id, fixtures.tools(c.kind)])),
     pairing: fixtures.pairing(),
+    additions: [],
     satellites: fixtures.satellites(),
     tasks: fixtures.tasks(),
     watches: fixtures.watches(),

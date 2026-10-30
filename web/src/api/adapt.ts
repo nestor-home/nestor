@@ -3,6 +3,7 @@
 import { rendered } from "@/lib/messages";
 import type {
   AccountDto,
+  AdditionDto,
   ComponentDto,
   ConfigSchemaDto,
   ConnectionDetailDto,
@@ -16,6 +17,7 @@ import type {
   JournalItemDto,
   MeDto,
   MemoryDto,
+  MethodDto,
   PendingDto,
   PersonDto,
   PersonRefDto,
@@ -29,6 +31,7 @@ import type {
 } from "./dto";
 import type {
   Account,
+  Addition,
   Component,
   ConfigDiff,
   ConfigPreview,
@@ -45,6 +48,7 @@ import type {
   JournalItem,
   Me,
   Memory,
+  PairingMethod,
   PairingRequest,
   Person,
   Satellite,
@@ -234,6 +238,35 @@ export function pending(dto: PendingDto, now = Date.now()): PairingRequest {
     id: dto.pairing_id,
     device: { ...dto.device, sdk: dto.sdk },
     capabilities: dto.capabilities,
+    methods: dto.methods.map(method),
+    recommended_method: dto.recommended_method,
+    can_identify: dto.can_identify,
+    expires_at: new Date(now + dto.expires_in_s * 1000).toISOString(),
+  };
+}
+
+export function method(dto: MethodDto): PairingMethod {
+  return {
+    id: dto.id,
+    proof: dto.proof === "device_code" ? "device_code" : "enrollment_code",
+    label: dto.label,
+    hint: dto.hint,
+  };
+}
+
+export function addition(dto: AdditionDto, now = Date.now()): Addition {
+  return {
+    id: dto.id,
+    method: method(dto.method),
+    stage: dto.stage,
+    name: dto.name,
+    room: dto.room,
+    capabilities: dto.capabilities,
+    candidates: dto.candidates,
+    device_id: dto.device_id,
+    created_by: ref(dto.created_by),
+    created_at: dto.created_at,
+    // from the seconds left, not the server's clock
     expires_at: new Date(now + dto.expires_in_s * 1000).toISOString(),
   };
 }
@@ -241,6 +274,8 @@ export function pending(dto: PendingDto, now = Date.now()): PairingRequest {
 export function satellite(dto: SatelliteDto): Satellite {
   return {
     id: dto.id,
+    name: dto.name,
+    can_identify: dto.can_identify,
     model: dto.model,
     room: dto.room,
     capabilities: dto.capabilities,

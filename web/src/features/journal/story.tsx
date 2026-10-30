@@ -174,7 +174,7 @@ function ThreadCard({ thread, density, open, isNew, unfolded }: Props & { thread
         {unfolded ? null : (
           <Link
             to="/journal"
-            search={{ session: thread.session }}
+            search={thread.filter}
             className="inline-flex shrink-0 items-center gap-0.5 text-[0.92rem] text-ink-muted hover:text-ink"
             aria-label={t("jr-thread-open")}
           >

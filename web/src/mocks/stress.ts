@@ -83,7 +83,7 @@ export function stress(db: Db, now = Date.now()): void {
   const session = { session: "s-stress", turn: "t-stress" };
   ev(
     {
-      type: "conversation.user_turn",
+      type: "conversation.turn.user",
       kind: "conversation",
       text: "Marie-Amélie a dit",
       detail: `Regarde ce document ${LONG_URL} et dis-moi si ${LONG_WORD} apparaît dedans, c'est urgent.`,
@@ -96,7 +96,7 @@ export function stress(db: Db, now = Date.now()): void {
   );
   ev(
     {
-      type: "tools.tool_called",
+      type: "agent.tool.called",
       kind: "tool",
       text: `Outil ${LONG_WORD} appelé`,
       detail: JSON_ARGS,
@@ -108,7 +108,7 @@ export function stress(db: Db, now = Date.now()): void {
   );
   ev(
     {
-      type: "tools.tool_completed",
+      type: "agent.tool.completed",
       kind: "tool",
       text: `Outil ${LONG_WORD} en échec`,
       detail: PROVIDER_ERROR,
@@ -122,7 +122,7 @@ export function stress(db: Db, now = Date.now()): void {
   );
   ev(
     {
-      type: "conversation.assistant_turn",
+      type: "conversation.turn.assistant",
       kind: "conversation",
       text: "Richie a répondu",
       detail: `${LONG_SENTENCE}\n\nLe lien que tu m'as donné : ${LONG_URL}`,
@@ -133,7 +133,7 @@ export function stress(db: Db, now = Date.now()): void {
   );
   ev(
     {
-      type: "initiative.delivery_failed",
+      type: "initiative.undeliverable",
       kind: "delivery",
       text: `Message non transmis : ${LONG_WORD}`,
       detail: PROVIDER_ERROR,

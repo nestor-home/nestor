@@ -45,6 +45,10 @@ function greeting(now = new Date()): string {
 /** Its own eye movements when nothing holds its attention (a constant: the controller lives once). */
 const LIVE = { saccades: true };
 
+/** The thread page of an event's conversation (its session for records that predate conversations). */
+const threadOf = (item: JournalItem) =>
+  item.links.conversation ? { conversation: item.links.conversation } : { session: item.links.session };
+
 const clock = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
 
 /** A clock for what fades with time: every second just after a live event, else every minute. */
@@ -313,9 +317,10 @@ function Now({
   const name = usePeopleNames();
   const talks = new Map<string, JournalItem>();
   for (const i of items) {
-    if (i.kind !== "conversation" || !i.links.session) continue;
+    const talk = i.links.conversation ?? i.links.session;
+    if (i.kind !== "conversation" || !talk) continue;
     if (now - new Date(i.at).getTime() > 15 * 60_000) continue;
-    if (!talks.has(i.links.session)) talks.set(i.links.session, i);
+    if (!talks.has(talk)) talks.set(talk, i);
   }
   return (
     <Band title={t("home-now")}>
@@ -336,8 +341,8 @@ function Now({
             );
           })}
           {[...talks.values()].map((i) => (
-            <li key={i.links.session}>
-              <Link to="/journal" search={{ session: i.links.session }} className="group block">
+            <li key={i.links.conversation ?? i.links.session}>
+              <Link to="/journal" search={threadOf(i)} className="group block">
                 <span className="text-[1.05rem] text-ink group-hover:underline">
                   {i.people.length
                     ? t("home-talking", { people: i.people.map((p) => name(p)).join(", ") })
@@ -452,11 +457,7 @@ function Today({ marks }: { marks: Mark[] }) {
               <li key={m.key}>
                 <Link
                   to="/journal"
-                  search={
-                    m.item.links.session && m.kind === "conversation"
-                      ? { session: m.item.links.session }
-                      : { event: m.item.id }
-                  }
+                  search={m.kind === "conversation" ? threadOf(m.item) : { event: m.item.id }}
                   className="group grid grid-cols-[3.2rem_0.6rem_1fr] items-baseline gap-x-3 py-2.5"
                 >
                   <time dateTime={m.at} className="font-mono text-[0.85rem] text-ink-muted tabular">

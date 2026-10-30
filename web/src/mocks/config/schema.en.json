@@ -175,6 +175,31 @@
       "title": "PersonConfig",
       "type": "object"
     },
+    "conversation": {
+      "additionalProperties": false,
+      "properties": {
+        "ends_after_s": {
+          "default": 300.0,
+          "exclusiveMinimum": 0,
+          "title": "Ends After S",
+          "type": "number",
+          "x-nestor": {
+            "field": "ends_after_s",
+            "title_id": "config-conversation-ends_after_s",
+            "help_id": "config-conversation-ends_after_s-help",
+            "fallback_title_id": "config-field-ends_after_s",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "conversation",
+            "title": "New conversation after (seconds)",
+            "help": "A message sent this long after the last turn starts a new conversation: the assistant no longer replays the earlier turns. Memories stay."
+          }
+        }
+      },
+      "title": "ConversationConfig",
+      "type": "object"
+    },
     "initiative": {
       "additionalProperties": false,
       "properties": {
@@ -360,6 +385,7 @@
   "section_titles": {
     "persona": "Persona",
     "household": "Household",
+    "conversation": "Conversations",
     "initiative": "Initiative",
     "admin": "Admin",
     "data_dir": "Data"
@@ -471,8 +497,8 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "model-openai-compatible",
-                "title": "Extra body",
-                "help": null
+                "title": "Extra request fields",
+                "help": "Sent as is with every request, e.g. the provider's routing options."
               }
             },
             "connect_timeout_s": {
@@ -489,7 +515,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "model-openai-compatible",
-                "title": "Connect timeout s",
+                "title": "Connection timeout (seconds)",
                 "help": null
               }
             },
@@ -507,7 +533,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "model-openai-compatible",
-                "title": "Read timeout s",
+                "title": "Read timeout (seconds)",
                 "help": null
               }
             }
@@ -624,8 +650,8 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "model-openai-compatible",
-                "title": "Extra body",
-                "help": null
+                "title": "Extra request fields",
+                "help": "Sent as is with every request, e.g. the provider's routing options."
               }
             },
             "connect_timeout_s": {
@@ -642,7 +668,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "model-openai-compatible",
-                "title": "Connect timeout s",
+                "title": "Connection timeout (seconds)",
                 "help": null
               }
             },
@@ -660,7 +686,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "model-openai-compatible",
-                "title": "Read timeout s",
+                "title": "Read timeout (seconds)",
                 "help": null
               }
             }
@@ -743,7 +769,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "channel-telegram",
-                "title": "Api base",
+                "title": "API address",
                 "help": null
               }
             },
@@ -762,7 +788,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "channel-telegram",
-                "title": "Poll timeout s",
+                "title": "Wait for new messages (seconds)",
                 "help": null
               }
             },
@@ -780,7 +806,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "channel-telegram",
-                "title": "Request timeout s",
+                "title": "Request timeout (seconds)",
                 "help": null
               }
             },
@@ -804,8 +830,8 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "channel-telegram",
-                "title": "Apology",
-                "help": null
+                "title": "Apology when an answer fails",
+                "help": "Left empty: the default apology. An empty text keeps the bot silent."
               }
             }
           },
@@ -866,7 +892,7 @@
                     "secret_values": false,
                     "advanced": false,
                     "group": "channel-voice-elevenlabssettings",
-                    "title": "Voice id",
+                    "title": "Voice identifier",
                     "help": null
                   }
                 },
@@ -884,7 +910,7 @@
                     "advanced": false,
                     "group": "channel-voice-elevenlabssettings",
                     "title": "Language",
-                    "help": null
+                    "help": "The language spoken to the assistant, for transcription (e.g. fr)."
                   }
                 },
                 "stt_model": {
@@ -900,7 +926,7 @@
                     "secret_values": false,
                     "advanced": false,
                     "group": "channel-voice-elevenlabssettings",
-                    "title": "Stt model",
+                    "title": "Transcription model",
                     "help": null
                   }
                 },
@@ -917,7 +943,7 @@
                     "secret_values": false,
                     "advanced": false,
                     "group": "channel-voice-elevenlabssettings",
-                    "title": "Tts model",
+                    "title": "Speech synthesis model",
                     "help": null
                   }
                 }
@@ -989,7 +1015,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "channel-voice",
-                "title": "Speech",
+                "title": "Speech services",
                 "help": null
               }
             },
@@ -1066,8 +1092,33 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "channel-voice",
-                "title": "Allow unpaired browser",
-                "help": null
+                "title": "Browser client without pairing",
+                "help": "Anyone who reaches the port can talk to the assistant. For a trusted network only: turn it off once satellites are paired."
+              }
+            },
+            "public_url": {
+              "anyOf": [
+                {
+                  "pattern": "^https?://",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Public Url",
+              "x-nestor": {
+                "field": "public_url",
+                "title_id": "config-channel-voice-public_url",
+                "help_id": "config-channel-voice-public_url-help",
+                "fallback_title_id": "config-field-public_url",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-voice",
+                "title": "Public address",
+                "help": "How satellites reach this server, e.g. http://nestor.local:7860. It goes into pairing addresses."
               }
             },
             "stt_fallback": {
@@ -1090,7 +1141,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "channel-voice",
-                "title": "Stt fallback",
+                "title": "Said when transcription fails",
                 "help": null
               }
             },
@@ -1115,8 +1166,8 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "channel-voice",
-                "title": "Fallback clips",
-                "help": null
+                "title": "Fallback clips folder",
+                "help": "stt.wav and tts.wav, played when transcription or synthesis is down."
               }
             },
             "quiet_s": {
@@ -1133,7 +1184,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "channel-voice",
-                "title": "Quiet s",
+                "title": "Silence before speaking up (seconds)",
                 "help": null
               }
             },
@@ -1151,7 +1202,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "channel-voice",
-                "title": "Send timeout s",
+                "title": "Send timeout (seconds)",
                 "help": null
               }
             }
@@ -1265,8 +1316,8 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "executor-hermes",
-                "title": "Description",
-                "help": null
+                "title": "What its tools allow",
+                "help": "The central agent reads it to decide what to hand over."
               }
             },
             "instructions": {
@@ -1318,7 +1369,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "executor-hermes",
-                "title": "Stop timeout s",
+                "title": "Stop timeout (seconds)",
                 "help": null
               }
             }
@@ -1441,7 +1492,7 @@
                 "advanced": false,
                 "group": "tools-mcp",
                 "title": "Token",
-                "help": null
+                "help": "Sent as Authorization: Bearer."
               }
             },
             "headers": {
@@ -1461,8 +1512,8 @@
                 "secret_values": true,
                 "advanced": false,
                 "group": "tools-mcp",
-                "title": "Headers",
-                "help": null
+                "title": "HTTP headers",
+                "help": "Sent with every request. Values are kept as secrets."
               }
             },
             "timeout_s": {
@@ -1506,8 +1557,8 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "tools-mcp",
-                "title": "Include",
-                "help": null
+                "title": "Tools offered",
+                "help": "Server tool names. Left empty: all of them."
               }
             },
             "exclude": {
@@ -1525,7 +1576,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "tools-mcp",
-                "title": "Exclude",
+                "title": "Tools left out",
                 "help": null
               }
             },
@@ -1544,8 +1595,8 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "tools-mcp",
-                "title": "Risks",
-                "help": null
+                "title": "Tool risks",
+                "help": "By server tool name, over what the server declares."
               }
             },
             "max_result_chars": {
@@ -1562,7 +1613,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "tools-mcp",
-                "title": "Max result chars",
+                "title": "Longest tool result (characters)",
                 "help": null
               }
             },
@@ -1580,7 +1631,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "tools-mcp",
-                "title": "Retry after s",
+                "title": "Wait before reconnecting (seconds)",
                 "help": null
               }
             },
@@ -1596,8 +1647,8 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "tools-mcp",
-                "title": "Negotiation",
-                "help": null
+                "title": "Protocol negotiation",
+                "help": "legacy skips the discovery probe of recent servers."
               }
             }
           },
@@ -1704,8 +1755,8 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "presence-home-assistant",
-                "title": "People",
-                "help": null
+                "title": "Person entities",
+                "help": "Each household person id with its entity, e.g. alice: person.alice."
               }
             },
             "rooms": {
@@ -1723,8 +1774,8 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "presence-home-assistant",
-                "title": "Rooms",
-                "help": null
+                "title": "Room trackers",
+                "help": "Optional: each person id with the sensor telling their room (Bermuda, ESPresense)."
               }
             },
             "occupancy_sensors": {
@@ -1751,7 +1802,7 @@
                 "advanced": false,
                 "group": "presence-home-assistant",
                 "title": "Occupancy sensors",
-                "help": null
+                "help": "Left empty: every occupancy, presence or motion sensor with an area."
               }
             },
             "sync_timeout_s": {
@@ -1768,7 +1819,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "presence-home-assistant",
-                "title": "Sync timeout s",
+                "title": "Sync timeout (seconds)",
                 "help": null
               }
             },
@@ -1786,7 +1837,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "presence-home-assistant",
-                "title": "Reconnect min s",
+                "title": "Shortest wait before reconnecting (seconds)",
                 "help": null
               }
             },
@@ -1804,7 +1855,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "presence-home-assistant",
-                "title": "Reconnect max s",
+                "title": "Longest wait before reconnecting (seconds)",
                 "help": null
               }
             }
@@ -1870,7 +1921,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "connector-google",
-                "title": "Poll interval s",
+                "title": "Check interval (seconds)",
                 "help": null
               }
             },
@@ -1888,7 +1939,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "connector-google",
-                "title": "Blocked s",
+                "title": "Wait while credentials are refused (seconds)",
                 "help": null
               }
             },
@@ -1906,7 +1957,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "connector-google",
-                "title": "Retry initial s",
+                "title": "First retry after (seconds)",
                 "help": null
               }
             },
@@ -1924,7 +1975,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "connector-google",
-                "title": "Retry max s",
+                "title": "Longest wait between retries (seconds)",
                 "help": null
               }
             },
@@ -1942,7 +1993,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "connector-google",
-                "title": "Body chars",
+                "title": "Longest message body read (characters)",
                 "help": null
               }
             },
@@ -1960,7 +2011,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "connector-google",
-                "title": "Excerpt chars",
+                "title": "Excerpt length (characters)",
                 "help": null
               }
             }
@@ -2036,8 +2087,8 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "connector-imap",
-                "title": "Idle s",
-                "help": null
+                "title": "IDLE renewed after (seconds)",
+                "help": "Under 1740: servers drop IDLE after 29 minutes."
               }
             },
             "poll_s": {
@@ -2054,7 +2105,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "connector-imap",
-                "title": "Poll s",
+                "title": "Check interval without IDLE (seconds)",
                 "help": null
               }
             },
@@ -2072,7 +2123,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "connector-imap",
-                "title": "Fetch bytes",
+                "title": "Largest message read (bytes)",
                 "help": null
               }
             },
@@ -2090,7 +2141,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "connector-imap",
-                "title": "Blocked s",
+                "title": "Wait while credentials are refused (seconds)",
                 "help": null
               }
             },
@@ -2108,7 +2159,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "connector-imap",
-                "title": "Retry initial s",
+                "title": "First retry after (seconds)",
                 "help": null
               }
             },
@@ -2126,7 +2177,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "connector-imap",
-                "title": "Retry max s",
+                "title": "Longest wait between retries (seconds)",
                 "help": null
               }
             },
@@ -2144,7 +2195,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "connector-imap",
-                "title": "Body chars",
+                "title": "Longest message body read (characters)",
                 "help": null
               }
             },
@@ -2162,7 +2213,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "connector-imap",
-                "title": "Excerpt chars",
+                "title": "Excerpt length (characters)",
                 "help": null
               }
             }

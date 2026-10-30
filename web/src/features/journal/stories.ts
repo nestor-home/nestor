@@ -1,9 +1,9 @@
 /**
  * The journal as stories instead of a flat log, built only from the ids events carry:
- * - a thread is one conversation (`links.session`): each user turn with what it caused — tool
- *   calls (paired by `links.call`), the answer, an interruption, a memory — in order;
- * - a chain follows one subject through its steps: a task (started → progress → ended →
- *   delivered), a watch (triggered → triaged → announced → followed up) or a lone delivery;
+ * - a thread is one conversation (`links.conversation`): each turn (`links.turn`) with what it
+ *   caused (tool calls paired by `links.call`, the answer, an interruption, a memory), in order;
+ * - a chain follows one subject through its steps: a task (started, progress, ended, delivered),
+ *   a watch (triggered, announced, followed up) or a lone delivery;
  * - anything else stays a single event.
  * Stories are ordered by their latest event, so a story that moves comes back to the top.
  */
@@ -24,8 +24,6 @@ export type Step =
 
 export interface Turn {
   id: Id;
-  /** the server's turn id, from the first event that carries one (a user's message may not) */
-  link?: Id;
   user: JournalItem | null; // null when the thread starts mid-way (older page not loaded)
   steps: Step[];
 }
@@ -39,7 +37,8 @@ interface Common {
 
 export interface Thread extends Common {
   type: "thread";
-  session: Id;
+  /** what the thread page filters on: the conversation, or the session of records that predate them */
+  filter: { conversation: Id } | { session: Id };
   turns: Turn[];
 }
 
@@ -60,15 +59,28 @@ const CONVERSATIONAL = new Set(["conversation", "tool", "memory"]);
 /** Which story an event belongs to. Tasks and watches win over the conversation they came from. */
 export function storyKey(item: JournalItem): string {
   const { links } = item;
-  if (links.session && CONVERSATIONAL.has(item.kind) && !links.task) return `session:${links.session}`;
+  const talk = links.conversation
+    ? `conversation:${links.conversation}`
+    : links.session
+      ? `session:${links.session}`
+      : null;
+  if (talk && CONVERSATIONAL.has(item.kind) && !links.task) return talk;
   if (links.task) return `task:${links.task}`;
   if (links.watch) return `watch:${links.watch}`;
   if (links.delivery) return `delivery:${links.delivery}`;
-  if (links.session) return `session:${links.session}`;
+  if (talk) return talk;
   return `event:${item.id}`;
 }
 
-const byTime = (a: JournalItem, b: JournalItem) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0);
+/**
+ * Oldest first. Events of the same instant keep the order things happen in: a person's message
+ * before what it caused, then the journal's own order (positions grow).
+ */
+const byTime = (a: JournalItem, b: JournalItem) => {
+  if (a.at !== b.at) return a.at < b.at ? -1 : 1;
+  const user = Number(is(b, "userTurn")) - Number(is(a, "userTurn"));
+  return user || Number(a.id) - Number(b.id) || 0;
+};
 
 export function buildStories(items: readonly JournalItem[]): Story[] {
   const groups = new Map<string, JournalItem[]>();
@@ -97,7 +109,13 @@ export function buildStories(items: readonly JournalItem[]): Story[] {
       latest: sorted.at(-1)?.at ?? "",
     };
     const [type, id = ""] = key.split(/:(.*)/s) as [string, string?];
-    if (type === "session") stories.push({ ...common, type: "thread", session: id, turns: turnsOf(sorted, spawned) });
+    if (type === "conversation" || type === "session")
+      stories.push({
+        ...common,
+        type: "thread",
+        filter: type === "conversation" ? { conversation: id } : { session: id },
+        turns: turnsOf(sorted, spawned),
+      });
     else if (type === "task" || type === "watch" || type === "delivery")
       stories.push({ ...common, type: "chain", subject: { type, id } });
     else if (sorted[0]) stories.push({ ...common, type: "single", item: sorted[0] });
@@ -107,33 +125,40 @@ export function buildStories(items: readonly JournalItem[]): Story[] {
 
 function turnsOf(items: JournalItem[], spawned: Map<Id, JournalItem[]>): Turn[] {
   const turns: Turn[] = [];
+  const byId = new Map<Id, Turn>();
   const calls = new Map<Id, ToolCall>();
-  let current: Turn | null = null;
+  let last: Turn | null = null;
+  const open = (id: Id): Turn => {
+    const turn: Turn = { id, user: null, steps: [] };
+    turns.push(turn);
+    byId.set(id, turn);
+    for (const spawn of spawned.get(id) ?? []) turn.steps.push({ type: "spawn", item: spawn });
+    return turn;
+  };
   for (const item of items) {
     const isUser = is(item, "userTurn");
-    const turnId = item.links.turn ?? item.id;
-    if (isUser || !current || (item.links.turn && current.link && item.links.turn !== current.link)) {
-      current = { id: turnId, link: item.links.turn, user: isUser ? item : null, steps: [] };
-      turns.push(current);
-      if (isUser) {
-        for (const spawn of spawned.get(turnId) ?? []) current.steps.push({ type: "spawn", item: spawn });
-        continue;
-      }
+    // the server stamps every event of a turn with its id; records written before it (no turn) open
+    // a turn at each message and gather what follows
+    const id = item.links.turn;
+    const turn: Turn = id ? (byId.get(id) ?? open(id)) : isUser || !last ? open(item.id) : last;
+    last = turn;
+    if (isUser) {
+      turn.user = item;
+      continue;
     }
-    if (item.links.turn && !current.link) current.link = item.links.turn;
     const callId = item.links.call;
     if (callId && item.kind === "tool") {
       let call = calls.get(callId);
       if (!call) {
         call = { call: callId, name: item.tool ?? item.text, started: null, ended: null };
         calls.set(callId, call);
-        current.steps.push({ type: "call", call });
+        turn.steps.push({ type: "call", call });
       }
       if (is(item, "toolDone") || item.outcome) call.ended = item;
       else call.started = item;
       continue;
     }
-    current.steps.push({ type: "event", item });
+    turn.steps.push({ type: "event", item });
   }
   // spawned items sort among the steps by time
   for (const turn of turns) turn.steps.sort((a, b) => stepTime(a).localeCompare(stepTime(b)));

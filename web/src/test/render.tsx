@@ -79,36 +79,35 @@ export function renderWithProviders(ui: ReactNode) {
   };
 }
 
-/** The message id a test event's type stands for, as the server names it. */
+/** The server's message for each event type (`presentation/events.py`). */
 const MESSAGE_OF: Record<string, string> = {
-  user_turn: "journal-user-said",
-  assistant_turn: "journal-assistant-answered",
-  answer_cut: "journal-answer-cut",
-  tool_called: "journal-tool-called",
-  tool_completed: "journal-tool-completed",
-  task_started: "journal-task-started",
-  task_progressed: "journal-task-progressed",
-  task_ended: "journal-task-ended",
-  watch_created: "journal-watch-created",
-  watch_triggered: "journal-watch-triggered",
-  watch_triaged: "journal-watch-triaged",
-  delivery_considered: "journal-delivery-considered",
-  delivered: "journal-delivered",
-  delivery_failed: "journal-delivery-failed",
-  recorded: "journal-memory-recorded",
-  presence_changed: "journal-presence-changed",
+  "conversation.turn.user": "journal-user-said",
+  "conversation.turn.assistant": "journal-assistant-answered",
+  "conversation.turn.cut": "journal-answer-cut",
+  "agent.tool.called": "journal-tool-called",
+  "agent.tool.completed": "journal-tool-completed",
+  "task.started": "journal-task-started",
+  "task.progress": "journal-task-progressed",
+  "task.ended": "journal-task-ended",
+  "watch.created": "journal-watch-created",
+  "watch.triggered": "journal-watch-triggered",
+  "initiative.considered": "journal-delivery-considered",
+  "initiative.delivered": "journal-delivered",
+  "initiative.undeliverable": "journal-delivery-failed",
+  "memory.recorded": "journal-memory-recorded",
+  "presence.changed": "journal-presence-changed",
 };
 
 export function liveItem(overrides: Partial<JournalItem> = {}): JournalItem {
-  const type = overrides.type ?? "conversation.user_turn";
-  const id = MESSAGE_OF[type.split(".").at(-1) ?? ""] ?? "journal-other";
+  const type = overrides.type ?? "conversation.turn.user";
+  const id = MESSAGE_OF[type] ?? "journal-other";
   return {
     message: { id, args: { name: "Jules" } },
     id: String(100_000 + Math.floor(Math.random() * 900_000)),
     uid: `live-${Math.random().toString(36).slice(2)}`,
     kind_label: "Conversations",
     at: new Date().toISOString(),
-    type: "conversation.user_turn",
+    type: "conversation.turn.user",
     kind: "conversation",
     text: "Jules a dit",
     detail: "",

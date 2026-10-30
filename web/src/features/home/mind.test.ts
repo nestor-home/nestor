@@ -8,12 +8,12 @@ const NOW = Date.parse("2026-10-30T15:00:00Z");
 
 describe("the agent's state", () => {
   it("listens, thinks, speaks, then rests or works", () => {
-    expect(agentState([liveItem({ at: at(0.1), type: "conversation.user_turn" })], 0, NOW)).toBe("listening");
-    expect(agentState([liveItem({ at: at(0.1), type: "tools.tool_called", kind: "tool" })], 0, NOW)).toBe("thinking");
-    expect(agentState([liveItem({ at: at(0.05), type: "conversation.assistant_turn" })], 0, NOW)).toBe("speaking");
+    expect(agentState([liveItem({ at: at(0.1), type: "conversation.turn.user" })], 0, NOW)).toBe("listening");
+    expect(agentState([liveItem({ at: at(0.1), type: "agent.tool.called", kind: "tool" })], 0, NOW)).toBe("thinking");
+    expect(agentState([liveItem({ at: at(0.05), type: "conversation.turn.assistant" })], 0, NOW)).toBe("speaking");
     // nothing recent: what runs decides
-    expect(agentState([liveItem({ at: at(10), type: "conversation.assistant_turn" })], 0, NOW)).toBe("idle");
-    expect(agentState([liveItem({ at: at(10), type: "conversation.assistant_turn" })], 2, NOW)).toBe("working");
+    expect(agentState([liveItem({ at: at(10), type: "conversation.turn.assistant" })], 0, NOW)).toBe("idle");
+    expect(agentState([liveItem({ at: at(10), type: "conversation.turn.assistant" })], 2, NOW)).toBe("working");
     expect(agentState([], 0, NOW)).toBe("idle");
   });
 });
@@ -22,10 +22,10 @@ describe("the day's marks", () => {
   it("makes one mark per conversation, however many turns, and one per message delivered", () => {
     const items = [
       liveItem({ at: at(30), links: { session: "s1" }, people: ["lea"] }),
-      liveItem({ at: at(29), type: "conversation.assistant_turn", links: { session: "s1" }, people: [] }),
+      liveItem({ at: at(29), type: "conversation.turn.assistant", links: { session: "s1" }, people: [] }),
       liveItem({ at: at(28), links: { session: "s1" }, people: ["jules"] }),
       liveItem({ at: at(10), type: "initiative.delivered", kind: "delivery", links: { delivery: "d1" } }),
-      liveItem({ at: at(5), type: "tools.tool_called", kind: "tool" }),
+      liveItem({ at: at(5), type: "agent.tool.called", kind: "tool" }),
     ];
     const marks = marksOf(items);
     expect(marks.map((m) => m.kind)).toEqual(["conversation", "delivery"]);

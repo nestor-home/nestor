@@ -164,6 +164,9 @@ export function pendingDto(p: PairingRequest): PendingDto {
     pairing_id: p.id,
     device: { id: p.device.id, model: p.device.model, room: p.device.room, brand: p.device.brand },
     capabilities: p.capabilities,
+    methods: p.methods,
+    recommended_method: p.recommended_method,
+    can_identify: p.can_identify,
     sdk: p.device.sdk,
     sdk_version: null,
     expires_in_s: Math.max(0, Math.round((new Date(p.expires_at).getTime() - Date.now()) / 1000)),
@@ -173,6 +176,8 @@ export function pendingDto(p: PairingRequest): PendingDto {
 export function satelliteDto(s: Satellite): SatelliteDto {
   return {
     id: s.id,
+    name: s.name,
+    can_identify: s.can_identify,
     model: s.model,
     room: s.room,
     brand: s.brand,

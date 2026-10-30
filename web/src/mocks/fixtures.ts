@@ -7,6 +7,8 @@ import type {
   Connector,
   Invitation,
   Memory,
+  PairingMethod,
+  PairingMethodId,
   PairingRequest,
   Person,
   Role,
@@ -390,27 +392,91 @@ const PEOPLE = cap("vision.person_detection", "détection de personnes (sans ima
 const FACE = cap("expression.emotion", "expressions");
 const HEAD = cap("motion.head", "mouvements de tête");
 
+const IDENTIFY = cap("device.identify", "se signaler (lumière, mouvement ou son)");
+
+/** The pairing methods, as Nestor's catalogue words them (`labels.ftl`), in the recommended order. */
+export const METHODS: PairingMethod[] = [
+  {
+    id: "device_code.display",
+    proof: "device_code",
+    label: "Code sur son écran",
+    hint: "Saisissez le code affiché par l'appareil.",
+  },
+  {
+    id: "device_code.speech",
+    proof: "device_code",
+    label: "Code dit à voix haute",
+    hint: "Saisissez le code que dit l'appareil.",
+  },
+  {
+    id: "enrollment.qr",
+    proof: "enrollment_code",
+    label: "QR code",
+    hint: "Montrez le QR code à la caméra de l'appareil.",
+  },
+  {
+    id: "enrollment.input",
+    proof: "enrollment_code",
+    label: "Code saisi sur l'appareil",
+    hint: "Saisissez ce code sur l'appareil.",
+  },
+  {
+    id: "enrollment.provisioning",
+    proof: "enrollment_code",
+    label: "Configuration",
+    hint: "Donnez à l'appareil l'adresse d'appairage, dans NESTOR_PAIRING_URI ou ses réglages.",
+  },
+];
+const method = (id: PairingMethodId) => METHODS.find((m) => m.id === id) as PairingMethod;
+
 export function pairing(): PairingRequest[] {
   return [
     {
       id: "pair-7f3a",
       device: { id: "reachy-mini-entree", model: "Reachy Mini", room: "entrée", brand: "reachy", sdk: "python" },
-      capabilities: [MIC, SPEAKER, VAD, PEOPLE, FACE, HEAD],
+      capabilities: [MIC, SPEAKER, VAD, PEOPLE, FACE, HEAD, IDENTIFY],
+      methods: [method("device_code.speech"), method("enrollment.provisioning")],
+      recommended_method: "device_code.speech",
+      can_identify: true,
       expires_at: ahead(4 * 60 + 12),
     },
     {
       id: "pair-91c0",
       device: { id: "esp32-cuisine", model: "ESP32-S3 Box", room: "cuisine", brand: "espressif", sdk: "cpp" },
       capabilities: [MIC, SPEAKER],
+      methods: [method("device_code.display"), method("enrollment.input"), method("enrollment.provisioning")],
+      recommended_method: "device_code.display",
+      can_identify: false,
       expires_at: ahead(8 * 60 + 40),
     },
   ];
+}
+
+/** A device turning up for an addition made with a device code method. */
+export function arriving(pairingId: string, room: string | null): PairingRequest {
+  return {
+    id: pairingId,
+    device: {
+      id: "reachy-mini-veranda",
+      model: "Reachy Mini",
+      room: room ?? "véranda",
+      brand: "reachy",
+      sdk: "python",
+    },
+    capabilities: [MIC, SPEAKER, VAD, FACE, HEAD, IDENTIFY],
+    methods: [method("device_code.speech"), method("enrollment.provisioning")],
+    recommended_method: "device_code.speech",
+    can_identify: true,
+    expires_at: ahead(10 * 60),
+  };
 }
 
 export function satellites(): Satellite[] {
   return [
     {
       id: "reachy-salon",
+      name: "Reachy du salon",
+      can_identify: true,
       model: "Reachy Mini",
       room: "salon",
       capabilities: [MIC, SPEAKER, VAD, PEOPLE, FACE, HEAD],
@@ -425,6 +491,8 @@ export function satellites(): Satellite[] {
     },
     {
       id: "reachy-bureau",
+      name: null,
+      can_identify: true,
       model: "Reachy Mini",
       room: "bureau",
       capabilities: [MIC, SPEAKER, VAD, FACE],
@@ -439,6 +507,8 @@ export function satellites(): Satellite[] {
     },
     {
       id: "pi-chambre-jules",
+      name: "Enceinte de Jules",
+      can_identify: false,
       model: "Raspberry Pi 5 · ReSpeaker",
       room: "chambre de Jules",
       capabilities: [MIC, SPEAKER],

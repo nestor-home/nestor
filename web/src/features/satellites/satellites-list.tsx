@@ -1,9 +1,9 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
-import { type PairingRequest, type Satellite, satellitesQuery } from "@/api";
+import { type Addition, api, keys, messageOf, type PairingRequest, type Satellite, satellitesQuery } from "@/api";
 import { Ago } from "@/components/ago";
-import { Dither } from "@/components/dither";
+import { useNotify } from "@/components/notices";
 import { Section } from "@/components/page";
 import { Empty, Failure, Loading } from "@/components/states";
 import { Status } from "@/components/status";
@@ -15,6 +15,7 @@ import { BrandMark, brandOf } from "@/lib/brands";
 import { remaining } from "@/lib/dates";
 import { CAPABILITY_ICON } from "@/lib/icons";
 import { useCan, useMe } from "@/lib/session";
+import { AddSatelliteButton, IdentifyButton } from "./add-satellite";
 import { ApproveForm } from "./approve-form";
 
 export function SatellitesList({
@@ -28,10 +29,11 @@ export function SatellitesList({
   const satellites = useQuery(satellitesQuery);
   if (satellites.isPending) return <Loading lines={3} />;
   if (satellites.isError) return <Failure error={satellites.error} retry={() => void satellites.refetch()} />;
-  const { pending, paired } = satellites.data;
+  const { pending, paired, additions } = satellites.data;
   const request = pending.find((p) => p.id === approving);
   return (
     <>
+      {additions.length ? <Additions additions={additions} /> : null}
       {pending.length ? <Pending requests={pending} onApprove={onApprove} /> : null}
       <Section title={t("sat-paired")} count={paired.length}>
         {paired.length === 0 ? (
@@ -59,12 +61,8 @@ function Pending({ requests, onApprove }: { requests: PairingRequest[]; onApprov
         {requests.map((r) => {
           const brand = brandOf(r.device.brand);
           return (
-            <li
-              key={r.id}
-              className="corner-marks relative overflow-hidden rounded-md border border-rule bg-paper-raised p-5"
-            >
-              <Dither shape="ramp-left" from={0.35} to={0} className="absolute inset-y-0 right-0 w-1/3 text-amber/50" />
-              <div className="relative">
+            <li key={r.id} className="rounded-md border border-rule bg-paper-raised p-5">
+              <div>
                 <div className="flex items-center gap-2">
                   {brand ? <BrandMark brand={brand} className="size-4 text-ink" /> : null}
                   <h3 className="font-mono text-[0.95rem] font-medium">{r.device.id}</h3>
@@ -83,10 +81,16 @@ function Pending({ requests, onApprove }: { requests: PairingRequest[]; onApprov
                     })}
                   </span>
                 </p>
+                <p className="mt-2 text-[0.88rem] text-ink-muted">
+                  {r.methods.find((m) => m.id === r.recommended_method)?.hint}
+                </p>
                 {canPair ? (
-                  <Button size="sm" className="mt-4" onClick={() => onApprove(r.id)}>
-                    {t("sat-approve")}
-                  </Button>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <Button size="sm" onClick={() => onApprove(r.id)}>
+                      {t("sat-approve")}
+                    </Button>
+                    {r.can_identify ? <IdentifyButton pairing={r.id} /> : null}
+                  </div>
                 ) : (
                   <p className="mt-4 text-sm text-ink-muted">{t("sat-approve-forbidden")}</p>
                 )}
@@ -131,8 +135,9 @@ function PairedRow({ satellite: s }: { satellite: Satellite }) {
       >
         {brand ? <BrandMark brand={brand} className="size-5 text-ink" /> : <span />}
         <span className="min-w-0">
-          <span className="block truncate font-mono text-sm text-ink">{s.id}</span>
-          <span className="block text-xs text-ink-muted">
+          <span className="block text-ink">{s.name ?? <span className="font-mono text-sm">{s.id}</span>}</span>
+          <span className="block text-[0.85rem] text-ink-muted">
+            {s.name ? `${s.id} · ` : ""}
             {s.model} · {s.room}
           </span>
         </span>
@@ -162,5 +167,46 @@ function PairedRow({ satellite: s }: { satellite: Satellite }) {
         <ArrowRight className="hidden size-3.5 text-ink-faint group-hover:text-ink sm:block" aria-hidden="true" />
       </Link>
     </li>
+  );
+}
+
+/** Additions in progress: the method, where they stand, and what to do with them. */
+function Additions({ additions }: { additions: Addition[] }) {
+  const t = useT();
+  const now = useNow();
+  const queryClient = useQueryClient();
+  const notify = useNotify();
+  const cancel = useMutation({
+    mutationFn: (id: string) => api.cancelAddition(id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: keys.satellites });
+      notify(t("sat-addition-cancelled"));
+    },
+    onError: (error) => notify(messageOf(error)),
+  });
+  return (
+    <Section title={t("sat-additions")} count={additions.length}>
+      <ul className="divide-y divide-rule rounded-md border border-rule bg-paper-raised">
+        {additions.map((a) => (
+          <li key={a.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3.5">
+            <div className="min-w-0 flex-1">
+              <p className="text-ink">
+                {a.name ?? a.method.label}
+                <span className="text-ink-muted"> · {t(`sat-stage-${a.stage.replace("_", "-")}`)}</span>
+              </p>
+              <p className="text-[0.85rem] text-ink-muted">
+                {a.name ? `${a.method.label} · ` : ""}
+                {a.room ? `${t("sat-room", { room: a.room })} · ` : ""}
+                <span className="tabular">{t("sat-expires-in", { remaining: remaining(a.expires_at, now) })}</span>
+              </p>
+            </div>
+            <AddSatelliteButton resume={a} />
+            <Button variant="ghost" size="sm" onClick={() => cancel.mutate(a.id)} disabled={cancel.isPending}>
+              {t("sat-addition-cancel")}
+            </Button>
+          </li>
+        ))}
+      </ul>
+    </Section>
   );
 }

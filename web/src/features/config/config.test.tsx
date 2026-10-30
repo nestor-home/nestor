@@ -22,7 +22,7 @@ describe("the configuration", () => {
     const timeout = within(sheet).getByRole("spinbutton", { name: "Délai (secondes)" });
     expect(timeout).toHaveAttribute("placeholder", "10");
     expect(timeout).toHaveAttribute("min", "0");
-    expect(within(sheet).getByRole("textbox", { name: "Risks, nom 1" })).toHaveValue("HassTurnOff");
+    expect(within(sheet).getByRole("textbox", { name: "Risques des outils, nom 1" })).toHaveValue("HassTurnOff");
   });
 
   it("keeps a secret unless it is replaced, and never shows its value", async () => {
@@ -190,12 +190,21 @@ describe("the configuration", () => {
     const sheet = await screen.findByRole("dialog", { name: "maison" });
     expect(within(sheet).getByText(/défini · lam•••2f/)).toBeInTheDocument();
     expect(sheet).not.toHaveTextContent("lambert-maison-7d2f");
-    await user.click(within(sheet).getByRole("button", { name: /Remplacer Headers, valeur de X-Household/ }));
-    await user.type(within(sheet).getByLabelText("Headers, valeur de X-Household"), "new-household-key");
+    await user.click(within(sheet).getByRole("button", { name: /Remplacer En-têtes HTTP, valeur de X-Household/ }));
+    await user.type(within(sheet).getByLabelText("En-têtes HTTP, valeur de X-Household"), "new-household-key");
     await user.click(within(sheet).getByRole("button", { name: "Terminé" }));
     await user.click(await screen.findByRole("button", { name: "1 modification" }));
     const changes = await screen.findByRole("dialog", { name: "Modifications" });
     expect(within(changes).getByText("tools.0.headers.X-Household")).toBeInTheDocument();
     expect(within(changes).getByText("secret modifié")).toBeInTheDocument();
+  });
+
+  it("shows any section the schema has, such as when a conversation ends", async () => {
+    renderApp("/config/conversation");
+    expect(await screen.findByRole("heading", { name: "Conversations" })).toBeInTheDocument();
+    const field = await screen.findByRole("spinbutton", { name: "Nouvelle conversation après (secondes)" });
+    expect(field).toHaveAttribute("placeholder", "300");
+    expect(screen.getByText(/ouvre une nouvelle conversation/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Conversations/ })).toHaveAttribute("href", "/config/conversation");
   });
 });

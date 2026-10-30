@@ -20,6 +20,7 @@ import { moment } from "@/lib/dates";
 import { CAPABILITY_ICON } from "@/lib/icons";
 import { usePeopleNames } from "@/lib/people";
 import { useCan, useMe } from "@/lib/session";
+import { IdentifyButton } from "./add-satellite";
 
 /** What each capability lets the assistant do, said for the household. */
 const MEANS: Record<string, string> = {
@@ -32,7 +33,7 @@ const MEANS: Record<string, string> = {
 };
 
 /** The wire format satellites speak: an identifier, not language. */
-const PROTOCOL = "nestor.satellite/1";
+const PROTOCOL = "nestor.satellite/2";
 
 function means(capability: string): string | null {
   const id = MEANS[capability];
@@ -47,6 +48,7 @@ export function useSatellite(id: string): { satellite: Satellite | undefined; pe
 export function SatelliteFrame({ id, children }: { id: string; children: ReactNode }) {
   const t = useT();
   const { satellite: s, pending, error } = useSatellite(id);
+  const canPair = useCan("satellites:write");
   const trail: Crumb[] = [{ label: t("sat-title"), link: { to: "/satellites" } }, { label: id }];
   if (pending) return <Loading lines={4} />;
   if (error || !s) {
@@ -66,9 +68,10 @@ export function SatelliteFrame({ id, children }: { id: string; children: ReactNo
         title={
           <span className="inline-flex items-center gap-3">
             {brand ? <BrandMark brand={brand} className="size-7 text-ink" /> : null}
-            <span className="font-mono text-[2rem] tracking-tight">{s.id}</span>
+            {s.name ?? <span className="font-mono text-[2rem] tracking-tight">{s.id}</span>}
           </span>
         }
+        actions={s.can_identify && s.connected && canPair ? <IdentifyButton device={s.id} /> : undefined}
         meta={
           <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.85rem] text-ink-muted">
             {s.connected === null ? null : s.connected ? (
@@ -76,6 +79,7 @@ export function SatelliteFrame({ id, children }: { id: string; children: ReactNo
             ) : (
               <Status tone="attention">{t("sat-state-offline")}</Status>
             )}
+            {s.name ? <span className="font-mono">{s.id}</span> : null}
             <span>{s.model}</span>
             <span>{t("sat-room", { room: s.room })}</span>
           </p>

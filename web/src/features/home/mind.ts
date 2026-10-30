@@ -30,8 +30,7 @@ export function agentState(items: readonly JournalItem[], context: Context | num
     const age = now - new Date(latest.at).getTime();
     if ((is(latest, "answer") || is(latest, "delivered") || is(latest, "fallback")) && age < HOLD_MS.speaking)
       return "speaking";
-    if ((is(latest, "toolCalled") || is(latest, "considered") || is(latest, "watchTriaged")) && age < HOLD_MS.thinking)
-      return "thinking";
+    if ((is(latest, "toolCalled") || is(latest, "considered")) && age < HOLD_MS.thinking) return "thinking";
     if ((is(latest, "userTurn") || is(latest, "speech")) && age < HOLD_MS.listening) return "listening";
   }
   if (running > 0) return "working";
@@ -142,15 +141,16 @@ export function marksOf(items: readonly JournalItem[]): Mark[] {
     room: item.room,
   });
   for (const item of sorted) {
-    if (item.kind === "conversation" && item.links.session) {
-      const known = sessions.get(item.links.session);
+    const talk = item.links.conversation ?? item.links.session;
+    if (item.kind === "conversation" && talk) {
+      const known = sessions.get(talk);
       if (known) {
         known.count += 1;
         for (const p of item.people) if (!known.people.includes(p)) known.people.push(p);
         continue;
       }
       const m = mark("conversation", item);
-      sessions.set(item.links.session, m);
+      sessions.set(talk, m);
       marks.push(m);
     } else if (is(item, "delivered")) marks.push(mark("delivery", item));
     else if (is(item, "taskStarted")) marks.push(mark("task", item));

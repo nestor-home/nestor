@@ -60,6 +60,7 @@ describe("approving a satellite", () => {
           "audio.capture",
           "audio.playback",
           "audio.speech_activity",
+          "device.identify",
           "expression.emotion",
           "vision.person_detection",
         ],

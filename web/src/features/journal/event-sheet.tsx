@@ -75,6 +75,12 @@ function useRelated(event: JournalEvent): Related[] {
       value: name(person),
       link: { to: "/people/$personId", params: { personId: person } },
     });
+  if (links.conversation)
+    related.push({
+      label: tr("jr-related-conversation"),
+      value: links.conversation,
+      link: { to: "/journal", search: { conversation: links.conversation } },
+    });
   if (links.session)
     related.push({
       label: tr("jr-related-session"),

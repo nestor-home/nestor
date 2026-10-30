@@ -1,8 +1,9 @@
 import "@testing-library/jest-dom/vitest";
 import { act, cleanup, configure } from "@testing-library/react";
-import { afterAll, afterEach, beforeAll, beforeEach } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, vi } from "vitest";
 import { setCsrfToken } from "@/api";
 import { reset } from "@/mocks/db";
+import { resetServer } from "@/mocks/handlers";
 import { server } from "@/mocks/server";
 
 // Node's fetch has no page to resolve `/api/v1/...` against: give it jsdom's origin
@@ -40,9 +41,23 @@ globalThis.matchMedia ??= ((query: string) => ({
 // no canvas in jsdom: the dither texture simply does not draw
 HTMLCanvasElement.prototype.getContext = (() => null) as typeof HTMLCanvasElement.prototype.getContext;
 
+/**
+ * The household's day is relative to "now" (events minutes ago, "today" since midnight): tests run
+ * at the same hour of the same day wherever and whenever they run, the clock moving from there.
+ * Only `Date` is faked; timers stay real, so the mock server, polling and waits behave as usual.
+ */
+export const TEST_NOW = new Date(2026, 9, 30, 18, 30);
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"], now: TEST_NOW, shouldAdvanceTime: true });
+});
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 beforeAll(() => server.listen({ onUnhandledFrame: "error" }));
 beforeEach(() => {
   reset();
+  resetServer();
   setCsrfToken(null);
   sessionStorage.clear();
 });

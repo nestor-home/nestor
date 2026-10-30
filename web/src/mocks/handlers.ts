@@ -2,11 +2,11 @@
  * The API v1 as Nestor answers it, on the mock state: the same paths, codes and error bodies,
  * every answer built as its generated DTO type (dto.ts) so the mocks cannot drift from the API.
  */
-import { delay, HttpResponse, http, type JsonBodyType, sse } from "msw";
-import type { Connection, JournalItem } from "@/api";
+import { HttpResponse, http, type JsonBodyType, delay as latency, sse } from "msw";
+import type { Connection, JournalItem, PairingRequest, Satellite } from "@/api";
 import type { components } from "@/api/schema.gen";
 import * as config from "./config";
-import { db, save } from "./db";
+import { db, type MockAddition, save } from "./db";
 import {
   accountDto,
   componentDto,
@@ -19,18 +19,25 @@ import {
   memoryDto,
   pendingDto,
   personDto,
+  personRef,
   satelliteDto,
   taskDto,
   watchDto,
 } from "./dto";
 import { inEnglish } from "./english";
-import { KIND_LABELS, LIVE, ROLE_LABEL, tools as toolsOf } from "./fixtures";
+import { arriving, KIND_LABELS, LIVE, METHODS, ROLE_LABEL, tools as toolsOf } from "./fixtures";
 import { facets, filtersOf, matching, withoutRecord } from "./journal";
 import { errorText, type Lang, localize, toItem } from "./messages";
 
 type In<N extends keyof components["schemas"]> = components["schemas"][N];
 
 const API = "/api/v1";
+
+/**
+ * A real server's latency, in the browser only: under test it would only slow every render of
+ * the whole app and make the waits of parallel test files race against it.
+ */
+const delay = (ms: number) => (import.meta.env.MODE === "test" ? Promise.resolve() : latency(ms));
 const PAGE = 30;
 export const CSRF = "mock-csrf-token";
 
@@ -80,6 +87,11 @@ function guard(request: Request): Response | null {
 
 /** While the instance restarts nothing answers; it comes back a little later. */
 let downUntil = 0;
+
+/** Back to a running instance, between tests. */
+export function resetServer(): void {
+  downUntil = 0;
+}
 const restarting = () => Date.now() < downUntil;
 export const RESTART_MS = 2_500;
 
@@ -443,11 +455,117 @@ export const handlers = [
   http.get(`${API}/satellites`, ({ request }) => {
     const refused = guard(request);
     if (refused) return refused;
+    advance();
     const now = new Date().toISOString();
     return json({
       pending: db.pairing.filter((p) => p.expires_at > now).map(pendingDto),
       paired: db.satellites.map(satelliteDto),
+      additions: db.additions.filter((a) => a.status === "active").map(additionOut),
     } satisfies In<"SatellitesOut">);
+  }),
+
+  http.get(`${API}/satellites/pairing-methods`, ({ request }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    return json({ methods: METHODS, recommended: "device_code.display" } satisfies In<"MethodsOut">);
+  }),
+
+  http.post(`${API}/satellites/additions`, async ({ request }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    const body = (await request.json()) as In<"AdditionIn">;
+    if (body.room !== null && body.room !== undefined && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(body.room))
+      return fail(400, "invalid", "error-invalid-request");
+    if (db.additions.filter((a) => a.status === "active").length >= 8)
+      return fail(409, "too_many_additions", "error-too-many-additions");
+    await delay(250);
+    const enrollment = body.method.startsWith("enrollment.");
+    const now = Date.now();
+    const addition: MockAddition = {
+      id: newId("add"),
+      method: body.method,
+      name: body.name ?? null,
+      room: body.room ?? null,
+      capabilities: body.capabilities ?? null,
+      created_at: new Date(now).toISOString(),
+      expires_at: new Date(now + (body.ttl_s ?? 15 * 60) * 1000).toISOString(),
+      status: "active",
+      device_id: null,
+      code: enrollment ? enrollmentCode() : null,
+    };
+    db.additions.push(addition);
+    save();
+    const code = addition.code;
+    return json(
+      {
+        addition: additionOut(addition),
+        code: code ? `${code.slice(0, 4)}-${code.slice(4)}` : null,
+        uri: code ? `nestor+http://nestor.local:7860/?code=${code}` : null,
+      } satisfies In<"StartedOut">,
+      { status: 201 },
+    );
+  }),
+
+  http.get(`${API}/satellites/additions`, ({ request }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    advance();
+    return json({
+      additions: db.additions.filter((a) => a.status === "active").map(additionOut),
+    } satisfies In<"AdditionsOut">);
+  }),
+
+  http.get(`${API}/satellites/additions/:id`, ({ request, params }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    advance();
+    const addition = db.additions.find((a) => a.id === params.id);
+    return addition ? json(additionOut(addition)) : fail(404, "addition_unknown", "error-addition-unknown");
+  }),
+
+  http.delete(`${API}/satellites/additions/:id`, ({ request, params }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    const addition = db.additions.find((a) => a.id === params.id && a.status === "active");
+    if (!addition) return fail(404, "addition_unknown", "error-addition-unknown");
+    addition.status = "cancelled";
+    save();
+    return noContent();
+  }),
+
+  http.post(`${API}/satellites/pending/:id/identify`, ({ request, params }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    const pending = db.pairing.find((p) => p.id === params.id);
+    if (!pending) return fail(404, "pending_unknown", "error-pending-unknown");
+    if (!pending.can_identify) return fail(409, "identify_unsupported", "error-identify-unsupported");
+    return noContent();
+  }),
+
+  http.post(`${API}/satellites/approvals`, async ({ request }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    await delay(400);
+    const body = (await request.json()) as In<"ApprovalIn">;
+    if (!/^\d{6}$/.test(body.code.replace(/\s/g, ""))) return fail(400, "invalid_code", "error-invalid-code");
+    const addition = body.addition_id ? db.additions.find((a) => a.id === body.addition_id) : undefined;
+    if (body.addition_id && addition?.status !== "active") return fail(409, "addition_over", "error-addition-over");
+    const pending = db.pairing.find((p) => p.id === body.pairing_id);
+    // the mock accepts 424242 as the code every device shows
+    if (!pending || body.code.replace(/\s/g, "") !== "424242")
+      return fail(400, "pairing_refused", "error-pairing-refused");
+    const allowed = body.capabilities ?? addition?.capabilities ?? null;
+    const satellite = pair(pending, {
+      name: addition?.name ?? null,
+      room: addition?.room ?? null,
+      capabilities: allowed,
+    });
+    if (addition) {
+      addition.status = "completed";
+      addition.device_id = satellite.id;
+    }
+    save();
+    return json(satelliteDto(satellite), { status: 201 });
   }),
 
   http.get(`${API}/satellites/:id`, ({ request, params }) => {
@@ -457,33 +575,14 @@ export const handlers = [
     return satellite ? json(satelliteDto(satellite)) : notFound("satellite");
   }),
 
-  http.post(`${API}/satellites/approvals`, async ({ request }) => {
+  http.post(`${API}/satellites/:id/identify`, ({ request, params }) => {
     const refused = guard(request);
     if (refused) return refused;
-    await delay(400);
-    const body = (await request.json()) as In<"ApprovalIn">;
-    const pending = db.pairing.find((p) => p.id === body.pairing_id);
-    // the mock accepts 424242 as the code every device shows
-    if (!pending || body.code !== "424242") return fail(400, "pairing_refused", "error-pairing-refused");
-    const approver = signedIn();
-    const satellite = {
-      id: pending.device.id,
-      model: pending.device.model,
-      room: pending.device.room,
-      capabilities: pending.capabilities.filter((c) => (body.capabilities ?? []).includes(c.name)),
-      paired_at: new Date().toISOString(),
-      approved_by: approver?.person ?? null,
-      approved_by_name: approver?.person_name ?? null,
-      connected: true,
-      last_seen_at: new Date().toISOString(),
-      brand: pending.device.brand,
-      sdk: pending.device.sdk,
-      sdk_version: null,
-    };
-    db.pairing = db.pairing.filter((p) => p.id !== pending.id);
-    db.satellites.push(satellite);
-    save();
-    return json(satelliteDto(satellite), { status: 201 });
+    const satellite = db.satellites.find((x) => x.id === params.id);
+    if (!satellite) return fail(404, "satellite_unknown", "error-satellite-unknown");
+    if (!satellite.can_identify) return fail(409, "identify_unsupported", "error-identify-unsupported");
+    if (!satellite.connected) return fail(409, "satellite_offline", "error-satellite-offline");
+    return noContent();
   }),
 
   http.delete(`${API}/satellites/:id`, ({ request, params }) => {
@@ -766,7 +865,7 @@ function plug(
   if (replaced) db.connections = db.connections.filter((c) => c.id !== replaced.id);
   journalize(
     toItem({
-      type: "connectors.connection_created",
+      type: "connection.created",
       kind: "connection",
       title: `Compte ${connection.account} connecté (${connection.title})`,
       detail: "",
@@ -868,4 +967,96 @@ export function activityOut(): In<"AgentActivityOut"> {
     listening_rooms: [],
     quiet,
   };
+}
+
+/** Seconds after an addition starts when its device turns up, in this mock (none on a real server). */
+export const DEVICE_TURNS_UP_S = 4;
+
+/**
+ * What happens on the household's network while an addition waits: a device given the enrollment
+ * code presents it, or a device turns up asking to be paired with its code.
+ */
+function advance(now = Date.now()): void {
+  for (const a of db.additions) {
+    if (a.status !== "active") continue;
+    if (Date.parse(a.expires_at) <= now) {
+      a.status = "expired";
+      continue;
+    }
+    if (now - Date.parse(a.created_at) < DEVICE_TURNS_UP_S * 1000) continue;
+    if (a.code) {
+      const satellite = pair(arriving(newId("pair"), a.room), a);
+      a.status = "completed";
+      a.device_id = satellite.id;
+    } else if (!db.pairing.some((p) => p.id === `pair-for-${a.id}`)) {
+      db.pairing.push(arriving(`pair-for-${a.id}`, a.room));
+    }
+  }
+  save();
+}
+
+/** Pairs a pending device, with what an addition decided. */
+function pair(
+  pending: PairingRequest,
+  choice: { name: string | null; room: string | null; capabilities: string[] | null },
+): Satellite {
+  const approver = signedIn();
+  const satellite: Satellite = {
+    id: pending.device.id,
+    name: choice.name,
+    can_identify: pending.can_identify,
+    model: pending.device.model,
+    room: choice.room ?? pending.device.room,
+    capabilities: choice.capabilities
+      ? pending.capabilities.filter((c) => choice.capabilities?.includes(c.name))
+      : pending.capabilities,
+    paired_at: new Date().toISOString(),
+    approved_by: approver?.person ?? null,
+    approved_by_name: approver?.person_name ?? null,
+    connected: true,
+    last_seen_at: new Date().toISOString(),
+    brand: pending.device.brand,
+    sdk: pending.device.sdk,
+    sdk_version: null,
+  };
+  db.pairing = db.pairing.filter((p) => p.id !== pending.id);
+  db.satellites = [...db.satellites.filter((s) => s.id !== satellite.id), satellite];
+  return satellite;
+}
+
+function additionOut(a: MockAddition): In<"AdditionOut"> {
+  const method = METHODS.find((m) => m.id === a.method) ?? (METHODS[0] as (typeof METHODS)[number]);
+  const candidates =
+    a.status === "active" && !a.code ? db.pairing.filter((p) => p.id === `pair-for-${a.id}`).map((p) => p.id) : [];
+  const stage =
+    a.status === "completed"
+      ? "paired"
+      : a.status === "cancelled"
+        ? "cancelled"
+        : a.status === "expired"
+          ? "expired"
+          : candidates.length
+            ? "device_seen"
+            : "waiting";
+  const creator = db.accounts.find((x) => x.id === db.signedIn);
+  return {
+    id: a.id,
+    method,
+    stage,
+    name: a.name,
+    room: a.room,
+    capabilities: a.capabilities ? a.capabilities.map((name) => ({ name, label: name })) : null,
+    candidates,
+    device_id: a.device_id,
+    created_by: personRef(creator?.person ?? null),
+    created_at: a.created_at,
+    expires_at: a.expires_at,
+    expires_in_s: a.status === "active" ? Math.max(0, Math.round((Date.parse(a.expires_at) - Date.now()) / 1000)) : 0,
+  };
+}
+
+/** Eight symbols of Crockford's base32 (no I, L, O, U). */
+function enrollmentCode(): string {
+  const alphabet = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+  return Array.from({ length: 8 }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join("");
 }

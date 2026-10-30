@@ -1,7 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 import { api, keys, type PairingRequest } from "@/api";
-import { Dither } from "@/components/dither";
 import { Field } from "@/components/field";
 import { useNotify } from "@/components/notices";
 import { FormError } from "@/components/states";
@@ -22,18 +21,33 @@ export function normaliseCode(typed: string): string {
  * Approving needs the code the device shows: it proves the person approving can see the device.
  * The code is never displayed here. What the satellite may do can be narrowed now.
  */
-export function ApproveForm({ request, onDone }: { request: PairingRequest; onDone?: () => void }) {
+export function ApproveForm({
+  request,
+  onDone,
+  additionId,
+  granted: allowed,
+}: {
+  request: PairingRequest;
+  onDone?: () => void;
+  /** the addition this approval completes: its name, room and capabilities apply */
+  additionId?: string;
+  /** what the addition allows at most; all it declares by default */
+  granted?: string[];
+}) {
   const t = useT();
   const queryClient = useQueryClient();
   const notify = useNotify();
   const [code, setCode] = useState("");
   const [invalid, setInvalid] = useState<string | null>(null);
-  const [granted, setGranted] = useState(() => new Set(request.capabilities.map((c) => c.name)));
+  const [granted, setGranted] = useState(
+    () => new Set(request.capabilities.map((c) => c.name).filter((c) => !allowed || allowed.includes(c))),
+  );
   const approve = useMutation({
     mutationFn: () =>
       api.approve(request.id, {
         code: normaliseCode(code),
         capabilities: [...granted].sort(),
+        ...(additionId ? { addition_id: additionId } : {}),
       }),
     onSuccess: (satellite) => {
       void queryClient.invalidateQueries({ queryKey: keys.satellites });
@@ -55,9 +69,8 @@ export function ApproveForm({ request, onDone }: { request: PairingRequest; onDo
   const codeId = `code-${request.id}`;
   return (
     <form onSubmit={submit} className="grid gap-5" noValidate>
-      <div className="relative overflow-hidden rounded-md border border-rule bg-paper-sunken px-5 py-5">
-        <Dither shape="vignette" from={0.05} to={0.5} dot={2} className="absolute inset-0 size-full text-ink/20" />
-        <Field label={t("sat-code-label")} htmlFor={codeId} error={invalid} className="relative">
+      <div className="rounded-md bg-paper-sunken px-5 py-5">
+        <Field label={t("sat-code-label")} htmlFor={codeId} error={invalid}>
           <Input
             id={codeId}
             inputMode="numeric"

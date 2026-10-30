@@ -3,7 +3,6 @@ import {
   BellRing,
   Check,
   CircleAlert,
-  Filter,
   Inbox,
   Megaphone,
   Play,
@@ -36,17 +35,17 @@ export function stepLook(item: JournalItem): StepLook {
   if (is(item, "taskProgressed"))
     return { label: tr("step-task-progressed"), icon: StepForward, tone: "text-ink-muted", dot: "bg-ink-faint" };
   if (is(item, "taskEnded"))
-    return item.outcome?.ok === false || item.message.args.status === "failed" || item.tone === "warning"
+    return item.message.args.status === "failed"
       ? { label: tr("step-task-failed"), icon: X, tone: "text-brick", dot: "bg-brick" }
-      : { label: tr("step-task-completed"), icon: Check, tone: "text-sage", dot: "bg-sage" };
+      : item.message.args.status === "cancelled"
+        ? { label: tr("step-task-cancelled"), icon: X, tone: "text-ink-muted", dot: "bg-ink-faint" }
+        : { label: tr("step-task-completed"), icon: Check, tone: "text-sage", dot: "bg-sage" };
   if (is(item, "taskDelivered"))
     return { label: tr("step-task-delivered"), icon: Send, tone: "text-ember", dot: "bg-ember" };
   if (is(item, "watchCreated"))
     return { label: tr("step-watch-created"), icon: Plus, tone: "text-kind-watch", dot: "bg-kind-watch" };
   if (is(item, "watchTriggered"))
     return { label: tr("step-watch-triggered"), icon: Inbox, tone: "text-kind-watch", dot: "bg-kind-watch" };
-  if (is(item, "watchTriaged"))
-    return { label: tr("step-watch-triaged"), icon: Filter, tone: "text-ink-muted", dot: "bg-ink-faint" };
   if (is(item, "considered"))
     return {
       label: tr(followUp ? "step-follow-up" : "step-considered"),

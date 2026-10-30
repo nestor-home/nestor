@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./clock";
 
 /** The home on the mocks, at phone and desktop widths: the agent, the house, the day, no sideways scroll. */
 for (const width of [390, 1440]) {
@@ -21,7 +21,8 @@ for (const width of [390, 1440]) {
 /** On a retina screen the dithered textures keep their box: the bitmap follows the box, never the reverse. */
 test.describe("on a 2× screen", () => {
   test.use({ deviceScaleFactor: 2 });
-  for (const path of ["/", "/satellites"]) {
+  // the home's hero is the one dithered texture left (the satellites cards lost theirs)
+  for (const path of ["/"]) {
     test(`the textures of ${path} keep their size`, async ({ page }) => {
       await page.goto(path);
       await expect(page.locator("canvas").first()).toBeAttached();

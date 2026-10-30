@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./clock";
 
 test("the journal opens and shows why the assistant spoke", async ({ page }) => {
   await page.goto("/journal");

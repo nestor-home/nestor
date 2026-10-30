@@ -1,4 +1,5 @@
-import { expect, type Locator, type Page, test } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
+import { expect, test } from "./clock";
 
 /**
  * The open state of each composite widget, in a real browser and both themes: exactly one item

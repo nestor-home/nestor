@@ -10,7 +10,9 @@ const outDir = fileURLToPath(new URL("../src/nestor/admin/static/app", import.me
 
 export default defineConfig({
   plugins: [
-    tanstackRouter({ target: "react", autoCodeSplitting: true, routesDirectory: "src/routes" }),
+    // routes load on demand in the browser; under test they are part of the module graph from the
+    // start, so no test pays for transforming a lazy route chunk inside its own time budget
+    tanstackRouter({ target: "react", autoCodeSplitting: !process.env.VITEST, routesDirectory: "src/routes" }),
     react(),
     tailwindcss(),
     // serves the mock service worker in development only; never emitted into the build

@@ -14,6 +14,7 @@ export function filtersOf(url: URL): JournalFilters {
     to: text(url, "to"),
     tone: text(url, "tone") as Tone | undefined,
     session: text(url, "session"),
+    conversation: text(url, "conversation"),
     task: text(url, "task"),
     watch: text(url, "watch"),
     connection: text(url, "connection"),
@@ -35,6 +36,7 @@ function accepts(e: JournalItem, f: JournalFilters, ignore?: Facetable): boolean
     (!f.to || e.at <= f.to) &&
     (!f.tone || e.tone === f.tone) &&
     (!f.session || e.links.session === f.session) &&
+    (!f.conversation || e.links.conversation === f.conversation) &&
     (!f.task || e.links.task === f.task) &&
     (!f.watch || e.links.watch === f.watch) &&
     (!f.connection || e.links.connection === f.connection) &&

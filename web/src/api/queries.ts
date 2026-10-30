@@ -21,6 +21,8 @@ export const keys = {
   connection: (id: Id) => ["connections", id] as const,
   satellites: ["satellites"] as const,
   satellite: (id: string) => ["satellites", id] as const,
+  pairingMethods: ["satellites", "pairing-methods"] as const,
+  addition: (id: Id) => ["satellites", "additions", id] as const,
   tasks: ["tasks"] as const,
   task: (id: Id) => ["tasks", id] as const,
   watches: ["watches"] as const,
@@ -91,6 +93,18 @@ export const satellitesQuery = queryOptions({
   queryFn: api.satellites,
   refetchInterval: 5_000, // a device asking to pair appears without reloading
 });
+export const pairingMethodsQuery = queryOptions({
+  queryKey: keys.pairingMethods,
+  queryFn: api.pairingMethods,
+  staleTime: Number.POSITIVE_INFINITY,
+});
+/** An addition in progress, polled for its stage until it is over. */
+export const additionQuery = (id: Id) =>
+  queryOptions({
+    queryKey: keys.addition(id),
+    queryFn: ({ signal }) => api.addition(id, signal),
+    refetchInterval: (q) => (q.state.data && !["waiting", "device_seen"].includes(q.state.data.stage) ? false : 1_500),
+  });
 export const satelliteQuery = (id: string) =>
   queryOptions({ queryKey: keys.satellite(id), queryFn: () => api.satellite(id) });
 export const tasksQuery = queryOptions({ queryKey: keys.tasks, queryFn: api.tasks, refetchInterval: 5_000 });

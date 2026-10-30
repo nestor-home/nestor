@@ -22,7 +22,7 @@ describe("the journal", () => {
   it("tells a watch as one chain, from the trigger to the message, with the reason", async () => {
     renderApp("/journal");
     const chain = await storyWith("Les messages de l'école de Jules.");
-    for (const step of ["déclenchée", "triée", "décision", "non transmis", "écrit"]) {
+    for (const step of ["déclenchée", "décision", "non transmis", "écrit"]) {
       expect(within(chain).getByText(step)).toBeInTheDocument();
     }
     expect(chain).toHaveTextContent("pourquoi : Mathis est dans la pièce « bureau »");
@@ -48,7 +48,7 @@ describe("the journal", () => {
     stream.emit(liveItem({ detail: "Richie, quelle heure est-il ?", links: { session: "s-new", turn: "u-new" } }));
     stream.emit(
       liveItem({
-        type: "conversation.assistant_turn",
+        type: "conversation.turn.assistant",
         message: { id: "journal-assistant-answered", args: { assistant: "Richie" } },
         text: "Richie a répondu",
         detail: "Il est 16 h.",

@@ -20,6 +20,7 @@ export function parseJournalSearch(search: Record<string, unknown>): JournalSear
     "from",
     "to",
     "session",
+    "conversation",
     "task",
     "watch",
     "connection",

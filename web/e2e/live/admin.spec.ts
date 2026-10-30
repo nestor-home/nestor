@@ -143,3 +143,16 @@ test("a configuration change applies once a person restarts", async ({ page }) =
   await rename(page, current, next);
   await rename(page, next, current); // leave the throwaway instance as it was
 });
+
+test("a satellite addition gives its enrollment code once, and can be cancelled", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/satellites");
+  await page.getByRole("button", { name: /Ajouter un satellite|Add a satellite/ }).click();
+  const sheet = page.getByRole("dialog", { name: /Ajouter un satellite|Add a satellite/ });
+  await sheet.getByRole("button", { name: /^(Configuration)/ }).click();
+  await sheet.getByRole("button", { name: /^(Commencer|Start)$/ }).click();
+  await expect(sheet.getByText(/^[0-9A-Z]{4}-[0-9A-Z]{4}$/).first()).toBeVisible();
+  await expect(sheet.getByText(/NESTOR_PAIRING_(URI|CODE)/).first()).toBeVisible();
+  await sheet.getByRole("button", { name: /Annuler l'ajout|Cancel the addition/ }).click();
+  await expect(page.getByText(/Ajout annulé|Addition cancelled/)).toBeVisible();
+});

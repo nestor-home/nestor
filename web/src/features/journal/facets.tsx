@@ -19,7 +19,7 @@ import type { JournalSearch } from "./search";
  * Kinds combine; person, channel and room pick one.
  */
 /** Filters that come from a link elsewhere (a task's page, a connection's activity…), shown so they can be removed. */
-const SUBJECTS = ["session", "task", "watch", "connection", "satellite", "tone"] as const;
+const SUBJECTS = ["session", "conversation", "task", "watch", "connection", "satellite", "tone"] as const;
 
 interface Group {
   id: "kinds" | "person" | "channel" | "room";

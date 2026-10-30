@@ -5,6 +5,7 @@ import type {
   AcceptInvitation,
   Account,
   AccountChange,
+  Addition,
   AgentActivity,
   Approval,
   ConfigDocument,
@@ -31,12 +32,15 @@ import type {
   Me,
   Memory,
   MemoryQuery,
+  NewAddition,
   NewInvitation,
   OAuthClient,
+  PairingMethods,
   Person,
   Satellite,
   Satellites,
   Secret,
+  StartedAddition,
   SystemInfo,
   Task,
   Tasks,
@@ -202,8 +206,38 @@ export const api = {
   satellites: async (): Promise<Satellites> => {
     const all = await unwrap(client.GET("/api/v1/satellites"));
     const now = Date.now();
-    return { pending: all.pending.map((p) => adapt.pending(p, now)), paired: all.paired.map(adapt.satellite) };
+    return {
+      pending: all.pending.map((p) => adapt.pending(p, now)),
+      paired: all.paired.map(adapt.satellite),
+      additions: all.additions.map((a) => adapt.addition(a, now)),
+    };
   },
+  pairingMethods: async (): Promise<PairingMethods> => {
+    const all = await unwrap(client.GET("/api/v1/satellites/pairing-methods"));
+    return { methods: all.methods.map(adapt.method), recommended: all.recommended };
+  },
+  startAddition: async (body: NewAddition): Promise<StartedAddition> => {
+    const started = await unwrap(client.POST("/api/v1/satellites/additions", { body }));
+    return { addition: adapt.addition(started.addition), code: started.code, uri: started.uri };
+  },
+  addition: async (id: Id, signal?: AbortSignal): Promise<Addition> =>
+    adapt.addition(
+      await unwrap(
+        client.GET("/api/v1/satellites/additions/{addition_id}", { params: { path: { addition_id: id } }, signal }),
+      ),
+    ),
+  cancelAddition: (id: Id): Promise<void> =>
+    unwrap(client.DELETE("/api/v1/satellites/additions/{addition_id}", { params: { path: { addition_id: id } } })).then(
+      () => undefined,
+    ),
+  identifyPending: (pairing: Id): Promise<void> =>
+    unwrap(
+      client.POST("/api/v1/satellites/pending/{pairing_id}/identify", { params: { path: { pairing_id: pairing } } }),
+    ).then(() => undefined),
+  identify: (device: string): Promise<void> =>
+    unwrap(client.POST("/api/v1/satellites/{device_id}/identify", { params: { path: { device_id: device } } })).then(
+      () => undefined,
+    ),
   satellite: async (device: string): Promise<Satellite> =>
     adapt.satellite(
       await unwrap(client.GET("/api/v1/satellites/{device_id}", { params: { path: { device_id: device } } })),

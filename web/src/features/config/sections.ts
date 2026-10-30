@@ -11,10 +11,12 @@ import {
   History,
   House,
   KeyRound,
+  MessageCircle,
   MessagesSquare,
   Plug,
   Radar,
   Server,
+  SlidersHorizontal,
   Sparkles,
   Users,
   Workflow,
@@ -38,6 +40,7 @@ export interface ConfigPage {
 export const PAGES: ConfigPage[] = [
   { slug: "persona", kind: "section", keys: ["persona"], icon: Bot, group: "agent" },
   { slug: "household", kind: "household", keys: ["household"], icon: Users, group: "agent" },
+  { slug: "conversation", kind: "section", keys: ["conversation"], icon: MessageCircle, group: "agent" },
   { slug: "initiative", kind: "section", keys: ["initiative"], icon: Sparkles, group: "agent" },
   { slug: "model", kind: "slots", keys: ["model", "triage_model"], icon: Brain, group: "parts" },
   { slug: "channels", kind: "slots", keys: ["channels"], icon: MessagesSquare, group: "parts" },
@@ -58,10 +61,30 @@ export const GROUP_LABEL: Record<ConfigPage["group"], string> = {
   vault: "cfg-group-vault",
 };
 
-export const pageOf = (slug: string): ConfigPage | undefined => PAGES.find((p) => p.slug === slug);
+/**
+ * The pages for this instance's schema: the known ones it has, then a page for any section or slot
+ * the schema adds (a plugin's, a newer Nestor's), so nothing in the file is out of reach.
+ */
+export function pagesFor(schema: ConfigSchema): ConfigPage[] {
+  const known = new Set(PAGES.flatMap((p) => p.keys));
+  const has = (p: ConfigPage) => !p.keys.length || p.keys.some((k) => k in schema.sections || k in schema.slots);
+  const added = (keys: string[], kind: PageKind, group: ConfigPage["group"]): ConfigPage[] =>
+    keys.filter((k) => !known.has(k)).map((k) => ({ slug: k, kind, keys: [k], icon: SlidersHorizontal, group }));
+  const extra = [
+    ...added(Object.keys(schema.sections), "section", "agent"),
+    ...added(Object.keys(schema.slots), "slots", "parts"),
+  ];
+  const pages = PAGES.filter(has);
+  const vault = pages.findIndex((p) => p.group === "instance");
+  return [...pages.slice(0, vault), ...extra, ...pages.slice(vault)];
+}
+
+export const pageOf = (slug: string, schema: ConfigSchema): ConfigPage | undefined =>
+  pagesFor(schema).find((p) => p.slug === slug);
 
 /** The page that edits a document key. */
-export const pageOfKey = (key: string): ConfigPage | undefined => PAGES.find((p) => p.keys.includes(key));
+export const pageOfKey = (key: string, schema: ConfigSchema): ConfigPage | undefined =>
+  pagesFor(schema).find((p) => p.keys.includes(key));
 
 /** A page's title in the reader's language: the schema's own, else the admin's catalogue. */
 export function pageTitle(page: ConfigPage, schema: ConfigSchema, t: (id: string) => string): string {

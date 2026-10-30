@@ -13,6 +13,7 @@ export function matches(item: JournalItem, f: JournalFilters): boolean {
     (!f.to || item.at <= f.to) &&
     (!f.tone || item.tone === f.tone) &&
     (!f.session || item.links.session === f.session) &&
+    (!f.conversation || item.links.conversation === f.conversation) &&
     (!f.task || item.links.task === f.task) &&
     (!f.watch || item.links.watch === f.watch) &&
     (!f.connection || item.links.connection === f.connection) &&

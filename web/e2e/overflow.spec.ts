@@ -1,4 +1,5 @@
-import { expect, type Page, test } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { expect, test } from "./clock";
 
 /**
  * No text pushes its box: every screen, and the main dialogs and sheets, on the stress fixture
@@ -136,6 +137,18 @@ for (const width of [390, 1440]) {
       await page.locator("[data-journal-entry]").first().click();
       await expect(page.getByRole("dialog")).toBeVisible();
       await page.waitForTimeout(300);
+      expect(await overflows(page)).toEqual([]);
+    });
+
+    test("nothing overflows while adding a satellite", async ({ page }) => {
+      await page.goto("/satellites");
+      await page.getByRole("button", { name: "Ajouter un satellite" }).click();
+      const sheet = page.getByRole("dialog", { name: "Ajouter un satellite" });
+      await sheet.getByRole("button", { name: /^Configuration/ }).click();
+      await sheet.getByLabel("Nom").fill(LONG_WORD);
+      expect(await overflows(page)).toEqual([]);
+      await sheet.getByRole("button", { name: "Commencer" }).click();
+      await expect(sheet.getByRole("img", { name: /QR code/ })).toBeVisible();
       expect(await overflows(page)).toEqual([]);
     });
 

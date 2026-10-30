@@ -13,6 +13,7 @@ import {
   Hourglass,
   House,
   KeyRound,
+  Lightbulb,
   Megaphone,
   MessageSquareText,
   Mic,
@@ -74,6 +75,7 @@ export const CAPABILITY_ICON: Record<string, LucideIcon> = {
   "vision.person_detection": ScanFace,
   "expression.emotion": Smile,
   "motion.head": Move3d,
+  "device.identify": Lightbulb,
 };
 
 export const SECTION_ICON = {
