@@ -378,3 +378,22 @@ async def test_an_account_of_someone_no_longer_in_the_household_is_still_listed(
         assert admin.nestor.connections
         await admin.nestor.connections.connect("imap", PersonId("ancien"), {"server": "s", "password": "p"})
         assert "<td>ancien</td>" in (await admin.get("/connections")).text
+
+
+@pytest.mark.parametrize(
+    ("base", "direct"),
+    [
+        ("https://nestor.example", True),
+        ("http://localhost:8080", True),
+        ("http://127.0.0.1:8080", True),
+        ("http://[::1]:8080", True),
+        ("http://192.168.1.20:8080", False),
+        ("http://nestor.local:8080", False),
+    ],
+)
+def test_the_provider_comes_back_directly_only_over_https_or_to_this_machine(base: str, direct: bool) -> None:
+    from nestor.admin import hash_password
+    from nestor.admin.settings import CALLBACK_PATH, DEFAULT_RELAY, AdminSettings
+
+    settings = AdminSettings(password_hash=hash_password("un-long-mot-de-passe"))
+    assert settings.redirect_uri(base) == (f"{base}{CALLBACK_PATH}" if direct else DEFAULT_RELAY)

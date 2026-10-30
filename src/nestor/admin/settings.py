@@ -10,6 +10,9 @@ DEFAULT_RELAY = "https://nestor.mathislambert.fr/redirect/oauth"
 CALLBACK_PATH = "/connections/callback"
 
 
+LOOPBACK = frozenset({"localhost", "127.0.0.1", "::1"})
+
+
 @dataclass(frozen=True, slots=True, kw_only=True)
 class AdminSettings:
     password_hash: str  # from `nestor admin-password`
@@ -32,5 +35,9 @@ class AdminSettings:
         return (self.public_url or seen).rstrip("/")
 
     def redirect_uri(self, base_url: str) -> str:
-        """Where the provider sends the browser back: the admin itself over HTTPS, else the relay."""
-        return f"{base_url}{CALLBACK_PATH}" if base_url.startswith("https://") else self.relay_url
+        """Where the provider sends the browser back: the admin itself over HTTPS or on this very machine
+        (loopback redirects are allowed in plain HTTP, RFC 8252 §7.3; Google accepts `http://localhost`),
+        else the relay page."""
+        host = urllib.parse.urlsplit(base_url).hostname or ""
+        direct = base_url.startswith("https://") or host in LOOPBACK
+        return f"{base_url}{CALLBACK_PATH}" if direct else self.relay_url
