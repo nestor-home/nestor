@@ -1,4 +1,4 @@
-"""HTTP side of the satellite protocol `nestor.satellite/2`, realtime profile (WebRTC).
+"""HTTP side of the satellite protocol `nestor.satellite/1`, realtime profile (WebRTC).
 
     POST  /satellites/pairings                         pairing.request     → 201 pairing.ticket
     POST  /satellites/pairings/{pairing_id}/enrollment pairing.enrollment  → 200 pairing.state

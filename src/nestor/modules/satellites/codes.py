@@ -1,4 +1,4 @@
-"""The two pairing codes of `nestor.satellite/2`, and the pairing URI that carries an enrollment code.
+"""The two pairing codes of `nestor.satellite/1`, and the pairing URI that carries an enrollment code.
 
 Device code: 6 decimal digits the device shows or says, typed in the admin. Digits read well aloud.
 

@@ -108,7 +108,7 @@ def test_the_command_line_writes_the_wire_schemas(tmp_path: Path, capsys: pytest
     written = sorted(p.name for p in (tmp_path / "schemas").iterdir())
     assert {"manifest.json", "hello.json", "intent.identify.json", "pairing.request.json"} <= set(written)
     manifest = json.loads((tmp_path / "schemas" / "manifest.json").read_text())
-    assert manifest["properties"]["protocol"]["const"] == "nestor.satellite/2"
+    assert manifest["properties"]["protocol"]["const"] == "nestor.satellite/1"
     assert f"wrote {tmp_path / 'schemas' / 'manifest.json'}" in capsys.readouterr().out
 
 

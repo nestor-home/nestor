@@ -14,7 +14,7 @@ from typing import Any
 
 from nestor.core import Capability, ContractError, PersonId
 
-PROTOCOL = "nestor.satellite/2"
+PROTOCOL = "nestor.satellite/1"
 _PROTOCOL = re.compile(r"^nestor\.satellite/\d+$")
 
 AUDIO_CAPTURE = Capability("audio.capture")

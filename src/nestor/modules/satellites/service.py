@@ -1,4 +1,4 @@
-"""Pairing (`nestor.satellite/2`): a device gets a token once a person proved they meant to pair it.
+"""Pairing (`nestor.satellite/1`): a device gets a token once a person proved they meant to pair it.
 
 The proof travels whichever way the device can carry it, and the person picks the method:
 
@@ -61,7 +61,7 @@ from nestor.modules.satellites.types import (
     check_room,
 )
 
-TOKEN_PREFIX = "nst2_"
+TOKEN_PREFIX = "nst1_"
 MIN_ADDITION_TTL_S = 60.0
 MAX_ADDITION_TTL_S = 7 * 24 * 3600.0
 _REFUSALS = {AdditionStatus.COMPLETED: "used", AdditionStatus.EXPIRED: "expired", AdditionStatus.CANCELLED: "cancelled"}

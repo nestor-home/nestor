@@ -153,7 +153,7 @@ async def test_a_device_without_a_valid_token_is_refused() -> None:
         assert token
 
         assert (await _offer(client, satellite.id, None)).status_code == 401
-        assert (await _offer(client, satellite.id, "nst2_guessed")).status_code == 401
+        assert (await _offer(client, satellite.id, "nst1_guessed")).status_code == 401
         assert (await _offer(client, "reachy-salon", token)).status_code == 401, "a token opens its own device only"
         foreign = await _offer(client, satellite.id, token, pc_id="SmallWebRTCConnection#0-someone-else")
         assert foreign.status_code == 403
@@ -192,7 +192,7 @@ async def test_pairing_over_http_hands_out_the_token_once() -> None:
 
         await pairing.approve(ticket["device_code"])
         approved, claimed = (await client.get(poll)).json(), (await client.get(poll)).json()
-    assert approved["status"] == "approved" and approved["token"].startswith("nst2_")
+    assert approved["status"] == "approved" and approved["token"].startswith("nst1_")
     assert approved["room"] == "cuisine" and "expression.emotion" in approved["capabilities"]
     assert claimed["status"] == "claimed" and "token" not in claimed
 
@@ -240,11 +240,11 @@ async def test_wrong_enrollment_codes_are_rate_limited_with_retry_after() -> Non
 @pytest.mark.parametrize(
     ("body", "error"),
     [
-        ({"manifest": {"protocol": "nestor.satellite/2"}}, "invalid_request"),
-        ({"manifest": {**MANIFEST.to_json(), "protocol": "nestor.satellite/1"}}, "protocol_unsupported"),
+        ({"manifest": {"protocol": "nestor.satellite/1"}}, "invalid_request"),
+        ({"manifest": {**MANIFEST.to_json(), "protocol": "nestor.satellite/0"}}, "protocol_unsupported"),
         (MANIFEST.to_json(), "invalid_request"),
     ],
-    ids=["no device", "protocol 1", "a bare manifest"],
+    ids=["no device", "protocol 0", "a bare manifest"],
 )
 async def test_an_invalid_request_is_refused(body: dict[str, Any], error: str) -> None:
     async with _gateway_client(Pairing(Journal(MemoryEventLog()))) as client:

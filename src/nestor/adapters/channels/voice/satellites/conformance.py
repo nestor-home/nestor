@@ -1,4 +1,4 @@
-"""Black-box conformance of a satellite driver to `nestor.satellite/2`, realtime profile (HTTP + WebRTC).
+"""Black-box conformance of a satellite driver to `nestor.satellite/1`, realtime profile (HTTP + WebRTC).
 
 `check_satellite` runs a fake core (the real pairing service and satellite gateway, with no assistant
 behind them) and launches the driver against it once per scenario. A driver is a Python coroutine
