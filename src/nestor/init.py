@@ -57,6 +57,7 @@ admin:                             # who signs in is in the database: `nestor ac
 """
 
 ENV = """# Secrets for Nestor. Never commit this file.
+# nestor reads it next to its configuration; a variable already set in the environment wins.
 NESTOR_SECRET_KEY={secret_key}
 OPENROUTER_API_KEY=
 ELEVENLABS_API_KEY=

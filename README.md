@@ -32,6 +32,17 @@ Its reference distribution is **Richie**, a Reachy Mini Wireless home robot.
 **Documentation:** [nestorhome.dev/docs](https://nestorhome.dev/docs/): installing the server,
 pairing satellites, the satellite protocol, its schemas and the SDKs.
 
+## Running
+
+```bash
+nestor init                   # writes nestor.yaml, its .env (secrets) and the owner account
+nestor -c nestor.yaml check   # fill the API keys in .env first
+nestor -c nestor.yaml run
+```
+
+Every command reads the `.env` next to the configuration: no need to source it. A variable already set
+in the environment (the shell, a service manager, Docker's `env_file`) wins over the file.
+
 ## Development
 
 ```bash

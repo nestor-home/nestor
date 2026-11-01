@@ -25,7 +25,7 @@ from nestor.modules.accounts import Role
 from nestor.modules.satellites import PairingMethod
 from nestor.modules.satellites.wire import SCHEMAS, write_schemas
 from nestor.runtime.app import Nestor, open_accounts, run_until_stopped
-from nestor.runtime.config import SECRET_KEY, NestorConfig, load_config
+from nestor.runtime.config import ENV_FILE, SECRET_KEY, NestorConfig, environment, load_config
 from nestor.runtime.secrets import ConfigFile, open_secrets, preview
 
 OPENAPI = Path("web") / "openapi.json"
@@ -91,24 +91,25 @@ def main(argv: list[str] | None = None) -> int:
     checking = args.command == "satellites" and args.action == "conformance"  # its output is the findings
     level = logging.DEBUG if args.verbose else logging.WARNING if checking else logging.INFO
     logging.basicConfig(level=level, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    environ = environment(args.config)  # the shell's variables, completed by the `.env` next to the configuration
     try:
         if args.command == "admin":
             return _openapi(args.out)
         if args.command == "accounts":
-            return _create_owner(load_config(args.config), args.login, args.person)
+            return _create_owner(load_config(args.config, environ), args.login, args.person)
         if args.command == "init":
             return _init(args.config)
         if args.command == "satellites" and args.action == "conformance":
             return _conformance(args.satellite, args.deadline, words)
         if args.command == "satellites":
-            return _satellites(args)
+            return _satellites(args, environ)
         if args.command == "secrets":
-            return _secrets(args)
+            return _secrets(args, environ)
         if args.command == "restart":
-            _call(load_config(args.config), "POST", "/api/v1/system/restart", {"confirm": True})
+            _call(load_config(args.config, environ), "POST", "/api/v1/system/restart", {"confirm": True})
             print("restarting: the instance stops cleanly, then starts again")
             return 0
-        nestor = Nestor(load_config(args.config), source=args.config)
+        nestor = Nestor(load_config(args.config, environ), environ=environ, source=args.config)
         extras = _admin_server(nestor)
         if args.command == "check":
             names = ", ".join(c.channel_id for c in nestor.channels)
@@ -144,7 +145,9 @@ def _init(config: Path) -> int:
     for path in written:
         print(f"wrote {path}")
     print(f"owner account {login!r} created: sign in to the admin with it")
-    print("next: fill the API keys in .env, then `nestor -c <config> check` and `run`")
+    print(
+        f"next: fill the API keys in {config.parent / ENV_FILE} (no need to source it), then `nestor -c {config} check`"
+    )
     return 0
 
 
@@ -179,13 +182,13 @@ def _openapi(out: Path) -> int:
     return 0
 
 
-def _secrets(args: argparse.Namespace) -> int:
+def _secrets(args: argparse.Namespace, environ: dict[str, str]) -> int:
     """Directly on the vault of the configuration's data folder: no running instance is needed."""
-    file = ConfigFile(args.config, os.environ)
+    file = ConfigFile(args.config, environ)
     used = file.used()
 
     async def run() -> int:
-        async with open_secrets(file.data_dir, os.environ.get(SECRET_KEY)) as secrets:
+        async with open_secrets(file.data_dir, environ.get(SECRET_KEY)) as secrets:
             if args.action == "list":
                 for name in sorted({*await secrets.names(), *used}):
                     value = await secrets.value(name)
@@ -217,12 +220,12 @@ def _secrets(args: argparse.Namespace) -> int:
 ENROLLMENT_METHODS = [m.value for m in PairingMethod if m.proof.value == "enrollment_code"]
 
 
-def _satellites(args: argparse.Namespace) -> int:
+def _satellites(args: argparse.Namespace, environ: dict[str, str]) -> int:
     if args.action == "schemas":
         for path in write_schemas(args.out or SCHEMAS):
             print(f"wrote {path}")
         return 0
-    config = load_config(args.config)
+    config = load_config(args.config, environ)
     if args.action == "add":
         asked = {"method": args.method} | {k: v for k in ("room", "name") if (v := getattr(args, k)) is not None}
         started = _call(config, "POST", "/api/v1/satellites/additions", asked)

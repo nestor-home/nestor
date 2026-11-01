@@ -1,12 +1,14 @@
-"""The configuration file: validated before anything starts, secrets from the environment."""
+"""The configuration file: validated before anything starts, secrets from the environment and the
+`.env` next to it."""
 
+import logging
 from pathlib import Path
 
 import pytest
 
 from nestor.modules.channels import Address
 from nestor.runtime import ConfigError, load_config
-from nestor.runtime.config import parse_config
+from nestor.runtime.config import environment, parse_config
 
 VALID = """
 persona:
@@ -42,6 +44,60 @@ def test_a_valid_file_gives_people_adapters_and_secrets() -> None:
 def test_a_missing_secret_is_named() -> None:
     with pytest.raises(ConfigError, match="TELEGRAM_TOKEN is not set"):
         parse_config(VALID, {"OPENROUTER_API_KEY": "sk"})
+
+
+def test_without_a_dot_env_the_environment_is_used_as_is(tmp_path: Path) -> None:
+    config = tmp_path / "nestor.yaml"
+    config.write_text(VALID)
+    assert environment(config, ENV) == ENV
+    with pytest.raises(ConfigError, match=r"TELEGRAM_TOKEN is not set \(in the environment or the \.env next"):
+        load_config(config, environment(config, {"OPENROUTER_API_KEY": "sk"}))
+
+
+DOT_ENV = """# written by nestor init, then filled by hand
+export OPENROUTER_API_KEY=sk-from-file
+TELEGRAM_TOKEN="123:abc # inside quotes"
+LITERAL='p$ss ${HOME}'
+EMPTY=
+INLINE=value # a comment after a value
+"""
+
+
+def test_the_dot_env_next_to_the_file_fills_what_the_environment_lacks(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    config = tmp_path / "home" / "nestor.yaml"
+    config.parent.mkdir()
+    config.write_text(VALID)
+    (config.parent / ".env").write_text(DOT_ENV)
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    monkeypatch.setenv("TELEGRAM_TOKEN", "999:from-the-shell")
+    monkeypatch.chdir(tmp_path)  # the file next to the configuration, not the one of the working directory
+
+    found = environment(config)
+    assert {k: found[k] for k in ("OPENROUTER_API_KEY", "LITERAL", "EMPTY", "INLINE")} == {
+        "OPENROUTER_API_KEY": "sk-from-file",
+        "LITERAL": "p$ss ${HOME}",
+        "EMPTY": "",
+        "INLINE": "value",
+    }
+    loaded = load_config(config)  # by default, the process environment completed by the file
+    assert loaded.model.settings()["api_key"] == "sk-from-file"
+    assert loaded.channels[0].settings() == {"token": "999:from-the-shell"}  # the environment wins
+
+    monkeypatch.delenv("TELEGRAM_TOKEN")
+    assert load_config(config).channels[0].settings() == {"token": "123:abc # inside quotes"}
+
+
+def test_a_line_the_dot_env_cannot_parse_is_skipped_with_its_line_named(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    config = tmp_path / "nestor.yaml"
+    (tmp_path / ".env").write_text('OPENROUTER_API_KEY=sk\nnot a variable\n"unclosed\nTELEGRAM_TOKEN=1:a\n')
+    with caplog.at_level(logging.WARNING):
+        found = environment(config, {})
+    assert found == {"OPENROUTER_API_KEY": "sk", "TELEGRAM_TOKEN": "1:a"}
+    assert "line 2" in caplog.text
 
 
 @pytest.mark.parametrize(

@@ -68,7 +68,8 @@ def test_the_command_asks_then_writes(
     out = capsys.readouterr().out
     assert f"wrote {config}" in out and "owner account 'mathis' created" in out
     assert "already exists: nothing changed" in out
-    assert sign_in(load_config(config, {"OPENROUTER_API_KEY": "k", "ELEVENLABS_API_KEY": "k"}), "mathis")
+    assert f"fill the API keys in {tmp_path / '.env'}" in out
+    assert sign_in(load_config(config), "mathis")  # its variables come from the .env written next to it
 
 
 @pytest.mark.parametrize(
