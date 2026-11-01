@@ -194,3 +194,42 @@ def test_the_conformance_suite_without_the_voice_extra_says_how_to_install_it(
     assert main(["satellites", "conformance", "--", sys.executable, "-c", "pass"]) == 2
     error = capsys.readouterr().err
     assert "needs the voice extra" in error and "nestor-home[voice]" in error
+
+
+def test_every_command_reads_the_dot_env_next_to_the_configuration_and_the_shell_wins(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    home = tmp_path / "home"
+    home.mkdir()
+    config = home / "nestor.yaml"
+    config.write_text(
+        CONFIG.format(data_dir="${NESTOR_DATA}", admin="null")
+        .replace(
+            "kind: scripted",
+            "kind: openai-compatible, api_key: '${OPENROUTER_API_KEY}', model: m, base_url: 'http://x'",
+        )
+        .replace("[{kind: remote, name: hermes}]", "[]")
+        .replace("[{kind: memory, name: telegram}]", "[{kind: telegram, token: '${secret:bot}'}]")
+        .replace("presence: {kind: static}\n", "")
+    )
+    (home / ".env").write_text(
+        f"# from nestor init\nexport NESTOR_SECRET_KEY={SECRET_KEY}\nNESTOR_DATA='{tmp_path / 'state'}'\n"
+        "OPENROUTER_API_KEY=sk-from-file\n"
+    )
+    for name in ("NESTOR_SECRET_KEY", "NESTOR_DATA", "OPENROUTER_API_KEY"):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.chdir(tmp_path)
+
+    monkeypatch.setattr(sys, "stdin", io.StringIO(VALUE))
+    assert main(["-c", str(config), "secrets", "set", "bot", "--from-stdin"]) == 0  # the vault opens
+    assert (tmp_path / "state" / "nestor.db").exists()
+    assert main(["-c", str(config), "check"]) == 0
+    assert f"{config}: OK" in capsys.readouterr().out
+
+    assert main(["-c", str(config), "secrets", "list"]) == 0
+    assert "bot  set" in capsys.readouterr().out
+
+    monkeypatch.setenv("NESTOR_DATA", str(tmp_path / "elsewhere"))  # the shell wins over the file
+    assert main(["-c", str(config), "secrets", "list"]) == 0
+    assert "bot  not set" in capsys.readouterr().out
+    assert (tmp_path / "elsewhere" / "nestor.db").exists()

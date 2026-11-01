@@ -2,16 +2,18 @@
 
 YAML, validated before anything starts. Secrets are never written in it: `${NAME}` is replaced by
 the environment variable `NAME`, `${secret:name}` by the secret `name` of the encrypted vault (set
-with `nestor secrets set` or from the admin); a missing one is an error that names it.
+with `nestor secrets set` or from the admin); a missing one is an error that names it. The variables
+are the process environment's, completed by the `.env` next to the file (`environment`).
 """
 
 import os
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any
 
 import yaml
+from dotenv import dotenv_values
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
 from nestor.core import NestorError, PersonId
@@ -21,6 +23,7 @@ from nestor.modules.initiative import QuietHours
 
 _VARIABLE = re.compile(r"\$\{(?:(?P<secret>secret):)?(?P<name>[A-Za-z_][A-Za-z0-9_.-]*)\}")
 SECRET_KEY = "NESTOR_SECRET_KEY"
+ENV_FILE = ".env"  # next to the configuration: what `nestor init` writes
 
 type SecretLookup = Callable[[str], str | None]  # a secret's value by name, None when it is not set
 
@@ -137,15 +140,31 @@ class NestorConfig(Section):
     connectors: tuple[AdapterConfig, ...] | None = None
 
 
+def environment(config: Path | str, environ: Mapping[str, str] | None = None) -> dict[str, str]:
+    """The variables a configuration sees: `environ` (the process environment by default), completed by
+    the `.env` next to the file when there is one. A variable already set always wins: the shell, a
+    service manager or Docker keep the last word, and the file only fills what is missing.
+
+    Standard dotenv syntax (comments, `export`, quotes, empty values); values are taken literally,
+    without `${...}` expansion, so a key holding a `$` stays intact. A line that cannot be parsed is
+    skipped with a warning naming its line.
+    """
+    environ = os.environ if environ is None else environ
+    path = Path(config).parent / ENV_FILE
+    found = dotenv_values(path, interpolate=False, encoding="utf-8") if path.is_file() else {}
+    return {**{k: v for k, v in found.items() if v is not None}, **environ}
+
+
 def load_config(
     path: Path | str, environ: dict[str, str] | None = None, *, secrets: SecretLookup | None = None
 ) -> NestorConfig:
+    """The configuration in `path`, resolved with `environ` (by default, its `environment`)."""
     path = Path(path)
     try:
         text = path.read_text()
     except OSError as error:
         raise ConfigError(f"cannot read {path}: {error.strerror}") from None
-    environ = environ if environ is not None else dict(os.environ)
+    environ = environ if environ is not None else environment(path)
     return parse_config(text, environ, origin=str(path), secrets=secrets)
 
 
@@ -181,7 +200,10 @@ def vault_lookup(raw: Any, environ: dict[str, str]) -> SecretLookup:
         return lambda name: None
     key = environ.get(SECRET_KEY)
     if not key:
-        raise ConfigError(f"the configuration refers to secrets, but {SECRET_KEY} is not set to open the vault")
+        raise ConfigError(
+            f"the configuration refers to secrets, but {SECRET_KEY} is not set to open the vault "
+            f"(in the environment or the {ENV_FILE} next to the configuration)"
+        )
     from nestor.runtime.secrets import vault_reader  # the vault adapter, only when needed
 
     data_dir = raw.get("data_dir", "data") if isinstance(raw, dict) else "data"
@@ -198,7 +220,10 @@ def substitute(value: Any, environ: dict[str, str], secrets: SecretLookup) -> An
             if found is None:
                 if match["secret"]:
                     raise ConfigError(f"secret {name} is not set: `nestor secrets set {name}`")
-                raise ConfigError(f"environment variable {name} is not set")
+                raise ConfigError(
+                    f"environment variable {name} is not set (in the environment or the {ENV_FILE} next to the "
+                    "configuration)"
+                )
             return found
 
         return _VARIABLE.sub(resolved, value)

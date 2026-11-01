@@ -138,7 +138,8 @@ class Nestor:
             if self.vault is None:
                 raise ConfigError(
                     f"{SECRET_KEY} is not set: connectors keep their tokens encrypted with it. Generate one with "
-                    f"{GENERATE} and set it in the environment, never in the configuration file"
+                    f"{GENERATE} and set it in the environment or the .env next to the configuration, never in the "
+                    "configuration file"
                 )
             self.token_endpoint = token_endpoint or HttpxTokenEndpoint()
             self.connections = Connections(self.journal, self.vault, self.token_endpoint, self.connectors)
