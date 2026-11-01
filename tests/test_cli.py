@@ -1,8 +1,9 @@
-"""The command line on the configuration's secrets (straight on the vault, no instance running) and on
-restarting a running instance."""
+"""The command line on the configuration's secrets (straight on the vault, no instance running), on
+restarting a running instance, and on checking a satellite program against the standard."""
 
 import asyncio
 import io
+import json
 import sys
 from pathlib import Path
 
@@ -10,7 +11,10 @@ import pytest
 
 from nestor.admin import AdminServer, AdminSettings
 from nestor.cli import main
+from nestor.core import Capability
 from nestor.modules.journal import Journal
+from nestor.modules.satellites import Device, Manifest
+from nestor.modules.satellites.types import DeclaredCapability
 from nestor.modules.system import SecretChanged
 from nestor.runtime.app import Restart
 from nestor.runtime.config import ConfigError, load_config
@@ -20,6 +24,10 @@ from .admin.harness import CONFIG, SECRET_KEY, Harness
 from .admin.test_satellites import free_port
 
 VALUE = "123:telegram-bot-token"
+SPEAKER = Manifest(
+    Device("enceinte-salon", "raspberry-pi-zero", "salon"),
+    (DeclaredCapability(Capability("audio.capture")), DeclaredCapability(Capability("audio.playback"))),
+)
 
 
 @pytest.fixture
@@ -127,3 +135,62 @@ async def test_the_command_line_restarts_the_running_instance(
             assert await asyncio.to_thread(main, ["-c", str(config), "restart"]) == 0
             await asyncio.wait_for(restarted.wait(), 2)
     assert "restarting" in capsys.readouterr().out
+
+
+@pytest.fixture
+def english(monkeypatch: pytest.MonkeyPatch) -> None:
+    for name in ("LC_ALL", "LC_MESSAGES"):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("LANG", "en_US.UTF-8")
+
+
+@pytest.mark.usefixtures("english")
+def test_a_conformant_satellite_program_passes_every_check(capsys: pytest.CaptureFixture[str]) -> None:
+    satellite = [sys.executable, "-m", "tests.adapters.channels.voice.satellites.reference", "{url}", "{state}",
+                 json.dumps(SPEAKER.to_json())]  # fmt: skip
+    assert main(["satellites", "conformance", "--deadline", "15", "--", *satellite]) == 0
+    lines = capsys.readouterr().out.splitlines()
+    assert "PASS  pairs with the enrollment code of NESTOR_PAIRING_URI, no code typed (P3, P4)" in lines
+    assert "PASS  reconnects with the same token after a hang-up (W4)" in lines
+    assert not [line for line in lines if line.startswith("FAIL")]
+    assert lines[-1] == f"conformant: {len(lines) - 1} checks passed"
+
+
+def test_a_satellite_program_that_exits_fails_with_what_went_wrong_in_the_readers_language(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("LC_ALL", "fr_FR.UTF-8")
+    assert main(["satellites", "conformance", "--deadline", "1", "--", sys.executable, "-c", "pass"]) == 1
+    assert capsys.readouterr().out.splitlines() == [
+        "ÉCHEC  demande à être appairé",
+        "ÉCHEC  tourne sans planter (terminé avec le code 0)",
+        "2 vérifications échouées sur 2",
+    ]
+
+
+@pytest.mark.usefixtures("english")
+@pytest.mark.parametrize(
+    ("command", "said"),
+    [
+        ([], "give the satellite's command after --"),
+        (["--", "./no-such-satellite"], "./no-such-satellite cannot be run"),
+    ],
+    ids=["no command", "no such program"],
+)
+def test_a_satellite_that_cannot_be_launched_is_a_usage_error(
+    command: list[str], said: str, capsys: pytest.CaptureFixture[str]
+) -> None:
+    assert main(["satellites", "conformance", *command]) == 2
+    assert said in capsys.readouterr().err
+
+
+@pytest.mark.usefixtures("english")
+def test_the_conformance_suite_without_the_voice_extra_says_how_to_install_it(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    for name in [m for m in sys.modules if m.startswith(("nestor.adapters.channels.voice", "pipecat"))]:
+        monkeypatch.delitem(sys.modules, name)
+    monkeypatch.setitem(sys.modules, "pipecat", None)  # as if the extra were not installed
+    assert main(["satellites", "conformance", "--", sys.executable, "-c", "pass"]) == 2
+    error = capsys.readouterr().err
+    assert "needs the voice extra" in error and "nestor-home[voice]" in error

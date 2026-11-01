@@ -1,4 +1,5 @@
-"""`nestor` command line: run the assistant, check a configuration, create accounts, pair satellites.
+"""`nestor` command line: run the assistant, check a configuration, create accounts, pair satellites and check
+one against the standard.
 
 It sits at the top of the package, above both the runtime and the admin interface it starts.
 """
@@ -8,14 +9,17 @@ import asyncio
 import getpass
 import logging
 import os
+import shutil
 import sys
 from pathlib import Path
 from typing import Any
 
 import httpx
 
+from nestor.adapters.i18n import FluentLocalizer, catalogue_dirs
 from nestor.admin import AdminServer, openapi_text, read_token, token_path
 from nestor.core import Component, NestorError, PersonId
+from nestor.core.i18n import Locale, Message
 from nestor.init import initialise, slug
 from nestor.modules.accounts import Role
 from nestor.modules.satellites import PairingMethod
@@ -25,9 +29,11 @@ from nestor.runtime.config import SECRET_KEY, NestorConfig, load_config
 from nestor.runtime.secrets import ConfigFile, open_secrets, preview
 
 OPENAPI = Path("web") / "openapi.json"
+CONFORMANCE_DEADLINE_S = 15.0
 
 
 def main(argv: list[str] | None = None) -> int:
+    words = _Words()
     parser = argparse.ArgumentParser(prog="nestor", description="Run a Nestor home assistant.")
     parser.add_argument("-c", "--config", type=Path, default=Path("nestor.yaml"), help="configuration file")
     parser.add_argument("-v", "--verbose", action="store_true", help="debug logs")
@@ -58,6 +64,18 @@ def main(argv: list[str] | None = None) -> int:
     satellites.add_parser("revoke", help="unpair a satellite").add_argument("device_id")
     schemas = satellites.add_parser("schemas", help="write the wire protocol's JSON Schemas")
     schemas.add_argument("--out", type=Path, default=None, help="folder (default: the package's schemas)")
+    conformance = satellites.add_parser(
+        "conformance",
+        usage="%(prog)s [-h] [--deadline SECONDS] -- COMMAND [ARGUMENT ...]",
+        help=words("conformance-help"),
+        description=words("conformance-description"),
+        epilog=words("conformance-epilog"),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    conformance.add_argument("--deadline", type=float, default=CONFORMANCE_DEADLINE_S, metavar="SECONDS",
+                             help=words("conformance-deadline-help", seconds=CONFORMANCE_DEADLINE_S))  # fmt: skip
+    conformance.add_argument("satellite", nargs=argparse.REMAINDER, metavar="-- COMMAND",
+                             help=words("conformance-command-help"))  # fmt: skip
     commands.add_parser("restart", help="restart the running instance (applies the configuration written since)")
     secrets = commands.add_parser("secrets", help="the configuration's secrets, kept in the encrypted vault")
     actions = secrets.add_subparsers(dest="action", required=True)
@@ -70,9 +88,9 @@ def main(argv: list[str] | None = None) -> int:
     deleting.add_argument("--force", action="store_true", help="even while the configuration refers to it")
     args = parser.parse_args(argv)
 
-    logging.basicConfig(
-        level=logging.DEBUG if args.verbose else logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s"
-    )
+    checking = args.command == "satellites" and args.action == "conformance"  # its output is the findings
+    level = logging.DEBUG if args.verbose else logging.WARNING if checking else logging.INFO
+    logging.basicConfig(level=level, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     try:
         if args.command == "admin":
             return _openapi(args.out)
@@ -80,6 +98,8 @@ def main(argv: list[str] | None = None) -> int:
             return _create_owner(load_config(args.config), args.login, args.person)
         if args.command == "init":
             return _init(args.config)
+        if args.command == "satellites" and args.action == "conformance":
+            return _conformance(args.satellite, args.deadline, words)
         if args.command == "satellites":
             return _satellites(args)
         if args.command == "secrets":
@@ -220,6 +240,52 @@ def _satellites(args: argparse.Namespace) -> int:
     else:
         _call(config, "DELETE", f"/api/v1/satellites/{args.device_id}")
         print(f"revoked {args.device_id}")
+    return 0
+
+
+class _Words:
+    """The command's words, in the language of the environment (`LC_ALL`, `LC_MESSAGES`, `LANG`)."""
+
+    def __init__(self) -> None:
+        self._localizer = FluentLocalizer(catalogue_dirs(["nestor"]))
+        wanted = next((v for k in ("LC_ALL", "LC_MESSAGES", "LANG") if (v := os.environ.get(k))), "")
+        self._locale = Locale(wanted.split(".")[0].split("@")[0])
+
+    def __call__(self, message_id: str, **args: str | int | float) -> str:
+        return self.render(Message.of(message_id, **args))
+
+    def render(self, message: Message) -> str:
+        return self._localizer.format(message, self._locale)
+
+
+def _conformance(command: list[str], deadline_s: float, words: _Words) -> int:
+    """Run the black-box conformance suite on a satellite's command line; 0 when it conforms."""
+    command = command[1:] if command[:1] == ["--"] else command
+    if not command:
+        print(words("conformance-no-command"), file=sys.stderr)
+        return 2
+    if shutil.which(command[0]) is None:
+        print(words("conformance-no-program", program=command[0]), file=sys.stderr)
+        return 2
+    try:
+        from nestor.adapters.channels.voice.satellites.conformance import check_satellite
+    except ModuleNotFoundError as missing:  # the suite runs the real WebRTC gateway: the `voice` extra
+        print(words("conformance-needs-voice", module=str(missing.name)), file=sys.stderr)
+        return 2
+    findings = asyncio.run(check_satellite(command, deadline_s=deadline_s))
+    for finding in findings.items:
+        check = words.render(finding.check)
+        if finding.passed:
+            print(words("conformance-passed", check=check))
+        elif finding.detail is None:
+            print(words("conformance-failed", check=check))
+        else:
+            print(words("conformance-failed-detail", check=check, detail=words.render(finding.detail)))
+    failed, total = len(findings.failures()), len(findings.items)
+    if failed:
+        print(words("conformance-not-conformant", count=failed, total=total))
+        return 1
+    print(words("conformance-conformant", total=total))
     return 0
 
 

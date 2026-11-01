@@ -286,7 +286,15 @@ names, at most 32, each declared once. Known capabilities: `audio.capture`, `aud
 
 `check_satellite(driver)` launches the driver once per scenario: a Python coroutine function taking a
 `Launch`, or a command where `{url}` is the core's URL and `{state}` a fresh folder for its token. The
-enrollment code is given in `NESTOR_PAIRING_URI`.
+enrollment code is given in `NESTOR_PAIRING_URI` (removed from the environment of the other scenarios).
+A driver in any language runs the suite from the command line, with the `voice` extra:
+
+```bash
+uvx --from 'nestor-home[voice]==<version>' nestor satellites conformance --deadline 15 -- <command and arguments>
+```
+
+It prints one line per check and a summary, and exits 0 when the driver conforms, 1 when a check
+fails, 2 when the command cannot run.
 
 | Check | Rules |
 | --- | --- |
