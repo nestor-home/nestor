@@ -44,12 +44,11 @@ import {
   siWebrtc,
   siWhatsapp,
 } from "simple-icons";
+import { tr } from "@/i18n/runtime";
 import { cn } from "@/lib/utils";
 
-interface Brand {
-  name: string; // the accessible label
-  mark: SimpleIcon | LucideIcon;
-}
+/** A mark and its accessible label: a brand's own name, or a Fluent message for a generic one. */
+type Brand = { mark: SimpleIcon | LucideIcon } & ({ name: string } | { message: string });
 
 const BRANDS = {
   gmail: { name: "Gmail", mark: siGmail },
@@ -65,7 +64,7 @@ const BRANDS = {
   openrouter: { name: "OpenRouter", mark: siOpenrouter },
   anthropic: { name: "Anthropic", mark: siAnthropic },
   claude: { name: "Claude", mark: siClaude },
-  "openai-compatible": { name: "OpenAI-compatible API", mark: Cpu },
+  "openai-compatible": { message: "brand-openai-compatible", mark: Cpu },
   elevenlabs: { name: "ElevenLabs", mark: siElevenlabs },
   silero: { name: "Silero VAD", mark: AudioWaveform },
   "smart-turn": { name: "Smart Turn", mark: AudioWaveform },
@@ -73,7 +72,7 @@ const BRANDS = {
   imap: { name: "IMAP", mark: Mail },
   oauth: { name: "OAuth", mark: KeyRound },
   webrtc: { name: "WebRTC", mark: siWebrtc },
-  voice: { name: "Voice", mark: Mic },
+  voice: { message: "brand-voice", mark: Mic },
   web: { name: "Web", mark: Globe },
   reachy: { name: "Reachy Mini (Pollen Robotics)", mark: Bot },
   "raspberry-pi": { name: "Raspberry Pi", mark: siRaspberrypi },
@@ -113,7 +112,8 @@ export function brandOf(kind: string | null | undefined): BrandSlug | null {
 }
 
 export function brandName(slug: BrandSlug): string {
-  return BRANDS[slug].name;
+  const brand: Brand = BRANDS[slug];
+  return "name" in brand ? brand.name : tr(brand.message);
 }
 
 function isSimpleIcon(mark: Brand["mark"]): mark is SimpleIcon {
@@ -135,7 +135,8 @@ export function BrandMark({
   colour?: boolean;
   label?: boolean;
 }) {
-  const { name, mark } = BRANDS[brand];
+  const { mark } = BRANDS[brand];
+  const name = brandName(brand);
   const a11y = label ? { role: "img", "aria-label": name } : { "aria-hidden": true as const };
   if (isSimpleIcon(mark)) {
     return (

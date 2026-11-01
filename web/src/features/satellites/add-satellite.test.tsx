@@ -47,7 +47,7 @@ describe("adding a satellite", () => {
     const [code] = await within(sheet).findAllByText(/^[0-9A-Z]{4}-[0-9A-Z]{4}$/);
     const canonical = code?.textContent?.replace("-", "") ?? "";
     expect(within(sheet).getByRole("img", { name: /QR code of the pairing address/ })).toBeInTheDocument();
-    expect(sheet).toHaveTextContent(`NESTOR_PAIRING_URI="nestor+http://nestor.local:7860/?code=${canonical}"`);
+    expect(sheet).toHaveTextContent(`NESTOR_PAIRING_URI="nestor+http://nestor.local:8471/?code=${canonical}"`);
     expect(sheet).toHaveTextContent(`nestor-satellite run --pairing-uri`);
     expect(within(sheet).getByRole("list", { name: "Progress of the addition" })).toHaveTextContent(
       "waiting for the device",

@@ -45,9 +45,9 @@ export function document(): ConfigDocument {
     data_dir: "data/richie",
     persona: {
       name: "Richie",
-      locale: "en-US",
+      locale: "en",
       language: "English",
-      timezone: "Europe/Paris",
+      timezone: "UTC",
       character:
         "You are Richie, the Lambert household's assistant. You speak plainly, warmly and with a touch of humour, and you get to the point.",
     },
@@ -61,21 +61,21 @@ export function document(): ConfigDocument {
       kind: "openai-compatible",
       name: "sonnet",
       base_url: "https://openrouter.ai/api/v1",
-      api_key: vault("model.api_key"),
+      api_key: environ("MODEL_API_KEY"),
       model: "anthropic/claude-sonnet-4.6",
       extra_body: { provider: { order: ["anthropic"] } },
     },
     triage_model: {
       kind: "openai-compatible",
       base_url: "https://openrouter.ai/api/v1",
-      api_key: vault("model.api_key"),
+      api_key: environ("MODEL_API_KEY"),
       model: "anthropic/claude-haiku-4.5",
     },
     channels: [
       {
         kind: "voice",
         room: "living room",
-        port: 7870,
+        port: 8471,
         speech: { api_key: vault("channels.voice.speech.api_key"), voice_id: "Xb7hH8MSUJpSbSDYk0k2" },
       },
       { kind: "telegram", token: environ("TELEGRAM_TOKEN") },
@@ -109,7 +109,7 @@ export function document(): ConfigDocument {
     },
     connectors: [{ kind: "google" }, { kind: "imap" }],
     initiative: { quiet_hours: "22:30-07:30", main_room: "living room" },
-    admin: { host: "0.0.0.0", port: 8080, public_url: "https://nestor.lambert.family" },
+    admin: { host: "0.0.0.0", port: 8470, public_url: "https://nestor.lambert.family" },
   };
 }
 
@@ -130,7 +130,6 @@ export function fresh(): ConfigDb {
       { id: "20261021T090455031000Z", at: minutes(60 * 24 * 9), document: oldest },
     ],
     vault: {
-      "model.api_key": { value: "sk-or-v1-4f1c9a2b7d", at: minutes(60 * 24 * 30) },
       "channels.voice.speech.api_key": { value: "sk_e1d0a8c7b6f5", at: minutes(60 * 24 * 30) },
       "executors.hermes.api_key": { value: "hermes-7c0f2b91", at: minutes(60 * 24 * 12) },
       "tools.home.token": { value: "eyJhbGciOiJIUzI1NiJ9.home", at: minutes(60 * 24 * 12) },
@@ -252,7 +251,7 @@ export function prepared(edited: ConfigDocument, current: ConfigDocument) {
 
 // -- checking --------------------------------------------------------------------------------------
 
-const ENVIRON = new Set(["TELEGRAM_TOKEN"]);
+const ENVIRON = new Set(["MODEL_API_KEY", "TELEGRAM_TOKEN"]);
 
 function references(node: unknown, path: Path = []): { path: Path; name: string; secret: boolean }[] {
   if (typeof node === "string") {

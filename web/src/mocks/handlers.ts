@@ -504,7 +504,7 @@ export const handlers = [
       {
         addition: additionOut(addition),
         code: code ? `${code.slice(0, 4)}-${code.slice(4)}` : null,
-        uri: code ? `nestor+http://nestor.local:7860/?code=${code}` : null,
+        uri: code ? `nestor+http://nestor.local:8471/?code=${code}` : null,
       } satisfies In<"StartedOut">,
       { status: 201 },
     );
@@ -956,7 +956,7 @@ function quietOf(): In<"QuietHoursOut"> | null {
   const at = now.getHours() * 60 + now.getMinutes();
   const [from, to] = [minute(start), minute(end)];
   const active = from <= to ? at >= from && at < to : at >= from || at < to;
-  return { start, end, timezone: "Europe/Paris", active };
+  return { start, end, timezone: "UTC", active };
 }
 
 /** What the agent is doing, from the mock state: working while a task runs, asleep in the quiet hours. */

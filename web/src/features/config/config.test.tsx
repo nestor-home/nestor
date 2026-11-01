@@ -27,19 +27,19 @@ describe("the configuration", () => {
 
   it("keeps a secret unless it is replaced, and never shows its value", async () => {
     const user = userEvent.setup();
-    renderApp("/config/model");
-    const panel = (await screen.findAllByText(`reference \${secret:model.api_key}`))[0];
+    renderApp("/config/presence");
+    const panel = (await screen.findAllByText(`reference \${secret:presence.token}`))[0];
     expect(panel).toBeInTheDocument();
-    await user.click(screen.getAllByRole("button", { name: "Replace API key" })[0] as HTMLElement);
-    const field = screen.getAllByLabelText("API key")[0] as HTMLInputElement;
+    await user.click(screen.getAllByRole("button", { name: "Replace Token" })[0] as HTMLElement);
+    const field = screen.getAllByLabelText("Token")[0] as HTMLInputElement;
     expect(field).toHaveAttribute("type", "password");
     expect(field).toHaveValue("");
-    await user.type(field, "sk-or-v1-new");
+    await user.type(field, "eyJhbGciOiJIUzI1NiJ9.new");
     await user.click(await screen.findByRole("button", { name: "1 change" }));
     const changes = await screen.findByRole("dialog", { name: "Changes" });
-    expect(within(changes).getByText("model.api_key")).toBeInTheDocument();
+    expect(within(changes).getByText("presence.token")).toBeInTheDocument();
     expect(within(changes).getByText("secret changed")).toBeInTheDocument();
-    expect(changes).not.toHaveTextContent("sk-or-v1-new");
+    expect(changes).not.toHaveTextContent("eyJhbGciOiJIUzI1NiJ9.new");
     await user.keyboard("{Escape}");
     await user.click(screen.getAllByRole("button", { name: "Keep current" })[0] as HTMLElement);
     await waitFor(() => expect(screen.queryByRole("region", { name: "Unsaved changes" })).not.toBeInTheDocument());
@@ -159,13 +159,13 @@ describe("the configuration", () => {
   it("explains why a secret in use is not deleted, and deletes it only when insisted", async () => {
     const user = userEvent.setup();
     renderApp("/config/secrets");
-    await user.click(await screen.findByRole("button", { name: "Delete model.api_key" }));
+    await user.click(await screen.findByRole("button", { name: "Delete presence.token" }));
     const dialog = await screen.findByRole("alertdialog");
     await user.click(within(dialog).getByRole("button", { name: "Delete" }));
-    expect(await within(dialog).findByText(/still used by model\.api_key, triage_model\.api_key/)).toBeInTheDocument();
-    expect("model.api_key" in db.config.vault).toBe(true);
+    expect(await within(dialog).findByText(/still used by presence\.token/)).toBeInTheDocument();
+    expect("presence.token" in db.config.vault).toBe(true);
     await user.click(within(dialog).getByRole("button", { name: "Delete anyway" }));
-    await waitFor(() => expect("model.api_key" in db.config.vault).toBe(false));
+    await waitFor(() => expect("presence.token" in db.config.vault).toBe(false));
   });
 
   it("is reserved to those who manage the configuration", async () => {
