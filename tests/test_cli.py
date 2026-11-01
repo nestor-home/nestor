@@ -233,3 +233,10 @@ def test_every_command_reads_the_dot_env_next_to_the_configuration_and_the_shell
     assert main(["-c", str(config), "secrets", "list"]) == 0
     assert "bot  not set" in capsys.readouterr().out
     assert (tmp_path / "elsewhere" / "nestor.db").exists()
+
+
+def test_a_configuration_that_cannot_be_read_is_reported_once(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    assert main(["-c", str(tmp_path / "absent.yaml"), "check"]) == 2
+    assert capsys.readouterr().err.count("nestor:") == 1

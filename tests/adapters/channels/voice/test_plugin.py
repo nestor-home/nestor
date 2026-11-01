@@ -2,9 +2,10 @@ from pathlib import Path
 
 import pytest
 
-from nestor.adapters.channels.voice import VoiceChannel, plugin
+from nestor.adapters.channels.voice import ElevenLabsSettings, plugin
+from nestor.adapters.channels.voice.channel import VoiceChannel
 from nestor.adapters.channels.voice.eager import EagerSentenceFlush
-from nestor.adapters.channels.voice.providers import ElevenLabsSettings, ElevenLabsSpeech
+from nestor.adapters.channels.voice.providers import ElevenLabsSpeech
 from nestor.core import ContractError
 from nestor.core.i18n import Locale
 from nestor.modules.channels import Address, Medium

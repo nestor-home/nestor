@@ -111,6 +111,6 @@ def test_the_command_line_checks_a_configuration_with_the_admin(
     assert main(["-c", str(path), "check"]) == 2
     assert "colour" in capsys.readouterr().err
 
-    path.write_text(path.read_text().replace("{'colour': 'red'}", "{port: 8080}"))
+    path.write_text(path.read_text().replace("{'colour': 'red'}", "{port: 8470}"))
     assert main(["-c", str(path), "check"]) == 0
-    assert "admin on 127.0.0.1:8080" in capsys.readouterr().out
+    assert "admin on 127.0.0.1:8470" in capsys.readouterr().out

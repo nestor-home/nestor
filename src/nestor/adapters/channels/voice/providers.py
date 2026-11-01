@@ -7,16 +7,15 @@ it). Another provider is another `Speech` implementation.
 """
 
 from abc import ABC, abstractmethod
-from typing import Literal
 
 from pipecat.services.elevenlabs.dialogue.tts import ElevenLabsDialogueTTSService
 from pipecat.services.elevenlabs.stt import CommitStrategy, ElevenLabsRealtimeSTTService
 from pipecat.services.stt_service import STTService
 from pipecat.services.tts_service import TTSService
 from pipecat.transcriptions.language import Language
-from pydantic import BaseModel, ConfigDict, SecretStr
 
 from nestor.adapters.channels.voice.eager import EagerSentenceFlush
+from nestor.adapters.channels.voice.settings import ElevenLabsSettings
 
 IN_SAMPLE_RATE = 16000
 
@@ -32,17 +31,6 @@ class Speech(ABC):
     @abstractmethod
     def tts(self) -> TTSService:
         """A synthesis that should mix in `EagerSentenceFlush`, or the first sentence waits for the next."""
-
-
-class ElevenLabsSettings(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True)
-
-    provider: Literal["elevenlabs"] = "elevenlabs"
-    api_key: SecretStr
-    voice_id: str
-    language: str = "fr"  # transcription language; the synthesis detects it (checked with expression tags)
-    stt_model: str = "scribe_v2_realtime"
-    tts_model: str = "eleven_v4_turbo"
 
 
 class ElevenLabsDialogueTTS(EagerSentenceFlush, ElevenLabsDialogueTTSService):

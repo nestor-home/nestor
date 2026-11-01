@@ -13,20 +13,20 @@ Device control is not here: it goes through Home Assistant's MCP server.
 
 from typing import Self
 
-from pydantic import Field, PositiveFloat, SecretStr, field_validator, model_validator
+from pydantic import Field, PositiveFloat, field_validator, model_validator
 
 from nestor.adapters.home.home_assistant.client import websocket_url
 from nestor.adapters.home.home_assistant.installation import PresenceMapping
 from nestor.adapters.home.home_assistant.presence import HomeAssistantPresence
 from nestor.core import ContractError, PersonId
-from nestor.runtime import AdapterSettings, Family, Plugin, Services
+from nestor.runtime import AdapterSettings, Family, Plugin, RequiredSecret, Services
 
 __all__ = ["HomeAssistantPresence", "HomeAssistantSettings", "PresenceMapping", "plugin"]
 
 
 class HomeAssistantSettings(AdapterSettings):
     url: str
-    token: SecretStr
+    token: RequiredSecret
     people: dict[str, str] = Field(default_factory=dict)
     rooms: dict[str, str] = Field(default_factory=dict)
     occupancy_sensors: list[str] | None = None  # `None`: every occupancy, presence or motion sensor with an area

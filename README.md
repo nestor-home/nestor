@@ -35,13 +35,25 @@ pairing satellites, the satellite protocol, its schemas and the SDKs.
 ## Running
 
 ```bash
-nestor init                   # writes nestor.yaml, its .env (secrets) and the owner account
-nestor -c nestor.yaml check   # fill the API keys in .env first
+pip install nestor-home            # text only (Telegram); add voice with 'nestor-home[voice]'
+nestor init                        # writes nestor.yaml, its .env (secrets) and the owner account
+nestor -c nestor.yaml check        # fill the keys in .env first
 nestor -c nestor.yaml run
 ```
 
-Every command reads the `.env` next to the configuration: no need to source it. A variable already set
-in the environment (the shell, a service manager, Docker's `env_file`) wins over the file.
+Voice is one channel among others: without the `voice` extra, Nestor runs text only, and a configuration
+that uses the voice channel says which requirement to install. `nestor init` writes a voice channel only
+when the extra is installed and you want it.
+
+Every command reads the `.env` next to the configuration at each start: no need to source it. A variable
+already set in the environment (the shell, a service manager) wins over the file.
+
+The model is any OpenAI-compatible server. Hosted providers need a key (`MODEL_API_KEY` in the `.env`);
+local ones (Ollama `http://localhost:11434/v1`, LM Studio `http://localhost:1234/v1`, vLLM, llama.cpp)
+need none: leave it empty and no `Authorization` header is sent.
+
+Ports: the admin listens on 8470, the voice channel (satellites, development browser client) on 8471.
+Both are configurable (`admin.port`, the voice channel's `port`).
 
 ## Development
 
@@ -61,11 +73,11 @@ and pnpm.
 cd web
 pnpm install
 pnpm dev                                   # on the mock API (MSW), typed against web/openapi.json
-NESTOR_API=http://localhost:8080 pnpm dev  # against a running Nestor instead of the mocks
+NESTOR_API=http://localhost:8470 pnpm dev  # against a running Nestor instead of the mocks
 pnpm lint && pnpm typecheck && pnpm test && pnpm build
 pnpm api:generate                          # regenerate the client after the API changed
 pnpm e2e                                   # Playwright on the mocks, light and dark
-NESTOR_URL=http://localhost:8080 E2E_LOGIN=… E2E_PASSWORD=… pnpm e2e:live  # on a throwaway instance
+NESTOR_URL=http://localhost:8470 E2E_LOGIN=… E2E_PASSWORD=… pnpm e2e:live  # on a throwaway instance
 ```
 
 On the mocks, sign in as `mathis` (owner) or `lea` (admin) with the password `nestor`; satellites
@@ -91,6 +103,13 @@ neutral. Its figure is Nestor's character, the
 ([install](https://nestorhome.dev/docs/)). The container starts as root only to give `/data` to its
 `nestor` user (uid 1000) when the folder is not already its own, as Docker creates a missing bind
 mount owned by root, then runs as that user; started with `--user`, it runs as given.
+
+Nestor reads `data/.env` itself, at every start: after editing it, `docker compose restart` applies it.
+Inside the container, `localhost` is the container: a model server running on the host is
+`http://host.docker.internal:<port>/v1` (for Ollama, `http://host.docker.internal:11434/v1`), which
+`compose.yaml` maps on Linux as Docker Desktop does on macOS and Windows. On Linux, that address is the
+host's Docker bridge, not its loopback: the model server must listen there too (Ollama:
+`OLLAMA_HOST=0.0.0.0`; llama.cpp: `--host 0.0.0.0`).
 
 ## Checking a satellite
 

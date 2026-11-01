@@ -15,6 +15,6 @@
     target.search = window.location.search;
     window.location.replace(target.toString());
   } catch (error) {
-    message.textContent = "Ce lien ne mène à aucune instance Nestor : recommencez la connexion depuis l'administration.";
+    message.textContent = "This link leads to no Nestor instance: connect again from the admin.";
   }
 })();

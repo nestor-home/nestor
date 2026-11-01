@@ -24,6 +24,9 @@ from nestor.modules.initiative import QuietHours
 _VARIABLE = re.compile(r"\$\{(?:(?P<secret>secret):)?(?P<name>[A-Za-z_][A-Za-z0-9_.-]*)\}")
 SECRET_KEY = "NESTOR_SECRET_KEY"
 ENV_FILE = ".env"  # next to the configuration: what `nestor init` writes
+# Clear of the ports local model servers and dev tools use (llama.cpp's 8080, Gradio's 7860, Ollama's 11434…);
+# the voice channel serves satellites on the next one.
+ADMIN_PORT = 8470
 
 type SecretLookup = Callable[[str], str | None]  # a secret's value by name, None when it is not set
 
@@ -50,9 +53,9 @@ class Section(BaseModel):
 class PersonaConfig(Section):
     name: str
     character: str
-    locale: str = "fr-FR"  # BCP 47: the household's language, for every fixed phrase and the admin default
-    language: str = "French"  # how the model's instructions name the language it must write in
-    timezone: str = "Europe/Paris"
+    locale: str = "en"  # BCP 47: the household's language, for every fixed phrase and the admin default
+    language: str = "English"  # how the model's instructions name the language it must write in
+    timezone: str = "UTC"  # IANA name ("Europe/Paris"): the household's clock
 
 
 class PersonConfig(Section):
@@ -96,7 +99,7 @@ class AdminConfig(Section):
     configured here: accounts live in the database (`nestor init`, `nestor accounts create-owner`)."""
 
     host: str = "127.0.0.1"
-    port: int = Field(default=8080, ge=0, le=65535)
+    port: int = Field(default=ADMIN_PORT, ge=0, le=65535)
     public_url: str | None = None  # how the household's browsers reach it: "https://nestor.example.org"
     # OAuth redirect when not served over HTTPS
     relay_url: str = Field(default="https://nestorhome.dev/redirect/oauth", json_schema_extra=ADVANCED)

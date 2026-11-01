@@ -36,7 +36,7 @@ class ActivityMonitor(Component):
         tasks: TaskManager,
         *,
         quiet_hours: QuietHours | None = None,
-        timezone: str = "Europe/Paris",
+        timezone: str = "UTC",
         clock: Callable[[], datetime] = utc_now,
     ) -> None:
         self.journal, self.replies, self.tasks = journal, replies, tasks

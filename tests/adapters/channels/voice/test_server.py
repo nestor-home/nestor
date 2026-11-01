@@ -10,7 +10,7 @@ from aiortc import RTCConfiguration, RTCPeerConnection, RTCSessionDescription
 from aiortc.mediastreams import AudioStreamTrack
 from pipecat.transports.base_transport import BaseTransport
 
-from nestor.adapters.channels.voice import VoiceChannel
+from nestor.adapters.channels.voice.channel import VoiceChannel
 from nestor.adapters.channels.voice.server import BrowserRoutes, SignallingServer
 from nestor.adapters.channels.voice.session import SessionSettings
 from nestor.modules.channels import Address

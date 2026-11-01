@@ -9,7 +9,7 @@ import httpx
 import pytest
 from pipecat.transports.smallwebrtc.connection import SmallWebRTCConnection
 
-from nestor.adapters.channels.voice import VoiceChannel
+from nestor.adapters.channels.voice.channel import VoiceChannel
 from nestor.adapters.channels.voice.satellites import SatelliteGateway
 from nestor.adapters.channels.voice.server import SignallingServer
 from nestor.adapters.channels.voice.session import SessionSettings
@@ -271,8 +271,8 @@ def test_the_voice_channel_says_where_satellites_reach_it() -> None:
         voice.host_satellites(Pairing(Journal(MemoryEventLog())), Journal(MemoryEventLog()))
         return voice
 
-    assert channel("0.0.0.0", 7860).satellite_url("nestor.local") == "http://nestor.local:7860"
-    assert channel("::", 7860).satellite_url("fd00::4") == "http://[fd00::4]:7860"
+    assert channel("0.0.0.0", 8471).satellite_url("nestor.local") == "http://nestor.local:8471"
+    assert channel("::", 8471).satellite_url("fd00::4") == "http://[fd00::4]:8471"
     assert channel("192.168.1.4", 7870).satellite_url("nestor.local") == "http://192.168.1.4:7870"
-    assert channel("0.0.0.0", 7860, "https://n.example.org/").satellite_url("x") == "https://n.example.org"
+    assert channel("0.0.0.0", 8471, "https://n.example.org/").satellite_url("x") == "https://n.example.org"
     assert channel("0.0.0.0", None).satellite_url("nestor.local") is None

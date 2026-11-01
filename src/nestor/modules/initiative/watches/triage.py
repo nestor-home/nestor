@@ -36,7 +36,7 @@ class Triage:
     """Stage two: a small model's verdict. A model failure lets the item through as a match, unsure:
     better an announcement too many than a parcel missed."""
 
-    def __init__(self, model: ConversationModel, *, language: str = "French") -> None:
+    def __init__(self, model: ConversationModel, *, language: str = "English") -> None:
         self.model, self.language = model, language
 
     async def verdict(self, watch: Watch, item: Incoming) -> Verdict:

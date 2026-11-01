@@ -33,7 +33,7 @@ def test_a_device_code_is_six_digits() -> None:
 @pytest.mark.parametrize(
     ("core", "uri"),
     [
-        ("http://nestor.local:7860", "nestor+http://nestor.local:7860/?code=K7QF2M9X"),
+        ("http://nestor.local:8471", "nestor+http://nestor.local:8471/?code=K7QF2M9X"),
         ("https://nestor.example.org/proxy/", "nestor+https://nestor.example.org/proxy/?code=K7QF2M9X"),
     ],
 )
@@ -43,12 +43,12 @@ def test_a_pairing_uri_carries_the_core_and_the_code_both_ways(core: str, uri: s
 
 
 def test_a_pairing_uri_is_read_leniently_for_the_code() -> None:
-    assert parse_pairing_uri("NESTOR+HTTP://192.168.1.4:7860?code=k7qf-2m9x") == ("http://192.168.1.4:7860", "K7QF2M9X")
+    assert parse_pairing_uri("NESTOR+HTTP://192.168.1.4:8471?code=k7qf-2m9x") == ("http://192.168.1.4:8471", "K7QF2M9X")
 
 
 @pytest.mark.parametrize(
     "uri",
-    ["http://nestor.local:7860/?code=K7QF2M9X", "nestor+http:///?code=K7QF2M9X", "nestor+http://n:1/?code=bad",
+    ["http://nestor.local:8471/?code=K7QF2M9X", "nestor+http:///?code=K7QF2M9X", "nestor+http://n:1/?code=bad",
      "nestor+http://n:1/", "nestor+http://n:1/?code=K7QF2M9X&code=K7QF2M9X"],
 )  # fmt: skip
 def test_anything_else_is_no_pairing_uri(uri: str) -> None:

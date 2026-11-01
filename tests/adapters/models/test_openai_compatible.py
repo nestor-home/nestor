@@ -90,7 +90,7 @@ def sent(route: respx.Route) -> dict[str, object]:
 def model(
     *,
     base_url: str = BASE_URL,
-    api_key: str = KEY,
+    api_key: str | None = KEY,
     extra_body: Mapping[str, object] | None = None,
     provider: str = "openai-compatible",
 ) -> OpenAICompatibleModel:
@@ -409,9 +409,25 @@ async def test_a_model_that_was_never_started_closes_cleanly_but_cannot_stream()
         await anext(m.stream(HELLO))
 
 
-def test_an_empty_api_key_is_refused() -> None:
-    with pytest.raises(ContractError, match="empty api_key"):
-        model(api_key="")
+async def test_a_model_without_a_key_sends_no_authorization_header(api: respx.MockRouter) -> None:
+    route = api.post(COMPLETIONS).mock(return_value=streamed(*TEXT_REPLY))
+    async with model(api_key=None) as m:
+        outputs = [o async for o in m.stream(HELLO)]
+    assert outputs[-1] == Finished(FinishReason.STOP)
+    assert "authorization" not in route.calls.last.request.headers
+
+
+async def test_a_model_without_a_key_reports_errors_unaltered(api: respx.MockRouter) -> None:
+    api.post(COMPLETIONS).respond(401, json={"error": {"message": "this server wants a key"}})
+    with pytest.raises(ProviderError, match="HTTP 401: this server wants a key"):
+        async with model(api_key=None) as m:
+            await anext(m.stream(HELLO))
+
+
+async def test_a_model_with_a_key_sends_it_as_a_bearer_token(api: respx.MockRouter) -> None:
+    route = api.post(COMPLETIONS).mock(return_value=streamed(*TEXT_REPLY))
+    await collect()
+    assert route.calls.last.request.headers["authorization"] == f"Bearer {KEY}"
 
 
 async def test_the_plugin_builds_a_model_from_its_configuration(api: respx.MockRouter, tmp_path: Path) -> None:
@@ -428,12 +444,33 @@ async def test_the_plugin_builds_a_model_from_its_configuration(api: respx.MockR
     assert sent(route)["temperature"] == 0.2
 
 
+LOCAL = "http://localhost:11434/v1"  # Ollama
+
+
+@pytest.mark.parametrize("key", [{}, {"api_key": ""}], ids=["absent", "empty"])
+async def test_a_local_server_needs_no_key(api: respx.MockRouter, tmp_path: Path, key: dict[str, str]) -> None:
+    route = api.post(f"{LOCAL}/chat/completions").mock(return_value=streamed(*TEXT_REPLY))
+    raw = {"base_url": LOCAL, "model": "llama3.2", **key}
+    async with plugin.create(
+        raw, "main", Services(data_dir=tmp_path, localizer=EchoLocalizer(), locale=Locale("en"))
+    ) as m:
+        assert isinstance(m, ConversationModel)
+        outputs = [o async for o in m.stream(HELLO)]
+    assert outputs[-1] == Finished(FinishReason.STOP)
+    assert "authorization" not in route.calls.last.request.headers
+
+
 @pytest.mark.parametrize(
-    "raw", [{"base_url": BASE_URL, "model": "m"}, {"base_url": BASE_URL, "model": "m", "api_key": ""}]
+    ("base_url", "host"),
+    [("https://openrouter.ai/api/v1", "openrouter.ai"), ("https://api.openai.com/v1", "openai.com")],
 )
-def test_the_plugin_refuses_a_configuration_without_a_key(raw: dict[str, object], tmp_path: Path) -> None:
-    with pytest.raises(ContractError, match="api_key"):
-        plugin.create(raw, "main", Services(data_dir=tmp_path, localizer=EchoLocalizer(), locale=Locale("fr-FR")))
+@pytest.mark.parametrize("key", [{}, {"api_key": ""}], ids=["absent", "empty"])
+def test_a_known_provider_refuses_a_configuration_without_a_key(
+    tmp_path: Path, base_url: str, host: str, key: dict[str, str]
+) -> None:
+    raw = {"base_url": base_url, "model": "m", **key}
+    with pytest.raises(ContractError, match=f"api_key: {host} requires an API key"):
+        plugin.create(raw, "main", Services(data_dir=tmp_path, localizer=EchoLocalizer(), locale=Locale("en")))
 
 
 OPENROUTER_KEY = os.environ.get("OPENROUTER_API_KEY", "")

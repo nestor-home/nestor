@@ -41,6 +41,17 @@ def test_a_valid_file_gives_people_adapters_and_secrets() -> None:
     assert config.channels[0].settings() == {"token": "123:abc"}
 
 
+def test_a_household_that_says_nothing_is_english_speaking_on_utc() -> None:
+    persona = parse_config(VALID + "admin: {}\n", ENV).persona
+    assert (persona.locale, persona.language, persona.timezone) == ("en", "English", "UTC")
+
+
+def test_the_voice_transcribes_english_unless_configured() -> None:
+    from nestor.adapters.channels.voice import ElevenLabsSettings
+
+    assert ElevenLabsSettings(api_key="xi", voice_id="v").language == "en"
+
+
 def test_a_missing_secret_is_named() -> None:
     with pytest.raises(ConfigError, match="TELEGRAM_TOKEN is not set"):
         parse_config(VALID, {"OPENROUTER_API_KEY": "sk"})
