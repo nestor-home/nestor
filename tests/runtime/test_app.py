@@ -1,20 +1,23 @@
 """Nestor assembled from a configuration, served, stopped and restarted — with doubles only."""
 
 import asyncio
+import os
+import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
 import pytest
 
 from nestor.cli import main
-from nestor.core import ContractError
+from nestor.core import Component, ContractError
 from nestor.modules.channels import Address
 from nestor.modules.cognition import Outcome, TaskDelivered
 from nestor.modules.cognition.model import ToolCall
 from nestor.modules.conversation import AssistantTurn
 from nestor.runtime import Nestor, Registry
 from nestor.runtime.config import parse_config
-from nestor.runtime.plugins import Family, Plugin
+from nestor.runtime.plugins import Family, Plugin, Services
 
 from .fakes import Fakes, NoSettings
 
@@ -97,6 +100,95 @@ def test_a_registry_refuses_two_plugins_for_one_kind() -> None:
     plugin = Fakes().channel_plugin()
     with pytest.raises(ContractError, match="two plugins provide the channel kind 'memory'"):
         Registry([plugin, plugin])
+
+
+def test_an_adapter_whose_optional_dependencies_are_missing_names_the_requirement_to_install(tmp_path: Path) -> None:
+    def build(settings: NoSettings, name: str, services: Services) -> Component:
+        import nestor_absent_sdk  # ty: ignore[unresolved-import]  # an optional dependency, not installed
+
+        raise AssertionError(nestor_absent_sdk)
+
+    fakes = Fakes()
+    needy = Plugin(Family.CHANNEL, "memory", NoSettings, build, requires="nestor-home[voice]")
+    registry = Registry([fakes.model_plugin(), fakes.executor_plugin(), needy])
+    with pytest.raises(ContractError) as raised:
+        Nestor(config(tmp_path, []), registry)
+    assert str(raised.value) == (
+        "channel 'memory' (memory) needs nestor-home[voice], which is not installed "
+        "(no module 'nestor_absent_sdk'): pip install 'nestor-home[voice]'"
+    )
+
+
+def test_a_missing_module_in_an_adapter_without_optional_dependencies_is_a_bug_shown_as_such(tmp_path: Path) -> None:
+    def build(settings: NoSettings, name: str, services: Services) -> Component:
+        import nestor_absent_sdk  # ty: ignore[unresolved-import]
+
+        raise AssertionError(nestor_absent_sdk)
+
+    fakes = Fakes()
+    registry = Registry(
+        [fakes.model_plugin(), fakes.executor_plugin(), Plugin(Family.CHANNEL, "memory", NoSettings, build)]
+    )
+    with pytest.raises(ModuleNotFoundError):
+        Nestor(config(tmp_path, []), registry)
+
+
+# Without the `voice` extra: Pipecat (and what it brings) cannot be imported, as after `pip install nestor-home`.
+WITHOUT_VOICE = """
+import sys
+sys.modules.update(dict.fromkeys(["pipecat", "aiortc", "numpy"], None))
+from nestor.cli import main
+sys.exit(main(sys.argv[1:]))
+"""
+OPTIONAL = """
+import sys
+from nestor.runtime import Family, Registry
+registry = Registry.installed()
+print(" ".join(registry.kinds(Family.CHANNEL)))
+print(" ".join(sorted({m.partition(".")[0] for m in sys.modules} & {"pipecat", "aiortc", "numpy"})))
+"""
+TEXT_ONLY = """
+data_dir: {data_dir}
+persona: {{name: Nestor, character: You are Nestor.}}
+household: [{{id: ada, name: Ada}}]
+model: {{kind: openai-compatible, base_url: "http://localhost:11434/v1", model: llama3.2}}
+channels: [{channel}]
+admin: {{}}
+"""
+
+
+def without_voice(*args: str) -> subprocess.CompletedProcess[str]:
+    env = {**os.environ, "NESTOR_SECRET_KEY": "k" * 43}
+    return subprocess.run(
+        [sys.executable, "-c", WITHOUT_VOICE, *args], capture_output=True, text=True, timeout=60, env=env, check=False
+    )
+
+
+def test_discovering_the_installed_adapters_imports_no_optional_dependency() -> None:
+    found = subprocess.run([sys.executable, "-c", OPTIONAL], capture_output=True, text=True, timeout=60, check=True)
+    kinds, imported = found.stdout.splitlines()
+    assert "voice" in kinds.split(), "the voice channel is listed even when its extra is missing"
+    assert imported == ""
+
+
+def test_a_text_only_configuration_passes_the_check_without_the_voice_extra(tmp_path: Path) -> None:
+    path = tmp_path / "nestor.yaml"
+    path.write_text(TEXT_ONLY.format(data_dir=tmp_path, channel="{kind: telegram, token: '1:a'}"))
+    checked = without_voice("-c", str(path), "check")
+    assert checked.returncode == 0, checked.stderr
+    assert "channels: telegram, admin on 127.0.0.1:8470" in checked.stdout
+
+
+def test_a_voice_configuration_without_the_extra_says_what_to_install(tmp_path: Path) -> None:
+    path = tmp_path / "nestor.yaml"
+    voice = "{kind: voice, room: living-room, speech: {api_key: xi, voice_id: v}}"
+    path.write_text(TEXT_ONLY.format(data_dir=tmp_path, channel=voice))
+    checked = without_voice("-c", str(path), "check")
+    assert checked.returncode == 2
+    assert checked.stderr.strip() == (
+        "nestor: channel 'voice' (voice) needs nestor-home[voice], which is not installed (no module 'pipecat'): "
+        "pip install 'nestor-home[voice]'"
+    )
 
 
 def test_the_command_line_checks_a_configuration(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:

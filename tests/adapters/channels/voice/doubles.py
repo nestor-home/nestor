@@ -21,8 +21,8 @@ from pipecat.services.stt_service import STTService
 from pipecat.services.tts_service import TTSService
 from pipecat.utils.time import time_now_iso8601
 
-from nestor.adapters.channels.voice import Speech
 from nestor.adapters.channels.voice.eager import EagerSentenceFlush
+from nestor.adapters.channels.voice.providers import Speech
 from nestor.core import PersonId
 from nestor.modules.channels import Address, Assistant, InboundMessage, Reply, Sender
 

@@ -28,7 +28,7 @@ ENV PATH="/app/.venv/bin:$PATH" PYTHONUNBUFFERED=1
 # Starts as root to give /data to nestor (Docker creates a missing bind mount as root), then runs as nestor.
 WORKDIR /data
 VOLUME ["/data"]
-EXPOSE 7860 8080
-HEALTHCHECK --interval=30s --timeout=5s CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health')" || exit 1
+EXPOSE 8470 8471
+HEALTHCHECK --interval=30s --timeout=5s CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8470/health')" || exit 1
 ENTRYPOINT ["docker-entrypoint.sh", "nestor", "-c", "/data/nestor.yaml"]
 CMD ["run"]

@@ -4,7 +4,8 @@ Speaks the wire protocol directly with httpx and Server-Sent Events: no vendor S
 payload is a single-line `data:` JSON chunk, as all OpenAI-compatible servers send them, and the
 stream ends with `data: [DONE]`.
 
-Tested against OpenRouter only; other servers are expected to work but remain untested.
+Tested against OpenRouter only; other servers are expected to work but remain untested. Local servers
+(Ollama, LM Studio, vLLM, llama.cpp) usually need no key: without one, no `Authorization` header is sent.
 """
 
 import json
@@ -15,7 +16,8 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import httpx
-from pydantic import Field, PositiveFloat, SecretStr
+from pydantic import Field, PositiveFloat, SecretStr, ValidationInfo, field_validator
+from pydantic_core import PydanticCustomError
 
 from nestor.core import ContractError, ProviderError, new_id
 from nestor.modules.cognition import (
@@ -44,6 +46,12 @@ _BRANDS = {"openrouter.ai": "openrouter", "openai.com": "openai", "mistral.ai": 
 _MAX_DETAIL = 300
 
 
+def _brand_host(base_url: str) -> str | None:
+    """The known provider `base_url` belongs to (`openrouter.ai`), if any: each requires an API key."""
+    host = urllib.parse.urlsplit(base_url).hostname or ""
+    return next((suffix for suffix in _BRANDS if host == suffix or host.endswith(f".{suffix}")), None)
+
+
 def _retryable(status: int) -> bool:
     return status in _RETRYABLE_STATUSES or status >= 500
 
@@ -62,34 +70,30 @@ class OpenAICompatibleModel(ConversationModel):
         self,
         *,
         base_url: str,
-        api_key: str,
+        api_key: str | None,
         model: str,
         extra_body: Mapping[str, object] | None = None,
         connect_timeout_s: float = 5.0,
         read_timeout_s: float = 30.0,
         provider: str = "openai-compatible",
     ) -> None:
-        if not api_key:
-            raise ContractError(f"{provider}: empty api_key (local servers accept any placeholder)")
         self._base_url = base_url
-        self._api_key = api_key
+        self._api_key = api_key or None
         self._model = model
         self._extra_body = dict(extra_body or {})
         self._timeout = httpx.Timeout(read_timeout_s, connect=connect_timeout_s)
         self._provider = provider
         self._client: httpx.AsyncClient | None = None
-        host = urllib.parse.urlsplit(base_url).hostname or ""
-        self.brand = next((b for suffix, b in _BRANDS.items() if host == suffix or host.endswith(f".{suffix}")), None)
+        self.brand = _BRANDS.get(_brand_host(base_url) or "")
 
     def details(self) -> Mapping[str, str]:
         return {"model": self._model}
 
     async def start(self) -> None:
-        self._client = httpx.AsyncClient(
-            base_url=self._base_url,
-            headers={"Authorization": f"Bearer {self._api_key}", "Accept": "text/event-stream"},
-            timeout=self._timeout,
-        )
+        headers = {"Accept": "text/event-stream"}
+        if self._api_key:
+            headers["Authorization"] = f"Bearer {self._api_key}"
+        self._client = httpx.AsyncClient(base_url=self._base_url, headers=headers, timeout=self._timeout)
 
     async def close(self) -> None:
         client, self._client = self._client, None
@@ -125,7 +129,8 @@ class OpenAICompatibleModel(ConversationModel):
         return body | self._extra_body
 
     def _error(self, message: str, *, transient: bool) -> ProviderError:
-        return ProviderError(self._provider, message.replace(self._api_key, "[redacted]"), transient=transient)
+        redacted = message.replace(self._api_key, "[redacted]") if self._api_key else message
+        return ProviderError(self._provider, redacted, transient=transient)
 
 
 @dataclass(slots=True)
@@ -248,20 +253,35 @@ def _message_of(error: object) -> str:
 
 
 class OpenAICompatibleSettings(AdapterSettings):
-    """Configuration of an OpenAI-compatible model; `api_key` should come from the environment."""
+    """Configuration of an OpenAI-compatible model; `api_key` should come from the environment.
+
+    The key is optional, as local servers need none: empty is the same as absent. The hosted providers
+    known to require one refuse to be configured without it."""
 
     base_url: str
-    api_key: SecretStr = Field(min_length=1)
+    api_key: SecretStr | None = Field(default=None, validate_default=True)
     model: str
     extra_body: dict[str, Any] = Field(default_factory=dict)
     connect_timeout_s: PositiveFloat = 5.0
     read_timeout_s: PositiveFloat = 30.0
 
+    @field_validator("api_key", mode="before")
+    @classmethod
+    def _empty_is_absent(cls, value: object) -> object:
+        return None if value == "" else value
+
+    @field_validator("api_key")
+    @classmethod
+    def _required_by_known_providers(cls, value: SecretStr | None, info: ValidationInfo) -> SecretStr | None:
+        if value is None and (host := _brand_host(str(info.data.get("base_url", "")))):
+            raise PydanticCustomError("api_key_required", "{host} requires an API key", {"host": host})
+        return value
+
 
 def build(settings: OpenAICompatibleSettings, name: str, services: Services) -> OpenAICompatibleModel:
     return OpenAICompatibleModel(
         base_url=settings.base_url,
-        api_key=settings.api_key.get_secret_value(),
+        api_key=settings.api_key.get_secret_value() if settings.api_key else None,
         model=settings.model,
         extra_body=settings.extra_body,
         connect_timeout_s=settings.connect_timeout_s,

@@ -311,11 +311,11 @@ async def test_no_secret_is_ever_returned(tmp_path: Path) -> None:
     ("public_url", "direct"),
     [
         ("https://nestor.example", True),
-        ("http://localhost:8080", True),
-        ("http://127.0.0.1:8080", True),
-        ("http://[::1]:8080", True),
-        ("http://192.168.1.20:8080", False),
-        ("http://nestor.local:8080", False),
+        ("http://localhost:8470", True),
+        ("http://127.0.0.1:8470", True),
+        ("http://[::1]:8470", True),
+        ("http://192.168.1.20:8470", False),
+        ("http://nestor.local:8470", False),
     ],
 )
 async def test_the_provider_comes_back_directly_only_over_https_or_to_this_machine(

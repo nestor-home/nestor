@@ -45,10 +45,38 @@ jobs:
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm e2e
 
+  # `pip install nestor-home` without any extra: `nestor init` writes a text-only configuration (a local
+  # model, no key; Telegram), `check` accepts it and `run` serves the admin, with no Pipecat installed.
+  text-only:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.12"
+      - run: uv build --wheel
+      - run: uv venv bare && uv pip install --python bare dist/*.whl
+      - run: "! bare/bin/python -c 'import pipecat'"
+      - name: init, without the voice extra
+        # name, first name, language, time zone, model server, model, login, password twice
+        run: >-
+          printf '%s\n' Nestor Ada en UTC http://localhost:11434/v1 llama3.2 ada long-enough-password
+          long-enough-password | bare/bin/nestor -c data/nestor.yaml init
+      - run: sed -i 's/^TELEGRAM_BOT_TOKEN=$/TELEGRAM_BOT_TOKEN=123:ci/' data/.env
+      - run: bare/bin/nestor -c data/nestor.yaml check
+      - name: run serves the admin
+        # a Bot API that does not answer: the channel retries as when offline, and Nestor keeps running
+        run: |
+          sed -i '/# from @BotFather/a\    api_base: http://127.0.0.1:9' data/nestor.yaml
+          bare/bin/nestor -c data/nestor.yaml run & pid=$!
+          for _ in $(seq 30); do curl -fs http://127.0.0.1:8470/health && break; sleep 1; done
+          curl -fs http://127.0.0.1:8470/health
+          kill "$pid" && wait "$pid"
+
   # The image against a root-owned ./data, as Docker creates a missing bind mount.
   # The single check the branch rules require.
   ci:
-    needs: [check, web]
+    needs: [check, web, text-only]
     if: always()
     runs-on: ubuntu-latest
     steps:

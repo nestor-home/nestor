@@ -14,6 +14,7 @@ from nestor.runtime.plugins import (
     Plugged,
     Plugin,
     Registry,
+    RequiredSecret,
     Services,
 )
 
@@ -28,6 +29,7 @@ __all__ = [
     "Plugged",
     "Plugin",
     "Registry",
+    "RequiredSecret",
     "Services",
     "load_config",
 ]

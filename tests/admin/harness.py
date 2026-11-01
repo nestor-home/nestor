@@ -33,7 +33,7 @@ SECRET_KEY = "s" * 43
 CLIENT_SECRET = "gocspx-household-client-secret"
 CONFIG = """# The test household's assistant (this comment must survive an edit from the admin).
 data_dir: {data_dir}
-persona: {{name: Richie, character: Tu es Richie., timezone: Europe/Paris}}
+persona: {{name: Richie, character: Tu es Richie., locale: fr-FR, language: French, timezone: Europe/Paris}}
 household:
   - {{id: mathis, name: Mathis, accounts: ["memory:user"], reach: "memory:main"}}
   - {{id: mathilde, name: Mathilde}}

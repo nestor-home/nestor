@@ -55,7 +55,7 @@ class Plan:
 class DeliveryPolicy:
     quiet_hours: QuietHours | None = None
     main_room: str | None = None  # where to speak when the home only knows that someone is home
-    timezone: str = "Europe/Paris"
+    timezone: str = "UTC"
 
     def plan(
         self,

@@ -1,45 +1,78 @@
-"""`nestor init`: a first configuration, its secrets and its owner account, never overwriting what exists."""
+"""`nestor init`: a first configuration, its secrets and its owner account, never overwriting what exists.
+
+Voice is one channel among others: without it (the `voice` extra missing, or declined), the configuration
+is text-only, on Telegram.
+"""
 
 import asyncio
+import importlib.util
+import os
 import secrets
+from dataclasses import dataclass
 from pathlib import Path
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from nestor.adapters.channels.voice.plugin import REQUIREMENT as VOICE_REQUIREMENT
 from nestor.core import ContractError, PersonId
 from nestor.modules.accounts import MIN_LENGTH, Role, normalise_login
 from nestor.modules.household import Person
 from nestor.runtime.app import database_path, open_accounts
+from nestor.runtime.config import ADMIN_PORT
 
-TEMPLATE = """# Nestor configuration — every ${{NAME}} comes from the environment (.env next to this file).
+# The languages Nestor ships catalogues for, as the model's instructions name them.
+LANGUAGES = {"en": "English", "fr": "French"}
+OPENROUTER = "https://openrouter.ai/api/v1"
+DEFAULT_MODEL = "anthropic/claude-haiku-5.5"
+
+HEADER = """# Nestor configuration — every ${{NAME}} comes from the environment (.env next to this file).
 data_dir: {data_dir}
 
 persona:
   name: {name}
-  language: French
-  timezone: Europe/Paris
+  locale: {locale}
+  language: {language}
+  timezone: {timezone}
   character: |
-    Tu es {name}, l'assistant de la maison : chaleureux, direct, avec de l'humour.
+    You are {name}, the household's assistant: warm, direct, with a sense of humour.
 
 household:
   - id: {person_id}
     name: {person}
-    accounts: ["voice:*"]          # add "telegram:<your chat id>" once the bot knows you
+    accounts: {accounts}
 
 model:
   kind: openai-compatible
-  base_url: https://openrouter.ai/api/v1
-  api_key: ${{OPENROUTER_API_KEY}}
-  model: anthropic/claude-haiku-5.5
+  base_url: {base_url}
+  api_key: ${{MODEL_API_KEY}}        # may stay empty for a local server that needs no key
+  model: {model}
 
 channels:
-  - kind: voice
-    room: salon
+"""
+
+VOICE = """  - kind: voice
+    room: living-room
     host: 0.0.0.0
     speech:
       api_key: ${{ELEVENLABS_API_KEY}}
       voice_id: GPAQQPp9dazaB2bl4zg9
+      language: {locale}
   # - kind: telegram
   #   token: ${{TELEGRAM_BOT_TOKEN}}
+"""
 
+TEXT_ONLY = """  - kind: telegram
+    token: ${{TELEGRAM_BOT_TOKEN}}   # from @BotFather
+  # Voice needs `pip install '{requirement}'`, then:
+  # - kind: voice
+  #   room: living-room
+  #   host: 0.0.0.0
+  #   speech:
+  #     api_key: ${{ELEVENLABS_API_KEY}}
+  #     voice_id: GPAQQPp9dazaB2bl4zg9
+  #     language: {locale}
+"""
+
+FOOTER = """
 # presence:
 #   kind: home-assistant
 #   url: ${{HOME_ASSISTANT_URL}}
@@ -53,15 +86,56 @@ channels:
 
 admin:                             # who signs in is in the database: `nestor accounts create-owner`
   host: 0.0.0.0
-  port: 8080
+  port: {admin_port}
 """
 
 ENV = """# Secrets for Nestor. Never commit this file.
-# nestor reads it next to its configuration; a variable already set in the environment wins.
+# nestor reads it next to its configuration at every start; a variable already set in the environment wins.
 NESTOR_SECRET_KEY={secret_key}
-OPENROUTER_API_KEY=
-ELEVENLABS_API_KEY=
+MODEL_API_KEY=
 """
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class Setup:
+    """What `nestor init` asks for, the owner's credentials aside."""
+
+    name: str = "Nestor"
+    person: str = "Me"
+    locale: str = "en"  # one of `LANGUAGES`
+    timezone: str = "UTC"
+    base_url: str = OPENROUTER
+    model: str = DEFAULT_MODEL
+    voice: bool = False  # the voice channel, which needs the `voice` extra; else Telegram, text only
+
+    def __post_init__(self) -> None:
+        if self.locale not in LANGUAGES:
+            raise ContractError(f"choose a language among {', '.join(LANGUAGES)}")
+        if not self.model:
+            raise ContractError("name the model the server serves")
+        if not known_timezone(self.timezone):
+            raise ContractError(f"unknown time zone {self.timezone!r}: an IANA name such as Europe/Paris")
+
+
+def voice_installed() -> bool:
+    """Whether the voice channel can be built here (the `voice` extra is installed)."""
+    return importlib.util.find_spec("pipecat") is not None
+
+
+def known_timezone(name: str) -> bool:
+    try:
+        ZoneInfo(name)
+    except (ZoneInfoNotFoundError, ValueError):
+        return False
+    return True
+
+
+def local_timezone(localtime: Path = Path("/etc/localtime")) -> str:
+    """This machine's IANA time zone (`TZ`, else what `/etc/localtime` links to), `UTC` when unknown."""
+    candidates = [os.environ.get("TZ", "").removeprefix(":")]
+    if localtime.is_symlink():
+        candidates.append(str(localtime.resolve()).rpartition("/zoneinfo/")[2])
+    return next((name for name in candidates if name and known_timezone(name)), "UTC")
 
 
 def slug(text: str) -> str:
@@ -69,7 +143,34 @@ def slug(text: str) -> str:
     return kept or "me"
 
 
-def initialise(config: Path, *, name: str, person: str, login: str, password: str) -> list[Path]:
+def configuration(setup: Setup, data_dir: Path) -> str:
+    """The YAML of a first configuration."""
+    person_id = slug(setup.person)
+    channels = VOICE if setup.voice else TEXT_ONLY
+    text = HEADER + channels + FOOTER
+    return text.format(
+        data_dir=data_dir,
+        name=setup.name,
+        locale=setup.locale,
+        language=LANGUAGES[setup.locale],
+        timezone=setup.timezone,
+        person=setup.person,
+        person_id=person_id,
+        accounts='["voice:*"]' if setup.voice else '[]                     # add "telegram:<your chat id>"',
+        base_url=setup.base_url,
+        model=setup.model,
+        requirement=VOICE_REQUIREMENT,
+        admin_port=ADMIN_PORT,
+    )
+
+
+def environment_file(setup: Setup) -> str:
+    """The `.env` of a first configuration: the instance key, and an empty line for each key to fill."""
+    keys = ["ELEVENLABS_API_KEY="] if setup.voice else ["TELEGRAM_BOT_TOKEN="]
+    return ENV.format(secret_key=secrets.token_urlsafe(48)) + "".join(f"{key}\n" for key in keys)
+
+
+def initialise(config: Path, setup: Setup, *, login: str, password: str) -> list[Path]:
     """Write the configuration, its `.env` and the owner account when absent; returns what was written."""
     if len(password) < MIN_LENGTH:  # refuse a weak password or login before writing anything
         raise ContractError(f"choose a password of at least {MIN_LENGTH} characters")
@@ -78,21 +179,15 @@ def initialise(config: Path, *, name: str, person: str, login: str, password: st
     config.parent.mkdir(parents=True, exist_ok=True)
     env = config.parent / ".env"
     if not env.exists():
-        env.write_text(ENV.format(secret_key=secrets.token_urlsafe(48)))
+        env.write_text(environment_file(setup))
         env.chmod(0o600)
         written.append(env)
     if not config.exists():
-        config.write_text(
-            TEMPLATE.format(
-                data_dir=config.parent.resolve() / "state",
-                name=name,
-                person=person,
-                person_id=slug(person),
-            )
-        )
+        data_dir = config.parent.resolve() / "state"
+        config.write_text(configuration(setup, data_dir))
         written.append(config)
-        asyncio.run(_owner(config.parent.resolve() / "state", person, login, password))
-        written.append(database_path(config.parent.resolve() / "state"))
+        asyncio.run(_owner(data_dir, setup.person, login, password))
+        written.append(database_path(data_dir))
     return written
 
 

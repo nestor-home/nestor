@@ -7,6 +7,7 @@ import pytest
 
 from nestor.adapters.i18n import FluentLocalizer, catalogue_dirs
 from nestor.core import PersonId, utc_now
+from nestor.core.i18n import Locale
 from nestor.modules.channels import Address, InboundMessage, Medium, Sender
 from nestor.modules.cognition.tools import Tool, Toolbox
 from nestor.modules.conversation import (
@@ -51,7 +52,13 @@ def make_agent(journal: Journal) -> MakeAgent:
     ) -> Agent:
         return Agent(
             model=model or ScriptedModel(*replies),
-            persona=Persona(name="Richie", character="Tu es Richie, le robot de la maison."),
+            persona=Persona(
+                name="Richie",
+                character="Tu es Richie, le robot de la maison.",
+                locale=Locale("fr-FR"),
+                language="French",
+                timezone="Europe/Paris",
+            ),
             journal=journal,
             household=Household([MATHIS]),
             toolbox=Toolbox(journal, tools),

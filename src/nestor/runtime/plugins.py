@@ -4,6 +4,10 @@ Built-in and third-party adapters declare themselves the same way, in their pack
 
     [project.entry-points."nestor.adapters"]
     telegram = "nestor.adapters.channels.telegram:plugin"
+
+Discovering plugins loads every entry point, so a plugin module imports only what its settings need.
+An adapter relying on optional dependencies imports them when it is built and names, in `requires`,
+the requirement that installs them: a configuration using it without them fails with that requirement.
 """
 
 from collections.abc import Callable, Iterable, Mapping
@@ -11,9 +15,10 @@ from dataclasses import dataclass
 from enum import StrEnum
 from importlib.metadata import entry_points
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, SecretStr, ValidationError
+from pydantic_core import PydanticCustomError
 
 from nestor.core import Component, ContractError
 from nestor.core.i18n import Locale, Localizer
@@ -30,6 +35,16 @@ class Family(StrEnum):
     TOOLS = "tools"
     INBOUND = "inbound"
     CONNECTOR = "connector"  # builds a `Connector`: a service the household plugs accounts into from the admin
+
+
+def _filled(value: SecretStr) -> SecretStr:
+    if not value.get_secret_value():
+        raise PydanticCustomError("empty_secret", "required, but empty")
+    return value
+
+
+# A key or token the adapter cannot work without: an empty one (a blank line of the `.env`) is refused.
+RequiredSecret = Annotated[SecretStr, AfterValidator(_filled)]
 
 
 class AdapterSettings(BaseModel):
@@ -60,6 +75,7 @@ class Plugin[S: AdapterSettings]:
     kind: str
     settings: type[S]
     build: Callable[[S, str, Services], Component | Connector]  # settings, the instance name, services
+    requires: str | None = None  # the optional dependencies `build` imports, as a pip requirement ("pkg[extra]")
 
     def create(self, raw: Mapping[str, Any], name: str, services: Services) -> Any:
         """The built adapter (a `Connector` for the connector family, a `Component` otherwise); the
@@ -68,7 +84,15 @@ class Plugin[S: AdapterSettings]:
             settings = self.settings.model_validate(raw)
         except ValidationError as error:
             raise ContractError(f"{self.family} {name!r} ({self.kind}): {_explain(error)}") from None
-        return self.build(settings, name, services)
+        try:
+            return self.build(settings, name, services)
+        except ModuleNotFoundError as missing:
+            if self.requires is None:
+                raise
+            raise ContractError(
+                f"{self.family} {name!r} ({self.kind}) needs {self.requires}, which is not installed "
+                f"(no module {(missing.name or '').partition('.')[0]!r}): pip install '{self.requires}'"
+            ) from None
 
 
 @dataclass(frozen=True, slots=True)

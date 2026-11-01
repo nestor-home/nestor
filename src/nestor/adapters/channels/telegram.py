@@ -13,12 +13,12 @@ from datetime import UTC, datetime
 from typing import Any
 
 import httpx
-from pydantic import BaseModel, Field, SecretStr, TypeAdapter, ValidationError
+from pydantic import BaseModel, Field, TypeAdapter, ValidationError
 
 from nestor.core import Component, ContractError, ProviderError
 from nestor.core.i18n import Message
 from nestor.modules.channels import Address, Assistant, Channel, InboundMessage, Sender
-from nestor.runtime.plugins import ChannelSettings, Family, Plugin, Services
+from nestor.runtime.plugins import ChannelSettings, Family, Plugin, RequiredSecret, Services
 
 logger = logging.getLogger(__name__)
 
@@ -346,7 +346,7 @@ class TelegramChannel(Channel):
 
 
 class TelegramSettings(ChannelSettings):
-    token: SecretStr
+    token: RequiredSecret
     api_base: str = "https://api.telegram.org"
     poll_timeout_s: int = Field(default=30, ge=1, le=50)
     request_timeout_s: float = Field(default=10.0, gt=0)

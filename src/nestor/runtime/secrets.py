@@ -6,7 +6,7 @@ them, and loading the configuration resolves the references. A value is never lo
 
 import contextlib
 import re
-from collections.abc import AsyncGenerator, Mapping
+from collections.abc import AsyncGenerator, Callable, Mapping
 from pathlib import Path
 from typing import Any
 
@@ -97,9 +97,17 @@ class ConfigFile:
         return Path(str(substitute(self.raw.get("data_dir", "data"), dict(self.environ), lambda name: None)))
 
     def used(self) -> dict[str, list[str]]:
+        """The vault secrets it refers to, each with the fields using it."""
+        return self._referred(lambda name, secret: secret)
+
+    def empty(self) -> dict[str, list[str]]:
+        """The environment variables it refers to that are set but empty, each with the fields using it."""
+        return self._referred(lambda name, secret: not secret and self.environ.get(name) == "")
+
+    def _referred(self, keep: Callable[[str, bool], bool]) -> dict[str, list[str]]:
         found: dict[str, list[str]] = {}
         for path, name, secret in references(self.raw):
-            if secret:
+            if keep(name, secret):
                 found.setdefault(name, []).append(".".join(str(p) for p in path))
         return found
 

@@ -47,12 +47,12 @@ def code(ticket: PairingTicket) -> str:
 
 
 class Host(InMemoryChannel, SatelliteHost):
-    """Serves satellites on every interface, port 7860."""
+    """Serves satellites on every interface, port 8471."""
 
     def host_satellites(self, pairing: Pairing, journal: Journal) -> None: ...
 
     def satellite_url(self, seen_as: str) -> str | None:
-        return f"http://{seen_as}:7860"
+        return f"http://{seen_as}:8471"
 
 
 class Voice(InMemoryChannel):
@@ -174,7 +174,7 @@ async def test_an_enrollment_addition_gives_its_code_and_uri_once_then_pairs_its
         body = started.json()
         addition, shown = body["addition"], body["code"]
         assert re.fullmatch(r"[0-9A-Z]{4}-[0-9A-Z]{4}", shown)
-        assert body["uri"] == f"nestor+http://admin.test:7860/?code={shown.replace('-', '')}"
+        assert body["uri"] == f"nestor+http://admin.test:8471/?code={shown.replace('-', '')}"
         assert (addition["stage"], addition["room"], addition["method"]["id"]) == ("waiting", "bureau", "enrollment.qr")
         listed = await api.get("/api/v1/satellites")
         assert [a["id"] for a in listed.json()["additions"]] == [addition["id"]] and shown not in listed.text

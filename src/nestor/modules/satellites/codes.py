@@ -6,7 +6,7 @@ Enrollment code: 8 symbols of Crockford's base32 (40 bits), made in the admin an
 shown grouped by four (`K7QF-2M9X`). Reading it back forgives case, dashes, spaces, and the letters
 Crockford maps to digits (O → 0, I and L → 1). Only its SHA-256 is kept.
 
-Pairing URI: `nestor+http://nestor.local:7860/?code=K7QF2M9X`: the core's base URL, prefixed with
+Pairing URI: `nestor+http://nestor.local:8471/?code=K7QF2M9X`: the core's base URL, prefixed with
 `nestor+` so a scanner or a configuration loader knows what it holds, and the enrollment code.
 """
 
@@ -52,7 +52,7 @@ def hash_code(code: str) -> str:
 
 
 def pairing_uri(core_url: str, code: str) -> str:
-    """`http://nestor.local:7860` and `K7QF2M9X` → `nestor+http://nestor.local:7860/?code=K7QF2M9X`."""
+    """`http://nestor.local:8471` and `K7QF2M9X` → `nestor+http://nestor.local:8471/?code=K7QF2M9X`."""
     parts = urllib.parse.urlsplit(core_url)
     if parts.scheme not in ("http", "https") or not parts.netloc:
         raise ContractError(f"the core's address {core_url!r} must be an http(s) URL")

@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from nestor.core import ContractError
+from nestor.runtime.config import ADMIN_PORT
 
 DEFAULT_RELAY = "https://nestorhome.dev/redirect/oauth"
 CALLBACK_PATH = "/connections/callback"
@@ -16,7 +17,7 @@ LOOPBACK = frozenset({"localhost", "127.0.0.1", "::1"})
 @dataclass(frozen=True, slots=True, kw_only=True)
 class AdminSettings:
     host: str = "127.0.0.1"
-    port: int = 8080
+    port: int = ADMIN_PORT
     public_url: str | None = None  # how the household's browsers reach the admin; else the URL they used
     relay_url: str = DEFAULT_RELAY  # OAuth redirect page used when the admin is not served over HTTPS
     session_ttl_s: float = 12 * 3600.0

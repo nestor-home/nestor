@@ -16,9 +16,9 @@ Never use Markdown, lists, URLs or emoji."""
 
 WRITTEN = """You are writing in a chat. Be concise and natural; light formatting only when it helps."""
 
-HONESTY = """Never claim something was done without its result. If you cannot do something, say so plainly."""
+ENGLISH = Locale("en")
 
-FRENCH = Locale("fr-FR")
+HONESTY = """Never claim something was done without its result. If you cannot do something, say so plainly."""
 
 FALLBACKS: Mapping[FallbackReason, Message] = {
     FallbackReason.MODEL_UNAVAILABLE: Message.of("fallback-model-unavailable"),
@@ -34,9 +34,9 @@ class Persona:
 
     name: str
     character: str
-    locale: Locale = FRENCH  # BCP 47: the fixed phrases the assistant says (fallbacks…)
-    language: str = "French"  # how the instructions name the language the model must write in
-    timezone: str = "Europe/Paris"
+    locale: Locale = ENGLISH  # BCP 47: the fixed phrases the assistant says (fallbacks…)
+    language: str = "English"  # how the instructions name the language the model must write in
+    timezone: str = "UTC"
 
     def instructions(
         self,

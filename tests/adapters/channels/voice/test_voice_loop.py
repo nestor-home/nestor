@@ -12,7 +12,8 @@ from pathlib import Path
 
 import pytest
 
-from nestor.adapters.channels.voice import SessionSettings, VoiceChannel
+from nestor.adapters.channels.voice.channel import VoiceChannel
+from nestor.adapters.channels.voice.session import SessionSettings
 from nestor.core import ContractError, ProviderError
 from nestor.modules.channels import Address
 

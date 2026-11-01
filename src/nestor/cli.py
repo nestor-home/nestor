@@ -20,7 +20,17 @@ from nestor.adapters.i18n import FluentLocalizer, catalogue_dirs
 from nestor.admin import AdminServer, openapi_text, read_token, token_path
 from nestor.core import Component, NestorError, PersonId
 from nestor.core.i18n import Locale, Message
-from nestor.init import initialise, slug
+from nestor.init import (
+    DEFAULT_MODEL,
+    LANGUAGES,
+    OPENROUTER,
+    VOICE_REQUIREMENT,
+    Setup,
+    initialise,
+    local_timezone,
+    slug,
+    voice_installed,
+)
 from nestor.modules.accounts import Role
 from nestor.modules.satellites import PairingMethod
 from nestor.modules.satellites.wire import SCHEMAS, write_schemas
@@ -121,8 +131,24 @@ def main(argv: list[str] | None = None) -> int:
             os.execv(sys.executable, sys.orig_argv)
     except NestorError as error:
         print(f"nestor: {error}", file=sys.stderr)
+        if args.command in ("check", "run"):
+            _report_empty(args.config, environ, str(error))
         return 2
     return 0
+
+
+def _report_empty(config: Path, environ: dict[str, str], error: str) -> None:
+    """Name the empty variables behind the fields an error names (`token: required, but empty`): a key
+    left blank in the `.env`."""
+    try:
+        empty = ConfigFile(config, environ).empty()
+    except NestorError:
+        return
+    for name, fields in sorted(empty.items()):
+        named = [f for f in fields if f"{f.rpartition('.')[2]}:" in error]
+        if named:
+            where = f"in {config.parent / ENV_FILE} or the environment"
+            print(f"nestor: {name} is empty ({where}), used by {', '.join(named)}", file=sys.stderr)
 
 
 def _admin_server(nestor: Nestor) -> list[Component]:
@@ -135,20 +161,38 @@ def _init(config: Path) -> int:
     if config.exists():
         print(f"{config} already exists: nothing changed")
         return 0
-    name = input("Name of the assistant [Nestor]: ").strip() or "Nestor"
-    person = input("Your first name: ").strip() or "Moi"
-    login = input(f"Your login for the admin, an email or a username [{slug(person)}]: ").strip() or slug(person)
+    name = _ask("Name of the assistant", "Nestor")
+    person = _ask("Your first name", "Me")
+    locale = _ask(f"Language of the household ({', '.join(LANGUAGES)})", "en")
+    timezone = _ask("Time zone", local_timezone())
+    print(
+        "The model: any OpenAI-compatible server. Local ones need no key: Ollama http://localhost:11434/v1,\n"
+        "LM Studio http://localhost:1234/v1 (from Docker, http://host.docker.internal:<port>/v1)."
+    )
+    base_url = _ask("Model server", OPENROUTER)
+    model = _ask("Model", DEFAULT_MODEL if base_url == OPENROUTER else "")
+    if voice_installed():
+        voice = _ask("Talk to it by voice (an ElevenLabs key is needed)? y/n", "y").casefold().startswith("y")
+    else:
+        voice = False
+        print(f"Voice is not installed (pip install '{VOICE_REQUIREMENT}'): a text-only configuration, on Telegram.")
+    setup = Setup(
+        name=name, person=person, locale=locale, timezone=timezone, base_url=base_url, model=model, voice=voice
+    )
+    login = _ask("Your login for the admin, an email or a username", slug(person))
     password = _new_password()
     if password is None:
         return 2
-    written = initialise(config, name=name, person=person, login=login, password=password)
+    written = initialise(config, setup, login=login, password=password)
     for path in written:
         print(f"wrote {path}")
     print(f"owner account {login!r} created: sign in to the admin with it")
-    print(
-        f"next: fill the API keys in {config.parent / ENV_FILE} (no need to source it), then `nestor -c {config} check`"
-    )
+    print(f"next: fill the keys in {config.parent / ENV_FILE} (no need to source it), then `nestor -c {config} check`")
     return 0
+
+
+def _ask(question: str, default: str) -> str:
+    return input(f"{question} [{default}]: " if default else f"{question}: ").strip() or default
 
 
 def _new_password() -> str | None:
