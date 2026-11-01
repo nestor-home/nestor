@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   release:
-    uses: nestor-home/.github/.github/workflows/release-please.yml@v1
+    uses: nestor-home/.github/.github/workflows/release-please.yml@main
 
   pypi:
     needs: release
@@ -50,7 +50,7 @@ jobs:
       packages: write
       id-token: write
       attestations: write
-    uses: nestor-home/.github/.github/workflows/container.yml@v1
+    uses: nestor-home/.github/.github/workflows/container.yml@main
     with:
       version: ${{ needs.release.outputs.version }}
       ref: ${{ needs.release.outputs.tag_name }}
