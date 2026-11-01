@@ -106,7 +106,7 @@ class AdminConfig(Section):
     port: int = Field(default=8080, ge=0, le=65535)
     public_url: str | None = None  # how the household's browsers reach it: "https://nestor.example.org"
     # OAuth redirect when not served over HTTPS
-    relay_url: str = Field(default="https://nestor.mathislambert.fr/redirect/oauth", json_schema_extra=ADVANCED)
+    relay_url: str = Field(default="https://nestorhome.dev/redirect/oauth", json_schema_extra=ADVANCED)
 
 
 class AdapterConfig(BaseModel):

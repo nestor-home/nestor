@@ -338,7 +338,7 @@
           }
         },
         "relay_url": {
-          "default": "https://nestor.mathislambert.fr/redirect/oauth",
+          "default": "https://nestorhome.dev/redirect/oauth",
           "title": "Relay Url",
           "type": "string",
           "x-nestor": {

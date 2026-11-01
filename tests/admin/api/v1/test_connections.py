@@ -15,7 +15,7 @@ from nestor.modules.connectors import service as connections_service
 
 from ...harness import CLIENT_SECRET, Api, Harness
 
-RELAY = "https://nestor.mathislambert.fr/redirect/oauth"
+RELAY = "https://nestorhome.dev/redirect/oauth"
 
 
 def query(url: str) -> dict[str, str]:

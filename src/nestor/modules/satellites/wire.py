@@ -39,7 +39,7 @@ from nestor.modules.satellites.types import (
 )
 
 SCHEMAS = Path(__file__).parent / "schemas"
-SCHEMA_BASE = "https://nestor.mathislambert.fr/schemas/satellite/2/"
+SCHEMA_BASE = "https://nestorhome.dev/schemas/satellite/2/"
 
 
 @dataclass(frozen=True, slots=True)
