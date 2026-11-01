@@ -11,7 +11,7 @@ The key words MUST, MUST NOT, SHOULD, SHOULD NOT and MAY are to be read as in RF
 
 The message classes of `nestor.modules.satellites.wire` are the source of truth for shapes: the JSON
 Schemas they generate are published in `src/nestor/modules/satellites/schemas/` (`nestor satellites
-schemas`) under `https://nestor.mathislambert.fr/schemas/satellite/2/`. SDKs copy them and test what
+schemas`) under `https://nestorhome.dev/schemas/satellite/2/`. SDKs copy them and test what
 they send against them.
 
 ## 1. Overview

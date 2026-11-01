@@ -6,7 +6,7 @@ from pathlib import Path
 
 from nestor.core import ContractError
 
-DEFAULT_RELAY = "https://nestor.mathislambert.fr/redirect/oauth"
+DEFAULT_RELAY = "https://nestorhome.dev/redirect/oauth"
 CALLBACK_PATH = "/connections/callback"
 FRONT = Path(__file__).parent / "static" / "app"  # built by `pnpm build` in web/, not committed
 

@@ -56,7 +56,7 @@ google = "nestor.adapters.connectors.google:plugin"
 imap = "nestor.adapters.connectors.imap:plugin"
 
 [project.urls]
-Homepage = "https://nestor.mathislambert.fr"
+Homepage = "https://nestorhome.dev"
 Source = "https://github.com/nestor-home/nestor"
 Issues = "https://github.com/nestor-home/nestor/issues"
 
