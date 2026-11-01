@@ -34,10 +34,10 @@ describe("approving a satellite", () => {
         <ApproveForm request={reachy} />
       </I18nProvider>,
     );
-    await user.type(screen.getByLabelText("Code affiché par l'appareil"), "12a45");
-    await user.click(screen.getByRole("button", { name: "Appairer" }));
-    expect(screen.getByRole("alert")).toHaveTextContent("Le code est fait de 6 chiffres, lus sur l'appareil.");
-    expect(screen.getByLabelText("Code affiché par l'appareil")).toHaveAttribute("aria-invalid", "true");
+    await user.type(screen.getByLabelText("Code shown by the device"), "12a45");
+    await user.click(screen.getByRole("button", { name: "Pair" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("The code is 6 digits, read on the device.");
+    expect(screen.getByLabelText("Code shown by the device")).toHaveAttribute("aria-invalid", "true");
     expect(sent).toHaveLength(0);
   });
 
@@ -49,10 +49,10 @@ describe("approving a satellite", () => {
         <ApproveForm request={reachy} />
       </I18nProvider>,
     );
-    await user.type(screen.getByLabelText("Code affiché par l'appareil"), "424 242");
-    await user.click(screen.getByRole("checkbox", { name: /mouvements de tête/ }));
-    await user.click(screen.getByRole("button", { name: "Appairer" }));
-    expect(await screen.findByText("Satellite reachy-mini-entree (pièce « entrée ») appairé.")).toBeInTheDocument();
+    await user.type(screen.getByLabelText("Code shown by the device"), "424 242");
+    await user.click(screen.getByRole("checkbox", { name: /head movements/ }));
+    await user.click(screen.getByRole("button", { name: "Pair" }));
+    expect(await screen.findByText("Satellite reachy-mini-hallway (hallway) paired.")).toBeInTheDocument();
     expect(sent).toEqual([
       {
         code: "424242",
@@ -76,9 +76,9 @@ describe("approving a satellite", () => {
         <ApproveForm request={reachy} />
       </I18nProvider>,
     );
-    await user.type(screen.getByLabelText("Code affiché par l'appareil"), "000000");
-    await user.click(screen.getByRole("button", { name: "Appairer" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Aucun appareil n'attend ce code");
+    await user.type(screen.getByLabelText("Code shown by the device"), "000000");
+    await user.click(screen.getByRole("button", { name: "Pair" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("No device is waiting with this code");
   });
 
   it("explains an unreachable Nestor", async () => {
@@ -89,8 +89,8 @@ describe("approving a satellite", () => {
         <ApproveForm request={reachy} />
       </I18nProvider>,
     );
-    await user.type(screen.getByLabelText("Code affiché par l'appareil"), "424242");
-    await user.click(screen.getByRole("button", { name: "Appairer" }));
-    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Nestor ne répond pas"));
+    await user.type(screen.getByLabelText("Code shown by the device"), "424242");
+    await user.click(screen.getByRole("button", { name: "Pair" }));
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Nestor does not answer"));
   });
 });

@@ -1,6 +1,6 @@
 /**
  * The stress fixture: the shapes real data takes (long URLs, unbroken ids, multi-line JSON, long
- * French sentences, provider errors) at extreme lengths, spread over every screen. Synthetic, never
+ * sentences, provider errors) at extreme lengths, spread over every screen. Synthetic, never
  * real data. On when `localStorage["nestor.mock.stress"]` is set (the overflow guard sets it).
  */
 import type { JournalEvent } from "@/api";
@@ -18,13 +18,13 @@ export function stressed(): boolean {
 }
 
 /** A URL with no space anywhere, about 300 characters long. */
-export const LONG_URL = `https://cloud.example.org/remote.php/dav/files/household/Documents/${"administratif-impots-2026-".repeat(8)}declaration-revenus.pdf?token=${"a1b2c3d4e5f6".repeat(4)}`;
+export const LONG_URL = `https://cloud.example.org/remote.php/dav/files/household/Documents/${"paperwork-taxes-2026-".repeat(8)}income-tax-return.pdf?token=${"a1b2c3d4e5f6".repeat(4)}`;
 /** One 60-character word. */
-export const LONG_WORD = "Anticonstitutionnellementdéraisonnablementinextricablement-60";
+export const LONG_WORD = "Antidisestablishmentarianismincomprehensibilitiesoverthink-60";
 const JSON_ARGS = JSON.stringify(
   {
-    query: `from:${"notifications-automatiques-ne-pas-repondre".repeat(2)}@impots.gouv.example subject:"avis"`,
-    folder: "INBOX/Administratif/Impôts/2026/Avis-de-situation-déclarative",
+    query: `from:${"automatic-notifications-do-not-reply".repeat(2)}@taxes.gov.example subject:"notice"`,
+    folder: "INBOX/Paperwork/Taxes/2026/Statement-of-declared-situation",
     limit: 50,
     include: ["attachments", "headers", "body"],
   },
@@ -32,10 +32,10 @@ const JSON_ARGS = JSON.stringify(
   2,
 );
 const LONG_SENTENCE =
-  "Je n'ai pas pu joindre le serveur de messagerie parce que le fournisseur a répondu avec une erreur inattendue au moment de renouveler le jeton d'accès, et j'ai donc préféré ne rien envoyer plutôt que de risquer un message incomplet ou en double à toute la famille.";
+  "I could not reach the mail server because the provider answered with an unexpected error just as the access token was being renewed, so I chose to send nothing rather than risk an incomplete or duplicated message to the whole family, and I will try again later tonight.";
 const PROVIDER_ERROR = `invalid_grant: Token has been expired or revoked. (request_id=${"9f8e7d6c5b4a".repeat(5)}) at ${LONG_URL}`;
 const LONG_NAME = "Marie-Amélie Bérengère de La Tour d'Auvergne-Lauraguais";
-const LONG_ROOM = "chambre-d-amis-du-deuxième-étage-côté-jardin-sous-les-combles";
+const LONG_ROOM = "second-floor-guest-bedroom-on-the-garden-side-under-the-eaves";
 
 /** Adds the stress shapes to a fresh mock state. */
 export function stress(db: Db, now = Date.now()): void {
@@ -50,7 +50,7 @@ export function stress(db: Db, now = Date.now()): void {
     account_login: null,
   });
   const mathis = db.accounts[0];
-  if (mathis) mathis.login = `mathis.lambert.${"administrateur-principal".repeat(2)}@example.org`;
+  if (mathis) mathis.login = `mathis.lambert.${"main-administrator".repeat(2)}@example.org`;
 
   let position = Math.max(0, ...db.journal.map((e) => Number(e.id) || 0));
   const events: JournalEvent[] = [];
@@ -85,8 +85,8 @@ export function stress(db: Db, now = Date.now()): void {
     {
       type: "conversation.turn.user",
       kind: "conversation",
-      text: "Marie-Amélie a dit",
-      detail: `Regarde ce document ${LONG_URL} et dis-moi si ${LONG_WORD} apparaît dedans, c'est urgent.`,
+      text: "Marie-Amélie said",
+      detail: `Look at this document ${LONG_URL} and tell me whether ${LONG_WORD} appears in it, it is urgent.`,
       people: ["marie-amelie"],
       channels: ["web"],
       room: LONG_ROOM,
@@ -98,7 +98,7 @@ export function stress(db: Db, now = Date.now()): void {
     {
       type: "agent.tool.called",
       kind: "tool",
-      text: `Outil ${LONG_WORD} appelé`,
+      text: `Tool ${LONG_WORD} called`,
       detail: JSON_ARGS,
       tool: LONG_WORD,
       brand: "mcp",
@@ -110,7 +110,7 @@ export function stress(db: Db, now = Date.now()): void {
     {
       type: "agent.tool.completed",
       kind: "tool",
-      text: `Outil ${LONG_WORD} en échec`,
+      text: `Tool ${LONG_WORD} failed`,
       detail: PROVIDER_ERROR,
       tool: LONG_WORD,
       brand: "mcp",
@@ -124,8 +124,8 @@ export function stress(db: Db, now = Date.now()): void {
     {
       type: "conversation.turn.assistant",
       kind: "conversation",
-      text: "Richie a répondu",
-      detail: `${LONG_SENTENCE}\n\nLe lien que tu m'as donné : ${LONG_URL}`,
+      text: "Richie answered",
+      detail: `${LONG_SENTENCE}\n\nThe link you gave me: ${LONG_URL}`,
       channels: ["web"],
       links: session,
     },
@@ -135,7 +135,7 @@ export function stress(db: Db, now = Date.now()): void {
     {
       type: "initiative.undeliverable",
       kind: "delivery",
-      text: `Message non transmis : ${LONG_WORD}`,
+      text: `Message not passed on: ${LONG_WORD}`,
       detail: PROVIDER_ERROR,
       people: ["marie-amelie"],
       channels: ["telegram"],
@@ -148,14 +148,14 @@ export function stress(db: Db, now = Date.now()): void {
 
   db.tasks.unshift({
     id: `t-${"0123456789abcdef".repeat(2)}`,
-    objective: `${LONG_SENTENCE} Le dossier est ici : ${LONG_URL}`,
+    objective: `${LONG_SENTENCE} The file is here: ${LONG_URL}`,
     executor: "hermes",
     status: "running",
-    status_label: "en cours",
+    status_label: "running",
     requested_by: "marie-amelie",
     started_at: at(20),
     ended_at: null,
-    steps: [`Téléchargement de ${LONG_URL}`, `Analyse de ${LONG_WORD}`],
+    steps: [`Downloading ${LONG_URL}`, `Analysing ${LONG_WORD}`],
     result: null,
     error: PROVIDER_ERROR,
     origin: { session: "s-stress", channel: "web" },
@@ -163,7 +163,7 @@ export function stress(db: Db, now = Date.now()): void {
   });
   db.watches.unshift({
     id: `w-${"fedcba9876543210".repeat(2)}`,
-    what: `Préviens ${LONG_NAME} quand ${LONG_WORD} répond à propos de ${LONG_URL}`,
+    what: `Tell ${LONG_NAME} when ${LONG_WORD} replies about ${LONG_URL}`,
     owner: "marie-amelie",
     kinds: ["mail"],
     keywords: [LONG_WORD, LONG_URL],
@@ -176,7 +176,7 @@ export function stress(db: Db, now = Date.now()): void {
   });
   db.memories.unshift({
     id: "m-stress",
-    text: `${LONG_NAME} range ses papiers sur ${LONG_URL} et appelle ça ${LONG_WORD}.`,
+    text: `${LONG_NAME} keeps her papers at ${LONG_URL} and calls it ${LONG_WORD}.`,
     about: "marie-amelie",
     told_by: "marie-amelie",
     channel: "web",
@@ -187,7 +187,7 @@ export function stress(db: Db, now = Date.now()): void {
   });
   const connection = db.connections[0];
   if (connection) {
-    connection.account = `${"tres.long.identifiant.de.messagerie".repeat(2)}@example-household-provider.org`;
+    connection.account = `${"a.very.long.mailbox.identifier".repeat(2)}@example-household-provider.org`;
     connection.status = "error";
     connection.status_reason = PROVIDER_ERROR;
   }

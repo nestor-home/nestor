@@ -36,7 +36,7 @@
           }
         },
         "locale": {
-          "default": "fr-FR",
+          "default": "en-US",
           "title": "Locale",
           "type": "string",
           "x-nestor": {
@@ -53,7 +53,7 @@
           }
         },
         "language": {
-          "default": "French",
+          "default": "English",
           "title": "Language",
           "type": "string",
           "x-nestor": {
@@ -897,7 +897,7 @@
                   }
                 },
                 "language": {
-                  "default": "fr",
+                  "default": "en",
                   "title": "Language",
                   "type": "string",
                   "x-nestor": {

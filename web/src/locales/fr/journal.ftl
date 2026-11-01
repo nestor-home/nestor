@@ -96,6 +96,7 @@ jr-chain-watch-link = veille
 jr-chain-delivery = Prise de parole
 jr-channel-voice = voix
 jr-why = pourquoi
+jr-why-label = pourquoi :
 
 step-task-started = confiée
 step-task-progressed = étape

@@ -9,14 +9,14 @@ describe("signing in", () => {
     db.signedIn = null;
     const user = userEvent.setup();
     const { router } = renderApp("/login?next=%2Fwatches");
-    await user.type(await screen.findByLabelText("Identifiant"), "lea");
-    await user.type(screen.getByLabelText("Mot de passe"), "mauvais");
-    await user.click(screen.getByRole("button", { name: "Se connecter" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Adresse ou mot de passe incorrect.");
+    await user.type(await screen.findByLabelText("Login"), "lea");
+    await user.type(screen.getByLabelText("Password"), "wrong");
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Wrong address or password.");
 
-    await user.clear(screen.getByLabelText("Mot de passe"));
-    await user.type(screen.getByLabelText("Mot de passe"), "nestor");
-    await user.click(screen.getByRole("button", { name: "Se connecter" }));
+    await user.clear(screen.getByLabelText("Password"));
+    await user.type(screen.getByLabelText("Password"), "nestor");
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
     await waitFor(() => expect(router.state.location.pathname).toBe("/watches"));
   });
 
@@ -24,9 +24,9 @@ describe("signing in", () => {
     db.signedIn = null;
     const user = userEvent.setup();
     const { router } = renderApp("/login?next=%2F%2Fevil.example");
-    await user.type(await screen.findByLabelText("Identifiant"), "mathis");
-    await user.type(screen.getByLabelText("Mot de passe"), "nestor");
-    await user.click(screen.getByRole("button", { name: "Se connecter" }));
+    await user.type(await screen.findByLabelText("Login"), "mathis");
+    await user.type(screen.getByLabelText("Password"), "nestor");
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
     await waitFor(() => expect(router.state.location.pathname).toBe("/journal"));
   });
 });
@@ -36,23 +36,23 @@ describe("accepting an invitation", () => {
     db.signedIn = null;
     const user = userEvent.setup();
     const { router } = renderApp("/invitation/inv-odile");
-    expect(await screen.findByText(/comme/)).toHaveTextContent("membre, pour Odile");
-    expect(screen.getByLabelText("Identifiant")).toHaveValue("odile");
-    await user.type(screen.getByLabelText("Mot de passe"), "court");
-    await user.type(screen.getByLabelText("Confirmez le mot de passe"), "court");
-    await user.click(screen.getByRole("button", { name: "Accepter l'invitation" }));
-    expect(screen.getByRole("alert")).toHaveTextContent("Au moins 12 caractères.");
+    expect(await screen.findByText(/ as /)).toHaveTextContent("member, for Odile");
+    expect(screen.getByLabelText("Login")).toHaveValue("odile");
+    await user.type(screen.getByLabelText("Password"), "short");
+    await user.type(screen.getByLabelText("Confirm the password"), "short");
+    await user.click(screen.getByRole("button", { name: "Accept the invitation" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("At least 12 characters.");
 
-    await user.clear(screen.getByLabelText("Mot de passe"));
-    await user.type(screen.getByLabelText("Mot de passe"), "le thé de grand-mère");
-    await user.clear(screen.getByLabelText("Confirmez le mot de passe"));
-    await user.type(screen.getByLabelText("Confirmez le mot de passe"), "le thé de grand-mere");
-    await user.click(screen.getByRole("button", { name: "Accepter l'invitation" }));
-    expect(screen.getByRole("alert")).toHaveTextContent("Les deux mots de passe diffèrent.");
+    await user.clear(screen.getByLabelText("Password"));
+    await user.type(screen.getByLabelText("Password"), "my grandmother's tea");
+    await user.clear(screen.getByLabelText("Confirm the password"));
+    await user.type(screen.getByLabelText("Confirm the password"), "my grandmother's tee");
+    await user.click(screen.getByRole("button", { name: "Accept the invitation" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("The two passwords differ.");
 
-    await user.clear(screen.getByLabelText("Confirmez le mot de passe"));
-    await user.type(screen.getByLabelText("Confirmez le mot de passe"), "le thé de grand-mère");
-    await user.click(screen.getByRole("button", { name: "Accepter l'invitation" }));
+    await user.clear(screen.getByLabelText("Confirm the password"));
+    await user.type(screen.getByLabelText("Confirm the password"), "my grandmother's tea");
+    await user.click(screen.getByRole("button", { name: "Accept the invitation" }));
     await waitFor(() => expect(router.state.location.pathname).toBe("/journal"));
     expect(db.accounts.some((a) => a.login === "odile" && a.role === "member" && a.person === "odile")).toBe(true);
   });
@@ -61,7 +61,7 @@ describe("accepting an invitation", () => {
     db.signedIn = null;
     renderApp("/invitation/inv-perime");
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Cette invitation n'existe pas, a expiré ou a déjà servi.",
+      "This invitation does not exist, has expired or was already used.",
     );
   });
 });

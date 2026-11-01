@@ -7,14 +7,14 @@ for (const width of [390, 1440]) {
     await page.goto("/");
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     await expect(page.locator("svg.nestor").first()).toBeVisible();
-    const house = page.getByRole("region", { name: "La maison" });
+    const house = page.getByRole("region", { name: "The house" });
     await expect(house).toBeVisible();
-    await expect(page.getByRole("list", { name: "Aujourd'hui" })).toBeVisible();
+    await expect(page.getByRole("list", { name: "Today" })).toBeVisible();
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     expect(overflow).toBeLessThanOrEqual(0);
     // a room leads to what happened there
-    await house.getByRole("link", { name: /^Salon/ }).click();
-    await expect(page).toHaveURL(/\/journal\?room=salon/);
+    await house.getByRole("link", { name: /^Living room/ }).click();
+    await expect(page).toHaveURL(/\/journal\?room=living\+room/);
   });
 }
 

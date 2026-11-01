@@ -21,51 +21,51 @@ const storyWith = async (text: string | RegExp) =>
 describe("the journal", () => {
   it("tells a watch as one chain, from the trigger to the message, with the reason", async () => {
     renderApp("/journal");
-    const chain = await storyWith("Les messages de l'école de Jules.");
-    for (const step of ["déclenchée", "décision", "non transmis", "écrit"]) {
+    const chain = await storyWith("Messages from Jules's school.");
+    for (const step of ["triggered", "decision", "not delivered", "written"]) {
       expect(within(chain).getByText(step)).toBeInTheDocument();
     }
-    expect(chain).toHaveTextContent("pourquoi : Mathis est dans la pièce « bureau »");
+    expect(chain).toHaveTextContent("why: Mathis is in the office");
   });
 
   it("reads a conversation as a transcript, what happened in between folded into one line", async () => {
     const user = userEvent.setup();
     renderApp("/journal");
-    const thread = await storyWith("éteins la lumière de la cuisine");
-    expect(within(thread).getByText("Richie, éteins la lumière de la cuisine.")).toBeInTheDocument();
-    expect(within(thread).getByText("C'est éteint.")).toBeInTheDocument();
-    const between = within(thread).getByRole("button", { name: /Ce qui s'est passé : 1 outil · .*réponse de secours/ });
-    expect(within(thread).queryByRole("button", { name: "Outil ha_turn_off : détails" })).not.toBeInTheDocument();
+    const thread = await storyWith("turn off the kitchen light");
+    expect(within(thread).getByText("Richie, turn off the kitchen light.")).toBeInTheDocument();
+    expect(within(thread).getByText("It's off.")).toBeInTheDocument();
+    const between = within(thread).getByRole("button", { name: /What happened: 1 tool · .*fallback answer/ });
+    expect(within(thread).queryByRole("button", { name: "Tool ha_turn_off: details" })).not.toBeInTheDocument();
     await user.click(between);
-    expect(within(thread).getByRole("button", { name: "Outil ha_turn_off : détails" })).toBeVisible();
-    expect(within(thread).getByText(/light\.cuisine : off/)).toBeVisible();
-    expect(thread).toHaveTextContent("Réponse de secours : modèle trop lent");
+    expect(within(thread).getByRole("button", { name: "Tool ha_turn_off: details" })).toBeVisible();
+    expect(within(thread).getByText(/light\.kitchen: off/)).toBeVisible();
+    expect(thread).toHaveTextContent("Fallback answer: model too slow");
   });
 
   it("joins live events to their conversation at the top", async () => {
     const { stream } = renderApp("/journal");
     await stories();
-    stream.emit(liveItem({ detail: "Richie, quelle heure est-il ?", links: { session: "s-new", turn: "u-new" } }));
+    stream.emit(liveItem({ detail: "Richie, what time is it?", links: { session: "s-new", turn: "u-new" } }));
     stream.emit(
       liveItem({
         type: "conversation.turn.assistant",
         message: { id: "journal-assistant-answered", args: { assistant: "Richie" } },
-        text: "Richie a répondu",
-        detail: "Il est 16 h.",
+        text: "Richie answered",
+        detail: "It's 4 pm.",
         people: [],
         links: { session: "s-new", turn: "u-new" },
       }),
     );
     const [first] = await stories();
-    expect(first).toHaveTextContent("quelle heure est-il");
-    expect(first).toHaveTextContent("Il est 16 h.");
+    expect(first).toHaveTextContent("what time is it");
+    expect(first).toHaveTextContent("It's 4 pm.");
   });
 
   it("ignores live events the filters exclude", async () => {
     const { stream } = renderApp("/journal?kinds=tool");
     await stories();
-    stream.emit(liveItem({ kind: "conversation", detail: "Hors filtre", links: { session: "s-x" } }));
-    expect(screen.queryByText(/Hors filtre/)).not.toBeInTheDocument();
+    stream.emit(liveItem({ kind: "conversation", detail: "Filtered out", links: { session: "s-x" } }));
+    expect(screen.queryByText(/Filtered out/)).not.toBeInTheDocument();
   });
 
   it("holds new events while paused, and shows them on request", async () => {
@@ -73,20 +73,20 @@ describe("the journal", () => {
     const { stream } = renderApp("/journal");
     await stories();
     await user.click(screen.getByRole("button", { name: "Pause" }));
-    expect(screen.getByText("en pause")).toBeInTheDocument();
-    stream.emit(liveItem({ detail: "En attente 1", links: { session: "s-a" } }));
-    stream.emit(liveItem({ detail: "En attente 2", links: { session: "s-b" } }));
-    expect(screen.queryByText(/En attente 1/)).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "2 nouveaux événements" }));
-    expect(await screen.findByText(/En attente 1/)).toBeInTheDocument();
+    expect(screen.getByText("paused")).toBeInTheDocument();
+    stream.emit(liveItem({ detail: "Waiting 1", links: { session: "s-a" } }));
+    stream.emit(liveItem({ detail: "Waiting 2", links: { session: "s-b" } }));
+    expect(screen.queryByText(/Waiting 1/)).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "2 new events" }));
+    expect(await screen.findByText(/Waiting 1/)).toBeInTheDocument();
   });
 
   it("filters by a facet from its searchable list, by keyboard, with counts", async () => {
     const user = userEvent.setup();
     const { router } = renderApp("/journal");
     await stories();
-    await user.click(screen.getByRole("button", { name: /^Personne/ }));
-    const search = await screen.findByPlaceholderText("Filtrer : Personne…");
+    await user.click(screen.getByRole("button", { name: /^Person/ }));
+    const search = await screen.findByPlaceholderText("Filter Person…");
     expect(screen.getByRole("option", { name: /Léa/ })).toHaveTextContent(/\d+/);
     await user.type(search, "lé");
     expect(screen.queryByRole("option", { name: /Mathis/ })).not.toBeInTheDocument();
@@ -95,7 +95,7 @@ describe("the journal", () => {
     await waitFor(async () => {
       for (const story of await stories()) expect(story).toHaveTextContent("Léa");
     });
-    await user.click(screen.getByRole("button", { name: "Effacer les filtres" }));
+    await user.click(screen.getByRole("button", { name: "Clear filters" }));
     await waitFor(() => expect(router.state.location.search).toEqual({}));
   });
 
@@ -107,7 +107,7 @@ describe("the journal", () => {
     expect(document.activeElement).toHaveAttribute("data-journal-entry");
     await user.keyboard("{Enter}");
     const sheet = await screen.findByRole("dialog");
-    expect(await within(sheet).findByRole("heading", { name: "Enregistrement brut" })).toBeInTheDocument();
+    expect(await within(sheet).findByRole("heading", { name: "Raw record" })).toBeInTheDocument();
     expect(router.state.location.search).toHaveProperty("event");
     await user.keyboard("{Escape}");
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
@@ -119,25 +119,25 @@ describe("the journal", () => {
     const { router } = renderApp("/journal");
     await stories();
     await user.keyboard("/");
-    expect(screen.getByRole("searchbox", { name: "Chercher dans le journal" })).toHaveFocus();
-    await user.keyboard("pamplemousse{Enter}");
-    await waitFor(() => expect(router.state.location.search).toEqual({ q: "pamplemousse" }));
-    expect(await screen.findByText("Rien dans le journal pour ces filtres.")).toBeInTheDocument();
+    expect(screen.getByRole("searchbox", { name: "Search the journal" })).toHaveFocus();
+    await user.keyboard("grapefruit{Enter}");
+    await waitFor(() => expect(router.state.location.search).toEqual({ q: "grapefruit" }));
+    expect(await screen.findByText("Nothing in the journal for these filters.")).toBeInTheDocument();
   });
 
   it("loads older events on request", async () => {
     const user = userEvent.setup();
     renderApp("/journal");
     const before = (await stories()).length;
-    await user.click(screen.getByRole("button", { name: "Plus ancien" }));
+    await user.click(screen.getByRole("button", { name: "Older" }));
     await waitFor(async () => expect((await stories()).length).toBeGreaterThan(before));
   });
 
   it("shows whether the agent is online beside its name", async () => {
     const { stream } = renderApp("/journal");
     await stories();
-    expect(screen.getByRole("link", { name: "Richie, en ligne" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Richie, online" })).toBeInTheDocument();
     stream.status("closed");
-    expect(await screen.findByRole("link", { name: "Richie, hors ligne" })).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: "Richie, offline" })).toBeInTheDocument();
   });
 });

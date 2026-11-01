@@ -96,6 +96,7 @@ jr-chain-watch-link = watch
 jr-chain-delivery = Speaking up
 jr-channel-voice = voice
 jr-why = why
+jr-why-label = why:
 
 step-task-started = handed over
 step-task-progressed = step

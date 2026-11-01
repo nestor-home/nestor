@@ -24,7 +24,7 @@ describe("connecting an account", () => {
         <ConnectForm connector={connector("google")} replaces={null} onConnected={onConnected} leave={leave} />
       </I18nProvider>,
     );
-    const owner = screen.getByRole("combobox", { name: "Compte de" });
+    const owner = screen.getByRole("combobox", { name: "Account of" });
     await user.click(owner);
     await user.clear(owner);
     await user.type(owner, "léa");
@@ -43,13 +43,13 @@ describe("connecting an account", () => {
         await held;
       }),
     );
-    await user.click(screen.getByRole("button", { name: "Connecter" }));
-    expect(await screen.findByRole("button", { name: "Connexion…" })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Connect" }));
+    expect(await screen.findByRole("button", { name: "Connecting…" })).toBeDisabled();
     release();
     await waitFor(() =>
       expect(leave).toHaveBeenCalledWith(expect.stringMatching(/^\/connections\/c-.+\?connected=1$/)),
     );
-    expect(screen.getByRole("button", { name: "Redirection vers le service…" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Redirecting to the service…" })).toBeDisabled();
     expect(onConnected).not.toHaveBeenCalled();
   });
 
@@ -59,8 +59,8 @@ describe("connecting an account", () => {
         <ConnectForm connector={connector("google-calendar")} replaces={null} onConnected={vi.fn()} leave={vi.fn()} />
       </I18nProvider>,
     );
-    expect(screen.getByRole("button", { name: "Connecter" })).toBeDisabled();
-    expect(screen.getByText("Enregistrez d'abord le client OAuth du foyer.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Connect" })).toBeDisabled();
+    expect(screen.getByText("Register the household's OAuth client first.")).toBeInTheDocument();
   });
 
   it("connects a secret-based service at once, with trimmed values", async () => {
@@ -71,10 +71,10 @@ describe("connecting an account", () => {
         <ConnectForm connector={connector("imap")} replaces={null} onConnected={onConnected} />
       </I18nProvider>,
     );
-    await user.type(screen.getByLabelText("Serveur IMAP"), "imap.fastmail.com ");
-    await user.type(screen.getByLabelText("Identifiant"), "lea@lambert.family ");
-    await user.type(screen.getByLabelText("Mot de passe d'application"), "s3cret-app");
-    await user.click(screen.getByRole("button", { name: "Connecter" }));
+    await user.type(screen.getByLabelText("IMAP server"), "imap.example.org ");
+    await user.type(screen.getByLabelText("Username"), "lea@lambert.family ");
+    await user.type(screen.getByLabelText("App password"), "s3cret-app");
+    await user.click(screen.getByRole("button", { name: "Connect" }));
     await waitFor(() =>
       expect(onConnected).toHaveBeenCalledWith(expect.objectContaining({ account: "lea@lambert.family" })),
     );
@@ -88,12 +88,12 @@ describe("connecting an account", () => {
         <ConnectForm connector={connector("imap")} replaces={null} onConnected={onConnected} />
       </I18nProvider>,
     );
-    await user.type(screen.getByLabelText("Serveur IMAP"), "imap.invalide.example");
-    await user.type(screen.getByLabelText("Identifiant"), "lea");
-    await user.type(screen.getByLabelText("Mot de passe d'application"), "faux");
-    await user.click(screen.getByRole("button", { name: "Connecter" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Le service a refusé la connexion");
-    expect(screen.getByRole("button", { name: "Connecter" })).toBeEnabled();
+    await user.type(screen.getByLabelText("IMAP server"), "imap.invalid.example");
+    await user.type(screen.getByLabelText("Username"), "lea");
+    await user.type(screen.getByLabelText("App password"), "wrong");
+    await user.click(screen.getByRole("button", { name: "Connect" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("The service refused the connection");
+    expect(screen.getByRole("button", { name: "Connect" })).toBeEnabled();
     expect(onConnected).not.toHaveBeenCalled();
   });
 });

@@ -14,9 +14,9 @@ function deviceTurnsUp() {
 async function openAdd() {
   const user = userEvent.setup();
   renderApp("/satellites");
-  await user.click(await screen.findByRole("button", { name: "Ajouter un satellite" }));
-  const sheet = await screen.findByRole("dialog", { name: "Ajouter un satellite" });
-  await within(sheet).findByRole("button", { name: /Code sur son écran/ });
+  await user.click(await screen.findByRole("button", { name: "Add a satellite" }));
+  const sheet = await screen.findByRole("dialog", { name: "Add a satellite" });
+  await within(sheet).findByRole("button", { name: /Code on its screen/ });
   return { user, sheet };
 }
 
@@ -27,10 +27,10 @@ describe("adding a satellite", () => {
       .getAllByRole("button")
       .filter((b) => b.hasAttribute("aria-pressed"));
     expect(methods.map((m) => m.textContent)).toEqual([
-      expect.stringMatching(/^Code sur son écranrecommandé/),
-      expect.stringMatching(/^Code dit à voix haute/),
+      expect.stringMatching(/^Code on its screenrecommended/),
+      expect.stringMatching(/^Code said aloud/),
       expect.stringMatching(/^QR code/),
-      expect.stringMatching(/^Code saisi sur l'appareil/),
+      expect.stringMatching(/^Code typed on the device/),
       expect.stringMatching(/^Configuration/),
     ]);
     expect(methods[0]).toHaveAttribute("aria-pressed", "true");
@@ -39,46 +39,44 @@ describe("adding a satellite", () => {
   it("gives an enrollment code to paste, then follows the device until it is paired", async () => {
     const { user, sheet } = await openAdd();
     await user.click(within(sheet).getByRole("button", { name: /^Configuration/ }));
-    await user.type(within(sheet).getByLabelText("Nom"), "Reachy de la véranda");
-    await user.type(within(sheet).getByLabelText("Pièce"), "Véranda");
-    expect(within(sheet).getByText("Enregistrée comme « veranda ».")).toBeInTheDocument();
-    await user.click(within(sheet).getByRole("button", { name: "Commencer" }));
+    await user.type(within(sheet).getByLabelText("Name"), "Veranda Reachy");
+    await user.type(within(sheet).getByLabelText("Room"), "Veranda");
+    expect(within(sheet).getByText("Saved as “veranda”.")).toBeInTheDocument();
+    await user.click(within(sheet).getByRole("button", { name: "Start" }));
 
     const [code] = await within(sheet).findAllByText(/^[0-9A-Z]{4}-[0-9A-Z]{4}$/);
     const canonical = code?.textContent?.replace("-", "") ?? "";
-    expect(within(sheet).getByRole("img", { name: /QR code de l'adresse d'appairage/ })).toBeInTheDocument();
+    expect(within(sheet).getByRole("img", { name: /QR code of the pairing address/ })).toBeInTheDocument();
     expect(sheet).toHaveTextContent(`NESTOR_PAIRING_URI="nestor+http://nestor.local:7860/?code=${canonical}"`);
     expect(sheet).toHaveTextContent(`nestor-satellite run --pairing-uri`);
-    expect(within(sheet).getByRole("list", { name: "Avancement de l'ajout" })).toHaveTextContent(
-      "en attente de l'appareil",
+    expect(within(sheet).getByRole("list", { name: "Progress of the addition" })).toHaveTextContent(
+      "waiting for the device",
     );
     expect(db.additions[0]).toMatchObject({
       method: "enrollment.provisioning",
-      name: "Reachy de la véranda",
+      name: "Veranda Reachy",
       room: "veranda",
     });
 
     deviceTurnsUp();
-    expect(
-      await within(sheet).findByText("Reachy de la véranda est appairé.", {}, { timeout: 5_000 }),
-    ).toBeInTheDocument();
-    expect(db.satellites.find((s) => s.name === "Reachy de la véranda")?.room).toBe("veranda");
+    expect(await within(sheet).findByText("Veranda Reachy is paired.", {}, { timeout: 5_000 })).toBeInTheDocument();
+    expect(db.satellites.find((s) => s.name === "Veranda Reachy")?.room).toBe("veranda");
   });
 
   it("waits for a device to ask, identifies it, then pairs it with the code it says", async () => {
     const { user, sheet } = await openAdd();
-    await user.click(within(sheet).getByRole("button", { name: /^Code dit à voix haute/ }));
-    await user.click(within(sheet).getByRole("button", { name: "Commencer" }));
-    expect(await within(sheet).findByText(/J'attends que l'appareil se présente/)).toBeInTheDocument();
+    await user.click(within(sheet).getByRole("button", { name: /^Code said aloud/ }));
+    await user.click(within(sheet).getByRole("button", { name: "Start" }));
+    expect(await within(sheet).findByText(/I'm waiting for the device to turn up/)).toBeInTheDocument();
 
     deviceTurnsUp();
     const candidate = await within(sheet).findByText("reachy-mini-veranda", {}, { timeout: 5_000 });
     expect(candidate).toBeInTheDocument();
-    await user.click(within(sheet).getByRole("button", { name: "Identifier" }));
-    expect(await screen.findByText("Demandé : l'appareil se signale dans un instant.")).toBeInTheDocument();
+    await user.click(within(sheet).getByRole("button", { name: "Identify" }));
+    expect(await screen.findByText("Asked: the device makes itself noticed in a moment.")).toBeInTheDocument();
 
-    await user.type(within(sheet).getByLabelText("Code affiché par l'appareil"), "424 242");
-    await user.click(within(sheet).getByRole("button", { name: "Appairer" }));
+    await user.type(within(sheet).getByLabelText("Code shown by the device"), "424 242");
+    await user.click(within(sheet).getByRole("button", { name: "Pair" }));
     await waitFor(() => expect(db.satellites.some((s) => s.id === "reachy-mini-veranda")).toBe(true));
     expect(db.additions[0]?.status).toBe("completed");
   });
@@ -86,10 +84,10 @@ describe("adding a satellite", () => {
   it("cancels an addition: its code no longer pairs anything", async () => {
     const { user, sheet } = await openAdd();
     await user.click(within(sheet).getByRole("button", { name: /^QR code/ }));
-    await user.click(within(sheet).getByRole("button", { name: "Commencer" }));
+    await user.click(within(sheet).getByRole("button", { name: "Start" }));
     await within(sheet).findAllByText(/^[0-9A-Z]{4}-[0-9A-Z]{4}$/);
-    await user.click(within(sheet).getByRole("button", { name: "Annuler l'ajout" }));
-    expect(await screen.findByText("Ajout annulé : son code n'appaire plus rien.")).toBeInTheDocument();
+    await user.click(within(sheet).getByRole("button", { name: "Cancel the addition" }));
+    expect(await screen.findByText("Addition cancelled: its code no longer pairs anything.")).toBeInTheDocument();
     expect(db.additions[0]?.status).toBe("cancelled");
   });
 

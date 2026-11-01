@@ -24,12 +24,12 @@ describe("the sidebar", () => {
     const first = renderApp("/journal");
     await screen.findByRole("navigation", { name: "Sections" });
     expect(sidebarState()).toBe("expanded");
-    await user.click(screen.getByRole("button", { name: "Réduire" }));
+    await user.click(screen.getByRole("button", { name: "Collapse" }));
     expect(sidebarState()).toBe("collapsed");
     expect(localStorage.getItem(SIDEBAR_STORAGE_KEY)).toBe("collapsed");
     // the section names stay for assistive technologies, the agent shows its figure
     expect(screen.getByRole("link", { name: "Journal" })).toBeInTheDocument();
-    const agent = screen.getByRole("link", { name: "Richie, en ligne" });
+    const agent = screen.getByRole("link", { name: "Richie, online" });
     expect(agent.querySelector("svg[data-state]")).not.toBeNull();
     first.unmount();
 
@@ -44,7 +44,7 @@ describe("the sidebar", () => {
   it("does not collapse when [ is typed in a field", async () => {
     const user = userEvent.setup();
     renderApp("/journal");
-    await user.type(await screen.findByLabelText("Chercher dans le journal"), "[[");
+    await user.type(await screen.findByLabelText("Search the journal"), "[[");
     expect(sidebarState()).toBe("expanded");
   });
 
@@ -52,9 +52,9 @@ describe("the sidebar", () => {
     resize(390);
     const user = userEvent.setup();
     const { router } = renderApp("/");
-    await user.click(await screen.findByRole("button", { name: "Ouvrir le menu" }));
+    await user.click(await screen.findByRole("button", { name: "Open the menu" }));
     const sheet = await screen.findByRole("dialog");
-    await user.click(within(sheet).getByRole("link", { name: "Souvenirs" }));
+    await user.click(within(sheet).getByRole("link", { name: "Memories" }));
     await waitFor(() => expect(router.state.location.pathname).toBe("/memories"));
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });

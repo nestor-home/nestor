@@ -39,7 +39,7 @@ test("select", async ({ page }, info) => {
 
 test("combobox", async ({ page }, info) => {
   await page.goto("/connections/catalogue?connect=imap");
-  await page.getByRole("combobox", { name: "Compte de" }).click();
+  await page.getByRole("combobox", { name: "Account of" }).click();
   const options = page.getByRole("listbox").getByRole("option");
   await page.keyboard.press("ArrowDown");
   await hoverMoves(page, options, "data-highlighted");
@@ -57,7 +57,7 @@ test("command palette", async ({ page }, info) => {
 
 test("dropdown menu", async ({ page }, info) => {
   await page.goto("/journal");
-  await page.getByRole("button", { name: /Menu du compte/ }).click();
+  await page.getByRole("button", { name: /Account menu/ }).click();
   const items = page.getByRole("menu").locator("[role=menuitem], [role=menuitemradio]");
   await page.keyboard.press("ArrowDown");
   await hoverMoves(page, items, "data-highlighted");
@@ -66,17 +66,17 @@ test("dropdown menu", async ({ page }, info) => {
 
 test("popover with a command list", async ({ page }, info) => {
   await page.goto("/journal");
-  await page.getByRole("button", { name: /^Personne/ }).click();
-  const items = page.getByRole("dialog", { name: "Personne" }).locator("[cmdk-item]");
+  await page.getByRole("button", { name: /^Person/ }).click();
+  const items = page.getByRole("dialog", { name: "Person" }).locator("[cmdk-item]");
   await hoverMoves(page, items, "data-selected");
   await page.screenshot({ path: info.outputPath("popover.png") });
 });
 
 test("a dialog keeps Tab inside it and gives focus back on Escape", async ({ page }) => {
   await page.goto("/accounts");
-  const open = page.getByRole("button", { name: "Inviter…" });
+  const open = page.getByRole("button", { name: "Invite…" });
   await open.click();
-  const dialog = page.getByRole("dialog", { name: "Inviter quelqu'un" });
+  const dialog = page.getByRole("dialog", { name: "Invite someone" });
   for (let i = 0; i < 12; i++) {
     await page.keyboard.press("Tab");
     // Base UI sends focus back in from its guards on the next frame: a person never tabs faster

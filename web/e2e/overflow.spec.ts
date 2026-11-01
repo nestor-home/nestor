@@ -7,7 +7,7 @@ import { expect, test } from "./clock";
  * element fails when its content is wider than itself while it neither scrolls nor clips on
  * purpose (an ellipsis), or when the page scrolls sideways.
  */
-const LONG_WORD = "Anticonstitutionnellementdéraisonnablementinextricablement-60";
+const LONG_WORD = "Antidisestablishmentarianismincomprehensibilitiesoverthink-60";
 const TASK = `t-${"0123456789abcdef".repeat(2)}`;
 const WATCH = `w-${"fedcba9876543210".repeat(2)}`;
 
@@ -27,7 +27,7 @@ const ROUTES = [
   "/connections/c-gmail-mathis",
   "/connections/catalogue",
   "/satellites",
-  "/satellites/reachy-salon",
+  "/satellites/reachy-living-room",
   "/system",
   "/accounts",
   "/accounts/acc-mathis",
@@ -130,7 +130,7 @@ for (const width of [390, 1440]) {
       await page.goto("/journal?session=s-stress");
       await page.waitForLoadState("networkidle");
       await page
-        .getByRole("button", { name: /Ce qui s'est passé/ })
+        .getByRole("button", { name: /What happened/ })
         .first()
         .click();
       expect(await overflows(page)).toEqual([]);
@@ -142,19 +142,19 @@ for (const width of [390, 1440]) {
 
     test("nothing overflows while adding a satellite", async ({ page }) => {
       await page.goto("/satellites");
-      await page.getByRole("button", { name: "Ajouter un satellite" }).click();
-      const sheet = page.getByRole("dialog", { name: "Ajouter un satellite" });
+      await page.getByRole("button", { name: "Add a satellite" }).click();
+      const sheet = page.getByRole("dialog", { name: "Add a satellite" });
       await sheet.getByRole("button", { name: /^Configuration/ }).click();
-      await sheet.getByLabel("Nom").fill(LONG_WORD);
+      await sheet.getByLabel("Name").fill(LONG_WORD);
       expect(await overflows(page)).toEqual([]);
-      await sheet.getByRole("button", { name: "Commencer" }).click();
+      await sheet.getByRole("button", { name: "Start" }).click();
       await expect(sheet.getByRole("img", { name: /QR code/ })).toBeVisible();
       expect(await overflows(page)).toEqual([]);
     });
 
     test("nothing overflows in a component's sheet and the changes", async ({ page }) => {
       await page.goto("/config/tools");
-      await page.getByRole("button", { name: `Modifier ${LONG_WORD}` }).click();
+      await page.getByRole("button", { name: `Edit ${LONG_WORD}` }).click();
       await expect(page.getByRole("dialog")).toBeVisible();
       await page.waitForTimeout(300);
       expect(await overflows(page)).toEqual([]);
