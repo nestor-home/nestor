@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.2.0](https://github.com/nestor-home/nestor/compare/v0.1.0...v0.2.0) (2026-11-01)
+
+
+### ⚠ BREAKING CHANGES
+
+* the core accepts only `nestor.satellite/1`. Satellites announcing `nestor.satellite/2` are refused with `protocol_unsupported`, and devices paired under `/2` (Richie's included) no longer authenticate: update their SDK and pair them again.
+
+### Features
+
+* name the satellite protocol nestor.satellite/1 ([#14](https://github.com/nestor-home/nestor/issues/14)) ([ca271be](https://github.com/nestor-home/nestor/commit/ca271be156f0fd96e62dc3b88b744b07daf7a17b))
+
+
+### Documentation
+
+* point to the developer documentation ([#12](https://github.com/nestor-home/nestor/issues/12)) ([d20e45b](https://github.com/nestor-home/nestor/commit/d20e45bae2109ce3ba29c5d430ba247f0017c66e))
+
 ## [0.1.0](https://github.com/nestor-home/nestor/compare/v0.0.2...v0.1.0) (2026-11-01)
 
 
