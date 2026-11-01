@@ -45,6 +45,7 @@ jobs:
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm e2e
 
+  # The image against a root-owned ./data, as Docker creates a missing bind mount.
   # The single check the branch rules require.
   ci:
     needs: [check, web]

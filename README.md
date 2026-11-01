@@ -85,6 +85,13 @@ neutral. Its figure is Nestor's character, the
 [`@nestor-home/character`](https://github.com/nestor-home/nestor-character) package, shown through
 `web/src/components/agent-figure.tsx`.
 
+## Docker
+
+`compose.yaml` runs the published image with everything it keeps in `./data`
+([install](https://nestorhome.dev/docs/)). The container starts as root only to give `/data` to its
+`nestor` user (uid 1000) when the folder is not already its own, as Docker creates a missing bind
+mount owned by root, then runs as that user; started with `--user`, it runs as given.
+
 ## Checking a satellite
 
 `nestor satellites conformance` checks a satellite written in any language against the
