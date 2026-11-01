@@ -1,6 +1,6 @@
 /** The agent's bow tie (the character module's own), as a discreet mark. Decorative. */
-import { renderBowTie } from "@/character";
-import "@/character/nestor.css";
+import { renderBowTie } from "@nestor-home/character";
+import "@nestor-home/character/nestor.css";
 
 export function BowTie({ size = 22, className }: { size?: number; className?: string }) {
   return (

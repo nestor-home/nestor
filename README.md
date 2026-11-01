@@ -67,7 +67,8 @@ the next step, how to fix an error). No description that restates its title, no 
 intro, and almost no em dashes (a period, a colon, parentheses or a middle dot instead):
 `web/src/i18n/catalog.test.ts` fails on all three. The agent speaks in the first person only where
 it speaks (its line on the home page, empty states, toasts after what it does); system texts stay
-neutral. Its figure is the shared character module (`web/src/character/`), shown through
+neutral. Its figure is Nestor's character, the
+[`@nestor-home/character`](https://github.com/nestor-home/nestor-character) package, shown through
 `web/src/components/agent-figure.tsx`.
 
 ## License

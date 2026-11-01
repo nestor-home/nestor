@@ -3,6 +3,8 @@
  * what it waits for from you, the house as it perceives it, what it is doing, what comes next,
  * its day so far and what it learnt. Plain lists, full titles, no decoration that says nothing.
  */
+
+import type { NestorController } from "@nestor-home/character";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
@@ -19,7 +21,6 @@ import {
   type UpcomingDelivery,
   watchesQuery,
 } from "@/api";
-import type { NestorController } from "@/character";
 import { AgentFigure } from "@/components/agent-figure";
 import { Ago } from "@/components/ago";
 import { BowTie } from "@/components/bow-tie";

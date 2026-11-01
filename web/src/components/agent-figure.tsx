@@ -1,10 +1,11 @@
 /**
- * The agent's figure wherever it appears in the admin: the shared character (`@/character`),
- * at the admin's sizes. `live` brings it to life (blinks, gaze, the controller in `onReady`).
+ * The agent's figure wherever it appears in the admin: Nestor's character
+ * (`@nestor-home/character`), at the admin's sizes. `live` brings it to life (blinks, gaze, the
+ * controller in `onReady`).
  */
-import type { ControllerOptions, NestorController } from "@/character";
-import { Nestor } from "@/character/react";
-import type { NestorState } from "@/character/render";
+import type { ControllerOptions, NestorController, NestorState } from "@nestor-home/character";
+import "@nestor-home/character/nestor.css";
+import { Nestor } from "@nestor-home/character/react";
 
 export type FigureState = NestorState;
 export type FigureSize = "xs" | "sm" | "md" | "lg" | "hero";
