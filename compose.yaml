@@ -1,5 +1,6 @@
 # docker compose run --rm nestor init   then fill data/.env   then   docker compose up -d
-# ./data holds nestor.yaml, its .env (secrets, created by `nestor init`) and the state.
+# ./data holds nestor.yaml, its .env (secrets, created by `nestor init`) and the state. Docker creates
+# it if missing; the container gives it to its nestor user (uid 1000) before running as that user.
 services:
   nestor:
     image: ghcr.io/nestor-home/nestor:latest

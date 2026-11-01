@@ -45,9 +45,16 @@ jobs:
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm e2e
 
+  # The image against a root-owned ./data, as Docker creates a missing bind mount.
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: tests/docker/data-ownership.sh
+
   # The single check the branch rules require.
   ci:
-    needs: [check, web]
+    needs: [check, web, docker]
     if: always()
     runs-on: ubuntu-latest
     steps:

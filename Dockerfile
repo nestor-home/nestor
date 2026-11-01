@@ -23,11 +23,12 @@ RUN uv sync --locked --no-dev --all-extras
 FROM python:3.12-slim
 RUN useradd --create-home --uid 1000 nestor
 COPY --from=build --chown=nestor:nestor /app /app
+COPY docker-entrypoint.sh /usr/local/bin/
 ENV PATH="/app/.venv/bin:$PATH" PYTHONUNBUFFERED=1
-USER nestor
+# Starts as root to give /data to nestor (Docker creates a missing bind mount as root), then runs as nestor.
 WORKDIR /data
 VOLUME ["/data"]
 EXPOSE 7860 8080
 HEALTHCHECK --interval=30s --timeout=5s CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health')" || exit 1
-ENTRYPOINT ["nestor", "-c", "/data/nestor.yaml"]
+ENTRYPOINT ["docker-entrypoint.sh", "nestor", "-c", "/data/nestor.yaml"]
 CMD ["run"]
