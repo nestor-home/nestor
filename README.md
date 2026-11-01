@@ -29,6 +29,9 @@ something matters, and can be reached by voice as well as through messaging apps
 
 Its reference distribution is **Richie**, a Reachy Mini Wireless home robot.
 
+**Documentation:** [nestorhome.dev/docs](https://nestorhome.dev/docs/): installing the server,
+pairing satellites, the satellite protocol, its schemas and the SDKs.
+
 ## Development
 
 ```bash
@@ -73,16 +76,8 @@ neutral. Its figure is Nestor's character, the
 
 ## Checking a satellite
 
-A satellite written in any language checks itself against the `nestor.satellite/2` standard
-([docs/satellite-protocol.md](docs/satellite-protocol.md)) without cloning this repository:
-
-```bash
-uvx --from 'nestor-home[voice]' nestor satellites conformance [--deadline SECONDS] -- ./my-satellite --core {url} --token-file {state}/token.json
-```
-
-A fake core launches the command once per scenario, `{url}` replaced by its URL and `{state}` by a
-fresh folder; the enrollment scenarios give the code in `NESTOR_PAIRING_URI`. One line per check,
-then a summary; exit status 0 when conformant, 1 when a check fails, 2 when the command cannot run.
+`nestor satellites conformance` checks a satellite written in any language against the
+`nestor.satellite/2` standard: see [Conformance](https://nestorhome.dev/docs/satellites/conformance/).
 
 ## License
 

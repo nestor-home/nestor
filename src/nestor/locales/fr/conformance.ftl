@@ -1,6 +1,6 @@
 # La suite de conformité des satellites (`nestor satellites conformance`) : ses vérifications, ce
-# qu'elle a vu à la place, et les mots de la commande. Une vérification cite la règle de
-# docs/satellite-protocol.md qu'elle prouve.
+# qu'elle a vu à la place, et les mots de la commande. Une vérification cite la règle du standard
+# (https://nestorhome.dev/fr/docs/satellites/protocol/) qu'elle prouve.
 
 ## Vérifications. `$connection` : paired (première connexion), reconnected, enrolled (appairé par code d'enrôlement).
 
