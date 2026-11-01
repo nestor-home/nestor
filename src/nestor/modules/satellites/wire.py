@@ -1,5 +1,5 @@
 """The satellite wire protocol `nestor.satellite/2`: JSON messages in one envelope, whatever the transport,
-and the JSON bodies of pairing over HTTP. The standard is `docs/satellite-protocol.md`.
+and the JSON bodies of pairing over HTTP. The standard is https://nestorhome.dev/docs/satellites/protocol/.
 
     {"type": "intent.expression", "id": "…", "at": "2026-10-30T12:00:00+00:00",
      "payload": {"expression": "joy", "intensity": 1.0}}

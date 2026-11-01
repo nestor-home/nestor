@@ -1,5 +1,5 @@
 # The satellite conformance suite (`nestor satellites conformance`): its checks, what it saw instead,
-# and the command's own words. A check names the rule of docs/satellite-protocol.md it proves.
+# and the command's own words. A check names the rule of the standard (https://nestorhome.dev/docs/satellites/protocol/) it proves.
 
 ## Checks. `$connection`: paired (first connection), reconnected, enrolled (paired with an enrollment code).
 

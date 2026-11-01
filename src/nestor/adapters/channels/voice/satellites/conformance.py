@@ -5,9 +5,9 @@ behind them) and launches the driver against it once per scenario. A driver is a
 function taking a `Launch`, or a command where `{url}` is replaced by the core's URL and `{state}` by
 a fresh folder for its token. The enrollment code is handed over in `NESTOR_PAIRING_URI` (environment
 of a command, `Launch.pairing_uri` of a coroutine), the way a person would configure a headless
-device. Each check names the rule of the standard (`docs/satellite-protocol.md`) it proves; checks and
-what was seen instead are `Message`s of the `conformance.ftl` catalogue. `nestor satellites conformance`
-runs the suite on a command and prints them.
+device. Each check names the rule of the standard (https://nestorhome.dev/docs/satellites/protocol/) it
+proves; checks and what was seen instead are `Message`s of the `conformance.ftl` catalogue.
+`nestor satellites conformance` runs the suite on a command and prints them.
 
 1. device code (P1, P2, P8, I1, I2, W1-W4): it declares `enrollment.provisioning`, asks to pair,
    keeps polling after a pending identify, claims its token once a person types its code, connects,
