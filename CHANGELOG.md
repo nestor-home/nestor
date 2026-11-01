@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.4.0](https://github.com/nestor-home/nestor/compare/v0.3.0...v0.4.0) (2026-11-01)
+
+
+### ⚠ BREAKING CHANGES
+
+* existing configurations must change:
+    - a French household now sets `persona.locale: fr-FR` (or `fr`),
+    `persona.language: French` and `persona.timezone: Europe/Paris`
+    explicitly, and the voice channel's `speech.language: fr`;
+    - the admin listens on 8470 and the voice channel on 8471 unless
+    `admin.port` / the voice `port` are set: keep 8080 / 7860 by setting
+    them, or move satellites (pairing URIs, `public_url`), bookmarks,
+    proxies and port mappings to the new ports;
+    - Docker: compose no longer reads `data/.env` through `env_file` (Nestor
+    reads it itself); publish 8470 and 8471 instead of 8080 and 7860;
+    - `nestor.adapters.channels.voice` only exports `plugin`,
+    `VoiceSettings` and `ElevenLabsSettings`; import the channel from
+    `nestor.adapters.channels.voice.channel`;
+    - an empty Telegram token, Home Assistant token or ElevenLabs key is now
+    a configuration error, as is an empty `api_key` for openrouter.ai,
+    openai.com, mistral.ai and anthropic.com;
+    - `nestor init` writes `MODEL_API_KEY` (not `OPENROUTER_API_KEY`).
+
+### Features
+
+* run text-only, optional keys, single .env, distinctive ports, English defaults ([#20](https://github.com/nestor-home/nestor/issues/20)) ([40d8dad](https://github.com/nestor-home/nestor/commit/40d8dad98e767d596ef844c32a6fd547a479c65f))
+
 ## [0.3.0](https://github.com/nestor-home/nestor/compare/v0.2.0...v0.3.0) (2026-11-01)
 
 
