@@ -110,9 +110,14 @@ async def test_speech_cuts_the_assistant_off_quickly_and_it_learns_only_what_was
     cut = playback.sound_stops_after(barge_in_at)
     assert cut is not None and cut - barge_in_at < 0.5, f"cut after {cut and cut - barge_in_at:.2f} s"
     assert playback.first_sound_after(barge_in.end_s) is not None, "the question that cut in got no answer"
-    first, second = assistant.replies
+    # A pause in the question that cut in may end a turn early (« Attends, attends, » is complete):
+    # the voice decides how many messages it makes, and the replies to those cut before a word was
+    # played learn that nothing was heard.
+    first, *unheard, last = assistant.replies
     assert first.heard == "Bonne question.", "only the sentence played before the cut was heard"
-    assert second.heard is None
+    assert all(reply.heard == "" for reply in unheard)
+    assert last.heard is None, "the answer to the question that cut in was played to its end"
+    assert " ".join(m.text for m in assistant.messages[1:]) == "Attends, attends, et les ours polaires ?"
 
 
 @needs_recordings("hesitation-01")

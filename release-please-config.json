@@ -1,0 +1,14 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "packages": {
+    ".": {
+      "release-type": "python",
+      "package-name": "nestor-home",
+      "include-component-in-tag": false,
+      "bump-minor-pre-major": true,
+      "extra-files": [
+        { "type": "toml", "path": "uv.lock", "jsonpath": "$.package[?(@.name.value=='nestor-home')].version" }
+      ]
+    }
+  }
+}
