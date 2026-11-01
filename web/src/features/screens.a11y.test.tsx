@@ -13,7 +13,7 @@ const SCREENS: [string, string | RegExp][] = [
   ["/people/lea", "Léa"],
   ["/memories", "Souvenirs"],
   ["/watches", "Veilles"],
-  ["/watches/w-9d41", /colis Vinted/],
+  ["/watches/w-9d41", /nouvelles de l'école/],
   ["/tasks", "Tâches"],
   ["/tasks/t-3f2a1c", /électricité/],
   ["/connections", "Connexions"],

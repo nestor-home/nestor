@@ -566,11 +566,11 @@ export function tasks(): Task[] {
       started_at: minutes(351.6),
       ended_at: minutes(251),
       steps: [
-        "Lecture des deux dernières factures : 6 800 kWh/an, heures creuses.",
-        "Grilles tarifaires d'Ekwateur, Enercoop et Ilek récupérées.",
+        "Lecture des deux dernières factures.",
+        "Grilles tarifaires des trois fournisseurs récupérées.",
         "Calcul sur un an, abonnement compris.",
       ],
-      result: "Ilek est 38 € moins cher par an ; Enercoop 112 € plus cher ; Ekwateur au même prix.",
+      result: "La deuxième offre est la moins chère sur un an, abonnement compris ; la troisième, la plus chère.",
       error: null,
       origin: { session: "s-elec", channel: "telegram" },
       delivered: { at: minutes(250.4), channel: "voice", room: "bureau" },
@@ -612,10 +612,10 @@ export function watches(): Watch[] {
   return [
     {
       id: "w-9d41",
-      what: "Le colis Vinted de Léa : prévenir quand il est disponible en point relais.",
+      what: "Les nouvelles de l'école : prévenir Léa dès que l'école répond pour la sortie.",
       owner: "lea",
       kinds: ["mail"],
-      keywords: ["Mondial Relay", "Vinted", "disponible"],
+      keywords: ["école", "sortie"],
       once: false,
       created_at: minutes(60 * 28),
       until: ahead(60 * 60 * 24 * 6),

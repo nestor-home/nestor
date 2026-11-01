@@ -151,7 +151,7 @@ export function day(now = Date.now()): JournalEvent[] {
     type: "conversation.turn.user",
     kind: "conversation",
     title: "Léa a dit",
-    detail: "Préviens-moi quand mon colis Vinted arrive au point relais.",
+    detail: "Dis-moi dès que l'école répond pour la sortie.",
     people: ["lea"],
     channels: ["telegram"],
     links: { session: "s-hier", turn: "t-hier" },
@@ -160,8 +160,8 @@ export function day(now = Date.now()): JournalEvent[] {
     ago: 60 * 28 - 0.2,
     type: "watch.created",
     kind: "watch",
-    title: "Veille créée : le colis Vinted de Léa",
-    detail: "Mots-clés : Mondial Relay, Vinted, disponible",
+    title: "Veille créée : les nouvelles de l'école pour Léa",
+    detail: "Mots-clés : école, sortie",
     people: ["lea"],
     channels: ["telegram"],
     links: { session: "s-hier", turn: "t-hier", watch: "w-9d41" },
@@ -319,7 +319,7 @@ export function day(now = Date.now()): JournalEvent[] {
     type: "task.progress",
     kind: "task",
     title: "Tâche 3f2a1c : nouvelle étape",
-    detail: "Lecture des deux dernières factures : 6 800 kWh/an, heures creuses.",
+    detail: "Lecture des deux dernières factures.",
     brand: "hermes",
     links: { task: "t-3f2a1c" },
     cause: started,
@@ -329,7 +329,7 @@ export function day(now = Date.now()): JournalEvent[] {
     type: "task.progress",
     kind: "task",
     title: "Tâche 3f2a1c : nouvelle étape",
-    detail: "Grilles tarifaires d'Ekwateur, Enercoop et Ilek récupérées.",
+    detail: "Grilles tarifaires des trois fournisseurs récupérées.",
     brand: "hermes",
     links: { task: "t-3f2a1c" },
   });
@@ -347,7 +347,7 @@ export function day(now = Date.now()): JournalEvent[] {
     type: "task.ended",
     kind: "task",
     title: "Tâche 3f2a1c terminée (1 h 41)",
-    detail: "Ilek est 38 € moins cher par an ; Enercoop 112 € plus cher ; Ekwateur au même prix.",
+    detail: "La deuxième offre est la moins chère sur un an, abonnement compris ; la troisième, la plus chère.",
     brand: "hermes",
     outcome: { ok: true, duration_s: 6060 },
     links: { task: "t-3f2a1c" },
@@ -372,25 +372,25 @@ export function day(now = Date.now()): JournalEvent[] {
     type: "initiative.delivered",
     kind: "delivery",
     title: "Message transmis : tâche 3f2a1c",
-    detail: "« Mathis, j'ai fini la comparaison : Ilek te ferait gagner 38 € par an. »",
+    detail: "« Mathis, j'ai fini la comparaison : la deuxième offre est la moins chère. »",
     people: ["mathis"],
     channels: [VOICE],
     room: "bureau",
     links: { task: "t-3f2a1c", delivery: "d-1", satellite: "reachy-bureau" },
   });
 
-  // the parcel: a watch triggered, announced by voice, then followed up in writing
+  // the school: a watch triggered, announced by voice, then followed up in writing
   const w = { watch: "w-9d41" };
   const trig = ev({
     ago: 230,
     type: "watch.triggered",
     kind: "watch",
-    title: "Veille 9d41 déclenchée par « Votre colis est disponible »",
-    detail: "Mondial Relay : colis disponible au Tabac de la Place jusqu'au 6 nov.",
+    title: "Veille 9d41 déclenchée par « Sortie de vendredi confirmée »",
+    detail: "L'école confirme la sortie de vendredi ; prévoir un pique-nique.",
     people: ["lea"],
     brand: "imap",
     links: { ...w, connection: "c-imap-lea" },
-    record: { item: { kind: "mail", from: "noreply@mondialrelay.fr", subject: "Votre colis est disponible" } },
+    record: { item: { kind: "mail", from: "secretariat@ecole.example", subject: "Sortie de vendredi confirmée" } },
   });
   ev({
     ago: 229.6,
@@ -411,7 +411,7 @@ export function day(now = Date.now()): JournalEvent[] {
     type: "initiative.delivered",
     kind: "delivery",
     title: "Message transmis : veille 9d41",
-    detail: "« Léa, ton colis Vinted t'attend au Tabac de la Place. »",
+    detail: "« Léa, l'école a répondu : la sortie de vendredi est maintenue. »",
     people: ["lea"],
     channels: [VOICE],
     room: "salon",
@@ -441,18 +441,18 @@ export function day(now = Date.now()): JournalEvent[] {
     type: "initiative.delivered",
     kind: "delivery",
     title: "Message transmis : veille 9d41 (relance)",
-    detail: "« Ton colis est au Tabac de la Place jusqu'au 6 novembre. »",
+    detail: "« L'école confirme la sortie de vendredi. Pense au pique-nique. »",
     people: ["lea"],
     channels: ["telegram"],
     links: { ...w, delivery: "d-2" },
   });
-  const s3 = { session: "s-colis" };
+  const s3 = { session: "s-ecole" };
   ev({
     ago: 190,
     type: "conversation.turn.user",
     kind: "conversation",
     title: "Léa a dit",
-    detail: "Merci ! J'irai le chercher en rentrant.",
+    detail: "Merci ! Mets-la dans l'agenda de la famille.",
     people: ["lea"],
     channels: ["telegram"],
     links: { ...s3, turn: "u-3", watch: "w-9d41" },
@@ -462,7 +462,7 @@ export function day(now = Date.now()): JournalEvent[] {
     type: "conversation.turn.assistant",
     kind: "conversation",
     title: "Richie a répondu",
-    detail: "Parfait. Je garde la veille ouverte jusqu'à ce qu'il soit retiré.",
+    detail: "C'est fait : vendredi, pour toute la maison.",
     channels: ["telegram"],
     links: { ...s3, turn: "u-3" },
   });
