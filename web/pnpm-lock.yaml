@@ -187,6 +187,9 @@ importers:
       '@fontsource/ibm-plex-mono':
         specifier: 5.3.0
         version: 5.3.0
+      '@nestor-home/character':
+        specifier: 0.1.0
+        version: 0.1.0(react@19.3.1)
       '@tanstack/react-query':
         specifier: 5.105.0
         version: 5.105.0(@types/react@19.3.0)(react@19.3.1)
@@ -638,6 +641,15 @@ packages:
   '@mswjs/interceptors@0.45.10':
     resolution: {integrity: sha512-pGZkvxzv6PZAQCpZHuu+TRs/4U8GWlClRToQETz4MHwwnq0dSxS279xRQ2StBVPpwXxTKtXpLHeK6MGSuxh8uA==}
     engines: {node: '>=22'}
+
+  '@nestor-home/character@0.1.0':
+    resolution: {integrity: sha512-OeFniQQqj5YaPDmG4vJ4NIHXvkaj2Ub72zK1a8fFLhIon+nLdjo0CETes6RRLtq39Kl1+NkzRDo6Yh0ybYY/5A==}
+    engines: {node: '>=22.12'}
+    peerDependencies:
+      react: '>=18'
+    peerDependenciesMeta:
+      react:
+        optional: true
 
   '@open-draft/until@3.0.1':
     resolution: {integrity: sha512-s7/9ELP4aP9YZtW7RJaa0Xf3RISaRH9+EFN18FtykJYRHGNrl8f9ymvoNXzjhrjmftFvkQudtuDU9RYhk0xs3A==}
@@ -2530,6 +2542,10 @@ snapshots:
       rettime: 0.11.12
     transitivePeerDependencies:
       - supports-color
+
+  '@nestor-home/character@0.1.0(react@19.3.1)':
+    optionalDependencies:
+      react: 19.3.1
 
   '@open-draft/until@3.0.1': {}
 

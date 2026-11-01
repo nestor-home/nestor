@@ -1,3 +1,6 @@
+# Our own packages are used as soon as they are released.
+minimumReleaseAgeExclude:
+  - "@nestor-home/*"
 permissions:
   "@tanstack/react-router":
     skills: true
