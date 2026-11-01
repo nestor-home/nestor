@@ -16,8 +16,7 @@
  *
  * The texture behind it: `drawDither(canvas)` on a canvas sized by CSS (see dither.ts).
  *
- * The canonical source lives in nestor/web/src/character/; nestor-web keeps a verbatim copy
- * and a test fails when they drift.
+ * The canonical source lives in nestor/web/src/character/; nestor-web keeps a verbatim copy.
  */
 export { type ControllerOptions, ease, type Gaze, gazeToward, NestorController, speakingTime } from "./controller";
 export { BAYER, type DitherShape, density, ditherSvg, drawDither, lit } from "./dither";
