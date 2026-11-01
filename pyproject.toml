@@ -4,7 +4,7 @@ build-backend = "uv_build"
 
 [project]
 name = "nestor-home"
-version = "0.2.0"
+version = "0.3.0"
 description = "Open-source framework for intelligent home assistants: fast voice agent, Home Assistant, memory, delegation, initiative and pluggable embodiment."
 readme = "README.md"
 license = "MIT"
