@@ -278,7 +278,7 @@ export function connectors(): Connector[] {
     {
       kind: "google-calendar",
       brand: "google-calendar",
-      title: fr("Google Calendar", "Google Agenda"),
+      title: "Google Calendar",
       description: fr(
         "Read the household's calendars and add events.",
         "Consulter les agendas du foyer et y ajouter des événements.",
@@ -866,6 +866,7 @@ const component = (
 });
 
 const ONE_TASK = fr("1 task running", "1 tâche en cours");
+const PYTHON_SDK_042 = fr("Python SDK 0.4.2", "SDK Python 0.4.2");
 
 export function system(): SystemInfo {
   return {
@@ -1053,7 +1054,7 @@ export function system(): SystemInfo {
         id: "sat-living-room",
         slot: "satellite",
         name: "reachy-living-room",
-        adapter: "SDK Python 0.4.2",
+        adapter: PYTHON_SDK_042,
         brand: "reachy",
         version: "nestor.satellite/1",
         health: "ok",
@@ -1063,7 +1064,7 @@ export function system(): SystemInfo {
         id: "sat-office",
         slot: "satellite",
         name: "reachy-office",
-        adapter: "SDK Python 0.4.1",
+        adapter: fr("Python SDK 0.4.1", "SDK Python 0.4.1"),
         brand: "reachy",
         version: "nestor.satellite/1",
         health: "down",
@@ -1073,7 +1074,7 @@ export function system(): SystemInfo {
         id: "sat-jules",
         slot: "satellite",
         name: "pi-bedroom",
-        adapter: "SDK Python 0.4.2",
+        adapter: PYTHON_SDK_042,
         brand: "raspberry-pi",
         version: "nestor.satellite/1",
         health: "ok",

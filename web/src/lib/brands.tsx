@@ -44,16 +44,19 @@ import {
   siWebrtc,
   siWhatsapp,
 } from "simple-icons";
-import { tr } from "@/i18n/runtime";
+import { type Args, tr } from "@/i18n/runtime";
 import { cn } from "@/lib/utils";
 
 /** A mark and its accessible label: a brand's own name, or a Fluent message for a generic one. */
-type Brand = { mark: SimpleIcon | LucideIcon } & ({ name: string } | { message: string });
+type Brand = { mark: SimpleIcon | LucideIcon } & ({ name: string } | { message: string; args?: Args });
+
+/** A satellite SDK, named by its language in the reader's word order. */
+const sdk = (language: string, mark: SimpleIcon): Brand => ({ message: "brand-sdk", args: { language }, mark });
 
 const BRANDS = {
   gmail: { name: "Gmail", mark: siGmail },
   google: { name: "Google", mark: siGoogle },
-  "google-calendar": { name: "Google Agenda", mark: siGooglecalendar },
+  "google-calendar": { name: "Google Calendar", mark: siGooglecalendar },
   gemini: { name: "Gemini (Vertex AI)", mark: siGooglegemini },
   telegram: { name: "Telegram", mark: siTelegram },
   whatsapp: { name: "WhatsApp", mark: siWhatsapp },
@@ -77,10 +80,10 @@ const BRANDS = {
   reachy: { name: "Reachy Mini (Pollen Robotics)", mark: Bot },
   "raspberry-pi": { name: "Raspberry Pi", mark: siRaspberrypi },
   espressif: { name: "ESP32 (Espressif)", mark: siEspressif },
-  python: { name: "SDK Python", mark: siPython },
-  typescript: { name: "SDK TypeScript", mark: siTypescript },
-  rust: { name: "SDK Rust", mark: siRust },
-  cpp: { name: "SDK C++", mark: siCplusplus },
+  python: sdk("Python", siPython),
+  typescript: sdk("TypeScript", siTypescript),
+  rust: sdk("Rust", siRust),
+  cpp: sdk("C++", siCplusplus),
   sqlite: { name: "SQLite", mark: siSqlite },
   litestream: { name: "Litestream", mark: DatabaseBackup },
   docker: { name: "Docker", mark: siDocker },
@@ -113,7 +116,7 @@ export function brandOf(kind: string | null | undefined): BrandSlug | null {
 
 export function brandName(slug: BrandSlug): string {
   const brand: Brand = BRANDS[slug];
-  return "name" in brand ? brand.name : tr(brand.message);
+  return "name" in brand ? brand.name : tr(brand.message, brand.args);
 }
 
 function isSimpleIcon(mark: Brand["mark"]): mark is SimpleIcon {
