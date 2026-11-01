@@ -6,11 +6,11 @@
 
 import asyncio
 import sqlite3
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from nestor.adapters.storage.sqlite.schema import SCHEMA, fingerprint
+from nestor.adapters.storage.sqlite.schema import MIGRATIONS
 from nestor.core import Component, ContractError
 
 type Work[T] = Callable[[sqlite3.Connection], T]
@@ -19,11 +19,15 @@ type Work[T] = Callable[[sqlite3.Connection], T]
 class SQLiteDatabase(Component):
     name = "sqlite"
 
-    def __init__(self, path: Path | str, schema: str = SCHEMA) -> None:
+    def __init__(self, path: Path | str, migrations: Sequence[str] = MIGRATIONS) -> None:
         self.path = Path(path)
-        self._schema = schema
+        self._migrations = tuple(migrations)
         self._connection: sqlite3.Connection | None = None
         self._worker: ThreadPoolExecutor | None = None
+
+    @property
+    def schema_version(self) -> int:
+        return len(self._migrations)
 
     async def start(self) -> None:
         if self._connection is not None:
@@ -70,22 +74,20 @@ class SQLiteDatabase(Component):
             connection.execute("PRAGMA synchronous = NORMAL")  # durable across crashes in WAL mode
             connection.execute("PRAGMA foreign_keys = ON")
             connection.execute("PRAGMA busy_timeout = 5000")  # Litestream briefly holds locks
-            self._create(connection)
+            self._migrate(connection)
         except BaseException:
             connection.close()
             raise
         return connection
 
-    def _create(self, connection: sqlite3.Connection) -> None:
-        """Create the schema in an empty file; refuse a file made with another schema."""
-        expected = fingerprint(self._schema)
-        (objects,) = connection.execute("SELECT count(*) FROM sqlite_schema").fetchone()
-        if objects == 0:
-            connection.executescript(f"BEGIN IMMEDIATE;\n{self._schema}\nPRAGMA user_version = {expected};\nCOMMIT;")
-            return
-        (found,) = connection.execute("PRAGMA user_version").fetchone()
-        if found != expected:
-            raise ContractError(f"{self.path} was made with another schema: recreate the data folder")
+    def _migrate(self, connection: sqlite3.Connection) -> None:
+        (current,) = connection.execute("PRAGMA user_version").fetchone()
+        if current > self.schema_version:
+            raise ContractError(
+                f"{self.path} has schema version {current}, this code knows {self.schema_version}: upgrade Nestor"
+            )
+        for version, script in enumerate(self._migrations[current:], start=current + 1):
+            connection.executescript(f"BEGIN IMMEDIATE;\n{script}\nPRAGMA user_version = {version};\nCOMMIT;")
 
     async def _submit[T](self, work: Work[T]) -> T:
         connection, worker = self._connection, self._worker

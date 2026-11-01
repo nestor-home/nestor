@@ -1,4 +1,4 @@
-"""SQLite storage: one database file in WAL mode, one schema, stores sharing the connection.
+"""SQLite storage: one database file in WAL mode, versioned migrations, stores sharing the connection.
 
 WAL keeps reads concurrent with writes and is what Litestream replicates continuously.
 """

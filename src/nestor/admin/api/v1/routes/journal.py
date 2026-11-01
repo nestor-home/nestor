@@ -56,7 +56,7 @@ class JournalFacets(BaseModel):
 
 class JournalEntryOut(BaseModel):
     item: JournalItem
-    record: dict[str, Any]  # the raw logged record: type, id, at, source, session, payload
+    record: dict[str, Any]  # the raw logged record: type, version, id, at, source, session, payload
 
 
 def journal_filters(

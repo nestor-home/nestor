@@ -1,16 +1,14 @@
-"""The database schema, created at once in an empty file.
+"""Schema migrations, applied in order; the database's `user_version` is the number applied.
 
-The database keeps the schema's fingerprint in `user_version`: a file made with any other schema is
-refused, and the data folder is recreated.
+Never edit a released migration: append a new one.
 """
-
-import zlib
 
 EVENTS = """
 CREATE TABLE events (
     position INTEGER PRIMARY KEY AUTOINCREMENT,
     id TEXT NOT NULL UNIQUE,
     type TEXT NOT NULL,
+    version INTEGER NOT NULL,
     at TEXT NOT NULL,  -- UTC, fixed width: text order is time order
     source TEXT NOT NULL,
     session TEXT,
@@ -76,9 +74,4 @@ CREATE TABLE account_activity (
 ) STRICT;
 """
 
-SCHEMA = EVENTS + MEMORIES + SECRETS + VERIFIERS + ACTIVITY
-
-
-def fingerprint(schema: str) -> int:
-    """What `user_version` holds for a database made with `schema` (it fits SQLite's signed 32 bits)."""
-    return zlib.crc32(schema.encode()) & 0x7FFF_FFFF
+MIGRATIONS: tuple[str, ...] = (EVENTS + MEMORIES + SECRETS + VERIFIERS + ACTIVITY,)

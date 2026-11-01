@@ -7,7 +7,6 @@ import pytest
 
 from nestor.adapters.storage.files import FileBlobStore
 from nestor.adapters.storage.sqlite import SQLiteDatabase, SQLiteEventLog, SQLiteMemoryStore
-from nestor.adapters.storage.sqlite.schema import SCHEMA, fingerprint
 from nestor.core import ContractError, PersonId
 from nestor.modules.channels import Address
 from nestor.modules.journal import LogQuery
@@ -64,30 +63,31 @@ async def test_the_log_cannot_be_rewritten_even_with_raw_sql(db_path: Path) -> N
         assert len(await log.read(LogQuery())) == 1
 
 
-async def test_the_database_runs_in_wal_mode_with_its_schema_fingerprint(db_path: Path) -> None:
+async def test_the_database_runs_in_wal_mode_at_the_latest_schema(db_path: Path) -> None:
     async with SQLiteDatabase(db_path) as db:
         mode = await db.read(lambda c: c.execute("PRAGMA journal_mode").fetchone()[0])
-        mark = await db.read(lambda c: c.execute("PRAGMA user_version").fetchone()[0])
-    assert (mode, mark) == ("wal", fingerprint(SCHEMA))
+        version = await db.read(lambda c: c.execute("PRAGMA user_version").fetchone()[0])
+    assert (mode, version) == ("wal", db.schema_version)
 
 
-async def test_the_schema_is_created_once(db_path: Path) -> None:
-    schema = "CREATE TABLE t (n INTEGER);"
-    async with SQLiteDatabase(db_path, schema) as db:
+async def test_migrations_apply_once_and_in_order(db_path: Path) -> None:
+    first = ("CREATE TABLE t (n INTEGER);",)
+    async with SQLiteDatabase(db_path, first) as db:
         await db.write(lambda c: c.execute("INSERT INTO t VALUES (1)"))
-    async with SQLiteDatabase(db_path, schema) as db:
-        assert await db.read(lambda c: c.execute("SELECT n FROM t").fetchall()) == [(1,)]
+    async with SQLiteDatabase(db_path, (*first, "ALTER TABLE t ADD COLUMN label TEXT;")) as db:
+        rows = await db.read(lambda c: c.execute("SELECT n, label FROM t").fetchall())
+    assert rows == [(1, None)]
 
 
-async def test_a_database_made_with_another_schema_is_refused(db_path: Path) -> None:
-    async with SQLiteDatabase(db_path, "CREATE TABLE a (n);"):
+async def test_a_database_written_by_a_newer_nestor_is_refused(db_path: Path) -> None:
+    async with SQLiteDatabase(db_path, ("CREATE TABLE a (n);", "CREATE TABLE b (n);")):
         pass
-    with pytest.raises(ContractError, match="recreate the data folder"):
-        await SQLiteDatabase(db_path, "CREATE TABLE a (n, m);").start()
+    with pytest.raises(ContractError, match="upgrade Nestor"):
+        await SQLiteDatabase(db_path, ("CREATE TABLE a (n);",)).start()
 
 
 async def test_a_failed_transaction_writes_nothing(db_path: Path) -> None:
-    async with SQLiteDatabase(db_path, "CREATE TABLE t (n INTEGER);") as db:
+    async with SQLiteDatabase(db_path, ("CREATE TABLE t (n INTEGER);",)) as db:
 
         def half_done(connection: sqlite3.Connection) -> None:
             connection.execute("INSERT INTO t VALUES (1)")

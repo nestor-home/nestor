@@ -117,7 +117,7 @@ function journalize(draft: Omit<JournalItem, "id" | "at" | "uid" | "kind_label">
     at: new Date().toISOString(),
     kind_label: "",
   };
-  db.journal.unshift({ ...entry, record: { type: entry.type, at: entry.at, ...entry.links } });
+  db.journal.unshift({ ...entry, record: { type: entry.type, version: 1, at: entry.at, ...entry.links } });
   save();
   return entry;
 }

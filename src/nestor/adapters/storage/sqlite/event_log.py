@@ -9,7 +9,7 @@ from nestor.adapters.storage.sqlite.database import SQLiteDatabase
 from nestor.core import ContractError, Event, Record
 from nestor.modules.journal import Entry, EventLog, LogQuery
 
-_COLUMNS = "position, id, type, at, source, session, payload"
+_COLUMNS = "position, id, type, version, at, source, session, payload"
 
 
 def time_key(at: datetime) -> str:
@@ -42,6 +42,7 @@ class SQLiteEventLog(EventLog):
         row = (
             event.id,
             event.event_type,
+            event.version,
             time_key(event.at),
             event.source,
             event.session,
@@ -51,7 +52,7 @@ class SQLiteEventLog(EventLog):
         def insert(connection: sqlite3.Connection) -> int:
             try:
                 cursor = connection.execute(
-                    "INSERT INTO events (id, type, at, source, session, payload) VALUES (?, ?, ?, ?, ?, ?)",
+                    "INSERT INTO events (id, type, version, at, source, session, payload) VALUES (?, ?, ?, ?, ?, ?, ?)",
                     row,
                 )
             except sqlite3.IntegrityError:
@@ -89,9 +90,10 @@ class SQLiteEventLog(EventLog):
 
 
 def _record(row: tuple) -> Record:
-    _, id_, type_, at, source, session, payload = row
+    _, id_, type_, version, at, source, session, payload = row
     return {
         "type": type_,
+        "version": version,
         "id": id_,
         "at": datetime.strptime(at, "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=UTC).isoformat(),
         "source": source,

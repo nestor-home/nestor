@@ -396,7 +396,7 @@ class EventDescriber:
         at = datetime.fromisoformat(str(entry.record["at"]))
         try:
             event = entry.event()
-        except ContractError:  # a type no installed plugin defines, or a payload its class does not declare
+        except ContractError:  # written by a plugin no longer installed, or by a newer version
             payload = entry.record.get("payload")
             fields = payload if isinstance(payload, dict) else {}
             return Line(at=at, kind=OTHER_KEY, message=unknown_message(entry.type, fields))

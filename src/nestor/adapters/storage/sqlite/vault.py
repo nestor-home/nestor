@@ -92,7 +92,7 @@ class SealedReader:
                 row = connection.execute(
                     "SELECT sealed FROM secrets WHERE owner = ? AND name = ?", (owner, name)
                 ).fetchone()
-            except sqlite3.OperationalError:  # a database whose schema is not created yet
+            except sqlite3.OperationalError:  # a database the migrations have not reached yet
                 return None
         return _open(self._cipher, row[0], owner, name) if row else None
 
