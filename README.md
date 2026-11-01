@@ -80,7 +80,6 @@ neutral. Its figure is Nestor's character, the
 ([install](https://nestorhome.dev/docs/)). The container starts as root only to give `/data` to its
 `nestor` user (uid 1000) when the folder is not already its own, as Docker creates a missing bind
 mount owned by root, then runs as that user; started with `--user`, it runs as given.
-`tests/docker/data-ownership.sh` checks this against a root-owned folder (CI runs it).
 
 ## Checking a satellite
 
