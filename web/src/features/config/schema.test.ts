@@ -31,7 +31,14 @@ describe("reading a plugin's schema (as a real instance sends it)", () => {
   it("unwraps a nullable value and keeps the property's own bounds and default", () => {
     const port = resolve(prop(voice, "port"), voice);
     expect(port.nullable).toBe(true);
-    expect(port.schema).toMatchObject({ type: "integer", minimum: 0, maximum: 65535, default: 7860 });
+    expect(port.schema).toMatchObject({ type: "integer", minimum: 0, maximum: 65535, default: 8471 });
+  });
+
+  it("leaves a model's key optional, for a local server that needs none", () => {
+    const model = SCHEMA.slots.model?.kinds["openai-compatible"] as JsonSchema;
+    expect(controlOf(prop(model, "api_key"), model, "api_key")).toBe("secret");
+    expect(resolve(prop(model, "api_key"), model).nullable).toBe(true);
+    expect(model.required).not.toContain("api_key");
   });
 
   it("folds the advanced settings apart, and never shows the kind", () => {

@@ -14,9 +14,9 @@ globalThis.fetch = (input, init) =>
 // the first render of a whole route compiles lazily: give it time
 configure({ asyncUtilTimeout: 4000 });
 
-// the household's admin reads French: tests run in French unless one switches
-Object.defineProperty(window.navigator, "languages", { value: ["fr-FR", "fr"], configurable: true });
-Object.defineProperty(window.navigator, "language", { value: "fr-FR", configurable: true });
+// tests read the admin in English, the default, unless one switches
+Object.defineProperty(window.navigator, "languages", { value: ["en-US", "en"], configurable: true });
+Object.defineProperty(window.navigator, "language", { value: "en-US", configurable: true });
 
 // jsdom has no scrolling; the router restores scroll positions
 window.scrollTo = () => undefined;

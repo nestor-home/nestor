@@ -7,20 +7,20 @@ import { renderApp } from "@/test/render";
 describe("accounts", () => {
   it("protects the last active owner and says why", async () => {
     renderApp("/accounts");
-    expect(await screen.findByRole("combobox", { name: "Rôle de Mathis" })).toHaveAttribute("data-disabled");
-    expect(screen.getByText("Dernier propriétaire actif : le foyer doit en garder au moins un.")).toBeInTheDocument();
+    expect(await screen.findByRole("combobox", { name: "Role of Mathis" })).toHaveAttribute("data-disabled");
+    expect(screen.getByText("Last active owner: the household must keep at least one.")).toBeInTheDocument();
   });
 
   it("changes a role from the keyboard", async () => {
     const user = userEvent.setup();
     renderApp("/accounts");
-    const role = await screen.findByRole("combobox", { name: "Rôle de Léa" });
+    const role = await screen.findByRole("combobox", { name: "Role of Léa" });
     role.focus();
     await user.keyboard("{Enter}");
     const listbox = await screen.findByRole("listbox");
-    expect(within(listbox).getByRole("option", { name: "administrateur" })).toHaveAttribute("aria-selected", "true");
+    expect(within(listbox).getByRole("option", { name: "administrator" })).toHaveAttribute("aria-selected", "true");
     await user.keyboard("{ArrowUp}{Enter}");
-    expect(await screen.findByText("Léa est maintenant membre.")).toBeInTheDocument();
+    expect(await screen.findByText("Léa is now member.")).toBeInTheDocument();
     expect(db.accounts.find((a) => a.id === "acc-lea")?.role).toBe("member");
   });
 
@@ -29,30 +29,30 @@ describe("accounts", () => {
     const lea = db.accounts.find((a) => a.id === "acc-lea");
     if (lea) lea.role = "owner";
     renderApp("/accounts/acc-mathis");
-    const role = await screen.findByRole("combobox", { name: "Rôle" });
+    const role = await screen.findByRole("combobox", { name: "Role" });
     // between the page loading and the change, Léa lost her owner role elsewhere
     if (lea) lea.role = "admin";
     await user.click(role);
-    await user.click(await screen.findByRole("option", { name: "membre" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Le foyer doit garder au moins un propriétaire actif.");
+    await user.click(await screen.findByRole("option", { name: "member" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("The household must keep at least one active owner.");
   });
 
   it("disables an account only once confirmed", async () => {
     const user = userEvent.setup();
     renderApp("/accounts/acc-lea");
-    await user.click(await screen.findByRole("button", { name: "Désactiver…" }));
-    const dialog = await screen.findByRole("alertdialog", { name: "Désactiver le compte de Léa ?" });
-    await user.click(within(dialog).getByRole("button", { name: "Désactiver" }));
+    await user.click(await screen.findByRole("button", { name: "Disable…" }));
+    const dialog = await screen.findByRole("alertdialog", { name: "Disable Léa's account?" });
+    await user.click(within(dialog).getByRole("button", { name: "Disable" }));
     await waitFor(() => expect(db.accounts.find((a) => a.id === "acc-lea")?.disabled).toBe(true));
-    expect(await screen.findByText("Compte de Léa désactivé.")).toBeInTheDocument();
+    expect(await screen.findByText("Léa's account disabled.")).toBeInTheDocument();
   });
 
   it("invites from a dialog that takes focus, closes on Escape and hands over the link", async () => {
     const user = userEvent.setup();
     renderApp("/accounts");
-    const open = await screen.findByRole("button", { name: "Inviter…" });
+    const open = await screen.findByRole("button", { name: "Invite…" });
     await user.click(open);
-    let dialog = await screen.findByRole("dialog", { name: "Inviter quelqu'un" });
+    let dialog = await screen.findByRole("dialog", { name: "Invite someone" });
     // focus goes into the dialog; cycling through the focus guards is checked in a real browser
     // (e2e/open-states.spec.ts), jsdom does not run them
     await waitFor(() => expect(dialog.contains(document.activeElement)).toBe(true));
@@ -61,14 +61,14 @@ describe("accounts", () => {
     expect(open).toHaveFocus();
 
     await user.click(open);
-    dialog = await screen.findByRole("dialog", { name: "Inviter quelqu'un" });
-    const person = within(dialog).getByRole("combobox", { name: "Personne du foyer" });
+    dialog = await screen.findByRole("dialog", { name: "Invite someone" });
+    const person = within(dialog).getByRole("combobox", { name: "Household member" });
     await user.clear(person);
     await user.type(person, "jul");
     await user.keyboard("{Enter}");
-    await user.click(within(dialog).getByRole("button", { name: "Créer l'invitation" }));
-    expect(await within(dialog).findByText(/Envoyez ce lien à/)).toBeInTheDocument();
-    expect(within(dialog).getByRole("button", { name: "Copier le lien d'invitation" })).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: "Create the invitation" }));
+    expect(await within(dialog).findByText(/Send this link to/)).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "Copy the invitation link" })).toBeInTheDocument();
     expect(db.invitations.some((i) => i.status === "pending" && i.person === "jules")).toBe(true);
   });
 });

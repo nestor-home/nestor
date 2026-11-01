@@ -67,3 +67,8 @@ person-picker-empty = Personne de ce nom.
 action-show-choices = Afficher les choix
 role-guest = invité
 role-guest-hint = Son journal seulement.
+
+# Les marques génériques, nommées par des mots plutôt que par une marque (src/lib/brands.tsx).
+brand-voice = Voix
+brand-openai-compatible = API compatible OpenAI
+brand-sdk = SDK { $language }

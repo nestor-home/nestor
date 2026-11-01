@@ -45,11 +45,11 @@ export function document(): ConfigDocument {
     data_dir: "data/richie",
     persona: {
       name: "Richie",
-      locale: "fr-FR",
-      language: "French",
-      timezone: "Europe/Paris",
+      locale: "en",
+      language: "English",
+      timezone: "UTC",
       character:
-        "Tu es Richie, l'assistant de la maison Lambert. Tu parles simplement, avec chaleur et un peu d'humour, et tu vas droit au but.",
+        "You are Richie, the Lambert household's assistant. You speak plainly, warmly and with a touch of humour, and you get to the point.",
     },
     household: [
       { id: "mathis", name: "Mathis", accounts: ["voice:*", "telegram:@mathis_l"], reach: "telegram:@mathis_l" },
@@ -61,21 +61,21 @@ export function document(): ConfigDocument {
       kind: "openai-compatible",
       name: "sonnet",
       base_url: "https://openrouter.ai/api/v1",
-      api_key: vault("model.api_key"),
+      api_key: environ("MODEL_API_KEY"),
       model: "anthropic/claude-sonnet-4.6",
       extra_body: { provider: { order: ["anthropic"] } },
     },
     triage_model: {
       kind: "openai-compatible",
       base_url: "https://openrouter.ai/api/v1",
-      api_key: vault("model.api_key"),
+      api_key: environ("MODEL_API_KEY"),
       model: "anthropic/claude-haiku-4.5",
     },
     channels: [
       {
         kind: "voice",
-        room: "salon",
-        port: 7870,
+        room: "living room",
+        port: 8471,
         speech: { api_key: vault("channels.voice.speech.api_key"), voice_id: "Xb7hH8MSUJpSbSDYk0k2" },
       },
       { kind: "telegram", token: environ("TELEGRAM_TOKEN") },
@@ -86,18 +86,18 @@ export function document(): ConfigDocument {
         base_url: "http://hermes.local:8642/v1",
         api_key: vault("executors.hermes.api_key"),
         model: "hermes-agent",
-        description: "Recherches longues, code, et tout ce qui demande plusieurs étapes.",
+        description: "Long research, code, and anything that takes several steps.",
       },
     ],
     tools: [
       {
         kind: "mcp",
-        name: "maison",
+        name: "home",
         url: "http://homeassistant.local:8123/mcp_server/sse",
         transport: "sse",
-        token: vault("tools.maison.token"),
+        token: vault("tools.home.token"),
         risks: { HassTurnOff: "write", HassLockUnlock: "sensitive" },
-        headers: { "X-Household": "lambert-maison-7d2f" },
+        headers: { "X-Household": "lambert-home-7d2f" },
       },
     ],
     presence: {
@@ -105,18 +105,18 @@ export function document(): ConfigDocument {
       url: "http://homeassistant.local:8123",
       token: vault("presence.token"),
       people: { mathis: "person.mathis", lea: "person.lea" },
-      rooms: { salon: "area.salon", cuisine: "area.cuisine" },
+      rooms: { "living room": "area.living_room", kitchen: "area.kitchen" },
     },
     connectors: [{ kind: "google" }, { kind: "imap" }],
-    initiative: { quiet_hours: "22:30-07:30", main_room: "salon" },
-    admin: { host: "0.0.0.0", port: 8080, public_url: "https://nestor.lambert.family" },
+    initiative: { quiet_hours: "22:30-07:30", main_room: "living room" },
+    admin: { host: "0.0.0.0", port: 8470, public_url: "https://nestor.lambert.family" },
   };
 }
 
 export function fresh(): ConfigDb {
   const now = document();
   const older = structuredClone(now) as Record<string, Record<string, unknown>>;
-  (older.persona as Record<string, unknown>).character = "Tu es Richie, l'assistant de la maison Lambert.";
+  (older.persona as Record<string, unknown>).character = "You are Richie, the Lambert household's assistant.";
   (older.initiative as Record<string, unknown>).quiet_hours = "23:00-07:00";
   const oldest = structuredClone(older);
   delete (oldest as Record<string, unknown>).triage_model;
@@ -130,10 +130,9 @@ export function fresh(): ConfigDb {
       { id: "20261021T090455031000Z", at: minutes(60 * 24 * 9), document: oldest },
     ],
     vault: {
-      "model.api_key": { value: "sk-or-v1-4f1c9a2b7d", at: minutes(60 * 24 * 30) },
       "channels.voice.speech.api_key": { value: "sk_e1d0a8c7b6f5", at: minutes(60 * 24 * 30) },
       "executors.hermes.api_key": { value: "hermes-7c0f2b91", at: minutes(60 * 24 * 12) },
-      "tools.maison.token": { value: "eyJhbGciOiJIUzI1NiJ9.maison", at: minutes(60 * 24 * 12) },
+      "tools.home.token": { value: "eyJhbGciOiJIUzI1NiJ9.home", at: minutes(60 * 24 * 12) },
       "presence.token": { value: "eyJhbGciOiJIUzI1NiJ9.presence", at: minutes(60 * 24 * 12) },
       "github.token": { value: "ghp_unused0000", at: minutes(60 * 24 * 40) },
     },
@@ -252,7 +251,7 @@ export function prepared(edited: ConfigDocument, current: ConfigDocument) {
 
 // -- checking --------------------------------------------------------------------------------------
 
-const ENVIRON = new Set(["TELEGRAM_TOKEN"]);
+const ENVIRON = new Set(["MODEL_API_KEY", "TELEGRAM_TOKEN"]);
 
 function references(node: unknown, path: Path = []): { path: Path; name: string; secret: boolean }[] {
   if (typeof node === "string") {

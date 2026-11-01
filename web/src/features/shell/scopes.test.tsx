@@ -12,16 +12,16 @@ function signInAs(role: Role) {
 }
 
 const ALL = [
-  "Aujourd'hui",
+  "Today",
   "Journal",
-  "Personnes",
-  "Souvenirs",
-  "Veilles",
-  "Tâches",
-  "Connexions",
+  "People",
+  "Memories",
+  "Watches",
+  "Tasks",
+  "Connections",
   "Satellites",
-  "Système",
-  "Comptes",
+  "System",
+  "Accounts",
 ];
 
 /** The sections the navigation offers, by accessible name. */
@@ -39,36 +39,28 @@ describe("what the scopes allow", () => {
   it("hides accounts from a guest, and explains it on a direct visit", async () => {
     signInAs("guest");
     renderApp("/accounts");
-    expect(await sections()).not.toContain("Comptes");
-    expect(await screen.findByRole("heading", { name: "Section réservée" })).toBeInTheDocument();
+    expect(await sections()).not.toContain("Accounts");
+    expect(await screen.findByRole("heading", { name: "Restricted section" })).toBeInTheDocument();
   });
 
   it("gives a member only their own corner", async () => {
     signInAs("member");
     renderApp("/journal");
     // reading the household shows its watches and tasks; changing them is for administrators
-    expect(await sections()).toEqual([
-      "Aujourd'hui",
-      "Journal",
-      "Personnes",
-      "Souvenirs",
-      "Veilles",
-      "Tâches",
-      "Connexions",
-    ]);
+    expect(await sections()).toEqual(["Today", "Journal", "People", "Memories", "Watches", "Tasks", "Connections"]);
   });
 
   it("hides pairing from whoever may only look at satellites", async () => {
     signInAs("member");
     renderApp("/satellites");
-    expect(await screen.findByRole("heading", { name: "Section réservée" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Approuver…" })).not.toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Restricted section" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Approve…" })).not.toBeInTheDocument();
   });
 
   it("sends a signed-out visitor to the login page, remembering where they were going", async () => {
     db.signedIn = null;
     const { router } = renderApp("/tasks");
-    expect(await screen.findByRole("heading", { name: "Connexion" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Sign in" })).toBeInTheDocument();
     expect(router.state.location.search).toEqual({ next: "/tasks" });
   });
 });

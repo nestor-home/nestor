@@ -36,7 +36,7 @@
           }
         },
         "locale": {
-          "default": "fr-FR",
+          "default": "en",
           "title": "Locale",
           "type": "string",
           "x-nestor": {
@@ -53,7 +53,7 @@
           }
         },
         "language": {
-          "default": "French",
+          "default": "English",
           "title": "Language",
           "type": "string",
           "x-nestor": {
@@ -70,7 +70,7 @@
           }
         },
         "timezone": {
-          "default": "Europe/Paris",
+          "default": "UTC",
           "title": "Timezone",
           "type": "string",
           "x-nestor": {
@@ -295,7 +295,7 @@
           }
         },
         "port": {
-          "default": 8080,
+          "default": 8470,
           "maximum": 65535,
           "minimum": 0,
           "title": "Port",
@@ -450,11 +450,18 @@
               }
             },
             "api_key": {
-              "format": "password",
-              "minLength": 1,
+              "anyOf": [
+                {
+                  "format": "password",
+                  "type": "string",
+                  "writeOnly": true
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
               "title": "Api Key",
-              "type": "string",
-              "writeOnly": true,
               "x-nestor": {
                 "field": "api_key",
                 "title_id": "config-model-openai-compatible-api_key",
@@ -538,7 +545,7 @@
               }
             }
           },
-          "required": ["kind", "base_url", "api_key", "model"],
+          "required": ["kind", "base_url", "model"],
           "title": "OpenAICompatibleSettings",
           "type": "object"
         }
@@ -603,11 +610,18 @@
               }
             },
             "api_key": {
-              "format": "password",
-              "minLength": 1,
+              "anyOf": [
+                {
+                  "format": "password",
+                  "type": "string",
+                  "writeOnly": true
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
               "title": "Api Key",
-              "type": "string",
-              "writeOnly": true,
               "x-nestor": {
                 "field": "api_key",
                 "title_id": "config-model-openai-compatible-api_key",
@@ -691,7 +705,7 @@
               }
             }
           },
-          "required": ["kind", "base_url", "api_key", "model"],
+          "required": ["kind", "base_url", "model"],
           "title": "OpenAICompatibleSettings",
           "type": "object"
         }
@@ -897,7 +911,7 @@
                   }
                 },
                 "language": {
-                  "default": "fr",
+                  "default": "en",
                   "title": "Language",
                   "type": "string",
                   "x-nestor": {
@@ -1064,7 +1078,7 @@
                   "type": "null"
                 }
               ],
-              "default": 7860,
+              "default": 8471,
               "title": "Port",
               "x-nestor": {
                 "field": "port",
@@ -1118,7 +1132,7 @@
                 "advanced": false,
                 "group": "channel-voice",
                 "title": "Adresse publique",
-                "help": "Comment les satellites joignent ce serveur, par ex. http://nestor.local:7860. Elle figure dans les adresses d'appairage."
+                "help": "Comment les satellites joignent ce serveur, par ex. http://nestor.local:8471. Elle figure dans les adresses d'appairage."
               }
             },
             "stt_fallback": {

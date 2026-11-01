@@ -6,6 +6,7 @@ import { HttpResponse, http, type JsonBodyType, delay as latency, sse } from "ms
 import type { Connection, JournalItem, PairingRequest, Satellite } from "@/api";
 import type { components } from "@/api/schema.gen";
 import * as config from "./config";
+import { LIVE } from "./day";
 import { db, type MockAddition, save } from "./db";
 import {
   accountDto,
@@ -24,8 +25,8 @@ import {
   taskDto,
   watchDto,
 } from "./dto";
-import { inEnglish } from "./english";
-import { arriving, KIND_LABELS, LIVE, METHODS, ROLE_LABEL, tools as toolsOf } from "./fixtures";
+import { arriving, CANCELLED, KIND_LABELS, METHODS, ROLE_LABEL, tools as toolsOf } from "./fixtures";
+import { fr, inFrench } from "./french";
 import { facets, filtersOf, matching, withoutRecord } from "./journal";
 import { errorText, type Lang, localize, toItem } from "./messages";
 
@@ -41,18 +42,21 @@ const delay = (ms: number) => (import.meta.env.MODE === "test" ? Promise.resolve
 const PAGE = 30;
 export const CSRF = "mock-csrf-token";
 
-/** The language of this request's answers: the account's, else the browser's, else French. */
-let lang: Lang = "fr";
+/** The language of this request's answers: the account's, else the browser's, else English. */
+let lang: Lang = "en";
 
 function listen(request: Request): void {
   const account = db.accounts.find((a) => a.id === db.signedIn);
   const asked = request.headers.get("Accept-Language")?.slice(0, 2);
-  lang = (account?.locale as Lang | null) ?? (asked === "fr" || asked === "en" ? asked : "fr");
+  lang = (account?.locale as Lang | null) ?? (asked === "fr" || asked === "en" ? asked : "en");
 }
 
-/** A JSON answer in the reader's language (static server texts; content stays as written). */
+/** A JSON answer in the reader's language: the household's texts follow it (french.ts). */
 const json = <T extends JsonBodyType>(body: T, init?: ResponseInit) =>
-  HttpResponse.json(lang === "en" ? inEnglish(body) : body, init);
+  HttpResponse.json(lang === "fr" ? inFrench(body) : body, init);
+
+/** The journal as the reader reads it, so that a search or a room filter finds what they see. */
+const journal = () => (lang === "fr" ? db.journal.map(inFrench) : db.journal);
 
 const noContent = () => new HttpResponse(null, { status: 204 });
 
@@ -101,8 +105,8 @@ let sequence = 0;
 const newId = (prefix: string) => `${prefix}-${Date.now().toString(36)}${(sequence++).toString(36)}`;
 
 const kindLabel = (kind: string) => {
-  const fr = KIND_LABELS[kind] ?? kind;
-  return lang === "en" ? inEnglish(fr) : fr;
+  const label = KIND_LABELS[kind] ?? kind;
+  return lang === "fr" ? inFrench(label) : label;
 };
 
 const itemOut = (item: JournalItem) => journalItemDto(localize(item, lang), kindLabel(item.kind));
@@ -164,7 +168,7 @@ export const handlers = [
   }),
 
   http.get(`${API}/i18n`, () =>
-    HttpResponse.json({ locales: ["en", "fr"], default: "en", household: "fr" } satisfies In<"LanguagesOut">),
+    HttpResponse.json({ locales: ["en", "fr"], default: "en", household: "en" } satisfies In<"LanguagesOut">),
   ),
 
   // the server's own catalogue is not mocked: the mock renders `text` itself (messages.ts)
@@ -207,7 +211,7 @@ export const handlers = [
     };
     db.accounts.push(account);
     invitation.status = "accepted";
-    invitation.status_label = "acceptée";
+    invitation.status_label = fr("accepted", "acceptée");
     db.signedIn = account.id;
     save();
     return json(meDto(account, lang), { status: 201 });
@@ -243,7 +247,7 @@ export const handlers = [
       person: person?.id ?? null,
       person_name: person?.name ?? null,
       status: "pending" as const,
-      status_label: "en attente",
+      status_label: fr("pending", "en attente"),
       created_at: new Date().toISOString(),
       expires_at: new Date(Date.now() + 7 * 86_400_000).toISOString(),
     };
@@ -315,7 +319,7 @@ export const handlers = [
     const refused = guard(request);
     if (refused) return refused;
     await delay(120);
-    return json(facets(db.journal, filtersOf(new URL(request.url)), db.people, KIND_LABELS));
+    return json(facets(journal(), filtersOf(new URL(request.url)), db.people, KIND_LABELS));
   }),
 
   http.get(`${API}/journal/stream`, () => new HttpResponse(null, { status: 204 })),
@@ -336,7 +340,7 @@ export const handlers = [
     const before = url.searchParams.get("before");
     const limit = Number(url.searchParams.get("limit") ?? PAGE);
     if (limit < 1 || limit > 200) return fail(422, "invalid", "error-invalid-request");
-    let items = matching(db.journal, filtersOf(url));
+    let items = matching(journal(), filtersOf(url));
     if (before) items = items.filter((e) => Number(e.id) < Number(before));
     const page = items.slice(0, limit).map((e) => itemOut(withoutRecord(e)));
     return json({
@@ -409,7 +413,7 @@ export const handlers = [
     if (missing.length) {
       return fail(400, "fields_missing", "error-fields-missing", { fields: missing.map((f) => f.label).join(", ") });
     }
-    if (values.host?.includes("invalide")) return fail(502, "provider_refused", "error-provider-refused");
+    if (values.host?.includes("invalid")) return fail(502, "provider_refused", "error-provider-refused");
     const connection = plug(connector.kind, body.person ?? null, body.replaces ?? null, values);
     return json(connectionDetailDto(connection), { status: 201 });
   }),
@@ -500,7 +504,7 @@ export const handlers = [
       {
         addition: additionOut(addition),
         code: code ? `${code.slice(0, 4)}-${code.slice(4)}` : null,
-        uri: code ? `nestor+http://nestor.local:7860/?code=${code}` : null,
+        uri: code ? `nestor+http://nestor.local:8471/?code=${code}` : null,
       } satisfies In<"StartedOut">,
       { status: 201 },
     );
@@ -617,7 +621,7 @@ export const handlers = [
     const task = db.tasks.find((t) => t.id === params.id);
     if (!task) return notFound("task");
     task.status = "cancelled";
-    task.status_label = "annulée";
+    task.status_label = CANCELLED;
     task.ended_at = new Date().toISOString();
     save();
     return json({ task: taskDto(task), confirmed: true } satisfies In<"CancelOut">);
@@ -847,10 +851,10 @@ function plug(
     account:
       values.username ||
       values.name ||
-      (connector?.auth === "oauth2" ? `${person ?? "foyer"}@gmail.com` : (connector?.title ?? kind)),
+      (connector?.auth === "oauth2" ? `${person ?? "household"}@gmail.com` : (connector?.title ?? kind)),
     owner: person,
     status: "connected",
-    status_label: "connectée",
+    status_label: fr("connected", "connectée"),
     status_reason: null,
     confirm_writes: replaced?.confirm_writes ?? true,
     disabled_tools: [],
@@ -867,7 +871,7 @@ function plug(
     toItem({
       type: "connection.created",
       kind: "connection",
-      title: `Compte ${connection.account} connecté (${connection.title})`,
+      title: `Account ${connection.account} connected (${connection.title})`,
       detail: "",
       people: person ? [person] : [],
       channels: [],
@@ -952,7 +956,7 @@ function quietOf(): In<"QuietHoursOut"> | null {
   const at = now.getHours() * 60 + now.getMinutes();
   const [from, to] = [minute(start), minute(end)];
   const active = from <= to ? at >= from && at < to : at >= from || at < to;
-  return { start, end, timezone: "Europe/Paris", active };
+  return { start, end, timezone: "UTC", active };
 }
 
 /** What the agent is doing, from the mock state: working while a task runs, asleep in the quiet hours. */

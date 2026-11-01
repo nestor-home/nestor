@@ -44,17 +44,19 @@ import {
   siWebrtc,
   siWhatsapp,
 } from "simple-icons";
+import { type Args, tr } from "@/i18n/runtime";
 import { cn } from "@/lib/utils";
 
-interface Brand {
-  name: string; // the accessible label
-  mark: SimpleIcon | LucideIcon;
-}
+/** A mark and its accessible label: a brand's own name, or a Fluent message for a generic one. */
+type Brand = { mark: SimpleIcon | LucideIcon } & ({ name: string } | { message: string; args?: Args });
+
+/** A satellite SDK, named by its language in the reader's word order. */
+const sdk = (language: string, mark: SimpleIcon): Brand => ({ message: "brand-sdk", args: { language }, mark });
 
 const BRANDS = {
   gmail: { name: "Gmail", mark: siGmail },
   google: { name: "Google", mark: siGoogle },
-  "google-calendar": { name: "Google Agenda", mark: siGooglecalendar },
+  "google-calendar": { name: "Google Calendar", mark: siGooglecalendar },
   gemini: { name: "Gemini (Vertex AI)", mark: siGooglegemini },
   telegram: { name: "Telegram", mark: siTelegram },
   whatsapp: { name: "WhatsApp", mark: siWhatsapp },
@@ -65,7 +67,7 @@ const BRANDS = {
   openrouter: { name: "OpenRouter", mark: siOpenrouter },
   anthropic: { name: "Anthropic", mark: siAnthropic },
   claude: { name: "Claude", mark: siClaude },
-  "openai-compatible": { name: "API compatible OpenAI", mark: Cpu },
+  "openai-compatible": { message: "brand-openai-compatible", mark: Cpu },
   elevenlabs: { name: "ElevenLabs", mark: siElevenlabs },
   silero: { name: "Silero VAD", mark: AudioWaveform },
   "smart-turn": { name: "Smart Turn", mark: AudioWaveform },
@@ -73,15 +75,15 @@ const BRANDS = {
   imap: { name: "IMAP", mark: Mail },
   oauth: { name: "OAuth", mark: KeyRound },
   webrtc: { name: "WebRTC", mark: siWebrtc },
-  voice: { name: "Voix", mark: Mic },
+  voice: { message: "brand-voice", mark: Mic },
   web: { name: "Web", mark: Globe },
   reachy: { name: "Reachy Mini (Pollen Robotics)", mark: Bot },
   "raspberry-pi": { name: "Raspberry Pi", mark: siRaspberrypi },
   espressif: { name: "ESP32 (Espressif)", mark: siEspressif },
-  python: { name: "SDK Python", mark: siPython },
-  typescript: { name: "SDK TypeScript", mark: siTypescript },
-  rust: { name: "SDK Rust", mark: siRust },
-  cpp: { name: "SDK C++", mark: siCplusplus },
+  python: sdk("Python", siPython),
+  typescript: sdk("TypeScript", siTypescript),
+  rust: sdk("Rust", siRust),
+  cpp: sdk("C++", siCplusplus),
   sqlite: { name: "SQLite", mark: siSqlite },
   litestream: { name: "Litestream", mark: DatabaseBackup },
   docker: { name: "Docker", mark: siDocker },
@@ -113,7 +115,8 @@ export function brandOf(kind: string | null | undefined): BrandSlug | null {
 }
 
 export function brandName(slug: BrandSlug): string {
-  return BRANDS[slug].name;
+  const brand: Brand = BRANDS[slug];
+  return "name" in brand ? brand.name : tr(brand.message, brand.args);
 }
 
 function isSimpleIcon(mark: Brand["mark"]): mark is SimpleIcon {
@@ -135,7 +138,8 @@ export function BrandMark({
   colour?: boolean;
   label?: boolean;
 }) {
-  const { name, mark } = BRANDS[brand];
+  const { mark } = BRANDS[brand];
+  const name = brandName(brand);
   const a11y = label ? { role: "img", "aria-label": name } : { "aria-hidden": true as const };
   if (isSimpleIcon(mark)) {
     return (

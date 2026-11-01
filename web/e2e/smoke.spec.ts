@@ -3,22 +3,13 @@ import { expect, test } from "./clock";
 test("the journal opens and shows why the assistant spoke", async ({ page }) => {
   await page.goto("/journal");
   await expect(page.getByRole("heading", { name: "Journal", level: 1 })).toBeVisible();
-  await expect(page.getByText(/^pourquoi :/).first()).toBeVisible();
+  await expect(page.getByText(/^why:/).first()).toBeVisible();
 });
 
 test("every section of the navigation answers", async ({ page }) => {
   await page.goto("/journal");
   const nav = page.getByRole("navigation", { name: "Sections" });
-  for (const name of [
-    "Connexions",
-    "Satellites",
-    "Tâches",
-    "Veilles",
-    "Souvenirs",
-    "Personnes",
-    "Comptes",
-    "Système",
-  ]) {
+  for (const name of ["Connections", "Satellites", "Tasks", "Watches", "Memories", "People", "Accounts", "System"]) {
     await nav.getByRole("link", { name }).click();
     await expect(page.getByRole("heading", { name, level: 1 })).toBeVisible();
   }

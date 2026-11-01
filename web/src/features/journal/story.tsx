@@ -593,7 +593,7 @@ function ChainStep({
         </span>
         {item.reason ? (
           <span className="mt-1 block text-[0.92rem] text-ink [overflow-wrap:anywhere]">
-            <span className="text-ink-muted">{t("jr-why")} : </span>
+            <span className="text-ink-muted">{t("jr-why-label")} </span>
             {why(item)}
           </span>
         ) : null}

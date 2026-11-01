@@ -109,7 +109,7 @@ export function liveItem(overrides: Partial<JournalItem> = {}): JournalItem {
     at: new Date().toISOString(),
     type: "conversation.turn.user",
     kind: "conversation",
-    text: "Jules a dit",
+    text: "Jules said",
     detail: "",
     reason: null,
     people: ["jules"],
