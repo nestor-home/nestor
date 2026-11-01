@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.3.0](https://github.com/nestor-home/nestor/compare/v0.2.0...v0.3.0) (2026-11-01)
+
+
+### ⚠ BREAKING CHANGES
+
+* existing data folders must be recreated.
+
+### Features
+
+* read the .env next to the configuration ([#16](https://github.com/nestor-home/nestor/issues/16)) ([1ca73a4](https://github.com/nestor-home/nestor/commit/1ca73a428afeaf2566fa7b8c63aea29b7697fcdc))
+
+
+### Bug Fixes
+
+* give the data folder to the nestor user when the container starts ([#15](https://github.com/nestor-home/nestor/issues/15)) ([ae5f41b](https://github.com/nestor-home/nestor/commit/ae5f41bf7ba3c2a1c3f9ebc9e9a2ccd4df7e6681))
+
+
+### Code Refactoring
+
+* drop every transition path ([#18](https://github.com/nestor-home/nestor/issues/18)) ([823763c](https://github.com/nestor-home/nestor/commit/823763c4ba73820253afd0bc22572e4bc66ee288))
+
 ## [0.2.0](https://github.com/nestor-home/nestor/compare/v0.1.0...v0.2.0) (2026-11-01)
 
 
