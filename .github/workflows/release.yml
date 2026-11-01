@@ -1,0 +1,56 @@
+# Release pull request on every push to main; when it is merged, publishes the package to PyPI
+# (trusted publishing, environment `pypi`) and the image to ghcr.io/nestor-home/nestor.
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release:
+    uses: nestor-home/.github/.github/workflows/release-please.yml@v1
+
+  pypi:
+    needs: release
+    if: needs.release.outputs.release_created == 'true'
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.release.outputs.tag_name }}
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: web/package.json
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      # The admin front is built into the package (src/nestor/admin/static/app, git-ignored).
+      - working-directory: web
+        run: mkdir -p .claude/skills && pnpm install --frozen-lockfile && pnpm build
+      - uses: astral-sh/setup-uv@v7
+      - run: uv build
+      - run: unzip -l dist/*.whl | grep -q 'nestor/admin/static/app/index.html'
+      - run: uv publish --trusted-publishing always
+
+  image:
+    needs: release
+    if: needs.release.outputs.release_created == 'true'
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    uses: nestor-home/.github/.github/workflows/container.yml@v1
+    with:
+      version: ${{ needs.release.outputs.version }}
+      ref: ${{ needs.release.outputs.tag_name }}
