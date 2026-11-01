@@ -4,7 +4,8 @@
 `hello` from the paired device, answers `welcome`, sends one intent of each kind the device may
 receive (`intent.identify` only to a device allowed `device.identify`) and expects each to be
 acknowledged in time, and checks that every message it receives,
-observations included, follows the contract. The transport (WebRTC data channel, WebSocket…) only
+observations included, follows the contract. Each finding is a `Message` (catalogue `conformance.ftl`),
+so whoever shows it renders it in the reader's language. The transport (WebRTC data channel, WebSocket…) only
 has to implement `SatelliteSession`; the realtime profile's black-box core lives with the WebRTC
 gateway (`nestor.adapters.channels.voice.satellites.conformance`).
 """
@@ -16,6 +17,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from nestor.core import Capability, ContractError, PersonId
+from nestor.core.i18n import Message
 from nestor.modules.behavior import EXPRESSION, HEAD_MOTION, Behavior, Expression
 from nestor.modules.satellites import IDENTIFY, PERSON_DETECTION, SPEECH_ACTIVITY, Manifest, Pairing, Satellite, wire
 
@@ -39,16 +41,19 @@ class SatelliteSession(ABC):
 
 @dataclass(frozen=True, slots=True)
 class Finding:
-    check: str
+    """One check: what was checked (its id names the check, whatever the language), whether it held,
+    and, when it did not, what was seen instead."""
+
+    check: Message
     passed: bool
-    detail: str = ""
+    detail: Message | None = None
 
 
 @dataclass(slots=True)
 class Findings:
     items: list[Finding] = field(default_factory=list)
 
-    def add(self, check: str, passed: bool, detail: str = "") -> bool:
+    def add(self, check: Message, passed: bool, detail: Message | None = None) -> bool:
         self.items.append(Finding(check, passed, detail))
         return passed
 
@@ -67,21 +72,27 @@ class ProtocolProbe:
         self.listen_s = listen_s
 
     async def run(
-        self, session: SatelliteSession, satellite: Satellite, findings: Findings, *, label: str = ""
+        self, session: SatelliteSession, satellite: Satellite, findings: Findings, *, connection: str = "paired"
     ) -> bool:
-        """Check one connection; returns whether its `hello` was valid (the rest depends on it)."""
-        reader = _Reader(session, satellite, findings, label)
+        """Check one connection; returns whether its `hello` was valid (the rest depends on it).
+
+        `connection` says which one it is in the findings: `paired` (the first after pairing with a
+        device code), `reconnected` or `enrolled` (after pairing with an enrollment code)."""
+        reader = _Reader(session, satellite, findings, connection)
         first = await reader.next(time.monotonic() + self.hello_deadline_s)
+        hello_first = Message.of("conformance-hello-first", connection=connection)
         if not isinstance(first, wire.Hello):
-            detail = f"first message: {first.message_type}" if first else "no valid message in time"
-            findings.add(f"{label}sends a hello first", False, detail)
+            if first:
+                findings.add(hello_first, False, Message.of("conformance-first-message", type=first.message_type))
+            else:
+                findings.add(hello_first, False, Message.of("conformance-no-message"))
             return False
         hello = first
-        findings.add(f"{label}sends a hello first", True)
+        findings.add(hello_first, True)
         findings.add(
-            f"{label}introduces itself as the paired device",
+            Message.of("conformance-introduces", connection=connection),
             hello.manifest.device.id == satellite.id,
-            f"hello says {hello.manifest.device.id!r}, paired as {satellite.id!r}",
+            Message.of("conformance-wrong-device", said=hello.manifest.device.id, paired=satellite.id),
         )
         session.send(wire.encode(wire.Welcome(device_id=satellite.id, room=satellite.room,
                                               capabilities=tuple(sorted(satellite.capabilities)))))  # fmt: skip
@@ -90,10 +101,11 @@ class ProtocolProbe:
             session.send(sent)
             ack = await reader.ack_of(sent["id"], self.ack_deadline_s)
             findings.add(
-                f"{label}acknowledges {intent.message_type} within {self.ack_deadline_s:g} s",
+                Message.of("conformance-acknowledges", connection=connection, intent=intent.message_type,
+                           seconds=self.ack_deadline_s),
                 ack,
-                "no ack with this intent's id",
-            )
+                Message.of("conformance-no-ack"),
+            )  # fmt: skip
         await reader.listen(self.listen_s)
         reader.conclude()
         return True
@@ -114,8 +126,8 @@ def _intents_for(capabilities: frozenset[Capability]) -> list[wire.Message]:
 class _Reader:
     """Reads the satellite's messages, judging each one, and keeps the acks it sees."""
 
-    def __init__(self, session: SatelliteSession, satellite: Satellite, findings: Findings, label: str) -> None:
-        self._session, self._satellite, self._findings, self._label = session, satellite, findings, label
+    def __init__(self, session: SatelliteSession, satellite: Satellite, findings: Findings, connection: str) -> None:
+        self._session, self._satellite, self._findings, self._connection = session, satellite, findings, connection
         self._acks: set[str] = set()
         self._invalid: list[str] = []
 
@@ -133,7 +145,9 @@ class _Reader:
 
     def conclude(self) -> None:
         self._findings.add(
-            f"{self._label}every message follows the schema", not self._invalid, "; ".join(self._invalid)
+            Message.of("conformance-follows-schema", connection=self._connection),
+            not self._invalid,
+            Message.of("conformance-off-schema", errors="; ".join(self._invalid)),
         )
 
     async def next(self, deadline: float) -> wire.Message | None:

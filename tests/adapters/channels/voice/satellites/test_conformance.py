@@ -6,9 +6,11 @@ import sys
 import pytest
 
 from nestor.adapters.channels.voice.satellites.conformance import Launch, check_satellite
+from nestor.adapters.i18n import FluentLocalizer, catalogue_dirs
 from nestor.core import Capability
 from nestor.modules.satellites import Device, Manifest, PairingMethod
 from nestor.modules.satellites.types import DeclaredCapability
+from nestor.testing.satellites import Finding
 
 from .reference import Faults, ReferenceSatellite
 
@@ -35,13 +37,19 @@ SPEAKER = Manifest(
 )
 SENSOR = Manifest(Device("capteur-entree", "esp32", "entree"),
                   (DeclaredCapability(Capability("vision.person_detection")),))  # fmt: skip
+ENGLISH = FluentLocalizer(catalogue_dirs(["nestor"]))
+
+
+def named(findings: list[Finding]) -> set[str]:
+    """The checks, as an English reader sees them."""
+    return {ENGLISH.format(f.check, "en") for f in findings}
 
 
 async def test_the_reference_satellite_conforms() -> None:
     driver = ReferenceSatellite("", MANIFEST)
     findings = await check_satellite(driver, deadline_s=10)
     assert findings.passed, findings.failures()
-    checks = {f.check for f in findings.items}
+    checks = named(findings.items)
     assert {
         "claims its token once its device code is typed (P2)",
         "receives the core's audio (W3)",
@@ -62,7 +70,7 @@ async def test_the_reference_satellite_conforms() -> None:
 async def test_a_device_is_only_checked_on_what_it_declared(manifest: Manifest) -> None:
     findings = await check_satellite(ReferenceSatellite("", manifest), deadline_s=10)
     assert findings.passed, findings.failures()
-    checks = {f.check for f in findings.items}
+    checks = named(findings.items)
     assert "acknowledges intent.expression within 1 s" not in checks
     assert not {"acknowledges intent.identify within 1 s", "keeps polling after a pending identify (I1)"} & checks
     assert ("receives the core's audio (W3)" in checks) is (manifest is SPEAKER)
@@ -72,15 +80,13 @@ async def test_a_driver_can_be_any_program() -> None:
     command = [sys.executable, "-m", "tests.adapters.channels.voice.satellites.reference", "{url}", "{state}",
                json.dumps(SPEAKER.to_json())]  # fmt: skip
     findings = await check_satellite(command, deadline_s=15)
-    assert "pairs with the enrollment code of NESTOR_PAIRING_URI, no code typed (P3, P4)" in {
-        f.check for f in findings.items
-    }
+    assert "pairs with the enrollment code of NESTOR_PAIRING_URI, no code typed (P3, P4)" in named(findings.items)
     assert findings.passed, findings.failures()
 
 
 async def test_a_driver_program_that_exits_is_reported() -> None:
     findings = await check_satellite([sys.executable, "-c", "pass"], deadline_s=1)
-    assert {f.check for f in findings.failures()} == {"asks to pair", "runs without crashing"}
+    assert named(findings.failures()) == {"asks to pair", "runs without crashing"}
 
 
 @pytest.mark.parametrize(
@@ -114,23 +120,23 @@ async def test_a_driver_program_that_exits_is_reported() -> None:
 )
 async def test_a_broken_satellite_is_caught(faults: Faults, failing: str) -> None:
     findings = await check_satellite(ReferenceSatellite("", MANIFEST, faults=faults), deadline_s=3)
-    assert failing in {f.check for f in findings.failures()}
+    assert failing in named(findings.failures())
 
 
 async def test_an_observation_without_its_capability_is_off_contract() -> None:
     blind = Manifest(MANIFEST.device, tuple(c for c in MANIFEST.capabilities if c.name != "vision.person_detection"))
     findings = await check_satellite(ReferenceSatellite("", blind, observe=True), deadline_s=4)
-    assert "every message follows the schema" in {f.check for f in findings.failures()}
+    assert "every message follows the schema" in named(findings.failures())
 
 
 async def test_a_driver_that_never_pairs_fails_at_once() -> None:
     async def silent(_launch: Launch) -> None: ...
 
     findings = await check_satellite(silent, deadline_s=0.5)
-    assert [f.check for f in findings.failures()] == ["asks to pair"]
+    assert [ENGLISH.format(f.check, "en") for f in findings.failures()] == ["asks to pair"]
 
 
 async def test_a_driver_without_enrollment_provisioning_is_caught() -> None:
     display_only = Manifest(SPEAKER.device, SPEAKER.capabilities, (PairingMethod.DISPLAY,))
     findings = await check_satellite(ReferenceSatellite("", display_only), deadline_s=3)
-    assert "declares enrollment.provisioning (P1)" in {f.check for f in findings.failures()}
+    assert "declares enrollment.provisioning (P1)" in named(findings.failures())

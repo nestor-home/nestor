@@ -5,7 +5,9 @@ behind them) and launches the driver against it once per scenario. A driver is a
 function taking a `Launch`, or a command where `{url}` is replaced by the core's URL and `{state}` by
 a fresh folder for its token. The enrollment code is handed over in `NESTOR_PAIRING_URI` (environment
 of a command, `Launch.pairing_uri` of a coroutine), the way a person would configure a headless
-device. Each check names the rule of the standard (`docs/satellite-protocol.md`) it proves.
+device. Each check names the rule of the standard (`docs/satellite-protocol.md`) it proves; checks and
+what was seen instead are `Message`s of the `conformance.ftl` catalogue. `nestor satellites conformance`
+runs the suite on a command and prints them.
 
 1. device code (P1, P2, P8, I1, I2, W1-W4): it declares `enrollment.provisioning`, asks to pair,
    keeps polling after a pending identify, claims its token once a person types its code, connects,
@@ -41,6 +43,7 @@ from pipecat.transports.smallwebrtc.transport import RawAudioTrack
 from nestor.adapters.channels.voice.satellites.gateway import SatelliteGateway
 from nestor.adapters.channels.voice.server import SignallingServer
 from nestor.core import utc_now
+from nestor.core.i18n import Message
 from nestor.modules.journal import Journal
 from nestor.modules.satellites import (
     AUDIO_CAPTURE,
@@ -227,27 +230,28 @@ class FakeCore:
         core = _Core(_WatchedPairing(approve_after_s=self._approve_after_s))
         async with core.serving(), _running(driver, core.url, None, findings):
             pairing = core.pairing
-            if not findings.add("asks to pair", await _within(pairing.requested.wait(), self.deadline_s)):
+            if not findings.add(Message.of("conformance-asks-to-pair"),
+                                await _within(pairing.requested.wait(), self.deadline_s)):  # fmt: skip
                 return
             manifest = pairing.attempts[0].manifest
             findings.add(
-                "declares enrollment.provisioning (P1)", PairingMethod.PROVISIONING in manifest.pairing_methods
+                Message.of("conformance-declares-provisioning"), PairingMethod.PROVISIONING in manifest.pairing_methods
             )
-            if not findings.add("claims its token once its device code is typed (P2)",
+            if not findings.add(Message.of("conformance-claims-token"),
                                 await _within(pairing.claimed.wait(), self.deadline_s)):  # fmt: skip
                 return
             if IDENTIFY in manifest.names:
-                findings.add("keeps polling after a pending identify (I1)",
+                findings.add(Message.of("conformance-polls-after-identify"),
                              pairing.identify_seen and pairing.polled_after_identify.is_set(),
-                             "never polled past the identify")  # fmt: skip
-            first = await self._next(core, findings, "connects with its token (W1)")
+                             Message.of("conformance-never-polled-after-identify"))  # fmt: skip
+            first = await self._next(core, findings, Message.of("conformance-connects"))
             if first is None or not await self.probe.run(first, first.satellite, findings):
                 return
             await self._check_audio(first, findings)
             await first.connection.disconnect()
-            again = await self._next(core, findings, "reconnects with the same token after a hang-up (W4)")
+            again = await self._next(core, findings, Message.of("conformance-reconnects"))
             if again is not None:
-                await self.probe.run(again, again.satellite, findings, label="after reconnecting: ")
+                await self.probe.run(again, again.satellite, findings, connection="reconnected")
                 await again.connection.disconnect()
 
     async def _enrollment(self, driver: Driver, findings: Findings) -> None:
@@ -258,12 +262,12 @@ class FakeCore:
             async with _running(driver, core.url, pairing_uri(core.url, started.code), findings):
                 claimed = await _within(core.pairing.claimed.wait(), self.deadline_s)
                 sent = any(a.code for a in core.pairing.attempts)
-                findings.add(f"pairs with the enrollment code of {PAIRING_URI}, no code typed (P3, P4)",
-                             claimed and sent, "no token claimed" if not claimed else "")  # fmt: skip
+                seen = Message.of("conformance-no-code-sent" if claimed else "conformance-no-token")
+                findings.add(Message.of("conformance-enrolls", variable=PAIRING_URI), claimed and sent, seen)
                 if claimed:
-                    link = await self._next(core, findings, "connects after pairing with an enrollment code")
+                    link = await self._next(core, findings, Message.of("conformance-connects-enrolled"))
                     if link is not None:
-                        await self.probe.run(link, link.satellite, findings, label="enrolled: ")
+                        await self.probe.run(link, link.satellite, findings, connection="enrolled")
                         await link.connection.disconnect()
 
     async def _refused(self, driver: Driver, findings: Findings, refusal: str) -> None:
@@ -273,13 +277,10 @@ class FakeCore:
             async with _running(driver, core.url, pairing_uri(core.url, code), findings):
                 fell_back = await _within(core.pairing.fell_back.wait(), self.deadline_s)
                 await asyncio.sleep(1.0)  # time to retry, if it wrongly would
-                findings.add(
-                    f"falls back to a device code after its enrollment code is refused ({refusal}) (P5)", fell_back
-                )
+                findings.add(Message.of("conformance-falls-back", refusal=refusal), fell_back)
                 tries = sum(a.code is not None for a in core.pairing.attempts)
-                findings.add(
-                    f"presents a refused enrollment code ({refusal}) only once (P5)", tries == 1, f"{tries} times"
-                )
+                findings.add(Message.of("conformance-refused-once", refusal=refusal), tries == 1,
+                             Message.of("conformance-tries", count=tries))  # fmt: skip
 
     async def _rate_limited(self, driver: Driver, findings: Findings) -> None:
         limiter = AttemptLimiter(per_source=1, window_s=1.5)
@@ -292,15 +293,19 @@ class FakeCore:
                 paired = await _within(core.pairing.claimed.wait(), self.deadline_s + limiter.window_s)
                 coded = [a.at for a in core.pairing.attempts if a.code is not None]
                 waited = len(coded) >= 2 and coded[1] - coded[0] >= 1.0
-                seen = f"attempts at {[round(t - coded[0], 2) for t in coded]} s" if coded else "no attempt"
-                findings.add("waits for Retry-After when rate-limited (P6)", waited, seen)
-                findings.add("pairs once the rate limit lifts (P6)", paired)
+                seen = (
+                    Message.of("conformance-attempts", times=", ".join(f"{t - coded[0]:.2f}" for t in coded))
+                    if coded
+                    else Message.of("conformance-no-attempt")
+                )
+                findings.add(Message.of("conformance-waits-retry-after"), waited, seen)
+                findings.add(Message.of("conformance-pairs-after-limit"), paired)
 
-    async def _next(self, core: _Core, findings: Findings, check: str) -> _Connection | None:
+    async def _next(self, core: _Core, findings: Findings, check: Message) -> _Connection | None:
         try:
             connection = await asyncio.wait_for(core.connections.get(), self.deadline_s)
         except TimeoutError:
-            findings.add(check, False, f"no authenticated offer within {self.deadline_s:g} s")
+            findings.add(check, False, Message.of("conformance-no-offer", seconds=self.deadline_s))
             return None
         findings.add(check, True)
         return connection
@@ -312,12 +317,13 @@ class FakeCore:
             link.connection.replace_audio_track(track)
             t = np.arange(AUDIO_RATE) / AUDIO_RATE
             track.add_audio_bytes((6000 * np.sin(2 * np.pi * 440 * t)).astype(np.int16).tobytes())
-            findings.add("receives the core's audio (W3)", await _within(_reports_reception(link.connection), 5.0),
-                         "no RTCP receiver report from the satellite")  # fmt: skip
+            findings.add(Message.of("conformance-receives-audio"),
+                         await _within(_reports_reception(link.connection), 5.0),
+                         Message.of("conformance-no-receiver-report"))  # fmt: skip
         if AUDIO_CAPTURE in capabilities:
-            findings.add("sends its microphone audio (W3)",
+            findings.add(Message.of("conformance-sends-audio"),
                          await _within(link.connection.audio_input_track().recv(), 5.0),
-                         "no audio frame from the satellite")  # fmt: skip
+                         Message.of("conformance-no-audio-frame"))  # fmt: skip
 
 
 async def check_satellite(driver: Driver, **options: Any) -> Findings:
@@ -375,20 +381,20 @@ async def _running(driver: Driver, url: str, uri: str | None, findings: Findings
             yield launch
         finally:
             if crash := await _stop(task, process):
-                findings.add("runs without crashing", False, crash)
+                findings.add(Message.of("conformance-runs"), False, crash)
 
 
-async def _stop(task: asyncio.Task[None] | None, process: subprocess.Popen[bytes] | None) -> str | None:
+async def _stop(task: asyncio.Task[None] | None, process: subprocess.Popen[bytes] | None) -> Message | None:
     """Stop the driver; how it crashed, if it did before being stopped."""
     if task is not None:
         if task.done() and not task.cancelled() and (error := task.exception()):
-            return repr(error)
+            return Message.of("conformance-raised", error=repr(error))
         task.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await task
     if process is not None:
         if (code := process.poll()) is not None:
-            return f"exited with status {code}"
+            return Message.of("conformance-exited", status=code)
         process.terminate()
         await asyncio.to_thread(process.wait, 10)
     return None
