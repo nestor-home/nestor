@@ -6,10 +6,10 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
-from nestor.core import PersonId, utc_now
+from nestor.core import PersonId, new_id, utc_now
 from nestor.core.i18n import Message
 from nestor.modules.accounts import Role
-from nestor.modules.channels import Address, InboundMessage, Sender
+from nestor.modules.channels import Address, Exchange, InboundMessage, Sender
 from nestor.modules.cognition import TaskEnded, TaskStarted, TaskStatus
 from nestor.modules.cognition.delegation.events import TaskDelivered
 from nestor.modules.conversation import Conversations, UserTurn
@@ -81,7 +81,15 @@ async def test_a_task_chains_from_its_start_to_its_result(tmp_path: Path) -> Non
 async def test_the_position_cursor_pages_back_through_a_filtered_journal(tmp_path: Path) -> None:
     async with Harness(tmp_path) as admin:
         for n in range(5):
-            await admin.nestor.journal.publish(UserTurn(source="agent", address=TELEGRAM, text=f"m{n}", person=MATHIS))
+            await admin.nestor.journal.publish(
+                UserTurn(
+                    exchange=Exchange(conversation_id="c1", turn_id=new_id()),
+                    source="agent",
+                    address=TELEGRAM,
+                    text=f"m{n}",
+                    person=MATHIS,
+                )
+            )
             await admin.nestor.journal.publish(MemoryRecorded(source="memory", memory_id=f"x{n}", text=f"s{n}"))
         api = await admin.api()
         first = (await api.get("/api/v1/journal", kinds="memory", limit=2)).json()
@@ -94,10 +102,24 @@ async def test_every_filter_narrows_the_journal(tmp_path: Path) -> None:
     async with Harness(tmp_path) as admin:
         journal = admin.nestor.journal
         await journal.publish(
-            UserTurn(source="agent", session=TELEGRAM.session, address=TELEGRAM, text="Le dentiste", person=MATHIS)
+            UserTurn(
+                exchange=Exchange(conversation_id="c1", turn_id=new_id()),
+                source="agent",
+                session=TELEGRAM.session,
+                address=TELEGRAM,
+                text="Le dentiste",
+                person=MATHIS,
+            )
         )
         await journal.publish(
-            UserTurn(source="agent", session=VOICE.session, address=VOICE, text="Bonsoir", person=MATHILDE)
+            UserTurn(
+                exchange=Exchange(conversation_id="c1", turn_id=new_id()),
+                source="agent",
+                session=VOICE.session,
+                address=VOICE,
+                text="Bonsoir",
+                person=MATHILDE,
+            )
         )
         await journal.publish(PresenceChanged(source="presence", person=MATHIS, home=True, room="cuisine"))
         await journal.publish(DeliveryConsidered(source="courier", about="watch w9", reason=REASON, person=MATHIS))
@@ -122,7 +144,15 @@ async def test_each_facet_is_counted_ignoring_its_own_selection(tmp_path: Path) 
     async with Harness(tmp_path) as admin:
         journal = admin.nestor.journal
         for text, person, address in (("a", MATHIS, TELEGRAM), ("b", MATHIS, TELEGRAM), ("c", MATHILDE, VOICE)):
-            await journal.publish(UserTurn(source="agent", address=address, text=text, person=person))
+            await journal.publish(
+                UserTurn(
+                    exchange=Exchange(conversation_id="c1", turn_id=new_id()),
+                    source="agent",
+                    address=address,
+                    text=text,
+                    person=person,
+                )
+            )
         await journal.publish(PresenceChanged(source="presence", person=MATHIS, home=True, room="salon"))
         api = await admin.api()
         facets = (await api.get("/api/v1/journal/facets", kinds="conversation", person="mathis")).json()
@@ -149,7 +179,15 @@ async def test_each_facet_is_counted_ignoring_its_own_selection(tmp_path: Path) 
 async def test_one_entry_comes_with_its_record_and_only_to_who_may_read_it(tmp_path: Path) -> None:
     async with Harness(tmp_path) as admin:
         await admin.account("mathilde", Role.MEMBER, "mathilde")
-        await admin.nestor.journal.publish(UserTurn(source="agent", address=TELEGRAM, text="secret", person=MATHIS))
+        await admin.nestor.journal.publish(
+            UserTurn(
+                exchange=Exchange(conversation_id="c1", turn_id=new_id()),
+                source="agent",
+                address=TELEGRAM,
+                text="secret",
+                person=MATHIS,
+            )
+        )
         api = await admin.api()
         (item,) = await items(api, q="secret")
         entry = (await api.get(f"/api/v1/journal/{item['position']}")).json()

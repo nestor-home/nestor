@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from nestor.core import Event, PersonId, ProviderError, utc_now
+from nestor.core import Event, ProviderError, utc_now
 from nestor.core.events import JSON
 from nestor.modules.channels import Address, Exchange, Medium
 from nestor.modules.cognition import TaskStarted
@@ -23,9 +23,8 @@ from nestor.modules.conversation import (
     UserTurn,
 )
 from nestor.modules.household import Household
-from nestor.modules.initiative import WatchCreated
 from nestor.modules.journal import Journal
-from nestor.modules.memory import Memories, MemoryCorrected, MemoryForgotten, MemoryRecorded
+from nestor.modules.memory import Memories, MemoryRecorded
 from nestor.modules.memory.assistant import MemoryTools
 from nestor.testing.cognition import ScriptedExecutor
 from nestor.testing.cognition.model import ScriptedModel
@@ -233,42 +232,6 @@ async def test_a_composed_message_sees_only_the_open_conversation(
     assert soon == [Role.SYSTEM, Role.USER, Role.ASSISTANT, Role.SYSTEM]
     assert late == [Role.SYSTEM, Role.SYSTEM]
     assert len(await journal.history(UserTurn)) == 1, "composing is not a turn"
-
-
-# Records written before conversations were counted.
-
-
-def test_turns_recorded_in_version_1_belong_to_no_conversation() -> None:
-    at = utc_now().isoformat()
-    envelope: dict[str, JSON] = {"id": "e1", "at": at, "source": "agent", "session": "telegram:42", "version": 1}
-    said: dict[str, JSON] = {"address": TELEGRAM_42, "text": "Salut", "person": "mathis"}
-    user = Event.from_record({**envelope, "type": "conversation.turn.user", "payload": said})
-    cut = Event.from_record({**envelope, "type": "conversation.turn.cut", "payload": {"turn": "a1", "heard": "Bon"}})
-    assert isinstance(user, UserTurn) and (user.text, user.person, user.exchange) == ("Salut", PersonId("mathis"), None)
-    assert isinstance(cut, AnswerCut) and (cut.answer, cut.heard, cut.exchange) == ("a1", "Bon", None)
-
-
-@pytest.mark.parametrize(
-    ("cls", "payload"),
-    [
-        (AssistantTurn, {"address": TELEGRAM_42, "text": "Oui"}),
-        (FallbackSpoken, {"address": TELEGRAM_42, "reason": "model_slow"}),
-        (ToolCalled, {"address": TELEGRAM_42, "call_id": "c", "name": "t", "arguments": {}}),
-        (ToolCompleted, {"call_id": "c", "name": "t", "output": "", "ok": True, "duration_s": 0.1}),
-        (MemoryRecorded, {"memory_id": "m", "text": "Mathis aime le thé"}),
-        (MemoryCorrected, {"memory_id": "m", "text": "Mathis aime le café"}),
-        (MemoryForgotten, {"memory_id": "m"}),
-        (TaskStarted, {"task_id": "t", "objective": "o", "executor": "hermes", "origin": TELEGRAM_42}),
-        (WatchCreated, {"watch_id": "w", "what": "le colis", "keywords": [], "kinds": ["mail"], "once": True}),
-    ],
-    ids=lambda value: getattr(value, "event_type", ""),
-)
-def test_older_records_of_events_of_a_turn_still_read(cls: type[Event], payload: dict[str, object]) -> None:
-    record = {"type": cls.event_type, "version": 1, "id": "e1", "at": utc_now().isoformat(), "source": "x",
-              "session": None, "payload": payload}  # fmt: skip
-    event = Event.from_record(record)  # ty: ignore[invalid-argument-type]
-    assert isinstance(event, cls) and event.version == 2 and getattr(event, "exchange", "missing") is None
-    assert Event.from_record(event.to_record()) == event
 
 
 def test_an_exchange_is_written_as_plain_data() -> None:

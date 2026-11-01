@@ -165,8 +165,8 @@ async def test_responses_forbid_framing_caching_and_referrers(tmp_path: Path) ->
 
 async def test_only_the_api_the_callback_the_relay_and_the_front_are_served(tmp_path: Path) -> None:
     async with Harness(tmp_path) as admin:
-        for old in ("/login", "/journal", "/connections", "/satellites"):
-            response = await admin.browser.get(old)
+        for page in ("/login", "/journal", "/connections", "/satellites"):
+            response = await admin.browser.get(page)
             assert response.status_code == 503 and "pnpm build" in response.text, "the front, not built here"
-        posted = await admin.browser.post("/api/satellites/approve", json={"code": "123456"})
-        assert posted.status_code == 405 and posted.json()["error"]["code"] == "method_not_allowed", "gone"
+        posted = await admin.browser.post("/satellites", json={"code": "123456"})
+        assert posted.status_code == 405 and posted.json()["error"]["code"] == "method_not_allowed", "read only"

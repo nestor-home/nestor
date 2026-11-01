@@ -1,7 +1,7 @@
 """Vendor-free kernel shared by every module.
 
 - `contracts`: `Component` lifecycle and capabilities
-- `events`: versioned events and their log records
+- `events`: domain events and their log records
 - `shared`: identifiers and time helpers
 - `exceptions`: the error hierarchy
 """

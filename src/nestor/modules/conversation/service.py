@@ -203,21 +203,21 @@ class AgentReply(Reply):
         agent.replies.set(self, ReplyPhase.THINKING)
         try:
             if self._record:
-                self._exchange = await agent.conversations.turn(self._address)
-                conversation: str | None = self._exchange.conversation_id
+                exchange = self._exchange = await agent.conversations.turn(self._address)
+                conversation: str | None = exchange.conversation_id
+                if self._user is not None:
+                    await agent.journal.publish(
+                        UserTurn(
+                            source="agent",
+                            session=self._address.session,
+                            address=self._address,
+                            text=self._user,
+                            person=self._person.id if self._person else None,
+                            exchange=exchange,
+                        )
+                    )
             else:  # a composed message: the open conversation's turns, if any
                 conversation = await agent.conversations.current(self._address)
-            if self._user is not None:
-                await agent.journal.publish(
-                    UserTurn(
-                        source="agent",
-                        session=self._address.session,
-                        address=self._address,
-                        text=self._user,
-                        person=self._person.id if self._person else None,
-                        exchange=self._exchange,
-                    )
-                )
             await self._answer(conversation)
             if self._record:
                 await self._log_answer("".join(self._said), interrupted=False)

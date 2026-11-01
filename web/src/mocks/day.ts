@@ -56,7 +56,6 @@ export function day(now = Date.now()): JournalEvent[] {
     });
     const record = {
       type: d.type,
-      version: 1,
       at: item.at,
       ...(d.record ?? {}),
       ...Object.fromEntries(Object.entries(d.links ?? {}).map(([k, v]) => [`${k}_id`, v])),

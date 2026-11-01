@@ -101,7 +101,7 @@ def test_the_command_line_checks_a_configuration_with_the_admin(
 ) -> None:
     path = tmp_path / "nestor.yaml"
     path.write_text(
-        CONFIG.format(data_dir=tmp_path, admin={"password_hash": "scrypt$left-from-before"})
+        CONFIG.format(data_dir=tmp_path, admin={"colour": "red"})
         .replace("kind: scripted", "kind: openai-compatible, api_key: k, model: m, base_url: 'http://x'")
         .replace("[{kind: remote, name: hermes}]", "[]")
         .replace("[{kind: memory, name: telegram}]", "[{kind: telegram, token: '1:a'}]")
@@ -109,8 +109,8 @@ def test_the_command_line_checks_a_configuration_with_the_admin(
     )
     monkeypatch.setenv("NESTOR_SECRET_KEY", "k" * 40)
     assert main(["-c", str(path), "check"]) == 2
-    assert "password_hash is gone" in (err := capsys.readouterr().err) and "nestor accounts create-owner" in err
+    assert "colour" in capsys.readouterr().err
 
-    path.write_text(path.read_text().replace("{'password_hash': 'scrypt$left-from-before'}", "{port: 8080}"))
+    path.write_text(path.read_text().replace("{'colour': 'red'}", "{port: 8080}"))
     assert main(["-c", str(path), "check"]) == 0
     assert "admin on 127.0.0.1:8080" in capsys.readouterr().out

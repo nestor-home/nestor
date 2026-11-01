@@ -101,8 +101,7 @@ async def test_an_entry_no_installed_code_can_read_still_shows_its_type(tmp_path
     async with Harness(tmp_path) as admin:
         await admin.nestor.database.write(
             lambda c: c.execute(
-                "INSERT INTO events (id, type, version, at, source, session, payload) "
-                "VALUES (?, ?, 1, ?, 's', NULL, ?)",
+                "INSERT INTO events (id, type, at, source, session, payload) VALUES (?, ?, ?, 's', NULL, ?)",
                 ("e1", "plugin.gone", "2026-10-30T10:00:00.000000Z", '{"x": 1}'),
             )
         )

@@ -452,27 +452,3 @@ async def test_identify_is_refused_to_a_satellite_not_allowed_it_or_unknown(pair
     with pytest.raises(IdentifyUnavailable) as unknown:
         await pairing.identify("nope")
     assert (unsupported.value.reason, unknown.value.reason) == ("unsupported", "unknown")
-
-
-# Versions.
-
-
-async def test_satellites_paired_with_the_draft_protocol_0_must_pair_again(journal: Journal) -> None:
-    from nestor.modules.journal import Entry
-
-    record = SatellitePaired(
-        source="satellites", pairing_id="p", device=SENSOR.device, capabilities=(), token_hash="h",
-        protocol="nestor.satellite/1", proof=Proof.DEVICE_CODE,
-    ).to_record()  # fmt: skip
-    record["version"] = 1
-    payload = record["payload"]
-    assert isinstance(payload, dict)
-    for key in ("protocol", "proof", "method", "addition_id", "name"):
-        payload.pop(key, None)
-    upgraded = SatellitePaired.from_record(Entry(position=1, record=record).record)
-    assert isinstance(upgraded, SatellitePaired)
-    assert (upgraded.protocol, upgraded.proof) == ("nestor.satellite/0", Proof.DEVICE_CODE)
-    await journal.publish(upgraded)
-    restarted = Pairing(journal)
-    await restarted.start()
-    assert restarted.satellites() == []

@@ -15,9 +15,9 @@ pending device accepts both proofs: the first one accepted wins, the other is re
 enrollment code refused that way stays usable. A person may ask a pending device to identify itself
 through its next poll, or a paired one through its link: that only helps tell devices apart.
 
-Default deny: a device that is not paired, was revoked, or paired with an older protocol never
-authenticates. Pending pairings live in memory (a restart asks devices to request again); paired
-satellites and the additions in progress are rebuilt from the journal, where only hashes are written.
+Default deny: a device that is not paired, or was revoked, never authenticates. Pending pairings
+live in memory (a restart asks devices to request again); paired satellites and the additions in
+progress are rebuilt from the journal, where only hashes are written.
 """
 
 import contextlib
@@ -45,7 +45,6 @@ from nestor.modules.satellites.events import (
 from nestor.modules.satellites.types import (
     IDENTIFY,
     MAX_NAME,
-    PROTOCOL,
     Addition,
     AdditionStatus,
     Device,
@@ -179,8 +178,8 @@ class Pairing(Component):
         self._online: dict[str, Identify] = {}
 
     async def start(self) -> None:
-        """Rebuild the paired satellites (the latest pairing of each device made with this protocol,
-        unless revoked since) and the additions in progress."""
+        """Rebuild the paired satellites (the latest pairing of each device, unless revoked since) and
+        the additions in progress."""
         history = await self.journal.history(
             SatellitePaired,
             SatelliteRevoked,
@@ -191,11 +190,10 @@ class Pairing(Component):
         )
         for event in history:  # log order
             match event:
-                case SatellitePaired() if event.protocol == PROTOCOL:
+                case SatellitePaired():
                     self._satellites[event.device.id] = _satellite(event)
-                case SatellitePaired() | SatelliteRevoked():
-                    self._satellites.pop(event.device.id if isinstance(event, SatellitePaired) else event.device_id,
-                                         None)  # fmt: skip
+                case SatelliteRevoked():
+                    self._satellites.pop(event.device_id, None)
                 case SatelliteAdditionStarted():
                     self._additions[event.addition_id] = _addition(event)
                 case SatelliteAdditionCompleted():
@@ -512,7 +510,6 @@ class Pairing(Component):
             device=device,
             capabilities=tuple(sorted(allowed)),
             token_hash=hash_token(token),
-            protocol=PROTOCOL,
             proof=proof,
             method=method,
             addition_id=addition.id if addition else None,

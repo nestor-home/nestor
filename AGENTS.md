@@ -21,7 +21,7 @@ All four must pass before a change is done; CI runs them on Python 3.12 to 3.14 
 src/nestor/
 ├── core/                 kernel shared by everything (stdlib only)
 │   ├── contracts/        Component lifecycle, capabilities
-│   ├── events/           versioned Event base, JSON codec for the log
+│   ├── events/           Event base, JSON codec for the log
 │   ├── shared/           identifiers, clock
 │   └── exceptions.py     error hierarchy
 ├── modules/              domain modules
@@ -48,7 +48,7 @@ src/nestor/
 │                         the web front of `web/` is built on; it also serves that front once built
 ├── cli.py                the `nestor` command, above runtime and admin
 ├── adapters/             adapters/<family>/<vendor>/ — the only place for third-party SDKs
-│   └── storage/          SQLite (one WAL database, migrations in schema.py), blobs on disk
+│   └── storage/          SQLite (one WAL database, its schema in schema.py), blobs on disk
 └── testing/              doubles and contract suites, mirroring modules/ (shipped with the package)
 tests/                    mirrors src/nestor
 ```
@@ -92,7 +92,7 @@ runtime may assemble the built-in storage adapters, and the admin may use FastAP
   closed sets are `StrEnum`s. No dicts of loosely typed data across module boundaries.
 - **Events** are declared in the owning module's `events.py`:
   `class TaskStarted(Event, event_type="task.started")`. Payloads are plain data (see
-  `nestor.core.codec`); changing one means bumping `version` and migrating older records.
+  `nestor.core.codec`); a record reads back only with exactly the payload its class declares.
 - **Errors** derive from `NestorError`. Adapters translate vendor exceptions into `ProviderError`
   (with `transient` set) — a vendor exception never reaches a module.
 - **Async**: explicit timeouts, cancellation honoured, resources released in `close`.

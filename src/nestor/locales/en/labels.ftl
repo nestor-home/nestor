@@ -83,4 +83,3 @@ pairing-method-enrollment-provisioning-hint = Give the device the pairing addres
 # Why a connection needs authorising again, or is in error.
 connection-refresh-refused = The service refused to renew the access: it was revoked or has expired. Connect the account again.
 connection-no-refresh-token = The access has expired and the service gave no way to renew it. Connect the account again.
-connection-reason-other = { $detail }

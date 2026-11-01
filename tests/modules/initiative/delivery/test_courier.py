@@ -2,9 +2,9 @@
 
 import asyncio
 
-from nestor.core import PersonId
+from nestor.core import PersonId, new_id
 from nestor.core.i18n import Message
-from nestor.modules.channels import Address, Medium
+from nestor.modules.channels import Address, Exchange, Medium
 from nestor.modules.cognition.tools import Toolbox
 from nestor.modules.conversation import Agent, Persona, UserTurn
 from nestor.modules.home import Granularity
@@ -70,7 +70,15 @@ async def test_a_reaction_cancels_the_follow_up() -> None:
     sender, journal, _, telegram = courier(StaticPresence().set("mathis", home=True))
     async with sender:
         await sender.deliver(MATHIS, "Le colis est arrivé.", about="watch colis")
-        await journal.publish(UserTurn(source="voice", session=SALON.session, address=SALON, text="Super, merci"))
+        await journal.publish(
+            UserTurn(
+                exchange=Exchange(conversation_id="c1", turn_id=new_id()),
+                source="voice",
+                session=SALON.session,
+                address=SALON,
+                text="Super, merci",
+            )
+        )
         await asyncio.sleep(0.05)
     assert telegram.sent == []
 

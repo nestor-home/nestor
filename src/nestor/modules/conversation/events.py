@@ -1,64 +1,41 @@
-"""Events of the dialogue, whatever the channel (voice, messaging, web).
-
-v2 of each: `exchange`, the conversation and the turn the event belongs to. Records of version 1 were
-written before conversations were counted: they read with `exchange` set to `None`.
-"""
+"""Events of the dialogue, whatever the channel (voice, messaging, web), each with the conversation
+and the turn it belongs to (`exchange`)."""
 
 from nestor.core import Event, PersonId
-from nestor.core.events import JSON
-from nestor.modules.channels import Address, Exchange, before_exchanges
+from nestor.modules.channels import Address, Exchange
 from nestor.modules.conversation.types import FallbackReason
 
 
-class UserTurn(Event, event_type="conversation.turn.user", version=2):
+class UserTurn(Event, event_type="conversation.turn.user"):
     """A message to the assistant. Its `exchange.turn_id` is the turn it opens."""
 
     address: Address
     text: str
+    exchange: Exchange
     person: PersonId | None = None
-    exchange: Exchange | None = None  # None only in records of version 1
-
-    @classmethod
-    def upgrade(cls, version: int, payload: dict[str, JSON]) -> dict[str, JSON]:
-        return before_exchanges(payload)
 
 
-class AssistantTurn(Event, event_type="conversation.turn.assistant", version=2):
+class AssistantTurn(Event, event_type="conversation.turn.assistant"):
     """What the user actually received: on voice, only the part played before an interruption. In the
     turn it answers, or in a turn of its own when it was unprompted (a delivery)."""
 
     address: Address
     text: str
     interrupted: bool = False
-    exchange: Exchange | None = None  # None only in records of version 1
-
-    @classmethod
-    def upgrade(cls, version: int, payload: dict[str, JSON]) -> dict[str, JSON]:
-        return before_exchanges(payload)
+    exchange: Exchange | None = None  # None outside a turn: composed, or cut before its turn began
 
 
-class FallbackSpoken(Event, event_type="conversation.fallback", version=2):
+class FallbackSpoken(Event, event_type="conversation.fallback"):
     """A provider failed or stalled and the assistant said so instead of staying silent."""
 
     address: Address
     reason: FallbackReason
-    exchange: Exchange | None = None  # None only in records of version 1
-
-    @classmethod
-    def upgrade(cls, version: int, payload: dict[str, JSON]) -> dict[str, JSON]:
-        return before_exchanges(payload)
+    exchange: Exchange | None = None  # None outside a turn: composed, or cut before its turn began
 
 
-class AnswerCut(Event, event_type="conversation.turn.cut", version=2):
-    """The user cut in while a fully written answer was still being spoken: only `heard` reached them.
-
-    v2: `answer` was named `turn`, a word that now means the whole turn (in `exchange`)."""
+class AnswerCut(Event, event_type="conversation.turn.cut"):
+    """The user cut in while a fully written answer was still being spoken: only `heard` reached them."""
 
     answer: str  # id of the AssistantTurn
     heard: str
-    exchange: Exchange | None = None  # None only in records of version 1
-
-    @classmethod
-    def upgrade(cls, version: int, payload: dict[str, JSON]) -> dict[str, JSON]:
-        rest = {k: v for k, v in payload.items() if k != "turn"}
-        return before_exchanges({**rest, "answer": payload.get("turn")})
+    exchange: Exchange | None = None  # the turn of the answer it cuts
