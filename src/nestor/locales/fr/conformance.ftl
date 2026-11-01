@@ -72,8 +72,8 @@ conformance-exited = terminé avec le code { $status }
 
 ## La commande.
 
-conformance-help = vérifie un satellite selon nestor.satellite/2 (demande l'extra voice)
-conformance-description = Vérifie un satellite, écrit dans n'importe quel langage, selon le standard nestor.satellite/2. Un faux cœur (le vrai service d'appairage et la vraie passerelle) lance la commande du satellite une fois par scénario : appairage par code d'appareil, par code d'enrôlement, codes refusés, limites de débit, identification, hello, acquittements, audio dans les deux sens et reconnexion.
+conformance-help = vérifie un satellite selon nestor.satellite/1 (demande l'extra voice)
+conformance-description = Vérifie un satellite, écrit dans n'importe quel langage, selon le standard nestor.satellite/1. Un faux cœur (le vrai service d'appairage et la vraie passerelle) lance la commande du satellite une fois par scénario : appairage par code d'appareil, par code d'enrôlement, codes refusés, limites de débit, identification, hello, acquittements, audio dans les deux sens et reconnexion.
 conformance-epilog =
     Dans la commande, { "{url}" } est remplacé par l'URL du faux cœur et { "{state}" } par un dossier neuf pour le jeton du satellite.
     Les scénarios avec un code d'enrôlement le donnent dans la variable d'environnement NESTOR_PAIRING_URI (retirée dans les autres), comme une personne configure un appareil sans écran.

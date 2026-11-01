@@ -33,7 +33,7 @@ const MEANS: Record<string, string> = {
 };
 
 /** The wire format satellites speak: an identifier, not language. */
-const PROTOCOL = "nestor.satellite/2";
+const PROTOCOL = "nestor.satellite/1";
 
 function means(capability: string): string | null {
   const id = MEANS[capability];

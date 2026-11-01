@@ -93,7 +93,7 @@ OFF_CONTRACT = {
     "unknown expression": _with(wire.ExpressionIntent(expression=Expression.JOY), expression="anger"),
     "unexpected field": _with(wire.Ack(of="x"), extra=1),
     "missing field": {**wire.encode(wire.Ack(of="x")), "payload": {}},
-    "other protocol": _manifest(protocol="nestor.satellite/1"),
+    "other protocol": _manifest(protocol="nestor.satellite/0"),
     "no pairing method": _manifest(pairing_methods=[]),
     "device id with a colon": _manifest(device={"id": "voice:salon", "model": "m", "room": "salon"}),
     "capability without a family": _manifest(capabilities=[{"name": "camera"}]),
@@ -196,7 +196,7 @@ def test_an_off_contract_pairing_request_is_refused(body: dict[str, Any]) -> Non
 
 
 def test_another_protocol_version_is_refused_as_such() -> None:
-    old = MANIFEST.to_json() | {"protocol": "nestor.satellite/1"}
+    old = MANIFEST.to_json() | {"protocol": "nestor.satellite/0"}
     with pytest.raises(ProtocolUnsupported):
         wire.PairingRequest.from_json({"manifest": old})
     with pytest.raises(ContractError):

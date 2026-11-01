@@ -77,7 +77,7 @@ neutral. Its figure is Nestor's character, the
 ## Checking a satellite
 
 `nestor satellites conformance` checks a satellite written in any language against the
-`nestor.satellite/2` standard: see [Conformance](https://nestorhome.dev/docs/satellites/conformance/).
+`nestor.satellite/1` standard: see [Conformance](https://nestorhome.dev/docs/satellites/conformance/).
 
 ## License
 

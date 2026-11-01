@@ -165,7 +165,7 @@ async def test_a_replaced_or_borrowed_token_is_refused(pairing: Pairing) -> None
     assert pairing.authenticate("reachy-salon", old) is None
     assert pairing.authenticate("reachy-salon", new) is not None
     assert pairing.authenticate("enceinte-cuisine", new) is None, "a token only opens its own device"
-    assert pairing.authenticate("reachy-salon", "nst2_guessed") is None
+    assert pairing.authenticate("reachy-salon", "nst1_guessed") is None
 
 
 async def test_the_approver_can_allow_less_than_the_device_declares(pairing: Pairing, journal: Journal) -> None:
@@ -457,12 +457,12 @@ async def test_identify_is_refused_to_a_satellite_not_allowed_it_or_unknown(pair
 # Versions.
 
 
-async def test_satellites_paired_with_protocol_1_must_pair_again(journal: Journal) -> None:
+async def test_satellites_paired_with_the_draft_protocol_0_must_pair_again(journal: Journal) -> None:
     from nestor.modules.journal import Entry
 
     record = SatellitePaired(
         source="satellites", pairing_id="p", device=SENSOR.device, capabilities=(), token_hash="h",
-        protocol="nestor.satellite/2", proof=Proof.DEVICE_CODE,
+        protocol="nestor.satellite/1", proof=Proof.DEVICE_CODE,
     ).to_record()  # fmt: skip
     record["version"] = 1
     payload = record["payload"]
@@ -471,7 +471,7 @@ async def test_satellites_paired_with_protocol_1_must_pair_again(journal: Journa
         payload.pop(key, None)
     upgraded = SatellitePaired.from_record(Entry(position=1, record=record).record)
     assert isinstance(upgraded, SatellitePaired)
-    assert (upgraded.protocol, upgraded.proof) == ("nestor.satellite/1", Proof.DEVICE_CODE)
+    assert (upgraded.protocol, upgraded.proof) == ("nestor.satellite/0", Proof.DEVICE_CODE)
     await journal.publish(upgraded)
     restarted = Pairing(journal)
     await restarted.start()

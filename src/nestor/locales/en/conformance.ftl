@@ -71,8 +71,8 @@ conformance-exited = exited with status { $status }
 
 ## The command.
 
-conformance-help = check a satellite against nestor.satellite/2 (needs the voice extra)
-conformance-description = Check a satellite, written in any language, against the nestor.satellite/2 standard. A fake core (the real pairing service and gateway) launches the satellite's command once per scenario: pairing with a device code, with an enrollment code, refused codes, rate limits, identify, hello, acks, audio both ways and reconnection.
+conformance-help = check a satellite against nestor.satellite/1 (needs the voice extra)
+conformance-description = Check a satellite, written in any language, against the nestor.satellite/1 standard. A fake core (the real pairing service and gateway) launches the satellite's command once per scenario: pairing with a device code, with an enrollment code, refused codes, rate limits, identify, hello, acks, audio both ways and reconnection.
 conformance-epilog =
     In the command, { "{url}" } is replaced by the fake core's URL and { "{state}" } by a fresh folder for the satellite's token.
     The scenarios with an enrollment code give it in the NESTOR_PAIRING_URI environment variable (removed in the others), the way a person configures a headless device.

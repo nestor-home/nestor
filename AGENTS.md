@@ -36,7 +36,7 @@ src/nestor/
 │   ├── memory/           memories per person: journaled changes, searchable store, agent tools
 │   ├── identity/         diarization and speaker identification ports (opt-in, never authorisation)
 │   ├── connectors/       third-party services plugged in from the admin: OAuth, vault, tools, inbound
-│   ├── satellites/       pairing, additions, manifests, the `nestor.satellite/2` wire format and its JSON Schemas
+│   ├── satellites/       pairing, additions, manifests, the `nestor.satellite/1` wire format and its JSON Schemas
 │   │                     (the standard: https://nestorhome.dev/docs/satellites/protocol/)
 │   ├── initiative/       what the agent says unprompted
 │   │   ├── delivery/     the courier and its presence-aware policy

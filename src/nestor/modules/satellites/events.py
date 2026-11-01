@@ -19,7 +19,7 @@ class SatellitePairingRequested(Event, event_type="satellite.pairing.requested",
 
     @classmethod
     def upgrade(cls, version: int, payload: dict[str, codec.JSON]) -> dict[str, codec.JSON]:
-        return payload | {"methods": []}  # version 1: nestor.satellite/1 declared no method
+        return payload | {"methods": []}  # version 1: nestor.satellite/0, a pre-release draft, declared no method
 
 
 class SatellitePaired(Event, event_type="satellite.paired", version=2):
@@ -41,7 +41,7 @@ class SatellitePaired(Event, event_type="satellite.paired", version=2):
 
     @classmethod
     def upgrade(cls, version: int, payload: dict[str, codec.JSON]) -> dict[str, codec.JSON]:
-        return payload | {"protocol": "nestor.satellite/1", "proof": Proof.DEVICE_CODE.value}
+        return payload | {"protocol": "nestor.satellite/0", "proof": Proof.DEVICE_CODE.value}
 
 
 class SatelliteRevoked(Event, event_type="satellite.revoked"):
