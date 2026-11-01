@@ -30,8 +30,20 @@ from nestor.admin.api.v1.routes import (
 from nestor.admin.api.v1.security import CSRF_HEADER, json_only
 
 PREFIX = "/api/v1"
+# Written out rather than left to FastAPI, which takes them from `http.HTTPStatus`: Python 3.13 renamed
+# some phrases (422 is "Unprocessable Content" since RFC 9110), and the document must not depend on it.
+ERROR_DESCRIPTIONS = {
+    400: "Bad Request",
+    401: "Unauthorized",
+    403: "Forbidden",
+    404: "Not Found",
+    409: "Conflict",
+    422: "Unprocessable Content",
+    429: "Too Many Requests",
+    502: "Bad Gateway",
+}
 ERRORS: dict[int | str, dict[str, Any]] = {
-    status: {"model": ErrorOut} for status in (400, 401, 403, 404, 409, 422, 429, 502)
+    status: {"model": ErrorOut, "description": description} for status, description in ERROR_DESCRIPTIONS.items()
 }
 
 
