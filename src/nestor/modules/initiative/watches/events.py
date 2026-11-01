@@ -3,12 +3,11 @@
 from datetime import datetime
 
 from nestor.core import Event, PersonId
-from nestor.core.events import JSON
-from nestor.modules.channels import Address, Exchange, before_exchanges
+from nestor.modules.channels import Address, Exchange
 
 
-class WatchCreated(Event, event_type="watch.created", version=2):
-    """v2: `exchange`, the conversation and turn that asked for it (`None` in version 1 records)."""
+class WatchCreated(Event, event_type="watch.created"):
+    """`exchange` is the conversation and turn that asked for it, when one did."""
 
     watch_id: str
     what: str
@@ -19,10 +18,6 @@ class WatchCreated(Event, event_type="watch.created", version=2):
     created_in: Address | None = None
     until: datetime | None = None
     exchange: Exchange | None = None
-
-    @classmethod
-    def upgrade(cls, version: int, payload: dict[str, JSON]) -> dict[str, JSON]:
-        return before_exchanges(payload)
 
 
 class WatchTriggered(Event, event_type="watch.triggered"):

@@ -265,7 +265,6 @@ delivery-in-room = { $person } est dans la pièce « { $room } »
 delivery-room-without-satellite = { $person } est dans une pièce sans satellite
 delivery-home-main-satellite = { $person } est à la maison, pièce inconnue : satellite principal ({ $room })
 delivery-no-satellite = aucun satellite là où { $person } peut se trouver
-delivery-other = { $reason }
 
 error-bad-credentials = Adresse ou mot de passe incorrect.
 error-account-disabled = Ce compte est désactivé : demandez au propriétaire du foyer.

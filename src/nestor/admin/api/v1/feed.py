@@ -192,14 +192,10 @@ def _cause_rule(entry: Entry) -> _Rule | None:
     if kind == WatchEnded.event_type:
         return of(WatchTriggered, "watch_id")
     if kind == AnswerCut.event_type:
-        cut = entry.event()
-        answer = cut.answer if isinstance(cut, AnswerCut) else None  # read through `upgrade`: v1 named it `turn`
+        answer = payload.get("answer")
         return _Rule(frozenset({AssistantTurn.event_type}), lambda c: c.record.get("id") == answer)
     if kind == AssistantTurn.event_type:
         turn = _exchange(entry).get("turn_id")
-        if turn is None:  # recorded before turns were counted (v1): the session's last message
-            session = entry.record.get("session")
-            return _Rule(frozenset({UserTurn.event_type}), lambda c: c.record.get("session") == session)
         return _Rule(frozenset({UserTurn.event_type}), lambda c: _exchange(c).get("turn_id") == turn)
     if kind in (Delivered.event_type, DeliveryFailed.event_type):
         return of(DeliveryConsidered, "about")

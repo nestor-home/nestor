@@ -5,7 +5,6 @@ from datetime import datetime
 from enum import StrEnum
 
 from nestor.core import ContractError, SessionId, new_id, utc_now
-from nestor.core.events import JSON
 
 
 class Medium(StrEnum):
@@ -64,12 +63,6 @@ class Exchange:
 
     conversation_id: str
     turn_id: str
-
-
-def before_exchanges(payload: dict[str, JSON]) -> dict[str, JSON]:
-    """The payload of a version 1 record of an event that gained `exchange` in version 2: written
-    before conversations were counted, it belongs to none."""
-    return {**payload, "exchange": None}
 
 
 @dataclass(frozen=True, slots=True)

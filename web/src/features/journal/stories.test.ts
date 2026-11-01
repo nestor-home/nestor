@@ -82,19 +82,15 @@ describe("stories", () => {
     ]);
   });
 
-  it("reads records written before conversations: a message opens a turn, the session is the thread", () => {
+  it("gathers events outside any conversation by session, in the turn before them", () => {
     const s = { session: "voice:salon" };
     const items = [
-      ev({ id: "u1", type: "conversation.turn.user", kind: "conversation", links: s }),
-      ev({ id: "a1", type: "conversation.turn.assistant", kind: "conversation", links: s }),
-      ev({ id: "u2", type: "conversation.turn.user", kind: "conversation", links: s }),
+      ev({ id: "f1", type: "conversation.fallback", kind: "conversation", links: s }),
+      ev({ id: "f2", type: "conversation.fallback", kind: "conversation", links: s }),
     ];
     const thread = buildStories(items)[0] as Thread;
     expect(thread.filter).toEqual({ session: "voice:salon" });
-    expect(thread.turns.map((t) => [t.user?.id, t.steps.length])).toEqual([
-      ["u1", 1],
-      ["u2", 0],
-    ]);
+    expect(thread.turns.map((t) => [t.user, t.steps.length])).toEqual([[null, 2]]);
   });
 
   it("keeps a message before its reply when both happened in the same instant", () => {

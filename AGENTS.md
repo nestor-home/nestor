@@ -92,7 +92,8 @@ runtime may assemble the built-in storage adapters, and the admin may use FastAP
   closed sets are `StrEnum`s. No dicts of loosely typed data across module boundaries.
 - **Events** are declared in the owning module's `events.py`:
   `class TaskStarted(Event, event_type="task.started")`. Payloads are plain data (see
-  `nestor.core.codec`); changing one means bumping `version` and migrating older records.
+  `nestor.core.codec`); changing one means bumping `version` and overriding `upgrade`, which
+  turns a record of the previous version into the new one as it is read.
 - **Errors** derive from `NestorError`. Adapters translate vendor exceptions into `ProviderError`
   (with `transient` set) — a vendor exception never reaches a module.
 - **Async**: explicit timeouts, cancellation honoured, resources released in `close`.

@@ -1,13 +1,12 @@
 """Events of delegated tasks: the journal is the only record of a task, so it survives restarts."""
 
 from nestor.core import Event, PersonId
-from nestor.core.events import JSON
-from nestor.modules.channels import Address, Exchange, before_exchanges
+from nestor.modules.channels import Address, Exchange
 from nestor.modules.cognition.delegation.types import Notify, TaskStatus
 
 
-class TaskStarted(Event, event_type="task.started", version=2):
-    """v2: `exchange`, the conversation and turn that delegated it (`None` in version 1 records)."""
+class TaskStarted(Event, event_type="task.started"):
+    """`exchange` is the conversation and turn that delegated it, when one did."""
 
     task_id: str
     objective: str
@@ -16,10 +15,6 @@ class TaskStarted(Event, event_type="task.started", version=2):
     requested_by: PersonId | None = None
     notify: Notify = Notify.AUTO
     exchange: Exchange | None = None
-
-    @classmethod
-    def upgrade(cls, version: int, payload: dict[str, JSON]) -> dict[str, JSON]:
-        return before_exchanges(payload)
 
 
 class TaskAttached(Event, event_type="task.attached"):

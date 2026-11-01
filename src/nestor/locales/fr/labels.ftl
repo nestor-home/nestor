@@ -82,4 +82,3 @@ pairing-method-enrollment-provisioning-hint = Donnez à l'appareil l'adresse d'a
 # Pourquoi une connexion doit être réautorisée, ou est en erreur.
 connection-refresh-refused = Le service a refusé de renouveler l'accès : il a été révoqué ou a expiré. Reconnectez le compte.
 connection-no-refresh-token = L'accès a expiré et le service n'a donné aucun moyen de le renouveler. Reconnectez le compte.
-connection-reason-other = { $detail }

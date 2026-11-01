@@ -4,33 +4,26 @@ Never a token, never a code in clear: only their hashes."""
 from datetime import datetime
 
 from nestor.core import Capability, Event, PersonId
-from nestor.core.events import codec
 from nestor.modules.satellites.types import Device, PairingMethod, Proof
 
 
-class SatellitePairingRequested(Event, event_type="satellite.pairing.requested", version=2):
+class SatellitePairingRequested(Event, event_type="satellite.pairing.requested"):
     """A device asked to pair, declaring how a person can pair it (`methods`)."""
 
     pairing_id: str
     device: Device
     capabilities: tuple[Capability, ...]
     expires_at: datetime
-    methods: tuple[PairingMethod, ...] = ()
-
-    @classmethod
-    def upgrade(cls, version: int, payload: dict[str, codec.JSON]) -> dict[str, codec.JSON]:
-        return payload | {"methods": []}  # version 1: nestor.satellite/0, a pre-release draft, declared no method
+    methods: tuple[PairingMethod, ...]
 
 
-class SatellitePaired(Event, event_type="satellite.paired", version=2):
-    """A proof was accepted; pairing the same device again replaces its token. Only pairings made with
-    the current `protocol` let a device connect: older ones must pair again."""
+class SatellitePaired(Event, event_type="satellite.paired"):
+    """A proof was accepted; pairing the same device again replaces its token."""
 
     pairing_id: str
     device: Device  # its room is where it was paired: an enrollment code may have chosen it
     capabilities: tuple[Capability, ...]  # what it may do, a subset of what it declared
     token_hash: str  # SHA-256 of a 256-bit random token: enough to check it, useless to forge it
-    protocol: str
     proof: Proof
     method: PairingMethod | None = None  # how the person paired it, when known
     addition_id: str | None = None  # the addition it completed
@@ -38,10 +31,6 @@ class SatellitePaired(Event, event_type="satellite.paired", version=2):
     approved_by: PersonId | None = None  # who typed its code, or made the enrollment code
     sdk: str | None = None  # the software it declared at pairing, and its version
     sdk_version: str | None = None
-
-    @classmethod
-    def upgrade(cls, version: int, payload: dict[str, codec.JSON]) -> dict[str, codec.JSON]:
-        return payload | {"protocol": "nestor.satellite/0", "proof": Proof.DEVICE_CODE.value}
 
 
 class SatelliteRevoked(Event, event_type="satellite.revoked"):

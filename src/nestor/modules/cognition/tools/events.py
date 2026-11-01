@@ -1,16 +1,13 @@
-"""Events of tool calls: what the agent did, with which arguments, and what came back.
-
-v2: `exchange`, the conversation and turn the call was made in (`None` in version 1 records).
-"""
+"""Events of tool calls: what the agent did, with which arguments, and what came back, in the
+conversation and turn (`exchange`) the call was made in, when there is one."""
 
 from collections.abc import Mapping
 
 from nestor.core import Event, PersonId
-from nestor.core.events import JSON
-from nestor.modules.channels import Address, Exchange, before_exchanges
+from nestor.modules.channels import Address, Exchange
 
 
-class ToolCalled(Event, event_type="agent.tool.called", version=2):
+class ToolCalled(Event, event_type="agent.tool.called"):
     address: Address
     call_id: str
     name: str
@@ -18,12 +15,8 @@ class ToolCalled(Event, event_type="agent.tool.called", version=2):
     person: PersonId | None = None
     exchange: Exchange | None = None
 
-    @classmethod
-    def upgrade(cls, version: int, payload: dict[str, JSON]) -> dict[str, JSON]:
-        return before_exchanges(payload)
 
-
-class ToolCompleted(Event, event_type="agent.tool.completed", version=2):
+class ToolCompleted(Event, event_type="agent.tool.completed"):
     """`output` is what the model received: the result, or the reason of the failure."""
 
     call_id: str
@@ -32,7 +25,3 @@ class ToolCompleted(Event, event_type="agent.tool.completed", version=2):
     ok: bool
     duration_s: float
     exchange: Exchange | None = None
-
-    @classmethod
-    def upgrade(cls, version: int, payload: dict[str, JSON]) -> dict[str, JSON]:
-        return before_exchanges(payload)

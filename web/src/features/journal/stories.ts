@@ -37,7 +37,7 @@ interface Common {
 
 export interface Thread extends Common {
   type: "thread";
-  /** what the thread page filters on: the conversation, or the session of records that predate them */
+  /** what the thread page filters on: the conversation, or the session of events outside one */
   filter: { conversation: Id } | { session: Id };
   turns: Turn[];
 }
@@ -137,10 +137,10 @@ function turnsOf(items: JournalItem[], spawned: Map<Id, JournalItem[]>): Turn[] 
   };
   for (const item of items) {
     const isUser = is(item, "userTurn");
-    // the server stamps every event of a turn with its id; records written before it (no turn) open
-    // a turn at each message and gather what follows
+    // the server stamps every event of a turn with its id; one outside any turn (a composed
+    // message's tool calls) joins the turn before it
     const id = item.links.turn;
-    const turn: Turn = id ? (byId.get(id) ?? open(id)) : isUser || !last ? open(item.id) : last;
+    const turn: Turn = id ? (byId.get(id) ?? open(id)) : (last ?? open(item.id));
     last = turn;
     if (isUser) {
       turn.user = item;

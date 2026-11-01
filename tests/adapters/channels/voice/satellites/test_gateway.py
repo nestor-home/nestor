@@ -241,10 +241,10 @@ async def test_wrong_enrollment_codes_are_rate_limited_with_retry_after() -> Non
     ("body", "error"),
     [
         ({"manifest": {"protocol": "nestor.satellite/1"}}, "invalid_request"),
-        ({"manifest": {**MANIFEST.to_json(), "protocol": "nestor.satellite/0"}}, "protocol_unsupported"),
+        ({"manifest": {**MANIFEST.to_json(), "protocol": "nestor.satellite/99"}}, "protocol_unsupported"),
         (MANIFEST.to_json(), "invalid_request"),
     ],
-    ids=["no device", "protocol 0", "a bare manifest"],
+    ids=["no device", "another protocol version", "a bare manifest"],
 )
 async def test_an_invalid_request_is_refused(body: dict[str, Any], error: str) -> None:
     async with _gateway_client(Pairing(Journal(MemoryEventLog()))) as client:

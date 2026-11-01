@@ -44,7 +44,7 @@ def main(argv: list[str] | None = None) -> int:
         "init", help="write a first configuration, its secrets and the owner account (never overwrites)"
     )
     accounts = commands.add_parser("accounts", help="admin accounts").add_subparsers(dest="action", required=True)
-    owner = accounts.add_parser("create-owner", help="create an owner account (an existing install's first one)")
+    owner = accounts.add_parser("create-owner", help="create an owner account (when `nestor init` did not)")
     owner.add_argument("--login", help="email or username (default: the person's id)")
     owner.add_argument("--person", help="household person id (default: the first person of the configuration)")
     admin = commands.add_parser("admin", help="the admin web interface").add_subparsers(dest="action", required=True)

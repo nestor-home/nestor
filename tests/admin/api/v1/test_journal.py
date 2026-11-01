@@ -7,10 +7,10 @@ from pathlib import Path
 import pytest
 
 from nestor.admin.presentation import EventDescriber
-from nestor.core import PersonId
+from nestor.core import PersonId, new_id
 from nestor.core.i18n import Message
 from nestor.modules.accounts import Role
-from nestor.modules.channels import Address
+from nestor.modules.channels import Address, Exchange
 from nestor.modules.conversation import AssistantTurn, UserTurn
 from nestor.modules.initiative import DeliveryConsidered
 from nestor.modules.memory import MemoryRecorded
@@ -23,7 +23,12 @@ MATHIS_CHAT, MATHILDE_CHAT = Address("telegram", "7"), Address("telegram", "42")
 
 def turn(address: Address, text: str, person: str | None) -> UserTurn:
     return UserTurn(
-        source="agent", session=address.session, address=address, text=text, person=PersonId(person) if person else None
+        exchange=Exchange(conversation_id="c1", turn_id=new_id()),
+        source="agent",
+        session=address.session,
+        address=address,
+        text=text,
+        person=PersonId(person) if person else None,
     )
 
 

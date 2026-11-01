@@ -20,6 +20,7 @@ import nestor.modules.identity
 import nestor.modules.initiative
 import nestor.modules.memory  # noqa: F401  (importing a module registers its events)
 from nestor.core import ContractError, Event, Record, SessionId
+from nestor.core.events import JSON
 from nestor.modules.cognition import TaskEnded, TaskStatus
 
 ENVELOPE = {"source", "session", "id", "at"}
@@ -128,43 +129,30 @@ def test_a_rich_payload_survives_the_log() -> None:
     assert Event.from_record(json.loads(json.dumps(event.to_record()))) == event
 
 
-def test_an_older_record_is_upgraded_as_it_is_read_and_a_too_new_one_refused() -> None:
-    from nestor.core import Event
-    from nestor.core.i18n import Message
-    from nestor.modules.connectors import ConnectionChanged
-    from nestor.modules.initiative import DeliveryConsidered
+class Renamed(Event, event_type="testing.renamed", version=2):
+    """A test-only event whose payload changed: `note` was `text` in version 1."""
 
-    def v1(type: str, payload: dict) -> dict:
-        return {
-            "type": type,
-            "version": 1,
-            "id": type,
-            "at": "2026-10-30T10:00:00+00:00",
-            "source": "s",
-            "session": None,
-            "payload": payload,
-        }
+    note: str
 
-    changed = {"connection_id": "c1", "status": "needs_reauth"}
-    empty = Event.from_record(v1("connection.changed", {**changed, "reason": ""}))
-    assert isinstance(empty, ConnectionChanged) and empty.reason is None and empty.status == "needs_reauth"
-    refused = Event.from_record(v1("connection.changed", {**changed, "reason": "refresh refused by the provider"}))
-    assert isinstance(refused, ConnectionChanged) and refused.reason == Message.of("connection-refresh-refused")
-    odd = Event.from_record(v1("connection.changed", {**changed, "reason": "bad gateway"}))
-    assert isinstance(odd, ConnectionChanged) and odd.reason == Message.of(
-        "connection-reason-other", detail="bad gateway"
-    )
-    for text, expected in (
-        ("Mathis is in the salon", Message.of("delivery-in-room", person="Mathis", room="salon")),
-        ("Mathis is away", Message.of("delivery-away", person="Mathis")),
-        ("quiet hours: nothing spoken", Message.of("delivery-quiet-hours")),
-        (
-            "Mathis is home, room unknown: main satellite",
-            Message.of("delivery-other", reason="Mathis is home, room unknown: main satellite"),
-        ),
-    ):
-        considered = Event.from_record(v1("initiative.considered", {"about": "watch w1", "reason": text}))
-        assert isinstance(considered, DeliveryConsidered) and considered.reason == expected, text
+    @classmethod
+    def upgrade(cls, version: int, payload: dict[str, JSON]) -> dict[str, JSON]:
+        rest = {k: v for k, v in payload.items() if k != "text"}
+        return {**rest, "note": payload["text"]}
+
+
+def test_a_record_of_an_earlier_version_is_upgraded_as_it_is_read() -> None:
+    record: Record = {
+        "type": "testing.renamed",
+        "version": 1,
+        "id": "r",
+        "at": "2026-10-30T10:00:00+00:00",
+        "source": "s",
+        "session": None,
+        "payload": {"text": "x"},
+    }
+    event = Event.from_record(record)
+    assert isinstance(event, Renamed) and event.note == "x"
+    assert event.to_record()["version"] == 2 and Event.from_record(event.to_record()) == event
 
 
 class Bumped(Event, event_type="testing.bumped", version=2):
