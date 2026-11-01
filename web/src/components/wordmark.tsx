@@ -1,5 +1,5 @@
-import { renderLogo } from "@/character";
-import "@/character/nestor.css";
+import { renderLogo } from "@nestor-home/character";
+import "@nestor-home/character/nestor.css";
 import { cn } from "@/lib/utils";
 
 /**

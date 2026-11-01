@@ -1,4 +1,4 @@
-import { type DitherShape, drawDither } from "@/character/dither";
+import { type DitherShape, drawDither } from "@nestor-home/character";
 import { cn } from "@/lib/utils";
 
 /**
