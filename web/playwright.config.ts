@@ -14,14 +14,14 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   use: { baseURL: base ?? "http://localhost:5173", locale: "fr-FR", trace: "on-first-retry" },
   projects: [
-    { name: "light", use: { ...devices["Desktop Chrome"], colorScheme: "light" }, testIgnore: /live\// },
+    { name: "light", use: { ...devices["Desktop Chrome"], colorScheme: "light" }, testIgnore: /\/e2e\/live\// },
     {
       name: "dark",
       use: { ...devices["Desktop Chrome"], colorScheme: "dark" },
-      testIgnore: /live\//,
-      testMatch: /open-states|home|overflow/,
+      testIgnore: /\/e2e\/live\//,
+      testMatch: /\/e2e\/(open-states|home|overflow)\.spec\.ts$/,
     },
-    { name: "live", use: { ...devices["Desktop Chrome"] }, testMatch: /live\// },
+    { name: "live", use: { ...devices["Desktop Chrome"] }, testMatch: /\/e2e\/live\/.+\.spec\.ts$/ },
   ],
   webServer: base ? undefined : { command: "pnpm dev", url: "http://localhost:5173", reuseExistingServer: true },
 });
