@@ -1,6 +1,6 @@
 """Channels: voice, messaging and web entry points, all leading to the same assistant."""
 
-from nestor.modules.channels.ports import Assistant, Channel, Reply
+from nestor.modules.channels.ports import Assistant, Channel, MessageEnd, Reply
 from nestor.modules.channels.types import Address, Exchange, InboundMessage, Media, Medium, Sender
 
 __all__ = [
@@ -11,6 +11,7 @@ __all__ = [
     "InboundMessage",
     "Media",
     "Medium",
+    "MessageEnd",
     "Reply",
     "Sender",
 ]

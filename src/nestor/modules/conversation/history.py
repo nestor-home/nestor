@@ -26,8 +26,9 @@ async def recent_history(
 
 def to_messages(events: Sequence[Event]) -> tuple[Message, ...]:
     """Turn log events into model messages. A tool call without its result (crash midway, or cut by
-    the window) is dropped, since models refuse unanswered calls. The history may open on an
-    assistant message: an unprompted delivery the user is now answering."""
+    the window) is dropped, since models refuse unanswered calls. A message written just before a
+    tool call goes back with it, as the model wrote them. The history may open on an assistant
+    message: an unprompted delivery the user is now answering."""
     results = {e.call_id: e for e in events if isinstance(e, ToolCompleted)}
     heard = {e.answer: e.heard for e in events if isinstance(e, AnswerCut)}
     messages: list[Message] = []
@@ -38,6 +39,10 @@ def to_messages(events: Sequence[Event]) -> tuple[Message, ...]:
             messages.append(Message(role=Role.ASSISTANT, content=text))
         elif isinstance(event, ToolCalled) and (result := results.get(event.call_id)):
             call = ToolCall(event.call_id, event.name, event.arguments)
-            messages.append(Message(role=Role.ASSISTANT, tool_calls=(call,)))
+            before = messages[-1] if messages else None
+            if before is not None and before.role is Role.ASSISTANT and not before.tool_calls:
+                messages[-1] = Message(role=Role.ASSISTANT, content=before.content, tool_calls=(call,))
+            else:
+                messages.append(Message(role=Role.ASSISTANT, tool_calls=(call,)))
             messages.append(Message(role=Role.TOOL, content=result.output, tool_call_id=event.call_id))
     return tuple(messages)

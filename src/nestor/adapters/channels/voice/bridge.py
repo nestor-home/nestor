@@ -160,7 +160,7 @@ class AssistantBridge(FrameProcessor):
         async with self._speaking:
             await self.push_frame(start)
             try:
-                async for chunk in reply:
+                async for chunk in reply.speech():
                     await self.push_frame(LLMTextFrame(chunk))
             except Exception:
                 logger.exception("voice: the assistant failed to answer in %s", self._address)

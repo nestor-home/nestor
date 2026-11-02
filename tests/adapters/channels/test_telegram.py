@@ -4,7 +4,7 @@ import asyncio
 import json
 import logging
 from collections import defaultdict, deque
-from collections.abc import AsyncGenerator, Callable
+from collections.abc import AsyncGenerator, AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
@@ -13,9 +13,9 @@ import httpx
 import pytest
 
 from nestor.adapters.channels.telegram import MESSAGE_LIMIT, TelegramChannel, plugin, split_text
-from nestor.core import ContractError, ProviderError
+from nestor.core import ContractError, PersonId, ProviderError
 from nestor.core.i18n import Locale
-from nestor.modules.channels import Address, InboundMessage, Sender
+from nestor.modules.channels import Address, Assistant, InboundMessage, MessageEnd, Reply, Sender
 from nestor.runtime import Services
 from nestor.testing.channels import ScriptedAssistant
 from nestor.testing.i18n import EchoLocalizer
@@ -117,7 +117,7 @@ def channel_for(api: FakeBotApi, *, token: str = TOKEN, **options: Any) -> Teleg
 
 @asynccontextmanager
 async def serving(
-    api: FakeBotApi, assistant: ScriptedAssistant, **options: Any
+    api: FakeBotApi, assistant: Assistant, **options: Any
 ) -> AsyncGenerator[tuple[TelegramChannel, asyncio.Task[None]]]:
     channel = channel_for(api, **options)
     task = asyncio.create_task(channel.serve(assistant))
@@ -420,3 +420,42 @@ async def test_a_written_conversation_lasts_hours_unless_configured(
     await channel.close()
     with pytest.raises(ContractError):
         plugin.create({"token": TOKEN, "conversation_ends_after_s": 0}, "bot", services)
+
+
+class _LookingUp(Reply):
+    """Says it is looking, then waits for its tool (`done`) before giving the result."""
+
+    def __init__(self, done: asyncio.Event) -> None:
+        self._done = done
+
+    async def __aiter__(self) -> AsyncIterator[str | MessageEnd]:
+        yield "Je regarde où en sont les tests."
+        yield MessageEnd()
+        await self._done.wait()
+        yield "Tout est vert."
+        yield MessageEnd()
+
+    async def interrupt(self, heard: str) -> None: ...
+
+
+class _LookingAssistant(Assistant):
+    def __init__(self, done: asyncio.Event) -> None:
+        self._done = done
+
+    def identify(self, address: Address, sender: Sender) -> PersonId | None:
+        return PersonId(sender.id)
+
+    def respond(self, message: InboundMessage) -> Reply:
+        return _LookingUp(self._done)
+
+
+async def test_each_message_of_an_answer_is_sent_as_soon_as_it_is_written(api: FakeBotApi) -> None:
+    done = asyncio.Event()
+    async with serving(api, _LookingAssistant(done)):
+        api.say("Les tests ?")
+        await eventually(lambda: api.texts(ADA) == ["Je regarde où en sont les tests."])
+        typing = len(api.actions)
+        await eventually(lambda: len(api.actions) > typing)  # still typing while the tool runs
+        done.set()
+        await eventually(lambda: len(api.sent) == 2)
+    assert api.texts(ADA) == ["Je regarde où en sont les tests.", "Tout est vert."]

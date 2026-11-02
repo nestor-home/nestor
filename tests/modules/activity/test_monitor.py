@@ -84,7 +84,7 @@ async def test_an_answer_is_thought_then_spoken_then_the_agent_is_idle_again(wor
     world.agent.replies.listen(lambda: states.append(world.monitor.current().state))
     assert world.monitor.current().state is Activity.IDLE
     reply = world.agent.respond(InboundMessage(address=TELEGRAM, sender=Sender("42"), text="Quel temps ?"))
-    assert await reply.collect() == "Il fait vingt et un degrés."
+    assert await reply.collect() == ("Il fait vingt et un degrés.",)
     assert states == [Activity.THINKING, Activity.SPEAKING, Activity.IDLE], "the tool call is thought, not said"
     assert world.monitor.current().replies == 0
 

@@ -4,23 +4,24 @@ import asyncio
 from collections.abc import AsyncIterator, Callable
 
 from nestor.core import ContractError, PersonId
-from nestor.modules.channels import Address, Assistant, Channel, InboundMessage, Reply, Sender
+from nestor.modules.channels import Address, Assistant, Channel, InboundMessage, MessageEnd, Reply, Sender
 
 
 class ScriptedReply(Reply):
-    """Streams `text` word by word; stops as soon as it is interrupted."""
+    """Streams `text` word by word, as one message; stops as soon as it is interrupted."""
 
     def __init__(self, text: str, *, word_delay_s: float = 0.0) -> None:
         self._words = text.split()
         self._word_delay_s = word_delay_s
         self.heard: str | None = None
 
-    async def __aiter__(self) -> AsyncIterator[str]:
+    async def __aiter__(self) -> AsyncIterator[str | MessageEnd]:
         for i, word in enumerate(self._words):
             if self.heard is not None:
                 return
             await asyncio.sleep(self._word_delay_s)
             yield word if i == 0 else f" {word}"
+        yield MessageEnd()
 
     async def interrupt(self, heard: str) -> None:
         self.heard = heard
@@ -56,14 +57,16 @@ class ScriptedAssistant(Assistant):
 
 
 class InMemoryChannel(Channel):
-    """A text channel driven by the test: `ask` plays a user message and returns the full answer,
-    or `None` when the assistant does not know the sender."""
+    """A text channel driven by the test: `ask` plays a user message and returns the messages of the
+    answer, or `None` when the assistant does not know the sender."""
 
     name = "in-memory"
 
     def __init__(self, channel_id: str = "memory") -> None:
         super().__init__(channel_id)
-        self._inbox: asyncio.Queue[tuple[InboundMessage, asyncio.Future[str | None]] | None] = asyncio.Queue()
+        self._inbox: asyncio.Queue[tuple[InboundMessage, asyncio.Future[tuple[str, ...] | None]] | None] = (
+            asyncio.Queue()
+        )
         self.sent: list[tuple[Address, str]] = []
 
     async def serve(self, assistant: Assistant) -> None:
@@ -77,9 +80,9 @@ class InMemoryChannel(Channel):
             except Exception as error:
                 answered.set_exception(error)
 
-    async def ask(self, text: str, *, sender: str = "user", conversation: str = "main") -> str | None:
+    async def ask(self, text: str, *, sender: str = "user", conversation: str = "main") -> tuple[str, ...] | None:
         message = InboundMessage(address=Address(self.channel_id, conversation), sender=Sender(sender), text=text)
-        answered: asyncio.Future[str | None] = asyncio.get_running_loop().create_future()
+        answered: asyncio.Future[tuple[str, ...] | None] = asyncio.get_running_loop().create_future()
         await self._inbox.put((message, answered))
         return await answered
 

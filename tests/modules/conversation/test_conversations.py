@@ -196,7 +196,7 @@ async def test_every_event_of_a_turn_carries_its_conversation_and_its_turn(
         *await journal.history(MemoryRecorded),
         *await journal.history(TaskStarted),
     ]
-    [answer, _] = await journal.history(AssistantTurn)
+    [answer] = await journal.history(AssistantTurn)  # "Merci" got no answer: nothing to log
     assert len(of_the_turn) == 6
     assert {getattr(e, "exchange", None) for e in [*of_the_turn, answer]} == {turn}
 
