@@ -26,7 +26,6 @@ watch-cancel-description = Nothing more will be reported for “{ $what }”.
 watch-found = What it found
 watch-found-empty = Nothing matching has arrived yet. It triggers on the first relevant message.
 watch-watches = watches
-watch-keywords = keywords
 watch-rhythm = rhythm
 watch-rhythm-once = Stops at the first message found.
 watch-rhythm-every = Reports every relevant message.

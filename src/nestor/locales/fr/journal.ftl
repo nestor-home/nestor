@@ -102,7 +102,22 @@ journal-detail-tried = { $count ->
 }
 
 journal-watch-created = Veille créée : { $what }
-journal-detail-keywords = Mots-clés : { $keywords }
+journal-watch-sorted = { $unsorted ->
+    [yes] « { $item } » n'a pas pu être trié : le modèle de tri n'a pas répondu, rien n'a été annoncé
+   *[no] { $matched ->
+        [0] « { $item } » lu pour { $asked } { $asked ->
+            [one] veille
+           *[other] veilles
+        } : rien pour elles
+       *[other] « { $item } » lu pour { $asked } { $asked ->
+            [one] veille
+           *[other] veilles
+        } : { $matched } { $matched ->
+            [one] concernée
+           *[other] concernées
+        }
+    }
+}
 journal-watch-triggered = { $urgent ->
     [yes] Veille { $watch } déclenchée par « { $item } » (urgent)
    *[no] Veille { $watch } déclenchée par « { $item } »

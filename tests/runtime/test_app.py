@@ -1,7 +1,9 @@
 """Nestor assembled from a configuration, served, stopped and restarted — with doubles only."""
 
 import asyncio
+import json
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -13,7 +15,7 @@ from nestor.cli import main
 from nestor.core import Component, ContractError
 from nestor.modules.channels import Address
 from nestor.modules.cognition import Outcome, TaskDelivered
-from nestor.modules.cognition.model import ToolCall
+from nestor.modules.cognition.model import ModelRequest, ToolCall
 from nestor.modules.conversation import AssistantTurn
 from nestor.runtime import Nestor, Registry
 from nestor.runtime.config import parse_config
@@ -279,11 +281,15 @@ async def test_memories_persist_in_the_database(tmp_path: Path) -> None:
 async def test_a_watch_created_in_conversation_is_announced_when_its_mail_arrives(tmp_path: Path) -> None:
     from nestor.modules.initiative import Incoming, WatchTriggered
 
+    def every_listed_watch(request: ModelRequest) -> str:
+        ids = re.findall(r"^- \[([^\]]+)\]", request.messages[0].content, re.MULTILINE)
+        return json.dumps({"matches": [{"watch": id, "summary": "Colis livré."} for id in ids]})
+
     fakes = Fakes()
     fakes.script = [
-        ToolCall("c1", "create_watch", {"what": "le colis", "keywords": ["Colissimo"]}),
+        ToolCall("c1", "create_watch", {"what": "le colis"}),
         "Je te préviens.",
-        '{"matches": true, "urgent": false, "summary": "Colis livré."}',
+        every_listed_watch,
         "Ton colis est arrivé.",
     ]
     text = CONFIG.format(data_dir=tmp_path, replies=[]) + "inbound: [{kind: inbox}]\n"

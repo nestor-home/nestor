@@ -123,8 +123,8 @@ your mail best, whether a new triage algorithm misses fewer parcels, what it cos
 
 ```bash
 nestor bench list
-nestor bench run watch-triage --variant gate-small.yaml --variant batch-small.yaml [--repeat 3] [--cases mine.jsonl]
-nestor bench run watch-triage --variant gate-small.yaml --replay      # scored again from the recorded replies
+nestor bench run watch-triage --variant batch-small.yaml --variant per-watch-small.yaml [--repeat 3] [--cases mine.jsonl]
+nestor bench run watch-triage --variant batch-small.yaml --replay      # scored again from the recorded replies
 nestor bench compare bench-results/watch-triage/<run> bench-results/watch-triage/<run>
 nestor bench report bench-results/watch-triage/<run>
 ```
@@ -140,7 +140,7 @@ triage_model:
   model: mistralai/mistral-small-3.2
   extra_body: {stream_options: {include_usage: true}}  # token counts from servers that only send them on request
 persona: {language: French}
-bench: {name: gate-mistral-small, algorithm: gate}   # watch-triage: gate, no-gate, hints or batch
+bench: {name: batch-mistral-small, algorithm: batch}   # watch-triage: batch or per-watch
 ```
 
 `triage_model: {kind: watch-triage-fake}` runs the suite without a network, on a deterministic word-overlap

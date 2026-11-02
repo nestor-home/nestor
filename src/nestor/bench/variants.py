@@ -7,8 +7,8 @@
       model: mistralai/mistral-small-3.2
     persona: {language: French}
     bench:                        # the only key of its own: the variant's name and the suite's knobs
-      name: gate-mistral-small
-      algorithm: gate
+      name: batch-mistral-small
+      algorithm: batch
 
 The fragment is laid over the defaults of a minimal configuration, so a whole `nestor.yaml` is a variant
 too. `${NAME}` and `${secret:name}` resolve as in a configuration (the `.env` next to the variant file).

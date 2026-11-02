@@ -49,6 +49,7 @@ from nestor.modules.initiative import (
     DeliveryFailed,
     WatchCreated,
     WatchEnded,
+    WatchSorted,
     WatchTriggered,
 )
 from nestor.modules.journal import Entry
@@ -98,7 +99,7 @@ CATEGORIES = (
     Category("delivery", (DeliveryConsidered, Delivered, DeliveryFailed)),
     Category("tool", (ToolCalled, ToolCompleted)),
     Category("task", (TaskStarted, TaskAttached, TaskProgressed, TaskCancelRequested, TaskEnded, TaskDelivered)),
-    Category("watch", (WatchCreated, WatchTriggered, WatchEnded)),
+    Category("watch", (WatchCreated, WatchSorted, WatchTriggered, WatchEnded)),
     Category("memory", (MemoryRecorded, MemoryCorrected, MemoryForgotten)),
     Category("connection", (ConnectionCreated, ConnectionChanged, ConnectionRemoved)),
     Category("presence", (PresenceChanged,)),
@@ -257,11 +258,19 @@ class EventDescriber:
             WatchCreated: lambda e: self._line(
                 e,
                 Message.of("journal-watch-created", what=e.what),
-                detail_message=Message.of("journal-detail-keywords", keywords=", ".join(e.keywords))
-                if e.keywords
-                else None,
                 people=[e.owner],
                 channels=[e.created_in],
+            ),
+            WatchSorted: lambda e: self._line(
+                e,
+                Message.of(
+                    "journal-watch-sorted",
+                    item=e.item_title,
+                    matched=len(e.matched),
+                    asked=len(e.asked),
+                    unsorted=_yes(e.unsorted),
+                ),
+                tone=Tone.WARNING if e.unsorted else Tone.NORMAL,
             ),
             WatchTriggered: lambda e: self._line(
                 e,

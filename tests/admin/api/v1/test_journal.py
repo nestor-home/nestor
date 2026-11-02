@@ -243,7 +243,14 @@ async def test_the_important_events_are_told_in_the_readers_language(tmp_path: P
     from nestor.modules.connectors import ConnectionChanged, Status
     from nestor.modules.conversation import AnswerCut, FallbackReason, FallbackSpoken
     from nestor.modules.home import PresenceChanged
-    from nestor.modules.initiative import Delivered, DeliveryFailed, WatchCreated, WatchEnded, WatchTriggered
+    from nestor.modules.initiative import (
+        Delivered,
+        DeliveryFailed,
+        WatchCreated,
+        WatchEnded,
+        WatchSorted,
+        WatchTriggered,
+    )
     from nestor.modules.memory import MemoryCorrected
     from nestor.modules.satellites import (
         DeclaredCapability,
@@ -271,6 +278,9 @@ async def test_the_important_events_are_told_in_the_readers_language(tmp_path: P
             ToolCalled(source="toolbox", address=MATHIS_CHAT, call_id="c1", name="create_watch", arguments={}),
             ToolCompleted(source="toolbox", call_id="c1", name="create_watch", output="ok", ok=True, duration_s=0.2),
             ToolCompleted(source="toolbox", call_id="c2", name="mailbox_send", output="no", ok=False, duration_s=1),
+            WatchSorted(source="keeper", item_id="i", item_title="Colis livré", asked=("w1", "w2"), matched=("w1",)),
+            WatchSorted(source="keeper", item_id="j", item_title="Newsletter", asked=("w1",)),
+            WatchSorted(source="keeper", item_id="k", item_title="Facture", asked=("w1",), unsorted=True),
             WatchTriggered(
                 source="keeper", watch_id="w1", item_id="i", item_title="Colis livré", summary="", urgent=True
             ),
@@ -284,9 +294,7 @@ async def test_the_important_events_are_told_in_the_readers_language(tmp_path: P
             PresenceChanged(source="presence", person=PersonId("ghost"), home=None),
             TaskStarted(source="tasks", task_id="t1", objective="Analyse", executor="hermes", origin=MATHIS_CHAT),
             TaskEnded(source="tasks", task_id="t1", status=TaskStatus.FAILED, error="quota", duration_s=12),
-            WatchCreated(
-                source="watch-book", watch_id="w3", what="le colis", keywords=("Colissimo",), kinds=(), once=True
-            ),
+            WatchCreated(source="watch-book", watch_id="w3", what="le colis", kinds=(), once=True),
             ConnectionChanged(
                 source="connections",
                 connection_id="c1",
@@ -312,6 +320,9 @@ async def test_the_important_events_are_told_in_the_readers_language(tmp_path: P
             "Outil create_watch appelé",
             "Outil create_watch terminé en 0,2 s",
             "Outil mailbox_send en échec",
+            "« Colis livré » lu pour 2 veilles : 1 concernée",
+            "« Newsletter » lu pour 1 veille : rien pour elles",
+            "« Facture » n'a pas pu être trié : le modèle de tri n'a pas répondu, rien n'a été annoncé",
             "Veille w1 déclenchée par « Colis livré » (urgent)",
             "Veille w1 trouvée",
             "Message transmis : veille w1",
@@ -324,7 +335,6 @@ async def test_the_important_events_are_told_in_the_readers_language(tmp_path: P
             "ghost n'est plus localisé·e",
             "Tâche t1 confiée à hermes",
             "Tâche t1 en échec (12 s)",
-            "Mots-clés : Colissimo",
             "Connexion c1 à réautoriser",
             "Le satellite reachy-salon (reachy-mini, pièce « salon ») demande l'appairage",
             "Déclare : micro, haut-parleur",

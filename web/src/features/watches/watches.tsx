@@ -153,16 +153,6 @@ function Loaded({ watch: w, trail }: { watch: Watch; trail: Crumb[] }) {
               ))}
             </p>
           </div>
-          {w.keywords.length ? (
-            <div>
-              <p className="label-mono mb-1.5">{t("watch-keywords")}</p>
-              <p className="flex flex-wrap gap-1">
-                {w.keywords.map((k) => (
-                  <Tag key={k}>{k}</Tag>
-                ))}
-              </p>
-            </div>
-          ) : null}
           <div>
             <p className="label-mono mb-1.5">{t("watch-rhythm")}</p>
             <p>{w.once ? t("watch-rhythm-once") : t("watch-rhythm-every")}</p>

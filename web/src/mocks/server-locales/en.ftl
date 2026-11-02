@@ -105,7 +105,19 @@ journal-detail-tried = { $count ->
 }
 
 journal-watch-created = Watch created: { $what }
-journal-detail-keywords = Keywords: { $keywords }
+journal-watch-sorted = { $unsorted ->
+    [yes] “{ $item }” could not be sorted: the triage model did not answer, nothing announced
+   *[no] { $matched ->
+        [0] “{ $item }” read against { $asked } { $asked ->
+            [one] watch
+           *[other] watches
+        }: nothing for them
+       *[other] “{ $item }” read against { $asked } { $asked ->
+            [one] watch
+           *[other] watches
+        }: { $matched } matched
+    }
+}
 journal-watch-triggered = { $urgent ->
     [yes] Watch { $watch } triggered by “{ $item }” (urgent)
    *[no] Watch { $watch } triggered by “{ $item }”

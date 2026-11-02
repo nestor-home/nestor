@@ -314,7 +314,6 @@ export function watch(dto: WatchDto): Watch {
     what: dto.what,
     owner: ref(dto.owner),
     kinds: dto.kinds,
-    keywords: dto.keywords,
     once: dto.once,
     created_at: dto.created_at,
     until: dto.until,

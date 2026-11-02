@@ -428,7 +428,6 @@ export interface Watch {
   what: string;
   owner: Id | null;
   kinds: string[];
-  keywords: string[];
   once: boolean;
   created_at: Instant;
   until: Instant | null;

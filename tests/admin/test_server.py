@@ -83,12 +83,12 @@ def test_a_service_configured_twice_is_refused(tmp_path: Path) -> None:
 
 
 async def test_a_mail_arriving_in_a_connected_mailbox_triggers_a_watch(tmp_path: Path) -> None:
-    verdict = '{"matches": true, "urgent": false, "summary": "Colis livré."}'
+    verdict = '{"matches": [{"watch": "w1", "summary": "Colis livré."}]}'
     async with Harness(tmp_path, replies=(verdict, "Ton colis est arrivé.")) as admin:
         assert admin.nestor.connections
         assert admin.nestor.watch_book.kinds == {"mail"}, "watches may watch what connectors bring"
         await admin.nestor.connections.connect("imap", None, {"server": "s", "password": "p"})
-        await admin.nestor.watch_book.create(Watch(what="le colis", keywords=("Colissimo",)))
+        await admin.nestor.watch_book.create(Watch(id="w1", what="le colis"))
         triggered = admin.nestor.journal.subscribe(WatchTriggered)
         await asyncio.sleep(0.05)
         admin.imap.inbox.deliver(Incoming(source="imap", kind="mail", title="Votre colis Colissimo"))

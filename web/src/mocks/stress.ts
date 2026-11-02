@@ -166,7 +166,6 @@ export function stress(db: Db, now = Date.now()): void {
     what: `Tell ${LONG_NAME} when ${LONG_WORD} replies about ${LONG_URL}`,
     owner: "marie-amelie",
     kinds: ["mail"],
-    keywords: [LONG_WORD, LONG_URL],
     once: false,
     created_at: at(300),
     until: null,
