@@ -51,7 +51,7 @@ class Memories:
         )
         await self.store.put(memory)
         if self.index:
-            self.index.refresh()
+            self.index.refresh(memory.id)
         return memory
 
     async def correct(
@@ -64,7 +64,7 @@ class Memories:
         )
         await self.store.put(corrected)
         if self.index:
-            self.index.refresh()
+            self.index.refresh(corrected.id)
         return corrected
 
     async def forget(self, memory_id: str, *, by: PersonId | None = None, exchange: Exchange | None = None) -> Memory:
@@ -72,7 +72,7 @@ class Memories:
         await self.journal.publish(MemoryForgotten(source="memory", memory_id=memory_id, by=by, exchange=exchange))
         await self.store.delete(memory_id)
         if self.index:
-            self.index.refresh()
+            self.index.refresh(memory_id)
         return memory
 
     async def recall(

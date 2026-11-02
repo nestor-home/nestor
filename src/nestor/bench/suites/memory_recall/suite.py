@@ -96,7 +96,8 @@ class MemoryRecall(Suite[tuple[Memory, ...], Knobs]):
         """The household's memories in a store of the variant's own, filled and embedded once for the run."""
         if (found := self._stores.get(trial.variant)) is not None:
             return found
-        opened = open_memories(Path(tempfile.mkdtemp(prefix="nestor-bench-recall-")), trial.embedder)
+        folder = Path(tempfile.mkdtemp(prefix="nestor-bench-recall-"))
+        opened = open_memories(folder, trial.embedder, query_timeout_s=trial.config.memory.query_timeout_s)
         memories = await self._stack.enter_async_context(opened)
         for memory in shared:
             await memories.store.put(memory)

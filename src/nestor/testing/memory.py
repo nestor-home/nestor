@@ -25,7 +25,7 @@ class InMemoryMemoryStore(MemoryStore):
         return self.memories.get(memory_id)
 
     async def get_many(self, memory_ids: Collection[str]) -> list[Memory]:
-        return [m for i in memory_ids if (m := self.memories.get(i)) is not None]
+        return [m for i in dict.fromkeys(memory_ids) if (m := self.memories.get(i)) is not None]
 
     async def delete(self, memory_id: str) -> None:
         self.memories.pop(memory_id, None)
@@ -89,3 +89,13 @@ class MemoryStoreContract:
                 await store.put(Memory(text=text))
             recent = await store.recent(limit=2)
         assert [m.text for m in recent] == ["troisième", "deuxième"]
+
+    async def test_several_memories_are_read_at_once_and_all_of_them_listed(self) -> None:
+        async with self.store() as store:
+            kept = [Memory(text=text) for text in ("premier", "deuxième", "troisième")]
+            for memory in kept:
+                await store.put(memory)
+            some = await store.get_many([kept[0].id, "absent", kept[2].id, kept[0].id])
+            assert sorted(m.text for m in some) == ["premier", "troisième"], "an unknown id is left out, once"
+            assert await store.get_many([]) == []
+            assert sorted(m.id for m in await store.everything()) == sorted(m.id for m in kept)

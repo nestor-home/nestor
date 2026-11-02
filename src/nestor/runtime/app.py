@@ -123,7 +123,12 @@ class Nestor:
         def model(role: str, key: str) -> ConversationModel:
             found = self.models[key]
             if not isinstance(found, ConversationModel):
-                raise ConfigError(f"{role} names {key}, a model that embeds and cannot answer")
+                raise ConfigError(
+                    f"{role} names {key}, a model that embeds and cannot answer",
+                    path=tuple(role.split(".")),
+                    code="not_answering",
+                    detail=key,
+                )
             return found
 
         self.executors = [
@@ -178,8 +183,15 @@ class Nestor:
         delegation = Delegation(self.tasks)
         embedder = self.models[config.memory.embedder] if config.memory.embedder else None
         if embedder is not None and not isinstance(embedder, Embedder):
-            raise ConfigError(f"memory.embedder names {config.memory.embedder}, a model that does not embed")
-        self.memories, self._memory_parts = assemble_memories(self.journal, self.database, embedder)
+            raise ConfigError(
+                f"memory.embedder names {config.memory.embedder}, a model that does not embed",
+                path=("memory", "embedder"),
+                code="not_embedding",
+                detail=config.memory.embedder,
+            )
+        self.memories, self._memory_parts = assemble_memories(
+            self.journal, self.database, embedder, query_timeout_s=config.memory.query_timeout_s
+        )
         recall = config.memory.recall()
         memory = MemoryTools(self.memories, self.household, recall=recall)
         self.watch_book = WatchBook(self.journal, kinds=(k for source in self.sources for k in source.kinds))
@@ -384,7 +396,7 @@ async def open_accounts(data_dir: Path, people: Iterable[Person]) -> AsyncGenera
 
 
 def assemble_memories(
-    journal: Journal, database: SQLiteDatabase, embedder: Embedder | None
+    journal: Journal, database: SQLiteDatabase, embedder: Embedder | None, *, query_timeout_s: float = 1.0
 ) -> tuple[Memories, tuple[Component, ...]]:
     """The memories as every instance keeps them, and the components they need started (the vector index and
     the memory index when there is an embedder, after it)."""
@@ -392,17 +404,21 @@ def assemble_memories(
     if embedder is None:
         return Memories(journal, store), ()
     vectors = SQLiteVectorIndex(database)
-    index = MemoryIndex(store, embedder, vectors)
+    index = MemoryIndex(store, embedder, vectors, query_timeout_s=query_timeout_s)
     return Memories(journal, store, index), (vectors, index)
 
 
 @contextlib.asynccontextmanager
-async def open_memories(data_dir: Path, embedder: Embedder | None = None) -> AsyncGenerator[Memories]:
+async def open_memories(
+    data_dir: Path, embedder: Embedder | None = None, *, query_timeout_s: float = 1.0
+) -> AsyncGenerator[Memories]:
     """The memories kept in `data_dir`, assembled and searched as a running instance does (the `embedder` is
     started by the caller), without the rest of Nestor: a bench measures recall on them."""
     database = SQLiteDatabase(database_path(data_dir))
     async with database, AsyncExitStack() as stack:
-        memories, parts = assemble_memories(Journal(SQLiteEventLog(database)), database, embedder)
+        memories, parts = assemble_memories(
+            Journal(SQLiteEventLog(database)), database, embedder, query_timeout_s=query_timeout_s
+        )
         for part in parts:
             await stack.enter_async_context(part)
         yield memories

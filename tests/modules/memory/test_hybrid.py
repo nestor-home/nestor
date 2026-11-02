@@ -1,10 +1,15 @@
 """Hybrid recall: memories found by words and by meaning, fused; vectors kept in step with the memories, rebuilt
 for a new model, and search by words when the embedder is down."""
 
+from collections.abc import Sequence
 from pathlib import Path
 
-from nestor.core import PersonId
+import pytest
+
+from nestor.core import PersonId, ProviderError
+from nestor.modules.cognition.embedding import Vector
 from nestor.modules.memory import Memories
+from nestor.modules.memory import index as index_module
 from nestor.modules.memory.service import fused
 from nestor.runtime.app import open_memories
 from nestor.testing.cognition import ConceptEmbedder
@@ -93,3 +98,43 @@ def test_fusion_ranks_first_what_both_lists_found() -> None:
 
     a, b, c = (Memory(id=i, text=i) for i in "abc")
     assert [m.id for m in fused([[a, b], [c, b]])] == ["b", "a", "c"]
+
+
+class Flaky(ConceptEmbedder):
+    """Fails its documents call number `failing` (1-based) with `error`, then works again."""
+
+    def __init__(self, failing: int, error: Exception) -> None:
+        super().__init__(CONCEPTS)
+        self.calls, self.failing, self.error = 0, failing, error
+
+    async def embed_documents(self, texts: Sequence[str]) -> list[Vector]:
+        self.calls += 1
+        if self.calls == self.failing:
+            raise self.error
+        return await super().embed_documents(texts)
+
+
+async def test_the_batches_embedded_before_a_failure_are_kept(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(index_module, "BATCH", 2)
+    async with open_memories(tmp_path) as plain:
+        for n in range(5):
+            await plain.remember(f"Souvenir numéro {n}.")
+    embedder = Flaky(failing=2, error=ProviderError("flaky", "rate limited", transient=True))
+    async with embedder, open_memories(tmp_path, embedder) as memories:
+        await settled(memories)  # reconciled at start: the first batch went in, the second failed
+        assert memories.index is not None
+        assert len(await memories.index.vectors.fingerprints(embedder.space, "memory")) == 2
+        assert await memories.index.reconcile() == 3, "only what is missing is embedded again"
+
+
+async def test_an_unexpected_failure_never_stops_the_index_from_keeping_up(tmp_path: Path) -> None:
+    embedder = Flaky(failing=1, error=RuntimeError("a bug somewhere"))  # nothing to embed at start
+    async with embedder, open_memories(tmp_path, embedder) as memories:
+        await settled(memories)
+        first = await memories.remember("Mathilde est végétarienne.")  # its catch-up fails unexpectedly
+        await settled(memories)
+        await memories.remember("Le portail s'ouvre avec le code 1234.")
+        await settled(memories)  # the worker is still there
+        assert memories.index is not None
+        indexed = await memories.index.vectors.fingerprints(embedder.space, "memory")
+    assert first.id not in indexed and len(indexed) == 1, "the failed one waits for the next start"

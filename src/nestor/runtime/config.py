@@ -46,7 +46,16 @@ def _located[T](parse: Callable[[str], T], value: str) -> T:
 
 
 class ConfigError(NestorError):
-    """The configuration cannot be used; the message says where and why."""
+    """The configuration cannot be used; the message says where and why. For the admin, which says it in the
+    reader's language, `path` locates it in the document and `code` names its message (`config-error-<code>`,
+    with `detail`)."""
+
+    def __init__(
+        self, message: str, *, path: tuple[str | int, ...] = (), code: str = "invalid", detail: str | None = None
+    ) -> None:
+        super().__init__(message)
+        self.path, self.code = path, code
+        self.detail = message if detail is None else detail
 
 
 class Section(BaseModel):
@@ -156,6 +165,8 @@ class MemoryConfig(Section):
     found: int = Field(default=_RECALL.found, ge=0, le=50)
     # an embedding model of `models`: memories are then found by meaning as well as by words
     embedder: str | None = Field(default=None, json_schema_extra=MODEL_REFERENCE)
+    # how long a turn waits for the question's vector before searching by words only
+    query_timeout_s: float = Field(default=1.0, gt=0, json_schema_extra=ADVANCED)
 
     def recall(self) -> RecallSettings:
         return RecallSettings(strategy=self.strategy, recent=self.recent, found=self.found)
@@ -213,9 +224,12 @@ class NestorConfig(Section):
         sole = next(iter(answering)) if len(answering) == 1 else None
         written = self.agent.written or self.agent.spoken or sole
         if written is None:
+            among = ", ".join(answering) or "-"
             raise ConfigError(
-                f"agent: name the model it answers with, among {', '.join(answering) or 'none'}: "
-                "`spoken`, `written` or both"
+                f"agent: name the model it answers with, among {among}: `spoken`, `written` or both",
+                path=("agent",),
+                code="no_answering_model",
+                detail=among,
             )
         return {
             "spoken": self.agent.spoken or written,
