@@ -27,6 +27,7 @@ from nestor.modules.conversation import (
     ContextProvider,
     FallbackReason,
     FallbackSpoken,
+    ModelChoice,
     UserTurn,
 )
 from nestor.modules.household import Person
@@ -49,6 +50,18 @@ async def test_an_answer_is_streamed_and_both_turns_are_logged(make_agent: MakeA
     user, assistant = await journal.history(UserTurn), await journal.history(AssistantTurn)
     assert (user[0].text, user[0].person, user[0].session) == ("Salut", "mathis", TELEGRAM.session)
     assert (assistant[0].text, assistant[0].interrupted) == (answer, False)
+
+
+async def test_each_medium_answers_with_its_own_model(make_agent: MakeAgent) -> None:
+    spoken, written = ScriptedModel("Il fait beau.", "C'est prêt."), ScriptedModel("Voici le détail.", "Envoyé.")
+    agent = make_agent(models=ModelChoice(spoken=spoken, written=written))
+
+    said = await agent.respond(message("Quel temps ?", VOICE, "mic")).collect()
+    typed = await agent.respond(message("Et en détail ?", VOICE, "mic", medium=Medium.WRITTEN)).collect()
+    composed = await agent.compose(TELEGRAM, MATHIS, "The parcel arrived.", Medium.SPOKEN)
+
+    assert (said, typed, composed) == (("Il fait beau.",), ("Voici le détail.",), ("C'est prêt.",))
+    assert (len(spoken.requests), len(written.requests)) == (2, 1)
 
 
 def test_strangers_are_not_identified(make_agent: MakeAgent) -> None:

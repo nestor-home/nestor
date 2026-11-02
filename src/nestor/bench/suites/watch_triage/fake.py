@@ -2,7 +2,7 @@
 try). It is a crude word-overlap judge, not a baseline worth beating: a watch matches when one of its
 distinctive words is in the item, and an item is urgent when it says so.
 
-    triage_model: {kind: watch-triage-fake}
+    models: {fake: {kind: watch-triage-fake}}
 """
 
 import json

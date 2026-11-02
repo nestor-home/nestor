@@ -1,18 +1,20 @@
 """Variants: the configuration under test, written as a fragment of `nestor.yaml`.
 
-    triage_model:                 # any key of nestor.yaml, validated as it would be there
-      kind: openai-compatible
-      base_url: https://openrouter.ai/api/v1
-      api_key: ${OPENROUTER_API_KEY}
-      model: mistralai/mistral-small-3.2
+    models:                       # any key of nestor.yaml, validated as it would be there
+      mistral-small:
+        kind: openai-compatible
+        base_url: https://openrouter.ai/api/v1
+        api_key: ${OPENROUTER_API_KEY}
+        model: mistralai/mistral-small-3.2
     persona: {language: French}
     bench:                        # the only key of its own: the variant's name and the suite's knobs
       name: batch-mistral-small
       algorithm: batch
 
 The fragment is laid over the defaults of a minimal configuration, so a whole `nestor.yaml` is a variant
-too. `${NAME}` and `${secret:name}` resolve as in a configuration (the `.env` next to the variant file).
-What a run records of it has every secret masked.
+too. Each role the suite calls (`watches`, `written`…) takes the model the configuration gives it: with a
+single model, every role does. `${NAME}` and `${secret:name}` resolve as in a configuration (the `.env`
+next to the variant file). What a run records of it has every secret masked.
 """
 
 from collections.abc import Mapping
@@ -27,7 +29,7 @@ from nestor.bench.errors import BenchError
 from nestor.bench.ports import Knobs, Suite
 from nestor.core.i18n import Locale, Localizer, Message
 from nestor.modules.cognition import ConversationModel
-from nestor.runtime.config import AdapterConfig, NestorConfig, environment, validate_config
+from nestor.runtime.config import NestorConfig, environment, validate_config
 from nestor.runtime.plugins import Family, Registry, Services
 
 DEFAULTS: dict[str, Any] = {
@@ -43,8 +45,8 @@ class Variant[K: Knobs]:
     source: Path
     knobs: K
     config: NestorConfig
-    models: Mapping[str, ConversationModel]  # by configuration key, built but not started
-    described: Mapping[str, Mapping[str, Any]]  # each model's kind and settings, secrets masked
+    models: Mapping[str, ConversationModel]  # by role, built but not started
+    described: Mapping[str, Mapping[str, Any]]  # each role's model: its name, kind and settings, secrets masked
 
     def record(self) -> dict[str, Any]:
         """What a run keeps of the variant: no secret, no value it did not set."""
@@ -70,24 +72,22 @@ def load_variant[K: Knobs](
         knobs = suite.knobs.model_validate(fragment.pop("bench", None) or {})
     except ValidationError as error:
         raise BenchError(Message.of("bench-variant-invalid", path=str(path), problems=_explain(error))) from None
-    if "model" not in fragment:  # a variant naming only the model under test: it is the main one as well
-        chosen = next((fragment[role] for role in suite.models if role in fragment), None)
-        if chosen is None:
-            raise BenchError(Message.of("bench-variant-no-model", path=str(path), keys=", ".join(suite.models)))
-        fragment["model"] = chosen
     merged = DEFAULTS | {k: _over(DEFAULTS.get(k), v) for k, v in fragment.items()}
     config = validate_config(merged, environ if environ is not None else environment(path), origin=str(path))
     services = Services(data_dir=config.data_dir, localizer=localizer, locale=Locale(config.persona.locale))
+    roles = config.roles()
     models: dict[str, ConversationModel] = {}
     described: dict[str, Mapping[str, Any]] = {}
     for role in suite.models:
-        adapter: AdapterConfig = getattr(config, role, None) or config.model
+        key = roles[role]
+        adapter = config.models[key]
         plugin = registry.get(Family.MODEL, adapter.kind)
-        model = plugin.create(adapter.settings(), role, services)
+        model = plugin.create(adapter.settings(), key, services)
         if not isinstance(model, ConversationModel):
             raise BenchError(Message.of("bench-variant-not-a-model", path=str(path), kind=adapter.kind))
         models[role] = model
         described[role] = {
+            "name": key,
             "kind": adapter.kind,
             **plugin.settings.model_validate(adapter.settings()).model_dump(mode="json"),
         }

@@ -13,10 +13,13 @@ is `advanced`, its `group`, and how it holds secrets:
   (HTTP headers). The document shows `{"Authorization": {"set": true, "preview": "Bea…001"}}`; each key
   is kept, replaced or removed on its own, the same way, and a new key comes as `{"value": "…"}`. A
   typed value is kept in the vault as `<slot>.<name>.<field>.<key>`.
+
+A property whose `x-nestor.reference` is a slot (`models`) holds the name of one of that slot's
+components: the form offers the names the document gives them.
 """
 
 from datetime import datetime
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel, Field
@@ -37,16 +40,16 @@ Manager = Annotated[Caller, Depends(allowed(Scope.CONFIG_MANAGE))]
 
 class SlotOut(BaseModel):
     family: str  # the plugin family the slot takes (`channel`)
-    many: bool  # a list of components, or one
+    shape: Literal["one", "list", "named"]  # one component, a list, or components under names other keys use
     required: bool
     title: str
     kinds: dict[str, dict[str, Any]]  # JSON Schema of each installed plugin's settings, by kind
 
 
 class ConfigSchemaOut(BaseModel):
-    sections: dict[str, dict[str, Any]]  # persona, household (one person), initiative, admin, data_dir
+    sections: dict[str, dict[str, Any]]  # persona, household (one person), agent, watches, initiative, admin, data_dir
     section_titles: dict[str, str]
-    slots: dict[str, SlotOut]  # model, triage_model, channels, executors, tools, inbound, presence, connectors
+    slots: dict[str, SlotOut]  # models, channels, executors, tools, inbound, presence, connectors
 
 
 class ConfigOut(BaseModel):
@@ -183,7 +186,7 @@ async def get_config_schema(request: Request, caller: Manager) -> ConfigSchemaOu
     slots = {
         key: SlotOut(
             family=slot["family"],
-            many=slot["many"],
+            shape=slot["shape"],
             required=slot["required"],
             title=words.text_or(Message(f"config-slot-{key}"), _humanize(key)),
             kinds=_render(slot["kinds"], words),

@@ -96,6 +96,7 @@ export type Control =
   | "long-text"
   | "path"
   | "enum"
+  | "reference"
   | "boolean"
   | "integer"
   | "number"
@@ -110,6 +111,7 @@ const LONG = new Set(["character", "description", "instructions", "style", "apol
 /** The control a property needs. */
 export function controlOf(node: JsonSchema, root: JsonSchema, field = "", value?: unknown): Control {
   if (isSecret(node)) return "secret";
+  if (node["x-nestor"]?.reference) return "reference";
   const { schema } = resolve(node, root);
   if (schema.const !== undefined) return "const";
   if (schema.enum) return "enum";
@@ -152,6 +154,47 @@ export function defaultText(node: JsonSchema, root: JsonSchema): string | null {
   if (Array.isArray(value)) return value.length ? value.join(", ") : null;
   if (isRecord(value)) return Object.keys(value).length ? JSON.stringify(value) : null;
   return String(value);
+}
+
+// -- named components ----------------------------------------------------------------------------
+
+/** What a component of a named slot (`models`) may be called: as the configuration accepts it. */
+export const NAME = /^[A-Za-z0-9][A-Za-z0-9_.-]*$/;
+
+/** A name for a new component of a named slot: `base`, or `base-2`, `base-3`… when taken. */
+export function freeName(base: string, taken: Iterable<string>): string {
+  const used = new Set(taken);
+  if (!used.has(base)) return base;
+  let n = 2;
+  while (used.has(`${base}-${n}`)) n += 1;
+  return `${base}-${n}`;
+}
+
+/**
+ * The document with a component of a named slot renamed in place (its order kept), and every
+ * section setting that referred to it by name following.
+ */
+export function renamed(
+  doc: ConfigDocument,
+  sections: Record<string, JsonSchema>,
+  slot: string,
+  from: string,
+  to: string,
+): ConfigDocument {
+  const named = isRecord(doc[slot]) ? (doc[slot] as Record<string, unknown>) : {};
+  const next: ConfigDocument = {
+    ...doc,
+    [slot]: Object.fromEntries(Object.entries(named).map(([k, v]) => [k === from ? to : k, v])),
+  };
+  for (const [key, section] of Object.entries(sections)) {
+    const value = next[key];
+    if (!isRecord(value)) continue;
+    const following = Object.entries(section.properties ?? {}).filter(
+      ([field, node]) => node["x-nestor"]?.reference === slot && value[field] === from,
+    );
+    if (following.length) next[key] = { ...value, ...Object.fromEntries(following.map(([field]) => [field, to])) };
+  }
+  return next;
 }
 
 // -- secrets -------------------------------------------------------------------------------------

@@ -31,7 +31,7 @@ def metric(run: Run, id: str) -> float | None:
 async def test_every_case_runs_against_every_variant_and_repetition(tmp_path: Path) -> None:
     suite = Quiz()
     right = variant(tmp_path, suite)
-    wrong = variant(tmp_path, suite, "wrong", "triage_model: {kind: oracle, replies: {two plus two: '5'}}\n")
+    wrong = variant(tmp_path, suite, "wrong", "models: {m: {kind: oracle, replies: {two plus two: '5'}}}\n")
     runs = await quiz_runs(tmp_path, right, wrong, plan=Plan(repeat=2))
     assert [r.variant for r in runs] == ["right", "wrong"]
     assert [(r.case, r.repetition) for r in runs[0].results] == [
@@ -44,11 +44,11 @@ async def test_every_case_runs_against_every_variant_and_repetition(tmp_path: Pa
 
 async def test_a_run_records_the_model_that_answered_tokens_cost_and_calls(tmp_path: Path) -> None:
     suite = Quiz()
-    text = "triage_model: {kind: oracle, served: oracle/v1-2026-10, replies: {two plus two: '4'}}\n"
+    text = "models: {m: {kind: oracle, served: oracle/v1-2026-10, replies: {two plus two: '4'}}}\n"
     [run] = await quiz_runs(tmp_path, variant(tmp_path, suite, "served", text))
     assert run.served_models == ("oracle/v1-2026-10",)
     first = run.results[1].calls[0]
-    assert (first.role, first.input_tokens, first.output_tokens, first.cost) == ("triage_model", 12, 1, 0.001)
+    assert (first.role, first.input_tokens, first.output_tokens, first.cost) == ("watches", 12, 1, 0.001)
     assert metric(run, "calls-per-case") == 1
     assert metric(run, "cost-per-1000-cases") == pytest.approx(1.0)
     assert sum(c.cold for r in run.results for c in r.calls) == 1, "only the very first call opens the connection"
@@ -75,7 +75,7 @@ async def test_replaying_a_case_never_recorded_stops_the_run_and_names_it(tmp_pa
     with pytest.raises(BenchError) as raised:
         await quiz_runs(tmp_path, variant(tmp_path, suite), plan=Plan(replay=True, repeat=2))
     assert raised.value.message.id == "bench-no-recording"
-    assert raised.value.message.args["role"] == "triage_model"
+    assert raised.value.message.args["role"] == "watches"
 
 
 async def test_another_seed_or_model_is_not_answered_from_the_recordings_of_the_first(tmp_path: Path) -> None:
@@ -83,14 +83,14 @@ async def test_another_seed_or_model_is_not_answered_from_the_recordings_of_the_
     await quiz_runs(tmp_path, variant(tmp_path, suite))
     with pytest.raises(BenchError):
         await quiz_runs(tmp_path, variant(tmp_path, suite), plan=Plan(replay=True, seed=1))
-    other = "triage_model: {kind: oracle, served: other, replies: {}}\n"
+    other = "models: {m: {kind: oracle, served: other, replies: {}}}\n"
     with pytest.raises(BenchError):
         await quiz_runs(tmp_path, variant(tmp_path, suite, "other", other), plan=Plan(replay=True))
 
 
 async def test_a_provider_outage_is_counted_and_never_recorded_as_an_answer(tmp_path: Path) -> None:
     suite = Quiz()
-    text = "triage_model: {kind: oracle, fail_on: two plus two, replies: {capital of France: Paris}}\n"
+    text = "models: {m: {kind: oracle, fail_on: two plus two, replies: {capital of France: Paris}}}\n"
     [run] = await quiz_runs(tmp_path, variant(tmp_path, suite, "flaky", text))
     assert metric(run, "provider-errors") == 1
     assert run.results[1].output == {"reply": ""}
@@ -197,4 +197,4 @@ async def test_a_trial_refuses_a_model_its_suite_did_not_declare(tmp_path: Path)
         variant="v", knobs=QuizKnobs(), config=variant(tmp_path, suite).config, models={}, repetition=0, seed=0
     )
     with pytest.raises(ContractError, match="did not declare"):
-        trial.model("triage_model")
+        trial.model("watches")

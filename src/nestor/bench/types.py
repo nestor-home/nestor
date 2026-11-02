@@ -29,7 +29,7 @@ class Dataset[S]:
 class Call:
     """One model call a case made, as measured (or recorded, when replayed)."""
 
-    role: str  # the configuration key of the model: "triage_model"
+    role: str  # the role of the model in the configuration: "watches"
     key: str  # its record in the replay cache
     latency_s: float
     first_output_s: float | None = None

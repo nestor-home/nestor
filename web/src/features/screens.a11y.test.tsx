@@ -27,7 +27,7 @@ const SCREENS: [string, string | RegExp][] = [
   ["/config/persona", "Configuration"],
   ["/config/household", "Configuration"],
   ["/config/conversation", "Configuration"],
-  ["/config/model", "Configuration"],
+  ["/config/models", "Configuration"],
   ["/config/channels", "Configuration"],
   ["/config/tools", "Configuration"],
   ["/config/inbound", "Configuration"],

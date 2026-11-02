@@ -6,7 +6,7 @@ from nestor.core import PersonId, ProviderError
 from nestor.modules.channels import Address, Medium
 from nestor.modules.cognition import Notify, TaskDelivered, TaskEnded, TaskStarted, TaskStatus
 from nestor.modules.cognition.tools import Toolbox
-from nestor.modules.conversation import Agent, AssistantTurn, Persona
+from nestor.modules.conversation import Agent, AssistantTurn, ModelChoice, Persona
 from nestor.modules.household import Account, Household, Person
 from nestor.modules.initiative import Courier, Delivered, DeliveryFailed, TaskAnnouncer
 from nestor.modules.journal import Journal
@@ -50,7 +50,7 @@ class Home:
         self.household = Household([MATHIS])
         self.model = model or ScriptedModel(*["Ton analyse est finie : tout est vert."] * 3)
         self.agent = Agent(
-            model=self.model,
+            models=ModelChoice.single(self.model),
             persona=Persona(name="Richie", character="Tu es Richie."),
             journal=self.journal,
             household=self.household,

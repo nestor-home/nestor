@@ -37,7 +37,7 @@ class Trial[K: Knobs]:
     variant: str
     knobs: K
     config: NestorConfig  # the variant's fragment over the defaults of a configuration
-    models: Mapping[str, ConversationModel]  # by configuration key, measured and cached by the engine
+    models: Mapping[str, ConversationModel]  # by role, measured and cached by the engine
     repetition: int
     seed: int
 
@@ -61,7 +61,7 @@ class Suite[S, K: Knobs](ABC):
     name: str  # the command line's: "watch-triage"
     description: str  # a message id
     knobs: type[K]
-    models: tuple[str, ...] = ("model",)  # configuration keys of the models it calls; `triage_model` falls back
+    models: tuple[str, ...] = ("written",)  # the roles whose models it calls (`NestorConfig.roles`)
     plugins: tuple[Plugin[Any], ...] = ()  # extra model kinds for variants (a deterministic fake for CI)
 
     @abstractmethod

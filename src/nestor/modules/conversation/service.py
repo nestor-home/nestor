@@ -47,6 +47,24 @@ class ChannelProfile:
         return self.conversation_ends_after_s or medium.conversation_ends_after_s
 
 
+@dataclass(frozen=True, slots=True)
+class ModelChoice:
+    """The model that answers in each medium: the voice needs its first words fast, writing allows more."""
+
+    spoken: ConversationModel
+    written: ConversationModel
+
+    @classmethod
+    def single(cls, model: ConversationModel) -> "ModelChoice":
+        return cls(spoken=model, written=model)
+
+    def of(self, medium: Medium) -> ConversationModel:
+        return self.spoken if medium is Medium.SPOKEN else self.written
+
+    def distinct(self) -> tuple[ConversationModel, ...]:
+        return (self.spoken,) if self.spoken is self.written else (self.spoken, self.written)
+
+
 @dataclass(frozen=True, slots=True, kw_only=True)
 class AgentSettings:
     max_tool_rounds: int = 6
@@ -84,7 +102,7 @@ class Agent(Assistant):
     def __init__(
         self,
         *,
-        model: ConversationModel,
+        models: ModelChoice,
         persona: Persona,
         journal: Journal,
         household: Household,
@@ -95,7 +113,7 @@ class Agent(Assistant):
         settings: AgentSettings | None = None,
         clock: Callable[[], datetime] = utc_now,
     ) -> None:
-        self.model, self.persona, self.journal = model, persona, journal
+        self.models, self.persona, self.journal = models, persona, journal
         self.conversations = Conversations(
             journal,
             ends_after_s=lambda address, medium: self.channel(address).ends_conversation_after_s(medium),
@@ -271,7 +289,7 @@ class AgentReply(Reply):
         request = ModelRequest(messages=tuple(messages), tools=agent.toolbox.specs())
         text: list[str] = []
         calls: list[ToolCall] = []
-        stream = agent.model.stream(request)
+        stream = agent.models.of(self._medium).stream(request)
         spoken = self._medium is Medium.SPOKEN
         filler = self._slow_filler() if spoken and not self._message and not self._ended else None
         try:

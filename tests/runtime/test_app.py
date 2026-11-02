@@ -28,7 +28,7 @@ data_dir: {data_dir}
 persona: {{name: Richie, character: Tu es Richie.}}
 household:
   - {{id: mathis, name: Mathis, accounts: ["memory:user"], reach: "memory:main"}}
-model: {{kind: scripted, replies: {replies}}}
+models: {{main: {{kind: scripted, replies: {replies}}}}}
 executors: [{{kind: remote, name: hermes}}]
 channels: [{{kind: memory}}]
 """
@@ -155,7 +155,7 @@ TEXT_ONLY = """
 data_dir: {data_dir}
 persona: {{name: Nestor, character: You are Nestor.}}
 household: [{{id: ada, name: Ada}}]
-model: {{kind: openai-compatible, base_url: "http://localhost:11434/v1", model: llama3.2}}
+models: {{local: {{kind: openai-compatible, base_url: "http://localhost:11434/v1", model: llama3.2}}}}
 channels: [{channel}]
 admin: {{}}
 """

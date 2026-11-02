@@ -8,7 +8,7 @@ from nestor.modules.conversation.conversations import Conversations
 from nestor.modules.conversation.events import AnswerCut, AssistantTurn, FallbackSpoken, UserTurn
 from nestor.modules.conversation.persona import Persona
 from nestor.modules.conversation.ports import ContextProvider
-from nestor.modules.conversation.service import Agent, AgentSettings, ChannelProfile, LiveReplies
+from nestor.modules.conversation.service import Agent, AgentSettings, ChannelProfile, LiveReplies, ModelChoice
 from nestor.modules.conversation.types import FallbackReason, ReplyPhase
 
 __all__ = [
@@ -22,6 +22,7 @@ __all__ = [
     "FallbackReason",
     "FallbackSpoken",
     "LiveReplies",
+    "ModelChoice",
     "Persona",
     "ReplyPhase",
     "UserTurn",

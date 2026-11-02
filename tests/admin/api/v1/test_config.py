@@ -26,13 +26,19 @@ async def document(api: Api) -> dict[str, Any]:
 async def test_the_schema_gives_every_section_and_every_installed_plugin_its_form(tmp_path: Path) -> None:
     async with Harness(tmp_path) as admin:
         schema = (await (await admin.api()).get("/api/v1/config/schema")).json()
-        assert {"persona", "household", "initiative", "admin", "data_dir"} <= set(schema["sections"])
+        assert {"persona", "household", "agent", "watches", "initiative", "admin", "data_dir"} <= set(
+            schema["sections"]
+        )
         assert schema["section_titles"]["household"] == "Foyer"
         locale = schema["sections"]["persona"]["properties"]["locale"]["x-nestor"]
         assert locale["title"] == "Langue" and locale["help"].startswith("La langue du foyer")
         assert locale["title_id"] == "config-persona-locale" and locale["group"] == "persona"
         slots = schema["slots"]
-        assert slots["channels"]["many"] and slots["channels"]["required"] and slots["channels"]["title"] == "Canaux"
+        assert slots["channels"]["shape"] == "list" and slots["channels"]["required"]
+        assert slots["channels"]["title"] == "Canaux"
+        assert (slots["models"]["shape"], slots["presence"]["shape"]) == ("named", "one")
+        spoken = schema["sections"]["agent"]["properties"]["spoken"]["x-nestor"]
+        assert (spoken["reference"], spoken["title"]) == ("models", "Modèle à l'oral"), "it takes a name of `models`"
         tool = slots["tools"]["kinds"]["weather"]
         properties = tool["properties"]
         assert properties["kind"]["const"] == "weather" and "kind" in tool["required"]
@@ -128,6 +134,22 @@ async def test_a_configuration_that_cannot_be_used_is_not_written_and_says_where
         assert message["message"] == "tools.1.kind : aucun greffon « teleporter » n'est installé."
         assert admin.config_path.read_text() == before
         assert await admin.app.state.admin.secrets.value("tools.weather.api_key") is None, "nor any secret"
+
+
+async def test_models_are_named_by_the_household_and_the_agent_refers_to_them(tmp_path: Path) -> None:
+    async with Harness(tmp_path) as admin:
+        api = await admin.api()
+        edited = await document(api)
+        edited["models"]["vite"] = {"kind": "scripted"}
+        problems = (await api.put("/api/v1/config", {"document": edited})).json()["error"]["problems"]
+        assert [tuple(p["path"]) for p in problems] == [("agent",)], "with two models, the agent must say which"
+        edited["agent"] = {"spoken": "vite", "written": "lent"}
+        problems = (await api.put("/api/v1/config", {"document": edited})).json()["error"]["problems"]
+        assert [(tuple(p["path"]), "lent" in p["message"]) for p in problems] == [(("agent",), True)]
+        edited["agent"]["written"] = "main"
+        written = await api.put("/api/v1/config", {"document": edited})
+        assert written.status_code == 200, written.text
+        assert "spoken: vite" in admin.config_path.read_text()
 
 
 async def test_a_preview_says_what_would_change_without_writing(tmp_path: Path) -> None:

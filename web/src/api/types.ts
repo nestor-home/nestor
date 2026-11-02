@@ -544,12 +544,15 @@ export interface JsonSchema {
     secret_values?: boolean;
     advanced?: boolean;
     group?: string;
+    /** the named slot (`models`) whose names the property takes */
+    reference?: string | null;
   };
 }
 
 export interface ConfigSlot {
   family: string;
-  many: boolean;
+  /** one component, a list, or components under names other settings refer to */
+  shape: "one" | "list" | "named";
   required: boolean;
   title: string;
   kinds: Record<string, JsonSchema>;

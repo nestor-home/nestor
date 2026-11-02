@@ -8,7 +8,7 @@ from nestor.core import ContractError, PersonId
 from nestor.modules.channels import Address, InboundMessage, Sender
 from nestor.modules.cognition.model import ToolCall
 from nestor.modules.cognition.tools import Toolbox, ToolContext, ToolFailed
-from nestor.modules.conversation import Agent, Persona
+from nestor.modules.conversation import Agent, ModelChoice, Persona
 from nestor.modules.household import Account, Household, Person
 from nestor.modules.journal import Journal
 from nestor.modules.memory import Memories, MemoryCorrected, MemoryForgotten, MemoryRecorded
@@ -74,7 +74,7 @@ async def test_unknown_or_empty_memories_are_refused(memories: Memories) -> None
 
 def agent(journal: Journal, tools: MemoryTools, model: ScriptedModel) -> Agent:
     return Agent(
-        model=model,
+        models=ModelChoice.single(model),
         persona=Persona(name="Richie", character="Tu es Richie."),
         journal=journal,
         household=HOUSEHOLD,

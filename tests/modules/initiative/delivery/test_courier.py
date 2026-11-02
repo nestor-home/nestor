@@ -6,7 +6,7 @@ from nestor.core import PersonId, new_id
 from nestor.core.i18n import Message
 from nestor.modules.channels import Address, Exchange, Medium
 from nestor.modules.cognition.tools import Toolbox
-from nestor.modules.conversation import Agent, Persona, UserTurn
+from nestor.modules.conversation import Agent, ModelChoice, Persona, UserTurn
 from nestor.modules.home import Granularity
 from nestor.modules.household import Account, Household, Person
 from nestor.modules.initiative import Courier, DeliveryConsidered, DeliveryPolicy
@@ -32,7 +32,7 @@ def courier(
 ) -> tuple[Courier, Journal, Satellite, InMemoryChannel]:
     journal = Journal(MemoryEventLog())
     agent = Agent(
-        model=ScriptedModel(*["Ton colis est arrivé."] * 4),
+        models=ModelChoice.single(ScriptedModel(*["Ton colis est arrivé."] * 4)),
         persona=Persona(name="Richie", character="Tu es Richie."),
         journal=journal,
         household=Household([MATHIS]),

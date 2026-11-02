@@ -13,7 +13,7 @@ from nestor.core import PersonId, ProviderError, utc_now
 from nestor.modules.channels import Address, InboundMessage, Medium, Sender
 from nestor.modules.cognition.model import ModelRequest, ToolCall
 from nestor.modules.cognition.tools import Toolbox, ToolContext, ToolFailed
-from nestor.modules.conversation import Agent, Persona
+from nestor.modules.conversation import Agent, ModelChoice, Persona
 from nestor.modules.household import Account, Household, Person
 from nestor.modules.initiative import (
     Courier,
@@ -81,7 +81,7 @@ class Home:
         self.voice, self.telegram = Satellite("voice"), InMemoryChannel("telegram")
         self.writer = ScriptedModel(*["Ton colis est arrivé !"] * 5)
         agent = Agent(
-            model=self.writer,
+            models=ModelChoice.single(self.writer),
             persona=Persona(name="Richie", character="Tu es Richie."),
             journal=self.journal,
             household=self.household,
@@ -253,9 +253,11 @@ async def test_the_agent_creates_lists_and_cancels_watches_through_its_tools() -
     book = WatchBook(home.journal, kinds=("mail",))
     tools = WatchTools(book)
     agent = Agent(
-        model=ScriptedModel(
-            ToolCall("c1", "create_watch", {"what": "le colis de la poussette", "days": 30}),
-            "D'accord, je te préviens dès qu'il arrive.",
+        models=ModelChoice.single(
+            ScriptedModel(
+                ToolCall("c1", "create_watch", {"what": "le colis de la poussette", "days": 30}),
+                "D'accord, je te préviens dès qu'il arrive.",
+            )
         ),
         persona=Persona(name="Richie", character="Tu es Richie."),
         journal=home.journal,

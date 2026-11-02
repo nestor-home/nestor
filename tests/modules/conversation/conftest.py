@@ -15,6 +15,7 @@ from nestor.modules.conversation import (
     AgentSettings,
     ChannelProfile,
     ContextProvider,
+    ModelChoice,
     Persona,
 )
 from nestor.modules.household import Account, Household, Person
@@ -46,6 +47,7 @@ def make_agent(journal: Journal) -> MakeAgent:
     def make(
         *replies: Reply,
         model: ScriptedModel | None = None,
+        models: ModelChoice | None = None,
         tools: Iterable[Tool] = (),
         context: Iterable[ContextProvider] = (),
         settings: AgentSettings | None = None,
@@ -53,7 +55,7 @@ def make_agent(journal: Journal) -> MakeAgent:
         channels: Mapping[str, ChannelProfile] | None = None,
     ) -> Agent:
         return Agent(
-            model=model or ScriptedModel(*replies),
+            models=models or ModelChoice.single(model or ScriptedModel(*replies)),
             persona=Persona(
                 name="Richie",
                 character="Tu es Richie, le robot de la maison.",

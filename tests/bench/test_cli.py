@@ -19,7 +19,7 @@ def here(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setenv("LANG", "en_US.UTF-8")
     for algorithm in ("per-watch", "batch"):
         (tmp_path / f"{algorithm}.yaml").write_text(
-            f"triage_model: {{kind: watch-triage-fake}}\nbench: {{name: fake-{algorithm}, algorithm: {algorithm}}}\n"
+            f"models: {{m: {{kind: watch-triage-fake}}}}\nbench: {{name: fake-{algorithm}, algorithm: {algorithm}}}\n"
         )
     return tmp_path
 

@@ -38,7 +38,7 @@ household:
   - {{id: mathis, name: Mathis, accounts: ["memory:user"], reach: "memory:main"}}
   - {{id: mathilde, name: Mathilde}}
   - {{id: lucie, name: Lucie}}
-model: {{kind: scripted}}
+models: {{main: {{kind: scripted}}}}
 executors: [{{kind: remote, name: hermes}}]
 channels: [{{kind: memory, name: telegram}}]
 presence: {{kind: static}}

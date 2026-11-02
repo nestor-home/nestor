@@ -183,7 +183,7 @@ class AgentOut(BaseModel):
 
     @classmethod
     def of(cls, nestor: Nestor) -> "AgentOut":
-        required = [nestor.model, *nestor.channels]
+        required = [*nestor.agent.models.distinct(), *nestor.channels]
         degraded = any(c.health() is not Health.STARTED for c in required)
         return cls(name=nestor.config.persona.name, status="degraded" if degraded else "online")
 

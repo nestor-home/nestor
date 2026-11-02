@@ -48,9 +48,26 @@ when the extra is installed and you want it.
 Every command reads the `.env` next to the configuration at each start: no need to source it. A variable
 already set in the environment (the shell, a service manager) wins over the file.
 
-The model is any OpenAI-compatible server. Hosted providers need a key (`MODEL_API_KEY` in the `.env`);
+Models are any OpenAI-compatible server. Hosted providers need a key (`MODEL_API_KEY` in the `.env`);
 local ones (Ollama `http://localhost:11434/v1`, LM Studio `http://localhost:1234/v1`, vLLM, llama.cpp)
 need none: leave it empty and no `Authorization` header is sent.
+
+`models` holds as many as you like, under names you choose; each role refers to one by name. With a
+single model, every role uses it:
+
+```yaml
+models:
+  haiku: {kind: openai-compatible, base_url: https://openrouter.ai/api/v1, api_key: ${MODEL_API_KEY}, model: anthropic/claude-haiku-5.5}
+  sonnet: {kind: openai-compatible, base_url: https://openrouter.ai/api/v1, api_key: ${MODEL_API_KEY}, model: anthropic/claude-sonnet-5.5}
+agent:
+  spoken: haiku     # answers aloud: the voice starts on its first sentence
+  written: sonnet   # answers in writing; either one left out takes the other
+watches:
+  model: haiku      # sorts incoming items; the written model by default
+```
+
+The medium belongs to the turn: a satellite someone types on gets the written model, the same satellite
+spoken to gets the spoken one.
 
 Ports: the admin listens on 8470, satellites on 8471 (their link and their voice). Both are configurable
 (`admin.port`, the satellites channel's `port`).
@@ -133,18 +150,20 @@ A variant is a fragment of `nestor.yaml` (a whole one works too), with the suite
 `${NAME}` resolves from the environment and the `.env` next to it:
 
 ```yaml
-triage_model:
-  kind: openai-compatible
-  base_url: https://openrouter.ai/api/v1
-  api_key: ${OPENROUTER_API_KEY}
-  model: mistralai/mistral-small-3.2
-  extra_body: {stream_options: {include_usage: true}}  # token counts from servers that only send them on request
+models:
+  mistral-small:
+    kind: openai-compatible
+    base_url: https://openrouter.ai/api/v1
+    api_key: ${OPENROUTER_API_KEY}
+    model: mistralai/mistral-small-3.2
+    extra_body: {stream_options: {include_usage: true}}  # token counts from servers that only send them on request
 persona: {language: French}
-bench: {name: batch-mistral-small, algorithm: batch}   # watch-triage: batch or per-watch
+bench: {name: batch-mistral-small, algorithm: batch}     # watch-triage: batch or per-watch
 ```
 
-`triage_model: {kind: watch-triage-fake}` runs the suite without a network, on a deterministic word-overlap
-judge. A run writes `bench-results/<suite>/<started>-<variant>/results.json` (dataset hash, variant with its
+A suite calls the models of the roles it measures (`watches` for watch-triage); with a single model in the
+variant, every role takes it. `models: {fake: {kind: watch-triage-fake}}` runs the suite without a network,
+on a deterministic word-overlap judge. A run writes `bench-results/<suite>/<started>-<variant>/results.json` (dataset hash, variant with its
 secrets masked, the models the provider says answered, Nestor's version and commit, every case's output and
 model calls with latency, tokens and cost) and a self-contained `report.html`; model replies are recorded in
 `.bench-cache/`, keyed by model, request, repetition and seed. Both folders are relative to where the

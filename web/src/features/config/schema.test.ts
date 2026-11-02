@@ -40,7 +40,7 @@ describe("reading a plugin's schema (as a real instance sends it)", () => {
   });
 
   it("leaves a model's key optional, for a local server that needs none", () => {
-    const model = SCHEMA.slots.model?.kinds["openai-compatible"] as JsonSchema;
+    const model = SCHEMA.slots.models?.kinds["openai-compatible"] as JsonSchema;
     expect(controlOf(prop(model, "api_key"), model, "api_key")).toBe("secret");
     expect(resolve(prop(model, "api_key"), model).nullable).toBe(true);
     expect(model.required).not.toContain("api_key");
