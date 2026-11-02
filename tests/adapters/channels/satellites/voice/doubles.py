@@ -209,5 +209,8 @@ class FakeLink:
     def send(self, message: wire.Message) -> None:
         self.sent.append(message)
 
+    def show(self, text: str) -> None:
+        self.send(wire.TextIntent(text=text))
+
     def identify(self) -> None:
         self.send(wire.IdentifyIntent())

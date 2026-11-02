@@ -24,7 +24,7 @@ from nestor.adapters.channels.satellites.voice.session import SessionSettings, V
 from nestor.adapters.channels.satellites.voice.webrtc import PeerConnections
 from nestor.core import ContractError, ProviderError
 from nestor.modules.channels import Address, Assistant, Sender
-from nestor.modules.satellites import TEXT_DISPLAY, wire
+from nestor.modules.satellites import TEXT_DISPLAY
 
 logger = logging.getLogger(__name__)
 
@@ -53,8 +53,10 @@ class SatelliteVoice(AudioOffers):
         self._assistant, self._links = assistant, links
 
     async def hang_up(self, link: SatelliteLink) -> None:
-        """The device's link ended: its audio ends too (A3)."""
-        if session := self._sessions.get(link.satellite.id):
+        """The device's link ended: its audio ends too (A3), and its answered offers are forgotten."""
+        device = link.satellite.id
+        self._owners = {pc: owner for pc, owner in self._owners.items() if owner != device}
+        if session := self._sessions.get(device):
             await session.stop()
 
     async def offer(self, device_id: str, body: dict[str, Any]) -> dict[str, Any]:
@@ -110,7 +112,7 @@ class SatelliteVoice(AudioOffers):
         if previous := self._sessions.get(device.id):
             await previous.stop()
         body = RemoteBody(link)
-        shown = (lambda text: link.send(wire.TextIntent(text=text))) if TEXT_DISPLAY in link.allowed else None
+        shown = link.show if TEXT_DISPLAY in link.allowed else None
         session = VoiceSession(
             transport,
             speech=self.speech,

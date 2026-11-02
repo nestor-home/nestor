@@ -225,3 +225,16 @@ async def test_a_lost_device_never_breaks_the_conversation() -> None:
     body.set_behavior(Behavior.LISTENING)
     body.express(Expression.SIGH)
     body.beat()
+
+
+async def test_a_long_answer_is_shown_in_messages_the_protocol_allows(journal: Journal) -> None:
+    words = ("mot " * (wire.SHOWN_MAX // 4 + 10)).strip()
+    async with linked(journal) as (link, socket):
+        link.show(words)
+        link.show("  Court.  ")
+        await settle()
+    shown = [m for m in socket.messages() if isinstance(m, wire.TextIntent)]
+    assert [m.final for m in shown] == [False, True, True]
+    assert all(len(m.text) <= wire.SHOWN_MAX for m in shown)
+    assert " ".join(m.text for m in shown[:2]) == words, "cut between words, nothing lost"
+    assert shown[2].text == "Court."

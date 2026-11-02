@@ -81,6 +81,18 @@ class SatelliteLink:
             self._unacknowledged[data["id"]] = (time.monotonic(), message.message_type)
         self._outbox.put_nowait(data)
 
+    def show(self, text: str, *, final: bool = True) -> None:
+        """The assistant's words, to show: in as many `intent.text` as the protocol's size needs, cut
+        between words when it can (T4). `final`: the turn ends with this message (T2), marked on its
+        last piece."""
+        rest = text.strip()
+        while rest:
+            piece = rest[: wire.SHOWN_MAX]
+            if len(rest) > wire.SHOWN_MAX and (cut := piece.rfind(" ")) > 0:
+                piece = piece[:cut]
+            rest = rest[len(piece) :].strip()
+            self.send(wire.TextIntent(text=piece, final=final and not rest))
+
     async def run(self, typed: Typed) -> None:
         """Welcome the device, then read it until it leaves or `close` is called; `typed` answers each
         text it sends, in order."""

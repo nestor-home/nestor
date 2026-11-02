@@ -65,7 +65,8 @@ type Unit = Annotated[float, Bounds(0.0, 1.0)]
 type Count = Annotated[int, Bounds(0)]
 type Token = Annotated[str, Size(1, 128)]
 type Typed = Annotated[str, Size(1, 4000)]  # what a person types in one go
-type Shown = Annotated[str, Size(1, 16000)]  # one message of the assistant
+SHOWN_MAX = 16000  # characters of one `intent.text`: a longer answer goes in several
+type Shown = Annotated[str, Size(1, SHOWN_MAX)]  # one message of the assistant
 
 
 class Direction(StrEnum):

@@ -22,7 +22,7 @@ from collections.abc import Awaitable, Callable
 from enum import IntEnum
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, Request, WebSocket
+from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 
 from nestor.core import Capability, ContractError
@@ -146,6 +146,8 @@ class SatelliteGateway:
             hello = wire.decode(json.loads(received)).message
         except TimeoutError:
             return await self._turn_away(socket, device_id, Close.OFF_CONTRACT, "no hello in time")
+        except WebSocketDisconnect:
+            return None  # the device left before saying hello
         except (ContractError, ValueError, KeyError, RuntimeError) as error:
             return await self._turn_away(socket, device_id, Close.OFF_CONTRACT, str(error))
         if not isinstance(hello, wire.Hello):

@@ -29,7 +29,6 @@ from nestor.modules.satellites import (
     Pairing,
     Satellite,
     SatelliteHost,
-    wire,
 )
 
 if TYPE_CHECKING:
@@ -127,7 +126,7 @@ class SatellitesChannel(Channel, SatelliteHost):
         if not showing:
             raise ProviderError(PROVIDER, f"no screen is connected in {to}", transient=True)
         for link in showing:
-            link.send(wire.TextIntent(text=text))
+            link.show(text)
 
     async def close(self) -> None:
         self._closed.set()
@@ -181,4 +180,4 @@ class SatellitesChannel(Channel, SatelliteHost):
                 continue
             message, written = "".join(written).strip(), []
             if message:
-                link.send(wire.TextIntent(text=message, final=part.last))
+                link.show(message, final=part.last)
