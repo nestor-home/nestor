@@ -165,9 +165,7 @@ class Nestor:
             journal=self.journal,
             household=self.household,
             toolbox=Toolbox(self.journal, providers=[delegation, memory, watch_tools, *self.tools, *connector_tools]),
-            channels={
-                c.channel_id: ChannelProfile(c.medium, c.style, c.conversation_ends_after_s) for c in self.channels
-            },
+            channels={c.channel_id: ChannelProfile(c.style, c.conversation_ends_after_s) for c in self.channels},
             context=[delegation, memory, watch_tools],
         )
         initiative = config.initiative

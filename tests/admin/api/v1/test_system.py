@@ -21,7 +21,7 @@ REACHY = Manifest(
 
 
 class Voice(InMemoryChannel):
-    medium = Medium.SPOKEN
+    media = frozenset({Medium.SPOKEN})
     brand = "webrtc"
 
     @property

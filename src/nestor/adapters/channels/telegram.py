@@ -17,7 +17,7 @@ from pydantic import BaseModel, Field, TypeAdapter, ValidationError
 
 from nestor.core import Component, ContractError, ProviderError
 from nestor.core.i18n import Message
-from nestor.modules.channels import Address, Assistant, Channel, InboundMessage, Sender
+from nestor.modules.channels import Address, Assistant, Channel, InboundMessage, Medium, Sender
 from nestor.runtime.plugins import ChannelSettings, Family, Plugin, RequiredSecret, Services
 
 logger = logging.getLogger(__name__)
@@ -249,9 +249,9 @@ class TelegramChannel(Channel):
         finally:
             await chats.aclose()
 
-    async def send(self, to: Address, text: str) -> None:
-        if to.channel != self.channel_id:
-            raise ContractError(f"{to} is not on channel {self.channel_id!r}")
+    async def send(self, to: Address, text: str, medium: Medium) -> None:
+        if to.channel != self.channel_id or medium not in self.media:
+            raise ContractError(f"{to} is not on channel {self.channel_id!r} {medium}")
         if self._closing.is_set():
             raise ProviderError(PROVIDER, "the channel is closed", transient=False)
         await self._send_text(to.conversation, text)

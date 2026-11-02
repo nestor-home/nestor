@@ -28,7 +28,7 @@ from pipecat.processors.aggregators.llm_context import LLMContext
 from pipecat.processors.frame_processor import FrameDirection, FrameProcessor, FrameProcessorSetup
 
 from nestor.core import ProviderError
-from nestor.modules.channels import Address, Assistant, InboundMessage, Reply, Sender
+from nestor.modules.channels import Address, Assistant, InboundMessage, Medium, Reply, Sender
 
 logger = logging.getLogger(__name__)
 
@@ -152,7 +152,9 @@ class AssistantBridge(FrameProcessor):
                 self._told_stranger = True
             return
         await self._cut()
-        reply = self._assistant.respond(InboundMessage(address=self._address, sender=self._sender, text=text))
+        reply = self._assistant.respond(
+            InboundMessage(address=self._address, sender=self._sender, text=text, medium=Medium.SPOKEN)
+        )
         start = LLMFullResponseStartFrame()
         self._answer = _Answer(reply, start, self.create_task(self._stream(reply, start)))
 

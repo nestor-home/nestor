@@ -15,7 +15,7 @@ import pytest
 from nestor.adapters.channels.voice.channel import VoiceChannel
 from nestor.adapters.channels.voice.session import SessionSettings
 from nestor.core import ContractError, ProviderError
-from nestor.modules.channels import Address
+from nestor.modules.channels import Address, Medium
 
 from .audio import needs_recordings, needs_say, recording, say, tone_wav
 from .doubles import FakeAssistant, FakeSpeech, ScriptedSTT, ToneTTS
@@ -71,7 +71,7 @@ async def converse(channel: VoiceChannel, transport: ReplayTransport, timeout_s:
 
 async def send_at(channel: VoiceChannel, transport: ReplayTransport, at_s: float, text: str) -> None:
     await transport.clock.sleep_until(at_s)
-    await channel.send(ROOM, text)
+    await channel.send(ROOM, text, Medium.SPOKEN)
 
 
 @needs_recordings("complet-01")
@@ -201,9 +201,9 @@ async def test_an_unprompted_message_is_spoken_promptly_in_a_quiet_room() -> Non
 async def test_an_unprompted_message_fails_when_nobody_is_connected() -> None:
     transport = ReplayTransport([])
     async with serving(FakeAssistant([]), ScriptedSTT(transport, []), ToneTTS(transport.clock)) as channel:
-        assert not channel.reachable(ROOM)
+        assert not channel.reachable(ROOM, Medium.SPOKEN)
         with pytest.raises(ProviderError) as refused:
-            await channel.send(ROOM, "Ta lessive est terminée.")
+            await channel.send(ROOM, "Ta lessive est terminée.", Medium.SPOKEN)
     assert refused.value.transient
 
 
@@ -213,9 +213,9 @@ async def test_an_unprompted_message_not_spoken_in_time_fails_and_is_never_spoke
     async with serving(FakeAssistant([]), ScriptedSTT(transport, []), tts, quiet_s=1.0, send_timeout_s=0.3) as channel:
         session = asyncio.create_task(converse(channel, transport))
         await asyncio.sleep(0.1)
-        assert channel.reachable(ROOM)
+        assert channel.reachable(ROOM, Medium.SPOKEN)
         with pytest.raises(ProviderError) as refused:
-            await channel.send(ROOM, "Ta lessive est terminée.")
+            await channel.send(ROOM, "Ta lessive est terminée.", Medium.SPOKEN)
         await session
     assert refused.value.transient
     assert not tts.texts, "the sender gave up (and wrote it elsewhere): saying it now would repeat it"
@@ -226,17 +226,20 @@ async def test_closing_the_channel_ends_its_sessions_and_their_pending_messages(
     async with serving(FakeAssistant([]), ScriptedSTT(transport, []), ToneTTS(transport.clock), quiet_s=60) as channel:
         session = asyncio.create_task(channel.attach(transport))
         await asyncio.sleep(0.2)
-        pending = [asyncio.create_task(channel.send(ROOM, text)) for text in ("Ta lessive est terminée.", "Il pleut.")]
+        pending = [
+            asyncio.create_task(channel.send(ROOM, text, Medium.SPOKEN))
+            for text in ("Ta lessive est terminée.", "Il pleut.")
+        ]
         await asyncio.sleep(0.2)
         await channel.close()
         async with asyncio.timeout(10):
             await session
             results = await asyncio.gather(*pending, return_exceptions=True)
         assert all(isinstance(r, ProviderError) and r.transient for r in results)
-        assert not channel.reachable(ROOM)
+        assert not channel.reachable(ROOM, Medium.SPOKEN)
         await channel.detach(transport)  # a client leaving after the session ended changes nothing
         await channel.attach(ReplayTransport([]))  # nor does one arriving once the channel is closed
-        assert not channel.reachable(ROOM)
+        assert not channel.reachable(ROOM, Medium.SPOKEN)
 
 
 async def test_a_session_cannot_start_before_the_channel_serves_an_assistant() -> None:
@@ -256,7 +259,7 @@ async def test_a_message_for_another_channel_is_refused() -> None:
     transport = ReplayTransport([])
     async with serving(FakeAssistant([]), ScriptedSTT(transport, []), ToneTTS(transport.clock)) as channel:
         with pytest.raises(ContractError):
-            await channel.send(Address("telegram", "salon"), "Ta lessive est terminée.")
+            await channel.send(Address("telegram", "salon"), "Ta lessive est terminée.", Medium.SPOKEN)
 
 
 async def test_a_transcription_outage_is_announced_instead_of_silence() -> None:

@@ -56,7 +56,7 @@ class Host(InMemoryChannel, SatelliteHost):
 
 
 class Voice(InMemoryChannel):
-    medium = Medium.SPOKEN
+    media = frozenset({Medium.SPOKEN})
 
     @property
     def rooms(self) -> frozenset[str]:

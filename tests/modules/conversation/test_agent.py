@@ -7,7 +7,7 @@ from collections.abc import AsyncGenerator, Mapping
 import pytest
 
 from nestor.core import ContractError, PersonId, ProviderError
-from nestor.modules.channels import Address, Sender
+from nestor.modules.channels import Address, Medium, Sender
 from nestor.modules.cognition.model import (
     Finished,
     FinishReason,
@@ -294,9 +294,14 @@ async def test_a_slow_model_gets_a_filler_on_voice_only(make_agent: MakeAgent, j
         .respond(message("Question"))
         .collect()
     )
+    typed_on_voice = (
+        await make_agent(model=ScriptedModel("Voilà.", word_delay_s=0.05), settings=settings)
+        .respond(message("Question", VOICE, "mic", Medium.WRITTEN))
+        .collect()
+    )
 
     assert spoken == ("Hmm, je rame un peu, laisse-moi une seconde. Voilà.",)
-    assert written == ("Voilà.",)
+    assert written == typed_on_voice == ("Voilà.",)
     assert [e.reason for e in await journal.history(FallbackSpoken)] == [FallbackReason.MODEL_SLOW]
 
 
@@ -334,7 +339,7 @@ async def test_a_composed_message_uses_the_conversation_and_is_left_to_its_sende
     await make_agent("Je lance l'analyse.").respond(message("Analyse le dépôt")).collect()
     model = ScriptedModel("L'analyse est finie : trois soucis trouvés.")
 
-    text = await make_agent(model=model).compose(TELEGRAM, MATHIS, "Task finished: 3 issues found.")
+    text = await make_agent(model=model).compose(TELEGRAM, MATHIS, "Task finished: 3 issues found.", Medium.WRITTEN)
 
     assert text == ("L'analyse est finie : trois soucis trouvés.",)
     last = model.requests[0].messages[-1]
@@ -346,7 +351,7 @@ async def test_a_composed_message_uses_the_conversation_and_is_left_to_its_sende
 async def test_an_answer_to_a_delivery_sees_the_delivery(make_agent: MakeAgent, journal: Journal) -> None:
     model = ScriptedModel("Rien d'autre.")
     agent = make_agent(model=model)
-    delivered = await agent.conversations.turn(TELEGRAM)  # what the courier does
+    delivered = await agent.conversations.turn(TELEGRAM, Medium.WRITTEN)  # what the courier does
     await journal.publish(
         AssistantTurn(
             source="courier",

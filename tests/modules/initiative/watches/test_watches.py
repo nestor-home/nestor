@@ -70,7 +70,7 @@ class TestQueuedSource(InboundEventSourceContract):
 
 
 class Satellite(InMemoryChannel):
-    medium = Medium.SPOKEN
+    media = frozenset({Medium.SPOKEN})
     room = "salon"
 
 

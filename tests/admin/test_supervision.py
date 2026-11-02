@@ -24,7 +24,7 @@ NOON = datetime(2026, 10, 30, 11, 0, tzinfo=UTC)
 
 
 class Satellite(InMemoryChannel):
-    medium = Medium.SPOKEN
+    media = frozenset({Medium.SPOKEN})
 
     def __init__(self, channel_id: str, room: str) -> None:
         super().__init__(channel_id)

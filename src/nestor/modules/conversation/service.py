@@ -40,13 +40,11 @@ from nestor.modules.journal import Journal
 class ChannelProfile:
     """What the agent needs to know about a channel to write for it, and to tell its conversations apart."""
 
-    medium: Medium = Medium.WRITTEN
     style: str = ""
-    conversation_ends_after_s: float | None = None  # None: the medium's default
+    conversation_ends_after_s: float | None = None  # None: the default of each turn's medium
 
-    @property
-    def ends_conversation_after_s(self) -> float:
-        return self.conversation_ends_after_s or self.medium.conversation_ends_after_s
+    def ends_conversation_after_s(self, medium: Medium) -> float:
+        return self.conversation_ends_after_s or medium.conversation_ends_after_s
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -99,7 +97,9 @@ class Agent(Assistant):
     ) -> None:
         self.model, self.persona, self.journal = model, persona, journal
         self.conversations = Conversations(
-            journal, ends_after_s=lambda address: self.channel(address).ends_conversation_after_s, clock=clock
+            journal,
+            ends_after_s=lambda address, medium: self.channel(address).ends_conversation_after_s(medium),
+            clock=clock,
         )
         self.localizer = localizer
         self.household, self.toolbox = household, toolbox
@@ -114,24 +114,27 @@ class Agent(Assistant):
 
     def respond(self, message: InboundMessage) -> Reply:
         person = self.household.identify(message.address.channel, message.sender.id)
-        return AgentReply(self, message.address, person, user=message.text)
+        return AgentReply(self, message.address, person, message.medium, user=message.text)
 
-    async def compose(self, address: Address, person: Person | None, instruction: str) -> tuple[str, ...]:
-        """Write unprompted messages for this conversation (a task result, an announcement).
+    async def compose(
+        self, address: Address, person: Person | None, instruction: str, medium: Medium
+    ) -> tuple[str, ...]:
+        """Write unprompted messages for this conversation (a task result, an announcement), to be
+        delivered through `medium`.
 
         `instruction` tells the agent what to convey; the text is written in the persona's voice,
         with the conversation's history. It is not logged: whoever delivers it logs it once sent.
         """
-        return await AgentReply(self, address, person, instruction=instruction, record=False).collect()
+        return await AgentReply(self, address, person, medium, instruction=instruction, record=False).collect()
 
     def channel(self, address: Address) -> ChannelProfile:
         return self._channels.get(address.channel, ChannelProfile())
 
-    async def instructions(self, address: Address, person: Person | None) -> str:
+    async def instructions(self, address: Address, person: Person | None, medium: Medium) -> str:
         sections = await asyncio.gather(*(p.context(person, address) for p in self._context))
         profile = self.channel(address)
         return self.persona.instructions(
-            medium=profile.medium,
+            medium=medium,
             style=profile.style,
             person=person,
             now=utc_now(),
@@ -154,12 +157,13 @@ class AgentReply(Reply):
         agent: Agent,
         address: Address,
         person: Person | None,
+        medium: Medium,
         *,
         user: str | None = None,
         instruction: str | None = None,
         record: bool = True,
     ) -> None:
-        self._agent, self._address, self._person = agent, address, person
+        self._agent, self._address, self._person, self._medium = agent, address, person, medium
         self._user, self._instruction, self._record = user, instruction, record
         self._chunks: asyncio.Queue[str | MessageEnd | None] = asyncio.Queue()
         self._message: list[str] = []  # the message being written
@@ -209,7 +213,7 @@ class AgentReply(Reply):
         agent.replies.set(self, ReplyPhase.THINKING)
         try:
             if self._record:
-                exchange = self._exchange = await agent.conversations.turn(self._address)
+                exchange = self._exchange = await agent.conversations.turn(self._address, self._medium)
                 conversation: str | None = exchange.conversation_id
                 if self._user is not None:
                     await agent.journal.publish(
@@ -223,7 +227,7 @@ class AgentReply(Reply):
                         )
                     )
             else:  # a composed message: the open conversation's turns, if any
-                conversation = await agent.conversations.current(self._address)
+                conversation = await agent.conversations.current(self._address, self._medium)
             await self._answer(conversation)
             await self._end_message()
             self._end_turn()
@@ -237,7 +241,7 @@ class AgentReply(Reply):
             agent.journal, self._address, conversation, max_events=agent.settings.history_events
         )
         messages = [
-            Message(role=Role.SYSTEM, content=await agent.instructions(self._address, self._person)),
+            Message(role=Role.SYSTEM, content=await agent.instructions(self._address, self._person, self._medium)),
             *history,
         ]
         if self._instruction is not None:
@@ -268,7 +272,7 @@ class AgentReply(Reply):
         text: list[str] = []
         calls: list[ToolCall] = []
         stream = agent.model.stream(request)
-        spoken = agent.channel(self._address).medium is Medium.SPOKEN
+        spoken = self._medium is Medium.SPOKEN
         filler = self._slow_filler() if spoken and not self._message and not self._ended else None
         try:
             async for output in stream:

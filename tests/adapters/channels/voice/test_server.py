@@ -13,7 +13,7 @@ from pipecat.transports.base_transport import BaseTransport
 from nestor.adapters.channels.voice.channel import VoiceChannel
 from nestor.adapters.channels.voice.server import BrowserRoutes, SignallingServer
 from nestor.adapters.channels.voice.session import SessionSettings
-from nestor.modules.channels import Address
+from nestor.modules.channels import Address, Medium
 
 from .doubles import FakeAssistant, FakeSpeech, ScriptedSTT, ToneTTS
 from .replay import ReplayTransport
@@ -85,7 +85,7 @@ class Satellite:
             assert (await client.patch(f"/sessions/{session_id}/api/offer", json=candidates)).json() == {
                 "status": "success"
             }
-        await _until(lambda: self.peer.connectionState == "connected" and self.channel.reachable(ROOM))
+        await _until(lambda: self.peer.connectionState == "connected" and self.channel.reachable(ROOM, Medium.SPOKEN))
 
 
 async def test_a_webrtc_peer_gets_a_voice_session_until_it_leaves() -> None:
@@ -94,7 +94,7 @@ async def test_a_webrtc_peer_gets_a_voice_session_until_it_leaves() -> None:
         serving = asyncio.create_task(satellite.channel.serve(FakeAssistant([])))
         await satellite.connect()
         await satellite.peer.close()
-        await _until(lambda: not satellite.channel.reachable(ROOM))
+        await _until(lambda: not satellite.channel.reachable(ROOM, Medium.SPOKEN))
         await satellite.channel.close()
         async with asyncio.timeout(10):
             await serving
@@ -108,7 +108,7 @@ async def test_closing_the_channel_ends_the_sessions_of_connected_peers_and_stop
         await satellite.channel.close()
         async with asyncio.timeout(10):
             await serving
-        assert not satellite.channel.reachable(ROOM)
+        assert not satellite.channel.reachable(ROOM, Medium.SPOKEN)
         assert not _answers(satellite.port)
     await satellite.peer.close()
 

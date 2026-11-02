@@ -14,7 +14,7 @@ from nestor.adapters.channels.voice.satellites import SatelliteGateway
 from nestor.adapters.channels.voice.server import SignallingServer
 from nestor.adapters.channels.voice.session import SessionSettings
 from nestor.modules.behavior import Behavior, Expression
-from nestor.modules.channels import Address
+from nestor.modules.channels import Address, Medium
 from nestor.modules.journal import Journal
 from nestor.modules.satellites import (
     AttemptLimiter,
@@ -78,13 +78,15 @@ async def test_a_paired_satellite_speaks_in_its_room_and_its_body_follows_the_pl
         assert satellite.code is not None
         await pairing.approve(satellite.code)
         await asyncio.wait_for(satellite.welcomed.wait(), 10)
-        await _until(lambda: channel.reachable(KITCHEN))
+        await _until(lambda: channel.reachable(KITCHEN, Medium.SPOKEN))
         assert channel.rooms == {"cuisine"}
         await pairing.identify("enceinte-cuisine")
         await _until(lambda: satellite.identified == 1)
-        assert not channel.reachable(Address("voice", "salon")), "the satellite speaks in its paired room"
+        assert not channel.reachable(Address("voice", "salon"), Medium.SPOKEN), (
+            "the satellite speaks in its paired room"
+        )
 
-        await channel.send(KITCHEN, "[laughs] Ah, celle-là je ne l'avais pas vue.")
+        await channel.send(KITCHEN, "[laughs] Ah, celle-là je ne l'avais pas vue.", Medium.SPOKEN)
         await _until(lambda: wire.BehaviorIntent(behavior=Behavior.IDLE) in satellite.intents)
 
         intents = satellite.intents
@@ -97,7 +99,7 @@ async def test_a_paired_satellite_speaks_in_its_room_and_its_body_follows_the_pl
         assert seen and {(e.device_id, e.room) for e in seen} == {("enceinte-cuisine", "cuisine")}
 
         running.cancel()
-        await _until(lambda: not channel.reachable(KITCHEN))
+        await _until(lambda: not channel.reachable(KITCHEN, Medium.SPOKEN))
         kinds = [type(e) for e in await journal.history(SatelliteConnected, SatelliteDisconnected)]
         assert kinds == [SatelliteConnected, SatelliteDisconnected]
 
@@ -125,7 +127,7 @@ async def test_a_new_connection_of_a_satellite_replaces_its_previous_session() -
                 await asyncio.sleep(0.05)
 
         await asyncio.wait_for(replaced(), 10)
-        assert channel.reachable(KITCHEN), "the new connection holds the room"
+        assert channel.reachable(KITCHEN, Medium.SPOKEN), "the new connection holds the room"
         running.cancel()
 
 

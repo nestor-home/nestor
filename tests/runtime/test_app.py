@@ -13,7 +13,7 @@ import pytest
 
 from nestor.cli import main
 from nestor.core import Component, ContractError
-from nestor.modules.channels import Address
+from nestor.modules.channels import Address, Medium
 from nestor.modules.cognition import Outcome, TaskDelivered
 from nestor.modules.cognition.model import ModelRequest, ToolCall
 from nestor.modules.conversation import AssistantTurn
@@ -223,7 +223,8 @@ async def test_initiative_settings_reach_the_courier(tmp_path: Path) -> None:
 async def test_each_channel_brings_its_conversation_window_to_the_agent(tmp_path: Path) -> None:
     nestor = Nestor(config(tmp_path, []), Fakes().registry())
     profile = nestor.agent.channel(Address("memory", "x"))
-    assert profile.ends_conversation_after_s == 4 * 3600, "a written channel's default"
+    assert profile.ends_conversation_after_s(Medium.WRITTEN) == 4 * 3600, "writing's default"
+    assert profile.ends_conversation_after_s(Medium.SPOKEN) == 300, "speech's default"
 
 
 def test_malformed_quiet_hours_are_a_configuration_error(tmp_path: Path) -> None:

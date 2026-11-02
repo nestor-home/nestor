@@ -22,8 +22,8 @@ def test_the_channel_is_named_after_its_instance_and_speaks_in_its_room(tmp_path
         Services(tmp_path, localizer=EchoLocalizer(), locale=Locale("fr-FR")),
     )
     assert isinstance(channel, VoiceChannel)
-    assert (channel.channel_id, channel.medium, channel.style) == ("voix", Medium.SPOKEN, "Use [laughs] sparingly.")
-    assert not channel.reachable(Address("voix", "salon")), "nobody is connected yet"
+    assert (channel.channel_id, channel.media, channel.style) == ("voix", {Medium.SPOKEN}, "Use [laughs] sparingly.")
+    assert not channel.reachable(Address("voix", "salon"), Medium.SPOKEN), "nobody is connected yet"
     assert (channel.brand, channel.details()) == ("webrtc", {"speech": "elevenlabs"})
 
 
@@ -59,7 +59,7 @@ def test_the_transcription_fallback_is_in_the_households_language_unless_configu
     assert isinstance(channel, VoiceChannel) and channel._session.stt_phrase == said
 
 
-@pytest.mark.parametrize(("configured", "seconds"), [({}, 300.0), ({"conversation_ends_after_s": 120}, 120.0)])
+@pytest.mark.parametrize(("configured", "seconds"), [({}, None), ({"conversation_ends_after_s": 120}, 120.0)])
 def test_a_spoken_conversation_lasts_five_minutes_as_in_assist_unless_configured(
     tmp_path: Path, configured: dict[str, int], seconds: float
 ) -> None:

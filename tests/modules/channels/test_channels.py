@@ -5,7 +5,7 @@ import asyncio
 import pytest
 
 from nestor.core import ContractError
-from nestor.modules.channels import Address, InboundMessage
+from nestor.modules.channels import Address, InboundMessage, Medium
 from nestor.testing.channels import InMemoryChannel, ScriptedAssistant, ScriptedReply
 
 
@@ -36,9 +36,9 @@ async def test_a_message_reaches_the_assistant_and_its_answer_comes_back() -> No
 async def test_an_unprompted_message_is_only_delivered_on_its_own_channel() -> None:
     channel = InMemoryChannel("telegram")
 
-    await channel.send(Address("telegram", "42"), "La tâche est finie.")
+    await channel.send(Address("telegram", "42"), "La tâche est finie.", Medium.WRITTEN)
     with pytest.raises(ContractError, match="not on channel 'telegram'"):
-        await channel.send(Address("voice", "salon"), "La tâche est finie.")
+        await channel.send(Address("voice", "salon"), "La tâche est finie.", Medium.WRITTEN)
 
     assert channel.sent == [(Address("telegram", "42"), "La tâche est finie.")]
 

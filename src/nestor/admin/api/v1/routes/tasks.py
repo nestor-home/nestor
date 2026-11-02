@@ -16,7 +16,7 @@ from nestor.admin.api.v1.security import Caller, allowed
 from nestor.admin.presentation import Phrasebook, subject
 from nestor.admin.state import AdminState, state
 from nestor.modules.accounts import Scope
-from nestor.modules.channels import Address, Medium
+from nestor.modules.channels import Address
 from nestor.modules.cognition import TaskStatus
 from nestor.modules.cognition.delegation.events import TaskDelivered, TaskEnded
 from nestor.modules.cognition.delegation.service import Task
@@ -83,7 +83,7 @@ class Afterwards:
 
 async def deliveries(admin: AdminState) -> dict[str, DeliveredOut]:
     """Where each task's result was passed on: in the conversation, or by the courier (the latest wins)."""
-    spoken = {c.channel_id for c in admin.nestor.channels if c.medium is Medium.SPOKEN}
+    spoken = {c.channel_id for c in admin.nestor.channels if c.spoken}
     found: dict[str, DeliveredOut] = {}
 
     def out(at: datetime, address: Address) -> DeliveredOut:

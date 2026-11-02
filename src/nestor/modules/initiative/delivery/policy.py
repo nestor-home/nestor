@@ -14,7 +14,7 @@ from zoneinfo import ZoneInfo
 
 from nestor.core import ContractError
 from nestor.core.i18n import Message
-from nestor.modules.channels import Address, Channel, Medium
+from nestor.modules.channels import Address, Channel
 from nestor.modules.home import Presence
 from nestor.modules.household import Person
 
@@ -69,7 +69,7 @@ class DeliveryPolicy:
         urgent: bool = False,
     ) -> Plan:
         channels = tuple(channels)
-        spoken_ids = {c.channel_id for c in channels if c.medium is Medium.SPOKEN}
+        spoken_ids = {c.channel_id for c in channels if c.spoken}
         satellites = {
             room: Address(c.channel_id, room) for c in channels if c.channel_id in spoken_ids for room in c.rooms
         }

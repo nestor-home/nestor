@@ -49,7 +49,7 @@ class VoiceChannel(Channel, SatelliteHost):
 
     name = "voice"
     brand = "webrtc"
-    medium = Medium.SPOKEN
+    media = frozenset({Medium.SPOKEN})
 
     def details(self) -> Mapping[str, str]:
         known = {"speech": self._speech.brand}
@@ -146,12 +146,12 @@ class VoiceChannel(Channel, SatelliteHost):
         """Rooms where someone can hear the channel right now."""
         return frozenset(s.address.conversation for s in self._sessions.values())
 
-    def reachable(self, to: Address) -> bool:
-        return any(s.address == to for s in self._sessions.values())
+    def reachable(self, to: Address, medium: Medium) -> bool:
+        return medium in self.media and any(s.address == to for s in self._sessions.values())
 
-    async def send(self, to: Address, text: str) -> None:
-        if to.channel != self.channel_id:
-            raise ContractError(f"{to} is not on channel {self.channel_id!r}")
+    async def send(self, to: Address, text: str, medium: Medium) -> None:
+        if to.channel != self.channel_id or medium not in self.media:
+            raise ContractError(f"{to} is not on channel {self.channel_id!r} {medium}")
         sessions = [s for s in self._sessions.values() if s.address == to]
         if not sessions:
             raise ProviderError(PROVIDER, f"nobody is connected in {to}", transient=True)

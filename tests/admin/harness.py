@@ -76,7 +76,7 @@ class WeatherSettings(AdapterSettings):
 class Speaker(InMemoryChannel):
     """A satellite heard in the salon: a spoken channel the courier can speak through."""
 
-    medium = Medium.SPOKEN
+    media = frozenset({Medium.SPOKEN})
     room = "salon"
 
 

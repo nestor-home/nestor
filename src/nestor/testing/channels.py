@@ -4,7 +4,7 @@ import asyncio
 from collections.abc import AsyncIterator, Callable
 
 from nestor.core import ContractError, PersonId
-from nestor.modules.channels import Address, Assistant, Channel, InboundMessage, MessageEnd, Reply, Sender
+from nestor.modules.channels import Address, Assistant, Channel, InboundMessage, Medium, MessageEnd, Reply, Sender
 
 
 class ScriptedReply(Reply):
@@ -86,9 +86,9 @@ class InMemoryChannel(Channel):
         await self._inbox.put((message, answered))
         return await answered
 
-    async def send(self, to: Address, text: str) -> None:
-        if to.channel != self.channel_id:
-            raise ContractError(f"{to} is not on channel {self.channel_id!r}")
+    async def send(self, to: Address, text: str, medium: Medium) -> None:
+        if to.channel != self.channel_id or medium not in self.media:
+            raise ContractError(f"{to} is not on channel {self.channel_id!r} {medium}")
         self.sent.append((to, text))
 
     async def close(self) -> None:

@@ -125,7 +125,7 @@ async def test_a_channel_without_a_profile_gets_the_default_of_writing(
 
 
 async def test_a_channel_may_set_its_own_window(make_agent: MakeAgent, journal: Journal, clock: Clock) -> None:
-    channels = {"telegram": ChannelProfile(Medium.WRITTEN, conversation_ends_after_s=60)}
+    channels = {"telegram": ChannelProfile(conversation_ends_after_s=60)}
     await two_turns(
         make_agent("Oui.", "Oui.", clock=clock, channels=channels), TELEGRAM, "42", timedelta(minutes=2), clock
     )
@@ -151,6 +151,30 @@ async def test_the_silence_counts_from_the_end_of_the_reply(
 
     first, second = await conversation_of_each_turn(journal)
     assert first == second
+
+
+async def test_a_typed_follow_up_to_a_spoken_question_stays_in_its_conversation(
+    make_agent: MakeAgent, journal: Journal, clock: Clock
+) -> None:
+    agent = make_agent("Il fait 21 degrés.", "Dehors, 12.", clock=clock)
+    await agent.respond(message("Quelle température ?", VOICE, "mic")).collect()
+    clock.now += timedelta(minutes=30)
+    await agent.respond(message("Et dehors ?", VOICE, "mic", Medium.WRITTEN)).collect()
+
+    first, second = await conversation_of_each_turn(journal)
+    assert first == second, "a typed turn waits as long as writing allows"
+
+
+async def test_a_spoken_turn_after_a_long_silence_opens_a_new_conversation(
+    make_agent: MakeAgent, journal: Journal, clock: Clock
+) -> None:
+    agent = make_agent("Noté.", "Oui.", clock=clock)
+    await agent.respond(message("Note le pain", VOICE, "mic", Medium.WRITTEN)).collect()
+    clock.now += timedelta(minutes=30)
+    await agent.respond(message("Tu es là ?", VOICE, "mic")).collect()
+
+    first, second = await conversation_of_each_turn(journal)
+    assert first != second, "a spoken turn waits only as long as speech allows"
 
 
 async def test_sessions_hold_their_own_conversations(make_agent: MakeAgent, journal: Journal) -> None:
@@ -224,9 +248,9 @@ async def test_a_composed_message_sees_only_the_open_conversation(
     await make_agent("Je lance l'analyse.", clock=clock).respond(message("Analyse")).collect()
     model = ScriptedModel("C'est fini.", "C'est fini.")
     agent = make_agent(model=model, clock=clock)
-    await agent.compose(TELEGRAM, MATHIS, "Task finished.")
+    await agent.compose(TELEGRAM, MATHIS, "Task finished.", Medium.WRITTEN)
     clock.now += timedelta(hours=5)
-    await agent.compose(TELEGRAM, MATHIS, "Task finished.")
+    await agent.compose(TELEGRAM, MATHIS, "Task finished.", Medium.WRITTEN)
 
     soon, late = ([m.role for m in r.messages] for r in model.requests)
     assert soon == [Role.SYSTEM, Role.USER, Role.ASSISTANT, Role.SYSTEM]

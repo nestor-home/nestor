@@ -27,8 +27,10 @@ TELEGRAM = Address("telegram", "42")
 VOICE = Address("voice", "salon")
 
 
-def message(text: str, address: Address = TELEGRAM, sender: str = "42") -> InboundMessage:
-    return InboundMessage(address=address, sender=Sender(sender), text=text)
+def message(text: str, address: Address = TELEGRAM, sender: str = "42", medium: Medium | None = None) -> InboundMessage:
+    """A turn, said on the voice channel unless `medium` says otherwise, typed elsewhere."""
+    said = Medium.SPOKEN if address.channel == "voice" else Medium.WRITTEN
+    return InboundMessage(address=address, sender=Sender(sender), text=text, medium=medium or said)
 
 
 type MakeAgent = Callable[..., Agent]
@@ -63,7 +65,7 @@ def make_agent(journal: Journal) -> MakeAgent:
             household=Household([MATHIS]),
             toolbox=Toolbox(journal, tools),
             localizer=FluentLocalizer(catalogue_dirs(["nestor"])),
-            channels=channels or {"voice": ChannelProfile(Medium.SPOKEN, style="Use [laughs] sparingly.")},
+            channels=channels or {"voice": ChannelProfile(style="Use [laughs] sparingly.")},
             context=context,
             settings=settings,
             clock=clock,
