@@ -28,7 +28,6 @@ class Watch:
     """A durable commitment: tell `owner` when something matching `what` arrives."""
 
     what: str  # in the person's words: "le colis Colissimo de la poussette"
-    keywords: tuple[str, ...] = ()  # cheap first filter; empty means every item of the kinds
     kinds: tuple[str, ...] = ("mail",)
     owner: PersonId | None = None
     created_in: Address | None = None
@@ -40,8 +39,7 @@ class Watch:
 
 @dataclass(frozen=True, slots=True)
 class Verdict:
-    """The triage model's answer about one item for one watch."""
+    """The triage model's answer for a watch an item matches."""
 
-    matches: bool
     urgent: bool = False
     summary: str = ""

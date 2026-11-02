@@ -14,8 +14,8 @@ from nestor.modules.initiative.watches.types import Watch
 
 HOW_TO_WATCH = (
     "When someone asks to be told when something arrives or happens (a parcel, an email from someone, an answer), "
-    "call create_watch with their words and a few distinctive keywords (sender, carrier, tracking number, subject "
-    "words). Confirm briefly. When it matches you will be asked to announce it. Watches can see: {kinds}."
+    "call create_watch with what to watch for, in their words, precise enough to recognise it (sender, carrier, "
+    "tracking number…). Confirm briefly. When it matches you will be asked to announce it. Watches can see: {kinds}."
 )
 NO_SOURCE = "No inbound source is connected (no mailbox): you cannot watch for anything. Say so if asked."
 
@@ -34,12 +34,11 @@ class WatchTools(ToolProvider, ContextProvider):
             "type": "object",
             "properties": {
                 "what": {"type": "string", "description": "what to watch for, in the person's words"},
-                "keywords": {"type": "array", "items": {"type": "string"}, "description": "distinctive words"},
                 "kinds": {"type": "array", "items": {"type": "string", "enum": kinds}},
                 "once": {"type": "boolean", "description": "end after the first match (default true)"},
                 "days": {"type": "integer", "minimum": 1, "maximum": 365, "description": "how long to keep watching"},
             },
-            "required": ["what", "keywords"],
+            "required": ["what"],
         }
         cancel = {"type": "object", "properties": {"watch_id": {"type": "string"}}, "required": ["watch_id"]}
         return (
@@ -62,10 +61,9 @@ class WatchTools(ToolProvider, ContextProvider):
         return "\n\n".join(lines)
 
     async def _create(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
-        keywords = arguments.get("keywords") or []
         kinds = arguments.get("kinds") or sorted(self.book.kinds)
-        if not isinstance(keywords, list) or not isinstance(kinds, list):
-            raise ToolFailed("keywords and kinds must be lists")
+        if not isinstance(kinds, list):
+            raise ToolFailed("kinds must be a list")
         unknown = set(map(str, kinds)) - self.book.kinds
         if unknown:
             raise ToolFailed(f"cannot watch {', '.join(sorted(unknown))}: no such source connected")
@@ -73,7 +71,6 @@ class WatchTools(ToolProvider, ContextProvider):
         watch = await self.book.create(
             Watch(
                 what=str(arguments["what"]),
-                keywords=tuple(str(k) for k in keywords if str(k).strip()),
                 kinds=tuple(str(k) for k in kinds),
                 once=arguments.get("once") is not False,
                 owner=context.person,
@@ -85,11 +82,7 @@ class WatchTools(ToolProvider, ContextProvider):
         return {"watch_id": watch.id, "watching": watch.what}
 
     async def _list(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
-        return {
-            "watches": [
-                {"watch_id": w.id, "what": w.what, "keywords": list(w.keywords)} for w in self.book.watches.values()
-            ]
-        }
+        return {"watches": [{"watch_id": w.id, "what": w.what} for w in self.book.watches.values()]}
 
     async def _cancel(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
         if not await self.book.end(str(arguments["watch_id"]), "cancelled"):

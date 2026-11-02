@@ -27,6 +27,7 @@ from nestor.modules.initiative.watches import (
     WatchCreated,
     WatchEnded,
     WatchKeeper,
+    WatchSorted,
     WatchTriggered,
 )
 
@@ -49,5 +50,6 @@ __all__ = [
     "WatchCreated",
     "WatchEnded",
     "WatchKeeper",
+    "WatchSorted",
     "WatchTriggered",
 ]

@@ -2219,8 +2219,6 @@ export interface components {
             id: string;
             /** What */
             what: string;
-            /** Keywords */
-            keywords: string[];
             /** Kinds */
             kinds: string[];
             owner: components["schemas"]["PersonRef"] | null;

@@ -40,7 +40,7 @@ def by_type(found: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
 async def test_a_watch_chains_to_its_delivery_and_its_follow_up(tmp_path: Path) -> None:
     async with Harness(tmp_path) as admin:
         for event in (
-            WatchCreated(source="watch-book", watch_id="w1", what="le colis", keywords=(), kinds=("mail",), once=True),
+            WatchCreated(source="watch-book", watch_id="w1", what="le colis", kinds=("mail",), once=True),
             WatchTriggered(source="watch-keeper", watch_id="w1", item_id="i1", item_title="Colis", summary=""),
             DeliveryConsidered(source="courier", about="watch w1", reason=REASON, spoken=VOICE, person=MATHIS),
             Delivered(source="courier", address=VOICE, about="watch w1", person=MATHIS),

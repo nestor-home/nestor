@@ -1,14 +1,14 @@
 {"dataset": "watch-triage", "version": 1}
-{"watch": "w-stroller", "lang": "fr", "what": "Préviens-moi quand le colis de la poussette arrive (commande Petit Pas PP-48213)", "keywords": ["poussette", "PP-48213"]}
-{"watch": "w-school-trip", "lang": "fr", "what": "Tout ce que l'école envoie sur la sortie de la classe de Jules au planétarium", "keywords": ["sortie", "planétarium"]}
-{"watch": "w-electricity", "lang": "fr", "what": "Les factures d'électricité", "keywords": ["facture", "électricité"]}
-{"watch": "w-dentist", "lang": "en", "what": "Let me know when the dentist confirms Jules's appointment", "keywords": ["dentist", "appointment"]}
-{"watch": "w-bank-login", "lang": "en", "what": "Any new sign-in alert on our joint bank account at Banque Horizon", "keywords": ["sign-in", "login", "connexion"]}
-{"watch": "w-passport", "lang": "fr", "what": "Quand la mairie répond pour le renouvellement du passeport de Léa", "keywords": ["passeport", "mairie"]}
-{"watch": "w-flight", "lang": "en", "what": "If the airline changes or cancels our flight to Lisbon on 22 November", "keywords": ["Lisbon", "flight"]}
-{"watch": "w-swimming", "lang": "fr", "what": "Les annulations ou changements d'horaire des cours de natation de Jules", "keywords": ["natation", "piscine"]}
-{"watch": "w-landlord", "lang": "fr", "what": "Quand le propriétaire répond au sujet de la chaudière", "keywords": ["chaudière", "propriétaire"]}
-{"watch": "w-tickets", "lang": "en", "what": "When the resale of tickets for the Jardin Sonore concert opens", "keywords": ["tickets", "billets", "revente"]}
+{"watch": "w-stroller", "lang": "fr", "what": "Préviens-moi quand le colis de la poussette arrive (commande Petit Pas PP-48213)"}
+{"watch": "w-school-trip", "lang": "fr", "what": "Tout ce que l'école envoie sur la sortie de la classe de Jules au planétarium"}
+{"watch": "w-electricity", "lang": "fr", "what": "Les factures d'électricité"}
+{"watch": "w-dentist", "lang": "en", "what": "Let me know when the dentist confirms Jules's appointment"}
+{"watch": "w-bank-login", "lang": "en", "what": "Any new sign-in alert on our joint bank account at Banque Horizon"}
+{"watch": "w-passport", "lang": "fr", "what": "Quand la mairie répond pour le renouvellement du passeport de Léa"}
+{"watch": "w-flight", "lang": "en", "what": "If the airline changes or cancels our flight to Lisbon on 22 November"}
+{"watch": "w-swimming", "lang": "fr", "what": "Les annulations ou changements d'horaire des cours de natation de Jules"}
+{"watch": "w-landlord", "lang": "fr", "what": "Quand le propriétaire répond au sujet de la chaudière"}
+{"watch": "w-tickets", "lang": "en", "what": "When the resale of tickets for the Jardin Sonore concert opens"}
 {"case": "m001", "lang": "fr", "from": "commandes@petitpas-boutique.fr", "title": "Votre commande PP-48213 a été expédiée", "body": "Bonjour Mathis,\nBonne nouvelle : votre commande PP-48213 (poussette Balade 3 roues, coloris sable) a quitté notre entrepôt. Elle sera remise au transporteur Colis Express sous le numéro 8R04417.\nL'équipe Petit Pas", "expected": {"w-stroller": "match"}}
 {"case": "m002", "lang": "fr", "from": "suivi@colis-express.fr", "title": "Votre colis 8R04417 sera livré demain", "body": "Bonjour,\nVotre colis expédié par Petit Pas sera livré demain entre 9 h et 13 h au 12 rue des Lilas. Aucune signature n'est requise.\nColis Express", "expected": {"w-stroller": "match"}}
 {"case": "m003", "lang": "fr", "from": "suivi@colis-express.fr", "title": "Votre colis vous attend en point relais", "body": "Bonjour,\nVotre colis 8R04417 (expéditeur : Petit Pas) est disponible au relais Tabac de la Gare. Vous avez jusqu'au 12 novembre pour le retirer, muni d'une pièce d'identité.", "expected": {"w-stroller": "match"}}

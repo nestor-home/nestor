@@ -26,7 +26,6 @@ watch-cancel-description = Plus rien ne sera signalé pour « { $what } ».
 watch-found = Ce qu'elle a trouvé
 watch-found-empty = Rien n'est encore arrivé qui corresponde. Elle se déclenchera au premier message pertinent.
 watch-watches = surveille
-watch-keywords = mots-clés
 watch-rhythm = rythme
 watch-rhythm-once = S'arrête au premier message trouvé.
 watch-rhythm-every = Signale chaque message pertinent.

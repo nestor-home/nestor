@@ -9,9 +9,9 @@ from nestor.core import Component
 from nestor.modules.household import Household
 from nestor.modules.initiative.delivery.courier import Courier
 from nestor.modules.initiative.watches.book import WatchBook
-from nestor.modules.initiative.watches.events import WatchTriggered
+from nestor.modules.initiative.watches.events import WatchSorted, WatchTriggered
 from nestor.modules.initiative.watches.ports import InboundEventSource
-from nestor.modules.initiative.watches.triage import Triage, passes_keywords
+from nestor.modules.initiative.watches.triage import Triage
 from nestor.modules.initiative.watches.types import Incoming, Verdict, Watch
 
 log = logging.getLogger(__name__)
@@ -59,14 +59,28 @@ class WatchKeeper(Component):
         self._workers = []
 
     async def handle(self, item: Incoming) -> None:
-        """Triage one item against every watch it may concern."""
-        for watch in tuple(self.book.watches.values()):
-            if watch.owner and item.owner and watch.owner != item.owner:
-                continue  # someone else's mailbox
-            if not passes_keywords(watch, item):
-                continue
-            verdict = await self.triage.verdict(watch, item)
-            if verdict.matches and watch.id in self.book.watches:
+        """Triage one item against every watch it may concern, in one model call."""
+        concerned = [
+            w
+            for w in self.book.watches.values()
+            if item.kind in w.kinds and not (w.owner and item.owner and w.owner != item.owner)  # not someone else's
+        ]
+        if not concerned:
+            return
+        verdicts = await self.triage.verdicts(concerned, item)
+        await self.journal.publish(
+            WatchSorted(
+                source=self.name,
+                item_id=item.id,
+                item_title=item.title,
+                asked=tuple(w.id for w in concerned),
+                matched=tuple(verdicts or ()),
+                unsorted=verdicts is None,
+            )
+        )
+        for watch in concerned:
+            verdict = (verdicts or {}).get(watch.id)
+            if verdict is not None and watch.id in self.book.watches:
                 await self._trigger(watch, item, verdict)
 
     async def _trigger(self, watch: Watch, item: Incoming, verdict: Verdict) -> None:

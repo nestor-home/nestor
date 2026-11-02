@@ -63,35 +63,32 @@ def test_scores_count_every_mail_and_watch_pair_and_name_what_went_wrong() -> No
             {"case": "m3", "title": "for none"},
         )
     )
-    gate_dropped = {"gate": False, "matches": False}
     results = [
         decided("m1", 0, **{"w-a": {"matches": True, "urgent": False}}),
-        decided("m2", 0, **{"w-b": gate_dropped}),
-        decided("m3", 0, **{"w-a": {"matches": True, "unsorted": True}}),
+        decided("m2", 0, **{"w-b": {"matches": False}}),
+        decided("m3", 0, **{"w-a": {"matches": True}}),
         decided("m1", 1, **{"w-a": {"matches": True, "urgent": True}}),
         decided("m2", 1, **{"w-b": {"matches": False}}),
-        decided("m3", 1),
+        decided("m3", 1, **{"w-a": {"unsorted": True}}),
     ]
     summary = suite.summarise(dataset, results)
     metrics = {m.id: m.value for m in summary.metrics}
     assert metrics["matches-precision"] == pytest.approx(2 / 3)
     assert metrics["matches-recall"] == pytest.approx(2 / 4)
     assert (metrics["urgent-precision"], metrics["urgent-recall"]) == (1.0, 0.5)
-    assert (metrics["missed"], metrics["dropped-by-keywords"]) == (1.0, 0.5)
-    assert (metrics["false-alarms"], metrics["unread-answers"]) == (0.5, 0.5)
-    found = {(f.group, f.case, f.detail.args.get("stage"), f.detail.args["times"]) for f in summary.findings}
+    assert (metrics["missed"], metrics["false-alarms"], metrics["unsorted"]) == (1.0, 0.5, 0.5)
+    found = {(f.group, f.case, f.detail.args["times"]) for f in summary.findings}
     assert found == {
-        ("bench-watch-triage-missed-list", "m2", "keywords", 1),
-        ("bench-watch-triage-missed-list", "m2", "model", 1),
-        ("bench-watch-triage-false-alarms-list", "m3", None, 1),
-        ("bench-watch-triage-not-urgent-list", "m1", None, 1),
+        ("bench-watch-triage-missed-list", "m2", 2),
+        ("bench-watch-triage-false-alarms-list", "m3", 1),
+        ("bench-watch-triage-not-urgent-list", "m1", 1),
     }
 
 
 async def test_every_algorithm_runs_end_to_end_on_the_fake_model_the_same_way_twice(tmp_path: Path) -> None:
     registry = Registry(suite.plugins)
     variants = []
-    for algorithm in ("gate", "no-gate", "hints", "batch"):
+    for algorithm in ("batch", "per-watch"):
         path = tmp_path / f"{algorithm}.yaml"
         path.write_text(json.dumps({"triage_model": {"kind": "watch-triage-fake"}, "bench": {"algorithm": algorithm}}))
         variants.append(load_variant(path, suite, registry, EchoLocalizer(), environ={}))
@@ -101,8 +98,7 @@ async def test_every_algorithm_runs_end_to_end_on_the_fake_model_the_same_way_tw
     quality = [[m for m in run.summary.metrics if "latency" not in m.id] for run in first]
     assert quality == [[m for m in run.summary.metrics if "latency" not in m.id] for run in again]
     calls = {run.variant: next(m.value or 0 for m in run.summary.metrics if m.id == "calls-per-case") for run in first}
-    assert calls["batch"] == 1
-    assert calls["gate"] < 1 < calls["no-gate"] == calls["hints"]
+    assert calls["batch"] == 1 < calls["per-watch"]
     assert all(run.served_models == ("fake/word-overlap-1",) for run in first)
     words = FluentLocalizer(catalogue_dirs(["nestor"]))
     shown = [Message.of(m.label) for run in first for m in run.summary.metrics]

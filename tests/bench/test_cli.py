@@ -17,7 +17,7 @@ from .kit import Quiz, quiz_runs, variant
 def here(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("LANG", "en_US.UTF-8")
-    for algorithm in ("gate", "batch"):
+    for algorithm in ("per-watch", "batch"):
         (tmp_path / f"{algorithm}.yaml").write_text(
             f"triage_model: {{kind: watch-triage-fake}}\nbench: {{name: fake-{algorithm}, algorithm: {algorithm}}}\n"
         )
@@ -36,14 +36,14 @@ def test_the_installed_suites_are_listed_with_their_description(here: Path, caps
 def test_a_run_prints_the_comparison_and_writes_results_reports_and_the_cache(
     here: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    assert bench("run", "watch-triage", "--variant", "gate.yaml", "--variant", "batch.yaml") == 0
+    assert bench("run", "watch-triage", "--variant", "per-watch.yaml", "--variant", "batch.yaml") == 0
     out = capsys.readouterr().out
     assert out.startswith(
         "watch-triage: 151 cases \N{MULTIPLICATION SIGN} 2 variants \N{MULTIPLICATION SIGN} 1 repetition\n"
     )
-    assert "fake-gate: answered by fake/word-overlap-1" in out
+    assert "fake-per-watch: answered by fake/word-overlap-1" in out
     runs = sorted((here / "bench-results" / "watch-triage").iterdir())
-    assert [p.name.split("-", 1)[1] for p in runs] == ["compare.html", "fake-batch", "fake-gate"]
+    assert [p.name.split("-", 1)[1] for p in runs] == ["compare.html", "fake-batch", "fake-per-watch"]
     assert {p.name for p in runs[1].iterdir()} == {"results.json", "report.html"}
     assert any((here / ".bench-cache").rglob("*.json"))
 
@@ -51,10 +51,12 @@ def test_a_run_prints_the_comparison_and_writes_results_reports_and_the_cache(
 def test_a_replayed_run_reports_the_same_quality_and_says_it_was_replayed(
     here: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    bench("run", "watch-triage", "--variant", "gate.yaml", "--results", "live")
+    bench("run", "watch-triage", "--variant", "per-watch.yaml", "--results", "live")
     live = [line for line in capsys.readouterr().out.splitlines() if line.startswith("matches")]
     assert (
-        bench("run", "watch-triage", "--variant", "gate.yaml", "--replay", "--results", "again", "--concurrency", "2")
+        bench(
+            "run", "watch-triage", "--variant", "per-watch.yaml", "--replay", "--results", "again", "--concurrency", "2"
+        )
         == 0
     )
     out = capsys.readouterr().out
@@ -63,40 +65,39 @@ def test_a_replayed_run_reports_the_same_quality_and_says_it_was_replayed(
 
 
 def test_runs_are_compared_and_reported_again_later(here: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    bench("run", "watch-triage", "--variant", "gate.yaml", "--variant", "batch.yaml")
-    gate, batch = sorted(p for p in (here / "bench-results" / "watch-triage").iterdir() if p.is_dir())[::-1]
+    bench("run", "watch-triage", "--variant", "per-watch.yaml", "--variant", "batch.yaml")
+    per_watch, batch = sorted(p for p in (here / "bench-results" / "watch-triage").iterdir() if p.is_dir())[::-1]
     capsys.readouterr()
-    assert bench("compare", str(gate), str(batch / "results.json"), "--out", "both.html") == 0
-    assert "fake-gate" in capsys.readouterr().out
+    assert bench("compare", str(per_watch), str(batch / "results.json"), "--out", "both.html") == 0
+    assert "fake-per-watch" in capsys.readouterr().out
     assert "<svg" in (here / "both.html").read_text()
-    (gate / "report.html").unlink()
-    assert bench("report", str(gate)) == 0
+    (per_watch / "report.html").unlink()
+    assert bench("report", str(per_watch)) == 0
     out = capsys.readouterr().out
     assert "Missed matches\n" in out
-    assert "dropped by the keywords" in out
-    assert (gate / "report.html").exists()
+    assert (per_watch / "report.html").exists()
 
 
 def test_the_command_speaks_the_language_of_the_environment(here: Path, capsys: pytest.CaptureFixture[str],
                                                            monkeypatch: pytest.MonkeyPatch) -> None:  # fmt: skip
     monkeypatch.setenv("LANG", "fr_FR.UTF-8")
-    bench("run", "watch-triage", "--variant", "gate.yaml")
+    bench("run", "watch-triage", "--variant", "per-watch.yaml")
     out = capsys.readouterr().out
     assert "151 cas \N{MULTIPLICATION SIGN} 1 variante \N{MULTIPLICATION SIGN} 1 répétition" in out
     assert "correspondances, rappel" in out
 
 
 def test_a_failure_is_said_in_words_with_status_2(here: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    assert bench("run", "nope", "--variant", "gate.yaml") == 2
+    assert bench("run", "nope", "--variant", "per-watch.yaml") == 2
     assert "nestor bench: no suite named nope (installed: watch-triage)" in capsys.readouterr().err
-    assert bench("run", "watch-triage", "--variant", "gate.yaml", "--replay") == 2
+    assert bench("run", "watch-triage", "--variant", "per-watch.yaml", "--replay") == 2
     assert "run it once without --replay" in capsys.readouterr().err
     assert bench("report", "nowhere") == 2
 
 
 def test_a_repetition_count_below_one_is_refused(here: Path, capsys: pytest.CaptureFixture[str]) -> None:
     with pytest.raises(SystemExit):
-        bench("run", "watch-triage", "--variant", "gate.yaml", "--repeat", "0")
+        bench("run", "watch-triage", "--variant", "per-watch.yaml", "--repeat", "0")
 
 
 def test_an_entry_point_that_is_not_a_suite_is_refused(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -124,7 +125,7 @@ def test_a_terminal_sees_the_cases_counted_on_one_line(
     here: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(sys.stderr, "isatty", lambda: True)
-    bench("run", "watch-triage", "--variant", "gate.yaml")
+    bench("run", "watch-triage", "--variant", "per-watch.yaml")
     err = capsys.readouterr().err
     assert err.startswith("\r1/151\r2/151")
     assert err.endswith("\r151/151\n")

@@ -1,6 +1,6 @@
 """A deterministic stand-in for the triage model, so the suite runs end to end without a network (CI, a first
 try). It is a crude word-overlap judge, not a baseline worth beating: a watch matches when one of its
-distinctive words (or a hint) is in the item, and an item is urgent when it says so.
+distinctive words is in the item, and an item is urgent when it says so.
 
     triage_model: {kind: watch-triage-fake}
 """
@@ -23,9 +23,7 @@ from nestor.modules.cognition import (
 from nestor.runtime.plugins import AdapterSettings, Family, Plugin, Services
 
 SERVED = "fake/word-overlap-1"
-_SINGLE = re.compile(r'told about: "(?P<what>.*?)"\.')
 _LISTED = re.compile(r'^- \[(?P<id>[^\]]+)\] "(?P<what>.*)"$', re.MULTILINE)
-_HINTS = re.compile(r"\(hints, not requirements\): (?P<hints>.*)\.$", re.MULTILINE)
 _URGENT = ("urgent", "today", "aujourd'hui", "immediately", "immediatement", "ce soir", "tonight")
 _COMMON_WORDS = (
     "about tell when with from that this have will what which there their they your mine also anything something "
@@ -43,9 +41,8 @@ def _words(what: str) -> set[str]:
     return {w for w in re.findall(r"[a-z0-9]+", _fold(what)) if len(w) >= 4 and w not in _COMMON}
 
 
-def _judge(what: str, hints: str, item: str) -> bool:
-    signs = _words(what) | {_fold(h.strip()) for h in hints.split(",") if h.strip()}
-    return any(sign in item for sign in signs)
+def _judge(what: str, item: str) -> bool:
+    return any(word in item for word in _words(what))
 
 
 class FakeTriageModel(ConversationModel):
@@ -55,14 +52,12 @@ class FakeTriageModel(ConversationModel):
         system = next((m.content for m in request.messages if m.role is Role.SYSTEM), "")
         item = _fold(" ".join(m.content for m in request.messages if m.role is Role.USER))
         urgent = any(word in item for word in _URGENT)
-        listed = _LISTED.findall(system)
-        if listed:
-            found = [{"watch": id, "urgent": urgent, "summary": "-"} for id, what in listed if _judge(what, "", item)]
-            answer = json.dumps({"matches": found})
-        else:
-            single, hints = _SINGLE.search(system), _HINTS.search(system)
-            matches = single is not None and _judge(single["what"], hints["hints"] if hints else "", item)
-            answer = json.dumps({"matches": matches, "urgent": matches and urgent, "summary": "-"})
+        found = [
+            {"watch": id, "urgent": urgent, "summary": "-"}
+            for id, what in _LISTED.findall(system)
+            if _judge(what, item)
+        ]
+        answer = json.dumps({"matches": found})
         yield TextDelta(answer)
         spent = Usage(
             input_tokens=len(" ".join(m.content for m in request.messages).split()), output_tokens=len(answer.split())

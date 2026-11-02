@@ -31,7 +31,6 @@ class WatchBook(Component):
                 session=watch.created_in.session if watch.created_in else None,
                 watch_id=watch.id,
                 what=watch.what,
-                keywords=watch.keywords,
                 kinds=watch.kinds,
                 once=watch.once,
                 owner=watch.owner,
@@ -60,7 +59,6 @@ def _watch(event: WatchCreated) -> Watch:
     return Watch(
         id=event.watch_id,
         what=event.what,
-        keywords=event.keywords,
         kinds=event.kinds,
         once=event.once,
         owner=event.owner,

@@ -3,7 +3,7 @@
 Its dataset (`cases.jsonl`) starts with a header, then the watches, then the mails with their labels:
 
     {"dataset": "watch-triage", "version": 1}
-    {"watch": "w-stroller", "what": "le colis de la poussette", "keywords": ["poussette", "colis"]}
+    {"watch": "w-stroller", "what": "le colis de la poussette"}
     {"case": "m001", "from": "...", "title": "...", "body": "...", "expected": {"w-stroller": "match"}}
 
 `expected` names the watches a mail matches, `"match"` or `"urgent"`; a watch it does not name is not
@@ -30,7 +30,7 @@ LABELS = frozenset({"match", "urgent"})
 
 
 class TriageKnobs(Knobs):
-    algorithm: Algorithm = Algorithm.GATE
+    algorithm: Algorithm = Algorithm.BATCH
 
 
 class WatchTriage(Suite[tuple[Watch, ...], TriageKnobs]):
@@ -50,9 +50,8 @@ class WatchTriage(Suite[tuple[Watch, ...], TriageKnobs]):
         cases: list[Case] = []
         for number, record in enumerate(records[1:], start=2):
             if "watch" in record and isinstance(record.get("what"), str):
-                keywords = tuple(str(k) for k in record.get("keywords", ()))
                 kinds = tuple(str(k) for k in record.get("kinds", ("mail",)))
-                watches.append(Watch(id=str(record["watch"]), what=record["what"], keywords=keywords, kinds=kinds))
+                watches.append(Watch(id=str(record["watch"]), what=record["what"], kinds=kinds))
             elif "case" in record and isinstance(record.get("title"), str):
                 cases.append(Case(id=str(record["case"]), data=record))
             else:
@@ -73,15 +72,7 @@ class WatchTriage(Suite[tuple[Watch, ...], TriageKnobs]):
         decisions = await decide(trial.knobs.algorithm, trial.model("triage_model"), shared, item, language=language)
         return {
             "decisions": [
-                {
-                    "watch": d.watch,
-                    "gate": d.gate,
-                    "asked": d.asked,
-                    "matches": d.matches,
-                    "urgent": d.urgent,
-                    "unsorted": d.unsorted,
-                }
-                for d in decisions
+                {"watch": d.watch, "matches": d.matches, "urgent": d.urgent, "unsorted": d.unsorted} for d in decisions
             ]
         }
 
@@ -89,10 +80,10 @@ class WatchTriage(Suite[tuple[Watch, ...], TriageKnobs]):
         cases = {c.id: c for c in dataset.cases}
         repetitions = len({r.repetition for r in results}) or 1
         matches, urgency = Confusion(), Confusion()
-        missed: Counter[tuple[str, str, str]] = Counter()
+        missed: Counter[tuple[str, str]] = Counter()
         alarms: Counter[tuple[str, str]] = Counter()
         late: Counter[tuple[str, str]] = Counter()
-        dropped = unread = 0
+        unsorted = 0
         for result in results:
             expected: Mapping[str, str] = cases[result.case].data.get("expected", {})
             decided = {d["watch"]: d for d in result.output["decisions"]}
@@ -105,11 +96,9 @@ class WatchTriage(Suite[tuple[Watch, ...], TriageKnobs]):
                 )
                 matches.add(predicted=said, expected=label is not None)
                 urgency.add(predicted=said and urgent, expected=label == "urgent")
-                unread += bool(decision.get("unsorted"))
+                unsorted += bool(decision.get("unsorted"))
                 if label is not None and not said:
-                    stage = "keywords" if decision.get("gate") is False else "model"
-                    dropped += stage == "keywords"
-                    missed[result.case, watch.id, stage] += 1
+                    missed[result.case, watch.id] += 1
                 elif label is None and said:
                     alarms[result.case, watch.id] += 1
                 if label == "urgent" and said and not urgent:
@@ -120,22 +109,6 @@ class WatchTriage(Suite[tuple[Watch, ...], TriageKnobs]):
 
         findings = [
             Finding(
-                group="bench-watch-triage-missed-list",
-                case=case,
-                detail=Message.of(
-                    "bench-watch-triage-missed-item",
-                    case=case,
-                    watch=watch,
-                    title=title(case),
-                    stage=stage,
-                    times=times,
-                    of=repetitions,
-                ),
-            )
-            for (case, watch, stage), times in sorted(missed.items())
-        ]
-        findings += [
-            Finding(
                 group=group,
                 case=case,
                 detail=Message.of(
@@ -143,6 +116,7 @@ class WatchTriage(Suite[tuple[Watch, ...], TriageKnobs]):
                 ),
             )
             for group, counts in (
+                ("bench-watch-triage-missed-list", missed),
                 ("bench-watch-triage-false-alarms-list", alarms),
                 ("bench-watch-triage-not-urgent-list", late),
             )
@@ -161,9 +135,8 @@ class WatchTriage(Suite[tuple[Watch, ...], TriageKnobs]):
                 metric("urgent-precision", urgency.precision, Unit.RATIO, Better.HIGHER),
                 metric("urgent-recall", urgency.recall, Unit.RATIO, Better.HIGHER),
                 metric("missed", matches.false_negatives / per, Unit.COUNT, Better.LOWER),
-                metric("dropped-by-keywords", dropped / per, Unit.COUNT, Better.LOWER),
                 metric("false-alarms", matches.false_positives / per, Unit.COUNT, Better.LOWER),
-                metric("unread-answers", unread / per, Unit.COUNT, Better.LOWER),
+                metric("unsorted", unsorted / per, Unit.COUNT, Better.LOWER),
             ),
             findings=tuple(findings),
         )

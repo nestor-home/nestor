@@ -1,4 +1,4 @@
-"""Events of watches: created, triggered by an item, ended (matched, cancelled, expired)."""
+"""Events of watches: created, an item sorted against them, triggered by it, ended (matched, cancelled, expired)."""
 
 from datetime import datetime
 
@@ -11,13 +11,23 @@ class WatchCreated(Event, event_type="watch.created"):
 
     watch_id: str
     what: str
-    keywords: tuple[str, ...]
     kinds: tuple[str, ...]
     once: bool
     owner: PersonId | None = None
     created_in: Address | None = None
     until: datetime | None = None
     exchange: Exchange | None = None
+
+
+class WatchSorted(Event, event_type="watch.sorted"):
+    """An item read against the watches it may concern: those it matched, or none when it stayed unsorted
+    (the triage model could not be reached or read: nothing is announced)."""
+
+    item_id: str
+    item_title: str
+    asked: tuple[str, ...]
+    matched: tuple[str, ...] = ()
+    unsorted: bool = False
 
 
 class WatchTriggered(Event, event_type="watch.triggered"):

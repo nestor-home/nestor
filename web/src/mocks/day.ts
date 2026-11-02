@@ -185,7 +185,6 @@ export function day(now = Date.now()): JournalEvent[] {
     type: "watch.created",
     kind: "watch",
     title: `Watch created: ${fr("news from the school for Léa", "les nouvelles de l'école pour Léa")}`,
-    detail: fr("Keywords: school, trip", "Mots-clés : école, sortie"),
     people: ["lea"],
     channels: ["telegram"],
     links: { session: "s-hier", turn: "t-hier", watch: "w-9d41" },

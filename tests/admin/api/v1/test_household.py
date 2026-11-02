@@ -51,12 +51,11 @@ async def test_a_member_sees_and_cancels_their_own_watches_only(tmp_path: Path) 
     async with Harness(tmp_path) as admin:
         await admin.account("mathilde", Role.MEMBER, "mathilde")
         book = admin.nestor.watch_book
-        hers = await book.create(Watch(what="le colis", keywords=("Colissimo",), owner=MATHILDE))
+        hers = await book.create(Watch(what="le colis", owner=MATHILDE))
         his = await book.create(Watch(what="la facture", owner=MATHIS))
         api = await admin.api("mathilde")
         listed = (await api.get("/api/v1/watches")).json()
         assert [w["what"] for w in listed["watches"]] == ["le colis"] and listed["kinds"] == ["mail"]
-        assert listed["watches"][0]["keywords"] == ["Colissimo"]
         assert (await api.post(f"/api/v1/watches/{his.id}/cancel")).status_code == 404
         assert (await api.post(f"/api/v1/watches/{hers.id}/cancel")).status_code == 204
         assert list(book.watches) == [his.id]

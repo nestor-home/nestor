@@ -29,7 +29,6 @@ class OriginOut(BaseModel):
 class WatchOut(BaseModel):
     id: str
     what: str  # in the person's words
-    keywords: list[str]
     kinds: list[str]  # what it watches ("mail")
     owner: PersonRef | None
     once: bool  # ends at the first match
@@ -62,7 +61,6 @@ def _watch(w: Watch, people: People, triggers: Counter[str], last: dict[str, dat
     return WatchOut(
         id=w.id,
         what=w.what,
-        keywords=list(w.keywords),
         kinds=list(w.kinds),
         owner=people.ref(w.owner),
         once=w.once,

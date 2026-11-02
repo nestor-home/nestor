@@ -11448,13 +11448,6 @@
             "type": "string",
             "title": "What"
           },
-          "keywords": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Keywords"
-          },
           "kinds": {
             "items": {
               "type": "string"
@@ -11524,7 +11517,6 @@
         "required": [
           "id",
           "what",
-          "keywords",
           "kinds",
           "owner",
           "once",

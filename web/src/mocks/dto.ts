@@ -213,7 +213,6 @@ export function watchDto(w: Watch): WatchDto {
   return {
     id: w.id,
     what: w.what,
-    keywords: w.keywords,
     kinds: w.kinds,
     owner: personRef(w.owner),
     once: w.once,
