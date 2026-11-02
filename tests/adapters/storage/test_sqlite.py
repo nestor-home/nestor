@@ -6,13 +6,13 @@ from pathlib import Path
 import pytest
 
 from nestor.adapters.storage.files import FileBlobStore
-from nestor.adapters.storage.sqlite import SQLiteDatabase, SQLiteEventLog, SQLiteMemoryStore
+from nestor.adapters.storage.sqlite import SQLiteDatabase, SQLiteEpisodeStore, SQLiteEventLog, SQLiteMemoryStore
 from nestor.core import ContractError, PersonId
 from nestor.modules.channels import Address
 from nestor.modules.journal import LogQuery
 from nestor.modules.memory import Memory
 from nestor.testing.journal import BlobStoreContract, EventLogContract, Probe
-from nestor.testing.memory import MemoryStoreContract
+from nestor.testing.memory import EpisodeStoreContract, MemoryStoreContract
 
 
 @pytest.fixture
@@ -136,3 +136,12 @@ async def test_memories_survive_a_restart_with_their_source(db_path: Path) -> No
     async with SQLiteMemoryStore(SQLiteDatabase(db_path), owns_database=True) as store:
         assert await store.get(memory.id) == memory
         assert await store.recent(about=PersonId("mathis")) == [memory]
+
+
+class TestSQLiteEpisodeStore(EpisodeStoreContract):
+    @pytest.fixture(autouse=True)
+    def _path(self, db_path: Path) -> None:
+        self.path = db_path
+
+    def store(self) -> SQLiteEpisodeStore:
+        return SQLiteEpisodeStore(SQLiteDatabase(self.path), owns_database=True)

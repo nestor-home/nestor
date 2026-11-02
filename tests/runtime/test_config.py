@@ -50,7 +50,13 @@ TWO_MODELS = VALID.replace(
 
 def test_a_single_model_takes_every_role() -> None:
     roles = parse_config(VALID, ENV).roles(["haiku"])
-    assert roles == {"spoken": "haiku", "written": "haiku", "background": "haiku", "watches": "haiku"}
+    assert set(roles.values()) == {"haiku"} and set(roles) == {
+        "spoken",
+        "written",
+        "background",
+        "watches",
+        "consolidation",
+    }
 
 
 def test_roles_take_the_models_named_and_fall_back_on_each_other() -> None:
@@ -62,13 +68,15 @@ def test_roles_take_the_models_named_and_fall_back_on_each_other() -> None:
         "written": "local",
         "background": "local",
         "watches": "local",
-    }, "the watches and the background turns take the written model by default"
+        "consolidation": "local",
+    }, "the watches, the background turns and the consolidation take the written model by default"
     assert roles("agent: {spoken: haiku, background: local}\nwatches: {model: local}\n") == {
         "spoken": "haiku",
         "written": "haiku",
         "background": "local",
         "watches": "local",
-    }
+        "consolidation": "local",
+    }, "the consolidation takes the background model by default"
 
 
 @pytest.mark.parametrize(

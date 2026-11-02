@@ -1,18 +1,23 @@
-"""Which memories go into a turn's instructions. Generous rather than precise, as ChatGPT does with its saved
-memories: a memory is a short line, the model sorts them out, and missing one costs more than carrying a few
-it does not need.
+"""What a turn's instructions carry of the past. Generous rather than precise, as ChatGPT does with its saved
+memories and chat history: a line costs little, the model sorts them out, and missing one costs more than
+carrying a few it does not need.
 
 - The household layer carries every memory, the latest first, up to a budget: the same from a turn to the
   next, so the provider's prompt cache keeps it.
 - Beyond the budget, the turn layer adds those the person's last messages find among the others.
+- The turn layer carries the latest episodes of whoever speaks (what their recent conversations were about),
+  then those their last messages find among the older ones.
 
 Measured by the `memory-recall` bench.
 """
 
+import asyncio
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import NamedTuple
 
+from nestor.core import PersonId
+from nestor.modules.memory.episodes import Episode, Episodes
 from nestor.modules.memory.service import Memories
 from nestor.modules.memory.types import Memory
 
@@ -28,20 +33,47 @@ class RecallSettings:
     strategy: Strategy = Strategy.BOTH
     recent: int = 150  # the household layer's budget: a few thousand tokens, cached
     found: int = 12  # how many found memories at most, beyond those already shown
+    recent_episodes: int = 3  # the latest conversations of whoever speaks
+    found_episodes: int = 4  # how many found older conversations at most
 
 
 class TurnMemories(NamedTuple):
     shown: list[Memory]  # the household layer's: the latest, up to the budget
     found: list[Memory]  # the turn layer's: what was said finds among the others
+    latest_episodes: list[Episode]  # whoever speaks: their latest conversations
+    found_episodes: list[Episode]  # whoever speaks: the older conversations what was said finds
 
 
-async def for_turn(memories: Memories, said: str | None, settings: RecallSettings) -> TurnMemories:
-    """The memories a turn's instructions carry. Every memory of the household may matter, not only those
-    about whoever speaks ("what does Léa like?"). When every memory is already shown, nothing is searched, so
-    no embedding call is waited for."""
-    shown = await memories.recent(limit=settings.recent) if settings.strategy is not Strategy.SEARCH else []
+async def for_turn(
+    memories: Memories, episodes: Episodes, said: str | None, person: PersonId | None, settings: RecallSettings
+) -> TurnMemories:
+    """What a turn's instructions carry. Every memory of the household may matter, not only those about whoever
+    speaks ("what does Léa like?"); episodes are only theirs. What is already all shown is not searched, and
+    the question is embedded once for both searches, so a household that fits waits for no embedding call."""
+    shown, latest = await asyncio.gather(
+        memories.recent(limit=settings.recent) if settings.strategy is not Strategy.SEARCH else _nothing(),
+        episodes.recent(person, limit=settings.recent_episodes + 1) if person else _nothing(),
+    )
+    older_episodes = len(latest) > settings.recent_episodes  # one more was asked for, to know
+    latest = latest[: settings.recent_episodes]
     everything_shown = settings.strategy is Strategy.BOTH and len(shown) < settings.recent
-    if not said or settings.strategy is Strategy.RECENT or not settings.found or everything_shown:
-        return TurnMemories(shown, [])
-    found = await memories.recall(said, limit=settings.found, exclude={m.id for m in shown})
-    return TurnMemories(shown, found)
+    search_memories = settings.strategy is not Strategy.RECENT and settings.found > 0 and not everything_shown
+    search_episodes = person is not None and settings.found_episodes > 0 and older_episodes
+    if not said or not (search_memories or search_episodes):
+        return TurnMemories(shown, [], latest, [])
+    vector = await memories.query(said)
+    found, found_episodes = await asyncio.gather(
+        memories.recall(said, vector=vector, limit=settings.found, exclude={m.id for m in shown})
+        if search_memories
+        else _nothing(),
+        episodes.recall(
+            said, vector=vector, person=person, limit=settings.found_episodes, exclude={e.id for e in latest}
+        )
+        if search_episodes and person is not None
+        else _nothing(),
+    )
+    return TurnMemories(shown, found, latest, found_episodes)
+
+
+async def _nothing() -> list:
+    return []

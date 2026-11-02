@@ -1,18 +1,16 @@
 """Memories in SQLite, searched with an accent-insensitive FTS5 index ranked by BM25."""
 
-import re
 import sqlite3
 from collections.abc import Collection
-from datetime import UTC, datetime
 
 from nestor.adapters.storage.sqlite.database import SQLiteDatabase
-from nestor.adapters.storage.sqlite.event_log import time_key
+from nestor.adapters.storage.sqlite.event_log import from_time_key, time_key
+from nestor.adapters.storage.sqlite.text import match
 from nestor.core import PersonId
 from nestor.modules.channels import Address
 from nestor.modules.memory import Memory, MemoryStore
 
 _COLUMNS = "id, text, about, source, told_by, created_at, updated_at"
-_WORD = re.compile(r"\w{2,}")
 
 
 class SQLiteMemoryStore(MemoryStore):
@@ -55,12 +53,12 @@ class SQLiteMemoryStore(MemoryStore):
         )
         return _memory(row) if row else None
 
-    async def get_many(self, memory_ids: Collection[str]) -> list[Memory]:
-        if not memory_ids:
+    async def get_many(self, ids: Collection[str]) -> list[Memory]:
+        if not ids:
             return []
-        marks = ", ".join("?" * len(memory_ids))
+        marks = ", ".join("?" * len(ids))
         rows = await self.database.read(
-            lambda c: c.execute(f"SELECT {_COLUMNS} FROM memories WHERE id IN ({marks})", tuple(memory_ids)).fetchall()
+            lambda c: c.execute(f"SELECT {_COLUMNS} FROM memories WHERE id IN ({marks})", tuple(ids)).fetchall()
         )
         return [_memory(r) for r in rows]
 
@@ -68,15 +66,13 @@ class SQLiteMemoryStore(MemoryStore):
         await self.database.write(lambda c: c.execute("DELETE FROM memories WHERE id = ?", (memory_id,)))
 
     async def search(self, query: str, *, about: PersonId | None = None, limit: int = 10) -> list[Memory]:
-        terms = _WORD.findall(query)
-        if not terms:
+        if (words := match(query)) is None:
             return []
-        match = " OR ".join(f'"{t}"*' for t in terms)  # quoted: user text never becomes FTS syntax
         sql = (
             f"SELECT {', '.join('m.' + c for c in _COLUMNS.split(', '))} FROM memories_text "
             "JOIN memories m ON m.rowid = memories_text.rowid WHERE memories_text MATCH ?"
         )
-        params: list[object] = [match]
+        params: list[object] = [words]
         if about is not None:
             sql += " AND (m.about = ? OR m.about IS NULL)"
             params.append(about)
@@ -107,10 +103,6 @@ def _memory(row: tuple) -> Memory:
         about=PersonId(about) if about else None,
         source=Address.parse(source) if source else None,
         told_by=PersonId(told_by) if told_by else None,
-        created_at=_time(created_at),
-        updated_at=_time(updated_at),
+        created_at=from_time_key(created_at),
+        updated_at=from_time_key(updated_at),
     )
-
-
-def _time(key: str) -> datetime:
-    return datetime.strptime(key, "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=UTC)

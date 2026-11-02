@@ -2,16 +2,17 @@
 and the turn it belongs to (`exchange`)."""
 
 from nestor.core import Event, PersonId
-from nestor.modules.channels import Address, Exchange
+from nestor.modules.channels import Address, Exchange, Medium
 from nestor.modules.conversation.types import FallbackReason
 
 
 class UserTurn(Event, event_type="conversation.turn.user"):
-    """A message to the assistant. Its `exchange.turn_id` is the turn it opens."""
+    """A message to the assistant, said or typed (`medium`). Its `exchange.turn_id` is the turn it opens."""
 
     address: Address
     text: str
     exchange: Exchange
+    medium: Medium
     person: PersonId | None = None
 
 

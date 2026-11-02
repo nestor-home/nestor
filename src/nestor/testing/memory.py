@@ -1,9 +1,12 @@
-"""Double and contract suite for the memory store."""
+"""Doubles and contract suites for the memory and episode stores."""
 
 from collections.abc import Collection
+from datetime import UTC, datetime, timedelta
 
 from nestor.core import PersonId
+from nestor.modules.channels import Address, Medium
 from nestor.modules.memory import Memory, MemoryStore
+from nestor.modules.memory.episodes import Episode, EpisodeStore
 from nestor.testing.text import folded_words
 
 
@@ -24,8 +27,8 @@ class InMemoryMemoryStore(MemoryStore):
     async def get(self, memory_id: str) -> Memory | None:
         return self.memories.get(memory_id)
 
-    async def get_many(self, memory_ids: Collection[str]) -> list[Memory]:
-        return [m for i in dict.fromkeys(memory_ids) if (m := self.memories.get(i)) is not None]
+    async def get_many(self, ids: Collection[str]) -> list[Memory]:
+        return [m for i in dict.fromkeys(ids) if (m := self.memories.get(i)) is not None]
 
     async def delete(self, memory_id: str) -> None:
         self.memories.pop(memory_id, None)
@@ -99,3 +102,99 @@ class MemoryStoreContract:
             assert sorted(m.text for m in some) == ["premier", "troisième"], "an unknown id is left out, once"
             assert await store.get_many([]) == []
             assert sorted(m.id for m in await store.everything()) == sorted(m.id for m in kept)
+
+
+class InMemoryEpisodeStore(EpisodeStore):
+    name = "episode-store"
+
+    def __init__(self) -> None:
+        self.episodes: dict[str, Episode] = {}
+
+    async def put(self, episode: Episode) -> None:
+        self.episodes[episode.id] = episode
+
+    async def get_many(self, ids: Collection[str]) -> list[Episode]:
+        return [e for i in dict.fromkeys(ids) if (e := self.episodes.get(i)) is not None]
+
+    async def everything(self) -> list[Episode]:
+        return list(self.episodes.values())
+
+    async def search(
+        self,
+        query: str,
+        *,
+        person: PersonId,
+        limit: int,
+        since: datetime | None = None,
+        until: datetime | None = None,
+    ) -> list[Episode]:
+        wanted = words(query)
+        scored = [(len(wanted & words(e.text)), e) for e in self._theirs(person, since, until)]
+        return [e for score, e in sorted(scored, key=lambda s: -s[0]) if score][:limit]
+
+    async def recent(
+        self, *, person: PersonId, limit: int, since: datetime | None = None, until: datetime | None = None
+    ) -> list[Episode]:
+        return sorted(self._theirs(person, since, until), key=lambda e: e.ended_at, reverse=True)[:limit]
+
+    def _theirs(self, person: PersonId, since: datetime | None, until: datetime | None) -> list[Episode]:
+        return [
+            e
+            for e in self.episodes.values()
+            if person in e.participants
+            and (since is None or e.ended_at >= since)
+            and (until is None or e.ended_at <= until)
+        ]
+
+
+def episode(
+    id: str, summary: str, *people: str, ended: datetime, address: Address | None = None, topics: tuple[str, ...] = ()
+) -> Episode:
+    """An episode for a test: a conversation of `people` that ended at `ended`."""
+    return Episode(
+        id=id,
+        address=address or Address("telegram", "42"),
+        medium=Medium.WRITTEN,
+        participants=tuple(PersonId(p) for p in people),
+        started_at=ended - timedelta(minutes=5),
+        ended_at=ended,
+        summary=summary,
+        topics=topics,
+    )
+
+
+class EpisodeStoreContract:
+    """Behaviour every `EpisodeStore` must show. Implement `store()`; it is used as a context manager."""
+
+    def store(self) -> EpisodeStore:
+        raise NotImplementedError
+
+    async def test_only_the_participants_find_an_episode_by_its_words_whatever_the_accents(self) -> None:
+        at = datetime(2026, 10, 20, 20, tzinfo=UTC)
+        async with self.store() as store:
+            await store.put(episode("e1", "Léa a parlé du restaurant Da Marco", "lea", ended=at, topics=("dîner",)))
+            await store.put(episode("e2", "Hugo et le restaurant chinois", "hugo", ended=at))
+            assert [e.id for e in await store.search("RESTAURANT diner", person=PersonId("lea"), limit=5)] == ["e1"]
+            assert await store.search("Da Marco", person=PersonId("hugo"), limit=5) == []
+
+    async def test_the_latest_come_first_within_the_dates_asked(self) -> None:
+        async with self.store() as store:
+            for day in (20, 25, 30):
+                ended = datetime(2026, 10, day, 12, tzinfo=UTC)
+                await store.put(episode(f"e{day}", f"le {day}", "lea", ended=ended))
+            lea = PersonId("lea")
+            assert [e.id for e in await store.recent(person=lea, limit=2)] == ["e30", "e25"]
+            within = await store.recent(
+                person=lea, limit=5, since=datetime(2026, 10, 21, tzinfo=UTC), until=datetime(2026, 10, 29, tzinfo=UTC)
+            )
+            assert [e.id for e in within] == ["e25"]
+            assert [e.id for e in await store.recent(person=PersonId("hugo"), limit=5)] == []
+
+    async def test_episodes_are_replaced_read_at_once_and_listed(self) -> None:
+        at = datetime(2026, 10, 20, tzinfo=UTC)
+        async with self.store() as store:
+            await store.put(episode("e1", "avant", "lea", ended=at))
+            await store.put(episode("e1", "après", "lea", ended=at))
+            await store.put(episode("e2", "autre", "hugo", ended=at))
+            assert [e.summary for e in await store.get_many(["e1", "absent", "e1"])] == ["après"]
+            assert sorted(e.id for e in await store.everything()) == ["e1", "e2"]

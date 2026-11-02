@@ -17,6 +17,10 @@ def time_key(at: datetime) -> str:
     return at.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
 
+def from_time_key(key: str) -> datetime:
+    return datetime.strptime(key, "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=UTC)
+
+
 class SQLiteEventLog(EventLog):
     name = "sqlite-event-log"
 
@@ -95,7 +99,7 @@ def _record(row: tuple) -> Record:
         "type": type_,
         "version": version,
         "id": id_,
-        "at": datetime.strptime(at, "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=UTC).isoformat(),
+        "at": from_time_key(at).isoformat(),
         "source": source,
         "session": session,
         "payload": json.loads(payload),

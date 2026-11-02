@@ -26,9 +26,10 @@ from nestor.modules.household import Household
 from nestor.modules.journal import Journal
 from nestor.modules.memory import Memories, MemoryRecorded
 from nestor.modules.memory.assistant import MemoryTools
+from nestor.modules.memory.episodes import Episodes
 from nestor.testing.cognition import ScriptedExecutor
 from nestor.testing.cognition.model import ScriptedModel
-from nestor.testing.memory import InMemoryMemoryStore
+from nestor.testing.memory import InMemoryEpisodeStore, InMemoryMemoryStore
 
 from .conftest import MATHIS, TELEGRAM, VOICE, MakeAgent, message
 
@@ -200,7 +201,13 @@ async def test_the_open_conversation_survives_a_restart(make_agent: MakeAgent, j
 async def test_every_event_of_a_turn_carries_its_conversation_and_its_turn(
     make_agent: MakeAgent, journal: Journal
 ) -> None:
-    memories = MemoryTools(Memories(journal, InMemoryMemoryStore()), Household([MATHIS]))
+    memories = MemoryTools(
+        Memories(journal, InMemoryMemoryStore()),
+        Episodes(journal, InMemoryEpisodeStore()),
+        Household([MATHIS]),
+        journal,
+        assistant="Richie",
+    )
     async with TaskManager(journal, [ScriptedExecutor()]) as tasks:
         model = ScriptedModel(
             ToolCall("c1", "remember", {"text": "Mathis aime le thé", "about": "mathis"}),
@@ -260,6 +267,7 @@ async def test_a_composed_message_sees_only_the_open_conversation(
 
 def test_an_exchange_is_written_as_plain_data() -> None:
     turn = UserTurn(
+        medium=Medium.WRITTEN,
         source="agent",
         address=TELEGRAM,
         text="Salut",

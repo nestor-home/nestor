@@ -163,13 +163,23 @@ class MemoryConfig(Section):
     strategy: Strategy = _RECALL.strategy
     recent: int = Field(default=_RECALL.recent, ge=0, le=1000)
     found: int = Field(default=_RECALL.found, ge=0, le=50)
+    recent_episodes: int = Field(default=_RECALL.recent_episodes, ge=0, le=20)  # whoever speaks: latest conversations
+    found_episodes: int = Field(default=_RECALL.found_episodes, ge=0, le=20)  # and older ones their words find
+    # the model that summarizes each conversation once it is over: the background one by default
+    consolidation: str | None = Field(default=None, json_schema_extra=MODEL_REFERENCE)
     # an embedding model of `models`: memories are then found by meaning as well as by words
     embedder: str | None = Field(default=None, json_schema_extra=MODEL_REFERENCE)
     # how long a turn waits for the question's vector before searching by words only
     query_timeout_s: float = Field(default=1.0, gt=0, json_schema_extra=ADVANCED)
 
     def recall(self) -> RecallSettings:
-        return RecallSettings(strategy=self.strategy, recent=self.recent, found=self.found)
+        return RecallSettings(
+            strategy=self.strategy,
+            recent=self.recent,
+            found=self.found,
+            recent_episodes=self.recent_episodes,
+            found_episodes=self.found_episodes,
+        )
 
 
 class NestorConfig(Section):
@@ -215,11 +225,12 @@ class NestorConfig(Section):
     @field_validator("memory")
     @classmethod
     def _memory(cls, value: MemoryConfig, info: ValidationInfo) -> MemoryConfig:
-        _known(info, {"embedder": value.embedder})
+        _known(info, {"embedder": value.embedder, "consolidation": value.consolidation})
         return value
 
     def roles(self, answering: Collection[str]) -> dict[str, str]:
-        """The key of the model each role uses, defaults applied: `spoken`, `written`, `background`, `watches`.
+        """The key of the model each role uses, defaults applied: `spoken`, `written`, `background`, `watches`,
+        `consolidation`.
         `answering` are the models that answer (not those that embed): with a single one, every role takes it."""
         sole = next(iter(answering)) if len(answering) == 1 else None
         written = self.agent.written or self.agent.spoken or sole
@@ -236,6 +247,7 @@ class NestorConfig(Section):
             "written": written,
             "background": self.agent.background or written,
             "watches": self.watches.model or written,
+            "consolidation": self.memory.consolidation or self.agent.background or written,
         }
 
 

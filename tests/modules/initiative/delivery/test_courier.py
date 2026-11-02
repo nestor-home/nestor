@@ -72,6 +72,7 @@ async def test_a_reaction_cancels_the_follow_up() -> None:
         await sender.deliver(MATHIS, "Le colis est arrivé.", about="watch colis")
         await journal.publish(
             UserTurn(
+                medium=Medium.WRITTEN,
                 exchange=Exchange(conversation_id="c1", turn_id=new_id()),
                 source="voice",
                 session=SALON.session,

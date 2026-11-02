@@ -6,12 +6,16 @@ from nestor.modules.channels import Address, Exchange
 
 
 class MemoryRecorded(Event, event_type="memory.recorded"):
+    """`exchange` is the turn that remembered it; `episode` the past conversation it was drawn from, when the
+    consolidation found it there."""
+
     memory_id: str
     text: str
     about: PersonId | None = None
     learnt_in: Address | None = None  # `source` is the envelope's emitting component
     told_by: PersonId | None = None
     exchange: Exchange | None = None
+    episode: str | None = None
 
 
 class MemoryCorrected(Event, event_type="memory.corrected"):

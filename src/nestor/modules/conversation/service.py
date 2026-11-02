@@ -269,6 +269,7 @@ class AgentReply(Reply):
                             session=self._address.session,
                             address=self._address,
                             text=self._user,
+                            medium=self._medium,
                             person=self._person.id if self._person else None,
                             exchange=exchange,
                         )

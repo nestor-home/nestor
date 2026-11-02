@@ -65,6 +65,18 @@
 {"memory": "m64", "about": "odile", "text": "Odile conduit de nouveau la nuit depuis son opération de la cataracte.", "at": "2026-10-02"}
 {"memory": "m65", "about": "lea", "text": "Léa était allergique aux arachides enfant, ça lui est passé.", "at": "2026-06-11"}
 {"memory": "m66", "about": "odile", "text": "Odile n'aime pas qu'on l'appelle Mamie devant ses amies.", "at": "2026-04-03"}
+{"episode": "e01", "people": ["lea"], "ended": "2026-10-18T20:10", "address": "telegram:7", "medium": "written", "summary": "Léa a parlé d'un restaurant italien, Da Marco, rue Mercière, où elle veut emmener Hugo pour leur anniversaire de mariage.", "topics": ["restaurant", "anniversaire"]}
+{"episode": "e02", "people": ["lea"], "ended": "2026-10-21T08:05", "address": "satellites:cuisine", "medium": "spoken", "summary": "Léa et Nestor ont cherché un cadeau pour les dix ans de Jules : un télescope d'initiation, budget 150 euros.", "topics": ["cadeau", "Jules", "télescope"]}
+{"episode": "e03", "people": ["lea"], "ended": "2026-10-24T18:40", "address": "telegram:7", "medium": "written", "summary": "Le plombier, M. Dufour, passera jeudi 6 novembre à 9 h pour la fuite sous l'évier ; Léa laissera la clé à la voisine.", "topics": ["plombier", "fuite"]}
+{"episode": "e04", "people": ["lea"], "ended": "2026-10-28T07:50", "address": "satellites:cuisine", "medium": "spoken", "summary": "Léa a demandé la météo du week-end et prévu une sortie au parc de la Tête d'Or samedi si le temps le permet.", "topics": ["météo", "sortie"]}
+{"episode": "e05", "people": ["lea"], "ended": "2026-10-30T21:15", "address": "telegram:7", "medium": "written", "summary": "Léa a fait la liste des courses pour le dîner de dimanche avec Odile : poireaux, saumon, tarte aux pommes.", "topics": ["courses", "dîner"]}
+{"episode": "e06", "people": ["lea"], "ended": "2026-11-01T19:30", "address": "telegram:7", "medium": "written", "summary": "Pour la réunion de copropriété, Léa a conclu qu'elle voterait contre le ravalement de façade et pour le local à vélos.", "topics": ["copropriété", "vote"]}
+{"episode": "e07", "people": ["hugo"], "ended": "2026-10-19T22:00", "address": "telegram:42", "medium": "written", "summary": "Hugo voulait voir le film Dune 3 au cinéma Pathé Bellecour avec Léa, séance du samedi soir.", "topics": ["film", "cinéma"]}
+{"episode": "e08", "people": ["hugo"], "ended": "2026-10-25T09:30", "address": "satellites:salon", "medium": "spoken", "summary": "Hugo a comparé deux vélos cargo, un Babboe et un Urban Arrow ; il penche pour l'Urban Arrow d'occasion.", "topics": ["vélo cargo"]}
+{"episode": "e09", "people": ["hugo"], "ended": "2026-10-29T18:20", "address": "telegram:42", "medium": "written", "summary": "Hugo a demandé de lui rappeler de renouveler l'assurance de la voiture avant le 15 novembre.", "topics": ["assurance", "voiture"]}
+{"episode": "e10", "people": ["hugo"], "ended": "2026-11-01T12:00", "address": "satellites:salon", "medium": "spoken", "summary": "Hugo a mis la playlist de jazz du dimanche et demandé l'heure du match de l'OL.", "topics": ["musique", "football"]}
+{"episode": "e11", "people": ["jules"], "ended": "2026-10-27T17:00", "address": "satellites:chambre", "medium": "spoken", "summary": "Jules a posé plein de questions sur les volcans pour son exposé : le Piton de la Fournaise, la lave, les éruptions.", "topics": ["volcans", "exposé"]}
+{"episode": "e12", "people": ["odile"], "ended": "2026-11-01T13:30", "address": "satellites:salon", "medium": "spoken", "summary": "Odile a raconté son voyage en Bretagne de l'été et demandé la recette du far breton.", "topics": ["Bretagne", "recette"]}
 {"case": "c01", "speaker": "hugo", "said": "Léa est végétarienne, non ?", "expected": ["m01"], "kind": "direct"}
 {"case": "c02", "speaker": "lea", "said": "Quand est-ce que Jules a foot ?", "expected": ["m03"], "kind": "direct"}
 {"case": "c03", "speaker": "hugo", "said": "Elles sont où les clés de secours ?", "expected": ["m06"], "kind": "direct"}
@@ -120,3 +132,11 @@
 {"case": "c53", "speaker": "hugo", "said": "Léa a des allergies alimentaires ?", "expected": ["m65"], "kind": "other-person", "avoid": ["m02"]}
 {"case": "c54", "speaker": "hugo", "said": "C'est quand l'anniversaire d'Odile ?", "expected": ["m31"], "kind": "other-person", "avoid": ["m28", "m29", "m30"]}
 {"case": "c55", "speaker": "lea", "said": "Hugo a quoi le jeudi soir ?", "expected": ["m23", "m62"], "kind": "other-person", "avoid": ["m34"]}
+{"case": "c56", "speaker": "lea", "said": "Tu te souviens du resto italien dont je t'ai parlé ?", "expected": ["e01"], "kind": "episode"}
+{"case": "c57", "speaker": "lea", "said": "On avait dit quoi pour le cadeau de Jules ?", "expected": ["e02"], "kind": "episode"}
+{"case": "c58", "speaker": "lea", "said": "Le plombier devait passer quand déjà ?", "expected": ["e03", "m38"], "kind": "episode"}
+{"case": "c59", "speaker": "hugo", "said": "C'était quoi le film qu'on voulait aller voir ?", "expected": ["e07"], "kind": "episode"}
+{"case": "c60", "speaker": "jules", "said": "Tu m'avais dit quoi sur les volcans ?", "expected": ["e11", "m26"], "kind": "episode"}
+{"case": "c61", "speaker": "odile", "said": "On avait parlé de quoi dimanche ?", "expected": ["e12"], "kind": "episode"}
+{"case": "c62", "speaker": "hugo", "said": "Le resto italien que Léa voulait, c'est lequel ?", "expected": [], "kind": "private", "avoid": ["e01"]}
+{"case": "c63", "speaker": "jules", "said": "Papa a choisi quel vélo cargo ?", "expected": ["m35"], "kind": "private", "avoid": ["e08"]}

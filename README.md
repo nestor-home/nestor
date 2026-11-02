@@ -80,6 +80,13 @@ Vectors live in the instance's SQLite database (sqlite-vec), one table per embed
 dimension, its prefixes): switching models embeds every memory again at the next start, and the old vectors go.
 With a hosted model, memories leave the house to be embedded.
 
+Past conversations are remembered too. Once a conversation is over (its channel's silence has passed), the
+`memory.consolidation` model (the background one by default) writes its episode: what it was about, for whoever
+took part, and the lasting facts nobody asked to remember. Each turn then carries the latest conversations of
+whoever speaks and the older ones their words find (`memory.recent_episodes`, `memory.found_episodes`); the
+agent can recall the conversations of a time and reread one word for word. A conversation is only ever brought
+back to the people who took part in it.
+
 The medium belongs to the turn: a satellite someone types on gets the written model, the same satellite
 spoken to gets the spoken one.
 

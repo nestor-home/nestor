@@ -49,6 +49,36 @@ BEGIN
 END;
 """
 
+EPISODES = """
+CREATE TABLE episodes (
+    id TEXT PRIMARY KEY,  -- the conversation's
+    address TEXT NOT NULL,
+    medium TEXT NOT NULL,
+    participants TEXT NOT NULL,  -- JSON array of person ids: only they see it again
+    started_at TEXT NOT NULL,
+    ended_at TEXT NOT NULL,
+    summary TEXT NOT NULL,
+    topics TEXT NOT NULL  -- JSON array
+) STRICT;
+CREATE INDEX episodes_by_end ON episodes (ended_at);
+CREATE VIRTUAL TABLE episodes_text USING fts5 (
+    summary, topics, content = 'episodes', content_rowid = 'rowid', tokenize = 'unicode61 remove_diacritics 2'
+);
+CREATE TRIGGER episodes_indexed AFTER INSERT ON episodes
+BEGIN INSERT INTO episodes_text (rowid, summary, topics) VALUES (new.rowid, new.summary, new.topics); END;
+CREATE TRIGGER episodes_unindexed AFTER DELETE ON episodes
+BEGIN
+    INSERT INTO episodes_text (episodes_text, rowid, summary, topics)
+    VALUES ('delete', old.rowid, old.summary, old.topics);
+END;
+CREATE TRIGGER episodes_reindexed AFTER UPDATE ON episodes
+BEGIN
+    INSERT INTO episodes_text (episodes_text, rowid, summary, topics)
+    VALUES ('delete', old.rowid, old.summary, old.topics);
+    INSERT INTO episodes_text (rowid, summary, topics) VALUES (new.rowid, new.summary, new.topics);
+END;
+"""
+
 SECRETS = """
 CREATE TABLE secrets (
     owner TEXT NOT NULL,
@@ -74,4 +104,4 @@ CREATE TABLE account_activity (
 ) STRICT;
 """
 
-MIGRATIONS: tuple[str, ...] = (EVENTS + MEMORIES + SECRETS + VERIFIERS + ACTIVITY,)
+MIGRATIONS: tuple[str, ...] = (EVENTS + MEMORIES + EPISODES + SECRETS + VERIFIERS + ACTIVITY,)

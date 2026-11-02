@@ -94,7 +94,10 @@ async def test_an_embedding_model_is_declared_with_the_others_and_finds_memories
         await nestor.memories.remember("Mathis est végétarien.")
         assert nestor.memories.index is not None
         await nestor.memories.index.settled()  # embedded in the background
-        assert [m.text for m in await nestor.memories.recall("Du jambon ?")] == ["Mathis est végétarien."]
+        vector = await nestor.memories.query("Du jambon ?")
+        assert [m.text for m in await nestor.memories.recall("Du jambon ?", vector=vector)] == [
+            "Mathis est végétarien."
+        ]
     with pytest.raises(ConfigError, match=r"memory\.embedder: main is a conversation model and cannot search memories"):
         Nestor(with_embedder(tmp_path, "main"), fakes.registry())
     with pytest.raises(ConfigError, match=r"agent\.spoken: sens searches memories and cannot answer"):
@@ -334,7 +337,7 @@ async def test_memories_persist_in_the_database(tmp_path: Path) -> None:
         await fakes.channels[0].ask("Retiens que le chat s'appelle Biscotte")
         serving.cancel()
     async with Nestor(config(tmp_path, []), Fakes().registry()) as restarted:
-        assert [m.text for m in await restarted.memories.recall("chat")] == ["Le chat s'appelle Biscotte"]
+        assert [m.text for m in await restarted.memories.recall("chat", vector=None)] == ["Le chat s'appelle Biscotte"]
 
 
 async def test_a_watch_created_in_conversation_is_announced_when_its_mail_arrives(tmp_path: Path) -> None:
