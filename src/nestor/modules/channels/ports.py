@@ -12,23 +12,58 @@ from nestor.core import Component, ContractError, PersonId
 from nestor.modules.channels.types import Address, InboundMessage, Medium, Sender
 
 
-class Reply(ABC):
-    """An answer streamed as text chunks.
+class MessageEnd:
+    """Marks the end of a message in a `Reply`: the assistant stops writing to act (a tool call)
+    and the next words start a new message."""
 
-    Text channels can simply `collect()` it. A voice channel speaks chunks as they come and, if the
-    user cuts in, calls `interrupt` with what was actually heard so that the assistant remembers
-    only that part.
+    def __repr__(self) -> str:
+        return "MessageEnd()"
+
+
+class Reply(ABC):
+    """An answer streamed as text chunks, in one or more messages: the assistant ends a message
+    when it stops to act and starts another once it knows more ("Je regarde.", then the result).
+
+    A written channel sends each of `messages()` as soon as it is complete. A voice channel speaks
+    `speech()` as it comes and, if the user cuts in, calls `interrupt` with what was actually heard
+    so that the assistant remembers only that part.
     """
 
     @abstractmethod
-    def __aiter__(self) -> AsyncIterator[str]: ...
+    def __aiter__(self) -> AsyncIterator[str | MessageEnd]:
+        """Text chunks, each message followed by a `MessageEnd`."""
 
     @abstractmethod
     async def interrupt(self, heard: str) -> None:
         """Stop the answer; `heard` is the part the user received before cutting in."""
 
-    async def collect(self) -> str:
-        return "".join([chunk async for chunk in self])
+    async def messages(self) -> AsyncIterator[str]:
+        """Each complete message, as soon as it ends."""
+        chunks: list[str] = []
+        async for part in self:
+            if isinstance(part, MessageEnd):
+                if text := "".join(chunks).strip():
+                    yield text
+                chunks.clear()
+            else:
+                chunks.append(part)
+        if text := "".join(chunks).strip():  # cut before its end
+            yield text
+
+    async def speech(self) -> AsyncIterator[str]:
+        """The messages as one continuous text, a space between two of them."""
+        ended, last = False, ""
+        async for part in self:
+            if isinstance(part, MessageEnd):
+                ended = bool(last)
+                continue
+            if ended and not last[-1:].isspace() and not part[:1].isspace():
+                part = f" {part}"
+            ended, last = False, part
+            yield part
+
+    async def collect(self) -> tuple[str, ...]:
+        return tuple([message async for message in self.messages()])
 
 
 class Assistant(ABC):

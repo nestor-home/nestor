@@ -7,7 +7,7 @@ so the last batch received before a stop is delivered again at the next start.
 import asyncio
 import logging
 import re
-from collections.abc import AsyncGenerator, Awaitable, Callable
+from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from typing import Any
@@ -199,7 +199,8 @@ class _ChatQueues:
 class TelegramChannel(Channel):
     """A Telegram bot: household members write to it, strangers are ignored.
 
-    `serve` long-polls `getUpdates`; answers are sent as plain text (no Markdown parsing, so a stray
+    `serve` long-polls `getUpdates`; each message of an answer is sent as soon as it is written ("Je
+    regarde." before the tools run, the result after), as plain text (no Markdown parsing, so a stray
     `*` cannot make Telegram reject them), split under the message limit. When the assistant fails,
     the user receives `apology` rather than a typing indicator followed by silence; an empty
     `apology` keeps the bot silent.
@@ -303,13 +304,23 @@ class TelegramChannel(Channel):
 
     async def _answer(self, assistant: Assistant, message: InboundMessage) -> None:
         chat_id = int(message.address.conversation)
+        messages = self._messages(assistant, message)
+        while (text := await self._next(messages, chat_id, message.address)) is not None:
+            await self._send_text(chat_id, text)
+
+    async def _messages(self, assistant: Assistant, message: InboundMessage) -> AsyncIterator[str]:
+        async for text in assistant.respond(message).messages():  # asks on the first read: a failure is caught there
+            yield text
+
+    async def _next(self, messages: AsyncIterator[str], chat_id: int, address: Address) -> str | None:
+        """The next message of an answer, with "typing…" shown meanwhile (sending one clears it);
+        the apology when the assistant fails, then `None`."""
         async with self._typing(chat_id):
             try:
-                text = await assistant.respond(message).collect()
+                return await anext(messages, None)
             except Exception:
-                logger.exception("telegram: the assistant failed to answer in %s", message.address)
-                text = self._apology
-        await self._send_text(chat_id, text)
+                logger.exception("telegram: the assistant failed to answer in %s", address)
+                return self._apology
 
     async def _send_text(self, chat_id: int | str, text: str) -> None:
         for part in split_text(text):

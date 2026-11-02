@@ -281,7 +281,7 @@ async def test_the_agent_creates_lists_and_cancels_watches_through_its_tools() -
         with pytest.raises(ToolFailed, match="must be a list"):
             await by_name["create_watch"].run({"what": "x", "kinds": "mail"}, context)
 
-    assert answer == "D'accord, je te préviens dès qu'il arrive."
+    assert answer == ("D'accord, je te préviens dès qu'il arrive.",)
     assert (watch.owner, watch.created_in, watch.once) == (MATHIS.id, TELEGRAM, True)
     assert watch.until is not None and watch.until > utc_now() + timedelta(days=29)
     assert listed == {"watches": [{"watch_id": watch.id, "what": "le colis de la poussette"}]}

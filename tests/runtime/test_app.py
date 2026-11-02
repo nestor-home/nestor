@@ -43,7 +43,7 @@ async def test_a_message_goes_through_the_whole_assistant_and_is_persisted(tmp_p
     nestor = Nestor(config(tmp_path, ["Bonjour Mathis."]), fakes.registry())
     async with nestor:
         serving = asyncio.create_task(nestor.serve())
-        assert await fakes.channels[0].ask("Salut") == "Bonjour Mathis."
+        assert await fakes.channels[0].ask("Salut") == ("Bonjour Mathis.",)
         assert await fakes.channels[0].ask("Salut", sender="stranger") is None
         serving.cancel()
 
@@ -59,7 +59,7 @@ async def test_a_task_started_before_a_restart_is_delivered_after_it(tmp_path: P
     nestor = Nestor(config(tmp_path, []), fakes.registry())
     async with nestor:
         serving = asyncio.create_task(nestor.serve())
-        assert await fakes.channels[0].ask("Analyse le dépôt") == "Je lance l'analyse."
+        assert await fakes.channels[0].ask("Analyse le dépôt") == ("Je lance l'analyse.",)
         serving.cancel()
     (ref,) = fakes.remote.runs
     fakes.remote.finish(ref, Outcome.completed("tout est vert"))
@@ -208,7 +208,7 @@ async def test_a_crashing_channel_does_not_stop_the_others(tmp_path: Path, caplo
     nestor = Nestor(parse_config(text, {}), fakes.registry())
     async with nestor:
         serving = asyncio.create_task(nestor.serve())
-        assert await fakes.channels[0].ask("Salut") == "Toujours là."
+        assert await fakes.channels[0].ask("Salut") == ("Toujours là.",)
         serving.cancel()
     assert "channel broken stopped" in caplog.text
 
@@ -295,7 +295,7 @@ async def test_a_watch_created_in_conversation_is_announced_when_its_mail_arrive
     text = CONFIG.format(data_dir=tmp_path, replies=[]) + "inbound: [{kind: inbox}]\n"
     async with Nestor(parse_config(text, {}), fakes.registry()) as nestor:
         serving = asyncio.create_task(nestor.serve())
-        assert await fakes.channels[0].ask("Préviens-moi quand le colis arrive") == "Je te préviens."
+        assert await fakes.channels[0].ask("Préviens-moi quand le colis arrive") == ("Je te préviens.",)
         triggered = nestor.journal.subscribe(WatchTriggered)
         fakes.inbox.deliver(Incoming(source="inbox", kind="mail", title="Votre colis Colissimo est livré"))
         await triggered.next(timeout_s=2)

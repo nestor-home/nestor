@@ -28,7 +28,7 @@ async def test_a_message_reaches_the_assistant_and_its_answer_comes_back() -> No
         answer = await channel.ask("Salut", sender="mathis", conversation="42")
     await asyncio.wait_for(serving, 1)  # closing the channel ends `serve`
 
-    assert answer == "Bonjour mathis !"
+    assert answer == ("Bonjour mathis !",)
     (message,) = assistant.messages
     assert message.address == Address("telegram", "42") and message.text == "Salut"
 
@@ -47,7 +47,7 @@ async def test_an_interrupted_reply_stops_and_keeps_what_was_heard() -> None:
     reply = ScriptedReply("Alors, les ours bruns et les grizzlys sont la même espèce.")
     spoken = []
 
-    async for chunk in reply:
+    async for chunk in reply.speech():
         spoken.append(chunk)
         if len(spoken) == 2:
             await reply.interrupt("".join(spoken))

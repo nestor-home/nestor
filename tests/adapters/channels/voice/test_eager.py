@@ -9,7 +9,7 @@ from pipecat.tests.utils import SleepFrame, run_test
 from nestor.adapters.channels.voice.bridge import AssistantBridge, PlayedText
 from nestor.adapters.channels.voice.eager import ResponseWatcher, SentenceFlushFrame
 from nestor.core import PersonId
-from nestor.modules.channels import Address, Assistant, InboundMessage, Reply, Sender
+from nestor.modules.channels import Address, Assistant, InboundMessage, MessageEnd, Reply, Sender
 
 from .doubles import ToneTTS
 from .replay import ScenarioClock
@@ -18,10 +18,12 @@ from .replay import ScenarioClock
 class _ThinkingAloud(Reply):
     """Says a short sentence, then goes quiet while it calls a tool."""
 
-    async def __aiter__(self) -> AsyncIterator[str]:
+    async def __aiter__(self) -> AsyncIterator[str | MessageEnd]:
         yield "Je regarde ça."
+        yield MessageEnd()
         await asyncio.sleep(1.0)
-        yield " Il fait beau."
+        yield "Il fait beau."
+        yield MessageEnd()
 
     async def interrupt(self, heard: str) -> None: ...
 

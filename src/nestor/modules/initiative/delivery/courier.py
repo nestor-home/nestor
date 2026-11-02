@@ -106,15 +106,17 @@ class Courier(Component):
         channel = self.channels.get(address.channel)
         if channel is None or not channel.reachable(address):
             return None
-        text = await self.agent.compose(address, person, instruction)
+        texts = await self.agent.compose(address, person, instruction)
         try:
-            await channel.send(address, text)
+            for text in texts:
+                await channel.send(address, text)
         except ProviderError:
             return None
         exchange = await self.agent.conversations.turn(address)  # an unprompted message is a turn of its own
-        await self.journal.publish(
-            AssistantTurn(source=self.name, session=address.session, address=address, text=text, exchange=exchange)
-        )
+        for text in texts:
+            await self.journal.publish(
+                AssistantTurn(source=self.name, session=address.session, address=address, text=text, exchange=exchange)
+            )
         await self.journal.publish(
             Delivered(source=self.name, address=address, about=about, person=person.id if person else None)
         )

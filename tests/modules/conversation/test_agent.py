@@ -43,7 +43,7 @@ def tool(name: str, run, **kwargs) -> Tool:
 async def test_an_answer_is_streamed_and_both_turns_are_logged(make_agent: MakeAgent, journal: Journal) -> None:
     agent = make_agent("Bonjour Mathis, tout va bien.")
 
-    answer = await agent.respond(message("Salut")).collect()
+    (answer,) = await agent.respond(message("Salut")).collect()
 
     assert answer == "Bonjour Mathis, tout va bien."
     user, assistant = await journal.history(UserTurn), await journal.history(AssistantTurn)
@@ -90,32 +90,91 @@ async def test_the_agent_calls_tools_and_answers_with_their_result(make_agent: M
 
     agent = make_agent(ToolCall("c1", "light_on", {"room": "salon"}), answer, tools=[tool("light_on", light)])
 
-    assert await agent.respond(message("Allume le salon")).collect() == "C'est allumé dans le salon."
+    assert await agent.respond(message("Allume le salon")).collect() == ("C'est allumé dans le salon.",)
     assert [(c.address, c.person) for c in contexts] == [(TELEGRAM, PersonId("mathis"))]
     called, completed = (await journal.history(ToolCalled))[0], (await journal.history(ToolCompleted))[0]
     assert (called.name, called.arguments, called.person) == ("light_on", {"room": "salon"}, "mathis")
     assert completed.ok and json.loads(completed.output) == {"room": "salon", "state": "on"}
 
 
-async def test_text_around_a_tool_call_reads_as_one_answer(make_agent: MakeAgent) -> None:
-    class Announcing(ScriptedModel):
-        """Says a sentence, then calls a tool in the same round (what real models do)."""
+class Announcing(ScriptedModel):
+    """Says a sentence, then calls a tool in the same round (what real models do), then answers."""
 
-        async def stream(self, request: ModelRequest) -> AsyncGenerator[ModelOutput]:
-            self.requests.append(request)
-            if len(self.requests) == 1:
-                yield TextDelta("Je regarde.")
-                yield ToolCallRequested(ToolCall("c1", "light_on"))
-                yield Finished(FinishReason.TOOL_CALLS)
-            else:
-                yield TextDelta("C'est allumé.")
-                yield Finished(FinishReason.STOP)
+    async def stream(self, request: ModelRequest) -> AsyncGenerator[ModelOutput]:
+        self.requests.append(request)
+        if len(self.requests) == 1:
+            yield TextDelta("Je regarde")
+            yield TextDelta(".")
+            yield ToolCallRequested(ToolCall("c1", "light_on"))
+            yield Finished(FinishReason.TOOL_CALLS)
+        else:
+            yield TextDelta("C'est allumé.")
+            yield Finished(FinishReason.STOP)
+
+
+async def light_on(arguments: Mapping[str, object], context: ToolContext) -> str:
+    return "on"
+
+
+async def test_text_before_a_tool_call_is_a_message_of_its_own_handed_over_before_the_tool_runs(
+    make_agent: MakeAgent,
+) -> None:
+    first_read = asyncio.Event()
 
     async def light(arguments: Mapping[str, object], context: ToolContext) -> str:
+        await first_read.wait()  # the tool cannot end before the first message is out
         return "on"
 
-    answer = await make_agent(model=Announcing(), tools=[tool("light_on", light)]).respond(message("Allume")).collect()
-    assert answer == "Je regarde. C'est allumé."
+    messages = make_agent(model=Announcing(), tools=[tool("light_on", light)]).respond(message("Allume")).messages()
+
+    assert await asyncio.wait_for(anext(messages), 1) == "Je regarde."
+    first_read.set()
+    assert [m async for m in messages] == ["C'est allumé."]
+
+
+async def test_messages_are_logged_in_the_order_the_user_saw_them(make_agent: MakeAgent, journal: Journal) -> None:
+    await make_agent(model=Announcing(), tools=[tool("light_on", light_on)]).respond(message("Allume")).collect()
+
+    logged = await journal.history(UserTurn, AssistantTurn, ToolCalled, ToolCompleted)
+    said = [e.text if isinstance(e, UserTurn | AssistantTurn) else type(e).__name__ for e in logged]
+    assert said == ["Allume", "Je regarde.", "ToolCalled", "ToolCompleted", "C'est allumé."]
+
+    model = ScriptedModel("Oui.")
+    await make_agent(model=model, tools=[tool("light_on", light_on)]).respond(message("C'est fait ?")).collect()
+    replayed = [(m.role, m.content, [c.name for c in m.tool_calls]) for m in model.requests[0].messages[1:]]
+    assert replayed == [
+        (Role.USER, "Allume", []),
+        (Role.ASSISTANT, "Je regarde.", ["light_on"]),  # as the model wrote it: the sentence with its call
+        (Role.TOOL, "on", []),
+        (Role.ASSISTANT, "C'est allumé.", []),
+        (Role.USER, "C'est fait ?", []),
+    ]
+
+
+async def test_a_tool_call_without_text_makes_no_empty_message(make_agent: MakeAgent, journal: Journal) -> None:
+    agent = make_agent(ToolCall("c1", "light_on"), "C'est allumé.", tools=[tool("light_on", light_on)])
+
+    assert await agent.respond(message("Allume")).collect() == ("C'est allumé.",)
+    assert [t.text for t in await journal.history(AssistantTurn)] == ["C'est allumé."]
+
+
+async def test_voice_speaks_the_messages_as_one_text(make_agent: MakeAgent) -> None:
+    reply = make_agent(model=Announcing(), tools=[tool("light_on", light_on)]).respond(message("Allume", VOICE, "mic"))
+
+    assert "".join([chunk async for chunk in reply.speech()]) == "Je regarde. C'est allumé."
+
+
+async def test_a_cut_across_messages_keeps_what_was_heard_of_each(make_agent: MakeAgent, journal: Journal) -> None:
+    reply = make_agent(model=Announcing(), tools=[tool("light_on", light_on)]).respond(message("Allume", VOICE, "mic"))
+    await reply.collect()
+    await reply.interrupt("Je regarde. C'est")  # word by word, as the synthesis reports them
+
+    [_, second] = await journal.history(AssistantTurn)
+    [cut] = await journal.history(AnswerCut)
+    assert (cut.answer, cut.heard) == (second.id, "C'est")
+    model = ScriptedModel("Pardon.")
+    await make_agent(model=model, tools=[tool("light_on", light_on)]).respond(message("Hein ?", VOICE, "mic")).collect()
+    assert [m.content for m in model.requests[0].messages[1:] if m.role is Role.ASSISTANT] == ["Je regarde.", "C'est"]
 
 
 async def test_a_tool_round_is_part_of_the_history(make_agent: MakeAgent) -> None:
@@ -153,7 +212,7 @@ async def test_a_failing_tool_is_reported_to_the_model_not_raised(make_agent: Ma
         tools=[tool("light_on", broken), tool("crash", crashing), tool("needs_room", broken, required=["room"])],
     )
 
-    assert await agent.respond(message("Allume")).collect() == "Désolé, je n'y arrive pas."
+    assert await agent.respond(message("Allume")).collect() == ("Désolé, je n'y arrive pas.",)
     errors = [json.loads(e.output)["error"] for e in await journal.history(ToolCompleted)]
     assert errors == [
         "la box Home Assistant ne répond pas",
@@ -190,7 +249,7 @@ async def test_an_unavailable_model_is_excused_aloud_and_logged(make_agent: Make
 
     answer = await agent.respond(message("Salut", VOICE, "mic")).collect()
 
-    assert answer == "Désolé, j'ai un trou de connexion. Tu peux répéter ?"
+    assert answer == ("Désolé, j'ai un trou de connexion. Tu peux répéter ?",)
     assert [e.reason for e in await journal.history(FallbackSpoken)] == [FallbackReason.MODEL_UNAVAILABLE]
 
 
@@ -202,7 +261,7 @@ async def test_a_model_failing_midway_keeps_what_was_said_and_excuses_the_cut(
             yield TextDelta("Alors, la météo")
             raise ProviderError("openrouter", "connection reset", transient=True)
 
-    answer = await make_agent(model=Dropping()).respond(message("Météo ?")).collect()
+    (answer,) = await make_agent(model=Dropping()).respond(message("Météo ?")).collect()
 
     assert answer == "Alors, la météo Désolé, j'ai un trou de connexion. Tu peux répéter ?"
     assert (await journal.history(AssistantTurn))[0].text == answer
@@ -236,8 +295,8 @@ async def test_a_slow_model_gets_a_filler_on_voice_only(make_agent: MakeAgent, j
         .collect()
     )
 
-    assert spoken == "Hmm, je rame un peu, laisse-moi une seconde. Voilà."
-    assert written == "Voilà."
+    assert spoken == ("Hmm, je rame un peu, laisse-moi une seconde. Voilà.",)
+    assert written == ("Voilà.",)
     assert [e.reason for e in await journal.history(FallbackSpoken)] == [FallbackReason.MODEL_SLOW]
 
 
@@ -277,7 +336,7 @@ async def test_a_composed_message_uses_the_conversation_and_is_left_to_its_sende
 
     text = await make_agent(model=model).compose(TELEGRAM, MATHIS, "Task finished: 3 issues found.")
 
-    assert text == "L'analyse est finie : trois soucis trouvés."
+    assert text == ("L'analyse est finie : trois soucis trouvés.",)
     last = model.requests[0].messages[-1]
     assert (last.role, last.content) == (Role.SYSTEM, "Task finished: 3 issues found.")
     assert [t.text for t in await journal.history(UserTurn)] == ["Analyse le dépôt"]
@@ -320,3 +379,20 @@ async def test_instructions_carry_persona_channel_person_and_context(make_agent:
     assert "Tu es Richie" in spoken and "Mathis" in spoken and "spoken aloud" in spoken
     assert "[laughs]" in spoken and "Running tasks: none." in spoken and "Europe/Paris" in spoken
     assert "do not know who" in written and "chat" in written and "Running tasks" not in written
+
+
+async def test_a_cut_is_shared_by_length_whatever_the_synthesis_made_of_the_words(
+    make_agent: MakeAgent, journal: Journal
+) -> None:
+    class Laughing(Announcing):
+        async def stream(self, request: ModelRequest) -> AsyncGenerator[ModelOutput]:
+            async for output in super().stream(request):
+                yield TextDelta("[laughs softly] Je regarde") if output == TextDelta("Je regarde") else output
+
+    reply = make_agent(model=Laughing(), tools=[tool("light_on", light_on)]).respond(message("Allume", VOICE, "mic"))
+    await reply.collect()
+    await reply.interrupt("[laughs soft ly] Je regarde. C'est")  # the tag cut in three
+
+    [_, second] = await journal.history(AssistantTurn)
+    [cut] = await journal.history(AnswerCut)
+    assert (cut.answer, cut.heard) == (second.id, "C'est")

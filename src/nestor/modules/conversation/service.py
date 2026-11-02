@@ -13,7 +13,7 @@ from datetime import datetime
 
 from nestor.core import ContractError, PersonId, ProviderError, utc_now
 from nestor.core.i18n import Localizer
-from nestor.modules.channels import Address, Assistant, Exchange, InboundMessage, Medium, Reply, Sender
+from nestor.modules.channels import Address, Assistant, Exchange, InboundMessage, Medium, MessageEnd, Reply, Sender
 from nestor.modules.cognition.model import (
     ConversationModel,
     Finished,
@@ -116,8 +116,8 @@ class Agent(Assistant):
         person = self.household.identify(message.address.channel, message.sender.id)
         return AgentReply(self, message.address, person, user=message.text)
 
-    async def compose(self, address: Address, person: Person | None, instruction: str) -> str:
-        """Write an unprompted message for this conversation (a task result, an announcement).
+    async def compose(self, address: Address, person: Person | None, instruction: str) -> tuple[str, ...]:
+        """Write unprompted messages for this conversation (a task result, an announcement).
 
         `instruction` tells the agent what to convey; the text is written in the persona's voice,
         with the conversation's history. It is not logged: whoever delivers it logs it once sent.
@@ -143,9 +143,10 @@ class AgentReply(Reply):
     """One answer, produced in the background and streamed through a queue so that a channel can
     interrupt it from another task at any time.
 
-    A voice channel usually receives the whole text long before it is played: an interruption that
-    comes after the answer was logged is recorded as an `AnswerCut`, so the history keeps only
-    what the user heard.
+    Each round of the model that writes something is a message of its own, logged as soon as it
+    ends, before the tools it asked for run: the journal keeps the order the user saw. A voice
+    channel usually receives a message long before it is played: an interruption that comes after
+    it was logged is recorded as an `AnswerCut`, so the history keeps only what the user heard.
     """
 
     def __init__(
@@ -160,14 +161,15 @@ class AgentReply(Reply):
     ) -> None:
         self._agent, self._address, self._person = agent, address, person
         self._user, self._instruction, self._record = user, instruction, record
-        self._chunks: asyncio.Queue[str | None] = asyncio.Queue()
-        self._said: list[str] = []
+        self._chunks: asyncio.Queue[str | MessageEnd | None] = asyncio.Queue()
+        self._message: list[str] = []  # the message being written
+        self._ended: list[tuple[str, AssistantTurn | None]] = []  # the messages written, logged if recorded
         self._worker: asyncio.Task[None] | None = None
         self._interrupted = False
-        self._logged: AssistantTurn | None = None
+        self._over = False
         self._exchange: Exchange | None = None  # the turn this reply belongs to, once it started
 
-    async def __aiter__(self) -> AsyncIterator[str]:
+    async def __aiter__(self) -> AsyncIterator[str | MessageEnd]:
         if self._worker is not None:
             raise ContractError("a reply can only be read once")
         self._worker = asyncio.create_task(self._produce(), name=f"reply {self._address}")
@@ -184,18 +186,22 @@ class AgentReply(Reply):
             self._worker.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await self._worker
-        if self._logged is None:
-            await self._log_answer(heard, interrupted=True)
-        else:
-            await self._agent.journal.publish(
-                AnswerCut(
-                    source="agent",
-                    session=self._address.session,
-                    answer=self._logged.id,
-                    heard=heard,
-                    exchange=self._exchange,
+        *parts, rest = _share(heard, [text for text, _ in self._ended])
+        for (text, turn), part in zip(self._ended, parts, strict=True):
+            if turn is not None and _letters(part) < _letters(text):
+                await self._agent.journal.publish(
+                    AnswerCut(
+                        source="agent",
+                        session=self._address.session,
+                        answer=turn.id,
+                        heard=part,
+                        exchange=self._exchange,
+                    )
                 )
-            )
+        if self._record and ("".join(self._message).strip() or not self._ended):
+            await self._log(rest, interrupted=True)
+        self._message.clear()
+        self._end_turn()
         self._chunks.put_nowait(None)
 
     async def _produce(self) -> None:
@@ -219,8 +225,8 @@ class AgentReply(Reply):
             else:  # a composed message: the open conversation's turns, if any
                 conversation = await agent.conversations.current(self._address)
             await self._answer(conversation)
-            if self._record:
-                await self._log_answer("".join(self._said), interrupted=False)
+            await self._end_message()
+            self._end_turn()
         finally:
             self._agent.replies.set(self, None)
             self._chunks.put_nowait(None)
@@ -245,6 +251,7 @@ class AgentReply(Reply):
             except ProviderError:
                 await self._fall_back(FallbackReason.MODEL_UNAVAILABLE)
                 return
+            await self._end_message()
             if not calls:
                 return
             messages.append(Message(role=Role.ASSISTANT, content=text, tool_calls=calls))
@@ -262,7 +269,7 @@ class AgentReply(Reply):
         calls: list[ToolCall] = []
         stream = agent.model.stream(request)
         spoken = agent.channel(self._address).medium is Medium.SPOKEN
-        filler = self._slow_filler() if spoken and not self._said else None
+        filler = self._slow_filler() if spoken and not self._message and not self._ended else None
         try:
             async for output in stream:
                 if isinstance(output, TextDelta) and output.text:
@@ -270,8 +277,8 @@ class AgentReply(Reply):
                         filler.cancel()
                         filler = None
                     chunk = output.text
-                    if not text and self._said and not self._said[-1][-1:].isspace() and not chunk[:1].isspace():
-                        chunk = f" {chunk}"  # a new round after a tool call: keep its first word apart
+                    if not text and self._message and not self._message[-1][-1:].isspace() and not chunk[:1].isspace():
+                        chunk = f" {chunk}"  # after a filler: keep the first word apart
                     text.append(chunk)
                     self._say(chunk)
                 elif isinstance(output, ToolCallRequested):
@@ -292,7 +299,7 @@ class AgentReply(Reply):
         return asyncio.create_task(wait_then_say())
 
     async def _fall_back(self, reason: FallbackReason) -> None:
-        if reason is FallbackReason.MODEL_UNAVAILABLE and self._said:
+        if reason is FallbackReason.MODEL_UNAVAILABLE and self._message:
             self._say(" ")  # keep what was said, then excuse the cut
         agent = self._agent
         self._say(agent.localizer.format(agent.persona.fallback(reason), agent.persona.locale))
@@ -307,12 +314,26 @@ class AgentReply(Reply):
         )
 
     def _say(self, text: str) -> None:
-        self._said.append(text)
+        self._message.append(text)
         self._chunks.put_nowait(text)
         if self._record:  # a composed message is only words to send later: still thinking
             self._agent.replies.set(self, ReplyPhase.SPEAKING)
 
-    async def _log_answer(self, text: str, *, interrupted: bool) -> None:
+    async def _end_message(self) -> None:
+        """The message being written is complete: hand it over and log it (nothing if it is empty)."""
+        text, self._message = "".join(self._message).strip(), []
+        if not text:
+            return
+        self._chunks.put_nowait(MessageEnd())
+        self._ended.append((text, await self._log(text, interrupted=False) if self._record else None))
+
+    def _end_turn(self) -> None:
+        """The reply is over, written or cut: the conversation's silence starts now."""
+        if not self._over and self._exchange is not None:
+            self._agent.conversations.ended(self._exchange, self._address)
+        self._over = True
+
+    async def _log(self, text: str, *, interrupted: bool) -> AssistantTurn:
         turn = AssistantTurn(
             source="agent",
             session=self._address.session,
@@ -322,6 +343,21 @@ class AgentReply(Reply):
             exchange=self._exchange,
         )
         await self._agent.journal.publish(turn)
-        self._logged = turn
-        if self._exchange is not None:
-            self._agent.conversations.ended(self._exchange, self._address)
+        return turn
+
+
+def _share(heard: str, messages: list[str]) -> list[str]:
+    """What was heard of each message, then of the one being written: the heard words go to each
+    message in turn, by length without spaces, since the synthesis may cut words differently."""
+    words, parts = heard.split(), []
+    for text in messages:
+        room, taken = _letters(text), []
+        while words and len(words[0]) <= room:
+            room -= len(words[0])
+            taken.append(words.pop(0))
+        parts.append(" ".join(taken))
+    return [*parts, " ".join(words)]
+
+
+def _letters(text: str) -> int:
+    return len("".join(text.split()))
