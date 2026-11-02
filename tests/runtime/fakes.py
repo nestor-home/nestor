@@ -16,9 +16,28 @@ class NoSettings(AdapterSettings):
     pass
 
 
+class FlakySettings(AdapterSettings):
+    crashes: int = 1
+
+
 class CrashingChannel(InMemoryChannel):
     async def serve(self, assistant: Assistant) -> None:
         raise RuntimeError("socket closed")
+
+
+class FlakyChannel(InMemoryChannel):
+    """Stops with an error the first `crashes` times it is served, then serves."""
+
+    def __init__(self, channel_id: str, crashes: int) -> None:
+        super().__init__(channel_id)
+        self.crashes = crashes
+        self.served = 0
+
+    async def serve(self, assistant: Assistant) -> None:
+        self.served += 1
+        if self.served <= self.crashes:
+            raise RuntimeError("socket closed")
+        await super().serve(assistant)
 
 
 class Fakes:
@@ -32,9 +51,10 @@ class Fakes:
         self.inbox = Inbox()
 
     def registry(self) -> Registry:
+        flaky = Plugin(Family.CHANNEL, "flaky", FlakySettings, self._flaky)
         crashing = Plugin(Family.CHANNEL, "crashing", NoSettings, lambda s, name, x: CrashingChannel(name))
         inbox = Plugin(Family.INBOUND, "inbox", NoSettings, lambda s, name, x: QueuedSource(self.inbox))
-        return Registry([self.model_plugin(), self.channel_plugin(), self.executor_plugin(), crashing, inbox])
+        return Registry([self.model_plugin(), self.channel_plugin(), self.executor_plugin(), crashing, flaky, inbox])
 
     def model_plugin(self) -> Plugin[ModelSettings]:
         return Plugin(Family.MODEL, "scripted", ModelSettings, self._model)
@@ -52,6 +72,11 @@ class Fakes:
 
     def _channel(self, settings: NoSettings, name: str, services: Services) -> InMemoryChannel:
         channel = InMemoryChannel(name)
+        self.channels.append(channel)
+        return channel
+
+    def _flaky(self, settings: FlakySettings, name: str, services: Services) -> FlakyChannel:
+        channel = FlakyChannel(name, settings.crashes)
         self.channels.append(channel)
         return channel
 

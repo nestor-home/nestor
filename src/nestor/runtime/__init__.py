@@ -4,7 +4,7 @@ The only layer that knows every module; adapters are found through the `nestor.a
 point group, so a third-party plugin needs no change here.
 """
 
-from nestor.runtime.app import Nestor
+from nestor.runtime.app import Backoff, Nestor
 from nestor.runtime.config import ConfigError, NestorConfig, load_config
 from nestor.runtime.plugins import (
     AdapterSettings,
@@ -20,6 +20,7 @@ from nestor.runtime.plugins import (
 
 __all__ = [
     "AdapterSettings",
+    "Backoff",
     "ChannelSettings",
     "ConfigError",
     "Distribution",

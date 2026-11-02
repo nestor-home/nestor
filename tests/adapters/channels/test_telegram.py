@@ -250,6 +250,21 @@ async def test_transient_polling_failures_are_retried(api: FakeBotApi, caplog: p
     assert caplog.text.count("retrying") == 3
 
 
+async def test_another_instance_polling_is_waited_out_without_leaving_serve(
+    api: FakeBotApi, caplog: pytest.LogCaptureFixture
+) -> None:
+    conflict = error(409, "Conflict: terminated by other getUpdates request")
+    api.fail("getUpdates", conflict, conflict)
+    with caplog.at_level(logging.WARNING):
+        async with serving(api, ScriptedAssistant(echo)) as (_, task):
+            api.say("still there?")
+            await eventually(lambda: bool(api.sent))
+            assert not task.done()
+    assert api.sent == [(ADA, "echo: still there?")]
+    assert caplog.text.count("409 Conflict") == 2
+    assert "Traceback" not in caplog.text
+
+
 async def test_a_bad_token_stops_serving_with_a_permanent_error(api: FakeBotApi) -> None:
     channel = channel_for(api, token="123456:wrong")
     with pytest.raises(ProviderError) as raised:

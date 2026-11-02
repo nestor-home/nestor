@@ -82,6 +82,7 @@ class Assistant(ABC):
 class Channel(Component, ABC):
     """Contract:
     - `serve` receives messages until the channel is closed and answers each one through the assistant;
+      when it raises, Nestor logs it and calls `serve` again after a pause, so it must be callable again;
     - `send` delivers an unprompted message (task result, initiative) through one of its `media` and
       raises `ProviderError` when it cannot: aloud with nobody connected, for instance;
     - senders the channel cannot authenticate are dropped before reaching the assistant;

@@ -122,8 +122,9 @@ class BotApi:
 
 
 def _transient(status: int) -> bool:
-    """Rate limits and server errors may pass; a bad token (401), a blocked bot (403) or a bad request won't."""
-    return status == 429 or status >= 500
+    """Rate limits, server errors and a conflict (another instance polling with the same token, which
+    ends with it) may pass; a bad token (401), a blocked bot (403) or a bad request won't."""
+    return status in (409, 429) or status >= 500
 
 
 def split_text(text: str, limit: int = MESSAGE_LIMIT) -> list[str]:
@@ -237,7 +238,7 @@ class TelegramChannel(Channel):
 
     async def serve(self, assistant: Assistant) -> None:
         """Answer messages until the channel is closed; raises `ProviderError` on a fatal API error
-        (bad token, another bot instance polling) — network failures are retried."""
+        (bad token) — network failures and a conflicting instance polling are retried."""
         chats = self._chats = _ChatQueues(lambda message: self._answer(assistant, message))
         offset: int | None = None
         try:

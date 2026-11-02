@@ -7,6 +7,7 @@ import os
 import signal
 from collections.abc import AsyncGenerator, Callable, Iterable, Mapping, Sequence
 from contextlib import AsyncExitStack
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Self, cast
 
@@ -21,7 +22,7 @@ from nestor.adapters.storage.sqlite import (
     SQLiteVerifierStore,
 )
 from nestor.adapters.storage.sqlite.vault import GENERATE
-from nestor.core import Component, ContractError
+from nestor.core import Component, ContractError, ProviderError
 from nestor.core.i18n import Locale
 from nestor.modules.accounts import Accounts
 from nestor.modules.activity import ActivityMonitor
@@ -62,11 +63,22 @@ def database_path(data_dir: Path) -> Path:
     return data_dir / DATABASE
 
 
+@dataclass(frozen=True)
+class Backoff:
+    """How a channel that stopped is served again: after `initial_s`, doubling up to `maximum_s` while it
+    keeps failing; a run that lasted `healthy_after_s` starts over from `initial_s`."""
+
+    initial_s: float = 1.0
+    maximum_s: float = 60.0
+    healthy_after_s: float = 60.0
+
+
 class Nestor:
     """Build with `Nestor(config)`, then `async with nestor: await nestor.serve()`.
 
     `environ` is where secrets are read from (the process environment by default); `token_endpoint`
-    replaces the HTTP OAuth client (tests use a fake provider).
+    replaces the HTTP OAuth client (tests use a fake provider); `backoff` paces serving a channel
+    again after it stopped.
     """
 
     def __init__(
@@ -77,8 +89,10 @@ class Nestor:
         environ: Mapping[str, str] | None = None,
         token_endpoint: TokenEndpoint | None = None,
         source: Path | None = None,
+        backoff: Backoff | None = None,
     ) -> None:
         self.config = config
+        self._backoff = backoff or Backoff()
         self.source = source  # the configuration file it was loaded from, when it was (the admin edits it)
         self.registry = registry = registry or Registry.installed()
         self.restart = Restart()
@@ -243,16 +257,30 @@ class Nestor:
         await self._stack.aclose()
 
     async def serve(self) -> None:
-        """Serve every channel until cancelled. A channel that crashes is logged and the others keep going."""
+        """Serve every channel until cancelled. A channel that stops is logged and served again after a
+        pause (the others keep going)."""
         await asyncio.gather(*(self._serve(channel) for channel in self.channels))
 
     async def _serve(self, channel: Channel) -> None:
-        try:
-            await channel.serve(self.agent)
-        except asyncio.CancelledError:
-            raise
-        except Exception:
-            log.exception("channel %s stopped", channel.channel_id)
+        loop = asyncio.get_running_loop()
+        delay = self._backoff.initial_s
+        while True:
+            started = loop.time()
+            try:
+                await channel.serve(self.agent)
+            except asyncio.CancelledError:
+                raise
+            except ProviderError as error:
+                log.warning("channel %s stopped: %s", channel.channel_id, error)
+            except Exception:
+                log.exception("channel %s stopped", channel.channel_id)
+            else:
+                return  # it ends when closed
+            if loop.time() - started >= self._backoff.healthy_after_s:
+                delay = self._backoff.initial_s
+            log.info("channel %s serves again in %.1f s", channel.channel_id, delay)
+            await asyncio.sleep(delay)
+            delay = min(delay * 2, self._backoff.maximum_s)
 
 
 def _connectors(
