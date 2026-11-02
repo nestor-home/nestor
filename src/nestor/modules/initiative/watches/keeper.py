@@ -80,7 +80,7 @@ class WatchKeeper(Component):
         )
         for watch in concerned:
             verdict = (verdicts or {}).get(watch.id)
-            if verdict and watch.id in self.book.watches:
+            if verdict is not None and watch.id in self.book.watches:
                 await self._trigger(watch, item, verdict)
 
     async def _trigger(self, watch: Watch, item: Incoming, verdict: Verdict) -> None:

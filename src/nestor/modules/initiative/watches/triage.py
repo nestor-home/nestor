@@ -1,9 +1,8 @@
 """Triage of incoming items: a small model reads each item once against every watch it may concern; the
 central agent only writes the announcement of a confirmed match.
 
-Chosen on the watch-triage bench (`nestor bench run watch-triage`): one call per item judging every watch at
-once caught as many matches as one call per watch, for a tenth of the calls, while a keyword filter in front
-of the model dropped a third of them and keywords given as hints did not help.
+Chosen on the watch-triage bench (`nestor bench run watch-triage --variant …`): one call judging every watch
+at once catches as many matches as one call per watch, for a fraction of the calls.
 """
 
 import json
@@ -39,7 +38,7 @@ class Triage:
         request = ModelRequest(
             messages=(
                 Message(role=Role.SYSTEM, content=QUESTION.format(watches=listed, language=self.language)),
-                Message.user(describe(item)),
+                Message.user(_describe(item)),
             )
         )
         for _ in range(ATTEMPTS):
@@ -54,7 +53,7 @@ class Triage:
         return None
 
 
-def describe(item: Incoming) -> str:
+def _describe(item: Incoming) -> str:
     sender = f"From: {item.sender}\n" if item.sender else ""
     return f"Kind: {item.kind}\n{sender}Title: {item.title}\n\n{item.body[:2000]}"
 

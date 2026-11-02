@@ -1,4 +1,4 @@
-"""The two triage algorithms on one item: what the model is asked, and how failures count."""
+"""The two triage algorithms on one item: how many calls, what each judges, and how failures count."""
 
 import json
 from collections.abc import Callable
@@ -21,15 +21,11 @@ CARRIER = Incoming(
 
 
 def yes_to(*matching: str, urgent: bool = False) -> Callable[[ModelRequest], str]:
-    """A reply that says yes for the watches it is told, in the asked format."""
+    """A reply that says yes for those of the asked watches it is told."""
 
     def reply(request: ModelRequest) -> str:
         question = request.messages[0].content
-        if "[w-" in question:
-            found = [{"watch": w, "urgent": urgent} for w in matching if f"[{w}]" in question]
-            return json.dumps({"matches": found})
-        hit = any(w.what in question for w in WATCHES if w.id in matching)
-        return json.dumps({"matches": hit, "urgent": urgent and hit, "summary": "ok"})
+        return json.dumps({"matches": [{"watch": w, "urgent": urgent} for w in matching if f"[{w}]" in question]})
 
     return reply
 
@@ -45,11 +41,12 @@ async def test_one_call_judges_every_watch_of_the_items_kind_in_a_batch() -> Non
     assert decisions == [Decision(watch="w-parcel"), Decision(watch="w-school", matches=True, urgent=True)]
 
 
-async def test_per_watch_the_model_answers_a_closed_question_for_each() -> None:
+async def test_per_watch_each_call_lists_a_single_watch() -> None:
     model = answering("w-parcel")
     decisions = await decide(Algorithm.PER_WATCH, model, WATCHES, CARRIER, language="French")
     assert len(model.requests) == 2, "the doorbell watch does not watch mail"
-    assert 'told about: "the stroller parcel"' in model.requests[0].messages[0].content
+    asked = [r.messages[0].content for r in model.requests]
+    assert ["[w-parcel]" in q and "[w-school]" not in q for q in asked] == [True, False]
     assert decisions == [Decision(watch="w-parcel", matches=True), Decision(watch="w-school")]
 
 

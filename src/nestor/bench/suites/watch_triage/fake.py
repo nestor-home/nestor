@@ -23,7 +23,6 @@ from nestor.modules.cognition import (
 from nestor.runtime.plugins import AdapterSettings, Family, Plugin, Services
 
 SERVED = "fake/word-overlap-1"
-_SINGLE = re.compile(r'told about: "(?P<what>.*?)"\.')
 _LISTED = re.compile(r'^- \[(?P<id>[^\]]+)\] "(?P<what>.*)"$', re.MULTILINE)
 _URGENT = ("urgent", "today", "aujourd'hui", "immediately", "immediatement", "ce soir", "tonight")
 _COMMON_WORDS = (
@@ -53,14 +52,12 @@ class FakeTriageModel(ConversationModel):
         system = next((m.content for m in request.messages if m.role is Role.SYSTEM), "")
         item = _fold(" ".join(m.content for m in request.messages if m.role is Role.USER))
         urgent = any(word in item for word in _URGENT)
-        listed = _LISTED.findall(system)
-        if listed:
-            found = [{"watch": id, "urgent": urgent, "summary": "-"} for id, what in listed if _judge(what, item)]
-            answer = json.dumps({"matches": found})
-        else:
-            single = _SINGLE.search(system)
-            matches = single is not None and _judge(single["what"], item)
-            answer = json.dumps({"matches": matches, "urgent": matches and urgent, "summary": "-"})
+        found = [
+            {"watch": id, "urgent": urgent, "summary": "-"}
+            for id, what in _LISTED.findall(system)
+            if _judge(what, item)
+        ]
+        answer = json.dumps({"matches": found})
         yield TextDelta(answer)
         spent = Usage(
             input_tokens=len(" ".join(m.content for m in request.messages).split()), output_tokens=len(answer.split())

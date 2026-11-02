@@ -14,7 +14,6 @@ class Confusion:
     true_positives: int = 0
     false_positives: int = 0
     false_negatives: int = 0
-    true_negatives: int = 0
 
     def add(self, *, predicted: bool, expected: bool) -> None:
         if predicted and expected:
@@ -23,8 +22,6 @@ class Confusion:
             self.false_positives += 1
         elif expected:
             self.false_negatives += 1
-        else:
-            self.true_negatives += 1
 
     @property
     def precision(self) -> float | None:
