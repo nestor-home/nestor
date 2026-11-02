@@ -8,7 +8,7 @@ from nestor.core import ContractError, PersonId, utc_now
 from nestor.modules.channels import Address, InboundMessage, Sender
 from nestor.modules.cognition.model import ToolCall
 from nestor.modules.cognition.tools import Toolbox, ToolContext, ToolFailed
-from nestor.modules.conversation import Agent, Layer, ModelChoice, Persona
+from nestor.modules.conversation import Agent, Layer, ModelChoice, Persona, TurnContext
 from nestor.modules.household import Account, Household, Person
 from nestor.modules.journal import Journal
 from nestor.modules.memory import Memories, MemoryCorrected, MemoryForgotten, MemoryRecorded
@@ -139,10 +139,12 @@ async def test_beyond_its_budget_a_turn_adds_what_its_words_find_to_the_latest()
     await memories.remember("Le portail s'ouvre avec le code 1234")
     await memories.remember("Mathilde est végétarienne", about=MATHILDE.id)
     tools = MemoryTools(memories, HOUSEHOLD, recall=RecallSettings(recent=1))
-    assert (tools.layer, tools.found.layer) == (Layer.HOUSEHOLD, Layer.TURN)
 
-    shown = str(await tools.context(MATHIS, TELEGRAM, "Bonjour"))
-    assert "végétarienne" in shown and "1234" not in shown, "the latest, within the budget"
-    found = str(await tools.found.context(MATHIS, TELEGRAM, "Quel code pour le portail ?"))
-    assert "1234" in found and "végétarienne" not in found, "what the words find, without what is shown"
-    assert await tools.found.context(MATHIS, TELEGRAM, None) is None
+    def turn(said: str | None) -> TurnContext:
+        return TurnContext(person=MATHIS, address=TELEGRAM, said=said)
+
+    greeted = await tools.context(turn("Bonjour"))
+    assert "végétarienne" in greeted[Layer.HOUSEHOLD] and "1234" not in greeted[Layer.HOUSEHOLD], "the latest"
+    asked = await tools.context(turn("Quel code pour le portail ?"))
+    assert "1234" in asked[Layer.TURN] and "végétarienne" not in asked[Layer.TURN], "found, without what is shown"
+    assert Layer.TURN not in await tools.context(turn(None))

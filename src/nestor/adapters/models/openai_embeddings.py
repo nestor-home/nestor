@@ -9,20 +9,16 @@ Tested against OpenRouter only. With a hosted provider, the texts embedded (the 
 the house: a local server keeps them in.
 """
 
-import urllib.parse
 from collections.abc import Mapping, Sequence
 from typing import Any
 
 import httpx
-from pydantic import Field, PositiveFloat, PositiveInt, SecretStr, field_validator
+from pydantic import Field, PositiveFloat, PositiveInt
 
+from nestor.adapters.models.common import MAX_DETAIL, EndpointSettings, brand, detail, provider_error, retryable
 from nestor.core import ContractError, ProviderError
 from nestor.modules.cognition.embedding import Embedder, EmbeddingSpace, Vector
-from nestor.runtime.plugins import AdapterSettings, Family, Plugin, Services
-
-_KNOWN_HOSTS = ("openrouter.ai", "openai.com", "mistral.ai")
-_RETRYABLE = frozenset({408, 409, 425, 429})
-_MAX_DETAIL = 300
+from nestor.runtime.plugins import Family, Plugin, Services
 
 
 class OpenAICompatibleEmbedder(Embedder):
@@ -44,7 +40,7 @@ class OpenAICompatibleEmbedder(Embedder):
         read_timeout_s: float = 30.0,
         provider: str = "openai-compatible-embeddings",
     ) -> None:
-        self._base_url, self._api_key, self._model = base_url, api_key or None, model
+        self._base_url, self._api_key = base_url, api_key or None
         self._send_dimensions, self._batch_size = send_dimensions, batch_size
         self._extra_body = dict(extra_body or {})
         self._timeout = httpx.Timeout(read_timeout_s, connect=connect_timeout_s)
@@ -53,15 +49,14 @@ class OpenAICompatibleEmbedder(Embedder):
             model=model, dimensions=dimensions, query_prefix=query_prefix, document_prefix=document_prefix
         )
         self._client: httpx.AsyncClient | None = None
-        host = urllib.parse.urlsplit(base_url).hostname or ""
-        self.brand = next((h.split(".")[0] for h in _KNOWN_HOSTS if host == h or host.endswith(f".{h}")), None)
+        self.brand = brand(base_url)
 
     @property
     def space(self) -> EmbeddingSpace:
         return self._space
 
     def details(self) -> Mapping[str, str]:
-        return {"model": self._model, "dimensions": str(self._space.dimensions)}
+        return {"model": self._space.model, "dimensions": str(self._space.dimensions)}
 
     async def start(self) -> None:
         headers = {"Authorization": f"Bearer {self._api_key}"} if self._api_key else {}
@@ -88,7 +83,7 @@ class OpenAICompatibleEmbedder(Embedder):
             raise ContractError(f"{self._provider}: used before start()")
         if not inputs:
             return []
-        body: dict[str, object] = {"model": self._model, "input": inputs, "encoding_format": "float"}
+        body: dict[str, object] = {"model": self._space.model, "input": inputs, "encoding_format": "float"}
         if self._send_dimensions:
             body["dimensions"] = self._space.dimensions
         try:
@@ -99,9 +94,7 @@ class OpenAICompatibleEmbedder(Embedder):
             raise self._error(f"transport failure ({type(error).__name__}: {error})", transient=True) from error
         if response.is_error:
             status = response.status_code
-            raise self._error(
-                f"HTTP {status}: {response.text[:_MAX_DETAIL]}", transient=status in _RETRYABLE or status >= 500
-            )
+            raise self._error(f"HTTP {status}: {detail(response.content)}", transient=retryable(status))
         return self._vectors(response, len(inputs))
 
     def _vectors(self, response: httpx.Response, count: int) -> list[Vector]:
@@ -109,7 +102,7 @@ class OpenAICompatibleEmbedder(Embedder):
             data: list[dict[str, Any]] = sorted(response.json()["data"], key=lambda d: d.get("index", 0))
             vectors = [[float(x) for x in d["embedding"]] for d in data]
         except (ValueError, KeyError, TypeError):
-            raise self._error(f"malformed answer: {response.text[:_MAX_DETAIL]}", transient=True) from None
+            raise self._error(f"malformed answer: {response.text[:MAX_DETAIL]}", transient=True) from None
         if len(vectors) != count:
             raise self._error(f"{len(vectors)} vectors for {count} texts", transient=True)
         if any(len(v) != self._space.dimensions for v in vectors):
@@ -122,15 +115,12 @@ class OpenAICompatibleEmbedder(Embedder):
         return vectors
 
     def _error(self, message: str, *, transient: bool) -> ProviderError:
-        redacted = message.replace(self._api_key, "[redacted]") if self._api_key else message
-        return ProviderError(self._provider, redacted, transient=transient)
+        return provider_error(self._provider, self._api_key, message, transient=transient)
 
 
-class OpenAICompatibleEmbedderSettings(AdapterSettings):
-    """An embedding model's profile; `api_key` should come from the environment (none for a local server)."""
+class OpenAICompatibleEmbedderSettings(EndpointSettings):
+    """An embedding model's profile."""
 
-    base_url: str
-    api_key: SecretStr | None = None
     model: str
     dimensions: PositiveInt  # of the vectors it returns, or asks for with `send_dimensions`
     send_dimensions: bool = False  # ask the model for `dimensions` (Matryoshka models shorten their vectors)
@@ -140,11 +130,6 @@ class OpenAICompatibleEmbedderSettings(AdapterSettings):
     extra_body: dict[str, Any] = Field(default_factory=dict, json_schema_extra={"advanced": True})
     connect_timeout_s: PositiveFloat = Field(default=5.0, json_schema_extra={"advanced": True})
     read_timeout_s: PositiveFloat = Field(default=30.0, json_schema_extra={"advanced": True})
-
-    @field_validator("api_key", mode="before")
-    @classmethod
-    def _empty_is_absent(cls, value: object) -> object:
-        return None if value == "" else value
 
 
 def build(settings: OpenAICompatibleEmbedderSettings, name: str, services: Services) -> OpenAICompatibleEmbedder:
@@ -164,4 +149,4 @@ def build(settings: OpenAICompatibleEmbedderSettings, name: str, services: Servi
     )
 
 
-plugin = Plugin(Family.EMBEDDER, "openai-compatible-embeddings", OpenAICompatibleEmbedderSettings, build)
+plugin = Plugin(Family.MODEL, "openai-compatible-embeddings", OpenAICompatibleEmbedderSettings, build)

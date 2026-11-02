@@ -2,20 +2,12 @@
 `Embedder` and `VectorIndex` adapter must show."""
 
 import math
-import re
-import unicodedata
 from collections.abc import Mapping, Sequence
 from contextlib import AbstractAsyncContextManager
 
 from nestor.core import ProviderError
-from nestor.modules.cognition.embedding import Embedder, EmbeddingSpace, Vector, VectorIndex
-
-_WORD = re.compile(r"\w+")
-
-
-def _fold(text: str) -> list[str]:
-    plain = unicodedata.normalize("NFKD", text.casefold())
-    return _WORD.findall("".join(c for c in plain if not unicodedata.combining(c)))
+from nestor.modules.cognition.embedding import Embedder, EmbeddingSpace, Indexed, Vector, VectorIndex
+from nestor.testing.text import folded_words
 
 
 class ConceptEmbedder(Embedder):
@@ -25,12 +17,11 @@ class ConceptEmbedder(Embedder):
 
     name = "concept-embedder"
 
-    def __init__(self, concepts: Mapping[str, str], *, model: str = "concepts", fail: bool = False) -> None:
-        self._concepts = {word: concept for word, concept in concepts.items()}
+    def __init__(self, concepts: Mapping[str, str], *, model: str = "concepts") -> None:
+        self._concepts = dict(concepts)
         self._axes = {c: i for i, c in enumerate(sorted(set(concepts.values())))}
         self._space = EmbeddingSpace(model=model, dimensions=len(self._axes) + 1)
-        self.fail = fail
-        self.embedded: list[str] = []  # every text embedded, documents and questions
+        self.fail = False  # set to have it answer like a provider that is down
 
     @property
     def space(self) -> EmbeddingSpace:
@@ -45,10 +36,9 @@ class ConceptEmbedder(Embedder):
     def _vector(self, text: str) -> Vector:
         if self.fail:
             raise ProviderError(self.name, "embedder down", transient=True)
-        self.embedded.append(text)
         vector = [0.0] * self._space.dimensions
         vector[-1] = 0.01  # nothing known: still a direction
-        for word in _fold(text):
+        for word in folded_words(text):
             if (concept := self._concepts.get(word)) is not None:
                 vector[self._axes[concept]] += 1.0
         norm = math.sqrt(sum(x * x for x in vector))
@@ -98,26 +88,26 @@ class VectorIndexContract:
 
     async def test_the_nearest_items_of_a_kind_come_first(self) -> None:
         async with self.index() as index:
-            await index.put(self.SPACE, "memory", "east", "f1", [1.0, 0.0, 0.0])
-            await index.put(self.SPACE, "memory", "north", "f2", [0.0, 1.0, 0.0])
-            await index.put(self.SPACE, "episode", "e", "f3", [1.0, 0.0, 0.0])
+            await index.put(
+                self.SPACE, "memory", [Indexed("east", "f1", [1.0, 0.0, 0.0]), Indexed("north", "f2", [0.0, 1.0, 0.0])]
+            )
+            await index.put(self.SPACE, "episode", [Indexed("e", "f3", [1.0, 0.0, 0.0])])
             found = await index.nearest(self.SPACE, "memory", [0.9, 0.2, 0.0], 5)
         assert [item for item, _ in found] == ["east", "north"]
         assert found[0][1] < found[1][1], "nearest first, by cosine distance"
 
     async def test_an_item_put_again_is_replaced_and_its_fingerprint_kept(self) -> None:
         async with self.index() as index:
-            await index.put(self.SPACE, "memory", "a", "old", [1.0, 0.0, 0.0])
-            await index.put(self.SPACE, "memory", "a", "new", [0.0, 0.0, 1.0])
+            await index.put(self.SPACE, "memory", [Indexed("a", "old", [1.0, 0.0, 0.0])])
+            await index.put(self.SPACE, "memory", [Indexed("a", "new", [0.0, 0.0, 1.0])])
             assert await index.fingerprints(self.SPACE, "memory") == {"a": "new"}
             assert [i for i, _ in await index.nearest(self.SPACE, "memory", [0.0, 0.0, 1.0], 5)] == ["a"]
 
     async def test_a_deleted_item_leaves_every_space_and_other_spaces_can_be_dropped(self) -> None:
         async with self.index() as index:
-            await index.put(self.SPACE, "memory", "a", "f", [1.0, 0.0, 0.0])
-            await index.put(self.OTHER, "memory", "a", "f", [1.0, 0.0])
-            await index.put(self.OTHER, "memory", "b", "f", [0.0, 1.0])
-            await index.delete("memory", "a")
+            await index.put(self.SPACE, "memory", [Indexed("a", "f", [1.0, 0.0, 0.0])])
+            await index.put(self.OTHER, "memory", [Indexed("a", "f", [1.0, 0.0]), Indexed("b", "f", [0.0, 1.0])])
+            await index.delete("memory", {"a"})
             assert await index.fingerprints(self.SPACE, "memory") == {}
             assert await index.fingerprints(self.OTHER, "memory") == {"b": "f"}
             await index.keep_only(self.SPACE)

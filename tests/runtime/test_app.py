@@ -89,9 +89,11 @@ def with_embedder(tmp_path: Path, embedder: str, agent: str = "") -> Any:
 async def test_an_embedding_model_is_declared_with_the_others_and_finds_memories_by_meaning(tmp_path: Path) -> None:
     fakes = Fakes()
     nestor = Nestor(with_embedder(tmp_path, "sens"), fakes.registry())
-    assert nestor.config.roles()["written"] == "main", "the embedder never answers"
+    assert nestor.agent.models.written is nestor.models["main"], "the embedder never answers"
     async with nestor:
         await nestor.memories.remember("Mathis est végétarien.")
+        assert nestor.memories.index is not None
+        await nestor.memories.index.settled()  # embedded in the background
         assert [m.text for m in await nestor.memories.recall("Du jambon ?")] == ["Mathis est végétarien."]
     with pytest.raises(ConfigError, match=r"memory\.embedder names main, a model that does not embed"):
         Nestor(with_embedder(tmp_path, "main"), fakes.registry())

@@ -13,7 +13,7 @@ from nestor.core import PersonId, ProviderError, utc_now
 from nestor.modules.channels import Address, InboundMessage, Medium, Sender
 from nestor.modules.cognition.model import ModelRequest, ToolCall
 from nestor.modules.cognition.tools import Toolbox, ToolContext, ToolFailed
-from nestor.modules.conversation import Agent, ModelChoice, Persona
+from nestor.modules.conversation import Agent, ModelChoice, Persona, TurnContext
 from nestor.modules.household import Account, Household, Person
 from nestor.modules.initiative import (
     Courier,
@@ -274,7 +274,7 @@ async def test_the_agent_creates_lists_and_cancels_watches_through_its_tools() -
         context = ToolContext(address=TELEGRAM, person=MATHIS.id)
         by_name = {t.name: t for t in tools.tools()}
         listed = await by_name["list_watches"].run({}, context)
-        section = str(await tools.context(MATHIS, TELEGRAM))
+        section = str(await tools.context(TurnContext(person=MATHIS, address=TELEGRAM, said=None)))
         await by_name["cancel_watch"].run({"watch_id": watch.id}, context)
         with pytest.raises(ToolFailed, match="no active watch"):
             await by_name["cancel_watch"].run({"watch_id": watch.id}, context)

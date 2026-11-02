@@ -29,9 +29,10 @@ from nestor.modules.conversation import (
     FallbackSpoken,
     Layer,
     ModelChoice,
+    Sections,
+    TurnContext,
     UserTurn,
 )
-from nestor.modules.household import Person
 from nestor.modules.journal import Journal
 from nestor.testing.cognition.model import ScriptedModel
 
@@ -382,12 +383,12 @@ async def test_an_answer_to_a_delivery_sees_the_delivery(make_agent: MakeAgent, 
 
 async def test_instructions_carry_persona_channel_person_and_context(make_agent: MakeAgent) -> None:
     class Tasks(ContextProvider):
-        async def context(self, person: Person | None, address: Address, said: str | None = None) -> str | None:
-            return "Running tasks: none." if person else None
+        async def context(self, turn: TurnContext) -> Sections:
+            return {Layer.TURN: "Running tasks: none."} if turn.person else {}
 
     class Silent(ContextProvider):
-        async def context(self, person: Person | None, address: Address, said: str | None = None) -> str | None:
-            return None
+        async def context(self, turn: TurnContext) -> Sections:
+            return {}
 
     model = ScriptedModel("Oui.", "Oui.")
     agent = make_agent(model=model, context=[Tasks(), Silent()])
@@ -404,9 +405,9 @@ async def test_modules_look_things_up_with_the_last_words_of_the_conversation(ma
     looked_up: list[str | None] = []
 
     class Lookup(ContextProvider):
-        async def context(self, person: Person | None, address: Address, said: str | None = None) -> str | None:
-            looked_up.append(said)
-            return None
+        async def context(self, turn: TurnContext) -> Sections:
+            looked_up.append(turn.said)
+            return {}
 
     agent = make_agent("Des pâtes.", "Sans gluten, alors.", context=[Lookup()])
     await agent.respond(message("Je cuisine quoi pour Mathilde ?")).collect()
@@ -419,17 +420,15 @@ async def test_modules_look_things_up_with_the_last_words_of_the_conversation(ma
 
 async def test_the_instructions_run_from_what_never_changes_to_what_this_turn_brings(make_agent: MakeAgent) -> None:
     class Book(ContextProvider):
-        layer = Layer.HOUSEHOLD
-
         def guidance(self) -> str:
             return "Use the book tools."
 
-        async def context(self, person: Person | None, address: Address, said: str | None = None) -> str | None:
-            return "Books lent: Tintin."
+        async def context(self, turn: TurnContext) -> Sections:
+            return {Layer.HOUSEHOLD: "Books lent: Tintin."}
 
     class Tasks(ContextProvider):
-        async def context(self, person: Person | None, address: Address, said: str | None = None) -> str | None:
-            return f"Tasks for {person.name if person else 'nobody'}: none."
+        async def context(self, turn: TurnContext) -> Sections:
+            return {Layer.TURN: f"Tasks for {turn.person.name if turn.person else 'nobody'}: none."}
 
     model = ScriptedModel("Oui.", "Oui.")
     agent = make_agent(model=model, context=[Book(), Tasks()])

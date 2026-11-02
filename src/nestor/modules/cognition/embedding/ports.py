@@ -5,10 +5,10 @@ can always be rebuilt, for instance after switching to another model.
 """
 
 from abc import ABC, abstractmethod
-from collections.abc import Mapping, Sequence
+from collections.abc import Collection, Mapping, Sequence
 
 from nestor.core import Component
-from nestor.modules.cognition.embedding.types import EmbeddingSpace, Vector
+from nestor.modules.cognition.embedding.types import EmbeddingSpace, Indexed, Vector
 
 
 class Embedder(Component, ABC):
@@ -36,17 +36,17 @@ class VectorIndex(Component, ABC):
     text it was computed from, so that only changed texts are embedded again.
 
     Contract (checked by `nestor.testing.cognition.VectorIndexContract`):
-    - `put` inserts or replaces an item's vector in a space; `delete` removes it from every space;
+    - `put` inserts or replaces items' vectors in a space, all at once; `delete` removes items from every space;
     - `nearest` lists the closest items of a kind, nearest first, with their cosine distance;
     - `fingerprints` maps each item of a kind indexed in a space to its text's fingerprint;
     - `keep_only` drops every other space.
     """
 
     @abstractmethod
-    async def put(self, space: EmbeddingSpace, kind: str, item: str, fingerprint: str, vector: Vector) -> None: ...
+    async def put(self, space: EmbeddingSpace, kind: str, items: Sequence[Indexed]) -> None: ...
 
     @abstractmethod
-    async def delete(self, kind: str, item: str) -> None: ...
+    async def delete(self, kind: str, items: Collection[str]) -> None: ...
 
     @abstractmethod
     async def nearest(

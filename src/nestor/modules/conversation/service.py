@@ -30,7 +30,7 @@ from nestor.modules.conversation.conversations import Conversations
 from nestor.modules.conversation.events import AnswerCut, AssistantTurn, FallbackSpoken, UserTurn
 from nestor.modules.conversation.history import recent_history
 from nestor.modules.conversation.persona import Instructions, Persona
-from nestor.modules.conversation.ports import ContextProvider, Layer
+from nestor.modules.conversation.ports import ContextProvider, Layer, TurnContext
 from nestor.modules.conversation.types import FallbackReason, ReplyPhase
 from nestor.modules.household import Household, Person
 from nestor.modules.journal import Journal
@@ -47,7 +47,7 @@ class ChannelProfile:
         return self.conversation_ends_after_s or medium.conversation_ends_after_s
 
 
-LAST_WORDS = 3  # the person's messages a turn looks things up with, as NVIDIA's RAG concatenates them
+SAID_MESSAGES = 3  # the person's messages a turn looks things up with, as NVIDIA's RAG concatenates them
 
 
 @dataclass(frozen=True, slots=True)
@@ -171,10 +171,10 @@ class Agent(Assistant):
         return self._channels.get(address.channel, ChannelProfile())
 
     async def instructions(
-        self, address: Address, person: Person | None, medium: Medium, said: str | None = None
+        self, address: Address, person: Person | None, medium: Medium, said: str | None
     ) -> Instructions:
-        found = await asyncio.gather(*(p.context(person, address, said) for p in self._context))
-        layered = list(zip((p.layer for p in self._context), found, strict=True))
+        turn = TurnContext(person=person, address=address, said=said)
+        sections = await asyncio.gather(*(p.context(turn) for p in self._context))
         return self.persona.instructions(
             medium=medium,
             style=self.channel(address).style,
@@ -182,8 +182,8 @@ class Agent(Assistant):
             now=utc_now(),
             guidance=tuple(g for p in self._context if (g := p.guidance())),
             people=self.household.people,
-            household=tuple(text for layer, text in layered if text and layer is Layer.HOUSEHOLD),
-            turn=tuple(text for layer, text in layered if text and layer is Layer.TURN),
+            household=tuple(text for found in sections if (text := found.get(Layer.HOUSEHOLD))),
+            turn=tuple(text for found in sections if (text := found.get(Layer.TURN))),
         )
 
 
@@ -289,7 +289,7 @@ class AgentReply(Reply):
         history = await recent_history(
             agent.journal, self._address, conversation, max_events=agent.settings.history_events
         )
-        instructions = await agent.instructions(self._address, self._person, self._medium, self._last_words(history))
+        instructions = await agent.instructions(self._address, self._person, self._medium, self._said(history))
         messages = [
             Message(role=Role.SYSTEM, layers=(instructions.stable, instructions.household), content=instructions.turn),
             *history,
@@ -315,10 +315,10 @@ class AgentReply(Reply):
                 Message(role=Role.TOOL, content=o, tool_call_id=c.id) for c, o in zip(calls, outputs, strict=True)
             ]
 
-    def _last_words(self, history: Sequence[Message]) -> str | None:
+    def _said(self, history: Sequence[Message]) -> str | None:
         """What a module looks up for this turn: the person's last messages of the conversation, so that a
         follow-up ("and for her?") keeps its subject, or what the agent is asked to convey."""
-        said = [m.content for m in history if m.role is Role.USER][-LAST_WORDS:]
+        said = [m.content for m in history if m.role is Role.USER][-SAID_MESSAGES:]
         if self._instruction is not None:
             said.append(self._instruction)
         return " ".join(said) or None

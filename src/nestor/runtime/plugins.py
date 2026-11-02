@@ -28,8 +28,7 @@ ENTRY_POINTS = "nestor.adapters"
 
 
 class Family(StrEnum):
-    MODEL = "model"
-    EMBEDDER = "embedder"  # builds an `Embedder`: a model that turns text into vectors, declared in `models` too
+    MODEL = "model"  # builds a `ConversationModel` (it answers) or an `Embedder` (it turns text into vectors)
     EXECUTOR = "executor"
     CHANNEL = "channel"
     PRESENCE = "presence"
@@ -149,15 +148,6 @@ class Registry:
     def origin(self, family: Family, kind: str) -> Distribution | None:
         """Where an installed plugin comes from; `None` for one registered by code (tests)."""
         return self._origins.get((family, kind))
-
-    def family_of(self, kind: str, families: Iterable[Family]) -> Family:
-        """Which of the model `families` installs `kind`: whether it answers or embeds."""
-        chosen = tuple(families)
-        found = [f for f in chosen if (f, kind) in self._plugins]
-        if not found:
-            known = ", ".join(sorted({k for f, k in self._plugins if f in chosen})) or "none installed"
-            raise ContractError(f"unknown model kind {kind!r} (available: {known})")
-        return found[0]
 
     def kinds(self, family: Family) -> list[str]:
         """The kinds installed for a family, sorted."""

@@ -8,19 +8,19 @@ are the process environment's, completed by the `.env` next to the file (`enviro
 
 import os
 import re
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Collection, Mapping
 from pathlib import Path
 from typing import Any
 
 import yaml
 from dotenv import dotenv_values
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, ValidationInfo, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, ValidationInfo, field_validator
 
 from nestor.core import NestorError, PersonId
 from nestor.modules.channels import Address
 from nestor.modules.household import Account, Person
 from nestor.modules.initiative import QuietHours
-from nestor.modules.memory.recall import Strategy
+from nestor.modules.memory.recall import RecallSettings, Strategy
 
 _MODEL_KEY = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]*")
 _VARIABLE = re.compile(r"\$\{(?:(?P<secret>secret):)?(?P<name>[A-Za-z_][A-Za-z0-9_.-]*)\}")
@@ -144,15 +144,21 @@ class WatchesConfig(Section):
     model: str | None = Field(default=None, json_schema_extra=MODEL_REFERENCE)
 
 
+_RECALL = RecallSettings()
+
+
 class MemoryConfig(Section):
     """Which memories each turn's instructions carry (`memory-recall` bench): the latest up to `recent`, cached
-    with the household, then those the conversation's words find among the others."""
+    with the household, then those the person's last messages find among the others."""
 
-    strategy: Strategy = Strategy.BOTH
-    recent: int = Field(default=150, ge=0, le=1000)
-    found: int = Field(default=12, ge=0, le=50)
+    strategy: Strategy = _RECALL.strategy
+    recent: int = Field(default=_RECALL.recent, ge=0, le=1000)
+    found: int = Field(default=_RECALL.found, ge=0, le=50)
     # an embedding model of `models`: memories are then found by meaning as well as by words
     embedder: str | None = Field(default=None, json_schema_extra=MODEL_REFERENCE)
+
+    def recall(self) -> RecallSettings:
+        return RecallSettings(strategy=self.strategy, recent=self.recent, found=self.found)
 
 
 class NestorConfig(Section):
@@ -160,7 +166,7 @@ class NestorConfig(Section):
     persona: PersonaConfig
     household: tuple[PersonConfig, ...] = Field(min_length=1)
     # the models it may use, under names the household chooses; the roles below refer to them by name. A
-    # model's kind says whether it chats (`openai-compatible`) or embeds (`openai-compatible-embeddings`)
+    # model answers (`openai-compatible`) or embeds (`openai-compatible-embeddings`): each role checks which
     models: dict[str, ComponentConfig] = Field(min_length=1)
     agent: AgentConfig = Field(default=AgentConfig(), validate_default=True)
     watches: WatchesConfig = WatchesConfig()
@@ -201,26 +207,18 @@ class NestorConfig(Section):
         _known(info, {"embedder": value.embedder})
         return value
 
-    @model_validator(mode="after")
-    def _one_answering_model(self) -> "NestorConfig":
-        chat = [k for k in self.models if k != self.memory.embedder]
-        if not chat:
-            raise ValueError("models: none is left to answer once the embedder is set aside")
-        if len(chat) > 1 and not (self.agent.spoken or self.agent.written):
-            raise ValueError(
-                f"agent: name the model it answers with, among {', '.join(chat)}: `spoken`, `written` or both"
-            )
-        return self
-
-    def roles(self) -> dict[str, str]:
-        """The key of the model each role uses, defaults applied: `spoken`, `written`, `background`, `watches`."""
-        chat = [k for k in self.models if k != self.memory.embedder]  # an embedder never answers
-        sole = chat[0] if len(chat) == 1 else None
+    def roles(self, answering: Collection[str]) -> dict[str, str]:
+        """The key of the model each role uses, defaults applied: `spoken`, `written`, `background`, `watches`.
+        `answering` are the models that answer (not those that embed): with a single one, every role takes it."""
+        sole = next(iter(answering)) if len(answering) == 1 else None
         written = self.agent.written or self.agent.spoken or sole
-        spoken = self.agent.spoken or written
-        assert spoken and written  # checked on validation
+        if written is None:
+            raise ConfigError(
+                f"agent: name the model it answers with, among {', '.join(answering) or 'none'}: "
+                "`spoken`, `written` or both"
+            )
         return {
-            "spoken": spoken,
+            "spoken": self.agent.spoken or written,
             "written": written,
             "background": self.agent.background or written,
             "watches": self.watches.model or written,

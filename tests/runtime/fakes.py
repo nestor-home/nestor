@@ -55,7 +55,7 @@ class Fakes:
         flaky = Plugin(Family.CHANNEL, "flaky", FlakySettings, self._flaky)
         crashing = Plugin(Family.CHANNEL, "crashing", NoSettings, lambda s, name, x: CrashingChannel(name))
         inbox = Plugin(Family.INBOUND, "inbox", NoSettings, lambda s, name, x: QueuedSource(self.inbox))
-        concepts = Plugin(Family.EMBEDDER, "concepts", NoSettings, lambda s, n, x: self.embedder)
+        concepts = Plugin(Family.MODEL, "concepts", NoSettings, lambda s, n, x: self.embedder)
         return Registry(
             [self.model_plugin(), self.channel_plugin(), self.executor_plugin(), crashing, flaky, inbox, concepts]
         )

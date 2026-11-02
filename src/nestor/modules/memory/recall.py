@@ -4,13 +4,14 @@ it does not need.
 
 - The household layer carries every memory, the latest first, up to a budget: the same from a turn to the
   next, so the provider's prompt cache keeps it.
-- Beyond the budget, the turn layer adds those the conversation's last words find among the others.
+- Beyond the budget, the turn layer adds those the person's last messages find among the others.
 
 Measured by the `memory-recall` bench.
 """
 
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import NamedTuple
 
 from nestor.modules.memory.service import Memories
 from nestor.modules.memory.types import Memory
@@ -29,23 +30,18 @@ class RecallSettings:
     found: int = 12  # how many found memories at most, beyond those already shown
 
 
-async def latest(memories: Memories, settings: RecallSettings) -> list[Memory]:
-    """The household layer's memories."""
-    return await memories.recent(limit=settings.recent) if settings.strategy is not Strategy.SEARCH else []
+class TurnMemories(NamedTuple):
+    shown: list[Memory]  # the household layer's: the latest, up to the budget
+    found: list[Memory]  # the turn layer's: what was said finds among the others
 
 
-async def found(memories: Memories, words: str | None, settings: RecallSettings) -> list[Memory]:
-    """The turn layer's memories: those `words` find, without the ones the household layer already shows.
-    Every memory of the household may matter, not only those about whoever speaks: "what does Léa like?"."""
-    if not words or settings.strategy is Strategy.RECENT or not settings.found:
-        return []
-    shown = {m.id for m in await latest(memories, settings)}
-    if settings.strategy is Strategy.BOTH and len(shown) < settings.recent:
-        return []  # every memory is already shown: no search, no embedding call to wait for
-    hits = await memories.recall(words, limit=settings.found + len(shown))
-    return [m for m in hits if m.id not in shown][: settings.found]
-
-
-async def for_turn(memories: Memories, words: str | None, settings: RecallSettings) -> list[Memory]:
-    """Every memory a turn's instructions carry, the found ones first."""
-    return [*await found(memories, words, settings), *await latest(memories, settings)]
+async def for_turn(memories: Memories, said: str | None, settings: RecallSettings) -> TurnMemories:
+    """The memories a turn's instructions carry. Every memory of the household may matter, not only those
+    about whoever speaks ("what does Léa like?"). When every memory is already shown, nothing is searched, so
+    no embedding call is waited for."""
+    shown = await memories.recent(limit=settings.recent) if settings.strategy is not Strategy.SEARCH else []
+    everything_shown = settings.strategy is Strategy.BOTH and len(shown) < settings.recent
+    if not said or settings.strategy is Strategy.RECENT or not settings.found or everything_shown:
+        return TurnMemories(shown, [])
+    found = await memories.recall(said, limit=settings.found, exclude={m.id for m in shown})
+    return TurnMemories(shown, found)

@@ -10,7 +10,7 @@ from nestor.core import ContractError, PersonId
 from nestor.modules.channels import Address
 from nestor.modules.cognition.model import ToolCall
 from nestor.modules.cognition.tools import Toolbox, ToolContext, ToolFailed
-from nestor.modules.conversation import Agent, AssistantTurn, ModelChoice, Persona
+from nestor.modules.conversation import Agent, AssistantTurn, ModelChoice, Persona, TurnContext
 from nestor.modules.household import Household, Person
 from nestor.modules.initiative import (
     Schedule,
@@ -168,5 +168,5 @@ async def test_the_wake_ups_set_are_in_the_instructions_with_when_they_are_next_
     home = Home("D'accord.", now=paris(2, 7))
     async with home.book:
         await home.schedule(instruction="Arrose les plantes", times=["08:00"], days=["sat", "sun"])
-        section = str(await home.tools.context(MATHIS, CHAT))
+        section = str(await home.tools.context(TurnContext(person=MATHIS, address=CHAT, said=None)))
     assert "sat, sun at 08:00 (next: Saturday 07 November 08:00): Arrose les plantes" in section

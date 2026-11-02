@@ -5,7 +5,8 @@ in meaning (vectors) are fused by reciprocal rank, as Anthropic's contextual ret
 either list comes high, one in both comes first. Without an index, by words only.
 """
 
-from collections.abc import Sequence
+import asyncio
+from collections.abc import Collection, Sequence
 
 from nestor.core import ContractError, PersonId
 from nestor.modules.channels import Address, Exchange
@@ -50,7 +51,7 @@ class Memories:
         )
         await self.store.put(memory)
         if self.index:
-            await self.index.index(memory)
+            self.index.refresh()
         return memory
 
     async def correct(
@@ -63,7 +64,7 @@ class Memories:
         )
         await self.store.put(corrected)
         if self.index:
-            await self.index.index(corrected)
+            self.index.refresh()
         return corrected
 
     async def forget(self, memory_id: str, *, by: PersonId | None = None, exchange: Exchange | None = None) -> Memory:
@@ -71,20 +72,24 @@ class Memories:
         await self.journal.publish(MemoryForgotten(source="memory", memory_id=memory_id, by=by, exchange=exchange))
         await self.store.delete(memory_id)
         if self.index:
-            await self.index.unindex(memory_id)
+            self.index.refresh()
         return memory
 
-    async def recall(self, query: str, *, about: PersonId | None = None, limit: int = 8) -> list[Memory]:
-        depth = max(limit, CANDIDATES)
-        by_words = await self.store.search(query, about=about, limit=depth)
+    async def recall(
+        self, query: str, *, about: PersonId | None = None, limit: int = 8, exclude: Collection[str] = ()
+    ) -> list[Memory]:
+        """The best `limit` memories for `query`, leaving out those of `exclude` (already shown)."""
+        depth = max(limit, CANDIDATES) + len(exclude)
         if self.index is None:
-            return by_words[:limit]
+            return [m for m in await self.store.search(query, about=about, limit=depth) if m.id not in exclude][:limit]
+        by_words, nearest_ids = await asyncio.gather(
+            self.store.search(query, about=about, limit=depth), self.index.nearest(query, depth)
+        )
+        by_words = [m for m in by_words if m.id not in exclude]
         known = {m.id: m for m in by_words}
-        nearest: list[Memory] = []
-        for memory_id in await self.index.nearest(query, depth):
-            memory = known.get(memory_id) or await self.store.get(memory_id)
-            if memory is not None and (about is None or memory.about in (about, None)):
-                nearest.append(memory)
+        wanted = [i for i in nearest_ids if i not in exclude]
+        known |= {m.id: m for m in await self.store.get_many([i for i in wanted if i not in known])}
+        nearest = [m for i in wanted if (m := known.get(i)) and (about is None or m.about in (about, None))]
         return fused((by_words, nearest))[:limit]
 
     async def recent(self, *, about: PersonId | None = None, limit: int = 20) -> list[Memory]:

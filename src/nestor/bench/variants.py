@@ -30,6 +30,7 @@ from nestor.bench.ports import Knobs, Suite
 from nestor.core.i18n import Locale, Localizer, Message
 from nestor.modules.cognition import ConversationModel
 from nestor.modules.cognition.embedding import Embedder
+from nestor.runtime.app import build_models
 from nestor.runtime.config import NestorConfig, environment, validate_config
 from nestor.runtime.plugins import Family, Registry, Services
 
@@ -77,35 +78,21 @@ def load_variant[K: Knobs](
     merged = DEFAULTS | {k: _over(DEFAULTS.get(k), v) for k, v in fragment.items()}
     config = validate_config(merged, environ if environ is not None else environment(path), origin=str(path))
     services = Services(data_dir=config.data_dir, localizer=localizer, locale=Locale(config.persona.locale))
-    roles = config.roles()
-    models: dict[str, ConversationModel] = {}
+    built = build_models(config, registry, services)
+    roles = config.roles([k for k, m in built.items() if isinstance(m, ConversationModel)])
     described: dict[str, Mapping[str, Any]] = {}
-    for role in suite.models:
-        key = roles[role]
-        adapter = config.models[key]
-        plugin = registry.get(Family.MODEL, adapter.kind)
-        model = plugin.create(adapter.settings(), key, services)
-        if not isinstance(model, ConversationModel):
-            raise BenchError(Message.of("bench-variant-not-a-model", path=str(path), kind=adapter.kind))
-        models[role] = model
-        described[role] = {
-            "name": key,
-            "kind": adapter.kind,
-            **plugin.settings.model_validate(adapter.settings()).model_dump(mode="json"),
-        }
-    embedder = None
-    if suite.embedder and (key := config.memory.embedder):
-        profile = config.models[key]
-        plugin = registry.get(Family.EMBEDDER, profile.kind)
-        built = plugin.create(profile.settings(), key, services)
-        if not isinstance(built, Embedder):
-            raise BenchError(Message.of("bench-variant-not-an-embedder", path=str(path), kind=profile.kind))
-        embedder = built
-        described["embedder"] = {
-            "name": key,
-            "kind": profile.kind,
-            **plugin.settings.model_validate(profile.settings()).model_dump(mode="json"),
-        }
+
+    def chosen[M](role: str, key: str, expected: type[M]) -> M:
+        model, profile = built[key], config.models[key]
+        if not isinstance(model, expected):
+            raise BenchError(Message.of("bench-variant-not-a-model", path=str(path), kind=profile.kind))
+        settings = registry.get(Family.MODEL, profile.kind).settings.model_validate(profile.settings())
+        described[role] = {"name": key, "kind": profile.kind, **settings.model_dump(mode="json")}
+        return model
+
+    models = {role: chosen(role, roles[role], ConversationModel) for role in suite.models}
+    key = config.memory.embedder
+    embedder = chosen("embedder", key, Embedder) if suite.embedder and key else None
     return Variant(
         name=knobs.name or path.stem,
         source=path,

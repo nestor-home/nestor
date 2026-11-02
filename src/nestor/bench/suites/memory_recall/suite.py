@@ -35,26 +35,24 @@ from nestor.bench.types import Better, Case, CaseResult, Dataset, Finding, Metri
 from nestor.core import PersonId
 from nestor.core.i18n import Message
 from nestor.modules.memory import Memories, Memory
-from nestor.modules.memory.recall import RecallSettings, for_turn
+from nestor.modules.memory.recall import for_turn
 from nestor.runtime.app import open_memories
 
 NAME = "memory-recall"
 KINDS = ("direct", "paraphrase", "contradiction", "premise", "other-person", "none")
 
 
-class RecallKnobs(Knobs):
-    """Nothing of its own: a variant's `memory` section, embedder included, says how memories are found."""
+class MemoryRecall(Suite[tuple[Memory, ...], Knobs]):
+    """A variant's `memory` section, embedder included, says how memories are found: no knobs of its own."""
 
-
-class MemoryRecall(Suite[tuple[Memory, ...], RecallKnobs]):
     name = NAME
     description = "bench-memory-recall-description"
-    knobs = RecallKnobs
+    knobs = Knobs
     models = ()  # retrieval calls no language model
     embedder = True  # but searches by meaning with the variant's embedder
 
     def __init__(self) -> None:
-        self._stores: dict[str, tuple[tuple[Memory, ...], Memories]] = {}  # by variant
+        self._stores: dict[str, Memories] = {}  # by variant: a run reads one dataset
         self._stack = AsyncExitStack()  # open for the process: a bench run is a command of its own
 
     def dataset(self) -> Traversable:
@@ -89,23 +87,23 @@ class MemoryRecall(Suite[tuple[Memory, ...], RecallKnobs]):
                 raise BenchError(Message.of("bench-memory-recall-unknown", case=case.id, memory=", ".join(unknown)))
         return Dataset(version=records[0]["version"], cases=tuple(cases), shared=tuple(memories))
 
-    async def run(self, case: Case, shared: tuple[Memory, ...], trial: Trial[RecallKnobs]) -> Mapping[str, Any]:
+    async def run(self, case: Case, shared: tuple[Memory, ...], trial: Trial[Knobs]) -> Mapping[str, Any]:
         memories = await self._store(shared, trial)
-        settings = RecallSettings(**trial.config.memory.model_dump(exclude={"embedder"}))
-        injected = await for_turn(memories, str(case.data["said"]), settings)
-        return {"injected": [m.id for m in injected]}
+        shown, found = await for_turn(memories, str(case.data["said"]), trial.config.memory.recall())
+        return {"injected": [m.id for m in (*found, *shown)]}
 
-    async def _store(self, shared: tuple[Memory, ...], trial: Trial[RecallKnobs]) -> Memories:
+    async def _store(self, shared: tuple[Memory, ...], trial: Trial[Knobs]) -> Memories:
         """The household's memories in a store of the variant's own, filled and embedded once for the run."""
-        if (found := self._stores.get(trial.variant)) is not None and found[0] is shared:
-            return found[1]
+        if (found := self._stores.get(trial.variant)) is not None:
+            return found
         opened = open_memories(Path(tempfile.mkdtemp(prefix="nestor-bench-recall-")), trial.embedder)
         memories = await self._stack.enter_async_context(opened)
         for memory in shared:
             await memories.store.put(memory)
         if memories.index is not None:
-            await memories.index.reconcile()
-        self._stores[trial.variant] = (shared, memories)
+            memories.index.refresh()
+            await memories.index.settled()
+        self._stores[trial.variant] = memories
         return memories
 
     def summarise(self, dataset: Dataset[tuple[Memory, ...]], results: Sequence[CaseResult]) -> Summary:

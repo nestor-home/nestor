@@ -22,6 +22,7 @@ from nestor.modules.cognition import (
 from nestor.modules.cognition.delegation.assistant import Delegation
 from nestor.modules.cognition.delegation.service import INTERRUPTED, TaskManager
 from nestor.modules.cognition.tools import ToolContext
+from nestor.modules.conversation import TurnContext
 from nestor.modules.journal import Journal
 from nestor.testing.cognition import (
     FakeRemote,
@@ -241,9 +242,12 @@ async def test_the_instructions_say_what_executors_can_do_and_what_runs(journal:
     async with TaskManager(journal, []) as none:
         assert Delegation(none).tools() == ()
         assert "No executor is plugged in" in Delegation(none).guidance()
-        assert await Delegation(none).context(None, VOICE) is None
+        assert await Delegation(none).context(TurnContext(person=None, address=VOICE, said=None)) == {}
     async with TaskManager(journal, [ScriptedRemoteExecutor(duration_s=None)]) as tasks:
         await tasks.delegate("Réserver un resto", origin=VOICE)
-        guidance, running = Delegation(tasks).guidance(), str(await Delegation(tasks).context(None, VOICE))
+        guidance, running = (
+            Delegation(tasks).guidance(),
+            str(await Delegation(tasks).context(TurnContext(person=None, address=VOICE, said=None))),
+        )
     assert "scripted-remote: carry out scripted remote tasks" in guidance and "Réserver" not in guidance
     assert "Réserver un resto" in running

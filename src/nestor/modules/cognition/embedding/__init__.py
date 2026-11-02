@@ -2,6 +2,6 @@
 embedder, search is by words only."""
 
 from nestor.modules.cognition.embedding.ports import Embedder, VectorIndex
-from nestor.modules.cognition.embedding.types import EmbeddingSpace, Vector
+from nestor.modules.cognition.embedding.types import EmbeddingSpace, Indexed, Vector, fingerprint
 
-__all__ = ["Embedder", "EmbeddingSpace", "Vector", "VectorIndex"]
+__all__ = ["Embedder", "EmbeddingSpace", "Indexed", "Vector", "VectorIndex", "fingerprint"]

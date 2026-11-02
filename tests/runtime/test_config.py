@@ -49,13 +49,13 @@ TWO_MODELS = VALID.replace(
 
 
 def test_a_single_model_takes_every_role() -> None:
-    roles = parse_config(VALID, ENV).roles()
+    roles = parse_config(VALID, ENV).roles(["haiku"])
     assert roles == {"spoken": "haiku", "written": "haiku", "background": "haiku", "watches": "haiku"}
 
 
 def test_roles_take_the_models_named_and_fall_back_on_each_other() -> None:
     def roles(extra: str) -> dict[str, str]:
-        return parse_config(TWO_MODELS + extra, ENV).roles()
+        return parse_config(TWO_MODELS + extra, ENV).roles(["haiku", "local"])
 
     assert roles("agent: {spoken: haiku, written: local}\n") == {
         "spoken": "haiku",
@@ -74,7 +74,6 @@ def test_roles_take_the_models_named_and_fall_back_on_each_other() -> None:
 @pytest.mark.parametrize(
     ("extra", "error"),
     [
-        ("", "agent: name the model it answers with, among haiku, local"),
         ("agent: {written: sonnet}\n", "agent: Value error, written: no model named 'sonnet' in models (haiku, local)"),
         ("agent: {written: local}\nwatches: {model: mini}\n", "watches: Value error, model: no model named 'mini'"),
     ],
@@ -82,6 +81,13 @@ def test_roles_take_the_models_named_and_fall_back_on_each_other() -> None:
 def test_a_role_must_name_a_declared_model(extra: str, error: str) -> None:
     with pytest.raises(ConfigError, match=re.escape(error)):
         parse_config(TWO_MODELS + extra, ENV)
+
+
+def test_with_several_models_that_answer_the_agent_says_which() -> None:
+    config = parse_config(TWO_MODELS, ENV)
+    with pytest.raises(ConfigError, match="agent: name the model it answers with, among haiku, local"):
+        config.roles(["haiku", "local"])
+    assert config.roles(["haiku"])["written"] == "haiku", "a model that embeds is never a default"
 
 
 def test_a_model_name_is_one_word() -> None:

@@ -21,11 +21,18 @@ CONCEPTS = {
 }
 
 
+async def settled(memories: Memories) -> None:
+    """Until the vectors caught up with the memories: they are embedded in the background."""
+    assert memories.index is not None
+    await memories.index.settled()
+
+
 async def remembered(memories: Memories) -> dict[str, str]:
     texts = ("Mathilde est végétarienne.", "Le portail s'ouvre avec le code 1234.", "Le chat s'appelle Moustache.")
     ids = {}
     for text in texts:
         ids[text.split()[1]] = (await memories.remember(text, about=MATHILDE if "Mathilde" in text else None)).id
+    await settled(memories)
     return ids
 
 
@@ -47,6 +54,7 @@ async def test_without_an_embedder_or_while_it_is_down_memories_are_found_by_the
         assert [m.id for m in await memories.recall("code du portail")] == [ids["portail"]]
         assert await memories.recall("jambon") == [], "no word in common, no meaning: nothing"
         await memories.remember("Le code du garage est 5678.")  # remembered all the same, embedded later
+        await settled(memories)  # the attempt failed: it is tried again at the next change or start
     async with open_memories(tmp_path) as words_only:
         assert len(await words_only.recall("code")) == 2
 
@@ -56,8 +64,10 @@ async def test_vectors_follow_corrections_and_forgetting(tmp_path: Path) -> None
     async with embedder, open_memories(tmp_path, embedder) as memories:
         ids = await remembered(memories)
         await memories.correct(ids["chat"], "Le chat mange de la viande crue.")
+        await settled(memories)
         assert ids["chat"] in [m.id for m in await memories.recall("saucisse", limit=3)]
         await memories.forget(ids["est"])
+        await settled(memories)
         assert ids["est"] not in [m.id for m in await memories.recall("jambon", limit=3)]
 
 
@@ -71,8 +81,9 @@ async def test_a_new_model_embeds_every_memory_again_and_an_unchanged_one_is_nev
         assert await memories.index.reconcile() == 0, "every memory already has its vector"
     second = ConceptEmbedder(CONCEPTS, model="second")
     async with second, open_memories(tmp_path, second) as memories:
+        await settled(memories)  # reconciled at start: another space, everything again
         assert memories.index is not None
-        assert await memories.index.reconcile() == 3, "another space: everything again"
+        assert len(await memories.index.vectors.fingerprints(second.space, "memory")) == 3
         assert len(await memories.index.vectors.fingerprints(first.space, "memory")) == 0, "the old space is dropped"
         assert (await memories.recall("jambon", limit=1))[0].text == "Mathilde est végétarienne."
 

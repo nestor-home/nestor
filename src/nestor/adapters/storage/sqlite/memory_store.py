@@ -2,6 +2,7 @@
 
 import re
 import sqlite3
+from collections.abc import Collection
 from datetime import UTC, datetime
 
 from nestor.adapters.storage.sqlite.database import SQLiteDatabase
@@ -53,6 +54,15 @@ class SQLiteMemoryStore(MemoryStore):
             lambda c: c.execute(f"SELECT {_COLUMNS} FROM memories WHERE id = ?", (memory_id,)).fetchone()
         )
         return _memory(row) if row else None
+
+    async def get_many(self, memory_ids: Collection[str]) -> list[Memory]:
+        if not memory_ids:
+            return []
+        marks = ", ".join("?" * len(memory_ids))
+        rows = await self.database.read(
+            lambda c: c.execute(f"SELECT {_COLUMNS} FROM memories WHERE id IN ({marks})", tuple(memory_ids)).fetchall()
+        )
+        return [_memory(r) for r in rows]
 
     async def delete(self, memory_id: str) -> None:
         await self.database.write(lambda c: c.execute("DELETE FROM memories WHERE id = ?", (memory_id,)))

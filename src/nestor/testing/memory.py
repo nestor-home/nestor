@@ -1,16 +1,15 @@
 """Double and contract suite for the memory store."""
 
-import unicodedata
+from collections.abc import Collection
 
 from nestor.core import PersonId
 from nestor.modules.memory import Memory, MemoryStore
+from nestor.testing.text import folded_words
 
 
 def words(text: str) -> set[str]:
-    """Lower-cased words without accents: how memory search compares text."""
-    plain = unicodedata.normalize("NFKD", text.casefold())
-    plain = "".join(c for c in plain if not unicodedata.combining(c))
-    return {w for w in "".join(c if c.isalnum() else " " for c in plain).split() if len(w) > 1}
+    """Lower-cased words without accents, of two letters or more: how memory search compares text."""
+    return {w for w in folded_words(text) if len(w) > 1}
 
 
 class InMemoryMemoryStore(MemoryStore):
@@ -24,6 +23,9 @@ class InMemoryMemoryStore(MemoryStore):
 
     async def get(self, memory_id: str) -> Memory | None:
         return self.memories.get(memory_id)
+
+    async def get_many(self, memory_ids: Collection[str]) -> list[Memory]:
+        return [m for i in memory_ids if (m := self.memories.get(i)) is not None]
 
     async def delete(self, memory_id: str) -> None:
         self.memories.pop(memory_id, None)

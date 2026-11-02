@@ -4,11 +4,9 @@ from collections.abc import Mapping, Sequence
 from datetime import timedelta
 
 from nestor.core import utc_now
-from nestor.modules.channels import Address
 from nestor.modules.cognition.model import ToolSpec
 from nestor.modules.cognition.tools import Risk, Tool, ToolContext, ToolFailed, ToolProvider
-from nestor.modules.conversation import ContextProvider, Layer
-from nestor.modules.household import Person
+from nestor.modules.conversation import ContextProvider, Layer, Sections, TurnContext
 from nestor.modules.initiative.watches.book import WatchBook
 from nestor.modules.initiative.watches.types import Watch
 
@@ -51,18 +49,16 @@ class WatchTools(ToolProvider, ContextProvider):
             Tool(spec=ToolSpec("cancel_watch", "Stop a watch.", cancel), run=self._cancel, risk=Risk.WRITE),
         )
 
-    layer = Layer.HOUSEHOLD  # the watches change when one is created or ends
-
     def guidance(self) -> str:
         if not self.book.kinds:
             return NO_SOURCE
         return HOW_TO_WATCH.format(kinds=", ".join(sorted(self.book.kinds)))
 
-    async def context(self, person: Person | None, address: Address, said: str | None = None) -> str | None:
+    async def context(self, turn: TurnContext) -> Sections:
         if not self.book.watches:
-            return None
+            return {}
         listed = "\n".join(f"- [{w.id}] {w.what}" for w in self.book.watches.values())
-        return f"Active watches:\n{listed}"
+        return {Layer.HOUSEHOLD: f"Active watches:\n{listed}"}  # they change when one is created or ends
 
     async def _create(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
         kinds = arguments.get("kinds") or sorted(self.book.kinds)

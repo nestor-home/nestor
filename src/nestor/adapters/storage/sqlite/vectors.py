@@ -7,11 +7,11 @@ milliseconds (measured: 4 ms for 5,000 of 768 dimensions), no approximate index 
 import re
 import sqlite3
 import struct
-from collections.abc import Mapping
+from collections.abc import Collection, Mapping, Sequence
 
 from nestor.adapters.storage.sqlite.database import SQLiteDatabase
 from nestor.core import ContractError
-from nestor.modules.cognition.embedding import EmbeddingSpace, Vector, VectorIndex
+from nestor.modules.cognition.embedding import EmbeddingSpace, Indexed, Vector, VectorIndex
 
 _PREFIX = "vectors_"
 _TABLE = re.compile(rf"^{_PREFIX}[0-9a-f]{{16}}$")
@@ -47,25 +47,30 @@ class SQLiteVectorIndex(VectorIndex):
 
         await self.database.read(load)
 
-    async def put(self, space: EmbeddingSpace, kind: str, item: str, fingerprint: str, vector: Vector) -> None:
-        if len(vector) != space.dimensions:
-            raise ContractError(f"a vector of {len(vector)} dimensions in a space of {space.dimensions}")
+    async def put(self, space: EmbeddingSpace, kind: str, items: Sequence[Indexed]) -> None:
+        if wrong := next((i for i in items if len(i.vector) != space.dimensions), None):
+            raise ContractError(f"a vector of {len(wrong.vector)} dimensions in a space of {space.dimensions}")
+        if not items:
+            return
         table = await self._create(space)
 
-        def write(connection: sqlite3.Connection) -> None:
-            key = f"{kind}:{item}"
-            connection.execute(f"DELETE FROM {table} WHERE id = ?", (key,))
-            connection.execute(
+        def write(connection: sqlite3.Connection) -> None:  # vec0 has no upsert: replaced by delete and insert
+            connection.executemany(f"DELETE FROM {table} WHERE id = ?", [(f"{kind}:{i.item}",) for i in items])
+            connection.executemany(
                 f"INSERT INTO {table} (id, embedding, kind, item, fingerprint) VALUES (?, ?, ?, ?, ?)",
-                (key, _blob(vector), kind, item, fingerprint),
+                [(f"{kind}:{i.item}", _blob(i.vector), kind, i.item, i.fingerprint) for i in items],
             )
 
         await self.database.write(write)
 
-    async def delete(self, kind: str, item: str) -> None:
+    async def delete(self, kind: str, items: Collection[str]) -> None:
+        if not items:
+            return
+
         def remove(connection: sqlite3.Connection) -> None:
+            keys = [(f"{kind}:{item}",) for item in items]
             for table in _tables(connection):
-                connection.execute(f"DELETE FROM {table} WHERE id = ?", (f"{kind}:{item}",))
+                connection.executemany(f"DELETE FROM {table} WHERE id = ?", keys)
 
         await self.database.write(remove)
 
