@@ -14,3 +14,7 @@ data/
 
 # the admin SPA build (web/), produced by `pnpm build`
 src/nestor/admin/static/app/
+
+# `nestor bench`: run results and recorded model replies, relative to where it runs
+bench-results/
+.bench-cache/

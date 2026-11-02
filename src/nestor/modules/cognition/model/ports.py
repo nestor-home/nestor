@@ -15,7 +15,8 @@ class ConversationModel(Component, ABC):
     """Streams a reply to a request.
 
     Contract (checked by `nestor.testing.cognition.ConversationModelContract`):
-    - the stream yields any number of `TextDelta` and `ToolCallRequested`, then exactly one `Finished`;
+    - the stream yields any number of `TextDelta` and `ToolCallRequested`, then exactly one `Finished`,
+      which carries the usage and the model that answered when the provider reports them;
     - closing the stream early (`aclose`, on barge-in) stops generation and releases the request;
     - a provider failure raises `ProviderError`, never a vendor exception.
     """

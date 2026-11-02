@@ -32,6 +32,7 @@ from nestor.modules.cognition import (
     ToolCall,
     ToolCallRequested,
     ToolSpec,
+    Usage,
 )
 from nestor.runtime.plugins import AdapterSettings, Family, Plugin, Services
 
@@ -149,6 +150,8 @@ class _ChunkDecoder:
         self._error = error
         self._calls: dict[int, _PartialCall] = {}
         self._finish: str | None = None
+        self._usage: Usage | None = None
+        self._model: str | None = None
 
     async def outputs(self, lines: AsyncIterator[str]) -> AsyncGenerator[ModelOutput]:
         async for line in lines:
@@ -164,7 +167,7 @@ class _ChunkDecoder:
                 raise self._error("stream ended before the reply was finished", transient=True)
         for call in self._completed_calls():
             yield ToolCallRequested(call)
-        yield Finished(_FINISH_REASONS.get(self._finish or "stop", FinishReason.STOP))
+        yield Finished(_FINISH_REASONS.get(self._finish or "stop", FinishReason.STOP), self._usage, self._model)
 
     def _parse(self, data: str) -> dict[str, Any]:
         try:
@@ -180,6 +183,10 @@ class _ChunkDecoder:
             code = error.get("code") if isinstance(error, dict) else None
             transient = not isinstance(code, int) or _retryable(code)
             raise self._error(f"error in stream: {_message_of(error)}", transient=transient)
+        if isinstance(model := chunk.get("model"), str) and model:
+            self._model = model
+        if isinstance(usage := chunk.get("usage"), dict):
+            self._usage = _usage(usage) or self._usage
         for choice in chunk.get("choices") or ():
             delta = choice.get("delta") or {}
             if text := delta.get("content"):
@@ -236,6 +243,20 @@ def _wire_call(call: ToolCall) -> dict[str, object]:
 def _wire_tool(tool: ToolSpec) -> dict[str, object]:
     function = {"name": tool.name, "description": tool.description, "parameters": dict(tool.parameters)}
     return {"type": "function", "function": function}
+
+
+def _usage(usage: dict[str, Any]) -> Usage | None:
+    """The usage of a chunk (OpenRouter sends it on the last one, others with `stream_options.include_usage`),
+    with OpenRouter's `cost`."""
+    tokens = usage.get("prompt_tokens"), usage.get("completion_tokens")
+    if not all(isinstance(t, int) for t in tokens):
+        return None
+    cost = usage.get("cost")
+    return Usage(
+        input_tokens=int(tokens[0] or 0),
+        output_tokens=int(tokens[1] or 0),
+        cost=float(cost) if isinstance(cost, int | float) else None,
+    )
 
 
 def _detail(body: bytes) -> str:

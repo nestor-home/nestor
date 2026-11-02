@@ -56,6 +56,9 @@ mcp = "nestor.adapters.tools.mcp.plugin:plugin"
 google = "nestor.adapters.connectors.google:plugin"
 imap = "nestor.adapters.connectors.imap:plugin"
 
+[project.entry-points."nestor.benches"]
+watch-triage = "nestor.bench.suites.watch_triage:suite"
+
 [project.urls]
 Homepage = "https://nestorhome.dev"
 Source = "https://github.com/nestor-home/nestor"
