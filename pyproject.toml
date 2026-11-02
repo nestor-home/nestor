@@ -23,6 +23,7 @@ dependencies = [
     "python-multipart>=0.0.32",
     "pyyaml>=6.0.3",
     "ruamel-yaml>=0.18",
+    "sqlite-vec>=0.1.9",
     "uvicorn>=0.54.0",
     "websockets>=17",
 ]
@@ -48,6 +49,7 @@ nestor = "nestor.cli:main"
 
 [project.entry-points."nestor.adapters"]
 openai-compatible = "nestor.adapters.models.openai_compatible:plugin"
+openai-compatible-embeddings = "nestor.adapters.models.openai_embeddings:plugin"
 hermes = "nestor.adapters.executors.hermes:plugin"
 telegram = "nestor.adapters.channels.telegram:plugin"
 satellites = "nestor.adapters.channels.satellites:plugin"

@@ -74,7 +74,7 @@ def test_roles_take_the_models_named_and_fall_back_on_each_other() -> None:
 @pytest.mark.parametrize(
     ("extra", "error"),
     [
-        ("", "agent: Value error, name the model it answers with, among haiku, local"),
+        ("", "agent: name the model it answers with, among haiku, local"),
         ("agent: {written: sonnet}\n", "agent: Value error, written: no model named 'sonnet' in models (haiku, local)"),
         ("agent: {written: local}\nwatches: {model: mini}\n", "watches: Value error, model: no model named 'mini'"),
     ],

@@ -84,6 +84,10 @@ class SQLiteMemoryStore(MemoryStore):
 
         return [_memory(r) for r in await self.database.read(query)]
 
+    async def everything(self) -> list[Memory]:
+        rows = await self.database.read(lambda c: c.execute(f"SELECT {_COLUMNS} FROM memories").fetchall())
+        return [_memory(r) for r in rows]
+
 
 def _memory(row: tuple) -> Memory:
     id_, text, about, source, told_by, created_at, updated_at = row

@@ -8,6 +8,7 @@ from nestor.adapters.storage.sqlite.database import SQLiteDatabase
 from nestor.adapters.storage.sqlite.event_log import SQLiteEventLog
 from nestor.adapters.storage.sqlite.memory_store import SQLiteMemoryStore
 from nestor.adapters.storage.sqlite.vault import SealedReader, SQLiteVault
+from nestor.adapters.storage.sqlite.vectors import SQLiteVectorIndex
 from nestor.adapters.storage.sqlite.verifiers import SQLiteVerifierStore
 
 __all__ = [
@@ -16,6 +17,7 @@ __all__ = [
     "SQLiteEventLog",
     "SQLiteMemoryStore",
     "SQLiteVault",
+    "SQLiteVectorIndex",
     "SQLiteVerifierStore",
     "SealedReader",
 ]

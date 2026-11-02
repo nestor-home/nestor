@@ -42,6 +42,7 @@ bench-dataset-invalid-line = { $path }, line { $line }: not a JSON object
 bench-variant-unreadable = { $path } is not a YAML mapping (a fragment of nestor.yaml)
 bench-variant-invalid = { $path }, section bench: { $problems }
 bench-variant-not-a-model = { $path }: { $kind } does not build a conversation model
+bench-variant-not-an-embedder = { $path }: { $kind } does not build an embedding model
 bench-no-recording = no recorded reply for case { $case } ({ $role }): run it once without --replay
 bench-cache-unreadable = the cache file { $path } is damaged: delete it
 bench-results-unreadable = { $path } is not a bench run (no readable results.json)

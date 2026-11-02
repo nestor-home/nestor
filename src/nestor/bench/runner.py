@@ -84,6 +84,8 @@ async def run_suite[S](
         for variant in variants:
             for model in variant.models.values():
                 await stack.enter_async_context(model)
+            if variant.embedder is not None:
+                await stack.enter_async_context(variant.embedder)
         measured = {v.name: _measured(v, cache, plan.replay) for v in variants}
 
         async def one(case: Case, variant: Variant[Any], repetition: int) -> None:
@@ -94,6 +96,7 @@ async def run_suite[S](
                 models=measured[variant.name],
                 repetition=repetition,
                 seed=plan.seed,
+                embedder=variant.embedder,
             )
             async with gate:
                 log = CaseLog(case=case.id, repetition=repetition, seed=plan.seed)

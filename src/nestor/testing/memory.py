@@ -41,6 +41,9 @@ class InMemoryMemoryStore(MemoryStore):
         kept = [m for m in self.memories.values() if about is None or m.about in (about, None)]
         return sorted(kept, key=lambda m: m.updated_at, reverse=True)[:limit]
 
+    async def everything(self) -> list[Memory]:
+        return list(self.memories.values())
+
 
 class MemoryStoreContract:
     """Behaviour every `MemoryStore` must show. Implement `store()`; it is used as a context manager."""

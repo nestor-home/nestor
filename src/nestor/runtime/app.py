@@ -19,6 +19,7 @@ from nestor.adapters.storage.sqlite import (
     SQLiteEventLog,
     SQLiteMemoryStore,
     SQLiteVault,
+    SQLiteVectorIndex,
     SQLiteVerifierStore,
 )
 from nestor.adapters.storage.sqlite.vault import GENERATE
@@ -30,6 +31,7 @@ from nestor.modules.channels import Channel
 from nestor.modules.cognition import ConversationModel, Executor
 from nestor.modules.cognition.delegation.assistant import Delegation
 from nestor.modules.cognition.delegation.service import TaskManager
+from nestor.modules.cognition.embedding import Embedder
 from nestor.modules.cognition.tools import Toolbox, ToolProvider
 from nestor.modules.connectors import ConnectedInbound, Connections, Connector, ConnectorTools, TokenEndpoint
 from nestor.modules.conversation import Agent, ChannelProfile, ModelChoice, Persona
@@ -53,7 +55,7 @@ from nestor.modules.initiative import (
 )
 from nestor.modules.initiative.watches.assistant import WatchTools
 from nestor.modules.journal import Journal
-from nestor.modules.memory import Memories
+from nestor.modules.memory import Memories, MemoryIndex
 from nestor.modules.memory.assistant import MemoryTools
 from nestor.modules.memory.recall import RecallSettings
 from nestor.modules.satellites import Pairing, SatelliteHost
@@ -64,6 +66,7 @@ log = logging.getLogger("nestor")
 
 SECRET_KEY = "NESTOR_SECRET_KEY"
 DATABASE = "nestor.db"
+MODEL_FAMILIES = (Family.MODEL, Family.EMBEDDER)  # a model's kind says which: it answers, or it embeds
 
 
 def database_path(data_dir: Path) -> Path:
@@ -116,11 +119,15 @@ class Nestor:
             self.journal, SQLiteVerifierStore(self.database), self.household, SQLiteActivityStore(self.database)
         )
 
-        self.models = {
-            key: _build(self.plugged, registry, Family.MODEL, c, key, services, ConversationModel)
-            for key, c in config.models.items()
-        }
+        self.models = {key: _model(self.plugged, registry, c, key, services) for key, c in config.models.items()}
         roles = config.roles()
+
+        def model(role: str, key: str) -> ConversationModel:
+            found = self.models[key]
+            if not isinstance(found, ConversationModel):
+                raise ConfigError(f"{role} names {key}, a model that embeds and cannot answer")
+            return found
+
         self.executors = [
             _build(self.plugged, registry, Family.EXECUTOR, c, c.name or c.kind, services, Executor)
             for c in config.executors
@@ -171,8 +178,17 @@ class Nestor:
                 channel.host_satellites(self.pairing, self.journal)
         self.tasks = TaskManager(self.journal, self.executors)
         delegation = Delegation(self.tasks)
-        self.memories = Memories(self.journal, SQLiteMemoryStore(self.database))
-        recall = RecallSettings(**config.memory.model_dump())
+        memory_store = SQLiteMemoryStore(self.database)
+        self.vectors: SQLiteVectorIndex | None = None
+        self.memory_index: MemoryIndex | None = None
+        if config.memory.embedder:
+            embedder = self.models[config.memory.embedder]
+            if not isinstance(embedder, Embedder):
+                raise ConfigError(f"memory.embedder names {config.memory.embedder}, a model that does not embed")
+            self.vectors = SQLiteVectorIndex(self.database)
+            self.memory_index = MemoryIndex(memory_store, embedder, self.vectors)
+        self.memories = Memories(self.journal, memory_store, self.memory_index)
+        recall = RecallSettings(**config.memory.model_dump(exclude={"embedder"}))
         memory = MemoryTools(self.memories, self.household, recall=recall)
         self.watch_book = WatchBook(self.journal, kinds=(k for source in self.sources for k in source.kinds))
         watch_tools = WatchTools(self.watch_book)
@@ -183,9 +199,9 @@ class Nestor:
         connector_tools = [ConnectorTools(self.connections)] if self.connections else []
         self.agent = Agent(
             models=ModelChoice(
-                spoken=self.models[roles["spoken"]],
-                written=self.models[roles["written"]],
-                background=self.models[roles["background"]],
+                spoken=model("agent.spoken", roles["spoken"]),
+                written=model("agent.written", roles["written"]),
+                background=model("agent.background", roles["background"]),
             ),
             persona=Persona(**{**config.persona.model_dump(), "locale": Locale(config.persona.locale)}),
             localizer=self.localizer,
@@ -227,7 +243,7 @@ class Nestor:
             self.watch_book,
             self.household,
             self.courier,
-            Triage(self.models[roles["watches"]], language=config.persona.language),
+            Triage(model("watches.model", roles["watches"]), language=config.persona.language),
             self.sources,
         )
         self.activity = ActivityMonitor(
@@ -255,6 +271,7 @@ class Nestor:
             self.pairing,
             *connections,
             *self.models.values(),
+            *(c for c in (self.vectors, self.memory_index) if c is not None),  # after its embedder
             *self.executors,
             *self.tools,
             *presence,
@@ -328,6 +345,15 @@ def _connectors(
     return connectors
 
 
+def _model(
+    plugged: list[Plugged], registry: Registry, config: ComponentConfig, key: str, services: Services
+) -> ConversationModel | Embedder:
+    """A model of `models`, built by the family its kind belongs to."""
+    if registry.family_of(config.kind, MODEL_FAMILIES) is Family.MODEL:
+        return _build(plugged, registry, Family.MODEL, config, key, services, ConversationModel)
+    return _build(plugged, registry, Family.EMBEDDER, config, key, services, Embedder)
+
+
 def _build[C](
     plugged: list[Plugged],
     registry: Registry,
@@ -360,13 +386,17 @@ async def open_accounts(data_dir: Path, people: Iterable[Person]) -> AsyncGenera
 
 
 @contextlib.asynccontextmanager
-async def open_memories(data_dir: Path) -> AsyncGenerator[Memories]:
-    """The memories kept in `data_dir`, searched as a running instance searches them, without the rest of
-    Nestor (a bench measures recall on them)."""
+async def open_memories(data_dir: Path, embedder: Embedder | None = None) -> AsyncGenerator[Memories]:
+    """The memories kept in `data_dir`, searched as a running instance searches them (by meaning too with an
+    `embedder`, started by the caller), without the rest of Nestor: a bench measures recall on them."""
     database = SQLiteDatabase(database_path(data_dir))
     store = SQLiteMemoryStore(database)
-    async with database, store:
-        yield Memories(Journal(SQLiteEventLog(database)), store)
+    async with database, store, AsyncExitStack() as stack:
+        index = None
+        if embedder is not None:
+            vectors = await stack.enter_async_context(SQLiteVectorIndex(database))
+            index = MemoryIndex(store, embedder, vectors)  # reconciled by whoever fills the store
+        yield Memories(Journal(SQLiteEventLog(database)), store, index)
 
 
 class Restart:

@@ -66,6 +66,20 @@ watches:
   model: haiku      # sorts incoming items; the written model by default
 ```
 
+An embedding model is declared with the others; its kind says it embeds. With `memory.embedder`, memories are
+found by meaning as well as by words (FTS5 and vectors, fused by reciprocal rank); without it, by words only:
+
+```yaml
+models:
+  te3: {kind: openai-compatible-embeddings, base_url: https://openrouter.ai/api/v1, api_key: ${MODEL_API_KEY}, model: openai/text-embedding-3-small, dimensions: 1536}
+memory:
+  embedder: te3     # any model you like: Nestor recommends none
+```
+
+Vectors live in the instance's SQLite database (sqlite-vec), one table per embedding space (the model served, its
+dimension, its prefixes): switching models embeds every memory again at the next start, and the old vectors go.
+With a hosted model, memories leave the house to be embedded.
+
 The medium belongs to the turn: a satellite someone types on gets the written model, the same satellite
 spoken to gets the spoken one.
 

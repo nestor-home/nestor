@@ -5,8 +5,9 @@ change; the store is the searchable projection the agent reads.
 """
 
 from nestor.modules.memory.events import MemoryCorrected, MemoryForgotten, MemoryRecorded
+from nestor.modules.memory.index import MemoryIndex
 from nestor.modules.memory.ports import MemoryStore
 from nestor.modules.memory.service import Memories
 from nestor.modules.memory.types import Memory
 
-__all__ = ["Memories", "Memory", "MemoryCorrected", "MemoryForgotten", "MemoryRecorded", "MemoryStore"]
+__all__ = ["Memories", "Memory", "MemoryCorrected", "MemoryForgotten", "MemoryIndex", "MemoryRecorded", "MemoryStore"]

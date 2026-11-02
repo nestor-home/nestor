@@ -42,6 +42,7 @@ bench-dataset-invalid-line = { $path }, ligne { $line } : pas un objet JSON
 bench-variant-unreadable = { $path } n'est pas un dictionnaire YAML (un fragment de nestor.yaml)
 bench-variant-invalid = { $path }, section bench : { $problems }
 bench-variant-not-a-model = { $path } : { $kind } ne construit pas un modèle de conversation
+bench-variant-not-an-embedder = { $path } : { $kind } ne construit pas un modèle d'embedding
 bench-no-recording = aucune réponse enregistrée pour le cas { $case } ({ $role }) : lancez-le une fois sans --replay
 bench-cache-unreadable = le fichier de cache { $path } est abîmé : supprimez-le
 bench-results-unreadable = { $path } n'est pas une course (pas de results.json lisible)

@@ -18,7 +18,7 @@ from nestor.modules.cognition import Outcome, TaskDelivered
 from nestor.modules.cognition.model import ModelRequest, ToolCall
 from nestor.modules.conversation import AssistantTurn
 from nestor.runtime import Backoff, Nestor, Registry
-from nestor.runtime.config import parse_config
+from nestor.runtime.config import ConfigError, parse_config
 from nestor.runtime.plugins import Family, Plugin, Services
 
 from .fakes import Fakes, NoSettings
@@ -78,6 +78,25 @@ def test_an_unknown_adapter_kind_lists_what_is_installed(tmp_path: Path) -> None
         ContractError, match="unknown channel kind 'carrier-pigeon' \\(available: crashing, flaky, memory\\)"
     ):
         Nestor(parse_config(text, {}), Fakes().registry())
+
+
+def with_embedder(tmp_path: Path, embedder: str, agent: str = "") -> Any:
+    models = "models: {main: {kind: scripted, replies: []}, sens: {kind: concepts}}"
+    text = CONFIG.format(data_dir=tmp_path, replies=[]).replace("models: {main: {kind: scripted, replies: []}}", models)
+    return parse_config(f"{text}memory: {{embedder: {embedder}}}\n{agent}", {})
+
+
+async def test_an_embedding_model_is_declared_with_the_others_and_finds_memories_by_meaning(tmp_path: Path) -> None:
+    fakes = Fakes()
+    nestor = Nestor(with_embedder(tmp_path, "sens"), fakes.registry())
+    assert nestor.config.roles()["written"] == "main", "the embedder never answers"
+    async with nestor:
+        await nestor.memories.remember("Mathis est végétarien.")
+        assert [m.text for m in await nestor.memories.recall("Du jambon ?")] == ["Mathis est végétarien."]
+    with pytest.raises(ConfigError, match=r"memory\.embedder names main, a model that does not embed"):
+        Nestor(with_embedder(tmp_path, "main"), fakes.registry())
+    with pytest.raises(ConfigError, match=r"agent\.spoken names sens, a model that embeds"):
+        Nestor(with_embedder(tmp_path, "sens", "agent: {written: sens}\n"), fakes.registry())
 
 
 def test_invalid_adapter_settings_name_the_adapter(tmp_path: Path) -> None:

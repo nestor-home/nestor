@@ -40,6 +40,8 @@ async def found(memories: Memories, words: str | None, settings: RecallSettings)
     if not words or settings.strategy is Strategy.RECENT or not settings.found:
         return []
     shown = {m.id for m in await latest(memories, settings)}
+    if settings.strategy is Strategy.BOTH and len(shown) < settings.recent:
+        return []  # every memory is already shown: no search, no embedding call to wait for
     hits = await memories.recall(words, limit=settings.found + len(shown))
     return [m for m in hits if m.id not in shown][: settings.found]
 

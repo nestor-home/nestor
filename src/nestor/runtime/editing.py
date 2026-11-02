@@ -42,7 +42,7 @@ from nestor.runtime.config import (
     references,
     substitute,
 )
-from nestor.runtime.plugins import Family, Registry
+from nestor.runtime.plugins import Family, Plugin, Registry
 from nestor.runtime.secrets import ConfigSecrets, preview
 
 HISTORY = "config-history"
@@ -58,16 +58,25 @@ class Shape(StrEnum):
 
 @dataclass(frozen=True, slots=True)
 class Slot:
-    """Where adapters plug into the configuration: a key of the file, a family of plugins."""
+    """Where adapters plug into the configuration: a key of the file, a family of plugins (and the others it
+    takes too: models answer or embed)."""
 
     key: str
     family: Family
     shape: Shape
     required: bool
+    also: tuple[Family, ...] = ()
+
+    @property
+    def families(self) -> tuple[Family, ...]:
+        return (self.family, *self.also)
+
+    def plugin(self, registry: Registry, kind: str) -> Plugin[Any]:
+        return registry.get(registry.family_of(kind, self.families), kind)
 
 
 SLOTS = (
-    Slot("models", Family.MODEL, Shape.NAMED, required=True),
+    Slot("models", Family.MODEL, Shape.NAMED, required=True, also=(Family.EMBEDDER,)),
     Slot("channels", Family.CHANNEL, Shape.LIST, required=True),
     Slot("executors", Family.EXECUTOR, Shape.LIST, required=False),
     Slot("tools", Family.TOOLS, Shape.LIST, required=False),
@@ -175,14 +184,15 @@ class ConfigSchema:
                 "family": slot.family.value,
                 "shape": slot.shape.value,
                 "required": slot.required,
-                "kinds": {kind: self.kind(slot, kind) for kind in self.registry.kinds(slot.family)},
+                "kinds": {kind: self.kind(slot, kind) for f in slot.families for kind in self.registry.kinds(f)},
             }
             for slot in SLOTS
         }
 
     def kind(self, slot: Slot, kind: str) -> dict[str, Any]:
         """A plugin's settings as a slot holds them: with its `kind`, and a `name` unless its key is one."""
-        schema = self.registry.get(slot.family, kind).settings.model_json_schema()
+        plugin = slot.plugin(self.registry, kind)
+        schema = plugin.settings.model_json_schema()
         schema.setdefault("properties", {})
         name = {"name": {"type": "string", "description": "the instance's name; the kind by default"}}
         schema["properties"] = {
@@ -191,7 +201,7 @@ class ConfigSchema:
             **schema["properties"],
         }
         schema["required"] = ["kind", *schema.get("required", [])]
-        return annotate(schema, f"{slot.family.value}-{kind}")
+        return annotate(schema, f"{plugin.family.value}-{kind}")
 
     def secrets_of(self, document: Mapping[str, Any]) -> dict[Path_, str]:
         """Every secret the document sets, with the vault name a typed value is kept under; a map of
@@ -199,7 +209,7 @@ class ConfigSchema:
         found: dict[Path_, str] = {}
         for slot, index, entry in entries(document):
             try:
-                model = self.registry.get(slot.family, str(entry.get("kind"))).settings
+                model = slot.plugin(self.registry, str(entry.get("kind"))).settings
             except NestorError:
                 continue
             where: Path_ = (slot.key,) if slot.shape is Shape.ONE else (slot.key, index)
@@ -459,7 +469,7 @@ class ConfigEditor:
         for slot, index, entry in entries(resolved):
             where: Path_ = (slot.key,) if slot.shape is Shape.ONE else (slot.key, index)
             try:
-                plugin = self.registry.get(slot.family, str(entry.get("kind")))
+                plugin = slot.plugin(self.registry, str(entry.get("kind")))
             except NestorError:
                 problems.append(Problem((*where, "kind"), "unknown_kind", str(entry.get("kind"))))
                 continue

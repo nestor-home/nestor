@@ -14,7 +14,7 @@ from typing import Any
 
 import yaml
 from dotenv import dotenv_values
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, ValidationInfo, field_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, ValidationInfo, field_validator, model_validator
 
 from nestor.core import NestorError, PersonId
 from nestor.modules.channels import Address
@@ -151,13 +151,16 @@ class MemoryConfig(Section):
     strategy: Strategy = Strategy.BOTH
     recent: int = Field(default=150, ge=0, le=1000)
     found: int = Field(default=12, ge=0, le=50)
+    # an embedding model of `models`: memories are then found by meaning as well as by words
+    embedder: str | None = Field(default=None, json_schema_extra=MODEL_REFERENCE)
 
 
 class NestorConfig(Section):
     data_dir: Path = Field(default=Path("data"), json_schema_extra=ADVANCED)
     persona: PersonaConfig
     household: tuple[PersonConfig, ...] = Field(min_length=1)
-    # the models it may use, under names the household chooses; the roles below refer to them by name
+    # the models it may use, under names the household chooses; the roles below refer to them by name. A
+    # model's kind says whether it chats (`openai-compatible`) or embeds (`openai-compatible-embeddings`)
     models: dict[str, ComponentConfig] = Field(min_length=1)
     agent: AgentConfig = Field(default=AgentConfig(), validate_default=True)
     watches: WatchesConfig = WatchesConfig()
@@ -183,9 +186,7 @@ class NestorConfig(Section):
     @field_validator("agent")
     @classmethod
     def _agent(cls, value: AgentConfig, info: ValidationInfo) -> AgentConfig:
-        models = _known(info, {"spoken": value.spoken, "written": value.written, "background": value.background})
-        if len(models) > 1 and not (value.spoken or value.written):
-            raise ValueError(f"name the model it answers with, among {', '.join(models)}: `spoken`, `written` or both")
+        _known(info, {"spoken": value.spoken, "written": value.written, "background": value.background})
         return value
 
     @field_validator("watches")
@@ -194,9 +195,27 @@ class NestorConfig(Section):
         _known(info, {"model": value.model})
         return value
 
+    @field_validator("memory")
+    @classmethod
+    def _memory(cls, value: MemoryConfig, info: ValidationInfo) -> MemoryConfig:
+        _known(info, {"embedder": value.embedder})
+        return value
+
+    @model_validator(mode="after")
+    def _one_answering_model(self) -> "NestorConfig":
+        chat = [k for k in self.models if k != self.memory.embedder]
+        if not chat:
+            raise ValueError("models: none is left to answer once the embedder is set aside")
+        if len(chat) > 1 and not (self.agent.spoken or self.agent.written):
+            raise ValueError(
+                f"agent: name the model it answers with, among {', '.join(chat)}: `spoken`, `written` or both"
+            )
+        return self
+
     def roles(self) -> dict[str, str]:
         """The key of the model each role uses, defaults applied: `spoken`, `written`, `background`, `watches`."""
-        sole = next(iter(self.models)) if len(self.models) == 1 else None
+        chat = [k for k in self.models if k != self.memory.embedder]  # an embedder never answers
+        sole = chat[0] if len(chat) == 1 else None
         written = self.agent.written or self.agent.spoken or sole
         spoken = self.agent.spoken or written
         assert spoken and written  # checked on validation
