@@ -5,6 +5,7 @@ the choice of where and when to say it.
 - `watches`: durable watches, inbound sources, triage
 - `tasks`: announcing delegated task outcomes
 - `messaging`: messages and questions passed on to someone of the household
+- `schedules`: wake-ups, the agent doing something later, once or regularly
 """
 
 from nestor.modules.initiative.delivery import (
@@ -24,6 +25,15 @@ from nestor.modules.initiative.messaging import (
     MessageTools,
     MessageUndelivered,
     Messenger,
+)
+from nestor.modules.initiative.schedules import (
+    Schedule,
+    ScheduleBook,
+    ScheduleCancelled,
+    ScheduleCreated,
+    ScheduleFired,
+    Scheduler,
+    ScheduleTools,
 )
 from nestor.modules.initiative.tasks import TaskAnnouncer
 from nestor.modules.initiative.watches import (
@@ -57,6 +67,13 @@ __all__ = [
     "Messenger",
     "Plan",
     "QuietHours",
+    "Schedule",
+    "ScheduleBook",
+    "ScheduleCancelled",
+    "ScheduleCreated",
+    "ScheduleFired",
+    "ScheduleTools",
+    "Scheduler",
     "TaskAnnouncer",
     "Triage",
     "Verdict",

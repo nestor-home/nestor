@@ -50,6 +50,9 @@ from nestor.modules.initiative import (
     MessageDelivered,
     MessageRequested,
     MessageUndelivered,
+    ScheduleCancelled,
+    ScheduleCreated,
+    ScheduleFired,
     WatchCreated,
     WatchEnded,
     WatchSorted,
@@ -109,6 +112,7 @@ CATEGORIES = (
     Category("tool", (ToolCalled, ToolCompleted)),
     Category("task", (TaskStarted, TaskAttached, TaskProgressed, TaskCancelRequested, TaskEnded, TaskDelivered)),
     Category("watch", (WatchCreated, WatchSorted, WatchTriggered, WatchEnded)),
+    Category("schedule", (ScheduleCreated, ScheduleFired, ScheduleCancelled)),
     Category("memory", (MemoryRecorded, MemoryCorrected, MemoryForgotten)),
     Category("connection", (ConnectionCreated, ConnectionChanged, ConnectionRemoved)),
     Category("presence", (PresenceChanged,)),
@@ -263,6 +267,17 @@ class EventDescriber:
                 detail=e.text,
                 people=[e.requested_by, e.to],
                 channels=[e.origin],
+            ),
+            ScheduleCreated: lambda e: self._line(
+                e,
+                Message.of("journal-schedule-created", recurring=_yes(e.once_at is None)),
+                detail=e.instruction,
+                people=[e.owner],
+                channels=[e.created_in],
+            ),
+            ScheduleFired: lambda e: self._line(e, Message.of("journal-schedule-fired", id=e.schedule_id)),
+            ScheduleCancelled: lambda e: self._line(
+                e, Message.of("journal-schedule-cancelled", id=e.schedule_id), people=[e.by]
             ),
             MessageDelivered: lambda e: self._line(
                 e, Message.of("journal-message-delivered", id=e.message_id), channels=[e.address]
