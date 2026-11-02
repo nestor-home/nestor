@@ -60,6 +60,10 @@ journal-delivery-considered = { $known ->
        *[other] { $status }
     }
     [watch] watch { $id }
+    [message] message { $id }{ $status ->
+        [undelivered] {" "}not delivered
+       *[other] {""}
+    }
    *[other] { $about }
 }{ $follow_up ->
     [yes] {" "}(follow-up)
@@ -73,11 +77,22 @@ journal-delivered = Message passed on: { $subject ->
        *[other] { $status }
     }
     [watch] watch { $id }
+    [message] message { $id }{ $status ->
+        [undelivered] {" "}not delivered
+       *[other] {""}
+    }
    *[other] { $about }
 }{ $follow_up ->
     [yes] {" "}(follow-up)
    *[no] {""}
 }
+journal-message-requested = { $kind ->
+    [question] Question for { $to }
+    [answer] Answer passed on to { $to }
+   *[other] Message for { $to }
+} from { $by }
+journal-message-delivered = Message { $id } delivered
+journal-message-undelivered = Message { $id } could not get through
 journal-delivery-failed = Message not passed on: { $subject ->
     [task] task { $id } { $status ->
         [completed] completed
@@ -86,6 +101,10 @@ journal-delivery-failed = Message not passed on: { $subject ->
        *[other] { $status }
     }
     [watch] watch { $id }
+    [message] message { $id }{ $status ->
+        [undelivered] {" "}not delivered
+       *[other] {""}
+    }
    *[other] { $about }
 }{ $follow_up ->
     [yes] {" "}(follow-up)

@@ -47,6 +47,9 @@ from nestor.modules.initiative import (
     Delivered,
     DeliveryConsidered,
     DeliveryFailed,
+    MessageDelivered,
+    MessageRequested,
+    MessageUndelivered,
     WatchCreated,
     WatchEnded,
     WatchSorted,
@@ -75,7 +78,10 @@ log = logging.getLogger(__name__)
 DETAIL_LIMIT = 600
 OTHER_KEY = "other"
 CLI = "cli"  # who did it, for an effect asked from the command line rather than by an account
-_SUBJECT = re.compile(r"^(?:task (?P<task>\S+) (?P<status>\w+)|watch (?P<watch>\S+))(?P<follow> \(follow-up\))?$")
+_SUBJECT = re.compile(
+    r"^(?:task (?P<task>\S+) (?P<status>\w+)|watch (?P<watch>\S+)|message (?P<message>\S+)(?P<bounce> undelivered)?)"
+    r"(?P<follow> \(follow-up\))?$"
+)
 
 
 class Tone(StrEnum):
@@ -96,7 +102,10 @@ class Category:
 
 CATEGORIES = (
     Category("conversation", (UserTurn, AssistantTurn, FallbackSpoken, AnswerCut)),
-    Category("delivery", (DeliveryConsidered, Delivered, DeliveryFailed)),
+    Category(
+        "delivery",
+        (DeliveryConsidered, Delivered, DeliveryFailed, MessageRequested, MessageDelivered, MessageUndelivered),
+    ),
     Category("tool", (ToolCalled, ToolCompleted)),
     Category("task", (TaskStarted, TaskAttached, TaskProgressed, TaskCancelRequested, TaskEnded, TaskDelivered)),
     Category("watch", (WatchCreated, WatchSorted, WatchTriggered, WatchEnded)),
@@ -160,15 +169,16 @@ def unknown_message(event_type: str, fields: Mapping[str, object] | None = None)
 
 
 def subject(about: str) -> dict[str, str]:
-    """What an unprompted message was about, as arguments: `task 3f2a completed`, `watch 9d (follow-up)`."""
+    """What an unprompted message was about, as arguments: `task 3f2a completed`, `watch 9d (follow-up)`,
+    `message 7c` (passed on), `message 7c undelivered` (telling whoever asked that it did not get through)."""
     match = _SUBJECT.match(about)
     if match is None:
         return {"subject": "other", "id": "", "status": "", "follow_up": "no", "about": about}
-    kind = "task" if match["task"] else "watch"
+    kind = "task" if match["task"] else "watch" if match["watch"] else "message"
     return {
         "subject": kind,
-        "id": match["task"] or match["watch"],
-        "status": match["status"] or "",
+        "id": match["task"] or match["watch"] or match["message"],
+        "status": match["status"] or ("undelivered" if match["bounce"] else ""),
         "follow_up": "yes" if match["follow"] else "no",
         "about": about,
     }
@@ -242,6 +252,24 @@ class EventDescriber:
                 e, Message.of("journal-task-delivered", task=e.task_id), channels=[e.address]
             ),
             DeliveryConsidered: self._considered,
+            MessageRequested: lambda e: self._line(
+                e,
+                Message.of(
+                    "journal-message-requested",
+                    to=self.name(e.to),
+                    kind="answer" if e.answers else "question" if e.expects_reply else "message",
+                    by=self.name(e.requested_by) or self.assistant,
+                ),
+                detail=e.text,
+                people=[e.requested_by, e.to],
+                channels=[e.origin],
+            ),
+            MessageDelivered: lambda e: self._line(
+                e, Message.of("journal-message-delivered", id=e.message_id), channels=[e.address]
+            ),
+            MessageUndelivered: lambda e: self._line(
+                e, Message.of("journal-message-undelivered", id=e.message_id), tone=Tone.WARNING
+            ),
             Delivered: lambda e: self._line(
                 e, Message("journal-delivered", subject(e.about)), people=[e.person], channels=[e.address]
             ),

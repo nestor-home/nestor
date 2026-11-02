@@ -65,6 +65,7 @@ class PersonConfig(Section):
     name: str
     accounts: tuple[str, ...] = ()
     reach: str | None = None
+    may_message: tuple[str, ...] = ("*",)  # whom they may have the agent write to: person ids, or "*"
 
     @field_validator("accounts")
     @classmethod
@@ -79,6 +80,7 @@ class PersonConfig(Section):
             name=self.name,
             accounts=tuple(Account.parse(a) for a in self.accounts),
             reach=Address.parse(self.reach) if self.reach else None,
+            may_message=self.may_message,
         )
 
 

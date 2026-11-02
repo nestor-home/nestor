@@ -1,5 +1,6 @@
 # Pourquoi un message spontané est parti là où il est parti (initiative/delivery).
 delivery-asked-in-writing = demandé par écrit
+delivery-place-asked = demandé sur { $channel }
 delivery-quiet-hours = heures calmes : rien à voix haute
 delivery-no-presence = présence inconnue : retour à la conversation d'origine
 delivery-away = { $person } n'est pas à la maison

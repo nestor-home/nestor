@@ -1,5 +1,6 @@
 # Why an unprompted message went where it went (initiative/delivery).
 delivery-asked-in-writing = asked for it in writing
+delivery-place-asked = asked for on { $channel }
 delivery-quiet-hours = quiet hours: nothing spoken
 delivery-no-presence = no presence information: back to the conversation it came from
 delivery-away = { $person } is away
