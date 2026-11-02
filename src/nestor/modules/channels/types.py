@@ -8,8 +8,9 @@ from nestor.core import ContractError, SessionId, new_id, utc_now
 
 
 class Medium(StrEnum):
-    """How the user receives answers: it decides their form (length, no Markdown when spoken), and how
-    long a conversation lasts without a turn."""
+    """How a turn travels, typed or said: it decides the answer's form (length, no Markdown when
+    spoken), and how long a conversation lasts without a turn. A channel may carry both (a satellite
+    with a screen and a microphone)."""
 
     SPOKEN = "spoken"
     WRITTEN = "written"
@@ -84,6 +85,7 @@ class InboundMessage:
     address: Address
     sender: Sender
     text: str
+    medium: Medium = Medium.WRITTEN  # typed or said: the answer takes the same way
     media: tuple[Media, ...] = ()
     id: str = field(default_factory=new_id)
     at: datetime = field(default_factory=utc_now)

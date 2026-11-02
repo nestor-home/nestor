@@ -20,7 +20,7 @@ NIGHT = datetime(2026, 10, 30, 23, 30, tzinfo=UTC)  # 00:30 in Paris
 
 
 class Satellite(InMemoryChannel):
-    medium = Medium.SPOKEN
+    media = frozenset({Medium.SPOKEN})
 
     def __init__(self, channel_id: str, room: str) -> None:
         super().__init__(channel_id)
@@ -122,7 +122,7 @@ def test_malformed_quiet_hours_are_refused() -> None:
 
 def test_one_voice_channel_may_serve_several_rooms() -> None:
     class Gateway(InMemoryChannel):
-        medium = Medium.SPOKEN
+        media = frozenset({Medium.SPOKEN})
 
         @property
         def rooms(self) -> frozenset[str]:
@@ -135,7 +135,7 @@ def test_one_voice_channel_may_serve_several_rooms() -> None:
 
 def test_a_main_satellite_nobody_is_connected_to_means_a_message() -> None:
     class Offline(InMemoryChannel):
-        medium = Medium.SPOKEN
+        media = frozenset({Medium.SPOKEN})
 
         @property
         def rooms(self) -> frozenset[str]:

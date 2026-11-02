@@ -15,7 +15,7 @@ import pytest
 from nestor.adapters.channels.telegram import MESSAGE_LIMIT, TelegramChannel, plugin, split_text
 from nestor.core import ContractError, PersonId, ProviderError
 from nestor.core.i18n import Locale
-from nestor.modules.channels import Address, Assistant, InboundMessage, MessageEnd, Reply, Sender
+from nestor.modules.channels import Address, Assistant, InboundMessage, Medium, MessageEnd, Reply, Sender
 from nestor.runtime import Services
 from nestor.testing.channels import ScriptedAssistant
 from nestor.testing.i18n import EchoLocalizer
@@ -325,7 +325,7 @@ async def test_the_token_never_appears_in_logs(api: FakeBotApi, caplog: pytest.L
 
 async def test_send_delivers_an_unprompted_message(api: FakeBotApi) -> None:
     async with channel_for(api) as channel:
-        await channel.send(Address("telegram", str(ADA)), "Your task is done.")
+        await channel.send(Address("telegram", str(ADA)), "Your task is done.", Medium.WRITTEN)
     assert api.sent == [(str(ADA), "Your task is done.")]
 
 
@@ -339,14 +339,14 @@ async def test_send_reports_failures_and_whether_retrying_may_help(
     api.fail("sendMessage", response)
     async with channel_for(api) as channel:
         with pytest.raises(ProviderError) as raised:
-            await channel.send(Address("telegram", str(ADA)), "Your task is done.")
+            await channel.send(Address("telegram", str(ADA)), "Your task is done.", Medium.WRITTEN)
     assert raised.value.transient is transient
 
 
 async def test_send_to_another_channel_is_a_contract_error(api: FakeBotApi) -> None:
     async with channel_for(api) as channel:
         with pytest.raises(ContractError):
-            await channel.send(Address("voice", "kitchen"), "hello")
+            await channel.send(Address("voice", "kitchen"), "hello", Medium.WRITTEN)
     assert api.sent == []
 
 
@@ -354,14 +354,14 @@ async def test_send_after_close_fails_permanently(api: FakeBotApi) -> None:
     channel = channel_for(api)
     await channel.close()
     with pytest.raises(ProviderError) as raised:
-        await channel.send(Address("telegram", str(ADA)), "hello")
+        await channel.send(Address("telegram", str(ADA)), "hello", Medium.WRITTEN)
     assert raised.value.transient is False
 
 
 async def test_only_addresses_of_this_channel_are_reachable(api: FakeBotApi) -> None:
     async with channel_for(api) as channel:
-        assert channel.reachable(Address("telegram", str(ADA)))
-        assert not channel.reachable(Address("family-bot", str(ADA)))
+        assert channel.reachable(Address("telegram", str(ADA)), Medium.WRITTEN)
+        assert not channel.reachable(Address("family-bot", str(ADA)), Medium.WRITTEN)
 
 
 async def test_the_plugin_names_the_channel_after_its_configured_instance(tmp_path: Path) -> None:
@@ -410,7 +410,7 @@ async def test_the_apology_is_the_households_language_unless_configured(
     await channel.close()
 
 
-@pytest.mark.parametrize(("configured", "seconds"), [({}, 4 * 3600.0), ({"conversation_ends_after_s": 86400}, 86400.0)])
+@pytest.mark.parametrize(("configured", "seconds"), [({}, None), ({"conversation_ends_after_s": 86400}, 86400.0)])
 async def test_a_written_conversation_lasts_hours_unless_configured(
     tmp_path: Path, configured: dict[str, int], seconds: float
 ) -> None:

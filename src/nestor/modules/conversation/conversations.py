@@ -2,11 +2,12 @@
 Assist counts them.
 
 A conversation id is minted with the first turn and kept while turns keep coming: one that comes after
-a longer silence than the channel allows opens a new conversation. Each channel decides
-(`Channel.conversation_ends_after_s`): 5 minutes when spoken, as Assist; hours when written, as a
-messaging thread. A session (`telegram:42`, `voice:salon`) is where people talk; a conversation is one
-exchange there, never merged across channels, and it bounds what the agent replays to the model, as
-Assist's chat log does. What must outlive it belongs in memories.
+a longer silence than its medium allows opens a new conversation: 5 minutes when spoken, as Assist;
+hours when written, as a messaging thread (a channel may set its own, `conversation_ends_after_s`). A
+device people both type on and talk to keeps one conversation: a typed follow-up to a spoken question
+stays in it while the written silence allows. A session (`telegram:42`, `voice:salon`) is where people
+talk; a conversation is one exchange there, never merged across channels, and it bounds what the agent
+replays to the model, as Assist's chat log does. What must outlive it belongs in memories.
 
 The open conversation of each session is rebuilt from the journal on first use, so a restart keeps
 it while it lasts.
@@ -17,7 +18,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 from nestor.core import SessionId, new_id, utc_now
-from nestor.modules.channels import Address, Exchange
+from nestor.modules.channels import Address, Exchange, Medium
 from nestor.modules.conversation.events import AssistantTurn, UserTurn
 from nestor.modules.journal import Journal
 
@@ -33,24 +34,25 @@ class Conversations:
         self,
         journal: Journal,
         *,
-        ends_after_s: Callable[[Address], float],
+        ends_after_s: Callable[[Address, Medium], float],
         clock: Callable[[], datetime] = utc_now,
     ) -> None:
-        """`ends_after_s` gives the silence after which a turn at this address opens a new conversation."""
+        """`ends_after_s` gives the silence after which a turn at this address, through this medium,
+        opens a new conversation."""
         self.journal = journal
         self._ends_after_s = ends_after_s
         self._clock = clock
         self._open: dict[SessionId, _Open] = {}
         self._loaded: set[SessionId] = set()
 
-    async def turn(self, address: Address) -> Exchange:
+    async def turn(self, address: Address, medium: Medium) -> Exchange:
         """A new turn in this session: in its open conversation, or in a new one when the last turn is
         too old. Nothing awaits between the decision and its record, so two turns starting together
         land in the same conversation."""
         session = address.session
         await self._load(session)
         now = self._clock()
-        current = self._live(address, now)
+        current = self._live(address, medium, now)
         conversation = current.id if current else new_id()
         self._open[session] = _Open(conversation, now)
         return Exchange(conversation_id=conversation, turn_id=new_id())
@@ -61,15 +63,16 @@ class Conversations:
         if current is not None and current.id == exchange.conversation_id:
             self._open[address.session] = _Open(current.id, self._clock())
 
-    async def current(self, address: Address) -> str | None:
-        """The session's open conversation, without starting a turn; `None` when it has none."""
+    async def current(self, address: Address, medium: Medium) -> str | None:
+        """The session's open conversation for a turn through `medium`, without starting one; `None`
+        when it has none."""
         await self._load(address.session)
-        current = self._live(address, self._clock())
+        current = self._live(address, medium, self._clock())
         return current.id if current else None
 
-    def _live(self, address: Address, now: datetime) -> _Open | None:
+    def _live(self, address: Address, medium: Medium, now: datetime) -> _Open | None:
         current = self._open.get(address.session)
-        ends_after = timedelta(seconds=self._ends_after_s(address))
+        ends_after = timedelta(seconds=self._ends_after_s(address, medium))
         return current if current is not None and now - current.last <= ends_after else None
 
     async def _load(self, session: SessionId) -> None:

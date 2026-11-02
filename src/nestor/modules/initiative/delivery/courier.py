@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 from nestor.core import Component, PersonId, ProviderError, utc_now
-from nestor.modules.channels import Address, Channel
+from nestor.modules.channels import Address, Channel, Medium
 from nestor.modules.conversation import Agent, AssistantTurn, UserTurn
 from nestor.modules.home import PresenceSource
 from nestor.modules.household import Person
@@ -90,11 +90,11 @@ class Courier(Component):
                 reason=plan.reason,
             )
         )
-        if plan.spoken and (spoken := await self._send(person, plan.spoken, instruction, about)):
+        if plan.spoken and (spoken := await self._send(person, plan.spoken, Medium.SPOKEN, instruction, about)):
             if plan.follow_up:
                 self._watch_reaction(person, plan, instruction, about)
             return spoken
-        if plan.written and (written_to := await self._send(person, plan.written, instruction, about)):
+        if plan.written and (written_to := await self._send(person, plan.written, Medium.WRITTEN, instruction, about)):
             return written_to
         tried = tuple(a for a in (plan.spoken, plan.written) if a)
         await self.journal.publish(
@@ -102,17 +102,19 @@ class Courier(Component):
         )
         return None
 
-    async def _send(self, person: Person | None, address: Address, instruction: str, about: str) -> Address | None:
+    async def _send(
+        self, person: Person | None, address: Address, medium: Medium, instruction: str, about: str
+    ) -> Address | None:
         channel = self.channels.get(address.channel)
-        if channel is None or not channel.reachable(address):
+        if channel is None or not channel.reachable(address, medium):
             return None
-        texts = await self.agent.compose(address, person, instruction)
+        texts = await self.agent.compose(address, person, instruction, medium)
         try:
             for text in texts:
-                await channel.send(address, text)
+                await channel.send(address, text, medium)
         except ProviderError:
             return None
-        exchange = await self.agent.conversations.turn(address)  # an unprompted message is a turn of its own
+        exchange = await self.agent.conversations.turn(address, medium)  # an unprompted message is a turn of its own
         for text in texts:
             await self.journal.publish(
                 AssistantTurn(source=self.name, session=address.session, address=address, text=text, exchange=exchange)
@@ -130,7 +132,9 @@ class Courier(Component):
             await asyncio.sleep(self.follow_up_after_s)
             replies = await self.journal.history(UserTurn, session=spoken.session, since=since)
             if not replies:
-                await self._send(person, written, f"{instruction}\n\n{FOLLOW_UP}", f"{about} (follow-up)")
+                await self._send(
+                    person, written, Medium.WRITTEN, f"{instruction}\n\n{FOLLOW_UP}", f"{about} (follow-up)"
+                )
 
         task = asyncio.create_task(follow_up(), name=f"follow-up {about}")
         self._follow_ups[task] = FollowUp(

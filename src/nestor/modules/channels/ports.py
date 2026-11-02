@@ -80,14 +80,14 @@ class Assistant(ABC):
 class Channel(Component, ABC):
     """Contract:
     - `serve` receives messages until the channel is closed and answers each one through the assistant;
-    - `send` delivers an unprompted message (task result, initiative) and raises `ProviderError` when
-      it cannot — a voice channel with nobody connected cannot;
+    - `send` delivers an unprompted message (task result, initiative) through one of its `media` and
+      raises `ProviderError` when it cannot: aloud with nobody connected, for instance;
     - senders the channel cannot authenticate are dropped before reaching the assistant;
-    - `conversation_ends_after_s` is how long a conversation on it lasts without a turn: what its
-      medium suggests, unless its configuration says otherwise.
+    - `conversation_ends_after_s` is how long a conversation on it lasts without a turn: what each
+      turn's medium suggests, unless its configuration says otherwise.
     """
 
-    medium: Medium = Medium.WRITTEN
+    media: frozenset[Medium] = frozenset({Medium.WRITTEN})  # how its turns can travel
     style: str = ""  # how to write for this channel (e.g. expression tags the voice understands)
     room: str | None = None  # where a spoken channel is heard (a home area id), if it is a satellite
 
@@ -98,23 +98,28 @@ class Channel(Component, ABC):
         self._conversation_ends_after_s = conversation_ends_after_s
 
     @property
-    def conversation_ends_after_s(self) -> float:
-        """The silence after which the next turn opens a new conversation: the configured one, or the
-        default of the channel's medium."""
-        return self._conversation_ends_after_s or self.medium.conversation_ends_after_s
+    def conversation_ends_after_s(self) -> float | None:
+        """The silence after which the next turn opens a new conversation, when configured; otherwise
+        each turn's medium decides."""
+        return self._conversation_ends_after_s
+
+    @property
+    def spoken(self) -> bool:
+        """Whether it can be heard in rooms."""
+        return Medium.SPOKEN in self.media
 
     @abstractmethod
     async def serve(self, assistant: Assistant) -> None: ...
 
     @abstractmethod
-    async def send(self, to: Address, text: str) -> None: ...
+    async def send(self, to: Address, text: str, medium: Medium) -> None: ...
 
     @property
     def rooms(self) -> frozenset[str]:
         """Rooms where a spoken channel can be heard right now: its satellites' rooms; by default `room`."""
         return frozenset({self.room}) if self.room else frozenset()
 
-    def reachable(self, to: Address) -> bool:
-        """Whether `send` can deliver now (a voice channel needs someone connected). Cheap; `send`
-        may still fail."""
-        return to.channel == self.channel_id
+    def reachable(self, to: Address, medium: Medium) -> bool:
+        """Whether `send` can deliver through `medium` now (aloud needs someone connected). Cheap;
+        `send` may still fail."""
+        return to.channel == self.channel_id and medium in self.media

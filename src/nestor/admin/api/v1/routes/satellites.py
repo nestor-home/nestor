@@ -27,7 +27,6 @@ from nestor.admin.state import AdminState, state
 from nestor.core import Capability, ContractError, utc_now
 from nestor.core.i18n import Message
 from nestor.modules.accounts import Scope
-from nestor.modules.channels import Medium
 from nestor.modules.satellites import (
     IDENTIFY,
     RECOMMENDED,
@@ -416,5 +415,5 @@ def _capabilities(names: frozenset[Capability] | tuple[Capability, ...], words: 
 
 def live_rooms(admin: AdminState) -> frozenset[str] | None:
     """Rooms a spoken channel can be heard in right now; `None` without any spoken channel."""
-    spoken = [c.rooms for c in admin.nestor.channels if c.medium is Medium.SPOKEN]
+    spoken = [c.rooms for c in admin.nestor.channels if c.spoken]
     return frozenset().union(*spoken) if spoken else None

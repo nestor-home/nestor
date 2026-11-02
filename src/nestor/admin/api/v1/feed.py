@@ -17,7 +17,6 @@ from nestor.admin.state import AdminState
 from nestor.core import SessionId
 from nestor.core.events.codec import JSON
 from nestor.modules.accounts import Principal, Scope
-from nestor.modules.channels import Medium
 from nestor.modules.cognition import TaskEnded, TaskStarted
 from nestor.modules.cognition.delegation.events import TaskDelivered
 from nestor.modules.cognition.tools import ToolCalled, ToolCompleted
@@ -229,7 +228,7 @@ class Feed:
         self.audience, self.filters, self.words = audience, filters, words
         self.describer = EventDescriber(nestor.household, nestor.config.persona.name, words, admin.accounts)
         self.people = People(nestor.household)
-        self._spoken = {c.channel_id for c in nestor.channels if c.medium is Medium.SPOKEN}
+        self._spoken = {c.channel_id for c in nestor.channels if c.spoken}
         self._channel_brands = {c.channel_id: c.brand for c in nestor.channels}
         self._executor_brands = {e.name: e.brand for e in nestor.executors}
 

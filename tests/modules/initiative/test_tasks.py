@@ -28,20 +28,20 @@ MATHIS = Person(
 class VoiceChannel(InMemoryChannel):
     """A voice satellite in the living room, nobody may be listening to."""
 
-    medium = Medium.SPOKEN
+    media = frozenset({Medium.SPOKEN})
     room = "salon"
 
     def __init__(self, *, connected: bool = True, broken: bool = False) -> None:
         super().__init__("voice")
         self.connected, self.broken = connected, broken
 
-    def reachable(self, to: Address) -> bool:
-        return self.connected and super().reachable(to)
+    def reachable(self, to: Address, medium: Medium) -> bool:
+        return self.connected and super().reachable(to, medium)
 
-    async def send(self, to: Address, text: str) -> None:
+    async def send(self, to: Address, text: str, medium: Medium) -> None:
         if self.broken:
             raise ProviderError("voice", "speaker unplugged", transient=True)
-        await super().send(to, text)
+        await super().send(to, text, medium)
 
 
 class Home:

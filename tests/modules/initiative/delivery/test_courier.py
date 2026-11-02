@@ -23,7 +23,7 @@ MATHIS = Person(id=PersonId("mathis"), name="Mathis", accounts=(Account.parse("t
 
 
 class Satellite(InMemoryChannel):
-    medium = Medium.SPOKEN
+    media = frozenset({Medium.SPOKEN})
     room = "salon"
 
 

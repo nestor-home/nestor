@@ -11,7 +11,7 @@ import pytest
 
 from nestor.core import utc_now
 from nestor.modules.activity import Activity, ActivityMonitor
-from nestor.modules.channels import Address, InboundMessage, Sender
+from nestor.modules.channels import Address, InboundMessage, Medium, Sender
 from nestor.modules.cognition.delegation.service import TaskManager
 from nestor.modules.cognition.model import ToolCall, ToolSpec
 from nestor.modules.cognition.tools import Tool, Toolbox
@@ -92,7 +92,7 @@ async def test_an_answer_is_thought_then_spoken_then_the_agent_is_idle_again(wor
 async def test_an_unprompted_message_being_written_is_thought_not_spoken(world: World) -> None:
     states: list[Activity] = []
     world.agent.replies.listen(lambda: states.append(world.monitor.current().state))
-    await world.agent.compose(TELEGRAM, MATHIS, "Dis bonjour.")
+    await world.agent.compose(TELEGRAM, MATHIS, "Dis bonjour.", Medium.WRITTEN)
     assert states == [Activity.THINKING, Activity.IDLE]
 
 
