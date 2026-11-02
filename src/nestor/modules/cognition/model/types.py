@@ -62,9 +62,20 @@ class FinishReason(StrEnum):
     LENGTH = "length"
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class Usage:
+    """What a reply cost, as the provider reports it."""
+
+    input_tokens: int
+    output_tokens: int
+    cost: float | None = None  # in the provider's billing currency, when it says
+
+
 @dataclass(frozen=True, slots=True)
 class Finished:
     reason: FinishReason
+    usage: Usage | None = None  # when the provider reports it
+    model: str | None = None  # the model that answered, as the provider names it (may differ from the one asked)
 
 
 type ModelOutput = TextDelta | ToolCallRequested | Finished

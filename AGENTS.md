@@ -46,6 +46,8 @@ src/nestor/
 ├── runtime/              composition: configuration, adapter registry, lifecycle
 ├── admin/                the admin over the assembled Nestor: accounts sign in to a JSON API (`api/v1`) that
 │                         the web front of `web/` is built on; it also serves that front once built
+├── bench/                `nestor bench`: the engine (cases, variants, runs, replay cache, reports); its
+│   └── suites/           suites, one folder each with its dataset (`nestor.benches` entry points)
 ├── cli.py                the `nestor` command, above runtime and admin
 ├── adapters/             adapters/<family>/<vendor>/ — the only place for third-party SDKs
 │   └── storage/          SQLite (one WAL database, migrations in schema.py), blobs on disk
@@ -63,8 +65,8 @@ module into sub-packages as soon as it holds more than one concept (`cognition/m
 New modules (memory, home, initiative, channels, identity, perception) and the `runtime/` and
 `adapters/` packages are created when their first ticket lands, not before.
 
-Layers only depend on more stable ones: `core` ← `modules` ← `runtime` ← `admin`; `testing` sees `core`
-and `modules`; adapters may import anything and are the only place for third-party SDKs; the
+Layers only depend on more stable ones: `core` ← `modules` ← `runtime` ← `admin`, and `bench` beside
+the admin; `testing` sees `core` and `modules`; adapters may import anything and are the only place for third-party SDKs; the
 runtime may assemble the built-in storage adapters, and the admin may use FastAPI and pydantic.
 `tests/test_architecture.py` enforces it.
 

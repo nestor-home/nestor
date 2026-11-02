@@ -1,5 +1,5 @@
-"""`nestor` command line: run the assistant, check a configuration, create accounts, pair satellites and check
-one against the standard.
+"""`nestor` command line: run the assistant, check a configuration, create accounts, pair satellites, check
+one against the standard, and benchmark parts of Nestor.
 
 It sits at the top of the package, above both the runtime and the admin interface it starts.
 """
@@ -18,6 +18,9 @@ import httpx
 
 from nestor.adapters.i18n import FluentLocalizer, catalogue_dirs
 from nestor.admin import AdminServer, openapi_text, read_token, token_path
+from nestor.bench import Suites
+from nestor.bench.cli import add_commands as add_bench_commands
+from nestor.bench.cli import main as bench
 from nestor.core import Component, NestorError, PersonId
 from nestor.core.i18n import Locale, Message
 from nestor.init import (
@@ -86,6 +89,7 @@ def main(argv: list[str] | None = None) -> int:
                              help=words("conformance-deadline-help", seconds=CONFORMANCE_DEADLINE_S))  # fmt: skip
     conformance.add_argument("satellite", nargs=argparse.REMAINDER, metavar="-- COMMAND",
                              help=words("conformance-command-help"))  # fmt: skip
+    add_bench_commands(commands.add_parser("bench", help=words("bench-help"), description=words("bench-help")), words)
     commands.add_parser("restart", help="restart the running instance (applies the configuration written since)")
     secrets = commands.add_parser("secrets", help="the configuration's secrets, kept in the encrypted vault")
     actions = secrets.add_subparsers(dest="action", required=True)
@@ -98,7 +102,8 @@ def main(argv: list[str] | None = None) -> int:
     deleting.add_argument("--force", action="store_true", help="even while the configuration refers to it")
     args = parser.parse_args(argv)
 
-    checking = args.command == "satellites" and args.action == "conformance"  # its output is the findings
+    # their output is the findings
+    checking = args.command == "bench" or (args.command == "satellites" and args.action == "conformance")
     level = logging.DEBUG if args.verbose else logging.WARNING if checking else logging.INFO
     logging.basicConfig(level=level, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     environ = environment(args.config)  # the shell's variables, completed by the `.env` next to the configuration
@@ -111,6 +116,10 @@ def main(argv: list[str] | None = None) -> int:
             return _init(args.config)
         if args.command == "satellites" and args.action == "conformance":
             return _conformance(args.satellite, args.deadline, words)
+        if args.command == "bench":
+            suites = Suites.installed()
+            words = _Words(("nestor", *suites.packages()))  # with the catalogues of suites from other packages
+            return bench(args, suites, words.render, words.localizer, words.locale)
         if args.command == "satellites":
             return _satellites(args, environ)
         if args.command == "secrets":
@@ -293,16 +302,16 @@ def _satellites(args: argparse.Namespace, environ: dict[str, str]) -> int:
 class _Words:
     """The command's words, in the language of the environment (`LC_ALL`, `LC_MESSAGES`, `LANG`)."""
 
-    def __init__(self) -> None:
-        self._localizer = FluentLocalizer(catalogue_dirs(["nestor"]))
+    def __init__(self, packages: tuple[str, ...] = ("nestor",)) -> None:
+        self.localizer = FluentLocalizer(catalogue_dirs(packages))
         wanted = next((v for k in ("LC_ALL", "LC_MESSAGES", "LANG") if (v := os.environ.get(k))), "")
-        self._locale = Locale(wanted.split(".")[0].split("@")[0])
+        self.locale = Locale(wanted.split(".")[0].split("@")[0] or "en")
 
     def __call__(self, message_id: str, **args: str | int | float) -> str:
         return self.render(Message.of(message_id, **args))
 
     def render(self, message: Message) -> str:
-        return self._localizer.format(message, self._locale)
+        return self.localizer.format(message, self.locale)
 
 
 def _conformance(command: list[str], deadline_s: float, words: _Words) -> int:

@@ -116,6 +116,45 @@ host's Docker bridge, not its loopback: the model server must listen there too (
 `nestor satellites conformance` checks a satellite written in any language against the
 `nestor.satellite/1` standard: see [Conformance](https://nestorhome.dev/docs/satellites/conformance/).
 
+## Benchmarks
+
+`nestor bench` measures a part of Nestor on a dataset and compares configurations: which small model sorts
+your mail best, whether a new triage algorithm misses fewer parcels, what it costs per thousand items.
+
+```bash
+nestor bench list
+nestor bench run watch-triage --variant gate-small.yaml --variant batch-small.yaml [--repeat 3] [--cases mine.jsonl]
+nestor bench run watch-triage --variant gate-small.yaml --replay      # scored again from the recorded replies
+nestor bench compare bench-results/watch-triage/<run> bench-results/watch-triage/<run>
+nestor bench report bench-results/watch-triage/<run>
+```
+
+A variant is a fragment of `nestor.yaml` (a whole one works too), with the suite's knobs under `bench`;
+`${NAME}` resolves from the environment and the `.env` next to it:
+
+```yaml
+triage_model:
+  kind: openai-compatible
+  base_url: https://openrouter.ai/api/v1
+  api_key: ${OPENROUTER_API_KEY}
+  model: mistralai/mistral-small-3.2
+  extra_body: {stream_options: {include_usage: true}}  # token counts from servers that only send them on request
+persona: {language: French}
+bench: {name: gate-mistral-small, algorithm: gate}   # watch-triage: gate, no-gate, hints or batch
+```
+
+`triage_model: {kind: watch-triage-fake}` runs the suite without a network, on a deterministic word-overlap
+judge. A run writes `bench-results/<suite>/<started>-<variant>/results.json` (dataset hash, variant with its
+secrets masked, the models the provider says answered, Nestor's version and commit, every case's output and
+model calls with latency, tokens and cost) and a self-contained `report.html`; model replies are recorded in
+`.bench-cache/`, keyed by model, request, repetition and seed. Both folders are relative to where the
+command runs and are not meant to be committed.
+
+A suite is a plugin: a `nestor.bench.Suite` declared in the `nestor.benches` entry-point group, with its
+JSONL dataset next to its code (`src/nestor/bench/suites/watch_triage/` is the example). It reads the
+records into cases, runs one case with the trial's models (so every call is measured and replayable), and
+sums the results up into metrics and findings, whose labels are Fluent messages.
+
 ## License
 
 [MIT](LICENSE)

@@ -27,6 +27,7 @@ from nestor.modules.cognition import (
     ToolCall,
     ToolCallRequested,
     ToolSpec,
+    Usage,
 )
 from nestor.runtime.plugins import Services
 from nestor.testing.cognition import ConversationModelContract
@@ -283,6 +284,21 @@ async def test_a_stream_cut_before_the_end_is_a_transient_provider_error(api: re
 async def test_a_stream_that_finished_may_omit_done(api: respx.MockRouter) -> None:
     api.post(COMPLETIONS).mock(return_value=streamed(chunk({"content": "Oui."}), chunk(finish="stop"), done=False))
     assert await collect() == [TextDelta("Oui."), Finished(FinishReason.STOP)]
+
+
+async def test_the_reply_says_what_it_cost_and_which_model_answered(api: respx.MockRouter) -> None:
+    served = {"model": "vendor/model-2026-10", **chunk(finish="stop")}
+    usage = {"choices": [], "usage": {"prompt_tokens": 120, "completion_tokens": 8, "total_tokens": 128, "cost": 4e-5}}
+    api.post(COMPLETIONS).mock(return_value=streamed(chunk({"content": "Oui."}), served, usage))
+    assert (await collect())[-1] == Finished(
+        FinishReason.STOP, Usage(input_tokens=120, output_tokens=8, cost=4e-5), "vendor/model-2026-10"
+    )
+
+
+async def test_a_usage_without_token_counts_or_cost_is_reported_as_far_as_known(api: respx.MockRouter) -> None:
+    local = {"choices": [], "usage": {"prompt_tokens": 30, "completion_tokens": 2}}
+    api.post(COMPLETIONS).mock(return_value=streamed(chunk(finish="stop"), {"usage": {"total_tokens": 3}}, local))
+    assert (await collect())[-1] == Finished(FinishReason.STOP, Usage(input_tokens=30, output_tokens=2))
 
 
 async def test_a_malformed_chunk_is_a_provider_error(api: respx.MockRouter) -> None:
