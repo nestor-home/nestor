@@ -19,6 +19,7 @@ import {
   Mic,
   Network,
   Plug,
+  RadioTower,
 } from "lucide-react";
 import {
   type SimpleIcon,
@@ -75,6 +76,7 @@ const BRANDS = {
   imap: { name: "IMAP", mark: Mail },
   oauth: { name: "OAuth", mark: KeyRound },
   webrtc: { name: "WebRTC", mark: siWebrtc },
+  satellites: { message: "brand-satellites", mark: RadioTower },
   voice: { message: "brand-voice", mark: Mic },
   web: { name: "Web", mark: Globe },
   reachy: { name: "Reachy Mini (Pollen Robotics)", mark: Bot },
@@ -100,6 +102,7 @@ const KIND_TO_BRAND: Record<string, BrandSlug> = {
   mcp: "mcp",
   telegram: "telegram",
   whatsapp: "whatsapp",
+  satellites: "satellites",
   voice: "voice",
   web: "web",
   webrtc: "webrtc",

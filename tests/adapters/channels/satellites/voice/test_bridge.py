@@ -19,7 +19,7 @@ from pipecat.pipeline.pipeline import Pipeline
 from pipecat.processors.aggregators.llm_context import LLMContext
 from pipecat.tests.utils import SleepFrame, run_test
 
-from nestor.adapters.channels.voice.bridge import AssistantBridge, PlayedText
+from nestor.adapters.channels.satellites.voice.bridge import AssistantBridge, PlayedText
 from nestor.core import PersonId
 from nestor.modules.channels import Address, Assistant, InboundMessage, Reply, Sender
 from nestor.testing.channels import ScriptedAssistant

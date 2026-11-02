@@ -146,12 +146,12 @@ def english(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.mark.usefixtures("english")
 def test_a_conformant_satellite_program_passes_every_check(capsys: pytest.CaptureFixture[str]) -> None:
-    satellite = [sys.executable, "-m", "tests.adapters.channels.voice.satellites.reference", "{url}", "{state}",
+    satellite = [sys.executable, "-m", "tests.adapters.channels.satellites.reference", "{url}", "{state}",
                  json.dumps(SPEAKER.to_json())]  # fmt: skip
     assert main(["satellites", "conformance", "--deadline", "15", "--", *satellite]) == 0
     lines = capsys.readouterr().out.splitlines()
     assert "PASS  pairs with the enrollment code of NESTOR_PAIRING_URI, no code typed (P3, P4)" in lines
-    assert "PASS  reconnects with the same token after a hang-up (W4)" in lines
+    assert "PASS  reconnects with the same token after the core closes its link (L5)" in lines
     assert not [line for line in lines if line.startswith("FAIL")]
     assert lines[-1] == f"conformant: {len(lines) - 1} checks passed"
 
@@ -185,15 +185,22 @@ def test_a_satellite_that_cannot_be_launched_is_a_usage_error(
 
 
 @pytest.mark.usefixtures("english")
-def test_the_conformance_suite_without_the_voice_extra_says_how_to_install_it(
+@pytest.mark.usefixtures("english")
+def test_without_the_voice_extra_the_suite_says_audio_cannot_be_checked(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    for name in [m for m in sys.modules if m.startswith(("nestor.adapters.channels.voice", "pipecat"))]:
+    voice = ("pipecat", "nestor.adapters.channels.satellites.voice")  # the extra, and what is built on it
+    for name in [m for m in sys.modules if m.startswith(voice)]:
         monkeypatch.delitem(sys.modules, name)
     monkeypatch.setitem(sys.modules, "pipecat", None)  # as if the extra were not installed
-    assert main(["satellites", "conformance", "--", sys.executable, "-c", "pass"]) == 2
-    error = capsys.readouterr().err
-    assert "needs the voice extra" in error and "nestor-home[voice]" in error
+    satellite = [sys.executable, "-m", "tests.adapters.channels.satellites.reference", "{url}", "{state}",
+                 json.dumps(SPEAKER.to_json())]  # fmt: skip
+    assert main(["satellites", "conformance", "--deadline", "15", "--", *satellite]) == 1
+    failed = [line for line in capsys.readouterr().out.splitlines() if line.startswith("FAIL")]
+    assert failed == [
+        "FAIL  exchanges audio, as allowed (A1, A2) (audio cannot be checked without the voice extra "
+        "(pipecat is missing))"
+    ]
 
 
 def test_every_command_reads_the_dot_env_next_to_the_configuration_and_the_shell_wins(

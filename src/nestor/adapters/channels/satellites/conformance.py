@@ -1,4 +1,4 @@
-"""Black-box conformance of a satellite driver to `nestor.satellite/1`, realtime profile (HTTP + WebRTC).
+"""Black-box conformance of a satellite driver to `nestor.satellite/1`.
 
 `check_satellite` runs a fake core (the real pairing service and satellite gateway, with no assistant
 behind them) and launches the driver against it once per scenario. A driver is a Python coroutine
@@ -9,14 +9,19 @@ device. Each check names the rule of the standard (https://nestorhome.dev/docs/s
 proves; checks and what was seen instead are `Message`s of the `conformance.ftl` catalogue.
 `nestor satellites conformance` runs the suite on a command and prints them.
 
-1. device code (P1, P2, P8, I1, I2, W1-W4): it declares `enrollment.provisioning`, asks to pair,
-   keeps polling after a pending identify, claims its token once a person types its code, connects,
-   says `hello`, acknowledges each intent (`intent.identify` when it declared `device.identify`),
-   exchanges audio, and reconnects with the same token after a hang-up;
-2. enrollment code (P3, P4): configured with a pairing URI, it pairs at once, with no code typed;
+1. device code (P1, P2, P8, I1, I2, L1-L5, T2, A1, A2): it declares `enrollment.provisioning`, asks to
+   pair, keeps polling after a pending identify, claims its token once a person types its code, opens
+   its link with a `hello`, acknowledges each intent (`intent.identify` when it declared
+   `device.identify`, `intent.text` when it declared `text.display`), exchanges audio when it declared
+   some, reconnects with the same token after the core closes its link, and pairs again once its
+   token is refused;
+2. enrollment code (P3, P4, A1): configured with a pairing URI that grants no audio, it pairs at once,
+   with no code typed, and offers no audio;
 3. refused codes, wrong, expired and already used (P5): it presents a refused code once, never
    again, and falls back to a device code so a person can still pair it;
 4. rate limit (P6): told to wait (429, `Retry-After`), it waits, then pairs.
+
+Checking audio needs the `voice` extra (WebRTC); the rest does not.
 
     report = await check_satellite(["./my-driver", "--core", "{url}", "--token-file", "{state}/token"])
     assert report.passed, report.failures()
@@ -24,6 +29,7 @@ proves; checks and what was seen instead are `Message`s of the `conformance.ftl`
 
 import asyncio
 import contextlib
+import json
 import os
 import secrets
 import socket
@@ -36,19 +42,23 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-import numpy as np
-from pipecat.transports.smallwebrtc.connection import SmallWebRTCConnection
-from pipecat.transports.smallwebrtc.transport import RawAudioTrack
+from fastapi import Request, WebSocket
 
-from nestor.adapters.channels.voice.satellites.gateway import SatelliteGateway
-from nestor.adapters.channels.voice.server import SignallingServer
-from nestor.core import utc_now
+from nestor.adapters.channels.satellites.gateway import AudioOffers, Close, SatelliteGateway
+from nestor.adapters.channels.satellites.server import DeviceServer
+from nestor.core import Capability, utc_now
 from nestor.core.i18n import Message
+from nestor.modules.behavior import EXPRESSION, HEAD_MOTION
 from nestor.modules.journal import Journal
 from nestor.modules.satellites import (
+    AUDIO,
     AUDIO_CAPTURE,
     AUDIO_PLAYBACK,
     IDENTIFY,
+    PERSON_DETECTION,
+    SPEECH_ACTIVITY,
+    TEXT_DISPLAY,
+    TEXT_INPUT,
     AttemptLimiter,
     Device,
     Manifest,
@@ -64,9 +74,12 @@ from nestor.modules.satellites.codes import ALPHABET
 from nestor.testing.journal import MemoryEventLog
 from nestor.testing.satellites import Findings, ProtocolProbe, SatelliteSession
 
+# What the enrolled device may do: anything it declares but audio (A1: it must not offer any).
+SILENT = (TEXT_INPUT, TEXT_DISPLAY, SPEECH_ACTIVITY, PERSON_DETECTION, EXPRESSION, HEAD_MOTION, IDENTIFY)
 AUDIO_RATE = 48000
 PAIRING_URI = "NESTOR_PAIRING_URI"
 IDENTIFY_WAIT_S = 5.0  # how long the person waits for a pending device to see its identify
+NO_AUDIO_WAIT_S = 2.0  # how long a device allowed no audio is watched for an offer
 
 
 @dataclass(frozen=True, slots=True)
@@ -158,25 +171,74 @@ class _WatchedPairing(Pairing):
         await self.approve(ticket.device_code, pairing_id=ticket.id)
 
 
-class _Connection(SatelliteSession):
-    def __init__(self, connection: SmallWebRTCConnection, satellite: Satellite) -> None:
-        self.connection, self.satellite = connection, satellite
-        self._messages: asyncio.Queue[Any] = asyncio.Queue()
+class _Link(SatelliteSession):
+    """A device's link, as the probe sees it: the messages after its accepted `hello`."""
+
+    def __init__(self, socket: WebSocket, satellite: Satellite, allowed: frozenset[Capability]) -> None:
+        self.socket, self.satellite, self.allowed = socket, satellite, allowed
+        self._outbox: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
         self.ended = asyncio.Event()
-        connection.add_event_handler("app-message", self._received)
-        connection.add_event_handler("closed", self._closed)
 
     async def receive(self) -> Any:
-        return await self._messages.get()
+        while True:
+            try:
+                received = await self.socket.receive()
+            except RuntimeError:
+                received = {"type": "websocket.disconnect"}
+            if received["type"] == "websocket.disconnect":
+                self.ended.set()
+                await asyncio.Event().wait()  # nothing more will come
+            if (text := received.get("text")) is not None:
+                try:
+                    return json.loads(text)
+                except ValueError:
+                    return text  # off-contract: the probe says so
 
     def send(self, data: dict[str, Any]) -> None:
-        self.connection.send_app_message(data)
+        self._outbox.put_nowait(data)
 
-    async def _received(self, _connection: SmallWebRTCConnection, data: Any) -> None:
-        self._messages.put_nowait(data)
+    async def write(self) -> None:
+        while True:
+            data = await self._outbox.get()
+            with contextlib.suppress(Exception):
+                await self.socket.send_text(json.dumps(data))
 
-    async def _closed(self, _connection: SmallWebRTCConnection) -> None:
+    async def close(self, code: Close) -> None:
+        with contextlib.suppress(RuntimeError):
+            await self.socket.close(code)
         self.ended.set()
+
+
+class _Audio(AudioOffers):
+    """Answers audio offers with a real WebRTC peer (the `voice` extra), each connection queued for
+    the checks; `None` without the extra."""
+
+    def __init__(self) -> None:
+        from nestor.adapters.channels.satellites.voice.webrtc import PeerConnections
+
+        self._peers = PeerConnections()
+        self.connections: asyncio.Queue[Any] = asyncio.Queue()
+
+    async def offer(self, device_id: str, body: dict[str, Any]) -> dict[str, Any]:
+        async def connected(connection: Any) -> None:
+            await connection.connect()
+            self.connections.put_nowait(connection)
+
+        return await self._peers.answer(body, connected)
+
+    async def patch(self, device_id: str, body: dict[str, Any]) -> None:
+        await self._peers.patch(body)
+
+    async def close(self) -> None:
+        await self._peers.close()
+
+
+def _audio() -> tuple[_Audio | None, str | None]:
+    """The audio checker, or the missing module that prevents it."""
+    try:
+        return _Audio(), None
+    except ModuleNotFoundError as missing:
+        return None, (missing.name or "pipecat").partition(".")[0]
 
 
 @dataclass(slots=True)
@@ -185,12 +247,30 @@ class _Core:
 
     pairing: _WatchedPairing
     url: str = ""
-    connections: asyncio.Queue[_Connection] = field(default_factory=asyncio.Queue)
+    links: asyncio.Queue[_Link] = field(default_factory=asyncio.Queue)
+    refusals: list[tuple[Close, str]] = field(default_factory=list)
+    audio_offers: int = 0  # every audio offer received, allowed or not
+    audio: _Audio | None = None
+    missing: str | None = None  # the module audio checks need, when missing
 
     @contextlib.asynccontextmanager
     async def serving(self) -> Any:
+        self.audio, self.missing = _audio()
         port = _free_port()
-        server = SignallingServer(host="127.0.0.1", port=port, routes=[SatelliteGateway(self.pairing, self._connected)])
+        gateway = SatelliteGateway(
+            self.pairing,
+            on_link=self._linked,
+            audio=self.audio,
+            refused=lambda _device, code, why: self.refusals.append((code, why)),
+        )
+        server = DeviceServer(host="127.0.0.1", port=port, gateway=gateway)
+
+        @server.app.middleware("http")
+        async def count_offers(request: Request, call_next: Any) -> Any:
+            if request.method == "POST" and request.url.path.endswith("/audio"):
+                self.audio_offers += 1
+            return await call_next(request)
+
         serving = asyncio.create_task(server.serve())
         while not server.started:
             await asyncio.sleep(0.01)
@@ -200,13 +280,18 @@ class _Core:
         finally:
             server.stop()
             await serving
+            if self.audio is not None:
+                await self.audio.close()
 
-    async def _connected(self, connection: SmallWebRTCConnection, satellite: Satellite) -> None:
-        link = _Connection(connection, satellite)
-        await connection.connect()  # what a transport does once its pipeline is up: messages flow from here
-        with self.pairing.online(satellite.id, lambda: None):
-            self.connections.put_nowait(link)
-            await link.ended.wait()
+    async def _linked(self, socket: WebSocket, satellite: Satellite, allowed: frozenset[Capability]) -> None:
+        link = _Link(socket, satellite, allowed)
+        writer = asyncio.create_task(link.write())
+        try:
+            with self.pairing.online(satellite.id, lambda: None):
+                self.links.put_nowait(link)
+                await link.ended.wait()
+        finally:
+            writer.cancel()
 
 
 class FakeCore:
@@ -219,7 +304,7 @@ class FakeCore:
         findings = Findings()
         await self._device_code(driver, findings)
         if not findings.passed:
-            return findings  # the other scenarios build on pairing and connecting
+            return findings  # the other scenarios build on pairing and linking
         await self._enrollment(driver, findings)
         for refusal in ("wrong", "expired", "used"):
             await self._refused(driver, findings, refusal)
@@ -245,30 +330,46 @@ class FakeCore:
                              pairing.identify_seen and pairing.polled_after_identify.is_set(),
                              Message.of("conformance-never-polled-after-identify"))  # fmt: skip
             first = await self._next(core, findings, Message.of("conformance-connects"))
-            if first is None or not await self.probe.run(first, first.satellite, findings):
+            if first is None:
                 return
-            await self._check_audio(first, findings)
-            await first.connection.disconnect()
+            self.probe.welcome(first, first.satellite, first.allowed)
+            await self._check_audio(core, first, findings)
+            await self.probe.run(first, first.satellite, findings)
+            await first.close(Close.STOPPING)
             again = await self._next(core, findings, Message.of("conformance-reconnects"))
-            if again is not None:
-                await self.probe.run(again, again.satellite, findings, connection="reconnected")
-                await again.connection.disconnect()
+            if again is None:
+                return
+            self.probe.welcome(again, again.satellite, again.allowed)
+            await self.probe.run(again, again.satellite, findings, connection="reconnected")
+            asked = len(pairing.attempts)
+            await pairing.revoke(again.satellite.id)
+            await again.close(Close.STOPPING)
+            findings.add(Message.of("conformance-pairs-again"),
+                         await _within(_until(lambda: len(pairing.attempts) > asked), self.deadline_s),
+                         Message.of("conformance-never-asked-again"))  # fmt: skip
 
     async def _enrollment(self, driver: Driver, findings: Findings) -> None:
         core = _Core(_WatchedPairing(approve_after_s=None))
         async with core.serving():
-            started = await core.pairing.start_addition(PairingMethod.PROVISIONING)
+            started = await core.pairing.start_addition(PairingMethod.PROVISIONING, capabilities=SILENT)
             assert started.code is not None
             async with _running(driver, core.url, pairing_uri(core.url, started.code), findings):
                 claimed = await _within(core.pairing.claimed.wait(), self.deadline_s)
                 sent = any(a.code for a in core.pairing.attempts)
                 seen = Message.of("conformance-no-code-sent" if claimed else "conformance-no-token")
                 findings.add(Message.of("conformance-enrolls", variable=PAIRING_URI), claimed and sent, seen)
-                if claimed:
-                    link = await self._next(core, findings, Message.of("conformance-connects-enrolled"))
-                    if link is not None:
-                        await self.probe.run(link, link.satellite, findings, connection="enrolled")
-                        await link.connection.disconnect()
+                if not claimed:
+                    return
+                link = await self._next(core, findings, Message.of("conformance-connects-enrolled"))
+                if link is None:
+                    return
+                self.probe.welcome(link, link.satellite, link.allowed)
+                await self.probe.run(link, link.satellite, findings, connection="enrolled")
+                if core.pairing.attempts[-1].manifest.names & AUDIO:
+                    await asyncio.sleep(NO_AUDIO_WAIT_S)
+                    findings.add(Message.of("conformance-no-unallowed-audio"), core.audio_offers == 0,
+                                 Message.of("conformance-audio-offers", count=core.audio_offers))  # fmt: skip
+                await link.close(Close.STOPPING)
 
     async def _refused(self, driver: Driver, findings: Findings, refusal: str) -> None:
         core = _Core(_WatchedPairing(approve_after_s=None))
@@ -301,29 +402,54 @@ class FakeCore:
                 findings.add(Message.of("conformance-waits-retry-after"), waited, seen)
                 findings.add(Message.of("conformance-pairs-after-limit"), paired)
 
-    async def _next(self, core: _Core, findings: Findings, check: Message) -> _Connection | None:
+    async def _next(self, core: _Core, findings: Findings, check: Message) -> _Link | None:
         try:
-            connection = await asyncio.wait_for(core.connections.get(), self.deadline_s)
+            link = await asyncio.wait_for(core.links.get(), self.deadline_s)
         except TimeoutError:
-            findings.add(check, False, Message.of("conformance-no-offer", seconds=self.deadline_s))
+            if core.refusals:
+                code, why = core.refusals[-1]
+                findings.add(check, False, Message.of("conformance-link-refused", code=int(code), why=why))
+            else:
+                findings.add(check, False, Message.of("conformance-no-link", seconds=self.deadline_s))
             return None
         findings.add(check, True)
-        return connection
+        return link
 
-    async def _check_audio(self, link: _Connection, findings: Findings) -> None:
-        capabilities = link.satellite.capabilities
-        if AUDIO_PLAYBACK in capabilities:
+    async def _check_audio(self, core: _Core, link: _Link, findings: Findings) -> None:
+        wanted = link.allowed & AUDIO
+        if not wanted:
+            return
+        if core.audio is None:
+            findings.add(Message.of("conformance-exchanges-audio"), False,
+                         Message.of("conformance-voice-missing", module=core.missing or "pipecat"))  # fmt: skip
+            return
+        try:
+            connection = await asyncio.wait_for(core.audio.connections.get(), self.deadline_s)
+        except TimeoutError:
+            findings.add(Message.of("conformance-exchanges-audio"), False,
+                         Message.of("conformance-no-audio-offer", seconds=self.deadline_s))  # fmt: skip
+            return
+        if AUDIO_PLAYBACK in wanted:
+            import numpy as np
+            from pipecat.transports.smallwebrtc.transport import RawAudioTrack
+
             track = RawAudioTrack(AUDIO_RATE)
-            link.connection.replace_audio_track(track)
+            connection.replace_audio_track(track)
             t = np.arange(AUDIO_RATE) / AUDIO_RATE
             track.add_audio_bytes((6000 * np.sin(2 * np.pi * 440 * t)).astype(np.int16).tobytes())
             findings.add(Message.of("conformance-receives-audio"),
-                         await _within(_reports_reception(link.connection), 5.0),
+                         await _within(_reports_reception(connection), 5.0),
                          Message.of("conformance-no-receiver-report"))  # fmt: skip
-        if AUDIO_CAPTURE in capabilities:
+        if AUDIO_CAPTURE in wanted:
             findings.add(Message.of("conformance-sends-audio"),
-                         await _within(link.connection.audio_input_track().recv(), 5.0),
+                         await _within(connection.audio_input_track().recv(), 5.0),
                          Message.of("conformance-no-audio-frame"))  # fmt: skip
+        await connection.disconnect()
+
+
+async def _until(condition: Callable[[], bool]) -> None:
+    while not condition():
+        await asyncio.sleep(0.05)
 
 
 async def check_satellite(driver: Driver, **options: Any) -> Findings:
@@ -345,7 +471,7 @@ async def _refused_code(pairing: Pairing, refusal: str) -> str:
     return started.code
 
 
-async def _reports_reception(connection: SmallWebRTCConnection) -> None:
+async def _reports_reception(connection: Any) -> None:
     sender = connection.pc.getTransceivers()[0].sender
     while not any(s.type == "remote-inbound-rtp" for s in (await sender.getStats()).values()):
         await asyncio.sleep(0.1)

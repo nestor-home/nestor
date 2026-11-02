@@ -47,7 +47,7 @@ def test_a_household_that_says_nothing_is_english_speaking_on_utc() -> None:
 
 
 def test_the_voice_transcribes_english_unless_configured() -> None:
-    from nestor.adapters.channels.voice import ElevenLabsSettings
+    from nestor.adapters.channels.satellites import ElevenLabsSettings
 
     assert ElevenLabsSettings(api_key="xi", voice_id="v").language == "en"
 

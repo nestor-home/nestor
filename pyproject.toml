@@ -39,9 +39,9 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-# Realtime voice channel (Pipecat cascade, WebRTC, ElevenLabs). Version pinned: the channel relies on
-# Pipecat internals covered by its tests.
-voice = ["pipecat-ai[elevenlabs,webrtc,runner]==1.14.0"]
+# The voice of satellites (Pipecat cascade, WebRTC, ElevenLabs). Version pinned: it relies on Pipecat
+# internals covered by its tests.
+voice = ["pipecat-ai[elevenlabs,webrtc]==1.14.0"]
 
 [project.scripts]
 nestor = "nestor.cli:main"
@@ -50,7 +50,7 @@ nestor = "nestor.cli:main"
 openai-compatible = "nestor.adapters.models.openai_compatible:plugin"
 hermes = "nestor.adapters.executors.hermes:plugin"
 telegram = "nestor.adapters.channels.telegram:plugin"
-voice = "nestor.adapters.channels.voice:plugin"
+satellites = "nestor.adapters.channels.satellites:plugin"
 home-assistant = "nestor.adapters.home.home_assistant:plugin"
 mcp = "nestor.adapters.tools.mcp.plugin:plugin"
 google = "nestor.adapters.connectors.google:plugin"

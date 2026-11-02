@@ -17,13 +17,16 @@ from nestor.core import Capability, ContractError, PersonId
 PROTOCOL = "nestor.satellite/1"
 _PROTOCOL = re.compile(r"^nestor\.satellite/\d+$")
 
+TEXT_INPUT = Capability("text.input")  # it sends what a person typed
+TEXT_DISPLAY = Capability("text.display")  # it shows the assistant's words
 AUDIO_CAPTURE = Capability("audio.capture")
 AUDIO_PLAYBACK = Capability("audio.playback")
+AUDIO = frozenset({AUDIO_CAPTURE, AUDIO_PLAYBACK})  # either one: the device exchanges audio over WebRTC
 PERSON_DETECTION = Capability("vision.person_detection")
 SPEECH_ACTIVITY = Capability("audio.speech_activity")
 IDENTIFY = Capability("device.identify")  # it can make itself noticed (blink, wiggle, chime): an aid, never a proof
 
-_SLUG = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")  # device ids and rooms end up in addresses (`voice:salon`)
+_SLUG = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")  # device ids and rooms end up in addresses (`satellites:salon`)
 _CAPABILITY = re.compile(r"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$")
 MAX_CAPABILITIES = 32
 MAX_NAME = 64

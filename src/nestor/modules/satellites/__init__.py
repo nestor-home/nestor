@@ -30,6 +30,7 @@ from nestor.modules.satellites.service import (
     hash_token,
 )
 from nestor.modules.satellites.types import (
+    AUDIO,
     AUDIO_CAPTURE,
     AUDIO_PLAYBACK,
     IDENTIFY,
@@ -37,6 +38,8 @@ from nestor.modules.satellites.types import (
     PROTOCOL,
     RECOMMENDED,
     SPEECH_ACTIVITY,
+    TEXT_DISPLAY,
+    TEXT_INPUT,
     Addition,
     AdditionStatus,
     DeclaredCapability,
@@ -56,6 +59,7 @@ from nestor.modules.satellites.types import (
 )
 
 __all__ = [
+    "AUDIO",
     "AUDIO_CAPTURE",
     "AUDIO_PLAYBACK",
     "IDENTIFY",
@@ -63,6 +67,8 @@ __all__ = [
     "PROTOCOL",
     "RECOMMENDED",
     "SPEECH_ACTIVITY",
+    "TEXT_DISPLAY",
+    "TEXT_INPUT",
     "Addition",
     "AdditionStatus",
     "AttemptLimiter",

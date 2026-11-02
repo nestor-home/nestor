@@ -5,7 +5,7 @@ A conversation id is minted with the first turn and kept while turns keep coming
 a longer silence than its medium allows opens a new conversation: 5 minutes when spoken, as Assist;
 hours when written, as a messaging thread (a channel may set its own, `conversation_ends_after_s`). A
 device people both type on and talk to keeps one conversation: a typed follow-up to a spoken question
-stays in it while the written silence allows. A session (`telegram:42`, `voice:salon`) is where people
+stays in it while the written silence allows. A session (`telegram:42`, `satellites:salon`) is where people
 talk; a conversation is one exchange there, never merged across channels, and it bounds what the agent
 replays to the model, as Assist's chat log does. What must outlive it belongs in memories.
 

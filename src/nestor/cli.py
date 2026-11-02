@@ -323,11 +323,8 @@ def _conformance(command: list[str], deadline_s: float, words: _Words) -> int:
     if shutil.which(command[0]) is None:
         print(words("conformance-no-program", program=command[0]), file=sys.stderr)
         return 2
-    try:
-        from nestor.adapters.channels.voice.satellites.conformance import check_satellite
-    except ModuleNotFoundError as missing:  # the suite runs the real WebRTC gateway: the `voice` extra
-        print(words("conformance-needs-voice", module=str(missing.name)), file=sys.stderr)
-        return 2
+    from nestor.adapters.channels.satellites.conformance import check_satellite  # audio checks need `voice`
+
     findings = asyncio.run(check_satellite(command, deadline_s=deadline_s))
     for finding in findings.items:
         check = words.render(finding.check)

@@ -52,9 +52,9 @@ export function document(): ConfigDocument {
         "You are Richie, the Lambert household's assistant. You speak plainly, warmly and with a touch of humour, and you get to the point.",
     },
     household: [
-      { id: "mathis", name: "Mathis", accounts: ["voice:*", "telegram:@mathis_l"], reach: "telegram:@mathis_l" },
-      { id: "lea", name: "Léa", accounts: ["voice:*", "telegram:@lea_lambert"], reach: "voice" },
-      { id: "jules", name: "Jules", accounts: ["voice:*"] },
+      { id: "mathis", name: "Mathis", accounts: ["satellites:*", "telegram:@mathis_l"], reach: "telegram:@mathis_l" },
+      { id: "lea", name: "Léa", accounts: ["satellites:*", "telegram:@lea_lambert"], reach: "voice" },
+      { id: "jules", name: "Jules", accounts: ["satellites:*"] },
       { id: "odile", name: "Odile", accounts: ["telegram:@odile.m"], reach: "telegram:@odile.m" },
     ],
     model: {
@@ -73,10 +73,11 @@ export function document(): ConfigDocument {
     },
     channels: [
       {
-        kind: "voice",
-        room: "living room",
+        kind: "satellites",
         port: 8471,
-        speech: { api_key: vault("channels.voice.speech.api_key"), voice_id: "Xb7hH8MSUJpSbSDYk0k2" },
+        voice: {
+          speech: { api_key: vault("channels.satellites.voice.speech.api_key"), voice_id: "Xb7hH8MSUJpSbSDYk0k2" },
+        },
       },
       { kind: "telegram", token: environ("TELEGRAM_TOKEN") },
     ],
@@ -130,7 +131,7 @@ export function fresh(): ConfigDb {
       { id: "20261021T090455031000Z", at: minutes(60 * 24 * 9), document: oldest },
     ],
     vault: {
-      "channels.voice.speech.api_key": { value: "sk_e1d0a8c7b6f5", at: minutes(60 * 24 * 30) },
+      "channels.satellites.voice.speech.api_key": { value: "sk_e1d0a8c7b6f5", at: minutes(60 * 24 * 30) },
       "executors.hermes.api_key": { value: "hermes-7c0f2b91", at: minutes(60 * 24 * 12) },
       "tools.home.token": { value: "eyJhbGciOiJIUzI1NiJ9.home", at: minutes(60 * 24 * 12) },
       "presence.token": { value: "eyJhbGciOiJIUzI1NiJ9.presence", at: minutes(60 * 24 * 12) },

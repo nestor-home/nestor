@@ -1,4 +1,4 @@
-"""The voice channel end to end, in real time.
+"""The voice of satellites end to end, in real time.
 
 Only STT and TTS are simulated; Silero VAD, Smart Turn, aggregation, interruptions and the
 transport buffers are the production ones, and the assistant sits behind the `Assistant` port.
@@ -9,25 +9,57 @@ import asyncio
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import cast
 
 import pytest
 
-from nestor.adapters.channels.voice.channel import VoiceChannel
-from nestor.adapters.channels.voice.session import SessionSettings
+from nestor.adapters.channels.satellites.link import SatelliteLink
+from nestor.adapters.channels.satellites.voice.audio import SatelliteVoice
+from nestor.adapters.channels.satellites.voice.resilience import load_clips
+from nestor.adapters.channels.satellites.voice.session import SessionSettings
 from nestor.core import ContractError, ProviderError
-from nestor.modules.channels import Address, Medium
+from nestor.modules.channels import Address
+from nestor.modules.satellites import AUDIO_CAPTURE, AUDIO_PLAYBACK, TEXT_DISPLAY, wire
 
 from .audio import needs_recordings, needs_say, recording, say, tone_wav
-from .doubles import FakeAssistant, FakeSpeech, ScriptedSTT, ToneTTS
+from .doubles import FakeAssistant, FakeLink, FakeSpeech, ScriptedSTT, ToneTTS
 from .replay import ReplayTransport
 
-ROOM = Address("voice", "salon")
+ROOM = Address("satellites", "salon")
+LINK = cast(SatelliteLink, FakeLink())
 # A short first sentence, as the persona asks: the voice starts as soon as it is complete.
 LONG_REPLY = (
     "Bonne question. Alors, les ours bruns et les grizzlys sont en fait la même espèce, mais le grizzly vit "
     "à l'intérieur des terres en Amérique du Nord, et sa fourrure a des pointes argentées."
 )
 STT_PHRASE = "Je ne t'entends plus très bien."
+
+
+class Room:
+    """The living room's voice, as the satellites channel uses it."""
+
+    def __init__(self, voice: SatelliteVoice, send_timeout_s: float) -> None:
+        self.voice, self.send_timeout_s = voice, send_timeout_s
+
+    async def attach(self, transport: ReplayTransport, link: SatelliteLink = LINK) -> None:
+        await self.voice.converse(transport, link)
+
+    async def detach(self, transport: ReplayTransport) -> None:
+        await self.voice.leave(transport)
+
+    def reachable(self, to: Address) -> bool:
+        return self.voice.reachable(to)
+
+    async def send(self, to: Address, text: str) -> None:
+        await self.voice.say(to, text, self.send_timeout_s)
+
+    async def close(self) -> None:
+        await self.voice.close()
+
+
+def voice_of(stt: ScriptedSTT, tts: ToneTTS, *, quiet_s: float = 0.5, clips: Path | None = None) -> SatelliteVoice:
+    settings = SessionSettings(stt_phrase=STT_PHRASE, quiet_s=quiet_s, clips=load_clips(clips))
+    return SatelliteVoice("satellites", speech=FakeSpeech(stt, tts), settings=settings)
 
 
 @asynccontextmanager
@@ -39,26 +71,17 @@ async def serving(
     quiet_s: float = 0.5,
     clips: Path | None = None,
     send_timeout_s: float = 30.0,
-) -> AsyncGenerator[VoiceChannel]:
-    channel = VoiceChannel(
-        "voice",
-        room="salon",
-        speech=FakeSpeech(stt, tts),
-        session=SessionSettings(stt_phrase=STT_PHRASE, quiet_s=quiet_s),
-        clips=clips,
-        send_timeout_s=send_timeout_s,
-    )
-    async with channel:
-        serve = asyncio.create_task(channel.serve(assistant))
-        await asyncio.sleep(0)
-        try:
-            yield channel
-        finally:
-            await channel.close()
-            await serve
+) -> AsyncGenerator[Room]:
+    voice = voice_of(stt, tts, quiet_s=quiet_s, clips=clips)
+    voice.serve(assistant, {})
+    room = Room(voice, send_timeout_s)
+    try:
+        yield room
+    finally:
+        await room.close()
 
 
-async def converse(channel: VoiceChannel, transport: ReplayTransport, timeout_s: float = 60) -> None:
+async def converse(channel: Room, transport: ReplayTransport, timeout_s: float = 60) -> None:
     """Run a session until the scenario's audio has been played."""
     session = asyncio.create_task(channel.attach(transport))
     try:
@@ -69,9 +92,9 @@ async def converse(channel: VoiceChannel, transport: ReplayTransport, timeout_s:
         await session
 
 
-async def send_at(channel: VoiceChannel, transport: ReplayTransport, at_s: float, text: str) -> None:
+async def send_at(channel: Room, transport: ReplayTransport, at_s: float, text: str) -> None:
     await transport.clock.sleep_until(at_s)
-    await channel.send(ROOM, text, Medium.SPOKEN)
+    await channel.send(ROOM, text)
 
 
 @needs_recordings("complet-01")
@@ -201,9 +224,9 @@ async def test_an_unprompted_message_is_spoken_promptly_in_a_quiet_room() -> Non
 async def test_an_unprompted_message_fails_when_nobody_is_connected() -> None:
     transport = ReplayTransport([])
     async with serving(FakeAssistant([]), ScriptedSTT(transport, []), ToneTTS(transport.clock)) as channel:
-        assert not channel.reachable(ROOM, Medium.SPOKEN)
+        assert not channel.reachable(ROOM)
         with pytest.raises(ProviderError) as refused:
-            await channel.send(ROOM, "Ta lessive est terminée.", Medium.SPOKEN)
+            await channel.send(ROOM, "Ta lessive est terminée.")
     assert refused.value.transient
 
 
@@ -213,9 +236,9 @@ async def test_an_unprompted_message_not_spoken_in_time_fails_and_is_never_spoke
     async with serving(FakeAssistant([]), ScriptedSTT(transport, []), tts, quiet_s=1.0, send_timeout_s=0.3) as channel:
         session = asyncio.create_task(converse(channel, transport))
         await asyncio.sleep(0.1)
-        assert channel.reachable(ROOM, Medium.SPOKEN)
+        assert channel.reachable(ROOM)
         with pytest.raises(ProviderError) as refused:
-            await channel.send(ROOM, "Ta lessive est terminée.", Medium.SPOKEN)
+            await channel.send(ROOM, "Ta lessive est terminée.")
         await session
     assert refused.value.transient
     assert not tts.texts, "the sender gave up (and wrote it elsewhere): saying it now would repeat it"
@@ -226,40 +249,48 @@ async def test_closing_the_channel_ends_its_sessions_and_their_pending_messages(
     async with serving(FakeAssistant([]), ScriptedSTT(transport, []), ToneTTS(transport.clock), quiet_s=60) as channel:
         session = asyncio.create_task(channel.attach(transport))
         await asyncio.sleep(0.2)
-        pending = [
-            asyncio.create_task(channel.send(ROOM, text, Medium.SPOKEN))
-            for text in ("Ta lessive est terminée.", "Il pleut.")
-        ]
+        pending = [asyncio.create_task(channel.send(ROOM, text)) for text in ("Ta lessive est terminée.", "Il pleut.")]
         await asyncio.sleep(0.2)
         await channel.close()
         async with asyncio.timeout(10):
             await session
             results = await asyncio.gather(*pending, return_exceptions=True)
         assert all(isinstance(r, ProviderError) and r.transient for r in results)
-        assert not channel.reachable(ROOM, Medium.SPOKEN)
+        assert not channel.reachable(ROOM)
         await channel.detach(transport)  # a client leaving after the session ended changes nothing
         await channel.attach(ReplayTransport([]))  # nor does one arriving once the channel is closed
-        assert not channel.reachable(ROOM, Medium.SPOKEN)
+        assert not channel.reachable(ROOM)
 
 
 async def test_a_session_cannot_start_before_the_channel_serves_an_assistant() -> None:
     transport = ReplayTransport([])
-    channel = VoiceChannel(
-        "voice",
-        room="salon",
-        speech=FakeSpeech(ScriptedSTT(transport, []), ToneTTS(transport.clock)),
-        session=SessionSettings(stt_phrase=STT_PHRASE),
-    )
-    async with channel:
-        with pytest.raises(ContractError):
-            await channel.attach(transport)
+    voice = voice_of(ScriptedSTT(transport, []), ToneTTS(transport.clock))
+    with pytest.raises(ContractError):
+        await voice.converse(transport, LINK)
 
 
-async def test_a_message_for_another_channel_is_refused() -> None:
-    transport = ReplayTransport([])
+async def test_a_satellite_with_a_screen_shows_what_it_says() -> None:
+    transport = ReplayTransport([], tail_s=3)
+    link = FakeLink(AUDIO_CAPTURE, AUDIO_PLAYBACK, TEXT_DISPLAY)
     async with serving(FakeAssistant([]), ScriptedSTT(transport, []), ToneTTS(transport.clock)) as channel:
-        with pytest.raises(ContractError):
-            await channel.send(Address("telegram", "salon"), "Ta lessive est terminée.", Medium.SPOKEN)
+        session = asyncio.create_task(channel.attach(transport, cast(SatelliteLink, link)))
+        await asyncio.sleep(0.2)
+        await channel.send(ROOM, "Ta lessive est terminée.")
+        await channel.detach(transport)
+        await session
+    assert [m.text for m in link.sent if isinstance(m, wire.TextIntent)] == ["Ta lessive est terminée."]
+
+
+async def test_a_satellite_without_a_screen_is_only_spoken_to() -> None:
+    transport = ReplayTransport([], tail_s=3)
+    link = FakeLink()
+    async with serving(FakeAssistant([]), ScriptedSTT(transport, []), ToneTTS(transport.clock)) as channel:
+        session = asyncio.create_task(channel.attach(transport, cast(SatelliteLink, link)))
+        await asyncio.sleep(0.2)
+        await channel.send(ROOM, "Ta lessive est terminée.")
+        await channel.detach(transport)
+        await session
+    assert not [m for m in link.sent if isinstance(m, wire.TextIntent)]
 
 
 async def test_a_transcription_outage_is_announced_instead_of_silence() -> None:

@@ -169,7 +169,7 @@ def without_voice(*args: str) -> subprocess.CompletedProcess[str]:
 def test_discovering_the_installed_adapters_imports_no_optional_dependency() -> None:
     found = subprocess.run([sys.executable, "-c", OPTIONAL], capture_output=True, text=True, timeout=60, check=True)
     kinds, imported = found.stdout.splitlines()
-    assert "voice" in kinds.split(), "the voice channel is listed even when its extra is missing"
+    assert "satellites" in kinds.split(), "the satellites channel is listed even when the voice extra is missing"
     assert imported == ""
 
 
@@ -181,15 +181,23 @@ def test_a_text_only_configuration_passes_the_check_without_the_voice_extra(tmp_
     assert "channels: telegram, admin on 127.0.0.1:8470" in checked.stdout
 
 
-def test_a_voice_configuration_without_the_extra_says_what_to_install(tmp_path: Path) -> None:
+def test_satellites_in_writing_pass_the_check_without_the_voice_extra(tmp_path: Path) -> None:
     path = tmp_path / "nestor.yaml"
-    voice = "{kind: voice, room: living-room, speech: {api_key: xi, voice_id: v}}"
+    path.write_text(TEXT_ONLY.format(data_dir=tmp_path, channel="{kind: satellites}"))
+    checked = without_voice("-c", str(path), "check")
+    assert checked.returncode == 0, checked.stderr
+    assert "channels: satellites" in checked.stdout
+
+
+def test_a_voice_for_satellites_without_the_extra_says_what_to_install(tmp_path: Path) -> None:
+    path = tmp_path / "nestor.yaml"
+    voice = "{kind: satellites, voice: {speech: {api_key: xi, voice_id: v}}}"
     path.write_text(TEXT_ONLY.format(data_dir=tmp_path, channel=voice))
     checked = without_voice("-c", str(path), "check")
     assert checked.returncode == 2
     assert checked.stderr.strip() == (
-        "nestor: channel 'voice' (voice) needs nestor-home[voice], which is not installed (no module 'pipecat'): "
-        "pip install 'nestor-home[voice]'"
+        "nestor: channel 'satellites' (satellites) needs nestor-home[voice], which is not installed "
+        "(no module 'pipecat'): pip install 'nestor-home[voice]'"
     )
 
 

@@ -1,0 +1,77 @@
+from pathlib import Path
+
+import pytest
+
+from nestor.adapters.channels.satellites import ElevenLabsSettings, plugin
+from nestor.adapters.channels.satellites.channel import SatellitesChannel
+from nestor.adapters.channels.satellites.voice.eager import EagerSentenceFlush
+from nestor.adapters.channels.satellites.voice.providers import ElevenLabsSpeech
+from nestor.core import ContractError
+from nestor.core.i18n import Locale
+from nestor.modules.channels import Address, Medium
+from nestor.runtime.plugins import Services
+from nestor.testing.i18n import EchoLocalizer
+
+SPEECH = {"api_key": "xi-test", "voice_id": "GPAQQPp9dazaB2bl4zg9"}
+
+
+def services(tmp_path: Path) -> Services:
+    return Services(tmp_path, localizer=EchoLocalizer(), locale=Locale("fr-FR"))
+
+
+def test_without_a_voice_satellites_only_write(tmp_path: Path) -> None:
+    channel = plugin.create({}, "devices", services(tmp_path))
+    assert isinstance(channel, SatellitesChannel)
+    assert (channel.channel_id, channel.media, channel.style) == ("devices", {Medium.WRITTEN}, "")
+    assert not channel.spoken and channel.details() == {}
+    assert not channel.reachable(Address("devices", "salon"), Medium.WRITTEN), "nobody is connected yet"
+
+
+def test_with_a_voice_satellites_also_speak_in_its_style(tmp_path: Path) -> None:
+    raw = {"voice": {"speech": SPEECH, "style": "Use [laughs] sparingly."}}
+    channel = plugin.create(raw, "satellites", services(tmp_path))
+    assert isinstance(channel, SatellitesChannel)
+    assert (channel.media, channel.style) == ({Medium.WRITTEN, Medium.SPOKEN}, "Use [laughs] sparingly.")
+    assert channel.details() == {"speech": "elevenlabs"}
+    assert not channel.reachable(Address("satellites", "salon"), Medium.SPOKEN), "nobody is connected yet"
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        {"voice": {"speech": {"voice_id": "v"}}},  # no key
+        {"voice": {"speech": SPEECH, "microphone": "usb"}},  # unknown key
+        {"room": "salon"},  # rooms belong to devices
+        {"port": 70000},
+    ],
+)
+def test_an_incomplete_or_unknown_configuration_is_rejected(raw: dict, tmp_path: Path) -> None:
+    with pytest.raises(ContractError):
+        plugin.create(raw, "satellites", services(tmp_path))
+
+
+def test_the_api_key_is_never_shown() -> None:
+    assert "xi-test" not in repr(ElevenLabsSettings.model_validate(SPEECH))
+
+
+def test_elevenlabs_speech_releases_a_complete_sentence_without_waiting_for_more_text() -> None:
+    speech = ElevenLabsSpeech(ElevenLabsSettings.model_validate(SPEECH))
+    assert isinstance(speech.tts(), EagerSentenceFlush)
+    assert speech.stt() is not speech.stt(), "each session gets its own transcription"
+
+
+@pytest.mark.parametrize(("configured", "said"), [({}, "voice-stt-down"), ({"stt_fallback": "Pardon ?"}, "Pardon ?")])
+def test_the_transcription_fallback_is_in_the_households_language_unless_configured(
+    tmp_path: Path, configured: dict[str, str], said: str
+) -> None:
+    channel = plugin.create({"voice": {"speech": SPEECH, **configured}}, "satellites", services(tmp_path))
+    assert isinstance(channel, SatellitesChannel) and channel._voice is not None
+    assert channel._voice._settings.stt_phrase == said
+
+
+@pytest.mark.parametrize(("configured", "seconds"), [({}, None), ({"conversation_ends_after_s": 120}, 120.0)])
+def test_each_turn_s_medium_decides_how_long_a_conversation_lasts_unless_configured(
+    tmp_path: Path, configured: dict[str, int], seconds: float
+) -> None:
+    channel = plugin.create(configured, "satellites", services(tmp_path))
+    assert isinstance(channel, SatellitesChannel) and channel.conversation_ends_after_s == seconds

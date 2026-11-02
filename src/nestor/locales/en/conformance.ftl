@@ -7,19 +7,9 @@ conformance-asks-to-pair = asks to pair
 conformance-declares-provisioning = declares enrollment.provisioning (P1)
 conformance-claims-token = claims its token once its device code is typed (P2)
 conformance-polls-after-identify = keeps polling after a pending identify (I1)
-conformance-connects = connects with its token (W1)
-conformance-reconnects = reconnects with the same token after a hang-up (W4)
-conformance-connects-enrolled = connects after pairing with an enrollment code
-conformance-hello-first = { $connection ->
-    [reconnected] after reconnecting: sends a hello first
-    [enrolled] enrolled: sends a hello first
-   *[paired] sends a hello first
-}
-conformance-introduces = { $connection ->
-    [reconnected] after reconnecting: introduces itself as the paired device
-    [enrolled] enrolled: introduces itself as the paired device
-   *[paired] introduces itself as the paired device
-}
+conformance-connects = opens its link with its token, a hello first, as the paired device (L1)
+conformance-reconnects = reconnects with the same token after the core closes its link (L5)
+conformance-connects-enrolled = opens its link after pairing with an enrollment code
 conformance-acknowledges = { $connection ->
     [reconnected] after reconnecting: acknowledges { $intent } within { $seconds } s
     [enrolled] enrolled: acknowledges { $intent } within { $seconds } s
@@ -30,8 +20,11 @@ conformance-follows-schema = { $connection ->
     [enrolled] enrolled: every message follows the schema
    *[paired] every message follows the schema
 }
-conformance-receives-audio = receives the core's audio (W3)
-conformance-sends-audio = sends its microphone audio (W3)
+conformance-exchanges-audio = exchanges audio, as allowed (A1, A2)
+conformance-receives-audio = receives the core's audio (A1, A2)
+conformance-sends-audio = sends its microphone audio (A1, A2)
+conformance-pairs-again = forgets a refused token and pairs again (L2, P8)
+conformance-no-unallowed-audio = offers no audio when audio is not allowed (A1)
 conformance-enrolls = pairs with the enrollment code of { $variable }, no code typed (P3, P4)
 conformance-falls-back = falls back to a device code after its enrollment code is refused ({ $refusal ->
     [expired] expired
@@ -50,10 +43,15 @@ conformance-runs = runs without crashing
 ## What was seen instead.
 
 conformance-never-polled-after-identify = never polled past the identify
-conformance-no-offer = no authenticated offer within { $seconds } s
-conformance-first-message = first message: { $type }
-conformance-no-message = no valid message in time
-conformance-wrong-device = hello says { $said }, paired as { $paired }
+conformance-no-link = no link within { $seconds } s
+conformance-link-refused = link closed with { $code }: { $why }
+conformance-no-audio-offer = no audio offer within { $seconds } s
+conformance-voice-missing = audio cannot be checked without the voice extra ({ $module } is missing)
+conformance-audio-offers = { $count ->
+    [one] 1 audio offer
+   *[other] { $count } audio offers
+}
+conformance-never-asked-again = never asked to pair again
 conformance-no-ack = no ack with this intent's id
 conformance-off-schema = { $errors }
 conformance-no-receiver-report = no RTCP receiver report from the satellite
@@ -71,8 +69,8 @@ conformance-exited = exited with status { $status }
 
 ## The command.
 
-conformance-help = check a satellite against nestor.satellite/1 (needs the voice extra)
-conformance-description = Check a satellite, written in any language, against the nestor.satellite/1 standard. A fake core (the real pairing service and gateway) launches the satellite's command once per scenario: pairing with a device code, with an enrollment code, refused codes, rate limits, identify, hello, acks, audio both ways and reconnection.
+conformance-help = check a satellite against nestor.satellite/1 (audio checks need the voice extra)
+conformance-description = Check a satellite, written in any language, against the nestor.satellite/1 standard. A fake core (the real pairing service and gateway) launches the satellite's command once per scenario: pairing with a device code, with an enrollment code, refused codes, rate limits, identify, the link and its hello, acks, text, audio both ways when allowed, reconnection and a refused token.
 conformance-epilog =
     In the command, { "{url}" } is replaced by the fake core's URL and { "{state}" } by a fresh folder for the satellite's token.
     The scenarios with an enrollment code give it in the NESTOR_PAIRING_URI environment variable (removed in the others), the way a person configures a headless device.
@@ -89,4 +87,3 @@ conformance-not-conformant = { $count ->
 } out of { $total }
 conformance-no-command = nestor: give the satellite's command after --, for example: nestor satellites conformance -- ./my-satellite --core { "{url}" }
 conformance-no-program = nestor: { $program } cannot be run (not found, or not executable)
-conformance-needs-voice = nestor: the conformance suite needs the voice extra ({ $module } is missing): pip install 'nestor-home[voice]'

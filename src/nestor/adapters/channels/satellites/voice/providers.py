@@ -14,8 +14,8 @@ from pipecat.services.stt_service import STTService
 from pipecat.services.tts_service import TTSService
 from pipecat.transcriptions.language import Language
 
-from nestor.adapters.channels.voice.eager import EagerSentenceFlush
-from nestor.adapters.channels.voice.settings import ElevenLabsSettings
+from nestor.adapters.channels.satellites.settings import ElevenLabsSettings
+from nestor.adapters.channels.satellites.voice.eager import EagerSentenceFlush
 
 IN_SAMPLE_RATE = 16000
 

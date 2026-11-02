@@ -50,6 +50,8 @@ sat-revoked-notice = Satellite { $id } revoked: it can no longer connect.
 sat-capabilities-empty = It was granted no capability: connected, but useless.
 sat-activity-empty = Nothing has gone through this device yet.
 
+sat-means-text-input = Read what someone types on it.
+sat-means-text-display = Show its answers in writing.
 sat-means-audio-capture = Hear what is said in the room, when someone talks to it.
 sat-means-audio-playback = Answer and tell things out loud in the room.
 sat-means-audio-speech-activity = Know that someone is talking, without sending the sound.
@@ -72,6 +74,8 @@ sat-add-room-as = Saved as “{ $room }”.
 sat-add-room-invalid = A room is written in letters and digits, for example “living-room” or “jules-bedroom”.
 sat-add-limit = Limit what it may do
 sat-add-start = Start
+sat-cap-text-input = read what is typed
+sat-cap-text-display = show its answers
 sat-cap-audio-capture = hear the room
 sat-cap-audio-playback = speak in the room
 sat-cap-audio-speech-activity = know someone is speaking

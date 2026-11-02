@@ -8,7 +8,7 @@ const SCHEMA = schemaFr as unknown as {
   slots: Record<string, { kinds: Record<string, JsonSchema> }>;
 };
 const mcp = SCHEMA.slots.tools?.kinds.mcp as JsonSchema;
-const voice = SCHEMA.slots.channels?.kinds.voice as JsonSchema;
+const satellites = SCHEMA.slots.channels?.kinds.satellites as JsonSchema;
 const prop = (root: JsonSchema, name: string) => root.properties?.[name] as JsonSchema;
 
 describe("reading a plugin's schema (as a real instance sends it)", () => {
@@ -22,15 +22,20 @@ describe("reading a plugin's schema (as a real instance sends it)", () => {
     expect(controlOf(prop(mcp, "max_result_chars"), mcp, "max_result_chars")).toBe("integer");
     expect(controlOf(prop(mcp, "timeout_s"), mcp, "timeout_s")).toBe("number");
     expect(controlOf(prop(mcp, "kind"), mcp, "kind")).toBe("const");
-    expect(controlOf(prop(voice, "speech"), voice, "speech")).toBe("object");
-    expect(controlOf(prop(voice, "allow_unpaired_browser"), voice, "allow_unpaired_browser")).toBe("boolean");
-    expect(controlOf(prop(voice, "fallback_clips"), voice, "fallback_clips")).toBe("path");
-    expect(controlOf(prop(voice, "style"), voice, "style")).toBe("long-text");
+    expect(controlOf(prop(satellites, "voice"), satellites, "voice")).toBe("object"); // an object, or null
+    const voice = resolve(prop(satellites, "voice"), satellites).schema;
+    expect(controlOf(prop(voice, "speech"), satellites, "speech")).toBe("object");
+    expect(controlOf(prop(voice, "fallback_clips"), satellites, "fallback_clips")).toBe("path");
+    expect(controlOf(prop(voice, "style"), satellites, "style")).toBe("long-text");
+    expect(controlOf({ type: "boolean" }, satellites, "enabled")).toBe("boolean");
   });
 
   it("unwraps a nullable value and keeps the property's own bounds and default", () => {
-    const port = resolve(prop(voice, "port"), voice);
-    expect(port.nullable).toBe(true);
+    const window = resolve(prop(satellites, "conversation_ends_after_s"), satellites);
+    expect(window.nullable).toBe(true);
+    expect(window.schema).toMatchObject({ type: "number", exclusiveMinimum: 0 });
+    const port = resolve(prop(satellites, "port"), satellites);
+    expect(port.nullable).toBe(false);
     expect(port.schema).toMatchObject({ type: "integer", minimum: 0, maximum: 65535, default: 8471 });
   });
 
@@ -51,14 +56,14 @@ describe("reading a plugin's schema (as a real instance sends it)", () => {
 });
 
 describe("editing a document", () => {
-  const doc = { persona: { name: "Richie" }, channels: [{ kind: "voice" }, { kind: "telegram" }] };
+  const doc = { persona: { name: "Richie" }, channels: [{ kind: "satellites" }, { kind: "telegram" }] };
 
   it("writes at a path without touching the original, and removes a key set to undefined", () => {
     const next = setAt(doc, ["persona", "name"], "Alfred");
     expect(getAt(next, ["persona", "name"])).toBe("Alfred");
     expect(doc.persona.name).toBe("Richie");
     expect(setAt(doc, ["persona", "name"], undefined)).toEqual({ ...doc, persona: {} });
-    expect(setAt(doc, ["channels", 0, "room"], "salon").channels[0]).toEqual({ kind: "voice", room: "salon" });
+    expect(setAt(doc, ["channels", 0, "port"], 8472).channels[0]).toEqual({ kind: "satellites", port: 8472 });
   });
 
   it("sends a typed secret as a value, and a reference as written", () => {

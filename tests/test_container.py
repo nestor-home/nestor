@@ -6,13 +6,13 @@ from pathlib import Path
 
 import yaml
 
-from nestor.adapters.channels.voice import VoiceSettings
+from nestor.adapters.channels.satellites import SatellitesSettings
 from nestor.runtime.config import AdminConfig
 
 ROOT = Path(__file__).parents[1]
 COMPOSE = yaml.safe_load((ROOT / "compose.yaml").read_text())["services"]["nestor"]
 DOCKERFILE = (ROOT / "Dockerfile").read_text()
-ADMIN, VOICE = AdminConfig().port, VoiceSettings.model_fields["port"].default
+ADMIN, VOICE = AdminConfig().port, SatellitesSettings.model_fields["port"].default
 # Ports local model servers and common tools take by default: Nestor's must not collide with them.
 TAKEN = {1234, 3000, 5000, 5173, 7860, 8000, 8080, 8081, 8123, 8888, 11434}
 

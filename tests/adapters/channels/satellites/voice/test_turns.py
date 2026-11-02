@@ -11,7 +11,7 @@ from pipecat.frames.frames import (
     VADUserStoppedSpeakingFrame,
 )
 
-from nestor.adapters.channels.voice.turns import BackchannelAwareStart, is_backchannel
+from nestor.adapters.channels.satellites.voice.turns import BackchannelAwareStart, is_backchannel
 
 
 @pytest.mark.parametrize(

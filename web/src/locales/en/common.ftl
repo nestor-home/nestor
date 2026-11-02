@@ -69,6 +69,7 @@ role-guest = guest
 role-guest-hint = Their own journal only.
 
 # Generic marks, named in words rather than by a brand (src/lib/brands.tsx).
+brand-satellites = Satellites
 brand-voice = Voice
 brand-openai-compatible = OpenAI-compatible API
 brand-sdk = { $language } SDK

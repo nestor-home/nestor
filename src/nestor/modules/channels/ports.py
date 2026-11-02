@@ -7,17 +7,19 @@ speech-to-speech model each implement `Channel`, so every channel reaches the sa
 
 from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
+from dataclasses import dataclass
 
 from nestor.core import Component, ContractError, PersonId
 from nestor.modules.channels.types import Address, InboundMessage, Medium, Sender
 
 
+@dataclass(frozen=True, slots=True)
 class MessageEnd:
     """Marks the end of a message in a `Reply`: the assistant stops writing to act (a tool call)
-    and the next words start a new message."""
+    and the next words start a new message. `last`: no other message follows in this turn, so a
+    screen can stop showing that the assistant is still at work."""
 
-    def __repr__(self) -> str:
-        return "MessageEnd()"
+    last: bool = True
 
 
 class Reply(ABC):
@@ -89,7 +91,6 @@ class Channel(Component, ABC):
 
     media: frozenset[Medium] = frozenset({Medium.WRITTEN})  # how its turns can travel
     style: str = ""  # how to write for this channel (e.g. expression tags the voice understands)
-    room: str | None = None  # where a spoken channel is heard (a home area id), if it is a satellite
 
     def __init__(self, channel_id: str, *, conversation_ends_after_s: float | None = None) -> None:
         if conversation_ends_after_s is not None and conversation_ends_after_s <= 0:
@@ -116,8 +117,8 @@ class Channel(Component, ABC):
 
     @property
     def rooms(self) -> frozenset[str]:
-        """Rooms where a spoken channel can be heard right now: its satellites' rooms; by default `room`."""
-        return frozenset({self.room}) if self.room else frozenset()
+        """Rooms (home area ids) where a spoken channel can be heard right now: its satellites' rooms."""
+        return frozenset()
 
     def reachable(self, to: Address, medium: Medium) -> bool:
         """Whether `send` can deliver through `medium` now (aloud needs someone connected). Cheap;

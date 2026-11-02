@@ -9,7 +9,7 @@ from pipecat.frames.frames import (
 from pipecat.observers.base_observer import FramePushed
 from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
 
-from nestor.adapters.channels.voice.embodiment import Embodiment
+from nestor.adapters.channels.satellites.voice.embodiment import Embodiment
 from nestor.modules.behavior import Behavior, Expression
 from nestor.testing.behavior import RecordingBody
 

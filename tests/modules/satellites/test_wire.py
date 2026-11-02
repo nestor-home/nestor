@@ -25,7 +25,7 @@ MANIFEST = Manifest(
     (DeclaredCapability(Capability("audio.capture"), {"formats": ["opus/48000"]}),),
 )
 MESSAGES: list[wire.Message] = [
-    wire.Hello(manifest=MANIFEST),
+    wire.Hello(manifest=MANIFEST, token="nst1_test"),
     wire.Ack(of="intent-1"),
     wire.PersonObservation(count=2, confidence=0.9),
     wire.SpeechActivityObservation(active=True),
@@ -34,6 +34,8 @@ MESSAGES: list[wire.Message] = [
     wire.ExpressionIntent(expression=Expression.JOY, intensity=0.7),
     wire.BeatIntent(),
     wire.IdentifyIntent(),
+    wire.TextInput(text="Allume la cuisine"),
+    wire.TextIntent(text="C'est fait.", final=False),
 ]
 
 
@@ -58,7 +60,7 @@ def test_a_message_survives_the_wire_and_matches_its_published_schema(message: w
 
 
 def test_a_manifest_keeps_the_parameters_of_its_capabilities() -> None:
-    sent = wire.encode(wire.Hello(manifest=MANIFEST))
+    sent = wire.encode(wire.Hello(manifest=MANIFEST, token="nst1_test"))
     assert sent["payload"]["manifest"]["capabilities"] == [{"name": "audio.capture", "formats": ["opus/48000"]}]
 
 
@@ -66,7 +68,7 @@ def test_a_manifest_may_name_its_maker_and_its_software() -> None:
     manifest = Manifest(
         Device("reachy", "reachy-mini", "salon", brand="pollen-robotics"), sdk=Sdk("nestor-reachy", "0.1.0")
     )
-    data = wire.encode(wire.Hello(manifest=manifest))
+    data = wire.encode(wire.Hello(manifest=manifest, token="nst1_test"))
     assert validator("hello").is_valid(data)
     decoded = wire.decode(data).message
     assert isinstance(decoded, wire.Hello) and decoded.manifest == manifest
@@ -79,12 +81,15 @@ def _with(message: wire.Message, **payload: Any) -> dict[str, Any]:
 
 
 def _manifest(**changes: Any) -> dict[str, Any]:
-    data = wire.encode(wire.Hello(manifest=MANIFEST))
+    data = wire.encode(wire.Hello(manifest=MANIFEST, token="nst1_test"))
     data["payload"]["manifest"] = {**data["payload"]["manifest"], **changes}
     return data
 
 
 OFF_CONTRACT = {
+    "empty typed text": _with(wire.TextInput(text="x"), text=""),
+    "too long typed text": _with(wire.TextInput(text="x"), text="x" * 4001),
+    "hello without a token": {**_manifest(), "payload": {"manifest": _manifest()["payload"]["manifest"]}},
     "out of bounds": _with(wire.ExpressionIntent(expression=Expression.JOY), intensity=1.5),
     "negative count": _with(wire.PersonObservation(count=1, confidence=0.5), count=-1),
     "boolean as a number": _with(wire.PersonObservation(count=1, confidence=0.5), count=True),

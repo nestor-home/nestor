@@ -1,11 +1,11 @@
-"""One connected client: its own realtime pipeline from the microphone to the speaker.
+"""One satellite's voice: its own realtime pipeline from the microphone to the speaker.
 
 transport in → STT → user turns (VAD, Smart Turn, backchannels) → assistant bridge
 → response watcher → say → TTS (eager flush) → play → transport out → played text
 """
 
 import logging
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 
 from pipecat.frames.frames import OutputAudioRawFrame
@@ -15,12 +15,12 @@ from pipecat.pipeline.worker import PipelineParams, PipelineWorker
 from pipecat.transports.base_transport import BaseTransport
 from pipecat.workers.runner import WorkerRunner
 
-from nestor.adapters.channels.voice.bridge import AssistantBridge, PlayedText
-from nestor.adapters.channels.voice.eager import ResponseWatcher
-from nestor.adapters.channels.voice.embodiment import Embodiment
-from nestor.adapters.channels.voice.providers import IN_SAMPLE_RATE, Speech
-from nestor.adapters.channels.voice.resilience import Injector, Outage, SpeechFallbacks
-from nestor.adapters.channels.voice.turns import TurnSettings, user_turns
+from nestor.adapters.channels.satellites.voice.bridge import AssistantBridge, PlayedText
+from nestor.adapters.channels.satellites.voice.eager import ResponseWatcher
+from nestor.adapters.channels.satellites.voice.embodiment import Embodiment
+from nestor.adapters.channels.satellites.voice.providers import IN_SAMPLE_RATE, Speech
+from nestor.adapters.channels.satellites.voice.resilience import Injector, Outage, SpeechFallbacks
+from nestor.adapters.channels.satellites.voice.turns import TurnSettings, user_turns
 from nestor.modules.behavior import Body
 from nestor.modules.channels import Address, Assistant, Sender
 
@@ -50,14 +50,13 @@ class VoiceSession:
         sender: Sender,
         settings: SessionSettings,
         body: Body | None = None,
-        rtvi: bool = True,
+        shown: Callable[[str], None] | None = None,
     ) -> None:
-        """`body` is animated in sync with the played audio; `rtvi` speaks the Pipecat client protocol
-        on the data channel (the browser client needs it, satellites speak the Nestor protocol)."""
+        """`body` is animated in sync with the played audio; `shown` receives what is said, to show it."""
         self.address = address
         played = PlayedText()
         self._bridge = AssistantBridge(
-            assistant, address=address, sender=sender, played=played, quiet_s=settings.quiet_s
+            assistant, address=address, sender=sender, played=played, quiet_s=settings.quiet_s, shown=shown
         )
         say, play = Injector(name="say"), Injector(name="play")
         pipeline = Pipeline(
@@ -85,7 +84,7 @@ class VoiceSession:
             ),
             observers=[latency, fallbacks, *embodiment],
             idle_timeout_secs=None,
-            enable_rtvi=rtvi,
+            enable_rtvi=False,
         )
         self._runner = WorkerRunner(handle_sigint=False)
 
