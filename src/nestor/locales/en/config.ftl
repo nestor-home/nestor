@@ -8,9 +8,9 @@ config-error-invalid = { $path }: { $detail }
 config-error-unknown-kind = { $path }: no plugin “{ $detail }” is installed.
 config-error-reference = { $path }: the environment variable { $detail } is not set.
 config-error-secret = { $path }: the secret { $detail } is not set.
-config-error-no-answering-model = { $path }: name the model it answers with, among { $detail }.
-config-error-not-answering = { $path }: { $detail } embeds text and cannot answer.
-config-error-not-embedding = { $path }: { $detail } answers and cannot embed text.
+config-error-no-answering-model = { $path }: several models can answer ({ $detail }). Choose the one for speaking, the one for writing, or both.
+config-error-not-answering = { $path }: { $detail } searches memories and cannot answer. Choose a conversation model.
+config-error-not-embedding = { $path }: { $detail } is a conversation model and cannot search memories. Choose an embedding model.
 
 config-section-persona = Persona
 config-section-household = Household

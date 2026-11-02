@@ -124,7 +124,7 @@ class Nestor:
             found = self.models[key]
             if not isinstance(found, ConversationModel):
                 raise ConfigError(
-                    f"{role} names {key}, a model that embeds and cannot answer",
+                    f"{role}: {key} searches memories and cannot answer; choose a conversation model",
                     path=tuple(role.split(".")),
                     code="not_answering",
                     detail=key,
@@ -184,7 +184,8 @@ class Nestor:
         embedder = self.models[config.memory.embedder] if config.memory.embedder else None
         if embedder is not None and not isinstance(embedder, Embedder):
             raise ConfigError(
-                f"memory.embedder names {config.memory.embedder}, a model that does not embed",
+                f"memory.embedder: {config.memory.embedder} is a conversation model and cannot search memories; "
+                "choose an embedding model",
                 path=("memory", "embedder"),
                 code="not_embedding",
                 detail=config.memory.embedder,

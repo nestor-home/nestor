@@ -85,7 +85,7 @@ def test_a_role_must_name_a_declared_model(extra: str, error: str) -> None:
 
 def test_with_several_models_that_answer_the_agent_says_which() -> None:
     config = parse_config(TWO_MODELS, ENV)
-    with pytest.raises(ConfigError, match="agent: name the model it answers with, among haiku, local"):
+    with pytest.raises(ConfigError, match=re.escape("agent: several models can answer (haiku, local)")):
         config.roles(["haiku", "local"])
     assert config.roles(["haiku"])["written"] == "haiku", "a model that embeds is never a default"
 

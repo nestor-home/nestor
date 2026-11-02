@@ -226,7 +226,7 @@ class NestorConfig(Section):
         if written is None:
             among = ", ".join(answering) or "-"
             raise ConfigError(
-                f"agent: name the model it answers with, among {among}: `spoken`, `written` or both",
+                f"agent: several models can answer ({among}); say which in `spoken`, `written` or both",
                 path=("agent",),
                 code="no_answering_model",
                 detail=among,

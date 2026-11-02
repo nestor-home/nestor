@@ -6,9 +6,9 @@ config-error-invalid = { $path } : { $detail }
 config-error-unknown-kind = { $path } : aucun greffon « { $detail } » n'est installé.
 config-error-reference = { $path } : la variable d'environnement { $detail } n'est pas définie.
 config-error-secret = { $path } : le secret { $detail } n'est pas défini.
-config-error-no-answering-model = { $path } : nommez le modèle qui répond, parmi { $detail }.
-config-error-not-answering = { $path } : { $detail } transforme le texte en vecteurs et ne peut pas répondre.
-config-error-not-embedding = { $path } : { $detail } répond mais ne transforme pas le texte en vecteurs.
+config-error-no-answering-model = { $path } : plusieurs modèles peuvent répondre ({ $detail }). Choisissez celui de l'oral, celui de l'écrit, ou les deux.
+config-error-not-answering = { $path } : { $detail } sert à chercher dans les souvenirs, il ne sait pas répondre. Choisissez un modèle de conversation.
+config-error-not-embedding = { $path } : { $detail } est un modèle de conversation, il ne sait pas chercher dans les souvenirs. Choisissez un modèle d'embedding.
 
 config-section-persona = Personnage
 config-section-household = Foyer
