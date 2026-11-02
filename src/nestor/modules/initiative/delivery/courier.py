@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 from nestor.core import Component, PersonId, ProviderError, utc_now
+from nestor.core.i18n import Message
 from nestor.modules.channels import Address, Channel, Medium
 from nestor.modules.conversation import Agent, AssistantTurn, UserTurn
 from nestor.modules.home import PresenceSource
@@ -69,16 +70,22 @@ class Courier(Component):
         origin: Address | None = None,
         written: bool = False,
         urgent: bool = False,
+        to: Address | None = None,
     ) -> Address | None:
-        """Deliver now; returns where, or `None` (logged as `DeliveryFailed`) when nothing could take it."""
-        plan = self.policy.plan(
-            person,
-            channels=self.channels.values(),
-            presence=self.presence.presence() if self.presence else None,
-            origin=origin,
-            now=utc_now(),
-            written=written,
-            urgent=urgent,
+        """Deliver now; returns where, or `None` (logged as `DeliveryFailed`) when nothing could take it.
+        `to` is a place asked for (a channel someone named): it is written there, whatever the policy."""
+        plan = (
+            Plan(spoken=None, written=to, reason=Message.of("delivery-place-asked", channel=to.channel))
+            if to
+            else self.policy.plan(
+                person,
+                channels=self.channels.values(),
+                presence=self.presence.presence() if self.presence else None,
+                origin=origin,
+                now=utc_now(),
+                written=written,
+                urgent=urgent,
+            )
         )
         await self.journal.publish(
             DeliveryConsidered(

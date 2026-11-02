@@ -59,6 +59,10 @@ journal-delivery-considered = { $known ->
        *[other] { $status }
     }
     [watch] veille { $id }
+    [message] message { $id }{ $status ->
+        [undelivered] {" "}non remis
+       *[other] {""}
+    }
    *[other] { $about }
 }{ $follow_up ->
     [yes] {" "}(relance)
@@ -72,11 +76,22 @@ journal-delivered = Message transmis : { $subject ->
        *[other] { $status }
     }
     [watch] veille { $id }
+    [message] message { $id }{ $status ->
+        [undelivered] {" "}non remis
+       *[other] {""}
+    }
    *[other] { $about }
 }{ $follow_up ->
     [yes] {" "}(relance)
    *[no] {""}
 }
+journal-message-requested = { $kind ->
+    [question] Question pour { $to }
+    [answer] Réponse transmise à { $to }
+   *[other] Message pour { $to }
+} de la part de { $by }
+journal-message-delivered = Message { $id } remis
+journal-message-undelivered = Message { $id } non remis
 journal-delivery-failed = Message non transmis : { $subject ->
     [task] tâche { $id } { $status ->
         [completed] terminée
@@ -85,6 +100,10 @@ journal-delivery-failed = Message non transmis : { $subject ->
        *[other] { $status }
     }
     [watch] veille { $id }
+    [message] message { $id }{ $status ->
+        [undelivered] {" "}non remis
+       *[other] {""}
+    }
    *[other] { $about }
 }{ $follow_up ->
     [yes] {" "}(relance)

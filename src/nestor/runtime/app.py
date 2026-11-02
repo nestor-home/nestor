@@ -39,6 +39,9 @@ from nestor.modules.initiative import (
     Courier,
     DeliveryPolicy,
     InboundEventSource,
+    MessageBook,
+    MessageTools,
+    Messenger,
     QuietHours,
     TaskAnnouncer,
     Triage,
@@ -168,6 +171,8 @@ class Nestor:
         memory = MemoryTools(self.memories, self.household)
         self.watch_book = WatchBook(self.journal, kinds=(k for source in self.sources for k in source.kinds))
         watch_tools = WatchTools(self.watch_book)
+        self.message_book = MessageBook(self.journal)
+        message_tools = MessageTools(self.message_book, self.household)
         connector_tools = [ConnectorTools(self.connections)] if self.connections else []
         self.agent = Agent(
             models=ModelChoice(spoken=self.models[roles["spoken"]], written=self.models[roles["written"]]),
@@ -175,9 +180,11 @@ class Nestor:
             localizer=self.localizer,
             journal=self.journal,
             household=self.household,
-            toolbox=Toolbox(self.journal, providers=[delegation, memory, watch_tools, *self.tools, *connector_tools]),
+            toolbox=Toolbox(
+                self.journal, providers=[delegation, memory, watch_tools, message_tools, *self.tools, *connector_tools]
+            ),
             channels={c.channel_id: ChannelProfile(c.style, c.conversation_ends_after_s) for c in self.channels},
-            context=[delegation, memory, watch_tools],
+            context=[delegation, memory, watch_tools, message_tools],
         )
         initiative = config.initiative
         quiet_hours = QuietHours.parse(initiative.quiet_hours) if initiative.quiet_hours else None
@@ -194,6 +201,7 @@ class Nestor:
             follow_up_after_s=initiative.follow_up_after_s,
         )
         self.announcer = TaskAnnouncer(self.journal, self.household, self.courier)
+        self.messenger = Messenger(self.message_book, self.household, self.courier)
         self.watches = WatchKeeper(
             self.watch_book,
             self.household,
@@ -233,6 +241,8 @@ class Nestor:
             *self.channels,
             self.courier,
             self.announcer,
+            self.message_book,
+            self.messenger,
             self.watch_book,
             *self.sources,
             self.watches,
