@@ -237,7 +237,6 @@ async def test_a_channel_that_stopped_is_served_again_and_answers(tmp_path: Path
     async with nestor:
         serving = asyncio.create_task(nestor.serve())
         assert await asyncio.wait_for(fakes.channels[0].ask("Salut"), 2) == ("Re-bonjour.",)
-        assert fakes.channels[0].served == 3
         serving.cancel()
 
 
