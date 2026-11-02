@@ -41,8 +41,8 @@ nestor -c nestor.yaml check        # fill the keys in .env first
 nestor -c nestor.yaml run
 ```
 
-Voice is one channel among others: without the `voice` extra, Nestor runs text only, and a configuration
-that uses the voice channel says which requirement to install. `nestor init` writes a voice channel only
+Satellites talk in writing out of the box; their voice is the `voice` extra. Without it, a configuration
+that gives satellites a `voice` says which requirement to install. `nestor init` writes that section only
 when the extra is installed and you want it.
 
 Every command reads the `.env` next to the configuration at each start: no need to source it. A variable
@@ -52,8 +52,8 @@ The model is any OpenAI-compatible server. Hosted providers need a key (`MODEL_A
 local ones (Ollama `http://localhost:11434/v1`, LM Studio `http://localhost:1234/v1`, vLLM, llama.cpp)
 need none: leave it empty and no `Authorization` header is sent.
 
-Ports: the admin listens on 8470, the voice channel (satellites, development browser client) on 8471.
-Both are configurable (`admin.port`, the voice channel's `port`).
+Ports: the admin listens on 8470, satellites on 8471 (their link and their voice). Both are configurable
+(`admin.port`, the satellites channel's `port`).
 
 ## Development
 

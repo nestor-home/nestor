@@ -10,7 +10,7 @@ services:
     volumes: ["./data:/data"]
     ports:
       - "8470:8470"  # admin
-      - "8471:8471"  # voice: satellites and the development browser client
+      - "8471:8471"  # satellites: their link and their voice
     # A model server on this machine (Ollama, LM Studio…) is http://host.docker.internal:<port>/v1 from
     # the container: `localhost` there is the container itself. Linux needs this line (and the model server
     # listening beyond loopback, e.g. OLLAMA_HOST=0.0.0.0); macOS and Windows define the name already.
