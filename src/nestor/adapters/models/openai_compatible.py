@@ -14,16 +14,23 @@ Tested against OpenRouter only; other servers are expected to work but remain un
 """
 
 import json
-import urllib.parse
 from collections.abc import AsyncGenerator, AsyncIterator, Callable, Iterator, Mapping
 from contextlib import aclosing
 from dataclasses import dataclass, field
 from typing import Any
 
 import httpx
-from pydantic import Field, PositiveFloat, SecretStr, ValidationInfo, field_validator
-from pydantic_core import PydanticCustomError
+from pydantic import Field, PositiveFloat
 
+from nestor.adapters.models.common import (
+    MAX_DETAIL,
+    EndpointSettings,
+    brand,
+    detail,
+    message_of,
+    provider_error,
+    retryable,
+)
 from nestor.core import ContractError, ProviderError, new_id
 from nestor.modules.cognition import (
     ConversationModel,
@@ -39,7 +46,7 @@ from nestor.modules.cognition import (
     ToolSpec,
     Usage,
 )
-from nestor.runtime.plugins import AdapterSettings, Family, Plugin, Services
+from nestor.runtime.plugins import Family, Plugin, Services
 
 _FINISH_REASONS = {
     "stop": FinishReason.STOP,
@@ -47,20 +54,9 @@ _FINISH_REASONS = {
     "function_call": FinishReason.TOOL_CALLS,
     "length": FinishReason.LENGTH,
 }
-_RETRYABLE_STATUSES = frozenset({408, 409, 425, 429})
-_BRANDS = {"openrouter.ai": "openrouter", "openai.com": "openai", "mistral.ai": "mistral", "anthropic.com": "anthropic"}
+
+
 _CACHE_CONTROL = frozenset({"openrouter", "anthropic"})  # the brands that read `cache_control` breakpoints
-_MAX_DETAIL = 300
-
-
-def _brand_host(base_url: str) -> str | None:
-    """The known provider `base_url` belongs to (`openrouter.ai`), if any: each requires an API key."""
-    host = urllib.parse.urlsplit(base_url).hostname or ""
-    return next((suffix for suffix in _BRANDS if host == suffix or host.endswith(f".{suffix}")), None)
-
-
-def _retryable(status: int) -> bool:
-    return status in _RETRYABLE_STATUSES or status >= 500
 
 
 class OpenAICompatibleModel(ConversationModel):
@@ -92,7 +88,7 @@ class OpenAICompatibleModel(ConversationModel):
         self._timeout = httpx.Timeout(read_timeout_s, connect=connect_timeout_s)
         self._provider = provider
         self._client: httpx.AsyncClient | None = None
-        self.brand = _BRANDS.get(_brand_host(base_url) or "")
+        self.brand = brand(base_url)
         self._cache_control = self.brand in _CACHE_CONTROL if cache_control is None else cache_control
 
     def details(self) -> Mapping[str, str]:
@@ -115,10 +111,8 @@ class OpenAICompatibleModel(ConversationModel):
         try:
             async with self._client.stream("POST", "chat/completions", json=self._body(request)) as response:
                 if response.is_error:
-                    detail = _detail(await response.aread())
-                    raise self._error(
-                        f"HTTP {response.status_code}: {detail}", transient=_retryable(response.status_code)
-                    )
+                    said = detail(await response.aread())
+                    raise self._error(f"HTTP {response.status_code}: {said}", transient=retryable(response.status_code))
                 async with aclosing(_ChunkDecoder(self._error).outputs(response.aiter_lines())) as outputs:
                     async for output in outputs:
                         yield output
@@ -138,8 +132,7 @@ class OpenAICompatibleModel(ConversationModel):
         return body | self._extra_body
 
     def _error(self, message: str, *, transient: bool) -> ProviderError:
-        redacted = message.replace(self._api_key, "[redacted]") if self._api_key else message
-        return ProviderError(self._provider, redacted, transient=transient)
+        return provider_error(self._provider, self._api_key, message, transient=transient)
 
 
 @dataclass(slots=True)
@@ -183,14 +176,14 @@ class _ChunkDecoder:
         except json.JSONDecodeError:
             chunk = None
         if not isinstance(chunk, dict):
-            raise self._error(f"malformed stream chunk: {data[:_MAX_DETAIL]}", transient=True)
+            raise self._error(f"malformed stream chunk: {data[:MAX_DETAIL]}", transient=True)
         return chunk
 
     def _read(self, chunk: dict[str, Any]) -> Iterator[str]:
         if (error := chunk.get("error")) is not None:
             code = error.get("code") if isinstance(error, dict) else None
-            transient = not isinstance(code, int) or _retryable(code)
-            raise self._error(f"error in stream: {_message_of(error)}", transient=transient)
+            transient = not isinstance(code, int) or retryable(code)
+            raise self._error(f"error in stream: {message_of(error)}", transient=transient)
         if isinstance(model := chunk.get("model"), str) and model:
             self._model = model
         if isinstance(usage := chunk.get("usage"), dict):
@@ -222,7 +215,7 @@ class _ChunkDecoder:
             except json.JSONDecodeError:
                 arguments = None
             if not isinstance(arguments, dict):
-                message = f"tool call {partial.name!r} has invalid JSON arguments: {raw[:_MAX_DETAIL]}"
+                message = f"tool call {partial.name!r} has invalid JSON arguments: {raw[:MAX_DETAIL]}"
                 raise self._error(message, transient=True)
             yield ToolCall(partial.id or new_id(), partial.name, arguments)
 
@@ -279,46 +272,15 @@ def _usage(usage: dict[str, Any]) -> Usage | None:
     )
 
 
-def _detail(body: bytes) -> str:
-    text = body.decode(errors="replace")
-    try:
-        error = json.loads(text)["error"]
-    except (ValueError, KeyError, TypeError):
-        return text[:_MAX_DETAIL]
-    return _message_of(error)
+class OpenAICompatibleSettings(EndpointSettings):
+    """Configuration of an OpenAI-compatible chat model."""
 
-
-def _message_of(error: object) -> str:
-    message = error.get("message", error) if isinstance(error, dict) else error
-    return str(message)[:_MAX_DETAIL]
-
-
-class OpenAICompatibleSettings(AdapterSettings):
-    """Configuration of an OpenAI-compatible model; `api_key` should come from the environment.
-
-    The key is optional, as local servers need none: empty is the same as absent. The hosted providers
-    known to require one refuse to be configured without it."""
-
-    base_url: str
-    api_key: SecretStr | None = Field(default=None, validate_default=True)
     model: str
     extra_body: dict[str, Any] = Field(default_factory=dict)
     connect_timeout_s: PositiveFloat = 5.0
     read_timeout_s: PositiveFloat = 30.0
     # mark the instructions' stable layers for the prompt cache; by default for OpenRouter and Anthropic
     cache_control: bool | None = Field(default=None, json_schema_extra={"advanced": True})
-
-    @field_validator("api_key", mode="before")
-    @classmethod
-    def _empty_is_absent(cls, value: object) -> object:
-        return None if value == "" else value
-
-    @field_validator("api_key")
-    @classmethod
-    def _required_by_known_providers(cls, value: SecretStr | None, info: ValidationInfo) -> SecretStr | None:
-        if value is None and (host := _brand_host(str(info.data.get("base_url", "")))):
-            raise PydanticCustomError("api_key_required", "{host} requires an API key", {"host": host})
-        return value
 
 
 def build(settings: OpenAICompatibleSettings, name: str, services: Services) -> OpenAICompatibleModel:

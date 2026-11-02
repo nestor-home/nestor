@@ -1,0 +1,122 @@
+{"dataset": "memory-recall", "version": 1}
+{"memory": "m01", "about": "lea", "text": "Léa est végétarienne depuis 2024.", "at": "2024-03-10"}
+{"memory": "m02", "about": "hugo", "text": "Hugo est allergique aux arachides.", "at": "2025-05-02"}
+{"memory": "m03", "about": "jules", "text": "Jules a entraînement de foot le mercredi à 14 h.", "at": "2025-09-01"}
+{"memory": "m04", "about": "odile", "text": "Odile prend son traitement pour la tension chaque matin à 8 h."}
+{"memory": "m05", "about": null, "text": "Le code du portail est donné aux invités par SMS, jamais par écrit sur la porte."}
+{"memory": "m06", "about": null, "text": "Les clés de secours sont chez la voisine, Mme Perrin, au numéro 12."}
+{"memory": "m07", "about": "lea", "text": "Léa travaille à l'hôpital de la Croix-Rousse, souvent de nuit le week-end."}
+{"memory": "m08", "about": "hugo", "text": "Hugo part en déplacement à Nantes tous les mardis.", "at": "2025-01-15"}
+{"memory": "m09", "about": "jules", "text": "Jules est en CM1 dans la classe de Mme Garnier."}
+{"memory": "m10", "about": "jules", "text": "Jules a peur du noir : on laisse la veilleuse du couloir allumée."}
+{"memory": "m11", "about": null, "text": "La poubelle jaune sort le jeudi soir, la verte le lundi soir."}
+{"memory": "m12", "about": null, "text": "Le chat s'appelle Moustache et mange des croquettes sans céréales."}
+{"memory": "m13", "about": null, "text": "Le vétérinaire de Moustache est le docteur Lemaire, rue Paul-Bert."}
+{"memory": "m14", "about": "odile", "text": "Odile adore les mots croisés de Télérama."}
+{"memory": "m15", "about": "odile", "text": "Odile ne mange pas de fromage au lait cru, sur conseil de son médecin."}
+{"memory": "m16", "about": "lea", "text": "Léa boit son café sans sucre avec un nuage de lait d'avoine."}
+{"memory": "m17", "about": "hugo", "text": "Hugo préfère le thé vert le soir."}
+{"memory": "m18", "about": null, "text": "Le Wi-Fi des invités s'appelle Maison-Invites."}
+{"memory": "m19", "about": null, "text": "La chaudière a été révisée en septembre 2026 par la société Thermiclim."}
+{"memory": "m20", "about": null, "text": "La voiture électrique se recharge la nuit, en heures creuses, à partir de 22 h 30."}
+{"memory": "m21", "about": "jules", "text": "Jules est invité à l'anniversaire de Nina le samedi 14 novembre."}
+{"memory": "m22", "about": "lea", "text": "Léa n'aime pas la coriandre."}
+{"memory": "m23", "about": "hugo", "text": "Hugo joue de la guitare et prend un cours le jeudi soir."}
+{"memory": "m24", "about": null, "text": "Le dentiste de la famille est le docteur Benali."}
+{"memory": "m25", "about": "odile", "text": "Odile habite à Villeurbanne et vient déjeuner le dimanche."}
+{"memory": "m26", "about": "jules", "text": "Jules doit rendre son exposé sur les volcans vendredi."}
+{"memory": "m27", "about": null, "text": "Les vacances de Noël sont prévues en Savoie, au chalet des cousins."}
+{"memory": "m28", "about": "lea", "text": "L'anniversaire de Léa est le 3 mars."}
+{"memory": "m29", "about": "hugo", "text": "L'anniversaire d'Hugo est le 19 juillet."}
+{"memory": "m30", "about": "jules", "text": "L'anniversaire de Jules est le 8 décembre."}
+{"memory": "m31", "about": "odile", "text": "L'anniversaire d'Odile est le 27 janvier."}
+{"memory": "m32", "about": null, "text": "Les piles de rechange sont dans le tiroir de gauche du buffet."}
+{"memory": "m33", "about": null, "text": "Le parapluie rouge est dans le coffre de la voiture."}
+{"memory": "m34", "about": "lea", "text": "Léa fait du yoga le lundi soir à la salle du quartier."}
+{"memory": "m35", "about": "hugo", "text": "Hugo veut changer de vélo pour un vélo cargo."}
+{"memory": "m36", "about": "jules", "text": "Jules ne supporte pas les endives."}
+{"memory": "m37", "about": null, "text": "La nounou du mercredi s'appelle Camille et arrive à 13 h."}
+{"memory": "m38", "about": null, "text": "Le plombier de confiance est Monsieur Dufour."}
+{"memory": "m39", "about": "odile", "text": "Odile ne conduit plus la nuit.", "at": "2025-11-20"}
+{"memory": "m40", "about": null, "text": "Le robot aspirateur passe le mardi et le vendredi à 10 h."}
+{"memory": "m41", "about": "lea", "text": "Léa est allergique aux pollens de bouleau au printemps."}
+{"memory": "m42", "about": "hugo", "text": "Hugo garde ses papiers importants dans la pochette bleue du bureau."}
+{"memory": "m43", "about": null, "text": "Le pass Navigo de Jules est rangé dans son cartable."}
+{"memory": "m44", "about": "jules", "text": "Jules aime les pâtes au pesto plus que tout."}
+{"memory": "m45", "about": null, "text": "La réunion de copropriété a lieu le 20 novembre à 19 h."}
+{"memory": "m46", "about": "lea", "text": "Léa veut qu'on lui rappelle d'arroser les orchidées le dimanche."}
+{"memory": "m47", "about": null, "text": "Le linge délicat se lave à 30 degrés, programme laine."}
+{"memory": "m48", "about": "hugo", "text": "Hugo a mal au dos et évite de porter des charges lourdes."}
+{"memory": "m49", "about": "odile", "text": "Odile appelle sa sœur Jeanne tous les mercredis."}
+{"memory": "m50", "about": null, "text": "Le frigo du garage sert aux boissons et aux restes du dimanche."}
+{"memory": "m51", "about": "jules", "text": "Jules prend des cours de natation le samedi matin."}
+{"memory": "m52", "about": null, "text": "Le médecin traitant de la famille est la docteure Martin."}
+{"memory": "m53", "about": "lea", "text": "Léa préfère être réveillée en douceur, sans alarme forte."}
+{"memory": "m54", "about": "hugo", "text": "Hugo supporte l'Olympique lyonnais."}
+{"memory": "m55", "about": null, "text": "La boîte à pharmacie est en haut du placard de la salle de bains."}
+{"memory": "m56", "about": "odile", "text": "Odile a un appareil auditif à l'oreille droite : parler lentement et en face."}
+{"memory": "m57", "about": null, "text": "Le mot de passe du Wi-Fi est sur l'étiquette au dos de la box."}
+{"memory": "m58", "about": "jules", "text": "Jules a une carie à soigner, rendez-vous à prendre chez le dentiste."}
+{"memory": "m59", "about": null, "text": "On commande les courses en ligne le vendredi pour une livraison le samedi."}
+{"memory": "m60", "about": "lea", "text": "Léa prépare un semi-marathon en avril."}
+{"memory": "m61", "about": "lea", "text": "Léa remange du poisson depuis l'été 2026.", "at": "2026-08-01"}
+{"memory": "m62", "about": "hugo", "text": "Hugo ne part plus à Nantes le mardi : il y va le jeudi désormais.", "at": "2026-09-14"}
+{"memory": "m63", "about": "jules", "text": "Jules a arrêté le foot, il fait du judo le mercredi à 14 h.", "at": "2026-09-05"}
+{"memory": "m64", "about": "odile", "text": "Odile conduit de nouveau la nuit depuis son opération de la cataracte.", "at": "2026-10-02"}
+{"memory": "m65", "about": "lea", "text": "Léa était allergique aux arachides enfant, ça lui est passé.", "at": "2026-06-11"}
+{"memory": "m66", "about": "odile", "text": "Odile n'aime pas qu'on l'appelle Mamie devant ses amies.", "at": "2026-04-03"}
+{"case": "c01", "speaker": "hugo", "said": "Léa est végétarienne, non ?", "expected": ["m01"], "kind": "direct"}
+{"case": "c02", "speaker": "lea", "said": "Quand est-ce que Jules a foot ?", "expected": ["m03"], "kind": "direct"}
+{"case": "c03", "speaker": "hugo", "said": "Elles sont où les clés de secours ?", "expected": ["m06"], "kind": "direct"}
+{"case": "c04", "speaker": "lea", "said": "C'est quand la poubelle jaune ?", "expected": ["m11"], "kind": "direct"}
+{"case": "c05", "speaker": "jules", "said": "Comment s'appelle le vétérinaire de Moustache ?", "expected": ["m13"], "kind": "direct"}
+{"case": "c06", "speaker": "hugo", "said": "C'est quoi le nom du Wi-Fi des invités ?", "expected": ["m18"], "kind": "direct"}
+{"case": "c07", "speaker": "lea", "said": "Qui est le plombier qu'on appelle d'habitude ?", "expected": ["m38"], "kind": "direct"}
+{"case": "c08", "speaker": "hugo", "said": "Quand est l'anniversaire de Jules ?", "expected": ["m30"], "kind": "direct"}
+{"case": "c09", "speaker": "lea", "said": "La réunion de copropriété, c'est quand déjà ?", "expected": ["m45"], "kind": "direct"}
+{"case": "c10", "speaker": "hugo", "said": "Où sont les piles ?", "expected": ["m32"], "kind": "direct"}
+{"case": "c11", "speaker": "lea", "said": "Jules a natation quel jour ?", "expected": ["m51"], "kind": "direct"}
+{"case": "c12", "speaker": "hugo", "said": "Qui est notre médecin traitant ?", "expected": ["m52"], "kind": "direct"}
+{"case": "c13", "speaker": "hugo", "said": "Je fais un gratin pour ce soir, je peux mettre du jambon pour tout le monde ?", "expected": ["m01"], "kind": "paraphrase"}
+{"case": "c14", "speaker": "lea", "said": "Je prépare des cookies aux cacahuètes, ça pose un souci ?", "expected": ["m02"], "kind": "paraphrase"}
+{"case": "c15", "speaker": "hugo", "said": "Ma mère a pris ses médicaments ce matin ?", "expected": ["m04"], "kind": "paraphrase"}
+{"case": "c16", "speaker": "lea", "said": "Le petit a l'air terrifié quand on éteint tout le soir, on fait comment ?", "expected": ["m10"], "kind": "paraphrase"}
+{"case": "c17", "speaker": "hugo", "said": "Qu'est-ce que je dois donner à manger au chat ?", "expected": ["m12"], "kind": "paraphrase"}
+{"case": "c18", "speaker": "lea", "said": "Je voudrais offrir un cadeau à ma belle-mère, une idée de ce qui lui plaît ?", "expected": ["m14"], "kind": "paraphrase"}
+{"case": "c19", "speaker": "hugo", "said": "Pour le plateau de fromages de dimanche, je prends un camembert de ferme ?", "expected": ["m15"], "kind": "paraphrase"}
+{"case": "c20", "speaker": "lea", "said": "Quand est-ce que je peux brancher la voiture pour qu'elle coûte le moins cher ?", "expected": ["m20"], "kind": "paraphrase"}
+{"case": "c21", "speaker": "hugo", "said": "Le gamin a quelque chose de prévu le week-end du 14 ?", "expected": ["m21", "m51"], "kind": "paraphrase"}
+{"case": "c22", "speaker": "lea", "said": "Je mets quoi comme herbes dans le curry ce soir ?", "expected": ["m22"], "kind": "paraphrase"}
+{"case": "c23", "speaker": "hugo", "said": "J'ai mal aux dents, chez qui je vais ?", "expected": ["m24"], "kind": "paraphrase"}
+{"case": "c24", "speaker": "lea", "said": "Où est-ce qu'on part pour les fêtes de fin d'année ?", "expected": ["m27"], "kind": "paraphrase"}
+{"case": "c25", "speaker": "hugo", "said": "Il pleut des cordes, tu sais où il y a un parapluie ?", "expected": ["m33"], "kind": "paraphrase"}
+{"case": "c26", "speaker": "jules", "said": "Je peux manger de la salade d'endives ce midi ?", "expected": ["m36"], "kind": "paraphrase"}
+{"case": "c27", "speaker": "lea", "said": "Qui garde les enfants mercredi après-midi ?", "expected": ["m37"], "kind": "paraphrase"}
+{"case": "c28", "speaker": "hugo", "said": "Maman peut rentrer seule en voiture après le dîner ?", "expected": ["m39"], "kind": "paraphrase"}
+{"case": "c29", "speaker": "lea", "said": "Pourquoi j'éternue autant en avril ?", "expected": ["m41"], "kind": "paraphrase"}
+{"case": "c30", "speaker": "hugo", "said": "Où j'ai mis mon passeport ?", "expected": ["m42"], "kind": "paraphrase"}
+{"case": "c31", "speaker": "lea", "said": "Qu'est-ce que je cuisine qui fera plaisir à Jules ?", "expected": ["m44"], "kind": "paraphrase"}
+{"case": "c32", "speaker": "hugo", "said": "Je lave le pull en cachemire de Léa à quelle température ?", "expected": ["m47"], "kind": "paraphrase"}
+{"case": "c33", "speaker": "lea", "said": "Hugo peut m'aider à monter le canapé au deuxième ?", "expected": ["m48"], "kind": "paraphrase"}
+{"case": "c34", "speaker": "hugo", "said": "J'ai des bouchons d'oreille qui me font mal, il y a de quoi soigner dans la maison ?", "expected": ["m55"], "kind": "paraphrase"}
+{"case": "c35", "speaker": "lea", "said": "Comment je dois parler à Odile pour qu'elle m'entende bien ?", "expected": ["m56"], "kind": "paraphrase"}
+{"case": "c36", "speaker": "hugo", "said": "C'est quoi le code pour se connecter à internet ?", "expected": ["m57"], "kind": "paraphrase"}
+{"case": "c37", "speaker": "lea", "said": "Tu peux me réveiller demain à 6 h ?", "expected": ["m53"], "kind": "paraphrase"}
+{"case": "c38", "speaker": "hugo", "said": "Qu'est-ce qu'on mange au dîner de ce soir avec Léa et Odile ?", "expected": ["m01", "m15"], "kind": "paraphrase"}
+{"case": "c39", "speaker": "hugo", "said": "Il fait quel temps demain ?", "expected": [], "kind": "none"}
+{"case": "c40", "speaker": "lea", "said": "Mets de la musique douce.", "expected": [], "kind": "none"}
+{"case": "c41", "speaker": "jules", "said": "Raconte-moi une blague.", "expected": [], "kind": "none"}
+{"case": "c42", "speaker": "hugo", "said": "Allume la lumière du salon.", "expected": [], "kind": "none"}
+{"case": "c43", "speaker": "lea", "said": "Combien font 17 fois 23 ?", "expected": [], "kind": "none"}
+{"case": "c44", "speaker": "hugo", "said": "Quelles sont les nouvelles du jour ?", "expected": [], "kind": "none"}
+{"case": "c45", "speaker": "jules", "said": "Bonne nuit !", "expected": [], "kind": "none"}
+{"case": "c46", "speaker": "hugo", "said": "Je prends du saumon pour Léa ce soir ?", "expected": ["m61"], "kind": "contradiction", "stale": ["m01"]}
+{"case": "c47", "speaker": "lea", "said": "Hugo est à Nantes quel jour ?", "expected": ["m62"], "kind": "contradiction", "stale": ["m08"]}
+{"case": "c48", "speaker": "hugo", "said": "Jules a toujours foot le mercredi ?", "expected": ["m63"], "kind": "contradiction", "stale": ["m03"]}
+{"case": "c49", "speaker": "lea", "said": "Odile peut rentrer en voiture de nuit ?", "expected": ["m64"], "kind": "contradiction", "stale": ["m39"]}
+{"case": "c50", "speaker": "lea", "said": "Jules adore les endives, j'en fais ce soir ?", "expected": ["m36"], "kind": "premise"}
+{"case": "c51", "speaker": "hugo", "said": "Léa met du sucre dans son café, je lui en mets deux ?", "expected": ["m16"], "kind": "premise"}
+{"case": "c52", "speaker": "jules", "said": "Mamie mange de tout, je lui sers le brie au lait cru ?", "expected": ["m15", "m66"], "kind": "premise"}
+{"case": "c53", "speaker": "hugo", "said": "Léa a des allergies alimentaires ?", "expected": ["m65"], "kind": "other-person", "avoid": ["m02"]}
+{"case": "c54", "speaker": "hugo", "said": "C'est quand l'anniversaire d'Odile ?", "expected": ["m31"], "kind": "other-person", "avoid": ["m28", "m29", "m30"]}
+{"case": "c55", "speaker": "lea", "said": "Hugo a quoi le jeudi soir ?", "expected": ["m23", "m62"], "kind": "other-person", "avoid": ["m34"]}

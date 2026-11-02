@@ -1,16 +1,15 @@
 """Double and contract suite for the memory store."""
 
-import unicodedata
+from collections.abc import Collection
 
 from nestor.core import PersonId
 from nestor.modules.memory import Memory, MemoryStore
+from nestor.testing.text import folded_words
 
 
 def words(text: str) -> set[str]:
-    """Lower-cased words without accents: how memory search compares text."""
-    plain = unicodedata.normalize("NFKD", text.casefold())
-    plain = "".join(c for c in plain if not unicodedata.combining(c))
-    return {w for w in "".join(c if c.isalnum() else " " for c in plain).split() if len(w) > 1}
+    """Lower-cased words without accents, of two letters or more: how memory search compares text."""
+    return {w for w in folded_words(text) if len(w) > 1}
 
 
 class InMemoryMemoryStore(MemoryStore):
@@ -24,6 +23,9 @@ class InMemoryMemoryStore(MemoryStore):
 
     async def get(self, memory_id: str) -> Memory | None:
         return self.memories.get(memory_id)
+
+    async def get_many(self, memory_ids: Collection[str]) -> list[Memory]:
+        return [m for i in dict.fromkeys(memory_ids) if (m := self.memories.get(i)) is not None]
 
     async def delete(self, memory_id: str) -> None:
         self.memories.pop(memory_id, None)
@@ -40,6 +42,9 @@ class InMemoryMemoryStore(MemoryStore):
     async def recent(self, *, about: PersonId | None = None, limit: int = 20) -> list[Memory]:
         kept = [m for m in self.memories.values() if about is None or m.about in (about, None)]
         return sorted(kept, key=lambda m: m.updated_at, reverse=True)[:limit]
+
+    async def everything(self) -> list[Memory]:
+        return list(self.memories.values())
 
 
 class MemoryStoreContract:
@@ -84,3 +89,13 @@ class MemoryStoreContract:
                 await store.put(Memory(text=text))
             recent = await store.recent(limit=2)
         assert [m.text for m in recent] == ["troisième", "deuxième"]
+
+    async def test_several_memories_are_read_at_once_and_all_of_them_listed(self) -> None:
+        async with self.store() as store:
+            kept = [Memory(text=text) for text in ("premier", "deuxième", "troisième")]
+            for memory in kept:
+                await store.put(memory)
+            some = await store.get_many([kept[0].id, "absent", kept[2].id, kept[0].id])
+            assert sorted(m.text for m in some) == ["premier", "troisième"], "an unknown id is left out, once"
+            assert await store.get_many([]) == []
+            assert sorted(m.id for m in await store.everything()) == sorted(m.id for m in kept)

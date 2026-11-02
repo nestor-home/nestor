@@ -142,7 +142,13 @@ async def test_models_are_named_by_the_household_and_the_agent_refers_to_them(tm
         edited = await document(api)
         edited["models"]["vite"] = {"kind": "scripted"}
         problems = (await api.put("/api/v1/config", {"document": edited})).json()["error"]["problems"]
-        assert [tuple(p["path"]) for p in problems] == [("agent",)], "with two models, the agent must say which"
+        assert [(tuple(p["path"]), p["message"]) for p in problems] == [
+            (
+                ("agent",),
+                "agent : plusieurs modèles peuvent répondre (main, vite). "
+                "Choisissez celui de l'oral, celui de l'écrit, ou les deux.",
+            )
+        ], "with two models, the agent must say which, in the reader's language"
         edited["agent"] = {"spoken": "vite", "written": "lent"}
         problems = (await api.put("/api/v1/config", {"document": edited})).json()["error"]["problems"]
         assert [(tuple(p["path"]), "lent" in p["message"]) for p in problems] == [(("agent",), True)]

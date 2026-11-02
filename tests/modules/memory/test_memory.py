@@ -4,15 +4,16 @@ from collections.abc import Mapping
 
 import pytest
 
-from nestor.core import ContractError, PersonId
+from nestor.core import ContractError, PersonId, utc_now
 from nestor.modules.channels import Address, InboundMessage, Sender
 from nestor.modules.cognition.model import ToolCall
 from nestor.modules.cognition.tools import Toolbox, ToolContext, ToolFailed
-from nestor.modules.conversation import Agent, ModelChoice, Persona
+from nestor.modules.conversation import Agent, Layer, ModelChoice, Persona, TurnContext
 from nestor.modules.household import Account, Household, Person
 from nestor.modules.journal import Journal
 from nestor.modules.memory import Memories, MemoryCorrected, MemoryForgotten, MemoryRecorded
 from nestor.modules.memory.assistant import MemoryTools
+from nestor.modules.memory.recall import RecallSettings
 from nestor.testing.cognition import ScriptedModel
 from nestor.testing.i18n import EchoLocalizer
 from nestor.testing.journal import MemoryEventLog
@@ -95,13 +96,11 @@ async def test_a_fact_told_by_voice_is_known_later_on_telegram() -> None:
 
     model = ScriptedModel("Une poêlée de légumes, sans viande pour Mathilde.")
     later = agent(journal, tools, model)
-    await later.respond(
-        InboundMessage(address=TELEGRAM, sender=Sender("42"), text="Je cuisine quoi ce soir ?")
-    ).collect()
+    said = "Je cuisine quoi ce soir ?"  # no word in common: every memory is there while the budget allows
+    await later.respond(InboundMessage(address=TELEGRAM, sender=Sender("42"), text=said)).collect()
 
-    instructions = model.requests[0].messages[0].text
-    assert "(about Mathilde) Mathilde est végétarienne" in instructions
-    assert [m.content for m in model.requests[0].messages[1:]] == ["Je cuisine quoi ce soir ?"]
+    assert "(about Mathilde) Mathilde est végétarienne" in model.requests[0].messages[0].text
+    assert [m.content for m in model.requests[0].messages[1:]] == [said]
 
 
 async def test_the_tools_recall_correct_and_forget_by_id() -> None:
@@ -117,7 +116,10 @@ async def test_the_tools_recall_correct_and_forget_by_id() -> None:
         await tools["remember"].run({"text": "Le portail s'ouvre avec le code 1234", "about": "household"}, context)
     )
     found = data(await tools["recall"].run({"query": "code du portail"}, context))
-    assert found["memories"] == [{"memory_id": saved["memory_id"], "text": "Le portail s'ouvre avec le code 1234"}]
+    today = f"{utc_now():%Y-%m-%d}"
+    assert found["memories"] == [
+        {"memory_id": saved["memory_id"], "text": f"{today} Le portail s'ouvre avec le code 1234"}
+    ], "dated, so that the later of two memories that disagree is told apart"
 
     await tools["correct_memory"].run({"memory_id": saved["memory_id"], "text": "Le code du portail est 4321"}, context)
     assert data(await tools["forget"].run({"memory_id": saved["memory_id"]}, context)) == {
@@ -132,6 +134,17 @@ async def test_the_tools_recall_correct_and_forget_by_id() -> None:
             await tools[name].run(arguments, context)
 
 
-async def test_with_nothing_remembered_the_agent_is_told_so() -> None:
-    tools = MemoryTools(Memories(Journal(MemoryEventLog()), InMemoryMemoryStore()), HOUSEHOLD)
-    assert "You do not remember anything yet." in str(await tools.context(MATHIS, TELEGRAM))
+async def test_beyond_its_budget_a_turn_adds_what_its_words_find_to_the_latest() -> None:
+    memories = Memories(Journal(MemoryEventLog()), InMemoryMemoryStore())
+    await memories.remember("Le portail s'ouvre avec le code 1234")
+    await memories.remember("Mathilde est végétarienne", about=MATHILDE.id)
+    tools = MemoryTools(memories, HOUSEHOLD, recall=RecallSettings(recent=1))
+
+    def turn(said: str | None) -> TurnContext:
+        return TurnContext(person=MATHIS, address=TELEGRAM, said=said)
+
+    greeted = await tools.context(turn("Bonjour"))
+    assert "végétarienne" in greeted[Layer.HOUSEHOLD] and "1234" not in greeted[Layer.HOUSEHOLD], "the latest"
+    asked = await tools.context(turn("Quel code pour le portail ?"))
+    assert "1234" in asked[Layer.TURN] and "végétarienne" not in asked[Layer.TURN], "found, without what is shown"
+    assert Layer.TURN not in await tools.context(turn(None))

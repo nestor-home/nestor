@@ -19,6 +19,7 @@ from pydantic import BaseModel, ConfigDict
 from nestor.bench.types import Case, CaseResult, Dataset, Summary
 from nestor.core import ContractError
 from nestor.modules.cognition import ConversationModel
+from nestor.modules.cognition.embedding import Embedder
 from nestor.runtime.config import NestorConfig
 from nestor.runtime.plugins import Plugin
 
@@ -40,6 +41,7 @@ class Trial[K: Knobs]:
     models: Mapping[str, ConversationModel]  # by role, measured and cached by the engine
     repetition: int
     seed: int
+    embedder: Embedder | None = None  # the variant's `memory.embedder`, started, when the suite asks for it
 
     def model(self, role: str) -> ConversationModel:
         try:
@@ -62,6 +64,7 @@ class Suite[S, K: Knobs](ABC):
     description: str  # a message id
     knobs: type[K]
     models: tuple[str, ...] = ("written",)  # the roles whose models it calls (`NestorConfig.roles`)
+    embedder: bool = False  # it searches by meaning with the variant's `memory.embedder`, when there is one
     plugins: tuple[Plugin[Any], ...] = ()  # extra model kinds for variants (a deterministic fake for CI)
 
     @abstractmethod

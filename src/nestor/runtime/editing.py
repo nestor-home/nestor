@@ -33,7 +33,9 @@ from nestor.modules.system import ConfigChanged
 from nestor.runtime.config import (
     AdminConfig,
     AgentConfig,
+    ConfigError,
     InitiativeConfig,
+    MemoryConfig,
     NestorConfig,
     PersonaConfig,
     PersonConfig,
@@ -79,6 +81,7 @@ SECTIONS: Mapping[str, Any] = {
     "household": PersonConfig,  # a list of them
     "agent": AgentConfig,
     "watches": WatchesConfig,
+    "memory": MemoryConfig,
     "initiative": InitiativeConfig,
     "admin": AdminConfig,
 }
@@ -471,6 +474,8 @@ class ConfigEditor:
             return problems
         try:
             self._build(config)
+        except ConfigError as error:
+            return [Problem(error.path, error.code, error.detail)]
         except NestorError as error:
             return [Problem((), "invalid", str(error))]
         return []

@@ -3,10 +3,9 @@ questions still waiting for an answer, on both sides."""
 
 from collections.abc import Mapping, Sequence
 
-from nestor.modules.channels import Address
 from nestor.modules.cognition.model import ToolSpec
 from nestor.modules.cognition.tools import Risk, Tool, ToolContext, ToolFailed, ToolProvider
-from nestor.modules.conversation import ContextProvider
+from nestor.modules.conversation import ContextProvider, Layer, Sections, TurnContext
 from nestor.modules.household import Household, Person
 from nestor.modules.initiative.messaging.book import MessageBook
 
@@ -51,9 +50,9 @@ class MessageTools(ToolProvider, ContextProvider):
         names = ", ".join(f"{p.name} ({p.id})" for p in self.household.people)
         return f"{HOW_TO_MESSAGE}\nThe people you can reach: {names}."
 
-    async def context(self, person: Person | None, address: Address) -> str | None:
-        if person is None:
-            return None
+    async def context(self, turn: TurnContext) -> Sections:
+        if (person := turn.person) is None:
+            return {}
         lines = []
         for q in self.book.open_questions():
             asker = self.household.person(q.requested_by).name if q.requested_by else "you"
@@ -61,7 +60,7 @@ class MessageTools(ToolProvider, ContextProvider):
                 lines.append(f"- [{q.message_id}] {asker} asked {person.name}: {q.text}")
             elif q.requested_by == person.id:
                 lines.append(f"- [{q.message_id}] asked {self.household.person(q.to).name}: {q.text} (no answer yet)")
-        return "Questions waiting for an answer:\n" + "\n".join(lines) if lines else None
+        return {Layer.TURN: "Questions waiting for an answer:\n" + "\n".join(lines)} if lines else {}
 
     async def _send(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
         if context.person is None:

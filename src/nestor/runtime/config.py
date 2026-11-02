@@ -8,7 +8,7 @@ are the process environment's, completed by the `.env` next to the file (`enviro
 
 import os
 import re
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Collection, Mapping
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +20,7 @@ from nestor.core import NestorError, PersonId
 from nestor.modules.channels import Address
 from nestor.modules.household import Account, Person
 from nestor.modules.initiative import QuietHours
+from nestor.modules.memory.recall import RecallSettings, Strategy
 
 _MODEL_KEY = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]*")
 _VARIABLE = re.compile(r"\$\{(?:(?P<secret>secret):)?(?P<name>[A-Za-z_][A-Za-z0-9_.-]*)\}")
@@ -45,7 +46,16 @@ def _located[T](parse: Callable[[str], T], value: str) -> T:
 
 
 class ConfigError(NestorError):
-    """The configuration cannot be used; the message says where and why."""
+    """The configuration cannot be used; the message says where and why. For the admin, which says it in the
+    reader's language, `path` locates it in the document and `code` names its message (`config-error-<code>`,
+    with `detail`)."""
+
+    def __init__(
+        self, message: str, *, path: tuple[str | int, ...] = (), code: str = "invalid", detail: str | None = None
+    ) -> None:
+        super().__init__(message)
+        self.path, self.code = path, code
+        self.detail = message if detail is None else detail
 
 
 class Section(BaseModel):
@@ -143,14 +153,35 @@ class WatchesConfig(Section):
     model: str | None = Field(default=None, json_schema_extra=MODEL_REFERENCE)
 
 
+_RECALL = RecallSettings()
+
+
+class MemoryConfig(Section):
+    """Which memories each turn's instructions carry (`memory-recall` bench): the latest up to `recent`, cached
+    with the household, then those the person's last messages find among the others."""
+
+    strategy: Strategy = _RECALL.strategy
+    recent: int = Field(default=_RECALL.recent, ge=0, le=1000)
+    found: int = Field(default=_RECALL.found, ge=0, le=50)
+    # an embedding model of `models`: memories are then found by meaning as well as by words
+    embedder: str | None = Field(default=None, json_schema_extra=MODEL_REFERENCE)
+    # how long a turn waits for the question's vector before searching by words only
+    query_timeout_s: float = Field(default=1.0, gt=0, json_schema_extra=ADVANCED)
+
+    def recall(self) -> RecallSettings:
+        return RecallSettings(strategy=self.strategy, recent=self.recent, found=self.found)
+
+
 class NestorConfig(Section):
     data_dir: Path = Field(default=Path("data"), json_schema_extra=ADVANCED)
     persona: PersonaConfig
     household: tuple[PersonConfig, ...] = Field(min_length=1)
-    # the models it may use, under names the household chooses; the roles below refer to them by name
+    # the models it may use, under names the household chooses; the roles below refer to them by name. A
+    # model answers (`openai-compatible`) or embeds (`openai-compatible-embeddings`): each role checks which
     models: dict[str, ComponentConfig] = Field(min_length=1)
     agent: AgentConfig = Field(default=AgentConfig(), validate_default=True)
     watches: WatchesConfig = WatchesConfig()
+    memory: MemoryConfig = MemoryConfig()
     executors: tuple[AdapterConfig, ...] = ()
     channels: tuple[AdapterConfig, ...] = Field(min_length=1)
     tools: tuple[AdapterConfig, ...] = ()  # tool providers (an MCP server: Home Assistant, Linear…)
@@ -172,9 +203,7 @@ class NestorConfig(Section):
     @field_validator("agent")
     @classmethod
     def _agent(cls, value: AgentConfig, info: ValidationInfo) -> AgentConfig:
-        models = _known(info, {"spoken": value.spoken, "written": value.written, "background": value.background})
-        if len(models) > 1 and not (value.spoken or value.written):
-            raise ValueError(f"name the model it answers with, among {', '.join(models)}: `spoken`, `written` or both")
+        _known(info, {"spoken": value.spoken, "written": value.written, "background": value.background})
         return value
 
     @field_validator("watches")
@@ -183,14 +212,27 @@ class NestorConfig(Section):
         _known(info, {"model": value.model})
         return value
 
-    def roles(self) -> dict[str, str]:
-        """The key of the model each role uses, defaults applied: `spoken`, `written`, `background`, `watches`."""
-        sole = next(iter(self.models)) if len(self.models) == 1 else None
+    @field_validator("memory")
+    @classmethod
+    def _memory(cls, value: MemoryConfig, info: ValidationInfo) -> MemoryConfig:
+        _known(info, {"embedder": value.embedder})
+        return value
+
+    def roles(self, answering: Collection[str]) -> dict[str, str]:
+        """The key of the model each role uses, defaults applied: `spoken`, `written`, `background`, `watches`.
+        `answering` are the models that answer (not those that embed): with a single one, every role takes it."""
+        sole = next(iter(answering)) if len(answering) == 1 else None
         written = self.agent.written or self.agent.spoken or sole
-        spoken = self.agent.spoken or written
-        assert spoken and written  # checked on validation
+        if written is None:
+            among = ", ".join(answering) or "-"
+            raise ConfigError(
+                f"agent: several models can answer ({among}); say which in `spoken`, `written` or both",
+                path=("agent",),
+                code="no_answering_model",
+                detail=among,
+            )
         return {
-            "spoken": spoken,
+            "spoken": self.agent.spoken or written,
             "written": written,
             "background": self.agent.background or written,
             "watches": self.watches.model or written,

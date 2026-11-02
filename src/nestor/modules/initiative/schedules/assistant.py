@@ -5,11 +5,9 @@ from datetime import datetime, time
 from zoneinfo import ZoneInfo
 
 from nestor.core import ContractError
-from nestor.modules.channels import Address
 from nestor.modules.cognition.model import ToolSpec
 from nestor.modules.cognition.tools import Risk, Tool, ToolContext, ToolFailed, ToolProvider
-from nestor.modules.conversation import ContextProvider, Layer
-from nestor.modules.household import Person
+from nestor.modules.conversation import ContextProvider, Layer, Sections, TurnContext
 from nestor.modules.initiative.schedules.book import ScheduleBook
 from nestor.modules.initiative.schedules.types import DAYS, Schedule
 
@@ -24,7 +22,6 @@ HOW_TO_SCHEDULE = (
 
 class ScheduleTools(ToolProvider, ContextProvider):
     name = "schedule-tools"
-    layer = Layer.HOUSEHOLD  # the wake-ups change when one is set, ends or is cancelled
 
     def __init__(self, book: ScheduleBook) -> None:
         self.book = book
@@ -58,11 +55,11 @@ class ScheduleTools(ToolProvider, ContextProvider):
     def guidance(self) -> str:
         return HOW_TO_SCHEDULE
 
-    async def context(self, person: Person | None, address: Address) -> str | None:
+    async def context(self, turn: TurnContext) -> Sections:
         if not self.book.schedules:
-            return None
+            return {}
         listed = "\n".join(f"- [{s.id}] {self._when(s)}: {s.instruction}" for s in self.book.schedules.values())
-        return f"Wake-ups set:\n{listed}"
+        return {Layer.HOUSEHOLD: f"Wake-ups set:\n{listed}"}  # they change when one is set, ends or is cancelled
 
     async def _create(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
         zone = ZoneInfo(self.book.timezone)

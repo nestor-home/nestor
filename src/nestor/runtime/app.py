@@ -19,6 +19,7 @@ from nestor.adapters.storage.sqlite import (
     SQLiteEventLog,
     SQLiteMemoryStore,
     SQLiteVault,
+    SQLiteVectorIndex,
     SQLiteVerifierStore,
 )
 from nestor.adapters.storage.sqlite.vault import GENERATE
@@ -30,6 +31,7 @@ from nestor.modules.channels import Channel
 from nestor.modules.cognition import ConversationModel, Executor
 from nestor.modules.cognition.delegation.assistant import Delegation
 from nestor.modules.cognition.delegation.service import TaskManager
+from nestor.modules.cognition.embedding import Embedder
 from nestor.modules.cognition.tools import Toolbox, ToolProvider
 from nestor.modules.connectors import ConnectedInbound, Connections, Connector, ConnectorTools, TokenEndpoint
 from nestor.modules.conversation import Agent, ChannelProfile, ModelChoice, Persona
@@ -53,7 +55,7 @@ from nestor.modules.initiative import (
 )
 from nestor.modules.initiative.watches.assistant import WatchTools
 from nestor.modules.journal import Journal
-from nestor.modules.memory import Memories
+from nestor.modules.memory import Memories, MemoryIndex
 from nestor.modules.memory.assistant import MemoryTools
 from nestor.modules.satellites import Pairing, SatelliteHost
 from nestor.runtime.config import AdapterConfig, ComponentConfig, ConfigError, NestorConfig
@@ -115,11 +117,20 @@ class Nestor:
             self.journal, SQLiteVerifierStore(self.database), self.household, SQLiteActivityStore(self.database)
         )
 
-        self.models = {
-            key: _build(self.plugged, registry, Family.MODEL, c, key, services, ConversationModel)
-            for key, c in config.models.items()
-        }
-        roles = config.roles()
+        self.models = build_models(config, registry, services, self.plugged)
+        roles = config.roles([k for k, m in self.models.items() if isinstance(m, ConversationModel)])
+
+        def model(role: str, key: str) -> ConversationModel:
+            found = self.models[key]
+            if not isinstance(found, ConversationModel):
+                raise ConfigError(
+                    f"{role}: {key} searches memories and cannot answer; choose a conversation model",
+                    path=tuple(role.split(".")),
+                    code="not_answering",
+                    detail=key,
+                )
+            return found
+
         self.executors = [
             _build(self.plugged, registry, Family.EXECUTOR, c, c.name or c.kind, services, Executor)
             for c in config.executors
@@ -170,8 +181,20 @@ class Nestor:
                 channel.host_satellites(self.pairing, self.journal)
         self.tasks = TaskManager(self.journal, self.executors)
         delegation = Delegation(self.tasks)
-        self.memories = Memories(self.journal, SQLiteMemoryStore(self.database))
-        memory = MemoryTools(self.memories, self.household)
+        embedder = self.models[config.memory.embedder] if config.memory.embedder else None
+        if embedder is not None and not isinstance(embedder, Embedder):
+            raise ConfigError(
+                f"memory.embedder: {config.memory.embedder} is a conversation model and cannot search memories; "
+                "choose an embedding model",
+                path=("memory", "embedder"),
+                code="not_embedding",
+                detail=config.memory.embedder,
+            )
+        self.memories, self._memory_parts = assemble_memories(
+            self.journal, self.database, embedder, query_timeout_s=config.memory.query_timeout_s
+        )
+        recall = config.memory.recall()
+        memory = MemoryTools(self.memories, self.household, recall=recall)
         self.watch_book = WatchBook(self.journal, kinds=(k for source in self.sources for k in source.kinds))
         watch_tools = WatchTools(self.watch_book)
         self.message_book = MessageBook(self.journal)
@@ -181,9 +204,9 @@ class Nestor:
         connector_tools = [ConnectorTools(self.connections)] if self.connections else []
         self.agent = Agent(
             models=ModelChoice(
-                spoken=self.models[roles["spoken"]],
-                written=self.models[roles["written"]],
-                background=self.models[roles["background"]],
+                spoken=model("agent.spoken", roles["spoken"]),
+                written=model("agent.written", roles["written"]),
+                background=model("agent.background", roles["background"]),
             ),
             persona=Persona(**{**config.persona.model_dump(), "locale": Locale(config.persona.locale)}),
             localizer=self.localizer,
@@ -225,7 +248,7 @@ class Nestor:
             self.watch_book,
             self.household,
             self.courier,
-            Triage(self.models[roles["watches"]], language=config.persona.language),
+            Triage(model("watches.model", roles["watches"]), language=config.persona.language),
             self.sources,
         )
         self.activity = ActivityMonitor(
@@ -253,6 +276,7 @@ class Nestor:
             self.pairing,
             *connections,
             *self.models.values(),
+            *self._memory_parts,  # after its embedder
             *self.executors,
             *self.tools,
             *presence,
@@ -326,6 +350,21 @@ def _connectors(
     return connectors
 
 
+def build_models(
+    config: NestorConfig, registry: Registry, services: Services, plugged: list[Plugged] | None = None
+) -> dict[str, ConversationModel | Embedder]:
+    """Every model of `models`, built but not started: each answers or embeds, as its plugin says."""
+    built: dict[str, ConversationModel | Embedder] = {}
+    for key, profile in config.models.items():
+        model = _build(
+            plugged if plugged is not None else [], registry, Family.MODEL, profile, key, services, Component
+        )
+        if not isinstance(model, ConversationModel | Embedder):
+            raise ContractError(f"plugin {profile.kind!r} built a {type(model).__name__}, not a model")
+        built[key] = model
+    return built
+
+
 def _build[C](
     plugged: list[Plugged],
     registry: Registry,
@@ -355,6 +394,35 @@ async def open_accounts(data_dir: Path, people: Iterable[Person]) -> AsyncGenera
     )
     async with database, accounts:
         yield accounts
+
+
+def assemble_memories(
+    journal: Journal, database: SQLiteDatabase, embedder: Embedder | None, *, query_timeout_s: float = 1.0
+) -> tuple[Memories, tuple[Component, ...]]:
+    """The memories as every instance keeps them, and the components they need started (the vector index and
+    the memory index when there is an embedder, after it)."""
+    store = SQLiteMemoryStore(database)
+    if embedder is None:
+        return Memories(journal, store), ()
+    vectors = SQLiteVectorIndex(database)
+    index = MemoryIndex(store, embedder, vectors, query_timeout_s=query_timeout_s)
+    return Memories(journal, store, index), (vectors, index)
+
+
+@contextlib.asynccontextmanager
+async def open_memories(
+    data_dir: Path, embedder: Embedder | None = None, *, query_timeout_s: float = 1.0
+) -> AsyncGenerator[Memories]:
+    """The memories kept in `data_dir`, assembled and searched as a running instance does (the `embedder` is
+    started by the caller), without the rest of Nestor: a bench measures recall on them."""
+    database = SQLiteDatabase(database_path(data_dir))
+    async with database, AsyncExitStack() as stack:
+        memories, parts = assemble_memories(
+            Journal(SQLiteEventLog(database)), database, embedder, query_timeout_s=query_timeout_s
+        )
+        for part in parts:
+            await stack.enter_async_context(part)
+        yield memories
 
 
 class Restart:

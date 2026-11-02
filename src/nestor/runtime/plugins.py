@@ -28,7 +28,7 @@ ENTRY_POINTS = "nestor.adapters"
 
 
 class Family(StrEnum):
-    MODEL = "model"
+    MODEL = "model"  # builds a `ConversationModel` (it answers) or an `Embedder` (it turns text into vectors)
     EXECUTOR = "executor"
     CHANNEL = "channel"
     PRESENCE = "presence"

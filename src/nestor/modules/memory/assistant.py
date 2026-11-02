@@ -3,27 +3,32 @@
 from collections.abc import Mapping, Sequence
 
 from nestor.core import ContractError, PersonId
-from nestor.modules.channels import Address
 from nestor.modules.cognition.model import ToolSpec
 from nestor.modules.cognition.tools import Risk, Tool, ToolContext, ToolFailed, ToolProvider
-from nestor.modules.conversation import ContextProvider, Layer
-from nestor.modules.household import Household, Person
+from nestor.modules.conversation import ContextProvider, Layer, Sections, TurnContext
+from nestor.modules.household import Household
+from nestor.modules.memory.recall import RecallSettings, for_turn
 from nestor.modules.memory.service import Memories
 from nestor.modules.memory.types import Memory
 
 HOUSEHOLD = "household"
+
+
 HOW_TO_REMEMBER = (
     "When someone asks you to remember something, or shares a lasting fact or preference, call remember with one "
-    "short self-contained sentence. When a question may depend on something you were told earlier and it is not "
-    "listed below, call recall. Correct or forget a memory when asked, by its id. Never invent a memory."
+    "short self-contained sentence. The memories that seem to matter to this turn are listed with it; when a "
+    "question may depend on something you were told earlier and it is not listed, call recall. Each memory is "
+    "dated: when two disagree, the later one holds, and you may correct or forget the earlier. Correct or forget a "
+    "memory when asked, by its id. Never invent a memory."
 )
 
 
 class MemoryTools(ToolProvider, ContextProvider):
     name = "memory"
 
-    def __init__(self, memories: Memories, household: Household, *, shown: int = 30) -> None:
-        self.memories, self.household, self._shown = memories, household, shown
+    def __init__(self, memories: Memories, household: Household, *, recall: RecallSettings | None = None) -> None:
+        self.memories, self.household = memories, household
+        self.recall = recall or RecallSettings()
 
     def tools(self) -> Sequence[Tool]:
         about = {
@@ -74,17 +79,22 @@ class MemoryTools(ToolProvider, ContextProvider):
             Tool(spec=ToolSpec("forget", "Forget a memory for good.", identified), run=self._forget, risk=Risk.WRITE),
         )
 
-    layer = Layer.HOUSEHOLD  # what is remembered changes when something is remembered, corrected or forgotten
-
     def guidance(self) -> str:
         return HOW_TO_REMEMBER
 
-    async def context(self, person: Person | None, address: Address) -> str | None:
-        known = await self.memories.recent(limit=self._shown)
-        if not known:
-            return "You do not remember anything yet."
-        lines = "\n".join(f"- [{m.id}] {self._line(m)}" for m in known)
-        return f"What you remember, most recent first:\n{lines}"
+    async def context(self, turn: TurnContext) -> Sections:
+        """The latest memories with the household (they change now and then, so the cache keeps them), and
+        what was said finds among the others with this turn."""
+        shown, found = await for_turn(self.memories, turn.said, self.recall)
+        sections: dict[Layer, str] = {}
+        if shown:
+            sections[Layer.HOUSEHOLD] = f"What you remember, the latest first:\n{self._lines(shown)}"
+        if found:
+            sections[Layer.TURN] = f"Older memories that may matter here:\n{self._lines(found)}"
+        return sections
+
+    def _lines(self, memories: Sequence[Memory]) -> str:
+        return "\n".join(f"- [{m.id}] {self._line(m)}" for m in memories)
 
     async def _remember(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
         memory = await self.memories.remember(
@@ -128,7 +138,9 @@ class MemoryTools(ToolProvider, ContextProvider):
             raise ToolFailed(f"{about!r} is not a member of the household") from None
 
     def _line(self, memory: Memory) -> str:
+        """Dated, so that of two memories that disagree the model can tell the later one."""
+        dated = f"{memory.updated_at:%Y-%m-%d}"
         if memory.about is None:
-            return memory.text
+            return f"{dated} {memory.text}"
         name = next((p.name for p in self.household.people if p.id == memory.about), memory.about)
-        return f"(about {name}) {memory.text}"
+        return f"{dated} (about {name}) {memory.text}"

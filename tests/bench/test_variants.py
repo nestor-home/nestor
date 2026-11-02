@@ -101,5 +101,5 @@ def test_a_model_kind_that_builds_something_else_is_refused(tmp_path: Path) -> N
         name = "lamp"
 
     odd = Plugin(Family.MODEL, "lamp", AdapterSettings, lambda settings, name, services: Lamp())
-    with pytest.raises(BenchError, match="bench-variant-not-a-model"):
+    with pytest.raises(ContractError, match="plugin 'lamp' built a Lamp, not a model"):
         load(write_variant(tmp_path, "v", "models: {m: {kind: lamp}}\n"), Registry([odd]))

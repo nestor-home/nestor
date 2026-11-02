@@ -3,13 +3,11 @@
 from collections.abc import Mapping, Sequence
 
 from nestor.core import ContractError
-from nestor.modules.channels import Address
 from nestor.modules.cognition.delegation.service import TaskManager
 from nestor.modules.cognition.delegation.types import Notify, TaskStatus
 from nestor.modules.cognition.model import ToolSpec
 from nestor.modules.cognition.tools import Risk, Tool, ToolContext, ToolFailed, ToolProvider
-from nestor.modules.conversation import ContextProvider
-from nestor.modules.household import Person
+from nestor.modules.conversation import ContextProvider, Layer, Sections, TurnContext
 
 HOW_TO_DELEGATE = """You never do long work yourself: you talk, and you hand over to an executor anything that needs \
 acting, searching or computing beyond your own tools. To hand over, call delegate_task with a precise, verifiable \
@@ -75,11 +73,11 @@ class Delegation(ToolProvider, ContextProvider):
             "Nothing else: for any other request, say right away that you cannot, without starting a task."
         )
 
-    async def context(self, person: Person | None, address: Address) -> str | None:
+    async def context(self, turn: TurnContext) -> Sections:
         if not (running := self.tasks.running()):
-            return None
+            return {}
         listed = "\n".join(f"- {t.id}: {t.objective}" for t in running)
-        return f"Tasks running now:\n{listed}"
+        return {Layer.TURN: f"Tasks running now:\n{listed}"}
 
     async def _delegate(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
         try:
