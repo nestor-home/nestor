@@ -132,6 +132,9 @@ class AgentConfig(Section):
 
     spoken: str | None = Field(default=None, json_schema_extra=MODEL_REFERENCE)  # the voice: first words fast
     written: str | None = Field(default=None, json_schema_extra=MODEL_REFERENCE)  # writing allows a few seconds
+    background: str | None = Field(
+        default=None, json_schema_extra=MODEL_REFERENCE
+    )  # wake-ups: the written one by default
 
 
 class WatchesConfig(Section):
@@ -169,7 +172,7 @@ class NestorConfig(Section):
     @field_validator("agent")
     @classmethod
     def _agent(cls, value: AgentConfig, info: ValidationInfo) -> AgentConfig:
-        models = _known(info, {"spoken": value.spoken, "written": value.written})
+        models = _known(info, {"spoken": value.spoken, "written": value.written, "background": value.background})
         if len(models) > 1 and not (value.spoken or value.written):
             raise ValueError(f"name the model it answers with, among {', '.join(models)}: `spoken`, `written` or both")
         return value
@@ -181,12 +184,17 @@ class NestorConfig(Section):
         return value
 
     def roles(self) -> dict[str, str]:
-        """The key of the model each role uses, defaults applied: `spoken`, `written`, `watches`."""
+        """The key of the model each role uses, defaults applied: `spoken`, `written`, `background`, `watches`."""
         sole = next(iter(self.models)) if len(self.models) == 1 else None
         written = self.agent.written or self.agent.spoken or sole
         spoken = self.agent.spoken or written
         assert spoken and written  # checked on validation
-        return {"spoken": spoken, "written": written, "watches": self.watches.model or written}
+        return {
+            "spoken": spoken,
+            "written": written,
+            "background": self.agent.background or written,
+            "watches": self.watches.model or written,
+        }
 
 
 def _known(info: ValidationInfo, references: Mapping[str, str | None]) -> Mapping[str, ComponentConfig]:

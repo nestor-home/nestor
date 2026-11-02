@@ -43,6 +43,9 @@ from nestor.modules.initiative import (
     MessageTools,
     Messenger,
     QuietHours,
+    ScheduleBook,
+    Scheduler,
+    ScheduleTools,
     TaskAnnouncer,
     Triage,
     WatchBook,
@@ -173,18 +176,33 @@ class Nestor:
         watch_tools = WatchTools(self.watch_book)
         self.message_book = MessageBook(self.journal)
         message_tools = MessageTools(self.message_book, self.household)
+        self.schedule_book = ScheduleBook(self.journal, timezone=config.persona.timezone)
+        schedule_tools = ScheduleTools(self.schedule_book)
         connector_tools = [ConnectorTools(self.connections)] if self.connections else []
         self.agent = Agent(
-            models=ModelChoice(spoken=self.models[roles["spoken"]], written=self.models[roles["written"]]),
+            models=ModelChoice(
+                spoken=self.models[roles["spoken"]],
+                written=self.models[roles["written"]],
+                background=self.models[roles["background"]],
+            ),
             persona=Persona(**{**config.persona.model_dump(), "locale": Locale(config.persona.locale)}),
             localizer=self.localizer,
             journal=self.journal,
             household=self.household,
             toolbox=Toolbox(
-                self.journal, providers=[delegation, memory, watch_tools, message_tools, *self.tools, *connector_tools]
+                self.journal,
+                providers=[
+                    delegation,
+                    memory,
+                    watch_tools,
+                    message_tools,
+                    schedule_tools,
+                    *self.tools,
+                    *connector_tools,
+                ],
             ),
             channels={c.channel_id: ChannelProfile(c.style, c.conversation_ends_after_s) for c in self.channels},
-            context=[delegation, memory, watch_tools, message_tools],
+            context=[delegation, memory, watch_tools, message_tools, schedule_tools],
         )
         initiative = config.initiative
         quiet_hours = QuietHours.parse(initiative.quiet_hours) if initiative.quiet_hours else None
@@ -202,6 +220,7 @@ class Nestor:
         )
         self.announcer = TaskAnnouncer(self.journal, self.household, self.courier)
         self.messenger = Messenger(self.message_book, self.household, self.courier)
+        self.scheduler = Scheduler(self.schedule_book, self.agent, self.household)
         self.watches = WatchKeeper(
             self.watch_book,
             self.household,
@@ -243,6 +262,8 @@ class Nestor:
             self.announcer,
             self.message_book,
             self.messenger,
+            self.schedule_book,
+            self.scheduler,
             self.watch_book,
             *self.sources,
             self.watches,

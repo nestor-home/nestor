@@ -7,6 +7,7 @@ journal-kind = { $kind ->
     [tool] Outils
     [task] Tâches
     [watch] Veilles
+    [schedule] Réveils
     [memory] Souvenirs
     [connection] Connexions
     [presence] Présence
@@ -120,6 +121,12 @@ journal-detail-tried = { $count ->
    *[other] Essayé : { $tried }
 }
 
+journal-schedule-created = { $recurring ->
+    [yes] Réveil régulier programmé
+   *[no] Réveil programmé
+}
+journal-schedule-fired = Réveil { $id } déclenché
+journal-schedule-cancelled = Réveil { $id } annulé
 journal-watch-created = Veille créée : { $what }
 journal-watch-sorted = { $unsorted ->
     [yes] « { $item } » n'a pas pu être trié : le modèle de tri n'a pas répondu, rien n'a été annoncé

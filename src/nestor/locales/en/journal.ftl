@@ -8,6 +8,7 @@ journal-kind = { $kind ->
     [tool] Tools
     [task] Tasks
     [watch] Watches
+    [schedule] Wake-ups
     [memory] Memories
     [connection] Connections
     [presence] Presence
@@ -121,6 +122,12 @@ journal-detail-tried = { $count ->
    *[other] Tried: { $tried }
 }
 
+journal-schedule-created = { $recurring ->
+    [yes] Regular wake-up set
+   *[no] Wake-up set
+}
+journal-schedule-fired = Woke up for { $id }
+journal-schedule-cancelled = Wake-up { $id } cancelled
 journal-watch-created = Watch created: { $what }
 journal-watch-sorted = { $unsorted ->
     [yes] “{ $item }” could not be sorted: the triage model did not answer, nothing announced

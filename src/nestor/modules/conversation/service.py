@@ -49,10 +49,12 @@ class ChannelProfile:
 
 @dataclass(frozen=True, slots=True)
 class ModelChoice:
-    """The model that answers in each medium: the voice needs its first words fast, writing allows more."""
+    """The model that answers in each medium: the voice needs its first words fast, writing allows more.
+    `background` runs the turns nobody waits for (a scheduled wake-up): the written one by default."""
 
     spoken: ConversationModel
     written: ConversationModel
+    background: ConversationModel | None = None
 
     @classmethod
     def single(cls, model: ConversationModel) -> "ModelChoice":
@@ -61,8 +63,16 @@ class ModelChoice:
     def of(self, medium: Medium) -> ConversationModel:
         return self.spoken if medium is Medium.SPOKEN else self.written
 
+    @property
+    def unattended(self) -> ConversationModel:
+        return self.background or self.written
+
     def distinct(self) -> tuple[ConversationModel, ...]:
-        return (self.spoken,) if self.spoken is self.written else (self.spoken, self.written)
+        found: list[ConversationModel] = []
+        for model in (self.spoken, self.written, self.unattended):
+            if all(model is not other for other in found):
+                found.append(model)
+        return tuple(found)
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -145,6 +155,15 @@ class Agent(Assistant):
         """
         return await AgentReply(self, address, person, medium, instruction=instruction, record=False).collect()
 
+    async def background(self, address: Address, person: Person | None, instruction: str) -> tuple[str, ...]:
+        """Run a turn nobody waits for (a scheduled wake-up), on behalf of `person`, with the agent's tools and
+        the background model, without any conversation's history. What it writes reaches no one: to tell
+        someone, it uses its tools. Its tool calls are logged as usual."""
+        reply = AgentReply(
+            self, address, person, Medium.WRITTEN, instruction=instruction, record=False, unattended=True
+        )
+        return await reply.collect()
+
     def channel(self, address: Address) -> ChannelProfile:
         return self._channels.get(address.channel, ChannelProfile())
 
@@ -183,9 +202,11 @@ class AgentReply(Reply):
         user: str | None = None,
         instruction: str | None = None,
         record: bool = True,
+        unattended: bool = False,
     ) -> None:
         self._agent, self._address, self._person, self._medium = agent, address, person, medium
         self._user, self._instruction, self._record = user, instruction, record
+        self._unattended = unattended
         self._chunks: asyncio.Queue[str | MessageEnd | None] = asyncio.Queue()
         self._message: list[str] = []  # the message being written
         self._ended: list[tuple[str, AssistantTurn | None]] = []  # the messages written, logged if recorded
@@ -247,6 +268,8 @@ class AgentReply(Reply):
                             exchange=exchange,
                         )
                     )
+            elif self._unattended:  # a background turn belongs to no conversation
+                conversation = None
             else:  # a composed message: the open conversation's turns, if any
                 conversation = await agent.conversations.current(self._address, self._medium)
             await self._answer(conversation)
@@ -293,7 +316,8 @@ class AgentReply(Reply):
         request = ModelRequest(messages=tuple(messages), tools=agent.toolbox.specs())
         text: list[str] = []
         calls: list[ToolCall] = []
-        stream = agent.models.of(self._medium).stream(request)
+        model = agent.models.unattended if self._unattended else agent.models.of(self._medium)
+        stream = model.stream(request)
         spoken = self._medium is Medium.SPOKEN
         filler = self._slow_filler() if spoken and not self._message and not self._ended else None
         try:
