@@ -6,7 +6,7 @@ from nestor.core import ContractError, PersonId
 from nestor.modules.channels import Address
 from nestor.modules.cognition.model import ToolSpec
 from nestor.modules.cognition.tools import Risk, Tool, ToolContext, ToolFailed, ToolProvider
-from nestor.modules.conversation import ContextProvider
+from nestor.modules.conversation import ContextProvider, Layer
 from nestor.modules.household import Household, Person
 from nestor.modules.memory.service import Memories
 from nestor.modules.memory.types import Memory
@@ -74,12 +74,17 @@ class MemoryTools(ToolProvider, ContextProvider):
             Tool(spec=ToolSpec("forget", "Forget a memory for good.", identified), run=self._forget, risk=Risk.WRITE),
         )
 
+    layer = Layer.HOUSEHOLD  # what is remembered changes when something is remembered, corrected or forgotten
+
+    def guidance(self) -> str:
+        return HOW_TO_REMEMBER
+
     async def context(self, person: Person | None, address: Address) -> str | None:
         known = await self.memories.recent(limit=self._shown)
         if not known:
-            return f"{HOW_TO_REMEMBER}\n\nYou do not remember anything yet."
+            return "You do not remember anything yet."
         lines = "\n".join(f"- [{m.id}] {self._line(m)}" for m in known)
-        return f"{HOW_TO_REMEMBER}\n\nWhat you remember, most recent first:\n{lines}"
+        return f"What you remember, most recent first:\n{lines}"
 
     async def _remember(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
         memory = await self.memories.remember(

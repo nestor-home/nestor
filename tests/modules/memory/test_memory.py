@@ -99,7 +99,7 @@ async def test_a_fact_told_by_voice_is_known_later_on_telegram() -> None:
         InboundMessage(address=TELEGRAM, sender=Sender("42"), text="Je cuisine quoi ce soir ?")
     ).collect()
 
-    instructions = model.requests[0].messages[0].content
+    instructions = model.requests[0].messages[0].text
     assert "(about Mathilde) Mathilde est végétarienne" in instructions
     assert [m.content for m in model.requests[0].messages[1:]] == ["Je cuisine quoi ce soir ?"]
 

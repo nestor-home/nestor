@@ -29,8 +29,8 @@ from nestor.modules.cognition.tools import Toolbox, ToolContext
 from nestor.modules.conversation.conversations import Conversations
 from nestor.modules.conversation.events import AnswerCut, AssistantTurn, FallbackSpoken, UserTurn
 from nestor.modules.conversation.history import recent_history
-from nestor.modules.conversation.persona import Persona
-from nestor.modules.conversation.ports import ContextProvider
+from nestor.modules.conversation.persona import Instructions, Persona
+from nestor.modules.conversation.ports import ContextProvider, Layer
 from nestor.modules.conversation.types import FallbackReason, ReplyPhase
 from nestor.modules.household import Household, Person
 from nestor.modules.journal import Journal
@@ -148,15 +148,18 @@ class Agent(Assistant):
     def channel(self, address: Address) -> ChannelProfile:
         return self._channels.get(address.channel, ChannelProfile())
 
-    async def instructions(self, address: Address, person: Person | None, medium: Medium) -> str:
-        sections = await asyncio.gather(*(p.context(person, address) for p in self._context))
-        profile = self.channel(address)
+    async def instructions(self, address: Address, person: Person | None, medium: Medium) -> Instructions:
+        found = await asyncio.gather(*(p.context(person, address) for p in self._context))
+        layered = list(zip((p.layer for p in self._context), found, strict=True))
         return self.persona.instructions(
             medium=medium,
-            style=profile.style,
+            style=self.channel(address).style,
             person=person,
             now=utc_now(),
-            sections=tuple(s for s in sections if s),
+            guidance=tuple(g for p in self._context if (g := p.guidance())),
+            people=self.household.people,
+            household=tuple(text for layer, text in layered if text and layer is Layer.HOUSEHOLD),
+            turn=tuple(text for layer, text in layered if text and layer is Layer.TURN),
         )
 
 
@@ -258,8 +261,9 @@ class AgentReply(Reply):
         history = await recent_history(
             agent.journal, self._address, conversation, max_events=agent.settings.history_events
         )
+        instructions = await agent.instructions(self._address, self._person, self._medium)
         messages = [
-            Message(role=Role.SYSTEM, content=await agent.instructions(self._address, self._person, self._medium)),
+            Message(role=Role.SYSTEM, layers=(instructions.stable, instructions.household), content=instructions.turn),
             *history,
         ]
         if self._instruction is not None:

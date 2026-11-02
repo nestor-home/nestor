@@ -45,7 +45,7 @@ NO = '{"matches": []}'
 
 def YES(request: ModelRequest) -> str:
     """Every watch the question lists matches."""
-    ids = re.findall(r"^- \[([^\]]+)\]", request.messages[0].content, re.MULTILINE)
+    ids = re.findall(r"^- \[([^\]]+)\]", request.messages[0].text, re.MULTILINE)
     return json.dumps({"matches": [{"watch": id, "summary": "Ton colis Colissimo est livré."} for id in ids]})
 
 
@@ -287,11 +287,11 @@ async def test_the_agent_creates_lists_and_cancels_watches_through_its_tools() -
     assert (watch.owner, watch.created_in, watch.once) == (MATHIS.id, TELEGRAM, True)
     assert watch.until is not None and watch.until > utc_now() + timedelta(days=29)
     assert listed == {"watches": [{"watch_id": watch.id, "what": "le colis de la poussette"}]}
-    assert "le colis de la poussette" in section and "mail" in section
+    assert "le colis de la poussette" in section and "mail" in tools.guidance()
 
 
 async def test_without_any_source_the_agent_cannot_watch() -> None:
     home = Home()
     tools = WatchTools(WatchBook(home.journal))
     assert tools.tools() == ()
-    assert await tools.context(None, TELEGRAM) == NO_SOURCE
+    assert tools.guidance() == NO_SOURCE

@@ -4,6 +4,11 @@ Speaks the wire protocol directly with httpx and Server-Sent Events: no vendor S
 payload is a single-line `data:` JSON chunk, as all OpenAI-compatible servers send them, and the
 stream ends with `data: [DONE]`.
 
+A message's stable layers (`Message.layers`) are sent as text parts marked with `cache_control`, the
+breakpoints OpenRouter passes to the providers that cache on request (Anthropic, Gemini) and Anthropic
+reads itself; other servers get one plain text, and those that cache by themselves (OpenAI) reuse the
+same stable prefix. `cache_control` in the settings says otherwise.
+
 Tested against OpenRouter only; other servers are expected to work but remain untested. Local servers
 (Ollama, LM Studio, vLLM, llama.cpp) usually need no key: without one, no `Authorization` header is sent.
 """
@@ -44,6 +49,7 @@ _FINISH_REASONS = {
 }
 _RETRYABLE_STATUSES = frozenset({408, 409, 425, 429})
 _BRANDS = {"openrouter.ai": "openrouter", "openai.com": "openai", "mistral.ai": "mistral", "anthropic.com": "anthropic"}
+_CACHE_CONTROL = frozenset({"openrouter", "anthropic"})  # the brands that read `cache_control` breakpoints
 _MAX_DETAIL = 300
 
 
@@ -77,6 +83,7 @@ class OpenAICompatibleModel(ConversationModel):
         connect_timeout_s: float = 5.0,
         read_timeout_s: float = 30.0,
         provider: str = "openai-compatible",
+        cache_control: bool | None = None,
     ) -> None:
         self._base_url = base_url
         self._api_key = api_key or None
@@ -86,6 +93,7 @@ class OpenAICompatibleModel(ConversationModel):
         self._provider = provider
         self._client: httpx.AsyncClient | None = None
         self.brand = _BRANDS.get(_brand_host(base_url) or "")
+        self._cache_control = self.brand in _CACHE_CONTROL if cache_control is None else cache_control
 
     def details(self) -> Mapping[str, str]:
         return {"model": self._model}
@@ -122,7 +130,7 @@ class OpenAICompatibleModel(ConversationModel):
     def _body(self, request: ModelRequest) -> dict[str, object]:
         body: dict[str, object] = {
             "model": self._model,
-            "messages": [_wire_message(m, self._provider) for m in request.messages],
+            "messages": [_wire_message(m, self._provider, cache_control=self._cache_control) for m in request.messages],
             "stream": True,
         }
         if request.tools:  # some servers reject an empty tool list
@@ -219,7 +227,7 @@ class _ChunkDecoder:
             yield ToolCall(partial.id or new_id(), partial.name, arguments)
 
 
-def _wire_message(message: Message, provider: str) -> dict[str, object]:
+def _wire_message(message: Message, provider: str, *, cache_control: bool) -> dict[str, object]:
     match message.role:
         case Role.ASSISTANT if message.tool_calls:
             return {
@@ -231,8 +239,17 @@ def _wire_message(message: Message, provider: str) -> dict[str, object]:
             if message.tool_call_id is None:
                 raise ContractError(f"{provider}: a tool message must say which call it answers (tool_call_id)")
             return {"role": "tool", "tool_call_id": message.tool_call_id, "content": message.content}
+        case _ if cache_control and message.layers:
+            parts: list[dict[str, object]] = [
+                {"type": "text", "text": layer, "cache_control": {"type": "ephemeral"}}
+                for layer in message.layers
+                if layer
+            ]
+            if message.content:
+                parts.append({"type": "text", "text": message.content})
+            return {"role": message.role.value, "content": parts}
         case _:
-            return {"role": message.role.value, "content": message.content}
+            return {"role": message.role.value, "content": message.text}
 
 
 def _wire_call(call: ToolCall) -> dict[str, object]:
@@ -252,10 +269,13 @@ def _usage(usage: dict[str, Any]) -> Usage | None:
     if not all(isinstance(t, int) for t in tokens):
         return None
     cost = usage.get("cost")
+    details = usage.get("prompt_tokens_details")
+    cached = details.get("cached_tokens") if isinstance(details, dict) else None
     return Usage(
         input_tokens=int(tokens[0] or 0),
         output_tokens=int(tokens[1] or 0),
         cost=float(cost) if isinstance(cost, int | float) else None,
+        cached_input_tokens=cached if isinstance(cached, int) else None,
     )
 
 
@@ -285,6 +305,8 @@ class OpenAICompatibleSettings(AdapterSettings):
     extra_body: dict[str, Any] = Field(default_factory=dict)
     connect_timeout_s: PositiveFloat = 5.0
     read_timeout_s: PositiveFloat = 30.0
+    # mark the instructions' stable layers for the prompt cache; by default for OpenRouter and Anthropic
+    cache_control: bool | None = Field(default=None, json_schema_extra={"advanced": True})
 
     @field_validator("api_key", mode="before")
     @classmethod
@@ -308,6 +330,7 @@ def build(settings: OpenAICompatibleSettings, name: str, services: Services) -> 
         connect_timeout_s=settings.connect_timeout_s,
         read_timeout_s=settings.read_timeout_s,
         provider=name,
+        cache_control=settings.cache_control,
     )
 
 

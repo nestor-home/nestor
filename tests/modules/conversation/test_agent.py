@@ -27,6 +27,7 @@ from nestor.modules.conversation import (
     ContextProvider,
     FallbackReason,
     FallbackSpoken,
+    Layer,
     ModelChoice,
     UserTurn,
 )
@@ -393,10 +394,38 @@ async def test_instructions_carry_persona_channel_person_and_context(make_agent:
     await agent.respond(message("Salut", VOICE, "mic")).collect()
     await agent.respond(message("Salut", Address("web", "x"), "inconnu")).collect()
 
-    spoken, written = (r.messages[0].content for r in model.requests)
+    spoken, written = (r.messages[0].text for r in model.requests)
     assert "Tu es Richie" in spoken and "Mathis" in spoken and "spoken aloud" in spoken
     assert "[laughs]" in spoken and "Running tasks: none." in spoken and "Europe/Paris" in spoken
     assert "do not know who" in written and "chat" in written and "Running tasks" not in written
+
+
+async def test_the_instructions_run_from_what_never_changes_to_what_this_turn_brings(make_agent: MakeAgent) -> None:
+    class Book(ContextProvider):
+        layer = Layer.HOUSEHOLD
+
+        def guidance(self) -> str:
+            return "Use the book tools."
+
+        async def context(self, person: Person | None, address: Address) -> str | None:
+            return "Books lent: Tintin."
+
+    class Tasks(ContextProvider):
+        async def context(self, person: Person | None, address: Address) -> str | None:
+            return f"Tasks for {person.name if person else 'nobody'}: none."
+
+    model = ScriptedModel("Oui.", "Oui.")
+    agent = make_agent(model=model, context=[Book(), Tasks()])
+    await agent.respond(message("Salut")).collect()
+    await agent.respond(message("Salut", Address("telegram", "666"), "666")).collect()
+
+    (stable, household), (again, same) = (r.messages[0].layers for r in model.requests)
+    first, second = (r.messages[0].content for r in model.requests)
+    assert (stable, household) == (again, same), "who speaks and when only change the last part"
+    assert "Tu es Richie" in stable and "Use the book tools." in stable and "Books lent" not in stable
+    assert household == "The household: Mathis.\n\nBooks lent: Tintin."
+    assert "Now:" in first and "talking with Mathis" in first and "Tasks for Mathis: none." in first
+    assert "do not know who" in second and "Tasks for nobody: none." in second
 
 
 async def test_a_cut_is_shared_by_length_whatever_the_synthesis_made_of_the_words(

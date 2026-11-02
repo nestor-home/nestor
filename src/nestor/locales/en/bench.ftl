@@ -84,6 +84,7 @@ bench-metric-case-latency-p95 = case latency, p95
 bench-metric-call-latency-p50 = call latency, median
 bench-metric-call-latency-p95 = call latency, p95
 bench-metric-input-tokens-per-case = input tokens per case
+bench-metric-cached-input-share = share of input tokens read from the cache
 bench-metric-output-tokens-per-case = output tokens per case
 bench-metric-cost-per-1000-cases = cost per 1000 cases
 bench-metric-provider-errors = provider errors

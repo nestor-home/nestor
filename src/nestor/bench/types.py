@@ -34,6 +34,7 @@ class Call:
     latency_s: float
     first_output_s: float | None = None
     input_tokens: int | None = None
+    cached_input_tokens: int | None = None  # of `input_tokens`, read from the provider's prompt cache
     output_tokens: int | None = None
     cost: float | None = None
     served_model: str | None = None  # the model the provider says answered
