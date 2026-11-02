@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.6.0](https://github.com/nestor-home/nestor/compare/v0.5.0...v0.6.0) (2026-11-02)
+
+
+### ⚠ BREAKING CHANGES
+
+* satellites talk in writing, aloud or both ([#27](https://github.com/nestor-home/nestor/issues/27))
+
+### Features
+
+* satellites talk in writing, aloud or both ([#27](https://github.com/nestor-home/nestor/issues/27)) ([6c78d7a](https://github.com/nestor-home/nestor/commit/6c78d7a282c2163e4f36a6941ef60cbd6a0ecb15))
+* send each message of an answer as soon as it is written ([#22](https://github.com/nestor-home/nestor/issues/22)) ([6f65676](https://github.com/nestor-home/nestor/commit/6f656764039c91d1514f45346b0a07b4fc1fcc0f))
+
 ## [0.5.0](https://github.com/nestor-home/nestor/compare/v0.4.0...v0.5.0) (2026-11-02)
 
 
