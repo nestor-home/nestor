@@ -25,11 +25,14 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Annotated, Any, ClassVar, dataclass_transform, get_args, get_origin, get_type_hints
 
-from nestor.core import ContractError, new_id, utc_now
+from nestor.core import Capability, ContractError, new_id, utc_now
 from nestor.core.events import codec
 from nestor.modules.behavior import Behavior, Expression
 from nestor.modules.satellites.types import (
+    PERSON_DETECTION,
     PROTOCOL,
+    SPEECH_ACTIVITY,
+    TEXT_INPUT,
     Manifest,
     PairingMethod,
     PairingState,
@@ -156,6 +159,14 @@ class TextIntent(Message, message_type="intent.text", direction=Direction.TO_SAT
 
     text: Shown
     final: bool = True
+
+
+# What a satellite must have been allowed before it sends a message of that kind.
+NEEDS: dict[type[Message], Capability] = {
+    PersonObservation: PERSON_DETECTION,
+    SpeechActivityObservation: SPEECH_ACTIVITY,
+    TextInput: TEXT_INPUT,
+}
 
 
 # Pairing over HTTP.

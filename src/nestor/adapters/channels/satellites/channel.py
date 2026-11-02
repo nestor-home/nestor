@@ -24,8 +24,7 @@ from nestor.core import Capability, ContractError, ProviderError
 from nestor.modules.channels import Address, Assistant, Channel, InboundMessage, Medium, MessageEnd, Sender
 from nestor.modules.journal import Journal
 from nestor.modules.satellites import (
-    AUDIO_CAPTURE,
-    AUDIO_PLAYBACK,
+    AUDIO,
     TEXT_DISPLAY,
     Pairing,
     Satellite,
@@ -39,7 +38,6 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 PROVIDER = "satellites"
-AUDIO = frozenset({AUDIO_CAPTURE, AUDIO_PLAYBACK})
 
 
 class SatellitesChannel(Channel, SatelliteHost):
@@ -97,12 +95,12 @@ class SatellitesChannel(Channel, SatelliteHost):
             raise ContractError("the runtime hosts satellites before serving the channel")
         self._assistant = assistant
         if self._voice is not None:
-            self._voice.serve(assistant)
+            self._voice.serve(assistant, self._links)
         if self._closed.is_set():
             return
         gateway = SatelliteGateway(self._hosting[0], on_link=self._linked, allowed=self.allowed, audio=self._voice)
         self._gateway = gateway
-        self._server = DeviceServer(host=self._host, port=self._port, routes=[gateway])
+        self._server = DeviceServer(host=self._host, port=self._port, gateway=gateway)
         logger.info("satellites: %s serving on http://%s:%d", self.channel_id, self._host, self._port)
         await self._server.serve()
 
@@ -148,8 +146,6 @@ class SatellitesChannel(Channel, SatelliteHost):
         pairing, journal = self._hosting
         link = SatelliteLink(socket, satellite, journal, allowed=allowed)
         self._links[satellite.id] = link
-        if self._voice is not None:
-            self._voice.attach(link)
         try:
             with pairing.online(satellite.id, link.identify):
                 await link.run(self._typed)

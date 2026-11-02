@@ -40,18 +40,18 @@ from collections.abc import Callable, Coroutine, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 from fastapi import Request, WebSocket
 
-from nestor.adapters.channels.satellites.gateway import AudioOffers, SatelliteGateway
-from nestor.adapters.channels.satellites.link import Close
+from nestor.adapters.channels.satellites.gateway import AudioOffers, Close, SatelliteGateway
 from nestor.adapters.channels.satellites.server import DeviceServer
 from nestor.core import Capability, utc_now
 from nestor.core.i18n import Message
 from nestor.modules.behavior import EXPRESSION, HEAD_MOTION
 from nestor.modules.journal import Journal
 from nestor.modules.satellites import (
+    AUDIO,
     AUDIO_CAPTURE,
     AUDIO_PLAYBACK,
     IDENTIFY,
@@ -74,7 +74,6 @@ from nestor.modules.satellites.codes import ALPHABET
 from nestor.testing.journal import MemoryEventLog
 from nestor.testing.satellites import Findings, ProtocolProbe, SatelliteSession
 
-AUDIO = frozenset({AUDIO_CAPTURE, AUDIO_PLAYBACK})
 # What the enrolled device may do: anything it declares but audio (A1: it must not offer any).
 SILENT = (TEXT_INPUT, TEXT_DISPLAY, SPEECH_ACTIVITY, PERSON_DETECTION, EXPRESSION, HEAD_MOTION, IDENTIFY)
 AUDIO_RATE = 48000
@@ -215,33 +214,23 @@ class _Audio(AudioOffers):
     the checks; `None` without the extra."""
 
     def __init__(self) -> None:
-        from pipecat.transports.smallwebrtc.request_handler import (
-            IceCandidate,
-            SmallWebRTCPatchRequest,
-            SmallWebRTCRequest,
-            SmallWebRTCRequestHandler,
-        )
+        from nestor.adapters.channels.satellites.voice.webrtc import PeerConnections
 
-        self._request, self._patch, self._candidate = SmallWebRTCRequest, SmallWebRTCPatchRequest, IceCandidate
-        self._handler = SmallWebRTCRequestHandler()
+        self._peers = PeerConnections()
         self.connections: asyncio.Queue[Any] = asyncio.Queue()
 
     async def offer(self, device_id: str, body: dict[str, Any]) -> dict[str, Any]:
-        request = self._request(sdp=body["sdp"], type=body["type"], pc_id=body.get("pc_id"))
-
         async def connected(connection: Any) -> None:
             await connection.connect()
             self.connections.put_nowait(connection)
 
-        # The handler raises rather than return no answer (Pipecat 1.14), despite its annotation.
-        return cast(dict[str, Any], await self._handler.handle_web_request(request, connected))
+        return await self._peers.answer(body, connected)
 
     async def patch(self, device_id: str, body: dict[str, Any]) -> None:
-        candidates = [self._candidate(**c) for c in body.get("candidates", [])]
-        await self._handler.handle_patch_request(self._patch(pc_id=body["pc_id"], candidates=candidates))
+        await self._peers.patch(body)
 
     async def close(self) -> None:
-        await self._handler.close()
+        await self._peers.close()
 
 
 def _audio() -> tuple[_Audio | None, str | None]:
@@ -274,7 +263,7 @@ class _Core:
             audio=self.audio,
             refused=lambda _device, code, why: self.refusals.append((code, why)),
         )
-        server = DeviceServer(host="127.0.0.1", port=port, routes=[gateway])
+        server = DeviceServer(host="127.0.0.1", port=port, gateway=gateway)
 
         @server.app.middleware("http")
         async def count_offers(request: Request, call_next: Any) -> Any:

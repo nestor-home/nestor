@@ -73,7 +73,7 @@ async def serving(
     send_timeout_s: float = 30.0,
 ) -> AsyncGenerator[Room]:
     voice = voice_of(stt, tts, quiet_s=quiet_s, clips=clips)
-    voice.serve(assistant)
+    voice.serve(assistant, {})
     room = Room(voice, send_timeout_s)
     try:
         yield room

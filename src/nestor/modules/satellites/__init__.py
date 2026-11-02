@@ -30,6 +30,7 @@ from nestor.modules.satellites.service import (
     hash_token,
 )
 from nestor.modules.satellites.types import (
+    AUDIO,
     AUDIO_CAPTURE,
     AUDIO_PLAYBACK,
     IDENTIFY,
@@ -58,6 +59,7 @@ from nestor.modules.satellites.types import (
 )
 
 __all__ = [
+    "AUDIO",
     "AUDIO_CAPTURE",
     "AUDIO_PLAYBACK",
     "IDENTIFY",

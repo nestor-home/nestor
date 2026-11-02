@@ -10,22 +10,18 @@ room. Limits: one speaker identity per room (no voice recognition yet).
 import asyncio
 import contextlib
 import logging
-from typing import Any, cast
+from collections.abc import Mapping
+from typing import Any
 
 from pipecat.transports.base_transport import BaseTransport, TransportParams
 from pipecat.transports.smallwebrtc.connection import SmallWebRTCConnection
-from pipecat.transports.smallwebrtc.request_handler import (
-    IceCandidate,
-    SmallWebRTCPatchRequest,
-    SmallWebRTCRequest,
-    SmallWebRTCRequestHandler,
-)
 from pipecat.transports.smallwebrtc.transport import SmallWebRTCTransport
 
 from nestor.adapters.channels.satellites.gateway import AudioOffers
 from nestor.adapters.channels.satellites.link import RemoteBody, SatelliteLink
 from nestor.adapters.channels.satellites.voice.providers import Speech
 from nestor.adapters.channels.satellites.voice.session import SessionSettings, VoiceSession
+from nestor.adapters.channels.satellites.voice.webrtc import PeerConnections
 from nestor.core import ContractError, ProviderError
 from nestor.modules.channels import Address, Assistant, Sender
 from nestor.modules.satellites import TEXT_DISPLAY, wire
@@ -36,56 +32,46 @@ PROVIDER = "voice"
 
 
 class SatelliteVoice(AudioOffers):
-    """`serve` lends it the assistant; then each answered offer runs a voice session."""
+    """`serve` lends it the assistant and the channel's links; then each answered offer runs a voice
+    session."""
 
     def __init__(self, channel_id: str, *, speech: Speech, settings: SessionSettings) -> None:
         self.speech = speech
         self._channel_id = channel_id
         self._settings = settings
         self._assistant: Assistant | None = None
-        self._handler = SmallWebRTCRequestHandler()
-        self._links: dict[str, SatelliteLink] = {}  # device id → its link, while it is up
+        self._peers = PeerConnections()
+        self._links: Mapping[str, SatelliteLink] = {}  # device id → its link, while it is up
         self._owners: dict[str, str] = {}  # peer connection id → device id
         self._sessions: dict[str, VoiceSession] = {}  # device id → its current session
         self._by_transport: dict[BaseTransport, VoiceSession] = {}
         self._closed = False
         self._running: set[asyncio.Task[None]] = set()
 
-    def serve(self, assistant: Assistant) -> None:
-        self._assistant = assistant
-
-    def attach(self, link: SatelliteLink) -> None:
-        """The device's link is up: its audio offers are answered from now on."""
-        self._links[link.satellite.id] = link
+    def serve(self, assistant: Assistant, links: Mapping[str, SatelliteLink]) -> None:
+        """Answer with `assistant` the devices whose link is up in `links` (device id → its link)."""
+        self._assistant, self._links = assistant, links
 
     async def hang_up(self, link: SatelliteLink) -> None:
         """The device's link ended: its audio ends too (A3)."""
-        device = link.satellite.id
-        if self._links.get(device) is link:
-            del self._links[device]
-        if session := self._sessions.get(device):
+        if session := self._sessions.get(link.satellite.id):
             await session.stop()
 
     async def offer(self, device_id: str, body: dict[str, Any]) -> dict[str, Any]:
         link = self._link(device_id, body.get("pc_id"))
-        request = SmallWebRTCRequest(
-            sdp=body["sdp"], type=body["type"], pc_id=body.get("pc_id"), restart_pc=body.get("restart_pc")
-        )
 
         async def connected(connection: SmallWebRTCConnection) -> None:
             task = asyncio.create_task(self._run(connection, link), name=f"voice {link.satellite.id}")
             self._running.add(task)
             task.add_done_callback(self._running.discard)
 
-        # The handler raises rather than return no answer (Pipecat 1.14), despite its annotation.
-        answer = cast(dict[str, Any], await self._handler.handle_web_request(request, connected))
+        answer = await self._peers.answer(body, connected)
         self._owners[answer["pc_id"]] = device_id
         return answer
 
     async def patch(self, device_id: str, body: dict[str, Any]) -> None:
         self._link(device_id, body["pc_id"])
-        candidates = [IceCandidate(**c) for c in body.get("candidates", [])]
-        await self._handler.handle_patch_request(SmallWebRTCPatchRequest(pc_id=body["pc_id"], candidates=candidates))
+        await self._peers.patch(body)
 
     @property
     def rooms(self) -> frozenset[str]:
@@ -109,9 +95,8 @@ class SatelliteVoice(AudioOffers):
     async def close(self) -> None:
         """End every session (their pending messages fail) and refuse new ones."""
         self._closed = True
-        for session in list(self._sessions.values()):
-            await session.stop()
-        await self._handler.close()
+        await asyncio.gather(*(session.stop() for session in self._sessions.values()))
+        await self._peers.close()
         await asyncio.gather(*self._running, return_exceptions=True)
 
     async def converse(self, transport: BaseTransport, link: SatelliteLink) -> None:

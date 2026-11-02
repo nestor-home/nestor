@@ -91,7 +91,6 @@ class Channel(Component, ABC):
 
     media: frozenset[Medium] = frozenset({Medium.WRITTEN})  # how its turns can travel
     style: str = ""  # how to write for this channel (e.g. expression tags the voice understands)
-    room: str | None = None  # where a spoken channel is heard (a home area id), if it is a satellite
 
     def __init__(self, channel_id: str, *, conversation_ends_after_s: float | None = None) -> None:
         if conversation_ends_after_s is not None and conversation_ends_after_s <= 0:
@@ -118,8 +117,8 @@ class Channel(Component, ABC):
 
     @property
     def rooms(self) -> frozenset[str]:
-        """Rooms where a spoken channel can be heard right now: its satellites' rooms; by default `room`."""
-        return frozenset({self.room}) if self.room else frozenset()
+        """Rooms (home area ids) where a spoken channel can be heard right now: its satellites' rooms."""
+        return frozenset()
 
     def reachable(self, to: Address, medium: Medium) -> bool:
         """Whether `send` can deliver through `medium` now (aloud needs someone connected). Cheap;

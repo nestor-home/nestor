@@ -334,7 +334,7 @@ async def test_audio_is_refused_without_a_valid_token_or_a_link() -> None:
 def _gateway_client(pairing: Pairing) -> httpx.AsyncClient:
     async def linked(*_: object) -> None: ...
 
-    server = DeviceServer(host="127.0.0.1", port=0, routes=[SatelliteGateway(pairing, on_link=linked)])
+    server = DeviceServer(host="127.0.0.1", port=0, gateway=SatelliteGateway(pairing, on_link=linked))
     return httpx.AsyncClient(transport=httpx.ASGITransport(app=server.app), base_url="http://core")
 
 

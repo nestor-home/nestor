@@ -21,22 +21,12 @@ from nestor.core.i18n import Message
 from nestor.modules.behavior import EXPRESSION, HEAD_MOTION, Behavior, Expression
 from nestor.modules.satellites import (
     IDENTIFY,
-    PERSON_DETECTION,
-    SPEECH_ACTIVITY,
     TEXT_DISPLAY,
-    TEXT_INPUT,
     Manifest,
     Pairing,
     Satellite,
     wire,
 )
-
-# What a satellite must have been allowed before it sends a message of that kind.
-NEEDS: dict[type[wire.Message], Capability] = {
-    wire.PersonObservation: PERSON_DETECTION,
-    wire.SpeechActivityObservation: SPEECH_ACTIVITY,
-    wire.TextInput: TEXT_INPUT,
-}
 
 
 class SatelliteSession(ABC):
@@ -175,7 +165,7 @@ class _Reader:
             self._acks.add(message.of)
         elif isinstance(message, wire.Hello):
             self._invalid.append("hello is only the first message of a link")
-        elif (needed := NEEDS.get(type(message))) and needed not in self._allowed:
+        elif (needed := wire.NEEDS.get(type(message))) and needed not in self._allowed:
             self._invalid.append(f"{message.message_type} needs the {needed} capability")
 
 

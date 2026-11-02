@@ -25,7 +25,7 @@ _VARIABLE = re.compile(r"\$\{(?:(?P<secret>secret):)?(?P<name>[A-Za-z_][A-Za-z0-
 SECRET_KEY = "NESTOR_SECRET_KEY"
 ENV_FILE = ".env"  # next to the configuration: what `nestor init` writes
 # Clear of the ports local model servers and dev tools use (llama.cpp's 8080, Gradio's 7860, Ollama's 11434…);
-# the voice channel serves satellites on the next one.
+# the satellites channel serves them on the next one.
 ADMIN_PORT = 8470
 
 type SecretLookup = Callable[[str], str | None]  # a secret's value by name, None when it is not set

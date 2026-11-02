@@ -12,18 +12,14 @@ import json
 import logging
 import time
 from collections.abc import Awaitable, Callable
-from enum import IntEnum
 from typing import Any
 
 from fastapi import WebSocket
 
-from nestor.core import Capabilities, Capability, ContractError, Event
+from nestor.core import Capabilities, Capability, ContractError
 from nestor.modules.behavior import EXPRESSION, HEAD_MOTION, Behavior, Body, Expression
 from nestor.modules.journal import Journal
 from nestor.modules.satellites import (
-    PERSON_DETECTION,
-    SPEECH_ACTIVITY,
-    TEXT_INPUT,
     PersonDetected,
     Satellite,
     SatelliteConnected,
@@ -35,22 +31,6 @@ from nestor.modules.satellites import (
 logger = logging.getLogger(__name__)
 
 SOURCE = "satellites"
-
-# What a device must have been allowed before the core takes what it sends.
-NEEDS: dict[type[wire.Message], Capability] = {
-    wire.PersonObservation: PERSON_DETECTION,
-    wire.SpeechActivityObservation: SPEECH_ACTIVITY,
-    wire.TextInput: TEXT_INPUT,
-}
-
-
-class Close(IntEnum):
-    """Why the core closes a link (L2, L4, L5)."""
-
-    STOPPING = 1001  # the core stops: reconnect
-    OFF_CONTRACT = 4400  # `hello` late, off-contract or for another device
-    TOKEN_REFUSED = 4401  # forget the token and pair again
-    REPLACED = 4409  # a newer link of this device took over
 
 
 type Typed = Callable[["SatelliteLink", str], Awaitable[None]]
@@ -106,7 +86,7 @@ class SatelliteLink:
         text it sends, in order."""
         satellite = self.satellite
         self.send(wire.Welcome(device_id=satellite.id, room=satellite.room, capabilities=tuple(sorted(self.allowed))))
-        await self._publish(SatelliteConnected(source=SOURCE, device_id=satellite.id, room=satellite.room))
+        await self._journal.publish(SatelliteConnected(source=SOURCE, device_id=satellite.id, room=satellite.room))
         writer = asyncio.create_task(self._write(), name=f"satellite {satellite.id} out")
         answering = asyncio.create_task(self._answer(typed), name=f"satellite {satellite.id} text")
         try:
@@ -119,7 +99,9 @@ class SatelliteLink:
             with contextlib.suppress(asyncio.CancelledError):
                 await answering
             await writer
-            await self._publish(SatelliteDisconnected(source=SOURCE, device_id=satellite.id, room=satellite.room))
+            await self._journal.publish(
+                SatelliteDisconnected(source=SOURCE, device_id=satellite.id, room=satellite.room)
+            )
 
     async def _read(self) -> None:
         while True:
@@ -155,7 +137,7 @@ class SatelliteLink:
         if message.direction is not wire.Direction.TO_CORE:
             logger.warning("satellite %s sent %s, which only the core sends", self.satellite.id, message.message_type)
             return
-        if (needed := NEEDS.get(type(message))) is not None and needed not in self.allowed:
+        if (needed := wire.NEEDS.get(type(message))) is not None and needed not in self.allowed:
             logger.warning("satellite %s sent %s without %s: ignored", self.satellite.id, message.message_type, needed)
             return
         satellite = self.satellite
@@ -167,17 +149,14 @@ class SatelliteLink:
             case wire.TextInput(text=typed):
                 self._typed.put_nowait(typed)
             case wire.PersonObservation(count=count, confidence=confidence):
-                await self._publish(
+                await self._journal.publish(
                     PersonDetected(source=SOURCE, device_id=satellite.id, room=satellite.room, count=count,
                                    confidence=confidence)
                 )  # fmt: skip
             case wire.SpeechActivityObservation(active=active):
-                await self._publish(
+                await self._journal.publish(
                     SpeechActivityObserved(source=SOURCE, device_id=satellite.id, room=satellite.room, active=active)
                 )
-
-    async def _publish(self, event: Event) -> None:
-        await self._journal.publish(event)
 
     def _forget_overdue(self) -> None:
         deadline = time.monotonic() - self._ack_timeout_s

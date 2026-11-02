@@ -189,7 +189,8 @@ def test_a_satellite_that_cannot_be_launched_is_a_usage_error(
 def test_without_the_voice_extra_the_suite_says_audio_cannot_be_checked(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    for name in [m for m in sys.modules if m.startswith("pipecat")]:
+    voice = ("pipecat", "nestor.adapters.channels.satellites.voice")  # the extra, and what is built on it
+    for name in [m for m in sys.modules if m.startswith(voice)]:
         monkeypatch.delitem(sys.modules, name)
     monkeypatch.setitem(sys.modules, "pipecat", None)  # as if the extra were not installed
     satellite = [sys.executable, "-m", "tests.adapters.channels.satellites.reference", "{url}", "{state}",

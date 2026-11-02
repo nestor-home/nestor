@@ -19,17 +19,15 @@ import json
 import logging
 from abc import ABC, abstractmethod
 from collections.abc import Awaitable, Callable
+from enum import IntEnum
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request, WebSocket
 from fastapi.responses import JSONResponse
 
-from nestor.adapters.channels.satellites.link import Close
-from nestor.adapters.channels.satellites.server import Routes
 from nestor.core import Capability, ContractError
 from nestor.modules.satellites import (
-    AUDIO_CAPTURE,
-    AUDIO_PLAYBACK,
+    AUDIO,
     EnrollmentRefused,
     NotPending,
     Pairing,
@@ -44,6 +42,15 @@ logger = logging.getLogger(__name__)
 
 PENDING_RETRY_S = 30  # when too many devices wait: about the time a person takes to approve one
 HELLO_DEADLINE_S = 10.0  # a link says hello within this (L2)
+
+
+class Close(IntEnum):
+    """Why the core closes a link (L2, L4, L5)."""
+
+    STOPPING = 1001  # the core stops: reconnect
+    OFF_CONTRACT = 4400  # `hello` late, off-contract or for another device
+    TOKEN_REFUSED = 4401  # forget the token and pair again
+    REPLACED = 4409  # a newer link of this device took over
 
 
 class AudioOffers(ABC):
@@ -62,7 +69,7 @@ type Linked = Callable[[WebSocket, Satellite, frozenset[Capability]], Awaitable[
 type Refused = Callable[[str, Close, str], None]
 
 
-class SatelliteGateway(Routes):
+class SatelliteGateway:
     """`on_link` holds the link of a device whose `hello` was accepted (the socket, the paired device,
     what it is granted) until it ends; `allowed` says what a paired device is granted (the voice may be
     missing); `refused` hears why a link was turned away."""
@@ -77,7 +84,6 @@ class SatelliteGateway(Routes):
         refused: Refused | None = None,
         hello_deadline_s: float = HELLO_DEADLINE_S,
     ) -> None:
-        super().__init__()
         self._pairing = pairing
         self._on_link, self._allowed, self._audio, self._refused = on_link, allowed, audio, refused
         self._hello_deadline_s = hello_deadline_s
@@ -91,9 +97,8 @@ class SatelliteGateway(Routes):
         app.add_api_route("/satellites/{device_id}/audio", self._offer, methods=["POST", "PATCH"])
 
     async def close(self) -> None:
-        for socket, _ in list(self._links.values()):
-            await _close(socket, Close.STOPPING)
-        await super().close()
+        """Close every link (1001): its device reconnects once the core is back."""
+        await asyncio.gather(*(_close(socket, Close.STOPPING) for socket, _ in self._links.values()))
 
     async def _pair(self, request: Request) -> Any:
         try:
@@ -162,7 +167,7 @@ class SatelliteGateway(Routes):
     async def _offer(self, device_id: str, request: Request) -> Any:
         self._authenticate(device_id, request)
         link = self._links.get(device_id)
-        if self._audio is None or link is None or not _hears(link[1]):
+        if self._audio is None or link is None or not link[1] & AUDIO:
             raise HTTPException(403, "audio needs this device's link up and audio allowed")
         body = await request.json()
         try:
@@ -184,10 +189,6 @@ class SatelliteGateway(Routes):
 async def _close(socket: WebSocket, code: Close) -> None:
     with contextlib.suppress(RuntimeError):  # closed already, or the device left first
         await socket.close(code)
-
-
-def _hears(allowed: frozenset[Capability]) -> bool:
-    return bool(allowed & {AUDIO_CAPTURE, AUDIO_PLAYBACK})
 
 
 def _client(request: Request) -> str:

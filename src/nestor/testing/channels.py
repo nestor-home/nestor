@@ -58,9 +58,10 @@ class ScriptedAssistant(Assistant):
 
 class InMemoryChannel(Channel):
     """A text channel driven by the test: `ask` plays a user message and returns the messages of the
-    answer, or `None` when the assistant does not know the sender."""
+    answer, or `None` when the assistant does not know the sender. A spoken one is heard in `room`."""
 
     name = "in-memory"
+    room: str | None = None
 
     def __init__(self, channel_id: str = "memory") -> None:
         super().__init__(channel_id)
@@ -85,6 +86,10 @@ class InMemoryChannel(Channel):
         answered: asyncio.Future[tuple[str, ...] | None] = asyncio.get_running_loop().create_future()
         await self._inbox.put((message, answered))
         return await answered
+
+    @property
+    def rooms(self) -> frozenset[str]:
+        return frozenset({self.room}) if self.room else frozenset()
 
     async def send(self, to: Address, text: str, medium: Medium) -> None:
         if to.channel != self.channel_id or medium not in self.media:

@@ -1,34 +1,14 @@
-"""The satellites' HTTP server: route sets plug into one FastAPI app served by `uvicorn` inside the
-channel. The gateway (`gateway`) is one: pairing, the link of each paired device, its audio offers."""
+"""The satellites' HTTP server: the gateway's routes (pairing, the link of each paired device, its
+audio offers) on one FastAPI app, served by `uvicorn` inside the channel."""
 
-import asyncio
-from abc import ABC, abstractmethod
-from collections.abc import Coroutine, Sequence
 from typing import Any
 
 import uvicorn
 from fastapi import FastAPI
 
+from nestor.adapters.channels.satellites.gateway import SatelliteGateway
+
 PING_INTERVAL_S = 20.0  # the core pings every link this often (L4)
-
-
-class Routes(ABC):
-    """A set of endpoints and the sessions they started."""
-
-    def __init__(self) -> None:
-        self._running: set[asyncio.Task[None]] = set()
-
-    @abstractmethod
-    def install(self, app: FastAPI) -> None: ...
-
-    def spawn(self, session: Coroutine[Any, Any, None], name: str) -> None:
-        task = asyncio.create_task(session, name=name)
-        self._running.add(task)
-        task.add_done_callback(self._running.discard)
-
-    async def close(self) -> None:
-        """End what the routes started and wait for it."""
-        await asyncio.gather(*self._running, return_exceptions=True)
 
 
 class _Server(uvicorn.Server):
@@ -45,11 +25,10 @@ class _NoSignals:
 
 
 class DeviceServer:
-    def __init__(self, *, host: str, port: int, routes: Sequence[Routes]) -> None:
-        self._routes = tuple(routes)
+    def __init__(self, *, host: str, port: int, gateway: SatelliteGateway) -> None:
+        self._gateway = gateway
         self.app = FastAPI(title="Nestor satellites")
-        for route_set in self._routes:
-            route_set.install(self.app)
+        gateway.install(self.app)
         config = uvicorn.Config(
             self.app,
             host=host,
@@ -63,12 +42,11 @@ class DeviceServer:
         self._server = _Server(config)
 
     async def serve(self) -> None:
-        """Serve until `stop`; then end every route set's sessions and wait for them."""
+        """Serve until `stop`; then close the links still up."""
         try:
             await self._server.serve()
         finally:
-            for route_set in self._routes:
-                await route_set.close()
+            await self._gateway.close()
 
     def stop(self) -> None:
         self._server.should_exit = True
