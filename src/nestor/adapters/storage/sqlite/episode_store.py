@@ -98,12 +98,8 @@ class SQLiteEpisodeStore(EpisodeStore):
 
 def _within(since: datetime | None, until: datetime | None) -> tuple[str, list[object]]:
     """The SQL keeping the episodes that ended within the bounds, and its parameters."""
-    where, params = "", []
-    if since is not None:
-        where, params = f"{where} AND e.ended_at >= ?", [*params, time_key(since)]
-    if until is not None:
-        where, params = f"{where} AND e.ended_at <= ?", [*params, time_key(until)]
-    return where, params
+    bounds = [(clause, time_key(at)) for clause, at in (("e.ended_at >= ?", since), ("e.ended_at <= ?", until)) if at]
+    return "".join(f" AND {clause}" for clause, _ in bounds), [key for _, key in bounds]
 
 
 def _episode(row: tuple) -> Episode:

@@ -48,30 +48,33 @@ async def for_turn(
     memories: Memories, episodes: Episodes, said: str | None, person: PersonId | None, settings: RecallSettings
 ) -> TurnMemories:
     """What a turn's instructions carry. Every memory of the household may matter, not only those about whoever
-    speaks ("what does Léa like?"); episodes are only theirs. What is already all shown is not searched, and
-    the question is embedded once for both searches, so a household that fits waits for no embedding call."""
+    speaks ("what does Léa like?"); episodes are only theirs. What is all shown already is not searched, and the
+    question is embedded once for both searches, so a household that fits waits for no embedding call."""
     shown, latest = await asyncio.gather(
         memories.recent(limit=settings.recent) if settings.strategy is not Strategy.SEARCH else _nothing(),
         episodes.recent(person, limit=settings.recent_episodes + 1) if person else _nothing(),
     )
     older_episodes = len(latest) > settings.recent_episodes  # one more was asked for, to know
     latest = latest[: settings.recent_episodes]
-    everything_shown = settings.strategy is Strategy.BOTH and len(shown) < settings.recent
-    search_memories = settings.strategy is not Strategy.RECENT and settings.found > 0 and not everything_shown
-    search_episodes = person is not None and settings.found_episodes > 0 and older_episodes
-    if not said or not (search_memories or search_episodes):
+    all_shown = settings.strategy is Strategy.BOTH and len(shown) < settings.recent
+    search_memories = bool(said) and settings.strategy is not Strategy.RECENT and settings.found > 0 and not all_shown
+    search_episodes = bool(said) and settings.found_episodes > 0 and older_episodes
+    if not (search_memories or search_episodes) or not said:
         return TurnMemories(shown, [], latest, [])
-    vector = await memories.query(said)
-    found, found_episodes = await asyncio.gather(
-        memories.recall(said, vector=vector, limit=settings.found, exclude={m.id for m in shown})
-        if search_memories
-        else _nothing(),
-        episodes.recall(
-            said, vector=vector, person=person, limit=settings.found_episodes, exclude={e.id for e in latest}
+    vector = asyncio.create_task(memories.query(said))
+    try:
+        found, found_episodes = await asyncio.gather(
+            memories.recall(said, vector=vector, limit=settings.found, exclude={m.id for m in shown})
+            if search_memories
+            else _nothing(),
+            episodes.recall(
+                said, vector=vector, person=person, limit=settings.found_episodes, exclude={e.id for e in latest}
+            )
+            if search_episodes and person
+            else _nothing(),
         )
-        if search_episodes and person is not None
-        else _nothing(),
-    )
+    finally:
+        vector.cancel()  # no longer needed, whatever happened
     return TurnMemories(shown, found, latest, found_episodes)
 
 

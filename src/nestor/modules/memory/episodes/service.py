@@ -1,7 +1,7 @@
 """Recording episodes and bringing back those of a person: the latest, and those a question finds by words and
 by meaning (see `memory.index`)."""
 
-from collections.abc import Collection
+from collections.abc import Awaitable, Collection
 from datetime import datetime
 
 from nestor.core import PersonId
@@ -10,7 +10,7 @@ from nestor.modules.journal import Journal
 from nestor.modules.memory.episodes.events import EpisodeSummarized
 from nestor.modules.memory.episodes.ports import EpisodeStore
 from nestor.modules.memory.episodes.types import Episode
-from nestor.modules.memory.index import CANDIDATES, SearchIndex
+from nestor.modules.memory.index import SearchIndex, recalled
 
 
 class Episodes:
@@ -47,7 +47,7 @@ class Episodes:
         self,
         query: str,
         *,
-        vector: Vector | None,
+        vector: Awaitable[Vector | None] | None = None,
         person: PersonId,
         limit: int,
         exclude: Collection[str] = (),
@@ -55,15 +55,12 @@ class Episodes:
         until: datetime | None = None,
     ) -> list[Episode]:
         """The episodes of `person` best matching `query` (and its `vector`), within `since` and `until`."""
-        by_words = await self.store.search(
-            query, person=person, limit=max(limit, CANDIDATES) + len(exclude), since=since, until=until
+        return await recalled(
+            self.index,
+            query,
+            lambda depth: self.store.search(query, person=person, limit=depth, since=since, until=until),
+            vector,
+            limit=limit,
+            exclude=exclude,
+            keep=lambda episode: episode.seen_by(person, since, until),
         )
-        if self.index is None:
-            return [e for e in by_words if e.id not in exclude][:limit]
-
-        def theirs(episode: Episode) -> bool:
-            return person in episode.participants and (
-                (since is None or episode.ended_at >= since) and (until is None or episode.ended_at <= until)
-            )
-
-        return await self.index.search(by_words, vector, limit=limit, exclude=exclude, keep=theirs)

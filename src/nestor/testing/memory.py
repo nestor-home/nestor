@@ -138,13 +138,7 @@ class InMemoryEpisodeStore(EpisodeStore):
         return sorted(self._theirs(person, since, until), key=lambda e: e.ended_at, reverse=True)[:limit]
 
     def _theirs(self, person: PersonId, since: datetime | None, until: datetime | None) -> list[Episode]:
-        return [
-            e
-            for e in self.episodes.values()
-            if person in e.participants
-            and (since is None or e.ended_at >= since)
-            and (until is None or e.ended_at <= until)
-        ]
+        return [e for e in self.episodes.values() if e.seen_by(person, since, until)]
 
 
 def episode(

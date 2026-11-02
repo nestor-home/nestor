@@ -28,6 +28,11 @@ class Household:
         except KeyError:
             raise ContractError(f"unknown person {person_id!r}") from None
 
+    def name_of(self, person_id: PersonId | None, default: str) -> str:
+        """The person's name, or `default` for nobody known."""
+        found = self._people.get(person_id) if person_id is not None else None
+        return found.name if found else default
+
     def identify(self, channel: str, sender: str) -> Person | None:
         """The person behind a sender, or `None` for a stranger."""
         return self._accounts.get((channel, sender)) or self._accounts.get((channel, ANYONE))

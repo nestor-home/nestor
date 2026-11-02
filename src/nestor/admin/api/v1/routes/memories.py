@@ -91,7 +91,7 @@ async def list_memories(
     person = PersonId(about) if about else None
     memories = nestor.memories
     found = (
-        await memories.recall(q, vector=await memories.query(q), about=person, limit=limit)
+        await memories.recall(q, about=person, limit=limit)
         if q.strip()
         else await memories.recent(about=person, limit=limit)
     )

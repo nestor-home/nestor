@@ -5,11 +5,11 @@ Chosen on the watch-triage bench (`nestor bench run watch-triage --variant …`)
 at once catches as many matches as one call per watch, for a fraction of the calls.
 """
 
-import json
 from collections.abc import Mapping, Sequence
+from typing import Any
 
 from nestor.core import ProviderError
-from nestor.modules.cognition.model import ConversationModel, Message, ModelRequest, Role, TextDelta
+from nestor.modules.cognition.model import ConversationModel, Message, ModelRequest, Role, json_answer
 from nestor.modules.initiative.watches.types import Incoming, Verdict, Watch
 
 QUESTION = """You sort incoming items for a home assistant. People asked to be told about these things:
@@ -43,10 +43,9 @@ class Triage:
         )
         for _ in range(ATTEMPTS):
             try:
-                text = "".join([o.text async for o in self.model.stream(request) if isinstance(o, TextDelta)])
+                found = _verdicts(await json_answer(self.model, request))
             except ProviderError:
                 continue
-            found = _parse(text)
             if found is not None:
                 known = {w.id for w in watches}
                 return {id: verdict for id, verdict in found.items() if id in known}
@@ -58,14 +57,9 @@ def _describe(item: Incoming) -> str:
     return f"Kind: {item.kind}\n{sender}Title: {item.title}\n\n{item.body[:2000]}"
 
 
-def _parse(text: str) -> dict[str, Verdict] | None:
+def _verdicts(answer: dict[str, Any] | None) -> dict[str, Verdict] | None:
     """The watches the answer names, with their verdicts; None when it cannot be read."""
-    start, end = text.find("{"), text.rfind("}")
-    try:
-        answer = json.loads(text[start : end + 1]) if start >= 0 else None
-    except json.JSONDecodeError:
-        answer = None
-    if not isinstance(answer, dict) or not isinstance(answer.get("matches"), list):
+    if answer is None or not isinstance(answer.get("matches"), list):
         return None
     return {
         str(m["watch"]): Verdict(urgent=m.get("urgent") is True, summary=str(m.get("summary", "")))

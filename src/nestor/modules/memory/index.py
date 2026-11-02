@@ -11,7 +11,7 @@ both comes first.
 import asyncio
 import contextlib
 import logging
-from collections.abc import Callable, Collection, Sequence
+from collections.abc import Awaitable, Callable, Collection, Sequence
 from typing import Protocol
 
 from nestor.core import Component, ProviderError
@@ -157,6 +157,30 @@ class SearchIndex[T: Searchable](Component):
                 log.exception("the %s index failed to catch up", self.kind)
             if not self._dirty.is_set():
                 self._idle.set()
+
+
+async def recalled[T: Searchable](
+    index: SearchIndex[T] | None,
+    query: str,
+    by_words: Callable[[int], Awaitable[list[T]]],
+    vector: Awaitable[Vector | None] | None = None,
+    *,
+    limit: int,
+    exclude: Collection[str] = (),
+    keep: Callable[[T], bool] = lambda _: True,
+) -> list[T]:
+    """The best `limit` items: those `by_words` finds (given how deep to read), fused with the nearest to the
+    query's vector when there is an index, the words alone otherwise. The vector is computed while the words are
+    searched; a caller searching several corpora passes it, to embed the query once."""
+    if index is None:
+        return [i for i in await by_words(limit + len(exclude)) if i.id not in exclude][:limit]
+    embedding = asyncio.ensure_future(vector or index.query(query))
+    try:
+        found = await by_words(max(limit, CANDIDATES) + len(exclude))
+        return await index.search(found, await embedding, limit=limit, exclude=exclude, keep=keep)
+    finally:
+        if vector is None:
+            embedding.cancel()
 
 
 def fused[T: Searchable](rankings: Sequence[Sequence[T]]) -> list[T]:

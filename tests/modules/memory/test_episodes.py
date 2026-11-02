@@ -64,7 +64,7 @@ class Home:
             self.memories,
             self.episodes,
             self.household,
-            ends_after_s=lambda address, medium: 300.0 if medium is Medium.SPOKEN else 3600.0,
+            over_after_s=lambda address: 3600.0,
             assistant="Richie",
             language="French",
             timezone="Europe/Paris",
@@ -149,6 +149,35 @@ async def test_a_summary_that_cannot_be_written_is_tried_again_then_waits_for_th
     assert await home.journal.history(EpisodeSummarized) == []
 
 
+async def test_an_odd_answer_and_a_broken_memory_never_make_a_conversation_kept_twice() -> None:
+    odd = json.dumps({"summary": "Da Marco.", "facts": [{"text": "Léa aime Da Marco.", "about": ["lea"]}]})
+    home = Home(odd, odd)
+
+    class Broken(InMemoryMemoryStore):
+        async def put(self, memory):  # type: ignore[override]
+            raise RuntimeError("disk full")
+
+    home.consolidator.memories = Memories(home.journal, Broken())
+    async with home.consolidator:
+        await home.exchange("c1", "Tu connais Da Marco ?", "Oui.", at=START)
+        home.clock.now = START + timedelta(hours=2)
+        for _ in range(3):
+            await home.consolidator.consolidate_due()
+    assert len(home.model.requests) == 1 and home.consolidator.pending() == ()
+    assert len(await home.journal.history(EpisodeSummarized)) == 1
+
+
+async def test_a_turn_published_after_a_later_one_is_still_read() -> None:
+    home = Home(SUMMARY)
+    async with home.consolidator:
+        await home.exchange("c1", "Tu connais Da Marco ?", "Oui.", at=START)
+        home.clock.now = START + timedelta(minutes=50)
+        await home.consolidator.consolidate_due()
+        await home.exchange("c1", "Et pour le 14 ?", "Je réserve.", at=START + timedelta(minutes=48))
+        home.clock.now = START + timedelta(minutes=70)
+        assert await home.consolidator.consolidate_due() == 0, "its silence counts from the late turn"
+
+
 async def test_an_answer_cut_short_is_summarized_as_it_was_heard() -> None:
     home = Home(SUMMARY)
     async with home.consolidator:
@@ -171,8 +200,8 @@ async def test_an_answer_cut_short_is_summarized_as_it_was_heard() -> None:
         await home.journal.publish(
             AnswerCut(source="t", session=CHAT.session, answer=answer.id, heard="Il était", exchange=turn)
         )
-        home.clock.now = START + timedelta(minutes=10)
-        assert await home.consolidator.consolidate_due() == 1, "a spoken conversation ends sooner"
+        home.clock.now = START + timedelta(hours=2)
+        assert await home.consolidator.consolidate_due() == 1
     transcript = home.model.requests[0].messages[-1].content
     assert "Richie: Il était" in transcript and "dragon" not in transcript
     assert "Someone: Raconte" in transcript, "an unknown speaker is no one of the household"

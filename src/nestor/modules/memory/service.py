@@ -1,14 +1,14 @@
 """Remembering, recalling, correcting and forgetting — every change logged before it applies. Recall is hybrid
 when an index is plugged in (words and meaning, see `index`), by words only without."""
 
-from collections.abc import Collection
+from collections.abc import Awaitable, Collection
 
 from nestor.core import ContractError, PersonId
 from nestor.modules.channels import Address, Exchange
 from nestor.modules.cognition.embedding import Vector
 from nestor.modules.journal import Journal
 from nestor.modules.memory.events import MemoryCorrected, MemoryForgotten, MemoryRecorded
-from nestor.modules.memory.index import CANDIDATES, SearchIndex
+from nestor.modules.memory.index import SearchIndex, recalled
 from nestor.modules.memory.ports import MemoryStore
 from nestor.modules.memory.types import Memory
 
@@ -78,17 +78,21 @@ class Memories:
         self,
         query: str,
         *,
-        vector: Vector | None,
+        vector: Awaitable[Vector | None] | None = None,
         about: PersonId | None = None,
         limit: int = 8,
         exclude: Collection[str] = (),
     ) -> list[Memory]:
-        """The best `limit` memories for `query` (and its `vector`), leaving out `exclude` (already shown)."""
-        by_words = await self.store.search(query, about=about, limit=max(limit, CANDIDATES) + len(exclude))
-        if self.index is None:
-            return [m for m in by_words if m.id not in exclude][:limit]
-        return await self.index.search(
-            by_words, vector, limit=limit, exclude=exclude, keep=lambda m: about is None or m.about in (about, None)
+        """The best `limit` memories for `query` (and its `vector`, see `query`), leaving out `exclude` (already
+        shown)."""
+        return await recalled(
+            self.index,
+            query,
+            lambda depth: self.store.search(query, about=about, limit=depth),
+            vector,
+            limit=limit,
+            exclude=exclude,
+            keep=lambda m: about is None or m.about in (about, None),
         )
 
     async def recent(self, *, about: PersonId | None = None, limit: int = 20) -> list[Memory]:

@@ -28,7 +28,7 @@ CONCEPTS = {
 
 async def recall(memories: Memories, query: str, limit: int = 8) -> list[Memory]:
     """As a turn recalls: by words and, with an index, by the question's vector."""
-    return await memories.recall(query, vector=await memories.query(query), limit=limit)
+    return await memories.recall(query, limit=limit)
 
 
 async def settled(memories: Memories) -> None:

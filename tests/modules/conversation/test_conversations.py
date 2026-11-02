@@ -166,6 +166,13 @@ async def test_a_typed_follow_up_to_a_spoken_question_stays_in_its_conversation(
     assert first == second, "a typed turn waits as long as writing allows"
 
 
+def test_a_conversation_is_over_once_no_medium_could_follow_it_up(make_agent: MakeAgent) -> None:
+    channels = {"telegram": ChannelProfile(conversation_ends_after_s=60)}
+    conversations = make_agent(channels=channels).conversations
+    assert conversations.over_after_s(VOICE) == 4 * 3600, "a spoken question may still get a typed answer"
+    assert conversations.over_after_s(TELEGRAM) == 60
+
+
 async def test_a_spoken_turn_after_a_long_silence_opens_a_new_conversation(
     make_agent: MakeAgent, journal: Journal, clock: Clock
 ) -> None:

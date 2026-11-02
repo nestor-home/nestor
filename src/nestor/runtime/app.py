@@ -267,7 +267,7 @@ class Nestor:
             self.memories,
             self.episodes,
             self.household,
-            ends_after_s=lambda address, medium: self.agent.channel(address).ends_conversation_after_s(medium),
+            over_after_s=self.agent.conversations.over_after_s,
             assistant=config.persona.name,
             language=config.persona.language,
             timezone=config.persona.timezone,

@@ -1,12 +1,12 @@
 """What the central agent sees of memory: what it remembers and what its past conversations with whoever speaks
 were about, and tools to remember, recall (with dates), reread a conversation, correct and forget."""
 
+import asyncio
 from collections.abc import Mapping, Sequence
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from nestor.core import ContractError, PersonId
-from nestor.modules.channels import Medium
 from nestor.modules.cognition.model import ToolSpec
 from nestor.modules.cognition.tools import Risk, Tool, ToolContext, ToolFailed, ToolProvider
 from nestor.modules.conversation import ContextProvider, Layer, Sections, TurnContext
@@ -143,11 +143,7 @@ class MemoryTools(ToolProvider, ContextProvider):
 
     def _episodes(self, episodes: Sequence[Episode]) -> str:
         zone = ZoneInfo(self.timezone)
-        return "\n".join(
-            f"- [{e.id}] {e.ended_at.astimezone(zone):%A %d %B %Y, %H:%M}, "
-            f"{'aloud' if e.medium is Medium.SPOKEN else 'in writing'} ({e.address}): {e.summary}"
-            for e in episodes
-        )
+        return "\n".join(f"- [{e.id}] {e.describe(zone)}: {e.summary}" for e in episodes)
 
     async def _remember(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
         memory = await self.memories.remember(
@@ -162,17 +158,21 @@ class MemoryTools(ToolProvider, ContextProvider):
     async def _recall(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
         query = str(arguments.get("query") or "").strip()
         since, until = self._bound(arguments.get("since"), end=False), self._bound(arguments.get("until"), end=True)
-        vector = await self.memories.query(query) if query else None
-        memories = await self.memories.recall(query, vector=vector, about=self._about(arguments)) if query else []
+        about, person = self._about(arguments), context.person
+        memories: list[Memory] = []
         conversations: list[Episode] = []
-        if context.person is not None:
-            conversations = (
-                await self.episodes.recall(
-                    query, vector=vector, person=context.person, limit=8, since=since, until=until
-                )
-                if query
-                else await self.episodes.recent(context.person, limit=8, since=since, until=until)
-            )
+        if not query:
+            conversations = await self.episodes.recent(person, limit=8, since=since, until=until) if person else []
+        else:
+            vector = asyncio.create_task(self.memories.query(query))
+            try:
+                memories = await self.memories.recall(query, vector=vector, about=about)
+                if person is not None:
+                    conversations = await self.episodes.recall(
+                        query, vector=vector, person=person, limit=8, since=since, until=until
+                    )
+            finally:
+                vector.cancel()
         return {
             "memories": [{"memory_id": m.id, "text": self._line(m)} for m in memories],
             "conversations": self._episodes(conversations) or "none",
@@ -238,5 +238,5 @@ class MemoryTools(ToolProvider, ContextProvider):
         dated = f"{memory.updated_at:%Y-%m-%d}"
         if memory.about is None:
             return f"{dated} {memory.text}"
-        name = next((p.name for p in self.household.people if p.id == memory.about), memory.about)
+        name = self.household.name_of(memory.about, memory.about)
         return f"{dated} (about {name}) {memory.text}"

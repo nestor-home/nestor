@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from nestor.core import PersonId
 from nestor.modules.channels import Address, Medium
@@ -25,3 +26,20 @@ class Episode:
     def text(self) -> str:
         """What is searched and embedded."""
         return f"{self.summary} ({', '.join(self.topics)})" if self.topics else self.summary
+
+    def seen_by(self, person: PersonId, since: datetime | None = None, until: datetime | None = None) -> bool:
+        """Whether `person` took part in it, and it ended within `since` and `until`."""
+        return (
+            person in self.participants
+            and (since is None or self.ended_at >= since)
+            and (until is None or self.ended_at <= until)
+        )
+
+    def describe(self, zone: ZoneInfo) -> str:
+        """When and where it ended, for the model: "Sunday 18 October 2026, 22:00, in writing (telegram:7)"."""
+        return f"{self.ended_at.astimezone(zone):%A %d %B %Y, %H:%M}, {how(self.medium)} ({self.address})"
+
+
+def how(medium: Medium) -> str:
+    """How a conversation was held, in the words the model reads."""
+    return "aloud" if medium is Medium.SPOKEN else "in writing"
