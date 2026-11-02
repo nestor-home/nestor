@@ -9,6 +9,7 @@ speaker.
 
 import asyncio
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass
 
 from pipecat.frames.frames import (
@@ -84,6 +85,8 @@ class AssistantBridge(FrameProcessor):
     - One reply at a time: a new turn or the user cutting in drops the current one, and a reply cut
       before its end is interrupted with the text played so far.
     - `announce` speaks an unprompted message once nobody has spoken for `quiet_s`.
+    - `shown`, when given, receives the words of each reply and announcement as they go to the
+      synthesis (a satellite with a screen shows what it says).
     """
 
     def __init__(
@@ -94,10 +97,12 @@ class AssistantBridge(FrameProcessor):
         sender: Sender,
         played: PlayedText,
         quiet_s: float = 0.5,
+        shown: Callable[[str], None] | None = None,
     ) -> None:
         super().__init__()
         self._assistant = assistant
         self._address, self._sender = address, sender
+        self._shown = shown
         self._played = played
         self._quiet_s = quiet_s
         self._answer: _Answer | None = None
@@ -161,12 +166,15 @@ class AssistantBridge(FrameProcessor):
     async def _stream(self, reply: Reply, start: LLMFullResponseStartFrame) -> None:
         async with self._speaking:
             await self.push_frame(start)
+            said: list[str] = []
             try:
                 async for chunk in reply.speech():
+                    said.append(chunk)
                     await self.push_frame(LLMTextFrame(chunk))
             except Exception:
                 logger.exception("voice: the assistant failed to answer in %s", self._address)
             await self.push_frame(LLMFullResponseEndFrame())
+            self._show("".join(said))
 
     async def _cut(self) -> None:
         await self._tell_heard(await self._drop())
@@ -203,9 +211,14 @@ class AssistantBridge(FrameProcessor):
                     await self.push_frame(LLMFullResponseStartFrame())
                     await self.push_frame(LLMTextFrame(text))
                     await self.push_frame(LLMFullResponseEndFrame())
+                self._show(text)
                 spoken.set_result(None)
             finally:
                 _abandon(spoken)
+
+    def _show(self, text: str) -> None:
+        if self._shown is not None and text.strip():
+            self._shown(text.strip())
 
     async def _until_quiet(self) -> None:
         quiet_for = 0.0

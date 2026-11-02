@@ -64,10 +64,11 @@ describe("accessibility of every screen", () => {
   it("a component's sheet, with a problem shown at its field", async () => {
     const user = userEvent.setup();
     const { queryClient } = renderApp("/config/channels");
-    await user.click(await screen.findByRole("button", { name: "Edit Voice" }));
-    const sheet = await screen.findByRole("dialog", { name: "Voice" });
-    await user.clear(within(sheet).getByRole("textbox", { name: "Room" }));
-    await within(sheet).findByText("Room: String should have at least 1 character");
+    await user.click(await screen.findByRole("button", { name: "Edit Satellites" }));
+    const sheet = await screen.findByRole("dialog", { name: "Satellites" });
+    await user.clear(within(sheet).getByRole("spinbutton", { name: "Port" }));
+    await user.type(within(sheet).getByRole("spinbutton", { name: "Port" }), "70000");
+    await within(sheet).findByText("Port: ≤ 65535");
     await settle(queryClient);
     await expectAccessible();
   });

@@ -1,10 +1,10 @@
 """A minimal satellite driver in Python, written only against the published protocol.
 
 It pairs (with the enrollment code it was launched with, else by "showing" its device code in
-`code`, falling back to it when the enrollment code is refused), connects with its token, says `hello` on the `nestor`
-data channel, acknowledges every intent, plays the audio it receives, reports one observation, and
-reconnects when the core hangs up. Its faults can be switched on to prove the conformance suite
-catches them.
+`code`, falling back to it when the enrollment code is refused), opens its link with its token in
+`hello`, acknowledges every intent, offers audio when allowed and plays what it receives, reports one
+observation, types `typed` when allowed, reconnects when the core closes its link, and pairs again
+when its token is refused. Its faults can be switched on to prove the conformance suite catches them.
 """
 
 import asyncio
@@ -14,12 +14,25 @@ from dataclasses import dataclass
 from typing import Any
 
 import httpx
+import websockets
 from aiortc import RTCConfiguration, RTCPeerConnection, RTCSessionDescription
 from aiortc.mediastreams import AudioStreamTrack, MediaStreamError, MediaStreamTrack
 
-from nestor.adapters.channels.voice.satellites.conformance import Launch
+from nestor.adapters.channels.satellites.conformance import Launch
 from nestor.modules.behavior import Behavior
-from nestor.modules.satellites import PERSON_DETECTION, Device, Manifest, PairingMethod, parse_pairing_uri, wire
+from nestor.modules.satellites import (
+    AUDIO_CAPTURE,
+    AUDIO_PLAYBACK,
+    PERSON_DETECTION,
+    TEXT_INPUT,
+    Device,
+    Manifest,
+    PairingMethod,
+    parse_pairing_uri,
+    wire,
+)
+
+TOKEN_REFUSED = 4401
 
 
 @dataclass(frozen=True, slots=True)
@@ -35,20 +48,30 @@ class Faults:
     falls_back: bool = True  # asks for a device code once its enrollment code is refused
     retries_refused: bool = False  # presents a refused enrollment code again
     honours_retry_after: bool = True
+    forgets_refused_token: bool = True  # pairs again once its token is refused
+    offers_unallowed_audio: bool = False  # offers audio although welcome allowed none
 
 
 class ReferenceSatellite:
     def __init__(
-        self, url: str, manifest: Manifest, *, faults: Faults | None = None, observe: bool | None = None
+        self,
+        url: str,
+        manifest: Manifest,
+        *,
+        faults: Faults | None = None,
+        observe: bool | None = None,
+        typed: str | None = None,
     ) -> None:
-        """`observe`: report people seen; by default only when it declared person detection."""
-        self.url, self.manifest, self.faults = url, manifest, faults or Faults()
+        """`observe`: report people seen; by default only when it declared person detection. `typed`:
+        what a person types on it once it is welcomed (when allowed)."""
+        self.url, self.manifest, self.faults, self.typed = url, manifest, faults or Faults(), typed
         self.observe = PERSON_DETECTION in manifest.names if observe is None else observe
         self.code: str | None = None
         self.token: str | None = None
         self.code_shown = asyncio.Event()
         self.welcomed = asyncio.Event()
         self.intents: list[wire.Message] = []
+        self.allowed: frozenset[str] = frozenset()
         self.audio_frames = 0
         self.connections = 0
         self.identified = 0
@@ -68,9 +91,12 @@ class ReferenceSatellite:
             if not self.faults.connects:
                 raise RuntimeError("driver bug after pairing")
             while True:
-                await self._connect_once(http, token)
+                if await self._link_once(http, token) == TOKEN_REFUSED and self.faults.forgets_refused_token:
+                    token = await self._pair(http)
+                    continue
                 if not self.faults.reconnects:
                     await asyncio.Event().wait()
+                await asyncio.sleep(0.1)
 
     async def _pair(self, http: httpx.AsyncClient) -> str:
         code = self.enrollment_code
@@ -110,69 +136,76 @@ class ReferenceSatellite:
                 return None
             await asyncio.sleep(0.1)
 
-    async def _connect_once(self, http: httpx.AsyncClient, token: str) -> None:
+    async def _link_once(self, http: httpx.AsyncClient, token: str) -> int | None:
+        """One link, until the core closes it; its close code."""
+        url = self.url.replace("http", "ws", 1) + f"/satellites/{self.manifest.device.id}/link"
+        async with websockets.connect(url) as link:
+            audio: asyncio.Task[None] | None = None
+
+            async def send(message: wire.Message | dict[str, Any]) -> None:
+                await link.send(json.dumps(message if isinstance(message, dict) else wire.encode(message)))
+
+            if self.faults.says_hello:
+                device = self.manifest.device if self.faults.honest_hello else Device("someone-else", "x", "salon")
+                hello = Manifest(device, self.manifest.capabilities, self.manifest.pairing_methods)
+                await send(wire.Hello(manifest=hello, token=token))
+            else:
+                await send(wire.SpeechActivityObservation(active=True))
+            self.connections += 1
+            try:
+                async for raw in link:
+                    envelope = wire.decode(json.loads(raw))
+                    message = envelope.message
+                    if isinstance(message, wire.Welcome):
+                        self.allowed = frozenset(message.capabilities)
+                        self.welcomed.set()
+                        if self.allowed & {AUDIO_CAPTURE, AUDIO_PLAYBACK} or self.faults.offers_unallowed_audio:
+                            audio = asyncio.create_task(self._audio(http, token))
+                        if self.observe:
+                            await send(wire.PersonObservation(count=1, confidence=0.92))
+                        if self.typed and TEXT_INPUT in self.allowed:
+                            await send(wire.TextInput(text=self.typed))
+                        if not self.faults.valid_messages:
+                            await send({"type": "observation.mood", "id": "x", "at": "2026-10-30T12:00:00+00:00",
+                                        "payload": {}})  # fmt: skip
+                            await send(wire.BeatIntent())  # only the core sends intents
+                        continue
+                    self.intents.append(message)
+                    if isinstance(message, wire.IdentifyIntent):
+                        self.identified += 1
+                    if self.faults.acks:
+                        await send(wire.Ack(of=envelope.id))
+                    if self.observe and message == wire.BehaviorIntent(behavior=Behavior.IDLE):
+                        await send(wire.PersonObservation(count=1, confidence=0.9))  # still there once it stopped
+            except websockets.ConnectionClosed:
+                pass
+            finally:
+                if audio is not None:
+                    audio.cancel()
+                    with contextlib.suppress(asyncio.CancelledError):
+                        await audio
+            return link.close_code
+
+    async def _audio(self, http: httpx.AsyncClient, token: str) -> None:
+        """Offer WebRTC audio and play what comes, until cancelled with the link."""
         peer = RTCPeerConnection(RTCConfiguration(iceServers=[]))
-        ended = asyncio.Event()
         players: set[asyncio.Task[None]] = set()
         peer.addTrack(AudioStreamTrack())  # the microphone: silence is enough here
-        channel = peer.createDataChannel("nestor")
-
-        def send(message: wire.Message | dict[str, Any]) -> None:
-            data = message if isinstance(message, dict) else wire.encode(message)
-            channel.send(json.dumps(data))
-
-        @channel.on("open")
-        def opened() -> None:
-            if not self.faults.says_hello:
-                send(wire.SpeechActivityObservation(active=True))
-                return
-            device = self.manifest.device if self.faults.honest_hello else Device("someone-else", "x", "salon")
-            send(wire.Hello(manifest=Manifest(device, self.manifest.capabilities, self.manifest.pairing_methods)))
-
-        @channel.on("message")
-        def received(raw: str) -> None:
-            data = json.loads(raw)
-            if data.get("type") == "signalling":
-                if data.get("message", {}).get("type") == "peerLeft":
-                    ended.set()
-                return
-            envelope = wire.decode(data)
-            message = envelope.message
-            if isinstance(message, wire.Welcome):
-                self.welcomed.set()
-                if self.observe:
-                    send(wire.PersonObservation(count=1, confidence=0.92))
-                if not self.faults.valid_messages:
-                    send({"type": "observation.mood", "id": "x", "at": "2026-10-30T12:00:00+00:00", "payload": {}})
-                    send(wire.BeatIntent())  # only the core sends intents
-            else:
-                self.intents.append(message)
-                if isinstance(message, wire.IdentifyIntent):
-                    self.identified += 1
-                if self.faults.acks:
-                    send(wire.Ack(of=envelope.id))
-                if self.observe and message == wire.BehaviorIntent(behavior=Behavior.IDLE):
-                    send(wire.PersonObservation(count=1, confidence=0.9))  # still there once it stopped talking
 
         @peer.on("track")
         def track(incoming: MediaStreamTrack) -> None:
             players.add(asyncio.ensure_future(self._play(incoming)))
 
-        @peer.on("connectionstatechange")
-        def state() -> None:
-            if peer.connectionState in {"failed", "closed"}:
-                ended.set()
-
-        await peer.setLocalDescription(await peer.createOffer())
-        offer = {"sdp": peer.localDescription.sdp, "type": peer.localDescription.type}
-        headers = {"Authorization": f"Bearer {token}"}
-        response = await http.post(f"/satellites/{self.manifest.device.id}/offer", json=offer, headers=headers)
-        response.raise_for_status()
-        answer = response.json()
-        await peer.setRemoteDescription(RTCSessionDescription(sdp=answer["sdp"], type=answer["type"]))
-        self.connections += 1
         try:
-            await ended.wait()
+            await peer.setLocalDescription(await peer.createOffer())
+            offer = {"sdp": peer.localDescription.sdp, "type": peer.localDescription.type}
+            headers = {"Authorization": f"Bearer {token}"}
+            response = await http.post(f"/satellites/{self.manifest.device.id}/audio", json=offer, headers=headers)
+            if response.status_code != 200:
+                return
+            answer = response.json()
+            await peer.setRemoteDescription(RTCSessionDescription(sdp=answer["sdp"], type=answer["type"]))
+            await asyncio.Event().wait()
         finally:
             await peer.close()
             for player in players:

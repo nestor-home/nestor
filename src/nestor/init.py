@@ -1,7 +1,8 @@
 """`nestor init`: a first configuration, its secrets and its owner account, never overwriting what exists.
 
-Voice is one channel among others: without it (the `voice` extra missing, or declined), the configuration
-is text-only, on Telegram.
+Satellites are always there, in writing; their voice needs the `voice` extra. Without it (missing, or
+declined), the configuration also talks on Telegram, so a household can write to it before it has a
+device.
 """
 
 import asyncio
@@ -12,7 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from nestor.adapters.channels.voice.plugin import REQUIREMENT as VOICE_REQUIREMENT
+from nestor.adapters.channels.satellites.plugin import VOICE_REQUIREMENT
 from nestor.core import ContractError, PersonId
 from nestor.modules.accounts import MIN_LENGTH, Role, normalise_login
 from nestor.modules.household import Person
@@ -49,27 +50,27 @@ model:
 channels:
 """
 
-VOICE = """  - kind: voice
-    room: living-room
+VOICE = """  - kind: satellites               # devices people type on or talk to: `nestor satellites add`
     host: 0.0.0.0
-    speech:
-      api_key: ${{ELEVENLABS_API_KEY}}
-      voice_id: GPAQQPp9dazaB2bl4zg9
-      language: {locale}
+    voice:
+      speech:
+        api_key: ${{ELEVENLABS_API_KEY}}
+        voice_id: GPAQQPp9dazaB2bl4zg9
+        language: {locale}
   # - kind: telegram
   #   token: ${{TELEGRAM_BOT_TOKEN}}
 """
 
-TEXT_ONLY = """  - kind: telegram
+TEXT_ONLY = """  - kind: satellites               # devices people type on: `nestor satellites add`
+    host: 0.0.0.0
+    # Their voice needs `pip install '{requirement}'`, then:
+    # voice:
+    #   speech:
+    #     api_key: ${{ELEVENLABS_API_KEY}}
+    #     voice_id: GPAQQPp9dazaB2bl4zg9
+    #     language: {locale}
+  - kind: telegram
     token: ${{TELEGRAM_BOT_TOKEN}}   # from @BotFather
-  # Voice needs `pip install '{requirement}'`, then:
-  # - kind: voice
-  #   room: living-room
-  #   host: 0.0.0.0
-  #   speech:
-  #     api_key: ${{ELEVENLABS_API_KEY}}
-  #     voice_id: GPAQQPp9dazaB2bl4zg9
-  #     language: {locale}
 """
 
 FOOTER = """
@@ -106,7 +107,7 @@ class Setup:
     timezone: str = "UTC"
     base_url: str = OPENROUTER
     model: str = DEFAULT_MODEL
-    voice: bool = False  # the voice channel, which needs the `voice` extra; else Telegram, text only
+    voice: bool = False  # the satellites' voice, which needs the `voice` extra; else Telegram too
 
     def __post_init__(self) -> None:
         if self.locale not in LANGUAGES:
@@ -118,7 +119,7 @@ class Setup:
 
 
 def voice_installed() -> bool:
-    """Whether the voice channel can be built here (the `voice` extra is installed)."""
+    """Whether the satellites' voice can be built here (the `voice` extra is installed)."""
     return importlib.util.find_spec("pipecat") is not None
 
 
@@ -156,7 +157,7 @@ def configuration(setup: Setup, data_dir: Path) -> str:
         timezone=setup.timezone,
         person=setup.person,
         person_id=person_id,
-        accounts='["voice:*"]' if setup.voice else '[]                     # add "telegram:<your chat id>"',
+        accounts='["satellites:*"]' + ("" if setup.voice else '     # add "telegram:<your chat id>"'),
         base_url=setup.base_url,
         model=setup.model,
         requirement=VOICE_REQUIREMENT,

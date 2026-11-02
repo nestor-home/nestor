@@ -7,7 +7,7 @@ from pipecat.frames.frames import ErrorFrame, Frame, OutputAudioRawFrame, TTSSpe
 from pipecat.observers.base_observer import FramePushed
 from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
 
-from nestor.adapters.channels.voice.resilience import Injector, Outage, SpeechFallbacks, load_clips
+from nestor.adapters.channels.satellites.voice.resilience import Injector, Outage, SpeechFallbacks, load_clips
 
 from .audio import tone_wav
 from .doubles import ScriptedSTT

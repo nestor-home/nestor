@@ -7,17 +7,19 @@ speech-to-speech model each implement `Channel`, so every channel reaches the sa
 
 from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
+from dataclasses import dataclass
 
 from nestor.core import Component, ContractError, PersonId
 from nestor.modules.channels.types import Address, InboundMessage, Medium, Sender
 
 
+@dataclass(frozen=True, slots=True)
 class MessageEnd:
     """Marks the end of a message in a `Reply`: the assistant stops writing to act (a tool call)
-    and the next words start a new message."""
+    and the next words start a new message. `last`: no other message follows in this turn, so a
+    screen can stop showing that the assistant is still at work."""
 
-    def __repr__(self) -> str:
-        return "MessageEnd()"
+    last: bool = True
 
 
 class Reply(ABC):

@@ -60,6 +60,8 @@ auth-kind = { $auth ->
    *[other] { $auth }
 }
 
+capability-text-input = keyboard
+capability-text-display = text on screen
 capability-audio-capture = microphone
 capability-audio-playback = speaker
 capability-audio-speech_activity = speech detection

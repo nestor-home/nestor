@@ -717,6 +717,394 @@
       "required": true,
       "title": "Canaux",
       "kinds": {
+        "satellites": {
+          "$defs": {
+            "ElevenLabsSettings": {
+              "additionalProperties": false,
+              "properties": {
+                "provider": {
+                  "const": "elevenlabs",
+                  "default": "elevenlabs",
+                  "title": "Provider",
+                  "type": "string",
+                  "x-nestor": {
+                    "field": "provider",
+                    "title_id": "config-channel-satellites-elevenlabssettings-provider",
+                    "help_id": "config-channel-satellites-elevenlabssettings-provider-help",
+                    "fallback_title_id": "config-field-provider",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "channel-satellites-elevenlabssettings",
+                    "title": "Fournisseur",
+                    "help": null
+                  }
+                },
+                "api_key": {
+                  "format": "password",
+                  "title": "Api Key",
+                  "type": "string",
+                  "writeOnly": true,
+                  "x-nestor": {
+                    "field": "api_key",
+                    "title_id": "config-channel-satellites-elevenlabssettings-api_key",
+                    "help_id": "config-channel-satellites-elevenlabssettings-api_key-help",
+                    "fallback_title_id": "config-field-api_key",
+                    "secret": true,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "channel-satellites-elevenlabssettings",
+                    "title": "Clé d'API",
+                    "help": null
+                  }
+                },
+                "voice_id": {
+                  "title": "Voice Id",
+                  "type": "string",
+                  "x-nestor": {
+                    "field": "voice_id",
+                    "title_id": "config-channel-satellites-elevenlabssettings-voice_id",
+                    "help_id": "config-channel-satellites-elevenlabssettings-voice_id-help",
+                    "fallback_title_id": "config-field-voice_id",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "channel-satellites-elevenlabssettings",
+                    "title": "Identifiant de la voix",
+                    "help": null
+                  }
+                },
+                "language": {
+                  "default": "en",
+                  "title": "Language",
+                  "type": "string",
+                  "x-nestor": {
+                    "field": "language",
+                    "title_id": "config-channel-satellites-elevenlabssettings-language",
+                    "help_id": "config-channel-satellites-elevenlabssettings-language-help",
+                    "fallback_title_id": "config-field-language",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "channel-satellites-elevenlabssettings",
+                    "title": "Langue",
+                    "help": "La langue parlée à l'assistant, pour la transcription (ex. fr)."
+                  }
+                },
+                "stt_model": {
+                  "default": "scribe_v2_realtime",
+                  "title": "Stt Model",
+                  "type": "string",
+                  "x-nestor": {
+                    "field": "stt_model",
+                    "title_id": "config-channel-satellites-elevenlabssettings-stt_model",
+                    "help_id": "config-channel-satellites-elevenlabssettings-stt_model-help",
+                    "fallback_title_id": "config-field-stt_model",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "channel-satellites-elevenlabssettings",
+                    "title": "Modèle de transcription",
+                    "help": null
+                  }
+                },
+                "tts_model": {
+                  "default": "eleven_v4_turbo",
+                  "title": "Tts Model",
+                  "type": "string",
+                  "x-nestor": {
+                    "field": "tts_model",
+                    "title_id": "config-channel-satellites-elevenlabssettings-tts_model",
+                    "help_id": "config-channel-satellites-elevenlabssettings-tts_model-help",
+                    "fallback_title_id": "config-field-tts_model",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "channel-satellites-elevenlabssettings",
+                    "title": "Modèle de synthèse vocale",
+                    "help": null
+                  }
+                }
+              },
+              "required": ["api_key", "voice_id"],
+              "title": "ElevenLabsSettings",
+              "type": "object"
+            },
+            "VoiceSettings": {
+              "additionalProperties": false,
+              "description": "How satellites allowed audio are heard and answered aloud (needs the `voice` extra).",
+              "properties": {
+                "speech": {
+                  "$ref": "#/$defs/ElevenLabsSettings",
+                  "x-nestor": {
+                    "field": "speech",
+                    "title_id": "config-channel-satellites-voicesettings-speech",
+                    "help_id": "config-channel-satellites-voicesettings-speech-help",
+                    "fallback_title_id": "config-field-speech",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "channel-satellites-voicesettings",
+                    "title": "Services vocaux",
+                    "help": null
+                  }
+                },
+                "style": {
+                  "default": "",
+                  "title": "Style",
+                  "type": "string",
+                  "x-nestor": {
+                    "field": "style",
+                    "title_id": "config-channel-satellites-voicesettings-style",
+                    "help_id": "config-channel-satellites-voicesettings-style-help",
+                    "fallback_title_id": "config-field-style",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "channel-satellites-voicesettings",
+                    "title": "Style d'écriture",
+                    "help": null
+                  }
+                },
+                "stt_fallback": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Stt Fallback",
+                  "x-nestor": {
+                    "field": "stt_fallback",
+                    "title_id": "config-channel-satellites-voicesettings-stt_fallback",
+                    "help_id": "config-channel-satellites-voicesettings-stt_fallback-help",
+                    "fallback_title_id": "config-field-stt_fallback",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "channel-satellites-voicesettings",
+                    "title": "Phrase dite si la transcription échoue",
+                    "help": null
+                  }
+                },
+                "fallback_clips": {
+                  "anyOf": [
+                    {
+                      "format": "path",
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Fallback Clips",
+                  "x-nestor": {
+                    "field": "fallback_clips",
+                    "title_id": "config-channel-satellites-voicesettings-fallback_clips",
+                    "help_id": "config-channel-satellites-voicesettings-fallback_clips-help",
+                    "fallback_title_id": "config-field-fallback_clips",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "channel-satellites-voicesettings",
+                    "title": "Dossier des clips de secours",
+                    "help": "stt.wav et tts.wav, joués quand la transcription ou la synthèse est en panne."
+                  }
+                },
+                "quiet_s": {
+                  "default": 0.5,
+                  "minimum": 0,
+                  "title": "Quiet S",
+                  "type": "number",
+                  "x-nestor": {
+                    "field": "quiet_s",
+                    "title_id": "config-channel-satellites-voicesettings-quiet_s",
+                    "help_id": "config-channel-satellites-voicesettings-quiet_s-help",
+                    "fallback_title_id": "config-field-quiet_s",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "channel-satellites-voicesettings",
+                    "title": "Silence avant de prendre la parole (secondes)",
+                    "help": null
+                  }
+                }
+              },
+              "required": ["speech"],
+              "title": "VoiceSettings",
+              "type": "object"
+            }
+          },
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "satellites",
+              "type": "string",
+              "x-nestor": {
+                "field": "kind",
+                "title_id": "config-channel-satellites-kind",
+                "help_id": "config-channel-satellites-kind-help",
+                "fallback_title_id": "config-field-kind",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-satellites",
+                "title": "Type",
+                "help": null
+              }
+            },
+            "name": {
+              "type": "string",
+              "description": "the instance's name; the kind by default",
+              "x-nestor": {
+                "field": "name",
+                "title_id": "config-channel-satellites-name",
+                "help_id": "config-channel-satellites-name-help",
+                "fallback_title_id": "config-field-name",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-satellites",
+                "title": "Nom",
+                "help": null
+              }
+            },
+            "conversation_ends_after_s": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Conversation Ends After S",
+              "x-nestor": {
+                "field": "conversation_ends_after_s",
+                "title_id": "config-channel-satellites-conversation_ends_after_s",
+                "help_id": "config-channel-satellites-conversation_ends_after_s-help",
+                "fallback_title_id": "config-field-conversation_ends_after_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "channel-satellites",
+                "title": "Nouvelle conversation après (secondes)",
+                "help": "Vide : chaque tour décide, 5 minutes à l'oral comme Assist de Home Assistant, 4 heures à l'écrit. Après ce silence, l'assistant ne reprend plus les tours précédents. Les souvenirs restent."
+              }
+            },
+            "host": {
+              "default": "localhost",
+              "title": "Host",
+              "type": "string",
+              "x-nestor": {
+                "field": "host",
+                "title_id": "config-channel-satellites-host",
+                "help_id": "config-channel-satellites-host-help",
+                "fallback_title_id": "config-field-host",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-satellites",
+                "title": "Hôte",
+                "help": null
+              }
+            },
+            "port": {
+              "default": 8471,
+              "maximum": 65535,
+              "minimum": 0,
+              "title": "Port",
+              "type": "integer",
+              "x-nestor": {
+                "field": "port",
+                "title_id": "config-channel-satellites-port",
+                "help_id": "config-channel-satellites-port-help",
+                "fallback_title_id": "config-field-port",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-satellites",
+                "title": "Port",
+                "help": null
+              }
+            },
+            "public_url": {
+              "anyOf": [
+                {
+                  "pattern": "^https?://",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Public Url",
+              "x-nestor": {
+                "field": "public_url",
+                "title_id": "config-channel-satellites-public_url",
+                "help_id": "config-channel-satellites-public_url-help",
+                "fallback_title_id": "config-field-public_url",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-satellites",
+                "title": "Adresse publique",
+                "help": "Comment les satellites joignent ce serveur, par ex. http://nestor.local:8471. Elle figure dans les adresses d'appairage."
+              }
+            },
+            "voice": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/VoiceSettings"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "x-nestor": {
+                "field": "voice",
+                "title_id": "config-channel-satellites-voice",
+                "help_id": "config-channel-satellites-voice-help",
+                "fallback_title_id": "config-field-voice",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-satellites",
+                "title": "Voix",
+                "help": "Sans elle, les satellites ne parlent que par écrit. Demande l’extra voice."
+              }
+            },
+            "send_timeout_s": {
+              "default": 30.0,
+              "exclusiveMinimum": 0,
+              "title": "Send Timeout S",
+              "type": "number",
+              "x-nestor": {
+                "field": "send_timeout_s",
+                "title_id": "config-channel-satellites-send_timeout_s",
+                "help_id": "config-channel-satellites-send_timeout_s-help",
+                "fallback_title_id": "config-field-send_timeout_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-satellites",
+                "title": "Délai d'envoi (secondes)",
+                "help": null
+              }
+            }
+          },
+          "title": "SatellitesSettings",
+          "type": "object",
+          "required": ["kind"]
+        },
         "telegram": {
           "additionalProperties": false,
           "properties": {
@@ -750,6 +1138,31 @@
                 "group": "channel-telegram",
                 "title": "Nom",
                 "help": null
+              }
+            },
+            "conversation_ends_after_s": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Conversation Ends After S",
+              "x-nestor": {
+                "field": "conversation_ends_after_s",
+                "title_id": "config-channel-telegram-conversation_ends_after_s",
+                "help_id": "config-channel-telegram-conversation_ends_after_s-help",
+                "fallback_title_id": "config-field-conversation_ends_after_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "channel-telegram",
+                "title": "Nouvelle conversation après (secondes)",
+                "help": "Vide : 4 heures, comme une discussion reprise plus tard dans la journée. Après ce silence, l'assistant ne reprend plus les messages précédents. Les souvenirs restent."
               }
             },
             "token": {
@@ -851,378 +1264,6 @@
           },
           "required": ["kind", "token"],
           "title": "TelegramSettings",
-          "type": "object"
-        },
-        "voice": {
-          "$defs": {
-            "ElevenLabsSettings": {
-              "additionalProperties": false,
-              "properties": {
-                "provider": {
-                  "const": "elevenlabs",
-                  "default": "elevenlabs",
-                  "title": "Provider",
-                  "type": "string",
-                  "x-nestor": {
-                    "field": "provider",
-                    "title_id": "config-channel-voice-elevenlabssettings-provider",
-                    "help_id": "config-channel-voice-elevenlabssettings-provider-help",
-                    "fallback_title_id": "config-field-provider",
-                    "secret": false,
-                    "secret_values": false,
-                    "advanced": false,
-                    "group": "channel-voice-elevenlabssettings",
-                    "title": "Fournisseur",
-                    "help": null
-                  }
-                },
-                "api_key": {
-                  "format": "password",
-                  "title": "Api Key",
-                  "type": "string",
-                  "writeOnly": true,
-                  "x-nestor": {
-                    "field": "api_key",
-                    "title_id": "config-channel-voice-elevenlabssettings-api_key",
-                    "help_id": "config-channel-voice-elevenlabssettings-api_key-help",
-                    "fallback_title_id": "config-field-api_key",
-                    "secret": true,
-                    "secret_values": false,
-                    "advanced": false,
-                    "group": "channel-voice-elevenlabssettings",
-                    "title": "Clé d'API",
-                    "help": null
-                  }
-                },
-                "voice_id": {
-                  "title": "Voice Id",
-                  "type": "string",
-                  "x-nestor": {
-                    "field": "voice_id",
-                    "title_id": "config-channel-voice-elevenlabssettings-voice_id",
-                    "help_id": "config-channel-voice-elevenlabssettings-voice_id-help",
-                    "fallback_title_id": "config-field-voice_id",
-                    "secret": false,
-                    "secret_values": false,
-                    "advanced": false,
-                    "group": "channel-voice-elevenlabssettings",
-                    "title": "Identifiant de la voix",
-                    "help": null
-                  }
-                },
-                "language": {
-                  "default": "en",
-                  "title": "Language",
-                  "type": "string",
-                  "x-nestor": {
-                    "field": "language",
-                    "title_id": "config-channel-voice-elevenlabssettings-language",
-                    "help_id": "config-channel-voice-elevenlabssettings-language-help",
-                    "fallback_title_id": "config-field-language",
-                    "secret": false,
-                    "secret_values": false,
-                    "advanced": false,
-                    "group": "channel-voice-elevenlabssettings",
-                    "title": "Langue",
-                    "help": "La langue parlée à l'assistant, pour la transcription (ex. fr)."
-                  }
-                },
-                "stt_model": {
-                  "default": "scribe_v2_realtime",
-                  "title": "Stt Model",
-                  "type": "string",
-                  "x-nestor": {
-                    "field": "stt_model",
-                    "title_id": "config-channel-voice-elevenlabssettings-stt_model",
-                    "help_id": "config-channel-voice-elevenlabssettings-stt_model-help",
-                    "fallback_title_id": "config-field-stt_model",
-                    "secret": false,
-                    "secret_values": false,
-                    "advanced": false,
-                    "group": "channel-voice-elevenlabssettings",
-                    "title": "Modèle de transcription",
-                    "help": null
-                  }
-                },
-                "tts_model": {
-                  "default": "eleven_v4_turbo",
-                  "title": "Tts Model",
-                  "type": "string",
-                  "x-nestor": {
-                    "field": "tts_model",
-                    "title_id": "config-channel-voice-elevenlabssettings-tts_model",
-                    "help_id": "config-channel-voice-elevenlabssettings-tts_model-help",
-                    "fallback_title_id": "config-field-tts_model",
-                    "secret": false,
-                    "secret_values": false,
-                    "advanced": false,
-                    "group": "channel-voice-elevenlabssettings",
-                    "title": "Modèle de synthèse vocale",
-                    "help": null
-                  }
-                }
-              },
-              "required": ["api_key", "voice_id"],
-              "title": "ElevenLabsSettings",
-              "type": "object"
-            }
-          },
-          "additionalProperties": false,
-          "properties": {
-            "kind": {
-              "const": "voice",
-              "type": "string",
-              "x-nestor": {
-                "field": "kind",
-                "title_id": "config-channel-voice-kind",
-                "help_id": "config-channel-voice-kind-help",
-                "fallback_title_id": "config-field-kind",
-                "secret": false,
-                "secret_values": false,
-                "advanced": false,
-                "group": "channel-voice",
-                "title": "Type",
-                "help": null
-              }
-            },
-            "name": {
-              "type": "string",
-              "description": "the instance's name; the kind by default",
-              "x-nestor": {
-                "field": "name",
-                "title_id": "config-channel-voice-name",
-                "help_id": "config-channel-voice-name-help",
-                "fallback_title_id": "config-field-name",
-                "secret": false,
-                "secret_values": false,
-                "advanced": false,
-                "group": "channel-voice",
-                "title": "Nom",
-                "help": null
-              }
-            },
-            "room": {
-              "minLength": 1,
-              "title": "Room",
-              "type": "string",
-              "x-nestor": {
-                "field": "room",
-                "title_id": "config-channel-voice-room",
-                "help_id": "config-channel-voice-room-help",
-                "fallback_title_id": "config-field-room",
-                "secret": false,
-                "secret_values": false,
-                "advanced": false,
-                "group": "channel-voice",
-                "title": "Pièce",
-                "help": null
-              }
-            },
-            "speech": {
-              "$ref": "#/$defs/ElevenLabsSettings",
-              "x-nestor": {
-                "field": "speech",
-                "title_id": "config-channel-voice-speech",
-                "help_id": "config-channel-voice-speech-help",
-                "fallback_title_id": "config-field-speech",
-                "secret": false,
-                "secret_values": false,
-                "advanced": false,
-                "group": "channel-voice",
-                "title": "Services vocaux",
-                "help": null
-              }
-            },
-            "style": {
-              "default": "",
-              "title": "Style",
-              "type": "string",
-              "x-nestor": {
-                "field": "style",
-                "title_id": "config-channel-voice-style",
-                "help_id": "config-channel-voice-style-help",
-                "fallback_title_id": "config-field-style",
-                "secret": false,
-                "secret_values": false,
-                "advanced": false,
-                "group": "channel-voice",
-                "title": "Style d'écriture",
-                "help": null
-              }
-            },
-            "host": {
-              "default": "localhost",
-              "title": "Host",
-              "type": "string",
-              "x-nestor": {
-                "field": "host",
-                "title_id": "config-channel-voice-host",
-                "help_id": "config-channel-voice-host-help",
-                "fallback_title_id": "config-field-host",
-                "secret": false,
-                "secret_values": false,
-                "advanced": false,
-                "group": "channel-voice",
-                "title": "Hôte",
-                "help": null
-              }
-            },
-            "port": {
-              "anyOf": [
-                {
-                  "maximum": 65535,
-                  "minimum": 0,
-                  "type": "integer"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "default": 8471,
-              "title": "Port",
-              "x-nestor": {
-                "field": "port",
-                "title_id": "config-channel-voice-port",
-                "help_id": "config-channel-voice-port-help",
-                "fallback_title_id": "config-field-port",
-                "secret": false,
-                "secret_values": false,
-                "advanced": false,
-                "group": "channel-voice",
-                "title": "Port",
-                "help": null
-              }
-            },
-            "allow_unpaired_browser": {
-              "default": true,
-              "title": "Allow Unpaired Browser",
-              "type": "boolean",
-              "x-nestor": {
-                "field": "allow_unpaired_browser",
-                "title_id": "config-channel-voice-allow_unpaired_browser",
-                "help_id": "config-channel-voice-allow_unpaired_browser-help",
-                "fallback_title_id": "config-field-allow_unpaired_browser",
-                "secret": false,
-                "secret_values": false,
-                "advanced": false,
-                "group": "channel-voice",
-                "title": "Client navigateur sans appairage",
-                "help": "Quiconque joint le port peut parler à l'assistant. Réservé à un réseau de confiance : à couper une fois les satellites appairés."
-              }
-            },
-            "public_url": {
-              "anyOf": [
-                {
-                  "pattern": "^https?://",
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "default": null,
-              "title": "Public Url",
-              "x-nestor": {
-                "field": "public_url",
-                "title_id": "config-channel-voice-public_url",
-                "help_id": "config-channel-voice-public_url-help",
-                "fallback_title_id": "config-field-public_url",
-                "secret": false,
-                "secret_values": false,
-                "advanced": false,
-                "group": "channel-voice",
-                "title": "Adresse publique",
-                "help": "Comment les satellites joignent ce serveur, par ex. http://nestor.local:8471. Elle figure dans les adresses d'appairage."
-              }
-            },
-            "stt_fallback": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "default": null,
-              "title": "Stt Fallback",
-              "x-nestor": {
-                "field": "stt_fallback",
-                "title_id": "config-channel-voice-stt_fallback",
-                "help_id": "config-channel-voice-stt_fallback-help",
-                "fallback_title_id": "config-field-stt_fallback",
-                "secret": false,
-                "secret_values": false,
-                "advanced": false,
-                "group": "channel-voice",
-                "title": "Phrase dite si la transcription échoue",
-                "help": null
-              }
-            },
-            "fallback_clips": {
-              "anyOf": [
-                {
-                  "format": "path",
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "default": null,
-              "title": "Fallback Clips",
-              "x-nestor": {
-                "field": "fallback_clips",
-                "title_id": "config-channel-voice-fallback_clips",
-                "help_id": "config-channel-voice-fallback_clips-help",
-                "fallback_title_id": "config-field-fallback_clips",
-                "secret": false,
-                "secret_values": false,
-                "advanced": false,
-                "group": "channel-voice",
-                "title": "Dossier des clips de secours",
-                "help": "stt.wav et tts.wav, joués quand la transcription ou la synthèse est en panne."
-              }
-            },
-            "quiet_s": {
-              "default": 0.5,
-              "minimum": 0,
-              "title": "Quiet S",
-              "type": "number",
-              "x-nestor": {
-                "field": "quiet_s",
-                "title_id": "config-channel-voice-quiet_s",
-                "help_id": "config-channel-voice-quiet_s-help",
-                "fallback_title_id": "config-field-quiet_s",
-                "secret": false,
-                "secret_values": false,
-                "advanced": false,
-                "group": "channel-voice",
-                "title": "Silence avant de prendre la parole (secondes)",
-                "help": null
-              }
-            },
-            "send_timeout_s": {
-              "default": 30.0,
-              "exclusiveMinimum": 0,
-              "title": "Send Timeout S",
-              "type": "number",
-              "x-nestor": {
-                "field": "send_timeout_s",
-                "title_id": "config-channel-voice-send_timeout_s",
-                "help_id": "config-channel-voice-send_timeout_s-help",
-                "fallback_title_id": "config-field-send_timeout_s",
-                "secret": false,
-                "secret_values": false,
-                "advanced": false,
-                "group": "channel-voice",
-                "title": "Délai d'envoi (secondes)",
-                "help": null
-              }
-            }
-          },
-          "required": ["kind", "room", "speech"],
-          "title": "VoiceSettings",
           "type": "object"
         }
       }

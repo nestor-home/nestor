@@ -17,6 +17,8 @@ from nestor.core import Capability, ContractError, PersonId
 PROTOCOL = "nestor.satellite/1"
 _PROTOCOL = re.compile(r"^nestor\.satellite/\d+$")
 
+TEXT_INPUT = Capability("text.input")  # it sends what a person typed
+TEXT_DISPLAY = Capability("text.display")  # it shows the assistant's words
 AUDIO_CAPTURE = Capability("audio.capture")
 AUDIO_PLAYBACK = Capability("audio.playback")
 PERSON_DETECTION = Capability("vision.person_detection")

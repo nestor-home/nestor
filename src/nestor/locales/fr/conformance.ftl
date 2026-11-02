@@ -8,19 +8,9 @@ conformance-asks-to-pair = demande à être appairé
 conformance-declares-provisioning = déclare enrollment.provisioning (P1)
 conformance-claims-token = récupère son jeton une fois son code d'appareil saisi (P2)
 conformance-polls-after-identify = continue d'interroger après une identification en attente (I1)
-conformance-connects = se connecte avec son jeton (W1)
-conformance-reconnects = se reconnecte avec le même jeton après une coupure (W4)
-conformance-connects-enrolled = se connecte après un appairage par code d'enrôlement
-conformance-hello-first = { $connection ->
-    [reconnected] après reconnexion : envoie d'abord un hello
-    [enrolled] enrôlé : envoie d'abord un hello
-   *[paired] envoie d'abord un hello
-}
-conformance-introduces = { $connection ->
-    [reconnected] après reconnexion : se présente comme l'appareil appairé
-    [enrolled] enrôlé : se présente comme l'appareil appairé
-   *[paired] se présente comme l'appareil appairé
-}
+conformance-connects = ouvre son lien avec son jeton, un hello d'abord, comme l'appareil appairé (L1)
+conformance-reconnects = se reconnecte avec le même jeton quand le cœur ferme son lien (L5)
+conformance-connects-enrolled = ouvre son lien après un appairage par code d'enrôlement
 conformance-acknowledges = { $connection ->
     [reconnected] après reconnexion : acquitte { $intent } en { $seconds } s au plus
     [enrolled] enrôlé : acquitte { $intent } en { $seconds } s au plus
@@ -31,8 +21,11 @@ conformance-follows-schema = { $connection ->
     [enrolled] enrôlé : chaque message suit le schéma
    *[paired] chaque message suit le schéma
 }
-conformance-receives-audio = reçoit l'audio du cœur (W3)
-conformance-sends-audio = envoie l'audio de son micro (W3)
+conformance-exchanges-audio = échange de l'audio, comme autorisé (A1, A2)
+conformance-receives-audio = reçoit l'audio du cœur (A1, A2)
+conformance-sends-audio = envoie l'audio de son micro (A1, A2)
+conformance-pairs-again = oublie un jeton refusé et s'appaire à nouveau (L2, P8)
+conformance-no-unallowed-audio = ne propose pas d'audio quand l'audio n'est pas autorisé (A1)
 conformance-enrolls = s'appaire avec le code d'enrôlement de { $variable }, sans code saisi (P3, P4)
 conformance-falls-back = revient à un code d'appareil après le refus de son code d'enrôlement ({ $refusal ->
     [expired] expiré
@@ -51,10 +44,15 @@ conformance-runs = tourne sans planter
 ## Ce qui a été vu à la place.
 
 conformance-never-polled-after-identify = n'a plus interrogé après l'identification
-conformance-no-offer = aucune offre authentifiée en { $seconds } s
-conformance-first-message = premier message : { $type }
-conformance-no-message = aucun message valide à temps
-conformance-wrong-device = le hello dit { $said }, appairé comme { $paired }
+conformance-no-link = aucun lien en { $seconds } s
+conformance-link-refused = lien fermé avec { $code } : { $why }
+conformance-no-audio-offer = aucune offre audio en { $seconds } s
+conformance-voice-missing = l'audio ne se vérifie pas sans l'extra voice ({ $module } manque)
+conformance-audio-offers = { $count ->
+    [one] 1 offre audio
+   *[other] { $count } offres audio
+}
+conformance-never-asked-again = n'a jamais redemandé à s'appairer
 conformance-no-ack = aucun acquittement portant l'identifiant de cette intention
 conformance-off-schema = { $errors }
 conformance-no-receiver-report = aucun rapport de réception RTCP du satellite
@@ -72,8 +70,8 @@ conformance-exited = terminé avec le code { $status }
 
 ## La commande.
 
-conformance-help = vérifie un satellite selon nestor.satellite/1 (demande l'extra voice)
-conformance-description = Vérifie un satellite, écrit dans n'importe quel langage, selon le standard nestor.satellite/1. Un faux cœur (le vrai service d'appairage et la vraie passerelle) lance la commande du satellite une fois par scénario : appairage par code d'appareil, par code d'enrôlement, codes refusés, limites de débit, identification, hello, acquittements, audio dans les deux sens et reconnexion.
+conformance-help = vérifie un satellite selon nestor.satellite/1 (l'audio demande l'extra voice)
+conformance-description = Vérifie un satellite, écrit dans n'importe quel langage, selon le standard nestor.satellite/1. Un faux cœur (le vrai service d'appairage et la vraie passerelle) lance la commande du satellite une fois par scénario : appairage par code d'appareil, par code d'enrôlement, codes refusés, limites de débit, identification, le lien et son hello, acquittements, texte, audio dans les deux sens s'il est autorisé, reconnexion et jeton refusé.
 conformance-epilog =
     Dans la commande, { "{url}" } est remplacé par l'URL du faux cœur et { "{state}" } par un dossier neuf pour le jeton du satellite.
     Les scénarios avec un code d'enrôlement le donnent dans la variable d'environnement NESTOR_PAIRING_URI (retirée dans les autres), comme une personne configure un appareil sans écran.
@@ -90,4 +88,3 @@ conformance-not-conformant = { $count ->
 } sur { $total }
 conformance-no-command = nestor : donnez la commande du satellite après --, par exemple : nestor satellites conformance -- ./mon-satellite --core { "{url}" }
 conformance-no-program = nestor : impossible de lancer { $program } (introuvable ou non exécutable)
-conformance-needs-voice = nestor : la suite de conformité demande l'extra voice ({ $module } manque) : pip install 'nestor-home[voice]'

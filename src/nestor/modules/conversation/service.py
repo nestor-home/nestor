@@ -255,7 +255,7 @@ class AgentReply(Reply):
             except ProviderError:
                 await self._fall_back(FallbackReason.MODEL_UNAVAILABLE)
                 return
-            await self._end_message()
+            await self._end_message(last=not calls)
             if not calls:
                 return
             messages.append(Message(role=Role.ASSISTANT, content=text, tool_calls=calls))
@@ -323,12 +323,13 @@ class AgentReply(Reply):
         if self._record:  # a composed message is only words to send later: still thinking
             self._agent.replies.set(self, ReplyPhase.SPEAKING)
 
-    async def _end_message(self) -> None:
-        """The message being written is complete: hand it over and log it (nothing if it is empty)."""
+    async def _end_message(self, *, last: bool = True) -> None:
+        """The message being written is complete: hand it over and log it (nothing if it is empty).
+        `last`: the turn ends with it (no tool call follows)."""
         text, self._message = "".join(self._message).strip(), []
         if not text:
             return
-        self._chunks.put_nowait(MessageEnd())
+        self._chunks.put_nowait(MessageEnd(last=last))
         self._ended.append((text, await self._log(text, interrupted=False) if self._record else None))
 
     def _end_turn(self) -> None:

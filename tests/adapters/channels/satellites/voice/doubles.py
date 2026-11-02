@@ -1,4 +1,5 @@
-"""Speech doubles with controlled latency, and an assistant whose answers take time to come.
+"""Speech doubles with controlled latency, an assistant whose answers take time to come, and the link
+of a satellite in the living room.
 
 Only STT and TTS are simulated: VAD, Smart Turn, aggregation, interruptions and the transport
 buffers are Pipecat's real components.
@@ -21,10 +22,11 @@ from pipecat.services.stt_service import STTService
 from pipecat.services.tts_service import TTSService
 from pipecat.utils.time import time_now_iso8601
 
-from nestor.adapters.channels.voice.eager import EagerSentenceFlush
-from nestor.adapters.channels.voice.providers import Speech
-from nestor.core import PersonId
-from nestor.modules.channels import Address, Assistant, InboundMessage, Reply, Sender
+from nestor.adapters.channels.satellites.voice.eager import EagerSentenceFlush
+from nestor.adapters.channels.satellites.voice.providers import Speech
+from nestor.core import Capability, PersonId, utc_now
+from nestor.modules.channels import Address, Assistant, InboundMessage, MessageEnd, Reply, Sender
+from nestor.modules.satellites import AUDIO_CAPTURE, AUDIO_PLAYBACK, Satellite, wire
 
 from .replay import ReplayTransport, ScenarioClock
 
@@ -144,7 +146,7 @@ class TimedReply(Reply):
         self._ttft_s, self._token_interval_s, self._fail = ttft_s, token_interval_s, fail
         self.heard: str | None = None
 
-    async def __aiter__(self) -> AsyncIterator[str]:
+    async def __aiter__(self) -> AsyncIterator[str | MessageEnd]:
         await asyncio.sleep(self._ttft_s)
         if self._fail:
             raise RuntimeError("the agent crashed")
@@ -153,6 +155,7 @@ class TimedReply(Reply):
                 return
             yield word if i == 0 else f" {word}"
             await asyncio.sleep(self._token_interval_s)
+        yield MessageEnd()
 
     async def interrupt(self, heard: str) -> None:
         self.heard = heard
@@ -191,3 +194,20 @@ class FakeAssistant(Assistant):
         reply = TimedReply(text, ttft_s=self._ttft_s, token_interval_s=self._token_interval_s, fail=self._fail)
         self.replies.append(reply)
         return reply
+
+
+class FakeLink:
+    """The link of a paired satellite in the living room: what the core sends it is kept."""
+
+    def __init__(self, *allowed: Capability, room: str = "salon", device_id: str = "enceinte-salon") -> None:
+        self.allowed = frozenset(allowed or (AUDIO_CAPTURE, AUDIO_PLAYBACK))
+        self.satellite = Satellite(
+            id=device_id, model="test", room=room, capabilities=self.allowed, token_hash="x", paired_at=utc_now()
+        )
+        self.sent: list[wire.Message] = []
+
+    def send(self, message: wire.Message) -> None:
+        self.sent.append(message)
+
+    def identify(self) -> None:
+        self.send(wire.IdentifyIntent())

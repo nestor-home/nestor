@@ -60,25 +60,27 @@ def test_a_first_configuration_is_in_english_unless_another_language_is_chosen(t
     initialise(tmp_path / "fr" / "nestor.yaml", chosen, login="moi", password=PASSWORD)
     french = load_config(tmp_path / "fr" / "nestor.yaml", env_of(tmp_path / "fr" / ".env"))
     assert (french.persona.locale, french.persona.language, french.persona.timezone) == ("fr", "French", "Europe/Paris")
-    assert french.channels[0].settings()["speech"]["language"] == "fr", "the transcription follows the household"
+    assert french.channels[0].settings()["voice"]["speech"]["language"] == "fr", (
+        "the transcription follows the household"
+    )
 
 
-def test_without_voice_the_configuration_is_text_only_and_asks_for_the_bot_token(tmp_path: Path) -> None:
+def test_without_voice_satellites_write_and_telegram_asks_for_its_bot_token(tmp_path: Path) -> None:
     config = tmp_path / "nestor.yaml"
     initialise(config, Setup(voice=False), login="me", password=PASSWORD)
     secrets = env_of(tmp_path / ".env")
     assert set(secrets) == {"NESTOR_SECRET_KEY", "MODEL_API_KEY", "TELEGRAM_BOT_TOKEN"}
-    assert [c.kind for c in load_config(config, secrets).channels] == ["telegram"]
+    assert [c.kind for c in load_config(config, secrets).channels] == ["satellites", "telegram"]
 
 
-def test_with_voice_the_configuration_has_the_voice_channel_and_asks_for_its_key(tmp_path: Path) -> None:
+def test_with_voice_satellites_speak_and_the_configuration_asks_for_its_key(tmp_path: Path) -> None:
     config = tmp_path / "nestor.yaml"
     initialise(config, Setup(voice=True), login="me", password=PASSWORD)
     secrets = env_of(tmp_path / ".env")
     assert set(secrets) == {"NESTOR_SECRET_KEY", "MODEL_API_KEY", "ELEVENLABS_API_KEY"}
     loaded = load_config(config, secrets)
-    assert [c.kind for c in loaded.channels] == ["voice"]
-    assert loaded.household[0].accounts == ("voice:*",)
+    assert [c.kind for c in loaded.channels] == ["satellites"]
+    assert loaded.household[0].accounts == ("satellites:*",)
 
 
 def test_a_local_model_passes_the_check_with_its_key_left_empty(
@@ -89,7 +91,7 @@ def test_a_local_model_passes_the_check_with_its_key_left_empty(
     env = tmp_path / ".env"
     env.write_text(env.read_text().replace("TELEGRAM_BOT_TOKEN=\n", "TELEGRAM_BOT_TOKEN=123:abc\n"))
     assert main(["-c", str(config), "check"]) == 0
-    assert "channels: telegram, admin on 0.0.0.0:8470" in capsys.readouterr().out
+    assert "channels: satellites, telegram, admin on 0.0.0.0:8470" in capsys.readouterr().out
 
 
 def test_a_hosted_model_with_its_key_left_empty_fails_the_check_naming_the_variable(
@@ -164,7 +166,7 @@ def test_the_command_asks_then_writes(
     loaded = load_config(config, env_of(tmp_path / ".env"))
     assert sign_in(loaded, "mathis")
     assert (loaded.persona.locale, loaded.model.settings()["base_url"]) == ("en", "https://openrouter.ai/api/v1")
-    assert [c.kind for c in loaded.channels] == ["telegram"]
+    assert [c.kind for c in loaded.channels] == ["satellites", "telegram"]
 
 
 def test_voice_is_written_when_installed_and_wanted(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -175,7 +177,7 @@ def test_voice_is_written_when_installed_and_wanted(tmp_path: Path, monkeypatch:
     config = tmp_path / "nestor.yaml"
     assert main(["-c", str(config), "init"]) == 0
     loaded = load_config(config, env_of(tmp_path / ".env"))
-    assert [c.kind for c in loaded.channels] == ["voice"]
+    assert [c.kind for c in loaded.channels] == ["satellites"]
     assert loaded.model.settings()["model"] == "qwen3"
 
 

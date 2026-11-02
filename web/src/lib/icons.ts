@@ -12,6 +12,7 @@ import {
   CircleSlash,
   Hourglass,
   House,
+  Keyboard,
   KeyRound,
   Lightbulb,
   Megaphone,
@@ -69,6 +70,8 @@ export const STATUS_ICON = {
 } satisfies Record<string, LucideIcon>;
 
 export const CAPABILITY_ICON: Record<string, LucideIcon> = {
+  "text.input": Keyboard,
+  "text.display": MessageSquareText,
   "audio.capture": Mic,
   "audio.playback": Volume2,
   "audio.speech_activity": AudioLines,

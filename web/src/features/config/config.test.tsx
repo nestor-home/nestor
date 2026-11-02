@@ -75,11 +75,12 @@ describe("the configuration", () => {
   it("shows a problem at its field, and on the page that holds it", async () => {
     const user = userEvent.setup();
     renderApp("/config/channels");
-    await user.click(await screen.findByRole("button", { name: "Edit Voice" }));
-    const sheet = await screen.findByRole("dialog", { name: "Voice" });
-    await user.clear(within(sheet).getByRole("textbox", { name: "Room" }));
-    expect(await within(sheet).findByText("Room: String should have at least 1 character")).toBeInTheDocument();
-    expect(within(sheet).getByRole("textbox", { name: "Room" })).toHaveAttribute("aria-invalid", "true");
+    await user.click(await screen.findByRole("button", { name: "Edit Satellites" }));
+    const sheet = await screen.findByRole("dialog", { name: "Satellites" });
+    await user.clear(within(sheet).getByRole("spinbutton", { name: "Port" }));
+    await user.type(within(sheet).getByRole("spinbutton", { name: "Port" }), "70000");
+    expect(await within(sheet).findByText("Port: ≤ 65535")).toBeInTheDocument();
+    expect(within(sheet).getByRole("spinbutton", { name: "Port" })).toHaveAttribute("aria-invalid", "true");
     await user.click(within(sheet).getByRole("button", { name: "Done" }));
     expect(within(await saveBar()).getByRole("button", { name: "1 problem" })).toBeInTheDocument();
     expect(within(await saveBar()).getByRole("button", { name: "Save" })).toBeDisabled();

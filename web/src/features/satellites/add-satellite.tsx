@@ -43,6 +43,8 @@ import { ApproveForm } from "./approve-form";
 
 /** What a satellite may be allowed to do, when the person narrows it before the device is known. */
 export const KNOWN_CAPABILITIES = [
+  "text.input",
+  "text.display",
   "audio.capture",
   "audio.playback",
   "audio.speech_activity",

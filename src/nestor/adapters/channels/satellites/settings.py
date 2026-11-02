@@ -1,5 +1,5 @@
-"""Configuration of the voice channel. Pydantic only: plugin discovery and configuration forms read it
-without the `voice` extra, which the channel itself needs once it is built."""
+"""Configuration of the satellites channel. Pydantic only: plugin discovery and configuration forms read
+it without the `voice` extra, which only its `voice` section needs once the channel is built."""
 
 from pathlib import Path
 from typing import Literal
@@ -22,19 +22,23 @@ class ElevenLabsSettings(BaseModel):
     tts_model: str = "eleven_v4_turbo"
 
 
-class VoiceSettings(ChannelSettings):
-    room: str = Field(min_length=1)  # the conversation: `<channel>:<room>`, kept across reconnections
+class VoiceSettings(BaseModel):
+    """How satellites allowed audio are heard and answered aloud (needs the `voice` extra)."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
     speech: ElevenLabsSettings
     style: str = ""  # how the assistant writes for this voice (e.g. the expression tags it performs)
-    host: str = "localhost"
-    port: int | None = Field(default=PORT, ge=0, le=65535)  # satellites and browser; `None` disables the server
-    # The Pipecat browser client at /client, with no pairing: anyone who reaches the port talks to the
-    # assistant. Development on a trusted LAN only; turn it off once real satellites are paired.
-    allow_unpaired_browser: bool = True
-    # How satellites reach this server ("http://nestor.local:8471"), for pairing URIs; by default its
-    # host and port, or the admin's host name when it listens on every interface.
-    public_url: str | None = Field(default=None, pattern=r"^https?://")
     stt_fallback: str | None = None  # said when the transcription fails; default: `voice-stt-down`
     fallback_clips: Path | None = None  # `stt.wav` and `tts.wav`, played when the synthesis is down
     quiet_s: float = Field(default=0.5, ge=0)  # silence before an unprompted message is spoken
-    send_timeout_s: float = Field(default=30.0, gt=0)
+
+
+class SatellitesSettings(ChannelSettings):
+    host: str = "localhost"
+    port: int = Field(default=PORT, ge=0, le=65535)
+    # How satellites reach this server ("http://nestor.local:8471"), for pairing URIs; by default its
+    # host and port, or the admin's host name when it listens on every interface.
+    public_url: str | None = Field(default=None, pattern=r"^https?://")
+    voice: VoiceSettings | None = None  # without it, satellites talk in writing only
+    send_timeout_s: float = Field(default=30.0, gt=0)  # how long an unprompted message waits to be said

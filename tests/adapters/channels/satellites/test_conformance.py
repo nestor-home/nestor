@@ -5,7 +5,7 @@ import sys
 
 import pytest
 
-from nestor.adapters.channels.voice.satellites.conformance import Launch, check_satellite
+from nestor.adapters.channels.satellites.conformance import Launch, check_satellite
 from nestor.adapters.i18n import FluentLocalizer, catalogue_dirs
 from nestor.core import Capability
 from nestor.modules.satellites import Device, Manifest, PairingMethod
@@ -25,6 +25,7 @@ MANIFEST = Manifest(
             "motion.head",
             "vision.person_detection",
             "device.identify",
+            "text.display",
         )
     ),
     (PairingMethod.DISPLAY, PairingMethod.PROVISIONING),
@@ -52,12 +53,16 @@ async def test_the_reference_satellite_conforms() -> None:
     checks = named(findings.items)
     assert {
         "claims its token once its device code is typed (P2)",
-        "receives the core's audio (W3)",
-        "sends its microphone audio (W3)",
+        "opens its link with its token, a hello first, as the paired device (L1)",
+        "receives the core's audio (A1, A2)",
+        "sends its microphone audio (A1, A2)",
+        "acknowledges intent.text within 1 s",
+        "forgets a refused token and pairs again (L2, P8)",
+        "offers no audio when audio is not allowed (A1)",
         "keeps polling after a pending identify (I1)",
         "acknowledges intent.expression within 1 s",
         "acknowledges intent.identify within 1 s",
-        "reconnects with the same token after a hang-up (W4)",
+        "reconnects with the same token after the core closes its link (L5)",
         "pairs with the enrollment code of NESTOR_PAIRING_URI, no code typed (P3, P4)",
         "presents a refused enrollment code (used) only once (P5)",
         "falls back to a device code after its enrollment code is refused (wrong) (P5)",
@@ -73,11 +78,11 @@ async def test_a_device_is_only_checked_on_what_it_declared(manifest: Manifest) 
     checks = named(findings.items)
     assert "acknowledges intent.expression within 1 s" not in checks
     assert not {"acknowledges intent.identify within 1 s", "keeps polling after a pending identify (I1)"} & checks
-    assert ("receives the core's audio (W3)" in checks) is (manifest is SPEAKER)
+    assert ("receives the core's audio (A1, A2)" in checks) is (manifest is SPEAKER)
 
 
 async def test_a_driver_can_be_any_program() -> None:
-    command = [sys.executable, "-m", "tests.adapters.channels.voice.satellites.reference", "{url}", "{state}",
+    command = [sys.executable, "-m", "tests.adapters.channels.satellites.reference", "{url}", "{state}",
                json.dumps(SPEAKER.to_json())]  # fmt: skip
     findings = await check_satellite(command, deadline_s=15)
     assert "pairs with the enrollment code of NESTOR_PAIRING_URI, no code typed (P3, P4)" in named(findings.items)
@@ -93,12 +98,14 @@ async def test_a_driver_program_that_exits_is_reported() -> None:
     ("faults", "failing"),
     [
         (Faults(acks=False), "acknowledges intent.behavior within 1 s"),
-        (Faults(says_hello=False), "sends a hello first"),
+        (Faults(says_hello=False), "opens its link with its token, a hello first, as the paired device (L1)"),
         (Faults(claims_token=False), "claims its token once its device code is typed (P2)"),
         (Faults(connects=False), "runs without crashing"),
-        (Faults(honest_hello=False), "introduces itself as the paired device"),
+        (Faults(honest_hello=False), "opens its link with its token, a hello first, as the paired device (L1)"),
         (Faults(valid_messages=False), "every message follows the schema"),
-        (Faults(reconnects=False), "reconnects with the same token after a hang-up (W4)"),
+        (Faults(reconnects=False), "reconnects with the same token after the core closes its link (L5)"),
+        (Faults(forgets_refused_token=False), "forgets a refused token and pairs again (L2, P8)"),
+        (Faults(offers_unallowed_audio=True), "offers no audio when audio is not allowed (A1)"),
         (Faults(reads_uri=False), "pairs with the enrollment code of NESTOR_PAIRING_URI, no code typed (P3, P4)"),
         (Faults(falls_back=False), "falls back to a device code after its enrollment code is refused (wrong) (P5)"),
         (Faults(retries_refused=True), "presents a refused enrollment code (expired) only once (P5)"),
@@ -112,6 +119,8 @@ async def test_a_driver_program_that_exits_is_reported() -> None:
         "someone else's hello",
         "off-contract message",
         "no reconnection",
+        "keeps a refused token",
+        "offers audio unallowed",
         "ignores its pairing URI",
         "stuck on a refused code",
         "insists on a refused code",

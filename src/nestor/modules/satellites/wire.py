@@ -4,9 +4,9 @@ and the JSON bodies of pairing over HTTP. The standard is https://nestorhome.dev
     {"type": "intent.expression", "id": "…", "at": "2026-10-30T12:00:00+00:00",
      "payload": {"expression": "joy", "intensity": 1.0}}
 
-The realtime profile carries them on the `nestor` WebRTC data channel; a WebSocket profile can carry
-the same messages. Satellite → core: `hello` (its manifest, first), `ack` (of an intent id),
-`observation.*`. Core → satellite: `welcome` (what it may do), `intent.*`, each acknowledged by id.
+The link, a WebSocket per device, carries them; WebRTC only carries audio. Satellite → core: `hello`
+(its manifest and token, first), `ack` (of an intent id), `observation.*`, `input.text`. Core →
+satellite: `welcome` (what it may do), `intent.*` (`intent.text` included), each acknowledged by id.
 
 Pairing bodies (`PairingRequest`, `EnrollmentProof`, and the answers `ticket_json`, `state_json`,
 `error_json`) are published as `pairing.*.json`.
@@ -50,8 +50,19 @@ class Bounds:
     maximum: float | None = None
 
 
+@dataclass(frozen=True, slots=True)
+class Size:
+    """Inclusive length limits of a text field, checked on decode and published in the schema."""
+
+    minimum: int
+    maximum: int
+
+
 type Unit = Annotated[float, Bounds(0.0, 1.0)]
 type Count = Annotated[int, Bounds(0)]
+type Token = Annotated[str, Size(1, 128)]
+type Typed = Annotated[str, Size(1, 4000)]  # what a person types in one go
+type Shown = Annotated[str, Size(1, 16000)]  # one message of the assistant
 
 
 class Direction(StrEnum):
@@ -80,9 +91,10 @@ class Message:
 
 
 class Hello(Message, message_type="hello", direction=Direction.TO_CORE):
-    """First message of a connection: the device's manifest (its id must be the paired one)."""
+    """First message of a link: the device's manifest (its id must be the paired one) and its token."""
 
     manifest: Manifest
+    token: Token
 
 
 class Ack(Message, message_type="ack", direction=Direction.TO_CORE):
@@ -102,6 +114,12 @@ class SpeechActivityObservation(Message, message_type="observation.speech.activi
     """Voice activity detected on the device started (`active`) or stopped."""
 
     active: bool
+
+
+class TextInput(Message, message_type="input.text", direction=Direction.TO_CORE):
+    """What a person typed on the device: a turn of its room's conversation (needs `text.input`)."""
+
+    text: Typed
 
 
 class Welcome(Message, message_type="welcome", direction=Direction.TO_SATELLITE):
@@ -131,6 +149,13 @@ class BeatIntent(Message, message_type="intent.beat", direction=Direction.TO_SAT
 
 class IdentifyIntent(Message, message_type="intent.identify", direction=Direction.TO_SATELLITE):
     """A person asks the device to make itself noticed for a few seconds (blink, wiggle, chime)."""
+
+
+class TextIntent(Message, message_type="intent.text", direction=Direction.TO_SATELLITE):
+    """The assistant's words, to show (needs `text.display`); `final` on the last message of a turn."""
+
+    text: Shown
+    final: bool = True
 
 
 # Pairing over HTTP.
@@ -358,12 +383,12 @@ def _encode(value: object) -> Any:
     return value.to_json() if isinstance(value, Manifest) else codec.encode(value)
 
 
-def _unwrap(hint: Any) -> tuple[Any, Bounds | None]:
+def _unwrap(hint: Any) -> tuple[Any, Bounds | Size | None]:
     if isinstance(hint, typing.TypeAliasType):
         hint = hint.__value__
     if get_origin(hint) is Annotated:
         base, *extras = get_args(hint)
-        return base, next((e for e in extras if isinstance(e, Bounds)), None)
+        return base, next((e for e in extras if isinstance(e, Bounds | Size)), None)
     return hint, None
 
 
@@ -379,7 +404,9 @@ def _decode(value: object, hint: Any, where: str) -> Any:
         decoded = codec.decode(value, base)  # ty: ignore[invalid-argument-type]
     except ContractError as error:
         raise ContractError(f"{where}: {error}") from None
-    if bounds is not None and (
+    if isinstance(bounds, Size) and not bounds.minimum <= len(decoded) <= bounds.maximum:
+        raise ContractError(f"{where}: {len(decoded)} characters, expected {bounds.minimum} to {bounds.maximum}")
+    if isinstance(bounds, Bounds) and (
         (bounds.minimum is not None and decoded < bounds.minimum)
         or (bounds.maximum is not None and decoded > bounds.maximum)
     ):
@@ -397,6 +424,8 @@ def _schema(hint: Any) -> dict[str, Any]:
         return {"enum": [m.value for m in base]}
     schema: dict[str, Any] = {str: {"type": "string"}, bool: {"type": "boolean"}, int: {"type": "integer"},
                               float: {"type": "number"}}[base]  # fmt: skip
-    if bounds is not None:
+    if isinstance(bounds, Size):
+        schema |= {"minLength": bounds.minimum, "maxLength": bounds.maximum}
+    elif bounds is not None:
         schema |= {k: v for k, v in (("minimum", bounds.minimum), ("maximum", bounds.maximum)) if v is not None}
     return schema

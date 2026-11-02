@@ -24,6 +24,8 @@ import { IdentifyButton } from "./add-satellite";
 
 /** What each capability lets the assistant do, said for the household. */
 const MEANS: Record<string, string> = {
+  "text.input": "sat-means-text-input",
+  "text.display": "sat-means-text-display",
   "audio.capture": "sat-means-audio-capture",
   "audio.playback": "sat-means-audio-playback",
   "audio.speech_activity": "sat-means-audio-speech-activity",

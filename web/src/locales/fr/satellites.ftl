@@ -50,6 +50,8 @@ sat-revoked-notice = Satellite { $id } révoqué : il ne peut plus se connecter.
 sat-capabilities-empty = Il n'a reçu aucune capacité : il est connecté mais inutile.
 sat-activity-empty = Rien n'est encore passé par cet appareil.
 
+sat-means-text-input = Lire ce qu'on tape dessus.
+sat-means-text-display = Afficher ses réponses par écrit.
 sat-means-audio-capture = Entendre ce qui est dit dans la pièce, quand quelqu'un s'adresse à lui.
 sat-means-audio-playback = Répondre et prévenir à voix haute dans la pièce.
 sat-means-audio-speech-activity = Savoir que quelqu'un parle, sans transmettre le son.
@@ -72,6 +74,8 @@ sat-add-room-as = Enregistrée comme « { $room } ».
 sat-add-room-invalid = Une pièce s'écrit en lettres et chiffres, par exemple « salon » ou « chambre-de-jules ».
 sat-add-limit = Limiter ce qu'il pourra faire
 sat-add-start = Commencer
+sat-cap-text-input = lire ce qu’on tape
+sat-cap-text-display = afficher ses réponses
 sat-cap-audio-capture = entendre la pièce
 sat-cap-audio-playback = parler dans la pièce
 sat-cap-audio-speech-activity = savoir que quelqu'un parle
