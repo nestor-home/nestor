@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.5.0](https://github.com/nestor-home/nestor/compare/v0.4.0...v0.5.0) (2026-11-02)
+
+
+### ⚠ BREAKING CHANGES
+
+* watches sort each item in one model call, without keywords ([#25](https://github.com/nestor-home/nestor/issues/25))
+
+### Features
+
+* nestor bench, with the watch-triage suite ([#23](https://github.com/nestor-home/nestor/issues/23)) ([8938638](https://github.com/nestor-home/nestor/commit/89386380a1c91454442aebe31314da0a5ec0d441))
+* watches sort each item in one model call, without keywords ([#25](https://github.com/nestor-home/nestor/issues/25)) ([b19909f](https://github.com/nestor-home/nestor/commit/b19909f3db527e4efeaf151d387a1994e72fa839))
+
 ## [0.4.0](https://github.com/nestor-home/nestor/compare/v0.3.0...v0.4.0) (2026-11-01)
 
 
