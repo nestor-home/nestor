@@ -874,9 +874,9 @@ export function system(): SystemInfo {
     pending_changes: [],
     components: [
       component({
-        id: "model",
+        id: "sonnet",
         slot: "model",
-        name: "Claude Sonnet 4.6",
+        name: "sonnet",
         adapter: "nestor.adapters.model.openrouter",
         brand: "openrouter",
         version: "anthropic/claude-sonnet-4.6",
@@ -885,9 +885,9 @@ export function system(): SystemInfo {
         capabilities: ["tools", "streaming"],
       }),
       component({
-        id: "triage",
+        id: "haiku",
         slot: "model",
-        name: fr("Claude Haiku 4.5 (watch triage)", "Claude Haiku 4.5 (tri des veilles)"),
+        name: "haiku",
         adapter: "nestor.adapters.model.openrouter",
         brand: "anthropic",
         version: "anthropic/claude-haiku-4.5",

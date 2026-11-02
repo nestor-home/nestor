@@ -2118,8 +2118,11 @@ export interface components {
         SlotOut: {
             /** Family */
             family: string;
-            /** Many */
-            many: boolean;
+            /**
+             * Shape
+             * @enum {string}
+             */
+            shape: "one" | "list" | "named";
             /** Required */
             required: boolean;
             /** Title */

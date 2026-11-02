@@ -14,13 +14,14 @@ from typing import Any
 
 import yaml
 from dotenv import dotenv_values
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, ValidationInfo, field_validator
 
 from nestor.core import NestorError, PersonId
 from nestor.modules.channels import Address
 from nestor.modules.household import Account, Person
 from nestor.modules.initiative import QuietHours
 
+_MODEL_KEY = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]*")
 _VARIABLE = re.compile(r"\$\{(?:(?P<secret>secret):)?(?P<name>[A-Za-z_][A-Za-z0-9_.-]*)\}")
 SECRET_KEY = "NESTOR_SECRET_KEY"
 ENV_FILE = ".env"  # next to the configuration: what `nestor init` writes
@@ -32,6 +33,7 @@ type SecretLookup = Callable[[str], str | None]  # a secret's value by name, Non
 
 
 ADVANCED: dict[str, Any] = {"advanced": True}  # forms fold such a field away by default
+MODEL_REFERENCE: dict[str, Any] = {"reference": "models"}  # forms offer the keys of `models`
 
 
 def _located[T](parse: Callable[[str], T], value: str) -> T:
@@ -105,25 +107,47 @@ class AdminConfig(Section):
     relay_url: str = Field(default="https://nestorhome.dev/redirect/oauth", json_schema_extra=ADVANCED)
 
 
-class AdapterConfig(BaseModel):
+class ComponentConfig(BaseModel):
     """`kind` picks the plugin; the other keys are its settings, validated by the plugin."""
 
     model_config = ConfigDict(extra="allow", frozen=True)
     kind: str
-    name: str | None = None
 
     def settings(self) -> dict[str, Any]:
         return dict(self.model_extra or {})
+
+
+class AdapterConfig(ComponentConfig):
+    """A component in a list or on its own: `name` tells it apart, its kind by default. A model needs
+    none: its key in `models` is its name."""
+
+    name: str | None = None
+
+
+class AgentConfig(Section):
+    """Which model of `models` answers in each medium. One left out takes the other's; with a single
+    model, neither needs saying."""
+
+    spoken: str | None = Field(default=None, json_schema_extra=MODEL_REFERENCE)  # the voice: first words fast
+    written: str | None = Field(default=None, json_schema_extra=MODEL_REFERENCE)  # writing allows a few seconds
+
+
+class WatchesConfig(Section):
+    """The model that sorts incoming items for the watches: the agent's written one by default."""
+
+    model: str | None = Field(default=None, json_schema_extra=MODEL_REFERENCE)
 
 
 class NestorConfig(Section):
     data_dir: Path = Field(default=Path("data"), json_schema_extra=ADVANCED)
     persona: PersonaConfig
     household: tuple[PersonConfig, ...] = Field(min_length=1)
-    model: AdapterConfig
+    # the models it may use, under names the household chooses; the roles below refer to them by name
+    models: dict[str, ComponentConfig] = Field(min_length=1)
+    agent: AgentConfig = Field(default=AgentConfig(), validate_default=True)
+    watches: WatchesConfig = WatchesConfig()
     executors: tuple[AdapterConfig, ...] = ()
     channels: tuple[AdapterConfig, ...] = Field(min_length=1)
-    triage_model: AdapterConfig | None = None  # small model sorting incoming items; defaults to `model`
     tools: tuple[AdapterConfig, ...] = ()  # tool providers (an MCP server: Home Assistant, Linear…)
     inbound: tuple[AdapterConfig, ...] = ()  # sources watches can watch (a mailbox…)
     presence: AdapterConfig | None = None
@@ -131,6 +155,45 @@ class NestorConfig(Section):
     admin: AdminConfig | None = None
     # services accounts are plugged into from the admin; by default every installed one when the admin is on
     connectors: tuple[AdapterConfig, ...] | None = None
+
+    @field_validator("models")
+    @classmethod
+    def _model_keys(cls, value: dict[str, ComponentConfig]) -> dict[str, ComponentConfig]:
+        for key in value:
+            if not _MODEL_KEY.fullmatch(key):
+                raise ValueError(f"{key!r} cannot name a model: letters, digits, `_`, `.` and `-`, starting with one")
+        return value
+
+    @field_validator("agent")
+    @classmethod
+    def _agent(cls, value: AgentConfig, info: ValidationInfo) -> AgentConfig:
+        models = _known(info, {"spoken": value.spoken, "written": value.written})
+        if len(models) > 1 and not (value.spoken or value.written):
+            raise ValueError(f"name the model it answers with, among {', '.join(models)}: `spoken`, `written` or both")
+        return value
+
+    @field_validator("watches")
+    @classmethod
+    def _watches(cls, value: WatchesConfig, info: ValidationInfo) -> WatchesConfig:
+        _known(info, {"model": value.model})
+        return value
+
+    def roles(self) -> dict[str, str]:
+        """The key of the model each role uses, defaults applied: `spoken`, `written`, `watches`."""
+        sole = next(iter(self.models)) if len(self.models) == 1 else None
+        written = self.agent.written or self.agent.spoken or sole
+        spoken = self.agent.spoken or written
+        assert spoken and written  # checked on validation
+        return {"spoken": spoken, "written": written, "watches": self.watches.model or written}
+
+
+def _known(info: ValidationInfo, references: Mapping[str, str | None]) -> Mapping[str, ComponentConfig]:
+    """The models declared before, once each reference is checked to name one of them."""
+    models: Mapping[str, ComponentConfig] = info.data.get("models") or {}
+    for field, key in references.items():
+        if key is not None and models and key not in models:
+            raise ValueError(f"{field}: no model named {key!r} in models ({', '.join(models)})")
+    return models
 
 
 def environment(config: Path | str, environ: Mapping[str, str] | None = None) -> dict[str, str]:

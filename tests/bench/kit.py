@@ -85,7 +85,7 @@ class Quiz(Suite[str, QuizKnobs]):
     name = "quiz"
     description = "bench-help"
     knobs = QuizKnobs
-    models = ("triage_model",)
+    models = ("watches",)
     plugins = (ORACLE,)
 
     def __init__(self, dataset: Path | None = None) -> None:
@@ -101,9 +101,7 @@ class Quiz(Suite[str, QuizKnobs]):
     async def run(self, case: Case, shared: str, trial: Trial[QuizKnobs]) -> Mapping[str, Any]:
         request = ModelRequest(messages=(Said.user(case.data["question"]),))
         try:
-            reply = "".join(
-                [o.text async for o in trial.model("triage_model").stream(request) if isinstance(o, TextDelta)]
-            )
+            reply = "".join([o.text async for o in trial.model("watches").stream(request) if isinstance(o, TextDelta)])
         except ProviderError:
             reply = ""
         return {"reply": reply.upper() if trial.knobs.shout else reply}
@@ -144,7 +142,7 @@ def write_variant(folder: Path, name: str, text: str) -> Path:
 
 
 ALL_RIGHT = (
-    "triage_model: {kind: oracle, replies: {capital of France: Paris, two plus two: '4', colour of the sky: blue}}\n"
+    "models: {m: {kind: oracle, replies: {capital of France: Paris, two plus two: '4', colour of the sky: blue}}}\n"
 )
 
 

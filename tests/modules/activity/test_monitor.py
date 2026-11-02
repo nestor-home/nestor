@@ -15,7 +15,7 @@ from nestor.modules.channels import Address, InboundMessage, Medium, Sender
 from nestor.modules.cognition.delegation.service import TaskManager
 from nestor.modules.cognition.model import ToolCall, ToolSpec
 from nestor.modules.cognition.tools import Tool, Toolbox
-from nestor.modules.conversation import Agent, Persona
+from nestor.modules.conversation import Agent, ModelChoice, Persona
 from nestor.modules.household import Account, Household, Person
 from nestor.modules.initiative import QuietHours
 from nestor.modules.journal import Journal
@@ -42,7 +42,7 @@ class World:
         self.journal = Journal(MemoryEventLog())
         self.tasks = TaskManager(self.journal, [ScriptedExecutor(duration_s=10)])
         self.agent = Agent(
-            model=model,
+            models=ModelChoice.single(model),
             persona=Persona(name="Richie", character="Tu es Richie."),
             journal=self.journal,
             household=Household([MATHIS]),

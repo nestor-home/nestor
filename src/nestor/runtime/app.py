@@ -32,7 +32,7 @@ from nestor.modules.cognition.delegation.assistant import Delegation
 from nestor.modules.cognition.delegation.service import TaskManager
 from nestor.modules.cognition.tools import Toolbox, ToolProvider
 from nestor.modules.connectors import ConnectedInbound, Connections, Connector, ConnectorTools, TokenEndpoint
-from nestor.modules.conversation import Agent, ChannelProfile, Persona
+from nestor.modules.conversation import Agent, ChannelProfile, ModelChoice, Persona
 from nestor.modules.home import PresenceSource
 from nestor.modules.household import Household, Person
 from nestor.modules.initiative import (
@@ -50,7 +50,7 @@ from nestor.modules.journal import Journal
 from nestor.modules.memory import Memories
 from nestor.modules.memory.assistant import MemoryTools
 from nestor.modules.satellites import Pairing, SatelliteHost
-from nestor.runtime.config import AdapterConfig, ConfigError, NestorConfig
+from nestor.runtime.config import AdapterConfig, ComponentConfig, ConfigError, NestorConfig
 from nestor.runtime.plugins import Family, Plugged, Registry, Services
 
 log = logging.getLogger("nestor")
@@ -109,7 +109,11 @@ class Nestor:
             self.journal, SQLiteVerifierStore(self.database), self.household, SQLiteActivityStore(self.database)
         )
 
-        self.model = _build(self.plugged, registry, Family.MODEL, config.model, "model", services, ConversationModel)
+        self.models = {
+            key: _build(self.plugged, registry, Family.MODEL, c, key, services, ConversationModel)
+            for key, c in config.models.items()
+        }
+        roles = config.roles()
         self.executors = [
             _build(self.plugged, registry, Family.EXECUTOR, c, c.name or c.kind, services, Executor)
             for c in config.executors
@@ -124,13 +128,6 @@ class Nestor:
             _build(self.plugged, registry, Family.TOOLS, c, c.name or c.kind, services, ToolProvider)
             for c in config.tools
         ]
-        self.triage_model = (
-            _build(
-                self.plugged, registry, Family.MODEL, config.triage_model, "triage-model", services, ConversationModel
-            )
-            if config.triage_model
-            else self.model
-        )
         self.inbound = [
             _build(self.plugged, registry, Family.INBOUND, c, c.name or c.kind, services, InboundEventSource)
             for c in config.inbound
@@ -173,7 +170,7 @@ class Nestor:
         watch_tools = WatchTools(self.watch_book)
         connector_tools = [ConnectorTools(self.connections)] if self.connections else []
         self.agent = Agent(
-            model=self.model,
+            models=ModelChoice(spoken=self.models[roles["spoken"]], written=self.models[roles["written"]]),
             persona=Persona(**{**config.persona.model_dump(), "locale": Locale(config.persona.locale)}),
             localizer=self.localizer,
             journal=self.journal,
@@ -201,7 +198,7 @@ class Nestor:
             self.watch_book,
             self.household,
             self.courier,
-            Triage(self.triage_model, language=config.persona.language),
+            Triage(self.models[roles["watches"]], language=config.persona.language),
             self.sources,
         )
         self.activity = ActivityMonitor(
@@ -218,7 +215,6 @@ class Nestor:
     def components(self) -> Sequence[Component]:
         """In start order; they are closed in reverse."""
         presence = [self.presence] if self.presence else []
-        triage = [self.triage_model] if self.triage_model is not self.model else []
         connections = [self.token_endpoint, self.connections] if self.token_endpoint and self.connections else []
         vault = [self.vault] if self.vault else []
         return [
@@ -229,8 +225,7 @@ class Nestor:
             self.accounts,
             self.pairing,
             *connections,
-            self.model,
-            *triage,
+            *self.models.values(),
             *self.executors,
             *self.tools,
             *presence,
@@ -304,7 +299,7 @@ def _build[C](
     plugged: list[Plugged],
     registry: Registry,
     family: Family,
-    config: AdapterConfig,
+    config: ComponentConfig,
     name: str,
     services: Services,
     expected: type[C],

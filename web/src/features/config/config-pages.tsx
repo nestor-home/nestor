@@ -1,5 +1,5 @@
 import { ArrowDown, ArrowUp, CircleAlert, Pencil, Plus, Trash2 } from "lucide-react";
-import { type ReactElement, type ReactNode, useState } from "react";
+import { type ReactElement, type ReactNode, useId, useState } from "react";
 import type { ConfigSlot, JsonSchema } from "@/api";
 import { Confirm } from "@/components/confirm";
 import { FormSheet } from "@/components/overlay-form";
@@ -14,12 +14,14 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useT } from "@/i18n";
 import { brandName, brandOf, KindMark } from "@/lib/brands";
 import { cn } from "@/lib/utils";
 import { useConfigEditor } from "./editor";
 import { ObjectFields, Problems } from "./fields";
-import { getAt, isRecord, move, type Path, problemsUnder } from "./schema";
+import { freeName, getAt, isRecord, move, NAME, type Path, problemsUnder, renamed } from "./schema";
 import { type ConfigPage, pageTitle } from "./sections";
 
 /** The title of a plugin kind: its brand's name when it has one. */
@@ -146,17 +148,25 @@ function HouseholdPage({ page }: { page: ConfigPage }) {
 
 // -- components (model, channels, tools…) ---------------------------------------------------------
 
+/** The components of a slot, then the sections that choose among them (the models, then who uses which). */
 function SlotsPage({ page }: { page: ConfigPage }) {
-  const { schema } = useConfigEditor();
+  const { schema, problems } = useConfigEditor();
   return (
     <>
       {page.keys.map((key) => {
         const slot = schema.slots[key];
-        if (!slot) return null;
-        return slot.many ? (
-          <ManySlot key={key} slotKey={key} slot={slot} />
-        ) : (
-          <OneSlot key={key} slotKey={key} slot={slot} main={key === page.keys[0]} />
+        const section = schema.sections[key];
+        if (slot?.shape === "named") return <NamedSlot key={key} slotKey={key} slot={slot} />;
+        if (slot?.shape === "list") return <ManySlot key={key} slotKey={key} slot={slot} />;
+        if (slot) return <OneSlot key={key} slotKey={key} slot={slot} main={key === page.keys[0]} />;
+        if (!section) return null;
+        return (
+          <Section key={key} title={schema.section_titles[key] ?? key} id={`section-${key}`}>
+            <Panel>
+              <ObjectFields schema={section} root={section} path={[key]} />
+              <Problems problems={problemsUnder(problems, [key]).filter((p) => p.path.length === 1)} />
+            </Panel>
+          </Section>
         );
       })}
     </>
@@ -329,6 +339,130 @@ function ManySlot({ slotKey, slot }: { slotKey: string; slot: ConfigSlot }) {
   );
 }
 
+/** A slot whose components have names other settings use (the models): cards by name, each edited in a sheet. */
+function NamedSlot({ slotKey, slot }: { slotKey: string; slot: ConfigSlot }) {
+  const t = useT();
+  const { schema: config, draft, set, replace, problems } = useConfigEditor();
+  const named = isRecord(draft[slotKey]) ? (draft[slotKey] as Record<string, Record<string, unknown>>) : {};
+  const names = Object.keys(named);
+  const [editing, setEditing] = useState<{ name: string; adding: boolean } | null>(null);
+  const kinds = Object.keys(slot.kinds);
+  const write = (next: Record<string, unknown>) => set([slotKey], next);
+  const current = editing ? named[editing.name] : undefined;
+  const schema = current ? slot.kinds[String(current.kind)] : undefined;
+  const stray = problemsUnder(problems, [slotKey]).filter((p) => p.path.length === 1);
+  const without = (name: string) => Object.fromEntries(Object.entries(named).filter(([k]) => k !== name));
+  return (
+    <Section
+      title={slot.title}
+      count={names.length}
+      id={`slot-${slotKey}`}
+      aside={
+        kinds.length ? (
+          <KindPicker
+            slot={slot}
+            onPick={(kind) => {
+              const name = freeName(kind, names);
+              write({ ...named, [name]: { kind } });
+              setEditing({ name, adding: true });
+            }}
+            trigger={
+              <Button variant="outline" size="sm">
+                <Plus /> {t("cfg-add-component")}
+              </Button>
+            }
+          />
+        ) : null
+      }
+    >
+      {names.length ? (
+        <ul className="grid gap-2">
+          {Object.entries(named).map(([name, entry]) => {
+            const kind = String(entry.kind ?? "");
+            return (
+              <ItemCard
+                key={name}
+                mark={kind}
+                title={name}
+                subtitle={kindTitle(kind)}
+                detail={summary(entry)}
+                problems={problemsUnder(problems, [slotKey, name]).length}
+                missing={!slot.kinds[kind]}
+                onEdit={() => setEditing({ name, adding: false })}
+                onRemove={async () => write(without(name))}
+                removeTitle={t("cfg-remove-title", { name })}
+                removeText={t("cfg-remove-text")}
+              />
+            );
+          })}
+        </ul>
+      ) : kinds.length ? (
+        <Empty hint={slot.required ? t("cfg-slot-required") : t("cfg-slot-optional")}>{t("cfg-slot-none")}</Empty>
+      ) : (
+        <Empty hint={t("cfg-no-plugin-hint")}>{t("cfg-no-plugin")}</Empty>
+      )}
+      <Problems problems={stray} />
+      {editing && current ? (
+        <ItemSheet
+          title={editing.adding ? t("cfg-add-kind", { kind: kindTitle(String(current.kind)) }) : editing.name}
+          mark={String(current.kind)}
+          adding={editing.adding}
+          onClose={() => setEditing(null)}
+          onCancelAdd={() => {
+            write(without(editing.name));
+            setEditing(null);
+          }}
+        >
+          <NameField
+            name={editing.name}
+            taken={names.filter((n) => n !== editing.name)}
+            onRename={(to) => {
+              replace(renamed(draft, config.sections, slotKey, editing.name, to));
+              setEditing({ ...editing, name: to });
+            }}
+          />
+          {schema ? (
+            <ObjectFields schema={schema} root={schema} path={[slotKey, editing.name]} />
+          ) : (
+            <p className="text-sm text-brick">{t("cfg-kind-missing", { kind: String(current.kind) })}</p>
+          )}
+        </ItemSheet>
+      ) : null}
+    </Section>
+  );
+}
+
+/** A named component's name: renamed once it is a free, valid one (on leaving the field or Enter). */
+function NameField({ name, taken, onRename }: { name: string; taken: string[]; onRename: (to: string) => void }) {
+  const t = useT();
+  const id = useId();
+  const [text, setText] = useState(name);
+  const trimmed = text.trim();
+  const problem = !NAME.test(trimmed) ? t("cfg-name-invalid") : taken.includes(trimmed) ? t("cfg-name-taken") : null;
+  const commit = () => {
+    if (!problem && trimmed !== name) onRename(trimmed);
+  };
+  return (
+    <div className="grid gap-1.5">
+      <Label htmlFor={id}>{t("cfg-name")}</Label>
+      <Input
+        id={id}
+        value={text}
+        spellCheck={false}
+        className="font-mono text-[0.82rem] sm:max-w-72"
+        aria-invalid={problem ? true : undefined}
+        aria-describedby={`${id}-help`}
+        onChange={(e) => setText(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => e.key === "Enter" && commit()}
+      />
+      <p id={`${id}-help`} className={cn("text-[0.85rem]", problem ? "text-brick" : "text-ink-muted")}>
+        {problem ?? t("cfg-name-help")}
+      </p>
+    </div>
+  );
+}
+
 /** Choosing what to add: every installed plugin of the slot, with its mark. */
 function KindPicker({
   slot,
@@ -401,10 +535,11 @@ function ItemCard({
   detail: string;
   problems: number;
   missing?: boolean;
-  index: number;
-  count: number;
+  /** Its place among the others, for the arrows that reorder them; none when the order is not the file's. */
+  index?: number;
+  count?: number;
   onEdit: () => void;
-  onMove: (by: -1 | 1) => void;
+  onMove?: (by: -1 | 1) => void;
   onRemove: () => Promise<void>;
   removeTitle: string;
   removeText: string;
@@ -435,24 +570,28 @@ function ItemCard({
         <Button variant="ghost" size="icon-sm" onClick={onEdit} aria-label={t("cfg-edit-item", { item: title })}>
           <Pencil />
         </Button>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          disabled={index === 0}
-          onClick={() => onMove(-1)}
-          aria-label={t("cfg-move-up", { item: title })}
-        >
-          <ArrowUp />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          disabled={index === count - 1}
-          onClick={() => onMove(1)}
-          aria-label={t("cfg-move-down", { item: title })}
-        >
-          <ArrowDown />
-        </Button>
+        {onMove && index !== undefined && count !== undefined ? (
+          <>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              disabled={index === 0}
+              onClick={() => onMove(-1)}
+              aria-label={t("cfg-move-up", { item: title })}
+            >
+              <ArrowUp />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              disabled={index === count - 1}
+              onClick={() => onMove(1)}
+              aria-label={t("cfg-move-down", { item: title })}
+            >
+              <ArrowDown />
+            </Button>
+          </>
+        ) : null}
         <Confirm
           trigger={
             <Button variant="ghost" size="icon-sm" aria-label={t("cfg-remove-item", { item: title })}>

@@ -32,10 +32,12 @@ from nestor.modules.journal import Journal
 from nestor.modules.system import ConfigChanged
 from nestor.runtime.config import (
     AdminConfig,
+    AgentConfig,
     InitiativeConfig,
     NestorConfig,
     PersonaConfig,
     PersonConfig,
+    WatchesConfig,
     references,
     substitute,
 )
@@ -47,29 +49,36 @@ _UNSAFE = re.compile(r"[^A-Za-z0-9_.-]")  # what a vault name cannot hold (a hea
 type Path_ = tuple[str | int, ...]
 
 
+class Shape(StrEnum):
+    ONE = "one"  # one component, or none when optional (presence)
+    LIST = "list"  # components in order (channels)
+    NAMED = "named"  # components under names the household chooses, that other keys refer to (models)
+
+
 @dataclass(frozen=True, slots=True)
 class Slot:
     """Where adapters plug into the configuration: a key of the file, a family of plugins."""
 
     key: str
     family: Family
-    many: bool
+    shape: Shape
     required: bool
 
 
 SLOTS = (
-    Slot("model", Family.MODEL, many=False, required=True),
-    Slot("triage_model", Family.MODEL, many=False, required=False),
-    Slot("channels", Family.CHANNEL, many=True, required=True),
-    Slot("executors", Family.EXECUTOR, many=True, required=False),
-    Slot("tools", Family.TOOLS, many=True, required=False),
-    Slot("inbound", Family.INBOUND, many=True, required=False),
-    Slot("presence", Family.PRESENCE, many=False, required=False),
-    Slot("connectors", Family.CONNECTOR, many=True, required=False),
+    Slot("models", Family.MODEL, Shape.NAMED, required=True),
+    Slot("channels", Family.CHANNEL, Shape.LIST, required=True),
+    Slot("executors", Family.EXECUTOR, Shape.LIST, required=False),
+    Slot("tools", Family.TOOLS, Shape.LIST, required=False),
+    Slot("inbound", Family.INBOUND, Shape.LIST, required=False),
+    Slot("presence", Family.PRESENCE, Shape.ONE, required=False),
+    Slot("connectors", Family.CONNECTOR, Shape.LIST, required=False),
 )
 SECTIONS: Mapping[str, Any] = {
     "persona": PersonaConfig,
     "household": PersonConfig,  # a list of them
+    "agent": AgentConfig,
+    "watches": WatchesConfig,
     "initiative": InitiativeConfig,
     "admin": AdminConfig,
 }
@@ -115,7 +124,7 @@ def _secret_values(node: Any) -> bool:
 def annotate(schema: dict[str, Any], scope: str, advanced: Iterable[str] = ()) -> dict[str, Any]:
     """Adds `x-nestor` to every property: its title and help message ids (`config-<scope>-<field>`,
     `…-help`), whether it is `secret` (a `SecretStr`, optional or not) or holds `secret_values` (a map
-    whose every value is one), advanced, and its group."""
+    whose every value is one), advanced, its group, and the named slot whose names it takes (`reference`)."""
 
     def walk(node: Any, group: str) -> None:
         if isinstance(node, dict):
@@ -130,6 +139,7 @@ def annotate(schema: dict[str, Any], scope: str, advanced: Iterable[str] = ()) -
                         "secret_values": _secret_values(prop),
                         "advanced": bool(prop.pop("advanced", False)) or name in advanced,
                         "group": group,
+                        "reference": prop.pop("reference", None),
                     }
             for key, child in node.items():
                 if key == "$defs" and isinstance(child, dict):
@@ -161,7 +171,7 @@ class ConfigSchema:
         return {
             slot.key: {
                 "family": slot.family.value,
-                "many": slot.many,
+                "shape": slot.shape.value,
                 "required": slot.required,
                 "kinds": {kind: self.kind(slot, kind) for kind in self.registry.kinds(slot.family)},
             }
@@ -169,11 +179,13 @@ class ConfigSchema:
         }
 
     def kind(self, slot: Slot, kind: str) -> dict[str, Any]:
+        """A plugin's settings as a slot holds them: with its `kind`, and a `name` unless its key is one."""
         schema = self.registry.get(slot.family, kind).settings.model_json_schema()
         schema.setdefault("properties", {})
+        name = {"name": {"type": "string", "description": "the instance's name; the kind by default"}}
         schema["properties"] = {
             "kind": {"const": kind, "type": "string"},
-            "name": {"type": "string", "description": "the instance's name; the kind by default"},
+            **(name if slot.shape is not Shape.NAMED else {}),
             **schema["properties"],
         }
         schema["required"] = ["kind", *schema.get("required", [])]
@@ -188,8 +200,12 @@ class ConfigSchema:
                 model = self.registry.get(slot.family, str(entry.get("kind"))).settings
             except NestorError:
                 continue
-            where: Path_ = (slot.key, index) if slot.many else (slot.key,)
-            label = [slot.key, str(entry.get("name") or entry.get("kind"))] if slot.many else [slot.key]
+            where: Path_ = (slot.key,) if slot.shape is Shape.ONE else (slot.key, index)
+            label = {
+                Shape.ONE: [slot.key],
+                Shape.LIST: [slot.key, str(entry.get("name") or entry.get("kind"))],
+                Shape.NAMED: [slot.key, str(index)],
+            }[slot.shape]
             for path, shape in secret_fields(model).items():
                 value = _get(entry, path)
                 name = ".".join([*label, *map(str, path)])
@@ -201,12 +217,22 @@ class ConfigSchema:
         return found
 
 
-def entries(document: Mapping[str, Any]) -> list[tuple[Slot, int, Mapping[str, Any]]]:
-    found = []
+def entries(document: Mapping[str, Any]) -> list[tuple[Slot, int | str, Mapping[str, Any]]]:
+    """Every component the document plugs in: its slot, where in it (a position, a name, or 0 for a
+    single one), its settings."""
+    found: list[tuple[Slot, int | str, Mapping[str, Any]]] = []
     for slot in SLOTS:
         value = document.get(slot.key)
-        items = value if slot.many and isinstance(value, list) else [value] if isinstance(value, dict) else []
-        found += [(slot, i, item) for i, item in enumerate(items) if isinstance(item, dict)]
+        match slot.shape, value:
+            case Shape.LIST, list():
+                items: list[tuple[int | str, Any]] = list(enumerate(value))
+            case Shape.NAMED, dict():
+                items = list(value.items())
+            case Shape.ONE, dict():
+                items = [(0, value)]
+            case _:
+                items = []
+        found += [(slot, where, item) for where, item in items if isinstance(item, dict)]
     return found
 
 
@@ -429,13 +455,14 @@ class ConfigEditor:
         except ValidationError as error:
             return [Problem(tuple(e["loc"]), _code(e["type"]), e["msg"]) for e in error.errors()]
         for slot, index, entry in entries(resolved):
-            where: Path_ = (slot.key, index) if slot.many else (slot.key,)
+            where: Path_ = (slot.key,) if slot.shape is Shape.ONE else (slot.key, index)
             try:
                 plugin = self.registry.get(slot.family, str(entry.get("kind")))
             except NestorError:
                 problems.append(Problem((*where, "kind"), "unknown_kind", str(entry.get("kind"))))
                 continue
-            settings = {k: v for k, v in entry.items() if k not in ("kind", "name")}
+            own = ("kind",) if slot.shape is Shape.NAMED else ("kind", "name")
+            settings = {k: v for k, v in entry.items() if k not in own}
             try:
                 plugin.settings.model_validate(settings)
             except ValidationError as error:

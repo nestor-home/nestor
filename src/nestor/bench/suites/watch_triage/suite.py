@@ -37,7 +37,7 @@ class WatchTriage(Suite[tuple[Watch, ...], TriageKnobs]):
     name = NAME
     description = "bench-watch-triage-description"
     knobs = TriageKnobs
-    models = ("triage_model",)
+    models = ("watches",)
     plugins = (fake,)
 
     def dataset(self) -> Traversable:
@@ -69,7 +69,7 @@ class WatchTriage(Suite[tuple[Watch, ...], TriageKnobs]):
     async def run(self, case: Case, shared: tuple[Watch, ...], trial: Trial[TriageKnobs]) -> Mapping[str, Any]:
         item = _incoming(case)
         language = trial.config.persona.language
-        decisions = await decide(trial.knobs.algorithm, trial.model("triage_model"), shared, item, language=language)
+        decisions = await decide(trial.knobs.algorithm, trial.model("watches"), shared, item, language=language)
         return {
             "decisions": [
                 {"watch": d.watch, "matches": d.matches, "urgent": d.urgent, "unsorted": d.unsorted} for d in decisions

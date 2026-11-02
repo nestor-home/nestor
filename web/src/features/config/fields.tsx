@@ -240,6 +240,8 @@ function ControlFor({ control, ...props }: ControlProps & { control: Control }) 
       return <SecretControl {...props} />;
     case "enum":
       return <EnumControl {...props} />;
+    case "reference":
+      return <ReferenceControl {...props} />;
     case "boolean":
       return <BooleanControl {...props} />;
     case "integer":
@@ -316,6 +318,30 @@ function EnumControl({ id, node, root, path, required }: ControlProps) {
   const options = (schema.enum ?? []).map((v) => ({ value: String(v), label: String(v) }));
   const all = required ? options : [{ value: "", label: t("cfg-default", { value: fallback ?? "∅" }) }, ...options];
   const value = field.value === undefined || field.value === null ? "" : String(field.value);
+  return (
+    <Choice
+      id={id}
+      value={value}
+      options={all}
+      className="sm:max-w-72"
+      describedBy={described(id, node, field.invalid)["aria-describedby"]}
+      onChange={(next) => (next === "" ? field.clear() : field.set(next))}
+    />
+  );
+}
+
+/** A setting that names a component of a named slot (`agent.spoken: haiku`): one of the names the draft gives. */
+function ReferenceControl({ id, node, root, path, required }: ControlProps) {
+  const t = useT();
+  const { draft } = useConfigEditor();
+  const { nullable } = resolve(node, root);
+  const field = useField(path, required, nullable);
+  const slot = getAt(draft, [node["x-nestor"]?.reference ?? ""]);
+  const names = isRecord(slot) ? Object.keys(slot) : [];
+  const value = typeof field.value === "string" ? field.value : "";
+  // a name the draft no longer has stays shown, so the problem the preview finds has its value
+  const options = [...names, ...(value && !names.includes(value) ? [value] : [])].map((v) => ({ value: v, label: v }));
+  const all = required ? options : [{ value: "", label: t("cfg-reference-default") }, ...options];
   return (
     <Choice
       id={id}

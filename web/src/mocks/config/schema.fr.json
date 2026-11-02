@@ -175,6 +175,97 @@
       "title": "PersonConfig",
       "type": "object"
     },
+    "agent": {
+      "additionalProperties": false,
+      "description": "Which model of `models` answers in each medium. One left out takes the other's; with a single\nmodel, neither needs saying.",
+      "properties": {
+        "spoken": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Spoken",
+          "x-nestor": {
+            "field": "spoken",
+            "title_id": "config-agent-spoken",
+            "help_id": "config-agent-spoken-help",
+            "fallback_title_id": "config-field-spoken",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "agent",
+            "reference": "models",
+            "title": "Modèle à l'oral",
+            "help": "Répond à voix haute ; la voix part dès sa première phrase. Sans lui, le modèle de l'écrit parle aussi."
+          }
+        },
+        "written": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Written",
+          "x-nestor": {
+            "field": "written",
+            "title_id": "config-agent-written",
+            "help_id": "config-agent-written-help",
+            "fallback_title_id": "config-field-written",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "agent",
+            "reference": "models",
+            "title": "Modèle à l'écrit",
+            "help": "Répond par écrit. Sans lui, le modèle de l'oral écrit aussi."
+          }
+        }
+      },
+      "title": "AgentConfig",
+      "type": "object"
+    },
+    "watches": {
+      "additionalProperties": false,
+      "description": "The model that sorts incoming items for the watches: the agent's written one by default.",
+      "properties": {
+        "model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model",
+          "x-nestor": {
+            "field": "model",
+            "title_id": "config-watches-model",
+            "help_id": "config-watches-model-help",
+            "fallback_title_id": "config-field-model",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "watches",
+            "reference": "models",
+            "title": "Modèle de tri",
+            "help": "Décide quelles veilles concerne chaque élément reçu. Par défaut, le modèle de l'écrit."
+          }
+        }
+      },
+      "title": "WatchesConfig",
+      "type": "object"
+    },
     "conversation": {
       "additionalProperties": false,
       "properties": {
@@ -385,17 +476,19 @@
   "section_titles": {
     "persona": "Personnage",
     "household": "Foyer",
+    "agent": "Agent",
+    "watches": "Veilles",
     "conversation": "Conversations",
     "initiative": "Initiative",
     "admin": "Administration",
     "data_dir": "Données"
   },
   "slots": {
-    "model": {
+    "models": {
       "family": "model",
-      "many": false,
+      "shape": "named",
       "required": true,
-      "title": "Modèle de langage",
+      "title": "Modèles",
       "kinds": {
         "openai-compatible": {
           "additionalProperties": false,
@@ -414,182 +507,6 @@
                 "advanced": false,
                 "group": "model-openai-compatible",
                 "title": "Type",
-                "help": null
-              }
-            },
-            "name": {
-              "type": "string",
-              "description": "the instance's name; the kind by default",
-              "x-nestor": {
-                "field": "name",
-                "title_id": "config-model-openai-compatible-name",
-                "help_id": "config-model-openai-compatible-name-help",
-                "fallback_title_id": "config-field-name",
-                "secret": false,
-                "secret_values": false,
-                "advanced": false,
-                "group": "model-openai-compatible",
-                "title": "Nom",
-                "help": null
-              }
-            },
-            "base_url": {
-              "title": "Base Url",
-              "type": "string",
-              "x-nestor": {
-                "field": "base_url",
-                "title_id": "config-model-openai-compatible-base_url",
-                "help_id": "config-model-openai-compatible-base_url-help",
-                "fallback_title_id": "config-field-base_url",
-                "secret": false,
-                "secret_values": false,
-                "advanced": false,
-                "group": "model-openai-compatible",
-                "title": "Adresse de l'API",
-                "help": null
-              }
-            },
-            "api_key": {
-              "anyOf": [
-                {
-                  "format": "password",
-                  "type": "string",
-                  "writeOnly": true
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "default": null,
-              "title": "Api Key",
-              "x-nestor": {
-                "field": "api_key",
-                "title_id": "config-model-openai-compatible-api_key",
-                "help_id": "config-model-openai-compatible-api_key-help",
-                "fallback_title_id": "config-field-api_key",
-                "secret": true,
-                "secret_values": false,
-                "advanced": false,
-                "group": "model-openai-compatible",
-                "title": "Clé d'API",
-                "help": null
-              }
-            },
-            "model": {
-              "title": "Model",
-              "type": "string",
-              "x-nestor": {
-                "field": "model",
-                "title_id": "config-model-openai-compatible-model",
-                "help_id": "config-model-openai-compatible-model-help",
-                "fallback_title_id": "config-field-model",
-                "secret": false,
-                "secret_values": false,
-                "advanced": false,
-                "group": "model-openai-compatible",
-                "title": "Modèle",
-                "help": null
-              }
-            },
-            "extra_body": {
-              "additionalProperties": true,
-              "title": "Extra Body",
-              "type": "object",
-              "x-nestor": {
-                "field": "extra_body",
-                "title_id": "config-model-openai-compatible-extra_body",
-                "help_id": "config-model-openai-compatible-extra_body-help",
-                "fallback_title_id": "config-field-extra_body",
-                "secret": false,
-                "secret_values": false,
-                "advanced": false,
-                "group": "model-openai-compatible",
-                "title": "Champs de requête supplémentaires",
-                "help": "Envoyés tels quels avec chaque requête, ex. les options de routage du fournisseur."
-              }
-            },
-            "connect_timeout_s": {
-              "default": 5.0,
-              "exclusiveMinimum": 0,
-              "title": "Connect Timeout S",
-              "type": "number",
-              "x-nestor": {
-                "field": "connect_timeout_s",
-                "title_id": "config-model-openai-compatible-connect_timeout_s",
-                "help_id": "config-model-openai-compatible-connect_timeout_s-help",
-                "fallback_title_id": "config-field-connect_timeout_s",
-                "secret": false,
-                "secret_values": false,
-                "advanced": false,
-                "group": "model-openai-compatible",
-                "title": "Délai de connexion (secondes)",
-                "help": null
-              }
-            },
-            "read_timeout_s": {
-              "default": 30.0,
-              "exclusiveMinimum": 0,
-              "title": "Read Timeout S",
-              "type": "number",
-              "x-nestor": {
-                "field": "read_timeout_s",
-                "title_id": "config-model-openai-compatible-read_timeout_s",
-                "help_id": "config-model-openai-compatible-read_timeout_s-help",
-                "fallback_title_id": "config-field-read_timeout_s",
-                "secret": false,
-                "secret_values": false,
-                "advanced": false,
-                "group": "model-openai-compatible",
-                "title": "Délai de lecture (secondes)",
-                "help": null
-              }
-            }
-          },
-          "required": ["kind", "base_url", "model"],
-          "title": "OpenAICompatibleSettings",
-          "type": "object"
-        }
-      }
-    },
-    "triage_model": {
-      "family": "model",
-      "many": false,
-      "required": false,
-      "title": "Modèle de tri",
-      "kinds": {
-        "openai-compatible": {
-          "additionalProperties": false,
-          "description": "Configuration of an OpenAI-compatible model; `api_key` should come from the environment.",
-          "properties": {
-            "kind": {
-              "const": "openai-compatible",
-              "type": "string",
-              "x-nestor": {
-                "field": "kind",
-                "title_id": "config-model-openai-compatible-kind",
-                "help_id": "config-model-openai-compatible-kind-help",
-                "fallback_title_id": "config-field-kind",
-                "secret": false,
-                "secret_values": false,
-                "advanced": false,
-                "group": "model-openai-compatible",
-                "title": "Type",
-                "help": null
-              }
-            },
-            "name": {
-              "type": "string",
-              "description": "the instance's name; the kind by default",
-              "x-nestor": {
-                "field": "name",
-                "title_id": "config-model-openai-compatible-name",
-                "help_id": "config-model-openai-compatible-name-help",
-                "fallback_title_id": "config-field-name",
-                "secret": false,
-                "secret_values": false,
-                "advanced": false,
-                "group": "model-openai-compatible",
-                "title": "Nom",
                 "help": null
               }
             },
@@ -713,7 +630,7 @@
     },
     "channels": {
       "family": "channel",
-      "many": true,
+      "shape": "list",
       "required": true,
       "title": "Canaux",
       "kinds": {
@@ -1270,7 +1187,7 @@
     },
     "executors": {
       "family": "executor",
-      "many": true,
+      "shape": "list",
       "required": false,
       "title": "Exécutants",
       "kinds": {
@@ -1437,7 +1354,7 @@
     },
     "tools": {
       "family": "tools",
-      "many": true,
+      "shape": "list",
       "required": false,
       "title": "Outils",
       "kinds": {
@@ -1715,14 +1632,14 @@
     },
     "inbound": {
       "family": "inbound",
-      "many": true,
+      "shape": "list",
       "required": false,
       "title": "Sources entrantes",
       "kinds": {}
     },
     "presence": {
       "family": "presence",
-      "many": false,
+      "shape": "one",
       "required": false,
       "title": "Présence",
       "kinds": {
@@ -1923,7 +1840,7 @@
     },
     "connectors": {
       "family": "connector",
-      "many": true,
+      "shape": "list",
       "required": false,
       "title": "Connecteurs",
       "kinds": {

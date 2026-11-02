@@ -23,7 +23,7 @@ def render(message: Message) -> str:
 @pytest.fixture
 async def runs(tmp_path: Path) -> list[Run]:
     suite = Quiz()
-    wrong = "triage_model: {kind: oracle, replies: {two plus two: '<b>5</b>'}}\nbench: {name: <script>x</script>}\n"
+    wrong = "models: {m: {kind: oracle, replies: {two plus two: '<b>5</b>'}}}\nbench: {name: <script>x</script>}\n"
     return await quiz_runs(tmp_path, variant(tmp_path, suite), variant(tmp_path, suite, "wrong", wrong))
 
 

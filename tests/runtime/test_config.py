@@ -2,6 +2,7 @@
 `.env` next to it."""
 
 import logging
+import re
 from pathlib import Path
 
 import pytest
@@ -19,10 +20,11 @@ household:
     name: Mathis
     accounts: ["telegram:42", "voice:*"]
     reach: telegram:42
-model:
-  kind: openai-compatible
-  api_key: ${OPENROUTER_API_KEY}
-  model: anthropic/claude-haiku-5.5
+models:
+  haiku:
+    kind: openai-compatible
+    api_key: ${OPENROUTER_API_KEY}
+    model: anthropic/claude-haiku-5.5
 channels:
   - kind: telegram
     token: ${TELEGRAM_TOKEN}
@@ -36,9 +38,52 @@ def test_a_valid_file_gives_people_adapters_and_secrets() -> None:
     person = config.household[0].to_person()
     assert (person.name, person.reach) == ("Mathis", Address("telegram", "42"))
     assert [str(a) for a in person.accounts] == ["telegram:42", "voice:*"]
-    assert config.model.kind == "openai-compatible"
-    assert config.model.settings() == {"api_key": "sk-test", "model": "anthropic/claude-haiku-5.5"}
+    assert config.models["haiku"].kind == "openai-compatible"
+    assert config.models["haiku"].settings() == {"api_key": "sk-test", "model": "anthropic/claude-haiku-5.5"}
     assert config.channels[0].settings() == {"token": "123:abc"}
+
+
+TWO_MODELS = VALID.replace(
+    "channels:", "  local: {kind: openai-compatible, base_url: http://localhost:11434/v1, model: qwen3}\nchannels:"
+)
+
+
+def test_a_single_model_takes_every_role() -> None:
+    assert parse_config(VALID, ENV).roles() == {"spoken": "haiku", "written": "haiku", "watches": "haiku"}
+
+
+def test_roles_take_the_models_named_and_fall_back_on_each_other() -> None:
+    def roles(extra: str) -> dict[str, str]:
+        return parse_config(TWO_MODELS + extra, ENV).roles()
+
+    assert roles("agent: {spoken: haiku, written: local}\n") == {
+        "spoken": "haiku",
+        "written": "local",
+        "watches": "local",
+    }, "the watches sort with the written model by default"
+    assert roles("agent: {spoken: haiku}\nwatches: {model: local}\n") == {
+        "spoken": "haiku",
+        "written": "haiku",
+        "watches": "local",
+    }
+
+
+@pytest.mark.parametrize(
+    ("extra", "error"),
+    [
+        ("", "agent: Value error, name the model it answers with, among haiku, local"),
+        ("agent: {written: sonnet}\n", "agent: Value error, written: no model named 'sonnet' in models (haiku, local)"),
+        ("agent: {written: local}\nwatches: {model: mini}\n", "watches: Value error, model: no model named 'mini'"),
+    ],
+)
+def test_a_role_must_name_a_declared_model(extra: str, error: str) -> None:
+    with pytest.raises(ConfigError, match=re.escape(error)):
+        parse_config(TWO_MODELS + extra, ENV)
+
+
+def test_a_model_name_is_one_word() -> None:
+    with pytest.raises(ConfigError, match="'claude haiku' cannot name a model"):
+        parse_config(VALID.replace("  haiku:", "  claude haiku:"), ENV)
 
 
 def test_a_household_that_says_nothing_is_english_speaking_on_utc() -> None:
@@ -93,7 +138,7 @@ def test_the_dot_env_next_to_the_file_fills_what_the_environment_lacks(
         "INLINE": "value",
     }
     loaded = load_config(config)  # by default, the process environment completed by the file
-    assert loaded.model.settings()["api_key"] == "sk-from-file"
+    assert loaded.models["haiku"].settings()["api_key"] == "sk-from-file"
     assert loaded.channels[0].settings() == {"token": "999:from-the-shell"}  # the environment wins
 
     monkeypatch.delenv("TELEGRAM_TOKEN")

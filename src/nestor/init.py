@@ -41,11 +41,16 @@ household:
     name: {person}
     accounts: {accounts}
 
-model:
-  kind: openai-compatible
-  base_url: {base_url}
-  api_key: ${{MODEL_API_KEY}}        # may stay empty for a local server that needs no key
-  model: {model}
+models:                            # any names: the roles refer to them
+  main:
+    kind: openai-compatible
+    base_url: {base_url}
+    api_key: ${{MODEL_API_KEY}}      # may stay empty for a local server that needs no key
+    model: {model}
+# With several models, say which answers aloud and which in writing:
+# agent:
+#   spoken: main
+#   written: main
 
 channels:
 """

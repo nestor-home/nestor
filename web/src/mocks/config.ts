@@ -33,7 +33,7 @@ export interface ConfigDb {
   vault: Record<string, VaultSecret>;
 }
 
-const SLOTS = ["model", "triage_model", "channels", "executors", "tools", "inbound", "presence", "connectors"];
+const SLOTS = ["models", "channels", "executors", "tools", "inbound", "presence", "connectors"];
 
 /** References as a configuration file writes them. */
 const vault = (name: string) => `\${secret:${name}}`;
@@ -57,20 +57,23 @@ export function document(): ConfigDocument {
       { id: "jules", name: "Jules", accounts: ["satellites:*"] },
       { id: "odile", name: "Odile", accounts: ["telegram:@odile.m"], reach: "telegram:@odile.m" },
     ],
-    model: {
-      kind: "openai-compatible",
-      name: "sonnet",
-      base_url: "https://openrouter.ai/api/v1",
-      api_key: environ("MODEL_API_KEY"),
-      model: "anthropic/claude-sonnet-4.6",
-      extra_body: { provider: { order: ["anthropic"] } },
+    models: {
+      sonnet: {
+        kind: "openai-compatible",
+        base_url: "https://openrouter.ai/api/v1",
+        api_key: environ("MODEL_API_KEY"),
+        model: "anthropic/claude-sonnet-4.6",
+        extra_body: { provider: { order: ["anthropic"] } },
+      },
+      haiku: {
+        kind: "openai-compatible",
+        base_url: "https://openrouter.ai/api/v1",
+        api_key: environ("MODEL_API_KEY"),
+        model: "anthropic/claude-haiku-4.5",
+      },
     },
-    triage_model: {
-      kind: "openai-compatible",
-      base_url: "https://openrouter.ai/api/v1",
-      api_key: environ("MODEL_API_KEY"),
-      model: "anthropic/claude-haiku-4.5",
-    },
+    agent: { spoken: "haiku", written: "sonnet" },
+    watches: { model: "haiku" },
     channels: [
       {
         kind: "satellites",
@@ -120,7 +123,7 @@ export function fresh(): ConfigDb {
   (older.persona as Record<string, unknown>).character = "You are Richie, the Lambert household's assistant.";
   (older.initiative as Record<string, unknown>).quiet_hours = "23:00-07:00";
   const oldest = structuredClone(older);
-  delete (oldest as Record<string, unknown>).triage_model;
+  delete (oldest as Record<string, unknown>).watches;
   return {
     document: now,
     path: "/home/mathis/richie-framework/configs/richie.yaml",
@@ -159,21 +162,35 @@ function isSecret(node: JsonSchema): boolean {
   return node.format === "password" || node.writeOnly === true || Boolean(node.anyOf?.some((o) => isSecret(o)));
 }
 
+type Slot = S["SlotOut"];
+
+/** The components a slot holds in a document: where each is, and the name its secrets are kept under. */
+function entriesOf(slot: Slot, key: string, value: unknown): { where: Path; label: string[]; entry: unknown }[] {
+  if (value === undefined || value === null) return [];
+  if (slot.shape === "named")
+    return isObject(value)
+      ? Object.entries(value).map(([name, entry]) => ({ where: [key, name], label: [key, name], entry }))
+      : [];
+  if (slot.shape === "list")
+    return (Array.isArray(value) ? value : [value]).map((entry, index) => ({
+      where: [key, index],
+      label: [key, String(isObject(entry) ? (entry.name ?? entry.kind) : index)],
+      entry,
+    }));
+  return [{ where: [key], label: [key], entry: value }];
+}
+
 /** Every path of a document holding a secret, with the vault name a typed value goes under. */
 export function secretsOf(doc: ConfigDocument): { path: Path; name: string }[] {
   const found: { path: Path; name: string }[] = [];
   const schema = SCHEMAS.fr;
   for (const key of SLOTS) {
     const slot = schema.slots[key];
-    const value = doc[key];
-    if (!slot || value === undefined || value === null) continue;
-    const entries = slot.many && Array.isArray(value) ? value : [value];
-    entries.forEach((entry, index) => {
-      if (!isObject(entry)) return;
+    if (!slot) continue;
+    for (const { where, label, entry } of entriesOf(slot, key, doc[key])) {
+      if (!isObject(entry)) continue;
       const kind = slot.kinds[String(entry.kind)] as JsonSchema | undefined;
-      if (!kind) return;
-      const where: Path = slot.many ? [key, index] : [key];
-      const label = slot.many ? [key, String(entry.name ?? entry.kind)] : [key];
+      if (!kind) continue;
       const walk = (node: JsonSchema, value: Record<string, unknown>, path: string[]) => {
         for (const [name, child] of Object.entries(node.properties ?? {})) {
           const resolved = resolve(child, kind);
@@ -191,7 +208,7 @@ export function secretsOf(doc: ConfigDocument): { path: Path; name: string }[] {
         }
       };
       walk(kind, entry, []);
-    });
+    }
   }
   return found;
 }
@@ -395,22 +412,21 @@ export function problems(
       const slot = schema.slots[key];
       const value = doc[key];
       if (!slot) continue;
-      const empty = value === undefined || value === null || (Array.isArray(value) && !value.length);
-      if (empty) {
+      const entries = entriesOf(slot, key, value);
+      if (!entries.length) {
         if (slot.required) found.push({ path: [key], code: "missing", detail: "" });
         continue;
       }
-      const entries = slot.many ? (Array.isArray(value) ? value : [value]) : [value];
-      entries.forEach((entry, i) => {
-        const where: Path = slot.many ? [key, i] : [key];
+      for (const { where, entry } of entries) {
         const kind = isObject(entry) ? (slot.kinds[String(entry.kind)] as JsonSchema | undefined) : undefined;
         if (!kind) {
           found.push({ path: [...where, "kind"], code: "unknown_kind", detail: String(isObject(entry) && entry.kind) });
-          return;
+          continue;
         }
         check(kind, kind, entry, where, found, lang);
-      });
+      }
     }
+    found.push(...unknownReferences(schema, doc));
     const known = new Set([...Object.keys(schema.sections), ...SLOTS]);
     for (const key of Object.keys(doc)) {
       if (!known.has(key)) found.push({ path: [key], code: "extra", detail: "" });
@@ -421,6 +437,23 @@ export function problems(
     const args = { path: path.join("."), detail };
     return { path, code, message_id: id, args, message: render(lang, { id, args }) };
   });
+}
+
+/** Roles naming a component their slot does not have (`agent.written: opus` without an `opus` model). */
+function unknownReferences(schema: S["ConfigSchemaOut"], doc: ConfigDocument): Found[] {
+  const found: Found[] = [];
+  for (const [key, section] of Object.entries(schema.sections) as [string, JsonSchema][]) {
+    const value = doc[key];
+    if (!isObject(value)) continue;
+    for (const [field, node] of Object.entries(section.properties ?? {})) {
+      const slot = node["x-nestor"]?.reference;
+      const named = value[field];
+      const names = isObject(doc[slot ?? ""]) ? Object.keys(doc[slot ?? ""] as object) : [];
+      if (slot && typeof named === "string" && !names.includes(named))
+        found.push({ path: [key], code: "invalid", detail: `${field}: no model named '${named}' in ${slot}` });
+    }
+  }
+  return found;
 }
 
 // -- the changes ---------------------------------------------------------------------------------

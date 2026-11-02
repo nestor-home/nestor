@@ -45,6 +45,25 @@ describe("the configuration", () => {
     await waitFor(() => expect(screen.queryByRole("region", { name: "Unsaved changes" })).not.toBeInTheDocument());
   });
 
+  it("names the models, and renaming one keeps the roles that use it", async () => {
+    const user = userEvent.setup();
+    renderApp("/config/models");
+    expect(await screen.findByRole("combobox", { name: "Spoken model" })).toHaveTextContent("haiku");
+    await user.click(screen.getByRole("button", { name: "Edit haiku" }));
+    const sheet = await screen.findByRole("dialog", { name: "haiku" });
+    const name = within(sheet).getByRole("textbox", { name: "Name" });
+    await user.clear(name);
+    await user.type(name, "sonnet");
+    expect(within(sheet).getByText("This name is already taken.")).toBeInTheDocument();
+    await user.clear(name);
+    await user.type(name, "fast{Enter}");
+    await user.click(within(sheet).getByRole("button", { name: "Done" }));
+    expect(screen.getByRole("button", { name: "Edit fast" })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Spoken model" })).toHaveTextContent("fast");
+    expect(screen.getByRole("combobox", { name: "Sorting model" })).toHaveTextContent("fast");
+    expect(screen.getByRole("combobox", { name: "Written model" })).toHaveTextContent("sonnet");
+  });
+
   it("folds the advanced settings until asked", async () => {
     const user = userEvent.setup();
     renderApp("/config/initiative");

@@ -42,7 +42,7 @@ export const PAGES: ConfigPage[] = [
   { slug: "household", kind: "household", keys: ["household"], icon: Users, group: "agent" },
   { slug: "conversation", kind: "section", keys: ["conversation"], icon: MessageCircle, group: "agent" },
   { slug: "initiative", kind: "section", keys: ["initiative"], icon: Sparkles, group: "agent" },
-  { slug: "model", kind: "slots", keys: ["model", "triage_model"], icon: Brain, group: "parts" },
+  { slug: "models", kind: "slots", keys: ["models", "agent", "watches"], icon: Brain, group: "parts" },
   { slug: "channels", kind: "slots", keys: ["channels"], icon: MessagesSquare, group: "parts" },
   { slug: "executors", kind: "slots", keys: ["executors"], icon: Workflow, group: "parts" },
   { slug: "tools", kind: "slots", keys: ["tools"], icon: Wrench, group: "parts" },

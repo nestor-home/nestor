@@ -11138,9 +11138,14 @@
             "type": "string",
             "title": "Family"
           },
-          "many": {
-            "type": "boolean",
-            "title": "Many"
+          "shape": {
+            "type": "string",
+            "enum": [
+              "one",
+              "list",
+              "named"
+            ],
+            "title": "Shape"
           },
           "required": {
             "type": "boolean",
@@ -11162,7 +11167,7 @@
         "type": "object",
         "required": [
           "family",
-          "many",
+          "shape",
           "required",
           "title",
           "kinds"
