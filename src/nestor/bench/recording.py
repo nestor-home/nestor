@@ -164,6 +164,7 @@ class MeasuredModel(ConversationModel):
             latency_s=recording.latency_s,
             first_output_s=recording.first_output_s,
             input_tokens=usage.input_tokens if usage else None,
+            cached_input_tokens=usage.cached_input_tokens if usage else None,
             output_tokens=usage.output_tokens if usage else None,
             cost=usage.cost if usage else None,
             served_model=finished.model if finished else None,
@@ -179,7 +180,12 @@ def _wire_output(output: ModelOutput) -> dict[str, Any]:
         call = output.call
         return {"tool_call": {"id": call.id, "name": call.name, "arguments": dict(call.arguments)}}
     usage = output.usage
-    spent = usage and {"input": usage.input_tokens, "output": usage.output_tokens, "cost": usage.cost}
+    spent = usage and {
+        "input": usage.input_tokens,
+        "cached": usage.cached_input_tokens,
+        "output": usage.output_tokens,
+        "cost": usage.cost,
+    }
     return {"finished": {"reason": output.reason.value, "usage": spent, "model": output.model}}
 
 
@@ -194,6 +200,11 @@ def _output(raw: Mapping[str, Any]) -> ModelOutput:
     usage = (
         None
         if spent is None
-        else Usage(input_tokens=spent["input"], output_tokens=spent["output"], cost=spent.get("cost"))
+        else Usage(
+            input_tokens=spent["input"],
+            output_tokens=spent["output"],
+            cost=spent.get("cost"),
+            cached_input_tokens=spent.get("cached"),
+        )
     )
     return Finished(FinishReason(finished["reason"]), usage, finished["model"])

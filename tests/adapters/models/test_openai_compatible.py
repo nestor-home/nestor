@@ -6,6 +6,7 @@ import json
 import os
 from collections.abc import AsyncIterator, Iterator, Mapping
 from pathlib import Path
+from typing import Any
 
 import httpx
 import pytest
@@ -293,6 +294,59 @@ async def test_the_reply_says_what_it_cost_and_which_model_answered(api: respx.M
     assert (await collect())[-1] == Finished(
         FinishReason.STOP, Usage(input_tokens=120, output_tokens=8, cost=4e-5), "vendor/model-2026-10"
     )
+
+
+def instructions(route: respx.Route) -> Any:
+    """The first message sent: the system one."""
+    return json.loads(route.calls.last.request.content)["messages"][0]
+
+
+LAYERED = ModelRequest(
+    messages=(
+        Message(role=Role.SYSTEM, layers=("Tu es Richie.", "Le foyer : Mathis."), content="Maintenant : 9 h."),
+        Message.user("Salut"),
+    )
+)
+
+
+@pytest.mark.parametrize("base_url", ["https://openrouter.ai/api/v1", "https://api.anthropic.com/v1"])
+async def test_the_stable_layers_are_cache_breakpoints_for_providers_that_read_them(
+    api: respx.MockRouter, base_url: str
+) -> None:
+    route = api.post(f"{base_url}/chat/completions").mock(return_value=streamed(*TEXT_REPLY))
+    async with model(base_url=base_url) as m:
+        [o async for o in m.stream(LAYERED)]
+    system = instructions(route)
+    breakpoint_ = {"type": "ephemeral"}
+    assert system == {
+        "role": "system",
+        "content": [
+            {"type": "text", "text": "Tu es Richie.", "cache_control": breakpoint_},
+            {"type": "text", "text": "Le foyer : Mathis.", "cache_control": breakpoint_},
+            {"type": "text", "text": "Maintenant : 9 h."},
+        ],
+    }
+
+
+async def test_other_servers_get_the_instructions_as_one_text_unless_told_otherwise(api: respx.MockRouter) -> None:
+    route = api.post(COMPLETIONS).mock(return_value=streamed(*TEXT_REPLY))
+    async with model() as m:
+        [o async for o in m.stream(LAYERED)]
+    assert instructions(route) == {
+        "role": "system",
+        "content": "Tu es Richie.\n\nLe foyer : Mathis.\n\nMaintenant : 9 h.",
+    }
+    async with OpenAICompatibleModel(base_url=BASE_URL, api_key=KEY, model="m", cache_control=True) as m:
+        [o async for o in m.stream(LAYERED)]
+    assert len(instructions(route)["content"]) == 3
+
+
+async def test_the_reply_says_how_much_of_the_prompt_came_from_the_cache(api: respx.MockRouter) -> None:
+    usage = {"prompt_tokens": 3000, "completion_tokens": 5, "prompt_tokens_details": {"cached_tokens": 2800}}
+    api.post(COMPLETIONS).mock(return_value=streamed(chunk(finish="stop"), {"choices": [], "usage": usage}))
+    finished = (await collect())[-1]
+    assert isinstance(finished, Finished) and finished.usage is not None
+    assert (finished.usage.input_tokens, finished.usage.cached_input_tokens) == (3000, 2800)
 
 
 async def test_a_usage_without_token_counts_or_cost_is_reported_as_far_as_known(api: respx.MockRouter) -> None:

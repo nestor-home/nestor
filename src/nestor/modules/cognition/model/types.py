@@ -21,14 +21,24 @@ class ToolCall:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Message:
+    """A message of the dialogue. `layers` go before `content`, from the most stable: the same from
+    one request to the next, so a provider that caches prompts may cache the request up to the end
+    of each (the instructions' identity and rules, then the household)."""
+
     role: Role
     content: str = ""
     tool_calls: tuple[ToolCall, ...] = ()
     tool_call_id: str | None = None  # set on TOOL messages: which call this result answers
+    layers: tuple[str, ...] = ()
 
     @classmethod
     def user(cls, content: str) -> "Message":
         return cls(role=Role.USER, content=content)
+
+    @property
+    def text(self) -> str:
+        """Its layers and content, as one text."""
+        return "\n\n".join(part for part in (*self.layers, self.content) if part)
 
 
 @dataclass(frozen=True, slots=True)
@@ -69,6 +79,7 @@ class Usage:
     input_tokens: int
     output_tokens: int
     cost: float | None = None  # in the provider's billing currency, when it says
+    cached_input_tokens: int | None = None  # of `input_tokens`, read from the provider's prompt cache
 
 
 @dataclass(frozen=True, slots=True)

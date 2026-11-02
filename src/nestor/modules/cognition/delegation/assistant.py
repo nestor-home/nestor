@@ -66,19 +66,20 @@ class Delegation(ToolProvider, ContextProvider):
             ),
         )
 
-    async def context(self, person: Person | None, address: Address) -> str | None:
+    def guidance(self) -> str:
         if not self.tasks.executors:
             return NO_EXECUTOR
         executors = "\n".join(f"- {e.name}: {e.description}" for e in self.tasks.executors.values())
-        lines = [
-            HOW_TO_DELEGATE,
-            f"Your executors and what they can really do:\n{executors}\n"
-            "Nothing else: for any other request, say right away that you cannot, without starting a task.",
-        ]
-        if running := self.tasks.running():
-            listed = "\n".join(f"- {t.id}: {t.objective}" for t in running)
-            lines.append(f"Tasks running now:\n{listed}")
-        return "\n\n".join(lines)
+        return (
+            f"{HOW_TO_DELEGATE}\n\nYour executors and what they can really do:\n{executors}\n"
+            "Nothing else: for any other request, say right away that you cannot, without starting a task."
+        )
+
+    async def context(self, person: Person | None, address: Address) -> str | None:
+        if not (running := self.tasks.running()):
+            return None
+        listed = "\n".join(f"- {t.id}: {t.objective}" for t in running)
+        return f"Tasks running now:\n{listed}"
 
     async def _delegate(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
         try:

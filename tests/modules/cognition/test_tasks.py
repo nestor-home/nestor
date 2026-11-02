@@ -240,9 +240,10 @@ async def test_the_delegation_tools_refuse_bad_arguments(journal: Journal) -> No
 async def test_the_instructions_say_what_executors_can_do_and_what_runs(journal: Journal) -> None:
     async with TaskManager(journal, []) as none:
         assert Delegation(none).tools() == ()
-        assert "No executor is plugged in" in str(await Delegation(none).context(None, VOICE))
+        assert "No executor is plugged in" in Delegation(none).guidance()
+        assert await Delegation(none).context(None, VOICE) is None
     async with TaskManager(journal, [ScriptedRemoteExecutor(duration_s=None)]) as tasks:
         await tasks.delegate("Réserver un resto", origin=VOICE)
-        section = str(await Delegation(tasks).context(None, VOICE))
-    assert "scripted-remote: carry out scripted remote tasks" in section
-    assert "Réserver un resto" in section
+        guidance, running = Delegation(tasks).guidance(), str(await Delegation(tasks).context(None, VOICE))
+    assert "scripted-remote: carry out scripted remote tasks" in guidance and "Réserver" not in guidance
+    assert "Réserver un resto" in running

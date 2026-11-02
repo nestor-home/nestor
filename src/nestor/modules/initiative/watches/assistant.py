@@ -7,7 +7,7 @@ from nestor.core import utc_now
 from nestor.modules.channels import Address
 from nestor.modules.cognition.model import ToolSpec
 from nestor.modules.cognition.tools import Risk, Tool, ToolContext, ToolFailed, ToolProvider
-from nestor.modules.conversation import ContextProvider
+from nestor.modules.conversation import ContextProvider, Layer
 from nestor.modules.household import Person
 from nestor.modules.initiative.watches.book import WatchBook
 from nestor.modules.initiative.watches.types import Watch
@@ -51,14 +51,18 @@ class WatchTools(ToolProvider, ContextProvider):
             Tool(spec=ToolSpec("cancel_watch", "Stop a watch.", cancel), run=self._cancel, risk=Risk.WRITE),
         )
 
-    async def context(self, person: Person | None, address: Address) -> str | None:
+    layer = Layer.HOUSEHOLD  # the watches change when one is created or ends
+
+    def guidance(self) -> str:
         if not self.book.kinds:
             return NO_SOURCE
-        lines = [HOW_TO_WATCH.format(kinds=", ".join(sorted(self.book.kinds)))]
-        if self.book.watches:
-            listed = "\n".join(f"- [{w.id}] {w.what}" for w in self.book.watches.values())
-            lines.append(f"Active watches:\n{listed}")
-        return "\n\n".join(lines)
+        return HOW_TO_WATCH.format(kinds=", ".join(sorted(self.book.kinds)))
+
+    async def context(self, person: Person | None, address: Address) -> str | None:
+        if not self.book.watches:
+            return None
+        listed = "\n".join(f"- [{w.id}] {w.what}" for w in self.book.watches.values())
+        return f"Active watches:\n{listed}"
 
     async def _create(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
         kinds = arguments.get("kinds") or sorted(self.book.kinds)

@@ -28,6 +28,17 @@ FALLBACKS: Mapping[FallbackReason, Message] = {
 }
 
 
+@dataclass(frozen=True, slots=True)
+class Instructions:
+    """The instructions of a turn, from the most stable to the most variable: what never changes
+    (who the agent is, its rules, how to use each module), what changes now and then (the household),
+    and this turn's (the time, who speaks, what is going on)."""
+
+    stable: str
+    household: str
+    turn: str
+
+
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Persona:
     """Who the agent is. `character` is free text written by the distribution (Richie's personality)."""
@@ -45,20 +56,33 @@ class Persona:
         style: str,
         person: Person | None,
         now: datetime,
-        sections: tuple[str, ...] = (),
-    ) -> str:
+        guidance: tuple[str, ...] = (),
+        people: tuple[Person, ...] = (),
+        household: tuple[str, ...] = (),
+        turn: tuple[str, ...] = (),
+    ) -> Instructions:
         local = now.astimezone(ZoneInfo(self.timezone))
-        lines = [
-            self.character.strip(),
-            f"Always write in {self.language}, every sentence, including what you say before using a tool.",
-            SPOKEN if medium is Medium.SPOKEN else WRITTEN,
-            style.strip(),
-            HONESTY,
-            f"Now: {local:%A %d %B %Y, %H:%M} ({self.timezone}).",
-            f"You are talking with {person.name}." if person else "You do not know who you are talking with.",
-            *sections,
-        ]
-        return "\n\n".join(line for line in lines if line)
+        names = ", ".join(p.name for p in people)
+        return Instructions(
+            stable=_joined(
+                self.character.strip(),
+                f"Always write in {self.language}, every sentence, including what you say before using a tool.",
+                SPOKEN if medium is Medium.SPOKEN else WRITTEN,
+                style.strip(),
+                HONESTY,
+                *guidance,
+            ),
+            household=_joined(f"The household: {names}." if names else "", *household),
+            turn=_joined(
+                f"Now: {local:%A %d %B %Y, %H:%M} ({self.timezone}).",
+                f"You are talking with {person.name}." if person else "You do not know who you are talking with.",
+                *turn,
+            ),
+        )
 
     def fallback(self, reason: FallbackReason) -> Message:
         return FALLBACKS[reason]
+
+
+def _joined(*parts: str) -> str:
+    return "\n\n".join(part for part in parts if part)

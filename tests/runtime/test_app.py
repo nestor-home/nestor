@@ -320,7 +320,7 @@ async def test_a_watch_created_in_conversation_is_announced_when_its_mail_arrive
     from nestor.modules.initiative import Incoming, WatchTriggered
 
     def every_listed_watch(request: ModelRequest) -> str:
-        ids = re.findall(r"^- \[([^\]]+)\]", request.messages[0].content, re.MULTILINE)
+        ids = re.findall(r"^- \[([^\]]+)\]", request.messages[0].text, re.MULTILINE)
         return json.dumps({"matches": [{"watch": id, "summary": "Colis livré."} for id in ids]})
 
     fakes = Fakes()
