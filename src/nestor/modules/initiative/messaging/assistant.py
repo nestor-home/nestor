@@ -51,7 +51,7 @@ class MessageTools(ToolProvider, ContextProvider):
         names = ", ".join(f"{p.name} ({p.id})" for p in self.household.people)
         return f"{HOW_TO_MESSAGE}\nThe people you can reach: {names}."
 
-    async def context(self, person: Person | None, address: Address) -> str | None:
+    async def context(self, person: Person | None, address: Address, said: str | None = None) -> str | None:
         if person is None:
             return None
         lines = []

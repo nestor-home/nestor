@@ -382,11 +382,11 @@ async def test_an_answer_to_a_delivery_sees_the_delivery(make_agent: MakeAgent, 
 
 async def test_instructions_carry_persona_channel_person_and_context(make_agent: MakeAgent) -> None:
     class Tasks(ContextProvider):
-        async def context(self, person: Person | None, address: Address) -> str | None:
+        async def context(self, person: Person | None, address: Address, said: str | None = None) -> str | None:
             return "Running tasks: none." if person else None
 
     class Silent(ContextProvider):
-        async def context(self, person: Person | None, address: Address) -> str | None:
+        async def context(self, person: Person | None, address: Address, said: str | None = None) -> str | None:
             return None
 
     model = ScriptedModel("Oui.", "Oui.")
@@ -400,6 +400,23 @@ async def test_instructions_carry_persona_channel_person_and_context(make_agent:
     assert "do not know who" in written and "chat" in written and "Running tasks" not in written
 
 
+async def test_modules_look_things_up_with_the_last_words_of_the_conversation(make_agent: MakeAgent) -> None:
+    looked_up: list[str | None] = []
+
+    class Lookup(ContextProvider):
+        async def context(self, person: Person | None, address: Address, said: str | None = None) -> str | None:
+            looked_up.append(said)
+            return None
+
+    agent = make_agent("Des pâtes.", "Sans gluten, alors.", context=[Lookup()])
+    await agent.respond(message("Je cuisine quoi pour Mathilde ?")).collect()
+    await agent.respond(message("Et elle mange du gluten ?")).collect()
+    assert looked_up == [
+        "Je cuisine quoi pour Mathilde ?",
+        "Je cuisine quoi pour Mathilde ? Et elle mange du gluten ?",
+    ], "a follow-up keeps its subject"
+
+
 async def test_the_instructions_run_from_what_never_changes_to_what_this_turn_brings(make_agent: MakeAgent) -> None:
     class Book(ContextProvider):
         layer = Layer.HOUSEHOLD
@@ -407,11 +424,11 @@ async def test_the_instructions_run_from_what_never_changes_to_what_this_turn_br
         def guidance(self) -> str:
             return "Use the book tools."
 
-        async def context(self, person: Person | None, address: Address) -> str | None:
+        async def context(self, person: Person | None, address: Address, said: str | None = None) -> str | None:
             return "Books lent: Tintin."
 
     class Tasks(ContextProvider):
-        async def context(self, person: Person | None, address: Address) -> str | None:
+        async def context(self, person: Person | None, address: Address, said: str | None = None) -> str | None:
             return f"Tasks for {person.name if person else 'nobody'}: none."
 
     model = ScriptedModel("Oui.", "Oui.")

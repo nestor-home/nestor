@@ -18,7 +18,9 @@ class Layer(StrEnum):
 class ContextProvider(ABC):
     """Adds to the agent's instructions: how to use the module (`guidance`, the same on every turn)
     and what it knows now (`context`, in its `layer`: running tasks, what is remembered…), `None`
-    when it has nothing to say. Must be fast: it runs before every answer."""
+    when it has nothing to say. `said` is what the turn answers (the person's words, or what the agent
+    is asked to convey), for a module that looks up what matters to it. Must be fast: it runs before
+    every answer."""
 
     layer: Layer = Layer.TURN
 
@@ -27,4 +29,4 @@ class ContextProvider(ABC):
         return None
 
     @abstractmethod
-    async def context(self, person: Person | None, address: Address) -> str | None: ...
+    async def context(self, person: Person | None, address: Address, said: str | None = None) -> str | None: ...

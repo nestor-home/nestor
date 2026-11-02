@@ -34,6 +34,7 @@ from nestor.runtime.config import (
     AdminConfig,
     AgentConfig,
     InitiativeConfig,
+    MemoryConfig,
     NestorConfig,
     PersonaConfig,
     PersonConfig,
@@ -79,6 +80,7 @@ SECTIONS: Mapping[str, Any] = {
     "household": PersonConfig,  # a list of them
     "agent": AgentConfig,
     "watches": WatchesConfig,
+    "memory": MemoryConfig,
     "initiative": InitiativeConfig,
     "admin": AdminConfig,
 }

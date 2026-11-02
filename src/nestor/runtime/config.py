@@ -20,6 +20,7 @@ from nestor.core import NestorError, PersonId
 from nestor.modules.channels import Address
 from nestor.modules.household import Account, Person
 from nestor.modules.initiative import QuietHours
+from nestor.modules.memory.recall import Strategy
 
 _MODEL_KEY = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]*")
 _VARIABLE = re.compile(r"\$\{(?:(?P<secret>secret):)?(?P<name>[A-Za-z_][A-Za-z0-9_.-]*)\}")
@@ -143,6 +144,15 @@ class WatchesConfig(Section):
     model: str | None = Field(default=None, json_schema_extra=MODEL_REFERENCE)
 
 
+class MemoryConfig(Section):
+    """Which memories each turn's instructions carry (`memory-recall` bench): the latest up to `recent`, cached
+    with the household, then those the conversation's words find among the others."""
+
+    strategy: Strategy = Strategy.BOTH
+    recent: int = Field(default=150, ge=0, le=1000)
+    found: int = Field(default=12, ge=0, le=50)
+
+
 class NestorConfig(Section):
     data_dir: Path = Field(default=Path("data"), json_schema_extra=ADVANCED)
     persona: PersonaConfig
@@ -151,6 +161,7 @@ class NestorConfig(Section):
     models: dict[str, ComponentConfig] = Field(min_length=1)
     agent: AgentConfig = Field(default=AgentConfig(), validate_default=True)
     watches: WatchesConfig = WatchesConfig()
+    memory: MemoryConfig = MemoryConfig()
     executors: tuple[AdapterConfig, ...] = ()
     channels: tuple[AdapterConfig, ...] = Field(min_length=1)
     tools: tuple[AdapterConfig, ...] = ()  # tool providers (an MCP server: Home Assistant, Linear…)

@@ -58,7 +58,7 @@ class WatchTools(ToolProvider, ContextProvider):
             return NO_SOURCE
         return HOW_TO_WATCH.format(kinds=", ".join(sorted(self.book.kinds)))
 
-    async def context(self, person: Person | None, address: Address) -> str | None:
+    async def context(self, person: Person | None, address: Address, said: str | None = None) -> str | None:
         if not self.book.watches:
             return None
         listed = "\n".join(f"- [{w.id}] {w.what}" for w in self.book.watches.values())

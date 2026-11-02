@@ -75,7 +75,7 @@ class Delegation(ToolProvider, ContextProvider):
             "Nothing else: for any other request, say right away that you cannot, without starting a task."
         )
 
-    async def context(self, person: Person | None, address: Address) -> str | None:
+    async def context(self, person: Person | None, address: Address, said: str | None = None) -> str | None:
         if not (running := self.tasks.running()):
             return None
         listed = "\n".join(f"- {t.id}: {t.objective}" for t in running)

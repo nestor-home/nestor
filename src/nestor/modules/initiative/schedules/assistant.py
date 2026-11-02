@@ -58,7 +58,7 @@ class ScheduleTools(ToolProvider, ContextProvider):
     def guidance(self) -> str:
         return HOW_TO_SCHEDULE
 
-    async def context(self, person: Person | None, address: Address) -> str | None:
+    async def context(self, person: Person | None, address: Address, said: str | None = None) -> str | None:
         if not self.book.schedules:
             return None
         listed = "\n".join(f"- [{s.id}] {self._when(s)}: {s.instruction}" for s in self.book.schedules.values())

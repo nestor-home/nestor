@@ -161,6 +161,9 @@ persona: {language: French}
 bench: {name: batch-mistral-small, algorithm: batch}     # watch-triage: batch or per-watch
 ```
 
+Two suites ship: `watch-triage` (which mails match a watch) and `memory-recall` (which memories reach a
+turn's instructions; it calls no model, its knobs are the `memory` settings).
+
 A suite calls the models of the roles it measures (`watches` for watch-triage); with a single model in the
 variant, every role takes it. `models: {fake: {kind: watch-triage-fake}}` runs the suite without a network,
 on a deterministic word-overlap judge. A run writes `bench-results/<suite>/<started>-<variant>/results.json` (dataset hash, variant with its

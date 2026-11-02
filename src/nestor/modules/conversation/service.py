@@ -7,7 +7,7 @@ tools it calls, round after round. Everything observable goes to the journal.
 
 import asyncio
 import contextlib
-from collections.abc import AsyncIterator, Callable, Iterable, Mapping
+from collections.abc import AsyncIterator, Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -45,6 +45,9 @@ class ChannelProfile:
 
     def ends_conversation_after_s(self, medium: Medium) -> float:
         return self.conversation_ends_after_s or medium.conversation_ends_after_s
+
+
+LAST_WORDS = 3  # the person's messages a turn looks things up with, as NVIDIA's RAG concatenates them
 
 
 @dataclass(frozen=True, slots=True)
@@ -167,8 +170,10 @@ class Agent(Assistant):
     def channel(self, address: Address) -> ChannelProfile:
         return self._channels.get(address.channel, ChannelProfile())
 
-    async def instructions(self, address: Address, person: Person | None, medium: Medium) -> Instructions:
-        found = await asyncio.gather(*(p.context(person, address) for p in self._context))
+    async def instructions(
+        self, address: Address, person: Person | None, medium: Medium, said: str | None = None
+    ) -> Instructions:
+        found = await asyncio.gather(*(p.context(person, address, said) for p in self._context))
         layered = list(zip((p.layer for p in self._context), found, strict=True))
         return self.persona.instructions(
             medium=medium,
@@ -284,7 +289,7 @@ class AgentReply(Reply):
         history = await recent_history(
             agent.journal, self._address, conversation, max_events=agent.settings.history_events
         )
-        instructions = await agent.instructions(self._address, self._person, self._medium)
+        instructions = await agent.instructions(self._address, self._person, self._medium, self._last_words(history))
         messages = [
             Message(role=Role.SYSTEM, layers=(instructions.stable, instructions.household), content=instructions.turn),
             *history,
@@ -309,6 +314,14 @@ class AgentReply(Reply):
             messages += [
                 Message(role=Role.TOOL, content=o, tool_call_id=c.id) for c, o in zip(calls, outputs, strict=True)
             ]
+
+    def _last_words(self, history: Sequence[Message]) -> str | None:
+        """What a module looks up for this turn: the person's last messages of the conversation, so that a
+        follow-up ("and for her?") keeps its subject, or what the agent is asked to convey."""
+        said = [m.content for m in history if m.role is Role.USER][-LAST_WORDS:]
+        if self._instruction is not None:
+            said.append(self._instruction)
+        return " ".join(said) or None
 
     async def _round(self, messages: list[Message]) -> tuple[str, tuple[ToolCall, ...]]:
         """One model call: stream its text out, collect its tool calls."""

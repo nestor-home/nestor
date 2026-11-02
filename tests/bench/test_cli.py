@@ -89,7 +89,7 @@ def test_the_command_speaks_the_language_of_the_environment(here: Path, capsys: 
 
 def test_a_failure_is_said_in_words_with_status_2(here: Path, capsys: pytest.CaptureFixture[str]) -> None:
     assert bench("run", "nope", "--variant", "per-watch.yaml") == 2
-    assert "nestor bench: no suite named nope (installed: watch-triage)" in capsys.readouterr().err
+    assert "nestor bench: no suite named nope (installed: memory-recall, watch-triage)" in capsys.readouterr().err
     assert bench("run", "watch-triage", "--variant", "per-watch.yaml", "--replay") == 2
     assert "run it once without --replay" in capsys.readouterr().err
     assert bench("report", "nowhere") == 2

@@ -55,6 +55,7 @@ from nestor.modules.initiative.watches.assistant import WatchTools
 from nestor.modules.journal import Journal
 from nestor.modules.memory import Memories
 from nestor.modules.memory.assistant import MemoryTools
+from nestor.modules.memory.recall import RecallSettings
 from nestor.modules.satellites import Pairing, SatelliteHost
 from nestor.runtime.config import AdapterConfig, ComponentConfig, ConfigError, NestorConfig
 from nestor.runtime.plugins import Family, Plugged, Registry, Services
@@ -171,7 +172,8 @@ class Nestor:
         self.tasks = TaskManager(self.journal, self.executors)
         delegation = Delegation(self.tasks)
         self.memories = Memories(self.journal, SQLiteMemoryStore(self.database))
-        memory = MemoryTools(self.memories, self.household)
+        recall = RecallSettings(**config.memory.model_dump())
+        memory = MemoryTools(self.memories, self.household, recall=recall)
         self.watch_book = WatchBook(self.journal, kinds=(k for source in self.sources for k in source.kinds))
         watch_tools = WatchTools(self.watch_book)
         self.message_book = MessageBook(self.journal)
@@ -202,7 +204,7 @@ class Nestor:
                 ],
             ),
             channels={c.channel_id: ChannelProfile(c.style, c.conversation_ends_after_s) for c in self.channels},
-            context=[delegation, memory, watch_tools, message_tools, schedule_tools],
+            context=[delegation, memory, memory.found, watch_tools, message_tools, schedule_tools],
         )
         initiative = config.initiative
         quiet_hours = QuietHours.parse(initiative.quiet_hours) if initiative.quiet_hours else None
@@ -355,6 +357,16 @@ async def open_accounts(data_dir: Path, people: Iterable[Person]) -> AsyncGenera
     )
     async with database, accounts:
         yield accounts
+
+
+@contextlib.asynccontextmanager
+async def open_memories(data_dir: Path) -> AsyncGenerator[Memories]:
+    """The memories kept in `data_dir`, searched as a running instance searches them, without the rest of
+    Nestor (a bench measures recall on them)."""
+    database = SQLiteDatabase(database_path(data_dir))
+    store = SQLiteMemoryStore(database)
+    async with database, store:
+        yield Memories(Journal(SQLiteEventLog(database)), store)
 
 
 class Restart:

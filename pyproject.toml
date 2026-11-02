@@ -58,6 +58,7 @@ imap = "nestor.adapters.connectors.imap:plugin"
 
 [project.entry-points."nestor.benches"]
 watch-triage = "nestor.bench.suites.watch_triage:suite"
+memory-recall = "nestor.bench.suites.memory_recall:suite"
 
 [project.urls]
 Homepage = "https://nestorhome.dev"
