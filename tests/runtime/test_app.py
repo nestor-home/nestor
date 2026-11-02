@@ -17,7 +17,7 @@ from nestor.modules.channels import Address, Medium
 from nestor.modules.cognition import Outcome, TaskDelivered
 from nestor.modules.cognition.model import ModelRequest, ToolCall
 from nestor.modules.conversation import AssistantTurn
-from nestor.runtime import Nestor, Registry
+from nestor.runtime import Backoff, Nestor, Registry
 from nestor.runtime.config import parse_config
 from nestor.runtime.plugins import Family, Plugin, Services
 
@@ -74,7 +74,9 @@ async def test_a_task_started_before_a_restart_is_delivered_after_it(tmp_path: P
 
 def test_an_unknown_adapter_kind_lists_what_is_installed(tmp_path: Path) -> None:
     text = CONFIG.format(data_dir=tmp_path, replies=[]).replace("kind: memory", "kind: carrier-pigeon")
-    with pytest.raises(ContractError, match="unknown channel kind 'carrier-pigeon' \\(available: crashing, memory\\)"):
+    with pytest.raises(
+        ContractError, match="unknown channel kind 'carrier-pigeon' \\(available: crashing, flaky, memory\\)"
+    ):
         Nestor(parse_config(text, {}), Fakes().registry())
 
 
@@ -208,17 +210,45 @@ def test_the_command_line_checks_a_configuration(tmp_path: Path, capsys: pytest.
     assert "unknown model kind 'absent'" in capsys.readouterr().err
 
 
+FAST = Backoff(initial_s=0.01, maximum_s=0.02, healthy_after_s=60)
+
+
 async def test_a_crashing_channel_does_not_stop_the_others(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
-    text = CONFIG.format(data_dir=tmp_path, replies=["Toujours là."]).replace(
+    text = CONFIG.format(data_dir=tmp_path, replies=["Toujours là.", "Toujours là."]).replace(
         "[{kind: memory}]", "[{kind: memory}, {kind: crashing, name: broken}]"
     )
     fakes = Fakes()
-    nestor = Nestor(parse_config(text, {}), fakes.registry())
+    nestor = Nestor(parse_config(text, {}), fakes.registry(), backoff=FAST)
     async with nestor:
         serving = asyncio.create_task(nestor.serve())
         assert await fakes.channels[0].ask("Salut") == ("Toujours là.",)
+        await asyncio.sleep(0.1)  # the broken channel has stopped and been served again meanwhile
+        assert await fakes.channels[0].ask("Encore") == ("Toujours là.",)
         serving.cancel()
-    assert "channel broken stopped" in caplog.text
+    assert caplog.text.count("channel broken stopped") >= 2
+
+
+async def test_a_channel_that_stopped_is_served_again_and_answers(tmp_path: Path) -> None:
+    text = CONFIG.format(data_dir=tmp_path, replies=["Re-bonjour."]).replace(
+        "[{kind: memory}]", "[{kind: flaky, name: memory, crashes: 2}]"
+    )
+    fakes = Fakes()
+    nestor = Nestor(parse_config(text, {}), fakes.registry(), backoff=FAST)
+    async with nestor:
+        serving = asyncio.create_task(nestor.serve())
+        assert await asyncio.wait_for(fakes.channels[0].ask("Salut"), 2) == ("Re-bonjour.",)
+        assert fakes.channels[0].served == 3
+        serving.cancel()
+
+
+async def test_a_channel_that_ends_when_closed_is_not_served_again(tmp_path: Path) -> None:
+    fakes = Fakes()
+    nestor = Nestor(config(tmp_path, []), fakes.registry(), backoff=FAST)
+    async with nestor:
+        serving = asyncio.create_task(nestor.serve())
+        await asyncio.sleep(0.05)
+        fakes.channels[0]._inbox.put_nowait(None)
+        await asyncio.wait_for(serving, 1)
 
 
 async def test_initiative_settings_reach_the_courier(tmp_path: Path) -> None:
