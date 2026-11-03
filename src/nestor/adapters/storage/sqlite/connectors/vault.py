@@ -17,8 +17,8 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
+from nestor.adapters.storage.sqlite.common import time_key
 from nestor.adapters.storage.sqlite.database import SQLiteDatabase
-from nestor.adapters.storage.sqlite.event_log import time_key
 from nestor.core import ContractError, utc_now
 from nestor.modules.connectors import CredentialVault, Secrets
 

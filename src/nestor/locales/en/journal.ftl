@@ -153,9 +153,16 @@ journal-watch-ended = Watch { $watch } { $reason ->
    *[other] { $reason }
 }
 
-journal-memory-recorded = Memory recorded
+journal-memory-recorded = { $drawn ->
+    [yes] Memory drawn from a conversation
+   *[no] Memory recorded
+}
 journal-memory-corrected = Memory corrected
 journal-memory-forgotten = Memory forgotten
+journal-episode-summarized = { $kept ->
+    [yes] Conversation summarized
+   *[no] Conversation with nothing to keep
+}
 
 journal-connection-created = Account { $account } connected ({ $kind })
 journal-connection-changed = Connection { $connection } { $status ->

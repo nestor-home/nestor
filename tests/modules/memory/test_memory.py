@@ -13,11 +13,12 @@ from nestor.modules.household import Account, Household, Person
 from nestor.modules.journal import Journal
 from nestor.modules.memory import Memories, MemoryCorrected, MemoryForgotten, MemoryRecorded
 from nestor.modules.memory.assistant import MemoryTools
+from nestor.modules.memory.episodes import Episodes
 from nestor.modules.memory.recall import RecallSettings
 from nestor.testing.cognition import ScriptedModel
 from nestor.testing.i18n import EchoLocalizer
 from nestor.testing.journal import MemoryEventLog
-from nestor.testing.memory import InMemoryMemoryStore, MemoryStoreContract
+from nestor.testing.memory import InMemoryEpisodeStore, InMemoryMemoryStore, MemoryStoreContract
 
 VOICE, TELEGRAM = Address("voice", "salon"), Address("telegram", "42")
 MATHIS = Person(id=PersonId("mathis"), name="Mathis", accounts=(Account.parse("voice:*"), Account.parse("telegram:42")))
@@ -63,7 +64,7 @@ async def test_every_change_is_logged_before_it_applies(memories: Memories) -> N
     )
     assert [e.text for e in await journal.history(MemoryCorrected)] == ["Mathilde est végane"]
     assert len(await journal.history(MemoryForgotten)) == 1
-    assert await memories.recall("Mathilde") == []
+    assert await memories.recall("Mathilde", vector=None) == []
 
 
 async def test_unknown_or_empty_memories_are_refused(memories: Memories) -> None:
@@ -85,9 +86,15 @@ def agent(journal: Journal, tools: MemoryTools, model: ScriptedModel) -> Agent:
     )
 
 
+def memory_tools(memories: Memories, journal: Journal, recall: RecallSettings | None = None) -> MemoryTools:
+    """The memory tools of the test household, its episodes in memory."""
+    episodes = Episodes(journal, InMemoryEpisodeStore())
+    return MemoryTools(memories, episodes, HOUSEHOLD, journal, assistant="Richie", recall=recall)
+
+
 async def test_a_fact_told_by_voice_is_known_later_on_telegram() -> None:
     journal = Journal(MemoryEventLog())
-    tools = MemoryTools(Memories(journal, InMemoryMemoryStore()), HOUSEHOLD)
+    tools = memory_tools(Memories(journal, InMemoryMemoryStore()), journal)
     remember = ToolCall("c1", "remember", {"text": "Mathilde est végétarienne", "about": "mathilde"})
     told = agent(journal, tools, ScriptedModel(remember, "C'est noté."))
     await told.respond(
@@ -105,7 +112,7 @@ async def test_a_fact_told_by_voice_is_known_later_on_telegram() -> None:
 
 async def test_the_tools_recall_correct_and_forget_by_id() -> None:
     memories = Memories(Journal(MemoryEventLog()), InMemoryMemoryStore())
-    tools = {t.name: t for t in MemoryTools(memories, HOUSEHOLD).tools()}
+    tools = {t.name: t for t in memory_tools(memories, memories.journal).tools()}
     context = ToolContext(address=TELEGRAM, person=MATHIS.id)
 
     def data(output: object) -> Mapping[str, object]:
@@ -138,7 +145,7 @@ async def test_beyond_its_budget_a_turn_adds_what_its_words_find_to_the_latest()
     memories = Memories(Journal(MemoryEventLog()), InMemoryMemoryStore())
     await memories.remember("Le portail s'ouvre avec le code 1234")
     await memories.remember("Mathilde est végétarienne", about=MATHILDE.id)
-    tools = MemoryTools(memories, HOUSEHOLD, recall=RecallSettings(recent=1))
+    tools = memory_tools(memories, memories.journal, recall=RecallSettings(recent=1))
 
     def turn(said: str | None) -> TurnContext:
         return TurnContext(person=MATHIS, address=TELEGRAM, said=said)

@@ -1,10 +1,13 @@
-"""The memory-recall suite: do the memories a turn needs reach its instructions, and how many others with them?
+"""The memory-recall suite: do the memories and past conversations a turn needs reach its instructions, and how
+many others with them?
 
-Its dataset (`cases.jsonl`) starts with a header, then the household's memories, then what people say with
-the memories that matter to it:
+Its dataset (`cases.jsonl`) starts with a header, then the household's memories and episodes, then what people
+say with what matters to it:
 
     {"dataset": "memory-recall", "version": 1}
     {"memory": "m01", "about": "lea", "text": "Léa est végétarienne depuis 2024."}
+    {"episode": "e01", "people": ["lea"], "ended": "2026-10-18T20:10", "address": "telegram:7",
+     "medium": "written", "summary": "Léa a parlé d'un restaurant italien…", "topics": ["restaurant"]}
     {"case": "c13", "speaker": "hugo", "said": "Je mets du jambon pour tout le monde ?", "expected": ["m01"],
      "kind": "paraphrase"}
 
@@ -14,15 +17,18 @@ the memories that matter to it:
   a memory's `at` dates it;
 - `premise`: what is said contradicts a memory, which must come to correct it ("Jules loves chicory, right?");
 - `other-person`: the same subject about someone else (`avoid`), which can mislead;
+- `episode`: a past conversation of whoever speaks matters ("do you remember the restaurant I told you about?");
+- `private`: someone else's conversation (`avoid`) must never come, whatever is said;
 - `none`: no memory matters, whatever comes is noise.
 
-The memories are kept in Nestor's own store, so what is measured is what runs.
+Memories and episodes are kept in Nestor's own stores, so what is measured is what runs.
 """
 
 import tempfile
 from collections import Counter
 from collections.abc import Mapping, Sequence
 from contextlib import AsyncExitStack
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from importlib.resources import files
 from importlib.resources.abc import Traversable
@@ -34,15 +40,23 @@ from nestor.bench.ports import Knobs, Suite, Trial
 from nestor.bench.types import Better, Case, CaseResult, Dataset, Finding, Metric, Summary, Unit
 from nestor.core import PersonId
 from nestor.core.i18n import Message
+from nestor.modules.channels import Address, Medium
 from nestor.modules.memory import Memories, Memory
+from nestor.modules.memory.episodes import Episode, Episodes
 from nestor.modules.memory.recall import for_turn
 from nestor.runtime.app import open_memories
 
 NAME = "memory-recall"
-KINDS = ("direct", "paraphrase", "contradiction", "premise", "other-person", "none")
+KINDS = ("direct", "paraphrase", "contradiction", "premise", "other-person", "episode", "private", "none")
 
 
-class MemoryRecall(Suite[tuple[Memory, ...], Knobs]):
+@dataclass(frozen=True, slots=True)
+class Remembered:
+    memories: tuple[Memory, ...]
+    episodes: tuple[Episode, ...]
+
+
+class MemoryRecall(Suite[Remembered, Knobs]):
     """A variant's `memory` section, embedder included, says how memories are found: no knobs of its own."""
 
     name = NAME
@@ -52,16 +66,17 @@ class MemoryRecall(Suite[tuple[Memory, ...], Knobs]):
     embedder = True  # but searches by meaning with the variant's embedder
 
     def __init__(self) -> None:
-        self._stores: dict[str, Memories] = {}  # by variant: a run reads one dataset
+        self._stores: dict[str, tuple[Memories, Episodes]] = {}  # by variant: a run reads one dataset
         self._stack = AsyncExitStack()  # open for the process: a bench run is a command of its own
 
     def dataset(self) -> Traversable:
         return files(__package__ or __name__) / "cases.jsonl"
 
-    def load(self, records: Sequence[Mapping[str, Any]]) -> Dataset[tuple[Memory, ...]]:
+    def load(self, records: Sequence[Mapping[str, Any]]) -> Dataset[Remembered]:
         if not records or records[0].get("dataset") != NAME or not isinstance(records[0].get("version"), int):
             raise BenchError(Message.of("bench-memory-recall-no-header"))
         memories: list[Memory] = []
+        episodes: list[Episode] = []
         cases: list[Case] = []
         for number, record in enumerate(records[1:], start=2):
             if "memory" in record and isinstance(record.get("text"), str):
@@ -76,44 +91,66 @@ class MemoryRecall(Suite[tuple[Memory, ...], Knobs]):
                         updated_at=at,
                     )
                 )
+            elif "episode" in record and isinstance(record.get("summary"), str):
+                ended = datetime.fromisoformat(str(record["ended"])).replace(tzinfo=UTC)
+                episodes.append(
+                    Episode(
+                        id=str(record["episode"]),
+                        address=Address.parse(str(record["address"])),
+                        medium=Medium(record.get("medium", "written")),
+                        participants=tuple(PersonId(p) for p in record.get("people", ())),
+                        started_at=ended,
+                        ended_at=ended,
+                        summary=record["summary"],
+                        topics=tuple(record.get("topics", ())),
+                    )
+                )
             elif "case" in record and isinstance(record.get("said"), str) and record.get("kind") in KINDS:
                 cases.append(Case(id=str(record["case"]), data=record))
             else:
                 raise BenchError(Message.of("bench-memory-recall-bad-record", line=number))
-        known = {m.id for m in memories}
+        known = {m.id for m in memories} | {e.id for e in episodes}
         for case in cases:
             named = {*case.data.get("expected", ()), *case.data.get("stale", ()), *case.data.get("avoid", ())}
             if unknown := named - known:
                 raise BenchError(Message.of("bench-memory-recall-unknown", case=case.id, memory=", ".join(unknown)))
-        return Dataset(version=records[0]["version"], cases=tuple(cases), shared=tuple(memories))
+        return Dataset(
+            version=records[0]["version"], cases=tuple(cases), shared=Remembered(tuple(memories), tuple(episodes))
+        )
 
-    async def run(self, case: Case, shared: tuple[Memory, ...], trial: Trial[Knobs]) -> Mapping[str, Any]:
-        memories = await self._store(shared, trial)
-        shown, found = await for_turn(memories, str(case.data["said"]), trial.config.memory.recall())
-        return {"injected": [m.id for m in (*found, *shown)]}
+    async def run(self, case: Case, shared: Remembered, trial: Trial[Knobs]) -> Mapping[str, Any]:
+        memories, episodes = await self._stores_for(shared, trial)
+        speaker = PersonId(str(case.data["speaker"])) if case.data.get("speaker") else None
+        found = await for_turn(memories, episodes, str(case.data["said"]), speaker, trial.config.memory.recall())
+        carried = (*found.found, *found.shown, *found.latest_episodes, *found.found_episodes)
+        return {"injected": [item.id for item in carried]}
 
-    async def _store(self, shared: tuple[Memory, ...], trial: Trial[Knobs]) -> Memories:
-        """The household's memories in a store of the variant's own, filled and embedded once for the run."""
+    async def _stores_for(self, shared: Remembered, trial: Trial[Knobs]) -> tuple[Memories, Episodes]:
+        """The household's memories and episodes in stores of the variant's own, filled and embedded once."""
         if (found := self._stores.get(trial.variant)) is not None:
             return found
         folder = Path(tempfile.mkdtemp(prefix="nestor-bench-recall-"))
         opened = open_memories(folder, trial.embedder, query_timeout_s=trial.config.memory.query_timeout_s)
-        memories = await self._stack.enter_async_context(opened)
-        for memory in shared:
+        memories, episodes = await self._stack.enter_async_context(opened)
+        for memory in shared.memories:
             await memories.store.put(memory)
-        if memories.index is not None:
-            memories.index.refresh()
-            await memories.index.settled()
-        self._stores[trial.variant] = memories
-        return memories
+        for episode in shared.episodes:
+            await episodes.store.put(episode)
+        for index in (memories.index, episodes.index):
+            if index is not None:
+                index.refresh()
+                await index.settled()
+        self._stores[trial.variant] = (memories, episodes)
+        return memories, episodes
 
-    def summarise(self, dataset: Dataset[tuple[Memory, ...]], results: Sequence[CaseResult]) -> Summary:
+    def summarise(self, dataset: Dataset[Remembered], results: Sequence[CaseResult]) -> Summary:
         cases = {c.id: c for c in dataset.cases}
         repetitions = len({r.repetition for r in results}) or 1
         wanted: Counter[str] = Counter()
         reached: Counter[str] = Counter()
-        complete = answered = injected = noise = stale = misleading = 0
+        complete = answered = injected = noise = stale = misleading = leaked = 0
         counted: Counter[str] = Counter()
+        participants = {e.id: set(e.participants) for e in dataset.shared.episodes}
         missed: Counter[tuple[str, str]] = Counter()
         for result in results:
             data = cases[result.case].data
@@ -122,8 +159,9 @@ class MemoryRecall(Suite[tuple[Memory, ...], Knobs]):
             counted[kind] += 1
             injected += len(got)
             stale += len(got & set(data.get("stale", ())))
-            misleading += len(got & set(data.get("avoid", ())))
-            if kind == "none":
+            misleading += len(got & set(data.get("avoid", ()))) if kind == "other-person" else 0
+            leaked += sum(1 for i in got if i in participants and data.get("speaker") not in participants[i])
+            if kind in ("none", "private"):
                 noise += len(got)
                 continue
             wanted[kind] += len(expected)
@@ -139,7 +177,7 @@ class MemoryRecall(Suite[tuple[Memory, ...], Knobs]):
         def metric(id: str, value: float | None, unit: Unit, better: Better) -> Metric:
             return Metric(id=id, label=f"bench-memory-recall-{id}", value=value, unit=unit, better=better)
 
-        texts = {m.id: m.text for m in dataset.shared}
+        texts = {m.id: m.text for m in dataset.shared.memories} | {e.id: e.summary for e in dataset.shared.episodes}
         findings = tuple(
             Finding(
                 group="bench-memory-recall-missed-list",
@@ -158,7 +196,7 @@ class MemoryRecall(Suite[tuple[Memory, ...], Knobs]):
         by_kind = tuple(
             metric(f"recall-{kind}", ratio(reached[kind], wanted[kind]), Unit.RATIO, Better.HIGHER)
             for kind in KINDS
-            if kind != "none"
+            if kind not in ("none", "private")
         )
         return Summary(
             metrics=(
@@ -169,6 +207,7 @@ class MemoryRecall(Suite[tuple[Memory, ...], Knobs]):
                 metric("noise-when-nothing-matters", ratio(noise, counted["none"]), Unit.COUNT, Better.LOWER),
                 metric("stale-injected", ratio(stale, counted["contradiction"]), Unit.COUNT, Better.LOWER),
                 metric("misleading-injected", ratio(misleading, counted["other-person"]), Unit.COUNT, Better.LOWER),
+                metric("others-conversations-injected", leaked / repetitions, Unit.COUNT, Better.LOWER),
             ),
             findings=findings,
         )

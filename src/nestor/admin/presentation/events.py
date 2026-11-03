@@ -60,6 +60,7 @@ from nestor.modules.initiative import (
 )
 from nestor.modules.journal import Entry
 from nestor.modules.memory import MemoryCorrected, MemoryForgotten, MemoryRecorded
+from nestor.modules.memory.episodes import EpisodeSummarized
 from nestor.modules.satellites import (
     PersonDetected,
     SatelliteAdditionCancelled,
@@ -113,7 +114,7 @@ CATEGORIES = (
     Category("task", (TaskStarted, TaskAttached, TaskProgressed, TaskCancelRequested, TaskEnded, TaskDelivered)),
     Category("watch", (WatchCreated, WatchSorted, WatchTriggered, WatchEnded)),
     Category("schedule", (ScheduleCreated, ScheduleFired, ScheduleCancelled)),
-    Category("memory", (MemoryRecorded, MemoryCorrected, MemoryForgotten)),
+    Category("memory", (MemoryRecorded, MemoryCorrected, MemoryForgotten, EpisodeSummarized)),
     Category("connection", (ConnectionCreated, ConnectionChanged, ConnectionRemoved)),
     Category("presence", (PresenceChanged,)),
     Category(
@@ -323,7 +324,7 @@ class EventDescriber:
             WatchEnded: lambda e: self._line(e, Message.of("journal-watch-ended", watch=e.watch_id, reason=e.reason)),
             MemoryRecorded: lambda e: self._line(
                 e,
-                Message.of("journal-memory-recorded"),
+                Message.of("journal-memory-recorded", drawn=_yes(e.episode is not None)),
                 detail=e.text,
                 people=[e.about, e.told_by],
                 channels=[e.learnt_in],
@@ -332,6 +333,13 @@ class EventDescriber:
                 e, Message.of("journal-memory-corrected"), detail=e.text, people=[e.by]
             ),
             MemoryForgotten: lambda e: self._line(e, Message.of("journal-memory-forgotten"), people=[e.by]),
+            EpisodeSummarized: lambda e: self._line(
+                e,
+                Message.of("journal-episode-summarized", kept=_yes(bool(e.summary))),
+                detail=e.summary,
+                people=e.participants,
+                channels=[e.address],
+            ),
             ConnectionCreated: lambda e: self._line(
                 e, Message.of("journal-connection-created", account=e.account, kind=e.kind), people=[e.owner]
             ),

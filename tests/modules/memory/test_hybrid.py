@@ -8,9 +8,9 @@ import pytest
 
 from nestor.core import PersonId, ProviderError
 from nestor.modules.cognition.embedding import Vector
-from nestor.modules.memory import Memories
+from nestor.modules.memory import Memories, Memory
 from nestor.modules.memory import index as index_module
-from nestor.modules.memory.service import fused
+from nestor.modules.memory.index import fused
 from nestor.runtime.app import open_memories
 from nestor.testing.cognition import ConceptEmbedder
 
@@ -24,6 +24,11 @@ CONCEPTS = {
     "code": "gate",
     "cle": "gate",
 }
+
+
+async def recall(memories: Memories, query: str, limit: int = 8) -> list[Memory]:
+    """As a turn recalls: by words and, with an index, by the question's vector."""
+    return await memories.recall(query, limit=limit)
 
 
 async def settled(memories: Memories) -> None:
@@ -43,59 +48,57 @@ async def remembered(memories: Memories) -> dict[str, str]:
 
 async def test_a_paraphrase_without_a_word_in_common_is_found_by_meaning(tmp_path: Path) -> None:
     embedder = ConceptEmbedder(CONCEPTS)
-    async with embedder, open_memories(tmp_path, embedder) as memories:
+    async with embedder, open_memories(tmp_path, embedder) as (memories, _):
         ids = await remembered(memories)
-        by_meaning = await memories.recall("Je mets du jambon ?", limit=2)
-        by_words = await memories.recall("Moustache", limit=1)
+        by_meaning = await recall(memories, "Je mets du jambon ?", limit=2)
+        by_words = await recall(memories, "Moustache", limit=1)
     assert by_meaning[0].id == ids["est"], "found by meaning, ranked first"
     assert [m.id for m in by_words] == [ids["chat"]], "and still by words"
 
 
 async def test_without_an_embedder_or_while_it_is_down_memories_are_found_by_their_words(tmp_path: Path) -> None:
     embedder = ConceptEmbedder(CONCEPTS)
-    async with embedder, open_memories(tmp_path, embedder) as memories:
+    async with embedder, open_memories(tmp_path, embedder) as (memories, _):
         ids = await remembered(memories)
         embedder.fail = True
-        assert [m.id for m in await memories.recall("code du portail")] == [ids["portail"]]
-        assert await memories.recall("jambon") == [], "no word in common, no meaning: nothing"
+        assert [m.id for m in await recall(memories, "code du portail")] == [ids["portail"]]
+        assert await recall(memories, "jambon") == [], "no word in common, no meaning: nothing"
         await memories.remember("Le code du garage est 5678.")  # remembered all the same, embedded later
         await settled(memories)  # the attempt failed: it is tried again at the next change or start
-    async with open_memories(tmp_path) as words_only:
-        assert len(await words_only.recall("code")) == 2
+    async with open_memories(tmp_path) as (words_only, _):
+        assert len(await recall(words_only, "code")) == 2
 
 
 async def test_vectors_follow_corrections_and_forgetting(tmp_path: Path) -> None:
     embedder = ConceptEmbedder(CONCEPTS)
-    async with embedder, open_memories(tmp_path, embedder) as memories:
+    async with embedder, open_memories(tmp_path, embedder) as (memories, _):
         ids = await remembered(memories)
         await memories.correct(ids["chat"], "Le chat mange de la viande crue.")
         await settled(memories)
-        assert ids["chat"] in [m.id for m in await memories.recall("saucisse", limit=3)]
+        assert ids["chat"] in [m.id for m in await recall(memories, "saucisse", limit=3)]
         await memories.forget(ids["est"])
         await settled(memories)
-        assert ids["est"] not in [m.id for m in await memories.recall("jambon", limit=3)]
+        assert ids["est"] not in [m.id for m in await recall(memories, "jambon", limit=3)]
 
 
 async def test_a_new_model_embeds_every_memory_again_and_an_unchanged_one_is_never_embedded_twice(
     tmp_path: Path,
 ) -> None:
     first = ConceptEmbedder(CONCEPTS, model="first")
-    async with first, open_memories(tmp_path, first) as memories:
+    async with first, open_memories(tmp_path, first) as (memories, _):
         await remembered(memories)
         assert memories.index is not None
         assert await memories.index.reconcile() == 0, "every memory already has its vector"
     second = ConceptEmbedder(CONCEPTS, model="second")
-    async with second, open_memories(tmp_path, second) as memories:
+    async with second, open_memories(tmp_path, second) as (memories, _):
         await settled(memories)  # reconciled at start: another space, everything again
         assert memories.index is not None
         assert len(await memories.index.vectors.fingerprints(second.space, "memory")) == 3
         assert len(await memories.index.vectors.fingerprints(first.space, "memory")) == 0, "the old space is dropped"
-        assert (await memories.recall("jambon", limit=1))[0].text == "Mathilde est végétarienne."
+        assert (await recall(memories, "jambon", limit=1))[0].text == "Mathilde est végétarienne."
 
 
 def test_fusion_ranks_first_what_both_lists_found() -> None:
-    from nestor.modules.memory import Memory
-
     a, b, c = (Memory(id=i, text=i) for i in "abc")
     assert [m.id for m in fused([[a, b], [c, b]])] == ["b", "a", "c"]
 
@@ -116,11 +119,11 @@ class Flaky(ConceptEmbedder):
 
 async def test_the_batches_embedded_before_a_failure_are_kept(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(index_module, "BATCH", 2)
-    async with open_memories(tmp_path) as plain:
+    async with open_memories(tmp_path) as (plain, _):
         for n in range(5):
             await plain.remember(f"Souvenir numéro {n}.")
     embedder = Flaky(failing=2, error=ProviderError("flaky", "rate limited", transient=True))
-    async with embedder, open_memories(tmp_path, embedder) as memories:
+    async with embedder, open_memories(tmp_path, embedder) as (memories, _):
         await settled(memories)  # reconciled at start: the first batch went in, the second failed
         assert memories.index is not None
         assert len(await memories.index.vectors.fingerprints(embedder.space, "memory")) == 2
@@ -129,7 +132,7 @@ async def test_the_batches_embedded_before_a_failure_are_kept(tmp_path: Path, mo
 
 async def test_an_unexpected_failure_never_stops_the_index_from_keeping_up(tmp_path: Path) -> None:
     embedder = Flaky(failing=1, error=RuntimeError("a bug somewhere"))  # nothing to embed at start
-    async with embedder, open_memories(tmp_path, embedder) as memories:
+    async with embedder, open_memories(tmp_path, embedder) as (memories, _):
         await settled(memories)
         first = await memories.remember("Mathilde est végétarienne.")  # its catch-up fails unexpectedly
         await settled(memories)

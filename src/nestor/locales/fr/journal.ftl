@@ -155,9 +155,16 @@ journal-watch-ended = Veille { $watch } { $reason ->
    *[other] { $reason }
 }
 
-journal-memory-recorded = Souvenir enregistré
+journal-memory-recorded = { $drawn ->
+    [yes] Souvenir tiré d'une conversation
+   *[no] Souvenir enregistré
+}
 journal-memory-corrected = Souvenir corrigé
 journal-memory-forgotten = Souvenir oublié
+journal-episode-summarized = { $kept ->
+    [yes] Conversation résumée
+   *[no] Conversation sans rien à retenir
+}
 
 journal-connection-created = Compte { $account } connecté ({ $kind })
 journal-connection-changed = Connexion { $connection } { $status ->

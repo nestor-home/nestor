@@ -2,10 +2,10 @@
 
 import sqlite3
 from collections.abc import Mapping
-from datetime import UTC, datetime
+from datetime import datetime
 
+from nestor.adapters.storage.sqlite.common import from_time_key, time_key
 from nestor.adapters.storage.sqlite.database import SQLiteDatabase
-from nestor.adapters.storage.sqlite.event_log import time_key
 from nestor.modules.accounts import ActivityStore
 
 
@@ -39,4 +39,4 @@ class SQLiteActivityStore(ActivityStore):
             return connection.execute("SELECT account_id, seen_at FROM account_activity").fetchall()
 
         rows = await self.database.read(query)
-        return {account: datetime.strptime(at, "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=UTC) for account, at in rows}
+        return {account: from_time_key(at) for account, at in rows}

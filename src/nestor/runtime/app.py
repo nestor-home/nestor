@@ -14,15 +14,16 @@ from typing import Self, cast
 from nestor.adapters.i18n import FluentLocalizer, catalogue_dirs
 from nestor.adapters.oauth import HttpxTokenEndpoint
 from nestor.adapters.storage.sqlite import (
+    GENERATE,
     SQLiteActivityStore,
     SQLiteDatabase,
+    SQLiteEpisodeStore,
     SQLiteEventLog,
     SQLiteMemoryStore,
     SQLiteVault,
     SQLiteVectorIndex,
     SQLiteVerifierStore,
 )
-from nestor.adapters.storage.sqlite.vault import GENERATE
 from nestor.core import Component, ContractError, ProviderError
 from nestor.core.i18n import Locale
 from nestor.modules.accounts import Accounts
@@ -55,8 +56,9 @@ from nestor.modules.initiative import (
 )
 from nestor.modules.initiative.watches.assistant import WatchTools
 from nestor.modules.journal import Journal
-from nestor.modules.memory import Memories, MemoryIndex
+from nestor.modules.memory import Memories, SearchIndex
 from nestor.modules.memory.assistant import MemoryTools
+from nestor.modules.memory.episodes import Consolidator, Episodes
 from nestor.modules.satellites import Pairing, SatelliteHost
 from nestor.runtime.config import AdapterConfig, ComponentConfig, ConfigError, NestorConfig
 from nestor.runtime.plugins import Family, Plugged, Registry, Services
@@ -190,11 +192,19 @@ class Nestor:
                 code="not_embedding",
                 detail=config.memory.embedder,
             )
-        self.memories, self._memory_parts = assemble_memories(
+        self.memories, self.episodes, self._memory_parts = assemble_memories(
             self.journal, self.database, embedder, query_timeout_s=config.memory.query_timeout_s
         )
         recall = config.memory.recall()
-        memory = MemoryTools(self.memories, self.household, recall=recall)
+        memory = MemoryTools(
+            self.memories,
+            self.episodes,
+            self.household,
+            self.journal,
+            assistant=config.persona.name,
+            timezone=config.persona.timezone,
+            recall=recall,
+        )
         self.watch_book = WatchBook(self.journal, kinds=(k for source in self.sources for k in source.kinds))
         watch_tools = WatchTools(self.watch_book)
         self.message_book = MessageBook(self.journal)
@@ -251,6 +261,18 @@ class Nestor:
             Triage(model("watches.model", roles["watches"]), language=config.persona.language),
             self.sources,
         )
+        self.consolidator = Consolidator(
+            self.journal,
+            model("memory.consolidation", roles["consolidation"]),
+            self.memories,
+            self.episodes,
+            self.household,
+            over_after_s=self.agent.conversations.over_after_s,
+            assistant=config.persona.name,
+            language=config.persona.language,
+            timezone=config.persona.timezone,
+            known=config.memory.recent,
+        )
         self.activity = ActivityMonitor(
             self.journal, self.agent.replies, self.tasks, quiet_hours=quiet_hours, timezone=config.persona.timezone
         )
@@ -292,6 +314,7 @@ class Nestor:
             *self.sources,
             self.watches,
             self.activity,
+            self.consolidator,
         ]
 
     async def __aenter__(self) -> Self:
@@ -398,31 +421,36 @@ async def open_accounts(data_dir: Path, people: Iterable[Person]) -> AsyncGenera
 
 def assemble_memories(
     journal: Journal, database: SQLiteDatabase, embedder: Embedder | None, *, query_timeout_s: float = 1.0
-) -> tuple[Memories, tuple[Component, ...]]:
-    """The memories as every instance keeps them, and the components they need started (the vector index and
-    the memory index when there is an embedder, after it)."""
-    store = SQLiteMemoryStore(database)
+) -> tuple[Memories, Episodes, tuple[Component, ...]]:
+    """The memories and episodes as every instance keeps them, and the components they need started (the vector
+    index and the search indexes when there is an embedder, after it)."""
+    store, episode_store = SQLiteMemoryStore(database), SQLiteEpisodeStore(database)
     if embedder is None:
-        return Memories(journal, store), ()
+        return Memories(journal, store), Episodes(journal, episode_store), ()
     vectors = SQLiteVectorIndex(database)
-    index = MemoryIndex(store, embedder, vectors, query_timeout_s=query_timeout_s)
-    return Memories(journal, store, index), (vectors, index)
+    memory_index = SearchIndex("memory", store, embedder, vectors, query_timeout_s=query_timeout_s)
+    episode_index = SearchIndex("episode", episode_store, embedder, vectors, query_timeout_s=query_timeout_s)
+    return (
+        Memories(journal, store, memory_index),
+        Episodes(journal, episode_store, episode_index),
+        (vectors, memory_index, episode_index),
+    )
 
 
 @contextlib.asynccontextmanager
 async def open_memories(
     data_dir: Path, embedder: Embedder | None = None, *, query_timeout_s: float = 1.0
-) -> AsyncGenerator[Memories]:
-    """The memories kept in `data_dir`, assembled and searched as a running instance does (the `embedder` is
-    started by the caller), without the rest of Nestor: a bench measures recall on them."""
+) -> AsyncGenerator[tuple[Memories, Episodes]]:
+    """The memories and episodes kept in `data_dir`, assembled and searched as a running instance does (the
+    `embedder` is started by the caller), without the rest of Nestor: a bench measures recall on them."""
     database = SQLiteDatabase(database_path(data_dir))
     async with database, AsyncExitStack() as stack:
-        memories, parts = assemble_memories(
+        memories, episodes, parts = assemble_memories(
             Journal(SQLiteEventLog(database)), database, embedder, query_timeout_s=query_timeout_s
         )
         for part in parts:
             await stack.enter_async_context(part)
-        yield memories
+        yield memories, episodes
 
 
 class Restart:

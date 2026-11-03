@@ -1,0 +1,37 @@
+"""The event log in SQLite: the contract, plus what only a database file can break."""
+
+import sqlite3
+from pathlib import Path
+
+import pytest
+
+from nestor.adapters.storage.sqlite import SQLiteEventLog
+from nestor.modules.journal import LogQuery
+from nestor.testing.journal import EventLogContract, Probe
+
+
+class TestSQLiteEventLog(EventLogContract):
+    @pytest.fixture(autouse=True)
+    def _path(self, db_path: Path) -> None:
+        self.path = db_path
+
+    def event_log(self) -> SQLiteEventLog:
+        return SQLiteEventLog.at(self.path)
+
+
+async def test_events_survive_a_restart(db_path: Path) -> None:
+    event = Probe(source="test", label="persisté", count=7)
+    async with SQLiteEventLog.at(db_path) as log:
+        await log.append(event)
+    async with SQLiteEventLog.at(db_path) as log:
+        entries = await log.read(LogQuery())
+    assert [e.event() for e in entries] == [event]
+
+
+async def test_the_log_cannot_be_rewritten_even_with_raw_sql(db_path: Path) -> None:
+    async with SQLiteEventLog.at(db_path) as log:
+        await log.append(Probe(source="test", label="gravé"))
+        for statement in ("UPDATE events SET source = 'x'", "DELETE FROM events"):
+            with pytest.raises(sqlite3.IntegrityError, match="append-only"):
+                await log.database.write(lambda c, s=statement: c.execute(s))
+        assert len(await log.read(LogQuery())) == 1

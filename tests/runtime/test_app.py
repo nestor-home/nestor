@@ -334,7 +334,7 @@ async def test_memories_persist_in_the_database(tmp_path: Path) -> None:
         await fakes.channels[0].ask("Retiens que le chat s'appelle Biscotte")
         serving.cancel()
     async with Nestor(config(tmp_path, []), Fakes().registry()) as restarted:
-        assert [m.text for m in await restarted.memories.recall("chat")] == ["Le chat s'appelle Biscotte"]
+        assert [m.text for m in await restarted.memories.recall("chat", vector=None)] == ["Le chat s'appelle Biscotte"]
 
 
 async def test_a_watch_created_in_conversation_is_announced_when_its_mail_arrives(tmp_path: Path) -> None:

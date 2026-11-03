@@ -9,7 +9,7 @@ from typing import Any
 from nestor.core import PersonId, new_id, utc_now
 from nestor.core.i18n import Message
 from nestor.modules.accounts import Role
-from nestor.modules.channels import Address, Exchange, InboundMessage, Sender
+from nestor.modules.channels import Address, Exchange, InboundMessage, Medium, Sender
 from nestor.modules.cognition import TaskEnded, TaskStarted, TaskStatus
 from nestor.modules.cognition.delegation.events import TaskDelivered
 from nestor.modules.conversation import Conversations, UserTurn
@@ -83,6 +83,7 @@ async def test_the_position_cursor_pages_back_through_a_filtered_journal(tmp_pat
         for n in range(5):
             await admin.nestor.journal.publish(
                 UserTurn(
+                    medium=Medium.WRITTEN,
                     exchange=Exchange(conversation_id="c1", turn_id=new_id()),
                     source="agent",
                     address=TELEGRAM,
@@ -103,6 +104,7 @@ async def test_every_filter_narrows_the_journal(tmp_path: Path) -> None:
         journal = admin.nestor.journal
         await journal.publish(
             UserTurn(
+                medium=Medium.WRITTEN,
                 exchange=Exchange(conversation_id="c1", turn_id=new_id()),
                 source="agent",
                 session=TELEGRAM.session,
@@ -113,6 +115,7 @@ async def test_every_filter_narrows_the_journal(tmp_path: Path) -> None:
         )
         await journal.publish(
             UserTurn(
+                medium=Medium.WRITTEN,
                 exchange=Exchange(conversation_id="c1", turn_id=new_id()),
                 source="agent",
                 session=VOICE.session,
@@ -146,6 +149,7 @@ async def test_each_facet_is_counted_ignoring_its_own_selection(tmp_path: Path) 
         for text, person, address in (("a", MATHIS, TELEGRAM), ("b", MATHIS, TELEGRAM), ("c", MATHILDE, VOICE)):
             await journal.publish(
                 UserTurn(
+                    medium=Medium.WRITTEN,
                     exchange=Exchange(conversation_id="c1", turn_id=new_id()),
                     source="agent",
                     address=address,
@@ -181,6 +185,7 @@ async def test_one_entry_comes_with_its_record_and_only_to_who_may_read_it(tmp_p
         await admin.account("mathilde", Role.MEMBER, "mathilde")
         await admin.nestor.journal.publish(
             UserTurn(
+                medium=Medium.WRITTEN,
                 exchange=Exchange(conversation_id="c1", turn_id=new_id()),
                 source="agent",
                 address=TELEGRAM,

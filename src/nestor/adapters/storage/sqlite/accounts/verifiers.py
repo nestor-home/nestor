@@ -6,8 +6,8 @@ sign in, even on an instance without connectors.
 
 import sqlite3
 
+from nestor.adapters.storage.sqlite.common import time_key
 from nestor.adapters.storage.sqlite.database import SQLiteDatabase
-from nestor.adapters.storage.sqlite.event_log import time_key
 from nestor.core import utc_now
 from nestor.modules.accounts import VerifierStore
 

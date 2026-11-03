@@ -63,6 +63,11 @@ class Conversations:
         if current is not None and current.id == exchange.conversation_id:
             self._open[address.session] = _Open(current.id, self._clock())
 
+    def over_after_s(self, address: Address) -> float:
+        """The silence after which a conversation at this address is over whatever comes next: the longest
+        its mediums allow (a spoken question may still get a typed follow-up)."""
+        return max(self._ends_after_s(address, medium) for medium in Medium)
+
     async def current(self, address: Address, medium: Medium) -> str | None:
         """The session's open conversation for a turn through `medium`, without starting one; `None`
         when it has none."""
