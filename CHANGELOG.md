@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.7.0](https://github.com/nestor-home/nestor/compare/v0.6.0...v0.7.0) (2026-11-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* models under names the household chooses, picked by role ([#34](https://github.com/nestor-home/nestor/issues/34))
+
+### Features
+
+* durable wake-ups, so the agent does things later, once or regularly ([#38](https://github.com/nestor-home/nestor/issues/38)) ([4f7aef6](https://github.com/nestor-home/nestor/commit/4f7aef628c41d0481e9117dfea1e13fd88984e34))
+* episodes, so the agent remembers past conversations ([#41](https://github.com/nestor-home/nestor/issues/41)) ([9fcd42f](https://github.com/nestor-home/nestor/commit/9fcd42f7c2c5f6d95e059d09d78e87ab6d2264ad))
+* instructions in layers, from the stable to this turn's, for the prompt cache ([#35](https://github.com/nestor-home/nestor/issues/35)) ([1b6a54a](https://github.com/nestor-home/nestor/commit/1b6a54aa5215a6660064ee12ece4c9fdcf3b2eb6))
+* memories in every turn, found by words and by meaning ([#40](https://github.com/nestor-home/nestor/issues/40)) ([cd138cb](https://github.com/nestor-home/nestor/commit/cd138cb49a56bfb6db1456e279a77ea69c0dd4aa))
+* message_person, so the agent passes messages and questions on to the household ([#37](https://github.com/nestor-home/nestor/issues/37)) ([812d564](https://github.com/nestor-home/nestor/commit/812d56444be1b37ac59cfcfe71f97b8edc06e33c))
+* models under names the household chooses, picked by role ([#34](https://github.com/nestor-home/nestor/issues/34)) ([03e83bc](https://github.com/nestor-home/nestor/commit/03e83bcff4fbff413039afee428548d348843a6b))
+
+
+### Bug Fixes
+
+* serve a channel again after it stops, and wait out a second Telegram poller ([#30](https://github.com/nestor-home/nestor/issues/30)) ([905edf6](https://github.com/nestor-home/nestor/commit/905edf62b154ba966b1c813fe797dbf766cb929b))
+
+
+### Documentation
+
+* the README and compose.yaml follow the satellites channel ([#32](https://github.com/nestor-home/nestor/issues/32)) ([ac35e92](https://github.com/nestor-home/nestor/commit/ac35e9297f05bfba8c6bb67a27923dc97c5ba632))
+
 ## [0.6.0](https://github.com/nestor-home/nestor/compare/v0.5.0...v0.6.0) (2026-11-02)
 
 
