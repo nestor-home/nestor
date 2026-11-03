@@ -2,23 +2,14 @@
 
 import json
 import sqlite3
-from datetime import UTC, datetime
 from pathlib import Path
 
+from nestor.adapters.storage.sqlite.common import from_time_key, time_key
 from nestor.adapters.storage.sqlite.database import SQLiteDatabase
 from nestor.core import ContractError, Event, Record
 from nestor.modules.journal import Entry, EventLog, LogQuery
 
 _COLUMNS = "position, id, type, version, at, source, session, payload"
-
-
-def time_key(at: datetime) -> str:
-    """Fixed-width UTC text, so that SQL comparisons on it follow time."""
-    return at.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-
-
-def from_time_key(key: str) -> datetime:
-    return datetime.strptime(key, "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=UTC)
 
 
 class SQLiteEventLog(EventLog):

@@ -14,6 +14,7 @@ from typing import Self, cast
 from nestor.adapters.i18n import FluentLocalizer, catalogue_dirs
 from nestor.adapters.oauth import HttpxTokenEndpoint
 from nestor.adapters.storage.sqlite import (
+    GENERATE,
     SQLiteActivityStore,
     SQLiteDatabase,
     SQLiteEpisodeStore,
@@ -23,7 +24,6 @@ from nestor.adapters.storage.sqlite import (
     SQLiteVectorIndex,
     SQLiteVerifierStore,
 )
-from nestor.adapters.storage.sqlite.vault import GENERATE
 from nestor.core import Component, ContractError, ProviderError
 from nestor.core.i18n import Locale
 from nestor.modules.accounts import Accounts

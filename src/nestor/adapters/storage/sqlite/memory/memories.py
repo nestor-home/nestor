@@ -3,9 +3,8 @@
 import sqlite3
 from collections.abc import Collection
 
+from nestor.adapters.storage.sqlite.common import from_time_key, match, time_key
 from nestor.adapters.storage.sqlite.database import SQLiteDatabase
-from nestor.adapters.storage.sqlite.event_log import from_time_key, time_key
-from nestor.adapters.storage.sqlite.text import match
 from nestor.core import PersonId
 from nestor.modules.channels import Address
 from nestor.modules.memory import Memory, MemoryStore
