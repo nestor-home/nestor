@@ -7,6 +7,7 @@ from nestor.core import Capability, Health
 from nestor.modules.accounts import Role
 from nestor.modules.channels import Medium
 from nestor.modules.satellites import DeclaredCapability, Device, Manifest, Sdk
+from nestor.modules.system import Releases
 from nestor.runtime import Distribution, Registry
 from nestor.testing.channels import InMemoryChannel
 from nestor.testing.satellites import pair_by_code
@@ -85,3 +86,45 @@ async def test_the_agent_is_online_until_its_model_or_a_channel_cannot_serve(tmp
         admin.nestor.channels.append(Down("broken"))
         assert (await api.get("/api/v1/me")).json()["agent"]["status"] == "degraded"
         assert (await api.get("/api/v1/system")).json()["agent"] == {"name": "Richie", "status": "degraded"}
+
+
+def _feed(*versions: str, protocols: tuple[str, ...] = ("nestor.satellite/1",)) -> Releases:
+    return Releases.from_json({
+        "protocols": list(protocols),
+        "releases": [
+            {"version": v, "date": "2026-11-05", "url": f"https://x/v{v}",
+             "changes": [{"kind": "breaking", "text": "models by role"}] if v == "9.0.0" else []}
+            for v in versions
+        ],
+    })  # fmt: skip
+
+
+async def test_the_admin_learns_what_was_released_since_the_running_version(tmp_path: Path) -> None:
+    running = metadata.version("nestor-home")
+    async with Harness(tmp_path) as admin:
+        await pair_by_code(admin.nestor.pairing, REACHY)
+        api = await admin.api()
+        unknown = (await api.get("/api/v1/system/updates")).json()
+        assert (unknown["running"], unknown["releases"]) == (running, [])
+
+        admin.releases.releases = _feed(running)
+        assert admin.nestor.updates is not None
+        await admin.nestor.updates.check()
+        current = (await api.get("/api/v1/system/updates")).json()
+        assert current["releases"] == []
+
+        admin.releases.releases = _feed("9.0.0", "8.0.0", running, protocols=("nestor.satellite/2",))
+        await admin.nestor.updates.check()
+        newer = (await api.get("/api/v1/system/updates")).json()
+        assert [(r["version"], r["breaking"]) for r in newer["releases"]] == [("9.0.0", True), ("8.0.0", False)]
+        assert newer["releases"][0]["changes"] == [{"kind": "breaking", "text": "models by role"}]
+
+        await admin.account("mathilde", Role.MEMBER, "mathilde")
+        assert (await (await admin.api("mathilde")).get("/api/v1/system/updates")).status_code == 403
+
+
+async def test_an_instance_told_not_to_check_says_so(tmp_path: Path) -> None:
+    async with Harness(tmp_path) as admin:
+        admin.nestor.updates = None
+        answer = (await (await admin.api()).get("/api/v1/system/updates")).json()
+        assert answer["releases"] == []

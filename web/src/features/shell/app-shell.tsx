@@ -23,6 +23,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Wordmark } from "@/components/wordmark";
 import { AgentPresenceProvider, useAgentPresence } from "@/features/agent/presence";
 import { RestartBanner } from "@/features/config/restart";
+import { UpdateAvailable } from "@/features/system/updates";
 import { useAccountLocale, useT } from "@/i18n";
 import { useMe } from "@/lib/session";
 import { cn } from "@/lib/utils";
@@ -141,6 +142,7 @@ function Navigation() {
         </nav>
       </SidebarContent>
       <SidebarFooter className="gap-2 border-t border-rule px-2 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+        <UpdateAvailable compact={collapsed} />
         <AccountMenu compact={collapsed} />
         <CollapseToggle />
       </SidebarFooter>

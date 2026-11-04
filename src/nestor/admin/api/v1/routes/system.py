@@ -1,12 +1,13 @@
 """What is plugged in: every configured adapter and paired satellite, its brand, version and health."""
 
 import asyncio
-from importlib import metadata
+from datetime import date
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
 
+from nestor import __version__
 from nestor.admin.api.v1.errors import ApiError
 from nestor.admin.api.v1.models import AgentOut, Input
 from nestor.admin.api.v1.routes.satellites import live_rooms
@@ -17,14 +18,13 @@ from nestor.core import Component, Health
 from nestor.core.i18n import Message
 from nestor.modules.accounts import Scope
 from nestor.modules.connectors import Connector
-from nestor.modules.system import RestartRequested
+from nestor.modules.system import ChangeKind, Release, RestartRequested
 from nestor.runtime import Plugged
 
 router = APIRouter(tags=["system"])
 Reader = Annotated[Caller, Depends(allowed(Scope.SYSTEM_READ))]
 Restarter = Annotated[Caller, Depends(allowed(Scope.CONFIG_MANAGE, local=True))]
 RESTART_DELAY_S = 0.2
-DISTRIBUTION = "nestor-home"
 
 
 class ComponentOut(BaseModel):
@@ -75,7 +75,7 @@ async def get_system(request: Request, caller: Reader) -> SystemOut:
             )
         )
     return SystemOut(
-        nestor=NestorOut(version=metadata.version(DISTRIBUTION)),
+        nestor=NestorOut(version=__version__),
         agent=AgentOut.of(nestor),
         restart_required=bool(state(request).pending_changes),
         pending_changes=state(request).pending_changes,
@@ -99,6 +99,44 @@ def _component(plugged: Plugged, words: Phrasebook) -> ComponentOut:
         health=component.health() if component else Health.STARTED,
         health_detail=words.text(detail) if detail else None,
         details=dict(component.details()) if component else {},
+    )
+
+
+class ReleaseChangeOut(BaseModel):
+    kind: ChangeKind
+    text: str  # one line of the changelog, in English
+
+
+class ReleaseOut(BaseModel):
+    version: str
+    date: date
+    url: str  # its notes, for people
+    breaking: bool  # the data or the configuration must be redone, or a contract changed
+    changes: list[ReleaseChangeOut]
+
+
+class UpdatesOut(BaseModel):
+    """What was released since the running version."""
+
+    running: str
+    releases: list[ReleaseOut]  # newer than the running version, newest first; empty: up to date (or not checked)
+
+
+@router.get("/system/updates")
+async def get_updates(request: Request, caller: Reader) -> UpdatesOut:
+    updates = state(request).nestor.updates
+    if updates is None:
+        return UpdatesOut(running=__version__, releases=[])
+    return UpdatesOut(running=updates.running, releases=[_release(r) for r in updates.newer()])
+
+
+def _release(release: Release) -> ReleaseOut:
+    return ReleaseOut(
+        version=release.version,
+        date=release.date,
+        url=release.url,
+        breaking=release.breaking,
+        changes=[ReleaseChangeOut(kind=c.kind, text=c.text) for c in release.changes],
     )
 
 

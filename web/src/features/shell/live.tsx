@@ -17,7 +17,7 @@ const STALE: Record<string, readonly (readonly unknown[])[]> = {
   watch: [keys.watches],
   memory: [["memories"]],
   connection: [keys.connections],
-  satellite: [keys.satellites], // its list and each satellite
+  satellite: [keys.satellites], // its list and each satellite: a connection, an update reported
   presence: [keys.people],
 };
 

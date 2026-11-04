@@ -927,6 +927,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/system/updates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Updates */
+        get: operations["getUpdates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/system/restart": {
         parameters: {
             query?: never;
@@ -1263,6 +1280,11 @@ export interface components {
             /** Label */
             label: string;
         };
+        /**
+         * ChangeKind
+         * @enum {string}
+         */
+        ChangeKind: "breaking" | "feature" | "fix" | "other";
         /** ChangeOut */
         ChangeOut: {
             /** Path */
@@ -1997,6 +2019,28 @@ export interface components {
             /** Text */
             text: string;
         };
+        /** ReleaseChangeOut */
+        ReleaseChangeOut: {
+            kind: components["schemas"]["ChangeKind"];
+            /** Text */
+            text: string;
+        };
+        /** ReleaseOut */
+        ReleaseOut: {
+            /** Version */
+            version: string;
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Url */
+            url: string;
+            /** Breaking */
+            breaking: boolean;
+            /** Changes */
+            changes: components["schemas"]["ReleaseChangeOut"][];
+        };
         /** RestartIn */
         RestartIn: {
             /** Confirm */
@@ -2215,6 +2259,16 @@ export interface components {
             risk_label: string;
             /** Enabled */
             enabled: boolean;
+        };
+        /**
+         * UpdatesOut
+         * @description What was released since the running version.
+         */
+        UpdatesOut: {
+            /** Running */
+            running: string;
+            /** Releases */
+            releases: components["schemas"]["ReleaseOut"][];
         };
         /** WatchOut */
         WatchOut: {
@@ -7495,6 +7549,98 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SystemOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    getUpdates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UpdatesOut"];
                 };
             };
             /** @description Bad Request */

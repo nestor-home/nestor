@@ -19,6 +19,7 @@ config-section-watches = Watches
 config-section-memory = Memory
 config-section-initiative = Initiative
 config-section-admin = Admin
+config-section-updates = Updates
 config-section-data_dir = Data
 
 config-slot-models = Models
@@ -74,6 +75,10 @@ config-initiative-follow_up_after_s = Written follow-up after (seconds)
 config-admin-public_url = Public address
 config-admin-public_url-help = How the household's browsers reach the admin, e.g. https://nestor.example.org.
 config-admin-relay_url = OAuth relay
+config-updates-check = Check for new releases
+config-updates-check-help = Once a day, Nestor reads its release feed and the admin says when a newer release is out. Nothing is installed.
+config-updates-feed = Release feed
+config-updates-feed-help = Where the list of releases is read from.
 
 # Plugins' settings: a generic title per field name, a specific one where the name says too little.
 config-field-api_base = API address

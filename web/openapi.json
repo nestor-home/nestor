@@ -6678,6 +6678,107 @@
         }
       }
     },
+    "/api/v1/system/updates": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Get Updates",
+        "operationId": "getUpdates",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdatesOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/system/restart": {
       "post": {
         "tags": [
@@ -8482,6 +8583,16 @@
           "label"
         ],
         "title": "CapabilityOut"
+      },
+      "ChangeKind": {
+        "type": "string",
+        "enum": [
+          "breaking",
+          "feature",
+          "fix",
+          "other"
+        ],
+        "title": "ChangeKind"
       },
       "ChangeOut": {
         "properties": {
@@ -10756,6 +10867,60 @@
         ],
         "title": "ReasonOut"
       },
+      "ReleaseChangeOut": {
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/ChangeKind"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "text"
+        ],
+        "title": "ReleaseChangeOut"
+      },
+      "ReleaseOut": {
+        "properties": {
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "breaking": {
+            "type": "boolean",
+            "title": "Breaking"
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/ReleaseChangeOut"
+            },
+            "type": "array",
+            "title": "Changes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version",
+          "date",
+          "url",
+          "breaking",
+          "changes"
+        ],
+        "title": "ReleaseOut"
+      },
       "RestartIn": {
         "properties": {
           "confirm": {
@@ -11442,6 +11607,28 @@
           "enabled"
         ],
         "title": "ToolOut"
+      },
+      "UpdatesOut": {
+        "properties": {
+          "running": {
+            "type": "string",
+            "title": "Running"
+          },
+          "releases": {
+            "items": {
+              "$ref": "#/components/schemas/ReleaseOut"
+            },
+            "type": "array",
+            "title": "Releases"
+          }
+        },
+        "type": "object",
+        "required": [
+          "running",
+          "releases"
+        ],
+        "title": "UpdatesOut",
+        "description": "What was released since the running version."
       },
       "WatchOut": {
         "properties": {

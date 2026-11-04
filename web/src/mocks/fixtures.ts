@@ -19,6 +19,7 @@ import type {
   SystemInfo,
   Task,
   Tool,
+  Updates,
   Watch,
 } from "@/api";
 import type { ScopeDto } from "@/api/dto";
@@ -865,6 +866,33 @@ const component = (
 
 const ONE_TASK = fr("1 task running", "1 tâche en cours");
 const PYTHON_SDK_042 = fr("Python SDK 0.4.2", "SDK Python 0.4.2");
+
+/** What the release feed says: two releases after the running 0.9.0, the newest one breaking. */
+export function updates(): Updates {
+  return {
+    running: "0.9.0",
+    releases: [
+      {
+        version: "0.10.0",
+        date: "2026-11-04",
+        url: "https://github.com/nestor-home/nestor/releases/tag/v0.10.0",
+        breaking: true,
+        changes: [
+          { kind: "breaking", text: "the configuration names its models by role" },
+          { kind: "feature", text: "the admin says when a newer Nestor is out" },
+          { kind: "fix", text: "a typed follow-up stays in the room's conversation" },
+        ],
+      },
+      {
+        version: "0.9.1",
+        date: "2026-11-03",
+        url: "https://github.com/nestor-home/nestor/releases/tag/v0.9.1",
+        breaking: false,
+        changes: [{ kind: "fix", text: "serve a channel again after it stops" }],
+      },
+    ],
+  };
+}
 
 export function system(): SystemInfo {
   return {

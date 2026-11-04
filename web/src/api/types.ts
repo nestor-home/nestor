@@ -477,6 +477,23 @@ export interface Component {
   details: Record<string, string>;
 }
 
+export type ChangeKind = "breaking" | "feature" | "fix" | "other";
+
+/** One release of Nestor, from its release feed: the changelog lines are English plain text. */
+export interface Release {
+  version: string;
+  date: string; // YYYY-MM-DD
+  url: string;
+  breaking: boolean;
+  changes: { kind: ChangeKind; text: string }[];
+}
+
+/** What was released since the running version (`GET /system/updates`). */
+export interface Updates {
+  running: string;
+  releases: Release[]; // newer than the running one, newest first
+}
+
 export interface SystemInfo {
   nestor: { version: string };
   agent: Agent;

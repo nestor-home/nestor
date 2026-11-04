@@ -449,6 +449,50 @@
       "title": "AdminConfig",
       "type": "object"
     },
+    "updates": {
+      "additionalProperties": false,
+      "description": "Whether Nestor reads its release feed to tell the admin about newer releases. It never installs\nanything: the household updates the way it installed Nestor.",
+      "properties": {
+        "check": {
+          "default": true,
+          "title": "Check",
+          "type": "boolean",
+          "x-nestor": {
+            "field": "check",
+            "title_id": "config-updates-check",
+            "help_id": "config-updates-check-help",
+            "fallback_title_id": "config-field-check",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "updates",
+            "reference": null,
+            "title": "Chercher les nouvelles versions",
+            "help": "Une fois par jour, Nestor lit la liste de ses versions et l'admin signale une version plus récente. Rien n'est installé."
+          }
+        },
+        "feed": {
+          "default": "https://github.com/nestor-home/nestor/releases/latest/download/releases.json",
+          "title": "Feed",
+          "type": "string",
+          "x-nestor": {
+            "field": "feed",
+            "title_id": "config-updates-feed",
+            "help_id": "config-updates-feed-help",
+            "fallback_title_id": "config-field-feed",
+            "secret": false,
+            "secret_values": false,
+            "advanced": true,
+            "group": "updates",
+            "reference": null,
+            "title": "Liste des versions",
+            "help": "L'adresse où la liste des versions est lue."
+          }
+        }
+      },
+      "title": "UpdatesConfig",
+      "type": "object"
+    },
     "data_dir": {
       "type": "object",
       "properties": {
@@ -481,6 +525,7 @@
     "conversation": "Conversations",
     "initiative": "Initiative",
     "admin": "Administration",
+    "updates": "Mises à jour",
     "data_dir": "Données"
   },
   "slots": {
