@@ -188,8 +188,8 @@ importers:
         specifier: 5.3.0
         version: 5.3.0
       '@nestor-home/character':
-        specifier: 0.1.0
-        version: 0.1.0(react@19.3.1)
+        specifier: 0.2.0
+        version: 0.2.0(react@19.3.1)
       '@tanstack/react-query':
         specifier: 5.105.0
         version: 5.105.0(@types/react@19.3.0)(react@19.3.1)
@@ -642,8 +642,8 @@ packages:
     resolution: {integrity: sha512-pGZkvxzv6PZAQCpZHuu+TRs/4U8GWlClRToQETz4MHwwnq0dSxS279xRQ2StBVPpwXxTKtXpLHeK6MGSuxh8uA==}
     engines: {node: '>=22'}
 
-  '@nestor-home/character@0.1.0':
-    resolution: {integrity: sha512-OeFniQQqj5YaPDmG4vJ4NIHXvkaj2Ub72zK1a8fFLhIon+nLdjo0CETes6RRLtq39Kl1+NkzRDo6Yh0ybYY/5A==}
+  '@nestor-home/character@0.2.0':
+    resolution: {integrity: sha512-6QCHYtL545L9TTwmDcq3kPLX9Lb8v9RfH9w92SjCwO+aOzRbEZVrbp41wqEZNnlSKrbdJ9CGnmbv+q8q/RJ0XQ==}
     engines: {node: '>=22.12'}
     peerDependencies:
       react: '>=18'
@@ -2543,7 +2543,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@nestor-home/character@0.1.0(react@19.3.1)':
+  '@nestor-home/character@0.2.0(react@19.3.1)':
     optionalDependencies:
       react: 19.3.1
 
