@@ -120,8 +120,8 @@ class AdminConfig(Section):
 
 
 class UpdatesConfig(Section):
-    """Whether Nestor reads its release feed to tell the admin about newer releases. It never installs
-    anything: the household updates the way it installed Nestor."""
+    """Whether Nestor reads its release feed to tell the admin about newer releases. It installs one only
+    when a person asks in the admin, and only where it runs from its own Python environment."""
 
     check: bool = True
     feed: str = Field(default="https://github.com/nestor-home/nestor/releases/latest/download/releases.json",
