@@ -10,7 +10,7 @@ from nestor.adapters.i18n import FluentLocalizer, catalogue_dirs
 from nestor.core import Capability
 from nestor.modules.satellites import Device, Manifest, PairingMethod
 from nestor.modules.satellites.types import DeclaredCapability
-from nestor.testing.satellites import Finding
+from nestor.testing.satellites import SOFTWARE, Finding
 
 from .reference import Faults, ReferenceSatellite
 
@@ -25,19 +25,22 @@ MANIFEST = Manifest(
             "motion.head",
             "vision.person_detection",
             "device.identify",
+            "device.update",
             "text.display",
         )
     ),
     (PairingMethod.DISPLAY, PairingMethod.PROVISIONING),
+    software=SOFTWARE,
 )
 
 
 SPEAKER = Manifest(
     Device("enceinte-salon", "raspberry-pi-zero", "salon"),
     (DeclaredCapability(Capability("audio.capture")), DeclaredCapability(Capability("audio.playback"))),
+    software=SOFTWARE,
 )
 SENSOR = Manifest(Device("capteur-entree", "esp32", "entree"),
-                  (DeclaredCapability(Capability("vision.person_detection")),))  # fmt: skip
+                  (DeclaredCapability(Capability("vision.person_detection")),), software=SOFTWARE)  # fmt: skip
 ENGLISH = FluentLocalizer(catalogue_dirs(["nestor"]))
 
 
@@ -62,6 +65,10 @@ async def test_the_reference_satellite_conforms() -> None:
         "keeps polling after a pending identify (I1)",
         "acknowledges intent.expression within 1 s",
         "acknowledges intent.identify within 1 s",
+        "acknowledges intent.update within 1 s",
+        "reports where its software stands (U1)",
+        "never installs a version it did not report (U2)",
+        "enrolled: reports where its software stands (U1)",
         "reconnects with the same token after the core closes its link (L5)",
         "pairs with the enrollment code of NESTOR_PAIRING_URI, no code typed (P3, P4)",
         "presents a refused enrollment code (used) only once (P5)",
@@ -78,6 +85,7 @@ async def test_a_device_is_only_checked_on_what_it_declared(manifest: Manifest) 
     checks = named(findings.items)
     assert "acknowledges intent.expression within 1 s" not in checks
     assert not {"acknowledges intent.identify within 1 s", "keeps polling after a pending identify (I1)"} & checks
+    assert "reports where its software stands (U1)" not in checks
     assert ("receives the core's audio (A1, A2)" in checks) is (manifest is SPEAKER)
 
 
@@ -110,6 +118,8 @@ async def test_a_driver_program_that_exits_is_reported() -> None:
         (Faults(falls_back=False), "falls back to a device code after its enrollment code is refused (wrong) (P5)"),
         (Faults(retries_refused=True), "presents a refused enrollment code (expired) only once (P5)"),
         (Faults(honours_retry_after=False), "waits for Retry-After when rate-limited (P6)"),
+        (Faults(reports_update=False), "reports where its software stands (U1)"),
+        (Faults(installs_unreported=True), "never installs a version it did not report (U2)"),
     ],
     ids=[
         "no acks",
@@ -125,6 +135,8 @@ async def test_a_driver_program_that_exits_is_reported() -> None:
         "stuck on a refused code",
         "insists on a refused code",
         "ignores Retry-After",
+        "silent about its software",
+        "installs what it is told",
     ],
 )
 async def test_a_broken_satellite_is_caught(faults: Faults, failing: str) -> None:
@@ -133,7 +145,11 @@ async def test_a_broken_satellite_is_caught(faults: Faults, failing: str) -> Non
 
 
 async def test_an_observation_without_its_capability_is_off_contract() -> None:
-    blind = Manifest(MANIFEST.device, tuple(c for c in MANIFEST.capabilities if c.name != "vision.person_detection"))
+    blind = Manifest(
+        MANIFEST.device,
+        tuple(c for c in MANIFEST.capabilities if c.name != "vision.person_detection"),
+        software=SOFTWARE,
+    )
     findings = await check_satellite(ReferenceSatellite("", blind, observe=True), deadline_s=4)
     assert "every message follows the schema" in named(findings.failures())
 
@@ -146,6 +162,6 @@ async def test_a_driver_that_never_pairs_fails_at_once() -> None:
 
 
 async def test_a_driver_without_enrollment_provisioning_is_caught() -> None:
-    display_only = Manifest(SPEAKER.device, SPEAKER.capabilities, (PairingMethod.DISPLAY,))
+    display_only = Manifest(SPEAKER.device, SPEAKER.capabilities, (PairingMethod.DISPLAY,), software=SOFTWARE)
     findings = await check_satellite(ReferenceSatellite("", display_only), deadline_s=3)
     assert "declares enrollment.provisioning (P1)" in named(findings.failures())

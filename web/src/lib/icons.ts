@@ -7,6 +7,7 @@ import {
   AudioLines,
   BookMarked,
   CircleAlert,
+  CircleArrowUp,
   CircleCheck,
   CircleDashed,
   CircleSlash,
@@ -79,6 +80,7 @@ export const CAPABILITY_ICON: Record<string, LucideIcon> = {
   "expression.emotion": Smile,
   "motion.head": Move3d,
   "device.identify": Lightbulb,
+  "device.update": CircleArrowUp,
 };
 
 export const SECTION_ICON = {

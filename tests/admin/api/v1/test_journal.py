@@ -14,7 +14,7 @@ from nestor.modules.channels import Address, Exchange, Medium
 from nestor.modules.conversation import AssistantTurn, UserTurn
 from nestor.modules.initiative import DeliveryConsidered
 from nestor.modules.memory import MemoryRecorded
-from nestor.testing.satellites import pair_by_code
+from nestor.testing.satellites import SOFTWARE, pair_by_code
 
 from ...harness import EventStream, Harness
 
@@ -215,7 +215,7 @@ async def test_items_carry_the_ids_that_link_them_into_threads(tmp_path: Path) -
         await journal.publish(
             ToolCompleted(source="toolbox", call_id="c1", name="light", output="ok", ok=True, duration_s=0.1)
         )
-        await admin.nestor.pairing.request(Manifest(Device("mic-bureau", "esp32", "bureau")))
+        await admin.nestor.pairing.request(Manifest(Device("mic-bureau", "esp32", "bureau"), software=SOFTWARE))
         items = {i["type"]: i for i in (await (await admin.api()).get("/api/v1/journal")).json()["items"]}
         user, called = items["conversation.turn.user"], items["agent.tool.called"]
         completed, pairing = items["agent.tool.completed"], items["satellite.pairing.requested"]
@@ -269,6 +269,7 @@ async def test_the_important_events_are_told_in_the_readers_language(tmp_path: P
         reachy = Manifest(
             Device("reachy-salon", "reachy-mini", "salon"),
             tuple(DeclaredCapability(Capability(c)) for c in ("audio.capture", "audio.playback")),
+            software=SOFTWARE,
         )
         await pair_by_code(pairing, reachy, by=mathis)
         await pairing.revoke("reachy-salon", by=mathis)
@@ -302,7 +303,7 @@ async def test_the_important_events_are_told_in_the_readers_language(tmp_path: P
                 status=Status.NEEDS_REAUTH,
                 reason=Message.of("connection-refresh-refused"),
             ),
-            SatelliteConnected(source="voice", device_id="reachy-salon", room="salon"),
+            SatelliteConnected(source="voice", device_id="reachy-salon", room="salon", software=SOFTWARE),
             SatelliteDisconnected(source="voice", device_id="reachy-salon", room="salon"),
             PersonDetected(source="voice", device_id="reachy-salon", room="salon", count=2, confidence=0.87),
             PersonDetected(source="voice", device_id="reachy-salon", room="salon", count=1, confidence=0.5),

@@ -4474,6 +4474,119 @@
         }
       }
     },
+    "/api/v1/satellites/{device_id}/update": {
+      "post": {
+        "tags": [
+          "satellites"
+        ],
+        "summary": "Update Satellite",
+        "description": "Ask a connected satellite to install the newer version of its software it reported. It fetches it\nfrom its own source, starts again on it, and goes back to the version it ran if that fails.",
+        "operationId": "updateSatellite",
+        "parameters": [
+          {
+            "name": "device_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Device Id"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateRequestedOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/satellites/approvals": {
       "post": {
         "tags": [
@@ -6678,6 +6791,107 @@
         }
       }
     },
+    "/api/v1/system/updates": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Get Updates",
+        "operationId": "getUpdates",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdatesOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/system/restart": {
       "post": {
         "tags": [
@@ -8482,6 +8696,16 @@
           "label"
         ],
         "title": "CapabilityOut"
+      },
+      "ChangeKind": {
+        "type": "string",
+        "enum": [
+          "breaking",
+          "feature",
+          "fix",
+          "other"
+        ],
+        "title": "ChangeKind"
       },
       "ChangeOut": {
         "properties": {
@@ -10457,27 +10681,8 @@
             "type": "boolean",
             "title": "Can Identify"
           },
-          "sdk": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Sdk"
-          },
-          "sdk_version": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Sdk Version"
+          "software": {
+            "$ref": "#/components/schemas/SoftwareOut"
           },
           "expires_in_s": {
             "type": "integer",
@@ -10492,8 +10697,7 @@
           "methods",
           "recommended_method",
           "can_identify",
-          "sdk",
-          "sdk_version",
+          "software",
           "expires_in_s"
         ],
         "title": "PendingOut"
@@ -10756,6 +10960,60 @@
         ],
         "title": "ReasonOut"
       },
+      "ReleaseChangeOut": {
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/ChangeKind"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "text"
+        ],
+        "title": "ReleaseChangeOut"
+      },
+      "ReleaseOut": {
+        "properties": {
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "breaking": {
+            "type": "boolean",
+            "title": "Breaking"
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/ReleaseChangeOut"
+            },
+            "type": "array",
+            "title": "Changes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version",
+          "date",
+          "url",
+          "breaking",
+          "changes"
+        ],
+        "title": "ReleaseOut"
+      },
       "RestartIn": {
         "properties": {
           "confirm": {
@@ -10851,27 +11109,12 @@
             ],
             "title": "Brand"
           },
-          "sdk": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Sdk"
+          "software": {
+            "$ref": "#/components/schemas/SoftwareOut"
           },
-          "sdk_version": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Sdk Version"
+          "protocol": {
+            "type": "string",
+            "title": "Protocol"
           },
           "capabilities": {
             "items": {
@@ -10883,6 +11126,20 @@
           "can_identify": {
             "type": "boolean",
             "title": "Can Identify"
+          },
+          "can_update": {
+            "type": "boolean",
+            "title": "Can Update"
+          },
+          "update": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UpdateOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "paired_at": {
             "type": "string",
@@ -10930,10 +11187,12 @@
           "model",
           "room",
           "brand",
-          "sdk",
-          "sdk_version",
+          "software",
+          "protocol",
           "capabilities",
           "can_identify",
+          "can_update",
+          "update",
           "paired_at",
           "last_seen_at",
           "approved_by",
@@ -11173,6 +11432,24 @@
           "kinds"
         ],
         "title": "SlotOut"
+      },
+      "SoftwareOut": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "version"
+        ],
+        "title": "SoftwareOut"
       },
       "Stage": {
         "type": "string",
@@ -11442,6 +11719,120 @@
           "enabled"
         ],
         "title": "ToolOut"
+      },
+      "UpdateOut": {
+        "properties": {
+          "state": {
+            "$ref": "#/components/schemas/UpdateState"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "state",
+          "version"
+        ],
+        "title": "UpdateOut",
+        "description": "What a connected device last reported about its software."
+      },
+      "UpdateRequestedOut": {
+        "properties": {
+          "version": {
+            "type": "string",
+            "title": "Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version"
+        ],
+        "title": "UpdateRequestedOut"
+      },
+      "UpdateState": {
+        "type": "string",
+        "enum": [
+          "current",
+          "available",
+          "installing",
+          "failed"
+        ],
+        "title": "UpdateState",
+        "description": "Where a device's own software stands, as it reports it (`update.status`)."
+      },
+      "UpdatesOut": {
+        "properties": {
+          "running": {
+            "type": "string",
+            "title": "Running"
+          },
+          "checking": {
+            "type": "boolean",
+            "title": "Checking"
+          },
+          "checked_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checked At"
+          },
+          "latest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest"
+          },
+          "releases": {
+            "items": {
+              "$ref": "#/components/schemas/ReleaseOut"
+            },
+            "type": "array",
+            "title": "Releases"
+          },
+          "outdated_satellites": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Outdated Satellites"
+          },
+          "container": {
+            "type": "boolean",
+            "title": "Container"
+          }
+        },
+        "type": "object",
+        "required": [
+          "running",
+          "checking",
+          "checked_at",
+          "latest",
+          "releases",
+          "outdated_satellites",
+          "container"
+        ],
+        "title": "UpdatesOut",
+        "description": "What was released since the running version. Nothing here installs anything."
       },
       "WatchOut": {
         "properties": {

@@ -30,9 +30,11 @@ from nestor.modules.accounts import Scope
 from nestor.modules.satellites import (
     IDENTIFY,
     RECOMMENDED,
+    UPDATE,
     Addition,
     AdditionStatus,
-    IdentifyUnavailable,
+    DeviceUnavailable,
+    Online,
     PairingMethod,
     PairingRefused,
     PendingPairing,
@@ -40,6 +42,8 @@ from nestor.modules.satellites import (
     SatelliteConnected,
     SatelliteDisconnected,
     SatellitePaired,
+    Software,
+    UpdateState,
     group,
     pairing_uri,
     recommended,
@@ -78,6 +82,18 @@ class DeviceOut(BaseModel):
     brand: str | None  # its maker, as the device declares it
 
 
+class SoftwareOut(BaseModel):
+    name: str  # its package, where it is installed from
+    version: str
+
+
+class UpdateOut(BaseModel):
+    """What a connected device last reported about its software."""
+
+    state: UpdateState
+    version: str | None  # the newer version, for every state but `current`
+
+
 class PendingOut(BaseModel):
     pairing_id: str
     device: DeviceOut
@@ -85,8 +101,7 @@ class PendingOut(BaseModel):
     methods: list[MethodOut]  # how it can be paired, the recommended one first
     recommended_method: PairingMethod
     can_identify: bool  # it declared device.identify: `POST /satellites/pending/{pairing_id}/identify`
-    sdk: str | None  # the software it declares
-    sdk_version: str | None
+    software: SoftwareOut  # what it declares it runs
     expires_in_s: int
 
 
@@ -96,10 +111,12 @@ class SatelliteOut(BaseModel):
     model: str
     room: str
     brand: str | None
-    sdk: str | None  # the software it declared
-    sdk_version: str | None
+    software: SoftwareOut  # what it runs, as it last declared
+    protocol: str  # the protocol version it speaks
     capabilities: list[CapabilityOut]  # what it may use
     can_identify: bool  # allowed device.identify: `POST /satellites/{device_id}/identify` while connected
+    can_update: bool  # allowed device.update: `POST /satellites/{device_id}/update` once it reports a version
+    update: UpdateOut | None  # what it reported about its software; None while offline or before it reports
     paired_at: datetime
     last_seen_at: datetime | None  # when it last connected or disconnected; None: never since pairing
     approved_by: PersonRef | None
@@ -179,7 +196,12 @@ async def list_satellites(request: Request, caller: Pairer) -> SatellitesOut:
         pending=[_pending(p, words, now) for p in pending],
         paired=[
             _satellite(
-                s, people.ref(approvals[s.id].approved_by) if s.id in approvals else None, live, words, seen.get(s.id)
+                s,
+                people.ref(approvals[s.id].approved_by) if s.id in approvals else None,
+                live,
+                words,
+                seen.get(s.id),
+                pairing.connected(s.id),
             )
             for s in pairing.satellites()
         ],
@@ -254,8 +276,8 @@ async def identify_pending(request: Request, caller: Pairer, pairing_id: str) ->
     """Ask a pending device to make itself noticed (it hears it within a second or so)."""
     try:
         await state(request).nestor.pairing.identify_pending(pairing_id, by=caller.person)
-    except IdentifyUnavailable as unavailable:
-        raise _identify_error(unavailable, "pending_unknown") from None
+    except DeviceUnavailable as unavailable:
+        raise _unavailable(unavailable, "pending_unknown") from None
     return Response(status_code=204)
 
 
@@ -270,7 +292,14 @@ async def get_satellite(request: Request, caller: Pairer, device_id: str) -> Sat
     approved = approvals[device_id].approved_by if device_id in approvals else None
     people = People(admin.nestor.household)
     seen = await last_seen(admin)
-    return _satellite(satellite, people.ref(approved), live_rooms(admin), caller.phrasebook, seen.get(device_id))
+    return _satellite(
+        satellite,
+        people.ref(approved),
+        live_rooms(admin),
+        caller.phrasebook,
+        seen.get(device_id),
+        admin.nestor.pairing.connected(device_id),
+    )
 
 
 @router.post("/satellites/{device_id}/identify", status_code=204)
@@ -278,9 +307,26 @@ async def identify_satellite(request: Request, caller: Pairer, device_id: str) -
     """Ask a paired, connected satellite to make itself noticed."""
     try:
         await state(request).nestor.pairing.identify(device_id, by=caller.person)
-    except IdentifyUnavailable as unavailable:
-        raise _identify_error(unavailable, "satellite_unknown") from None
+    except DeviceUnavailable as unavailable:
+        raise _unavailable(unavailable, "satellite_unknown") from None
     return Response(status_code=204)
+
+
+class UpdateRequestedOut(BaseModel):
+    version: str  # what it was asked to install; its next connection shows it running
+
+
+@router.post("/satellites/{device_id}/update", status_code=202)
+async def update_satellite(request: Request, caller: Pairer, device_id: str) -> UpdateRequestedOut:
+    """Ask a connected satellite to install the newer version of its software it reported. It fetches it
+    from its own source, starts again on it, and goes back to the version it ran if that fails."""
+    try:
+        version = await state(request).nestor.pairing.update(device_id, by=caller.person)
+    except DeviceUnavailable as unavailable:
+        if unavailable.reason == "current":
+            raise ApiError(409, "update_unavailable") from None
+        raise _unavailable(unavailable, "satellite_unknown", unsupported="update_unsupported") from None
+    return UpdateRequestedOut(version=version)
 
 
 @router.post("/satellites/approvals", status_code=201)
@@ -327,10 +373,12 @@ async def last_seen(admin: AdminState) -> dict[str, datetime]:
     return {e.device_id: e.at for e in events}
 
 
-def _identify_error(unavailable: IdentifyUnavailable, unknown: str) -> ApiError:
+def _unavailable(
+    unavailable: DeviceUnavailable, unknown: str, *, unsupported: str = "identify_unsupported"
+) -> ApiError:
     if unavailable.reason == "unknown":
         return not_found(unknown)
-    return ApiError(409, "identify_unsupported" if unavailable.reason == "unsupported" else "satellite_offline")
+    return ApiError(409, unsupported if unavailable.reason == "unsupported" else "satellite_offline")
 
 
 def _method(method: PairingMethod, words: Phrasebook) -> MethodOut:
@@ -354,8 +402,7 @@ def _pending(pending: PendingPairing, words: Phrasebook, now: datetime) -> Pendi
         methods=[_method(m, words) for m in ordered],
         recommended_method=best,
         can_identify=pending.can_identify,
-        sdk=pending.sdk.name if pending.sdk else None,
-        sdk_version=pending.sdk.version if pending.sdk else None,
+        software=_software(pending.software),
         expires_in_s=max(0, int((pending.expires_at - now).total_seconds())),
     )  # fmt: skip
 
@@ -391,22 +438,30 @@ def _satellite(
     live: frozenset[str] | None,
     words: Phrasebook,
     seen: datetime | None = None,
+    online: Online | None = None,
 ) -> SatelliteOut:
+    status = online.update_status if online else None
     return SatelliteOut(
         id=satellite.id,
         name=satellite.name,
         model=satellite.model,
         room=satellite.room,
         brand=satellite.brand,
-        sdk=satellite.sdk,
-        sdk_version=satellite.sdk_version,
+        software=_software(satellite.software),
+        protocol=satellite.protocol,
         capabilities=_capabilities(satellite.capabilities, words),
         can_identify=IDENTIFY in satellite.capabilities,
+        can_update=UPDATE in satellite.capabilities,
+        update=UpdateOut(state=status.state, version=status.version) if status else None,
         paired_at=satellite.paired_at,
         last_seen_at=seen,
         approved_by=approved_by,
         connected=satellite.room in live if live is not None else None,
     )
+
+
+def _software(software: Software) -> SoftwareOut:
+    return SoftwareOut(name=software.name, version=software.version)
 
 
 def _capabilities(names: frozenset[Capability] | tuple[Capability, ...], words: Phrasebook) -> list[CapabilityOut]:

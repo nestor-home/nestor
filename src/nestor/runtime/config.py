@@ -119,6 +119,15 @@ class AdminConfig(Section):
     relay_url: str = Field(default="https://nestorhome.dev/redirect/oauth", json_schema_extra=ADVANCED)
 
 
+class UpdatesConfig(Section):
+    """Whether Nestor reads its release feed to tell the admin about newer releases. It never installs
+    anything: the household updates the way it installed Nestor."""
+
+    check: bool = True
+    feed: str = Field(default="https://github.com/nestor-home/nestor/releases/latest/download/releases.json",
+                      json_schema_extra=ADVANCED)  # fmt: skip
+
+
 class ComponentConfig(BaseModel):
     """`kind` picks the plugin; the other keys are its settings, validated by the plugin."""
 
@@ -199,6 +208,7 @@ class NestorConfig(Section):
     presence: AdapterConfig | None = None
     initiative: InitiativeConfig = InitiativeConfig()
     admin: AdminConfig | None = None
+    updates: UpdatesConfig = UpdatesConfig()
     # services accounts are plugged into from the admin; by default every installed one when the admin is on
     connectors: tuple[AdapterConfig, ...] | None = None
 

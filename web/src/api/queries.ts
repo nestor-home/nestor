@@ -15,6 +15,7 @@ export const keys = {
   journalFacets: (filters: JournalFilters) => ["journal", "facets", filters] as const,
   journalEvent: (id: Id) => ["journal", "event", id] as const,
   system: ["system"] as const,
+  updates: ["system", "updates"] as const,
   connectors: ["connectors"] as const,
   connector: (kind: string) => ["connectors", kind] as const,
   connections: ["connections"] as const,
@@ -81,6 +82,9 @@ export const journalEventQuery = (id: Id) =>
 
 export const systemQuery = queryOptions({ queryKey: keys.system, queryFn: api.system, refetchInterval: 15_000 });
 
+/** The feed is read by Nestor once a day: asking hourly is plenty. */
+export const updatesQuery = queryOptions({ queryKey: keys.updates, queryFn: api.updates, staleTime: 3_600_000 });
+
 export const connectorsQuery = queryOptions({ queryKey: keys.connectors, queryFn: api.connectors });
 export const connectorQuery = (kind: string) =>
   queryOptions({ queryKey: keys.connector(kind), queryFn: () => api.connector(kind) });
@@ -105,8 +109,13 @@ export const additionQuery = (id: Id) =>
     queryFn: ({ signal }) => api.addition(id, signal),
     refetchInterval: (q) => (q.state.data && !["waiting", "device_seen"].includes(q.state.data.stage) ? false : 1_500),
   });
+/** Followed closely while it installs a version: it comes back on it, or reports it failed. */
 export const satelliteQuery = (id: string) =>
-  queryOptions({ queryKey: keys.satellite(id), queryFn: () => api.satellite(id) });
+  queryOptions({
+    queryKey: keys.satellite(id),
+    queryFn: () => api.satellite(id),
+    refetchInterval: (q) => (q.state.data?.update?.state === "installing" ? 2_000 : false),
+  });
 export const tasksQuery = queryOptions({ queryKey: keys.tasks, queryFn: api.tasks, refetchInterval: 5_000 });
 export const taskQuery = (id: Id) =>
   queryOptions({

@@ -323,4 +323,6 @@ error-too-many-additions = Too many additions are in progress. Cancel one first.
 error-pending-unknown = No device is waiting with this request any more.
 error-identify-unsupported = This device cannot make itself noticed.
 error-satellite-offline = This satellite is not connected right now.
+error-update-unavailable = This satellite reported no newer version.
+error-update-unsupported = This satellite was not allowed to update itself.
 error-satellite-unknown = This satellite is not (or no longer) paired.

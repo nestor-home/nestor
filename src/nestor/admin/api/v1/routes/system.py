@@ -1,7 +1,8 @@
 """What is plugged in: every configured adapter and paired satellite, its brand, version and health."""
 
 import asyncio
-from importlib import metadata
+from datetime import date, datetime
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
@@ -17,14 +18,13 @@ from nestor.core import Component, Health
 from nestor.core.i18n import Message
 from nestor.modules.accounts import Scope
 from nestor.modules.connectors import Connector
-from nestor.modules.system import RestartRequested
+from nestor.modules.system import ChangeKind, Release, RestartRequested
 from nestor.runtime import Plugged
 
 router = APIRouter(tags=["system"])
 Reader = Annotated[Caller, Depends(allowed(Scope.SYSTEM_READ))]
 Restarter = Annotated[Caller, Depends(allowed(Scope.CONFIG_MANAGE, local=True))]
 RESTART_DELAY_S = 0.2
-DISTRIBUTION = "nestor-home"
 
 
 class ComponentOut(BaseModel):
@@ -66,8 +66,8 @@ async def get_system(request: Request, caller: Reader) -> SystemOut:
                 name=s.id,
                 adapter=s.model,
                 brand=s.brand,
-                version=s.sdk_version,
-                distribution=s.sdk,
+                version=s.software.version,
+                distribution=s.software.name,
                 capabilities=sorted(s.capabilities),
                 health=None if live is None else Health.UNAVAILABLE if offline else Health.STARTED,
                 health_detail=words.text(Message.of("health-satellite-offline", room=s.room)) if offline else None,
@@ -75,7 +75,7 @@ async def get_system(request: Request, caller: Reader) -> SystemOut:
             )
         )
     return SystemOut(
-        nestor=NestorOut(version=metadata.version(DISTRIBUTION)),
+        nestor=NestorOut(version=nestor.version),
         agent=AgentOut.of(nestor),
         restart_required=bool(state(request).pending_changes),
         pending_changes=state(request).pending_changes,
@@ -99,6 +99,59 @@ def _component(plugged: Plugged, words: Phrasebook) -> ComponentOut:
         health=component.health() if component else Health.STARTED,
         health_detail=words.text(detail) if detail else None,
         details=dict(component.details()) if component else {},
+    )
+
+
+class ReleaseChangeOut(BaseModel):
+    kind: ChangeKind
+    text: str  # one line of the changelog, in English
+
+
+class ReleaseOut(BaseModel):
+    version: str
+    date: date
+    url: str  # its notes, for people
+    breaking: bool  # the data or the configuration must be redone, or a contract changed
+    changes: list[ReleaseChangeOut]
+
+
+class UpdatesOut(BaseModel):
+    """What was released since the running version. Nothing here installs anything."""
+
+    running: str
+    checking: bool  # `updates.check`: the release feed is read once a day
+    checked_at: datetime | None  # when it was last read; None: not yet (a minute after starting)
+    latest: str | None  # the newest release; None until the feed was read
+    releases: list[ReleaseOut]  # newer than the running version, newest first; empty: up to date
+    outdated_satellites: list[str]  # paired devices on a protocol the newest release no longer speaks
+    container: bool  # it runs in a container: update the image rather than the package
+
+
+@router.get("/system/updates")
+async def get_updates(request: Request, caller: Reader) -> UpdatesOut:
+    nestor = state(request).nestor
+    updates = nestor.updates
+    feed = updates.releases if updates else None
+    newer = feed.newer_than(nestor.version) if feed else ()
+    outdated = [s.id for s in nestor.pairing.satellites() if newer and feed and s.protocol not in feed.protocols]
+    return UpdatesOut(
+        running=nestor.version,
+        checking=updates is not None,
+        checked_at=updates.checked_at if updates else None,
+        latest=feed.latest.version if feed and feed.latest else None,
+        releases=[_release(r) for r in newer],
+        outdated_satellites=outdated,
+        container=Path("/.dockerenv").exists(),
+    )
+
+
+def _release(release: Release) -> ReleaseOut:
+    return ReleaseOut(
+        version=release.version,
+        date=release.date,
+        url=release.url,
+        breaking=release.breaking,
+        changes=[ReleaseChangeOut(kind=c.kind, text=c.text) for c in release.changes],
     )
 
 

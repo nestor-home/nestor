@@ -74,7 +74,10 @@ from nestor.modules.satellites import (
     SatellitePaired,
     SatellitePairingRequested,
     SatelliteRevoked,
+    SatelliteUpdateReported,
+    SatelliteUpdateRequested,
     SpeechActivityObserved,
+    UpdateState,
 )
 from nestor.modules.system import ConfigChanged, RestartRequested, SecretChanged
 
@@ -125,6 +128,8 @@ CATEGORIES = (
             SatelliteRevoked,
             SatelliteConnected,
             SatelliteDisconnected,
+            SatelliteUpdateRequested,
+            SatelliteUpdateReported,
             SatelliteAdditionStarted,
             SatelliteAdditionCompleted,
             SatelliteAdditionCancelled,
@@ -394,7 +399,23 @@ class EventDescriber:
                 tone=Tone.WARNING,
             ),
             SatelliteConnected: lambda e: self._line(
-                e, Message.of("journal-satellite-connected", device=e.device_id, room=e.room)
+                e,
+                Message.of("journal-satellite-connected", device=e.device_id, room=e.room),
+                detail_message=Message.of("journal-detail-software", name=e.software.name, version=e.software.version),
+            ),
+            SatelliteUpdateRequested: lambda e: self._line(
+                e,
+                Message.of(
+                    "journal-satellite-update-requested", device=e.device_id, running=e.running, target=e.target
+                ),
+                people=[e.requested_by],
+            ),
+            SatelliteUpdateReported: lambda e: self._line(
+                e,
+                Message.of(
+                    "journal-satellite-update-reported", device=e.device_id, state=e.state.value, target=e.target or ""
+                ),
+                tone=Tone.WARNING if e.state is UpdateState.FAILED else Tone.NORMAL,
             ),
             SatelliteDisconnected: lambda e: self._line(
                 e, Message.of("journal-satellite-disconnected", device=e.device_id, room=e.room)

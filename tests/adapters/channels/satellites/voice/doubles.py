@@ -27,6 +27,7 @@ from nestor.adapters.channels.satellites.voice.providers import Speech
 from nestor.core import Capability, PersonId, utc_now
 from nestor.modules.channels import Address, Assistant, InboundMessage, MessageEnd, Reply, Sender
 from nestor.modules.satellites import AUDIO_CAPTURE, AUDIO_PLAYBACK, Satellite, wire
+from nestor.testing.satellites import SOFTWARE
 
 from .replay import ReplayTransport, ScenarioClock
 
@@ -202,7 +203,13 @@ class FakeLink:
     def __init__(self, *allowed: Capability, room: str = "salon", device_id: str = "enceinte-salon") -> None:
         self.allowed = frozenset(allowed or (AUDIO_CAPTURE, AUDIO_PLAYBACK))
         self.satellite = Satellite(
-            id=device_id, model="test", room=room, capabilities=self.allowed, token_hash="x", paired_at=utc_now()
+            id=device_id,
+            model="test",
+            room=room,
+            capabilities=self.allowed,
+            token_hash="x",
+            paired_at=utc_now(),
+            software=SOFTWARE,
         )
         self.sent: list[wire.Message] = []
 

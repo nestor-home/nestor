@@ -147,7 +147,7 @@ function PairedRow({ satellite: s }: { satellite: Satellite }) {
             return Icon ? <Icon key={c.name} className="size-3.5" aria-label={c.label} /> : null;
           })}
         </span>
-        <span>
+        <span className="grid min-w-0 gap-0.5">
           {s.connected === null ? (
             <Status tone="idle">{t("sat-state-unknown")}</Status>
           ) : s.connected ? (
@@ -163,6 +163,9 @@ function PairedRow({ satellite: s }: { satellite: Satellite }) {
               ) : null}
             </Status>
           )}
+          {s.update?.state === "available" ? (
+            <span className="truncate text-[0.75rem] text-ember">{t("sat-update-badge")}</span>
+          ) : null}
         </span>
         <ArrowRight className="hidden size-3.5 text-ink-faint group-hover:text-ink sm:block" aria-hidden="true" />
       </Link>

@@ -36,6 +36,7 @@ from nestor.modules.satellites import (
 )
 from nestor.modules.satellites.types import DeclaredCapability
 from nestor.testing.journal import MemoryEventLog
+from nestor.testing.satellites import SOFTWARE
 
 from .reference import Faults, ReferenceSatellite
 from .test_conformance import MANIFEST
@@ -44,7 +45,9 @@ from .voice.replay import ReplayTransport
 
 KITCHEN = Address("satellites", "cuisine")
 SCREEN = Manifest(
-    Device("ecran-cuisine", "tablet", "cuisine"), (DeclaredCapability(TEXT_INPUT), DeclaredCapability(TEXT_DISPLAY))
+    Device("ecran-cuisine", "tablet", "cuisine"),
+    (DeclaredCapability(TEXT_INPUT), DeclaredCapability(TEXT_DISPLAY)),
+    software=SOFTWARE,
 )
 
 
@@ -237,7 +240,12 @@ async def test_without_a_voice_no_audio_is_allowed_on_the_link() -> None:
 @pytest.mark.parametrize(
     ("first", "code"),
     [
-        (lambda token: hello(Manifest(Device("quelqu-un", "x", "salon"), SCREEN.capabilities), token), 4400),
+        (
+            lambda token: hello(
+                Manifest(Device("quelqu-un", "x", "salon"), SCREEN.capabilities, software=SOFTWARE), token
+            ),
+            4400,
+        ),
         (lambda token: hello(SCREEN, "nst1_guessed"), 4401),
         (lambda token: json.dumps(wire.encode(wire.Ack(of="x"))), 4400),
         (lambda token: "pas du JSON", 4400),

@@ -3,7 +3,8 @@
 Everything the device says is checked against the wire contract and attributed to the *paired*
 device and room, never to what the message claims. Observations become journal events, typed text
 becomes turns of the room's conversation, intents go out (through `RemoteBody` for the body) and are
-acknowledged by id. What the device was not allowed is ignored.
+acknowledged by id. What the device reports about its software is kept for the admin and journaled.
+What the device was not allowed is ignored.
 """
 
 import asyncio
@@ -20,11 +21,15 @@ from nestor.core import Capabilities, Capability, ContractError
 from nestor.modules.behavior import EXPRESSION, HEAD_MOTION, Behavior, Body, Expression
 from nestor.modules.journal import Journal
 from nestor.modules.satellites import (
+    Manifest,
+    Online,
     PersonDetected,
     Satellite,
     SatelliteConnected,
     SatelliteDisconnected,
+    SatelliteUpdateReported,
     SpeechActivityObserved,
+    UpdateStatus,
     wire,
 )
 
@@ -36,7 +41,7 @@ SOURCE = "satellites"
 type Typed = Callable[["SatelliteLink", str], Awaitable[None]]
 
 
-class SatelliteLink:
+class SatelliteLink(Online):
     """A welcomed device: `run` reads it until it leaves; `send` queues a message for it.
 
     An intent not acknowledged within `ack_timeout_s` is logged once and forgotten: the device may
@@ -48,12 +53,14 @@ class SatelliteLink:
         self,
         socket: WebSocket,
         satellite: Satellite,
+        manifest: Manifest,
         journal: Journal,
         *,
         allowed: frozenset[Capability],
         ack_timeout_s: float = 2.0,
     ) -> None:
         self.satellite = satellite
+        self.manifest = manifest
         self.allowed = allowed  # what `welcome` granted: the pairing's capabilities the core can serve
         self._socket = socket
         self._journal = journal
@@ -71,6 +78,10 @@ class SatelliteLink:
     def identify(self) -> None:
         """Ask the device to make itself noticed (it declared and was allowed `device.identify`)."""
         self.send(wire.IdentifyIntent())
+
+    def update(self, version: str) -> None:
+        """Ask the device to install `version` of its software (it was allowed `device.update`)."""
+        self.send(wire.UpdateIntent(version=version))
 
     def send(self, message: wire.Message) -> None:
         if self._closed.is_set():
@@ -98,7 +109,9 @@ class SatelliteLink:
         text it sends, in order."""
         satellite = self.satellite
         self.send(wire.Welcome(device_id=satellite.id, room=satellite.room, capabilities=tuple(sorted(self.allowed))))
-        await self._journal.publish(SatelliteConnected(source=SOURCE, device_id=satellite.id, room=satellite.room))
+        software, protocol = self.manifest.software, self.manifest.protocol
+        await self._journal.publish(SatelliteConnected(source=SOURCE, device_id=satellite.id, room=satellite.room,
+                                                       software=software, protocol=protocol))  # fmt: skip
         writer = asyncio.create_task(self._write(), name=f"satellite {satellite.id} out")
         answering = asyncio.create_task(self._answer(typed), name=f"satellite {satellite.id} text")
         try:
@@ -169,6 +182,13 @@ class SatelliteLink:
                 await self._journal.publish(
                     SpeechActivityObserved(source=SOURCE, device_id=satellite.id, room=satellite.room, active=active)
                 )
+            case wire.UpdateStatusReport(state=state, version=version):
+                reported = UpdateStatus(state, version)
+                if reported != self.update_status:
+                    self.update_status = reported
+                    await self._journal.publish(
+                        SatelliteUpdateReported(source=SOURCE, device_id=satellite.id, state=state, target=version)
+                    )
 
     def _forget_overdue(self) -> None:
         deadline = time.monotonic() - self._ack_timeout_s

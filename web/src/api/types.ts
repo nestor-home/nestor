@@ -330,7 +330,8 @@ export interface PairingMethods {
 /** A device asking to be paired, waiting for a proof. */
 export interface PairingRequest {
   id: Id; // the pairing id
-  device: { id: string; model: string; room: string; brand: string | null; sdk: string | null };
+  device: { id: string; model: string; room: string; brand: string | null };
+  software: Software; // what it declares it runs
   capabilities: Capability[];
   methods: PairingMethod[]; // the recommended one first
   recommended_method: PairingMethodId;
@@ -369,6 +370,20 @@ export interface StartedAddition {
   uri: string | null; // null when no host serves satellites
 }
 
+/** The software a device runs, named as its package is where it is installed from. */
+export interface Software {
+  name: string;
+  version: string;
+}
+
+export type UpdateState = "current" | "available" | "installing" | "failed";
+
+/** What a connected device last reported about its software; `version` is the newer one. */
+export interface SatelliteUpdate {
+  state: UpdateState;
+  version: string | null;
+}
+
 export interface Satellite {
   id: string;
   name: string | null;
@@ -382,8 +397,10 @@ export interface Satellite {
   connected: boolean | null;
   last_seen_at: Instant | null;
   brand: string | null;
-  sdk: string | null;
-  sdk_version: string | null;
+  software: Software; // as it last declared
+  protocol: string;
+  can_update: boolean; // allowed device.update
+  update: SatelliteUpdate | null; // null while offline or before it reports
 }
 
 export interface Satellites {
@@ -475,6 +492,28 @@ export interface Component {
   health_detail: string | null;
   capabilities: string[];
   details: Record<string, string>;
+}
+
+export type ChangeKind = "breaking" | "feature" | "fix" | "other";
+
+/** One release of Nestor, from its release feed: the changelog lines are English plain text. */
+export interface Release {
+  version: string;
+  date: string; // YYYY-MM-DD
+  url: string;
+  breaking: boolean;
+  changes: { kind: ChangeKind; text: string }[];
+}
+
+/** What was released since the running version (`GET /system/updates`). Nothing installs from here. */
+export interface Updates {
+  running: string;
+  checking: boolean;
+  checked_at: Instant | null;
+  latest: string | null;
+  releases: Release[]; // newer than the running one, newest first
+  outdated_satellites: string[]; // device ids the newest release no longer speaks to
+  container: boolean;
 }
 
 export interface SystemInfo {

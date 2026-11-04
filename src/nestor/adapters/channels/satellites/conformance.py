@@ -9,12 +9,13 @@ device. Each check names the rule of the standard (https://nestorhome.dev/docs/s
 proves; checks and what was seen instead are `Message`s of the `conformance.ftl` catalogue.
 `nestor satellites conformance` runs the suite on a command and prints them.
 
-1. device code (P1, P2, P8, I1, I2, L1-L5, T2, A1, A2): it declares `enrollment.provisioning`, asks to
-   pair, keeps polling after a pending identify, claims its token once a person types its code, opens
-   its link with a `hello`, acknowledges each intent (`intent.identify` when it declared
-   `device.identify`, `intent.text` when it declared `text.display`), exchanges audio when it declared
-   some, reconnects with the same token after the core closes its link, and pairs again once its
-   token is refused;
+1. device code (P1, P2, P8, I1, I2, L1-L5, T2, U1, U2, A1, A2): it declares `enrollment.provisioning`,
+   asks to pair, keeps polling after a pending identify, claims its token once a person types its code,
+   opens its link with a `hello`, acknowledges each intent (`intent.identify` when it declared
+   `device.identify`, `intent.text` when it declared `text.display`, `intent.update` when it declared
+   `device.update`), reports its software and never installs a version it did not report when it
+   declared `device.update`, exchanges audio when it declared some, reconnects with the same token
+   after the core closes its link, and pairs again once its token is refused;
 2. enrollment code (P3, P4, A1): configured with a pairing URI that grants no audio, it pairs at once,
    with no code typed, and offers no audio;
 3. refused codes, wrong, expired and already used (P5): it presents a refused code once, never
@@ -59,15 +60,18 @@ from nestor.modules.satellites import (
     SPEECH_ACTIVITY,
     TEXT_DISPLAY,
     TEXT_INPUT,
+    UPDATE,
     AttemptLimiter,
     Device,
     Manifest,
+    Online,
     Pairing,
     PairingMethod,
     PairingState,
     PairingStatus,
     PairingTicket,
     Satellite,
+    Software,
     pairing_uri,
 )
 from nestor.modules.satellites.codes import ALPHABET
@@ -75,7 +79,7 @@ from nestor.testing.journal import MemoryEventLog
 from nestor.testing.satellites import Findings, ProtocolProbe, SatelliteSession
 
 # What the enrolled device may do: anything it declares but audio (A1: it must not offer any).
-SILENT = (TEXT_INPUT, TEXT_DISPLAY, SPEECH_ACTIVITY, PERSON_DETECTION, EXPRESSION, HEAD_MOTION, IDENTIFY)
+SILENT = (TEXT_INPUT, TEXT_DISPLAY, SPEECH_ACTIVITY, PERSON_DETECTION, EXPRESSION, HEAD_MOTION, IDENTIFY, UPDATE)
 AUDIO_RATE = 48000
 PAIRING_URI = "NESTOR_PAIRING_URI"
 IDENTIFY_WAIT_S = 5.0  # how long the person waits for a pending device to see its identify
@@ -171,11 +175,14 @@ class _WatchedPairing(Pairing):
         await self.approve(ticket.device_code, pairing_id=ticket.id)
 
 
-class _Link(SatelliteSession):
-    """A device's link, as the probe sees it: the messages after its accepted `hello`."""
+class _Link(SatelliteSession, Online):
+    """A device's link, as the probe sees it: the messages after its accepted `hello`. The probe sends
+    the intents itself: the pairing service only learns the device is online."""
 
-    def __init__(self, socket: WebSocket, satellite: Satellite, allowed: frozenset[Capability]) -> None:
-        self.socket, self.satellite, self.allowed = socket, satellite, allowed
+    def __init__(
+        self, socket: WebSocket, satellite: Satellite, manifest: Manifest, allowed: frozenset[Capability]
+    ) -> None:
+        self.socket, self.satellite, self.manifest, self.allowed = socket, satellite, manifest, allowed
         self._outbox: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
         self.ended = asyncio.Event()
 
@@ -207,6 +214,12 @@ class _Link(SatelliteSession):
         with contextlib.suppress(RuntimeError):
             await self.socket.close(code)
         self.ended.set()
+
+    def identify(self) -> None:
+        pass
+
+    def update(self, version: str) -> None:
+        pass
 
 
 class _Audio(AudioOffers):
@@ -283,11 +296,13 @@ class _Core:
             if self.audio is not None:
                 await self.audio.close()
 
-    async def _linked(self, socket: WebSocket, satellite: Satellite, allowed: frozenset[Capability]) -> None:
-        link = _Link(socket, satellite, allowed)
+    async def _linked(
+        self, socket: WebSocket, satellite: Satellite, manifest: Manifest, allowed: frozenset[Capability]
+    ) -> None:
+        link = _Link(socket, satellite, manifest, allowed)
         writer = asyncio.create_task(link.write())
         try:
-            with self.pairing.online(satellite.id, lambda: None):
+            with self.pairing.online(satellite.id, link):
                 self.links.put_nowait(link)
                 await link.ended.wait()
         finally:
@@ -466,7 +481,8 @@ async def _refused_code(pairing: Pairing, refusal: str) -> str:
         assert isinstance(pairing, _WatchedPairing)
         pairing.clock.offset = timedelta(seconds=61)
     else:
-        other = Manifest(Device("deja-appaire", "test", "salon"), pairing_methods=(PairingMethod.PROVISIONING,))
+        other = Manifest(Device("deja-appaire", "test", "salon"), pairing_methods=(PairingMethod.PROVISIONING,),
+                         software=Software("nestor-conformance", "1.0.0"))  # fmt: skip
         await Pairing.request(pairing, other, enrollment_code=started.code, method=PairingMethod.PROVISIONING)
     return started.code
 

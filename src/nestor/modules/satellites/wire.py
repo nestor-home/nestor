@@ -5,8 +5,9 @@ and the JSON bodies of pairing over HTTP. The standard is https://nestorhome.dev
      "payload": {"expression": "joy", "intensity": 1.0}}
 
 The link, a WebSocket per device, carries them; WebRTC only carries audio. Satellite → core: `hello`
-(its manifest and token, first), `ack` (of an intent id), `observation.*`, `input.text`. Core →
-satellite: `welcome` (what it may do), `intent.*` (`intent.text` included), each acknowledged by id.
+(its manifest and token, first), `ack` (of an intent id), `observation.*`, `input.text`, `update.status`.
+Core → satellite: `welcome` (what it may do), `intent.*` (`intent.text`, `intent.update` included), each
+acknowledged by id.
 
 Pairing bodies (`PairingRequest`, `EnrollmentProof`, and the answers `ticket_json`, `state_json`,
 `error_json`) are published as `pairing.*.json`.
@@ -18,6 +19,7 @@ drivers written in other languages, and `decode` enforces the same constraints.
 import dataclasses
 import enum
 import json
+import types
 import typing
 from dataclasses import dataclass
 from datetime import datetime
@@ -33,12 +35,14 @@ from nestor.modules.satellites.types import (
     PROTOCOL,
     SPEECH_ACTIVITY,
     TEXT_INPUT,
+    UPDATE,
     Manifest,
     PairingMethod,
     PairingState,
     PairingStatus,
     PairingTicket,
     Proof,
+    UpdateState,
 )
 
 SCHEMAS = Path(__file__).parent / "schemas"
@@ -67,6 +71,7 @@ type Token = Annotated[str, Size(1, 128)]
 type Typed = Annotated[str, Size(1, 4000)]  # what a person types in one go
 SHOWN_MAX = 16000  # characters of one `intent.text`: a longer answer goes in several
 type Shown = Annotated[str, Size(1, SHOWN_MAX)]  # one message of the assistant
+type Version = Annotated[str, Size(1, 64)]  # a version of the software a device runs
 
 
 class Direction(StrEnum):
@@ -79,6 +84,7 @@ class Direction(StrEnum):
 class Message:
     message_type: ClassVar[str] = ""
     direction: ClassVar[Direction]
+    payload_rules: ClassVar[dict[str, Any]] = {}  # the payload schema's rules across fields (`__post_init__` checks)
     _registry: ClassVar[dict[str, type["Message"]]] = {}
 
     def __init_subclass__(cls, *, message_type: str, direction: Direction, **kwargs: Any) -> None:
@@ -126,6 +132,22 @@ class TextInput(Message, message_type="input.text", direction=Direction.TO_CORE)
     text: Typed
 
 
+class UpdateStatusReport(Message, message_type="update.status", direction=Direction.TO_CORE):
+    """Where the device's own software stands, as found at its own source (needs `device.update`)."""
+
+    state: UpdateState
+    version: Version | None = None  # the newer version; required for every state but `current`
+    payload_rules: ClassVar[dict[str, Any]] = {
+        "if": {"properties": {"state": {"const": UpdateState.CURRENT.value}}},
+        "then": {"properties": {"version": False}},
+        "else": {"required": ["version"]},
+    }
+
+    def __post_init__(self) -> None:
+        if (self.version is None) != (self.state == UpdateState.CURRENT):
+            raise ContractError("update.status: a version goes with every state but current, and only with them")
+
+
 class Welcome(Message, message_type="welcome", direction=Direction.TO_SATELLITE):
     """Answer to `hello`: where the device is and what it was allowed to do."""
 
@@ -162,11 +184,18 @@ class TextIntent(Message, message_type="intent.text", direction=Direction.TO_SAT
     final: bool = True
 
 
+class UpdateIntent(Message, message_type="intent.update", direction=Direction.TO_SATELLITE):
+    """A person asks the device to install `version`, the newer one it reported, and start again on it."""
+
+    version: Version
+
+
 # What a satellite must have been allowed before it sends a message of that kind.
 NEEDS: dict[type[Message], Capability] = {
     PersonObservation: PERSON_DETECTION,
     SpeechActivityObservation: SPEECH_ACTIVITY,
     TextInput: TEXT_INPUT,
+    UpdateStatusReport: UPDATE,
 }
 
 
@@ -308,7 +337,8 @@ class Envelope:
 
 
 def encode(message: Message, *, id: str | None = None, at: datetime | None = None) -> dict[str, Any]:
-    payload = {f.name: _encode(getattr(message, f.name)) for f in dataclasses.fields(message)}
+    values = ((f.name, getattr(message, f.name)) for f in dataclasses.fields(message))
+    payload = {name: _encode(value) for name, value in values if value is not None}
     return {"type": message.message_type, "id": id or new_id(), "at": (at or utc_now()).isoformat(), "payload": payload}
 
 
@@ -361,6 +391,7 @@ def schemas() -> dict[str, dict[str, Any]]:
             "properties": {f.name: _schema(hints[f.name]) for f in fields},
             "required": [f.name for f in fields if _required(f)],
             "additionalProperties": False,
+            **cls.payload_rules,
         }
         found[name] = {
             **_header(name, (cls.__doc__ or message_type).strip().splitlines()[0]),
@@ -395,6 +426,14 @@ def _encode(value: object) -> Any:
     return value.to_json() if isinstance(value, Manifest) else codec.encode(value)
 
 
+def _optional(hint: Any) -> Any:
+    """The type inside `X | None`, or `None` when the hint is not optional."""
+    if isinstance(hint, types.UnionType) and type(None) in get_args(hint):
+        (inner,) = (a for a in get_args(hint) if a is not type(None))
+        return inner
+    return None
+
+
 def _unwrap(hint: Any) -> tuple[Any, Bounds | Size | None]:
     if isinstance(hint, typing.TypeAliasType):
         hint = hint.__value__
@@ -405,6 +444,8 @@ def _unwrap(hint: Any) -> tuple[Any, Bounds | Size | None]:
 
 
 def _decode(value: object, hint: Any, where: str) -> Any:
+    if (inner := _optional(hint)) is not None:  # absent when unset, never null
+        return _decode(value, inner, where)
     base, bounds = _unwrap(hint)
     if base is Manifest:
         return Manifest.from_json(value)
@@ -427,6 +468,8 @@ def _decode(value: object, hint: Any, where: str) -> Any:
 
 
 def _schema(hint: Any) -> dict[str, Any]:
+    if (inner := _optional(hint)) is not None:
+        return _schema(inner)  # optional: absent rather than null
     base, bounds = _unwrap(hint)
     if base is Manifest:
         return {"$ref": "manifest.json"}

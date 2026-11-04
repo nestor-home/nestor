@@ -6,10 +6,11 @@ from nestor.core import Capability, ContractError, PersonId, utc_now
 from nestor.modules.journal import Journal, LogQuery
 from nestor.modules.satellites import (
     IDENTIFY,
+    UPDATE,
     AttemptLimiter,
     Device,
+    DeviceUnavailable,
     EnrollmentRefused,
-    IdentifyUnavailable,
     Manifest,
     NotPending,
     Pairing,
@@ -19,15 +20,21 @@ from nestor.modules.satellites import (
     Proof,
     SatelliteAdditionCompleted,
     SatelliteAdditionExpired,
+    SatelliteConnected,
     SatelliteEnrollmentRefused,
     SatelliteIdentifyRequested,
     SatellitePaired,
+    SatelliteUpdateRequested,
+    Software,
     TooManyAttempts,
     TooManyPending,
+    UpdateState,
+    UpdateStatus,
     group,
 )
 from nestor.modules.satellites.types import DeclaredCapability
 from nestor.testing.journal import MemoryEventLog
+from nestor.testing.satellites import SOFTWARE, RecordingDevice
 
 REACHY = Manifest(
     Device("reachy-salon", "reachy-mini", "salon"),
@@ -37,8 +44,11 @@ REACHY = Manifest(
         DeclaredCapability(IDENTIFY),
     ),
     (PairingMethod.SPEECH, PairingMethod.PROVISIONING),
+    software=SOFTWARE,
 )
-SENSOR = Manifest(Device("capteur-entree", "esp32", "entree"), pairing_methods=(PairingMethod.PROVISIONING,))
+SENSOR = Manifest(
+    Device("capteur-entree", "esp32", "entree"), pairing_methods=(PairingMethod.PROVISIONING,), software=SOFTWARE
+)
 PROVISIONED = PairingMethod.PROVISIONING
 MATHIS = PersonId("mathis")
 
@@ -108,7 +118,7 @@ async def test_a_wrong_code_approves_nothing(pairing: Pairing) -> None:
 
 
 async def test_a_code_typed_on_another_devices_request_is_refused(pairing: Pairing) -> None:
-    kitchen = Manifest(Device("pi-cuisine", "raspberry-pi", "cuisine"), REACHY.capabilities)
+    kitchen = Manifest(Device("pi-cuisine", "raspberry-pi", "cuisine"), REACHY.capabilities, software=SOFTWARE)
     salon, cuisine = await pairing.request(REACHY), await pairing.request(kitchen)
     with pytest.raises(PairingRefused):
         await pairing.approve(code_of(cuisine), pairing_id=salon.id)
@@ -190,9 +200,9 @@ async def test_asking_again_replaces_the_earlier_code(pairing: Pairing) -> None:
 async def test_too_many_waiting_devices_are_refused(journal: Journal) -> None:
     pairing = Pairing(journal, max_pending=2)
     for i in range(2):
-        await pairing.request(Manifest(Device(f"device-{i}", "esp32", "salon")))
+        await pairing.request(Manifest(Device(f"device-{i}", "esp32", "salon"), software=SOFTWARE))
     with pytest.raises(PairingRefused):
-        await pairing.request(Manifest(Device("device-2", "esp32", "salon")))
+        await pairing.request(Manifest(Device("device-2", "esp32", "salon"), software=SOFTWARE))
 
 
 async def test_too_many_waiting_devices_are_told_to_come_back_but_an_enrolled_one_still_pairs(
@@ -202,7 +212,7 @@ async def test_too_many_waiting_devices_are_told_to_come_back_but_an_enrolled_on
     started = await pairing.start_addition(PROVISIONED)
     await pairing.request(REACHY)
     with pytest.raises(TooManyPending):
-        await pairing.request(Manifest(Device("other", "esp32", "salon")))
+        await pairing.request(Manifest(Device("other", "esp32", "salon"), software=SOFTWARE))
     ticket = await pairing.request(SENSOR, enrollment_code=started.code, method=PROVISIONED)
     assert ticket.status is PairingStatus.APPROVED
 
@@ -423,32 +433,103 @@ async def test_a_pending_device_hears_identify_once_at_its_next_poll(pairing: Pa
 
 
 async def test_identify_is_refused_to_a_device_that_cannot_or_does_not_wait(pairing: Pairing) -> None:
-    quiet = await pairing.request(Manifest(Device("micro", "esp32", "salon")))
-    with pytest.raises(IdentifyUnavailable) as unsupported:
+    quiet = await pairing.request(Manifest(Device("micro", "esp32", "salon"), software=SOFTWARE))
+    with pytest.raises(DeviceUnavailable) as unsupported:
         await pairing.identify_pending(quiet.id)
-    with pytest.raises(IdentifyUnavailable) as unknown:
+    with pytest.raises(DeviceUnavailable) as unknown:
         await pairing.identify_pending("nope")
     assert (unsupported.value.reason, unknown.value.reason) == ("unsupported", "unknown")
 
 
 async def test_a_paired_device_is_asked_to_identify_through_its_link_while_connected(pairing: Pairing) -> None:
     await _paired(pairing)
-    with pytest.raises(IdentifyUnavailable) as offline:
+    with pytest.raises(DeviceUnavailable) as offline:
         await pairing.identify("reachy-salon")
     assert offline.value.reason == "offline"
-    asked: list[str] = []
-    with pairing.online("reachy-salon", lambda: asked.append("reachy-salon")):
+    device = RecordingDevice(REACHY)
+    with pairing.online("reachy-salon", device):
         await pairing.identify("reachy-salon", by=MATHIS)
-    assert asked == ["reachy-salon"]
-    with pytest.raises(IdentifyUnavailable):
+    assert device.identified == 1
+    with pytest.raises(DeviceUnavailable):
         await pairing.identify("reachy-salon")
 
 
 async def test_identify_is_refused_to_a_satellite_not_allowed_it_or_unknown(pairing: Pairing) -> None:
     ticket = await pairing.request(REACHY)
     await pairing.approve(code_of(ticket), capabilities=[Capability("audio.capture")])
-    with pairing.online("reachy-salon", lambda: None), pytest.raises(IdentifyUnavailable) as unsupported:
+    with pairing.online("reachy-salon", RecordingDevice(REACHY)), pytest.raises(DeviceUnavailable) as unsupported:
         await pairing.identify("reachy-salon")
-    with pytest.raises(IdentifyUnavailable) as unknown:
+    with pytest.raises(DeviceUnavailable) as unknown:
         await pairing.identify("nope")
     assert (unsupported.value.reason, unknown.value.reason) == ("unsupported", "unknown")
+
+
+# Software and updates.
+
+UPDATABLE = Manifest(
+    Device("enceinte-salon", "raspberry-pi-4", "salon"),
+    (DeclaredCapability(UPDATE),),
+    software=Software("nestor-satellite", "0.5.0"),
+)
+
+
+async def test_the_software_a_device_connects_with_becomes_the_one_known_and_survives_a_restart(
+    journal: Journal,
+) -> None:
+    pairing = Pairing(journal)
+    await _paired(pairing, UPDATABLE)
+    newer = Manifest(UPDATABLE.device, UPDATABLE.capabilities, software=Software("nestor-satellite", "0.6.0"))
+    with pairing.online("enceinte-salon", RecordingDevice(newer)):
+        [satellite] = pairing.satellites()
+        assert satellite.software.version == "0.6.0"
+    await journal.publish(SatelliteConnected(source="satellites", device_id="enceinte-salon", room="salon",
+                                             software=Software("nestor-satellite", "0.6.1")))  # fmt: skip
+
+    restarted = Pairing(journal)
+    await restarted.start()
+    [satellite] = restarted.satellites()
+    assert satellite.software == Software("nestor-satellite", "0.6.1")
+
+
+async def test_a_device_is_asked_to_install_only_the_newer_version_it_reported(
+    pairing: Pairing, journal: Journal
+) -> None:
+    await _paired(pairing, UPDATABLE)
+    device = RecordingDevice(UPDATABLE)
+    with pairing.online("enceinte-salon", device):
+        with pytest.raises(DeviceUnavailable) as silent:
+            await pairing.update("enceinte-salon")
+        device.update_status = UpdateStatus(UpdateState.CURRENT)
+        with pytest.raises(DeviceUnavailable) as current:
+            await pairing.update("enceinte-salon")
+        device.update_status = UpdateStatus(UpdateState.INSTALLING, "0.6.0")
+        with pytest.raises(DeviceUnavailable) as installing:
+            await pairing.update("enceinte-salon")
+        assert {silent.value.reason, current.value.reason, installing.value.reason} == {"current"}
+
+        device.update_status = UpdateStatus(UpdateState.AVAILABLE, "0.6.0")
+        assert await pairing.update("enceinte-salon", by=MATHIS) == "0.6.0"
+    assert device.updates == ["0.6.0"]
+    [asked] = await journal.history(SatelliteUpdateRequested)
+    assert (asked.device_id, asked.running, asked.target, asked.requested_by) == (
+        "enceinte-salon",
+        "0.5.0",
+        "0.6.0",
+        MATHIS,
+    )
+
+
+async def test_an_update_is_refused_to_a_device_unknown_offline_or_not_allowed_it(pairing: Pairing) -> None:
+    await _paired(pairing)  # REACHY: no device.update
+    with pytest.raises(DeviceUnavailable) as unknown:
+        await pairing.update("nope")
+    with pytest.raises(DeviceUnavailable) as unsupported:
+        await pairing.update("reachy-salon")
+    await _paired(pairing, UPDATABLE)
+    with pytest.raises(DeviceUnavailable) as offline:
+        await pairing.update("enceinte-salon")
+    assert (unknown.value.reason, unsupported.value.reason, offline.value.reason) == (
+        "unknown",
+        "unsupported",
+        "offline",
+    )

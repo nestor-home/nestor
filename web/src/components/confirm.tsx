@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { tr } from "@/i18n/runtime";
 
 /**
- * A destructive action behind a confirmation: the dialog stays open while the action runs and shows
+ * An action behind a confirmation, destructive unless `tone` says otherwise: the dialog stays open while the action runs and shows
  * its failure, so nothing is lost silently.
  */
 export function Confirm({
@@ -23,12 +23,14 @@ export function Confirm({
   children,
   confirm,
   onConfirm,
+  tone = "destructive",
 }: {
   trigger: ReactElement;
   title: string;
   children: ReactNode;
   confirm: string;
   onConfirm: () => Promise<unknown>;
+  tone?: "destructive" | "accent";
 }) {
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
@@ -69,7 +71,7 @@ export function Confirm({
         ) : null}
         <AlertDialogFooter className="bg-paper-sunken/60">
           <AlertDialogCancel disabled={pending}>{tr("action-cancel")}</AlertDialogCancel>
-          <Button variant="destructive" onClick={run} disabled={pending}>
+          <Button variant={tone} onClick={run} disabled={pending}>
             {pending ? "…" : confirm}
           </Button>
         </AlertDialogFooter>

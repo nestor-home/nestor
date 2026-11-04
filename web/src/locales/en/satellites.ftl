@@ -39,8 +39,6 @@ sat-paired-at = paired
 sat-paired-by = { $when } by { $name }
 sat-last-seen = last seen
 sat-software = software
-sat-sdk = { $sdk } SDK { $version }
-sat-sdk-unknown = unknown
 sat-revoke = Revoke
 sat-revoke-action = Revoke…
 sat-revoke-hint = It is disconnected at once and cannot come back without a new pairing with its code.
@@ -58,6 +56,18 @@ sat-means-audio-speech-activity = Know that someone is talking, without sending 
 sat-means-vision-person-detection = Know how many people are there; no image leaves the device.
 sat-means-expression-emotion = Show an attitude (attention, joy, thinking) during the conversation.
 sat-means-motion-head = Turn its head towards whoever speaks.
+sat-means-device-update = Install a newer version of its software when you ask.
+
+sat-update = Update
+sat-update-badge = update available
+sat-update-available = Version { $version } is out; it runs { $running }. It downloads it from its own source and goes back to the current version if it does not start.
+sat-update-action = Update to { $version }
+sat-update-title = Update { $id } to { $version }?
+sat-update-description = It installs that version of { $name }, then restarts: it will be offline for a moment.
+sat-update-confirm = Update
+sat-update-asked = { $id } is installing { $version }.
+sat-update-installing = installing { $version }…
+sat-update-failed = Version { $version } did not start: the satellite went back to the previous one.
 
 ## Adding a satellite
 sat-add = Add a satellite

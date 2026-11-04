@@ -39,6 +39,7 @@ from nestor.runtime.config import (
     NestorConfig,
     PersonaConfig,
     PersonConfig,
+    UpdatesConfig,
     WatchesConfig,
     references,
     substitute,
@@ -84,6 +85,7 @@ SECTIONS: Mapping[str, Any] = {
     "memory": MemoryConfig,
     "initiative": InitiativeConfig,
     "admin": AdminConfig,
+    "updates": UpdatesConfig,
 }
 
 

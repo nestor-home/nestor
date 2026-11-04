@@ -26,6 +26,7 @@ from nestor.modules.journal import Journal
 from nestor.modules.satellites import (
     AUDIO,
     TEXT_DISPLAY,
+    Manifest,
     Pairing,
     Satellite,
     SatelliteHost,
@@ -140,13 +141,15 @@ class SatellitesChannel(Channel, SatelliteHost):
     def _showing(self, room: str) -> list[SatelliteLink]:
         return [link for link in self._links.values() if link.satellite.room == room and TEXT_DISPLAY in link.allowed]
 
-    async def _linked(self, socket: WebSocket, satellite: Satellite, allowed: frozenset[Capability]) -> None:
+    async def _linked(
+        self, socket: WebSocket, satellite: Satellite, manifest: Manifest, allowed: frozenset[Capability]
+    ) -> None:
         assert self._hosting is not None
         pairing, journal = self._hosting
-        link = SatelliteLink(socket, satellite, journal, allowed=allowed)
+        link = SatelliteLink(socket, satellite, manifest, journal, allowed=allowed)
         self._links[satellite.id] = link
         try:
-            with pairing.online(satellite.id, link.identify):
+            with pairing.online(satellite.id, link):
                 await link.run(self._typed)
         finally:
             if self._links.get(satellite.id) is link:

@@ -4,7 +4,7 @@ Never a token, never a code in clear: only their hashes."""
 from datetime import datetime
 
 from nestor.core import Capability, Event, PersonId
-from nestor.modules.satellites.types import Device, PairingMethod, Proof
+from nestor.modules.satellites.types import PROTOCOL, Device, PairingMethod, Proof, Software, UpdateState
 
 
 class SatellitePairingRequested(Event, event_type="satellite.pairing.requested"):
@@ -29,8 +29,8 @@ class SatellitePaired(Event, event_type="satellite.paired"):
     addition_id: str | None = None  # the addition it completed
     name: str | None = None  # what the household calls it
     approved_by: PersonId | None = None  # who typed its code, or made the enrollment code
-    sdk: str | None = None  # the software it declared at pairing, and its version
-    sdk_version: str | None = None
+    software: Software  # what it declared at pairing
+    protocol: str = PROTOCOL
 
 
 class SatelliteRevoked(Event, event_type="satellite.revoked"):
@@ -86,6 +86,26 @@ class SatelliteEnrollmentRefused(Event, event_type="satellite.enrollment.refused
 class SatelliteConnected(Event, event_type="satellite.connected"):
     device_id: str
     room: str
+    software: Software  # what it runs now: its version changes here after an update
+    protocol: str = PROTOCOL
+
+
+class SatelliteUpdateRequested(Event, event_type="satellite.update.requested"):
+    """A person asked a device to install a newer version of its software (it reported that version)."""
+
+    device_id: str
+    running: str  # the version it ran when asked
+    target: str  # the version it was asked to install
+    requested_by: PersonId | None = None
+
+
+class SatelliteUpdateReported(Event, event_type="satellite.update.reported"):
+    """What a device found about its software, or how installing a version went: once it starts
+    again on it, its next `SatelliteConnected` carries the new version."""
+
+    device_id: str
+    state: UpdateState
+    target: str | None = None  # the newer version, for every state but `current`
 
 
 class SatelliteDisconnected(Event, event_type="satellite.disconnected"):

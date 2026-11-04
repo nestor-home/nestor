@@ -89,6 +89,9 @@ function guard(request: Request): Response | null {
   return null;
 }
 
+/** How long a mock satellite takes to install a version and come back on it. */
+const UPDATE_MS = 4_000;
+
 /** While the instance restarts nothing answers; it comes back a little later. */
 let downUntil = 0;
 
@@ -363,6 +366,8 @@ export const handlers = [
       } satisfies In<"SystemOut">),
   ),
 
+  http.get(`${API}/system/updates`, ({ request }) => guard(request) ?? json(db.updates satisfies In<"UpdatesOut">)),
+
   // -- connectors -------------------------------------------------------------------------------
   http.get(`${API}/connectors`, ({ request }) => guard(request) ?? json(db.connectors.map(connectorDto))),
 
@@ -587,6 +592,26 @@ export const handlers = [
     if (!satellite.can_identify) return fail(409, "identify_unsupported", "error-identify-unsupported");
     if (!satellite.connected) return fail(409, "satellite_offline", "error-satellite-offline");
     return noContent();
+  }),
+
+  http.post(`${API}/satellites/:id/update`, ({ request, params }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    const satellite = db.satellites.find((x) => x.id === params.id);
+    if (!satellite) return fail(404, "satellite_unknown", "error-satellite-unknown");
+    if (!satellite.can_update) return fail(409, "update_unsupported", "error-update-unsupported");
+    if (!satellite.connected) return fail(409, "satellite_offline", "error-satellite-offline");
+    const version = satellite.update?.state === "available" ? satellite.update.version : null;
+    if (!version) return fail(409, "update_unavailable", "error-update-unavailable");
+    satellite.update = { state: "installing", version };
+    save();
+    // it installs, restarts and says hello again on the new version
+    setTimeout(() => {
+      satellite.software = { ...satellite.software, version };
+      satellite.update = { state: "current", version: null };
+      save();
+    }, UPDATE_MS);
+    return json({ version } satisfies In<"UpdateRequestedOut">, { status: 202 });
   }),
 
   http.delete(`${API}/satellites/:id`, ({ request, params }) => {
@@ -1020,8 +1045,10 @@ function pair(
     connected: true,
     last_seen_at: new Date().toISOString(),
     brand: pending.device.brand,
-    sdk: pending.device.sdk,
-    sdk_version: null,
+    software: pending.software,
+    protocol: "nestor.satellite/1",
+    can_update: pending.capabilities.some((c) => c.name === "device.update"),
+    update: null,
   };
   db.pairing = db.pairing.filter((p) => p.id !== pending.id);
   db.satellites = [...db.satellites.filter((s) => s.id !== satellite.id), satellite];

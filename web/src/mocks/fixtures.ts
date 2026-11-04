@@ -19,6 +19,7 @@ import type {
   SystemInfo,
   Task,
   Tool,
+  Updates,
   Watch,
 } from "@/api";
 import type { ScopeDto } from "@/api/dto";
@@ -479,6 +480,11 @@ const IDENTIFY = cap(
   "device.identify",
   fr("identify (light, motion or sound)", "se signaler (lumière, mouvement ou son)"),
 );
+const UPDATE = cap("device.update", fr("update itself", "se mettre à jour"));
+
+/** The wire format satellites speak, and the software the Reachys run. */
+const PROTOCOL = "nestor.satellite/1";
+const REACHY_SOFTWARE = { name: "nestor-reachy", version: "0.4.0" };
 
 /** The pairing methods, as Nestor's catalogue words them (`labels.ftl`), in the recommended order. */
 export const METHODS: PairingMethod[] = [
@@ -522,7 +528,8 @@ export function pairing(): PairingRequest[] {
   return [
     {
       id: "pair-7f3a",
-      device: { id: "reachy-mini-hallway", model: "Reachy Mini", room: HALLWAY, brand: "reachy", sdk: "python" },
+      device: { id: "reachy-mini-hallway", model: "Reachy Mini", room: HALLWAY, brand: "reachy" },
+      software: REACHY_SOFTWARE,
       capabilities: [MIC, SPEAKER, VAD, PEOPLE, FACE, HEAD, IDENTIFY],
       methods: [method("device_code.speech"), method("enrollment.provisioning")],
       recommended_method: "device_code.speech",
@@ -531,7 +538,8 @@ export function pairing(): PairingRequest[] {
     },
     {
       id: "pair-91c0",
-      device: { id: "esp32-kitchen", model: "ESP32-S3 Box", room: KITCHEN, brand: "espressif", sdk: "cpp" },
+      device: { id: "esp32-kitchen", model: "ESP32-S3 Box", room: KITCHEN, brand: "espressif" },
+      software: { name: "nestor-satellite", version: "0.5.1" },
       capabilities: [MIC, SPEAKER],
       methods: [method("device_code.display"), method("enrollment.input"), method("enrollment.provisioning")],
       recommended_method: "device_code.display",
@@ -550,8 +558,8 @@ export function arriving(pairingId: string, room: string | null): PairingRequest
       model: "Reachy Mini",
       room: room ?? VERANDA,
       brand: "reachy",
-      sdk: "python",
     },
+    software: REACHY_SOFTWARE,
     capabilities: [MIC, SPEAKER, VAD, FACE, HEAD, IDENTIFY],
     methods: [method("device_code.speech"), method("enrollment.provisioning")],
     recommended_method: "device_code.speech",
@@ -568,15 +576,17 @@ export function satellites(): Satellite[] {
       can_identify: true,
       model: "Reachy Mini",
       room: LIVING_ROOM,
-      capabilities: [MIC, SPEAKER, VAD, PEOPLE, FACE, HEAD],
+      capabilities: [MIC, SPEAKER, VAD, PEOPLE, FACE, HEAD, UPDATE],
       paired_at: minutes(60 * 24 * 26),
       approved_by: "mathis",
       approved_by_name: "Mathis",
       connected: true,
       last_seen_at: minutes(0.2),
       brand: "reachy",
-      sdk: "python",
-      sdk_version: "0.4.2",
+      software: { name: "nestor-reachy", version: "0.4.0" },
+      protocol: PROTOCOL,
+      can_update: true,
+      update: { state: "available", version: "0.4.1" },
     },
     {
       id: "reachy-office",
@@ -591,8 +601,10 @@ export function satellites(): Satellite[] {
       connected: false,
       last_seen_at: minutes(97),
       brand: "reachy",
-      sdk: "python",
-      sdk_version: "0.4.1",
+      software: { name: "nestor-reachy", version: "0.4.0" },
+      protocol: PROTOCOL,
+      can_update: false,
+      update: null,
     },
     {
       id: "pi-bedroom",
@@ -607,8 +619,10 @@ export function satellites(): Satellite[] {
       connected: true,
       last_seen_at: minutes(0.5),
       brand: "raspberry-pi",
-      sdk: "python",
-      sdk_version: "0.4.2",
+      software: { name: "nestor-satellite", version: "0.5.1" },
+      protocol: PROTOCOL,
+      can_update: true,
+      update: { state: "current", version: null },
     },
   ];
 }
@@ -865,6 +879,39 @@ const component = (
 
 const ONE_TASK = fr("1 task running", "1 tâche en cours");
 const PYTHON_SDK_042 = fr("Python SDK 0.4.2", "SDK Python 0.4.2");
+
+/** What the release feed says: two releases after the running 0.9.0, the newest one breaking. */
+export function updates(): Updates {
+  return {
+    running: "0.9.0",
+    checking: true,
+    checked_at: minutes(42),
+    latest: "0.10.0",
+    releases: [
+      {
+        version: "0.10.0",
+        date: "2026-11-04",
+        url: "https://github.com/nestor-home/nestor/releases/tag/v0.10.0",
+        breaking: true,
+        changes: [
+          { kind: "breaking", text: "the satellite manifest names its software" },
+          { kind: "feature", text: "satellites update themselves from the admin" },
+          { kind: "feature", text: "the admin says when a newer Nestor is out" },
+          { kind: "fix", text: "a typed follow-up stays in the room's conversation" },
+        ],
+      },
+      {
+        version: "0.9.1",
+        date: "2026-11-03",
+        url: "https://github.com/nestor-home/nestor/releases/tag/v0.9.1",
+        breaking: false,
+        changes: [{ kind: "fix", text: "serve a channel again after it stops" }],
+      },
+    ],
+    outdated_satellites: [],
+    container: false,
+  };
+}
 
 export function system(): SystemInfo {
   return {

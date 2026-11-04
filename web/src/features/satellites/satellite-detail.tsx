@@ -32,10 +32,8 @@ const MEANS: Record<string, string> = {
   "vision.person_detection": "sat-means-vision-person-detection",
   "expression.emotion": "sat-means-expression-emotion",
   "motion.head": "sat-means-motion-head",
+  "device.update": "sat-means-device-update",
 };
-
-/** The wire format satellites speak: an identifier, not language. */
-const PROTOCOL = "nestor.satellite/1";
 
 function means(capability: string): string | null {
   const id = MEANS[capability];
@@ -116,7 +114,6 @@ export function SatelliteOverview({ satellite: s }: { satellite: Satellite }) {
       void navigate({ to: "/satellites" });
     },
   });
-  const sdk = brandOf(s.sdk);
   return (
     <div className="grid gap-10">
       <p className="max-w-2xl font-serif text-[1.2rem] leading-relaxed text-pretty [font-variation-settings:'opsz'_20]">
@@ -136,11 +133,11 @@ export function SatelliteOverview({ satellite: s }: { satellite: Satellite }) {
         <dt className="label-mono pt-0.5">{t("sat-last-seen")}</dt>
         <dd>{s.last_seen_at ? <Ago iso={s.last_seen_at} /> : "—"}</dd>
         <dt className="label-mono pt-0.5">{t("sat-software")}</dt>
-        <dd className="flex items-center gap-2 font-mono text-[0.8rem]">
-          {sdk ? <BrandMark brand={sdk} className="size-3.5" /> : null}
-          {s.sdk ? t("sat-sdk", { sdk: s.sdk, version: s.sdk_version ?? "" }) : t("sat-sdk-unknown")} · {PROTOCOL}
+        <dd className="font-mono text-[0.8rem] [overflow-wrap:anywhere]">
+          {s.software.name} {s.software.version} · {s.protocol}
         </dd>
       </dl>
+      <SoftwareUpdate satellite={s} />
       {canRevoke ? (
         <Section title={t("sat-revoke")}>
           <p className="mb-4 max-w-2xl text-sm text-ink-muted">{t("sat-revoke-hint")}</p>
@@ -155,6 +152,54 @@ export function SatelliteOverview({ satellite: s }: { satellite: Satellite }) {
         </Section>
       ) : null}
     </div>
+  );
+}
+
+/** What the device reported about its software, and the person's way to install a newer version. */
+export function SoftwareUpdate({ satellite: s }: { satellite: Satellite }) {
+  const t = useT();
+  const canUpdate = useCan("satellites:write");
+  const queryClient = useQueryClient();
+  const notify = useNotify();
+  const update = useMutation({
+    mutationFn: () => api.updateSatellite(s.id),
+    onSuccess: (version) => {
+      void queryClient.invalidateQueries({ queryKey: keys.satellites });
+      notify(t("sat-update-asked", { id: s.name ?? s.id, version }));
+    },
+  });
+  const state = s.update?.state;
+  const version = s.update?.version ?? "";
+  if (!s.can_update || !state || state === "current") return null;
+  return (
+    <Section title={t("sat-update")}>
+      {state === "installing" ? (
+        <Status tone="pending">{t("sat-update-installing", { version })}</Status>
+      ) : state === "failed" ? (
+        <p role="alert" className="max-w-2xl text-sm text-brick">
+          {t("sat-update-failed", { version })}
+        </p>
+      ) : (
+        <div className="grid max-w-2xl gap-4">
+          <p className="text-sm text-ink-muted">
+            {t("sat-update-available", { version, running: s.software.version })}
+          </p>
+          {canUpdate && s.connected !== false ? (
+            <div>
+              <Confirm
+                trigger={<Button variant="accent">{t("sat-update-action", { version })}</Button>}
+                title={t("sat-update-title", { id: s.name ?? s.id, version })}
+                confirm={t("sat-update-confirm")}
+                tone="accent"
+                onConfirm={() => update.mutateAsync()}
+              >
+                {t("sat-update-description", { name: s.software.name })}
+              </Confirm>
+            </div>
+          ) : null}
+        </div>
+      )}
+    </Section>
   );
 }
 

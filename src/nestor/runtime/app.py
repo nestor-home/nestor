@@ -8,11 +8,13 @@ import signal
 from collections.abc import AsyncGenerator, Callable, Iterable, Mapping, Sequence
 from contextlib import AsyncExitStack
 from dataclasses import dataclass
+from importlib import metadata
 from pathlib import Path
 from typing import Self, cast
 
 from nestor.adapters.i18n import FluentLocalizer, catalogue_dirs
 from nestor.adapters.oauth import HttpxTokenEndpoint
+from nestor.adapters.releases import HttpReleaseFeed
 from nestor.adapters.storage.sqlite import (
     GENERATE,
     SQLiteActivityStore,
@@ -60,6 +62,7 @@ from nestor.modules.memory import Memories, SearchIndex
 from nestor.modules.memory.assistant import MemoryTools
 from nestor.modules.memory.episodes import Consolidator, Episodes
 from nestor.modules.satellites import Pairing, SatelliteHost
+from nestor.modules.system import ReleaseFeed, Updates
 from nestor.runtime.config import AdapterConfig, ComponentConfig, ConfigError, NestorConfig
 from nestor.runtime.plugins import Family, Plugged, Registry, Services
 
@@ -83,12 +86,15 @@ class Backoff:
     healthy_after_s: float = 60.0
 
 
+DISTRIBUTION = "nestor-home"  # the package Nestor is installed as
+
+
 class Nestor:
     """Build with `Nestor(config)`, then `async with nestor: await nestor.serve()`.
 
     `environ` is where secrets are read from (the process environment by default); `token_endpoint`
-    replaces the HTTP OAuth client (tests use a fake provider); `backoff` paces serving a channel
-    again after it stopped.
+    replaces the HTTP OAuth client (tests use a fake provider), `release_feed` the one read over HTTP;
+    `backoff` paces serving a channel again after it stopped.
     """
 
     def __init__(
@@ -98,6 +104,7 @@ class Nestor:
         *,
         environ: Mapping[str, str] | None = None,
         token_endpoint: TokenEndpoint | None = None,
+        release_feed: ReleaseFeed | None = None,
         source: Path | None = None,
         backoff: Backoff | None = None,
     ) -> None:
@@ -178,6 +185,12 @@ class Nestor:
         self.sources = [*self.inbound, *connected]
 
         self.pairing = Pairing(self.journal)
+        self.version = metadata.version(DISTRIBUTION)
+        self.updates = (
+            Updates(release_feed or HttpReleaseFeed(config.updates.feed), self.version)
+            if config.updates.check
+            else None
+        )
         for channel in self.channels:
             if isinstance(channel, SatelliteHost):
                 channel.host_satellites(self.pairing, self.journal)
@@ -289,6 +302,7 @@ class Nestor:
         presence = [self.presence] if self.presence else []
         connections = [self.token_endpoint, self.connections] if self.token_endpoint and self.connections else []
         vault = [self.vault] if self.vault else []
+        updates = [self.updates] if self.updates else []
         return [
             self.database,
             *vault,
@@ -315,6 +329,7 @@ class Nestor:
             self.watches,
             self.activity,
             self.consolidator,
+            *updates,
         ]
 
     async def __aenter__(self) -> Self:

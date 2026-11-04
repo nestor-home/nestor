@@ -26,6 +26,7 @@ import type {
   ScopeDto,
   SystemDto,
   TaskDto,
+  UpdatesDto,
   WatchDto,
   WrittenDto,
 } from "./dto";
@@ -55,6 +56,7 @@ import type {
   Scope,
   SystemInfo,
   Task,
+  Updates,
   Watch,
 } from "./types";
 
@@ -236,7 +238,8 @@ export function connectionDetail(dto: ConnectionDetailDto): ConnectionDetail {
 export function pending(dto: PendingDto, now = Date.now()): PairingRequest {
   return {
     id: dto.pairing_id,
-    device: { ...dto.device, sdk: dto.sdk },
+    device: { ...dto.device },
+    software: { ...dto.software },
     capabilities: dto.capabilities,
     methods: dto.methods.map(method),
     recommended_method: dto.recommended_method,
@@ -285,8 +288,10 @@ export function satellite(dto: SatelliteDto): Satellite {
     connected: dto.connected,
     last_seen_at: dto.last_seen_at,
     brand: dto.brand,
-    sdk: dto.sdk,
-    sdk_version: dto.sdk_version,
+    software: { ...dto.software },
+    protocol: dto.protocol,
+    can_update: dto.can_update,
+    update: dto.update ? { ...dto.update } : null,
   };
 }
 
@@ -362,6 +367,13 @@ export function system(dto: SystemDto): SystemInfo {
     restart_required: dto.restart_required,
     pending_changes: dto.pending_changes,
     components: dto.components.map(component),
+  };
+}
+
+export function updates(dto: UpdatesDto): Updates {
+  return {
+    ...dto,
+    releases: dto.releases.map((r) => ({ ...r, changes: r.changes.map((c) => ({ ...c })) })),
   };
 }
 
