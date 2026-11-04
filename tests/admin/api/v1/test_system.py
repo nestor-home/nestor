@@ -107,22 +107,21 @@ async def test_the_admin_learns_what_was_released_since_the_running_version(tmp_
         await pair_by_code(admin.nestor.pairing, REACHY)
         api = await admin.api()
         unknown = (await api.get("/api/v1/system/updates")).json()
-        assert unknown["running"] == running and unknown["checking"] is True
-        assert (unknown["latest"], unknown["checked_at"], unknown["releases"]) == (None, None, [])
+        assert (unknown["running"], unknown["releases"], unknown["left_behind"]) == (running, [], [])
+        assert (unknown["installation"], unknown["commands"]) == ("editable", []), "this checkout"
 
         admin.releases.releases = _feed(running)
         assert admin.nestor.updates is not None
         await admin.nestor.updates.check()
         current = (await api.get("/api/v1/system/updates")).json()
-        assert current["latest"] == running and current["releases"] == [] and current["checked_at"]
+        assert current["releases"] == [] and current["left_behind"] == []
 
         admin.releases.releases = _feed("9.0.0", "8.0.0", running, protocols=("nestor.satellite/2",))
         await admin.nestor.updates.check()
         newer = (await api.get("/api/v1/system/updates")).json()
         assert [(r["version"], r["breaking"]) for r in newer["releases"]] == [("9.0.0", True), ("8.0.0", False)]
         assert newer["releases"][0]["changes"] == [{"kind": "breaking", "text": "models by role"}]
-        assert newer["latest"] == "9.0.0" and newer["outdated_satellites"] == ["reachy-salon"]
-        assert isinstance(newer["container"], bool)
+        assert newer["left_behind"] == [{"id": "reachy-salon", "name": None}]
 
         await admin.account("mathilde", Role.MEMBER, "mathilde")
         assert (await (await admin.api("mathilde")).get("/api/v1/system/updates")).status_code == 403
@@ -132,7 +131,7 @@ async def test_an_instance_told_not_to_check_says_so(tmp_path: Path) -> None:
     async with Harness(tmp_path) as admin:
         admin.nestor.updates = None
         answer = (await (await admin.api()).get("/api/v1/system/updates")).json()
-        assert (answer["checking"], answer["latest"], answer["releases"]) == (False, None, [])
+        assert (answer["installation"], answer["releases"], answer["installable"]) == (None, [], False)
 
 
 async def test_the_owner_installs_the_newest_release_and_nestor_restarts_on_it(tmp_path: Path) -> None:
@@ -144,8 +143,8 @@ async def test_the_owner_installs_the_newest_release_and_nestor_restarts_on_it(t
         refused = await api.post("/api/v1/system/updates/install", {"version": "9.0.0", "confirm": True})
         assert refused.json()["error"]["code"] == "update_not_installable"
 
-        restarts: list[bool] = []
-        admin.app.state.admin.restart = lambda: restarts.append(True)
+        restarted = asyncio.Event()
+        admin.nestor.restart.stop = restarted.set
         updates.installer = FakeInstaller()
         admin.releases.releases = _feed("9.0.0")
         await updates.check()
@@ -153,9 +152,7 @@ async def test_the_owner_installs_the_newest_release_and_nestor_restarts_on_it(t
         assert unconfirmed.status_code == 400
         started = await api.post("/api/v1/system/updates/install", {"version": "9.0.0", "confirm": True})
         assert started.status_code == 202 and started.json()["installable"] is True
-        for _ in range(20):
-            await asyncio.sleep(0)
-        assert restarts == [True]
+        await asyncio.wait_for(restarted.wait(), 5)  # installed, then the restart once the answer is sent
 
         await admin.account("mathilde", Role.MEMBER, "mathilde")
         member = await admin.api("mathilde")

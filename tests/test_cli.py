@@ -19,6 +19,7 @@ from nestor.modules.system import SecretChanged
 from nestor.runtime.app import Restart
 from nestor.runtime.config import ConfigError, load_config
 from nestor.runtime.secrets import open_secrets
+from nestor.testing.journal import MemoryEventLog
 from nestor.testing.satellites import SOFTWARE
 
 from .admin.harness import CONFIG, SECRET_KEY, Harness
@@ -100,7 +101,7 @@ def test_a_restart_stops_the_process_cleanly_then_runs_the_same_command_line(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     stopped: list[bool] = []
-    restart = Restart(stop=lambda: stopped.append(True))
+    restart = Restart(Journal(MemoryEventLog()), stop=lambda: stopped.append(True))
     restart.request()
     assert restart.requested and stopped == [True]
 
@@ -132,7 +133,7 @@ async def test_the_command_line_restarts_the_running_instance(
     async with Harness(tmp_path) as admin:
         server = AdminServer(admin.nestor, AdminSettings(port=port))
         restarted = asyncio.Event()
-        server.app.state.admin.restart = restarted.set
+        admin.nestor.restart.stop = restarted.set
         async with server:
             assert await asyncio.to_thread(main, ["-c", str(config), "restart"]) == 0
             await asyncio.wait_for(restarted.wait(), 2)

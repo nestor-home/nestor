@@ -304,8 +304,8 @@ async def test_identify_says_why_a_device_cannot(tmp_path: Path) -> None:
         for path, (status, error) in cases.items():
             answer = await api.post(path, {})
             assert (answer.status_code, answer.json()["error"]["code"]) == (status, error), path
-        device = RecordingDevice(REACHY)
-        with pairing.online("reachy-salon", device):
+        device = RecordingDevice()
+        with pairing.online("reachy-salon", device, REACHY):
             assert (await api.post("/api/v1/satellites/reachy-salon/identify", {})).status_code == 204
         assert device.identified == 1
         assert (await api.get("/api/v1/satellites/reachy-salon")).json()["can_identify"] is True
@@ -332,11 +332,12 @@ async def test_a_connected_satellite_shows_its_software_and_installs_the_newer_v
             answer = await api.post(path, {})
             assert (answer.status_code, answer.json()["error"]["code"]) == (status, error), path
 
-        device = RecordingDevice(REACHY, UpdateStatus(UpdateState.CURRENT))
-        with pairing.online("reachy-salon", device):
+        device = RecordingDevice()
+        with pairing.online("reachy-salon", device, REACHY):
+            await pairing.reported("reachy-salon", UpdateStatus(UpdateState.CURRENT))
             current = await api.post("/api/v1/satellites/reachy-salon/update", {})
             assert current.json()["error"]["code"] == "update_unavailable"
-            device.update_status = UpdateStatus(UpdateState.AVAILABLE, "1.1.0", "https://x.org/v1.1.0")
+            await pairing.reported("reachy-salon", UpdateStatus(UpdateState.AVAILABLE, "1.1.0", "https://x.org/v1.1.0"))
             shown = (await api.get("/api/v1/satellites")).json()["paired"]
             assert next(s for s in shown if s["id"] == "reachy-salon")["update"] == {
                 "state": "available",

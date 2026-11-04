@@ -3,8 +3,8 @@
 Everything the device says is checked against the wire contract and attributed to the *paired*
 device and room, never to what the message claims. Observations become journal events, typed text
 becomes turns of the room's conversation, intents go out (through `RemoteBody` for the body) and are
-acknowledged by id. What the device reports about its software is kept for the admin and journaled.
-What the device was not allowed is ignored.
+acknowledged by id. What the device reports about its software goes to `reported` (the pairing
+service keeps it). What the device was not allowed is ignored.
 """
 
 import asyncio
@@ -27,7 +27,6 @@ from nestor.modules.satellites import (
     Satellite,
     SatelliteConnected,
     SatelliteDisconnected,
-    SatelliteUpdateReported,
     SpeechActivityObserved,
     UpdateStatus,
     wire,
@@ -39,6 +38,7 @@ SOURCE = "satellites"
 
 
 type Typed = Callable[["SatelliteLink", str], Awaitable[None]]
+type Reported = Callable[[UpdateStatus], Awaitable[None]]  # what the device said about its software
 
 
 class SatelliteLink(Online):
@@ -57,11 +57,13 @@ class SatelliteLink(Online):
         journal: Journal,
         *,
         allowed: frozenset[Capability],
+        reported: Reported,
         ack_timeout_s: float = 2.0,
     ) -> None:
         self.satellite = satellite
         self.manifest = manifest
         self.allowed = allowed  # what `welcome` granted: the pairing's capabilities the core can serve
+        self._reported = reported
         self._socket = socket
         self._journal = journal
         self._ack_timeout_s = ack_timeout_s
@@ -183,12 +185,7 @@ class SatelliteLink(Online):
                     SpeechActivityObserved(source=SOURCE, device_id=satellite.id, room=satellite.room, active=active)
                 )
             case wire.UpdateStatusReport(state=state, version=version, notes=notes):
-                reported = UpdateStatus(state, version, notes)
-                if reported != self.update_status:
-                    self.update_status = reported
-                    await self._journal.publish(
-                        SatelliteUpdateReported(source=SOURCE, device_id=satellite.id, state=state, target=version)
-                    )
+                await self._reported(UpdateStatus(state, version, notes))
 
     def _forget_overdue(self) -> None:
         deadline = time.monotonic() - self._ack_timeout_s

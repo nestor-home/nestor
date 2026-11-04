@@ -9,14 +9,15 @@ from the admin: only that version, only on their request, and the restart that f
 import asyncio
 import contextlib
 import logging
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Iterable
 from datetime import datetime
 
 from nestor.core import Component, ContractError, ProviderError, utc_now
 from nestor.modules.journal import Journal
+from nestor.modules.satellites import Satellite
 from nestor.modules.system.events import UpdateFailed, UpdateRequested
 from nestor.modules.system.ports import Installer, ReleaseFeed
-from nestor.modules.system.types import Releases, version_key
+from nestor.modules.system.types import Installation, Release, Releases, version_key
 
 log = logging.getLogger(__name__)
 
@@ -32,6 +33,8 @@ class Updates(Component):
         feed: ReleaseFeed,
         running: str,
         journal: Journal,
+        restart: Callable[[str], Awaitable[None]],
+        installation: Installation,
         *,
         installer: Installer | None = None,
         first_check_s: float = FIRST_CHECK_S,
@@ -40,7 +43,8 @@ class Updates(Component):
     ) -> None:
         self.running = running  # the version of this instance
         self._feed = feed
-        self._journal = journal
+        self._journal, self._restart = journal, restart  # `restart(by)` once a release is installed
+        self.installation = installation  # how Nestor is installed, so how it is updated
         self.installer = installer  # None: the household updates Nestor the way it installed it
         self.installing: str | None = None  # the version being installed
         self.failed: str | None = None  # the version that last failed to install
@@ -76,9 +80,19 @@ class Updates(Component):
             return
         self.checked_at = self._clock()
 
-    async def install(self, version: str, *, by: str, then: Callable[[], Awaitable[None]]) -> None:
+    def newer(self) -> tuple[Release, ...]:
+        """The releases read after the running version, newest first."""
+        return self.releases.newer_than(self.running) if self.releases else ()
+
+    def left_behind(self, satellites: Iterable[Satellite]) -> list[Satellite]:
+        """The paired satellites the newest release no longer speaks to (none while nothing is newer)."""
+        if self.releases is None or not self.newer():
+            return []
+        return [s for s in satellites if s.protocol not in self.releases.protocols]
+
+    async def install(self, version: str, *, by: str) -> None:
         """Start installing `version`, which must be the newest release read and newer than the running
-        one; `then` runs once it is installed (the restart). `ContractError` when it cannot start."""
+        one; Nestor restarts on it once it is installed. `ContractError` when it cannot start."""
         latest = self.releases.latest if self.releases else None
         if self.installer is None:
             raise ContractError("this instance updates the way it was installed, not from here")
@@ -88,9 +102,9 @@ class Updates(Component):
             raise ContractError(f"{self.installing} is being installed")
         self.installing, self.failed = version, None
         await self._journal.publish(UpdateRequested(source=self.name, by=by, running=self.running, target=version))
-        self._install = asyncio.create_task(self._run_install(self.installer, version, then), name="install")
+        self._install = asyncio.create_task(self._run_install(self.installer, version, by), name="install")
 
-    async def _run_install(self, installer: Installer, version: str, then: Callable[[], Awaitable[None]]) -> None:
+    async def _run_install(self, installer: Installer, version: str, by: str) -> None:
         try:
             await installer.install(version)
         except ProviderError as error:
@@ -98,7 +112,7 @@ class Updates(Component):
             self.installing, self.failed = None, version
             await self._journal.publish(UpdateFailed(source=self.name, target=version))
             return
-        await then()
+        await self._restart(by)
 
     async def _check_regularly(self) -> None:
         await asyncio.sleep(self._first_check_s)

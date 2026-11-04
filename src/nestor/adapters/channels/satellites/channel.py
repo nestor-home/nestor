@@ -146,10 +146,11 @@ class SatellitesChannel(Channel, SatelliteHost):
     ) -> None:
         assert self._hosting is not None
         pairing, journal = self._hosting
-        link = SatelliteLink(socket, satellite, manifest, journal, allowed=allowed)
+        link = SatelliteLink(socket, satellite, manifest, journal, allowed=allowed,
+                             reported=lambda status: pairing.reported(satellite.id, status))  # fmt: skip
         self._links[satellite.id] = link
         try:
-            with pairing.online(satellite.id, link):
+            with pairing.online(satellite.id, link, manifest):
                 await link.run(self._typed)
         finally:
             if self._links.get(satellite.id) is link:

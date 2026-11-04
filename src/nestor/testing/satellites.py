@@ -31,7 +31,6 @@ from nestor.modules.satellites import (
     Satellite,
     Software,
     UpdateState,
-    UpdateStatus,
     wire,
 )
 
@@ -41,8 +40,7 @@ SOFTWARE = Software("nestor-test-satellite", "1.0.0")  # what test devices decla
 class RecordingDevice(Online):
     """A connected device as the pairing service reaches it: it notes what it is asked."""
 
-    def __init__(self, manifest: Manifest, update_status: UpdateStatus | None = None) -> None:
-        self.manifest, self.update_status = manifest, update_status
+    def __init__(self) -> None:
         self.identified = 0
         self.updates: list[str] = []  # the versions it was asked to install
 

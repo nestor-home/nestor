@@ -26,7 +26,7 @@ from nestor.adapters.channels.satellites.voice.eager import EagerSentenceFlush
 from nestor.adapters.channels.satellites.voice.providers import Speech
 from nestor.core import Capability, PersonId, utc_now
 from nestor.modules.channels import Address, Assistant, InboundMessage, MessageEnd, Reply, Sender
-from nestor.modules.satellites import AUDIO_CAPTURE, AUDIO_PLAYBACK, Satellite, wire
+from nestor.modules.satellites import AUDIO_CAPTURE, AUDIO_PLAYBACK, PROTOCOL, Satellite, wire
 from nestor.testing.satellites import SOFTWARE
 
 from .replay import ReplayTransport, ScenarioClock
@@ -210,6 +210,7 @@ class FakeLink:
             token_hash="x",
             paired_at=utc_now(),
             software=SOFTWARE,
+            protocol=PROTOCOL,
         )
         self.sent: list[wire.Message] = []
 

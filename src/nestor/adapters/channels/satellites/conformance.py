@@ -179,10 +179,8 @@ class _Link(SatelliteSession, Online):
     """A device's link, as the probe sees it: the messages after its accepted `hello`. The probe sends
     the intents itself: the pairing service only learns the device is online."""
 
-    def __init__(
-        self, socket: WebSocket, satellite: Satellite, manifest: Manifest, allowed: frozenset[Capability]
-    ) -> None:
-        self.socket, self.satellite, self.manifest, self.allowed = socket, satellite, manifest, allowed
+    def __init__(self, socket: WebSocket, satellite: Satellite, allowed: frozenset[Capability]) -> None:
+        self.socket, self.satellite, self.allowed = socket, satellite, allowed
         self._outbox: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
         self.ended = asyncio.Event()
 
@@ -299,10 +297,10 @@ class _Core:
     async def _linked(
         self, socket: WebSocket, satellite: Satellite, manifest: Manifest, allowed: frozenset[Capability]
     ) -> None:
-        link = _Link(socket, satellite, manifest, allowed)
+        link = _Link(socket, satellite, allowed)
         writer = asyncio.create_task(link.write())
         try:
-            with self.pairing.online(satellite.id, link):
+            with self.pairing.online(satellite.id, link, manifest):
                 self.links.put_nowait(link)
                 await link.ended.wait()
         finally:

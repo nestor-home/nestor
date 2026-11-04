@@ -3,6 +3,7 @@ errors a retry may get past, the detail of an error as the provider words it, an
 
 import json
 import urllib.parse
+from typing import Any
 
 from pydantic import Field, SecretStr, ValidationInfo, field_validator
 from pydantic_core import PydanticCustomError
@@ -10,7 +11,7 @@ from pydantic_core import PydanticCustomError
 from nestor.core import ProviderError
 from nestor.runtime.plugins import AdapterSettings
 
-BRANDS = {  # host suffix → brand; published with `base_url`'s schema (`x-brands`) so the admin shows the same
+BRANDS = {  # host suffix → brand; published in `base_url`'s schema (`x-nestor.brands`) so the admin shows the same
     "openrouter.ai": "openrouter",
     "openai.com": "openai",
     "mistral.ai": "mistral",
@@ -18,6 +19,7 @@ BRANDS = {  # host suffix → brand; published with `base_url`'s schema (`x-bran
     "generativelanguage.googleapis.com": "gemini",
     "groq.com": "groq",
 }
+BRANDED: dict[str, Any] = {"brands": BRANDS}  # the field the brand is read from
 MAX_DETAIL = 300
 _RETRYABLE_STATUSES = frozenset({408, 409, 425, 429})
 
@@ -63,7 +65,7 @@ class EndpointSettings(AdapterSettings):
     The key is optional, as local servers need none: empty is the same as absent. The hosted providers known
     to require one refuse to be configured without it."""
 
-    base_url: str = Field(json_schema_extra={"x-brands": BRANDS})
+    base_url: str = Field(json_schema_extra=BRANDED)
     api_key: SecretStr | None = Field(default=None, validate_default=True)
 
     @field_validator("api_key", mode="before")

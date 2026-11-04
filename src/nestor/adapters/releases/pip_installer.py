@@ -1,4 +1,5 @@
-"""Installs a release of Nestor from PyPI into the Python environment it runs from (uv or pip).
+"""How this Nestor is installed (`probe`), and installing a release of it from PyPI into the Python
+environment it runs from (uv or pip).
 
     nestor-home[voice]==0.8.0   then   nestor -c <config> check   with that version
 
@@ -16,29 +17,33 @@ from collections.abc import Awaitable, Callable, Sequence
 from importlib import metadata
 from pathlib import Path
 
+from nestor import DISTRIBUTION
 from nestor.core import ProviderError
-from nestor.modules.system import Installer
+from nestor.modules.system import Installation, Installer, InstallKind
 
 PROVIDER = "installer"
-DISTRIBUTION = "nestor-home"
 TIMEOUT_S = 600.0
 _NAME = re.compile(r"^[A-Za-z0-9._-]+")  # a requirement's project name
 
 type Run = Callable[[Sequence[str]], Awaitable[bool]]  # runs a command, says whether it succeeded
 
 
+def probe() -> Installation:
+    """How this Nestor is installed, and the commands that update it by hand: looked at once, at start."""
+    if Path("/.dockerenv").exists():
+        return Installation(InstallKind.CONTAINER, ("docker compose pull", "docker compose up -d"))
+    direct = metadata.distribution(DISTRIBUTION).read_text("direct_url.json")
+    if direct and json.loads(direct).get("dir_info", {}).get("editable"):
+        return Installation(InstallKind.EDITABLE, ())
+    if Path(sys.prefix).parent.name == "tools" and Path(sys.prefix).parent.parent.name == "uv":
+        return Installation(InstallKind.UV_TOOL, (f"uv tool upgrade {DISTRIBUTION}",))
+    return Installation(InstallKind.PIP, (f"pip install --upgrade '{_requirement()}'",))
+
+
 class PipInstaller(Installer):
     def __init__(self, config: Path, running: str, *, run: Run | None = None) -> None:
         self._config, self._running = config, running
         self._run = run or _run
-
-    @staticmethod
-    def possible() -> bool:
-        """Whether this environment can be updated from here: not a container, not an editable checkout."""
-        if Path("/.dockerenv").exists():
-            return False
-        direct = metadata.distribution(DISTRIBUTION).read_text("direct_url.json")
-        return not (direct and json.loads(direct).get("dir_info", {}).get("editable"))
 
     async def install(self, version: str) -> None:
         if await self._pip(version) and await self._checks():
@@ -48,8 +53,7 @@ class PipInstaller(Installer):
                             transient=False)  # fmt: skip
 
     async def _pip(self, version: str) -> bool:
-        extras = _installed_extras()
-        wanted = f"{DISTRIBUTION}{f'[{",".join(extras)}]' if extras else ''}=={version}"
+        wanted = f"{_requirement()}=={version}"
         uv = shutil.which("uv")
         command = [uv, "pip", "install", "--python", sys.executable, wanted] if uv else [
             sys.executable, "-m", "pip", "install", wanted]  # fmt: skip
@@ -58,6 +62,12 @@ class PipInstaller(Installer):
     async def _checks(self) -> bool:
         nestor = Path(sys.executable).with_name("nestor")
         return await self._run([str(nestor), "-c", str(self._config), "check"])
+
+
+def _requirement() -> str:
+    """nestor-home with the extras installed now (`nestor-home[voice]`)."""
+    extras = _installed_extras()
+    return f"{DISTRIBUTION}[{','.join(extras)}]" if extras else DISTRIBUTION
 
 
 def _installed_extras() -> list[str]:

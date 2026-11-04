@@ -4,7 +4,7 @@ Never a token, never a code in clear: only their hashes."""
 from datetime import datetime
 
 from nestor.core import Capability, Event, PersonId
-from nestor.modules.satellites.types import PROTOCOL, Device, PairingMethod, Proof, Software, UpdateState
+from nestor.modules.satellites.types import Device, PairingMethod, Proof, Software, UpdateState
 
 
 class SatellitePairingRequested(Event, event_type="satellite.pairing.requested"):
@@ -30,7 +30,7 @@ class SatellitePaired(Event, event_type="satellite.paired"):
     name: str | None = None  # what the household calls it
     approved_by: PersonId | None = None  # who typed its code, or made the enrollment code
     software: Software  # what it declared at pairing
-    protocol: str = PROTOCOL
+    protocol: str
 
 
 class SatelliteRevoked(Event, event_type="satellite.revoked"):
@@ -87,7 +87,7 @@ class SatelliteConnected(Event, event_type="satellite.connected"):
     device_id: str
     room: str
     software: Software  # what it runs now: its version changes here after an update
-    protocol: str = PROTOCOL
+    protocol: str
 
 
 class SatelliteUpdateRequested(Event, event_type="satellite.update.requested"):

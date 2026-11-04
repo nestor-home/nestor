@@ -9,13 +9,23 @@ from nestor.modules.system.events import (
     UpdateRequested,
 )
 from nestor.modules.system.ports import Installer, ReleaseFeed
-from nestor.modules.system.types import Change, ChangeKind, Release, Releases, version_key
+from nestor.modules.system.types import (
+    Change,
+    ChangeKind,
+    Installation,
+    InstallKind,
+    Release,
+    Releases,
+    version_key,
+)
 from nestor.modules.system.updates import Updates
 
 __all__ = [
     "Change",
     "ChangeKind",
     "ConfigChanged",
+    "InstallKind",
+    "Installation",
     "Installer",
     "Release",
     "ReleaseFeed",

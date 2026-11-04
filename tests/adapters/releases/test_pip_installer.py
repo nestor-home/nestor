@@ -5,8 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from nestor.adapters.releases import PipInstaller
+from nestor.adapters.releases import PipInstaller, probe
 from nestor.core import ProviderError
+from nestor.modules.system import Installation, InstallKind
 
 
 class Commands:
@@ -43,4 +44,13 @@ async def test_a_failure_puts_the_running_version_back(failing: str) -> None:
 
 
 def test_a_developers_editable_checkout_is_never_updated_from_the_admin() -> None:
-    assert PipInstaller.possible() is False  # this checkout is installed editable
+    installation = probe()  # this checkout is installed editable
+    assert installation == Installation(InstallKind.EDITABLE, ()) and not installation.installable
+
+
+def test_a_container_is_updated_by_pulling_its_image(monkeypatch: pytest.MonkeyPatch) -> None:
+    real = Path.exists
+    monkeypatch.setattr(Path, "exists", lambda path: str(path) == "/.dockerenv" or real(path))
+    installation = probe()
+    assert installation.kind is InstallKind.CONTAINER and not installation.installable
+    assert installation.commands == ("docker compose pull", "docker compose up -d")

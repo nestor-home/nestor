@@ -1,7 +1,6 @@
 """What every route shares: the running Nestor, the settings, sessions, throttling, pending OAuth flows."""
 
 import asyncio
-from collections.abc import Callable
 from typing import cast
 
 from fastapi import Request
@@ -40,7 +39,6 @@ class AdminState:
             else None
         )
         self.pending_changes: list[str] = []  # written to the file since this process started: a restart applies them
-        self.restart: Callable[[], None] = nestor.restart.request
 
     def base_url(self, request: Request) -> str:
         """The admin's own address, as the household's browsers reach it."""

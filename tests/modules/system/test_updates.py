@@ -2,14 +2,18 @@
 
 import asyncio
 from datetime import date, datetime
+from typing import Any
 
 import pytest
 
 from nestor.core import ContractError
 from nestor.modules.journal import Journal
+from nestor.modules.satellites import Satellite
 from nestor.modules.system import (
     Change,
     ChangeKind,
+    Installation,
+    InstallKind,
     Release,
     Releases,
     UpdateFailed,
@@ -18,6 +22,7 @@ from nestor.modules.system import (
     version_key,
 )
 from nestor.testing.journal import MemoryEventLog
+from nestor.testing.satellites import SOFTWARE
 from nestor.testing.system import FakeInstaller, StaticReleaseFeed
 
 NOW = datetime.fromisoformat("2026-11-04T09:00:00+00:00")
@@ -78,11 +83,30 @@ def test_versions_compare_as_numbers() -> None:
         version_key("latest")
 
 
+PIP = Installation(InstallKind.PIP, ("pip install --upgrade nestor-home",))
+
+
+class Restarts:
+    """Who asked for a restart, in order."""
+
+    def __init__(self) -> None:
+        self.by: list[str] = []
+        self.asked = asyncio.Event()
+
+    async def __call__(self, by: str) -> None:
+        self.by.append(by)
+        self.asked.set()
+
+
+def _updates(feed: StaticReleaseFeed, installer: FakeInstaller | None = None, **options: Any) -> Updates:
+    return Updates(feed, "0.7.0", Journal(MemoryEventLog()), Restarts(), PIP, installer=installer, **options)
+
+
 async def test_a_feed_that_cannot_be_read_keeps_the_last_one_read() -> None:
     feed = StaticReleaseFeed()
-    updates = Updates(feed, "0.7.0", Journal(MemoryEventLog()), clock=lambda: NOW)
+    updates = _updates(feed, clock=lambda: NOW)
     await updates.check()
-    assert (updates.releases, updates.checked_at) == (None, None)
+    assert (updates.releases, updates.checked_at, updates.newer()) == (None, None, ())
     feed.releases = Releases.from_json(FEED)
     await updates.check()
     assert updates.releases == feed.releases and updates.checked_at == NOW
@@ -93,7 +117,7 @@ async def test_a_feed_that_cannot_be_read_keeps_the_last_one_read() -> None:
 
 async def test_the_feed_is_read_after_a_pause_then_regularly_until_closed() -> None:
     feed = StaticReleaseFeed(Releases.from_json(FEED))
-    async with Updates(feed, "0.7.0", Journal(MemoryEventLog()), first_check_s=0.01, every_s=0.01) as updates:
+    async with _updates(feed, first_check_s=0.01, every_s=0.01) as updates:
         assert feed.reads == 0, "not when it starts"
         await asyncio.sleep(0.1)
         assert feed.reads >= 2 and updates.releases is not None
@@ -102,54 +126,58 @@ async def test_the_feed_is_read_after_a_pause_then_regularly_until_closed() -> N
     assert feed.reads == read
 
 
-async def _read(installer: FakeInstaller | None) -> tuple[Updates, Journal]:
-    journal = Journal(MemoryEventLog())
-    updates = Updates(StaticReleaseFeed(Releases.from_json(FEED)), "0.7.0", journal, installer=installer)
+async def _read(installer: FakeInstaller | None) -> tuple[Updates, Journal, Restarts]:
+    journal, restarts = Journal(MemoryEventLog()), Restarts()
+    feed = StaticReleaseFeed(Releases.from_json(FEED))
+    updates = Updates(feed, "0.7.0", journal, restarts, PIP, installer=installer)
     await updates.check()
-    return updates, journal
+    return updates, journal, restarts
 
 
 async def test_only_the_newest_release_is_installed_then_nestor_restarts() -> None:
     installer = FakeInstaller(wait=True)
-    updates, journal = await _read(installer)
-    restarted = asyncio.Event()
-
-    async def restart() -> None:
-        restarted.set()
-
+    updates, journal, restarts = await _read(installer)
+    assert [r.version for r in updates.newer()] == ["0.10.0", "0.8.0"]
     for version in ("0.8.0", "0.7.0", "9.9.9"):
         with pytest.raises(ContractError):
-            await updates.install(version, by="mathis", then=restart)
-    await updates.install("0.10.0", by="mathis", then=restart)
+            await updates.install(version, by="mathis")
+    await updates.install("0.10.0", by="mathis")
     assert updates.installing == "0.10.0"
     with pytest.raises(ContractError):
-        await updates.install("0.10.0", by="mathis", then=restart)
+        await updates.install("0.10.0", by="mathis")
     installer.release.set()
-    await asyncio.wait_for(restarted.wait(), 1)
-    assert installer.installed == ["0.10.0"]
+    await asyncio.wait_for(restarts.asked.wait(), 1)
+    assert installer.installed == ["0.10.0"] and restarts.by == ["mathis"]
     [asked] = await journal.history(UpdateRequested)
     assert (asked.by, asked.running, asked.target) == ("mathis", "0.7.0", "0.10.0")
 
 
 async def test_a_release_that_does_not_install_leaves_the_running_one_and_says_so() -> None:
-    updates, journal = await _read(FakeInstaller(fails=True))
-
-    async def restart() -> None:
-        raise AssertionError("no restart after a failed install")
-
-    await updates.install("0.10.0", by="mathis", then=restart)
+    updates, journal, restarts = await _read(FakeInstaller(fails=True))
+    await updates.install("0.10.0", by="mathis")
     for _ in range(10):
         await asyncio.sleep(0)
-    assert (updates.installing, updates.failed) == (None, "0.10.0")
+    assert (updates.installing, updates.failed, restarts.by) == (None, "0.10.0", [])
     [failed] = await journal.history(UpdateFailed)
     assert failed.target == "0.10.0"
 
 
 async def test_an_instance_without_an_installer_updates_the_way_it_was_installed() -> None:
-    updates, _ = await _read(None)
-
-    async def restart() -> None:
-        pass
-
+    updates, _, _ = await _read(None)
     with pytest.raises(ContractError):
-        await updates.install("0.10.0", by="mathis", then=restart)
+        await updates.install("0.10.0", by="mathis")
+
+
+def _satellite(id: str, protocol: str) -> Satellite:
+    return Satellite(id=id, model="m", room="salon", capabilities=frozenset(), token_hash="x", paired_at=NOW,
+                     software=SOFTWARE, protocol=protocol)  # fmt: skip
+
+
+async def test_the_newest_release_names_the_satellites_it_no_longer_speaks_to() -> None:
+    old, current = _satellite("old", "nestor.satellite/0"), _satellite("current", "nestor.satellite/1")
+    updates, _, _ = await _read(None)
+    assert updates.left_behind([old, current]) == [old]
+    up_to_date = Updates(StaticReleaseFeed(Releases.from_json(FEED)), "0.10.0", Journal(MemoryEventLog()),
+                         Restarts(), PIP)  # fmt: skip
+    await up_to_date.check()
+    assert up_to_date.left_behind([old, current]) == [], "nothing newer, nobody left behind"

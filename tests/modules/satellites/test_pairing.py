@@ -6,6 +6,7 @@ from nestor.core import Capability, ContractError, PersonId, utc_now
 from nestor.modules.journal import Journal, LogQuery
 from nestor.modules.satellites import (
     IDENTIFY,
+    PROTOCOL,
     UPDATE,
     AttemptLimiter,
     Device,
@@ -24,6 +25,7 @@ from nestor.modules.satellites import (
     SatelliteEnrollmentRefused,
     SatelliteIdentifyRequested,
     SatellitePaired,
+    SatelliteUpdateReported,
     SatelliteUpdateRequested,
     Software,
     TooManyAttempts,
@@ -446,8 +448,8 @@ async def test_a_paired_device_is_asked_to_identify_through_its_link_while_conne
     with pytest.raises(DeviceUnavailable) as offline:
         await pairing.identify("reachy-salon")
     assert offline.value.reason == "offline"
-    device = RecordingDevice(REACHY)
-    with pairing.online("reachy-salon", device):
+    device = RecordingDevice()
+    with pairing.online("reachy-salon", device, REACHY):
         await pairing.identify("reachy-salon", by=MATHIS)
     assert device.identified == 1
     with pytest.raises(DeviceUnavailable):
@@ -457,7 +459,7 @@ async def test_a_paired_device_is_asked_to_identify_through_its_link_while_conne
 async def test_identify_is_refused_to_a_satellite_not_allowed_it_or_unknown(pairing: Pairing) -> None:
     ticket = await pairing.request(REACHY)
     await pairing.approve(code_of(ticket), capabilities=[Capability("audio.capture")])
-    with pairing.online("reachy-salon", RecordingDevice(REACHY)), pytest.raises(DeviceUnavailable) as unsupported:
+    with pairing.online("reachy-salon", RecordingDevice(), REACHY), pytest.raises(DeviceUnavailable) as unsupported:
         await pairing.identify("reachy-salon")
     with pytest.raises(DeviceUnavailable) as unknown:
         await pairing.identify("nope")
@@ -479,35 +481,39 @@ async def test_the_software_a_device_connects_with_becomes_the_one_known_and_sur
     pairing = Pairing(journal)
     await _paired(pairing, UPDATABLE)
     newer = Manifest(UPDATABLE.device, UPDATABLE.capabilities, software=Software("nestor-satellite", "0.6.0"))
-    with pairing.online("enceinte-salon", RecordingDevice(newer)):
+    assert pairing.last_seen("enceinte-salon") is None
+    with pairing.online("enceinte-salon", RecordingDevice(), newer):
         [satellite] = pairing.satellites()
         assert satellite.software.version == "0.6.0"
-    await journal.publish(SatelliteConnected(source="satellites", device_id="enceinte-salon", room="salon",
-                                             software=Software("nestor-satellite", "0.6.1")))  # fmt: skip
+        assert pairing.last_seen("enceinte-salon") is not None
+    connected = SatelliteConnected(source="satellites", device_id="enceinte-salon", room="salon",
+                                   software=Software("nestor-satellite", "0.6.1"), protocol=PROTOCOL)  # fmt: skip
+    await journal.publish(connected)
 
     restarted = Pairing(journal)
     await restarted.start()
     [satellite] = restarted.satellites()
     assert satellite.software == Software("nestor-satellite", "0.6.1")
+    assert restarted.last_seen("enceinte-salon") == connected.at
 
 
 async def test_a_device_is_asked_to_install_only_the_newer_version_it_reported(
     pairing: Pairing, journal: Journal
 ) -> None:
     await _paired(pairing, UPDATABLE)
-    device = RecordingDevice(UPDATABLE)
-    with pairing.online("enceinte-salon", device):
+    device = RecordingDevice()
+    with pairing.online("enceinte-salon", device, UPDATABLE):
         with pytest.raises(DeviceUnavailable) as silent:
             await pairing.update("enceinte-salon")
-        device.update_status = UpdateStatus(UpdateState.CURRENT)
+        await pairing.reported("enceinte-salon", UpdateStatus(UpdateState.CURRENT))
         with pytest.raises(DeviceUnavailable) as current:
             await pairing.update("enceinte-salon")
-        device.update_status = UpdateStatus(UpdateState.INSTALLING, "0.6.0")
+        await pairing.reported("enceinte-salon", UpdateStatus(UpdateState.INSTALLING, "0.6.0"))
         with pytest.raises(DeviceUnavailable) as installing:
             await pairing.update("enceinte-salon")
         assert {silent.value.reason, current.value.reason, installing.value.reason} == {"current"}
 
-        device.update_status = UpdateStatus(UpdateState.AVAILABLE, "0.6.0")
+        await pairing.reported("enceinte-salon", UpdateStatus(UpdateState.AVAILABLE, "0.6.0"))
         assert await pairing.update("enceinte-salon", by=MATHIS) == "0.6.0"
     assert device.updates == ["0.6.0"]
     [asked] = await journal.history(SatelliteUpdateRequested)
@@ -533,3 +539,23 @@ async def test_an_update_is_refused_to_a_device_unknown_offline_or_not_allowed_i
         "unsupported",
         "offline",
     )
+
+
+async def test_what_an_online_device_reports_is_kept_while_linked_and_journaled_when_it_changes(
+    pairing: Pairing, journal: Journal
+) -> None:
+    await _paired(pairing, UPDATABLE)
+    available = UpdateStatus(UpdateState.AVAILABLE, "0.6.0", "https://x.org/0.6.0")
+    await pairing.reported("enceinte-salon", available)
+    assert pairing.update_status("enceinte-salon") is None, "not while offline"
+    with pairing.online("enceinte-salon", RecordingDevice(), UPDATABLE):
+        await pairing.reported("enceinte-salon", available)
+        await pairing.reported("enceinte-salon", available)
+        assert pairing.update_status("enceinte-salon") == available
+        await pairing.reported("enceinte-salon", UpdateStatus(UpdateState.INSTALLING, "0.6.0"))
+    assert pairing.update_status("enceinte-salon") is None, "forgotten with the link"
+    reported = await journal.history(SatelliteUpdateReported)
+    assert [(e.state, e.target) for e in reported if isinstance(e, SatelliteUpdateReported)] == [
+        (UpdateState.AVAILABLE, "0.6.0"),
+        (UpdateState.INSTALLING, "0.6.0"),
+    ]

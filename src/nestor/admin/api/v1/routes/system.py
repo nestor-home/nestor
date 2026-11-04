@@ -1,13 +1,12 @@
 """What is plugged in: every configured adapter and paired satellite, its brand, version and health."""
 
-import asyncio
-from datetime import date, datetime
-from pathlib import Path
+from datetime import date
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
 
+from nestor import __version__
 from nestor.admin.api.v1.errors import ApiError
 from nestor.admin.api.v1.models import AgentOut, Input
 from nestor.admin.api.v1.routes.satellites import live_rooms
@@ -18,13 +17,12 @@ from nestor.core import Component, ContractError, Health
 from nestor.core.i18n import Message
 from nestor.modules.accounts import Scope
 from nestor.modules.connectors import Connector
-from nestor.modules.system import ChangeKind, Release, RestartRequested
+from nestor.modules.system import ChangeKind, InstallKind, Release
 from nestor.runtime import Plugged
 
 router = APIRouter(tags=["system"])
 Reader = Annotated[Caller, Depends(allowed(Scope.SYSTEM_READ))]
 Restarter = Annotated[Caller, Depends(allowed(Scope.CONFIG_MANAGE, local=True))]
-RESTART_DELAY_S = 0.2
 
 
 class ComponentOut(BaseModel):
@@ -75,7 +73,7 @@ async def get_system(request: Request, caller: Reader) -> SystemOut:
             )
         )
     return SystemOut(
-        nestor=NestorOut(version=nestor.version),
+        nestor=NestorOut(version=__version__),
         agent=AgentOut.of(nestor),
         restart_required=bool(state(request).pending_changes),
         pending_changes=state(request).pending_changes,
@@ -115,16 +113,19 @@ class ReleaseOut(BaseModel):
     changes: list[ReleaseChangeOut]
 
 
+class LeftBehindOut(BaseModel):
+    id: str
+    name: str | None  # what the household calls it
+
+
 class UpdatesOut(BaseModel):
-    """What was released since the running version. Nothing here installs anything."""
+    """What was released since the running version, and how this Nestor gets it."""
 
     running: str
-    checking: bool  # `updates.check`: the release feed is read once a day
-    checked_at: datetime | None  # when it was last read; None: not yet (a minute after starting)
-    latest: str | None  # the newest release; None until the feed was read
-    releases: list[ReleaseOut]  # newer than the running version, newest first; empty: up to date
-    outdated_satellites: list[str]  # paired devices on a protocol the newest release no longer speaks
-    container: bool  # it runs in a container: update the image rather than the package
+    releases: list[ReleaseOut]  # newer than the running version, newest first; empty: up to date (or not checked)
+    left_behind: list[LeftBehindOut]  # paired satellites the newest release no longer speaks to
+    installation: InstallKind | None  # how Nestor is installed; None when `updates.check` is off
+    commands: list[str]  # what to run to update it by hand (none for a developer's checkout)
     installable: bool  # `POST /system/updates/install` can install the newest release here
     installing: str | None  # the version being installed; a restart follows
     failed: str | None  # the version that last failed to install (the running one stayed)
@@ -134,20 +135,18 @@ class UpdatesOut(BaseModel):
 async def get_updates(request: Request, caller: Reader) -> UpdatesOut:
     nestor = state(request).nestor
     updates = nestor.updates
-    feed = updates.releases if updates else None
-    newer = feed.newer_than(nestor.version) if feed else ()
-    outdated = [s.id for s in nestor.pairing.satellites() if newer and feed and s.protocol not in feed.protocols]
+    if updates is None:
+        return UpdatesOut(running=__version__, releases=[], left_behind=[], installation=None, commands=[],
+                          installable=False, installing=None, failed=None)  # fmt: skip
     return UpdatesOut(
-        running=nestor.version,
-        checking=updates is not None,
-        checked_at=updates.checked_at if updates else None,
-        latest=feed.latest.version if feed and feed.latest else None,
-        releases=[_release(r) for r in newer],
-        outdated_satellites=outdated,
-        container=Path("/.dockerenv").exists(),
-        installable=bool(updates and updates.installer),
-        installing=updates.installing if updates else None,
-        failed=updates.failed if updates else None,
+        running=updates.running,
+        releases=[_release(r) for r in updates.newer()],
+        left_behind=[LeftBehindOut(id=s.id, name=s.name) for s in updates.left_behind(nestor.pairing.satellites())],
+        installation=updates.installation.kind,
+        commands=list(updates.installation.commands),
+        installable=updates.installer is not None,
+        installing=updates.installing,
+        failed=updates.failed,
     )
 
 
@@ -166,14 +165,8 @@ async def install_update(request: Request, caller: Restarter, body: InstallIn) -
     updates = admin.nestor.updates
     if updates is None:
         raise ApiError(409, "update_not_installable")
-    by = caller.account_id or "cli"
-
-    async def restart() -> None:
-        await admin.nestor.journal.publish(RestartRequested(source="admin", by=by))
-        admin.restart()
-
     try:
-        await updates.install(body.version, by=by, then=restart)
+        await updates.install(body.version, by=caller.account_id or "cli")
     except ContractError:
         raise ApiError(409, "update_not_installable") from None
     return await get_updates(request, caller)
@@ -203,7 +196,5 @@ async def restart_system(request: Request, caller: Restarter, body: RestartIn) -
     again with the same command line — applying the configuration written since. Never automatic."""
     if not body.confirm:
         raise ApiError(400, "restart_unconfirmed")
-    admin = state(request)
-    await admin.nestor.journal.publish(RestartRequested(source="admin", by=caller.account_id or "cli"))
-    asyncio.get_running_loop().call_later(RESTART_DELAY_S, admin.restart)  # once this answer is sent
+    await state(request).nestor.restart.ask(caller.account_id or "cli")
     return RestartOut(restarting=True)

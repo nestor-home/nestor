@@ -34,13 +34,11 @@ from nestor.modules.satellites import (
     Addition,
     AdditionStatus,
     DeviceUnavailable,
-    Online,
+    Pairing,
     PairingMethod,
     PairingRefused,
     PendingPairing,
     Satellite,
-    SatelliteConnected,
-    SatelliteDisconnected,
     SatellitePaired,
     Software,
     UpdateState,
@@ -190,20 +188,12 @@ async def list_satellites(request: Request, caller: Pairer) -> SatellitesOut:
     now = utc_now()
     live = live_rooms(admin)
     people = People(admin.nestor.household)
-    seen = await last_seen(admin)
     pending = pairing.pending()
     words = caller.phrasebook
     return SatellitesOut(
         pending=[_pending(p, words, now) for p in pending],
         paired=[
-            _satellite(
-                s,
-                people.ref(approvals[s.id].approved_by) if s.id in approvals else None,
-                live,
-                words,
-                seen.get(s.id),
-                pairing.connected(s.id),
-            )
+            _satellite(s, pairing, people.ref(approvals[s.id].approved_by) if s.id in approvals else None, live, words)
             for s in pairing.satellites()
         ],
         additions=[_addition(a, pending, people, words) for a in additions],
@@ -292,15 +282,7 @@ async def get_satellite(request: Request, caller: Pairer, device_id: str) -> Sat
     approvals = {e.device.id: e for e in await admin.nestor.journal.history(SatellitePaired)}
     approved = approvals[device_id].approved_by if device_id in approvals else None
     people = People(admin.nestor.household)
-    seen = await last_seen(admin)
-    return _satellite(
-        satellite,
-        people.ref(approved),
-        live_rooms(admin),
-        caller.phrasebook,
-        seen.get(device_id),
-        admin.nestor.pairing.connected(device_id),
-    )
+    return _satellite(satellite, admin.nestor.pairing, people.ref(approved), live_rooms(admin), caller.phrasebook)
 
 
 @router.post("/satellites/{device_id}/identify", status_code=204)
@@ -354,7 +336,11 @@ async def approve_satellite(request: Request, caller: Pairer, body: ApprovalIn) 
     except ContractError:
         raise ApiError(400, "not_a_device_code_method") from None
     return _satellite(
-        satellite, People(admin.nestor.household).ref(caller.person), live_rooms(admin), caller.phrasebook
+        satellite,
+        admin.nestor.pairing,
+        People(admin.nestor.household).ref(caller.person),
+        live_rooms(admin),
+        caller.phrasebook,
     )
 
 
@@ -366,12 +352,6 @@ async def revoke_satellite(request: Request, caller: Pairer, device_id: str) -> 
     except ContractError:
         raise not_found("satellite_unknown") from None
     return Response(status_code=204)
-
-
-async def last_seen(admin: AdminState) -> dict[str, datetime]:
-    """When each device last connected or disconnected (the latest wins)."""
-    events = await admin.nestor.journal.history(SatelliteConnected, SatelliteDisconnected)
-    return {e.device_id: e.at for e in events}
 
 
 def _unavailable(
@@ -435,13 +415,12 @@ def _addition(addition: Addition, pending: list[PendingPairing], people: People,
 
 def _satellite(
     satellite: Satellite,
+    pairing: Pairing,
     approved_by: PersonRef | None,
     live: frozenset[str] | None,
     words: Phrasebook,
-    seen: datetime | None = None,
-    online: Online | None = None,
 ) -> SatelliteOut:
-    status = online.update_status if online else None
+    status = pairing.update_status(satellite.id)
     return SatelliteOut(
         id=satellite.id,
         name=satellite.name,
@@ -455,7 +434,7 @@ def _satellite(
         can_update=UPDATE in satellite.capabilities,
         update=UpdateOut(state=status.state, version=status.version, notes=status.notes) if status else None,
         paired_at=satellite.paired_at,
-        last_seen_at=seen,
+        last_seen_at=pairing.last_seen(satellite.id),
         approved_by=approved_by,
         connected=satellite.room in live if live is not None else None,
     )

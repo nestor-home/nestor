@@ -14,6 +14,7 @@ from nestor.modules.channels import Address, Exchange, Medium
 from nestor.modules.conversation import AssistantTurn, UserTurn
 from nestor.modules.initiative import DeliveryConsidered
 from nestor.modules.memory import MemoryRecorded
+from nestor.modules.satellites import PROTOCOL
 from nestor.testing.satellites import SOFTWARE, pair_by_code
 
 from ...harness import EventStream, Harness
@@ -303,7 +304,9 @@ async def test_the_important_events_are_told_in_the_readers_language(tmp_path: P
                 status=Status.NEEDS_REAUTH,
                 reason=Message.of("connection-refresh-refused"),
             ),
-            SatelliteConnected(source="voice", device_id="reachy-salon", room="salon", software=SOFTWARE),
+            SatelliteConnected(
+                source="voice", device_id="reachy-salon", room="salon", software=SOFTWARE, protocol=PROTOCOL
+            ),
             SatelliteDisconnected(source="voice", device_id="reachy-salon", room="salon"),
             PersonDetected(source="voice", device_id="reachy-salon", room="salon", count=2, confidence=0.87),
             PersonDetected(source="voice", device_id="reachy-salon", room="salon", count=1, confidence=0.5),

@@ -8,7 +8,7 @@ from nestor.modules.accounts import Role
 from nestor.modules.channels import Address
 from nestor.modules.cognition import TaskStatus
 from nestor.modules.initiative import Watch
-from nestor.testing.satellites import SOFTWARE, pair_by_code
+from nestor.testing.satellites import SOFTWARE, RecordingDevice, pair_by_code
 
 from ...harness import Harness
 
@@ -131,7 +131,7 @@ async def test_resources_say_where_they_come_from_and_what_became_of_them(tmp_pa
     from nestor.modules.cognition.delegation.events import TaskDelivered
     from nestor.modules.cognition.tools import ToolCalled
     from nestor.modules.initiative import Delivered, WatchTriggered
-    from nestor.modules.satellites import Device, Manifest, SatelliteConnected
+    from nestor.modules.satellites import Device, Manifest
 
     async with Harness(tmp_path) as admin:
         nestor = admin.nestor
@@ -154,10 +154,10 @@ async def test_resources_say_where_they_come_from_and_what_became_of_them(tmp_pa
         await nestor.journal.publish(
             ToolCalled(source="toolbox", address=TELEGRAM, call_id="c1", name="imap_search", arguments={})
         )
-        await pair_by_code(nestor.pairing, Manifest(Device("mic", "esp32", "bureau"), software=SOFTWARE))
-        await nestor.journal.publish(
-            SatelliteConnected(source="voice", device_id="mic", room="bureau", software=SOFTWARE)
-        )
+        mic = Manifest(Device("mic", "esp32", "bureau"), software=SOFTWARE)
+        await pair_by_code(nestor.pairing, mic)
+        with nestor.pairing.online("mic", RecordingDevice(), mic):
+            pass  # it connected, then left
 
         api = await admin.api()
         tasks = {t["id"]: t for t in (await api.get("/api/v1/tasks")).json()["recent"]}

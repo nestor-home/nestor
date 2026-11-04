@@ -271,7 +271,7 @@ class Satellite:
     token_hash: str
     paired_at: datetime
     software: Software  # what it runs: declared at pairing, then at each connection
-    protocol: str = PROTOCOL  # the protocol version it speaks, as last declared
+    protocol: str  # the protocol version it speaks, as last declared
     brand: str | None = None
     name: str | None = None  # what the household calls it, given when it was added
 

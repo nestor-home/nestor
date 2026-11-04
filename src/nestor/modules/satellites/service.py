@@ -39,11 +39,13 @@ from nestor.modules.satellites.events import (
     SatelliteAdditionExpired,
     SatelliteAdditionStarted,
     SatelliteConnected,
+    SatelliteDisconnected,
     SatelliteEnrollmentRefused,
     SatelliteIdentifyRequested,
     SatellitePaired,
     SatellitePairingRequested,
     SatelliteRevoked,
+    SatelliteUpdateReported,
     SatelliteUpdateRequested,
 )
 from nestor.modules.satellites.types import (
@@ -75,10 +77,7 @@ _REFUSALS = {AdditionStatus.COMPLETED: "used", AdditionStatus.EXPIRED: "expired"
 
 
 class Online(ABC):
-    """A paired device whose link is up, as the host holding the link reaches it."""
-
-    manifest: Manifest  # what it declared in its `hello`
-    update_status: UpdateStatus | None = None  # what it last reported about its software (`update.status`)
+    """A paired device whose link is up, as the host holding the link reaches it: the intents it carries."""
 
     @abstractmethod
     def identify(self) -> None:
@@ -198,14 +197,17 @@ class Pairing(Component):
         self._satellites: dict[str, Satellite] = {}
         self._additions: dict[str, Addition] = {}
         self._online: dict[str, Online] = {}
+        self._updates: dict[str, UpdateStatus] = {}  # what each online device last reported about its software
+        self._seen: dict[str, datetime] = {}  # when each device last connected or disconnected
 
     async def start(self) -> None:
         """Rebuild the paired satellites (the latest pairing of each device, unless revoked since, with
-        the software it last connected with) and the additions in progress."""
+        the software it last connected with and when it was last seen) and the additions in progress."""
         history = await self.journal.history(
             SatellitePaired,
             SatelliteRevoked,
             SatelliteConnected,
+            SatelliteDisconnected,
             SatelliteAdditionStarted,
             SatelliteAdditionCompleted,
             SatelliteAdditionExpired,
@@ -219,6 +221,9 @@ class Pairing(Component):
                     self._satellites.pop(event.device_id, None)
                 case SatelliteConnected():
                     self._declared(event.device_id, event.software, event.protocol)
+                    self._seen[event.device_id] = event.at
+                case SatelliteDisconnected():
+                    self._seen[event.device_id] = event.at
                 case SatelliteAdditionStarted():
                     self._additions[event.addition_id] = _addition(event)
                 case SatelliteAdditionCompleted():
@@ -441,30 +446,46 @@ class Pairing(Component):
         software it reported; returns that version. Only a version the device found itself is ever
         asked for: the core never names a source, and never an older version."""
         online = self._reach(device_id, UPDATE)
-        status = online.update_status
+        status = self._updates.get(device_id)
         if status is None or status.state is not UpdateState.AVAILABLE or status.version is None:
             raise DeviceUnavailable("this satellite reported no newer version", reason="current")
         online.update(status.version)
-        running = online.manifest.software.version
+        running = self._satellites[device_id].software.version
         await self.journal.publish(SatelliteUpdateRequested(source=self.name, device_id=device_id, running=running,
                                                             target=status.version, requested_by=by))  # fmt: skip
         return status.version
 
-    def connected(self, device_id: str) -> Online | None:
-        """The device's link, while it is up."""
-        return self._online.get(device_id)
+    async def reported(self, device_id: str, status: UpdateStatus) -> None:
+        """What an online device says about its software (`update.status`): kept while its link is up,
+        journaled when it changes."""
+        if device_id not in self._online or self._updates.get(device_id) == status:
+            return
+        self._updates[device_id] = status
+        await self.journal.publish(SatelliteUpdateReported(source=self.name, device_id=device_id,
+                                                           state=status.state, target=status.version))  # fmt: skip
+
+    def update_status(self, device_id: str) -> UpdateStatus | None:
+        """What the device reported about its software, while its link is up."""
+        return self._updates.get(device_id)
+
+    def last_seen(self, device_id: str) -> datetime | None:
+        """When the device last connected or disconnected; `None` when never since it was paired."""
+        return self._seen.get(device_id)
 
     @contextlib.contextmanager
-    def online(self, device_id: str, online: Online) -> Generator[None]:
-        """While a host holds a paired device's link: how to reach it. The software it declared becomes
-        the one known for it (its `SatelliteConnected` keeps it across restarts)."""
+    def online(self, device_id: str, online: Online, manifest: Manifest) -> Generator[None]:
+        """While a host holds a paired device's link: how to reach it. The software it declared in
+        `manifest` becomes the one known for it (its `SatelliteConnected` keeps it across restarts)."""
         self._online[device_id] = online
-        self._declared(device_id, online.manifest.software, online.manifest.protocol)
+        self._declared(device_id, manifest.software, manifest.protocol)
+        self._seen[device_id] = self._clock()
         try:
             yield
         finally:
             if self._online.get(device_id) is online:
                 del self._online[device_id]
+                self._updates.pop(device_id, None)
+                self._seen[device_id] = self._clock()
 
     def authenticate(self, device_id: str, token: str) -> Satellite | None:
         """The satellite this token belongs to; `None` for any unpaired, revoked or replaced token."""
