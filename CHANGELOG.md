@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.1](https://github.com/nestor-home/nestor/compare/v0.8.0...v0.8.1) (2026-11-04)
+
+
+### Bug Fixes
+
+* back to Python 3.14, the newest every extra installs on ([#65](https://github.com/nestor-home/nestor/issues/65)) ([930e272](https://github.com/nestor-home/nestor/commit/930e27225cd090086bcd1c8e31ca8e1a39ce33d8))
+
 ## [0.8.0](https://github.com/nestor-home/nestor/compare/v0.7.0...v0.8.0) (2026-11-04)
 
 
