@@ -83,6 +83,36 @@ export function SideSheet({
   );
 }
 
+/** A short drawer from the bottom (filters on a phone): its title, then what it holds. */
+export function BottomSheet({
+  open,
+  onOpenChange,
+  trigger,
+  title,
+  children,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  trigger: ReactElement;
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetTrigger render={trigger} />
+      <SheetContent
+        side="bottom"
+        className="max-h-[85dvh] overflow-y-auto overscroll-contain rounded-t-xl bg-paper pb-[env(safe-area-inset-bottom)]"
+      >
+        <SheetHeader className="border-b border-rule px-5 pt-5 pb-3">
+          <SheetTitle className="font-serif text-xl font-normal">{title}</SheetTitle>
+        </SheetHeader>
+        {children}
+      </SheetContent>
+    </Sheet>
+  );
+}
+
 export function FormSheet({
   trigger,
   title,

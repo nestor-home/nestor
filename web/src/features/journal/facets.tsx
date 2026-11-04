@@ -2,11 +2,11 @@ import { Check, ChevronDown, SlidersHorizontal, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import type { Facet, JournalFacets } from "@/api";
+import { BottomSheet } from "@/components/overlay-form";
 import { RowList } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useT } from "@/i18n";
 import { KindMark } from "@/lib/brands";
 import { kindStyle } from "@/lib/icons";
@@ -156,83 +156,81 @@ export function FilterSheet({
   );
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetTrigger render={<Button variant="outline" />}>
-          <SlidersHorizontal aria-hidden="true" />
-          {t("jr-filters")}
-          {chosen.length ? <span className="font-mono text-[0.72rem]">{chosen.length}</span> : null}
-        </SheetTrigger>
-        <SheetContent
-          side="bottom"
-          className="max-h-[85dvh] overflow-y-auto overscroll-contain rounded-t-xl bg-paper pb-[env(safe-area-inset-bottom)]"
-        >
-          <SheetHeader className="border-b border-rule px-5 pt-5 pb-3">
-            <SheetTitle className="font-serif text-xl font-normal">{t("jr-filters")}</SheetTitle>
-          </SheetHeader>
-          <div className="grid gap-6 px-5 pb-6">
-            {groups.map((g) =>
-              g.facets?.length ? (
-                <section key={g.id} aria-labelledby={`sheet-${g.id}`}>
-                  <h3 id={`sheet-${g.id}`} className="label-mono mb-1.5">
-                    {g.label}
-                  </h3>
-                  <RowList>
-                    {g.facets.map((f) => {
-                      const on = g.selected.includes(f.key);
-                      return (
-                        <li key={f.key}>
-                          <button
-                            type="button"
-                            aria-pressed={on}
-                            onClick={() =>
-                              g.onChange(
-                                g.multiple
-                                  ? on
-                                    ? g.selected.filter((k) => k !== f.key)
-                                    : [...g.selected, f.key]
-                                  : on
-                                    ? []
-                                    : [f.key],
-                              )
-                            }
-                            className="flex min-h-11 w-full items-center gap-3 px-4 text-left text-sm aria-pressed:bg-paper-sunken"
+      <BottomSheet
+        open={open}
+        onOpenChange={setOpen}
+        title={t("jr-filters")}
+        trigger={
+          <Button variant="outline">
+            <SlidersHorizontal aria-hidden="true" />
+            {t("jr-filters")}
+            {chosen.length ? <span className="font-mono text-[0.72rem]">{chosen.length}</span> : null}
+          </Button>
+        }
+      >
+        <div className="grid gap-6 px-5 pb-6">
+          {groups.map((g) =>
+            g.facets?.length ? (
+              <section key={g.id} aria-labelledby={`sheet-${g.id}`}>
+                <h3 id={`sheet-${g.id}`} className="label-mono mb-1.5">
+                  {g.label}
+                </h3>
+                <RowList>
+                  {g.facets.map((f) => {
+                    const on = g.selected.includes(f.key);
+                    return (
+                      <li key={f.key}>
+                        <button
+                          type="button"
+                          aria-pressed={on}
+                          onClick={() =>
+                            g.onChange(
+                              g.multiple
+                                ? on
+                                  ? g.selected.filter((k) => k !== f.key)
+                                  : [...g.selected, f.key]
+                                : on
+                                  ? []
+                                  : [f.key],
+                            )
+                          }
+                          className="flex min-h-11 w-full items-center gap-3 px-4 text-left text-sm aria-pressed:bg-paper-sunken"
+                        >
+                          <span
+                            aria-hidden="true"
+                            className={cn(
+                              "grid size-4 place-items-center rounded-sm border border-rule-strong",
+                              on && "border-ink bg-ink text-paper",
+                            )}
                           >
-                            <span
-                              aria-hidden="true"
-                              className={cn(
-                                "grid size-4 place-items-center rounded-sm border border-rule-strong",
-                                on && "border-ink bg-ink text-paper",
-                              )}
-                            >
-                              {on ? <Check className="size-3" /> : null}
-                            </span>
-                            {g.render?.(f)}
-                            <span className="flex-1 truncate">{f.label}</span>
-                            <span className="font-mono text-[0.72rem] text-ink-faint tabular">{number(f.count)}</span>
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </RowList>
-                </section>
-              ) : null,
-            )}
-            <div className="sticky bottom-0 -mx-5 flex gap-2 border-t border-rule bg-paper px-5 pt-3 pb-3">
-              <Button
-                variant="ghost"
-                className="flex-1"
-                onClick={() => onChange(cleared(search))}
-                disabled={!chosen.length}
-              >
-                {t("jr-facet-clear")}
-              </Button>
-              <Button className="flex-1" onClick={() => setOpen(false)}>
-                {t("jr-filters-show")}
-              </Button>
-            </div>
+                            {on ? <Check className="size-3" /> : null}
+                          </span>
+                          {g.render?.(f)}
+                          <span className="flex-1 truncate">{f.label}</span>
+                          <span className="font-mono text-[0.72rem] text-ink-faint tabular">{number(f.count)}</span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </RowList>
+              </section>
+            ) : null,
+          )}
+          <div className="sticky bottom-0 -mx-5 flex gap-2 border-t border-rule bg-paper px-5 pt-3 pb-3">
+            <Button
+              variant="ghost"
+              className="flex-1"
+              onClick={() => onChange(cleared(search))}
+              disabled={!chosen.length}
+            >
+              {t("jr-facet-clear")}
+            </Button>
+            <Button className="flex-1" onClick={() => setOpen(false)}>
+              {t("jr-filters-show")}
+            </Button>
           </div>
-        </SheetContent>
-      </Sheet>
+        </div>
+      </BottomSheet>
       {chosen.map(({ group, facet }) => (
         <Button
           key={`${group.id}-${facet.key}`}

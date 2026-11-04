@@ -235,6 +235,7 @@ describe("a model's mark", () => {
 
   it("is its kind for any other server, an address still to write, or a kind that publishes no hosts", () => {
     expect(markOf("openai-compatible", { base_url: "http://localhost:11434/v1" }, schema)).toBe("openai-compatible");
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: a configuration value still to be filled, as the file writes it
     expect(markOf("openai-compatible", { base_url: "${MODEL_URL}" }, schema)).toBe("openai-compatible");
     expect(markOf("hermes", { base_url: "https://openrouter.ai" }, {})).toBe("hermes");
   });
