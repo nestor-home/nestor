@@ -179,60 +179,69 @@ function Hero({
     if (target) controller.current?.lookAt(target);
     else controller.current?.center();
   }, [focus, ready]);
+  // laid out by the room the page has (the sidebar takes some), not by the screen: the bubble goes
+  // under the figure rather than shrinking beside it
   return (
-    <section
-      aria-labelledby="hello"
-      className="grid items-center gap-8 md:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]"
-    >
-      <div>
-        <p className="mb-4 text-ink-muted first-letter:uppercase">{date}</p>
-        <h1 id="hello" className="display-1 text-ink">
-          {greeting}
-        </h1>
-      </div>
-      <div className="flex items-center gap-4 md:justify-center md:gap-6">
-        <Link
-          to="/journal"
-          aria-label={t("home-figure-label", { agent, state: t(`home-state-${state}`) })}
-          className="relative shrink-0 rounded-full p-5 md:p-8"
-        >
-          {/* a soft dithered disc behind it, as on the site: atmosphere, never on its body */}
-          <Dither
-            shape="vignette"
-            from={0.16}
-            to={0}
-            dot={3}
-            className="pointer-events-none absolute inset-0 overflow-hidden rounded-full text-ink/[0.16]"
-          />
-          <span className="relative hidden md:block">
-            <AgentFigure
-              state={state}
-              size="hero"
-              ground
-              live={LIVE}
-              onReady={(c) => {
-                controller.current = c;
-                setReady(true);
-              }}
-            />
-          </span>
-          <span className="relative md:hidden">
-            <AgentFigure state={state} size="lg" ground />
-          </span>
-        </Link>
-        <p aria-live="polite" className="bubble-say mb-10 self-end md:mb-24">
-          <span className="mb-0.5 block font-mono text-[0.68rem] text-ink-muted">
-            {agent} · {t(`home-state-${state}`)}
-          </span>
-          {line}
-        </p>
-      </div>
-      <div className="flex items-center gap-4 text-rule-strong md:col-span-2" aria-hidden="true">
-        <span className="h-px flex-1 bg-rule" />
-        <BowTie size={22} />
-        <span className="h-px flex-1 bg-rule" />
-      </div>
-    </section>
+    <div className="@container">
+      <section
+        aria-labelledby="hello"
+        className="grid items-center gap-8 @4xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]"
+      >
+        <div>
+          <p className="mb-4 text-ink-muted first-letter:uppercase">{date}</p>
+          <h1 id="hello" className="display-1 text-ink">
+            {greeting}
+          </h1>
+        </div>
+        <div className="@container/figure">
+          <div className="flex flex-col items-start gap-4 @lg/figure:flex-row @lg/figure:items-center @lg/figure:justify-center @lg/figure:gap-6">
+            <Link
+              to="/journal"
+              aria-label={t("home-figure-label", { agent, state: t(`home-state-${state}`) })}
+              className="relative shrink-0 rounded-full p-5 @4xl:p-8"
+            >
+              {/* a soft dithered disc behind it, as on the site: atmosphere, never on its body */}
+              <Dither
+                shape="vignette"
+                from={0.16}
+                to={0}
+                dot={3}
+                className="pointer-events-none absolute inset-0 overflow-hidden rounded-full text-ink/[0.16]"
+              />
+              <span className="relative hidden @4xl:block">
+                <AgentFigure
+                  state={state}
+                  size="hero"
+                  ground
+                  live={LIVE}
+                  onReady={(c) => {
+                    controller.current = c;
+                    setReady(true);
+                  }}
+                />
+              </span>
+              <span className="relative @4xl:hidden">
+                <AgentFigure state={state} size="lg" ground />
+              </span>
+            </Link>
+            <p
+              aria-live="polite"
+              className="bubble-say @lg/figure:mb-10 @4xl:@lg/figure:mb-24 @lg/figure:min-w-52 @lg/figure:flex-1 @lg/figure:self-end"
+            >
+              <span className="mb-0.5 block font-mono text-[0.68rem] text-ink-muted">
+                {agent} · {t(`home-state-${state}`)}
+              </span>
+              {line}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-4 text-rule-strong @4xl:col-span-2" aria-hidden="true">
+          <span className="h-px flex-1 bg-rule" />
+          <BowTie size={22} />
+          <span className="h-px flex-1 bg-rule" />
+        </div>
+      </section>
+    </div>
   );
 }
 
