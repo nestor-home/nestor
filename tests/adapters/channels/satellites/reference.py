@@ -3,7 +3,8 @@
 It pairs (with the enrollment code it was launched with, else by "showing" its device code in
 `code`, falling back to it when the enrollment code is refused), opens its link with its token in
 `hello`, acknowledges every intent, offers audio when allowed and plays what it receives, reports one
-observation, types `typed` when allowed, reconnects when the core closes its link, and pairs again
+observation, types `typed` when allowed, reports a newer version of its software when allowed to
+update (and installs only that one), reconnects when the core closes its link, and pairs again
 when its token is refused. Its faults can be switched on to prove the conformance suite catches them.
 """
 
@@ -25,14 +26,17 @@ from nestor.modules.satellites import (
     AUDIO_PLAYBACK,
     PERSON_DETECTION,
     TEXT_INPUT,
+    UPDATE,
     Device,
     Manifest,
     PairingMethod,
+    UpdateState,
     parse_pairing_uri,
     wire,
 )
 
 TOKEN_REFUSED = 4401
+FOUND = "9.9.9"  # the newer version of its software it finds at its own source
 
 
 @dataclass(frozen=True, slots=True)
@@ -50,6 +54,8 @@ class Faults:
     honours_retry_after: bool = True
     forgets_refused_token: bool = True  # pairs again once its token is refused
     offers_unallowed_audio: bool = False  # offers audio although welcome allowed none
+    reports_update: bool = True  # says where its software stands when allowed device.update
+    installs_unreported: bool = False  # installs whatever version intent.update names
 
 
 class ReferenceSatellite:
@@ -147,7 +153,9 @@ class ReferenceSatellite:
 
             if self.faults.says_hello:
                 device = self.manifest.device if self.faults.honest_hello else Device("someone-else", "x", "salon")
-                hello = Manifest(device, self.manifest.capabilities, self.manifest.pairing_methods)
+                hello = Manifest(
+                    device, self.manifest.capabilities, self.manifest.pairing_methods, software=self.manifest.software
+                )
                 await send(wire.Hello(manifest=hello, token=token))
             else:
                 await send(wire.SpeechActivityObservation(active=True))
@@ -165,6 +173,8 @@ class ReferenceSatellite:
                             await send(wire.PersonObservation(count=1, confidence=0.92))
                         if self.typed and TEXT_INPUT in self.allowed:
                             await send(wire.TextInput(text=self.typed))
+                        if UPDATE in self.allowed and self.faults.reports_update:
+                            await send(wire.UpdateStatusReport(state=UpdateState.AVAILABLE, version=FOUND))
                         if not self.faults.valid_messages:
                             await send({"type": "observation.mood", "id": "x", "at": "2026-10-30T12:00:00+00:00",
                                         "payload": {}})  # fmt: skip
@@ -175,6 +185,10 @@ class ReferenceSatellite:
                         self.identified += 1
                     if self.faults.acks:
                         await send(wire.Ack(of=envelope.id))
+                    if isinstance(message, wire.UpdateIntent) and (
+                        message.version == FOUND or self.faults.installs_unreported
+                    ):
+                        await send(wire.UpdateStatusReport(state=UpdateState.INSTALLING, version=message.version))
                     if self.observe and message == wire.BehaviorIntent(behavior=Behavior.IDLE):
                         await send(wire.PersonObservation(count=1, confidence=0.9))  # still there once it stopped
             except websockets.ConnectionClosed:

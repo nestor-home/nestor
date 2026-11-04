@@ -243,6 +243,10 @@ export const api = {
     unwrap(client.POST("/api/v1/satellites/{device_id}/identify", { params: { path: { device_id: device } } })).then(
       () => undefined,
     ),
+  /** Asks a connected satellite to install the newer version it reported; answers that version. */
+  updateSatellite: async (device: string): Promise<string> =>
+    (await unwrap(client.POST("/api/v1/satellites/{device_id}/update", { params: { path: { device_id: device } } })))
+      .version,
   satellite: async (device: string): Promise<Satellite> =>
     adapt.satellite(
       await unwrap(client.GET("/api/v1/satellites/{device_id}", { params: { path: { device_id: device } } })),

@@ -330,7 +330,8 @@ export interface PairingMethods {
 /** A device asking to be paired, waiting for a proof. */
 export interface PairingRequest {
   id: Id; // the pairing id
-  device: { id: string; model: string; room: string; brand: string | null; sdk: string | null };
+  device: { id: string; model: string; room: string; brand: string | null };
+  software: Software; // what it declares it runs
   capabilities: Capability[];
   methods: PairingMethod[]; // the recommended one first
   recommended_method: PairingMethodId;
@@ -369,6 +370,21 @@ export interface StartedAddition {
   uri: string | null; // null when no host serves satellites
 }
 
+/** The software a device runs, named as its package is where it is installed from. */
+export interface Software {
+  name: string;
+  version: string;
+}
+
+export type UpdateState = "current" | "available" | "installing" | "failed";
+
+/** What a connected device last reported about its software; `version` is the newer one. */
+export interface SatelliteUpdate {
+  state: UpdateState;
+  version: string | null;
+  notes: string | null; // what that version changes, an https address the device found: opened, never fetched
+}
+
 export interface Satellite {
   id: string;
   name: string | null;
@@ -382,8 +398,10 @@ export interface Satellite {
   connected: boolean | null;
   last_seen_at: Instant | null;
   brand: string | null;
-  sdk: string | null;
-  sdk_version: string | null;
+  software: Software; // as it last declared
+  protocol: string;
+  can_update: boolean; // allowed device.update
+  update: SatelliteUpdate | null; // null while offline or before it reports
 }
 
 export interface Satellites {
@@ -494,6 +512,7 @@ export type Installation = "container" | "editable" | "uv-tool" | "pip";
 export interface Updates {
   running: string;
   releases: Release[]; // newer than the running one, newest first
+  left_behind: { id: string; name: string | null }[]; // satellites the newest release no longer speaks to
   installation: Installation | null; // how Nestor is installed; null when it does not check for releases
   commands: string[]; // what to run to update it by hand
   installable: boolean; // the newest release installs from the admin (a Python environment, not a container)

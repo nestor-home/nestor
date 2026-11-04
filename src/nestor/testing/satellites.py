@@ -3,9 +3,11 @@
 `ProtocolProbe` plays the core on one link of the satellite under test, once the gateway accepted its
 `hello`: it answers `welcome`, sends one intent of each kind the device may receive
 (`intent.identify` only to a device allowed `device.identify`, `intent.text` only to one allowed
-`text.display`) and expects each to be acknowledged in time, and checks that every message it
-receives, observations and typed text included, follows the contract and what the device was
-allowed. Each finding is a `Message` (catalogue `conformance.ftl`), so whoever shows it renders it in
+`text.display`, `intent.update` for a version it never reported only to one allowed `device.update`)
+and expects each to be acknowledged in time, and checks that every message it receives, observations
+and typed text included, follows the contract and what the device was allowed. A device allowed
+`device.update` must also report where its software stands, and never install a version it did not
+report. Each finding is a `Message` (catalogue `conformance.ftl`), so whoever shows it renders it in
 the reader's language. The link only has to implement `SatelliteSession`; the black-box core lives
 with the gateway (`nestor.adapters.channels.satellites.conformance`).
 """
@@ -22,11 +24,34 @@ from nestor.modules.behavior import EXPRESSION, HEAD_MOTION, Behavior, Expressio
 from nestor.modules.satellites import (
     IDENTIFY,
     TEXT_DISPLAY,
+    UPDATE,
     Manifest,
+    Online,
     Pairing,
     Satellite,
+    Software,
+    UpdateState,
     wire,
 )
+
+SOFTWARE = Software("nestor-test-satellite", "1.0.0")  # what test devices declare they run
+
+
+class RecordingDevice(Online):
+    """A connected device as the pairing service reaches it: it notes what it is asked."""
+
+    def __init__(self) -> None:
+        self.identified = 0
+        self.updates: list[str] = []  # the versions it was asked to install
+
+    def identify(self) -> None:
+        self.identified += 1
+
+    def update(self, version: str) -> None:
+        self.updates.append(version)
+
+
+UNREPORTED = "0.0.0"  # the version `intent.update` asks for: never reported, older than any (U2)
 
 
 class SatelliteSession(ABC):
@@ -97,6 +122,12 @@ class ProtocolProbe:
                 Message.of("conformance-no-ack"),
             )  # fmt: skip
         await reader.listen(self.listen_s)
+        if UPDATE in allowed:
+            findings.add(Message.of("conformance-reports-update", connection=connection), bool(reader.updates),
+                         Message.of("conformance-no-update-status"))  # fmt: skip
+            installed = any(u.state is not UpdateState.CURRENT and u.version == UNREPORTED for u in reader.updates)
+            findings.add(Message.of("conformance-installs-only-found", connection=connection), not installed,
+                         Message.of("conformance-installed-unreported", version=UNREPORTED))  # fmt: skip
         reader.conclude()
 
 
@@ -110,6 +141,8 @@ def _intents_for(capabilities: frozenset[Capability]) -> list[wire.Message]:
         intents.append(wire.IdentifyIntent())
     if TEXT_DISPLAY in capabilities:
         intents.append(wire.TextIntent(text="Hello."))
+    if UPDATE in capabilities:
+        intents.append(wire.UpdateIntent(version=UNREPORTED))
     intents.append(wire.BehaviorIntent(behavior=Behavior.IDLE))
     return intents
 
@@ -123,6 +156,7 @@ class _Reader:
         self._session, self._allowed, self._findings, self._connection = session, allowed, findings, connection
         self._acks: set[str] = set()
         self._invalid: list[str] = []
+        self.updates: list[wire.UpdateStatusReport] = []  # what it reported about its software
 
     async def ack_of(self, intent_id: str, timeout_s: float) -> bool:
         deadline = time.monotonic() + timeout_s
@@ -163,6 +197,8 @@ class _Reader:
             self._invalid.append(f"{message.message_type} is sent by the core, not by satellites")
         elif isinstance(message, wire.Ack):
             self._acks.add(message.of)
+        elif isinstance(message, wire.UpdateStatusReport) and UPDATE in self._allowed:
+            self.updates.append(message)
         elif isinstance(message, wire.Hello):
             self._invalid.append("hello is only the first message of a link")
         elif (needed := wire.NEEDS.get(type(message))) and needed not in self._allowed:

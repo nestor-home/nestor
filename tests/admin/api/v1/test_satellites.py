@@ -24,9 +24,11 @@ from nestor.modules.satellites import (
     SatelliteAdditionCompleted,
     SatelliteHost,
     SatellitePaired,
+    UpdateState,
+    UpdateStatus,
 )
 from nestor.testing.channels import InMemoryChannel
-from nestor.testing.satellites import pair_by_code
+from nestor.testing.satellites import SOFTWARE, RecordingDevice, pair_by_code
 
 from ...harness import Harness
 
@@ -34,11 +36,14 @@ REACHY = Manifest(
     Device("reachy-salon", "reachy-mini", "salon"),
     tuple(
         DeclaredCapability(Capability(c))
-        for c in ("audio.capture", "audio.playback", "vision.person_detection", "device.identify")
+        for c in ("audio.capture", "audio.playback", "vision.person_detection", "device.identify", "device.update")
     ),
     (PairingMethod.PROVISIONING, PairingMethod.SPEECH),
+    software=SOFTWARE,
 )
-MIC = Manifest(Device("mic-bureau", "esp32", "bureau"), (DeclaredCapability(Capability("audio.capture")),))
+MIC = Manifest(
+    Device("mic-bureau", "esp32", "bureau"), (DeclaredCapability(Capability("audio.capture")),), software=SOFTWARE
+)
 
 
 def code(ticket: PairingTicket) -> str:
@@ -145,7 +150,7 @@ async def test_the_command_line_token_opens_pairing_and_nothing_else(tmp_path: P
         bearer = {"Authorization": "Bearer the-right-token"}
         approved = await api.send("POST", "/api/v1/satellites/approvals", {"code": code(ticket)}, **bearer)
         assert approved.status_code == 201 and approved.json()["approved_by"] is None
-        assert len(approved.json()["capabilities"]) == 4, "everything it declared by default"
+        assert len(approved.json()["capabilities"]) == 5, "everything it declared by default"
         assert (await api.send("GET", "/api/v1/journal", **bearer)).status_code == 401
         assert (await api.send("GET", "/api/v1/satellites", **bearer)).status_code == 200
         assert (await api.send("DELETE", "/api/v1/satellites/reachy-salon", **bearer)).status_code == 204
@@ -299,9 +304,49 @@ async def test_identify_says_why_a_device_cannot(tmp_path: Path) -> None:
         for path, (status, error) in cases.items():
             answer = await api.post(path, {})
             assert (answer.status_code, answer.json()["error"]["code"]) == (status, error), path
-        asked: list[str] = []
-        with pairing.online("reachy-salon", lambda: asked.append("now")):
+        device = RecordingDevice()
+        with pairing.online("reachy-salon", device, REACHY):
             assert (await api.post("/api/v1/satellites/reachy-salon/identify", {})).status_code == 204
-        assert asked == ["now"]
+        assert device.identified == 1
         assert (await api.get("/api/v1/satellites/reachy-salon")).json()["can_identify"] is True
         assert IDENTIFY in pairing.satellites()[0].capabilities
+
+
+async def test_a_connected_satellite_shows_its_software_and_installs_the_newer_version_it_found(
+    tmp_path: Path,
+) -> None:
+    async with Harness(tmp_path) as admin:
+        pairing = admin.nestor.pairing
+        await pair_by_code(pairing, REACHY)
+        await pair_by_code(pairing, MIC)
+        api = await admin.api()
+        offline = (await api.get("/api/v1/satellites/reachy-salon")).json()
+        assert offline["software"] == {"name": SOFTWARE.name, "version": SOFTWARE.version}
+        assert offline["protocol"] == "nestor.satellite/1" and offline["can_update"] and offline["update"] is None
+        cases = {
+            "/api/v1/satellites/reachy-salon/update": (409, "satellite_offline"),
+            "/api/v1/satellites/mic-bureau/update": (409, "update_unsupported"),
+            "/api/v1/satellites/nope/update": (404, "satellite_unknown"),
+        }
+        for path, (status, error) in cases.items():
+            answer = await api.post(path, {})
+            assert (answer.status_code, answer.json()["error"]["code"]) == (status, error), path
+
+        device = RecordingDevice()
+        with pairing.online("reachy-salon", device, REACHY):
+            await pairing.reported("reachy-salon", UpdateStatus(UpdateState.CURRENT))
+            current = await api.post("/api/v1/satellites/reachy-salon/update", {})
+            assert current.json()["error"]["code"] == "update_unavailable"
+            await pairing.reported("reachy-salon", UpdateStatus(UpdateState.AVAILABLE, "1.1.0", "https://x.org/v1.1.0"))
+            shown = (await api.get("/api/v1/satellites")).json()["paired"]
+            assert next(s for s in shown if s["id"] == "reachy-salon")["update"] == {
+                "state": "available",
+                "version": "1.1.0",
+                "notes": "https://x.org/v1.1.0",
+            }
+            asked = await api.post("/api/v1/satellites/reachy-salon/update", {})
+            assert (asked.status_code, asked.json()) == (202, {"version": "1.1.0"})
+        assert device.updates == ["1.1.0"]
+        await admin.account("mathilde", Role.MEMBER, "mathilde")
+        member = await admin.api("mathilde")
+        assert (await member.post("/api/v1/satellites/reachy-salon/update", {})).status_code == 403

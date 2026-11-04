@@ -21,6 +21,16 @@ conformance-follows-schema = { $connection ->
     [enrolled] enrôlé : chaque message suit le schéma
    *[paired] chaque message suit le schéma
 }
+conformance-reports-update = { $connection ->
+    [reconnected] après reconnexion : dit où en est son logiciel (U1)
+    [enrolled] enrôlé : dit où en est son logiciel (U1)
+   *[paired] dit où en est son logiciel (U1)
+}
+conformance-installs-only-found = { $connection ->
+    [reconnected] après reconnexion : n'installe jamais une version qu'il n'a pas signalée (U2)
+    [enrolled] enrôlé : n'installe jamais une version qu'il n'a pas signalée (U2)
+   *[paired] n'installe jamais une version qu'il n'a pas signalée (U2)
+}
 conformance-exchanges-audio = échange de l'audio, comme autorisé (A1, A2)
 conformance-receives-audio = reçoit l'audio du cœur (A1, A2)
 conformance-sends-audio = envoie l'audio de son micro (A1, A2)
@@ -55,6 +65,8 @@ conformance-audio-offers = { $count ->
 conformance-never-asked-again = n'a jamais redemandé à s'appairer
 conformance-no-ack = aucun acquittement portant l'identifiant de cette intention
 conformance-off-schema = { $errors }
+conformance-no-update-status = aucun update.status
+conformance-installed-unreported = a annoncé installer { $version }, qu'il n'a jamais signalée
 conformance-no-receiver-report = aucun rapport de réception RTCP du satellite
 conformance-no-audio-frame = aucune trame audio du satellite
 conformance-no-token = aucun jeton récupéré

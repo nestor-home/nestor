@@ -114,6 +114,7 @@ export const additionQuery = (id: Id) =>
     queryFn: ({ signal }) => api.addition(id, signal),
     refetchInterval: (q) => (q.state.data && !["waiting", "device_seen"].includes(q.state.data.stage) ? false : 1_500),
   });
+/** Kept fresh by the live journal (its connections and what it reports about its software). */
 export const satelliteQuery = (id: string) =>
   queryOptions({ queryKey: keys.satellite(id), queryFn: () => api.satellite(id) });
 export const tasksQuery = queryOptions({ queryKey: keys.tasks, queryFn: api.tasks, refetchInterval: 5_000 });

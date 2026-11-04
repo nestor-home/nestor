@@ -7,7 +7,7 @@ from pathlib import Path
 from nestor.core import Capability, Health
 from nestor.modules.accounts import Role
 from nestor.modules.channels import Medium
-from nestor.modules.satellites import DeclaredCapability, Device, Manifest, Sdk
+from nestor.modules.satellites import DeclaredCapability, Device, Manifest, Software
 from nestor.modules.system import Releases
 from nestor.runtime import Distribution, Registry
 from nestor.testing.channels import InMemoryChannel
@@ -19,7 +19,7 @@ from ...harness import Harness
 REACHY = Manifest(
     Device("reachy-salon", "reachy-mini", "salon", brand="pollen-robotics"),
     (DeclaredCapability(Capability("audio.capture")),),
-    sdk=Sdk("nestor-reachy", "0.1.0"),
+    software=Software("nestor-reachy", "0.1.0"),
 )
 
 
@@ -107,20 +107,21 @@ async def test_the_admin_learns_what_was_released_since_the_running_version(tmp_
         await pair_by_code(admin.nestor.pairing, REACHY)
         api = await admin.api()
         unknown = (await api.get("/api/v1/system/updates")).json()
-        assert (unknown["running"], unknown["releases"]) == (running, [])
+        assert (unknown["running"], unknown["releases"], unknown["left_behind"]) == (running, [], [])
         assert (unknown["installation"], unknown["commands"]) == ("editable", []), "this checkout"
 
         admin.releases.releases = _feed(running)
         assert admin.nestor.updates is not None
         await admin.nestor.updates.check()
         current = (await api.get("/api/v1/system/updates")).json()
-        assert current["releases"] == []
+        assert current["releases"] == [] and current["left_behind"] == []
 
         admin.releases.releases = _feed("9.0.0", "8.0.0", running, protocols=("nestor.satellite/2",))
         await admin.nestor.updates.check()
         newer = (await api.get("/api/v1/system/updates")).json()
         assert [(r["version"], r["breaking"]) for r in newer["releases"]] == [("9.0.0", True), ("8.0.0", False)]
         assert newer["releases"][0]["changes"] == [{"kind": "breaking", "text": "models by role"}]
+        assert newer["left_behind"] == [{"id": "reachy-salon", "name": None}]
 
         await admin.account("mathilde", Role.MEMBER, "mathilde")
         assert (await (await admin.api("mathilde")).get("/api/v1/system/updates")).status_code == 403

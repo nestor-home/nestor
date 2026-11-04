@@ -20,6 +20,7 @@ from nestor.runtime.app import Restart
 from nestor.runtime.config import ConfigError, load_config
 from nestor.runtime.secrets import open_secrets
 from nestor.testing.journal import MemoryEventLog
+from nestor.testing.satellites import SOFTWARE
 
 from .admin.harness import CONFIG, SECRET_KEY, Harness
 from .admin.test_satellites import free_port
@@ -28,6 +29,7 @@ VALUE = "123:telegram-bot-token"
 SPEAKER = Manifest(
     Device("enceinte-salon", "raspberry-pi-zero", "salon"),
     (DeclaredCapability(Capability("audio.capture")), DeclaredCapability(Capability("audio.playback"))),
+    software=SOFTWARE,
 )
 
 

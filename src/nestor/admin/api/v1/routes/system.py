@@ -64,8 +64,8 @@ async def get_system(request: Request, caller: Reader) -> SystemOut:
                 name=s.id,
                 adapter=s.model,
                 brand=s.brand,
-                version=s.sdk_version,
-                distribution=s.sdk,
+                version=s.software.version,
+                distribution=s.software.name,
                 capabilities=sorted(s.capabilities),
                 health=None if live is None else Health.UNAVAILABLE if offline else Health.STARTED,
                 health_detail=words.text(Message.of("health-satellite-offline", room=s.room)) if offline else None,
@@ -113,11 +113,17 @@ class ReleaseOut(BaseModel):
     changes: list[ReleaseChangeOut]
 
 
+class LeftBehindOut(BaseModel):
+    id: str
+    name: str | None  # what the household calls it
+
+
 class UpdatesOut(BaseModel):
     """What was released since the running version, and how this Nestor gets it."""
 
     running: str
     releases: list[ReleaseOut]  # newer than the running version, newest first; empty: up to date (or not checked)
+    left_behind: list[LeftBehindOut]  # paired satellites the newest release no longer speaks to
     installation: InstallKind | None  # how Nestor is installed; None when `updates.check` is off
     commands: list[str]  # what to run to update it by hand (none for a developer's checkout)
     installable: bool  # `POST /system/updates/install` can install the newest release here
@@ -130,11 +136,12 @@ async def get_updates(request: Request, caller: Reader) -> UpdatesOut:
     nestor = state(request).nestor
     updates = nestor.updates
     if updates is None:
-        return UpdatesOut(running=__version__, releases=[], installation=None, commands=[],
+        return UpdatesOut(running=__version__, releases=[], left_behind=[], installation=None, commands=[],
                           installable=False, installing=None, failed=None)  # fmt: skip
     return UpdatesOut(
         running=updates.running,
         releases=[_release(r) for r in updates.newer()],
+        left_behind=[LeftBehindOut(id=s.id, name=s.name) for s in updates.left_behind(nestor.pairing.satellites())],
         installation=updates.installation.kind,
         commands=list(updates.installation.commands),
         installable=updates.installer is not None,

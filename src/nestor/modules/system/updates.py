@@ -1,19 +1,20 @@
 """Whether a newer Nestor was released: the feed is read a minute after starting, then once a day.
 
-The admin shows what changed since the running version, and whether a change breaks the data or
-the configuration. Where an `Installer` can (a Python environment, not a container image), a person
-installs the newest release from the admin: only that version, only on their request, and the restart
-that follows is theirs too.
+The admin shows what changed since the running version, whether a change breaks the data or the
+configuration, and which paired satellites the newest release no longer speaks to. Where an
+`Installer` can (a Python environment, not a container image), a person installs the newest release
+from the admin: only that version, only on their request, and the restart that follows is theirs too.
 """
 
 import asyncio
 import contextlib
 import logging
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Iterable
 from datetime import datetime
 
 from nestor.core import Component, ContractError, ProviderError, utc_now
 from nestor.modules.journal import Journal
+from nestor.modules.satellites import Satellite
 from nestor.modules.system.events import UpdateFailed, UpdateRequested
 from nestor.modules.system.ports import Installer, ReleaseFeed
 from nestor.modules.system.types import Installation, Release, Releases, version_key
@@ -82,6 +83,12 @@ class Updates(Component):
     def newer(self) -> tuple[Release, ...]:
         """The releases read after the running version, newest first."""
         return self.releases.newer_than(self.running) if self.releases else ()
+
+    def left_behind(self, satellites: Iterable[Satellite]) -> list[Satellite]:
+        """The paired satellites the newest release no longer speaks to (none while nothing is newer)."""
+        if self.releases is None or not self.newer():
+            return []
+        return [s for s in satellites if s.protocol not in self.releases.protocols]
 
     async def install(self, version: str, *, by: str) -> None:
         """Start installing `version`, which must be the newest release read and newer than the running
