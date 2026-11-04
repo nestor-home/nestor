@@ -190,7 +190,7 @@ class Nestor:
                 self.journal,
                 self.restart.ask,
                 installation,
-                installer=PipInstaller(source, __version__) if source and installation.installable else None,
+                installer=PipInstaller.found(source, __version__) if source and installation.installable else None,
             )
             if config.updates.check
             else None

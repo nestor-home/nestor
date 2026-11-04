@@ -105,14 +105,14 @@ class Updates(Component):
         self._install = asyncio.create_task(self._run_install(self.installer, version, by), name="install")
 
     async def _run_install(self, installer: Installer, version: str, by: str) -> None:
+        """Whatever goes wrong ends the install as failed: it never stays `installing`."""
         try:
             await installer.install(version)
-        except ProviderError as error:
-            log.warning("installing %s: %s", version, error)
+            await self._restart(by)
+        except Exception as error:
+            log.warning("installing %s: %s", version, error, exc_info=not isinstance(error, ProviderError))
             self.installing, self.failed = None, version
             await self._journal.publish(UpdateFailed(source=self.name, target=version))
-            return
-        await self._restart(by)
 
     async def _check_regularly(self) -> None:
         await asyncio.sleep(self._first_check_s)

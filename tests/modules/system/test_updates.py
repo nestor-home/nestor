@@ -152,14 +152,23 @@ async def test_only_the_newest_release_is_installed_then_nestor_restarts() -> No
     assert (asked.by, asked.running, asked.target) == ("mathis", "0.7.0", "0.10.0")
 
 
-async def test_a_release_that_does_not_install_leaves_the_running_one_and_says_so() -> None:
-    updates, journal, restarts = await _read(FakeInstaller(fails=True))
+class Broken(FakeInstaller):
+    """An installer that fails in a way nobody planned (a command that cannot start, a bug)."""
+
+    async def install(self, version: str) -> None:
+        raise FileNotFoundError("nestor")
+
+
+@pytest.mark.parametrize("installer", [FakeInstaller(fails=True), Broken()], ids=["refused", "unplanned error"])
+async def test_a_release_that_does_not_install_leaves_the_running_one_and_says_so(installer: FakeInstaller) -> None:
+    updates, journal, restarts = await _read(installer)
     await updates.install("0.10.0", by="mathis")
-    for _ in range(10):
-        await asyncio.sleep(0)
+    assert updates._install is not None
+    await updates._install
     assert (updates.installing, updates.failed, restarts.by) == (None, "0.10.0", [])
     [failed] = await journal.history(UpdateFailed)
     assert failed.target == "0.10.0"
+    await updates.install("0.10.0", by="mathis")  # it can be tried again
 
 
 async def test_an_instance_without_an_installer_updates_the_way_it_was_installed() -> None:

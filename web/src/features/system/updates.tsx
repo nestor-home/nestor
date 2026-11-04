@@ -32,35 +32,40 @@ export function UpdateAvailable({ compact }: { compact: boolean }) {
   const [open, setOpen] = useState(false);
   const [hover, setHover] = useState(false);
   const latest = updates.data?.releases[0]?.version;
-  if (!latest) return null;
+  // the release being installed: the dialog follows Nestor through its restart, even once the server,
+  // back on that release, lists nothing newer
+  const [target, setTarget] = useState<string | null>(null);
+  if (!latest && !target) return null;
   return (
     <>
-      <SidebarMenu>
-        <SidebarMenuItem>
-          <SidebarMenuButton
-            tooltip={t("upd-available-version", { version: latest })}
-            className="relative overflow-hidden"
-            onClick={() => setOpen(true)}
-            onPointerEnter={() => setHover(true)}
-            onPointerLeave={() => setHover(false)}
-          >
-            {hover ? (
-              <Dither
-                shape="ramp-left"
-                from={0}
-                to={0.55}
-                dot={2}
-                animated
-                className="absolute inset-0 text-ember/35"
-              />
-            ) : null}
-            <CircleArrowUp className="relative size-4 shrink-0 text-ember" aria-hidden="true" />
-            <span className={compact ? "sr-only" : "relative min-w-0 flex-1 truncate"}>{t("upd-available")}</span>
-            {compact ? null : <span className="relative font-mono text-[0.75rem] text-ink-muted">{latest}</span>}
-          </SidebarMenuButton>
-        </SidebarMenuItem>
-      </SidebarMenu>
-      <NestorUpdate open={open} onOpenChange={setOpen} />
+      {latest ? (
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              tooltip={t("upd-available-version", { version: latest })}
+              className="relative overflow-hidden"
+              onClick={() => setOpen(true)}
+              onPointerEnter={() => setHover(true)}
+              onPointerLeave={() => setHover(false)}
+            >
+              {hover ? (
+                <Dither
+                  shape="ramp-left"
+                  from={0}
+                  to={0.55}
+                  dot={2}
+                  animated
+                  className="absolute inset-0 text-ember/35"
+                />
+              ) : null}
+              <CircleArrowUp className="relative size-4 shrink-0 text-ember" aria-hidden="true" />
+              <span className={compact ? "sr-only" : "relative min-w-0 flex-1 truncate"}>{t("upd-available")}</span>
+              {compact ? null : <span className="relative font-mono text-[0.75rem] text-ink-muted">{latest}</span>}
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      ) : null}
+      <NestorUpdate open={open} onOpenChange={setOpen} target={target} onTarget={setTarget} />
     </>
   );
 }
@@ -70,29 +75,39 @@ export function UpdateAvailable({ compact }: { compact: boolean }) {
  * What the install is doing comes from the server alone (`installing`, `failed`); once it stops
  * answering, or answers on the new version, the dialog follows Nestor through its restart.
  */
-export function NestorUpdate({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+export function NestorUpdate({
+  open,
+  onOpenChange,
+  target,
+  onTarget,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  target: string | null;
+  onTarget: (version: string | null) => void;
+}) {
   const t = useT();
   const canInstall = useCan("config:manage");
   const queryClient = useQueryClient();
   const query = useQuery(updatesQuery);
   const { phase, waitBack } = useRestart();
   const [confirming, setConfirming] = useState(false);
-  const [following, setFollowing] = useState(false);
   const updates = query.data;
-  const version = updates?.releases[0]?.version ?? "";
-  const gone = query.isError || updates?.running === version;
+  const version = target ?? updates?.releases[0]?.version ?? "";
+  // it went down (a failed poll, before react-query's retries end) or came back on that release
+  const gone = query.failureCount > 0 || updates?.running === target;
 
   useEffect(() => {
-    if (following && gone && phase === "idle") {
-      setFollowing(false);
-      void waitBack();
-    }
-  }, [following, gone, phase, waitBack]);
+    if (!target || phase !== "idle") return;
+    if (updates?.failed === target)
+      onTarget(null); // the running release stayed: the notes say why
+    else if (gone) void waitBack().then(() => onTarget(null));
+  }, [target, gone, phase, waitBack, onTarget, updates?.failed]);
 
   if (!updates || !version) return null;
   const install = async () => {
     queryClient.setQueryData(keys.updates, await api.installUpdate(version));
-    setFollowing(true);
+    onTarget(version);
   };
   const byHand = !updates.installable || !canInstall;
   return (

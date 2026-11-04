@@ -31,6 +31,7 @@ def feed(changelog: str) -> dict[str, Any]:
     for line in changelog.splitlines():
         if match := _RELEASE.match(line):
             releases.append({**match.groupdict(), "url": NOTES.format(**match.groupdict()), "changes": []})
+            kind = "other"  # until this release's first section says otherwise
         elif line.startswith("### ") and releases:
             kind = KINDS.get(line[4:].strip(), "other")
         elif line.startswith("* ") and releases:

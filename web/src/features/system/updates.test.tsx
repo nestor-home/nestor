@@ -47,6 +47,19 @@ describe("a newer Nestor", () => {
     expect(sent).toHaveLength(1);
   });
 
+  it("follows Nestor through its restart, once it is back on the release and lists nothing newer", async () => {
+    const user = userEvent.setup();
+    renderApp("/");
+    await user.click(await screen.findByRole("button", { name: /New release/ }));
+    const dialog = await screen.findByRole("dialog", { name: "Nestor 0.10.0 is here" });
+    await user.click(within(dialog).getByRole("button", { name: "Install 0.10.0" }));
+    await user.click(
+      within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Install and restart" }),
+    );
+    // the mock installs, then restarts on 0.10.0 (no newer release) and signs everyone out
+    expect(await screen.findByText("Restarting, back in a moment.", {}, { timeout: 8_000 })).toBeVisible();
+  }, 15_000);
+
   it("goes back to the notes when the confirmation is cancelled", async () => {
     const user = userEvent.setup();
     renderApp("/");

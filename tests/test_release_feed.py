@@ -65,3 +65,19 @@ def test_the_feed_lists_each_release_with_its_changes_in_plain_text_breaking_one
 def test_the_changelog_of_this_checkout_makes_a_valid_feed() -> None:
     releases = Releases.from_json(_script().feed((SCRIPT.parent.parent / "CHANGELOG.md").read_text()))
     assert releases.latest is not None
+
+
+def test_a_change_before_any_section_is_not_counted_in_the_previous_release_s_section() -> None:
+    changelog = """## [0.9.0](https://x) (2026-11-06)
+
+### ⚠ BREAKING CHANGES
+
+* models by role
+
+## [0.8.0](https://x) (2026-11-05)
+
+* a loose line
+"""
+    newest, older = Releases.from_json(_script().feed(changelog)).releases
+    assert newest.breaking
+    assert [c.kind for c in older.changes] == [ChangeKind.OTHER] and not older.breaking

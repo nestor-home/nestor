@@ -1,5 +1,7 @@
 """The release feed, a JSON file published with each release (`releases.json`), read over HTTPS."""
 
+import json
+
 import httpx
 
 from nestor.core import ProviderError
@@ -29,18 +31,20 @@ class HttpReleaseFeed(ReleaseFeed):
 
     async def fetch(self) -> Releases:
         assert self._client is not None, "start the feed first"
+        body = bytearray()
         try:
-            response = await self._client.get(self.url)
+            async with self._client.stream("GET", self.url) as response:
+                if response.status_code != 200:
+                    raise ProviderError(PROVIDER, f"{self.url}: HTTP {response.status_code}", transient=True)
+                async for chunk in response.aiter_bytes():  # read no further than a feed can weigh
+                    body += chunk
+                    if len(body) > MAX_BYTES:
+                        raise ProviderError(PROVIDER, f"{self.url}: over {MAX_BYTES} bytes, not a release feed",
+                                            transient=False)  # fmt: skip
         except httpx.HTTPError as error:
             raise ProviderError(PROVIDER, f"{self.url}: {type(error).__name__}", transient=True) from None
-        if response.status_code != 200:
-            raise ProviderError(PROVIDER, f"{self.url}: HTTP {response.status_code}", transient=True)
-        if len(response.content) > MAX_BYTES:
-            raise ProviderError(
-                PROVIDER, f"{self.url}: {len(response.content)} bytes, not a release feed", transient=False
-            )
         try:
-            data = response.json()
+            data = json.loads(body)
         except ValueError:
             raise ProviderError(PROVIDER, f"{self.url}: not JSON", transient=False) from None
         return Releases.from_json(data)
