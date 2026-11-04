@@ -39,7 +39,7 @@ from nestor.modules.cognition.tools import Toolbox, ToolProvider
 from nestor.modules.connectors import ConnectedInbound, Connections, Connector, ConnectorTools, TokenEndpoint
 from nestor.modules.conversation import Agent, ChannelProfile, ModelChoice, Persona
 from nestor.modules.home import PresenceSource
-from nestor.modules.household import Household, Person
+from nestor.modules.household import Account, Household, Person, SharedAccount
 from nestor.modules.initiative import (
     Courier,
     DeliveryPolicy,
@@ -118,7 +118,7 @@ class Nestor:
         self.database = SQLiteDatabase(database_path(config.data_dir))
         self.journal = Journal(SQLiteEventLog(self.database))
         self.restart = Restart(self.journal)
-        self.household = Household(p.to_person() for p in config.household)
+        self.household = _household(config)
         self.accounts = Accounts(
             self.journal, SQLiteVerifierStore(self.database), self.household, SQLiteActivityStore(self.database)
         )
@@ -373,6 +373,24 @@ class Nestor:
             log.info("channel %s serves again in %.1f s", channel.channel_id, delay)
             await asyncio.sleep(delay)
             delay = min(delay * 2, self._backoff.maximum_s)
+
+
+def _household(config: NestorConfig) -> Household:
+    """The household of the configuration; an account two people claim is located at the second one."""
+    try:
+        return Household(p.to_person() for p in config.household)
+    except SharedAccount as error:
+        claims = [
+            ("household", i, "accounts", j)
+            for i, person in enumerate(config.household)
+            for j, account in enumerate(person.accounts)
+            if Account.parse(account) == error.account
+        ]
+        raise ConfigError(
+            str(error),
+            path=claims[1],
+            code="shared_account",
+        ) from None
 
 
 def _connectors(
