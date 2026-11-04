@@ -26,7 +26,7 @@ async function toPhrases(person = "jules", button = /^Record their voice/) {
   const { user, dialog } = opened;
   await user.click(within(dialog).getByRole("button", { name: "Start" }));
   await within(dialog).findByText("Say “Hello Richie” to try the microphone.");
-  speak();
+  await speak();
   await within(dialog).findByText("I can hear you well.");
   await user.click(within(dialog).getByRole("button", { name: "Continue" }));
   await within(dialog).findByText("“Nestor, turn on the lights in the living room.”");
@@ -104,17 +104,17 @@ describe("recording a voice", () => {
     expect(await within(dialog).findByRole("heading", { name: "Say hello" })).toHaveFocus();
     await within(dialog).findByText("Say “Hello Richie” to try the microphone.");
     expect(within(dialog).getByRole("button", { name: "Continue" })).toBeDisabled();
-    speak();
+    await speak();
     await within(dialog).findByText("I can hear you well.");
     await user.click(within(dialog).getByRole("button", { name: "Continue" }));
 
     const progress = await within(dialog).findByRole("progressbar", { name: "Phrases kept" });
     await within(dialog).findByText("“Nestor, turn on the lights in the living room.”");
     expect(within(dialog).getByText("Phrase 1 of 5")).toBeInTheDocument();
-    speak();
+    await speak();
     await within(dialog).findByText("“What will the weather be like tomorrow morning?”");
     expect(progress).toHaveAttribute("value", "1");
-    speak(); // the mock refuses the second phrase once
+    await speak(); // the mock refuses the second phrase once
     expect(await within(dialog).findByText("That was a bit short. Once more?")).toBeInTheDocument();
     expect(within(dialog).getByText("Phrase 2 of 5")).toBeInTheDocument();
     for (const next of [
@@ -122,17 +122,17 @@ describe("recording a voice", () => {
       "“Add bread, apples and coffee to the shopping list.”",
       "“Tell me the story of a lighthouse keeper.”",
     ]) {
-      speak();
+      await speak();
       await within(dialog).findByText(next);
     }
-    speak();
+    await speak();
 
     expect(await within(dialog).findByRole("heading", { name: "I recognise Jules's voice" })).toBeInTheDocument();
     expect(db.voices.jules).toMatchObject({ enrolled: true, learning: false });
     expect(dialog).toHaveTextContent("say “Richie, learn to recognise my voice”");
     await user.click(within(dialog).getByRole("button", { name: "Try it" }));
     await within(dialog).findByText("Say something…");
-    speak();
+    await speak();
     expect(await within(dialog).findByText("It's Jules.")).toBeInTheDocument();
     expect(within(dialog).getByText("Likeness 82%, recognised from 55%.")).toBeInTheDocument();
 
@@ -146,7 +146,7 @@ describe("recording a voice", () => {
     const { user, dialog } = await openRecording("mathis", /^Record again/);
     await user.click(within(dialog).getByRole("button", { name: "Start" }));
     await within(dialog).findByText("Say “Hello Richie” to try the microphone.");
-    speak(0.008);
+    await speak(0.008);
     expect(await within(dialog).findByText(/I can barely hear you/)).toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: "Continue" })).toBeDisabled();
   });
@@ -173,7 +173,7 @@ describe("recording a voice", () => {
 
   it("abandons the recording when closed midway: nothing is kept", async () => {
     const { user, dialog } = await toPhrases();
-    speak();
+    await speak();
     await within(dialog).findByText("“What will the weather be like tomorrow morning?”");
     expect(recordingsInProgress()).toBe(1);
     await user.keyboard("{Escape}");

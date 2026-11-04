@@ -120,21 +120,21 @@ describe("accessibility of every screen", () => {
     await expectAccessible();
     await user.click(within(dialog).getByRole("button", { name: "Start" }));
     await within(dialog).findByRole("combobox", { name: "Microphone" });
-    speak();
+    await speak();
     await within(dialog).findByText("I can hear you well.");
     await expectAccessible();
     await user.click(within(dialog).getByRole("button", { name: "Continue" }));
     await within(dialog).findByRole("progressbar", { name: "Phrases kept" });
-    speak();
+    await speak();
     await within(dialog).findByText("Phrase 2 of 5");
     await expectAccessible();
-    speak(); // refused once by the mock
+    await speak(); // refused once by the mock
     await within(dialog).findByText("That was a bit short. Once more?");
     for (const n of [3, 4, 5]) {
-      speak();
+      await speak();
       await within(dialog).findByText(`Phrase ${n} of 5`);
     }
-    speak();
+    await speak();
     await within(dialog).findByRole("button", { name: "Try it" });
     await expectAccessible();
   });

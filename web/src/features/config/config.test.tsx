@@ -3,9 +3,11 @@ import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
 import { db } from "@/mocks/db";
+import { RESTART_MS } from "@/mocks/handlers";
 import { server } from "@/mocks/server";
 import { renderApp } from "@/test/render";
 import { markOf } from "./config-pages";
+import { RESTART_POLL_MS } from "./restart";
 
 const saveBar = () => screen.findByRole("region", { name: "Unsaved changes" });
 
@@ -165,8 +167,10 @@ describe("the configuration", () => {
     expect(dialog).toHaveTextContent("Remote tasks keep running");
     await user.click(within(dialog).getByRole("button", { name: "Restart now" }));
     expect(await screen.findByText("Restarting, back in a moment.")).toBeInTheDocument();
-    // sessions live in the process's memory: the restarted instance asks to sign in again, then comes back
-    expect(await screen.findByText(/I'm back, configuration applied/, {}, { timeout: 8_000 })).toBeInTheDocument();
+    // sessions live in the process's memory: the restarted instance asks to sign in again, then comes back. The
+    // mock is down for real seconds, polled every second: a CI runner busy with other test files needs the slack
+    const back = { timeout: RESTART_MS + RESTART_POLL_MS + 8_000 };
+    expect(await screen.findByText(/I'm back, configuration applied/, {}, back)).toBeInTheDocument();
     expect(await screen.findByRole("heading", { name: "Sign in" })).toBeInTheDocument();
     expect(router.state.location.search).toEqual({ next: "/config/persona" });
     await user.type(screen.getByLabelText("Login"), "mathis");
