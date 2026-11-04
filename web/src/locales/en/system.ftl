@@ -26,6 +26,7 @@ sys-health-unknown = unknown
 upd-available = New release
 upd-available-version = Update available: { $version }
 upd-title = Nestor { $version } is here
+upd-description = What changed since your version, and how to update.
 upd-behind = { $count ->
     [one] one release behind
    *[other] { $count } releases behind

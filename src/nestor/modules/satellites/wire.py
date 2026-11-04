@@ -19,6 +19,7 @@ drivers written in other languages, and `decode` enforces the same constraints.
 import dataclasses
 import enum
 import json
+import re
 import types
 import typing
 from dataclasses import dataclass
@@ -59,10 +60,12 @@ class Bounds:
 
 @dataclass(frozen=True, slots=True)
 class Size:
-    """Inclusive length limits of a text field, checked on decode and published in the schema."""
+    """Inclusive length limits of a text field, and the regular expression it must match when given,
+    checked on decode and published in the schema."""
 
     minimum: int
     maximum: int
+    pattern: str | None = None
 
 
 type Unit = Annotated[float, Bounds(0.0, 1.0)]
@@ -72,6 +75,7 @@ type Typed = Annotated[str, Size(1, 4000)]  # what a person types in one go
 SHOWN_MAX = 16000  # characters of one `intent.text`: a longer answer goes in several
 type Shown = Annotated[str, Size(1, SHOWN_MAX)]  # one message of the assistant
 type Version = Annotated[str, Size(1, 64)]  # a version of the software a device runs
+type Link = Annotated[str, Size(9, 512, r"^https://\S+$")]  # an address for people, opened by their browser
 
 
 class Direction(StrEnum):
@@ -137,15 +141,17 @@ class UpdateStatusReport(Message, message_type="update.status", direction=Direct
 
     state: UpdateState
     version: Version | None = None  # the newer version; required for every state but `current`
+    notes: Link | None = None  # what that version changes, found at the same source; never fetched by the core
     payload_rules: ClassVar[dict[str, Any]] = {
         "if": {"properties": {"state": {"const": UpdateState.CURRENT.value}}},
-        "then": {"properties": {"version": False}},
+        "then": {"properties": {"version": False, "notes": False}},
         "else": {"required": ["version"]},
     }
 
     def __post_init__(self) -> None:
-        if (self.version is None) != (self.state == UpdateState.CURRENT):
-            raise ContractError("update.status: a version goes with every state but current, and only with them")
+        current = self.state == UpdateState.CURRENT
+        if (self.version is None) != current or (current and self.notes is not None):
+            raise ContractError("update.status: a version, and its notes, go with every state but current")
 
 
 class Welcome(Message, message_type="welcome", direction=Direction.TO_SATELLITE):
@@ -459,6 +465,8 @@ def _decode(value: object, hint: Any, where: str) -> Any:
         raise ContractError(f"{where}: {error}") from None
     if isinstance(bounds, Size) and not bounds.minimum <= len(decoded) <= bounds.maximum:
         raise ContractError(f"{where}: {len(decoded)} characters, expected {bounds.minimum} to {bounds.maximum}")
+    if isinstance(bounds, Size) and bounds.pattern and not re.match(bounds.pattern, decoded):
+        raise ContractError(f"{where}: {decoded!r} does not match {bounds.pattern}")
     if isinstance(bounds, Bounds) and (
         (bounds.minimum is not None and decoded < bounds.minimum)
         or (bounds.maximum is not None and decoded > bounds.maximum)
@@ -481,6 +489,8 @@ def _schema(hint: Any) -> dict[str, Any]:
                               float: {"type": "number"}}[base]  # fmt: skip
     if isinstance(bounds, Size):
         schema |= {"minLength": bounds.minimum, "maxLength": bounds.maximum}
+        if bounds.pattern:
+            schema["pattern"] = bounds.pattern
     elif bounds is not None:
         schema |= {k: v for k, v in (("minimum", bounds.minimum), ("maximum", bounds.maximum)) if v is not None}
     return schema

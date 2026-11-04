@@ -182,8 +182,8 @@ class SatelliteLink(Online):
                 await self._journal.publish(
                     SpeechActivityObserved(source=SOURCE, device_id=satellite.id, room=satellite.room, active=active)
                 )
-            case wire.UpdateStatusReport(state=state, version=version):
-                reported = UpdateStatus(state, version)
+            case wire.UpdateStatusReport(state=state, version=version, notes=notes):
+                reported = UpdateStatus(state, version, notes)
                 if reported != self.update_status:
                     self.update_status = reported
                     await self._journal.publish(

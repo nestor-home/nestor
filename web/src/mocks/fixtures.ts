@@ -586,7 +586,11 @@ export function satellites(): Satellite[] {
       software: { name: "nestor-reachy", version: "0.4.0" },
       protocol: PROTOCOL,
       can_update: true,
-      update: { state: "available", version: "0.4.1" },
+      update: {
+        state: "available",
+        version: "0.4.1",
+        notes: "https://github.com/nestor-home/nestor-reachy/releases/tag/v0.4.1",
+      },
     },
     {
       id: "reachy-office",
@@ -622,7 +626,7 @@ export function satellites(): Satellite[] {
       software: { name: "nestor-satellite", version: "0.5.1" },
       protocol: PROTOCOL,
       can_update: true,
-      update: { state: "current", version: null },
+      update: { state: "current", version: null, notes: null },
     },
   ];
 }

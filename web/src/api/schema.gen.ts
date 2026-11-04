@@ -2323,6 +2323,8 @@ export interface components {
             state: components["schemas"]["UpdateState"];
             /** Version */
             version: string | null;
+            /** Notes */
+            notes: string | null;
         };
         /** UpdateRequestedOut */
         UpdateRequestedOut: {

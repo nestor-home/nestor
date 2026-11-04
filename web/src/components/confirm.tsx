@@ -15,24 +15,34 @@ import { tr } from "@/i18n/runtime";
 
 /**
  * An action behind a confirmation, destructive unless `tone` says otherwise: the dialog stays open while the action runs and shows
- * its failure, so nothing is lost silently.
+ * its failure, so nothing is lost silently. It opens from its `trigger`, or from `open` when another
+ * dialog hands over to it (`onOpenChange` hears it close).
  */
 export function Confirm({
   trigger,
+  open: shown,
+  onOpenChange,
   title,
   children,
   confirm,
   onConfirm,
   tone = "destructive",
 }: {
-  trigger: ReactElement;
+  trigger?: ReactElement;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   title: string;
   children: ReactNode;
   confirm: string;
   onConfirm: () => Promise<unknown>;
   tone?: "destructive" | "accent";
 }) {
-  const [open, setOpen] = useState(false);
+  const [own, setOwn] = useState(false);
+  const open = shown ?? own;
+  const setOpen = (next: boolean) => {
+    setOwn(next);
+    onOpenChange?.(next);
+  };
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<unknown>(null);
 
@@ -58,7 +68,7 @@ export function Confirm({
         if (!next) setError(null);
       }}
     >
-      <AlertDialogTrigger render={trigger} />
+      {trigger ? <AlertDialogTrigger render={trigger} /> : null}
       <AlertDialogContent className="max-w-md! border border-rule bg-paper-raised">
         <AlertDialogHeader>
           <AlertDialogTitle className="font-serif text-xl font-normal">{title}</AlertDialogTitle>

@@ -92,6 +92,7 @@ class UpdateOut(BaseModel):
 
     state: UpdateState
     version: str | None  # the newer version, for every state but `current`
+    notes: str | None  # an https address of what it changes, as the device found it: a link, never fetched
 
 
 class PendingOut(BaseModel):
@@ -452,7 +453,7 @@ def _satellite(
         capabilities=_capabilities(satellite.capabilities, words),
         can_identify=IDENTIFY in satellite.capabilities,
         can_update=UPDATE in satellite.capabilities,
-        update=UpdateOut(state=status.state, version=status.version) if status else None,
+        update=UpdateOut(state=status.state, version=status.version, notes=status.notes) if status else None,
         paired_at=satellite.paired_at,
         last_seen_at=seen,
         approved_by=approved_by,

@@ -26,6 +26,7 @@ sys-health-unknown = inconnu
 upd-available = Nouvelle version
 upd-available-version = Mise à jour disponible : { $version }
 upd-title = Nestor { $version } est là
+upd-description = Ce qui a changé depuis votre version, et comment mettre à jour.
 upd-behind = { $count ->
     [one] une version de retard
    *[other] { $count } versions de retard

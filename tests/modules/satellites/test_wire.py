@@ -39,7 +39,9 @@ MESSAGES: list[wire.Message] = [
     wire.IdentifyIntent(),
     wire.TextInput(text="Allume la cuisine"),
     wire.TextIntent(text="C'est fait.", final=False),
-    wire.UpdateStatusReport(state=UpdateState.AVAILABLE, version="0.6.0"),
+    wire.UpdateStatusReport(
+        state=UpdateState.AVAILABLE, version="0.6.0", notes="https://github.com/nestor-home/x/releases/tag/v0.6.0"
+    ),
     wire.UpdateStatusReport(state=UpdateState.CURRENT),
     wire.UpdateIntent(version="0.6.0"),
 ]
@@ -121,6 +123,12 @@ OFF_CONTRACT = {
     "a current version named": _with(wire.UpdateStatusReport(state=UpdateState.CURRENT), version="0.6.0"),
     "an unknown update state": _with(wire.UpdateStatusReport(state=UpdateState.CURRENT), state="downloading"),
     "an update to no version": _with(wire.UpdateIntent(version="1.0.0"), version=""),
+    "notes that are not https": _with(
+        wire.UpdateStatusReport(state=UpdateState.AVAILABLE, version="0.6.0"), notes="javascript:alert(1)"
+    ),
+    "notes with nothing to install": _with(
+        wire.UpdateStatusReport(state=UpdateState.CURRENT), notes="https://example.org/notes"
+    ),
     "brand that is not a slug": _manifest(
         device={"id": "d", "model": "m", "room": "salon", "brand": "Pollen Robotics"}
     ),

@@ -162,6 +162,14 @@ for (const width of [390, 1440]) {
       expect(await overflows(page)).toEqual([]);
     });
 
+    test("nothing overflows in a satellite's update dialog", async ({ page }) => {
+      await page.goto("/satellites/reachy-living-room");
+      await page.getByRole("button", { name: "Update available" }).click();
+      await expect(page.getByRole("dialog", { name: /version 0\.4\.1/ })).toBeVisible();
+      await page.waitForTimeout(300);
+      expect(await overflows(page)).toEqual([]);
+    });
+
     test("nothing overflows in a component's sheet and the changes", async ({ page }) => {
       await page.goto("/config/tools");
       await page.getByRole("button", { name: `Edit ${LONG_WORD}` }).click();

@@ -252,12 +252,12 @@ async def test_a_long_answer_is_shown_in_messages_the_protocol_allows(journal: J
 async def test_what_a_device_reports_about_its_software_is_kept_and_journaled_when_it_changes(
     journal: Journal,
 ) -> None:
-    available = wire.UpdateStatusReport(state=UpdateState.AVAILABLE, version="0.6.0")
+    available = wire.UpdateStatusReport(state=UpdateState.AVAILABLE, version="0.6.0", notes="https://x.org/0.6.0")
     async with linked(journal, ALLOWED | {UPDATE}) as (link, socket):
         socket.deliver(wire.encode(available))
         socket.deliver(wire.encode(available))
         await settle()
-        assert link.update_status == UpdateStatus(UpdateState.AVAILABLE, "0.6.0")
+        assert link.update_status == UpdateStatus(UpdateState.AVAILABLE, "0.6.0", "https://x.org/0.6.0")
         link.update("0.6.0")
         socket.deliver(wire.encode(wire.UpdateStatusReport(state=UpdateState.INSTALLING, version="0.6.0")))
         await settle()

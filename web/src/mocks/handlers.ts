@@ -627,12 +627,12 @@ export const handlers = [
     if (!satellite.connected) return fail(409, "satellite_offline", "error-satellite-offline");
     const version = satellite.update?.state === "available" ? satellite.update.version : null;
     if (!version) return fail(409, "update_unavailable", "error-update-unavailable");
-    satellite.update = { state: "installing", version };
+    satellite.update = { state: "installing", version, notes: satellite.update?.notes ?? null };
     save();
     // it installs, restarts and says hello again on the new version
     setTimeout(() => {
       satellite.software = { ...satellite.software, version };
-      satellite.update = { state: "current", version: null };
+      satellite.update = { state: "current", version: null, notes: null };
       save();
     }, UPDATE_MS);
     return json({ version } satisfies In<"UpdateRequestedOut">, { status: 202 });

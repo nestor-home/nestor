@@ -11866,12 +11866,24 @@
               }
             ],
             "title": "Version"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
           }
         },
         "type": "object",
         "required": [
           "state",
-          "version"
+          "version",
+          "notes"
         ],
         "title": "UpdateOut",
         "description": "What a connected device last reported about its software."

@@ -336,11 +336,12 @@ async def test_a_connected_satellite_shows_its_software_and_installs_the_newer_v
         with pairing.online("reachy-salon", device):
             current = await api.post("/api/v1/satellites/reachy-salon/update", {})
             assert current.json()["error"]["code"] == "update_unavailable"
-            device.update_status = UpdateStatus(UpdateState.AVAILABLE, "1.1.0")
+            device.update_status = UpdateStatus(UpdateState.AVAILABLE, "1.1.0", "https://x.org/v1.1.0")
             shown = (await api.get("/api/v1/satellites")).json()["paired"]
             assert next(s for s in shown if s["id"] == "reachy-salon")["update"] == {
                 "state": "available",
                 "version": "1.1.0",
+                "notes": "https://x.org/v1.1.0",
             }
             asked = await api.post("/api/v1/satellites/reachy-salon/update", {})
             assert (asked.status_code, asked.json()) == (202, {"version": "1.1.0"})

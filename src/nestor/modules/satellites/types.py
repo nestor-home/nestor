@@ -289,6 +289,7 @@ class UpdateState(StrEnum):
 class UpdateStatus:
     state: UpdateState
     version: str | None = None  # the newer version, for every state but `current`
+    notes: str | None = None  # an https address of what that version changes, for people
 
 
 class PairingStatus(StrEnum):

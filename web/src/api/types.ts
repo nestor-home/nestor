@@ -382,6 +382,7 @@ export type UpdateState = "current" | "available" | "installing" | "failed";
 export interface SatelliteUpdate {
   state: UpdateState;
   version: string | null;
+  notes: string | null; // what that version changes, an https address the device found: opened, never fetched
 }
 
 export interface Satellite {
