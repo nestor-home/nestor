@@ -167,8 +167,7 @@ export function pendingDto(p: PairingRequest): PendingDto {
     methods: p.methods,
     recommended_method: p.recommended_method,
     can_identify: p.can_identify,
-    sdk: p.device.sdk,
-    sdk_version: null,
+    software: p.software,
     expires_in_s: Math.max(0, Math.round((new Date(p.expires_at).getTime() - Date.now()) / 1000)),
   };
 }
@@ -181,8 +180,10 @@ export function satelliteDto(s: Satellite): SatelliteDto {
     model: s.model,
     room: s.room,
     brand: s.brand,
-    sdk: s.sdk,
-    sdk_version: s.sdk_version,
+    software: s.software,
+    protocol: s.protocol,
+    can_update: s.can_update,
+    update: s.update,
     capabilities: s.capabilities,
     paired_at: s.paired_at,
     last_seen_at: s.last_seen_at,

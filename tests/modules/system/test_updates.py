@@ -8,6 +8,7 @@ import pytest
 
 from nestor.core import ContractError
 from nestor.modules.journal import Journal
+from nestor.modules.satellites import Satellite
 from nestor.modules.system import (
     Change,
     ChangeKind,
@@ -21,6 +22,7 @@ from nestor.modules.system import (
     version_key,
 )
 from nestor.testing.journal import MemoryEventLog
+from nestor.testing.satellites import SOFTWARE
 from nestor.testing.system import FakeInstaller, StaticReleaseFeed
 
 NOW = datetime.fromisoformat("2026-11-04T09:00:00+00:00")
@@ -173,3 +175,18 @@ async def test_an_instance_without_an_installer_updates_the_way_it_was_installed
     updates, _, _ = await _read(None)
     with pytest.raises(ContractError):
         await updates.install("0.10.0", by="mathis")
+
+
+def _satellite(id: str, protocol: str) -> Satellite:
+    return Satellite(id=id, model="m", room="salon", capabilities=frozenset(), token_hash="x", paired_at=NOW,
+                     software=SOFTWARE, protocol=protocol)  # fmt: skip
+
+
+async def test_the_newest_release_names_the_satellites_it_no_longer_speaks_to() -> None:
+    old, current = _satellite("old", "nestor.satellite/0"), _satellite("current", "nestor.satellite/1")
+    updates, _, _ = await _read(None)
+    assert updates.left_behind([old, current]) == [old]
+    up_to_date = Updates(StaticReleaseFeed(Releases.from_json(FEED)), "0.10.0", Journal(MemoryEventLog()),
+                         Restarts(), PIP)  # fmt: skip
+    await up_to_date.check()
+    assert up_to_date.left_behind([old, current]) == [], "nothing newer, nobody left behind"

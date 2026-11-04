@@ -29,6 +29,7 @@ from nestor.core import Capability, ContractError
 from nestor.modules.satellites import (
     AUDIO,
     EnrollmentRefused,
+    Manifest,
     NotPending,
     Pairing,
     ProtocolUnsupported,
@@ -65,14 +66,14 @@ class AudioOffers(ABC):
         """Add the device's ICE candidates to one of its own peer connections."""
 
 
-type Linked = Callable[[WebSocket, Satellite, frozenset[Capability]], Awaitable[None]]
+type Linked = Callable[[WebSocket, Satellite, Manifest, frozenset[Capability]], Awaitable[None]]
 type Refused = Callable[[str, Close, str], None]
 
 
 class SatelliteGateway:
     """`on_link` holds the link of a device whose `hello` was accepted (the socket, the paired device,
-    what it is granted) until it ends; `allowed` says what a paired device is granted (the voice may be
-    missing); `refused` hears why a link was turned away."""
+    the manifest it said hello with, what it is granted) until it ends; `allowed` says what a paired
+    device is granted (the voice may be missing); `refused` hears why a link was turned away."""
 
     def __init__(
         self,
@@ -126,21 +127,23 @@ class SatelliteGateway:
 
     async def _link(self, socket: WebSocket, device_id: str) -> None:
         await socket.accept()
-        satellite = await self._greet(socket, device_id)
-        if satellite is None:
+        greeted = await self._greet(socket, device_id)
+        if greeted is None:
             return
+        satellite, manifest = greeted
         allowed = self._allowed(satellite)
         if previous := self._links.get(device_id):
             await _close(previous[0], Close.REPLACED)
         self._links[device_id] = (socket, allowed)
         try:
-            await self._on_link(socket, satellite, allowed)
+            await self._on_link(socket, satellite, manifest, allowed)
         finally:
             if self._links.get(device_id, (None,))[0] is socket:
                 del self._links[device_id]
 
-    async def _greet(self, socket: WebSocket, device_id: str) -> Satellite | None:
-        """The paired device behind the link's `hello`, or `None` once the link is closed (L1, L2)."""
+    async def _greet(self, socket: WebSocket, device_id: str) -> tuple[Satellite, Manifest] | None:
+        """The paired device behind the link's `hello` and its manifest, or `None` once the link is
+        closed (L1, L2)."""
         try:
             received = await asyncio.wait_for(socket.receive_text(), self._hello_deadline_s)
             hello = wire.decode(json.loads(received)).message
@@ -158,7 +161,7 @@ class SatelliteGateway:
         satellite = self._pairing.authenticate(device_id, hello.token)
         if satellite is None:
             return await self._turn_away(socket, device_id, Close.TOKEN_REFUSED, "token refused")
-        return satellite
+        return satellite, hello.manifest
 
     async def _turn_away(self, socket: WebSocket, device_id: str, code: Close, why: str) -> None:
         logger.warning("satellite %s: link closed (%d, %s)", device_id, code, why)

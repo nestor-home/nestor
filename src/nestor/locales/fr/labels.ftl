@@ -67,6 +67,7 @@ capability-audio-speech_activity = détection de parole
 capability-vision-person_detection = détection de personnes (sans image transmise)
 capability-expression-emotion = expressions
 capability-device-identify = se signaler (lumière, mouvement ou son)
+capability-device-update = mettre à jour son logiciel (sur demande)
 capability-motion-head = mouvements de tête
 
 # Méthodes d'appairage (`pairing-method-<méthode, points en tirets>`), et ce que fait la personne.

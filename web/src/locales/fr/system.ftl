@@ -39,6 +39,10 @@ upd-install-hint = Il redémarre une fois installée.
 upd-installing = Installation de la { $version }…
 upd-failed = La { $version } ne s'est pas installée. Nestor reste sur la { $running }.
 upd-breaking = Cette version change les données ou la configuration : relisez les notes avant de mettre à jour.
+upd-outdated = { $count ->
+    [one] Ce satellite ne pourra plus se connecter : mettez-le à jour avant.
+   *[other] Ces { $count } satellites ne pourront plus se connecter : mettez-les à jour avant.
+}
 upd-release = Version { $version }
 upd-notes = Notes de version
 upd-kind-breaking = Ruptures

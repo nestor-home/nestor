@@ -69,6 +69,7 @@ capability-vision-person_detection = person detection (no image sent)
 capability-expression-emotion = expressions
 capability-motion-head = head movements
 capability-device-identify = identify (light, motion or sound)
+capability-device-update = update its own software (on request)
 
 # Pairing methods (`pairing-method-<method, dots as dashes>`), and what the person does.
 pairing-method-device_code-display = Code on its screen

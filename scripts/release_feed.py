@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from nestor.modules.satellites import PROTOCOL
+from nestor.modules.satellites import PROTOCOLS
 
 CHANGELOG = Path(__file__).parent.parent / "CHANGELOG.md"
 NOTES = "https://github.com/nestor-home/nestor/releases/tag/v{version}"
@@ -41,7 +41,7 @@ def feed(changelog: str) -> dict[str, Any]:
                 c["kind"] == "breaking" and c["text"] == text for c in changes
             ):  # listed twice by release-please
                 changes.append({"kind": kind, "text": text})
-    return {"protocols": [PROTOCOL], "releases": releases}
+    return {"protocols": sorted(PROTOCOLS), "releases": releases}
 
 
 if __name__ == "__main__":

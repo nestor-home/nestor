@@ -17,6 +17,7 @@ from nestor.modules.satellites import (
     Device,
     Manifest,
 )
+from nestor.testing.satellites import SOFTWARE
 
 from .harness import CONFIG, Harness
 
@@ -27,6 +28,7 @@ REACHY = Manifest(
         DeclaredCapability(Capability("audio.playback")),
         DeclaredCapability(Capability("vision.person_detection")),
     ),
+    software=SOFTWARE,
 )
 
 

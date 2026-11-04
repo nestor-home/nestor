@@ -15,13 +15,13 @@ import { Button } from "@/components/ui/button";
 import { ActivityList } from "@/features/journal/activity-list";
 import { useT } from "@/i18n";
 import { tr } from "@/i18n/runtime";
-import { BrandMark, brandOf } from "@/lib/brands";
 import { moment } from "@/lib/dates";
 import { CAPABILITY_ICON } from "@/lib/icons";
 import { usePeopleNames } from "@/lib/people";
 import { useCan, useMe } from "@/lib/session";
 import { IdentifyButton } from "./add-satellite";
 import { DeviceMark } from "./device-mark";
+import { SatelliteUpdateButton } from "./satellite-update";
 
 /** What each capability lets the assistant do, said for the household. */
 const MEANS: Record<string, string> = {
@@ -33,10 +33,8 @@ const MEANS: Record<string, string> = {
   "vision.person_detection": "sat-means-vision-person-detection",
   "expression.emotion": "sat-means-expression-emotion",
   "motion.head": "sat-means-motion-head",
+  "device.update": "sat-means-device-update",
 };
-
-/** The wire format satellites speak: an identifier, not language. */
-const PROTOCOL = "nestor.satellite/1";
 
 function means(capability: string): string | null {
   const id = MEANS[capability];
@@ -73,7 +71,12 @@ export function SatelliteFrame({ id, children }: { id: string; children: ReactNo
             {s.name ?? <span className="font-mono text-[2rem] tracking-tight">{s.id}</span>}
           </span>
         }
-        actions={s.can_identify && s.connected && canPair ? <IdentifyButton device={s.id} /> : undefined}
+        actions={
+          <>
+            <SatelliteUpdateButton satellite={s} />
+            {s.can_identify && s.connected && canPair ? <IdentifyButton device={s.id} /> : null}
+          </>
+        }
         meta={
           <>
             {s.connected === null ? null : s.connected ? (
@@ -116,7 +119,6 @@ export function SatelliteOverview({ satellite: s }: { satellite: Satellite }) {
       void navigate({ to: "/satellites" });
     },
   });
-  const sdk = brandOf(s.sdk);
   return (
     <div className="grid gap-10">
       <Lead>
@@ -133,9 +135,8 @@ export function SatelliteOverview({ satellite: s }: { satellite: Satellite }) {
             : moment(s.paired_at)}
         </Fact>
         <Fact term={t("sat-last-seen")}>{s.last_seen_at ? <Ago iso={s.last_seen_at} /> : "—"}</Fact>
-        <Fact term={t("sat-software")} className="flex items-center gap-2 font-mono text-[0.8rem]">
-          {sdk ? <BrandMark brand={sdk} className="size-3.5" /> : null}
-          {s.sdk ? t("sat-sdk", { sdk: s.sdk, version: s.sdk_version ?? "" }) : t("sat-sdk-unknown")} · {PROTOCOL}
+        <Fact term={t("sat-software")} className="font-mono text-[0.8rem] [overflow-wrap:anywhere]">
+          {s.software.name} {s.software.version} · {s.protocol}
         </Fact>
       </Facts>
       {canRevoke ? (

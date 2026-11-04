@@ -13,7 +13,8 @@ The proof travels whichever way the device can carry it, and the person picks th
 A device configured with an enrollment code sends it with its request and is approved at once. A
 pending device accepts both proofs: the first one accepted wins, the other is refused and an
 enrollment code refused that way stays usable. A person may ask a pending device to identify itself
-through its next poll, or a paired one through its link: that only helps tell devices apart.
+through its next poll, or a paired one through its link: that only helps tell devices apart. Through its
+link, a person may also ask a paired device to install the newer version of its software it reported.
 
 Default deny: a device that is not paired, or was revoked, never authenticates. Pending pairings
 live in memory (a restart asks devices to request again); paired satellites and the additions in
@@ -23,6 +24,7 @@ progress are rebuilt from the journal, where only hashes are written.
 import contextlib
 import hmac
 import secrets
+from abc import ABC, abstractmethod
 from collections import deque
 from collections.abc import Callable, Generator, Iterable
 from dataclasses import dataclass, field, replace
@@ -36,15 +38,20 @@ from nestor.modules.satellites.events import (
     SatelliteAdditionCompleted,
     SatelliteAdditionExpired,
     SatelliteAdditionStarted,
+    SatelliteConnected,
+    SatelliteDisconnected,
     SatelliteEnrollmentRefused,
     SatelliteIdentifyRequested,
     SatellitePaired,
     SatellitePairingRequested,
     SatelliteRevoked,
+    SatelliteUpdateReported,
+    SatelliteUpdateRequested,
 )
 from nestor.modules.satellites.types import (
     IDENTIFY,
     MAX_NAME,
+    UPDATE,
     Addition,
     AdditionStatus,
     Device,
@@ -56,7 +63,10 @@ from nestor.modules.satellites.types import (
     PendingPairing,
     Proof,
     Satellite,
+    Software,
     StartedAddition,
+    UpdateState,
+    UpdateStatus,
     check_room,
 )
 
@@ -65,7 +75,17 @@ MIN_ADDITION_TTL_S = 60.0
 MAX_ADDITION_TTL_S = 7 * 24 * 3600.0
 _REFUSALS = {AdditionStatus.COMPLETED: "used", AdditionStatus.EXPIRED: "expired", AdditionStatus.CANCELLED: "cancelled"}
 
-type Identify = Callable[[], None]
+
+class Online(ABC):
+    """A paired device whose link is up, as the host holding the link reaches it: the intents it carries."""
+
+    @abstractmethod
+    def identify(self) -> None:
+        """Ask it to make itself noticed."""
+
+    @abstractmethod
+    def update(self, version: str) -> None:
+        """Ask it to install `version` of its software and start again on it."""
 
 
 class PairingRefused(ContractError):
@@ -102,8 +122,9 @@ class TooManyAttempts(PairingRefused):
         self.retry_after_s = retry_after_s
 
 
-class IdentifyUnavailable(ContractError):
-    """The device cannot be asked to identify itself: `reason` is unknown, unsupported or offline."""
+class DeviceUnavailable(ContractError):
+    """The device cannot be asked that: `reason` is unknown, unsupported, offline, or current (it reported
+    no newer version to install)."""
 
     def __init__(self, message: str, *, reason: str) -> None:
         super().__init__(message)
@@ -175,14 +196,18 @@ class Pairing(Component):
         self._requests: dict[str, _Request] = {}
         self._satellites: dict[str, Satellite] = {}
         self._additions: dict[str, Addition] = {}
-        self._online: dict[str, Identify] = {}
+        self._online: dict[str, Online] = {}
+        self._updates: dict[str, UpdateStatus] = {}  # what each online device last reported about its software
+        self._seen: dict[str, datetime] = {}  # when each device last connected or disconnected
 
     async def start(self) -> None:
-        """Rebuild the paired satellites (the latest pairing of each device, unless revoked since) and
-        the additions in progress."""
+        """Rebuild the paired satellites (the latest pairing of each device, unless revoked since, with
+        the software it last connected with and when it was last seen) and the additions in progress."""
         history = await self.journal.history(
             SatellitePaired,
             SatelliteRevoked,
+            SatelliteConnected,
+            SatelliteDisconnected,
             SatelliteAdditionStarted,
             SatelliteAdditionCompleted,
             SatelliteAdditionExpired,
@@ -194,6 +219,11 @@ class Pairing(Component):
                     self._satellites[event.device.id] = _satellite(event)
                 case SatelliteRevoked():
                     self._satellites.pop(event.device_id, None)
+                case SatelliteConnected():
+                    self._declared(event.device_id, event.software, event.protocol)
+                    self._seen[event.device_id] = event.at
+                case SatelliteDisconnected():
+                    self._seen[event.device_id] = event.at
                 case SatelliteAdditionStarted():
                     self._additions[event.addition_id] = _addition(event)
                 case SatelliteAdditionCompleted():
@@ -210,7 +240,8 @@ class Pairing(Component):
         self._expire()
         return [
             PendingPairing(id=r.ticket.id, device=r.manifest.device, capabilities=r.manifest.names,
-                           methods=r.manifest.pairing_methods, expires_at=r.ticket.expires_at, sdk=r.manifest.sdk)
+                           methods=r.manifest.pairing_methods, expires_at=r.ticket.expires_at,
+                           software=r.manifest.software)
             for r in self._requests.values()
             if r.status is PairingStatus.PENDING
         ]  # fmt: skip
@@ -397,36 +428,64 @@ class Pairing(Component):
         self._expire()
         request = self._requests.get(pairing_id)
         if request is None or request.status is not PairingStatus.PENDING:
-            raise IdentifyUnavailable("no device is waiting with this pairing", reason="unknown")
+            raise DeviceUnavailable("no device is waiting with this pairing", reason="unknown")
         if IDENTIFY not in request.manifest.names:
-            raise IdentifyUnavailable("this device cannot identify itself", reason="unsupported")
+            raise DeviceUnavailable("this device cannot identify itself", reason="unsupported")
         request.identify = True
         await self.journal.publish(SatelliteIdentifyRequested(source=self.name, device_id=request.manifest.device.id,
                                                               pairing_id=pairing_id, requested_by=by))  # fmt: skip
 
     async def identify(self, device_id: str, *, by: PersonId | None = None) -> None:
         """Ask a paired, connected device to make itself noticed, if it was allowed to."""
-        satellite = self._satellites.get(device_id)
-        if satellite is None:
-            raise IdentifyUnavailable(f"no paired satellite {device_id!r}", reason="unknown")
-        if IDENTIFY not in satellite.capabilities:
-            raise IdentifyUnavailable("this satellite cannot identify itself", reason="unsupported")
-        send = self._online.get(device_id)
-        if send is None:
-            raise IdentifyUnavailable("this satellite is not connected", reason="offline")
-        send()
+        self._reach(device_id, IDENTIFY).identify()
         await self.journal.publish(SatelliteIdentifyRequested(source=self.name, device_id=device_id,
                                                               requested_by=by))  # fmt: skip
 
+    async def update(self, device_id: str, *, by: PersonId | None = None) -> str:
+        """Ask a paired, connected device allowed `device.update` to install the newer version of its
+        software it reported; returns that version. Only a version the device found itself is ever
+        asked for: the core never names a source, and never an older version."""
+        online = self._reach(device_id, UPDATE)
+        status = self._updates.get(device_id)
+        if status is None or status.state is not UpdateState.AVAILABLE or status.version is None:
+            raise DeviceUnavailable("this satellite reported no newer version", reason="current")
+        online.update(status.version)
+        running = self._satellites[device_id].software.version
+        await self.journal.publish(SatelliteUpdateRequested(source=self.name, device_id=device_id, running=running,
+                                                            target=status.version, requested_by=by))  # fmt: skip
+        return status.version
+
+    async def reported(self, device_id: str, status: UpdateStatus) -> None:
+        """What an online device says about its software (`update.status`): kept while its link is up,
+        journaled when it changes."""
+        if device_id not in self._online or self._updates.get(device_id) == status:
+            return
+        self._updates[device_id] = status
+        await self.journal.publish(SatelliteUpdateReported(source=self.name, device_id=device_id,
+                                                           state=status.state, target=status.version))  # fmt: skip
+
+    def update_status(self, device_id: str) -> UpdateStatus | None:
+        """What the device reported about its software, while its link is up."""
+        return self._updates.get(device_id)
+
+    def last_seen(self, device_id: str) -> datetime | None:
+        """When the device last connected or disconnected; `None` when never since it was paired."""
+        return self._seen.get(device_id)
+
     @contextlib.contextmanager
-    def online(self, device_id: str, identify: Identify) -> Generator[None]:
-        """While a host holds a paired device's link: how to ask it to identify itself."""
-        self._online[device_id] = identify
+    def online(self, device_id: str, online: Online, manifest: Manifest) -> Generator[None]:
+        """While a host holds a paired device's link: how to reach it. The software it declared in
+        `manifest` becomes the one known for it (its `SatelliteConnected` keeps it across restarts)."""
+        self._online[device_id] = online
+        self._declared(device_id, manifest.software, manifest.protocol)
+        self._seen[device_id] = self._clock()
         try:
             yield
         finally:
-            if self._online.get(device_id) is identify:
+            if self._online.get(device_id) is online:
                 del self._online[device_id]
+                self._updates.pop(device_id, None)
+                self._seen[device_id] = self._clock()
 
     def authenticate(self, device_id: str, token: str) -> Satellite | None:
         """The satellite this token belongs to; `None` for any unpaired, revoked or replaced token."""
@@ -442,6 +501,21 @@ class Pairing(Component):
         del self._satellites[device_id]
 
     # Inside.
+
+    def _reach(self, device_id: str, needed: Capability) -> Online:
+        satellite = self._satellites.get(device_id)
+        if satellite is None:
+            raise DeviceUnavailable(f"no paired satellite {device_id!r}", reason="unknown")
+        if needed not in satellite.capabilities:
+            raise DeviceUnavailable(f"this satellite was not allowed {needed}", reason="unsupported")
+        online = self._online.get(device_id)
+        if online is None:
+            raise DeviceUnavailable("this satellite is not connected", reason="offline")
+        return online
+
+    def _declared(self, device_id: str, software: Software, protocol: str) -> None:
+        if (satellite := self._satellites.get(device_id)) is not None:
+            self._satellites[device_id] = replace(satellite, software=software, protocol=protocol)
 
     async def _redeem(
         self,
@@ -503,7 +577,6 @@ class Pairing(Component):
             )
             await self.journal.publish(completed)
         token = TOKEN_PREFIX + secrets.token_urlsafe(32)
-        sdk = request.manifest.sdk
         event = SatellitePaired(
             source=self.name,
             pairing_id=request.ticket.id,
@@ -515,8 +588,8 @@ class Pairing(Component):
             addition_id=addition.id if addition else None,
             name=addition.name if addition else None,
             approved_by=by,
-            sdk=sdk.name if sdk else None,
-            sdk_version=sdk.version if sdk else None,
+            software=request.manifest.software,
+            protocol=request.manifest.protocol,
         )
         await self.journal.publish(event)
         satellite = self._satellites[device.id] = _satellite(event)
@@ -568,8 +641,8 @@ def _satellite(event: SatellitePaired) -> Satellite:
         token_hash=event.token_hash,
         paired_at=event.at,
         brand=event.device.brand,
-        sdk=event.sdk,
-        sdk_version=event.sdk_version,
+        software=event.software,
+        protocol=event.protocol,
         name=event.name,
     )
 

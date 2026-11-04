@@ -238,7 +238,8 @@ export function connectionDetail(dto: ConnectionDetailDto): ConnectionDetail {
 export function pending(dto: PendingDto, now = Date.now()): PairingRequest {
   return {
     id: dto.pairing_id,
-    device: { ...dto.device, sdk: dto.sdk },
+    device: dto.device,
+    software: dto.software,
     capabilities: dto.capabilities,
     methods: dto.methods.map(method),
     recommended_method: dto.recommended_method,
@@ -287,8 +288,10 @@ export function satellite(dto: SatelliteDto): Satellite {
     connected: dto.connected,
     last_seen_at: dto.last_seen_at,
     brand: dto.brand,
-    sdk: dto.sdk,
-    sdk_version: dto.sdk_version,
+    software: dto.software,
+    protocol: dto.protocol,
+    can_update: dto.can_update,
+    update: dto.update ? { ...dto.update } : null,
   };
 }
 

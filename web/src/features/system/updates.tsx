@@ -142,6 +142,18 @@ export function NestorUpdate({
       >
         {updates.failed === version ? <Notice>{t("upd-failed", { version, running: updates.running })}</Notice> : null}
         {updates.releases.some((r) => r.breaking) ? <Notice>{t("upd-breaking")}</Notice> : null}
+        {updates.left_behind.length ? (
+          <Notice tone="attention">
+            <p>{t("upd-outdated", { count: updates.left_behind.length })}</p>
+            <ul className="mt-1.5 grid gap-0.5">
+              {updates.left_behind.map((s) => (
+                <li key={s.id} className="[overflow-wrap:anywhere]">
+                  {s.name ?? s.id}
+                </li>
+              ))}
+            </ul>
+          </Notice>
+        ) : null}
         {updates.releases.map((release) => (
           <ReleaseNotes key={release.version} release={release} />
         ))}

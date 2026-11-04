@@ -20,6 +20,16 @@ conformance-follows-schema = { $connection ->
     [enrolled] enrolled: every message follows the schema
    *[paired] every message follows the schema
 }
+conformance-reports-update = { $connection ->
+    [reconnected] after reconnecting: reports where its software stands (U1)
+    [enrolled] enrolled: reports where its software stands (U1)
+   *[paired] reports where its software stands (U1)
+}
+conformance-installs-only-found = { $connection ->
+    [reconnected] after reconnecting: never installs a version it did not report (U2)
+    [enrolled] enrolled: never installs a version it did not report (U2)
+   *[paired] never installs a version it did not report (U2)
+}
 conformance-exchanges-audio = exchanges audio, as allowed (A1, A2)
 conformance-receives-audio = receives the core's audio (A1, A2)
 conformance-sends-audio = sends its microphone audio (A1, A2)
@@ -54,6 +64,8 @@ conformance-audio-offers = { $count ->
 conformance-never-asked-again = never asked to pair again
 conformance-no-ack = no ack with this intent's id
 conformance-off-schema = { $errors }
+conformance-no-update-status = no update.status
+conformance-installed-unreported = reported installing { $version }, which it never reported
 conformance-no-receiver-report = no RTCP receiver report from the satellite
 conformance-no-audio-frame = no audio frame from the satellite
 conformance-no-token = no token claimed

@@ -25,7 +25,7 @@ import {
   taskDto,
   watchDto,
 } from "./dto";
-import { arriving, CANCELLED, KIND_LABELS, METHODS, ROLE_LABEL, tools as toolsOf } from "./fixtures";
+import { arriving, CANCELLED, KIND_LABELS, METHODS, PROTOCOL, ROLE_LABEL, tools as toolsOf } from "./fixtures";
 import { fr, inFrench } from "./french";
 import { facets, filtersOf, matching, withoutRecord } from "./journal";
 import { errorText, type Lang, localize, toItem } from "./messages";
@@ -89,6 +89,9 @@ function guard(request: Request): Response | null {
   return null;
 }
 
+/** How long a mock satellite takes to install a version and come back on it. */
+const UPDATE_MS = 4_000;
+
 /** While the instance restarts nothing answers; it comes back a little later. */
 let downUntil = 0;
 
@@ -99,7 +102,7 @@ export function resetServer(): void {
   pending.clear();
 }
 
-/** What the mock server does later (an install): never into the next test. */
+/** What the mock server does later (an install, a satellite coming back): never into the next test. */
 const pending = new Set<ReturnType<typeof setTimeout>>();
 function later(run: () => void, ms: number): void {
   const timer = setTimeout(() => {
@@ -627,6 +630,26 @@ export const handlers = [
     return noContent();
   }),
 
+  http.post(`${API}/satellites/:id/update`, ({ request, params }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    const satellite = db.satellites.find((x) => x.id === params.id);
+    if (!satellite) return fail(404, "satellite_unknown", "error-satellite-unknown");
+    if (!satellite.can_update) return fail(409, "update_unsupported", "error-update-unsupported");
+    if (!satellite.connected) return fail(409, "satellite_offline", "error-satellite-offline");
+    const version = satellite.update?.state === "available" ? satellite.update.version : null;
+    if (!version) return fail(409, "update_unavailable", "error-update-unavailable");
+    satellite.update = { state: "installing", version, notes: satellite.update?.notes ?? null };
+    save();
+    // it installs, restarts and says hello again on the new version
+    later(() => {
+      satellite.software = { ...satellite.software, version };
+      satellite.update = { state: "current", version: null, notes: null };
+      save();
+    }, UPDATE_MS);
+    return json({ version } satisfies In<"UpdateRequestedOut">, { status: 202 });
+  }),
+
   http.delete(`${API}/satellites/:id`, ({ request, params }) => {
     const refused = guard(request);
     if (refused) return refused;
@@ -1058,8 +1081,10 @@ function pair(
     connected: true,
     last_seen_at: new Date().toISOString(),
     brand: pending.device.brand,
-    sdk: pending.device.sdk,
-    sdk_version: null,
+    software: pending.software,
+    protocol: PROTOCOL,
+    can_update: pending.capabilities.some((c) => c.name === "device.update"),
+    update: null,
   };
   db.pairing = db.pairing.filter((p) => p.id !== pending.id);
   db.satellites = [...db.satellites.filter((s) => s.id !== satellite.id), satellite];

@@ -662,6 +662,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/satellites/{device_id}/update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Update Satellite
+         * @description Ask a connected satellite to install the newer version of its software it reported. It fetches it
+         *     from its own source, starts again on it, and goes back to the version it ran if that fails.
+         */
+        post: operations["updateSatellite"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/satellites/approvals": {
         parameters: {
             query?: never;
@@ -1799,6 +1820,13 @@ export interface components {
             /** Household */
             household: string;
         };
+        /** LeftBehindOut */
+        LeftBehindOut: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string | null;
+        };
         /**
          * LinksOut
          * @description What threads entries together; the front builds threads and chains from these only.
@@ -1972,10 +2000,7 @@ export interface components {
             recommended_method: components["schemas"]["PairingMethod"];
             /** Can Identify */
             can_identify: boolean;
-            /** Sdk */
-            sdk: string | null;
-            /** Sdk Version */
-            sdk_version: string | null;
+            software: components["schemas"]["SoftwareOut"];
             /** Expires In S */
             expires_in_s: number;
         };
@@ -2111,14 +2136,16 @@ export interface components {
             room: string;
             /** Brand */
             brand: string | null;
-            /** Sdk */
-            sdk: string | null;
-            /** Sdk Version */
-            sdk_version: string | null;
+            software: components["schemas"]["SoftwareOut"];
+            /** Protocol */
+            protocol: string;
             /** Capabilities */
             capabilities: components["schemas"]["CapabilityOut"][];
             /** Can Identify */
             can_identify: boolean;
+            /** Can Update */
+            can_update: boolean;
+            update: components["schemas"]["UpdateOut"] | null;
             /**
              * Paired At
              * Format: date-time
@@ -2212,6 +2239,13 @@ export interface components {
                 };
             };
         };
+        /** SoftwareOut */
+        SoftwareOut: {
+            /** Name */
+            name: string;
+            /** Version */
+            version: string;
+        };
         /**
          * Stage
          * @description Where an addition stands, for the front's progress.
@@ -2295,6 +2329,28 @@ export interface components {
             enabled: boolean;
         };
         /**
+         * UpdateOut
+         * @description What a connected device last reported about its software.
+         */
+        UpdateOut: {
+            state: components["schemas"]["UpdateState"];
+            /** Version */
+            version: string | null;
+            /** Notes */
+            notes: string | null;
+        };
+        /** UpdateRequestedOut */
+        UpdateRequestedOut: {
+            /** Version */
+            version: string;
+        };
+        /**
+         * UpdateState
+         * @description Where a device's own software stands, as it reports it (`update.status`).
+         * @enum {string}
+         */
+        UpdateState: "current" | "available" | "installing" | "failed";
+        /**
          * UpdatesOut
          * @description What was released since the running version, and how this Nestor gets it.
          */
@@ -2303,6 +2359,8 @@ export interface components {
             running: string;
             /** Releases */
             releases: components["schemas"]["ReleaseOut"][];
+            /** Left Behind */
+            left_behind: components["schemas"]["LeftBehindOut"][];
             installation: components["schemas"]["InstallKind"] | null;
             /** Commands */
             commands: string[];
@@ -6134,6 +6192,100 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    updateSatellite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                device_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UpdateRequestedOut"];
+                };
             };
             /** @description Bad Request */
             400: {

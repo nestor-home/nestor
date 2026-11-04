@@ -14,7 +14,10 @@ from typing import Any
 
 from nestor.core import Capability, ContractError, PersonId
 
-PROTOCOL = "nestor.satellite/1"
+PROTOCOL = "nestor.satellite/1"  # the version this core's messages follow
+# Every version this core accepts from devices: a later core may serve a device one version behind
+# with one codec per version, translating to the same events (only one version exists yet).
+PROTOCOLS = frozenset({PROTOCOL})
 _PROTOCOL = re.compile(r"^nestor\.satellite/\d+$")
 
 TEXT_INPUT = Capability("text.input")  # it sends what a person typed
@@ -25,6 +28,7 @@ AUDIO = frozenset({AUDIO_CAPTURE, AUDIO_PLAYBACK})  # either one: the device exc
 PERSON_DETECTION = Capability("vision.person_detection")
 SPEECH_ACTIVITY = Capability("audio.speech_activity")
 IDENTIFY = Capability("device.identify")  # it can make itself noticed (blink, wiggle, chime): an aid, never a proof
+UPDATE = Capability("device.update")  # it can install a newer version of its own software, on a person's request
 
 _SLUG = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")  # device ids and rooms end up in addresses (`satellites:salon`)
 _CAPABILITY = re.compile(r"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$")
@@ -44,7 +48,7 @@ def check_capability(name: str) -> Capability:
     return Capability(name)
 
 
-MAX_SDK = 64
+MAX_SOFTWARE = 64
 
 
 class ProtocolUnsupported(ContractError):
@@ -125,24 +129,25 @@ class Device:
 
 
 @dataclass(frozen=True, slots=True)
-class Sdk:
-    """The software a device runs, as it names it: `nestor-satellite-python` `0.2.0`."""
+class Software:
+    """The software a device runs, as its package is named where it is installed from: `nestor-reachy`
+    `0.4.0`. A device that updates itself installs newer versions of this package."""
 
     name: str
     version: str
 
     @classmethod
-    def from_json(cls, data: object) -> "Sdk":
+    def from_json(cls, data: object) -> "Software":
         if not isinstance(data, dict) or set(data) != {"name", "version"}:
-            raise ContractError("sdk must have exactly a name and a version")
+            raise ContractError("software must have exactly a name and a version")
         for key in ("name", "version"):
-            if not isinstance(data[key], str) or not 0 < len(data[key]) <= MAX_SDK:
-                raise ContractError(f"sdk {key} must be a non-empty string of at most {MAX_SDK} characters")
+            if not isinstance(data[key], str) or not 0 < len(data[key]) <= MAX_SOFTWARE:
+                raise ContractError(f"software {key} must be a non-empty string of at most {MAX_SOFTWARE} characters")
         return cls(data["name"], data["version"])
 
     @staticmethod
     def json_schema() -> dict[str, Any]:
-        text = {"type": "string", "minLength": 1, "maxLength": MAX_SDK}
+        text = {"type": "string", "minLength": 1, "maxLength": MAX_SOFTWARE}
         return {
             "type": "object",
             "properties": {"name": text, "version": text},
@@ -167,7 +172,7 @@ class Manifest:
     capabilities: tuple[DeclaredCapability, ...] = ()
     pairing_methods: tuple[PairingMethod, ...] = (PairingMethod.PROVISIONING,)
     protocol: str = PROTOCOL
-    sdk: Sdk | None = None  # the software it runs; optional
+    software: Software = field(kw_only=True)
 
     @property
     def names(self) -> frozenset[Capability]:
@@ -180,21 +185,23 @@ class Manifest:
             "device": device | ({"brand": self.device.brand} if self.device.brand else {}),
             "capabilities": [{"name": c.name, **c.params} for c in self.capabilities],
             "pairing_methods": [m.value for m in self.pairing_methods],
+            "software": {"name": self.software.name, "version": self.software.version},
         }
-        return data | ({"sdk": {"name": self.sdk.name, "version": self.sdk.version}} if self.sdk else {})
+        return data
 
     @classmethod
     def from_json(cls, data: object) -> "Manifest":
         """Validate a manifest received from a device; anything unexpected is a `ContractError`."""
         if not isinstance(data, dict) or set(data) - _MANIFEST_KEYS:
             raise ContractError(
-                "a manifest is an object with protocol, device, capabilities, pairing_methods and an optional sdk"
+                "a manifest is an object with protocol, device, software, pairing_methods and capabilities"
             )
         protocol = data.get("protocol")
-        if isinstance(protocol, str) and _PROTOCOL.match(protocol) and protocol != PROTOCOL:
-            raise ProtocolUnsupported(f"the device speaks {protocol}, this core only {PROTOCOL}: update the device")
-        if protocol != PROTOCOL:
-            raise ContractError(f"unsupported protocol {protocol!r}, expected {PROTOCOL!r}")
+        if isinstance(protocol, str) and _PROTOCOL.match(protocol) and protocol not in PROTOCOLS:
+            speaks = ", ".join(sorted(PROTOCOLS))
+            raise ProtocolUnsupported(f"the device speaks {protocol}, this core {speaks}: update the device")
+        if protocol not in PROTOCOLS:
+            raise ContractError(f"unsupported protocol {protocol!r}, expected one of {sorted(PROTOCOLS)}")
         device = Device.from_json(data.get("device"))
         capabilities = data.get("capabilities", [])
         if not isinstance(capabilities, list) or len(capabilities) > MAX_CAPABILITIES:
@@ -207,8 +214,10 @@ class Manifest:
             declared.append(DeclaredCapability(Capability(name), {k: v for k, v in entry.items() if k != "name"}))
         if len({c.name for c in declared}) != len(declared):
             raise ContractError("a capability is declared twice")
-        sdk = Sdk.from_json(data["sdk"]) if "sdk" in data else None
-        return cls(device, tuple(declared), _methods(data.get("pairing_methods")), sdk=sdk)
+        if "software" not in data:
+            raise ContractError("a manifest names the software the device runs")
+        software = Software.from_json(data["software"])
+        return cls(device, tuple(declared), _methods(data.get("pairing_methods")), protocol, software=software)
 
     @staticmethod
     def json_schema() -> dict[str, Any]:
@@ -217,7 +226,7 @@ class Manifest:
             "properties": {
                 "protocol": {"const": PROTOCOL},
                 "device": Device.json_schema(),
-                "sdk": Sdk.json_schema(),
+                "software": Software.json_schema(),
                 "pairing_methods": {
                     "type": "array",
                     "items": {"enum": [m.value for m in PairingMethod]},
@@ -234,12 +243,12 @@ class Manifest:
                     },
                 },
             },
-            "required": ["protocol", "device", "pairing_methods"],
+            "required": ["protocol", "device", "software", "pairing_methods"],
             "additionalProperties": False,
         }
 
 
-_MANIFEST_KEYS = {"protocol", "device", "capabilities", "pairing_methods", "sdk"}
+_MANIFEST_KEYS = {"protocol", "device", "capabilities", "pairing_methods", "software"}
 
 
 def _methods(data: object) -> tuple[PairingMethod, ...]:
@@ -261,10 +270,26 @@ class Satellite:
     capabilities: frozenset[Capability]
     token_hash: str
     paired_at: datetime
+    software: Software  # what it runs: declared at pairing, then at each connection
+    protocol: str  # the protocol version it speaks, as last declared
     brand: str | None = None
-    sdk: str | None = None
-    sdk_version: str | None = None
     name: str | None = None  # what the household calls it, given when it was added
+
+
+class UpdateState(StrEnum):
+    """Where a device's own software stands, as it reports it (`update.status`)."""
+
+    CURRENT = "current"  # it found nothing newer
+    AVAILABLE = "available"  # a newer version can be installed: `version`
+    INSTALLING = "installing"  # it installs `version`, then starts again on it
+    FAILED = "failed"  # `version` did not install or did not start: it went back to the one it runs
+
+
+@dataclass(frozen=True, slots=True)
+class UpdateStatus:
+    state: UpdateState
+    version: str | None = None  # the newer version, for every state but `current`
+    notes: str | None = None  # an https address of what that version changes, for people
 
 
 class PairingStatus(StrEnum):
@@ -303,7 +328,7 @@ class PendingPairing:
     capabilities: frozenset[Capability]
     methods: tuple[PairingMethod, ...]
     expires_at: datetime
-    sdk: Sdk | None = None
+    software: Software
 
     @property
     def can_identify(self) -> bool:

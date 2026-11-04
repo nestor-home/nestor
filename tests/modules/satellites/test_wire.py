@@ -15,14 +15,17 @@ from nestor.modules.satellites import (
     PairingStatus,
     PairingTicket,
     ProtocolUnsupported,
-    Sdk,
+    Software,
+    UpdateState,
     wire,
 )
 from nestor.modules.satellites.types import DeclaredCapability
+from nestor.testing.satellites import SOFTWARE
 
 MANIFEST = Manifest(
     Device("reachy-salon", "reachy-mini", "salon"),
     (DeclaredCapability(Capability("audio.capture"), {"formats": ["opus/48000"]}),),
+    software=SOFTWARE,
 )
 MESSAGES: list[wire.Message] = [
     wire.Hello(manifest=MANIFEST, token="nst1_test"),
@@ -36,6 +39,11 @@ MESSAGES: list[wire.Message] = [
     wire.IdentifyIntent(),
     wire.TextInput(text="Allume la cuisine"),
     wire.TextIntent(text="C'est fait.", final=False),
+    wire.UpdateStatusReport(
+        state=UpdateState.AVAILABLE, version="0.6.0", notes="https://github.com/nestor-home/x/releases/tag/v0.6.0"
+    ),
+    wire.UpdateStatusReport(state=UpdateState.CURRENT),
+    wire.UpdateIntent(version="0.6.0"),
 ]
 
 
@@ -64,9 +72,9 @@ def test_a_manifest_keeps_the_parameters_of_its_capabilities() -> None:
     assert sent["payload"]["manifest"]["capabilities"] == [{"name": "audio.capture", "formats": ["opus/48000"]}]
 
 
-def test_a_manifest_may_name_its_maker_and_its_software() -> None:
+def test_a_manifest_names_its_software_and_may_name_its_maker() -> None:
     manifest = Manifest(
-        Device("reachy", "reachy-mini", "salon", brand="pollen-robotics"), sdk=Sdk("nestor-reachy", "0.1.0")
+        Device("reachy", "reachy-mini", "salon", brand="pollen-robotics"), software=Software("nestor-reachy", "0.1.0")
     )
     data = wire.encode(wire.Hello(manifest=manifest, token="nst1_test"))
     assert validator("hello").is_valid(data)
@@ -81,8 +89,10 @@ def _with(message: wire.Message, **payload: Any) -> dict[str, Any]:
 
 
 def _manifest(**changes: Any) -> dict[str, Any]:
+    """The hello of MANIFEST, changed; a key changed to None is removed."""
     data = wire.encode(wire.Hello(manifest=MANIFEST, token="nst1_test"))
-    data["payload"]["manifest"] = {**data["payload"]["manifest"], **changes}
+    changed = {**data["payload"]["manifest"], **changes}
+    data["payload"]["manifest"] = {k: v for k, v in changed.items() if v is not None}
     return data
 
 
@@ -103,9 +113,22 @@ OFF_CONTRACT = {
     "device id with a colon": _manifest(device={"id": "voice:salon", "model": "m", "room": "salon"}),
     "capability without a family": _manifest(capabilities=[{"name": "camera"}]),
     "unexpected manifest key": _manifest(firmware="1.2"),
-    "sdk as text": _manifest(sdk="nestor-reachy 0.1.0"),
-    "sdk without a version": _manifest(sdk={"name": "nestor-reachy"}),
-    "empty sdk version": _manifest(sdk={"name": "nestor-reachy", "version": ""}),
+    "no software": _manifest(software=None),
+    "software as text": _manifest(software="nestor-reachy 0.1.0"),
+    "software without a version": _manifest(software={"name": "nestor-reachy"}),
+    "empty software version": _manifest(software={"name": "nestor-reachy", "version": ""}),
+    "an update available without its version": _with(
+        wire.UpdateStatusReport(state=UpdateState.CURRENT), state="available"
+    ),
+    "a current version named": _with(wire.UpdateStatusReport(state=UpdateState.CURRENT), version="0.6.0"),
+    "an unknown update state": _with(wire.UpdateStatusReport(state=UpdateState.CURRENT), state="downloading"),
+    "an update to no version": _with(wire.UpdateIntent(version="1.0.0"), version=""),
+    "notes that are not https": _with(
+        wire.UpdateStatusReport(state=UpdateState.AVAILABLE, version="0.6.0"), notes="javascript:alert(1)"
+    ),
+    "notes with nothing to install": _with(
+        wire.UpdateStatusReport(state=UpdateState.CURRENT), notes="https://example.org/notes"
+    ),
     "brand that is not a slug": _manifest(
         device={"id": "d", "model": "m", "room": "salon", "brand": "Pollen Robotics"}
     ),

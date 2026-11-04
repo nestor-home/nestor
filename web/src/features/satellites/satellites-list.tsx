@@ -156,6 +156,9 @@ function PairedRow({ satellite: s }: { satellite: Satellite }) {
               ) : null}
             </Status>
           )}
+          {s.update?.state === "available" ? (
+            <span className="truncate text-[0.75rem] text-ember">{t("sat-update-badge")}</span>
+          ) : null}
         </span>
         <RowArrow />
       </Link>

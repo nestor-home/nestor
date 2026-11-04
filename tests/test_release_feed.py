@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from nestor.modules.satellites import PROTOCOL
+from nestor.modules.satellites import PROTOCOLS
 from nestor.modules.system import ChangeKind, Releases
 
 SCRIPT = Path(__file__).parent.parent / "scripts" / "release_feed.py"
@@ -59,7 +59,7 @@ def test_the_feed_lists_each_release_with_its_changes_in_plain_text_breaking_one
         (ChangeKind.FIX, "a fix"),
     ]
     assert [c.kind for c in releases.releases[1].changes] == [ChangeKind.OTHER]
-    assert releases.protocols == {PROTOCOL}
+    assert releases.protocols == PROTOCOLS
 
 
 def test_the_changelog_of_this_checkout_makes_a_valid_feed() -> None:

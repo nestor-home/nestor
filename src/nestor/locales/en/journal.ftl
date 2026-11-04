@@ -196,6 +196,14 @@ journal-detail-allowed = { $count ->
 journal-satellite-revoked = Satellite { $device } revoked
 journal-satellite-connected = Satellite { $device } connected (room “{ $room }”)
 journal-satellite-disconnected = Satellite { $device } disconnected (room “{ $room }”)
+journal-detail-software = { $name } { $version }
+journal-satellite-update-requested = { $device } asked to update from { $running } to { $target }
+journal-satellite-update-reported = { $state ->
+    [available] { $device }: version { $target } available
+    [installing] { $device } installs { $target }
+    [failed] { $device } could not start { $target } and went back to its version
+   *[current] { $device } is up to date
+}
 journal-satellite-addition-started = { $proof ->
     [enrollment_code] Enrollment code made to add a satellite
    *[device_code] Adding a satellite by the code it presents

@@ -15,19 +15,25 @@ from nestor.modules.behavior import EXPRESSION, HEAD_MOTION, Behavior, Body, Exp
 from nestor.modules.journal import Journal
 from nestor.modules.satellites import (
     PERSON_DETECTION,
+    PROTOCOL,
     SPEECH_ACTIVITY,
     TEXT_INPUT,
+    UPDATE,
     Device,
     Manifest,
     PersonDetected,
     Satellite,
     SatelliteConnected,
     SatelliteDisconnected,
+    Software,
     SpeechActivityObserved,
+    UpdateState,
+    UpdateStatus,
     wire,
 )
 from nestor.testing.behavior import BodyContract
 from nestor.testing.journal import MemoryEventLog
+from nestor.testing.satellites import SOFTWARE
 
 from .voice.doubles import FakeLink
 
@@ -39,7 +45,10 @@ CUISINE = Satellite(
     capabilities=ALLOWED,
     token_hash="unused",
     paired_at=utc_now(),
+    software=SOFTWARE,
+    protocol=PROTOCOL,
 )
+MANIFEST = Manifest(Device(CUISINE.id, CUISINE.model, "cuisine"), software=Software("nestor-satellite", "0.5.0"))
 
 
 class Socket:
@@ -75,11 +84,23 @@ def journal() -> Journal:
 
 @asynccontextmanager
 async def linked(
-    journal: Journal, allowed: frozenset[Capability] = ALLOWED, typed: list[str] | None = None, **options: Any
+    journal: Journal,
+    allowed: frozenset[Capability] = ALLOWED,
+    typed: list[str] | None = None,
+    reported: list[UpdateStatus] | None = None,
+    **options: Any,
 ) -> AsyncGenerator[tuple[SatelliteLink, Socket]]:
-    """A running link; `typed` collects the texts it answers. It ends when the device leaves."""
+    """A running link; `typed` collects the texts it answers, `reported` what the device says about its
+    software. It ends when the device leaves."""
     socket = Socket()
-    link = SatelliteLink(cast(WebSocket, socket), CUISINE, journal, allowed=allowed, **options)
+    heard = reported if reported is not None else []
+
+    async def report(status: UpdateStatus) -> None:
+        heard.append(status)
+
+    link = SatelliteLink(
+        cast(WebSocket, socket), CUISINE, MANIFEST, journal, allowed=allowed, reported=report, **options
+    )
 
     async def answer(_link: SatelliteLink, text: str) -> None:
         if typed is not None:
@@ -111,10 +132,11 @@ async def test_the_device_is_welcomed_with_its_paired_room_and_what_it_may_do(jo
     connected, disconnected = await logged(journal, SatelliteConnected, SatelliteDisconnected)
     assert isinstance(connected, SatelliteConnected) and isinstance(disconnected, SatelliteDisconnected)
     assert (connected.room, disconnected.room) == ("cuisine", "cuisine")
+    assert (connected.software, connected.protocol) == (MANIFEST.software, "nestor.satellite/1")
 
 
 async def test_a_second_hello_on_a_link_is_ignored(journal: Journal) -> None:
-    hello = wire.Hello(manifest=Manifest(Device("reachy-salon", "x", "salon")), token="nst1_x")
+    hello = wire.Hello(manifest=Manifest(Device("reachy-salon", "x", "salon"), software=SOFTWARE), token="nst1_x")
     async with linked(journal) as (_, socket):
         socket.deliver(wire.encode(hello))
         await settle()
@@ -181,7 +203,12 @@ async def test_acknowledged_intents_are_settled_and_overdue_ones_forgotten(journ
         await settle()
         assert link.unacknowledged == ["intent.beat"]
 
-    impatient = SatelliteLink(cast(WebSocket, Socket()), CUISINE, journal, allowed=ALLOWED, ack_timeout_s=0)
+    async def ignore(_: UpdateStatus) -> None:
+        pass
+
+    impatient = SatelliteLink(
+        cast(WebSocket, Socket()), CUISINE, MANIFEST, journal, allowed=ALLOWED, reported=ignore, ack_timeout_s=0
+    )
     impatient.send(wire.BeatIntent())
     impatient.send(wire.BeatIntent())
     assert impatient.unacknowledged == ["intent.beat"], "the first beat was given up on"
@@ -238,3 +265,23 @@ async def test_a_long_answer_is_shown_in_messages_the_protocol_allows(journal: J
     assert all(len(m.text) <= wire.SHOWN_MAX for m in shown)
     assert " ".join(m.text for m in shown[:2]) == words, "cut between words, nothing lost"
     assert shown[2].text == "Court."
+
+
+async def test_what_a_device_reports_about_its_software_goes_to_the_pairing_service(journal: Journal) -> None:
+    available = wire.UpdateStatusReport(state=UpdateState.AVAILABLE, version="0.6.0", notes="https://x.org/0.6.0")
+    reported: list[UpdateStatus] = []
+    async with linked(journal, ALLOWED | {UPDATE}, reported=reported) as (link, socket):
+        socket.deliver(wire.encode(available))
+        await settle()
+        link.update("0.6.0")
+        await settle()
+    assert reported == [UpdateStatus(UpdateState.AVAILABLE, "0.6.0", "https://x.org/0.6.0")]
+    assert wire.UpdateIntent(version="0.6.0") in socket.messages()
+
+
+async def test_a_device_not_allowed_to_update_is_not_heard_about_its_software(journal: Journal) -> None:
+    reported: list[UpdateStatus] = []
+    async with linked(journal, reported=reported) as (_, socket):
+        socket.deliver(wire.encode(wire.UpdateStatusReport(state=UpdateState.AVAILABLE, version="0.6.0")))
+        await settle()
+    assert not reported
