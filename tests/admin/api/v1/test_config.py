@@ -168,7 +168,8 @@ async def test_an_account_two_people_claim_is_located_at_the_second(tmp_path: Pa
         [problem] = problems
         index = len(edited["household"]) - 1
         assert problem["path"] == ["household", index, "accounts", 1], "on the account, in the dialog of who added it"
-        assert problem["message"].endswith(": déjà le compte d'une autre personne. Un compte ne désigne qu'une personne.")
+        said = ": déjà le compte d'une autre personne. Un compte ne désigne qu'une personne."
+        assert problem["message"].endswith(said), "in the reader's language"
 
 
 async def test_a_preview_says_what_would_change_without_writing(tmp_path: Path) -> None:
