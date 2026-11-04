@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { db } from "@/mocks/db";
 import { server } from "@/mocks/server";
 import { renderApp } from "@/test/render";
+import { markOf } from "./config-pages";
 
 const saveBar = () => screen.findByRole("region", { name: "Unsaved changes" });
 
@@ -219,5 +220,25 @@ describe("the configuration", () => {
     expect(field).toHaveAttribute("placeholder", "300");
     expect(screen.getByText(/starts a new conversation/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Conversations/ })).toHaveAttribute("href", "/config/conversation");
+  });
+});
+
+describe("a model's mark", () => {
+  const schema = {
+    properties: {
+      base_url: { "x-nestor": { brands: { "openrouter.ai": "openrouter", "anthropic.com": "anthropic" } } },
+    },
+  };
+
+  it("is the provider its address belongs to, as the runtime recognises it", () => {
+    expect(markOf("openai-compatible", { base_url: "https://openrouter.ai/api/v1" }, schema)).toBe("openrouter");
+    expect(markOf("openai-compatible", { base_url: "https://api.anthropic.com/v1" }, schema)).toBe("anthropic");
+  });
+
+  it("is its kind for any other server, an address still to write, or a kind that publishes no hosts", () => {
+    expect(markOf("openai-compatible", { base_url: "http://localhost:11434/v1" }, schema)).toBe("openai-compatible");
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: a configuration value still to be filled, as the file writes it
+    expect(markOf("openai-compatible", { base_url: "${MODEL_URL}" }, schema)).toBe("openai-compatible");
+    expect(markOf("hermes", { base_url: "https://openrouter.ai" }, {})).toBe("hermes");
   });
 });

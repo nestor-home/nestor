@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 import { api, keys, type PairingRequest } from "@/api";
 import { Field } from "@/components/field";
+import { FormActions } from "@/components/form-actions";
 import { useNotify } from "@/components/notices";
 import { FormError } from "@/components/states";
 import { Button } from "@/components/ui/button";
@@ -128,11 +129,11 @@ export function ApproveForm({
         )}
       </fieldset>
       <FormError error={approve.error} />
-      <div className="flex justify-end">
+      <FormActions>
         <Button type="submit" disabled={approve.isPending}>
           {approve.isPending ? t("sat-pairing") : t("sat-pair")}
         </Button>
-      </div>
+      </FormActions>
     </form>
   );
 }

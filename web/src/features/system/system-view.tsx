@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { type Component, type Health, type Slot, systemQuery } from "@/api";
-import { Section } from "@/components/page";
+import { RowList, Section } from "@/components/page";
 import { Failure, Loading } from "@/components/states";
 import { Status, type StatusTone } from "@/components/status";
 import { useT } from "@/i18n";
@@ -47,11 +47,11 @@ export function SystemView() {
         return (
           <Section key={slot} title={t(title)} count={list.length}>
             {hint ? <p className="-mt-1 mb-3 text-sm text-ink-muted">{t(hint)}</p> : null}
-            <ul className="divide-y divide-rule rounded-md border border-rule bg-paper-raised">
+            <RowList>
               {list.map((c) => (
                 <ComponentRow key={c.id} component={c} />
               ))}
-            </ul>
+            </RowList>
           </Section>
         );
       })}

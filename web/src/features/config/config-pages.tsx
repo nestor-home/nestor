@@ -2,18 +2,11 @@ import { ArrowDown, ArrowUp, CircleAlert, Pencil, Plus, Trash2 } from "lucide-re
 import { type ReactElement, type ReactNode, useId, useState } from "react";
 import type { ConfigSlot, JsonSchema } from "@/api";
 import { Confirm } from "@/components/confirm";
-import { FormSheet } from "@/components/overlay-form";
+import { FormActions } from "@/components/form-actions";
+import { FormDialog, FormSheet } from "@/components/overlay-form";
 import { Panel, Section } from "@/components/page";
 import { Empty } from "@/components/states";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useT } from "@/i18n";
@@ -23,6 +16,23 @@ import { useConfigEditor } from "./editor";
 import { ObjectFields, Problems } from "./fields";
 import { freeName, getAt, isRecord, move, NAME, type Path, problemsUnder, renamed } from "./schema";
 import { type ConfigPage, pageTitle } from "./sections";
+
+/**
+ * What a component's mark shows: the provider one of its fields names, by the hosts the runtime
+ * recognises in it (`x-nestor.brands`, as the runtime itself brands a model), else its kind.
+ */
+export function markOf(kind: string, entry: Record<string, unknown>, schema: unknown): string {
+  const fields = isRecord(schema) && isRecord(schema.properties) ? Object.entries(schema.properties) : [];
+  for (const [name, field] of fields) {
+    const brands = isRecord(field) && isRecord(field["x-nestor"]) ? field["x-nestor"].brands : undefined;
+    const value = entry[name];
+    if (!isRecord(brands) || typeof value !== "string" || !URL.canParse(value)) continue;
+    const host = new URL(value).hostname;
+    const found = Object.entries(brands).find(([suffix]) => host === suffix || host.endsWith(`.${suffix}`));
+    if (typeof found?.[1] === "string") return found[1];
+  }
+  return kind;
+}
 
 /** The title of a plugin kind: its brand's name when it has one. */
 export function kindTitle(kind: string): string {
@@ -293,7 +303,7 @@ function ManySlot({ slotKey, slot }: { slotKey: string; slot: ConfigSlot }) {
               <ItemCard
                 // biome-ignore lint/suspicious/noArrayIndexKey: a component's position is its place in the file
                 key={index}
-                mark={kind}
+                mark={markOf(kind, entry, slot.kinds[kind])}
                 title={nameOf(entry)}
                 subtitle={kind}
                 detail={summary(entry)}
@@ -382,7 +392,7 @@ function NamedSlot({ slotKey, slot }: { slotKey: string; slot: ConfigSlot }) {
             return (
               <ItemCard
                 key={name}
-                mark={kind}
+                mark={markOf(kind, entry, slot.kinds[kind])}
                 title={name}
                 subtitle={kindTitle(kind)}
                 detail={summary(entry)}
@@ -474,24 +484,16 @@ function KindPicker({
   trigger: ReactElement;
 }) {
   const t = useT();
-  const [open, setOpen] = useState(false);
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={trigger} />
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="font-serif text-xl font-normal">
-            {t("cfg-pick-title", { slot: slot.title })}
-          </DialogTitle>
-          <DialogDescription>{t("cfg-pick-text")}</DialogDescription>
-        </DialogHeader>
+    <FormDialog trigger={trigger} title={t("cfg-pick-title", { slot: slot.title })} description={t("cfg-pick-text")}>
+      {(close) => (
         <ul className="grid gap-1.5">
           {Object.entries(slot.kinds).map(([kind, schema]) => (
             <li key={kind}>
               <button
                 type="button"
                 onClick={() => {
-                  setOpen(false);
+                  close();
                   onPick(kind);
                 }}
                 className="flex w-full items-center gap-3 rounded-md border border-rule bg-paper-raised px-3 py-2.5 text-left hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
@@ -507,8 +509,8 @@ function KindPicker({
             </li>
           ))}
         </ul>
-      </DialogContent>
-    </Dialog>
+      )}
+    </FormDialog>
   );
 }
 
@@ -642,15 +644,14 @@ function ItemSheet({
       {() => (
         <div className="grid gap-6 pt-5">
           {children}
-          <p className="text-xs text-ink-muted">{t("cfg-sheet-note")}</p>
-          <div className="flex justify-end gap-2">
+          <FormActions hint={t("cfg-sheet-note")}>
             {adding ? (
               <Button variant="ghost" onClick={onCancelAdd}>
                 {t("cfg-cancel-add")}
               </Button>
             ) : null}
             <Button onClick={onClose}>{t("cfg-done")}</Button>
-          </div>
+          </FormActions>
         </div>
       )}
     </FormSheet>

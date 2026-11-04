@@ -12,7 +12,8 @@
       "!src/api/schema.gen.ts",
       "!openapi.json",
       "!test-results",
-      "!playwright-report"
+      "!playwright-report",
+      "!src/assets/brands"
     ]
   },
   "formatter": {
@@ -110,6 +111,46 @@
           }
         }
       }
+    },
+    {
+      "includes": ["src/features/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "cmdk": "Import Command* from @/components/ui/command.",
+                  "react-day-picker": "Import Calendar (and its types and locales) from @/components/ui/calendar.",
+                  "@base-ui/react": "Import the shadcn component from @/components/ui, not the Base UI primitive.",
+                  "@/components/ui/dialog": {
+                    "importNames": ["Dialog", "DialogContent", "DialogTrigger"],
+                    "message": "Use FormDialog from @/components/overlay-form, or UpdateDialog, so every dialog shares its frame."
+                  },
+                  "@/components/ui/alert-dialog": "Use Confirm, or ConfirmFrame for a custom action, from @/components/confirm.",
+                  "@/components/ui/sheet": {
+                    "importNames": ["Sheet", "SheetContent", "SheetTrigger"],
+                    "message": "Use FormSheet or SideSheet from @/components/overlay-form, so every sheet opens the same way on a phone."
+                  },
+                  "@/components/ui/select": "Use Choice from @/components/choice for a short list."
+                },
+                "patterns": [
+                  {
+                    "group": ["@base-ui/react/*"],
+                    "message": "Import the shadcn component from @/components/ui, not the Base UI primitive."
+                  },
+                  {
+                    "group": ["react-day-picker/*"],
+                    "message": "Import Calendar (and its locales) from @/components/ui/calendar."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "plugins": ["./lint/use-shared-components.grit"]
     }
   ],
   "plugins": [

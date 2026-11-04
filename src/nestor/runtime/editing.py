@@ -127,7 +127,8 @@ def _secret_values(node: Any) -> bool:
 def annotate(schema: dict[str, Any], scope: str, advanced: Iterable[str] = ()) -> dict[str, Any]:
     """Adds `x-nestor` to every property: its title and help message ids (`config-<scope>-<field>`,
     `…-help`), whether it is `secret` (a `SecretStr`, optional or not) or holds `secret_values` (a map
-    whose every value is one), advanced, its group, and the named slot whose names it takes (`reference`)."""
+    whose every value is one), advanced, its group, the named slot whose names it takes (`reference`),
+    and the hosts it names a brand by (`brands`, host suffix → brand: a model's `base_url`)."""
 
     def walk(node: Any, group: str) -> None:
         if isinstance(node, dict):
@@ -143,6 +144,7 @@ def annotate(schema: dict[str, Any], scope: str, advanced: Iterable[str] = ()) -
                         "advanced": bool(prop.pop("advanced", False)) or name in advanced,
                         "group": group,
                         "reference": prop.pop("reference", None),
+                        "brands": prop.pop("brands", None),
                     }
             for key, child in node.items():
                 if key == "$defs" and isinstance(child, dict):

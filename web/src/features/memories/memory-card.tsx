@@ -5,6 +5,7 @@ import { type FormEvent, useState } from "react";
 import { api, type Memory } from "@/api";
 import { Ago } from "@/components/ago";
 import { Confirm } from "@/components/confirm";
+import { FormActions } from "@/components/form-actions";
 import { useNotify } from "@/components/notices";
 import { FormDialog } from "@/components/overlay-form";
 import { FormError } from "@/components/states";
@@ -127,12 +128,11 @@ function CorrectForm({ memory, onDone }: { memory: Memory; onDone: () => void })
         }}
       />
       <FormError error={correct.error} />
-      <div className="flex items-center justify-end gap-3">
-        <span className="font-mono text-[0.7rem] text-ink-faint">{t("mem-save-hint")}</span>
+      <FormActions hint={t("mem-save-hint")}>
         <Button type="submit" disabled={correct.isPending || !text.trim() || text.trim() === memory.text}>
           {correct.isPending ? t("action-saving") : t("action-save")}
         </Button>
-      </div>
+      </FormActions>
     </form>
   );
 }

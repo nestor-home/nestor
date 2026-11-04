@@ -1,12 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, MessageSquareText, Volume2 } from "lucide-react";
+import { MessageSquareText, Volume2 } from "lucide-react";
 import { api, isMissing, keys, type Task, type TaskStatus, taskQuery, tasksQuery } from "@/api";
 import { Ago } from "@/components/ago";
 import { Confirm } from "@/components/confirm";
 import { type Crumb, Crumbs } from "@/components/crumbs";
 import { useNotify } from "@/components/notices";
-import { PageHeader, Section } from "@/components/page";
+import { PageHeader, RowArrow, RowList, Section, WithAside } from "@/components/page";
 import { Empty, Failure, Loading } from "@/components/states";
 import { Status, type StatusTone } from "@/components/status";
 import { Button } from "@/components/ui/button";
@@ -63,7 +63,7 @@ function TaskRows({ tasks }: { tasks: Task[] }) {
   const t = useT();
   const name = usePeopleNames();
   return (
-    <ul className="divide-y divide-rule rounded-md border border-rule bg-paper-raised">
+    <RowList>
       {tasks.map((task) => (
         <li key={task.id}>
           <Link
@@ -91,11 +91,11 @@ function TaskRows({ tasks }: { tasks: Task[] }) {
               </span>
             </span>
             <TaskStatusMark status={task.status} />
-            <ArrowRight className="hidden size-3.5 text-ink-faint group-hover:text-ink sm:block" aria-hidden="true" />
+            <RowArrow />
           </Link>
         </li>
       ))}
-    </ul>
+    </RowList>
   );
 }
 
@@ -131,7 +131,7 @@ export function TaskDetail({ id }: { id: string }) {
         crumbs={<Crumbs trail={trail} />}
         title={task.objective}
         meta={
-          <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.85rem] text-ink-muted">
+          <>
             <TaskStatusMark status={task.status} />
             <Executor name={task.executor} />
             {task.requested_by ? <span>{t("task-requested-by", { name: name(task.requested_by) })}</span> : null}
@@ -139,7 +139,7 @@ export function TaskDetail({ id }: { id: string }) {
               <Ago iso={task.started_at} />
             </span>
             {took ? <span>{t("task-took", { duration: duration(took) })}</span> : null}
-          </p>
+          </>
         }
         actions={
           task.status === "running" && canCancel ? (
@@ -154,7 +154,7 @@ export function TaskDetail({ id }: { id: string }) {
           ) : null
         }
       />
-      <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_18rem] [&>*]:min-w-0">
+      <WithAside>
         <Section title={t("task-story")}>
           <SubjectStory filters={{ task: task.id }} empty={t("task-story-empty")} />
         </Section>
@@ -211,7 +211,7 @@ export function TaskDetail({ id }: { id: string }) {
             )}
           </div>
         </aside>
-      </div>
+      </WithAside>
     </>
   );
 }
