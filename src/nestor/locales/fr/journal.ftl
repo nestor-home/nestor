@@ -301,3 +301,8 @@ journal-system-restart-requested = Redémarrage demandé { $via ->
     [cli] depuis la ligne de commande
    *[admin] par { $login }
 }
+journal-system-update-requested = Mise à jour de { $running } vers { $target } { $via ->
+    [cli] depuis la ligne de commande
+   *[admin] par { $login }
+}
+journal-system-update-failed = { $target } ne s'est pas installée : Nestor garde sa version

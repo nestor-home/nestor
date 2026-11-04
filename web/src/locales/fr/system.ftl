@@ -26,16 +26,30 @@ sys-health-unknown = inconnu
 upd-available = Nouvelle version
 upd-available-version = Mise à jour disponible : { $version }
 upd-title = Nestor { $version } est là
-upd-description = Ce qui a changé depuis votre version.
+upd-description = Ce qui a changé depuis votre version, et comment mettre à jour.
 upd-behind = { $count ->
     [one] une version de retard
    *[other] { $count } versions de retard
 }
+upd-install = Installer la { $version }
+upd-install-title = Installer Nestor { $version } ?
+upd-install-description = Nestor installe la nouvelle version, vérifie qu'elle accepte votre configuration, puis redémarre. Les conversations s'interrompent un instant. Si quelque chose cloche, il reste sur la { $running }.
+upd-install-confirm = Installer et redémarrer
+upd-install-hint = Il redémarre une fois installée.
+upd-installing = Installation de la { $version }…
+upd-failed = La { $version } ne s'est pas installée. Nestor reste sur la { $running }.
 upd-breaking = Cette version change les données ou la configuration : relisez les notes avant de mettre à jour.
-upd-by-hand = Mettez Nestor à jour comme vous l'avez installé, puis redémarrez-le.
 upd-release = Version { $version }
 upd-notes = Notes de version
 upd-kind-breaking = Ruptures
 upd-kind-feature = Nouveautés
 upd-kind-fix = Corrections
 upd-kind-other = Autres
+upd-how = Mettre à jour
+upd-how-container = Nestor tourne dans un conteneur : récupérez la nouvelle image, puis relancez-le, dans le dossier de compose.yaml.
+upd-how-uv-tool = Sur la machine de Nestor, mettez à jour l'outil :
+upd-how-pip = Sur la machine de Nestor, mettez à jour le paquet :
+upd-how-editable = Nestor tourne depuis un checkout de développement : mettez-le à jour avec git.
+upd-then-restart = Puis redémarrez Nestor pour lancer la nouvelle version.
+upd-then-ask = Puis demandez à un administrateur de redémarrer Nestor.
+upd-command = la commande

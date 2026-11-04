@@ -14,7 +14,7 @@ from typing import Self, cast
 from nestor import __version__
 from nestor.adapters.i18n import FluentLocalizer, catalogue_dirs
 from nestor.adapters.oauth import HttpxTokenEndpoint
-from nestor.adapters.releases import HttpReleaseFeed
+from nestor.adapters.releases import HttpReleaseFeed, PipInstaller, probe
 from nestor.adapters.storage.sqlite import (
     GENERATE,
     SQLiteActivityStore,
@@ -62,7 +62,7 @@ from nestor.modules.memory import Memories, SearchIndex
 from nestor.modules.memory.assistant import MemoryTools
 from nestor.modules.memory.episodes import Consolidator, Episodes
 from nestor.modules.satellites import Pairing, SatelliteHost
-from nestor.modules.system import ReleaseFeed, Updates
+from nestor.modules.system import ReleaseFeed, RestartRequested, Updates
 from nestor.runtime.config import AdapterConfig, ComponentConfig, ConfigError, NestorConfig
 from nestor.runtime.plugins import Family, Plugged, Registry, Services
 
@@ -109,7 +109,6 @@ class Nestor:
         self._backoff = backoff or Backoff()
         self.source = source  # the configuration file it was loaded from, when it was (the admin edits it)
         self.registry = registry = registry or Registry.installed()
-        self.restart = Restart()
         self.localizer = FluentLocalizer(catalogue_dirs(["nestor", *registry.packages()]), default=Locale("en"))
         services = Services(data_dir=config.data_dir, localizer=self.localizer, locale=Locale(config.persona.locale))
         self.plugged: list[Plugged] = []  # every adapter built from the configuration, in build order
@@ -118,6 +117,7 @@ class Nestor:
 
         self.database = SQLiteDatabase(database_path(config.data_dir))
         self.journal = Journal(SQLiteEventLog(self.database))
+        self.restart = Restart(self.journal)
         self.household = Household(p.to_person() for p in config.household)
         self.accounts = Accounts(
             self.journal, SQLiteVerifierStore(self.database), self.household, SQLiteActivityStore(self.database)
@@ -182,8 +182,18 @@ class Nestor:
         self.sources = [*self.inbound, *connected]
 
         self.pairing = Pairing(self.journal)
+        installation = probe()
         self.updates = (
-            Updates(release_feed or HttpReleaseFeed(config.updates.feed), __version__) if config.updates.check else None
+            Updates(
+                release_feed or HttpReleaseFeed(config.updates.feed),
+                __version__,
+                self.journal,
+                self.restart.ask,
+                installation,
+                installer=PipInstaller.found(source, __version__) if source and installation.installable else None,
+            )
+            if config.updates.check
+            else None
         )
         for channel in self.channels:
             if isinstance(channel, SatelliteHost):
@@ -464,15 +474,22 @@ async def open_memories(
 
 class Restart:
     """A restart asked for by a person (never automatically): Nestor stops as on SIGTERM — channels close,
-    remote tasks detach and are followed again after — then the command line re-executes itself."""
+    remote tasks detach and are followed again after — then the command line re-executes itself.
+    `ask` is the one way in: from the admin, the command line, or once a release is installed."""
 
-    def __init__(self, stop: Callable[[], None] | None = None) -> None:
+    def __init__(self, journal: Journal, stop: Callable[[], None] | None = None, *, delay_s: float = 0.2) -> None:
         self.requested = False
-        self._stop = stop or (lambda: os.kill(os.getpid(), signal.SIGTERM))
+        self.stop = stop or (lambda: os.kill(os.getpid(), signal.SIGTERM))
+        self._journal, self._delay_s = journal, delay_s
+
+    async def ask(self, by: str) -> None:
+        """Journal who asked (an account id, or "cli"), then stop once the answer saying so is sent."""
+        await self._journal.publish(RestartRequested(source="system", by=by))
+        asyncio.get_running_loop().call_later(self._delay_s, self.request)
 
     def request(self) -> None:
         self.requested = True
-        self._stop()
+        self.stop()
 
 
 async def run_until_stopped(nestor: Nestor, extras: Sequence[Component] = ()) -> None:

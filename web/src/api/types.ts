@@ -488,10 +488,17 @@ export interface Release {
   changes: { kind: ChangeKind; text: string }[];
 }
 
-/** What was released since the running version (`GET /system/updates`). */
+/** What was released since the running version (`GET /system/updates`), and whether it installs from here. */
+export type Installation = "container" | "editable" | "uv-tool" | "pip";
+
 export interface Updates {
   running: string;
   releases: Release[]; // newer than the running one, newest first
+  installation: Installation | null; // how Nestor is installed; null when it does not check for releases
+  commands: string[]; // what to run to update it by hand
+  installable: boolean; // the newest release installs from the admin (a Python environment, not a container)
+  installing: string | null; // being installed: a restart follows
+  failed: string | null; // did not install: the running version stayed
 }
 
 export interface SystemInfo {

@@ -299,3 +299,8 @@ journal-system-restart-requested = Restart requested { $via ->
     [cli] from the command line
    *[admin] by { $login }
 }
+journal-system-update-requested = Update from { $running } to { $target } { $via ->
+    [cli] from the command line
+   *[admin] by { $login }
+}
+journal-system-update-failed = { $target } did not install: Nestor stays on its version

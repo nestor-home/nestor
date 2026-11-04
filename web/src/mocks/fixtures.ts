@@ -879,6 +879,7 @@ export function updates(): Updates {
         breaking: true,
         changes: [
           { kind: "breaking", text: "the configuration names its models by role" },
+          { kind: "feature", text: "satellites update themselves from the admin" },
           { kind: "feature", text: "the admin says when a newer Nestor is out" },
           { kind: "fix", text: "a typed follow-up stays in the room's conversation" },
         ],
@@ -891,6 +892,11 @@ export function updates(): Updates {
         changes: [{ kind: "fix", text: "serve a channel again after it stops" }],
       },
     ],
+    installation: "pip",
+    commands: ["pip install --upgrade 'nestor-home[voice]'"],
+    installable: true,
+    installing: null,
+    failed: null,
   };
 }
 

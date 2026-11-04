@@ -95,9 +95,22 @@ let downUntil = 0;
 /** Back to a running instance, between tests. */
 export function resetServer(): void {
   downUntil = 0;
+  for (const timer of pending) clearTimeout(timer);
+  pending.clear();
+}
+
+/** What the mock server does later (an install): never into the next test. */
+const pending = new Set<ReturnType<typeof setTimeout>>();
+function later(run: () => void, ms: number): void {
+  const timer = setTimeout(() => {
+    pending.delete(timer);
+    run();
+  }, ms);
+  pending.add(timer);
 }
 const restarting = () => Date.now() < downUntil;
 export const RESTART_MS = 2_500;
+export const INSTALL_MS = 3_000; // a release installing, before the restart
 
 const owners = () => db.accounts.filter((a) => a.role === "owner" && !a.disabled);
 
@@ -364,6 +377,29 @@ export const handlers = [
   ),
 
   http.get(`${API}/system/updates`, ({ request }) => guard(request) ?? json(db.updates satisfies In<"UpdatesOut">)),
+
+  http.post(`${API}/system/updates/install`, async ({ request }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    const body = (await request.json()) as In<"InstallIn">;
+    if (!body.confirm) return fail(400, "update_unconfirmed", "error-update-unconfirmed");
+    const updates = db.updates;
+    if (!updates.installable || body.version !== updates.releases[0]?.version || updates.installing) {
+      return fail(409, "update_not_installable", "error-update-not-installable");
+    }
+    updates.installing = body.version;
+    updates.failed = null;
+    save();
+    // installed a few seconds later, then the restart: everyone signs in again on the new version
+    later(() => {
+      Object.assign(db.updates, { running: body.version, releases: [], installing: null });
+      db.system.nestor.version = body.version;
+      db.signedIn = null;
+      downUntil = Date.now() + RESTART_MS;
+      save();
+    }, INSTALL_MS);
+    return json(updates satisfies In<"UpdatesOut">, { status: 202 });
+  }),
 
   // -- connectors -------------------------------------------------------------------------------
   http.get(`${API}/connectors`, ({ request }) => guard(request) ?? json(db.connectors.map(connectorDto))),
