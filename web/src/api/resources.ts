@@ -45,6 +45,7 @@ import type {
   Task,
   Tasks,
   ToolSettings,
+  Updates,
   Watch,
   Watches,
 } from "./types";
@@ -124,6 +125,7 @@ export const api = {
 
   // system
   system: async (): Promise<SystemInfo> => adapt.system(await unwrap(client.GET("/api/v1/system"))),
+  updates: async (): Promise<Updates> => adapt.updates(await unwrap(client.GET("/api/v1/system/updates"))),
   /** Asks for a restart: always a person's explicit, confirmed action. */
   restart: (): Promise<void> =>
     unwrap(client.POST("/api/v1/system/restart", { body: { confirm: true } })).then(() => undefined),

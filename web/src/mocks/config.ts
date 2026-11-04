@@ -12,7 +12,7 @@ import type { Lang } from "./messages";
 import { render } from "./messages";
 
 type S = components["schemas"];
-type Change = S["ChangeOut"];
+type Change = S["DiffOut"]["added"][number];
 
 export const SCHEMAS: Record<Lang, S["ConfigSchemaOut"]> = {
   fr: schemaFr as S["ConfigSchemaOut"],

@@ -363,6 +363,8 @@ export const handlers = [
       } satisfies In<"SystemOut">),
   ),
 
+  http.get(`${API}/system/updates`, ({ request }) => guard(request) ?? json(db.updates satisfies In<"UpdatesOut">)),
+
   // -- connectors -------------------------------------------------------------------------------
   http.get(`${API}/connectors`, ({ request }) => guard(request) ?? json(db.connectors.map(connectorDto))),
 

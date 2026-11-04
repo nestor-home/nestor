@@ -40,6 +40,13 @@ export function dayLabel(iso: string, now: Date = new Date()): string {
   }).format(at);
 }
 
+/** `3 Nov 2026`: a calendar day (`YYYY-MM-DD`), as written, whatever the timezone. */
+export function calendarDay(day: string): string {
+  return format({ day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(
+    new Date(`${day}T00:00:00Z`),
+  );
+}
+
 /** `4 min 05 s` until `iso`, never negative. */
 export function remaining(iso: string, now: Date = new Date()): string {
   const seconds = Math.max(0, Math.round((new Date(iso).getTime() - now.getTime()) / 1000));

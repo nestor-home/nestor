@@ -26,6 +26,7 @@ from nestor.testing.channels import InMemoryChannel
 from nestor.testing.cognition import FakeRemote, ScriptedModel, ScriptedRemoteExecutor
 from nestor.testing.connectors import FakeProvider, ScriptedConnector
 from nestor.testing.home import StaticPresence
+from nestor.testing.system import StaticReleaseFeed
 
 PASSWORD = "correct horse battery"
 OWNER = "mathis"  # the owner's login, opened with every harness
@@ -160,6 +161,7 @@ class Harness:
             ),
         )
         self.remote = FakeRemote()
+        self.releases = StaticReleaseFeed()
         self.presence = StaticPresence().set("mathis", home=True, room="salon")
         admin = {"port": 0, **({"public_url": public_url} if public_url else {})}
         text = CONFIG.format(data_dir=tmp_path, admin=admin)
@@ -180,6 +182,7 @@ class Harness:
             self.registry(),
             environ={"NESTOR_SECRET_KEY": SECRET_KEY, "WEATHER_CITY": "Paris"},
             token_endpoint=self.provider,
+            release_feed=self.releases,
             source=self.config_path,
         )
         self.settings = AdminSettings(

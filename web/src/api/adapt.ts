@@ -26,6 +26,7 @@ import type {
   ScopeDto,
   SystemDto,
   TaskDto,
+  UpdatesDto,
   WatchDto,
   WrittenDto,
 } from "./dto";
@@ -55,6 +56,7 @@ import type {
   Scope,
   SystemInfo,
   Task,
+  Updates,
   Watch,
 } from "./types";
 
@@ -363,6 +365,10 @@ export function system(dto: SystemDto): SystemInfo {
     pending_changes: dto.pending_changes,
     components: dto.components.map(component),
   };
+}
+
+export function updates(dto: UpdatesDto): Updates {
+  return dto;
 }
 
 /** The schemas travel as free JSON: the screens read them as JSON Schema with `x-nestor`. */

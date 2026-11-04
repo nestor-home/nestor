@@ -20,3 +20,22 @@ sys-health-ok = ok
 sys-health-degraded = degraded
 sys-health-down = down
 sys-health-unknown = unknown
+
+## Updates: a newer Nestor, what changed and how to install it.
+
+upd-available = New release
+upd-available-version = Update available: { $version }
+upd-title = Nestor { $version } is here
+upd-description = What changed since your version.
+upd-behind = { $count ->
+    [one] one release behind
+   *[other] { $count } releases behind
+}
+upd-breaking = This release changes the data or the configuration: read the notes before updating.
+upd-by-hand = Update Nestor the way you installed it, then restart it.
+upd-release = Release { $version }
+upd-notes = Release notes
+upd-kind-breaking = Breaking changes
+upd-kind-feature = Features
+upd-kind-fix = Fixes
+upd-kind-other = Other

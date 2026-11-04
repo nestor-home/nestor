@@ -15,6 +15,7 @@ export const keys = {
   journalFacets: (filters: JournalFilters) => ["journal", "facets", filters] as const,
   journalEvent: (id: Id) => ["journal", "event", id] as const,
   system: ["system"] as const,
+  updates: ["system", "updates"] as const,
   connectors: ["connectors"] as const,
   connector: (kind: string) => ["connectors", kind] as const,
   connections: ["connections"] as const,
@@ -80,6 +81,13 @@ export const journalEventQuery = (id: Id) =>
   queryOptions({ queryKey: keys.journalEvent(id), queryFn: () => api.journalEvent(id) });
 
 export const systemQuery = queryOptions({ queryKey: keys.system, queryFn: api.system, refetchInterval: 15_000 });
+
+/** The feed is read by Nestor once a day: asking hourly is plenty. */
+export const updatesQuery = queryOptions({
+  queryKey: keys.updates,
+  queryFn: api.updates,
+  staleTime: 3_600_000,
+});
 
 export const connectorsQuery = queryOptions({ queryKey: keys.connectors, queryFn: api.connectors });
 export const connectorQuery = (kind: string) =>

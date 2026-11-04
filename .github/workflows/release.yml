@@ -55,3 +55,22 @@ jobs:
     with:
       version: ${{ needs.release.outputs.version }}
       ref: ${{ needs.release.outputs.tag_name }}
+
+  # The release feed every running Nestor reads to tell its admin about newer releases
+  # (`updates.feed`: releases/latest/download/releases.json).
+  feed:
+    needs: release
+    if: needs.release.outputs.release_created == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.release.outputs.tag_name }}
+      - uses: astral-sh/setup-uv@v7
+      - run: uv run --locked --no-dev python scripts/release_feed.py > releases.json
+      - run: gh release upload "$TAG" releases.json --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.release.outputs.tag_name }}

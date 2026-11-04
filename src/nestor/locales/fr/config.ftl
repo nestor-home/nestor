@@ -17,6 +17,7 @@ config-section-watches = Veilles
 config-section-memory = Mémoire
 config-section-initiative = Initiative
 config-section-admin = Administration
+config-section-updates = Mises à jour
 config-section-data_dir = Données
 
 config-slot-models = Modèles
@@ -72,6 +73,10 @@ config-initiative-follow_up_after_s = Relance écrite après (secondes)
 config-admin-public_url = Adresse publique
 config-admin-public_url-help = Comment les navigateurs du foyer joignent l'administration, ex. https://nestor.example.org.
 config-admin-relay_url = Relais OAuth
+config-updates-check = Chercher les nouvelles versions
+config-updates-check-help = Une fois par jour, Nestor lit la liste de ses versions et l'admin signale une version plus récente. Rien n'est installé.
+config-updates-feed = Liste des versions
+config-updates-feed-help = L'adresse où la liste des versions est lue.
 
 # Plugins' settings: a generic title per field name, a specific one where the name says too little.
 config-field-api_base = Adresse de l'API
