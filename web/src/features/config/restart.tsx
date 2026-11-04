@@ -4,7 +4,7 @@
  * for the instance to answer again with nothing pending.
  */
 import { useQueryClient } from "@tanstack/react-query";
-import { useNavigate, useRouterState } from "@tanstack/react-router";
+import { useNavigate, useRouter } from "@tanstack/react-router";
 import { ChevronRight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { ApiError, api, type Me, meQuery, setCsrfToken } from "@/api";
@@ -22,7 +22,7 @@ import { cn } from "@/lib/utils";
 export const RESTART_POLL_MS = 1_000;
 const SLOW_AFTER_MS = 30_000;
 
-export const sleep = (ms: number, signal: AbortSignal) =>
+const sleep = (ms: number, signal: AbortSignal) =>
   new Promise<void>((done, fail) => {
     const timer = setTimeout(done, ms);
     signal.addEventListener("abort", () => {
@@ -58,10 +58,9 @@ export async function waitForRestart(signal: AbortSignal, onSlow: () => void): P
 export type RestartPhase = "idle" | "restarting" | "slow";
 
 /**
- * Asks for a restart, then waits for the instance to answer again: what the restart banner and the
- * update dialog share. `run` takes what asks for it (a restart, or installing a release, which ends in
- * one) and resolves once the instance is back or the person was signed out. `before` waits for the
- * instance to go down when the ask returns before that (an install runs for a while first).
+ * A restart, as the restart banner and the update dialog follow it: `restart` asks for one then waits
+ * for the instance to answer again; `waitBack` only waits (a release being installed restarts Nestor
+ * by itself). Both resolve once it is back, or once the person was signed out.
  */
 export function useRestart() {
   const t = useT();
@@ -69,7 +68,7 @@ export function useRestart() {
   const queryClient = useQueryClient();
   const notify = useNotify();
   const navigate = useNavigate();
-  const here = useRouterState({ select: (s) => s.location.href });
+  const router = useRouter();
   const [phase, setPhase] = useState<RestartPhase>("idle");
   const [error, setError] = useState<unknown>(null);
   const [pending, setPending] = useState(false);
@@ -77,38 +76,18 @@ export function useRestart() {
 
   useEffect(() => () => abort.current?.abort(), []);
 
-  const run = async ({
-    ask = api.restart,
-    accepted,
-    before,
-  }: {
-    ask?: () => Promise<unknown>;
-    accepted?: () => void;
-    before?: (signal: AbortSignal) => Promise<boolean>;
-  } = {}) => {
-    setPending(true);
-    setError(null);
-    try {
-      await ask();
-    } catch (failure) {
-      setError(failure);
-      setPending(false);
-      return;
-    }
-    setPending(false);
-    accepted?.();
+  const waitBack = async () => {
     const controller = new AbortController();
     abort.current = controller;
+    setPhase("restarting");
     try {
-      if (before && !(await before(controller.signal))) return;
-      setPhase("restarting");
       const back = await waitForRestart(controller.signal, () => setPhase("slow"));
       if (back === "signed-out") {
         // the new process knows no session: sign in again, then come back here
         notify(t("cfg-restart-signed-out", { agent: me.agent.name }));
         setCsrfToken(null);
         queryClient.clear();
-        void navigate({ to: "/login", search: { next: here } });
+        void navigate({ to: "/login", search: { next: router.state.location.href } });
         return;
       }
       queryClient.setQueryData(meQuery.queryKey, back);
@@ -121,14 +100,21 @@ export function useRestart() {
     }
   };
 
-  return {
-    phase,
-    pending,
-    error,
-    clearError: () => setError(null),
-    restart: (accepted?: () => void) => run({ accepted }),
-    run,
+  const restart = async () => {
+    setPending(true);
+    setError(null);
+    try {
+      await api.restart();
+    } catch (failure) {
+      setError(failure);
+      return;
+    } finally {
+      setPending(false);
+    }
+    await waitBack();
   };
+
+  return { phase, pending, error, clearError: () => setError(null), restart, waitBack };
 }
 
 /** While the instance restarts: the agent asleep, and how long it may take. */
@@ -204,7 +190,7 @@ export function RestartBanner() {
             }
             busy={pending}
             action={
-              <Button variant="accent" onClick={() => void restart(() => setAsking(false))} disabled={pending}>
+              <Button variant="accent" onClick={() => void restart()} disabled={pending}>
                 {pending ? "…" : t("cfg-restart-now")}
               </Button>
             }

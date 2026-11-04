@@ -11,6 +11,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { useOpenState } from "@/hooks/use-open-state";
 import { tr } from "@/i18n/runtime";
 
 /** The frame every confirmation shares: its title, what it means, any detail, then cancel and the action. */
@@ -79,12 +80,7 @@ export function Confirm({
   onConfirm: () => Promise<unknown>;
   tone?: "destructive" | "accent";
 }) {
-  const [own, setOwn] = useState(false);
-  const open = shown ?? own;
-  const setOpen = (next: boolean) => {
-    setOwn(next);
-    onOpenChange?.(next);
-  };
+  const [open, setOpen] = useOpenState(shown, onOpenChange);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<unknown>(null);
 

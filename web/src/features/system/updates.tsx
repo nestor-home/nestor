@@ -1,44 +1,28 @@
 /**
  * A newer Nestor: the sidebar says so, the dialog shows what changed since the running version, what
  * breaks and which satellites the new version no longer speaks to. Where Nestor runs from a Python
- * environment, the owner installs it from here and Nestor restarts on it; in a container, the dialog
- * gives the commands, since a container cannot replace its own image.
+ * environment, the owner installs it from here and Nestor restarts on it; otherwise the dialog gives
+ * the commands the server names for the way Nestor is installed.
  */
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CircleArrowUp, ExternalLink } from "lucide-react";
-import { useState } from "react";
-import {
-  api,
-  type ChangeKind,
-  keys,
-  messageOf,
-  type Release,
-  satellitesQuery,
-  type Updates,
-  updatesQuery,
-} from "@/api";
+import { useEffect, useState } from "react";
+import { api, type ChangeKind, keys, type Release, type Updates, updatesQuery } from "@/api";
 import { AgentFigure } from "@/components/agent-figure";
 import { Confirm } from "@/components/confirm";
 import { CopyField } from "@/components/copy-field";
 import { Dither } from "@/components/dither";
-import { Notice } from "@/components/states";
+import { FormActions } from "@/components/form-actions";
+import { FormError, Notice } from "@/components/states";
 import { Button } from "@/components/ui/button";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import { UpdateDialog } from "@/components/update-dialog";
-import { Restarting, sleep, useRestart } from "@/features/config/restart";
+import { Restarting, useRestart } from "@/features/config/restart";
 import { useT } from "@/i18n";
 import { calendarDay } from "@/lib/dates";
 import { useCan } from "@/lib/session";
 
 const KINDS: ChangeKind[] = ["breaking", "feature", "fix", "other"];
-const INSTALL_POLL_MS = 1_000;
-
-/** The commands that update an installation by hand: the image in a container, the package otherwise. */
-function commandsFor(updates: Pick<Updates, "container">): [string, string] {
-  return updates.container
-    ? ["docker compose pull", "docker compose up -d"]
-    : ["uv tool upgrade nestor-home", "pip install --upgrade nestor-home"];
-}
 
 /** In the sidebar's footer, only while a newer release is out; its texture comes alive on hover. */
 export function UpdateAvailable({ compact }: { compact: boolean }) {
@@ -47,55 +31,69 @@ export function UpdateAvailable({ compact }: { compact: boolean }) {
   const updates = useQuery({ ...updatesQuery, enabled: canRead });
   const [open, setOpen] = useState(false);
   const [hover, setHover] = useState(false);
-  const found = updates.data;
-  if (!found?.releases.length || !found.latest) return null;
+  const latest = updates.data?.releases[0]?.version;
+  if (!latest) return null;
   return (
     <>
       <SidebarMenu>
         <SidebarMenuItem>
           <SidebarMenuButton
-            tooltip={t("upd-available-version", { version: found.latest })}
-            className="group/update relative overflow-hidden"
+            tooltip={t("upd-available-version", { version: latest })}
+            className="relative overflow-hidden"
             onClick={() => setOpen(true)}
             onPointerEnter={() => setHover(true)}
             onPointerLeave={() => setHover(false)}
           >
-            <Dither
-              shape="ramp-left"
-              from={0}
-              to={0.55}
-              dot={2}
-              animated={hover}
-              className="absolute inset-0 text-ember/35 opacity-0 transition-opacity duration-300 group-hover/update:opacity-100"
-            />
+            {hover ? (
+              <Dither
+                shape="ramp-left"
+                from={0}
+                to={0.55}
+                dot={2}
+                animated
+                className="absolute inset-0 text-ember/35"
+              />
+            ) : null}
             <CircleArrowUp className="relative size-4 shrink-0 text-ember" aria-hidden="true" />
             <span className={compact ? "sr-only" : "relative min-w-0 flex-1 truncate"}>{t("upd-available")}</span>
-            {compact ? null : <span className="relative font-mono text-[0.75rem] text-ink-muted">{found.latest}</span>}
+            {compact ? null : <span className="relative font-mono text-[0.75rem] text-ink-muted">{latest}</span>}
           </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>
-      <NestorUpdate updates={found} open={open} onOpenChange={setOpen} />
+      <NestorUpdate open={open} onOpenChange={setOpen} />
     </>
   );
 }
 
-/** The notes, then the confirmation in their place (never on top), then the install in the notes again. */
-export function NestorUpdate({
-  updates,
-  open,
-  onOpenChange,
-}: {
-  updates: Updates;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}) {
+/**
+ * The notes, then the confirmation in their place (never on top), then the install in the notes again.
+ * What the install is doing comes from the server alone (`installing`, `failed`); once it stops
+ * answering, or answers on the new version, the dialog follows Nestor through its restart.
+ */
+export function NestorUpdate({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const t = useT();
   const canInstall = useCan("config:manage");
-  const version = updates.latest ?? "";
-  const install = useInstall(version);
+  const queryClient = useQueryClient();
+  const query = useQuery(updatesQuery);
+  const { phase, waitBack } = useRestart();
   const [confirming, setConfirming] = useState(false);
-  const breaking = updates.releases.some((r) => r.breaking);
-  const failed = install.failed || updates.failed === version;
+  const [following, setFollowing] = useState(false);
+  const updates = query.data;
+  const version = updates?.releases[0]?.version ?? "";
+  const gone = query.isError || updates?.running === version;
+
+  useEffect(() => {
+    if (following && gone && phase === "idle") {
+      setFollowing(false);
+      void waitBack();
+    }
+  }, [following, gone, phase, waitBack]);
+
+  if (!updates || !version) return null;
+  const install = async () => {
+    queryClient.setQueryData(keys.updates, await api.installUpdate(version));
+    setFollowing(true);
+  };
   const byHand = !updates.installable || !canInstall;
   return (
     <>
@@ -103,36 +101,44 @@ export function NestorUpdate({
         open={open && !confirming}
         onOpenChange={onOpenChange}
         tone="ember"
-        mark={<AgentFigure state={install.installing || updates.installing ? "working" : "laughing"} size="lg" />}
+        mark={<AgentFigure state={updates.installing ? "working" : "laughing"} size="lg" />}
         title={t("upd-title", { version })}
         description={t("upd-description")}
         running={updates.running}
         latest={version}
         aside={t("upd-behind", { count: updates.releases.length })}
         footer={
-          install.phase !== "idle" ? (
-            <Restarting phase={install.phase} className="bg-transparent p-0" />
-          ) : install.installing || updates.installing ? (
+          phase !== "idle" ? (
+            <Restarting phase={phase} className="bg-transparent p-0" />
+          ) : updates.installing ? (
             <p role="status" className="text-sm text-ink">
               {t("upd-installing", { version })}
             </p>
-          ) : byHand ? (
-            updates.container ? null : (
-              <Restart canRestart={canInstall} />
-            )
-          ) : (
-            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-              <p className="text-xs text-ink-muted">{t("upd-install-hint")}</p>
+          ) : !byHand ? (
+            <FormActions hint={t("upd-install-hint")}>
               <Button variant="accent" onClick={() => setConfirming(true)}>
                 {t("upd-install", { version })}
               </Button>
-            </div>
-          )
+            </FormActions>
+          ) : updates.installation !== "container" ? (
+            <Restart canRestart={canInstall} />
+          ) : null
         }
       >
-        {failed ? <Notice>{t("upd-failed", { version, running: updates.running })}</Notice> : null}
-        {breaking ? <Notice>{t("upd-breaking")}</Notice> : null}
-        <Outdated ids={updates.outdated_satellites} />
+        {updates.failed === version ? <Notice>{t("upd-failed", { version, running: updates.running })}</Notice> : null}
+        {updates.releases.some((r) => r.breaking) ? <Notice>{t("upd-breaking")}</Notice> : null}
+        {updates.left_behind.length ? (
+          <Notice tone="attention">
+            <p>{t("upd-outdated", { count: updates.left_behind.length })}</p>
+            <ul className="mt-1.5 grid gap-0.5">
+              {updates.left_behind.map((s) => (
+                <li key={s.id} className="[overflow-wrap:anywhere]">
+                  {s.name ?? s.id}
+                </li>
+              ))}
+            </ul>
+          </Notice>
+        ) : null}
         {updates.releases.map((release) => (
           <ReleaseNotes key={release.version} release={release} />
         ))}
@@ -146,31 +152,11 @@ export function NestorUpdate({
         title={t("upd-install-title", { version })}
         confirm={t("upd-install-confirm")}
         tone="accent"
-        onConfirm={install.start}
+        onConfirm={install}
       >
         {t("upd-install-description", { running: updates.running })}
       </Confirm>
     </>
-  );
-}
-
-function Outdated({ ids }: { ids: string[] }) {
-  const t = useT();
-  const canSee = useCan("satellites:read");
-  const satellites = useQuery({ ...satellitesQuery, enabled: canSee && ids.length > 0 });
-  if (!ids.length) return null;
-  const named = new Map((satellites.data?.paired ?? []).map((s) => [s.id, s.name ?? s.id]));
-  return (
-    <Notice tone="attention">
-      <p>{t("upd-outdated", { count: ids.length })}</p>
-      <ul className="mt-1.5 grid gap-0.5">
-        {ids.map((id) => (
-          <li key={id} className="[overflow-wrap:anywhere]">
-            {named.get(id) ?? id}
-          </li>
-        ))}
-      </ul>
-    </Notice>
   );
 }
 
@@ -211,54 +197,16 @@ function ReleaseNotes({ release }: { release: Release }) {
   );
 }
 
-/**
- * Installs the newest release, then follows Nestor through its restart. The install runs on the
- * server, which keeps answering until it stops: `false` when it says the install failed.
- */
-function useInstall(version: string) {
-  const queryClient = useQueryClient();
-  const restart = useRestart();
-  const [installing, setInstalling] = useState(false);
-  const [failed, setFailed] = useState(false);
-
-  const installed = async (signal: AbortSignal) => {
-    setInstalling(true);
-    for (;;) {
-      await sleep(INSTALL_POLL_MS, signal);
-      const now = await api.updates().catch(() => null); // no answer: it is restarting
-      if (now?.failed === version) {
-        queryClient.setQueryData(keys.updates, now);
-        setInstalling(false);
-        setFailed(true);
-        return false;
-      }
-      if (now === null || now.running === version) {
-        setInstalling(false);
-        return true;
-      }
-    }
-  };
-
-  /** For the confirmation: a refusal shows there; once accepted, the dialog follows the install. */
-  const start = async () => {
-    await api.installUpdate(version);
-    setFailed(false);
-    void restart.run({ ask: async () => undefined, before: installed });
-  };
-  return { phase: restart.phase, installing, failed, start };
-}
-
-/** Where Nestor cannot install itself: the commands (the restart is in the footer; a container restarts itself). */
+/** Where Nestor does not install itself: the commands the server names for how it is installed. */
 function ByHand({ updates }: { updates: Updates }) {
   const t = useT();
-  const [first, second] = commandsFor(updates);
   return (
     <section className="grid gap-3 border-t border-rule pt-5">
       <h3 className="font-serif text-lg font-normal">{t("upd-how")}</h3>
-      <p className="text-sm text-ink-muted">{t(updates.container ? "upd-how-container" : "upd-how-package")}</p>
-      <CopyField value={first} label={t("upd-command")} />
-      {updates.container ? null : <p className="text-sm text-ink-muted">{t("upd-how-pip")}</p>}
-      <CopyField value={second} label={t("upd-command")} />
+      <p className="text-sm text-ink-muted">{t(`upd-how-${updates.installation ?? "editable"}`)}</p>
+      {updates.commands.map((command) => (
+        <CopyField key={command} value={command} label={t("upd-command")} />
+      ))}
     </section>
   );
 }
@@ -269,11 +217,11 @@ function Restart({ canRestart }: { canRestart: boolean }) {
   if (phase !== "idle") return <Restarting phase={phase} className="bg-transparent p-0" />;
   if (!canRestart) return <p className="text-sm text-ink-muted">{t("upd-then-ask")}</p>;
   return (
-    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-      <p className="text-xs text-ink-muted">{error ? messageOf(error) : t("upd-then-restart")}</p>
+    <FormActions hint={t("upd-then-restart")}>
+      <FormError error={error} />
       <Button variant="outline" onClick={() => void restart()} disabled={pending}>
         {pending ? "…" : t("cfg-restart-now")}
       </Button>
-    </div>
+    </FormActions>
   );
 }

@@ -5,16 +5,26 @@
  * install itself. The dialog is the confirmation: it says everything the person is agreeing to.
  */
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { CircleAlert, CircleArrowUp, ExternalLink, LoaderCircle } from "lucide-react";
+import { CircleAlert, CircleArrowUp, ExternalLink, LoaderCircle, type LucideIcon } from "lucide-react";
 import { useState } from "react";
-import { api, keys, messageOf, type Satellite } from "@/api";
+import { api, keys, type SatelliteUpdate as Reported, type Satellite } from "@/api";
+import { FormActions } from "@/components/form-actions";
 import { useNotify } from "@/components/notices";
-import { Notice } from "@/components/states";
+import { FormError, Notice } from "@/components/states";
 import { Button } from "@/components/ui/button";
 import { UpdateDialog } from "@/components/update-dialog";
 import { useT } from "@/i18n";
 import { useCan } from "@/lib/session";
 import { DeviceMark } from "./device-mark";
+
+type Pending = Exclude<Reported["state"], "current">;
+
+/** The button for each state of an update, at the top of the page. */
+const BUTTON: Record<Pending, { label: string; variant: "accent" | "destructive" | "outline"; Icon: LucideIcon }> = {
+  available: { label: "sat-update-button", variant: "accent", Icon: CircleArrowUp },
+  installing: { label: "sat-update-button-installing", variant: "outline", Icon: LoaderCircle },
+  failed: { label: "sat-update-button-failed", variant: "destructive", Icon: CircleAlert },
+};
 
 /** At the top of a satellite's page, while it has a newer version, installs one or failed to. */
 export function SatelliteUpdateButton({ satellite: s }: { satellite: Satellite }) {
@@ -22,38 +32,37 @@ export function SatelliteUpdateButton({ satellite: s }: { satellite: Satellite }
   const [open, setOpen] = useState(false);
   const found = s.update;
   if (!s.can_update || !found?.version || found.state === "current") return null;
-  const label = {
-    available: t("sat-update-button"),
-    installing: t("sat-update-button-installing"),
-    failed: t("sat-update-button-failed"),
-  }[found.state];
+  const { label, variant, Icon } = BUTTON[found.state];
   return (
     <>
-      <Button
-        variant={found.state === "available" ? "accent" : found.state === "failed" ? "destructive" : "outline"}
-        size="sm"
-        onClick={() => setOpen(true)}
-      >
-        {found.state === "installing" ? (
-          <LoaderCircle className="animate-spin" aria-hidden="true" />
-        ) : found.state === "failed" ? (
-          <CircleAlert aria-hidden="true" />
-        ) : (
-          <CircleArrowUp aria-hidden="true" />
-        )}
-        {label}
+      <Button variant={variant} size="sm" onClick={() => setOpen(true)}>
+        <Icon className={found.state === "installing" ? "animate-spin" : undefined} aria-hidden="true" />
+        {t(label)}
       </Button>
-      <SatelliteUpdate satellite={s} open={open} onOpenChange={setOpen} />
+      <SatelliteUpdate
+        satellite={s}
+        state={found.state}
+        version={found.version}
+        notes={found.notes}
+        open={open}
+        onOpenChange={setOpen}
+      />
     </>
   );
 }
 
 function SatelliteUpdate({
   satellite: s,
+  state,
+  version,
+  notes,
   open,
   onOpenChange,
 }: {
   satellite: Satellite;
+  state: Pending;
+  version: string;
+  notes: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
@@ -68,10 +77,7 @@ function SatelliteUpdate({
       notify(t("sat-update-asked", { id: s.name ?? s.id }));
     },
   });
-  const { state, version, notes } = s.update ?? { state: "current", version: null, notes: null };
-  if (!version) return null;
   const running = s.software.version;
-  const name = s.name ?? s.id;
   return (
     <UpdateDialog
       open={open}
@@ -79,10 +85,10 @@ function SatelliteUpdate({
       tone="ink"
       mark={
         <span className="mb-5 grid size-20 place-items-center rounded-2xl border border-rule bg-paper-raised text-ink shadow-sm">
-          <DeviceMark brand={s.brand} capabilities={s.capabilities.map((c) => c.name)} className="size-10" />
+          <DeviceMark brand={s.brand} capabilities={s.capabilities} className="size-10" />
         </span>
       }
-      title={t("sat-update-title", { name, version })}
+      title={t("sat-update-title", { name: s.name ?? s.id, version })}
       description={t("sat-update-description")}
       running={running}
       latest={version}
@@ -94,12 +100,8 @@ function SatelliteUpdate({
             {t("sat-update-installing", { version })}
           </p>
         ) : state === "available" && canUpdate ? (
-          <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
-            {update.error || s.connected === false ? (
-              <p className="mr-auto text-xs text-ink-muted">
-                {update.error ? messageOf(update.error) : t("sat-update-offline")}
-              </p>
-            ) : null}
+          <FormActions hint={s.connected === false ? t("sat-update-offline") : undefined}>
+            <FormError error={update.error} />
             <Button
               variant="accent"
               onClick={() => update.mutate()}
@@ -107,7 +109,7 @@ function SatelliteUpdate({
             >
               {update.isPending ? "…" : t("sat-update-action", { version })}
             </Button>
-          </div>
+          </FormActions>
         ) : null
       }
     >

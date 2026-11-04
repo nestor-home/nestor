@@ -507,14 +507,14 @@ export interface Release {
 }
 
 /** What was released since the running version (`GET /system/updates`), and whether it installs from here. */
+export type Installation = "container" | "editable" | "uv-tool" | "pip";
+
 export interface Updates {
   running: string;
-  checking: boolean;
-  checked_at: Instant | null;
-  latest: string | null;
   releases: Release[]; // newer than the running one, newest first
-  outdated_satellites: string[]; // device ids the newest release no longer speaks to
-  container: boolean;
+  left_behind: { id: string; name: string | null }[]; // satellites the newest release no longer speaks to
+  installation: Installation | null; // how Nestor is installed; null when it does not check for releases
+  commands: string[]; // what to run to update it by hand
   installable: boolean; // the newest release installs from the admin (a Python environment, not a container)
   installing: string | null; // being installed: a restart follows
   failed: string | null; // did not install: the running version stayed

@@ -483,7 +483,7 @@ const IDENTIFY = cap(
 const UPDATE = cap("device.update", fr("update itself", "se mettre à jour"));
 
 /** The wire format satellites speak, and the software the Reachys run. */
-const PROTOCOL = "nestor.satellite/1";
+export const PROTOCOL = "nestor.satellite/1";
 const REACHY_SOFTWARE = { name: "nestor-reachy", version: "0.4.0" };
 
 /** The pairing methods, as Nestor's catalogue words them (`labels.ftl`), in the recommended order. */
@@ -888,9 +888,6 @@ const PYTHON_SDK_042 = fr("Python SDK 0.4.2", "SDK Python 0.4.2");
 export function updates(): Updates {
   return {
     running: "0.9.0",
-    checking: true,
-    checked_at: minutes(42),
-    latest: "0.10.0",
     releases: [
       {
         version: "0.10.0",
@@ -912,8 +909,9 @@ export function updates(): Updates {
         changes: [{ kind: "fix", text: "serve a channel again after it stops" }],
       },
     ],
-    outdated_satellites: [],
-    container: false,
+    left_behind: [],
+    installation: "pip",
+    commands: ["pip install --upgrade 'nestor-home[voice]'"],
     installable: true,
     installing: null,
     failed: null,
@@ -1015,7 +1013,7 @@ export function system(): SystemInfo {
         name: fr("Voice (satellites)", "Voix (satellites)"),
         adapter: "nestor.modules.channels.voice",
         brand: "voice",
-        version: "nestor.satellite/1",
+        version: PROTOCOL,
         health: "ok",
         health_detail: fr("2 of 3 satellites connected", "2 satellites connectés sur 3"),
       }),
@@ -1108,7 +1106,7 @@ export function system(): SystemInfo {
         name: "reachy-living-room",
         adapter: PYTHON_SDK_042,
         brand: "reachy",
-        version: "nestor.satellite/1",
+        version: PROTOCOL,
         health: "ok",
         health_detail: LIVING_ROOM,
       }),
@@ -1118,7 +1116,7 @@ export function system(): SystemInfo {
         name: "reachy-office",
         adapter: fr("Python SDK 0.4.1", "SDK Python 0.4.1"),
         brand: "reachy",
-        version: "nestor.satellite/1",
+        version: PROTOCOL,
         health: "down",
         health_detail: fr("Offline for 97 min", "Hors ligne depuis 97 min"),
       }),
@@ -1128,7 +1126,7 @@ export function system(): SystemInfo {
         name: "pi-bedroom",
         adapter: PYTHON_SDK_042,
         brand: "raspberry-pi",
-        version: "nestor.satellite/1",
+        version: PROTOCOL,
         health: "ok",
         health_detail: BEDROOM,
       }),

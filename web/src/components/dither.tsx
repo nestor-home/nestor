@@ -26,6 +26,9 @@ function attach(canvas: HTMLCanvasElement, animated: boolean) {
   };
 }
 
+const attachStill = (canvas: HTMLCanvasElement) => attach(canvas, false);
+const attachAnimated = (canvas: HTMLCanvasElement) => attach(canvas, true);
+
 export function Dither({
   shape = "ramp-right",
   from = 0,
@@ -46,7 +49,7 @@ export function Dither({
     <div aria-hidden="true" className={cn("pointer-events-none text-ink", !positioned && "relative", className)}>
       <canvas
         key={`${shape} ${from} ${to} ${dot} ${animated}`}
-        ref={(canvas) => (canvas ? attach(canvas, animated) : undefined)}
+        ref={animated ? attachAnimated : attachStill}
         data-shape={shape}
         data-from={from}
         data-to={to}

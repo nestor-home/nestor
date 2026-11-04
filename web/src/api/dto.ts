@@ -33,7 +33,6 @@ export type SatelliteDto = S["SatelliteOut"];
 export type SatellitesDto = S["SatellitesOut"];
 export type SystemDto = S["SystemOut"];
 export type UpdatesDto = S["UpdatesOut"];
-export type ReleaseDto = S["ReleaseOut"];
 export type TaskDto = S["TaskOut"];
 export type TasksDto = S["TasksOut"];
 export type ToolDto = S["ToolOut"];

@@ -1643,6 +1643,12 @@ export interface components {
             /** Confirm */
             confirm: boolean;
         };
+        /**
+         * InstallKind
+         * @description How this Nestor is installed, which says how it is updated.
+         * @enum {string}
+         */
+        InstallKind: "container" | "editable" | "uv-tool" | "pip";
         /** InvitationAcceptIn */
         InvitationAcceptIn: {
             /** Token */
@@ -1813,6 +1819,13 @@ export interface components {
             default: string;
             /** Household */
             household: string;
+        };
+        /** LeftBehindOut */
+        LeftBehindOut: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string | null;
         };
         /**
          * LinksOut
@@ -2339,23 +2352,18 @@ export interface components {
         UpdateState: "current" | "available" | "installing" | "failed";
         /**
          * UpdatesOut
-         * @description What was released since the running version. Nothing here installs anything.
+         * @description What was released since the running version, and how this Nestor gets it.
          */
         UpdatesOut: {
             /** Running */
             running: string;
-            /** Checking */
-            checking: boolean;
-            /** Checked At */
-            checked_at: string | null;
-            /** Latest */
-            latest: string | null;
             /** Releases */
             releases: components["schemas"]["ReleaseOut"][];
-            /** Outdated Satellites */
-            outdated_satellites: string[];
-            /** Container */
-            container: boolean;
+            /** Left Behind */
+            left_behind: components["schemas"]["LeftBehindOut"][];
+            installation: components["schemas"]["InstallKind"] | null;
+            /** Commands */
+            commands: string[];
             /** Installable */
             installable: boolean;
             /** Installing */

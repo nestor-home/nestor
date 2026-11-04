@@ -2,6 +2,7 @@ import { ArrowDown, ArrowUp, CircleAlert, Pencil, Plus, Trash2 } from "lucide-re
 import { type ReactElement, type ReactNode, useId, useState } from "react";
 import type { ConfigSlot, JsonSchema } from "@/api";
 import { Confirm } from "@/components/confirm";
+import { FormActions } from "@/components/form-actions";
 import { FormDialog, FormSheet } from "@/components/overlay-form";
 import { Panel, Section } from "@/components/page";
 import { Empty } from "@/components/states";
@@ -17,19 +18,20 @@ import { freeName, getAt, isRecord, move, NAME, type Path, problemsUnder, rename
 import { type ConfigPage, pageTitle } from "./sections";
 
 /**
- * What a component's mark shows: the provider its `base_url` belongs to when its schema publishes the
- * hosts the runtime recognises (`x-brands`, as the runtime itself brands a model), else its kind.
+ * What a component's mark shows: the provider one of its fields names, by the hosts the runtime
+ * recognises in it (`x-nestor.brands`, as the runtime itself brands a model), else its kind.
  */
 export function markOf(kind: string, entry: Record<string, unknown>, schema: unknown): string {
-  const brands =
-    isRecord(schema) && isRecord(schema.properties) && isRecord(schema.properties.base_url)
-      ? schema.properties.base_url["x-brands"]
-      : undefined;
-  const url = typeof entry.base_url === "string" ? entry.base_url : "";
-  if (!isRecord(brands) || !URL.canParse(url)) return kind;
-  const host = new URL(url).hostname;
-  const found = Object.entries(brands).find(([suffix]) => host === suffix || host.endsWith(`.${suffix}`));
-  return typeof found?.[1] === "string" ? found[1] : kind;
+  const fields = isRecord(schema) && isRecord(schema.properties) ? Object.entries(schema.properties) : [];
+  for (const [name, field] of fields) {
+    const brands = isRecord(field) && isRecord(field["x-nestor"]) ? field["x-nestor"].brands : undefined;
+    const value = entry[name];
+    if (!isRecord(brands) || typeof value !== "string" || !URL.canParse(value)) continue;
+    const host = new URL(value).hostname;
+    const found = Object.entries(brands).find(([suffix]) => host === suffix || host.endsWith(`.${suffix}`));
+    if (typeof found?.[1] === "string") return found[1];
+  }
+  return kind;
 }
 
 /** The title of a plugin kind: its brand's name when it has one. */
@@ -642,15 +644,14 @@ function ItemSheet({
       {() => (
         <div className="grid gap-6 pt-5">
           {children}
-          <p className="text-xs text-ink-muted">{t("cfg-sheet-note")}</p>
-          <div className="flex justify-end gap-2">
+          <FormActions hint={t("cfg-sheet-note")}>
             {adding ? (
               <Button variant="ghost" onClick={onCancelAdd}>
                 {t("cfg-cancel-add")}
               </Button>
             ) : null}
             <Button onClick={onClose}>{t("cfg-done")}</Button>
-          </div>
+          </FormActions>
         </div>
       )}
     </FormSheet>

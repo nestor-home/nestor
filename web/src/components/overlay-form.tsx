@@ -1,4 +1,4 @@
-import { type ReactElement, type ReactNode, useState } from "react";
+import type { ReactElement, ReactNode } from "react";
 import {
   Dialog,
   DialogContent,
@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useOpenState } from "@/hooks/use-open-state";
 
 /**
  * The one rule for editing: a page shows content; creating or changing is an explicit action that
@@ -33,12 +34,7 @@ export function FormDialog({
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }) {
-  const [own, setOwn] = useState(false);
-  const open = controlled ?? own;
-  const setOpen = (next: boolean) => {
-    setOwn(next);
-    onOpenChange?.(next);
-  };
+  const [open, setOpen] = useOpenState(controlled, onOpenChange);
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       {trigger ? <DialogTrigger render={trigger} /> : null}
@@ -128,12 +124,7 @@ export function FormSheet({
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }) {
-  const [own, setOwn] = useState(false);
-  const open = controlled ?? own;
-  const setOpen = (next: boolean) => {
-    setOwn(next);
-    onOpenChange?.(next);
-  };
+  const [open, setOpen] = useOpenState(controlled, onOpenChange);
   return (
     <SideSheet open={open} onOpenChange={setOpen} trigger={trigger}>
       <SheetHeader className="border-b border-rule px-6 pt-6 pb-4">

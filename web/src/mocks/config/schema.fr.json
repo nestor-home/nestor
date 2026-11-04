@@ -568,15 +568,15 @@
                 "advanced": false,
                 "group": "model-openai-compatible",
                 "title": "Adresse de l'API",
-                "help": null
-              },
-              "x-brands": {
-                "anthropic.com": "anthropic",
-                "generativelanguage.googleapis.com": "gemini",
-                "groq.com": "groq",
-                "mistral.ai": "mistral",
-                "openai.com": "openai",
-                "openrouter.ai": "openrouter"
+                "help": null,
+                "brands": {
+                  "anthropic.com": "anthropic",
+                  "generativelanguage.googleapis.com": "gemini",
+                  "groq.com": "groq",
+                  "mistral.ai": "mistral",
+                  "openai.com": "openai",
+                  "openrouter.ai": "openrouter"
+                }
               }
             },
             "api_key": {
@@ -1292,15 +1292,15 @@
                 "advanced": false,
                 "group": "executor-hermes",
                 "title": "Adresse de l'API",
-                "help": null
-              },
-              "x-brands": {
-                "anthropic.com": "anthropic",
-                "generativelanguage.googleapis.com": "gemini",
-                "groq.com": "groq",
-                "mistral.ai": "mistral",
-                "openai.com": "openai",
-                "openrouter.ai": "openrouter"
+                "help": null,
+                "brands": {
+                  "anthropic.com": "anthropic",
+                  "generativelanguage.googleapis.com": "gemini",
+                  "groq.com": "groq",
+                  "mistral.ai": "mistral",
+                  "openai.com": "openai",
+                  "openrouter.ai": "openrouter"
+                }
               }
             },
             "api_key": {

@@ -314,6 +314,10 @@ error-config-history-unknown = Cette configuration antérieure n'existe pas.
 error-secret-in-use = Ce secret sert encore à { $paths } : retirez d'abord ces références.
 error-secret-unknown = Ce secret n'est pas défini.
 error-restart-unconfirmed = Confirmez le redémarrage : chaque conversation sera interrompue un instant.
+error-update-unsupported = Cet appareil ne sait pas se mettre à jour.
+error-update-unavailable = Ce satellite n'a trouvé aucune version plus récente à installer.
+error-update-unconfirmed = Confirmez la mise à jour : Nestor redémarre une fois installée.
+error-update-not-installable = Cette version ne peut pas être installée d'ici.
 
 ## Satellites (copied from Nestor's locales/fr/errors.ftl)
 error-invalid-code = Le code est fait de 6 chiffres, affichés ou dits par l'appareil.
@@ -325,6 +329,4 @@ error-too-many-additions = Trop d'ajouts sont en cours. Annulez-en un d'abord.
 error-pending-unknown = Plus aucun appareil n'attend avec cette demande.
 error-identify-unsupported = Cet appareil ne sait pas se signaler.
 error-satellite-offline = Ce satellite n'est pas connecté en ce moment.
-error-update-unavailable = Ce satellite n'a signalé aucune version plus récente.
-error-update-unsupported = Ce satellite n'a pas été autorisé à se mettre à jour.
 error-satellite-unknown = Ce satellite n'est pas ou plus appairé.

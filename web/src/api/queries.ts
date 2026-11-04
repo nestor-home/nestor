@@ -83,7 +83,12 @@ export const journalEventQuery = (id: Id) =>
 export const systemQuery = queryOptions({ queryKey: keys.system, queryFn: api.system, refetchInterval: 15_000 });
 
 /** The feed is read by Nestor once a day: asking hourly is plenty. */
-export const updatesQuery = queryOptions({ queryKey: keys.updates, queryFn: api.updates, staleTime: 3_600_000 });
+export const updatesQuery = queryOptions({
+  queryKey: keys.updates,
+  queryFn: api.updates,
+  staleTime: 3_600_000,
+  refetchInterval: (q) => (q.state.data?.installing ? 1_000 : false), // an install runs on the server
+});
 
 export const connectorsQuery = queryOptions({ queryKey: keys.connectors, queryFn: api.connectors });
 export const connectorQuery = (kind: string) =>
@@ -109,13 +114,9 @@ export const additionQuery = (id: Id) =>
     queryFn: ({ signal }) => api.addition(id, signal),
     refetchInterval: (q) => (q.state.data && !["waiting", "device_seen"].includes(q.state.data.stage) ? false : 1_500),
   });
-/** Followed closely while it installs a version: it comes back on it, or reports it failed. */
+/** Kept fresh by the live journal (its connections and what it reports about its software). */
 export const satelliteQuery = (id: string) =>
-  queryOptions({
-    queryKey: keys.satellite(id),
-    queryFn: () => api.satellite(id),
-    refetchInterval: (q) => (q.state.data?.update?.state === "installing" ? 2_000 : false),
-  });
+  queryOptions({ queryKey: keys.satellite(id), queryFn: () => api.satellite(id) });
 export const tasksQuery = queryOptions({ queryKey: keys.tasks, queryFn: api.tasks, refetchInterval: 5_000 });
 export const taskQuery = (id: Id) =>
   queryOptions({

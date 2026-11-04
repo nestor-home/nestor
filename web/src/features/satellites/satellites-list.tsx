@@ -62,11 +62,7 @@ function Pending({ requests, onApprove }: { requests: PairingRequest[]; onApprov
             <li key={r.id} className="rounded-md border border-rule bg-paper-raised p-5">
               <div>
                 <div className="flex items-center gap-2">
-                  <DeviceMark
-                    brand={r.device.brand}
-                    capabilities={r.capabilities.map((c) => c.name)}
-                    className="size-4 text-ink"
-                  />
+                  <DeviceMark brand={r.device.brand} capabilities={r.capabilities} className="size-4 text-ink" />
                   <h3 className="font-mono text-[0.95rem] font-medium">{r.device.id}</h3>
                 </div>
                 <p className="mt-1 text-sm text-ink-muted">
@@ -130,7 +126,7 @@ function PairedRow({ satellite: s }: { satellite: Satellite }) {
         params={{ satelliteId: s.id }}
         className="group grid grid-cols-[1.5rem_minmax(0,1fr)_auto] items-center gap-x-4 px-5 py-3.5 hover:bg-paper-sunken/60 sm:grid-cols-[1.5rem_minmax(0,1.4fr)_minmax(0,1fr)_12rem_1rem]"
       >
-        <DeviceMark brand={s.brand} capabilities={s.capabilities.map((c) => c.name)} className="size-5 text-ink" />
+        <DeviceMark brand={s.brand} capabilities={s.capabilities} className="size-5 text-ink" />
         <span className="min-w-0">
           <span className="block text-ink">{s.name ?? <span className="font-mono text-sm">{s.id}</span>}</span>
           <span className="block text-[0.85rem] text-ink-muted">

@@ -25,7 +25,7 @@ import {
   taskDto,
   watchDto,
 } from "./dto";
-import { arriving, CANCELLED, KIND_LABELS, METHODS, ROLE_LABEL, tools as toolsOf } from "./fixtures";
+import { arriving, CANCELLED, KIND_LABELS, METHODS, PROTOCOL, ROLE_LABEL, tools as toolsOf } from "./fixtures";
 import { fr, inFrench } from "./french";
 import { facets, filtersOf, matching, withoutRecord } from "./journal";
 import { errorText, type Lang, localize, toItem } from "./messages";
@@ -98,6 +98,18 @@ let downUntil = 0;
 /** Back to a running instance, between tests. */
 export function resetServer(): void {
   downUntil = 0;
+  for (const timer of pending) clearTimeout(timer);
+  pending.clear();
+}
+
+/** What the mock server does later (an install, a satellite coming back): never into the next test. */
+const pending = new Set<ReturnType<typeof setTimeout>>();
+function later(run: () => void, ms: number): void {
+  const timer = setTimeout(() => {
+    pending.delete(timer);
+    run();
+  }, ms);
+  pending.add(timer);
 }
 const restarting = () => Date.now() < downUntil;
 export const RESTART_MS = 2_500;
@@ -375,14 +387,14 @@ export const handlers = [
     const body = (await request.json()) as In<"InstallIn">;
     if (!body.confirm) return fail(400, "update_unconfirmed", "error-update-unconfirmed");
     const updates = db.updates;
-    if (!updates.installable || body.version !== updates.latest || updates.installing) {
+    if (!updates.installable || body.version !== updates.releases[0]?.version || updates.installing) {
       return fail(409, "update_not_installable", "error-update-not-installable");
     }
     updates.installing = body.version;
     updates.failed = null;
     save();
     // installed a few seconds later, then the restart: everyone signs in again on the new version
-    setTimeout(() => {
+    later(() => {
       Object.assign(db.updates, { running: body.version, releases: [], installing: null });
       db.system.nestor.version = body.version;
       db.signedIn = null;
@@ -630,7 +642,7 @@ export const handlers = [
     satellite.update = { state: "installing", version, notes: satellite.update?.notes ?? null };
     save();
     // it installs, restarts and says hello again on the new version
-    setTimeout(() => {
+    later(() => {
       satellite.software = { ...satellite.software, version };
       satellite.update = { state: "current", version: null, notes: null };
       save();
@@ -1070,7 +1082,7 @@ function pair(
     last_seen_at: new Date().toISOString(),
     brand: pending.device.brand,
     software: pending.software,
-    protocol: "nestor.satellite/1",
+    protocol: PROTOCOL,
     can_update: pending.capabilities.some((c) => c.name === "device.update"),
     update: null,
   };

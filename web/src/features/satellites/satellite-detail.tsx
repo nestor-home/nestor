@@ -67,7 +67,7 @@ export function SatelliteFrame({ id, children }: { id: string; children: ReactNo
         crumbs={<Crumbs trail={trail} />}
         title={
           <span className="inline-flex items-center gap-3">
-            <DeviceMark brand={s.brand} capabilities={s.capabilities.map((c) => c.name)} className="size-7 text-ink" />
+            <DeviceMark brand={s.brand} capabilities={s.capabilities} className="size-7 text-ink" />
             {s.name ?? <span className="font-mono text-[2rem] tracking-tight">{s.id}</span>}
           </span>
         }

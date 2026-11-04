@@ -6,6 +6,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   AudioLines,
   BookMarked,
+  Bot,
   CircleAlert,
   CircleArrowUp,
   CircleCheck,
@@ -19,6 +20,7 @@ import {
   Megaphone,
   MessageSquareText,
   Mic,
+  MonitorSmartphone,
   Move3d,
   Plug,
   Radar,
@@ -82,6 +84,18 @@ export const CAPABILITY_ICON: Record<string, LucideIcon> = {
   "device.identify": Lightbulb,
   "device.update": CircleArrowUp,
 };
+
+/**
+ * What a satellite is, from what it can do, for a device whose maker has no logo: the body before the
+ * screen, the screen before the sound; the capability's own icon where it already says it.
+ */
+export const DEVICE_KIND: [string[], LucideIcon][] = [
+  [["motion.head", "expression.emotion"], Bot],
+  [["text.display", "text.input"], MonitorSmartphone],
+  [["audio.playback"], CAPABILITY_ICON["audio.playback"] as LucideIcon],
+  [["audio.capture"], CAPABILITY_ICON["audio.capture"] as LucideIcon],
+  [["vision.person_detection"], CAPABILITY_ICON["vision.person_detection"] as LucideIcon],
+];
 
 export const SECTION_ICON = {
   "/": Sun,

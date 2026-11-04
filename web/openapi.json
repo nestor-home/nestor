@@ -9757,6 +9757,17 @@
         ],
         "title": "InstallIn"
       },
+      "InstallKind": {
+        "type": "string",
+        "enum": [
+          "container",
+          "editable",
+          "uv-tool",
+          "pip"
+        ],
+        "title": "InstallKind",
+        "description": "How this Nestor is installed, which says how it is updated."
+      },
       "InvitationAcceptIn": {
         "properties": {
           "token": {
@@ -10258,6 +10269,31 @@
           "household"
         ],
         "title": "LanguagesOut"
+      },
+      "LeftBehindOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "LeftBehindOut"
       },
       "LinksOut": {
         "properties": {
@@ -11918,33 +11954,6 @@
             "type": "string",
             "title": "Running"
           },
-          "checking": {
-            "type": "boolean",
-            "title": "Checking"
-          },
-          "checked_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Checked At"
-          },
-          "latest": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Latest"
-          },
           "releases": {
             "items": {
               "$ref": "#/components/schemas/ReleaseOut"
@@ -11952,16 +11961,29 @@
             "type": "array",
             "title": "Releases"
           },
-          "outdated_satellites": {
+          "left_behind": {
+            "items": {
+              "$ref": "#/components/schemas/LeftBehindOut"
+            },
+            "type": "array",
+            "title": "Left Behind"
+          },
+          "installation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InstallKind"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "commands": {
             "items": {
               "type": "string"
             },
             "type": "array",
-            "title": "Outdated Satellites"
-          },
-          "container": {
-            "type": "boolean",
-            "title": "Container"
+            "title": "Commands"
           },
           "installable": {
             "type": "boolean",
@@ -11993,18 +12015,16 @@
         "type": "object",
         "required": [
           "running",
-          "checking",
-          "checked_at",
-          "latest",
           "releases",
-          "outdated_satellites",
-          "container",
+          "left_behind",
+          "installation",
+          "commands",
           "installable",
           "installing",
           "failed"
         ],
         "title": "UpdatesOut",
-        "description": "What was released since the running version. Nothing here installs anything."
+        "description": "What was released since the running version, and how this Nestor gets it."
       },
       "WatchOut": {
         "properties": {

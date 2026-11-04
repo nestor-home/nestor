@@ -225,7 +225,9 @@ describe("the configuration", () => {
 
 describe("a model's mark", () => {
   const schema = {
-    properties: { base_url: { "x-brands": { "openrouter.ai": "openrouter", "anthropic.com": "anthropic" } } },
+    properties: {
+      base_url: { "x-nestor": { brands: { "openrouter.ai": "openrouter", "anthropic.com": "anthropic" } } },
+    },
   };
 
   it("is the provider its address belongs to, as the runtime recognises it", () => {

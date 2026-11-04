@@ -63,7 +63,7 @@ describe("a newer Nestor", () => {
     await user.click(await screen.findByRole("button", { name: /New release/ }));
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).queryByRole("button", { name: /Install/ })).toBeNull();
-    expect(within(dialog).getByText("uv tool upgrade nestor-home")).toBeVisible();
+    expect(within(dialog).getByText("pip install --upgrade 'nestor-home[voice]'")).toBeVisible();
     expect(within(dialog).getByRole("button", { name: "Restart now" })).toBeEnabled();
   });
 
@@ -78,7 +78,13 @@ describe("a newer Nestor", () => {
 
   it("says which satellites the new version leaves behind, and the image's commands in a container", async () => {
     const user = userEvent.setup();
-    db.updates = { ...db.updates, outdated_satellites: ["reachy-office"], container: true, installable: false };
+    db.updates = {
+      ...db.updates,
+      left_behind: [{ id: "reachy-office", name: null }],
+      installation: "container",
+      commands: ["docker compose pull", "docker compose up -d"],
+      installable: false,
+    };
     renderApp("/");
     await user.click(await screen.findByRole("button", { name: /New release/ }));
     const dialog = await screen.findByRole("dialog");
@@ -89,7 +95,7 @@ describe("a newer Nestor", () => {
   });
 
   it("stays out of the way when the running version is the latest", async () => {
-    db.updates = { ...db.updates, latest: "0.9.0", releases: [] };
+    db.updates = { ...db.updates, releases: [] };
     renderApp("/");
     expect(await screen.findByRole("navigation")).toBeVisible();
     await waitFor(() => expect(screen.queryByRole("button", { name: /New release/ })).toBeNull());

@@ -11,13 +11,13 @@ interface Live {
 
 const LiveContext = createContext<Live | null>(null);
 
-// what a live item makes stale elsewhere in the admin
+// what a live item makes stale elsewhere in the admin, by its kind (the journal's categories)
 const STALE: Record<string, readonly (readonly unknown[])[]> = {
-  tasks: [keys.tasks],
-  watches: [keys.watches],
+  task: [keys.tasks],
+  watch: [keys.watches],
   memory: [["memories"]],
-  connections: [keys.connections],
-  satellites: [keys.satellites],
+  connection: [keys.connections],
+  satellite: [keys.satellites], // its list and each satellite: a connection, an update reported
   presence: [keys.people],
 };
 
