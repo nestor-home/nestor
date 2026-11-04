@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.8.0](https://github.com/nestor-home/nestor/compare/v0.7.0...v0.8.0) (2026-11-04)
+
+
+### ⚠ BREAKING CHANGES
+
+* satellites name their software and update on request ([#61](https://github.com/nestor-home/nestor/issues/61))
+
+### Features
+
+* install the newest release from the admin ([#60](https://github.com/nestor-home/nestor/issues/60)) ([a8064fc](https://github.com/nestor-home/nestor/commit/a8064fc2803ddbb9d61d3fd97eac74bfd31fecb3))
+* satellites name their software and update on request ([#61](https://github.com/nestor-home/nestor/issues/61)) ([c63bc90](https://github.com/nestor-home/nestor/commit/c63bc90db0e3197b7a3a2d0d126345c67405d596))
+* the admin says when a newer Nestor is out ([#59](https://github.com/nestor-home/nestor/issues/59)) ([8675d9a](https://github.com/nestor-home/nestor/commit/8675d9a51839041acfd7e6e0566d52427714d095))
+
+
+### Bug Fixes
+
+* **deps:** update dependency @nestor-home/character to v0.2.0 ([#46](https://github.com/nestor-home/nestor/issues/46)) ([e63a9b5](https://github.com/nestor-home/nestor/commit/e63a9b546419876d53df8f94473cdfbbe74994cb))
+* **deps:** update dependency @nestor-home/character to v0.3.0 ([#52](https://github.com/nestor-home/nestor/issues/52)) ([d8bc7c9](https://github.com/nestor-home/nestor/commit/d8bc7c9d207931a478a665c55269531cad71f482))
+* **deps:** update dependency @tanstack/react-query to v5.105.3 ([#51](https://github.com/nestor-home/nestor/issues/51)) ([93ec084](https://github.com/nestor-home/nestor/commit/93ec084075798428f2ce49e4fa5baf452584a771))
+
 ## [0.7.0](https://github.com/nestor-home/nestor/compare/v0.6.0...v0.7.0) (2026-11-03)
 
 
