@@ -26,6 +26,7 @@ import {
 import { AgentFigure } from "@/components/agent-figure";
 import { CopyField } from "@/components/copy-field";
 import { Field } from "@/components/field";
+import { FormActions } from "@/components/form-actions";
 import { useNotify } from "@/components/notices";
 import { FormSheet } from "@/components/overlay-form";
 import { QrCode } from "@/components/qr-code";
@@ -233,11 +234,11 @@ function Choose({ onStarted }: { onStarted: (started: StartedAddition) => void }
       </Collapsible>
 
       <FormError error={start.error} />
-      <div className="flex justify-end">
+      <FormActions>
         <Button type="submit" variant="accent" disabled={!method || start.isPending}>
           {start.isPending ? "…" : t("sat-add-start")}
         </Button>
-      </div>
+      </FormActions>
     </form>
   );
 }

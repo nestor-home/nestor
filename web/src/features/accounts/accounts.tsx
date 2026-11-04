@@ -18,7 +18,7 @@ import { Confirm } from "@/components/confirm";
 import { type Crumb, Crumbs } from "@/components/crumbs";
 import { useNotify } from "@/components/notices";
 import { FormDialog } from "@/components/overlay-form";
-import { PageHeader, Section } from "@/components/page";
+import { Fact, Facts, PageHeader, RowList, Section } from "@/components/page";
 import { Empty, Failure, FormError, Loading } from "@/components/states";
 import { Status, Tag } from "@/components/status";
 import { TabNav } from "@/components/tab-nav";
@@ -107,11 +107,11 @@ export function AccountsList() {
   if (accounts.isPending) return <Loading lines={3} />;
   if (accounts.isError) return <Failure error={accounts.error} retry={() => void accounts.refetch()} />;
   return (
-    <ul className="divide-y divide-rule rounded-md border border-rule bg-paper-raised">
+    <RowList>
       {accounts.data.map((a) => (
         <AccountRow key={a.id} account={a} accounts={accounts.data} />
       ))}
-    </ul>
+    </RowList>
   );
 }
 
@@ -174,11 +174,11 @@ export function InvitationsList() {
   if (invitations.isError) return <Failure error={invitations.error} retry={() => void invitations.refetch()} />;
   if (invitations.data.length === 0) return <Empty>{t("acc-invitations-empty")}</Empty>;
   return (
-    <ul className="divide-y divide-rule rounded-md border border-rule bg-paper-raised">
+    <RowList>
       {invitations.data.map((i) => (
         <InvitationRow key={i.id} invitation={i} />
       ))}
-    </ul>
+    </RowList>
   );
 }
 
@@ -245,7 +245,7 @@ export function AccountDetail({ id }: { id: string }) {
         crumbs={<Crumbs trail={trail} />}
         title={account.person_name ?? account.login}
         meta={
-          <p className="flex flex-wrap items-center gap-x-3 text-[0.85rem] text-ink-muted">
+          <>
             <span>{account.login}</span>
             {account.disabled ? (
               <Status tone="idle">{t("acc-disabled")}</Status>
@@ -253,13 +253,12 @@ export function AccountDetail({ id }: { id: string }) {
               <Status tone="ok">{t("acc-active")}</Status>
             )}
             {account.id === me.account.id ? <Tag tone="accent">{t("acc-you")}</Tag> : null}
-          </p>
+          </>
         }
       />
       <div className="grid max-w-2xl gap-10">
-        <dl className="grid grid-cols-1 gap-x-6 sm:grid-cols-[10rem_1fr] gap-y-2.5 text-sm">
-          <dt className="label-mono pt-0.5">{t("acc-field-person")}</dt>
-          <dd>
+        <Facts>
+          <Fact term={t("acc-field-person")}>
             {account.person ? (
               <Link to="/people/$personId" params={{ personId: account.person }} className="hover:text-ember">
                 {name(account.person)}
@@ -267,10 +266,9 @@ export function AccountDetail({ id }: { id: string }) {
             ) : (
               <span className="text-ink-muted">{t("acc-person-none-lower")}</span>
             )}
-          </dd>
-          <dt className="label-mono pt-0.5">{t("acc-field-created")}</dt>
-          <dd>{moment(account.created_at)}</dd>
-        </dl>
+          </Fact>
+          <Fact term={t("acc-field-created")}>{moment(account.created_at)}</Fact>
+        </Facts>
         <Section title={t("acc-role")}>
           {editable ? (
             <div className="grid max-w-sm gap-1.5">

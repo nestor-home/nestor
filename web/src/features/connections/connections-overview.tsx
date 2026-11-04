@@ -1,9 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ArrowRight } from "lucide-react";
 import { type Connection, connectionsQuery, connectorsQuery } from "@/api";
 import { Ago } from "@/components/ago";
-import { Panel } from "@/components/page";
+import { Panel, RowArrow, RowList } from "@/components/page";
 import { Empty, Failure, Loading } from "@/components/states";
 import { Tag } from "@/components/status";
 import { buttonVariants } from "@/components/ui/button";
@@ -38,7 +37,7 @@ export function ConnectedAccounts() {
     );
   }
   return (
-    <ul className="divide-y divide-rule rounded-md border border-rule bg-paper-raised">
+    <RowList>
       {list.map((c) => (
         <li key={c.id}>
           <Link
@@ -69,11 +68,11 @@ export function ConnectedAccounts() {
               )}
             </span>
             <ConnectionStatusMark status={c.status} />
-            <ArrowRight className="hidden size-3.5 text-ink-faint group-hover:text-ink sm:block" aria-hidden="true" />
+            <RowArrow />
           </Link>
         </li>
       ))}
-    </ul>
+    </RowList>
   );
 }
 

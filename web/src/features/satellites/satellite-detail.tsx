@@ -7,7 +7,7 @@ import { Ago } from "@/components/ago";
 import { Confirm } from "@/components/confirm";
 import { type Crumb, Crumbs } from "@/components/crumbs";
 import { useNotify } from "@/components/notices";
-import { PageHeader, Section } from "@/components/page";
+import { Fact, Facts, Lead, PageHeader, Section } from "@/components/page";
 import { Empty, Failure, Loading } from "@/components/states";
 import { Status } from "@/components/status";
 import { TabNav } from "@/components/tab-nav";
@@ -21,6 +21,7 @@ import { CAPABILITY_ICON } from "@/lib/icons";
 import { usePeopleNames } from "@/lib/people";
 import { useCan, useMe } from "@/lib/session";
 import { IdentifyButton } from "./add-satellite";
+import { DeviceMark } from "./device-mark";
 
 /** What each capability lets the assistant do, said for the household. */
 const MEANS: Record<string, string> = {
@@ -61,7 +62,6 @@ export function SatelliteFrame({ id, children }: { id: string; children: ReactNo
       </>
     );
   }
-  const brand = brandOf(s.brand);
   const base = `/satellites/${s.id}`;
   return (
     <>
@@ -69,13 +69,13 @@ export function SatelliteFrame({ id, children }: { id: string; children: ReactNo
         crumbs={<Crumbs trail={trail} />}
         title={
           <span className="inline-flex items-center gap-3">
-            {brand ? <BrandMark brand={brand} className="size-7 text-ink" /> : null}
+            <DeviceMark brand={s.brand} capabilities={s.capabilities} className="size-7 text-ink" />
             {s.name ?? <span className="font-mono text-[2rem] tracking-tight">{s.id}</span>}
           </span>
         }
         actions={s.can_identify && s.connected && canPair ? <IdentifyButton device={s.id} /> : undefined}
         meta={
-          <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.85rem] text-ink-muted">
+          <>
             {s.connected === null ? null : s.connected ? (
               <Status tone="ok">{t("sat-state-connected")}</Status>
             ) : (
@@ -84,7 +84,7 @@ export function SatelliteFrame({ id, children }: { id: string; children: ReactNo
             {s.name ? <span className="font-mono">{s.id}</span> : null}
             <span>{s.model}</span>
             <span>{t("sat-room", { room: s.room })}</span>
-          </p>
+          </>
         }
       />
       <TabNav
@@ -119,28 +119,25 @@ export function SatelliteOverview({ satellite: s }: { satellite: Satellite }) {
   const sdk = brandOf(s.sdk);
   return (
     <div className="grid gap-10">
-      <p className="max-w-2xl font-serif text-[1.2rem] leading-relaxed text-pretty [font-variation-settings:'opsz'_20]">
+      <Lead>
         {s.connected
           ? t("sat-summary-connected", { assistant: me.assistant, room: s.room })
           : s.connected === false
             ? t("sat-summary-offline", { room: s.room })
             : t("sat-summary-unknown")}
-      </p>
-      <dl className="grid max-w-2xl grid-cols-1 gap-x-6 sm:grid-cols-[10rem_1fr] gap-y-2.5 text-sm">
-        <dt className="label-mono pt-0.5">{t("sat-paired-at")}</dt>
-        <dd>
+      </Lead>
+      <Facts>
+        <Fact term={t("sat-paired-at")}>
           {s.approved_by
             ? t("sat-paired-by", { when: moment(s.paired_at), name: name(s.approved_by) })
             : moment(s.paired_at)}
-        </dd>
-        <dt className="label-mono pt-0.5">{t("sat-last-seen")}</dt>
-        <dd>{s.last_seen_at ? <Ago iso={s.last_seen_at} /> : "—"}</dd>
-        <dt className="label-mono pt-0.5">{t("sat-software")}</dt>
-        <dd className="flex items-center gap-2 font-mono text-[0.8rem]">
+        </Fact>
+        <Fact term={t("sat-last-seen")}>{s.last_seen_at ? <Ago iso={s.last_seen_at} /> : "—"}</Fact>
+        <Fact term={t("sat-software")} className="flex items-center gap-2 font-mono text-[0.8rem]">
           {sdk ? <BrandMark brand={sdk} className="size-3.5" /> : null}
           {s.sdk ? t("sat-sdk", { sdk: s.sdk, version: s.sdk_version ?? "" }) : t("sat-sdk-unknown")} · {PROTOCOL}
-        </dd>
-      </dl>
+        </Fact>
+      </Facts>
       {canRevoke ? (
         <Section title={t("sat-revoke")}>
           <p className="mb-4 max-w-2xl text-sm text-ink-muted">{t("sat-revoke-hint")}</p>

@@ -6,7 +6,7 @@ import { Ago } from "@/components/ago";
 import { Confirm } from "@/components/confirm";
 import { useNotify } from "@/components/notices";
 import { Panel } from "@/components/page";
-import { Empty, Failure, Loading } from "@/components/states";
+import { Empty, Failure, Loading, Notice } from "@/components/states";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/i18n";
 import { clock, dayLabel } from "@/lib/dates";
@@ -126,10 +126,10 @@ function VersionDetail({ id }: { id: string }) {
       </div>
       {editor.dirty ? <p className="mb-4 text-xs text-ink-muted">{t("cfg-restore-dirty")}</p> : null}
       {problems.length ? (
-        <div className="mb-5 rounded-md border border-brick/40 bg-brick-soft/40 px-4 py-3">
-          <p className="mb-1.5 text-sm text-ink">{t("cfg-history-invalid")}</p>
+        <Notice className="mb-5">
+          <p className="mb-1.5">{t("cfg-history-invalid")}</p>
           <Problems problems={problems} />
-        </div>
+        </Notice>
       ) : null}
       <Changes diff={preview.data.diff} />
     </Panel>

@@ -1,0 +1,19 @@
+language js
+
+// Features build their screens from the shared components, so the same thing looks the same
+// everywhere: hand-written alerts, definition lists and row lists drift apart one class at a time.
+or {
+  `role="alert"` as $node where {
+    register_diagnostic(span=$node, message="Use FormError (a line under a form), Notice (a boxed warning) or Failure (a failed request) from @/components/states rather than a hand-written alert.")
+  },
+  or {
+    `<dl $attrs>$children</dl>`,
+    `<dl $attrs />`
+  } as $node where {
+    register_diagnostic(span=$node, message="Use Facts and Fact from @/components/page rather than a hand-written definition list.")
+  },
+  JsxAttribute() as $node where {
+    $node <: r"(?s)className=.*divide-y divide-rule.*border border-rule.*",
+    register_diagnostic(span=$node, message="Use RowList from @/components/page for rows on a hairline surface.")
+  }
+}

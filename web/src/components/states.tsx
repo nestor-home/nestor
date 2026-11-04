@@ -30,16 +30,41 @@ export function Empty({
   );
 }
 
+/** Something to know before going on, boxed and announced: what went wrong, or what to watch out for. */
+export function Notice({
+  tone = "error",
+  children,
+  className,
+}: {
+  tone?: "error" | "attention";
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      role="alert"
+      className={cn(
+        "rounded-md border px-4 py-3 text-sm text-ink",
+        tone === "error" ? "border-brick/40 bg-brick-soft/40" : "border-amber/40 bg-amber-soft/40",
+        className,
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+/** A request that failed, in the words of the API, with a way to try again. */
 export function Failure({ error, retry, className }: { error: unknown; retry?: () => void; className?: string }) {
   return (
-    <div role="alert" className={cn("rounded-md border border-brick/40 bg-brick-soft/40 px-5 py-4", className)}>
-      <p className="text-sm text-ink">{messageOf(error)}</p>
+    <Notice className={className}>
+      <p>{messageOf(error)}</p>
       {retry ? (
         <Button variant="outline" size="sm" className="mt-3" onClick={retry}>
           <RotateCw /> {tr("action-retry")}
         </Button>
       ) : null}
-    </div>
+    </Notice>
   );
 }
 

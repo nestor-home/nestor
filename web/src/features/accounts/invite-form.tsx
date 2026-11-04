@@ -5,6 +5,7 @@ import { api, type InvitationCreated, keys, type Role } from "@/api";
 import { Choice } from "@/components/choice";
 import { CopyField } from "@/components/copy-field";
 import { Field } from "@/components/field";
+import { FormActions } from "@/components/form-actions";
 import { PersonPicker } from "@/components/person-picker";
 import { FormError } from "@/components/states";
 import { Button } from "@/components/ui/button";
@@ -47,9 +48,11 @@ export function InviteForm({ onDone }: { onDone: () => void }) {
           <p className="text-sm" />
         </Localized>
         <CopyField value={sent.link} label={t("acc-invite-link")} />
-        <Button variant="outline" className="justify-self-end" onClick={onDone}>
-          {t("acc-invite-done")}
-        </Button>
+        <FormActions>
+          <Button variant="outline" onClick={onDone}>
+            {t("acc-invite-done")}
+          </Button>
+        </FormActions>
       </div>
     );
   }
@@ -63,9 +66,11 @@ export function InviteForm({ onDone }: { onDone: () => void }) {
         <Choice id="invite-role" value={role} options={roleOptions()} onChange={setRole} />
       </Field>
       <FormError error={invite.error} />
-      <Button type="submit" disabled={invite.isPending} className="justify-self-end">
-        {invite.isPending ? t("acc-inviting") : t("acc-invite-create")}
-      </Button>
+      <FormActions>
+        <Button type="submit" disabled={invite.isPending}>
+          {invite.isPending ? t("acc-inviting") : t("acc-invite-create")}
+        </Button>
+      </FormActions>
     </form>
   );
 }

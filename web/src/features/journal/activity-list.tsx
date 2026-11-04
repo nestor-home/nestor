@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
 import { type JournalFilters, journalLatestQuery } from "@/api";
 import { Ago } from "@/components/ago";
+import { RowList } from "@/components/page";
 import { Empty, Failure, Loading } from "@/components/states";
 import { useT } from "@/i18n";
 import { KindMark } from "@/lib/brands";
@@ -33,7 +34,7 @@ export function ActivityList({
   if (latest.data.items.length === 0) return <Empty>{empty}</Empty>;
   return (
     <div>
-      <ol className="divide-y divide-rule rounded-md border border-rule bg-paper-raised">
+      <RowList ordered>
         {latest.data.items.map((item) => {
           const style = kindStyle(item.kind);
           const Icon = style.icon;
@@ -66,7 +67,7 @@ export function ActivityList({
             </li>
           );
         })}
-      </ol>
+      </RowList>
       <Link
         to="/journal"
         search={clean(search)}

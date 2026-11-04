@@ -3,9 +3,10 @@ import { Link, type LinkProps } from "@tanstack/react-router";
 import { ArrowUpRight } from "lucide-react";
 import { type JournalEvent, journalEventQuery } from "@/api";
 import { CopyButton } from "@/components/copy-field";
+import { SideSheet } from "@/components/overlay-form";
+import { Fact, Facts } from "@/components/page";
 import { Failure, Loading } from "@/components/states";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useT } from "@/i18n";
 import { tr } from "@/i18n/runtime";
 import { KindMark } from "@/lib/brands";
@@ -18,20 +19,10 @@ import { cn } from "@/lib/utils";
 
 /** One event in full: what it says, what it relates to, and the raw record for debugging. */
 export function EventSheet({ id, onClose }: { id: string | undefined; onClose: () => void }) {
-  const mobile = useIsMobile();
   return (
-    <Sheet open={Boolean(id)} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent
-        side={mobile ? "bottom" : "right"}
-        className={
-          mobile
-            ? "h-[100dvh] w-full overflow-y-auto overscroll-contain bg-paper pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
-            : "w-full overflow-y-auto overscroll-contain bg-paper sm:max-w-xl"
-        }
-      >
-        {id ? <EventDetail id={id} /> : null}
-      </SheetContent>
-    </Sheet>
+    <SideSheet open={Boolean(id)} onOpenChange={(open) => !open && onClose()}>
+      {id ? <EventDetail id={id} /> : null}
+    </SideSheet>
   );
 }
 
@@ -157,19 +148,16 @@ function Loaded({ event }: { event: JournalEvent }) {
             <h3 id="related" className="mb-2 border-b border-rule pb-1.5 font-serif text-lg font-normal">
               {t("jr-related")}
             </h3>
-            <dl className="grid grid-cols-[7rem_1fr] gap-x-4 gap-y-1.5 text-sm">
+            <Facts narrow>
               {related.map((r) => (
-                <div key={`${r.label}-${r.value}`} className="contents">
-                  <dt className="label-mono pt-0.5">{r.label}</dt>
-                  <dd>
-                    <Link {...r.link} className="inline-flex items-center gap-1 text-ink hover:text-ember">
-                      <span className={r.person ? "" : "font-mono text-[0.8rem]"}>{r.value}</span>
-                      <ArrowUpRight className="size-3" aria-hidden="true" />
-                    </Link>
-                  </dd>
-                </div>
+                <Fact key={`${r.label}-${r.value}`} term={r.label}>
+                  <Link {...r.link} className="inline-flex items-center gap-1 text-ink hover:text-ember">
+                    <span className={r.person ? "" : "font-mono text-[0.8rem]"}>{r.value}</span>
+                    <ArrowUpRight className="size-3" aria-hidden="true" />
+                  </Link>
+                </Fact>
               ))}
-            </dl>
+            </Facts>
           </section>
         ) : null}
 

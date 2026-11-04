@@ -1,12 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ArrowRight, MessageSquareText } from "lucide-react";
+import { MessageSquareText } from "lucide-react";
 import { api, isMissing, keys, type Watch, watchesQuery, watchQuery } from "@/api";
 import { Ago } from "@/components/ago";
 import { Confirm } from "@/components/confirm";
 import { type Crumb, Crumbs } from "@/components/crumbs";
 import { useNotify } from "@/components/notices";
-import { PageHeader, Section } from "@/components/page";
+import { PageHeader, RowArrow, RowList, Section, WithAside } from "@/components/page";
 import { Empty, Failure, Loading } from "@/components/states";
 import { Tag } from "@/components/status";
 import { Button } from "@/components/ui/button";
@@ -44,7 +44,7 @@ export function WatchesList() {
         {watches.data.watches.length === 0 ? (
           <Empty hint={t("watch-active-empty-hint")}>{t("watch-active-empty")}</Empty>
         ) : (
-          <ul className="divide-y divide-rule rounded-md border border-rule bg-paper-raised">
+          <RowList>
             {watches.data.watches.map((w) => (
               <li key={w.id}>
                 <Link
@@ -69,14 +69,11 @@ export function WatchesList() {
                       t("watch-never-triggered")
                     )}
                   </span>
-                  <ArrowRight
-                    className="hidden size-3.5 text-ink-faint group-hover:text-ink sm:block"
-                    aria-hidden="true"
-                  />
+                  <RowArrow />
                 </Link>
               </li>
             ))}
-          </ul>
+          </RowList>
         )}
       </Section>
     </>
@@ -121,11 +118,11 @@ function Loaded({ watch: w, trail }: { watch: Watch; trail: Crumb[] }) {
         crumbs={<Crumbs trail={trail} />}
         title={w.what}
         meta={
-          <p className="flex flex-wrap gap-x-3 text-[0.85rem] text-ink-muted">
+          <>
             <span>{t("watch-for", { name: name(w.owner) })}</span>
             <span>{t("watch-created", { when: moment(w.created_at) })}</span>
             {w.until ? <span>{t("watch-until", { when: moment(w.until) })}</span> : null}
-          </p>
+          </>
         }
         actions={
           canCancel ? (
@@ -140,7 +137,7 @@ function Loaded({ watch: w, trail }: { watch: Watch; trail: Crumb[] }) {
           ) : null
         }
       />
-      <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_18rem] [&>*]:min-w-0">
+      <WithAside>
         <Section title={t("watch-found")} count={w.triggered}>
           <SubjectStory filters={{ watch: w.id }} empty={t("watch-found-empty")} />
         </Section>
@@ -177,7 +174,7 @@ function Loaded({ watch: w, trail }: { watch: Watch; trail: Crumb[] }) {
             </div>
           ) : null}
         </aside>
-      </div>
+      </WithAside>
     </>
   );
 }
