@@ -10,7 +10,14 @@ from pydantic_core import PydanticCustomError
 from nestor.core import ProviderError
 from nestor.runtime.plugins import AdapterSettings
 
-BRANDS = {"openrouter.ai": "openrouter", "openai.com": "openai", "mistral.ai": "mistral", "anthropic.com": "anthropic"}
+BRANDS = {  # host suffix → brand; published with `base_url`'s schema (`x-brands`) so the admin shows the same
+    "openrouter.ai": "openrouter",
+    "openai.com": "openai",
+    "mistral.ai": "mistral",
+    "anthropic.com": "anthropic",
+    "generativelanguage.googleapis.com": "gemini",
+    "groq.com": "groq",
+}
 MAX_DETAIL = 300
 _RETRYABLE_STATUSES = frozenset({408, 409, 425, 429})
 
@@ -56,7 +63,7 @@ class EndpointSettings(AdapterSettings):
     The key is optional, as local servers need none: empty is the same as absent. The hosted providers known
     to require one refuse to be configured without it."""
 
-    base_url: str
+    base_url: str = Field(json_schema_extra={"x-brands": BRANDS})
     api_key: SecretStr | None = Field(default=None, validate_default=True)
 
     @field_validator("api_key", mode="before")

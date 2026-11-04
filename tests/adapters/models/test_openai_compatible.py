@@ -581,6 +581,8 @@ class TestOpenRouterLive(ConversationModelContract):
     [
         ("https://openrouter.ai/api/v1", "openrouter"),
         ("https://api.openai.com/v1", "openai"),
+        ("https://generativelanguage.googleapis.com/v1beta/openai", "gemini"),
+        ("https://api.groq.com/openai/v1", "groq"),
         ("http://localhost:8000", None),
     ],
 )

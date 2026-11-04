@@ -24,6 +24,22 @@ import { ObjectFields, Problems } from "./fields";
 import { freeName, getAt, isRecord, move, NAME, type Path, problemsUnder, renamed } from "./schema";
 import { type ConfigPage, pageTitle } from "./sections";
 
+/**
+ * What a component's mark shows: the provider its `base_url` belongs to when its schema publishes the
+ * hosts the runtime recognises (`x-brands`, as the runtime itself brands a model), else its kind.
+ */
+export function markOf(kind: string, entry: Record<string, unknown>, schema: unknown): string {
+  const brands =
+    isRecord(schema) && isRecord(schema.properties) && isRecord(schema.properties.base_url)
+      ? schema.properties.base_url["x-brands"]
+      : undefined;
+  const url = typeof entry.base_url === "string" ? entry.base_url : "";
+  if (!isRecord(brands) || !URL.canParse(url)) return kind;
+  const host = new URL(url).hostname;
+  const found = Object.entries(brands).find(([suffix]) => host === suffix || host.endsWith(`.${suffix}`));
+  return typeof found?.[1] === "string" ? found[1] : kind;
+}
+
 /** The title of a plugin kind: its brand's name when it has one. */
 export function kindTitle(kind: string): string {
   const slug = brandOf(kind);
@@ -293,7 +309,7 @@ function ManySlot({ slotKey, slot }: { slotKey: string; slot: ConfigSlot }) {
               <ItemCard
                 // biome-ignore lint/suspicious/noArrayIndexKey: a component's position is its place in the file
                 key={index}
-                mark={kind}
+                mark={markOf(kind, entry, slot.kinds[kind])}
                 title={nameOf(entry)}
                 subtitle={kind}
                 detail={summary(entry)}
@@ -382,7 +398,7 @@ function NamedSlot({ slotKey, slot }: { slotKey: string; slot: ConfigSlot }) {
             return (
               <ItemCard
                 key={name}
-                mark={kind}
+                mark={markOf(kind, entry, slot.kinds[kind])}
                 title={name}
                 subtitle={kindTitle(kind)}
                 detail={summary(entry)}

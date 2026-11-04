@@ -569,6 +569,14 @@
                 "group": "model-openai-compatible",
                 "title": "Address of the API",
                 "help": null
+              },
+              "x-brands": {
+                "anthropic.com": "anthropic",
+                "generativelanguage.googleapis.com": "gemini",
+                "groq.com": "groq",
+                "mistral.ai": "mistral",
+                "openai.com": "openai",
+                "openrouter.ai": "openrouter"
               }
             },
             "api_key": {
@@ -1285,6 +1293,14 @@
                 "group": "executor-hermes",
                 "title": "Address of the API",
                 "help": null
+              },
+              "x-brands": {
+                "anthropic.com": "anthropic",
+                "generativelanguage.googleapis.com": "gemini",
+                "groq.com": "groq",
+                "mistral.ai": "mistral",
+                "openai.com": "openai",
+                "openrouter.ai": "openrouter"
               }
             },
             "api_key": {
