@@ -3,6 +3,7 @@ import { type FormEvent, useState } from "react";
 import { api, type Connector, keys } from "@/api";
 import { CopyField } from "@/components/copy-field";
 import { Field } from "@/components/field";
+import { FormActions } from "@/components/form-actions";
 import { useNotify } from "@/components/notices";
 import { FormDialog } from "@/components/overlay-form";
 import { FormError } from "@/components/states";
@@ -116,9 +117,11 @@ function ClientForm({ connector, onDone }: { connector: Connector; onDone: () =>
         />
       </Field>
       <FormError error={save.error} />
-      <Button type="submit" disabled={save.isPending} className="justify-self-end">
-        {save.isPending ? t("action-saving") : t("conn-client-register")}
-      </Button>
+      <FormActions>
+        <Button type="submit" disabled={save.isPending}>
+          {save.isPending ? t("action-saving") : t("conn-client-register")}
+        </Button>
+      </FormActions>
     </form>
   );
 }

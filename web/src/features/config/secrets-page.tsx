@@ -3,6 +3,7 @@ import { KeyRound, Plus, Trash2 } from "lucide-react";
 import { type FormEvent, type ReactElement, useState } from "react";
 import { ApiError, api, keys, messageOf, type Secret, secretsQuery } from "@/api";
 import { Field } from "@/components/field";
+import { FormActions } from "@/components/form-actions";
 import { useNotify } from "@/components/notices";
 import { FormDialog } from "@/components/overlay-form";
 import { Section } from "@/components/page";
@@ -168,14 +169,14 @@ function SecretFields({ name: fixed, close }: { name?: string; close: () => void
           {messageOf(write.error)}
         </p>
       ) : null}
-      <div className="flex justify-end gap-2">
+      <FormActions>
         <Button type="button" variant="ghost" onClick={close}>
           {t("action-cancel")}
         </Button>
         <Button type="submit" variant="accent" disabled={write.isPending || !name.trim() || !value}>
           {write.isPending ? "…" : t("cfg-secret-save")}
         </Button>
-      </div>
+      </FormActions>
     </form>
   );
 }

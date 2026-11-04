@@ -156,8 +156,8 @@
 
 @layer components {
   /* small-caps mono labels for data: field captions, facet groups, nav groups — never above a title */
-  /* the actions of a form in a dialog stay in reach while its body scrolls on small screens */
-  [data-slot="dialog-content"] form > :last-child {
+  /* the actions of a form in a dialog (FormActions) are its footer, in reach while its body scrolls */
+  [data-slot="dialog-content"] [data-slot="form-actions"] {
     position: sticky;
     bottom: -1rem;
     margin-inline: -1rem;
