@@ -10,7 +10,7 @@ RUN mkdir -p .claude/skills && pnpm install --frozen-lockfile
 COPY web ./
 RUN pnpm build
 
-FROM python:3.12-slim AS build
+FROM python:3.15-slim AS build
 COPY --from=ghcr.io/astral-sh/uv:0.13.7 /uv /usr/local/bin/uv
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy UV_PYTHON_DOWNLOADS=never
 WORKDIR /app
@@ -20,7 +20,7 @@ COPY src ./src
 COPY --from=web /src/nestor/admin/static/app ./src/nestor/admin/static/app
 RUN uv sync --locked --no-dev --all-extras
 
-FROM python:3.12-slim
+FROM python:3.15-slim
 RUN useradd --create-home --uid 1000 nestor
 COPY --from=build --chown=nestor:nestor /app /app
 COPY docker-entrypoint.sh /usr/local/bin/
