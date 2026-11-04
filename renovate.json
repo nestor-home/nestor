@@ -1,4 +1,12 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["github>nestor-home/.github"]
+  "extends": ["github>nestor-home/.github"],
+  "packageRules": [
+    {
+      "description": "The image and .python-version follow the newest Python the CI tests and every extra installs on: a new one waits on the dashboard.",
+      "matchDepNames": ["python"],
+      "dependencyDashboardApproval": true,
+      "automerge": false
+    }
+  ]
 }
