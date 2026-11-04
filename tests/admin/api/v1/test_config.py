@@ -225,7 +225,7 @@ async def test_only_owners_and_admins_edit_the_configuration(tmp_path: Path) -> 
 async def test_a_restart_is_asked_for_by_a_person_and_confirmed(tmp_path: Path) -> None:
     async with Harness(tmp_path) as admin:
         restarted = asyncio.Event()
-        admin.app.state.admin.restart = restarted.set
+        admin.nestor.restart.stop = restarted.set
         api = await admin.api()
         unconfirmed = await api.post("/api/v1/system/restart", {"confirm": False})
         assert unconfirmed.status_code == 400 and not restarted.is_set()
@@ -307,7 +307,7 @@ async def test_the_journal_tells_who_changed_the_configuration_its_secrets_and_a
     tmp_path: Path,
 ) -> None:
     async with Harness(tmp_path) as admin:
-        admin.app.state.admin.restart = lambda: None
+        admin.nestor.restart.stop = lambda: None
         api = await admin.api()
         edited = await document(api)
         edited["persona"]["name"] = "Nestor"

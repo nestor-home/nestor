@@ -7,15 +7,21 @@ from typing import Any
 import pytest
 
 from nestor.core import ContractError
+from nestor.modules.journal import Journal
 from nestor.modules.system import (
     Change,
     ChangeKind,
+    Installation,
+    InstallKind,
     Release,
     Releases,
+    UpdateFailed,
+    UpdateRequested,
     Updates,
     version_key,
 )
-from nestor.testing.system import StaticReleaseFeed
+from nestor.testing.journal import MemoryEventLog
+from nestor.testing.system import FakeInstaller, StaticReleaseFeed
 
 NOW = datetime.fromisoformat("2026-11-04T09:00:00+00:00")
 FEED = {
@@ -75,8 +81,23 @@ def test_versions_compare_as_numbers() -> None:
         version_key("latest")
 
 
-def _updates(feed: StaticReleaseFeed, **options: Any) -> Updates:
-    return Updates(feed, "0.7.0", **options)
+PIP = Installation(InstallKind.PIP, ("pip install --upgrade nestor-home",))
+
+
+class Restarts:
+    """Who asked for a restart, in order."""
+
+    def __init__(self) -> None:
+        self.by: list[str] = []
+        self.asked = asyncio.Event()
+
+    async def __call__(self, by: str) -> None:
+        self.by.append(by)
+        self.asked.set()
+
+
+def _updates(feed: StaticReleaseFeed, installer: FakeInstaller | None = None, **options: Any) -> Updates:
+    return Updates(feed, "0.7.0", Journal(MemoryEventLog()), Restarts(), PIP, installer=installer, **options)
 
 
 async def test_a_feed_that_cannot_be_read_keeps_the_last_one_read() -> None:
@@ -101,3 +122,54 @@ async def test_the_feed_is_read_after_a_pause_then_regularly_until_closed() -> N
     read = feed.reads
     await asyncio.sleep(0.05)
     assert feed.reads == read
+
+
+async def _read(installer: FakeInstaller | None) -> tuple[Updates, Journal, Restarts]:
+    journal, restarts = Journal(MemoryEventLog()), Restarts()
+    feed = StaticReleaseFeed(Releases.from_json(FEED))
+    updates = Updates(feed, "0.7.0", journal, restarts, PIP, installer=installer)
+    await updates.check()
+    return updates, journal, restarts
+
+
+async def test_only_the_newest_release_is_installed_then_nestor_restarts() -> None:
+    installer = FakeInstaller(wait=True)
+    updates, journal, restarts = await _read(installer)
+    assert [r.version for r in updates.newer()] == ["0.10.0", "0.8.0"]
+    for version in ("0.8.0", "0.7.0", "9.9.9"):
+        with pytest.raises(ContractError):
+            await updates.install(version, by="mathis")
+    await updates.install("0.10.0", by="mathis")
+    assert updates.installing == "0.10.0"
+    with pytest.raises(ContractError):
+        await updates.install("0.10.0", by="mathis")
+    installer.release.set()
+    await asyncio.wait_for(restarts.asked.wait(), 1)
+    assert installer.installed == ["0.10.0"] and restarts.by == ["mathis"]
+    [asked] = await journal.history(UpdateRequested)
+    assert (asked.by, asked.running, asked.target) == ("mathis", "0.7.0", "0.10.0")
+
+
+class Broken(FakeInstaller):
+    """An installer that fails in a way nobody planned (a command that cannot start, a bug)."""
+
+    async def install(self, version: str) -> None:
+        raise FileNotFoundError("nestor")
+
+
+@pytest.mark.parametrize("installer", [FakeInstaller(fails=True), Broken()], ids=["refused", "unplanned error"])
+async def test_a_release_that_does_not_install_leaves_the_running_one_and_says_so(installer: FakeInstaller) -> None:
+    updates, journal, restarts = await _read(installer)
+    await updates.install("0.10.0", by="mathis")
+    assert updates._install is not None
+    await updates._install
+    assert (updates.installing, updates.failed, restarts.by) == (None, "0.10.0", [])
+    [failed] = await journal.history(UpdateFailed)
+    assert failed.target == "0.10.0"
+    await updates.install("0.10.0", by="mathis")  # it can be tried again
+
+
+async def test_an_instance_without_an_installer_updates_the_way_it_was_installed() -> None:
+    updates, _, _ = await _read(None)
+    with pytest.raises(ContractError):
+        await updates.install("0.10.0", by="mathis")

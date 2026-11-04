@@ -2,4 +2,5 @@
 
 from importlib.metadata import version
 
-__version__ = version("nestor-home")
+DISTRIBUTION = "nestor-home"  # the package Nestor is installed as
+__version__ = version(DISTRIBUTION)

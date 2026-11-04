@@ -6779,6 +6779,118 @@
         }
       }
     },
+    "/api/v1/system/updates/install": {
+      "post": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Install Update",
+        "description": "Install the newest release where Nestor runs (a Python environment, never a container), check it\naccepts the configuration, then restart on it. On failure the running version stays: `failed`.",
+        "operationId": "installUpdate",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InstallIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdatesOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/system/restart": {
       "post": {
         "tags": [
@@ -9513,6 +9625,36 @@
         ],
         "title": "InitiativeOut"
       },
+      "InstallIn": {
+        "properties": {
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "confirm": {
+            "type": "boolean",
+            "title": "Confirm"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "version",
+          "confirm"
+        ],
+        "title": "InstallIn"
+      },
+      "InstallKind": {
+        "type": "string",
+        "enum": [
+          "container",
+          "editable",
+          "uv-tool",
+          "pip"
+        ],
+        "title": "InstallKind",
+        "description": "How this Nestor is installed, which says how it is updated."
+      },
       "InvitationAcceptIn": {
         "properties": {
           "token": {
@@ -11620,15 +11762,63 @@
             },
             "type": "array",
             "title": "Releases"
+          },
+          "installation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InstallKind"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "commands": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Commands"
+          },
+          "installable": {
+            "type": "boolean",
+            "title": "Installable"
+          },
+          "installing": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Installing"
+          },
+          "failed": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failed"
           }
         },
         "type": "object",
         "required": [
           "running",
-          "releases"
+          "releases",
+          "installation",
+          "commands",
+          "installable",
+          "installing",
+          "failed"
         ],
         "title": "UpdatesOut",
-        "description": "What was released since the running version."
+        "description": "What was released since the running version, and how this Nestor gets it."
       },
       "WatchOut": {
         "properties": {

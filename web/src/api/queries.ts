@@ -87,6 +87,7 @@ export const updatesQuery = queryOptions({
   queryKey: keys.updates,
   queryFn: api.updates,
   staleTime: 3_600_000,
+  refetchInterval: (q) => (q.state.data?.installing ? 1_000 : false), // an install runs on the server
 });
 
 export const connectorsQuery = queryOptions({ queryKey: keys.connectors, queryFn: api.connectors });

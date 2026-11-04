@@ -20,6 +20,26 @@ def version_key(version: str) -> tuple[int, int, int]:
     return major, minor, patch
 
 
+class InstallKind(StrEnum):
+    """How this Nestor is installed, which says how it is updated."""
+
+    CONTAINER = "container"  # an image: the household pulls the new one (a container cannot replace itself)
+    EDITABLE = "editable"  # a developer's checkout: updated with git, never from the admin
+    UV_TOOL = "uv-tool"  # `uv tool install nestor-home`
+    PIP = "pip"  # a Python environment of its own
+
+
+@dataclass(frozen=True, slots=True)
+class Installation:
+    kind: InstallKind
+    commands: tuple[str, ...]  # what a person runs to update it by hand (none for a checkout)
+
+    @property
+    def installable(self) -> bool:
+        """Whether Nestor can install a release into itself from the admin."""
+        return self.kind in (InstallKind.UV_TOOL, InstallKind.PIP)
+
+
 class ChangeKind(StrEnum):
     BREAKING = "breaking"  # the data or the configuration must be redone, or a contract changed
     FEATURE = "feature"

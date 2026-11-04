@@ -1,6 +1,5 @@
 """What is plugged in: every configured adapter and paired satellite, its brand, version and health."""
 
-import asyncio
 from datetime import date
 from typing import Annotated
 
@@ -14,17 +13,16 @@ from nestor.admin.api.v1.routes.satellites import live_rooms
 from nestor.admin.api.v1.security import Caller, allowed
 from nestor.admin.presentation import Phrasebook
 from nestor.admin.state import state
-from nestor.core import Component, Health
+from nestor.core import Component, ContractError, Health
 from nestor.core.i18n import Message
 from nestor.modules.accounts import Scope
 from nestor.modules.connectors import Connector
-from nestor.modules.system import ChangeKind, Release, RestartRequested
+from nestor.modules.system import ChangeKind, InstallKind, Release
 from nestor.runtime import Plugged
 
 router = APIRouter(tags=["system"])
 Reader = Annotated[Caller, Depends(allowed(Scope.SYSTEM_READ))]
 Restarter = Annotated[Caller, Depends(allowed(Scope.CONFIG_MANAGE, local=True))]
-RESTART_DELAY_S = 0.2
 
 
 class ComponentOut(BaseModel):
@@ -116,18 +114,55 @@ class ReleaseOut(BaseModel):
 
 
 class UpdatesOut(BaseModel):
-    """What was released since the running version."""
+    """What was released since the running version, and how this Nestor gets it."""
 
     running: str
     releases: list[ReleaseOut]  # newer than the running version, newest first; empty: up to date (or not checked)
+    installation: InstallKind | None  # how Nestor is installed; None when `updates.check` is off
+    commands: list[str]  # what to run to update it by hand (none for a developer's checkout)
+    installable: bool  # `POST /system/updates/install` can install the newest release here
+    installing: str | None  # the version being installed; a restart follows
+    failed: str | None  # the version that last failed to install (the running one stayed)
 
 
 @router.get("/system/updates")
 async def get_updates(request: Request, caller: Reader) -> UpdatesOut:
-    updates = state(request).nestor.updates
+    nestor = state(request).nestor
+    updates = nestor.updates
     if updates is None:
-        return UpdatesOut(running=__version__, releases=[])
-    return UpdatesOut(running=updates.running, releases=[_release(r) for r in updates.newer()])
+        return UpdatesOut(running=__version__, releases=[], installation=None, commands=[],
+                          installable=False, installing=None, failed=None)  # fmt: skip
+    return UpdatesOut(
+        running=updates.running,
+        releases=[_release(r) for r in updates.newer()],
+        installation=updates.installation.kind,
+        commands=list(updates.installation.commands),
+        installable=updates.installer is not None,
+        installing=updates.installing,
+        failed=updates.failed,
+    )
+
+
+class InstallIn(Input):
+    version: str  # the newest release, as `GET /system/updates` says
+    confirm: bool  # must be true: once installed, Nestor restarts and every conversation is interrupted
+
+
+@router.post("/system/updates/install", status_code=202)
+async def install_update(request: Request, caller: Restarter, body: InstallIn) -> UpdatesOut:
+    """Install the newest release where Nestor runs (a Python environment, never a container), check it
+    accepts the configuration, then restart on it. On failure the running version stays: `failed`."""
+    if not body.confirm:
+        raise ApiError(400, "update_unconfirmed")
+    admin = state(request)
+    updates = admin.nestor.updates
+    if updates is None:
+        raise ApiError(409, "update_not_installable")
+    try:
+        await updates.install(body.version, by=caller.account_id or "cli")
+    except ContractError:
+        raise ApiError(409, "update_not_installable") from None
+    return await get_updates(request, caller)
 
 
 def _release(release: Release) -> ReleaseOut:
@@ -154,7 +189,5 @@ async def restart_system(request: Request, caller: Restarter, body: RestartIn) -
     again with the same command line — applying the configuration written since. Never automatic."""
     if not body.confirm:
         raise ApiError(400, "restart_unconfirmed")
-    admin = state(request)
-    await admin.nestor.journal.publish(RestartRequested(source="admin", by=caller.account_id or "cli"))
-    asyncio.get_running_loop().call_later(RESTART_DELAY_S, admin.restart)  # once this answer is sent
+    await state(request).nestor.restart.ask(caller.account_id or "cli")
     return RestartOut(restarting=True)

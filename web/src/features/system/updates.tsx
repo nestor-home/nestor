@@ -1,16 +1,23 @@
 /**
- * A newer Nestor: the sidebar says so, the dialog shows what changed since the running version and
- * what breaks. The household updates Nestor the way it installed it.
+ * A newer Nestor: the sidebar says so, the dialog shows what changed since the running version, what
+ * breaks and which satellites the new version no longer speaks to. Where Nestor runs from a Python
+ * environment, the owner installs it from here and Nestor restarts on it; otherwise the dialog gives
+ * the commands the server names for the way Nestor is installed.
  */
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CircleArrowUp, ExternalLink } from "lucide-react";
-import { useState } from "react";
-import { type ChangeKind, type Release, updatesQuery } from "@/api";
+import { useEffect, useState } from "react";
+import { api, type ChangeKind, keys, type Release, type Updates, updatesQuery } from "@/api";
 import { AgentFigure } from "@/components/agent-figure";
+import { Confirm } from "@/components/confirm";
+import { CopyField } from "@/components/copy-field";
 import { Dither } from "@/components/dither";
-import { Notice } from "@/components/states";
+import { FormActions } from "@/components/form-actions";
+import { FormError, Notice } from "@/components/states";
+import { Button } from "@/components/ui/button";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import { UpdateDialog } from "@/components/update-dialog";
+import { Restarting, useRestart } from "@/features/config/restart";
 import { useT } from "@/i18n";
 import { calendarDay } from "@/lib/dates";
 import { useCan } from "@/lib/session";
@@ -25,10 +32,13 @@ export function UpdateAvailable({ compact }: { compact: boolean }) {
   const [open, setOpen] = useState(false);
   const [hover, setHover] = useState(false);
   const latest = updates.data?.releases[0]?.version;
-  if (!latest) return null;
+  // the release being installed: the dialog follows Nestor through its restart, even once the server,
+  // back on that release, lists nothing newer
+  const [target, setTarget] = useState<string | null>(null);
+  if (!latest && !target) return null;
   return (
     <>
-      {
+      {latest ? (
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
@@ -54,36 +64,102 @@ export function UpdateAvailable({ compact }: { compact: boolean }) {
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
-      }
-      <NestorUpdate open={open} onOpenChange={setOpen} />
+      ) : null}
+      <NestorUpdate open={open} onOpenChange={setOpen} target={target} onTarget={setTarget} />
     </>
   );
 }
 
-/** What changed in each release since the running one, newest first. */
-export function NestorUpdate({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+/**
+ * The notes, then the confirmation in their place (never on top), then the install in the notes again.
+ * What the install is doing comes from the server alone (`installing`, `failed`); once it stops
+ * answering, or answers on the new version, the dialog follows Nestor through its restart.
+ */
+export function NestorUpdate({
+  open,
+  onOpenChange,
+  target,
+  onTarget,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  target: string | null;
+  onTarget: (version: string | null) => void;
+}) {
   const t = useT();
-  const updates = useQuery(updatesQuery).data;
-  const version = updates?.releases[0]?.version;
+  const canInstall = useCan("config:manage");
+  const queryClient = useQueryClient();
+  const query = useQuery(updatesQuery);
+  const { phase, waitBack } = useRestart();
+  const [confirming, setConfirming] = useState(false);
+  const updates = query.data;
+  const version = target ?? updates?.releases[0]?.version ?? "";
+  // it went down (a failed poll, before react-query's retries end) or came back on that release
+  const gone = query.failureCount > 0 || updates?.running === target;
+
+  useEffect(() => {
+    if (!target || phase !== "idle") return;
+    if (updates?.failed === target)
+      onTarget(null); // the running release stayed: the notes say why
+    else if (gone) void waitBack().then(() => onTarget(null));
+  }, [target, gone, phase, waitBack, onTarget, updates?.failed]);
+
   if (!updates || !version) return null;
+  const install = async () => {
+    queryClient.setQueryData(keys.updates, await api.installUpdate(version));
+    onTarget(version);
+  };
+  const byHand = !updates.installable || !canInstall;
   return (
-    <UpdateDialog
-      open={open}
-      onOpenChange={onOpenChange}
-      tone="ember"
-      mark={<AgentFigure state="laughing" size="lg" />}
-      title={t("upd-title", { version })}
-      description={t("upd-description")}
-      running={updates.running}
-      latest={version}
-      aside={t("upd-behind", { count: updates.releases.length })}
-      footer={<p className="text-sm text-ink-muted">{t("upd-by-hand")}</p>}
-    >
-      {updates.releases.some((r) => r.breaking) ? <Notice>{t("upd-breaking")}</Notice> : null}
-      {updates.releases.map((release) => (
-        <ReleaseNotes key={release.version} release={release} />
-      ))}
-    </UpdateDialog>
+    <>
+      <UpdateDialog
+        open={open && !confirming}
+        onOpenChange={onOpenChange}
+        tone="ember"
+        mark={<AgentFigure state={updates.installing ? "working" : "laughing"} size="lg" />}
+        title={t("upd-title", { version })}
+        description={t("upd-description")}
+        running={updates.running}
+        latest={version}
+        aside={t("upd-behind", { count: updates.releases.length })}
+        footer={
+          phase !== "idle" ? (
+            <Restarting phase={phase} className="bg-transparent p-0" />
+          ) : updates.installing ? (
+            <p role="status" className="text-sm text-ink">
+              {t("upd-installing", { version })}
+            </p>
+          ) : !byHand ? (
+            <FormActions hint={t("upd-install-hint")}>
+              <Button variant="accent" onClick={() => setConfirming(true)}>
+                {t("upd-install", { version })}
+              </Button>
+            </FormActions>
+          ) : updates.installation !== "container" ? (
+            <Restart canRestart={canInstall} />
+          ) : null
+        }
+      >
+        {updates.failed === version ? <Notice>{t("upd-failed", { version, running: updates.running })}</Notice> : null}
+        {updates.releases.some((r) => r.breaking) ? <Notice>{t("upd-breaking")}</Notice> : null}
+        {updates.releases.map((release) => (
+          <ReleaseNotes key={release.version} release={release} />
+        ))}
+        {byHand ? <ByHand updates={updates} /> : null}
+      </UpdateDialog>
+      <Confirm
+        open={open && confirming}
+        onOpenChange={(next) => {
+          if (!next) setConfirming(false);
+        }}
+        title={t("upd-install-title", { version })}
+        confirm={t("upd-install-confirm")}
+        tone="accent"
+        onConfirm={install}
+      >
+        {t("upd-install-description", { running: updates.running })}
+      </Confirm>
+    </>
   );
 }
 
@@ -121,5 +197,34 @@ function ReleaseNotes({ release }: { release: Release }) {
         );
       })}
     </section>
+  );
+}
+
+/** Where Nestor does not install itself: the commands the server names for how it is installed. */
+function ByHand({ updates }: { updates: Updates }) {
+  const t = useT();
+  return (
+    <section className="grid gap-3 border-t border-rule pt-5">
+      <h3 className="font-serif text-lg font-normal">{t("upd-how")}</h3>
+      <p className="text-sm text-ink-muted">{t(`upd-how-${updates.installation ?? "editable"}`)}</p>
+      {updates.commands.map((command) => (
+        <CopyField key={command} value={command} label={t("upd-command")} />
+      ))}
+    </section>
+  );
+}
+
+function Restart({ canRestart }: { canRestart: boolean }) {
+  const t = useT();
+  const { phase, pending, error, restart } = useRestart();
+  if (phase !== "idle") return <Restarting phase={phase} className="bg-transparent p-0" />;
+  if (!canRestart) return <p className="text-sm text-ink-muted">{t("upd-then-ask")}</p>;
+  return (
+    <FormActions hint={t("upd-then-restart")}>
+      <FormError error={error} />
+      <Button variant="outline" onClick={() => void restart()} disabled={pending}>
+        {pending ? "…" : t("cfg-restart-now")}
+      </Button>
+    </FormActions>
   );
 }

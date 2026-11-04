@@ -312,6 +312,8 @@ error-config-history-unknown = This earlier configuration does not exist.
 error-secret-in-use = This secret is still used by { $paths }: remove those references first.
 error-secret-unknown = This secret is not set.
 error-restart-unconfirmed = Confirm the restart: every conversation will be interrupted for a moment.
+error-update-unconfirmed = Confirm the update: Nestor restarts once it is installed.
+error-update-not-installable = This release cannot be installed from here.
 
 ## Satellites (copied from Nestor's locales/en/errors.ftl)
 error-invalid-code = The code is 6 digits, shown or said by the device.
