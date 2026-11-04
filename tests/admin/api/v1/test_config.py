@@ -158,6 +158,20 @@ async def test_models_are_named_by_the_household_and_the_agent_refers_to_them(tm
         assert "spoken: vite" in admin.config_path.read_text()
 
 
+async def test_an_account_two_people_claim_is_located_at_the_second(tmp_path: Path) -> None:
+    async with Harness(tmp_path) as admin:
+        api = await admin.api()
+        edited = await document(api)
+        shared = edited["household"][0]["accounts"][0]
+        edited["household"].append({"id": "lea", "name": "Léa", "accounts": ["telegram:7", shared]})
+        problems = (await api.put("/api/v1/config", {"document": edited})).json()["error"]["problems"]
+        [problem] = problems
+        index = len(edited["household"]) - 1
+        assert problem["path"] == ["household", index, "accounts", 1], "on the account, in the dialog of who added it"
+        said = ": déjà le compte d'une autre personne. Un compte ne désigne qu'une personne."
+        assert problem["message"].endswith(said), "in the reader's language"
+
+
 async def test_a_preview_says_what_would_change_without_writing(tmp_path: Path) -> None:
     async with Harness(tmp_path) as admin:
         api = await admin.api()

@@ -176,6 +176,14 @@ function SaveBar() {
               {t("cfg-problems", { count: problems })}
             </button>
           ) : null}
+          {/* a problem with no field to show it at: said here */}
+          {editor.problems
+            .filter((p) => !p.path.length)
+            .map((p) => (
+              <span key={p.message} className="text-brick">
+                {p.message}
+              </span>
+            ))}
           {count ? (
             <button type="button" onClick={() => setOpen(true)} className="text-ink underline-offset-4 hover:underline">
               {t("cfg-changes", { count })}

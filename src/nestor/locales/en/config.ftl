@@ -11,6 +11,7 @@ config-error-secret = { $path }: the secret { $detail } is not set.
 config-error-no-answering-model = { $path }: several models can answer ({ $detail }). Choose the one for speaking, the one for writing, or both.
 config-error-not-answering = { $path }: { $detail } searches memories and cannot answer. Choose a conversation model.
 config-error-not-embedding = { $path }: { $detail } is a conversation model and cannot search memories. Choose an embedding model.
+config-error-shared-account = { $path }: already someone else's account. An account stands for one person only.
 
 config-section-persona = Persona
 config-section-household = Household

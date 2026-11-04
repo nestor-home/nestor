@@ -3,7 +3,15 @@
 from collections.abc import Iterable
 
 from nestor.core import ContractError, PersonId
-from nestor.modules.household.types import ANYONE, Person
+from nestor.modules.household.types import ANYONE, Account, Person
+
+
+class SharedAccount(ContractError):
+    """Two people claim the same account: a channel could not tell who is writing or speaking."""
+
+    def __init__(self, account: Account, first: PersonId, second: PersonId) -> None:
+        super().__init__(f"account {account} belongs to both {first!r} and {second!r}")
+        self.account = account
 
 
 class Household:
@@ -14,8 +22,7 @@ class Household:
             for account in person.accounts:
                 key = (account.channel, account.sender)
                 if key in self._accounts:
-                    other = self._accounts[key].id
-                    raise ContractError(f"account {account} belongs to both {other!r} and {person.id!r}")
+                    raise SharedAccount(account, self._accounts[key].id, person.id)
                 self._accounts[key] = person
 
     @property
