@@ -11,12 +11,12 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useNow } from "@/hooks/use-now";
 import { useT } from "@/i18n";
-import { BrandMark, brandOf } from "@/lib/brands";
 import { remaining } from "@/lib/dates";
 import { CAPABILITY_ICON } from "@/lib/icons";
 import { useCan, useMe } from "@/lib/session";
 import { AddSatelliteButton, IdentifyButton } from "./add-satellite";
 import { ApproveForm } from "./approve-form";
+import { DeviceMark } from "./device-mark";
 
 export function SatellitesList({
   approving,
@@ -59,12 +59,15 @@ function Pending({ requests, onApprove }: { requests: PairingRequest[]; onApprov
     <Section title={t("sat-pending")} count={requests.length}>
       <ul className="grid gap-3 sm:grid-cols-2">
         {requests.map((r) => {
-          const brand = brandOf(r.device.brand);
           return (
             <li key={r.id} className="rounded-md border border-rule bg-paper-raised p-5">
               <div>
                 <div className="flex items-center gap-2">
-                  {brand ? <BrandMark brand={brand} className="size-4 text-ink" /> : null}
+                  <DeviceMark
+                    brand={r.device.brand}
+                    capabilities={r.capabilities.map((c) => c.name)}
+                    className="size-4 text-ink"
+                  />
                   <h3 className="font-mono text-[0.95rem] font-medium">{r.device.id}</h3>
                 </div>
                 <p className="mt-1 text-sm text-ink-muted">
@@ -125,7 +128,6 @@ function ApproveDialog({ request, onClose }: { request: PairingRequest | undefin
 
 function PairedRow({ satellite: s }: { satellite: Satellite }) {
   const t = useT();
-  const brand = brandOf(s.brand);
   return (
     <li>
       <Link
@@ -133,7 +135,7 @@ function PairedRow({ satellite: s }: { satellite: Satellite }) {
         params={{ satelliteId: s.id }}
         className="group grid grid-cols-[1.5rem_minmax(0,1fr)_auto] items-center gap-x-4 px-5 py-3.5 hover:bg-paper-sunken/60 sm:grid-cols-[1.5rem_minmax(0,1.4fr)_minmax(0,1fr)_12rem_1rem]"
       >
-        {brand ? <BrandMark brand={brand} className="size-5 text-ink" /> : <span />}
+        <DeviceMark brand={s.brand} capabilities={s.capabilities.map((c) => c.name)} className="size-5 text-ink" />
         <span className="min-w-0">
           <span className="block text-ink">{s.name ?? <span className="font-mono text-sm">{s.id}</span>}</span>
           <span className="block text-[0.85rem] text-ink-muted">

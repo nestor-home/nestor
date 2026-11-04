@@ -15,12 +15,12 @@ import { Button } from "@/components/ui/button";
 import { ActivityList } from "@/features/journal/activity-list";
 import { useT } from "@/i18n";
 import { tr } from "@/i18n/runtime";
-import { BrandMark, brandOf } from "@/lib/brands";
 import { moment } from "@/lib/dates";
 import { CAPABILITY_ICON } from "@/lib/icons";
 import { usePeopleNames } from "@/lib/people";
 import { useCan, useMe } from "@/lib/session";
 import { IdentifyButton } from "./add-satellite";
+import { DeviceMark } from "./device-mark";
 import { SatelliteUpdateButton } from "./satellite-update";
 
 /** What each capability lets the assistant do, said for the household. */
@@ -60,7 +60,6 @@ export function SatelliteFrame({ id, children }: { id: string; children: ReactNo
       </>
     );
   }
-  const brand = brandOf(s.brand);
   const base = `/satellites/${s.id}`;
   return (
     <>
@@ -68,7 +67,7 @@ export function SatelliteFrame({ id, children }: { id: string; children: ReactNo
         crumbs={<Crumbs trail={trail} />}
         title={
           <span className="inline-flex items-center gap-3">
-            {brand ? <BrandMark brand={brand} className="size-7 text-ink" /> : null}
+            <DeviceMark brand={s.brand} capabilities={s.capabilities.map((c) => c.name)} className="size-7 text-ink" />
             {s.name ?? <span className="font-mono text-[2rem] tracking-tight">{s.id}</span>}
           </span>
         }

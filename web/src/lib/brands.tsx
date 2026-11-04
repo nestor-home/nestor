@@ -195,6 +195,12 @@ export function brandOf(kind: string | null | undefined): BrandSlug | null {
   return ALIASES[key] ?? null;
 }
 
+/** Whether the brand has a published logo (a monogram stands in for one that has none). */
+export function hasLogo(slug: BrandSlug): boolean {
+  const brand: Brand = BRANDS[slug];
+  return !("monogram" in brand.mark);
+}
+
 export function brandName(slug: BrandSlug): string {
   const brand: Brand = BRANDS[slug];
   return "name" in brand ? brand.name : tr(brand.message, brand.args);

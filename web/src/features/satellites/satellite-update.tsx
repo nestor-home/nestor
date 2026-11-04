@@ -5,15 +5,15 @@
  * install itself. The dialog is the confirmation: it says everything the person is agreeing to.
  */
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { CircleAlert, CircleArrowUp, ExternalLink, LoaderCircle, Satellite as SatelliteIcon } from "lucide-react";
+import { CircleAlert, CircleArrowUp, ExternalLink, LoaderCircle } from "lucide-react";
 import { useState } from "react";
 import { api, keys, messageOf, type Satellite } from "@/api";
 import { useNotify } from "@/components/notices";
 import { Button } from "@/components/ui/button";
 import { UpdateDialog } from "@/components/update-dialog";
 import { useT } from "@/i18n";
-import { BrandMark, brandOf } from "@/lib/brands";
 import { useCan } from "@/lib/session";
+import { DeviceMark } from "./device-mark";
 
 /** At the top of a satellite's page, while it has a newer version, installs one or failed to. */
 export function SatelliteUpdateButton({ satellite: s }: { satellite: Satellite }) {
@@ -70,7 +70,6 @@ function SatelliteUpdate({
   const { state, version, notes } = s.update ?? { state: "current", version: null, notes: null };
   if (!version) return null;
   const running = s.software.version;
-  const brand = brandOf(s.brand);
   const name = s.name ?? s.id;
   return (
     <UpdateDialog
@@ -79,11 +78,7 @@ function SatelliteUpdate({
       tone="ink"
       mark={
         <span className="mb-5 grid size-20 place-items-center rounded-2xl border border-rule bg-paper-raised text-ink shadow-sm">
-          {brand ? (
-            <BrandMark brand={brand} className="size-10" />
-          ) : (
-            <SatelliteIcon className="size-9" aria-hidden="true" />
-          )}
+          <DeviceMark brand={s.brand} capabilities={s.capabilities.map((c) => c.name)} className="size-10" />
         </span>
       }
       title={t("sat-update-title", { name, version })}
