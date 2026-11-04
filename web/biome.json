@@ -12,7 +12,8 @@
       "!src/api/schema.gen.ts",
       "!openapi.json",
       "!test-results",
-      "!playwright-report"
+      "!playwright-report",
+      "!src/assets/brands"
     ]
   },
   "formatter": {
