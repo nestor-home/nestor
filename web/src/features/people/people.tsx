@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, BookMarked, Gauge, House, MessageSquareText, Plug } from "lucide-react";
+import { BookMarked, Gauge, House, MessageSquareText, Plug } from "lucide-react";
 import type { ReactNode } from "react";
 import {
   accountsQuery,
@@ -14,7 +14,7 @@ import {
 } from "@/api";
 import { Ago } from "@/components/ago";
 import { type Crumb, Crumbs } from "@/components/crumbs";
-import { PageHeader, Section } from "@/components/page";
+import { Lead, PageHeader, RowArrow, RowList, Section, WithAside } from "@/components/page";
 import { Empty, Failure, Loading } from "@/components/states";
 import { Status } from "@/components/status";
 import { TabNav } from "@/components/tab-nav";
@@ -46,7 +46,7 @@ export function PeopleList() {
   if (people.isError) return <Failure error={people.error} retry={() => void people.refetch()} />;
   if (people.data.length === 0) return <Empty>{t("people-empty")}</Empty>;
   return (
-    <ul className="divide-y divide-rule rounded-md border border-rule bg-paper-raised">
+    <RowList>
       {people.data.map((p) => (
         <li key={p.id}>
           <Link
@@ -77,11 +77,11 @@ export function PeopleList() {
             <span className="col-start-2 sm:col-start-auto">
               <PresenceMark presence={p.presence} />
             </span>
-            <ArrowRight className="hidden size-3.5 text-ink-faint group-hover:text-ink sm:block" aria-hidden="true" />
+            <RowArrow />
           </Link>
         </li>
       ))}
-    </ul>
+    </RowList>
   );
 }
 
@@ -111,14 +111,14 @@ export function PersonFrame({ id, children }: { id: string; children: ReactNode 
         crumbs={<Crumbs trail={trail} />}
         title={person.name}
         meta={
-          <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.85rem] text-ink-muted">
+          <>
             <PresenceMark presence={person.presence} />
             {person.presence?.since ? (
               <span>
                 {t("people-since")} <Ago iso={person.presence.since} />
               </span>
             ) : null}
-          </p>
+          </>
         }
       />
       <TabNav
@@ -144,10 +144,10 @@ export function PersonOverview({ person: p }: { person: Person }) {
   const account = accounts.data?.find((a) => a.id === p.account);
   const kinds = new Map(today.data?.kinds.map((k) => [k.key, k.count]));
   return (
-    <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_18rem] [&>*]:min-w-0">
+    <WithAside>
       <div className="grid content-start gap-10">
         {today.data ? (
-          <p className="max-w-2xl font-serif text-[1.2rem] leading-relaxed text-pretty [font-variation-settings:'opsz'_20]">
+          <Lead>
             {today.data.total
               ? t("people-today", {
                   name: p.name,
@@ -156,7 +156,7 @@ export function PersonOverview({ person: p }: { person: Person }) {
                   assistant: me.assistant,
                 })
               : t("people-today-nothing", { name: p.name })}
-          </p>
+          </Lead>
         ) : null}
         <Section title={t("people-recent")}>
           <ActivityList
@@ -201,7 +201,7 @@ export function PersonOverview({ person: p }: { person: Person }) {
           )}
         </div>
       </aside>
-    </div>
+    </WithAside>
   );
 }
 
@@ -239,7 +239,7 @@ export function PersonConnections({ person: p }: { person: Person }) {
     );
   }
   return (
-    <ul className="divide-y divide-rule rounded-md border border-rule bg-paper-raised">
+    <RowList>
       {own.map((c) => (
         <li key={c.id}>
           <Link
@@ -256,7 +256,7 @@ export function PersonConnections({ person: p }: { person: Person }) {
           </Link>
         </li>
       ))}
-    </ul>
+    </RowList>
   );
 }
 

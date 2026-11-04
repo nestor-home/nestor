@@ -9,6 +9,7 @@ import { CircleAlert, CircleArrowUp, ExternalLink, LoaderCircle } from "lucide-r
 import { useState } from "react";
 import { api, keys, messageOf, type Satellite } from "@/api";
 import { useNotify } from "@/components/notices";
+import { Notice } from "@/components/states";
 import { Button } from "@/components/ui/button";
 import { UpdateDialog } from "@/components/update-dialog";
 import { useT } from "@/i18n";
@@ -110,11 +111,7 @@ function SatelliteUpdate({
         ) : null
       }
     >
-      {state === "failed" ? (
-        <p role="alert" className="rounded-md bg-brick-soft px-4 py-3 text-sm text-brick">
-          {t("sat-update-failed", { version })}
-        </p>
-      ) : null}
+      {state === "failed" ? <Notice>{t("sat-update-failed", { version })}</Notice> : null}
       {notes ? (
         <a
           href={notes}

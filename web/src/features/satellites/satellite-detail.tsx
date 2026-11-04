@@ -7,7 +7,7 @@ import { Ago } from "@/components/ago";
 import { Confirm } from "@/components/confirm";
 import { type Crumb, Crumbs } from "@/components/crumbs";
 import { useNotify } from "@/components/notices";
-import { PageHeader, Section } from "@/components/page";
+import { Fact, Facts, Lead, PageHeader, Section } from "@/components/page";
 import { Empty, Failure, Loading } from "@/components/states";
 import { Status } from "@/components/status";
 import { TabNav } from "@/components/tab-nav";
@@ -78,7 +78,7 @@ export function SatelliteFrame({ id, children }: { id: string; children: ReactNo
           </>
         }
         meta={
-          <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.85rem] text-ink-muted">
+          <>
             {s.connected === null ? null : s.connected ? (
               <Status tone="ok">{t("sat-state-connected")}</Status>
             ) : (
@@ -87,7 +87,7 @@ export function SatelliteFrame({ id, children }: { id: string; children: ReactNo
             {s.name ? <span className="font-mono">{s.id}</span> : null}
             <span>{s.model}</span>
             <span>{t("sat-room", { room: s.room })}</span>
-          </p>
+          </>
         }
       />
       <TabNav
@@ -121,27 +121,24 @@ export function SatelliteOverview({ satellite: s }: { satellite: Satellite }) {
   });
   return (
     <div className="grid gap-10">
-      <p className="max-w-2xl font-serif text-[1.2rem] leading-relaxed text-pretty [font-variation-settings:'opsz'_20]">
+      <Lead>
         {s.connected
           ? t("sat-summary-connected", { assistant: me.assistant, room: s.room })
           : s.connected === false
             ? t("sat-summary-offline", { room: s.room })
             : t("sat-summary-unknown")}
-      </p>
-      <dl className="grid max-w-2xl grid-cols-1 gap-x-6 sm:grid-cols-[10rem_1fr] gap-y-2.5 text-sm">
-        <dt className="label-mono pt-0.5">{t("sat-paired-at")}</dt>
-        <dd>
+      </Lead>
+      <Facts>
+        <Fact term={t("sat-paired-at")}>
           {s.approved_by
             ? t("sat-paired-by", { when: moment(s.paired_at), name: name(s.approved_by) })
             : moment(s.paired_at)}
-        </dd>
-        <dt className="label-mono pt-0.5">{t("sat-last-seen")}</dt>
-        <dd>{s.last_seen_at ? <Ago iso={s.last_seen_at} /> : "—"}</dd>
-        <dt className="label-mono pt-0.5">{t("sat-software")}</dt>
-        <dd className="font-mono text-[0.8rem] [overflow-wrap:anywhere]">
+        </Fact>
+        <Fact term={t("sat-last-seen")}>{s.last_seen_at ? <Ago iso={s.last_seen_at} /> : "—"}</Fact>
+        <Fact term={t("sat-software")} className="font-mono text-[0.8rem] [overflow-wrap:anywhere]">
           {s.software.name} {s.software.version} · {s.protocol}
-        </dd>
-      </dl>
+        </Fact>
+      </Facts>
       {canRevoke ? (
         <Section title={t("sat-revoke")}>
           <p className="mb-4 max-w-2xl text-sm text-ink-muted">{t("sat-revoke-hint")}</p>

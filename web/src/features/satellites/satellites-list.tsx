@@ -1,14 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ArrowRight } from "lucide-react";
 import { type Addition, api, keys, messageOf, type PairingRequest, type Satellite, satellitesQuery } from "@/api";
 import { Ago } from "@/components/ago";
 import { useNotify } from "@/components/notices";
-import { Section } from "@/components/page";
+import { FormDialog } from "@/components/overlay-form";
+import { RowArrow, RowList, Section } from "@/components/page";
 import { Empty, Failure, Loading } from "@/components/states";
 import { Status } from "@/components/status";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useNow } from "@/hooks/use-now";
 import { useT } from "@/i18n";
 import { remaining } from "@/lib/dates";
@@ -39,11 +38,11 @@ export function SatellitesList({
         {paired.length === 0 ? (
           <Empty hint={t("sat-paired-empty-hint")}>{t("sat-paired-empty")}</Empty>
         ) : (
-          <ul className="divide-y divide-rule rounded-md border border-rule bg-paper-raised">
+          <RowList>
             {paired.map((s) => (
               <PairedRow key={s.id} satellite={s} />
             ))}
-          </ul>
+          </RowList>
         )}
       </Section>
       <ApproveDialog request={request} onClose={() => onApprove(undefined)} />
@@ -110,19 +109,15 @@ function ApproveDialog({ request, onClose }: { request: PairingRequest | undefin
   const t = useT();
   const me = useMe();
   return (
-    <Dialog open={Boolean(request)} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="font-serif text-xl font-normal">
-            {t("sat-approve-title", { id: request?.device.id ?? "" })}
-          </DialogTitle>
-          <DialogDescription>
-            {t("sat-approve-description", { assistant: me.assistant, room: request?.device.room ?? "" })}
-          </DialogDescription>
-        </DialogHeader>
-        {request ? <ApproveForm request={request} onDone={onClose} /> : null}
-      </DialogContent>
-    </Dialog>
+    <FormDialog
+      open={Boolean(request)}
+      onOpenChange={(open) => !open && onClose()}
+      wide
+      title={t("sat-approve-title", { id: request?.device.id ?? "" })}
+      description={t("sat-approve-description", { assistant: me.assistant, room: request?.device.room ?? "" })}
+    >
+      {() => (request ? <ApproveForm request={request} onDone={onClose} /> : null)}
+    </FormDialog>
   );
 }
 
@@ -169,7 +164,7 @@ function PairedRow({ satellite: s }: { satellite: Satellite }) {
             <span className="truncate text-[0.75rem] text-ember">{t("sat-update-badge")}</span>
           ) : null}
         </span>
-        <ArrowRight className="hidden size-3.5 text-ink-faint group-hover:text-ink sm:block" aria-hidden="true" />
+        <RowArrow />
       </Link>
     </li>
   );
@@ -191,7 +186,7 @@ function Additions({ additions }: { additions: Addition[] }) {
   });
   return (
     <Section title={t("sat-additions")} count={additions.length}>
-      <ul className="divide-y divide-rule rounded-md border border-rule bg-paper-raised">
+      <RowList>
         {additions.map((a) => (
           <li key={a.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3.5">
             <div className="min-w-0 flex-1">
@@ -211,7 +206,7 @@ function Additions({ additions }: { additions: Addition[] }) {
             </Button>
           </li>
         ))}
-      </ul>
+      </RowList>
     </Section>
   );
 }

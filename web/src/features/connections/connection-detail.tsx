@@ -6,7 +6,7 @@ import { api, type ConnectionDetail, connectionQuery, keys } from "@/api";
 import { Confirm } from "@/components/confirm";
 import { type Crumb, Crumbs } from "@/components/crumbs";
 import { useNotify } from "@/components/notices";
-import { PageHeader, Panel, Section } from "@/components/page";
+import { Lead, PageHeader, Panel, Section } from "@/components/page";
 import { Failure, Loading } from "@/components/states";
 import { TabNav } from "@/components/tab-nav";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -55,12 +55,12 @@ export function ConnectionFrame({ id, children }: { id: string; children: ReactN
           </span>
         }
         meta={
-          <p className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-xs text-ink-muted">
+          <>
             <ConnectionStatusMark status={c.status} />
             <span>{c.title}</span>
             <span>{t("conn-owner", { name: name(c.owner) })}</span>
             <span>{t("conn-connected-at", { when: moment(c.created_at) })}</span>
-          </p>
+          </>
         }
       />
       <TabNav
@@ -118,9 +118,7 @@ export function ConnectionOverview({ connection: c }: { connection: ConnectionDe
           ) : null}
         </Panel>
       ) : null}
-      <p className="max-w-2xl font-serif text-[1.2rem] leading-relaxed text-pretty [font-variation-settings:'opsz'_20]">
-        {summary.filter(Boolean).join(" ")}
-      </p>
+      <Lead>{summary.filter(Boolean).join(" ")}</Lead>
       <Section title={t("conn-latest-uses")}>
         <ActivityList
           filters={{ connection: c.id }}

@@ -21,6 +21,7 @@ import { AgentFigure } from "@/components/agent-figure";
 import { Confirm } from "@/components/confirm";
 import { CopyField } from "@/components/copy-field";
 import { Dither } from "@/components/dither";
+import { Notice } from "@/components/states";
 import { Button } from "@/components/ui/button";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import { UpdateDialog } from "@/components/update-dialog";
@@ -129,16 +130,8 @@ export function NestorUpdate({
           )
         }
       >
-        {failed ? (
-          <p role="alert" className="rounded-md bg-brick-soft px-4 py-3 text-sm text-brick">
-            {t("upd-failed", { version, running: updates.running })}
-          </p>
-        ) : null}
-        {breaking ? (
-          <p role="alert" className="rounded-md bg-brick-soft px-4 py-3 text-sm text-brick">
-            {t("upd-breaking")}
-          </p>
-        ) : null}
+        {failed ? <Notice>{t("upd-failed", { version, running: updates.running })}</Notice> : null}
+        {breaking ? <Notice>{t("upd-breaking")}</Notice> : null}
         <Outdated ids={updates.outdated_satellites} />
         {updates.releases.map((release) => (
           <ReleaseNotes key={release.version} release={release} />
@@ -168,7 +161,7 @@ function Outdated({ ids }: { ids: string[] }) {
   if (!ids.length) return null;
   const named = new Map((satellites.data?.paired ?? []).map((s) => [s.id, s.name ?? s.id]));
   return (
-    <div role="alert" className="rounded-md bg-amber-soft px-4 py-3 text-sm text-ink">
+    <Notice tone="attention">
       <p>{t("upd-outdated", { count: ids.length })}</p>
       <ul className="mt-1.5 grid gap-0.5">
         {ids.map((id) => (
@@ -177,7 +170,7 @@ function Outdated({ ids }: { ids: string[] }) {
           </li>
         ))}
       </ul>
-    </div>
+    </Notice>
   );
 }
 

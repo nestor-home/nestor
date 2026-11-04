@@ -2,6 +2,7 @@ import { Check, ChevronDown, SlidersHorizontal, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import type { Facet, JournalFacets } from "@/api";
+import { RowList } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -175,7 +176,7 @@ export function FilterSheet({
                   <h3 id={`sheet-${g.id}`} className="label-mono mb-1.5">
                     {g.label}
                   </h3>
-                  <ul className="divide-y divide-rule rounded-md border border-rule bg-paper-raised">
+                  <RowList>
                     {g.facets.map((f) => {
                       const on = g.selected.includes(f.key);
                       return (
@@ -212,7 +213,7 @@ export function FilterSheet({
                         </li>
                       );
                     })}
-                  </ul>
+                  </RowList>
                 </section>
               ) : null,
             )}

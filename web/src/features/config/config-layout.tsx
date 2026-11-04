@@ -3,21 +3,12 @@ import { FileCog, LoaderCircle } from "lucide-react";
 import { useState } from "react";
 import { messageOf } from "@/api";
 import { Confirm } from "@/components/confirm";
+import { FormActions } from "@/components/form-actions";
 import { useNotify } from "@/components/notices";
+import { FormSheet } from "@/components/overlay-form";
 import { PageHeader } from "@/components/page";
 import { TabNav } from "@/components/tab-nav";
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { useT } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { Changes } from "./changes";
@@ -42,10 +33,10 @@ function Frame() {
       <PageHeader
         title={t("cfg-title")}
         meta={
-          <p className="flex min-w-0 items-center gap-1.5 font-mono text-xs text-ink-muted">
+          <>
             <FileCog className="size-3.5 shrink-0" aria-hidden="true" />
-            <span className="[overflow-wrap:anywhere]">{state.path}</span>
-          </p>
+            <span className="font-mono text-xs [overflow-wrap:anywhere]">{state.path}</span>
+          </>
         }
       >
         {t("cfg-intro")}
@@ -153,7 +144,6 @@ function SaveBar() {
   const notify = useNotify();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const mobile = useIsMobile();
   if (!editor.dirty && !editor.saving) return null;
   const count = changeCount(editor.diff);
   const problems = editor.problems.length;
@@ -215,28 +205,21 @@ function SaveBar() {
           </Button>
         </div>
       </div>
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent
-          side={mobile ? "bottom" : "right"}
-          className={cn("w-full overflow-y-auto bg-paper", mobile ? "h-[90dvh]" : "sm:max-w-xl")}
-        >
-          <SheetHeader className="border-b border-rule px-6 pt-6 pb-4">
-            <SheetTitle className="font-serif text-2xl font-normal">{t("cfg-changes-title")}</SheetTitle>
-            <SheetDescription>{t("cfg-changes-text")}</SheetDescription>
-          </SheetHeader>
-          <div className="grid gap-6 px-6 pb-8">
+      <FormSheet open={open} onOpenChange={setOpen} title={t("cfg-changes-title")} description={t("cfg-changes-text")}>
+        {(close) => (
+          <div className="grid gap-6">
             {editor.diff ? <Changes diff={editor.diff} /> : null}
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setOpen(false)}>
+            <FormActions>
+              <Button variant="outline" onClick={close}>
                 {t("action-close")}
               </Button>
               <Button variant="accent" onClick={save} disabled={editor.saving || editor.checking || problems > 0}>
                 {editor.saving ? t("cfg-saving") : t("cfg-save")}
               </Button>
-            </div>
+            </FormActions>
           </div>
-        </SheetContent>
-      </Sheet>
+        )}
+      </FormSheet>
     </section>
   );
 }
@@ -251,19 +234,15 @@ function LeaveGuard() {
     withResolver: true,
   });
   return (
-    <AlertDialog open={blocker.status === "blocked"} onOpenChange={(open) => !open && blocker.reset?.()}>
-      <AlertDialogContent className="max-w-md! border border-rule bg-paper-raised">
-        <AlertDialogHeader>
-          <AlertDialogTitle className="font-serif text-xl font-normal">{t("cfg-leave-title")}</AlertDialogTitle>
-          <AlertDialogDescription className="text-ink-muted">{t("cfg-leave-text")}</AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter className="bg-paper-sunken/60">
-          <AlertDialogCancel>{t("cfg-leave-stay")}</AlertDialogCancel>
-          <Button variant="destructive" onClick={() => blocker.proceed?.()}>
-            {t("cfg-leave-go")}
-          </Button>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <Confirm
+      open={blocker.status === "blocked"}
+      onOpenChange={(open) => !open && blocker.reset?.()}
+      title={t("cfg-leave-title")}
+      confirm={t("cfg-leave-go")}
+      cancel={t("cfg-leave-stay")}
+      onConfirm={async () => blocker.proceed?.()}
+    >
+      {t("cfg-leave-text")}
+    </Confirm>
   );
 }

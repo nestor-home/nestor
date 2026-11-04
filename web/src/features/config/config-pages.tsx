@@ -2,18 +2,10 @@ import { ArrowDown, ArrowUp, CircleAlert, Pencil, Plus, Trash2 } from "lucide-re
 import { type ReactElement, type ReactNode, useId, useState } from "react";
 import type { ConfigSlot, JsonSchema } from "@/api";
 import { Confirm } from "@/components/confirm";
-import { FormSheet } from "@/components/overlay-form";
+import { FormDialog, FormSheet } from "@/components/overlay-form";
 import { Panel, Section } from "@/components/page";
 import { Empty } from "@/components/states";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useT } from "@/i18n";
@@ -490,24 +482,16 @@ function KindPicker({
   trigger: ReactElement;
 }) {
   const t = useT();
-  const [open, setOpen] = useState(false);
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={trigger} />
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="font-serif text-xl font-normal">
-            {t("cfg-pick-title", { slot: slot.title })}
-          </DialogTitle>
-          <DialogDescription>{t("cfg-pick-text")}</DialogDescription>
-        </DialogHeader>
+    <FormDialog trigger={trigger} title={t("cfg-pick-title", { slot: slot.title })} description={t("cfg-pick-text")}>
+      {(close) => (
         <ul className="grid gap-1.5">
           {Object.entries(slot.kinds).map(([kind, schema]) => (
             <li key={kind}>
               <button
                 type="button"
                 onClick={() => {
-                  setOpen(false);
+                  close();
                   onPick(kind);
                 }}
                 className="flex w-full items-center gap-3 rounded-md border border-rule bg-paper-raised px-3 py-2.5 text-left hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
@@ -523,8 +507,8 @@ function KindPicker({
             </li>
           ))}
         </ul>
-      </DialogContent>
-    </Dialog>
+      )}
+    </FormDialog>
   );
 }
 

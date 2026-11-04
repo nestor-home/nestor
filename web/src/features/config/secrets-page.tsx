@@ -2,22 +2,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { KeyRound, Plus, Trash2 } from "lucide-react";
 import { type FormEvent, type ReactElement, useState } from "react";
 import { ApiError, api, keys, messageOf, type Secret, secretsQuery } from "@/api";
+import { ConfirmFrame } from "@/components/confirm";
 import { Field } from "@/components/field";
 import { FormActions } from "@/components/form-actions";
 import { useNotify } from "@/components/notices";
 import { FormDialog } from "@/components/overlay-form";
 import { Section } from "@/components/page";
-import { Empty, Failure, Loading } from "@/components/states";
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { Empty, Failure, FormError, Loading, Notice } from "@/components/states";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useT } from "@/i18n";
@@ -164,11 +155,7 @@ function SecretFields({ name: fixed, close }: { name?: string; close: () => void
           required
         />
       </Field>
-      {write.error ? (
-        <p role="alert" className="text-sm text-brick">
-          {messageOf(write.error)}
-        </p>
-      ) : null}
+      <FormError error={write.error} />
       <FormActions>
         <Button type="button" variant="ghost" onClick={close}>
           {t("action-cancel")}
@@ -203,7 +190,7 @@ function DeleteSecret({ secret: s }: { secret: Secret }) {
     },
   });
   return (
-    <AlertDialog
+    <ConfirmFrame
       open={open}
       onOpenChange={(next) => {
         if (remove.isPending) return;
@@ -213,39 +200,20 @@ function DeleteSecret({ secret: s }: { secret: Secret }) {
           remove.reset();
         }
       }}
-    >
-      <AlertDialogTrigger
-        render={
-          <Button variant="ghost" size="icon-sm" aria-label={t("cfg-secret-delete-label", { name: s.name })}>
-            <Trash2 />
-          </Button>
-        }
-      />
-      <AlertDialogContent className="max-w-md! border border-rule bg-paper-raised">
-        <AlertDialogHeader>
-          <AlertDialogTitle className="font-serif text-xl font-normal">
-            {t("cfg-secret-delete-title", { name: s.name })}
-          </AlertDialogTitle>
-          <AlertDialogDescription className="text-ink-muted">
-            {refused ? t("cfg-secret-in-use-text") : t("cfg-secret-delete-text")}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        {refused ? (
-          <div role="alert" className="rounded-md border border-brick/40 bg-brick-soft/40 px-4 py-3 text-sm text-ink">
-            {messageOf(refused)}
-          </div>
-        ) : remove.error ? (
-          <p role="alert" className="text-sm text-brick">
-            {messageOf(remove.error)}
-          </p>
-        ) : null}
-        <AlertDialogFooter className="bg-paper-sunken/60">
-          <AlertDialogCancel disabled={remove.isPending}>{t("action-cancel")}</AlertDialogCancel>
-          <Button variant="destructive" onClick={() => remove.mutate(Boolean(refused))} disabled={remove.isPending}>
-            {remove.isPending ? "…" : refused ? t("cfg-secret-delete-anyway") : t("cfg-secret-delete")}
-          </Button>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+      trigger={
+        <Button variant="ghost" size="icon-sm" aria-label={t("cfg-secret-delete-label", { name: s.name })}>
+          <Trash2 />
+        </Button>
+      }
+      title={t("cfg-secret-delete-title", { name: s.name })}
+      description={refused ? t("cfg-secret-in-use-text") : t("cfg-secret-delete-text")}
+      details={refused ? <Notice>{messageOf(refused)}</Notice> : <FormError error={remove.error} />}
+      busy={remove.isPending}
+      action={
+        <Button variant="destructive" onClick={() => remove.mutate(Boolean(refused))} disabled={remove.isPending}>
+          {remove.isPending ? "…" : refused ? t("cfg-secret-delete-anyway") : t("cfg-secret-delete")}
+        </Button>
+      }
+    />
   );
 }

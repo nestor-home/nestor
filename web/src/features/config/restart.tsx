@@ -7,19 +7,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { ChevronRight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { ApiError, api, type Me, meQuery, messageOf, setCsrfToken } from "@/api";
+import { ApiError, api, type Me, meQuery, setCsrfToken } from "@/api";
 import { AgentFigure } from "@/components/agent-figure";
+import { ConfirmFrame } from "@/components/confirm";
 import { useNotify } from "@/components/notices";
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { FormError } from "@/components/states";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useT } from "@/i18n";
@@ -186,48 +178,37 @@ export function RestartBanner() {
           ) : null}
         </div>
         {canRestart ? (
-          <AlertDialog
+          <ConfirmFrame
             open={asking}
             onOpenChange={(next) => {
               if (pending) return;
               setAsking(next);
               if (!next) clearError();
             }}
-          >
-            <AlertDialogTrigger
-              render={
-                <Button variant="outline" size="sm">
-                  {t("cfg-restart")}
-                </Button>
-              }
-            />
-            <AlertDialogContent className="max-w-md! border border-rule bg-paper-raised">
-              <AlertDialogHeader>
-                <AlertDialogTitle className="font-serif text-xl font-normal">
-                  {t("cfg-restart-title", { agent: me.agent.name })}
-                </AlertDialogTitle>
-                <AlertDialogDescription className="text-ink-muted">
-                  {t("cfg-restart-text", { agent: me.agent.name })}
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <ul className="grid gap-1.5 text-sm text-ink">
-                <li>{t("cfg-restart-channels")}</li>
-                <li>{t("cfg-restart-tasks")}</li>
-                <li>{t("cfg-restart-apply", { count })}</li>
-              </ul>
-              {error ? (
-                <p role="alert" className="text-sm text-brick">
-                  {messageOf(error)}
-                </p>
-              ) : null}
-              <AlertDialogFooter className="bg-paper-sunken/60">
-                <AlertDialogCancel disabled={pending}>{t("action-cancel")}</AlertDialogCancel>
-                <Button variant="accent" onClick={() => void restart(() => setAsking(false))} disabled={pending}>
-                  {pending ? "…" : t("cfg-restart-now")}
-                </Button>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+            trigger={
+              <Button variant="outline" size="sm">
+                {t("cfg-restart")}
+              </Button>
+            }
+            title={t("cfg-restart-title", { agent: me.agent.name })}
+            description={t("cfg-restart-text", { agent: me.agent.name })}
+            details={
+              <>
+                <ul className="grid gap-1.5 text-sm text-ink">
+                  <li>{t("cfg-restart-channels")}</li>
+                  <li>{t("cfg-restart-tasks")}</li>
+                  <li>{t("cfg-restart-apply", { count })}</li>
+                </ul>
+                <FormError error={error} />
+              </>
+            }
+            busy={pending}
+            action={
+              <Button variant="accent" onClick={() => void restart(() => setAsking(false))} disabled={pending}>
+                {pending ? "…" : t("cfg-restart-now")}
+              </Button>
+            }
+          />
         ) : (
           <p className="text-xs text-ink-muted">{t("cfg-restart-ask")}</p>
         )}
