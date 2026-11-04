@@ -25,11 +25,18 @@ sys-health-unknown = inconnu
 
 upd-available = Nouvelle version
 upd-available-version = Mise à jour disponible : { $version }
-upd-title = Nestor { $version } est disponible
-upd-running = { $count ->
-    [one] Vous utilisez la { $version }. Voici ce qui a changé depuis.
-   *[other] Vous utilisez la { $version }, avec { $count } versions de retard. Voici ce qui a changé depuis.
+upd-title = Nestor { $version } est là
+upd-behind = { $count ->
+    [one] une version de retard
+   *[other] { $count } versions de retard
 }
+upd-install = Installer la { $version }
+upd-install-title = Installer Nestor { $version } ?
+upd-install-description = Nestor installe la nouvelle version, vérifie qu'elle accepte votre configuration, puis redémarre. Les conversations s'interrompent un instant. Si quelque chose cloche, il reste sur la { $running }.
+upd-install-confirm = Installer et redémarrer
+upd-install-hint = Il redémarre une fois installée.
+upd-installing = Installation de la { $version }…
+upd-failed = La { $version } ne s'est pas installée. Nestor reste sur la { $running }.
 upd-breaking = Cette version change les données ou la configuration : relisez les notes avant de mettre à jour.
 upd-outdated = { $count ->
     [one] Ce satellite ne pourra plus se connecter : mettez-le à jour avant.

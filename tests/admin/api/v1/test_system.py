@@ -1,5 +1,6 @@
 """What is plugged in, by family: brand, version, capabilities and health, satellites included."""
 
+import asyncio
 from importlib import metadata
 from pathlib import Path
 
@@ -11,6 +12,7 @@ from nestor.modules.system import Releases
 from nestor.runtime import Distribution, Registry
 from nestor.testing.channels import InMemoryChannel
 from nestor.testing.satellites import pair_by_code
+from nestor.testing.system import FakeInstaller
 
 from ...harness import Harness
 
@@ -131,3 +133,31 @@ async def test_an_instance_told_not_to_check_says_so(tmp_path: Path) -> None:
         admin.nestor.updates = None
         answer = (await (await admin.api()).get("/api/v1/system/updates")).json()
         assert (answer["checking"], answer["latest"], answer["releases"]) == (False, None, [])
+
+
+async def test_the_owner_installs_the_newest_release_and_nestor_restarts_on_it(tmp_path: Path) -> None:
+    async with Harness(tmp_path) as admin:
+        updates = admin.nestor.updates
+        assert updates is not None
+        api = await admin.api()
+        assert (await api.get("/api/v1/system/updates")).json()["installable"] is False
+        refused = await api.post("/api/v1/system/updates/install", {"version": "9.0.0", "confirm": True})
+        assert refused.json()["error"]["code"] == "update_not_installable"
+
+        restarts: list[bool] = []
+        admin.app.state.admin.restart = lambda: restarts.append(True)
+        updates.installer = FakeInstaller()
+        admin.releases.releases = _feed("9.0.0")
+        await updates.check()
+        unconfirmed = await api.post("/api/v1/system/updates/install", {"version": "9.0.0", "confirm": False})
+        assert unconfirmed.status_code == 400
+        started = await api.post("/api/v1/system/updates/install", {"version": "9.0.0", "confirm": True})
+        assert started.status_code == 202 and started.json()["installable"] is True
+        for _ in range(20):
+            await asyncio.sleep(0)
+        assert restarts == [True]
+
+        await admin.account("mathilde", Role.MEMBER, "mathilde")
+        member = await admin.api("mathilde")
+        denied = await member.post("/api/v1/system/updates/install", {"version": "9.0.0", "confirm": True})
+        assert denied.status_code == 403

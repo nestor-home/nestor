@@ -14,7 +14,7 @@ from nestor.admin.api.v1.routes.satellites import live_rooms
 from nestor.admin.api.v1.security import Caller, allowed
 from nestor.admin.presentation import Phrasebook
 from nestor.admin.state import state
-from nestor.core import Component, Health
+from nestor.core import Component, ContractError, Health
 from nestor.core.i18n import Message
 from nestor.modules.accounts import Scope
 from nestor.modules.connectors import Connector
@@ -125,6 +125,9 @@ class UpdatesOut(BaseModel):
     releases: list[ReleaseOut]  # newer than the running version, newest first; empty: up to date
     outdated_satellites: list[str]  # paired devices on a protocol the newest release no longer speaks
     container: bool  # it runs in a container: update the image rather than the package
+    installable: bool  # `POST /system/updates/install` can install the newest release here
+    installing: str | None  # the version being installed; a restart follows
+    failed: str | None  # the version that last failed to install (the running one stayed)
 
 
 @router.get("/system/updates")
@@ -142,7 +145,38 @@ async def get_updates(request: Request, caller: Reader) -> UpdatesOut:
         releases=[_release(r) for r in newer],
         outdated_satellites=outdated,
         container=Path("/.dockerenv").exists(),
+        installable=bool(updates and updates.installer),
+        installing=updates.installing if updates else None,
+        failed=updates.failed if updates else None,
     )
+
+
+class InstallIn(Input):
+    version: str  # the newest release, as `GET /system/updates` says
+    confirm: bool  # must be true: once installed, Nestor restarts and every conversation is interrupted
+
+
+@router.post("/system/updates/install", status_code=202)
+async def install_update(request: Request, caller: Restarter, body: InstallIn) -> UpdatesOut:
+    """Install the newest release where Nestor runs (a Python environment, never a container), check it
+    accepts the configuration, then restart on it. On failure the running version stays: `failed`."""
+    if not body.confirm:
+        raise ApiError(400, "update_unconfirmed")
+    admin = state(request)
+    updates = admin.nestor.updates
+    if updates is None:
+        raise ApiError(409, "update_not_installable")
+    by = caller.account_id or "cli"
+
+    async def restart() -> None:
+        await admin.nestor.journal.publish(RestartRequested(source="admin", by=by))
+        admin.restart()
+
+    try:
+        await updates.install(body.version, by=by, then=restart)
+    except ContractError:
+        raise ApiError(409, "update_not_installable") from None
+    return await get_updates(request, caller)
 
 
 def _release(release: Release) -> ReleaseOut:

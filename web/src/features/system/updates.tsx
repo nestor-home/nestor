@@ -1,24 +1,38 @@
 /**
  * A newer Nestor: the sidebar says so, the dialog shows what changed since the running version, what
- * breaks, which satellites the new version no longer speaks to, and how to update. Nothing installs
- * from here: the household updates the way it installed Nestor, then restarts it.
+ * breaks and which satellites the new version no longer speaks to. Where Nestor runs from a Python
+ * environment, the owner installs it from here and Nestor restarts on it; in a container, the dialog
+ * gives the commands, since a container cannot replace its own image.
  */
-import { useQuery } from "@tanstack/react-query";
-import { CircleArrowUp, ExternalLink } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowRight, CircleArrowUp, ExternalLink } from "lucide-react";
 import { useState } from "react";
-import { type ChangeKind, messageOf, type Release, satellitesQuery, type Updates, updatesQuery } from "@/api";
+import {
+  api,
+  type ChangeKind,
+  keys,
+  messageOf,
+  type Release,
+  satellitesQuery,
+  type Updates,
+  updatesQuery,
+} from "@/api";
+import { AgentFigure } from "@/components/agent-figure";
+import { Confirm } from "@/components/confirm";
 import { CopyField } from "@/components/copy-field";
+import { Dither } from "@/components/dither";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
-import { Restarting, useRestart } from "@/features/config/restart";
+import { Restarting, sleep, useRestart } from "@/features/config/restart";
 import { useT } from "@/i18n";
 import { calendarDay } from "@/lib/dates";
 import { useCan } from "@/lib/session";
 
 const KINDS: ChangeKind[] = ["breaking", "feature", "fix", "other"];
+const INSTALL_POLL_MS = 1_000;
 
-/** The commands that update an installation: the image in a container, the package otherwise. */
+/** The commands that update an installation by hand: the image in a container, the package otherwise. */
 export function commandsFor(updates: Pick<Updates, "container">): [string, string] {
   return updates.container
     ? ["docker compose pull", "docker compose up -d"]
@@ -33,19 +47,19 @@ export function UpdateAvailable({ compact }: { compact: boolean }) {
   const [open, setOpen] = useState(false);
   const found = updates.data;
   if (!found?.releases.length || !found.latest) return null;
-  const label = t("upd-available");
   return (
     <>
       <SidebarMenu>
         <SidebarMenuItem>
           <SidebarMenuButton
             tooltip={t("upd-available-version", { version: found.latest })}
-            className="h-auto min-h-9 py-1.5 text-ink"
+            className="relative h-auto min-h-10 overflow-hidden bg-ember-soft/60 py-2 text-ink hover:bg-ember-soft"
             onClick={() => setOpen(true)}
           >
-            <CircleArrowUp className="size-4 shrink-0 text-ember" aria-hidden="true" />
-            <span className={compact ? "sr-only" : "min-w-0 flex-1 truncate"}>{label}</span>
-            {compact ? null : <span className="font-mono text-[0.75rem] text-ink-muted">{found.latest}</span>}
+            <Dither shape="ramp-right" from={0} to={0.4} dot={2} className="absolute inset-0 text-ember/20" />
+            <CircleArrowUp className="relative size-4 shrink-0 text-ember" aria-hidden="true" />
+            <span className={compact ? "sr-only" : "relative min-w-0 flex-1 truncate"}>{t("upd-available")}</span>
+            {compact ? null : <span className="relative font-mono text-[0.75rem] text-ember">{found.latest}</span>}
           </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>
@@ -67,27 +81,41 @@ export function UpdateDialog({
   const breaking = updates.releases.some((r) => r.breaking);
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-xl">
-        <DialogHeader>
-          <DialogTitle className="font-serif text-xl font-normal">
-            {t("upd-title", { version: updates.latest ?? "" })}
-          </DialogTitle>
-          <DialogDescription>
-            {t("upd-running", { version: updates.running, count: updates.releases.length })}
-          </DialogDescription>
-        </DialogHeader>
-        {breaking ? (
-          <p role="alert" className="rounded-md bg-brick-soft px-4 py-3 text-sm text-brick">
-            {t("upd-breaking")}
-          </p>
-        ) : null}
-        <Outdated ids={updates.outdated_satellites} />
-        <div className="grid gap-6">
+      <DialogContent className="max-h-[calc(100dvh-2rem)] gap-0 overflow-y-auto p-0 sm:max-w-xl">
+        <header className="relative overflow-hidden px-6 pt-8 pb-6">
+          <Dither shape="horizon" from={0} to={0.55} dot={3} className="absolute inset-0 text-ember/30" />
+          <div className="relative flex items-end gap-5">
+            <span className="-mb-2 shrink-0 max-sm:hidden">
+              <AgentFigure state="laughing" size="lg" />
+            </span>
+            <span className="shrink-0 sm:hidden">
+              <AgentFigure state="laughing" size="md" />
+            </span>
+            <div className="min-w-0">
+              <DialogTitle className="font-serif text-2xl leading-tight font-normal text-ink">
+                {t("upd-title", { version: updates.latest ?? "" })}
+              </DialogTitle>
+              <DialogDescription className="mt-2 flex flex-wrap items-center gap-2 font-mono text-sm text-ink-muted">
+                <span>{updates.running}</span>
+                <ArrowRight className="size-3.5" aria-hidden="true" />
+                <span className="text-ember">{updates.latest}</span>
+                <span className="font-sans">· {t("upd-behind", { count: updates.releases.length })}</span>
+              </DialogDescription>
+            </div>
+          </div>
+        </header>
+        <div className="grid gap-6 px-6 pt-5 pb-6">
+          {breaking ? (
+            <p role="alert" className="rounded-md bg-brick-soft px-4 py-3 text-sm text-brick">
+              {t("upd-breaking")}
+            </p>
+          ) : null}
+          <Outdated ids={updates.outdated_satellites} />
           {updates.releases.map((release) => (
             <ReleaseNotes key={release.version} release={release} />
           ))}
+          <Install updates={updates} />
         </div>
-        <HowTo updates={updates} />
       </DialogContent>
     </Dialog>
   );
@@ -150,38 +178,120 @@ function ReleaseNotes({ release }: { release: Release }) {
   );
 }
 
-function HowTo({ updates }: { updates: Updates }) {
+/**
+ * Installs the newest release, then follows Nestor through its restart. The install runs on the
+ * server, which keeps answering until it stops: `false` when it says the install failed.
+ */
+function useInstall(version: string) {
+  const queryClient = useQueryClient();
+  const restart = useRestart();
+  const [installing, setInstalling] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  const installed = async (signal: AbortSignal) => {
+    setInstalling(true);
+    for (;;) {
+      await sleep(INSTALL_POLL_MS, signal);
+      const now = await api.updates().catch(() => null); // no answer: it is restarting
+      if (now?.failed === version) {
+        queryClient.setQueryData(keys.updates, now);
+        setInstalling(false);
+        setFailed(true);
+        return false;
+      }
+      if (now === null || now.running === version) {
+        setInstalling(false);
+        return true;
+      }
+    }
+  };
+
+  /** For the confirmation: a refusal shows there; once accepted, the dialog follows the install. */
+  const install = async () => {
+    await api.installUpdate(version);
+    setFailed(false);
+    void restart.run({ ask: async () => undefined, before: installed });
+  };
+  return { phase: restart.phase, installing, failed, install };
+}
+
+function Install({ updates }: { updates: Updates }) {
   const t = useT();
-  const canRestart = useCan("config:manage");
-  const { phase, pending, error, restart } = useRestart();
-  const [first, second] = commandsFor(updates);
+  const canInstall = useCan("config:manage");
+  const version = updates.latest ?? "";
+  const { phase, installing, failed, install } = useInstall(version);
   if (phase !== "idle") return <Restarting phase={phase} />;
+  if (installing || updates.installing) {
+    return (
+      <div role="status" className="flex items-center gap-4 rounded-lg bg-paper-sunken/70 px-5 py-4">
+        <AgentFigure state="working" size="md" />
+        <p className="text-sm text-ink">{t("upd-installing", { version })}</p>
+      </div>
+    );
+  }
+  const didFail = failed || updates.failed === version;
+  const installable = updates.installable && canInstall;
   return (
     <section className="grid gap-3 border-t border-rule pt-5">
+      {didFail ? (
+        <p role="alert" className="text-sm text-brick">
+          {t("upd-failed", { version, running: updates.running })}
+        </p>
+      ) : null}
+      {installable ? (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <Confirm
+            trigger={<Button variant="accent">{t("upd-install", { version })}</Button>}
+            title={t("upd-install-title", { version })}
+            confirm={t("upd-install-confirm")}
+            tone="accent"
+            onConfirm={install}
+          >
+            {t("upd-install-description", { running: updates.running })}
+          </Confirm>
+          <p className="text-xs text-ink-muted">{t("upd-install-hint")}</p>
+        </div>
+      ) : (
+        <ByHand updates={updates} canRestart={canInstall} />
+      )}
+    </section>
+  );
+}
+
+/** Where Nestor cannot install itself: the commands, then the restart (a container restarts itself). */
+function ByHand({ updates, canRestart }: { updates: Updates; canRestart: boolean }) {
+  const t = useT();
+  const [first, second] = commandsFor(updates);
+  return (
+    <>
       <h3 className="font-serif text-lg font-normal">{t("upd-how")}</h3>
       <p className="text-sm text-ink-muted">{t(updates.container ? "upd-how-container" : "upd-how-package")}</p>
       <CopyField value={first} label={t("upd-command")} />
-      {updates.container ? (
-        <CopyField value={second} label={t("upd-command")} />
-      ) : (
-        <>
-          <p className="text-sm text-ink-muted">{t("upd-how-pip")}</p>
-          <CopyField value={second} label={t("upd-command")} />
-          <p className="text-sm text-ink-muted">{t(canRestart ? "upd-then-restart" : "upd-then-ask")}</p>
-          {canRestart ? (
-            <div>
-              <Button variant="outline" onClick={() => void restart()} disabled={pending}>
-                {pending ? "…" : t("cfg-restart-now")}
-              </Button>
-            </div>
-          ) : null}
-          {error ? (
-            <p role="alert" className="text-sm text-brick">
-              {messageOf(error)}
-            </p>
-          ) : null}
-        </>
-      )}
-    </section>
+      {updates.container ? null : <p className="text-sm text-ink-muted">{t("upd-how-pip")}</p>}
+      <CopyField value={second} label={t("upd-command")} />
+      {updates.container ? null : <Restart canRestart={canRestart} />}
+    </>
+  );
+}
+
+function Restart({ canRestart }: { canRestart: boolean }) {
+  const t = useT();
+  const { phase, pending, error, restart } = useRestart();
+  if (phase !== "idle") return <Restarting phase={phase} />;
+  if (!canRestart) return <p className="text-sm text-ink-muted">{t("upd-then-ask")}</p>;
+  return (
+    <>
+      <p className="text-sm text-ink-muted">{t("upd-then-restart")}</p>
+      <div>
+        <Button variant="outline" onClick={() => void restart()} disabled={pending}>
+          {pending ? "…" : t("cfg-restart-now")}
+        </Button>
+      </div>
+      {error ? (
+        <p role="alert" className="text-sm text-brick">
+          {messageOf(error)}
+        </p>
+      ) : null}
+    </>
   );
 }

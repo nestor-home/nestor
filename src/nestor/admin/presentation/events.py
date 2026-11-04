@@ -79,7 +79,7 @@ from nestor.modules.satellites import (
     SpeechActivityObserved,
     UpdateState,
 )
-from nestor.modules.system import ConfigChanged, RestartRequested, SecretChanged
+from nestor.modules.system import ConfigChanged, RestartRequested, SecretChanged, UpdateFailed, UpdateRequested
 
 log = logging.getLogger(__name__)
 DETAIL_LIMIT = 600
@@ -469,6 +469,12 @@ class EventDescriber:
             ConfigChanged: self._config_changed,
             SecretChanged: lambda e: self._by(e, e.by, "journal-secret-changed", name=e.name, removed=_yes(e.removed)),
             RestartRequested: lambda e: self._by(e, e.by, "journal-system-restart-requested", tone=Tone.WARNING),
+            UpdateRequested: lambda e: self._by(
+                e, e.by, "journal-system-update-requested", running=e.running, target=e.target
+            ),
+            UpdateFailed: lambda e: self._line(
+                e, Message.of("journal-system-update-failed", target=e.target), tone=Tone.WARNING
+            ),
         }
 
     def describe(self, entry: Entry) -> Line:

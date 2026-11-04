@@ -60,14 +60,14 @@ sat-means-device-update = Installer une version plus récente de son logiciel qu
 
 sat-update = Mise à jour
 sat-update-badge = mise à jour disponible
-sat-update-available = La version { $version } est disponible ; il utilise la { $running }. Il la télécharge lui-même depuis sa source et revient à la version actuelle si elle ne démarre pas.
+sat-update-available = { $running } → { $version }
 sat-update-action = Mettre à jour vers { $version }
 sat-update-title = Mettre à jour { $id } vers { $version } ?
-sat-update-description = Il installe { $name } dans cette version, puis redémarre : il sera hors ligne quelques instants.
+sat-update-description = Il redémarre sur la nouvelle version et reste hors ligne quelques secondes. S'il ne démarre pas, il revient à la { $running }.
 sat-update-confirm = Mettre à jour
-sat-update-asked = { $id } installe la version { $version }.
-sat-update-installing = installation de la { $version }…
-sat-update-failed = La version { $version } n'a pas démarré : le satellite est revenu à la précédente.
+sat-update-asked = { $id } se met à jour.
+sat-update-installing = Installation de la { $version }…
+sat-update-failed = La { $version } n'a pas démarré. Il a gardé sa version.
 
 ## Ajouter un satellite
 sat-add = Ajouter un satellite

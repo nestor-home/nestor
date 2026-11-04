@@ -910,6 +910,9 @@ export function updates(): Updates {
     ],
     outdated_satellites: [],
     container: false,
+    installable: true,
+    installing: null,
+    failed: null,
   };
 }
 

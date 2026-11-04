@@ -126,6 +126,9 @@ export const api = {
   // system
   system: async (): Promise<SystemInfo> => adapt.system(await unwrap(client.GET("/api/v1/system"))),
   updates: async (): Promise<Updates> => adapt.updates(await unwrap(client.GET("/api/v1/system/updates"))),
+  /** Installs the newest release where Nestor runs, then restarts on it: a person's confirmed action. */
+  installUpdate: async (version: string): Promise<Updates> =>
+    adapt.updates(await unwrap(client.POST("/api/v1/system/updates/install", { body: { version, confirm: true } }))),
   /** Asks for a restart: always a person's explicit, confirmed action. */
   restart: (): Promise<void> =>
     unwrap(client.POST("/api/v1/system/restart", { body: { confirm: true } })).then(() => undefined),

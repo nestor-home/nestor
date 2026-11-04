@@ -965,6 +965,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/system/updates/install": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Install Update
+         * @description Install the newest release where Nestor runs (a Python environment, never a container), check it
+         *     accepts the configuration, then restart on it. On failure the running version stays: `failed`.
+         */
+        post: operations["installUpdate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/system/restart": {
         parameters: {
             query?: never;
@@ -1614,6 +1635,13 @@ export interface components {
             quiet_hours: components["schemas"]["QuietHoursOut"] | null;
             /** Upcoming */
             upcoming: components["schemas"]["ScheduledDeliveryOut"][];
+        };
+        /** InstallIn */
+        InstallIn: {
+            /** Version */
+            version: string;
+            /** Confirm */
+            confirm: boolean;
         };
         /** InvitationAcceptIn */
         InvitationAcceptIn: {
@@ -2326,6 +2354,12 @@ export interface components {
             outdated_satellites: string[];
             /** Container */
             container: boolean;
+            /** Installable */
+            installable: boolean;
+            /** Installing */
+            installing: string | null;
+            /** Failed */
+            failed: string | null;
         };
         /** WatchOut */
         WatchOut: {
@@ -7787,6 +7821,102 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UpdatesOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    installUpdate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InstallIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };

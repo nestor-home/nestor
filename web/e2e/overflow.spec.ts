@@ -157,7 +157,7 @@ for (const width of [390, 1440]) {
       await page.waitForLoadState("networkidle");
       if (width < 768) await page.getByRole("button", { name: "Open the menu" }).first().click();
       await page.getByRole("button", { name: /New release/ }).click();
-      await expect(page.getByRole("dialog", { name: /is out/ })).toBeVisible();
+      await expect(page.getByRole("dialog", { name: /is here/ })).toBeVisible();
       await page.waitForTimeout(300);
       expect(await overflows(page)).toEqual([]);
     });

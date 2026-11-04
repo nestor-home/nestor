@@ -14,12 +14,12 @@ function requests(path: string) {
 }
 
 describe("a newer Nestor", () => {
-  it("shows in the sidebar, and its dialog says what changed, what breaks and how to update", async () => {
+  it("shows in the sidebar, and its dialog says what changed and what breaks", async () => {
     const user = userEvent.setup();
     renderApp("/");
     await user.click(await screen.findByRole("button", { name: /New release/ }));
-    const dialog = await screen.findByRole("dialog", { name: "Nestor 0.10.0 is out" });
-    expect(within(dialog).getByText("You run 0.9.0, 2 releases behind. Here is what changed since.")).toBeVisible();
+    const dialog = await screen.findByRole("dialog", { name: "Nestor 0.10.0 is here" });
+    expect(within(dialog).getByText(/2 releases behind/)).toBeVisible();
     expect(within(dialog).getByRole("alert")).toHaveTextContent("This release changes the data or the configuration");
     const newest = within(dialog).getByRole("region", { name: "Release 0.10.0" });
     expect(within(newest).getByText("Breaking changes")).toBeVisible();
@@ -28,13 +28,46 @@ describe("a newer Nestor", () => {
       "href",
       "https://github.com/nestor-home/nestor/releases/tag/v0.10.0",
     );
+  });
+
+  it("installs the newest release once the owner confirms, then follows the install", async () => {
+    const user = userEvent.setup();
+    const sent = requests("/system/updates/install");
+    renderApp("/");
+    await user.click(await screen.findByRole("button", { name: /New release/ }));
+    const dialog = await screen.findByRole("dialog", { name: "Nestor 0.10.0 is here" });
+    await user.click(within(dialog).getByRole("button", { name: "Install 0.10.0" }));
+    const confirm = await screen.findByRole("alertdialog", { name: "Install Nestor 0.10.0?" });
+    expect(within(confirm).getByText(/it stays on 0\.9\.0/)).toBeVisible();
+    expect(sent).toHaveLength(0);
+    await user.click(within(confirm).getByRole("button", { name: "Install and restart" }));
+    expect(await within(dialog).findByText("Installing 0.10.0…")).toBeVisible();
+    expect(sent).toHaveLength(1);
+  });
+
+  it("gives the commands where Nestor cannot install itself, then the restart", async () => {
+    const user = userEvent.setup();
+    db.updates = { ...db.updates, installable: false };
+    renderApp("/");
+    await user.click(await screen.findByRole("button", { name: /New release/ }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).queryByRole("button", { name: /Install/ })).toBeNull();
     expect(within(dialog).getByText("uv tool upgrade nestor-home")).toBeVisible();
     expect(within(dialog).getByRole("button", { name: "Restart now" })).toBeEnabled();
   });
 
+  it("says when a release did not install", async () => {
+    const user = userEvent.setup();
+    db.updates = { ...db.updates, failed: "0.10.0" };
+    renderApp("/");
+    await user.click(await screen.findByRole("button", { name: /New release/ }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("0.10.0 did not install. Nestor stays on 0.9.0.")).toBeVisible();
+  });
+
   it("says which satellites the new version leaves behind, and the image's commands in a container", async () => {
     const user = userEvent.setup();
-    db.updates = { ...db.updates, outdated_satellites: ["reachy-office"], container: true };
+    db.updates = { ...db.updates, outdated_satellites: ["reachy-office"], container: true, installable: false };
     renderApp("/");
     await user.click(await screen.findByRole("button", { name: /New release/ }));
     const dialog = await screen.findByRole("dialog");
@@ -58,13 +91,13 @@ describe("updating a satellite", () => {
     const sent = requests("/satellites/reachy-living-room/update");
     renderApp("/satellites/reachy-living-room");
     const update = await screen.findByRole("region", { name: "Update" });
-    expect(within(update).getByText(/Version 0\.4\.1 is out; it runs 0\.4\.0/)).toBeVisible();
+    expect(within(update).getByText("0.4.0 → 0.4.1")).toBeVisible();
     await user.click(within(update).getByRole("button", { name: "Update to 0.4.1" }));
     const confirm = await screen.findByRole("alertdialog", { name: "Update Living room Reachy to 0.4.1?" });
     expect(sent).toHaveLength(0);
     await user.click(within(confirm).getByRole("button", { name: "Update" }));
-    expect(await screen.findByText("Living room Reachy is installing 0.4.1.")).toBeVisible();
-    expect(await screen.findByText("installing 0.4.1…")).toBeVisible();
+    expect(await screen.findByText("Living room Reachy is updating.")).toBeVisible();
+    expect(await screen.findByText("Installing 0.4.1…")).toBeVisible();
     expect(sent).toHaveLength(1);
   });
 
@@ -73,9 +106,7 @@ describe("updating a satellite", () => {
     if (!living) throw new Error("fixture changed");
     living.update = { state: "failed", version: "0.4.1" };
     renderApp("/satellites/reachy-living-room");
-    expect(
-      await screen.findByText("Version 0.4.1 did not start: the satellite went back to the previous one."),
-    ).toBeVisible();
+    expect(await screen.findByText("0.4.1 did not start. It stayed on its version.")).toBeVisible();
     expect(screen.queryByRole("button", { name: /Update to/ })).toBeNull();
   });
 

@@ -30,7 +30,7 @@ import { cn } from "@/lib/utils";
 export const RESTART_POLL_MS = 1_000;
 const SLOW_AFTER_MS = 30_000;
 
-const sleep = (ms: number, signal: AbortSignal) =>
+export const sleep = (ms: number, signal: AbortSignal) =>
   new Promise<void>((done, fail) => {
     const timer = setTimeout(done, ms);
     signal.addEventListener("abort", () => {
@@ -67,7 +67,9 @@ export type RestartPhase = "idle" | "restarting" | "slow";
 
 /**
  * Asks for a restart, then waits for the instance to answer again: what the restart banner and the
- * update dialog share. `restart` resolves once it is back (or the person was signed out).
+ * update dialog share. `run` takes what asks for it (a restart, or installing a release, which ends in
+ * one) and resolves once the instance is back or the person was signed out. `before` waits for the
+ * instance to go down when the ask returns before that (an install runs for a while first).
  */
 export function useRestart() {
   const t = useT();
@@ -83,12 +85,19 @@ export function useRestart() {
 
   useEffect(() => () => abort.current?.abort(), []);
 
-  /** `accepted` runs once the instance agreed to restart, before waiting for it (closes a dialog). */
-  const restart = async (accepted?: () => void) => {
+  const run = async ({
+    ask = api.restart,
+    accepted,
+    before,
+  }: {
+    ask?: () => Promise<unknown>;
+    accepted?: () => void;
+    before?: (signal: AbortSignal) => Promise<boolean>;
+  } = {}) => {
     setPending(true);
     setError(null);
     try {
-      await api.restart();
+      await ask();
     } catch (failure) {
       setError(failure);
       setPending(false);
@@ -96,10 +105,11 @@ export function useRestart() {
     }
     setPending(false);
     accepted?.();
-    setPhase("restarting");
     const controller = new AbortController();
     abort.current = controller;
     try {
+      if (before && !(await before(controller.signal))) return;
+      setPhase("restarting");
       const back = await waitForRestart(controller.signal, () => setPhase("slow"));
       if (back === "signed-out") {
         // the new process knows no session: sign in again, then come back here
@@ -119,7 +129,14 @@ export function useRestart() {
     }
   };
 
-  return { phase, pending, error, clearError: () => setError(null), restart };
+  return {
+    phase,
+    pending,
+    error,
+    clearError: () => setError(null),
+    restart: (accepted?: () => void) => run({ accepted }),
+    run,
+  };
 }
 
 /** While the instance restarts: the agent asleep, and how long it may take. */

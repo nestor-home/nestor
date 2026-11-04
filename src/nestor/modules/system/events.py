@@ -1,4 +1,5 @@
-"""Events of the instance itself: its configuration edited, a secret changed, a restart asked for.
+"""Events of the instance itself: its configuration edited, a secret changed, a restart or an update
+asked for.
 
 Never a value: paths and names only (a configuration value may be personal, a secret's never leaves
 the vault)."""
@@ -20,3 +21,17 @@ class SecretChanged(Event, event_type="secret.changed"):
 
 class RestartRequested(Event, event_type="system.restart.requested"):
     by: str
+
+
+class UpdateRequested(Event, event_type="system.update.requested"):
+    """A person asked to install a newer release; a restart follows once it is installed."""
+
+    by: str
+    running: str
+    target: str
+
+
+class UpdateFailed(Event, event_type="system.update.failed"):
+    """The release did not install or did not accept the configuration: the running one stays."""
+
+    target: str

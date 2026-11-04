@@ -14,7 +14,7 @@ from typing import Self, cast
 
 from nestor.adapters.i18n import FluentLocalizer, catalogue_dirs
 from nestor.adapters.oauth import HttpxTokenEndpoint
-from nestor.adapters.releases import HttpReleaseFeed
+from nestor.adapters.releases import HttpReleaseFeed, PipInstaller
 from nestor.adapters.storage.sqlite import (
     GENERATE,
     SQLiteActivityStore,
@@ -187,7 +187,12 @@ class Nestor:
         self.pairing = Pairing(self.journal)
         self.version = metadata.version(DISTRIBUTION)
         self.updates = (
-            Updates(release_feed or HttpReleaseFeed(config.updates.feed), self.version)
+            Updates(
+                release_feed or HttpReleaseFeed(config.updates.feed),
+                self.version,
+                self.journal,
+                installer=PipInstaller(source, self.version) if source and PipInstaller.possible() else None,
+            )
             if config.updates.check
             else None
         )

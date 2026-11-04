@@ -505,7 +505,7 @@ export interface Release {
   changes: { kind: ChangeKind; text: string }[];
 }
 
-/** What was released since the running version (`GET /system/updates`). Nothing installs from here. */
+/** What was released since the running version (`GET /system/updates`), and whether it installs from here. */
 export interface Updates {
   running: string;
   checking: boolean;
@@ -514,6 +514,9 @@ export interface Updates {
   releases: Release[]; // newer than the running one, newest first
   outdated_satellites: string[]; // device ids the newest release no longer speaks to
   container: boolean;
+  installable: boolean; // the newest release installs from the admin (a Python environment, not a container)
+  installing: string | null; // being installed: a restart follows
+  failed: string | null; // did not install: the running version stayed
 }
 
 export interface SystemInfo {

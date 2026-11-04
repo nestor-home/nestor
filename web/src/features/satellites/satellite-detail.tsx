@@ -181,7 +181,7 @@ export function SoftwareUpdate({ satellite: s }: { satellite: Satellite }) {
         </p>
       ) : (
         <div className="grid max-w-2xl gap-4">
-          <p className="text-sm text-ink-muted">
+          <p className="font-mono text-sm text-ink">
             {t("sat-update-available", { version, running: s.software.version })}
           </p>
           {canUpdate && s.connected !== false ? (
@@ -193,7 +193,7 @@ export function SoftwareUpdate({ satellite: s }: { satellite: Satellite }) {
                 tone="accent"
                 onConfirm={() => update.mutateAsync()}
               >
-                {t("sat-update-description", { name: s.software.name })}
+                {t("sat-update-description", { running: s.software.version })}
               </Confirm>
             </div>
           ) : null}
