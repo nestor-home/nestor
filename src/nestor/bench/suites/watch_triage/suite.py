@@ -14,6 +14,7 @@ from collections import Counter
 from collections.abc import Mapping, Sequence
 from importlib.resources import files
 from importlib.resources.abc import Traversable
+from pathlib import Path
 from typing import Any
 
 from nestor.bench.errors import BenchError
@@ -43,7 +44,7 @@ class WatchTriage(Suite[tuple[Watch, ...], TriageKnobs]):
     def dataset(self) -> Traversable:
         return files(__package__ or __name__) / "cases.jsonl"
 
-    def load(self, records: Sequence[Mapping[str, Any]]) -> Dataset[tuple[Watch, ...]]:
+    def load(self, records: Sequence[Mapping[str, Any]], source: Traversable | Path) -> Dataset[tuple[Watch, ...]]:
         if not records or records[0].get("dataset") != NAME or not isinstance(records[0].get("version"), int):
             raise BenchError(Message.of("bench-watch-triage-no-header"))
         watches: list[Watch] = []

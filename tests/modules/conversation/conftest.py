@@ -17,21 +17,29 @@ from nestor.modules.conversation import (
     ContextProvider,
     ModelChoice,
     Persona,
+    Speakers,
 )
 from nestor.modules.household import Account, Household, Person
+from nestor.modules.identity import Heard
 from nestor.modules.journal import Journal
 from nestor.testing.cognition.model import Reply, ScriptedModel
 from nestor.testing.journal import MemoryEventLog
 
-MATHIS = Person(id=PersonId("mathis"), name="Mathis", accounts=(Account.parse("telegram:42"), Account.parse("voice:*")))
+MATHIS = Person(id=PersonId("mathis"), name="Mathis", accounts=(Account.parse("telegram:42"),))
 TELEGRAM = Address("telegram", "42")
 VOICE = Address("voice", "salon")
 
 
-def message(text: str, address: Address = TELEGRAM, sender: str = "42", medium: Medium | None = None) -> InboundMessage:
-    """A turn, said on the voice channel unless `medium` says otherwise, typed elsewhere."""
-    said = Medium.SPOKEN if address.channel == "voice" else Medium.WRITTEN
-    return InboundMessage(address=address, sender=Sender(sender), text=text, medium=medium or said)
+def message(
+    text: str, address: Address = TELEGRAM, sender: str = "42", medium: Medium | None = None, heard: Heard | None = None
+) -> InboundMessage:
+    """A turn, said on the voice channel (a shared device: whoever is in the room) unless `medium` says otherwise,
+    typed elsewhere from an account."""
+    shared = address.channel == "voice"
+    said = Medium.SPOKEN if shared else Medium.WRITTEN
+    return InboundMessage(
+        address=address, sender=None if shared else Sender(sender), text=text, medium=medium or said, heard=heard
+    )
 
 
 type MakeAgent = Callable[..., Agent]
@@ -53,6 +61,8 @@ def make_agent(journal: Journal) -> MakeAgent:
         settings: AgentSettings | None = None,
         clock: Callable[[], datetime] = utc_now,
         channels: Mapping[str, ChannelProfile] | None = None,
+        speakers: Speakers | None = None,
+        household: Household | None = None,
     ) -> Agent:
         return Agent(
             models=models or ModelChoice.single(model or ScriptedModel(*replies)),
@@ -64,13 +74,14 @@ def make_agent(journal: Journal) -> MakeAgent:
                 timezone="Europe/Paris",
             ),
             journal=journal,
-            household=Household([MATHIS]),
-            toolbox=Toolbox(journal, tools),
+            household=household or Household([MATHIS]),
+            toolbox=Toolbox(journal, tools, [speakers] if speakers else ()),
             localizer=FluentLocalizer(catalogue_dirs(["nestor"])),
             channels=channels or {"voice": ChannelProfile(style="Use [laughs] sparingly.")},
             context=context,
             settings=settings,
             clock=clock,
+            speakers=speakers,
         )
 
     return make

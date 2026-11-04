@@ -10,11 +10,8 @@ ANYONE = "*"
 
 @dataclass(frozen=True, slots=True)
 class Account:
-    """How a channel knows a person: `telegram:123456789`.
-
-    `voice:*` means "anyone speaking on the voice channel is assumed to be this person", the
-    explicit stand-in until a speaker identifier is plugged in.
-    """
+    """How a channel authenticates a person: `telegram:123456789`. One account stands for one person; a shared
+    device (a satellite) is a place, not an account: who speaks there is told by their voice or their words."""
 
     channel: str
     sender: str
@@ -24,6 +21,8 @@ class Account:
         channel, sep, sender = text.partition(":")
         if not (sep and channel and sender):
             raise ContractError(f"invalid account {text!r}, expected 'channel:sender'")
+        if sender == ANYONE:
+            raise ContractError(f"invalid account {text!r}: an account stands for one person, not anyone")
         return cls(channel, sender)
 
     def __str__(self) -> str:
@@ -42,7 +41,5 @@ class Person:
         return ANYONE in self.may_message or other in self.may_message
 
     def address_on(self, channel: str) -> Address | None:
-        """Where to write to them on `channel`: their account there, unless it stands for anyone (`voice:*`)."""
-        return next(
-            (Address(a.channel, a.sender) for a in self.accounts if a.channel == channel and a.sender != ANYONE), None
-        )
+        """Where to write to them on `channel`: their account there."""
+        return next((Address(a.channel, a.sender) for a in self.accounts if a.channel == channel), None)

@@ -35,7 +35,10 @@ async def test_a_release_is_installed_with_the_extras_in_use_then_checked_with_t
     await PipInstaller(Path("/home/nestor.yaml"), "0.7.0", UV, run=commands).install("0.8.0")
     assert requested(commands) == ["0.8.0", "check"]
     install, check = commands.ran
-    assert install[: len(UV)] == list(UV) and install[-1].startswith("nestor-home[voice]==")
+    requirement, _, version = install[-1].partition("==")
+    extras = set(requirement.removeprefix("nestor-home[").removesuffix("]").split(","))
+    assert install[: len(UV)] == list(UV) and version == "0.8.0"
+    assert "voice" in extras, "the extras installed now (every one, in the test environment) are kept"
     assert check[1:] == ["-c", CHECK, "-c", "/home/nestor.yaml", "check"], "the interpreter runs the check"
 
 

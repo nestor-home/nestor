@@ -44,6 +44,15 @@ class Call:
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class Startup:
+    """How a model the engine started for a variant came up: how long `start()` took, and how much the process's
+    peak memory grew meanwhile (None where the platform does not tell)."""
+
+    seconds: float
+    memory_bytes: int | None
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class CaseResult:
     case: str
     repetition: int
@@ -57,6 +66,7 @@ class Unit(StrEnum):
     COUNT = "count"
     DURATION = "duration"  # seconds
     COST = "cost"  # the provider's billing currency
+    BYTES = "bytes"
 
 
 class Better(StrEnum):

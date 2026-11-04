@@ -73,3 +73,7 @@ error-secret-unknown = This secret is not set.
 error-restart-unconfirmed = Confirm the restart: every conversation will be interrupted for a moment.
 error-update-unconfirmed = Confirm the update: Nestor restarts once it is installed.
 error-update-not-installable = This release cannot be installed from here.
+
+error-voices-off = Voices are not recognised on this instance: choose a voice model under voices in the configuration.
+error-voice-not-yours = Only the person records their voice, or an owner for someone without an account.
+error-audio-format = The recording must be a 16-bit mono WAV at 16 kHz.

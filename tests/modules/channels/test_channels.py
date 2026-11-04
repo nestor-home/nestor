@@ -20,7 +20,7 @@ def test_an_address_round_trips_and_names_its_session() -> None:
 
 
 async def test_a_message_reaches_the_assistant_and_its_answer_comes_back() -> None:
-    assistant = ScriptedAssistant(lambda m: f"Bonjour {m.sender.id} !")
+    assistant = ScriptedAssistant(lambda m: f"Bonjour {m.sender and m.sender.id} !")
     channel = InMemoryChannel("telegram")
     serving = asyncio.create_task(channel.serve(assistant))
 

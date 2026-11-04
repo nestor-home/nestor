@@ -5,10 +5,11 @@ Every channel — realtime voice included — reaches the same assistant through
 """
 
 from nestor.modules.conversation.conversations import Conversations
-from nestor.modules.conversation.events import AnswerCut, AssistantTurn, FallbackSpoken, UserTurn
+from nestor.modules.conversation.events import AnswerCut, AssistantTurn, FallbackSpoken, SpeakerDeclared, UserTurn
 from nestor.modules.conversation.persona import Instructions, Persona
 from nestor.modules.conversation.ports import ContextProvider, Layer, Sections, TurnContext
 from nestor.modules.conversation.service import Agent, AgentSettings, ChannelProfile, LiveReplies, ModelChoice
+from nestor.modules.conversation.speakers import Speakers
 from nestor.modules.conversation.types import FallbackReason, ReplyPhase
 
 __all__ = [
@@ -28,6 +29,8 @@ __all__ = [
     "Persona",
     "ReplyPhase",
     "Sections",
+    "SpeakerDeclared",
+    "Speakers",
     "TurnContext",
     "UserTurn",
 ]

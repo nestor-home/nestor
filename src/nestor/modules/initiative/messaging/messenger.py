@@ -67,6 +67,9 @@ class Messenger(Component):
             lines = [f"{asked} answered the question you passed on for {person.name} ({question.text}): {message.text}"]
         elif sender is not None and sender.id != person.id:
             lines = [f"{sender.name} asked you to pass this on to {person.name}: {message.text}"]
+        elif sender is None and message.origin is not None:  # someone at home nobody knows, on a shared device
+            place = message.origin.conversation
+            lines = [f"Someone at home, in {place}, asked you to pass this on to {person.name}: {message.text}"]
         else:
             lines = [f"What to tell {person.name}: {message.text}"]
         if message.expects_reply:

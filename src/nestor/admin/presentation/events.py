@@ -39,10 +39,10 @@ from nestor.modules.cognition import (
 )
 from nestor.modules.cognition.tools import ToolCalled, ToolCompleted
 from nestor.modules.connectors import ConnectionChanged, ConnectionCreated, ConnectionRemoved
-from nestor.modules.conversation import AnswerCut, AssistantTurn, FallbackSpoken, UserTurn
+from nestor.modules.conversation import AnswerCut, AssistantTurn, FallbackSpoken, SpeakerDeclared, UserTurn
 from nestor.modules.home import PresenceChanged
 from nestor.modules.household import Household
-from nestor.modules.identity import SpeakerEnrolled, SpeakerForgotten, SpeakerIdentified
+from nestor.modules.identity import VoiceEnrolled, VoiceForgotten, VoiceLearningChanged
 from nestor.modules.initiative import (
     Delivered,
     DeliveryConsidered,
@@ -58,6 +58,7 @@ from nestor.modules.initiative import (
     WatchSorted,
     WatchTriggered,
 )
+from nestor.modules.initiative.confirmations import ConfirmationAnswered, ConfirmationRequested
 from nestor.modules.journal import Entry
 from nestor.modules.memory import MemoryCorrected, MemoryForgotten, MemoryRecorded
 from nestor.modules.memory.episodes import EpisodeSummarized
@@ -113,7 +114,7 @@ CATEGORIES = (
         "delivery",
         (DeliveryConsidered, Delivered, DeliveryFailed, MessageRequested, MessageDelivered, MessageUndelivered),
     ),
-    Category("tool", (ToolCalled, ToolCompleted)),
+    Category("tool", (ToolCalled, ToolCompleted, ConfirmationRequested, ConfirmationAnswered)),
     Category("task", (TaskStarted, TaskAttached, TaskProgressed, TaskCancelRequested, TaskEnded, TaskDelivered)),
     Category("watch", (WatchCreated, WatchSorted, WatchTriggered, WatchEnded)),
     Category("schedule", (ScheduleCreated, ScheduleFired, ScheduleCancelled)),
@@ -138,7 +139,8 @@ CATEGORIES = (
             SatelliteIdentifyRequested,
         ),
     ),
-    Category("observation", (PersonDetected, SpeechActivityObserved, SpeakerIdentified)),
+    Category("voice", (SpeakerDeclared, VoiceEnrolled, VoiceForgotten, VoiceLearningChanged)),
+    Category("observation", (PersonDetected, SpeechActivityObserved)),
     Category(
         "account",
         (
@@ -454,17 +456,36 @@ class EventDescriber:
                 e, Message.of("journal-invitation-revoked", invitation=e.invitation_id)
             ),
             AccountLogin: self._login,
-            SpeakerIdentified: lambda e: self._line(
+            SpeakerDeclared: lambda e: self._line(
                 e,
-                Message.of("journal-observation-speaker-identified", **self._person(e.person)),
-                detail_message=Message.of("journal-detail-confidence", confidence=e.confidence),
+                Message.of("journal-speaker-declared", person=self.name(e.person)),
+                people=[e.person],
+                channels=[e.address],
+            ),
+            VoiceEnrolled: lambda e: self._line(
+                e,
+                Message.of("journal-voice-enrolled", person=self.name(e.person), where=e.where),
                 people=[e.person],
             ),
-            SpeakerEnrolled: lambda e: self._line(
-                e, Message.of("journal-identity-enrolled", person=self.name(e.person)), people=[e.person]
+            VoiceForgotten: lambda e: self._line(
+                e,
+                Message.of("journal-voice-forgotten", person=self.name(e.person), learned=_yes(e.learned_only)),
+                people=[e.person],
             ),
-            SpeakerForgotten: lambda e: self._line(
-                e, Message.of("journal-identity-forgotten", person=self.name(e.person)), people=[e.person]
+            VoiceLearningChanged: lambda e: self._line(
+                e,
+                Message.of("journal-voice-learning", person=self.name(e.person), learning=_yes(e.learning)),
+                people=[e.person],
+            ),
+            ConfirmationRequested: lambda e: self._line(
+                e,
+                Message.of("journal-confirmation-requested", person=self.name(e.person), tool=e.tool),
+                people=[e.person],
+                channels=[e.origin],
+                tool=e.tool,
+            ),
+            ConfirmationAnswered: lambda e: self._line(
+                e, Message.of("journal-confirmation-answered", approved=_yes(e.approved))
             ),
             ConfigChanged: self._config_changed,
             SecretChanged: lambda e: self._by(e, e.by, "journal-secret-changed", name=e.name, removed=_yes(e.removed)),
@@ -522,7 +543,7 @@ class EventDescriber:
     def _user_turn(self, e: UserTurn) -> Line:
         return self._line(
             e,
-            Message.of("journal-user-said", **self._person(e.person)),
+            Message.of("journal-user-said", by=e.speaker.by.value, **self._person(e.person)),
             detail=e.text,
             people=[e.person],
             channels=[e.address],

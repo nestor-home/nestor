@@ -33,6 +33,7 @@ from nestor.modules.conversation import (
     TurnContext,
     UserTurn,
 )
+from nestor.modules.identity import Heard
 from nestor.modules.journal import Journal
 from nestor.testing.cognition.model import ScriptedModel
 
@@ -392,11 +393,12 @@ async def test_instructions_carry_persona_channel_person_and_context(make_agent:
 
     model = ScriptedModel("Oui.", "Oui.")
     agent = make_agent(model=model, context=[Tasks(), Silent()])
-    await agent.respond(message("Salut", VOICE, "mic")).collect()
+    mathis = Heard(space="s", voiceprint=(1.0,), duration_s=2.0, person=MATHIS.id, score=0.9, margin=0.9)
+    await agent.respond(message("Salut", VOICE, heard=mathis)).collect()
     await agent.respond(message("Salut", Address("web", "x"), "inconnu")).collect()
 
     spoken, written = (r.messages[0].text for r in model.requests)
-    assert "Tu es Richie" in spoken and "Mathis" in spoken and "spoken aloud" in spoken
+    assert "Tu es Richie" in spoken and "Mathis, recognised by their voice" in spoken and "spoken aloud" in spoken
     assert "[laughs]" in spoken and "Running tasks: none." in spoken and "Europe/Paris" in spoken
     assert "do not know who" in written and "chat" in written and "Running tasks" not in written
 

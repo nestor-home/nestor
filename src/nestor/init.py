@@ -89,6 +89,15 @@ FOOTER = """
 #     name: home
 #     url: ${{HOME_ASSISTANT_MCP_URL}}
 #     token: ${{HOME_ASSISTANT_TOKEN}}
+#     sensitive:                   # confirmed by the person first: locks, the alarm, garage, gate and doors
+#       - tool: intent__HassTurnOn
+#         arguments: &doors {{domain: [lock, alarm_control_panel], device_class: [garage, gate, door],
+#                             name: [lock, alarm, garage, gate, door]}}
+#       - tool: intent__HassTurnOff
+#         arguments: *doors
+
+# voices:                           # who speaks to a satellite, from their voice: pip install 'nestor-home[voice-id]'
+#   embedder: ears                 # with, under models:  ears: {{kind: sherpa-onnx-voice, model: titanet-small}}
 
 admin:                             # who signs in is in the database: `nestor accounts create-owner`
   host: 0.0.0.0
@@ -162,7 +171,7 @@ def configuration(setup: Setup, data_dir: Path) -> str:
         timezone=setup.timezone,
         person=setup.person,
         person_id=person_id,
-        accounts='["satellites:*"]' + ("" if setup.voice else '     # add "telegram:<your chat id>"'),
+        accounts='[]                   # add "telegram:<your chat id>": satellites are rooms, not accounts',
         base_url=setup.base_url,
         model=setup.model,
         requirement=VOICE_REQUIREMENT,

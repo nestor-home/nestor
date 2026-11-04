@@ -4,6 +4,7 @@
  */
 import type { LucideIcon } from "lucide-react";
 import {
+  AudioLines,
   Bot,
   Brain,
   Cable,
@@ -42,6 +43,7 @@ export const PAGES: ConfigPage[] = [
   { slug: "household", kind: "household", keys: ["household"], icon: Users, group: "agent" },
   { slug: "conversation", kind: "section", keys: ["conversation"], icon: MessageCircle, group: "agent" },
   { slug: "initiative", kind: "section", keys: ["initiative"], icon: Sparkles, group: "agent" },
+  { slug: "voices", kind: "section", keys: ["voices"], icon: AudioLines, group: "agent" },
   { slug: "models", kind: "slots", keys: ["models", "agent", "watches"], icon: Brain, group: "parts" },
   { slug: "channels", kind: "slots", keys: ["channels"], icon: MessagesSquare, group: "parts" },
   { slug: "executors", kind: "slots", keys: ["executors"], icon: Workflow, group: "parts" },

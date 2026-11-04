@@ -137,6 +137,42 @@ export interface Person {
   account_login: string | null;
 }
 
+/** A person's voice, as Nestor recognises it: recorded with consent, then improved as they talk. */
+export interface Voice {
+  enrolled: boolean;
+  learning: boolean; // everyday turns still improve it
+  learned: number; // voiceprints learned since the recording
+  enrolled_at: Instant | null;
+  last_learned_at: Instant | null;
+  manageable: boolean; // whether this account may record, change or erase it
+}
+
+/** A guided recording in progress: the phrases to read, in the reader's language. */
+export interface VoiceRecording {
+  id: Id;
+  person: Id;
+  phrases: string[];
+  next: number | null; // the first phrase still to say
+}
+
+/** Why a phrase is asked again. */
+export type PhraseProblem = "too_short" | "too_quiet" | "too_loud" | "other_voice";
+
+export interface PhraseVerdict {
+  kept: boolean;
+  problem: PhraseProblem | null;
+  taken: number; // phrases kept so far
+  total: number;
+}
+
+/** Who a recording sounds like, as satellites would recognise it. */
+export interface Heard {
+  person: Id | null; // null: nobody recognised
+  name: string | null;
+  score: number; // how alike, 0 to 1
+  threshold: number; // recognised from there
+}
+
 // -- journal --------------------------------------------------------------------------------------
 
 export type Tone = "normal" | "decision" | "warning";

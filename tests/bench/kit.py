@@ -95,7 +95,7 @@ class Quiz(Suite[str, QuizKnobs]):
         assert self._dataset is not None
         return self._dataset
 
-    def load(self, records: Sequence[Mapping[str, Any]]) -> Dataset[str]:
+    def load(self, records: Sequence[Mapping[str, Any]], source: Traversable | Path) -> Dataset[str]:
         return Dataset(version=1, cases=tuple(Case(id=r["case"], data=r) for r in records), shared="answer:")
 
     async def run(self, case: Case, shared: str, trial: Trial[QuizKnobs]) -> Mapping[str, Any]:

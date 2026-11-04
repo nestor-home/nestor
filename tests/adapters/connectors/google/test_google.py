@@ -19,6 +19,7 @@ from nestor.core.i18n import Locale
 from nestor.modules.channels import Address
 from nestor.modules.cognition.tools import Risk, ToolContext, ToolFailed
 from nestor.modules.connectors import Access, AuthKind, Connection, Connections, ConnectorTools, Secrets
+from nestor.modules.identity import Speaker
 from nestor.modules.initiative import Incoming
 from nestor.modules.journal import Journal
 from nestor.runtime import Services
@@ -29,7 +30,7 @@ from nestor.testing.journal import MemoryEventLog
 
 MATHIS = PersonId("mathis")
 CONNECTION = Connection(kind="google", owner=MATHIS, account="mathis@gmail.com", id="gmail-math")
-CONTEXT = ToolContext(address=Address("telegram", "42"), person=MATHIS)
+CONTEXT = ToolContext(address=Address("telegram", "42"), speaker=Speaker.account(MATHIS))
 TOKEN = "ya29.a0AfB_sentinel-access-token"
 REDIRECT = "https://nestor.example/connections/callback"
 

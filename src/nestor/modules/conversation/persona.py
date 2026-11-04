@@ -9,6 +9,7 @@ from nestor.core.i18n import Locale, Message
 from nestor.modules.channels import Medium
 from nestor.modules.conversation.types import FallbackReason
 from nestor.modules.household import Person
+from nestor.modules.identity import Identified, Speaker
 
 SPOKEN = """Everything you write is spoken aloud. Answer briefly: one or two sentences unless asked to explain.
 Start with a very short sentence (three to six words): the voice only starts once it is complete.
@@ -56,6 +57,8 @@ class Persona:
         style: str,
         person: Person | None,
         now: datetime,
+        speaker: Speaker | None = None,
+        room: str | None = None,
         guidance: tuple[str, ...] = (),
         people: tuple[Person, ...] = (),
         household: tuple[str, ...] = (),
@@ -75,13 +78,27 @@ class Persona:
             household=_joined(f"The household: {names}." if names else "", *household),
             turn=_joined(
                 f"Now: {local:%A %d %B %Y, %H:%M} ({self.timezone}).",
-                f"You are talking with {person.name}." if person else "You do not know who you are talking with.",
+                _who(person, speaker, room),
                 *turn,
             ),
         )
 
     def fallback(self, reason: FallbackReason) -> Message:
         return FALLBACKS[reason]
+
+
+def _who(person: Person | None, speaker: Speaker | None, room: str | None) -> str:
+    """Who speaks, and how anyone knows: the agent asks when it matters and nobody is known."""
+    by = speaker.by if speaker else Identified.ACCOUNT
+    if person is not None and by is Identified.VOICE:
+        return f"You are talking with {person.name}, recognised by their voice."
+    if person is not None and by is Identified.SAID:
+        return f"You are talking with {person.name}, who said so; nothing confirms it."
+    if person is not None:
+        return f"You are talking with {person.name}."
+    if room is not None:
+        return f"Someone at home is talking to you through the satellite of the room {room}: you do not know who."
+    return "You do not know who you are talking with."
 
 
 def _joined(*parts: str) -> str:

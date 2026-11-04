@@ -105,6 +105,7 @@ class WatchKeeper(Component):
             about=f"watch {watch.id}",
             origin=watch.created_in,
             urgent=verdict.urgent,
+            private=person is not None,  # a mail for someone is theirs; one for the household is not
         )
 
     async def _consume(self, source: InboundEventSource) -> None:

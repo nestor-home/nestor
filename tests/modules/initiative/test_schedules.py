@@ -12,6 +12,7 @@ from nestor.modules.cognition.model import ToolCall
 from nestor.modules.cognition.tools import Toolbox, ToolContext, ToolFailed
 from nestor.modules.conversation import Agent, AssistantTurn, ModelChoice, Persona, TurnContext
 from nestor.modules.household import Household, Person
+from nestor.modules.identity import Speaker
 from nestor.modules.initiative import (
     Schedule,
     ScheduleBook,
@@ -89,7 +90,7 @@ class Home:
 
     async def schedule(self, **arguments: object) -> Any:
         tool = next(t for t in self.tools.tools() if t.spec.name == "schedule")
-        return await tool.run(arguments, ToolContext(address=CHAT, person=MATHIS.id))
+        return await tool.run(arguments, ToolContext(address=CHAT, speaker=Speaker.account(MATHIS.id)))
 
 
 async def test_a_wake_up_runs_its_instruction_once_each_time_it_is_due_with_the_background_model() -> None:
@@ -136,7 +137,9 @@ async def test_a_one_off_ends_once_run_and_a_cancelled_one_never_runs() -> None:
         once = await home.schedule(instruction="Rappelle à Mathis d'appeler le plombier", at="2026-11-03T09:00")
         daily = await home.schedule(instruction="Arrose les plantes", times=["08:00"])
         cancel = next(t for t in home.tools.tools() if t.spec.name == "cancel_schedule")
-        await cancel.run({"schedule_id": daily["schedule_id"]}, ToolContext(address=CHAT, person=MATHIS.id))
+        await cancel.run(
+            {"schedule_id": daily["schedule_id"]}, ToolContext(address=CHAT, speaker=Speaker.account(MATHIS.id))
+        )
         home.clock.now = paris(3, 9, 5)
         assert await home.scheduler.wake_due() == 1
         assert home.book.schedules == {}
@@ -168,5 +171,9 @@ async def test_the_wake_ups_set_are_in_the_instructions_with_when_they_are_next_
     home = Home("D'accord.", now=paris(2, 7))
     async with home.book:
         await home.schedule(instruction="Arrose les plantes", times=["08:00"], days=["sat", "sun"])
-        section = str(await home.tools.context(TurnContext(person=MATHIS, address=CHAT, said=None)))
+        section = str(
+            await home.tools.context(
+                TurnContext(person=MATHIS, speaker=Speaker.account(MATHIS.id), address=CHAT, said=None)
+            )
+        )
     assert "sat, sun at 08:00 (next: Saturday 07 November 08:00): Arrose les plantes" in section

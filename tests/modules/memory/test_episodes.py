@@ -11,6 +11,7 @@ from nestor.modules.channels import Address, Exchange, Medium
 from nestor.modules.cognition.tools import ToolContext, ToolFailed
 from nestor.modules.conversation import AnswerCut, AssistantTurn, Layer, TurnContext, UserTurn
 from nestor.modules.household import Account, Household, Person
+from nestor.modules.identity import Speaker
 from nestor.modules.journal import Journal
 from nestor.modules.memory import Memories, MemoryRecorded
 from nestor.modules.memory.assistant import MemoryTools
@@ -81,7 +82,7 @@ class Home:
                 address=CHAT,
                 text=said,
                 medium=Medium.WRITTEN,
-                person=person.id,
+                speaker=Speaker.account(person.id),
                 exchange=turn,
                 at=at,
             )
@@ -191,6 +192,7 @@ async def test_an_answer_cut_short_is_summarized_as_it_was_heard() -> None:
                 medium=Medium.SPOKEN,
                 exchange=turn,
                 at=START,
+                speaker=Speaker.unknown(),
             )
         )
         answer = AssistantTurn(
@@ -236,7 +238,9 @@ async def test_a_turn_carries_the_latest_conversations_of_whoever_speaks_and_old
     )
 
     def turn(person: Person, said: str) -> TurnContext:
-        return TurnContext(person=person, address=CHAT, said=said)
+        return TurnContext(
+            person=person, speaker=Speaker.account(person.id) if person else Speaker.unknown(), address=CHAT, said=said
+        )
 
     asked = (await tools(home).context(turn(LEA, "Tu te souviens du restaurant ?")))[Layer.TURN]
     latest, older = asked.split("Older conversations")
@@ -244,7 +248,9 @@ async def test_a_turn_carries_the_latest_conversations_of_whoever_speaks_and_old
     assert "[e18]" in older and "Da Marco" in older and "Sunday 18 October 2026, 22:00, in writing" in older
     assert "Dune" not in asked, "never someone else's conversation"
     assert "Dune" in (await tools(home).context(turn(HUGO, "Bonjour")))[Layer.TURN]
-    assert Layer.TURN not in await tools(home).context(TurnContext(person=None, address=CHAT, said="Bonjour"))
+    assert Layer.TURN not in await tools(home).context(
+        TurnContext(person=None, speaker=Speaker.unknown(), address=CHAT, said="Bonjour")
+    )
 
 
 async def test_recall_finds_the_conversations_of_a_time_and_a_participant_can_reread_one() -> None:
@@ -258,13 +264,15 @@ async def test_recall_finds_the_conversations_of_a_time_and_a_participant_can_re
         ),
     )
     found = {t.spec.name: t for t in tools(home).tools()}
-    lea = ToolContext(address=CHAT, person=LEA.id)
+    lea = ToolContext(address=CHAT, speaker=Speaker.account(LEA.id))
 
     week = str(await found["recall"].run({"query": "", "since": "2026-10-20", "until": "2026-10-26"}, lea))
     assert "[e24]" in week and "[e18]" not in week
     reread = await found["read_conversation"].run({"conversation_id": "e24"}, lea)
     assert reread == {"conversation": "[20:00] Léa: Le plombier vient quand ?\n[20:00] Richie: Jeudi à 9 h."}
     with pytest.raises(ToolFailed, match="no conversation e24"):
-        await found["read_conversation"].run({"conversation_id": "e24"}, ToolContext(address=CHAT, person=HUGO.id))
+        await found["read_conversation"].run(
+            {"conversation_id": "e24"}, ToolContext(address=CHAT, speaker=Speaker.account(HUGO.id))
+        )
     with pytest.raises(ToolFailed, match="cannot read the date"):
         await found["recall"].run({"query": "", "since": "mardi dernier"}, lea)

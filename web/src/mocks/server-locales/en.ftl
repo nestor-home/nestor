@@ -328,3 +328,13 @@ error-pending-unknown = No device is waiting with this request any more.
 error-identify-unsupported = This device cannot make itself noticed.
 error-satellite-offline = This satellite is not connected right now.
 error-satellite-unknown = This satellite is not (or no longer) paired.
+
+# copied from Nestor's locales/en/identity.ftl and errors.ftl
+voice-phrase-1 = Nestor, turn on the lights in the living room.
+voice-phrase-2 = What will the weather be like tomorrow morning?
+voice-phrase-3 = Remind me to call the plumber on Thursday.
+voice-phrase-4 = Add bread, apples and coffee to the shopping list.
+voice-phrase-5 = Tell me the story of a lighthouse keeper.
+error-voices-off = Voices are not recognised on this instance: choose a voice model under voices in the configuration.
+error-voice-not-yours = Only the person records their voice, or an owner for someone without an account.
+error-audio-format = The recording must be a 16-bit mono WAV at 16 kHz.

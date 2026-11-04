@@ -5,7 +5,7 @@ import pytest
 from nestor.core import ContractError, PersonId
 from nestor.modules.household import Account, Household, Person
 
-MATHIS = Person(id=PersonId("mathis"), name="Mathis", accounts=(Account.parse("telegram:42"), Account.parse("voice:*")))
+MATHIS = Person(id=PersonId("mathis"), name="Mathis", accounts=(Account.parse("telegram:42"),))
 MATHILDE = Person(id=PersonId("mathilde"), name="Mathilde", accounts=(Account.parse("telegram:7"),))
 
 
@@ -21,9 +21,10 @@ def test_the_household_lists_its_people() -> None:
     assert Household([MATHIS]).person(PersonId("mathis")) == MATHIS
 
 
-def test_a_wildcard_account_stands_for_anyone_on_that_channel() -> None:
-    household = Household([MATHIS, MATHILDE])
-    assert household.identify("voice", "living-room-mic") == MATHIS
+def test_an_account_stands_for_one_person_not_anyone() -> None:
+    """A shared device is a place, not an account: who speaks there is told by their voice or their words."""
+    with pytest.raises(ContractError, match="not anyone"):
+        Account.parse("satellites:*")
 
 
 def test_an_account_cannot_belong_to_two_people() -> None:

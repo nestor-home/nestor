@@ -20,6 +20,7 @@ import type {
   Task,
   Tool,
   Updates,
+  Voice,
   Watch,
 } from "@/api";
 import type { ScopeDto } from "@/api/dto";
@@ -75,6 +76,19 @@ export const OFFICE = fr("office", "bureau");
 export const HALLWAY = fr("hallway", "entrée");
 export const BEDROOM = fr("bedroom", "chambre");
 const VERANDA = fr("veranda", "véranda");
+
+/** Voices as recorded: Mathis's, long ago and improved since; nobody else's yet. */
+export function voices(): Record<string, Omit<Voice, "manageable">> {
+  return {
+    mathis: {
+      enrolled: true,
+      learning: true,
+      learned: 12,
+      enrolled_at: minutes(9 * 24 * 60),
+      last_learned_at: minutes(40),
+    },
+  };
+}
 
 export function people(): Person[] {
   return [

@@ -12,6 +12,7 @@ from nestor.core.i18n import Message
 from nestor.modules.accounts import Role
 from nestor.modules.channels import Address, Exchange, Medium
 from nestor.modules.conversation import AssistantTurn, UserTurn
+from nestor.modules.identity import Speaker
 from nestor.modules.initiative import DeliveryConsidered
 from nestor.modules.memory import MemoryRecorded
 from nestor.modules.satellites import PROTOCOL
@@ -30,7 +31,7 @@ def turn(address: Address, text: str, person: str | None) -> UserTurn:
         session=address.session,
         address=address,
         text=text,
-        person=PersonId(person) if person else None,
+        speaker=Speaker.account(PersonId(person)) if person else Speaker.unknown(),
     )
 
 

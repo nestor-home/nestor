@@ -12,6 +12,7 @@ journal-kind = { $kind ->
     [connection] Connexions
     [presence] Présence
     [satellite] Satellites
+    [voice] Voix
     [observation] Observations
     [account] Comptes
    *[other] Autres
@@ -19,7 +20,11 @@ journal-kind = { $kind ->
 
 journal-user-said = { $known ->
     [no] Quelqu'un a dit
-   *[yes] { $person } a dit
+   *[yes] { $by ->
+        [voice] { $person } a dit (voix reconnue)
+        [said] { $person } a dit (d'après ses mots)
+       *[other] { $person } a dit
+    }
 }
 journal-assistant-answered = { $assistant } a répondu
 journal-assistant-interrupted = { $assistant } a répondu (interrompu)
@@ -260,12 +265,21 @@ journal-login-failed = { $known ->
     }
 }
 
-journal-observation-speaker-identified = { $known ->
-    [no] Voix non reconnue
-   *[yes] Voix de { $person } reconnue
+journal-speaker-declared = { $person } a dit qui parlait
+journal-voice-enrolled = Voix de { $person } enregistrée ({ $where })
+journal-voice-forgotten = { $learned ->
+    [yes] Ce qui avait été appris de la voix de { $person } est effacé
+   *[no] Voix de { $person } effacée
 }
-journal-identity-enrolled = Empreinte vocale enregistrée pour { $person }
-journal-identity-forgotten = Empreinte vocale de { $person } supprimée
+journal-voice-learning = { $learning ->
+    [yes] La voix de { $person } s'affine de nouveau avec le temps
+   *[no] La voix de { $person } ne s'affine plus avec le temps
+}
+journal-confirmation-requested = Confirmation demandée par écrit à { $person } : { $tool }
+journal-confirmation-answered = { $approved ->
+    [yes] Confirmé par écrit
+   *[no] Refusé par écrit
+}
 
 journal-behavior-changed = Attitude : { $behavior ->
     [idle] au repos

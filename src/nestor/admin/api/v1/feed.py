@@ -21,6 +21,7 @@ from nestor.modules.cognition import TaskEnded, TaskStarted
 from nestor.modules.cognition.delegation.events import TaskDelivered
 from nestor.modules.cognition.tools import ToolCalled, ToolCompleted
 from nestor.modules.conversation import AnswerCut, AssistantTurn, UserTurn
+from nestor.modules.identity import Identified
 from nestor.modules.initiative import (
     Delivered,
     DeliveryConsidered,
@@ -149,7 +150,14 @@ class Audience:
         return audience
 
     def learn(self, entry: Entry) -> None:
-        mine = _payload(entry).get("person") == self.principal.person
+        """A conversation on the person's own account is theirs to read whole; on a shared device (a satellite),
+        only what they said and what concerns them is: others speak there too."""
+        speaker = _payload(entry).get("speaker")
+        mine = (
+            isinstance(speaker, dict)
+            and speaker.get("person") == self.principal.person
+            and speaker.get("by") == Identified.ACCOUNT.value
+        )
         if entry.type == UserTurn.event_type and mine and entry.record.get("session"):
             self._sessions.add(str(entry.record["session"]))
 

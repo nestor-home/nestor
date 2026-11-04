@@ -17,8 +17,9 @@ from nestor.adapters.channels.satellites.link import SatelliteLink
 from nestor.adapters.channels.satellites.voice.audio import SatelliteVoice
 from nestor.adapters.channels.satellites.voice.resilience import load_clips
 from nestor.adapters.channels.satellites.voice.session import SessionSettings
-from nestor.core import ContractError, ProviderError
+from nestor.core import ContractError, PersonId, ProviderError
 from nestor.modules.channels import Address
+from nestor.modules.identity import Heard
 from nestor.modules.satellites import AUDIO_CAPTURE, AUDIO_PLAYBACK, TEXT_DISPLAY, wire
 
 from .audio import needs_recordings, needs_say, recording, say, tone_wav
@@ -112,7 +113,7 @@ async def test_the_assistant_answers_shortly_after_the_user_stops_speaking() -> 
     # Simulated providers take 0.4 s: the rest is the loop's own cost (turn detection included).
     assert first_sound - end < 1.3, f"answered {first_sound - end:.2f} s after the end of speech"
     [message] = assistant.messages
-    assert (message.address, message.sender.id, message.text) == (ROOM, "salon", rec.text)
+    assert (message.address, message.sender, message.text) == (ROOM, None, rec.text)  # a place, no account
     assert tts.texts == ["Ça va très bien, et toi ?"], "a healthy conversation never falls back"
     assert assistant.replies[0].heard is None, "an answer played to its end is not interrupted"
 
@@ -332,14 +333,19 @@ async def test_without_a_clip_a_synthesis_outage_leaves_the_assistant_silent_but
 
 
 @needs_say
-async def test_strangers_are_not_answered() -> None:
+async def test_whoever_is_in_the_room_is_answered_with_what_their_voice_told() -> None:
+    """A satellite is a place: the turn has no account, and its speech went to the voice recognition while it was
+    transcribed."""
     question = say(0.5, "Ouvre la porte d'entrée.")
     transport = ReplayTransport([question], tail_s=3)
-    assistant = FakeAssistant(["Je l'ouvre."], strangers=frozenset({"salon"}))
+    lea = Heard(space="s", voiceprint=(1.0,), duration_s=2.0, person=PersonId("lea"), score=0.9, margin=0.8)
+    assistant = FakeAssistant(["Je l'ouvre."], voice=lea)
     async with serving(
         assistant, ScriptedSTT(transport, ["Ouvre la porte d'entrée."]), ToneTTS(transport.clock)
     ) as channel:
         await converse(channel, transport)
 
-    assert not assistant.messages
-    assert not transport.playback.chunks
+    [message] = assistant.messages
+    assert message.sender is None and message.heard == lea
+    assert assistant.heard and len(assistant.heard[-1]) >= 2 * 16000 * 0.5, "about the half-second said, at least"
+    assert transport.playback.chunks

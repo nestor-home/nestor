@@ -12,14 +12,16 @@ from abc import ABC, abstractmethod
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from importlib.resources.abc import Traversable
+from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
-from nestor.bench.types import Case, CaseResult, Dataset, Summary
+from nestor.bench.types import Case, CaseResult, Dataset, Startup, Summary
 from nestor.core import ContractError
 from nestor.modules.cognition import ConversationModel
 from nestor.modules.cognition.embedding import Embedder
+from nestor.modules.identity import VoiceEmbedder
 from nestor.runtime.config import NestorConfig
 from nestor.runtime.plugins import Plugin
 
@@ -42,6 +44,8 @@ class Trial[K: Knobs]:
     repetition: int
     seed: int
     embedder: Embedder | None = None  # the variant's `memory.embedder`, started, when the suite asks for it
+    voices: VoiceEmbedder | None = None  # the variant's `voices.embedder`, started, when the suite asks for it
+    voices_started: Startup | None = None  # how starting it went: a voice model is measured, never replayed
 
     def model(self, role: str) -> ConversationModel:
         try:
@@ -54,7 +58,8 @@ class Suite[S, K: Knobs](ABC):
     """A benchmark.
 
     Contract:
-    - `load` turns the JSONL records into cases, refusing a dataset it cannot read with a `ContractError`;
+    - `load` turns the JSONL records into cases, refusing a dataset it cannot read with a `BenchError`; what
+      the records name (audio files…) is found next to `source`, the JSONL file;
     - `run` answers one case with a JSON-serialisable output, using only the trial's models (so every call
       is measured and can be replayed) and handling provider errors the way the measured code does;
     - `summarise` scores the outputs against the expected answers, whatever their order.
@@ -65,14 +70,16 @@ class Suite[S, K: Knobs](ABC):
     knobs: type[K]
     models: tuple[str, ...] = ("written",)  # the roles whose models it calls (`NestorConfig.roles`)
     embedder: bool = False  # it searches by meaning with the variant's `memory.embedder`, when there is one
+    voices: bool = False  # it tells voices apart with the variant's `voices.embedder`
     plugins: tuple[Plugin[Any], ...] = ()  # extra model kinds for variants (a deterministic fake for CI)
 
     @abstractmethod
-    def dataset(self) -> Traversable:
-        """The JSONL dataset shipped with the suite."""
+    def dataset(self) -> Traversable | None:
+        """The JSONL dataset shipped with the suite; None when it ships none (recordings too big for a package):
+        `--cases` is then required."""
 
     @abstractmethod
-    def load(self, records: Sequence[Mapping[str, Any]]) -> Dataset[S]: ...
+    def load(self, records: Sequence[Mapping[str, Any]], source: Traversable | Path) -> Dataset[S]: ...
 
     @abstractmethod
     async def run(self, case: Case, shared: S, trial: Trial[K]) -> Mapping[str, Any]: ...

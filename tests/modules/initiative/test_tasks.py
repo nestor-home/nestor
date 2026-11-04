@@ -20,7 +20,7 @@ VOICE = Address("voice", "salon")
 MATHIS = Person(
     id=PersonId("mathis"),
     name="Mathis",
-    accounts=(Account.parse("telegram:42"), Account.parse("voice:*")),
+    accounts=(Account.parse("telegram:42"),),
     reach=TELEGRAM,
 )
 
@@ -65,8 +65,16 @@ class Home:
         return TaskAnnouncer(self.journal, self.household, self.courier)
 
     async def task(
-        self, task_id: str, *, notify: Notify = Notify.AUTO, status: TaskStatus = TaskStatus.COMPLETED
+        self,
+        task_id: str,
+        *,
+        notify: Notify = Notify.AUTO,
+        status: TaskStatus = TaskStatus.COMPLETED,
+        still_talking: bool = True,
     ) -> None:
+        """A task asked aloud; `still_talking`: its spoken conversation goes on when it ends."""
+        if still_talking:
+            await self.agent.conversations.turn(VOICE, Medium.SPOKEN)
         await self.journal.publish(
             TaskStarted(
                 source="t",
@@ -103,6 +111,15 @@ async def test_a_result_is_said_in_the_conversation_it_was_asked_in() -> None:
     turn = (await home.journal.history(AssistantTurn))[0]
     assert (turn.address, turn.text) == (VOICE, "Ton analyse est finie : tout est vert.")
     assert "tout est vert" in home.model.requests[0].messages[-1].content
+
+
+async def test_a_result_after_the_spoken_conversation_is_over_is_written() -> None:
+    """Nestor speaks unprompted only when it is sure someone listens: here nothing says who is in the room."""
+    home = Home()
+    await home.task("t1", still_talking=False)
+    async with home.announcer():
+        pass
+    assert home.voice.sent == [] and home.telegram.sent == [(TELEGRAM, "Ton analyse est finie : tout est vert.")]
 
 
 async def test_a_result_asked_in_writing_goes_where_the_person_reads() -> None:

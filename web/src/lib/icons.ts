@@ -56,6 +56,7 @@ export const KIND: Record<string, KindStyle> = {
   connection: { icon: Plug, tone: "text-ink-muted", rail: "bg-rule-strong" },
   presence: { icon: House, tone: "text-ink-muted", rail: "bg-rule-strong" },
   satellite: { icon: RadioTower, tone: "text-ink-muted", rail: "bg-rule-strong" },
+  voice: { icon: AudioLines, tone: "text-ink-muted", rail: "bg-rule-strong" },
   observation: { icon: ScanEye, tone: "text-ink-faint", rail: "bg-rule" },
   account: { icon: KeyRound, tone: "text-ink-muted", rail: "bg-rule" },
 };

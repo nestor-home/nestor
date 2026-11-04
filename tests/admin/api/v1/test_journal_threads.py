@@ -14,6 +14,7 @@ from nestor.modules.cognition import TaskEnded, TaskStarted, TaskStatus
 from nestor.modules.cognition.delegation.events import TaskDelivered
 from nestor.modules.conversation import Conversations, UserTurn
 from nestor.modules.home import PresenceChanged
+from nestor.modules.identity import Speaker
 from nestor.modules.initiative import Delivered, DeliveryConsidered, WatchCreated, WatchTriggered
 from nestor.modules.memory import MemoryRecorded
 
@@ -88,7 +89,7 @@ async def test_the_position_cursor_pages_back_through_a_filtered_journal(tmp_pat
                     source="agent",
                     address=TELEGRAM,
                     text=f"m{n}",
-                    person=MATHIS,
+                    speaker=Speaker.account(MATHIS),
                 )
             )
             await admin.nestor.journal.publish(MemoryRecorded(source="memory", memory_id=f"x{n}", text=f"s{n}"))
@@ -110,7 +111,7 @@ async def test_every_filter_narrows_the_journal(tmp_path: Path) -> None:
                 session=TELEGRAM.session,
                 address=TELEGRAM,
                 text="Le dentiste",
-                person=MATHIS,
+                speaker=Speaker.account(MATHIS),
             )
         )
         await journal.publish(
@@ -121,7 +122,7 @@ async def test_every_filter_narrows_the_journal(tmp_path: Path) -> None:
                 session=VOICE.session,
                 address=VOICE,
                 text="Bonsoir",
-                person=MATHILDE,
+                speaker=Speaker.account(MATHILDE),
             )
         )
         await journal.publish(PresenceChanged(source="presence", person=MATHIS, home=True, room="cuisine"))
@@ -154,7 +155,7 @@ async def test_each_facet_is_counted_ignoring_its_own_selection(tmp_path: Path) 
                     source="agent",
                     address=address,
                     text=text,
-                    person=person,
+                    speaker=Speaker.account(person),
                 )
             )
         await journal.publish(PresenceChanged(source="presence", person=MATHIS, home=True, room="salon"))
@@ -190,7 +191,7 @@ async def test_one_entry_comes_with_its_record_and_only_to_who_may_read_it(tmp_p
                 source="agent",
                 address=TELEGRAM,
                 text="secret",
-                person=MATHIS,
+                speaker=Speaker.account(MATHIS),
             )
         )
         api = await admin.api()

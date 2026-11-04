@@ -158,7 +158,7 @@ async def test_a_stranger_is_ignored_without_logging_what_they_wrote(
             api.say("hi", user=ADA)
             await eventually(lambda: bool(api.sent))
     assert api.sent == [(ADA, "echo: hi")]
-    assert [m.sender.id for m in assistant.messages] == [str(ADA)]
+    assert [m.sender and m.sender.id for m in assistant.messages] == [str(ADA)]
     assert str(STRANGER) in caplog.text
     assert "my secret plan" not in caplog.text
 

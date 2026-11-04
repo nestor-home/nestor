@@ -2,7 +2,8 @@
 delivery-asked-in-writing = demandé par écrit
 delivery-place-asked = demandé sur { $channel }
 delivery-quiet-hours = heures calmes : rien à voix haute
-delivery-no-presence = présence inconnue : retour à la conversation d'origine
+delivery-no-presence = présence inconnue : par écrit
+delivery-back-in-conversation = dit dans la conversation d'origine
 delivery-away = { $person } n'est pas à la maison
 delivery-in-room = { $person } est dans la pièce « { $room } »
 delivery-room-without-satellite = { $person } est dans une pièce sans satellite

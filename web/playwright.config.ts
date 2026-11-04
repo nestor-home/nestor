@@ -19,7 +19,7 @@ export default defineConfig({
       name: "dark",
       use: { ...devices["Desktop Chrome"], colorScheme: "dark" },
       testIgnore: /\/e2e\/live\//,
-      testMatch: /\/e2e\/(open-states|home|overflow)\.spec\.ts$/,
+      testMatch: /\/e2e\/(open-states|home|overflow|voice)\.spec\.ts$/,
     },
     { name: "live", use: { ...devices["Desktop Chrome"] }, testMatch: /\/e2e\/live\/.+\.spec\.ts$/ },
   ],

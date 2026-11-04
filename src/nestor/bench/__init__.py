@@ -9,7 +9,7 @@ from nestor.bench.catalogue import Suites
 from nestor.bench.errors import BenchError
 from nestor.bench.metrics import Confusion, percentile
 from nestor.bench.ports import Knobs, Suite, Trial
-from nestor.bench.types import Better, Call, Case, CaseResult, Dataset, Finding, Metric, Summary, Unit
+from nestor.bench.types import Better, Call, Case, CaseResult, Dataset, Finding, Metric, Startup, Summary, Unit
 
 __all__ = [
     "BenchError",
@@ -22,6 +22,7 @@ __all__ = [
     "Finding",
     "Knobs",
     "Metric",
+    "Startup",
     "Suite",
     "Suites",
     "Summary",

@@ -48,13 +48,17 @@ class Caller:
         return self.principal.account_id
 
 
+# Bodies the API takes: none a form of another site can send without the browser asking first (CORS preflight).
+BODIES = frozenset({"application/json", "audio/wav"})
+
+
 async def json_only(request: Request) -> None:
-    """Applied to the whole API: an unsafe request with a body must declare it as JSON."""
+    """Applied to the whole API: an unsafe request with a body must declare it as JSON (or a WAV recording)."""
     if request.method not in UNSAFE:
         return
     has_body = request.headers.get("content-length", "0") != "0" or "transfer-encoding" in request.headers
     media = request.headers.get("content-type", "").split(";")[0].strip().lower()
-    if has_body and media != "application/json":
+    if has_body and media not in BODIES:
         raise ApiError(415, "unsupported_media_type")
 
 

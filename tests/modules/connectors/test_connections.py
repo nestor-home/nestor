@@ -5,13 +5,15 @@ import base64
 import hashlib
 import json
 import urllib.parse
+from dataclasses import replace
 
 import pytest
 
 from nestor.core import ContractError, PersonId, ProviderError
 from nestor.core.i18n import Message
-from nestor.modules.channels import Address
-from nestor.modules.cognition.tools import ToolContext, ToolFailed
+from nestor.modules.channels import Address, Exchange
+from nestor.modules.cognition.model import ToolCall
+from nestor.modules.cognition.tools import Toolbox, ToolContext
 from nestor.modules.connectors import (
     AuthKind,
     ConnectedInbound,
@@ -22,6 +24,7 @@ from nestor.modules.connectors import (
     ConnectorTools,
     Status,
 )
+from nestor.modules.identity import Speaker
 from nestor.modules.initiative import Incoming
 from nestor.modules.journal import Journal, LogQuery
 from nestor.testing.connectors import FakeProvider, MemoryVault, ScriptedConnector
@@ -29,7 +32,7 @@ from nestor.testing.journal import MemoryEventLog
 
 MATHIS = PersonId("mathis")
 REDIRECT = "https://nestor.example/connections/callback"
-CONTEXT = ToolContext(address=Address("telegram", "42"), person=MATHIS)
+CONTEXT = ToolContext(address=Address("telegram", "42"), speaker=Speaker.account(MATHIS))
 
 
 class Setup:
@@ -151,17 +154,21 @@ async def test_a_provider_outage_during_refresh_does_not_disconnect() -> None:
     assert setup.connections.connections[connection_id].status is Status.CONNECTED
 
 
-async def test_writing_tools_wait_for_the_persons_consent() -> None:
+async def test_writing_tools_wait_for_the_persons_consent_and_serve_their_owner_only() -> None:
     setup = Setup()
     await setup.connect()
-    send = {t.name: t for t in ConnectorTools(setup.connections).tools()}["mailbox_send"]
-
-    properties = send.spec.parameters["properties"]
+    toolbox = Toolbox(setup.journal, providers=[ConnectorTools(setup.connections)])
+    [spec] = [s for s in toolbox.specs() if s.name == "mailbox_send"]
+    properties = spec.parameters["properties"]
     assert isinstance(properties, dict) and "confirmed" in properties
-    with pytest.raises(ToolFailed, match="ask the person to confirm"):
-        await send.run({"to": "maman"}, CONTEXT)
-    assert setup.mail.sent == []
-    assert await send.run({"to": "maman", "confirmed": True}, CONTEXT) == "sent"
+
+    chatting = replace(CONTEXT, exchange=Exchange(conversation_id="c", turn_id="t"))  # in a live conversation
+    asked = await toolbox.call(ToolCall("c1", "mailbox_send", {"to": "maman"}), chatting)
+    assert "ask the person to confirm" in asked and setup.mail.sent == []
+    other = ToolContext(address=Address("telegram", "7"), speaker=Speaker.account(PersonId("mathilde")))
+    refused = await toolbox.call(ToolCall("c2", "mailbox_send", {"to": "maman", "confirmed": True}), other)
+    assert "only mathis may use it" in refused and setup.mail.sent == []
+    assert await toolbox.call(ToolCall("c3", "mailbox_send", {"to": "maman", "confirmed": True}), chatting) == "sent"
     assert setup.mail.sent == [{"to": "maman"}]
 
 

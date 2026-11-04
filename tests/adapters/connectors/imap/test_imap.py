@@ -36,6 +36,7 @@ from nestor.core.i18n import Locale
 from nestor.modules.channels import Address
 from nestor.modules.cognition.tools import Risk, ToolContext, ToolFailed
 from nestor.modules.connectors import Access, AuthKind, Connection, Secrets
+from nestor.modules.identity import Speaker
 from nestor.modules.initiative import Incoming
 from nestor.runtime import Services
 from nestor.testing.i18n import EchoLocalizer
@@ -43,7 +44,7 @@ from nestor.testing.initiative import InboundEventSourceContract
 
 MATHILDE = PersonId("mathilde")
 CONNECTION = Connection(kind="imap", owner=MATHILDE, account="mathilde@free.fr", id="imap-mathi")
-CONTEXT = ToolContext(address=Address("telegram", "42"), person=MATHILDE)
+CONTEXT = ToolContext(address=Address("telegram", "42"), speaker=Speaker.account(MATHILDE))
 PASSWORD = 'abcd "efgh" \\ijkl'  # an app password with characters IMAP must quote
 FAST = ImapTiming(timeout_s=2.0, idle_s=0.3, poll_s=0.02)
 

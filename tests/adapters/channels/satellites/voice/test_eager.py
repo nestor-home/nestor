@@ -40,7 +40,7 @@ async def test_the_first_sentence_is_not_held_back_while_the_assistant_calls_a_t
     clock = ScenarioClock()
     tts = ToneTTS(clock, ttfb_s=0.0, secs_per_char=0.001)
     played = PlayedText()
-    bridge = AssistantBridge(_Assistant(), address=Address("voice", "salon"), sender=Sender("salon"), played=played)
+    bridge = AssistantBridge(_Assistant(), address=Address("voice", "salon"), played=played)
     turn = LLMContextFrame(context=LLMContext([{"role": "user", "content": "Quel temps fait-il ?"}]))
     clock.start()
     await run_test(Pipeline([bridge, ResponseWatcher(), tts, played]), frames_to_send=[turn, SleepFrame(1.5)])

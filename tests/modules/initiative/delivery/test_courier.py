@@ -9,6 +9,7 @@ from nestor.modules.cognition.tools import Toolbox
 from nestor.modules.conversation import Agent, ModelChoice, Persona, UserTurn
 from nestor.modules.home import Granularity
 from nestor.modules.household import Account, Household, Person
+from nestor.modules.identity import Speaker
 from nestor.modules.initiative import Courier, DeliveryConsidered, DeliveryPolicy
 from nestor.modules.journal import Journal
 from nestor.testing.channels import InMemoryChannel
@@ -66,6 +67,15 @@ async def test_an_unanswered_announcement_is_followed_by_a_message() -> None:
     assert considered.reason == Message.of("delivery-home-main-satellite", person="Mathis", room="salon")
 
 
+async def test_a_private_message_is_only_announced_aloud_and_written_at_once() -> None:
+    """Others may be in the room: they hear that something came, not what it says."""
+    sender, _, voice, telegram = courier(StaticPresence().set("mathis", home=True), follow_up_after_s=10)
+    async with sender:
+        assert await sender.deliver(MATHIS, "Mail de la banque.", about="watch banque", private=True) == TELEGRAM
+        assert sender.scheduled() == (), "already written: no follow-up"
+    assert [a for a, _ in voice.sent] == [SALON] and [a for a, _ in telegram.sent] == [TELEGRAM]
+
+
 async def test_a_reaction_cancels_the_follow_up() -> None:
     sender, journal, _, telegram = courier(StaticPresence().set("mathis", home=True))
     async with sender:
@@ -78,6 +88,7 @@ async def test_a_reaction_cancels_the_follow_up() -> None:
                 session=SALON.session,
                 address=SALON,
                 text="Super, merci",
+                speaker=Speaker.unknown(),
             )
         )
         await asyncio.sleep(0.05)

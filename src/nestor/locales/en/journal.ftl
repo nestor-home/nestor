@@ -13,6 +13,7 @@ journal-kind = { $kind ->
     [connection] Connections
     [presence] Presence
     [satellite] Satellites
+    [voice] Voices
     [observation] Observations
     [account] Accounts
    *[other] Other
@@ -20,7 +21,11 @@ journal-kind = { $kind ->
 
 journal-user-said = { $known ->
     [no] Someone said
-   *[yes] { $person } said
+   *[yes] { $by ->
+        [voice] { $person } said (voice recognised)
+        [said] { $person } said (by their own words)
+       *[other] { $person } said
+    }
 }
 journal-assistant-answered = { $assistant } answered
 journal-assistant-interrupted = { $assistant } answered (interrupted)
@@ -258,12 +263,21 @@ journal-login-failed = { $known ->
     }
 }
 
-journal-observation-speaker-identified = { $known ->
-    [no] Voice not recognised
-   *[yes] Voice of { $person } recognised
+journal-speaker-declared = { $person } said who is speaking
+journal-voice-enrolled = Voice of { $person } recorded ({ $where })
+journal-voice-forgotten = { $learned ->
+    [yes] What was learned of { $person }'s voice was erased
+   *[no] Voice of { $person } erased
 }
-journal-identity-enrolled = Voice profile recorded for { $person }
-journal-identity-forgotten = Voice profile of { $person } deleted
+journal-voice-learning = { $learning ->
+    [yes] { $person }'s voice is learned over time again
+   *[no] { $person }'s voice is no longer learned over time
+}
+journal-confirmation-requested = Confirmation asked of { $person } in writing: { $tool }
+journal-confirmation-answered = { $approved ->
+    [yes] Confirmed in writing
+   *[no] Refused in writing
+}
 
 journal-behavior-changed = Attitude: { $behavior ->
     [idle] at rest

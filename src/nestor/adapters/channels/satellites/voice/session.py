@@ -1,6 +1,6 @@
 """One satellite's voice: its own realtime pipeline from the microphone to the speaker.
 
-transport in → STT → user turns (VAD, Smart Turn, backchannels) → assistant bridge
+transport in → (voice listener) → STT → user turns (VAD, Smart Turn, backchannels) → assistant bridge
 → response watcher → say → TTS (eager flush) → play → transport out → played text
 """
 
@@ -18,11 +18,12 @@ from pipecat.workers.runner import WorkerRunner
 from nestor.adapters.channels.satellites.voice.bridge import AssistantBridge, PlayedText
 from nestor.adapters.channels.satellites.voice.eager import ResponseWatcher
 from nestor.adapters.channels.satellites.voice.embodiment import Embodiment
+from nestor.adapters.channels.satellites.voice.listener import VoiceListener
 from nestor.adapters.channels.satellites.voice.providers import IN_SAMPLE_RATE, Speech
 from nestor.adapters.channels.satellites.voice.resilience import Injector, Outage, SpeechFallbacks
 from nestor.adapters.channels.satellites.voice.turns import TurnSettings, user_turns
 from nestor.modules.behavior import Body
-from nestor.modules.channels import Address, Assistant, Sender
+from nestor.modules.channels import Address, Assistant
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +48,6 @@ class VoiceSession:
         speech: Speech,
         assistant: Assistant,
         address: Address,
-        sender: Sender,
         settings: SessionSettings,
         body: Body | None = None,
         shown: Callable[[str], None] | None = None,
@@ -55,13 +55,15 @@ class VoiceSession:
         """`body` is animated in sync with the played audio; `shown` receives what is said, to show it."""
         self.address = address
         played = PlayedText()
+        listener = VoiceListener(assistant) if assistant.voice_wait_s else None
         self._bridge = AssistantBridge(
-            assistant, address=address, sender=sender, played=played, quiet_s=settings.quiet_s, shown=shown
+            assistant, address=address, played=played, listener=listener, quiet_s=settings.quiet_s, shown=shown
         )
         say, play = Injector(name="say"), Injector(name="play")
         pipeline = Pipeline(
             [
                 transport.input(),
+                *([listener] if listener else []),
                 speech.stt(),
                 user_turns(settings.turns),
                 self._bridge,

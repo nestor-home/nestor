@@ -45,7 +45,7 @@ def records(*lines: dict[str, object]) -> list[dict[str, object]]:
 )
 def test_a_dataset_the_suite_cannot_score_is_refused(lines: list[dict[str, object]], message: str) -> None:
     with pytest.raises(BenchError) as raised:
-        suite.load(lines)
+        suite.load(lines, suite.dataset())
     assert raised.value.message.id == message
 
 
@@ -61,7 +61,8 @@ def test_scores_count_every_mail_and_watch_pair_and_name_what_went_wrong() -> No
             {"case": "m1", "title": "for a", "expected": {"w-a": "urgent"}},
             {"case": "m2", "title": "for b", "expected": {"w-b": "match"}},
             {"case": "m3", "title": "for none"},
-        )
+        ),
+        suite.dataset(),
     )
     results = [
         decided("m1", 0, **{"w-a": {"matches": True, "urgent": False}}),

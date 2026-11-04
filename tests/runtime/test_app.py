@@ -95,9 +95,9 @@ async def test_an_embedding_model_is_declared_with_the_others_and_finds_memories
         assert nestor.memories.index is not None
         await nestor.memories.index.settled()  # embedded in the background
         assert [m.text for m in await nestor.memories.recall("Du jambon ?")] == ["Mathis est végétarien."]
-    with pytest.raises(ConfigError, match=r"memory\.embedder: main is a conversation model and cannot search memories"):
+    with pytest.raises(ConfigError, match=r"memory\.embedder: main cannot search memories"):
         Nestor(with_embedder(tmp_path, "main"), fakes.registry())
-    with pytest.raises(ConfigError, match=r"agent\.spoken: sens searches memories and cannot answer"):
+    with pytest.raises(ConfigError, match=r"agent\.spoken: sens embeds and cannot answer"):
         Nestor(with_embedder(tmp_path, "sens", "agent: {written: sens}\n"), fakes.registry())
 
 

@@ -23,6 +23,7 @@ from nestor.modules.conversation import (
     UserTurn,
 )
 from nestor.modules.household import Household
+from nestor.modules.identity import Speaker
 from nestor.modules.journal import Journal
 from nestor.modules.memory import Memories, MemoryRecorded
 from nestor.modules.memory.assistant import MemoryTools
@@ -279,6 +280,7 @@ def test_an_exchange_is_written_as_plain_data() -> None:
         address=TELEGRAM,
         text="Salut",
         exchange=Exchange(conversation_id="c1", turn_id="t1"),
+        speaker=Speaker.unknown(),
     )
     record = turn.to_record()
     payload = record["payload"]

@@ -2,8 +2,8 @@
 
 Each device holds a link (`link`) through which it types and shows text; a device allowed audio also
 speaks through the voice (`voice`, only when configured). A device's conversation is its room's,
-`<channel>:<room>`, whatever the medium: a typed follow-up to a spoken question stays in it. The
-speaker is known as the room (map it in the household, e.g. an account `satellites:*`).
+`<channel>:<room>`, whatever the medium: a typed follow-up to a spoken question stays in it. A device is a
+place, not an account: whoever is there may speak, and who it is comes from their voice or their words.
 
 - A typed turn is answered in writing on a device allowed `text.display`, otherwise aloud (T3).
 - An unprompted message in writing goes to every device of the room that shows text; aloud, to the
@@ -21,7 +21,7 @@ from nestor.adapters.channels.satellites.gateway import SatelliteGateway
 from nestor.adapters.channels.satellites.link import SatelliteLink
 from nestor.adapters.channels.satellites.server import DeviceServer
 from nestor.core import Capability, ContractError, ProviderError
-from nestor.modules.channels import Address, Assistant, Channel, InboundMessage, Medium, MessageEnd, Sender
+from nestor.modules.channels import Address, Assistant, Channel, InboundMessage, Medium, MessageEnd
 from nestor.modules.journal import Journal
 from nestor.modules.satellites import (
     AUDIO,
@@ -161,17 +161,13 @@ class SatellitesChannel(Channel, SatelliteHost):
     async def _typed(self, link: SatelliteLink, text: str) -> None:
         """A typed turn: answered in writing where it shows text, otherwise aloud (T3)."""
         assert self._assistant is not None
-        room = link.satellite.room
-        address, sender = Address(self.channel_id, room), Sender(room)
-        if self._assistant.identify(address, sender) is None:
-            logger.info("satellites: %s is not a known sender in %s, ignoring typed text", sender.id, address)
-            return
+        address = Address(self.channel_id, link.satellite.room)
         shows = TEXT_DISPLAY in link.allowed
         if not shows and not (self._voice and self._voice.reachable(address)):
             logger.warning("satellites: %s typed, but can neither show nor say an answer", link.satellite.id)
             return
         medium = Medium.WRITTEN if shows else Medium.SPOKEN
-        reply = self._assistant.respond(InboundMessage(address=address, sender=sender, text=text, medium=medium))
+        reply = self._assistant.respond(InboundMessage(address=address, sender=None, text=text, medium=medium))
         if not shows:
             assert self._voice is not None
             if spoken := " ".join(await reply.collect()):

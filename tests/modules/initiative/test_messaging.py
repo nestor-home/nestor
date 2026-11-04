@@ -12,6 +12,7 @@ from nestor.modules.cognition.model import ModelRequest, ToolCall
 from nestor.modules.cognition.tools import Toolbox, ToolContext, ToolFailed
 from nestor.modules.conversation import Agent, ModelChoice, Persona
 from nestor.modules.household import Account, Household, Person
+from nestor.modules.identity import Speaker
 from nestor.modules.initiative import (
     Courier,
     DeliveryPolicy,
@@ -103,7 +104,7 @@ class Home:
 
     async def send(self, by: Person | None, **arguments: object) -> object:
         (tool,) = self.tools.tools()
-        context = ToolContext(address=MATHIS_CHAT, person=by.id if by else None)
+        context = ToolContext(address=MATHIS_CHAT, speaker=Speaker.account(by.id) if by else Speaker.unknown())
         return await tool.run(arguments, context)
 
 
@@ -192,7 +193,7 @@ async def test_a_message_that_cannot_get_through_is_told_to_whoever_asked() -> N
 @pytest.mark.parametrize(
     ("person", "arguments", "error"),
     [
-        (None, {"person": "mathis", "text": "Coucou"}, "do not know who is asking"),
+        (None, {"person": "mathis", "text": "Tu viens ?", "expects_reply": True}, "ask who is asking first"),
         (LUCIE, {"person": "mathilde", "text": "Coucou"}, "Lucie may not have you write to Mathilde"),
         (MATHIS, {"person": "Gaston", "text": "Coucou"}, "no one called Gaston"),
         (MATHIS, {"person": "odile", "text": "Coucou", "channel": "telegram"}, "Odile has no account on telegram"),

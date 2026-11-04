@@ -51,7 +51,8 @@ class MessageTools(ToolProvider, ContextProvider):
         return f"{HOW_TO_MESSAGE}\nThe people you can reach: {names}."
 
     async def context(self, turn: TurnContext) -> Sections:
-        if (person := turn.person) is None:
+        """The questions waiting on both sides: messages someone received are theirs, given only to them."""
+        if (person := turn.person) is None or not turn.speaker.private:
             return {}
         lines = []
         for q in self.book.open_questions():
@@ -63,12 +64,14 @@ class MessageTools(ToolProvider, ContextProvider):
         return {Layer.TURN: "Questions waiting for an answer:\n" + "\n".join(lines)} if lines else {}
 
     async def _send(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
-        if context.person is None:
-            raise ToolFailed("you do not know who is asking: only someone of the household can send a message")
-        sender = self.household.person(context.person)
+        """Anyone at home may have a message passed on ("tell Léa dinner is ready"), signed by the room they spoke
+        in; a question needs to know whom its answer goes back to."""
+        sender = self.household.person(context.person) if context.person else None
         to = self._person(str(arguments["person"]))
-        if not sender.may_write_to(to.id):
+        if sender is not None and not sender.may_write_to(to.id):
             raise ToolFailed(f"{sender.name} may not have you write to {to.name}")
+        if sender is None and arguments.get("expects_reply") is True:
+            raise ToolFailed("ask who is asking first: the answer must go back to someone")
         channel = str(arguments["channel"]) if arguments.get("channel") else None
         if channel and to.address_on(channel) is None:
             raise ToolFailed(f"{to.name} has no account on {channel}")
@@ -78,7 +81,7 @@ class MessageTools(ToolProvider, ContextProvider):
         message = await self.book.request(
             to.id,
             str(arguments["text"]),
-            requested_by=sender.id,
+            requested_by=sender.id if sender else None,
             origin=context.address,
             in_writing=arguments.get("in_writing") is True,
             channel=channel,

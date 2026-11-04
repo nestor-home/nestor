@@ -19,6 +19,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, ValidationIn
 from nestor.core import NestorError, PersonId
 from nestor.modules.channels import Address
 from nestor.modules.household import Account, Person
+from nestor.modules.identity import VoiceSettings
 from nestor.modules.initiative import QuietHours
 from nestor.modules.memory.recall import RecallSettings, Strategy
 
@@ -191,16 +192,48 @@ class MemoryConfig(Section):
         )
 
 
+_VOICES = VoiceSettings()
+
+
+class VoicesConfig(Section):
+    """Who speaks on a shared device (a satellite), from their voice: a voice model of `models` turns speech into
+    voiceprints, compared on this machine. Without it, whoever speaks there is someone of the household, nobody
+    in particular, and the agent asks who when it matters."""
+
+    embedder: str | None = Field(default=None, json_schema_extra=MODEL_REFERENCE)
+    # the similarity from which a voice is someone's: the model's own, calibrated on the `speaker-id` bench
+    threshold: float | None = Field(default=None, gt=0, lt=1, json_schema_extra=ADVANCED)
+    # how long a turn waits for its voiceprint (computed while the speech is transcribed)
+    wait_s: float = Field(default=0.5, gt=0, json_schema_extra=ADVANCED)
+    keep: int = Field(default=_VOICES.keep, ge=0, le=500, json_schema_extra=ADVANCED)  # learned voiceprints a person
+    per_room: int = Field(default=_VOICES.per_room, ge=0, le=500, json_schema_extra=ADVANCED)  # of them from one room
+    anchor_weight: float = Field(default=_VOICES.anchor_weight, ge=0, le=1, json_schema_extra=ADVANCED)
+    learn_margin: float = Field(default=_VOICES.learn_margin, ge=0, lt=1, json_schema_extra=ADVANCED)
+    learn_lead: float = Field(default=_VOICES.learn_lead, ge=0, lt=1, json_schema_extra=ADVANCED)
+
+    def settings(self) -> VoiceSettings:
+        return VoiceSettings(
+            threshold=self.threshold,
+            keep=self.keep,
+            per_room=self.per_room,
+            anchor_weight=self.anchor_weight,
+            learn_margin=self.learn_margin,
+            learn_lead=self.learn_lead,
+        )
+
+
 class NestorConfig(Section):
     data_dir: Path = Field(default=Path("data"), json_schema_extra=ADVANCED)
     persona: PersonaConfig
     household: tuple[PersonConfig, ...] = Field(min_length=1)
     # the models it may use, under names the household chooses; the roles below refer to them by name. A
-    # model answers (`openai-compatible`) or embeds (`openai-compatible-embeddings`): each role checks which
+    # model answers (`openai-compatible`), embeds text (`openai-compatible-embeddings`) or voices
+    # (`sherpa-onnx-voice`): each role checks which
     models: dict[str, ComponentConfig] = Field(min_length=1)
     agent: AgentConfig = Field(default=AgentConfig(), validate_default=True)
     watches: WatchesConfig = WatchesConfig()
     memory: MemoryConfig = MemoryConfig()
+    voices: VoicesConfig = VoicesConfig()
     executors: tuple[AdapterConfig, ...] = ()
     channels: tuple[AdapterConfig, ...] = Field(min_length=1)
     tools: tuple[AdapterConfig, ...] = ()  # tool providers (an MCP server: Home Assistant, Linear…)
@@ -236,6 +269,12 @@ class NestorConfig(Section):
     @classmethod
     def _memory(cls, value: MemoryConfig, info: ValidationInfo) -> MemoryConfig:
         _known(info, {"embedder": value.embedder, "consolidation": value.consolidation})
+        return value
+
+    @field_validator("voices")
+    @classmethod
+    def _voices(cls, value: VoicesConfig, info: ValidationInfo) -> VoicesConfig:
+        _known(info, {"embedder": value.embedder})
         return value
 
     def roles(self, answering: Collection[str]) -> dict[str, str]:

@@ -31,8 +31,10 @@ from nestor.modules.conversation.events import AnswerCut, AssistantTurn, Fallbac
 from nestor.modules.conversation.history import recent_history
 from nestor.modules.conversation.persona import Instructions, Persona
 from nestor.modules.conversation.ports import ContextProvider, Layer, TurnContext
+from nestor.modules.conversation.speakers import Speakers
 from nestor.modules.conversation.types import FallbackReason, ReplyPhase
 from nestor.modules.household import Household, Person
+from nestor.modules.identity import Heard, Speaker
 from nestor.modules.journal import Journal
 
 
@@ -123,9 +125,12 @@ class Agent(Assistant):
         channels: Mapping[str, ChannelProfile] | None = None,
         localizer: Localizer,
         context: Iterable[ContextProvider] = (),
+        speakers: Speakers | None = None,
         settings: AgentSettings | None = None,
         clock: Callable[[], datetime] = utc_now,
     ) -> None:
+        """`speakers` tells who speaks on shared devices (with recognised voices when it has them); its tools and
+        guidance belong in `toolbox` and `context`."""
         self.models, self.persona, self.journal = models, persona, journal
         self.conversations = Conversations(
             journal,
@@ -134,8 +139,9 @@ class Agent(Assistant):
         )
         self.localizer = localizer
         self.household, self.toolbox = household, toolbox
+        self.speakers = speakers or Speakers(journal, household)
         self._channels = dict(channels or {})
-        self._context = tuple(context)
+        self._context = (self.speakers, *context)  # who speaks: the agent's own concern, on every turn
         self.settings = settings or AgentSettings()
         self.replies = LiveReplies()  # what it is answering right now
 
@@ -144,8 +150,14 @@ class Agent(Assistant):
         return person.id if person else None
 
     def respond(self, message: InboundMessage) -> Reply:
-        person = self.household.identify(message.address.channel, message.sender.id)
-        return AgentReply(self, message.address, person, message.medium, user=message.text)
+        return AgentReply(self, message.address, None, message.medium, user=message, record=True)
+
+    @property
+    def voice_wait_s(self) -> float | None:
+        return self.speakers.wait_s if self.speakers.voices is not None else None
+
+    async def hear(self, audio: bytes) -> Heard | None:
+        return await self.speakers.voices.hear(audio) if self.speakers.voices is not None else None
 
     async def compose(
         self, address: Address, person: Person | None, instruction: str, medium: Medium
@@ -171,14 +183,18 @@ class Agent(Assistant):
         return self._channels.get(address.channel, ChannelProfile())
 
     async def instructions(
-        self, address: Address, person: Person | None, medium: Medium, said: str | None
+        self, address: Address, speaker: Speaker, medium: Medium, said: str | None, *, shared: bool = False
     ) -> Instructions:
-        turn = TurnContext(person=person, address=address, said=said)
+        """`shared`: the turn comes from a device anyone at home may use (`address.conversation` is its room)."""
+        person = self.household.person(speaker.person) if speaker.person else None
+        turn = TurnContext(person=person, speaker=speaker, address=address, said=said)
         sections = await asyncio.gather(*(p.context(turn) for p in self._context))
         return self.persona.instructions(
             medium=medium,
             style=self.channel(address).style,
             person=person,
+            speaker=speaker,
+            room=address.conversation if shared else None,
             now=utc_now(),
             guidance=tuple(g for p in self._context if (g := p.guidance())),
             people=self.household.people,
@@ -204,12 +220,14 @@ class AgentReply(Reply):
         person: Person | None,
         medium: Medium,
         *,
-        user: str | None = None,
+        user: InboundMessage | None = None,
         instruction: str | None = None,
         record: bool = True,
         unattended: bool = False,
     ) -> None:
         self._agent, self._address, self._person, self._medium = agent, address, person, medium
+        # a composed or background turn speaks for the person it is for; a message, for whoever sent it (`_produce`)
+        self._speaker = Speaker.account(person.id) if person else Speaker.unknown()
         self._user, self._instruction, self._record = user, instruction, record
         self._unattended = unattended
         self._chunks: asyncio.Queue[str | MessageEnd | None] = asyncio.Queue()
@@ -260,20 +278,30 @@ class AgentReply(Reply):
         agent.replies.set(self, ReplyPhase.THINKING)
         try:
             if self._record:
+                if self._user is not None:
+                    self._speaker = await agent.speakers.of(
+                        self._user, await agent.conversations.current(self._address, self._medium)
+                    )
+                    self._person = agent.household.person(self._speaker.person) if self._speaker.person else None
                 exchange = self._exchange = await agent.conversations.turn(self._address, self._medium)
                 conversation: str | None = exchange.conversation_id
                 if self._user is not None:
-                    await agent.journal.publish(
-                        UserTurn(
-                            source="agent",
-                            session=self._address.session,
-                            address=self._address,
-                            text=self._user,
-                            medium=self._medium,
-                            person=self._person.id if self._person else None,
-                            exchange=exchange,
-                        )
+                    turn = UserTurn(
+                        source="agent",
+                        session=self._address.session,
+                        address=self._address,
+                        text=self._user.text,
+                        medium=self._medium,
+                        speaker=self._speaker,
+                        exchange=exchange,
                     )
+                    await agent.journal.publish(turn)
+                    agent.speakers.learn(self._user.heard, turn)
+                    if said := await agent.speakers.enrolling(self._user):  # a phrase of a voice being recorded
+                        self._say(said)
+                        await self._end_message()
+                        self._end_turn()
+                        return
             elif self._unattended:  # a background turn belongs to no conversation
                 conversation = None
             else:  # a composed message: the open conversation's turns, if any
@@ -288,18 +316,22 @@ class AgentReply(Reply):
     async def _answer(self, conversation: str | None) -> None:
         agent = self._agent
         history = await recent_history(
-            agent.journal, self._address, conversation, max_events=agent.settings.history_events
+            agent.journal,
+            self._address,
+            conversation,
+            max_events=agent.settings.history_events,
+            names=agent.speakers.name_of,
         )
-        instructions = await agent.instructions(self._address, self._person, self._medium, self._said(history))
+        shared = self._user is not None and self._user.sender is None
+        said = self._said(history)
+        instructions = await agent.instructions(self._address, self._speaker, self._medium, said, shared=shared)
         messages = [
             Message(role=Role.SYSTEM, layers=(instructions.stable, instructions.household), content=instructions.turn),
             *history,
         ]
         if self._instruction is not None:
             messages.append(Message(role=Role.SYSTEM, content=self._instruction))
-        context = ToolContext(
-            address=self._address, person=self._person.id if self._person else None, exchange=self._exchange
-        )
+        context = ToolContext(address=self._address, speaker=self._speaker, exchange=self._exchange)
         for _ in range(agent.settings.max_tool_rounds):
             try:
                 text, calls = await self._round(messages)

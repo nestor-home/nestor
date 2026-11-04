@@ -25,6 +25,7 @@ from nestor.admin.api.v1.routes import (
     session,
     system,
     tasks,
+    voices,
     watches,
 )
 from nestor.admin.api.v1.security import CSRF_HEADER, json_only
@@ -64,6 +65,7 @@ def router() -> APIRouter:
         memories,
         system,
         config,
+        voices,
     ):
         api.include_router(resource.router)
     return api

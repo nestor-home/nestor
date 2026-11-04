@@ -72,7 +72,7 @@ class MemoryRecall(Suite[Remembered, Knobs]):
     def dataset(self) -> Traversable:
         return files(__package__ or __name__) / "cases.jsonl"
 
-    def load(self, records: Sequence[Mapping[str, Any]]) -> Dataset[Remembered]:
+    def load(self, records: Sequence[Mapping[str, Any]], source: Traversable | Path) -> Dataset[Remembered]:
         if not records or records[0].get("dataset") != NAME or not isinstance(records[0].get("version"), int):
             raise BenchError(Message.of("bench-memory-recall-no-header"))
         memories: list[Memory] = []
