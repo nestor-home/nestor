@@ -1,4 +1,4 @@
-"""The SQLite vault: connector secrets sealed at rest, opened only with the instance key."""
+"""The SQLite vault: connector secrets sealed at rest, opened only with the instance key; and its in-memory double."""
 
 from pathlib import Path
 
@@ -7,7 +7,7 @@ import pytest
 from nestor.adapters.storage.sqlite import SQLiteDatabase, SQLiteVault
 from nestor.core import ContractError
 from nestor.modules.connectors import CredentialVault
-from nestor.testing.connectors import CredentialVaultContract
+from nestor.testing.connectors import CredentialVaultContract, MemoryVault
 
 KEY = "k" * 40
 
@@ -22,6 +22,16 @@ class TestSQLiteVault(CredentialVaultContract):
 
     def stored_bytes(self) -> bytes:
         return b"".join(p.read_bytes() for p in self.path.parent.glob("nestor.db*"))
+
+
+class TestMemoryVault(CredentialVaultContract):
+    """The double that stands in for the vault in the connector tests."""
+
+    def vault(self) -> CredentialVault:
+        return MemoryVault()
+
+    def stored_bytes(self) -> bytes:
+        return b""  # it writes nothing to disk
 
 
 async def test_secrets_survive_a_restart_with_the_same_key(tmp_path: Path) -> None:

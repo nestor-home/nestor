@@ -19,7 +19,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel, Field
 
-from nestor.admin.api.v1.errors import ApiError, not_found
+from nestor.admin.api.v1.errors import ApiError, ErrorCode, not_found
 from nestor.admin.api.v1.models import Input, People, PersonRef
 from nestor.admin.api.v1.security import Caller, allowed
 from nestor.admin.presentation import Phrasebook
@@ -319,8 +319,6 @@ async def approve_satellite(request: Request, caller: Pairer, body: ApprovalIn) 
     code = re.sub(r"\s", "", body.code)
     if not DEVICE_CODE.match(code):
         raise ApiError(400, "invalid_code")
-    if body.method is not None and body.method.proof.value != "device_code":
-        raise ApiError(400, "not_a_device_code_method")
     try:
         satellite = await admin.nestor.pairing.approve(
             code,
@@ -331,10 +329,11 @@ async def approve_satellite(request: Request, caller: Pairer, body: ApprovalIn) 
             addition_id=body.addition_id,
         )
     except PairingRefused as refused:
-        over = refused.reason == "addition_over"
-        raise ApiError(409 if over else 400, "addition_over" if over else "pairing_refused") from None
-    except ContractError:
-        raise ApiError(400, "not_a_device_code_method") from None
+        if refused.reason == "addition_over":
+            raise ApiError(409, "addition_over") from None
+        if refused.reason == "not_a_device_code_method":
+            raise ApiError(400, "not_a_device_code_method") from None
+        raise ApiError(400, "pairing_refused") from None
     return _satellite(
         satellite,
         admin.nestor.pairing,
@@ -355,7 +354,7 @@ async def revoke_satellite(request: Request, caller: Pairer, device_id: str) -> 
 
 
 def _unavailable(
-    unavailable: DeviceUnavailable, unknown: str, *, unsupported: str = "identify_unsupported"
+    unavailable: DeviceUnavailable, unknown: ErrorCode, *, unsupported: ErrorCode = "identify_unsupported"
 ) -> ApiError:
     if unavailable.reason == "unknown":
         return not_found(unknown)

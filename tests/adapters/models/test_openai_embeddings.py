@@ -13,7 +13,7 @@ import respx
 
 from nestor.adapters.models import OpenAICompatibleEmbedder
 from nestor.adapters.models.openai_embeddings import plugin
-from nestor.core import ProviderError
+from nestor.core import ContractError, ProviderError
 from nestor.core.i18n import Locale
 from nestor.runtime.plugins import Services
 from nestor.testing.cognition import EmbedderContract
@@ -80,15 +80,33 @@ async def test_vectors_of_another_dimension_say_how_to_fix_the_profile(api: resp
     assert not raised.value.transient
 
 
-@pytest.mark.parametrize(("status", "transient"), [(429, True), (503, True), (400, False)])
-async def test_http_errors_say_whether_a_retry_may_succeed_and_never_show_the_key(
-    api: respx.MockRouter, status: int, transient: bool
+@pytest.mark.parametrize(
+    ("answer", "transient"),
+    [
+        (httpx.Response(429, text=f"bad key {KEY}"), True),
+        (httpx.Response(503, text=f"bad key {KEY}"), True),
+        (httpx.Response(400, text=f"bad key {KEY}"), False),
+        (httpx.ReadTimeout(f"no answer for {KEY}"), True),
+        (httpx.ConnectError(f"refused for {KEY}"), True),
+        (httpx.Response(200, text=f"<html>{KEY}</html>"), True),
+        (httpx.Response(200, json={"data": [{"index": 0, "vector": [1.0, 0.0, 0.0]}]}), True),
+        (httpx.Response(200, json={"data": []}), True),  # no vector for the text: never one shifted onto another
+    ],
+    ids=["429", "503", "400", "timeout", "unreachable", "not json", "no embedding", "too few vectors"],
+)
+async def test_a_failed_call_is_a_provider_error_that_says_whether_a_retry_may_succeed_and_never_shows_the_key(
+    api: respx.MockRouter, answer: httpx.Response | Exception, transient: bool
 ) -> None:
-    api.post(f"{BASE_URL}/embeddings").respond(status, text=f"bad key {KEY}")
+    api.post(f"{BASE_URL}/embeddings").mock(side_effect=[answer])
     async with embedder() as e:
         with pytest.raises(ProviderError) as raised:
             await e.embed_query("x")
     assert raised.value.transient is transient and KEY not in str(raised.value)
+
+
+async def test_an_embedder_used_before_it_starts_says_so() -> None:
+    with pytest.raises(ContractError, match="before start"):
+        await embedder().embed_query("x")
 
 
 async def test_the_space_is_the_model_served_its_dimension_and_prefixes_not_the_profile_name() -> None:

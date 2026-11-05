@@ -38,11 +38,20 @@ from nestor.core import Health, ProviderError
 from nestor.core.i18n import Locale
 from nestor.modules.channels import Address
 from nestor.modules.cognition.model import ToolCall
-from nestor.modules.cognition.tools import Risk, Tool, Toolbox, ToolCalled, ToolCompleted, ToolContext, ToolFailed
+from nestor.modules.cognition.tools import (
+    Results,
+    Risk,
+    Tool,
+    Toolbox,
+    ToolCalled,
+    ToolCompleted,
+    ToolContext,
+    ToolFailed,
+)
 from nestor.modules.journal import Journal
 from nestor.runtime import Family, Services
 from nestor.testing.i18n import EchoLocalizer
-from nestor.testing.journal import MemoryEventLog
+from nestor.testing.journal import MemoryBlobStore, MemoryEventLog
 
 type LogCapture = pytest.LogCaptureFixture
 
@@ -354,15 +363,6 @@ async def test_structured_content_without_text_is_given_as_json(home: McpToolPro
     assert json.loads(await call(home, "energy")) == {"kwh": 12.5, "unit": "kWh"}
 
 
-async def test_an_oversized_result_is_cut_with_a_marker(served_home: Served) -> None:
-    async with provider_for(served_home, max_result_chars=100) as provider:
-        output = await call(provider, "dump", size=250)
-        within = await call(provider, "dump", size=100)
-
-    assert output == "x" * 100 + "\n[truncated: 150 more characters]"
-    assert within == "x" * 100, "a result at the limit is unchanged"
-
-
 @ERAS
 async def test_a_changed_tool_list_is_fetched_again(served_home: Served, negotiation: str) -> None:
     async with provider_for(served_home, negotiation=negotiation) as provider:
@@ -556,6 +556,19 @@ async def test_a_call_through_the_toolbox_is_logged(home: McpToolProvider) -> No
     [completed] = await journal.history(ToolCompleted)
     assert (called.name, dict(called.arguments)) == ("turn_on", {"name": "kitchen light"})
     assert (completed.ok, completed.output) == (True, "kitchen light is on")
+
+
+async def test_a_long_result_reaches_the_model_whole_through_the_results(home: McpToolProvider) -> None:
+    """Past the turn's budget the toolbox keeps the result aside; the server's reply is never cut before."""
+    journal = Journal(MemoryEventLog())
+    toolbox = Toolbox(journal, providers=[home], results=Results(journal, MemoryBlobStore(), budget=2000))
+
+    shown = json.loads(await toolbox.call(ToolCall("c1", "dump", {"size": 40_000}), CONTEXT))
+    tail = ToolCall("c2", "read_result", {"ref": shown["ref"], "start": 39_990, "length": 100})
+    read = json.loads(await toolbox.call(tail, CONTEXT))
+
+    assert shown["size"] == 40_000
+    assert (read["start"], read["end"], read["text"]) == (39_990, 40_000, "x" * 10)
 
 
 def test_settings_keep_header_values_secret() -> None:

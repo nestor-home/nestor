@@ -342,7 +342,7 @@ class Pairing(Component):
                 raise _addition_over()
             method = addition.method
         if method is not None and method.proof is not Proof.DEVICE_CODE:
-            raise ContractError(f"{method} does not pair with a device code")
+            raise PairingRefused(f"{method} does not pair with a device code", reason="not_a_device_code_method")
         request = next(
             (r for r in self._requests.values() if r.status is PairingStatus.PENDING and r.ticket.device_code == code),
             None,

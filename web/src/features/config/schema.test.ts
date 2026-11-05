@@ -19,7 +19,7 @@ describe("reading a plugin's schema (as a real instance sends it)", () => {
     expect(controlOf(prop(mcp, "headers"), mcp, "headers")).toBe("map");
     expect(controlOf(prop(mcp, "risks"), mcp, "risks")).toBe("map");
     expect(controlOf(prop(mcp, "include"), mcp, "include")).toBe("list"); // a list, or null
-    expect(controlOf(prop(mcp, "max_result_chars"), mcp, "max_result_chars")).toBe("integer");
+    expect(controlOf(prop(satellites, "port"), satellites, "port")).toBe("integer");
     expect(controlOf(prop(mcp, "timeout_s"), mcp, "timeout_s")).toBe("number");
     expect(controlOf(prop(mcp, "kind"), mcp, "kind")).toBe("const");
     expect(controlOf(prop(satellites, "voice"), satellites, "voice")).toBe("object"); // an object, or null

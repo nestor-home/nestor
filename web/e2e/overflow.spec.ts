@@ -107,11 +107,27 @@ async function overflows(page: Page): Promise<string[]> {
   });
 }
 
+/** What went wrong while a screen loaded: an API call refused or failed, a script error. */
+let troubles: string[] = [];
+
 test.beforeEach(async ({ page }) => {
+  troubles = [];
+  page.on("response", (response) => {
+    if (new URL(response.url()).pathname.startsWith("/api/") && response.status() >= 400)
+      troubles.push(`${response.status()} ${response.request().method()} ${response.url()}`);
+  });
+  page.on("pageerror", (error) => troubles.push(error.message));
   await page.addInitScript(() => {
     localStorage.setItem("nestor.mock.stress", "1");
   });
 });
+
+/** The screen shows its content, not an error, a page still loading or nothing at all: then it can be measured. */
+async function rendered(page: Page) {
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "Loading…" })).toHaveCount(0);
+  expect(troubles).toEqual([]);
+}
 
 for (const width of [390, 1440]) {
   test.describe(`at ${width}px`, () => {
@@ -122,6 +138,7 @@ for (const width of [390, 1440]) {
         await page.goto(route);
         await page.waitForLoadState("networkidle");
         await page.waitForTimeout(400);
+        await rendered(page);
         expect(await overflows(page)).toEqual([]);
       });
     }

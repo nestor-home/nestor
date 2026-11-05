@@ -18,10 +18,12 @@ from nestor.adapters.channels.satellites.server import DeviceServer
 from nestor.adapters.channels.satellites.voice.audio import SatelliteVoice
 from nestor.adapters.channels.satellites.voice.session import SessionSettings
 from nestor.core import ContractError, PersonId, ProviderError
-from nestor.modules.behavior import Behavior, Expression
+from nestor.modules.behavior import HEAD_MOTION, Behavior, Expression
 from nestor.modules.channels import Address, Assistant, InboundMessage, Medium, MessageEnd, Reply, Sender
 from nestor.modules.journal import Journal
 from nestor.modules.satellites import (
+    AUDIO_CAPTURE,
+    AUDIO_PLAYBACK,
     TEXT_DISPLAY,
     TEXT_INPUT,
     AttemptLimiter,
@@ -47,6 +49,11 @@ KITCHEN = Address("satellites", "cuisine")
 SCREEN = Manifest(
     Device("ecran-cuisine", "tablet", "cuisine"),
     (DeclaredCapability(TEXT_INPUT), DeclaredCapability(TEXT_DISPLAY)),
+    software=SOFTWARE,
+)
+SPEAKER = Manifest(  # types on a keypad, has no screen
+    Device("enceinte-cuisine", "raspberry-pi-4", "cuisine"),
+    tuple(DeclaredCapability(c) for c in (AUDIO_CAPTURE, AUDIO_PLAYBACK, HEAD_MOTION, TEXT_INPUT)),
     software=SOFTWARE,
 )
 
@@ -158,6 +165,26 @@ async def test_typed_text_is_answered_in_writing_on_a_screen() -> None:
     assert answer == wire.TextIntent(text="Il fait 21 degrés.")
     (message,) = assistant.messages
     assert (message.address, message.text, message.medium) == (KITCHEN, "Quelle température ?", Medium.WRITTEN)
+
+
+async def test_typed_text_on_a_device_without_a_screen_is_answered_aloud() -> None:
+    assistant = FakeAssistant(["Il fait 21 degrés."], ttft_s=0.01)
+    async with home(assistant=assistant) as (channel, pairing, _, url):
+        satellite = ReferenceSatellite(url, SPEAKER)
+        running = asyncio.create_task(satellite.run())
+        await satellite.code_shown.wait()
+        assert satellite.code is not None
+        await pairing.approve(satellite.code)
+        await _until(lambda: channel.reachable(KITCHEN, Medium.SPOKEN))
+        await satellite.type("Quelle température ?")
+        await _until(lambda: wire.BehaviorIntent(behavior=Behavior.IDLE) in satellite.intents)
+        running.cancel()
+
+    (message,) = assistant.messages
+    assert (message.address, message.text, message.medium) == (KITCHEN, "Quelle température ?", Medium.SPOKEN)
+    assert wire.BehaviorIntent(behavior=Behavior.SPEAKING) in satellite.intents
+    assert sum(isinstance(i, wire.BeatIntent) for i in satellite.intents) == 4, "one beat per word played"
+    assert not any(isinstance(i, wire.TextIntent) for i in satellite.intents), "nothing to show it on"
 
 
 class LookingUp(Assistant):

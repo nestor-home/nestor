@@ -34,7 +34,7 @@ describe("accounts", () => {
     if (lea) lea.role = "admin";
     await user.click(role);
     await user.click(await screen.findByRole("option", { name: "member" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("The household must keep at least one active owner.");
+    expect(await screen.findByRole("alert")).toHaveTextContent("The household must keep at least one owner");
   });
 
   it("disables an account only once confirmed", async () => {

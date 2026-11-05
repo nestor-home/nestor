@@ -3,7 +3,7 @@
 It pairs (with the enrollment code it was launched with, else by "showing" its device code in
 `code`, falling back to it when the enrollment code is refused), opens its link with its token in
 `hello`, acknowledges every intent, offers audio when allowed and plays what it receives, reports one
-observation, types `typed` when allowed, reports a newer version of its software when allowed to
+observation, types what it is asked to (`type`) when allowed, reports a newer version of its software when allowed to
 update (and installs only that one), reconnects when the core closes its link, and pairs again
 when its token is refused. Its faults can be switched on to prove the conformance suite catches them.
 """
@@ -11,6 +11,7 @@ when its token is refused. Its faults can be switched on to prove the conformanc
 import asyncio
 import contextlib
 import json
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any
 
@@ -66,11 +67,9 @@ class ReferenceSatellite:
         *,
         faults: Faults | None = None,
         observe: bool | None = None,
-        typed: str | None = None,
     ) -> None:
-        """`observe`: report people seen; by default only when it declared person detection. `typed`:
-        what a person types on it once it is welcomed (when allowed)."""
-        self.url, self.manifest, self.faults, self.typed = url, manifest, faults or Faults(), typed
+        """`observe`: report people seen; by default only when it declared person detection."""
+        self.url, self.manifest, self.faults = url, manifest, faults or Faults()
         self.observe = PERSON_DETECTION in manifest.names if observe is None else observe
         self.code: str | None = None
         self.token: str | None = None
@@ -82,6 +81,12 @@ class ReferenceSatellite:
         self.connections = 0
         self.identified = 0
         self.enrollment_code: str | None = None
+        self._send: Callable[[wire.Message], Awaitable[None]] | None = None  # on its current link
+
+    async def type(self, text: str) -> None:
+        """A person types `text` on it (when allowed `text.input`), over its current link."""
+        assert self._send is not None and TEXT_INPUT in self.allowed, "not linked, or not allowed to type"
+        await self._send(wire.TextInput(text=text))
 
     async def __call__(self, launch: Launch) -> None:
         """The driver entry point the conformance suite launches: a fresh device each time."""
@@ -159,6 +164,7 @@ class ReferenceSatellite:
                 await send(wire.Hello(manifest=hello, token=token))
             else:
                 await send(wire.SpeechActivityObservation(active=True))
+            self._send = send
             self.connections += 1
             try:
                 async for raw in link:
@@ -171,8 +177,6 @@ class ReferenceSatellite:
                             audio = asyncio.create_task(self._audio(http, token))
                         if self.observe:
                             await send(wire.PersonObservation(count=1, confidence=0.92))
-                        if self.typed and TEXT_INPUT in self.allowed:
-                            await send(wire.TextInput(text=self.typed))
                         if UPDATE in self.allowed and self.faults.reports_update:
                             await send(wire.UpdateStatusReport(state=UpdateState.AVAILABLE, version=FOUND))
                         if not self.faults.valid_messages:
@@ -194,6 +198,7 @@ class ReferenceSatellite:
             except websockets.ConnectionClosed:
                 pass
             finally:
+                self._send = None
                 if audio is not None:
                     audio.cancel()
                     with contextlib.suppress(asyncio.CancelledError):

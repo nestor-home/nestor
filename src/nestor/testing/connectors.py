@@ -1,5 +1,8 @@
 """Doubles and contract suites for connectors: an in-memory vault, a fake OAuth provider, a scripted connector."""
 
+import base64
+import hashlib
+import urllib.parse
 from collections.abc import Mapping, Sequence
 from datetime import timedelta
 
@@ -49,20 +52,25 @@ class FakeProvider(TokenEndpoint):
 
     def __init__(self, *, lifetime_s: float = 3600.0) -> None:
         self.lifetime_s = lifetime_s
-        self.codes: dict[str, tuple[str, str]] = {}  # code → (client_id, verifier)
+        self.codes: dict[str, tuple[str, str, str]] = {}  # code → (client_id, redirect_uri, S256 challenge)
         self.revoked: list[str] = []
         self.refreshes = 0
         self.refusing = False
         self.unreachable = False
 
-    def authorize(self, client_id: str, verifier: str) -> str:
-        """What the provider's consent page does: hand out a code for this client and PKCE verifier."""
+    def consent(self, authorize_url: str) -> dict[str, str]:
+        """What the provider's consent page does with the authorisation URL once the person approves: the
+        query it sends back to `redirect_uri`, a code bound to the client, the redirect and the PKCE challenge."""
+        query = dict(urllib.parse.parse_qsl(urllib.parse.urlsplit(authorize_url).query))
+        if query.get("code_challenge_method") != "S256":
+            raise ProviderError(self.name, "invalid_request: PKCE S256 required", transient=False)
         code = new_id()
-        self.codes[code] = (client_id, verifier)
-        return code
+        self.codes[code] = (query["client_id"], query["redirect_uri"], query["code_challenge"])
+        return {"state": query["state"], "code": code}
 
     async def exchange(self, spec: OAuthSpec, client: Secrets, code: str, verifier: str, redirect_uri: str) -> Tokens:
-        if self.codes.pop(code, None) != (client["client_id"], verifier):
+        challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b"=").decode()
+        if self.codes.pop(code, None) != (client["client_id"], redirect_uri, challenge):
             raise ProviderError(self.name, "invalid_grant", transient=False)
         return self._issue(refresh=new_id())
 

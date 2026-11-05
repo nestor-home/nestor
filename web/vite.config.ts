@@ -24,6 +24,8 @@ export default defineConfig({
   build: { outDir, emptyOutDir: true },
   server: {
     port: 5173,
+    // the mock API renders its messages with Nestor's own catalogues, next door in the repository
+    fs: { allow: [".", fileURLToPath(new URL("../src/nestor/locales", import.meta.url))] },
     // with NESTOR_API set, the dev server talks to a running Nestor instead of the mocks
     proxy: process.env.NESTOR_API
       ? {

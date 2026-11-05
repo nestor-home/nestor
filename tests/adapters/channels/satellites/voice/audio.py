@@ -20,8 +20,9 @@ import pytest
 
 from .replay import Utterance
 
+# By default, the working repository that holds nestor as a submodule keeps them in `poc/bench/audio/recordings/`.
 RECORDINGS = Path(
-    os.environ.get("NESTOR_VOICE_RECORDINGS", Path(__file__).parents[5] / "poc" / "bench" / "audio" / "recordings")
+    os.environ.get("NESTOR_VOICE_RECORDINGS", Path(__file__).parents[6] / "poc" / "bench" / "audio" / "recordings")
 )
 SPEAKER = "mathis"
 STREAM_POP_S = 0.1  # opening the microphone stream clicks for 20 to 40 ms at the start of each recording
@@ -59,7 +60,9 @@ def has_recordings(*ids: str) -> bool:
 
 def needs_recordings(*ids: str) -> pytest.MarkDecorator:
     return pytest.mark.skipif(
-        not has_recordings(*ids), reason=f"recordings absent from {RECORDINGS} (set NESTOR_VOICE_RECORDINGS)"
+        not has_recordings(*ids),
+        reason=f"recordings {', '.join(ids)} expected in {RECORDINGS / SPEAKER} with its manifest.json "
+        "(biometric, kept outside git; set NESTOR_VOICE_RECORDINGS to another folder)",
     )
 
 

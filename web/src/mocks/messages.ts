@@ -1,28 +1,37 @@
 /**
  * The mock server's messages: day.ts writes events as their English text; this turns that text
- * into the `message {id, args}` Nestor will send, and renders it in the account's locale with the
- * server-side catalogue (`server-locales/*.ftl`), as the real server does with fluent.runtime.
+ * into the `message {id, args}` Nestor will send, and renders it in the account's locale with
+ * Nestor's own catalogues (`src/nestor/locales/<lang>/*.ftl`, read from the repository), as the
+ * real server does with fluent.runtime.
  */
 import { FluentBundle, FluentResource } from "@fluent/bundle";
 import type { JournalEvent, JournalItem, Message } from "@/api";
 import { inFrench } from "./french";
-import en from "./server-locales/en.ftl?raw";
-import fr from "./server-locales/fr.ftl?raw";
 
 export type Lang = "en" | "fr";
 
-const bundles: Record<Lang, FluentBundle> = { en: bundle("en", en), fr: bundle("fr", fr) };
+const SERVER: Record<string, string> = import.meta.glob("../../../src/nestor/locales/*/*.ftl", {
+  query: "?raw",
+  import: "default",
+  eager: true,
+});
 
-function bundle(locale: Lang, source: string): FluentBundle {
+const bundles: Record<Lang, FluentBundle> = { en: bundle("en"), fr: bundle("fr") };
+
+function bundle(locale: Lang): FluentBundle {
   const b = new FluentBundle(locale, { useIsolating: false });
-  b.addResource(new FluentResource(source));
+  for (const [path, source] of Object.entries(SERVER)) {
+    if (path.includes(`/locales/${locale}/`)) b.addResource(new FluentResource(source));
+  }
   return b;
 }
 
+/** A message the server's catalogue does not have is a mock that no longer speaks like Nestor. */
 export function render(lang: Lang, message: Message): string {
   const b = bundles[lang];
   const m = b.getMessage(message.id);
-  return m?.value ? b.formatPattern(m.value, message.args) : message.id;
+  if (!m?.value) throw new Error(`the mock says ${message.id}, which Nestor's ${lang} catalogue does not have`);
+  return b.formatPattern(m.value, message.args);
 }
 
 const msg = (id: string, args: Message["args"] = {}): Message => ({ id, args });
@@ -86,7 +95,7 @@ const TITLES: [RegExp, (m: RegExpMatchArray) => Message][] = [
     (m) => msg("journal-presence-changed", { person: m[1] ?? "", where: "room", room: m[2] ?? "" }),
   ],
   [/^(.+) is no longer home$/, (m) => msg("journal-presence-changed", { person: m[1] ?? "", where: "away", room: "" })],
-  [/^(\S+) said$/, (m) => msg("journal-user-said", { known: "yes", person: m[1] ?? "" })],
+  [/^(\S+) said$/, (m) => msg("journal-user-said", { known: "yes", by: "account", person: m[1] ?? "" })],
   [/^(\S+) answered \(interrupted\)$/, (m) => msg("journal-assistant-interrupted", { assistant: m[1] ?? "" })],
   [/^(\S+) answered$/, (m) => msg("journal-assistant-answered", { assistant: m[1] ?? "" })],
   [/^Answer cut off/, () => msg("journal-answer-cut")],
@@ -127,7 +136,7 @@ const TITLES: [RegExp, (m: RegExpMatchArray) => Message][] = [
     /^Satellite (\S+) \((.+), room “(.+)”\) asks to pair$/,
     (m) => msg("journal-satellite-pairing-requested", { device: m[1] ?? "", model: m[2] ?? "", room: m[3] ?? "" }),
   ],
-  [/^Memory recorded$/, () => msg("journal-memory-recorded")],
+  [/^Memory recorded$/, () => msg("journal-memory-recorded", { drawn: "no" })],
 ];
 
 /** Why a message went where it went, as the delivery policy says it (`delivery.ftl`). */

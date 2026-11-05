@@ -180,9 +180,12 @@ class VoiceprintStoreContract:
             await store.enroll(lea, self.SPACE, [unit([1.0, 0.0, 0.0])], learning=True, at=self.AT)
             for n in range(5):
                 await store.learn(lea, _sample(n, room="salon"), keep=4, per_room=3)
-            await store.learn(lea, _sample(5, room="cuisine"), keep=4, per_room=3)
-            learned = (await store.profiles(self.SPACE))[lea].learned
-        assert [s.turn for s in learned] == ["t2", "t3", "t4", "t5"]  # 3 from the living room, then 4 in all
+            per_room = [s.turn for s in (await store.profiles(self.SPACE))[lea].learned]
+            for n in (5, 6):
+                await store.learn(lea, _sample(n, room="cuisine"), keep=4, per_room=3)
+            in_all = [s.turn for s in (await store.profiles(self.SPACE))[lea].learned]
+        assert per_room == ["t2", "t3", "t4"], "3 per room, though 4 in all would fit"
+        assert in_all == ["t3", "t4", "t5", "t6"], "4 in all, though each room keeps 3"
 
     async def test_unlearning_says_whose_voice_changed(self) -> None:
         lea, hugo = PersonId("lea"), PersonId("hugo")

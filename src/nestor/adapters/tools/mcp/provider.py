@@ -12,7 +12,7 @@ Change notifications arrive differently per era: handshake-era servers push
 
 A dropped session (transport error, closed stream, protocol error) is not retried in a loop: the
 provider then lists no tools, and the next call — or the next look at `tools()`, at most every
-`retry_after_s` — opens a new session. Tool results are passed on unchanged, only capped in size.
+`retry_after_s` — opens a new session. Tool results are passed on unchanged: the toolbox keeps a long one aside.
 """
 
 import asyncio
@@ -166,14 +166,13 @@ class McpToolProvider(ToolProvider):
         exclude: Sequence[str] = (),
         risks: Mapping[str, Risk] | None = None,
         sensitive: Sequence[SensitiveWhen] = (),
-        max_result_chars: int = 16_000,
         retry_after_s: float = 30.0,
         negotiation: Negotiation = "auto",
     ) -> None:
         self.name = name
         self._url, self._transport, self._auth = url, transport, auth
         self._headers = dict(headers or {})
-        self._timeout_s, self._max_result_chars, self._retry_after_s = timeout_s, max_result_chars, retry_after_s
+        self._timeout_s, self._retry_after_s = timeout_s, retry_after_s
         self._include = None if include is None else frozenset(include)
         self._exclude = frozenset(exclude)
         self._risks = dict(risks or {})
@@ -388,7 +387,7 @@ class McpToolProvider(ToolProvider):
         except Exception as error:  # the SDK rejects a reply that breaks the tool's output schema
             session.closing.set()
             raise ToolFailed(f"{self.name}: {remote_name} failed ({_reason(error)})") from None
-        output = _cap(_render(result), self._max_result_chars)
+        output = _render(result)
         if result.is_error:
             raise ToolFailed(output or f"{remote_name} failed without saying why")
         return output
@@ -452,12 +451,6 @@ def _describe(block: ContentBlock) -> str:
     if isinstance(block, ResourceLink):
         return f"[resource link: {block.uri}]"
     return f"[resource: {block.resource.uri}]"
-
-
-def _cap(text: str, limit: int) -> str:
-    if len(text) <= limit:
-        return text
-    return f"{text[:limit]}\n[truncated: {len(text) - limit} more characters]"
 
 
 def _refusal(error: Exception, status: int | None) -> _Unreachable:

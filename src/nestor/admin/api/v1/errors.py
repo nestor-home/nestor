@@ -4,7 +4,7 @@ the reader's language. A message never holds a secret.
 """
 
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import Request
 from fastapi.exceptions import RequestValidationError
@@ -20,10 +20,87 @@ from nestor.modules.accounts import (
     AccessDenied,
     AccountConflict,
     InvitationRefused,
+    InvitationStatus,
     LastOwner,
+    PersonRequired,
     UnknownAccount,
+    UnknownPerson,
     WrongPassword,
 )
+
+# Every code the API sends: the type checker refuses any other, and the OpenAPI document lists them for the front.
+ErrorCode = Literal[
+    "addition_over",
+    "addition_unknown",
+    "audio_format",
+    "bad_token",
+    "client_incomplete",
+    "client_missing",
+    "config_history_unknown",
+    "config_invalid",
+    "config_unavailable",
+    "conflict",
+    "connection_unknown",
+    "connector_unknown",
+    "cross_origin",
+    "csrf_failed",
+    "empty_memory",
+    "fields_missing",
+    "forbidden",
+    "http_error",
+    "identify_unsupported",
+    "invalid",
+    "invalid_code",
+    "invalid_credentials",
+    "invalid_login",
+    "invalid_request",
+    "invitation_expired",
+    "invitation_revoked",
+    "invitation_unknown",
+    "invitation_used",
+    "journal_entry_unknown",
+    "last_owner",
+    "memory_shared",
+    "memory_unknown",
+    "method_not_allowed",
+    "no_connectors",
+    "no_secret_key",
+    "not_a_device_code_method",
+    "not_found",
+    "not_oauth",
+    "oauth",
+    "own_connections_only",
+    "pairing_refused",
+    "pending_unknown",
+    "person_required",
+    "person_unknown",
+    "provider_error",
+    "provider_refused",
+    "restart_unconfirmed",
+    "satellite_offline",
+    "satellite_unknown",
+    "secret_in_use",
+    "secret_unknown",
+    "task_unknown",
+    "throttled",
+    "too_many_additions",
+    "unauthenticated",
+    "unknown_kind",
+    "unknown_locale",
+    "unknown_person",
+    "unknown_tool",
+    "unsupported_media_type",
+    "update_not_installable",
+    "update_unavailable",
+    "update_unconfirmed",
+    "update_unsupported",
+    "use_me_password",
+    "voice_not_yours",
+    "voices_off",
+    "watch_unknown",
+    "weak_password",
+    "wrong_password",
+]
 
 
 class ApiError(Exception):
@@ -32,7 +109,7 @@ class ApiError(Exception):
     def __init__(
         self,
         status: int,
-        code: str,
+        code: ErrorCode,
         *,
         headers: Mapping[str, str] | None = None,
         problems: list[dict[str, Any]] | None = None,
@@ -43,17 +120,17 @@ class ApiError(Exception):
         self.message = Message(f"error-{code.replace('_', '-')}", args)
 
 
-def not_found(what: str = "not_found") -> ApiError:
+def not_found(what: ErrorCode = "not_found") -> ApiError:
     """404 with the message that says what is missing (`connection_unknown`…)."""
     return ApiError(404, what)
 
 
-_INVITATIONS = {
-    "this invitation has already been used": "invitation_used",
-    "this invitation has expired: ask for a new one": "invitation_expired",
-    "this invitation was withdrawn": "invitation_revoked",
+_INVITATIONS: dict[InvitationStatus, ErrorCode] = {
+    InvitationStatus.ACCEPTED: "invitation_used",
+    InvitationStatus.EXPIRED: "invitation_expired",
+    InvitationStatus.REVOKED: "invitation_revoked",
 }
-_HTTP = {404: "not_found", 405: "method_not_allowed"}
+_HTTP: dict[int, ErrorCode] = {404: "not_found", 405: "method_not_allowed"}
 
 
 def translate(error: Exception) -> ApiError:
@@ -69,10 +146,16 @@ def translate(error: Exception) -> ApiError:
             return ApiError(409, "last_owner")
         case AccountConflict():
             return ApiError(409, "conflict")
+        case InvitationRefused(status=InvitationStatus() as status):
+            return ApiError(400, _INVITATIONS[status])
         case InvitationRefused():
-            return ApiError(400, _INVITATIONS.get(str(error), "invitation_unknown"))
+            return ApiError(400, "invitation_unknown")
         case WrongPassword():
             return ApiError(400, "wrong_password")
+        case UnknownPerson():
+            return ApiError(400, "unknown_person")
+        case PersonRequired():
+            return ApiError(400, "person_required")
         case ProviderError():
             return ApiError(502, "provider_error", detail=str(error))
         case ContractError():

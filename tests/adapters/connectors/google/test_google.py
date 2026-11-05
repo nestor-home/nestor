@@ -3,7 +3,6 @@ break (expired history, rate limits, revoked authorisation) and what the model r
 
 import asyncio
 import base64
-import json
 import logging
 import urllib.parse
 from collections.abc import Callable, Mapping
@@ -64,6 +63,7 @@ class FakeGmail:
         self.oldest = 0
         self.records: list[tuple[int, str]] = []
         self.messages: dict[str, dict[str, Any]] = {}
+        self.found_by: dict[str, tuple[str, ...]] = {}
         self.failures: list[httpx.Response] = []  # answered, in order, to the next history requests
         self.message_failures: list[httpx.Response] = []  # same, for the next message requests
         self.requests: list[httpx.Request] = []
@@ -77,8 +77,11 @@ class FakeGmail:
         plain: str | None = "Votre colis arrive demain.",
         html: str | None = "<p>Votre colis arrive <b>demain</b>.</p>",
         payload: dict[str, Any] | None = None,
+        found_by: tuple[str, ...] = (),
     ) -> str:
+        """Adds a message; `found_by` are the exact `q` values Gmail's search would match it with."""
         message_id = f"18c{len(self.records):05x}e2a9f"
+        self.found_by[message_id] = found_by
         self.history_id += 7
         body = payload or {
             "mimeType": "multipart/mixed",
@@ -159,7 +162,7 @@ class FakeGmail:
         return httpx.Response(200, json=found)
 
     def search(self, query: str, limit: int) -> httpx.Response:
-        ids = [i for i, m in reversed(self.messages.items()) if query.lower() in json.dumps(m).lower()][:limit]
+        ids = [i for i in reversed(self.messages) if query in self.found_by.get(i, ())][:limit]
         return httpx.Response(200, json={"messages": [{"id": i, "threadId": f"t{i}"} for i in ids]})
 
     def history_calls(self) -> int:
@@ -434,9 +437,14 @@ def test_the_connector_declares_gmail_read_only_oauth_and_mail_for_watches() -> 
 
 async def test_a_search_returns_sender_subject_date_snippet_and_id() -> None:
     gmail = FakeGmail()
-    gmail.deliver("Facture EDF", sender="EDF <facture@edf.fr>")
-    wanted = gmail.deliver("Votre colis Colissimo", sender="=?utf-8?q?Colissimo_=C3=A9clair?= <noreply@colissimo.fr>")
-    found = await tools(gmail)["google_mail_search"].run({"query": "colissimo", "max_results": 5}, CONTEXT)
+    query = 'from:Colissimo subject:"Votre colis" -in:spam {après été} after:2026/10/01'  # operators, case, accents
+    gmail.deliver("Facture EDF", sender="EDF <facture@edf.fr>", found_by=("colissimo",))
+    wanted = gmail.deliver(
+        "Votre colis Colissimo",
+        sender="=?utf-8?q?Colissimo_=C3=A9clair?= <noreply@colissimo.fr>",
+        found_by=(query,),
+    )
+    found = await tools(gmail)["google_mail_search"].run({"query": f"  {query} ", "max_results": 5}, CONTEXT)
     assert found["messages"] == [
         {
             "id": wanted,
@@ -585,12 +593,12 @@ async def test_connecting_through_oauth_names_the_account_by_its_gmail_address()
         query = dict(urllib.parse.parse_qsl(urllib.parse.urlsplit(url).query))
         assert query["scope"] == "openid email https://www.googleapis.com/auth/gmail.readonly"
         assert query["prompt"] == "consent" and query["include_granted_scopes"] == "true"
-        code = provider.authorize(query["client_id"], next(iter(connections._pending.values())).verifier)
-        connection = await connections.complete(query["state"], code)
+        back = provider.consent(url)
+        connection = await connections.complete(back["state"], back["code"])
         assert connection.account == "mathis@gmail.com"
         search, read = ConnectorTools(connections).tools()
         assert (search.name, read.name) == ("google_mail_search", "google_mail_read")
-        gmail.deliver("Bienvenue")
+        gmail.deliver("Bienvenue", found_by=("bienvenue",))
         found: Any = await search.run({"query": "bienvenue"}, CONTEXT)
         assert [m["subject"] for m in found["messages"]] == ["Bienvenue"]
 

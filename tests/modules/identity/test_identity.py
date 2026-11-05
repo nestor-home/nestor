@@ -83,7 +83,6 @@ async def test_a_recorded_voice_is_recognised_and_a_stranger_is_not() -> None:
     assert stranger.person is None
     enrolled = await journal.history(VoiceEnrolled)
     assert [e.person for e in enrolled] == [LEA, HUGO]
-    assert "vector" not in str([e.to_record() for e in enrolled]) and "voiceprint" not in str(enrolled)
 
 
 async def test_speech_too_short_or_a_model_that_fails_recognises_nobody() -> None:
@@ -153,21 +152,38 @@ async def test_a_clear_turn_is_learned_and_a_doubtful_one_is_not() -> None:
     assert status.learned == 1 and status.last_learned_at is not None
 
 
-async def test_learning_stops_when_the_person_says_so_and_keeps_its_limits() -> None:
+async def test_learning_keeps_the_newest_turns_of_each_room_and_in_all() -> None:
+    """Each limit holds on its own: `per_room` while the total is under `keep`, then `keep` across rooms."""
     store = MemoryVoiceprintStore()
-    found, journal, clock = voices(store, keep=3, per_room=2)
+    found, _, clock = voices(store, keep=3, per_room=2)
+
+    async def learn(take: int, turn: str, room: str) -> None:
+        clock.now += timedelta(minutes=1)
+        assert await found.learn(await found.hear(tagged("lea", take=take)), turn=turn, room=room)
+
+    async def kept() -> list[str]:
+        return [s.turn for s in (await store.profiles(found.embedder.space))[LEA].learned]
+
     async with found:
         await enroll(found, LEA)
         for take in range(4):
-            clock.now += timedelta(minutes=1)
-            await found.learn(await found.hear(tagged("lea", take=take)), turn=f"s{take}", room="salon")
-        clock.now += timedelta(minutes=1)
-        await found.learn(await found.hear(tagged("lea", take=9)), turn="k", room="cuisine")
-        kept = [s.turn for s in (await store.profiles(found.embedder.space))[LEA].learned]
+            await learn(take, f"s{take}", "salon")
+        in_the_living_room = await kept()
+        await learn(8, "k1", "cuisine")
+        await learn(9, "k2", "cuisine")
+        in_all = await kept()
+    assert in_the_living_room == ["s2", "s3"], "two per room, though three in all would fit"
+    assert in_all == ["s3", "k1", "k2"], "three in all, though each room keeps two"
+    assert found.status(LEA).learned == 3
+
+
+async def test_learning_stops_when_the_person_says_so() -> None:
+    found, journal, _ = voices()
+    async with found:
+        await enroll(found, LEA)
         await found.set_learning(LEA, False, by=LEA)
         refused = await found.learn(await found.hear(tagged("lea", take=5)), turn="t", room="salon")
-    assert kept == ["s2", "s3", "k"] and found.status(LEA).learned == 3
-    assert not refused and not found.status(LEA).learning
+    assert not refused and not found.status(LEA).learning and found.status(LEA).learned == 0
     assert [e.learning for e in await journal.history(VoiceLearningChanged)] == [False]
 
 

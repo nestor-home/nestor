@@ -127,6 +127,18 @@ def test_a_registry_refuses_two_plugins_for_one_kind() -> None:
         Registry([plugin, plugin])
 
 
+def test_an_installed_entry_point_that_is_not_a_plugin_is_named(monkeypatch: pytest.MonkeyPatch) -> None:
+    class Entry:  # what a broken third-party package declares in the `nestor.adapters` group
+        name, value, dist = "broken", "nestor_broken:plugin", None
+
+        def load(self) -> object:
+            return object()
+
+    monkeypatch.setattr("nestor.runtime.plugins.entry_points", lambda group: [Entry()])
+    with pytest.raises(ContractError, match=r"entry point 'broken' \(nestor_broken:plugin\) is not a nestor Plugin"):
+        Registry.installed()
+
+
 def test_an_adapter_whose_optional_dependencies_are_missing_names_the_requirement_to_install(tmp_path: Path) -> None:
     def build(settings: NoSettings, name: str, services: Services) -> Component:
         import nestor_absent_sdk  # ty: ignore[unresolved-import]  # an optional dependency, not installed

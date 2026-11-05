@@ -1,5 +1,6 @@
 """Nothing the admin shows falls back to a raw name: every field of the configuration's forms, every
-built-in event of the journal has its words in every locale Nestor ships, written without an em-dash."""
+built-in event of the journal, every error the API sends has its words in every locale Nestor ships, written
+without an em-dash."""
 
 import dataclasses
 import importlib
@@ -17,6 +18,7 @@ import pytest
 
 import nestor.modules
 from nestor.adapters.i18n import FluentLocalizer, catalogue_dirs
+from nestor.admin.api.v1.errors import ErrorCode
 from nestor.admin.presentation import EventDescriber, Phrasebook
 from nestor.core import Event, PersonId
 from nestor.core.i18n import Locale, Message
@@ -136,3 +138,13 @@ def test_no_shipped_sentence_uses_an_em_dash() -> None:
     for locale in LOCALIZER.locales:
         _, text = LOCALIZER.source(locale)
         assert "—" not in text, [line for line in text.splitlines() if "—" in line]
+
+
+def test_every_error_the_api_sends_has_its_sentence_in_every_locale() -> None:
+    missing = {
+        (locale, f"error-{code.replace('_', '-')}")
+        for code in get_args(ErrorCode)
+        for locale, ids in IDS.items()
+        if f"error-{code.replace('_', '-')}" not in ids
+    }
+    assert not missing, sorted(missing)

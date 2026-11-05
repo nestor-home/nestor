@@ -102,9 +102,9 @@ class Home:
             await asyncio.sleep(0.01)
         raise AssertionError("the messages were not delivered")
 
-    async def send(self, by: Person | None, **arguments: object) -> object:
+    async def send(self, by: Person | None, at: Address = MATHIS_CHAT, /, **arguments: object) -> object:
         (tool,) = self.tools.tools()
-        context = ToolContext(address=MATHIS_CHAT, speaker=Speaker.account(by.id) if by else Speaker.unknown())
+        context = ToolContext(address=at, speaker=Speaker.account(by.id) if by else Speaker.unknown())
         return await tool.run(arguments, context)
 
 
@@ -178,6 +178,17 @@ async def test_a_channel_asked_for_is_where_it_is_written_whoever_is_home() -> N
         await home.send(MATHIS, person="mathis", text="Les nouvelles du jour.", channel="telegram")
         await home.settled(1)
     assert [a for a, _ in home.telegram.sent] == [MATHIS_CHAT] and home.voice.sent == []
+
+
+async def test_someone_nobody_recognised_has_a_message_passed_on_signed_by_the_room() -> None:
+    home = Home("Quelqu'un au salon te fait dire que le dîner est prêt.")
+    async with home:
+        await home.send(None, Address("voice", "salon"), person="mathilde", text="Le dîner est prêt.")
+        await home.settled(1)
+    assert home.telegram.sent == [(MATHILDE_CHAT, "Quelqu'un au salon te fait dire que le dîner est prêt.")]
+    composed = home.model.requests[0].messages[-1].content
+    assert "Someone at home, in salon, asked you to pass this on to Mathilde: Le dîner est prêt." in composed
+    assert "Mathis" not in composed, "nobody is named who did not ask"
 
 
 async def test_a_message_that_cannot_get_through_is_told_to_whoever_asked() -> None:

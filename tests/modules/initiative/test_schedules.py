@@ -6,9 +6,9 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
-from nestor.core import PersonId
+from nestor.core import PersonId, ProviderError
 from nestor.modules.channels import Address
-from nestor.modules.cognition.model import ToolCall
+from nestor.modules.cognition.model import ModelRequest, ToolCall
 from nestor.modules.cognition.tools import Toolbox, ToolContext, ToolFailed
 from nestor.modules.conversation import Agent, AssistantTurn, ModelChoice, Persona, TurnContext
 from nestor.modules.household import Household, Person
@@ -104,6 +104,26 @@ async def test_a_wake_up_runs_its_instruction_once_each_time_it_is_due_with_the_
     assert len(woken.messages) == 2, "no conversation's history"
     assert len(home.background.requests) == 4, "its tools run as in any turn"
     assert await home.journal.history(AssistantTurn) == [], "what it writes reaches no one"
+
+
+@pytest.mark.parametrize(
+    "failure", [ProviderError("openrouter", "503", transient=True), RuntimeError("bug")], ids=["model down", "bug"]
+)
+async def test_a_wake_up_that_fails_does_not_stop_the_others_nor_runs_again(failure: Exception) -> None:
+    def fails(request: ModelRequest) -> str:
+        raise failure
+
+    home = Home(fails, "Fait.", now=paris(2, 7))
+    async with home.book:
+        await home.schedule(instruction="Arrose les plantes", times=["08:00"])
+        await home.schedule(instruction="Ouvre les volets", times=["08:00"])
+        home.clock.now = paris(2, 8, 1)
+        assert await home.scheduler.wake_due() == 2
+        assert await home.scheduler.wake_due() == 0, "a failed wake-up is not retried in a loop"
+
+    woken = [r.messages[-1].content for r in home.background.requests]
+    assert len(woken) == 2 and "Ouvre les volets" in woken[1]
+    assert len(await home.journal.history(ScheduleFired)) == 2
 
 
 async def test_a_wake_up_missed_while_stopped_runs_once_when_back_then_follows_its_times() -> None:
