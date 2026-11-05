@@ -3,7 +3,9 @@
 from dataclasses import dataclass
 from enum import StrEnum
 
-CUE_CHARS = 8000  # of what a cue brings into a conversation: a task's long result keeps its beginning and end
+NOTIFICATION_CHARS = (
+    8000  # of what a notification brings into a conversation: a task's long result keeps its beginning and end
+)
 
 
 class FallbackReason(StrEnum):
@@ -21,7 +23,7 @@ class ReplyPhase(StrEnum):
 
 
 @dataclass(frozen=True, slots=True)
-class Cue:
+class Notification:
     """What Nestor brings into a conversation by itself, as a tool's result comes back to a model: a task ended, a
     watch matched, a message to pass on. It opens a turn as a person's message does, the answer follows, and both
     stay in the conversation's history. `about` names what it comes from (`task 3f2a completed`)."""
@@ -30,6 +32,6 @@ class Cue:
     about: str
 
     def __post_init__(self) -> None:
-        if len(self.text) > CUE_CHARS:
-            half = CUE_CHARS // 2
+        if len(self.text) > NOTIFICATION_CHARS:
+            half = NOTIFICATION_CHARS // 2
             object.__setattr__(self, "text", f"{self.text[:half]}\n[… cut …]\n{self.text[-half:]}")

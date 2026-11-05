@@ -6,7 +6,7 @@ from nestor.core import PersonId, new_id
 from nestor.core.i18n import Message
 from nestor.modules.channels import Address, Exchange, Medium
 from nestor.modules.cognition.tools import Toolbox
-from nestor.modules.conversation import Agent, Cue, ModelChoice, Persona, UserTurn
+from nestor.modules.conversation import Agent, ModelChoice, Notification, Persona, UserTurn
 from nestor.modules.home import Granularity
 from nestor.modules.household import Account, Household, Person
 from nestor.modules.identity import Speaker
@@ -59,7 +59,7 @@ def courier(
 async def test_an_unanswered_announcement_is_followed_by_a_message() -> None:
     sender, journal, voice, telegram = courier(StaticPresence().set("mathis", home=True))
     async with sender:
-        assert await sender.deliver(MATHIS, Cue("Le colis est arrivé.", "watch colis")) == SALON
+        assert await sender.deliver(MATHIS, Notification("Le colis est arrivé.", "watch colis")) == SALON
         await asyncio.sleep(0.05)
     assert [a for a, _ in voice.sent] == [SALON]
     assert [a for a, _ in telegram.sent] == [TELEGRAM]
@@ -71,7 +71,9 @@ async def test_a_private_message_is_only_announced_aloud_and_written_at_once() -
     """Others may be in the room: they hear that something came, not what it says."""
     sender, _, voice, telegram = courier(StaticPresence().set("mathis", home=True), follow_up_after_s=10)
     async with sender:
-        assert await sender.deliver(MATHIS, Cue("Mail de la banque.", "watch banque"), private=True) == TELEGRAM
+        assert (
+            await sender.deliver(MATHIS, Notification("Mail de la banque.", "watch banque"), private=True) == TELEGRAM
+        )
         assert sender.scheduled() == (), "already written: no follow-up"
     assert [a for a, _ in voice.sent] == [SALON] and [a for a, _ in telegram.sent] == [TELEGRAM]
 
@@ -79,7 +81,7 @@ async def test_a_private_message_is_only_announced_aloud_and_written_at_once() -
 async def test_a_reaction_cancels_the_follow_up() -> None:
     sender, journal, _, telegram = courier(StaticPresence().set("mathis", home=True))
     async with sender:
-        await sender.deliver(MATHIS, Cue("Le colis est arrivé.", "watch colis"))
+        await sender.deliver(MATHIS, Notification("Le colis est arrivé.", "watch colis"))
         await journal.publish(
             UserTurn(
                 medium=Medium.WRITTEN,
@@ -98,21 +100,21 @@ async def test_a_reaction_cancels_the_follow_up() -> None:
 async def test_closing_drops_pending_follow_ups() -> None:
     sender, _, _, telegram = courier(StaticPresence().set("mathis", home=True), follow_up_after_s=10)
     async with sender:
-        await sender.deliver(MATHIS, Cue("Le colis est arrivé.", "watch colis"))
+        await sender.deliver(MATHIS, Notification("Le colis est arrivé.", "watch colis"))
     assert telegram.sent == []
 
 
 async def test_someone_away_gets_a_message_straight_away() -> None:
     sender, _, voice, telegram = courier(StaticPresence(Granularity.HOME).set("mathis", home=False))
     async with sender:
-        assert await sender.deliver(MATHIS, Cue("Le colis est arrivé.", "watch colis")) == TELEGRAM
+        assert await sender.deliver(MATHIS, Notification("Le colis est arrivé.", "watch colis")) == TELEGRAM
     assert voice.sent == [] and len(telegram.sent) == 1
 
 
 async def test_a_pending_follow_up_is_listed_until_it_is_sent() -> None:
     sender, _, _, _ = courier(StaticPresence().set("mathis", home=True), follow_up_after_s=0.05)
     async with sender:
-        await sender.deliver(MATHIS, Cue("Le colis est arrivé.", "watch colis"))
+        await sender.deliver(MATHIS, Notification("Le colis est arrivé.", "watch colis"))
         (pending,) = sender.scheduled()
         assert (pending.about, pending.person, pending.spoken, pending.written) == (
             "watch colis",

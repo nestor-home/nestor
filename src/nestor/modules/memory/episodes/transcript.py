@@ -5,7 +5,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from nestor.modules.channels import Address
-from nestor.modules.conversation.events import AnswerCut, AssistantTurn, InternalTurn, UserTurn
+from nestor.modules.conversation.events import AnswerCut, AssistantTurn, NotificationTurn, UserTurn
 from nestor.modules.conversation.history import heard, in_conversation
 from nestor.modules.household import Household
 from nestor.modules.journal import Journal
@@ -23,7 +23,7 @@ async def transcript(
 ) -> list[str]:
     """One line per message; an answer cut short keeps only what was heard of it."""
     events = await journal.history(
-        UserTurn, InternalTurn, AssistantTurn, AnswerCut, session=address.session, since=since
+        UserTurn, NotificationTurn, AssistantTurn, AnswerCut, session=address.session, since=since
     )
     ours = in_conversation(events, conversation)
     cut = heard(ours)
@@ -32,7 +32,7 @@ async def transcript(
     for event in ours:
         if isinstance(event, UserTurn):
             said, who = event.text, household.name_of(event.person, "Someone")
-        elif isinstance(event, InternalTurn):  # what Nestor brought in (a task's result): its answer needs it
+        elif isinstance(event, NotificationTurn):  # what Nestor brought in (a task's result): its answer needs it
             said, who = event.text, f"(for {assistant}, {event.about})"
         elif isinstance(event, AssistantTurn):
             said, who = cut.get(event.id, event.text), assistant

@@ -27,12 +27,12 @@ from nestor.modules.cognition.model import (
 )
 from nestor.modules.cognition.tools import Toolbox, ToolContext
 from nestor.modules.conversation.conversations import Conversations
-from nestor.modules.conversation.events import AnswerCut, AssistantTurn, FallbackSpoken, InternalTurn, UserTurn
-from nestor.modules.conversation.history import cue_message, recent_history
+from nestor.modules.conversation.events import AnswerCut, AssistantTurn, FallbackSpoken, NotificationTurn, UserTurn
+from nestor.modules.conversation.history import notification_message, recent_history
 from nestor.modules.conversation.persona import Instructions, Persona
 from nestor.modules.conversation.ports import ContextProvider, Layer, TurnContext
 from nestor.modules.conversation.speakers import Speakers
-from nestor.modules.conversation.types import Cue, FallbackReason, ReplyPhase
+from nestor.modules.conversation.types import FallbackReason, Notification, ReplyPhase
 from nestor.modules.household import Household, Person
 from nestor.modules.identity import Heard, Speaker
 from nestor.modules.journal import Journal
@@ -159,26 +159,28 @@ class Agent(Assistant):
     async def hear(self, audio: bytes) -> Heard | None:
         return await self.speakers.voices.hear(audio) if self.speakers.voices is not None else None
 
-    async def compose(self, address: Address, person: Person | None, cue: Cue, medium: Medium) -> tuple[str, ...]:
-        """The answer to a cue (a task's result, a watch, a message to pass on) for this conversation, to be
+    async def compose(
+        self, address: Address, person: Person | None, notification: Notification, medium: Medium
+    ) -> tuple[str, ...]:
+        """The answer to a notification (a task's result, a watch, a message to pass on) for this conversation, to be
         delivered through `medium` to `person`: a draft, in the persona's voice and with the conversation's
         history. Nothing is logged until it is delivered (`delivered`): a message that could not go out was
         never said."""
-        return await AgentReply(self, address, medium, cue, person=person).collect()
+        return await AgentReply(self, address, medium, notification, person=person).collect()
 
     async def delivered(
-        self, address: Address, person: Person | None, cue: Cue, medium: Medium, texts: Sequence[str]
+        self, address: Address, person: Person | None, notification: Notification, medium: Medium, texts: Sequence[str]
     ) -> Exchange:
-        """Record a composed answer once sent: the cue opens a turn of the conversation, as a person's message
+        """Record a composed answer once sent: the notification opens a turn of the conversation, as a person's message
         would, and the answer follows it. Replies to it later see both."""
         exchange = await self.conversations.turn(address, medium)
         await self.journal.publish(
-            InternalTurn(
+            NotificationTurn(
                 source="agent",
                 session=address.session,
                 address=address,
-                text=cue.text,
-                about=cue.about,
+                text=notification.text,
+                about=notification.about,
                 exchange=exchange,
                 person=person.id if person else None,
             )
@@ -190,11 +192,11 @@ class Agent(Assistant):
         self.conversations.ended(exchange, address)
         return exchange
 
-    async def background(self, address: Address, person: Person | None, cue: Cue) -> tuple[str, ...]:
+    async def background(self, address: Address, person: Person | None, notification: Notification) -> tuple[str, ...]:
         """Run a turn nobody waits for (a scheduled wake-up), on behalf of `person`, with the agent's tools and
         the background model, without any conversation's history. What it writes reaches no one: to tell
         someone, it uses its tools. Its tool calls are logged as usual."""
-        return await AgentReply(self, address, Medium.WRITTEN, cue, person=person, unattended=True).collect()
+        return await AgentReply(self, address, Medium.WRITTEN, notification, person=person, unattended=True).collect()
 
     def channel(self, address: Address) -> ChannelProfile:
         return self._channels.get(address.channel, ChannelProfile())
@@ -221,29 +223,28 @@ class Agent(Assistant):
 
 
 class AgentReply(Reply):
-    """One answer to what opens a turn: a person's message, or a cue of Nestor's. Produced in the background and
-    streamed through a queue so that a channel can interrupt it from another task at any time.
+    """One answer to what opens a turn: a person's message, or a notification of Nestor's. Produced in the background
+    and streamed through a queue so that a channel can interrupt it from another task at any time.
 
-    The answer to a message is the conversation's as it goes: each round of the model that writes something is a
-    message of its own, logged as soon as it ends, before the tools it asked for run, so the journal keeps the
-    order the user saw. A voice channel usually receives a message long before it is played: an interruption
-    that comes after it was logged is recorded as an `AnswerCut`, so the history keeps only what the user heard.
+    The answer to a message is the conversation's as it goes: each round of the model that writes something is a message
+    of its own, logged as soon as it ends, before the tools it asked for run, so the journal keeps the order the user
+    saw. A voice channel usually receives a message long before it is played: an interruption that comes after it was
+    logged is recorded as an `AnswerCut`, so the history keeps only what the user heard.
 
-    The answer to a cue is a draft, logged with its cue by whoever delivers it (`Agent.delivered`); `unattended`,
-    a turn nobody takes part in (a wake-up), without any conversation's history.
-    """
+    The answer to a notification is a draft, logged with its notification by whoever delivers it (`Agent.delivered`);
+    `unattended`, a turn nobody takes part in (a wake-up), without any conversation's history."""
 
     def __init__(
         self,
         agent: Agent,
         address: Address,
         medium: Medium,
-        opening: InboundMessage | Cue,
+        opening: InboundMessage | Notification,
         *,
         person: Person | None = None,
         unattended: bool = False,
     ) -> None:
-        """`person`: whom a cue is for (who sent a message is found when the turn starts)."""
+        """`person`: whom a notification is for (who sent a message is found when the turn starts)."""
         self._agent, self._address, self._person, self._medium = agent, address, person, medium
         self._speaker = Speaker.account(person.id) if person else Speaker.unknown()
         self._opening = opening
@@ -322,7 +323,7 @@ class AgentReply(Reply):
                     return
             elif self._unattended:  # a background turn belongs to no conversation
                 conversation = None
-            else:  # a cue's answer, drafted in the open conversation, if any
+            else:  # a notification's answer, drafted in the open conversation, if any
                 conversation = await agent.conversations.current(self._address, self._medium)
             await self._answer(conversation)
             await self._end_message()
@@ -341,8 +342,8 @@ class AgentReply(Reply):
             names=agent.speakers.name_of,
         )
         opening = self._opening
-        if isinstance(opening, Cue):  # not in the journal yet: read as it will be once delivered
-            history = (*history, cue_message(opening))
+        if isinstance(opening, Notification):  # not in the journal yet: read as it will be once delivered
+            history = (*history, notification_message(opening))
         shared = isinstance(opening, InboundMessage) and opening.sender is None
         said = self._said(history)
         instructions = await agent.instructions(self._address, self._speaker, self._medium, said, shared=shared)
@@ -369,7 +370,7 @@ class AgentReply(Reply):
 
     def _said(self, history: Sequence[Message]) -> str | None:
         """What a module looks up for this turn: the last messages that opened turns of the conversation (a
-        person's, Nestor's cues), so that a follow-up ("and for her?") keeps its subject."""
+        person's, Nestor's notifications), so that a follow-up ("and for her?") keeps its subject."""
         said = [m.content for m in history if m.role is Role.USER][-SAID_MESSAGES:]
         return " ".join(said) or None
 

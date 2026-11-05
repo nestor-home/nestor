@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 from nestor.core import Component, PersonId, ProviderError, utc_now
 from nestor.core.i18n import Message
 from nestor.modules.channels import Address, Channel, Medium
-from nestor.modules.conversation import Agent, Cue, UserTurn
+from nestor.modules.conversation import Agent, Notification, UserTurn
 from nestor.modules.home import PresenceSource
 from nestor.modules.household import Person
 from nestor.modules.initiative.delivery.events import Delivered, DeliveryConsidered, DeliveryFailed
@@ -68,7 +68,7 @@ class Courier(Component):
     async def deliver(
         self,
         person: Person | None,
-        cue: Cue,
+        notification: Notification,
         *,
         origin: Address | None = None,
         written: bool = False,
@@ -76,11 +76,11 @@ class Courier(Component):
         private: bool = False,
         to: Address | None = None,
     ) -> Address | None:
-        """Deliver now what `cue` brings to `person`; returns where, or `None` (logged as `DeliveryFailed`) when
-        nothing could take it. Wherever it goes, the cue and its answer become a turn of that conversation.
-        `to` is a place asked for (a channel someone named): it is written there, whatever the policy.
-        `private`: its content is the person's (a mail): aloud, others may hear, so the room only hears that
-        something waits for them and the content is written at once; aloud in full only with nowhere to write."""
+        """Deliver now what `notification` brings to `person`; returns where, or `None` (logged as `DeliveryFailed`)
+        when nothing could take it. Wherever it goes, the notification and its answer become a turn of that
+        conversation. `to` is a place asked for (a channel someone named): it is written there, whatever the policy.
+        `private`: its content is the person's (a mail): aloud, others may hear, so the room only hears that something
+        waits for them and the content is written at once; aloud in full only with nowhere to write."""
         plan = (
             Plan(spoken=None, written=to, reason=Message.of("delivery-place-asked", channel=to.channel))
             if to
@@ -98,7 +98,7 @@ class Courier(Component):
         await self.journal.publish(
             DeliveryConsidered(
                 source=self.name,
-                about=cue.about,
+                about=notification.about,
                 person=person.id if person else None,
                 spoken=plan.spoken,
                 written=plan.written,
@@ -106,19 +106,21 @@ class Courier(Component):
             )
         )
         if private and plan.spoken and plan.written:
-            notice = Cue(f"{cue.text}\n\n{NOTICE}", f"{cue.about} (notice)")
+            notice = Notification(f"{notification.text}\n\n{NOTICE}", f"{notification.about} (notice)")
             noticed = await self._send(person, plan.spoken, Medium.SPOKEN, notice)
-            if noticed and (written_to := await self._send(person, plan.written, Medium.WRITTEN, cue)):
+            if noticed and (written_to := await self._send(person, plan.written, Medium.WRITTEN, notification)):
                 return written_to
-        elif plan.spoken and (spoken := await self._send(person, plan.spoken, Medium.SPOKEN, cue)):
+        elif plan.spoken and (spoken := await self._send(person, plan.spoken, Medium.SPOKEN, notification)):
             if plan.follow_up:
-                self._watch_reaction(person, plan, cue)
+                self._watch_reaction(person, plan, notification)
             return spoken
-        if plan.written and (written_to := await self._send(person, plan.written, Medium.WRITTEN, cue)):
+        if plan.written and (written_to := await self._send(person, plan.written, Medium.WRITTEN, notification)):
             return written_to
         tried = tuple(a for a in (plan.spoken, plan.written) if a)
         await self.journal.publish(
-            DeliveryFailed(source=self.name, about=cue.about, tried=tried, person=person.id if person else None)
+            DeliveryFailed(
+                source=self.name, about=notification.about, tried=tried, person=person.id if person else None
+            )
         )
         return None
 
@@ -129,24 +131,26 @@ class Courier(Component):
             return False
         return await self.agent.conversations.current(origin, Medium.SPOKEN) is not None
 
-    async def _send(self, person: Person | None, address: Address, medium: Medium, cue: Cue) -> Address | None:
-        """Compose the answer to `cue` for this conversation, send it, and only then record both as its turn."""
+    async def _send(
+        self, person: Person | None, address: Address, medium: Medium, notification: Notification
+    ) -> Address | None:
+        """Compose the answer to `notification` for this conversation, send it, then record both as its turn."""
         channel = self.channels.get(address.channel)
         if channel is None or not channel.reachable(address, medium):
             return None
-        texts = await self.agent.compose(address, person, cue, medium)
+        texts = await self.agent.compose(address, person, notification, medium)
         try:
             for text in texts:
                 await channel.send(address, text, medium)
         except ProviderError:
             return None
-        await self.agent.delivered(address, person, cue, medium, texts)
+        await self.agent.delivered(address, person, notification, medium, texts)
         await self.journal.publish(
-            Delivered(source=self.name, address=address, about=cue.about, person=person.id if person else None)
+            Delivered(source=self.name, address=address, about=notification.about, person=person.id if person else None)
         )
         return address
 
-    def _watch_reaction(self, person: Person | None, plan: Plan, cue: Cue) -> None:
+    def _watch_reaction(self, person: Person | None, plan: Plan, notification: Notification) -> None:
         assert plan.spoken is not None and plan.written is not None
         spoken, written, since = plan.spoken, plan.written, utc_now()
 
@@ -155,12 +159,15 @@ class Courier(Component):
             replies = await self.journal.history(UserTurn, session=spoken.session, since=since)
             if not replies:
                 await self._send(
-                    person, written, Medium.WRITTEN, Cue(f"{cue.text}\n\n{FOLLOW_UP}", f"{cue.about} (follow-up)")
+                    person,
+                    written,
+                    Medium.WRITTEN,
+                    Notification(f"{notification.text}\n\n{FOLLOW_UP}", f"{notification.about} (follow-up)"),
                 )
 
-        task = asyncio.create_task(follow_up(), name=f"follow-up {cue.about}")
+        task = asyncio.create_task(follow_up(), name=f"follow-up {notification.about}")
         self._follow_ups[task] = FollowUp(
-            about=cue.about,
+            about=notification.about,
             person=person.id if person else None,
             spoken=spoken,
             written=written,

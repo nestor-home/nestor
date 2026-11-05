@@ -12,7 +12,7 @@ from nestor.modules.accounts import Role
 from nestor.modules.channels import Address, Exchange, InboundMessage, Medium, Sender
 from nestor.modules.cognition import TaskEnded, TaskStarted, TaskStatus
 from nestor.modules.cognition.delegation.events import TaskDelivered
-from nestor.modules.conversation import AssistantTurn, Conversations, InternalTurn, UserTurn
+from nestor.modules.conversation import AssistantTurn, Conversations, NotificationTurn, UserTurn
 from nestor.modules.home import PresenceChanged
 from nestor.modules.identity import Speaker
 from nestor.modules.initiative import Delivered, DeliveryConsidered, WatchCreated, WatchTriggered
@@ -84,7 +84,7 @@ async def test_an_unprompted_message_chains_from_its_delivery_through_its_cue(tm
         turn = Exchange(conversation_id="c1", turn_id="t1")
         for event in (
             DeliveryConsidered(source="courier", about="task t1 completed", reason=REASON, written=TELEGRAM),
-            InternalTurn(
+            NotificationTurn(
                 source="agent",
                 session=TELEGRAM.session,
                 address=TELEGRAM,
@@ -99,10 +99,10 @@ async def test_an_unprompted_message_chains_from_its_delivery_through_its_cue(tm
         ):
             await admin.nestor.journal.publish(event)
         found = by_type(await items(await admin.api()))
-        considered, cue = found["initiative.considered"][0], found["conversation.turn.internal"][0]
+        considered, notification = found["initiative.considered"][0], found["conversation.turn.notification"][0]
         answered = found["conversation.turn.assistant"][0]
-    assert cue["cause"] == considered["position"] and answered["cause"] == cue["position"]
-    assert cue["text"] == "Pour Richie : tâche t1 terminée" and cue["detail"] == "Result: ok"
+    assert notification["cause"] == considered["position"] and answered["cause"] == notification["position"]
+    assert notification["text"] == "Pour Richie : tâche t1 terminée" and notification["detail"] == "Result: ok"
 
 
 async def test_the_position_cursor_pages_back_through_a_filtered_journal(tmp_path: Path) -> None:

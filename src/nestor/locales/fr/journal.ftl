@@ -26,7 +26,7 @@ journal-user-said = { $known ->
        *[other] { $person } a dit
     }
 }
-journal-internal-turn = Pour { $assistant } : { $subject ->
+journal-notification-turn = Pour { $assistant } : { $subject ->
     [task] tâche { $id } { $status ->
         [completed] terminée
         [failed] en échec

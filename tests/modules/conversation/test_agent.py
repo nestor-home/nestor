@@ -25,12 +25,12 @@ from nestor.modules.conversation import (
     AnswerCut,
     AssistantTurn,
     ContextProvider,
-    Cue,
     FallbackReason,
     FallbackSpoken,
-    InternalTurn,
     Layer,
     ModelChoice,
+    Notification,
+    NotificationTurn,
     Sections,
     TurnContext,
     UserTurn,
@@ -63,7 +63,7 @@ async def test_each_medium_answers_with_its_own_model(make_agent: MakeAgent) -> 
 
     said = await agent.respond(message("Quel temps ?", VOICE, "mic")).collect()
     typed = await agent.respond(message("Et en détail ?", VOICE, "mic", medium=Medium.WRITTEN)).collect()
-    composed = await agent.compose(TELEGRAM, MATHIS, Cue("The parcel arrived.", "watch w1"), Medium.SPOKEN)
+    composed = await agent.compose(TELEGRAM, MATHIS, Notification("The parcel arrived.", "watch w1"), Medium.SPOKEN)
 
     assert (said, typed, composed) == (("Il fait beau.",), ("Voici le détail.",), ("C'est prêt.",))
     assert (len(spoken.requests), len(written.requests)) == (2, 1)
@@ -357,30 +357,32 @@ async def test_a_composed_message_uses_the_conversation_and_is_left_to_its_sende
     await make_agent("Je lance l'analyse.").respond(message("Analyse le dépôt")).collect()
     model = ScriptedModel("L'analyse est finie : trois soucis trouvés.")
 
-    cue = Cue("Task finished: 3 issues found.", "task t1 completed")
-    text = await make_agent(model=model).compose(TELEGRAM, MATHIS, cue, Medium.WRITTEN)
+    notification = Notification("Task finished: 3 issues found.", "task t1 completed")
+    text = await make_agent(model=model).compose(TELEGRAM, MATHIS, notification, Medium.WRITTEN)
 
     assert text == ("L'analyse est finie : trois soucis trouvés.",)
     last = model.requests[0].messages[-1]
     assert last.role is Role.USER and last.content.endswith("Task finished: 3 issues found.")
     assert "not said by anyone here: task t1 completed" in last.content, "never taken for the person's words"
-    assert await journal.history(InternalTurn) == [], "a draft: nothing is said before it is delivered"
+    assert await journal.history(NotificationTurn) == [], "a draft: nothing is said before it is delivered"
     assert [t.text for t in await journal.history(AssistantTurn)] == ["Je lance l'analyse."]
 
 
 async def test_an_answer_to_a_delivery_sees_what_it_was_about(make_agent: MakeAgent, journal: Journal) -> None:
-    """A task's result comes back as a tool's result does: the cue, then the message it caused, then the person's
-    question about it, all in one history the model can quote from."""
+    """A task's result comes back as a tool's result does: the notification, then the message it caused, then the
+    person's question about it, all in one history the model can quote from."""
     model = ScriptedModel("Le deuxième : la CI est rouge sur main.")
     agent = make_agent(model=model)
-    cue = Cue("Result: 1. tests flaky 2. CI red on main 3. lockfile stale", "task t1 completed")
-    exchange = await agent.delivered(TELEGRAM, MATHIS, cue, Medium.WRITTEN, ["Ton analyse est prête : trois soucis."])
+    notification = Notification("Result: 1. tests flaky 2. CI red on main 3. lockfile stale", "task t1 completed")
+    exchange = await agent.delivered(
+        TELEGRAM, MATHIS, notification, Medium.WRITTEN, ["Ton analyse est prête : trois soucis."]
+    )
     await agent.respond(message("Et le deuxième point ?")).collect()
 
     history = model.requests[0].messages[1:]
     assert [m.role for m in history] == [Role.USER, Role.ASSISTANT, Role.USER]
     assert "CI red on main" in history[0].content and history[2].content == "Et le deuxième point ?"
-    [internal] = await journal.history(InternalTurn)
+    [internal] = await journal.history(NotificationTurn)
     [said] = [t for t in await journal.history(AssistantTurn) if t.exchange == exchange]
     assert internal.exchange == exchange and internal.person == MATHIS.id and said.text.startswith("Ton analyse")
     assert [t.speaker for t in await journal.history(UserTurn)] == [Speaker.account(MATHIS.id)]

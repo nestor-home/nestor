@@ -7,12 +7,12 @@ from nestor.core import Event
 from nestor.modules.channels import Address, Exchange
 from nestor.modules.cognition.model import Message, Role, ToolCall
 from nestor.modules.cognition.tools import ToolCalled, ToolCompleted
-from nestor.modules.conversation.events import AnswerCut, AssistantTurn, InternalTurn, UserTurn
-from nestor.modules.conversation.types import Cue
+from nestor.modules.conversation.events import AnswerCut, AssistantTurn, NotificationTurn, UserTurn
+from nestor.modules.conversation.types import Notification
 from nestor.modules.identity import Identified, Speaker
 from nestor.modules.journal import Journal
 
-HISTORY_EVENTS = (UserTurn, InternalTurn, AssistantTurn, AnswerCut, ToolCalled, ToolCompleted)
+HISTORY_EVENTS = (UserTurn, NotificationTurn, AssistantTurn, AnswerCut, ToolCalled, ToolCompleted)
 
 
 type Names = Callable[[Speaker], str | None]
@@ -44,17 +44,17 @@ def heard(events: Iterable[Event]) -> dict[str, str]:
     return {e.answer: e.heard for e in events if isinstance(e, AnswerCut)}
 
 
-def cue_message(cue: Cue) -> Message:
-    """A cue as the model reads it, when it answers it and every time the history is replayed: a user-role message
-    that says it comes from Nestor, not from anyone in the conversation (models take such messages for the person's
-    otherwise)."""
-    return Message.user(f"[From Nestor itself, not said by anyone here: {cue.about}]\n{cue.text}")
+def notification_message(notification: Notification) -> Message:
+    """A notification as the model reads it, when it answers it and every time the history is replayed: a user-role
+    message that says it comes from Nestor, not from anyone in the conversation (models take such messages for the
+    person's otherwise)."""
+    return Message.user(f"[From Nestor itself, not said by anyone here: {notification.about}]\n{notification.text}")
 
 
 def to_messages(events: Sequence[Event], *, names: Names | None = None) -> tuple[Message, ...]:
     """Turn log events into model messages. A tool call without its result (crash midway, or cut by
     the window) is dropped, since models refuse unanswered calls. A message written just before a
-    tool call goes back with it, as the model wrote them. An unprompted message comes after the cue that
+    tool call goes back with it, as the model wrote them. An unprompted message comes after the notification that
     caused it, so an answer to it knows what it was about. On a shared device, where several people may
     speak in one conversation, `names` labels each message with who said it, when anyone knows."""
     results = {e.call_id: e for e in events if isinstance(e, ToolCompleted)}
@@ -64,8 +64,8 @@ def to_messages(events: Sequence[Event], *, names: Names | None = None) -> tuple
         if isinstance(event, UserTurn):
             name = names(event.speaker) if names and event.speaker.by is not Identified.ACCOUNT else None
             messages.append(Message.user(f"[{name}] {event.text}" if name else event.text))
-        elif isinstance(event, InternalTurn):
-            messages.append(cue_message(Cue(event.text, event.about)))
+        elif isinstance(event, NotificationTurn):
+            messages.append(notification_message(Notification(event.text, event.about)))
         elif isinstance(event, AssistantTurn) and (text := cut.get(event.id, event.text)):
             messages.append(Message(role=Role.ASSISTANT, content=text))
         elif isinstance(event, ToolCalled) and (result := results.get(event.call_id)):

@@ -6,7 +6,7 @@ import logging
 from collections.abc import Iterable
 
 from nestor.core import Component
-from nestor.modules.conversation import Cue
+from nestor.modules.conversation import Notification
 from nestor.modules.household import Household
 from nestor.modules.initiative.delivery.courier import Courier
 from nestor.modules.initiative.watches.book import WatchBook
@@ -102,7 +102,7 @@ class WatchKeeper(Component):
         details = "\n".join(filter(None, (f"From: {item.sender}" if item.sender else "", item.title, item.body[:1500])))
         await self.courier.deliver(
             person,
-            Cue(
+            Notification(
                 ANNOUNCE.format(who=who, what=watch.what, summary=verdict.summary or item.title, item=details),
                 f"watch {watch.id}",
             ),

@@ -9,7 +9,7 @@ import pytest
 from nestor.core import PersonId, new_id
 from nestor.modules.channels import Address, Exchange, Medium
 from nestor.modules.cognition.tools import ToolContext, ToolFailed
-from nestor.modules.conversation import AnswerCut, AssistantTurn, InternalTurn, Layer, TurnContext, UserTurn
+from nestor.modules.conversation import AnswerCut, AssistantTurn, Layer, NotificationTurn, TurnContext, UserTurn
 from nestor.modules.household import Account, Household, Person
 from nestor.modules.identity import Speaker
 from nestor.modules.journal import Journal
@@ -119,7 +119,7 @@ async def test_a_message_nestor_brought_is_summarized_with_what_it_was_about() -
     async with home.consolidator:
         turn = Exchange(conversation_id="c9", turn_id=new_id())
         await home.journal.publish(
-            InternalTurn(
+            NotificationTurn(
                 source="test",
                 session=CHAT.session,
                 address=CHAT,

@@ -9,7 +9,7 @@ from nestor.modules.conversation.events import (
     AnswerCut,
     AssistantTurn,
     FallbackSpoken,
-    InternalTurn,
+    NotificationTurn,
     SpeakerDeclared,
     UserTurn,
 )
@@ -17,7 +17,7 @@ from nestor.modules.conversation.persona import Instructions, Persona
 from nestor.modules.conversation.ports import ContextProvider, Layer, Sections, TurnContext
 from nestor.modules.conversation.service import Agent, AgentSettings, ChannelProfile, LiveReplies, ModelChoice
 from nestor.modules.conversation.speakers import Speakers
-from nestor.modules.conversation.types import Cue, FallbackReason, ReplyPhase
+from nestor.modules.conversation.types import FallbackReason, Notification, ReplyPhase
 
 __all__ = [
     "Agent",
@@ -27,14 +27,14 @@ __all__ = [
     "ChannelProfile",
     "ContextProvider",
     "Conversations",
-    "Cue",
     "FallbackReason",
     "FallbackSpoken",
     "Instructions",
-    "InternalTurn",
     "Layer",
     "LiveReplies",
     "ModelChoice",
+    "Notification",
+    "NotificationTurn",
     "Persona",
     "ReplyPhase",
     "Sections",

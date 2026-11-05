@@ -43,7 +43,7 @@ from nestor.modules.conversation import (
     AnswerCut,
     AssistantTurn,
     FallbackSpoken,
-    InternalTurn,
+    NotificationTurn,
     SpeakerDeclared,
     UserTurn,
 )
@@ -116,7 +116,7 @@ class Category:
 
 
 CATEGORIES = (
-    Category("conversation", (UserTurn, InternalTurn, AssistantTurn, FallbackSpoken, AnswerCut)),
+    Category("conversation", (UserTurn, NotificationTurn, AssistantTurn, FallbackSpoken, AnswerCut)),
     Category(
         "delivery",
         (DeliveryConsidered, Delivered, DeliveryFailed, MessageRequested, MessageDelivered, MessageUndelivered),
@@ -224,9 +224,9 @@ class EventDescriber:
         self._categories = {e: c for c in CATEGORIES for e in c.events}
         self._describers: Mapping[type[Event], Callable[..., Line]] = {
             UserTurn: self._user_turn,
-            InternalTurn: lambda e: self._line(
+            NotificationTurn: lambda e: self._line(
                 e,
-                Message("journal-internal-turn", {**subject(e.about), "assistant": self.assistant}),
+                Message("journal-notification-turn", {**subject(e.about), "assistant": self.assistant}),
                 detail=e.text,
                 people=[e.person],
                 channels=[e.address],

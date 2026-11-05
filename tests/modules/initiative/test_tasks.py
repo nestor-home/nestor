@@ -7,7 +7,7 @@ from nestor.modules.channels import Address, InboundMessage, Medium, Sender
 from nestor.modules.cognition import Notify, TaskDelivered, TaskEnded, TaskStarted, TaskStatus
 from nestor.modules.cognition.model import Role
 from nestor.modules.cognition.tools import Toolbox
-from nestor.modules.conversation import Agent, AssistantTurn, InternalTurn, ModelChoice, Persona
+from nestor.modules.conversation import Agent, AssistantTurn, ModelChoice, NotificationTurn, Persona
 from nestor.modules.household import Account, Household, Person
 from nestor.modules.initiative import Courier, Delivered, DeliveryFailed, TaskAnnouncer
 from nestor.modules.journal import Journal
@@ -139,7 +139,7 @@ async def test_the_person_answering_a_result_is_answered_with_it_in_mind() -> No
     history = home.model.requests[1].messages[1:]
     assert [m.role for m in history] == [Role.USER, Role.ASSISTANT, Role.USER]
     assert "Result: tout est vert" in history[0].content and "not said by anyone here" in history[0].content
-    [internal] = await home.journal.history(InternalTurn)
+    [internal] = await home.journal.history(NotificationTurn)
     assert (internal.about, internal.person, internal.address) == ("task t1 completed", MATHIS.id, TELEGRAM)
 
 
