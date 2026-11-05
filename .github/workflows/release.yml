@@ -38,7 +38,7 @@ jobs:
       # The admin front is built into the package (src/nestor/admin/static/app, git-ignored).
       - working-directory: web
         run: mkdir -p .claude/skills && pnpm install --frozen-lockfile && pnpm build
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@v10.3.3
       - run: uv build
       - run: unzip -l dist/*.whl | grep -q 'nestor/admin/static/app/index.html'
       - run: uv publish --trusted-publishing always
@@ -68,7 +68,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           ref: ${{ needs.release.outputs.tag_name }}
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@v10.3.3
       - run: uv run --locked --no-dev python scripts/release_feed.py > releases.json
       - run: gh release upload "$TAG" releases.json --clobber
         env:
