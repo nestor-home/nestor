@@ -227,6 +227,29 @@ describe("the configuration", () => {
   });
 });
 
+describe("models by what they serve", () => {
+  it("are added by type, and a role is offered only the models of its type", async () => {
+    const user = userEvent.setup();
+    renderApp("/config/models");
+    await user.click(await screen.findByRole("button", { name: /^Add/ }));
+    const picker = await screen.findByRole("dialog");
+    const groups = within(picker)
+      .getAllByRole("region")
+      .map((g) => g.getAttribute("aria-label"));
+    expect(groups).toEqual(["Language models (LLM)", "Text embeddings", "Voice recognition"]);
+    expect(
+      within(within(picker).getByRole("region", { name: "Voice recognition" })).getByText("sherpa-onnx"),
+    ).toBeTruthy();
+    await user.keyboard("{Escape}");
+
+    expect(await screen.findByText(/sherpa-onnx · Voice recognition/)).toBeInTheDocument();
+    await user.click(screen.getByRole("combobox", { name: "Spoken model" }));
+    const options = (await screen.findAllByRole("option")).map((o) => o.textContent);
+    expect(options).toContain("haiku");
+    expect(options).not.toContain("ears");
+  });
+});
+
 describe("a model's mark", () => {
   const schema = {
     properties: {

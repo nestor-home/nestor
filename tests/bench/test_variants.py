@@ -9,7 +9,7 @@ from nestor.bench import BenchError
 from nestor.bench.variants import Variant, load_variant
 from nestor.core import Component, ContractError
 from nestor.runtime.config import ConfigError
-from nestor.runtime.plugins import AdapterSettings, Family, Plugin, Registry
+from nestor.runtime.plugins import AdapterSettings, Family, ModelType, Plugin, Registry
 from nestor.testing.i18n import EchoLocalizer
 
 from .kit import ORACLE, Quiz, registry, write_variant
@@ -100,6 +100,8 @@ def test_a_model_kind_that_builds_something_else_is_refused(tmp_path: Path) -> N
     class Lamp(Component):
         name = "lamp"
 
-    odd = Plugin(Family.MODEL, "lamp", AdapterSettings, lambda settings, name, services: Lamp())
-    with pytest.raises(ContractError, match="plugin 'lamp' built a Lamp, not a model"):
+    odd = Plugin(
+        Family.MODEL, "lamp", AdapterSettings, lambda settings, name, services: Lamp(), model_type=ModelType.LANGUAGE
+    )
+    with pytest.raises(ContractError, match="plugin 'lamp' built a Lamp, not a language model"):
         load(write_variant(tmp_path, "v", "models: {m: {kind: lamp}}\n"), Registry([odd]))

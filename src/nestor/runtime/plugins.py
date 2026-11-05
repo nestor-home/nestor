@@ -28,13 +28,21 @@ ENTRY_POINTS = "nestor.adapters"
 
 
 class Family(StrEnum):
-    MODEL = "model"  # builds a `ConversationModel` (it answers) or an `Embedder` (it turns text into vectors)
+    MODEL = "model"  # builds a model: what it serves is its `ModelType`
     EXECUTOR = "executor"
     CHANNEL = "channel"
     PRESENCE = "presence"
     TOOLS = "tools"
     INBOUND = "inbound"
     CONNECTOR = "connector"  # builds a `Connector`: a service the household plugs accounts into from the admin
+
+
+class ModelType(StrEnum):
+    """What a model plugin serves: roles and forms only offer the models of the type they need."""
+
+    LANGUAGE = "language"  # writes the answers (a `ConversationModel`)
+    EMBEDDING = "embedding"  # turns text into vectors, to search by meaning (an `Embedder`)
+    VOICE = "voice"  # turns speech into voiceprints, to tell voices apart (a `VoiceEmbedder`)
 
 
 def _filled(value: SecretStr) -> SecretStr:
@@ -76,6 +84,11 @@ class Plugin[S: AdapterSettings]:
     settings: type[S]
     build: Callable[[S, str, Services], Component | Connector]  # settings, the instance name, services
     requires: str | None = None  # the optional dependencies `build` imports, as a pip requirement ("pkg[extra]")
+    model_type: ModelType | None = None  # what a plugin of the model family serves: it must say
+
+    def __post_init__(self) -> None:
+        if (self.family is Family.MODEL) != (self.model_type is not None):
+            raise ContractError(f"plugin {self.kind!r}: a model plugin says its model_type, and only a model plugin")
 
     def create(self, raw: Mapping[str, Any], name: str, services: Services) -> Any:
         """The built adapter (a `Connector` for the connector family, a `Component` otherwise); the

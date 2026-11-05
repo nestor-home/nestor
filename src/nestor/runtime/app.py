@@ -67,7 +67,7 @@ from nestor.modules.memory.episodes import Consolidator, Episodes
 from nestor.modules.satellites import Pairing, SatelliteHost
 from nestor.modules.system import ReleaseFeed, RestartRequested, Updates
 from nestor.runtime.config import AdapterConfig, ComponentConfig, ConfigError, NestorConfig
-from nestor.runtime.plugins import Family, Plugged, Registry, Services
+from nestor.runtime.plugins import Family, ModelType, Plugged, Registry, Services
 
 log = logging.getLogger("nestor")
 
@@ -447,6 +447,11 @@ def _connectors(
 
 
 type Model = ConversationModel | Embedder | VoiceEmbedder
+SERVED: Mapping[ModelType, type[Model]] = {  # what a model plugin builds, by the type it says it serves
+    ModelType.LANGUAGE: ConversationModel,
+    ModelType.EMBEDDING: Embedder,
+    ModelType.VOICE: VoiceEmbedder,
+}
 
 
 def build_models(
@@ -458,8 +463,10 @@ def build_models(
         model = _build(
             plugged if plugged is not None else [], registry, Family.MODEL, profile, key, services, Component
         )
-        if not isinstance(model, ConversationModel | Embedder | VoiceEmbedder):
-            raise ContractError(f"plugin {profile.kind!r} built a {type(model).__name__}, not a model")
+        served = registry.get(Family.MODEL, profile.kind).model_type
+        assert served is not None  # a model plugin says what it serves
+        if not isinstance(model, SERVED[served]):
+            raise ContractError(f"plugin {profile.kind!r} built a {type(model).__name__}, not a {served} model")
         built[key] = model
     return built
 

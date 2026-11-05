@@ -46,7 +46,7 @@ from nestor.modules.cognition import (
     ToolSpec,
     Usage,
 )
-from nestor.runtime.plugins import Family, Plugin, Services
+from nestor.runtime.plugins import Family, ModelType, Plugin, Services
 
 _FINISH_REASONS = {
     "stop": FinishReason.STOP,
@@ -296,4 +296,4 @@ def build(settings: OpenAICompatibleSettings, name: str, services: Services) -> 
     )
 
 
-plugin = Plugin(Family.MODEL, "openai-compatible", OpenAICompatibleSettings, build)
+plugin = Plugin(Family.MODEL, "openai-compatible", OpenAICompatibleSettings, build, model_type=ModelType.LANGUAGE)

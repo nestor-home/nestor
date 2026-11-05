@@ -625,8 +625,13 @@ export interface JsonSchema {
     group?: string;
     /** the named slot (`models`) whose names the property takes */
     reference?: string | null;
+    /** the type of model the reference takes: only those are offered */
+    model_type?: ModelType | null;
   };
 }
+
+/** What a model plugin serves. */
+export type ModelType = "language" | "embedding" | "voice";
 
 export interface ConfigSlot {
   family: string;
@@ -635,6 +640,8 @@ export interface ConfigSlot {
   required: boolean;
   title: string;
   kinds: Record<string, JsonSchema>;
+  /** what each kind of the model slot serves */
+  model_types: Record<string, ModelType>;
 }
 
 export interface ConfigSchema {

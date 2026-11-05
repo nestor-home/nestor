@@ -53,6 +53,12 @@ cfg-add-kind = Ajouter : { $kind }
 cfg-choose-kind = Choisir…
 cfg-pick-title = { $slot } : ajouter
 cfg-pick-text = Les greffons installés sur cette instance. Le formulaire suit.
+cfg-model-type-language = Modèles de langage (LLM)
+cfg-model-type-language-help = Écrivent les réponses : à voix haute, par écrit, aux réveils.
+cfg-model-type-embedding = Embeddings de texte
+cfg-model-type-embedding-help = Retrouvent les souvenirs et les conversations par le sens.
+cfg-model-type-voice = Reconnaissance vocale
+cfg-model-type-voice-help = Reconnaissent qui parle à un satellite.
 cfg-required-fields = { $count ->
     [0] rien d'obligatoire
     [one] 1 réglage obligatoire

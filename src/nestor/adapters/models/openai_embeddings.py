@@ -18,7 +18,7 @@ from pydantic import Field, PositiveFloat, PositiveInt
 from nestor.adapters.models.common import MAX_DETAIL, EndpointSettings, brand, detail, provider_error, retryable
 from nestor.core import ContractError, ProviderError
 from nestor.modules.cognition.embedding import Embedder, EmbeddingSpace, Vector
-from nestor.runtime.plugins import Family, Plugin, Services
+from nestor.runtime.plugins import Family, ModelType, Plugin, Services
 
 
 class OpenAICompatibleEmbedder(Embedder):
@@ -149,4 +149,10 @@ def build(settings: OpenAICompatibleEmbedderSettings, name: str, services: Servi
     )
 
 
-plugin = Plugin(Family.MODEL, "openai-compatible-embeddings", OpenAICompatibleEmbedderSettings, build)
+plugin = Plugin(
+    Family.MODEL,
+    "openai-compatible-embeddings",
+    OpenAICompatibleEmbedderSettings,
+    build,
+    model_type=ModelType.EMBEDDING,
+)

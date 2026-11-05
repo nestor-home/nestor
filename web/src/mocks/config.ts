@@ -71,6 +71,7 @@ export function document(): ConfigDocument {
         api_key: environ("MODEL_API_KEY"),
         model: "anthropic/claude-haiku-4.5",
       },
+      ears: { kind: "sherpa-onnx-voice", model: "titanet-small" },
     },
     agent: { spoken: "haiku", written: "sonnet" },
     watches: { model: "haiku" },

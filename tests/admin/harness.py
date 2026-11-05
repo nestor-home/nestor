@@ -20,7 +20,7 @@ from nestor.modules.accounts import Account, Role
 from nestor.modules.channels import Medium
 from nestor.modules.cognition.tools import Tool, ToolProvider
 from nestor.modules.connectors import AuthKind, SecretField
-from nestor.runtime import AdapterSettings, Family, Nestor, Plugin, Registry
+from nestor.runtime import AdapterSettings, Family, ModelType, Nestor, Plugin, Registry
 from nestor.runtime.config import parse_config
 from nestor.testing.channels import InMemoryChannel
 from nestor.testing.cognition import FakeRemote, ScriptedModel, ScriptedRemoteExecutor
@@ -205,8 +205,20 @@ class Harness:
     def registry(self) -> Registry:
         return Registry(
             [
-                Plugin(Family.MODEL, "scripted", NoSettings, lambda s, n, x: ScriptedModel(*self.replies)),
-                Plugin(Family.MODEL, "tagged-voices", NoSettings, lambda s, n, x: TaggedVoices()),
+                Plugin(
+                    Family.MODEL,
+                    "scripted",
+                    NoSettings,
+                    lambda s, n, x: ScriptedModel(*self.replies),
+                    model_type=ModelType.LANGUAGE,
+                ),
+                Plugin(
+                    Family.MODEL,
+                    "tagged-voices",
+                    NoSettings,
+                    lambda s, n, x: TaggedVoices(),
+                    model_type=ModelType.VOICE,
+                ),
                 Plugin(Family.CHANNEL, "memory", NoSettings, lambda s, name, x: InMemoryChannel(name)),
                 Plugin(Family.CHANNEL, "speaker", NoSettings, lambda s, name, x: Speaker(name)),
                 Plugin(

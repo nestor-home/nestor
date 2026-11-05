@@ -24,7 +24,7 @@ from pydantic import Field, PositiveInt, model_validator
 from nestor.core import ContractError, ProviderError
 from nestor.modules.identity import Vector, VoiceEmbedder, VoiceSpace
 from nestor.modules.identity.audio import samples
-from nestor.runtime.plugins import AdapterSettings, Family, Plugin, Services
+from nestor.runtime.plugins import AdapterSettings, Family, ModelType, Plugin, Services
 
 if TYPE_CHECKING:
     import sherpa_onnx
@@ -237,4 +237,11 @@ def build(settings: SherpaOnnxVoiceSettings, name: str, services: Services) -> S
     )
 
 
-plugin = Plugin(Family.MODEL, "sherpa-onnx-voice", SherpaOnnxVoiceSettings, build, requires="nestor-home[voice-id]")
+plugin = Plugin(
+    Family.MODEL,
+    "sherpa-onnx-voice",
+    SherpaOnnxVoiceSettings,
+    build,
+    requires="nestor-home[voice-id]",
+    model_type=ModelType.VOICE,
+)

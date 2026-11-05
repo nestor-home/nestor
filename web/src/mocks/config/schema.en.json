@@ -201,7 +201,8 @@
             "group": "agent",
             "reference": "models",
             "title": "Spoken model",
-            "help": "Answers aloud; the voice starts on its first sentence. Without one, the written model speaks too."
+            "help": "Answers aloud; the voice starts on its first sentence. Without one, the written model speaks too.",
+            "model_type": "language"
           }
         },
         "written": {
@@ -226,7 +227,8 @@
             "group": "agent",
             "reference": "models",
             "title": "Written model",
-            "help": "Answers in writing. Without one, the spoken model writes too."
+            "help": "Answers in writing. Without one, the spoken model writes too.",
+            "model_type": "language"
           }
         }
       },
@@ -259,7 +261,8 @@
             "group": "watches",
             "reference": "models",
             "title": "Sorting model",
-            "help": "Decides which watches each incoming item concerns. The written model by default."
+            "help": "Decides which watches each incoming item concerns. The written model by default.",
+            "model_type": "language"
           }
         }
       },
@@ -678,7 +681,380 @@
           "required": ["kind", "base_url", "model"],
           "title": "OpenAICompatibleSettings",
           "type": "object"
+        },
+        "openai-compatible-embeddings": {
+          "additionalProperties": false,
+          "description": "An embedding model's profile.",
+          "properties": {
+            "kind": {
+              "const": "openai-compatible-embeddings",
+              "type": "string",
+              "x-nestor": {
+                "field": "kind",
+                "title_id": "config-model-openai-compatible-embeddings-kind",
+                "help_id": "config-model-openai-compatible-embeddings-kind-help",
+                "fallback_title_id": "config-field-kind",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-embeddings",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Kind",
+                "help": null
+              }
+            },
+            "base_url": {
+              "title": "Base Url",
+              "type": "string",
+              "x-nestor": {
+                "field": "base_url",
+                "title_id": "config-model-openai-compatible-embeddings-base_url",
+                "help_id": "config-model-openai-compatible-embeddings-base_url-help",
+                "fallback_title_id": "config-field-base_url",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-embeddings",
+                "reference": null,
+                "model_type": null,
+                "brands": {
+                  "anthropic.com": "anthropic",
+                  "generativelanguage.googleapis.com": "gemini",
+                  "groq.com": "groq",
+                  "mistral.ai": "mistral",
+                  "openai.com": "openai",
+                  "openrouter.ai": "openrouter"
+                },
+                "title": "Address of the API",
+                "help": null
+              }
+            },
+            "api_key": {
+              "anyOf": [
+                {
+                  "format": "password",
+                  "type": "string",
+                  "writeOnly": true
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Api Key",
+              "x-nestor": {
+                "field": "api_key",
+                "title_id": "config-model-openai-compatible-embeddings-api_key",
+                "help_id": "config-model-openai-compatible-embeddings-api_key-help",
+                "fallback_title_id": "config-field-api_key",
+                "secret": true,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-embeddings",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "API key",
+                "help": null
+              }
+            },
+            "model": {
+              "title": "Model",
+              "type": "string",
+              "x-nestor": {
+                "field": "model",
+                "title_id": "config-model-openai-compatible-embeddings-model",
+                "help_id": "config-model-openai-compatible-embeddings-model-help",
+                "fallback_title_id": "config-field-model",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-embeddings",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Model",
+                "help": null
+              }
+            },
+            "dimensions": {
+              "exclusiveMinimum": 0,
+              "title": "Dimensions",
+              "type": "integer",
+              "x-nestor": {
+                "field": "dimensions",
+                "title_id": "config-model-openai-compatible-embeddings-dimensions",
+                "help_id": "config-model-openai-compatible-embeddings-dimensions-help",
+                "fallback_title_id": "config-field-dimensions",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-embeddings",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Dimensions",
+                "help": "Of the vectors the model returns, or asks for when shortening them."
+              }
+            },
+            "send_dimensions": {
+              "default": false,
+              "title": "Send Dimensions",
+              "type": "boolean",
+              "x-nestor": {
+                "field": "send_dimensions",
+                "title_id": "config-model-openai-compatible-embeddings-send_dimensions",
+                "help_id": "config-model-openai-compatible-embeddings-send_dimensions-help",
+                "fallback_title_id": "config-field-send_dimensions",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-embeddings",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Ask for these dimensions",
+                "help": "For models that shorten their vectors (Matryoshka)."
+              }
+            },
+            "query_prefix": {
+              "default": "",
+              "title": "Query Prefix",
+              "type": "string",
+              "x-nestor": {
+                "field": "query_prefix",
+                "title_id": "config-model-openai-compatible-embeddings-query_prefix",
+                "help_id": "config-model-openai-compatible-embeddings-query_prefix-help",
+                "fallback_title_id": "config-field-query_prefix",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-embeddings",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Before a question",
+                "help": "What the model expects before a question, e.g. query: (none by default)."
+              }
+            },
+            "document_prefix": {
+              "default": "",
+              "title": "Document Prefix",
+              "type": "string",
+              "x-nestor": {
+                "field": "document_prefix",
+                "title_id": "config-model-openai-compatible-embeddings-document_prefix",
+                "help_id": "config-model-openai-compatible-embeddings-document_prefix-help",
+                "fallback_title_id": "config-field-document_prefix",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-embeddings",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Before a document",
+                "help": "What the model expects before a stored text, e.g. passage: (none by default)."
+              }
+            },
+            "batch_size": {
+              "default": 64,
+              "exclusiveMinimum": 0,
+              "title": "Batch Size",
+              "type": "integer",
+              "x-nestor": {
+                "field": "batch_size",
+                "title_id": "config-model-openai-compatible-embeddings-batch_size",
+                "help_id": "config-model-openai-compatible-embeddings-batch_size-help",
+                "fallback_title_id": "config-field-batch_size",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-openai-compatible-embeddings",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Texts per request",
+                "help": null
+              }
+            },
+            "extra_body": {
+              "additionalProperties": true,
+              "title": "Extra Body",
+              "type": "object",
+              "x-nestor": {
+                "field": "extra_body",
+                "title_id": "config-model-openai-compatible-embeddings-extra_body",
+                "help_id": "config-model-openai-compatible-embeddings-extra_body-help",
+                "fallback_title_id": "config-field-extra_body",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-openai-compatible-embeddings",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Extra request fields",
+                "help": null
+              }
+            },
+            "connect_timeout_s": {
+              "default": 5.0,
+              "exclusiveMinimum": 0,
+              "title": "Connect Timeout S",
+              "type": "number",
+              "x-nestor": {
+                "field": "connect_timeout_s",
+                "title_id": "config-model-openai-compatible-embeddings-connect_timeout_s",
+                "help_id": "config-model-openai-compatible-embeddings-connect_timeout_s-help",
+                "fallback_title_id": "config-field-connect_timeout_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-openai-compatible-embeddings",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Connection timeout (seconds)",
+                "help": null
+              }
+            },
+            "read_timeout_s": {
+              "default": 30.0,
+              "exclusiveMinimum": 0,
+              "title": "Read Timeout S",
+              "type": "number",
+              "x-nestor": {
+                "field": "read_timeout_s",
+                "title_id": "config-model-openai-compatible-embeddings-read_timeout_s",
+                "help_id": "config-model-openai-compatible-embeddings-read_timeout_s-help",
+                "fallback_title_id": "config-field-read_timeout_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-openai-compatible-embeddings",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Read timeout (seconds)",
+                "help": null
+              }
+            }
+          },
+          "required": ["kind", "base_url", "model", "dimensions"],
+          "title": "OpenAICompatibleEmbedderSettings",
+          "type": "object"
+        },
+        "sherpa-onnx-voice": {
+          "additionalProperties": false,
+          "description": "A voice model run by sherpa-onnx.",
+          "properties": {
+            "kind": {
+              "const": "sherpa-onnx-voice",
+              "type": "string",
+              "x-nestor": {
+                "field": "kind",
+                "title_id": "config-model-sherpa-onnx-voice-kind",
+                "help_id": "config-model-sherpa-onnx-voice-kind-help",
+                "fallback_title_id": "config-field-kind",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-sherpa-onnx-voice",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Kind",
+                "help": null
+              }
+            },
+            "model": {
+              "examples": ["titanet-small", "3dspeaker-campplus-zh-en", "3dspeaker-eres2net"],
+              "title": "Model",
+              "type": "string",
+              "x-nestor": {
+                "field": "model",
+                "title_id": "config-model-sherpa-onnx-voice-model",
+                "help_id": "config-model-sherpa-onnx-voice-model-help",
+                "fallback_title_id": "config-field-model",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-sherpa-onnx-voice",
+                "reference": null,
+                "model_type": null,
+                "brands": {
+                  "3dspeaker-campplus-zh-en": "modelscope",
+                  "3dspeaker-eres2net": "modelscope",
+                  "titanet-small": "nvidia"
+                },
+                "title": "Voice model",
+                "help": "titanet-small, 3dspeaker-campplus-zh-en or 3dspeaker-eres2net, downloaded once; or the path to an .onnx file of your own."
+              }
+            },
+            "threads": {
+              "default": 1,
+              "exclusiveMinimum": 0,
+              "maximum": 16,
+              "title": "Threads",
+              "type": "integer",
+              "x-nestor": {
+                "field": "threads",
+                "title_id": "config-model-sherpa-onnx-voice-threads",
+                "help_id": "config-model-sherpa-onnx-voice-threads-help",
+                "fallback_title_id": "config-field-threads",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-sherpa-onnx-voice",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "CPU threads",
+                "help": "How many CPU threads recognising a voice uses. One is enough and leaves the rest of the CPU to speech."
+              }
+            },
+            "threshold": {
+              "anyOf": [
+                {
+                  "exclusiveMaximum": 1,
+                  "exclusiveMinimum": 0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Threshold",
+              "x-nestor": {
+                "field": "threshold",
+                "title_id": "config-model-sherpa-onnx-voice-threshold",
+                "help_id": "config-model-sherpa-onnx-voice-threshold-help",
+                "fallback_title_id": "config-field-threshold",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-sherpa-onnx-voice",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Recognition threshold",
+                "help": "The catalogue's by default, measured on the speaker-id bench. Required for a file of your own."
+              }
+            }
+          },
+          "required": ["kind", "model"],
+          "title": "SherpaOnnxVoiceSettings",
+          "type": "object"
         }
+      },
+      "model_types": {
+        "openai-compatible": "language",
+        "openai-compatible-embeddings": "embedding",
+        "sherpa-onnx-voice": "voice"
       }
     },
     "channels": {
@@ -1236,7 +1612,8 @@
           "title": "TelegramSettings",
           "type": "object"
         }
-      }
+      },
+      "model_types": {}
     },
     "executors": {
       "family": "executor",
@@ -1411,7 +1788,8 @@
           "title": "HermesSettings",
           "type": "object"
         }
-      }
+      },
+      "model_types": {}
     },
     "tools": {
       "family": "tools",
@@ -1689,14 +2067,16 @@
           "title": "McpSettings",
           "type": "object"
         }
-      }
+      },
+      "model_types": {}
     },
     "inbound": {
       "family": "inbound",
       "shape": "list",
       "required": false,
       "title": "Inbound sources",
-      "kinds": {}
+      "kinds": {},
+      "model_types": {}
     },
     "presence": {
       "family": "presence",
@@ -1897,7 +2277,8 @@
           "title": "HomeAssistantSettings",
           "type": "object"
         }
-      }
+      },
+      "model_types": {}
     },
     "connectors": {
       "family": "connector",
@@ -2255,7 +2636,8 @@
           "type": "object",
           "required": ["kind"]
         }
-      }
+      },
+      "model_types": {}
     }
   }
 }

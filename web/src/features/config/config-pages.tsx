@@ -1,6 +1,6 @@
 import { ArrowDown, ArrowUp, CircleAlert, Pencil, Plus, Trash2 } from "lucide-react";
 import { type ReactElement, type ReactNode, useId, useState } from "react";
-import type { ConfigSlot, JsonSchema } from "@/api";
+import type { ConfigSlot, JsonSchema, ModelType } from "@/api";
 import { Confirm } from "@/components/confirm";
 import { FormActions } from "@/components/form-actions";
 import { FormDialog, FormSheet } from "@/components/overlay-form";
@@ -397,7 +397,11 @@ function NamedSlot({ slotKey, slot }: { slotKey: string; slot: ConfigSlot }) {
                 key={name}
                 mark={markOf(kind, entry, slot.kinds[kind])}
                 title={name}
-                subtitle={kindTitle(kind)}
+                subtitle={
+                  slot.model_types[kind]
+                    ? `${kindTitle(kind)} · ${t(`cfg-model-type-${slot.model_types[kind]}`)}`
+                    : kindTitle(kind)
+                }
                 detail={summary(entry)}
                 problems={problemsUnder(problems, [slotKey, name]).length}
                 missing={!slot.kinds[kind]}
@@ -476,7 +480,10 @@ function NameField({ name, taken, onRename }: { name: string; taken: string[]; o
   );
 }
 
-/** Choosing what to add: every installed plugin of the slot, with its mark. */
+/** The model types, in the order the picker shows them. */
+const MODEL_TYPES: readonly ModelType[] = ["language", "embedding", "voice"];
+
+/** Choosing what to add: every installed plugin of the slot, with its mark; models grouped by what they serve. */
 function KindPicker({
   slot,
   onPick,
@@ -489,30 +496,51 @@ function KindPicker({
   const t = useT();
   return (
     <FormDialog trigger={trigger} title={t("cfg-pick-title", { slot: slot.title })} description={t("cfg-pick-text")}>
-      {(close) => (
-        <ul className="grid gap-1.5">
-          {Object.entries(slot.kinds).map(([kind, schema]) => (
-            <li key={kind}>
-              <button
-                type="button"
-                onClick={() => {
-                  close();
-                  onPick(kind);
-                }}
-                className="flex w-full items-center gap-3 rounded-md border border-rule bg-paper-raised px-3 py-2.5 text-left hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
-              >
-                <KindMark kind={kind} className="size-5 text-ink" label={false} />
-                <span className="min-w-0 flex-1">
-                  <span className="block text-sm text-ink">{kindTitle(kind)}</span>
-                  <span className="block text-[0.85rem] text-ink-faint">
-                    {kind} · {t("cfg-required-fields", { count: requiredCount(schema) })}
-                  </span>
+      {(close) => {
+        const kinds = Object.keys(slot.kinds);
+        const typed = MODEL_TYPES.map((type) => ({ type, kinds: kinds.filter((k) => slot.model_types[k] === type) }));
+        const groups = Object.keys(slot.model_types).length
+          ? typed.filter((g) => g.kinds.length)
+          : [{ type: null, kinds }];
+        const option = (kind: string) => (
+          <li key={kind}>
+            <button
+              type="button"
+              onClick={() => {
+                close();
+                onPick(kind);
+              }}
+              className="flex w-full items-center gap-3 rounded-md border border-rule bg-paper-raised px-3 py-2.5 text-left hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
+            >
+              <KindMark kind={kind} className="size-5 text-ink" label={false} />
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm text-ink">{kindTitle(kind)}</span>
+                <span className="block text-[0.85rem] text-ink-faint">
+                  {kind} · {t("cfg-required-fields", { count: requiredCount(slot.kinds[kind] ?? {}) })}
                 </span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+              </span>
+            </button>
+          </li>
+        );
+        return (
+          <div className="grid gap-5">
+            {groups.map((group) => (
+              <section
+                key={group.type ?? "all"}
+                aria-label={group.type ? t(`cfg-model-type-${group.type}`) : undefined}
+              >
+                {group.type ? (
+                  <header className="mb-2">
+                    <h3 className="text-[0.92rem] font-medium text-ink">{t(`cfg-model-type-${group.type}`)}</h3>
+                    <p className="text-[0.82rem] text-ink-muted">{t(`cfg-model-type-${group.type}-help`)}</p>
+                  </header>
+                ) : null}
+                <ul className="grid gap-1.5">{group.kinds.map(option)}</ul>
+              </section>
+            ))}
+          </div>
+        );
+      }}
     </FormDialog>
   );
 }
