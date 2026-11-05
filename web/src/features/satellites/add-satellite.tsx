@@ -8,7 +8,18 @@
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, ChevronRight, Plus } from "lucide-react";
+import {
+  ArrowRight,
+  AudioLines,
+  Check,
+  ChevronRight,
+  FileCog,
+  Keyboard,
+  type LucideIcon,
+  MonitorSmartphone,
+  Plus,
+  ScanQrCode,
+} from "lucide-react";
 import { type FormEvent, useState } from "react";
 import {
   type Addition,
@@ -102,6 +113,15 @@ function AddSatellite({ resume, close }: { resume?: Addition; close: () => void 
 
 // -- 1. how, and what for ---------------------------------------------------------------------------
 
+/** What each pairing method looks like: what the person does with the device. */
+const METHOD_ICON: Record<PairingMethodId, LucideIcon> = {
+  "device_code.display": MonitorSmartphone,
+  "device_code.speech": AudioLines,
+  "enrollment.qr": ScanQrCode,
+  "enrollment.input": Keyboard,
+  "enrollment.provisioning": FileCog,
+};
+
 function Choose({ onStarted }: { onStarted: (started: StartedAddition) => void }) {
   const t = useT();
   const methods = useQuery(pairingMethodsQuery);
@@ -141,12 +161,12 @@ function Choose({ onStarted }: { onStarted: (started: StartedAddition) => void }
     { proof: "enrollment_code", title: t("sat-add-enrollment-code") },
   ];
   return (
-    <form onSubmit={submit} className="grid gap-7 pt-5" noValidate>
+    <form onSubmit={submit} className="grid gap-8 pt-5" noValidate>
       <fieldset className="grid gap-5">
         <legend className="mb-3 text-[0.95rem] font-medium text-ink">{t("sat-add-how")}</legend>
         {groups.map((group) => (
-          <div key={group.proof}>
-            <p className="mb-2 text-[0.88rem] text-ink-muted">{group.title}</p>
+          <div key={group.proof} className="grid gap-2">
+            <p className="label-mono text-[0.7rem]">{group.title}</p>
             <ToggleGroup
               aria-label={group.title}
               value={method ? [method] : []}
@@ -158,43 +178,58 @@ function Choose({ onStarted }: { onStarted: (started: StartedAddition) => void }
             >
               {methods.data.methods
                 .filter((m) => m.proof === group.proof)
-                .map((m) => (
-                  <ToggleGroupItem
-                    key={m.id}
-                    value={m.id}
-                    className="h-auto w-full justify-start rounded-md border border-rule bg-paper-raised px-3.5 py-3 text-left whitespace-normal data-[pressed]:border-ink data-[pressed]:bg-paper-sunken"
-                  >
-                    <span className="grid gap-0.5">
-                      <span className="flex flex-wrap items-baseline gap-2 text-[0.98rem] text-ink">
-                        {m.label}
-                        {m.id === methods.data.recommended ? (
-                          <span className="rounded-full bg-ember-soft px-2 py-px text-[0.75rem] text-ember">
-                            {t("sat-add-recommended")}
-                          </span>
-                        ) : null}
+                .map((m) => {
+                  const Icon = METHOD_ICON[m.id];
+                  return (
+                    <ToggleGroupItem
+                      key={m.id}
+                      value={m.id}
+                      className="group/method h-auto w-full items-center justify-start gap-3 rounded-lg border border-rule bg-paper-raised px-3 py-2.5 text-left whitespace-normal hover:border-rule-strong data-[pressed]:border-ember data-[pressed]:bg-ember-soft/40"
+                    >
+                      <span className="grid size-9 shrink-0 place-items-center rounded-md bg-paper-sunken text-ink-muted group-data-[pressed]/method:bg-ember group-data-[pressed]/method:text-paper">
+                        <Icon className="size-4.5" aria-hidden="true" />
                       </span>
-                      <span className="text-[0.88rem] font-normal text-ink-muted">{m.hint}</span>
-                    </span>
-                  </ToggleGroupItem>
-                ))}
+                      <span className="grid min-w-0 flex-1 gap-0.5">
+                        <span className="flex flex-wrap items-center gap-2 text-[0.95rem] font-medium text-ink">
+                          {m.label}
+                          {m.id === methods.data.recommended ? (
+                            <span className="rounded-full bg-ember-soft px-2 py-px text-[0.72rem] font-normal text-ember">
+                              {t("sat-add-recommended")}
+                            </span>
+                          ) : null}
+                        </span>
+                        <span className="text-[0.85rem] font-normal text-ink-muted">{m.hint}</span>
+                      </span>
+                      <span className="grid size-5 shrink-0 place-items-center rounded-full border border-rule-strong text-paper group-data-[pressed]/method:border-ember group-data-[pressed]/method:bg-ember">
+                        <Check
+                          className="size-3 opacity-0 group-data-[pressed]/method:opacity-100"
+                          aria-hidden="true"
+                        />
+                      </span>
+                    </ToggleGroupItem>
+                  );
+                })}
             </ToggleGroup>
           </div>
         ))}
       </fieldset>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label={t("sat-add-name")} htmlFor="sat-add-name" hint={t("sat-add-optional")}>
-          <Input id="sat-add-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={64} />
-        </Field>
-        <Field
-          label={t("sat-add-room")}
-          htmlFor="sat-add-room"
-          hint={room.trim() ? t("sat-add-room-as", { room: roomSlug(room) }) : t("sat-add-room-hint")}
-          error={roomError}
-        >
-          <Input id="sat-add-room" value={room} onChange={(e) => setRoom(e.target.value)} />
-        </Field>
-      </div>
+      <fieldset className="grid gap-4">
+        <legend className="mb-3 text-[0.95rem] font-medium text-ink">{t("sat-add-device")}</legend>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label={t("sat-add-name")} htmlFor="sat-add-name" hint={t("sat-add-optional")}>
+            <Input id="sat-add-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={64} />
+          </Field>
+          <Field
+            label={t("sat-add-room")}
+            htmlFor="sat-add-room"
+            hint={room.trim() ? t("sat-add-room-as", { room: roomSlug(room) }) : t("sat-add-room-hint")}
+            error={roomError}
+          >
+            <Input id="sat-add-room" value={room} onChange={(e) => setRoom(e.target.value)} />
+          </Field>
+        </div>
+      </fieldset>
 
       <Collapsible open={limited !== null} onOpenChange={(on) => setLimited(on ? new Set(KNOWN_CAPABILITIES) : null)}>
         <CollapsibleTrigger className="group/caps inline-flex items-center gap-1.5 text-[0.92rem] text-ink-muted hover:text-ink">

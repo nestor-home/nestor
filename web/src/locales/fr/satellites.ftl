@@ -77,10 +77,11 @@ sat-update-failed = La { $version } n'a pas démarré, il est revenu à sa versi
 ## Ajouter un satellite
 sat-add = Ajouter un satellite
 sat-add-title = Ajouter un satellite
-sat-add-how = Comment l'appareil prouvera que c'est bien vous
+sat-add-how = Appairage
 sat-add-device-code = L'appareil vous donne un code
 sat-add-enrollment-code = Vous donnez un code à l'appareil
 sat-add-recommended = recommandé
+sat-add-device = L'appareil
 sat-add-name = Nom
 sat-add-optional = Facultatif : comment le foyer l'appelle.
 sat-add-room = Pièce

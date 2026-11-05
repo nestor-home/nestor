@@ -77,10 +77,11 @@ sat-update-failed = { $version } did not start, so it went back to its version.
 ## Adding a satellite
 sat-add = Add a satellite
 sat-add-title = Add a satellite
-sat-add-how = How the device will prove it is you
+sat-add-how = Pairing
 sat-add-device-code = The device gives you a code
 sat-add-enrollment-code = You give the device a code
 sat-add-recommended = recommended
+sat-add-device = The device
 sat-add-name = Name
 sat-add-optional = Optional: what the household calls it.
 sat-add-room = Room
