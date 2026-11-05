@@ -1,4 +1,4 @@
-"""The journal as threads: causes chaining entries, the position cursor, every filter, facets that
+"""The journal as threads: causes chaining entries, every filter, facets that
 ignore their own selection, one entry with its record — and sign-in only from the admin's own pages."""
 
 from dataclasses import replace
@@ -105,27 +105,6 @@ async def test_an_unprompted_message_chains_from_its_delivery_through_its_cue(tm
     assert notification["text"] == "Pour Richie : tâche t1 terminée" and notification["detail"] == "Result: ok"
 
 
-async def test_the_position_cursor_pages_back_through_a_filtered_journal(tmp_path: Path) -> None:
-    async with Harness(tmp_path) as admin:
-        for n in range(5):
-            await admin.nestor.journal.publish(
-                UserTurn(
-                    medium=Medium.WRITTEN,
-                    exchange=Exchange(conversation_id="c1", turn_id=new_id()),
-                    source="agent",
-                    address=TELEGRAM,
-                    text=f"m{n}",
-                    speaker=Speaker.account(MATHIS),
-                )
-            )
-            await admin.nestor.journal.publish(MemoryRecorded(source="memory", memory_id=f"x{n}", text=f"s{n}"))
-        api = await admin.api()
-        first = (await api.get("/api/v1/journal", kinds="memory", limit=2)).json()
-        second = (await api.get("/api/v1/journal", kinds="memory", limit=2, before=first["next_before"])).json()
-        assert [i["detail"] for i in first["items"] + second["items"]] == ["s4", "s3", "s2", "s1"]
-        assert first["next_before"] == first["items"][-1]["position"]
-
-
 async def test_every_filter_narrows_the_journal(tmp_path: Path) -> None:
     async with Harness(tmp_path) as admin:
         journal = admin.nestor.journal
@@ -153,6 +132,7 @@ async def test_every_filter_narrows_the_journal(tmp_path: Path) -> None:
         )
         await journal.publish(PresenceChanged(source="presence", person=MATHIS, home=True, room="cuisine"))
         await journal.publish(DeliveryConsidered(source="courier", about="watch w9", reason=REASON, person=MATHIS))
+        await journal.publish(MemoryRecorded(source="memory", memory_id="m1", text="Aime le thé", about=MATHILDE))
         api = await admin.api()
 
         def details(found: list[dict[str, Any]]) -> set[str]:
@@ -163,6 +143,8 @@ async def test_every_filter_narrows_the_journal(tmp_path: Path) -> None:
         assert {i["type"] for i in await items(api, q="a dit")} == {"conversation.turn.user"}, "rendered text counts"
         assert {i["room"] for i in await items(api, room="cuisine")} == {"cuisine"}
         assert details(await items(api, session="telegram:7")) == {"Le dentiste"}
+        assert details(await items(api, channel="telegram")) == {"Le dentiste"}
+        assert details(await items(api, person="mathilde")) == {"Bonsoir", "Aime le thé"}, "memories about them too"
         assert {i["tone"] for i in await items(api, tone="decision")} == {"decision"}
         assert details(await items(api, kinds="conversation,presence", person="mathilde")) == {"Bonsoir"}
         assert await items(api, **{"from": (utc_now() + timedelta(hours=1)).isoformat()}) == []
@@ -192,7 +174,9 @@ async def test_each_facet_is_counted_ignoring_its_own_selection(tmp_path: Path) 
         assert kinds["conversation"] == 2 and kinds["presence"] == 1, "kinds counted for mathis, whatever the kind"
         people = {f["key"]: f["count"] for f in facets["people"]}
         assert people == {"mathis": 2, "mathilde": 1}, "people counted among conversations, whoever they are"
-        assert {f["key"]: f["count"] for f in facets["channels"]} == {"telegram": 2}
+        assert facets["channels"] == [{"key": "telegram", "label": "telegram", "count": 2}]
+        assert {"key": "conversation", "label": "Conversations", "count": 2} in facets["kinds"]
+        assert {"key": "mathilde", "label": "Mathilde", "count": 1} in facets["people"]
         assert {f["key"]: f["count"] for f in facets["rooms"]} == {}
         histogram = facets["histogram"]
         assert sum(histogram["counts"]) == 2 and histogram["bucket_s"] == 60 and histogram["from"] <= histogram["to"]

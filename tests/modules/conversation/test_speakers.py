@@ -1,10 +1,8 @@
 """Who speaks: a satellite is a place anyone at home talks to. The account a channel authenticated, a recognised
 voice, a name said, or someone of the household nobody knows; the agent asks when it matters."""
 
-from datetime import timedelta
-
 from nestor.adapters.i18n import FluentLocalizer, catalogue_dirs
-from nestor.core import PersonId, utc_now
+from nestor.core import PersonId
 from nestor.core.i18n import Locale, Message
 from nestor.modules.channels import Address, Medium
 from nestor.modules.cognition.model import ModelRequest, ToolCall
@@ -69,7 +67,7 @@ async def test_a_recognised_voice_says_who_speaks_and_is_learned_a_little_more(m
     [speaker] = await turns(journal)
     assert (speaker.person, speaker.by) == (LEA.id, Identified.VOICE) and speaker.private
     assert voices.status(LEA.id).learned == 1
-    assert agent.voice_wait_s == 0.5
+    assert agent.voice_wait_s is not None, "with voices, the turn waits for the voice to be heard"
 
 
 async def test_a_name_said_holds_for_the_conversation_until_another_voice_speaks(
@@ -170,4 +168,3 @@ async def test_the_history_of_a_shared_room_says_who_said_what(make_agent: MakeA
     await agent.respond(message("Et toi ?", VOICE)).collect()
     second: ModelRequest = model.requests[1]
     assert [m.content for m in second.messages if m.role.value == "user"] == ["[Léa] Bonjour", "Et toi ?"]
-    assert utc_now() - (await journal.history(UserTurn))[0].at < timedelta(minutes=1)

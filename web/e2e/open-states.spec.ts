@@ -21,6 +21,7 @@ async function hoverMoves(_page: Page, items: Locator, attribute: string) {
     await expect(await oneHighlighted(items, attribute)).toHaveText(((await item.textContent()) ?? "").trim());
     return;
   }
+  throw new Error(`no item besides the highlighted one (${before}) to hover`);
 }
 
 test.beforeEach(async ({ page }) => {

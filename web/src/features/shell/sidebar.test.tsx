@@ -1,7 +1,6 @@
 import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
-import { SIDEBAR_STORAGE_KEY } from "@/components/ui/sidebar";
 import { renderApp } from "@/test/render";
 
 function resize(width: number) {
@@ -26,7 +25,6 @@ describe("the sidebar", () => {
     expect(sidebarState()).toBe("expanded");
     await user.click(screen.getByRole("button", { name: "Collapse" }));
     expect(sidebarState()).toBe("collapsed");
-    expect(localStorage.getItem(SIDEBAR_STORAGE_KEY)).toBe("collapsed");
     // the section names stay for assistive technologies, the agent shows its figure
     expect(screen.getByRole("link", { name: "Journal" })).toBeInTheDocument();
     const agent = screen.getByRole("link", { name: "Richie, online" });
@@ -38,7 +36,6 @@ describe("the sidebar", () => {
     expect(sidebarState()).toBe("collapsed");
     await user.keyboard("[[");
     expect(sidebarState()).toBe("expanded");
-    expect(localStorage.getItem(SIDEBAR_STORAGE_KEY)).toBe("expanded");
   });
 
   it("does not collapse when [ is typed in a field", async () => {

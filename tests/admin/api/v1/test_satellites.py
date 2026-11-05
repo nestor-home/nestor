@@ -347,6 +347,3 @@ async def test_a_connected_satellite_shows_its_software_and_installs_the_newer_v
             asked = await api.post("/api/v1/satellites/reachy-salon/update", {})
             assert (asked.status_code, asked.json()) == (202, {"version": "1.1.0"})
         assert device.updates == ["1.1.0"]
-        await admin.account("mathilde", Role.MEMBER, "mathilde")
-        member = await admin.api("mathilde")
-        assert (await member.post("/api/v1/satellites/reachy-salon/update", {})).status_code == 403

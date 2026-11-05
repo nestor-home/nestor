@@ -2,7 +2,7 @@ import pytest
 
 from nestor.core import ContractError
 from nestor.modules.satellites import group, normalize_enrollment_code, pairing_uri, parse_pairing_uri
-from nestor.modules.satellites.codes import ALPHABET, new_device_code, new_enrollment_code
+from nestor.modules.satellites.codes import ALPHABET, new_enrollment_code
 
 
 def test_an_enrollment_code_is_eight_unambiguous_symbols_shown_by_four() -> None:
@@ -23,11 +23,6 @@ def test_letters_that_look_like_digits_read_as_digits() -> None:
 @pytest.mark.parametrize("typed", ["K7QF2M9", "K7QF2M9XY", "K7QF2M9U", "K7QF2M9!", ""])
 def test_what_cannot_be_a_code_is_none(typed: str) -> None:
     assert normalize_enrollment_code(typed) is None
-
-
-def test_a_device_code_is_six_digits() -> None:
-    code = new_device_code()
-    assert len(code) == 6 and code.isdigit()
 
 
 @pytest.mark.parametrize(

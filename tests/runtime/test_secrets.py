@@ -1,18 +1,13 @@
-"""The configuration's secrets: named sensibly, never empty, previewed without being given away."""
+"""The configuration's secrets: named sensibly, never empty, read from a file that may not be there."""
 
 from pathlib import Path
 
 import pytest
 
 from nestor.core import ContractError
-from nestor.runtime.secrets import ConfigFile, open_secrets, preview
+from nestor.runtime.secrets import ConfigFile, open_secrets
 
 KEY = "s" * 43
-
-
-def test_a_preview_is_enough_to_recognise_a_value_never_to_use_it() -> None:
-    assert preview("sk-or-v1-0123456789abcdef") == "sk-…def"
-    assert preview("short") == "•••"
 
 
 async def test_a_secret_needs_a_sensible_name_and_a_value(tmp_path: Path) -> None:

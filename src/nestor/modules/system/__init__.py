@@ -16,7 +16,6 @@ from nestor.modules.system.types import (
     InstallKind,
     Release,
     Releases,
-    version_key,
 )
 from nestor.modules.system.updates import Updates
 
@@ -35,5 +34,4 @@ __all__ = [
     "UpdateFailed",
     "UpdateRequested",
     "Updates",
-    "version_key",
 ]

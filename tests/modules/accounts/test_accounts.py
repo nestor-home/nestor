@@ -2,7 +2,7 @@
 
 import asyncio
 import json
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 import pytest
 
@@ -112,11 +112,13 @@ async def test_an_invitation_opens_one_account_with_its_role_and_person(book: Bo
 
 async def test_an_invitation_expires_after_48_hours(book: Book) -> None:
     owner = await book.owner()
-    _, token = await book.accounts.invite(Role.GUEST, PersonId("lucie"), by=owner)
+    invitation, token = await book.accounts.invite(Role.GUEST, PersonId("lucie"), by=owner)
+    assert book.accounts.invitations[invitation.id].status(book.now) is InvitationStatus.PENDING
     book.now += timedelta(hours=48)
     with pytest.raises(InvitationRefused, match="expired"):
         await book.accounts.accept(str(token), login="lucie", password=PASSWORD)
     assert book.accounts.by_login("lucie") is None
+    assert book.accounts.invitations[invitation.id].status(book.now) is InvitationStatus.EXPIRED
 
 
 async def test_a_withdrawn_or_forged_invitation_opens_nothing(book: Book) -> None:
@@ -262,17 +264,6 @@ async def test_the_book_is_rebuilt_from_the_journal(book: Book) -> None:
     assert reopened.invitations[accepted.id].status(book.now) is InvitationStatus.ACCEPTED
     assert reopened.invitations[pending.id].status(book.now) is InvitationStatus.REVOKED
     assert [a.login for a in reopened.owners()] == ["mathis"]
-
-
-def test_an_invitation_status_follows_time() -> None:
-    from nestor.modules.accounts import Invitation
-
-    now = datetime(2026, 10, 30, 12, 0)
-    invitation = Invitation(
-        id="i", role=Role.GUEST, person=None, invited_by=None, created_at=now, expires_at=now + timedelta(hours=1)
-    )
-    assert invitation.status(now) is InvitationStatus.PENDING
-    assert invitation.status(now + timedelta(hours=1)) is InvitationStatus.EXPIRED
 
 
 async def test_a_reading_language_is_ones_own_choice_or_an_administrators(book: Book) -> None:

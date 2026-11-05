@@ -17,9 +17,7 @@ from nestor.modules.identity import (
 )
 from nestor.modules.journal import Journal
 from nestor.testing.identity import (
-    DiarizerContract,
     MemoryVoiceprintStore,
-    TaggedDiarizer,
     TaggedVoices,
     VoiceEmbedderContract,
     VoiceprintStoreContract,
@@ -28,14 +26,6 @@ from nestor.testing.identity import (
 from nestor.testing.journal import MemoryEventLog
 
 LEA, HUGO = PersonId("lea"), PersonId("hugo")
-
-
-class TestTaggedDiarizer(DiarizerContract):
-    def diarizer(self) -> TaggedDiarizer:
-        return TaggedDiarizer()
-
-    def speech(self, speaker: str, seconds: float) -> bytes:
-        return tagged(speaker, seconds)
 
 
 class TestTaggedVoices(VoiceEmbedderContract):
@@ -176,19 +166,9 @@ async def test_learning_stops_when_the_person_says_so_and_keeps_its_limits() -> 
         kept = [s.turn for s in (await store.profiles(found.embedder.space))[LEA].learned]
         await found.set_learning(LEA, False, by=LEA)
         refused = await found.learn(await found.hear(tagged("lea", take=5)), turn="t", room="salon")
-    assert kept == ["s2", "s3", "k"] == [s.turn for s in found._profiles[LEA].learned]
+    assert kept == ["s2", "s3", "k"] and found.status(LEA).learned == 3
     assert not refused and not found.status(LEA).learning
     assert [e.learning for e in await journal.history(VoiceLearningChanged)] == [False]
-
-
-async def test_a_correction_takes_back_what_a_turn_taught() -> None:
-    found, _, _ = voices()
-    async with found:
-        await enroll(found, LEA)
-        await found.learn(await found.hear(tagged("lea", take=1)), turn="t1", room="salon")
-        await found.unlearn({"t1"})
-        await found.unlearn(set())
-    assert found.status(LEA).learned == 0
 
 
 async def test_learned_turns_weigh_alongside_the_recording() -> None:
@@ -196,10 +176,10 @@ async def test_learned_turns_weigh_alongside_the_recording() -> None:
     async with found:
         await enroll(found, LEA)
         before = (await found.hear(tagged("lea", take=7))).score
-        for take in range(1, 5):
-            await found.learn(await found.hear(tagged("lea", take=take)), turn=f"t{take}", room="salon")
+        for turn in range(1, 5):  # her voice as the room hears it, turn after turn
+            await found.learn(await found.hear(tagged("lea", take=7)), turn=f"t{turn}", room="salon")
         after = await found.hear(tagged("lea", take=7))
-    assert after.person == LEA and after.score != before
+    assert after.person == LEA and after.score > before
 
 
 async def test_forgetting_erases_the_voice_or_only_what_was_learned() -> None:

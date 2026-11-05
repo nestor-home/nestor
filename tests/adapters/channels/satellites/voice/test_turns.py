@@ -106,5 +106,4 @@ async def test_short_speech_over_the_assistant_does_not_start_the_turn() -> None
 async def test_once_the_assistant_stopped_speaking_voice_activity_starts_the_turn_again() -> None:
     probe = Strategy()
     await probe.feed(BotStartedSpeakingFrame(), BotStoppedSpeakingFrame(), VADUserStartedSpeakingFrame())
-    await probe.strategy.handle_user_turn_started()
     assert probe.turns == 1

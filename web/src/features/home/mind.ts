@@ -1,42 +1,14 @@
 /**
- * The agent's mind, read from what the API says: its state right now (from the latest events and
- * the running tasks), the household as it perceives it (rooms, devices, people), what it reaches
- * (channels, tasks, watches, connections), and the marks of its day. Pure: the home renders it.
+ * The agent's mind, read from what the API says: the household as it perceives it (rooms, devices,
+ * people), what it reaches (channels, tasks, watches, connections), and the marks of its day. Pure:
+ * the home renders it.
  */
 
-import type { Agent, Component, Connection, JournalItem, Person, Satellite, Task, Watch } from "@/api";
+import type { Component, Connection, JournalItem, Person, Satellite, Task, Watch } from "@/api";
 import type { FigureState } from "@/components/agent-figure";
 import { is } from "@/lib/events";
 
 export type AgentState = FigureState;
-
-/** How long an event keeps the agent in a state, if nothing follows it. */
-const HOLD_MS = { listening: 12_000, thinking: 20_000, speaking: 8_000 };
-
-export interface Context {
-  running: number; // tasks under way
-  troubled?: boolean; // something needs a person
-  quiet?: boolean; // within the quiet hours
-}
-
-/**
- * What the agent is doing, from the most recent event, then what runs, what is wrong, the hour.
- * There is no live "activity" signal in the API yet: this reads the journal's events.
- */
-export function agentState(items: readonly JournalItem[], context: Context | number, now = Date.now()): AgentState {
-  const { running, troubled = false, quiet = false } = typeof context === "number" ? { running: context } : context;
-  const latest = items.reduce<JournalItem | null>((a, b) => (!a || b.at > a.at ? b : a), null);
-  if (latest) {
-    const age = now - new Date(latest.at).getTime();
-    if ((is(latest, "answer") || is(latest, "delivered") || is(latest, "fallback")) && age < HOLD_MS.speaking)
-      return "speaking";
-    if ((is(latest, "toolCalled") || is(latest, "considered")) && age < HOLD_MS.thinking) return "thinking";
-    if ((is(latest, "userTurn") || is(latest, "speech")) && age < HOLD_MS.listening) return "listening";
-  }
-  if (running > 0) return "working";
-  if (troubled) return "concerned";
-  return quiet ? "sleeping" : "idle";
-}
 
 // -- the household as the agent perceives it -------------------------------------------------------
 
@@ -164,34 +136,6 @@ export function marksOf(items: readonly JournalItem[]): Mark[] {
   }
   return marks;
 }
-
-/** Merges live items into a list without duplicates, newest first. */
-export function merge(base: readonly JournalItem[], live: readonly JournalItem[]): JournalItem[] {
-  const seen = new Set<string>();
-  const out: JournalItem[] = [];
-  for (const item of [...live, ...base]) {
-    if (seen.has(item.uid)) continue;
-    seen.add(item.uid);
-    out.push(item);
-  }
-  return out.sort((a, b) => b.at.localeCompare(a.at));
-}
-
-/** "22:30-07:30" as minutes since midnight, or null. */
-export function quietHours(text: unknown): { from: number; to: number } | null {
-  if (typeof text !== "string") return null;
-  const m = text.match(/^(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})$/);
-  if (!m) return null;
-  const [h1, m1, h2, m2] = m.slice(1).map(Number) as [number, number, number, number];
-  return { from: h1 * 60 + m1, to: h2 * 60 + m2 };
-}
-
-/** Whether `minute` falls in the quiet hours (which may cross midnight). */
-export function isQuiet(q: { from: number; to: number }, minute: number): boolean {
-  return q.from <= q.to ? minute >= q.from && minute < q.to : minute >= q.from || minute < q.to;
-}
-
-export const isAgentDegraded = (agent: Agent) => agent.status === "degraded";
 
 /** A line the agent says about what it attends to: a message id of home.ftl and its arguments. */
 export interface Line {

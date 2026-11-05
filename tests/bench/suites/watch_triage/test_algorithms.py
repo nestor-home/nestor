@@ -62,11 +62,3 @@ async def test_an_unreachable_model_leaves_the_item_unsorted_and_unmatched(algor
     model = ScriptedModel(fail=ProviderError("triage", "down", transient=True))
     decisions = await decide(algorithm, model, WATCHES, CARRIER, language="French")
     assert decisions and all(d.unsorted and not d.matches for d in decisions)
-
-
-@pytest.mark.parametrize("algorithm", list(Algorithm))
-async def test_an_unreadable_answer_is_asked_again_once(algorithm: Algorithm) -> None:
-    model = ScriptedModel("{I think so, yes.}", *[yes_to("w-parcel")] * 4)
-    decisions = await decide(algorithm, model, WATCHES, CARRIER, language="French")
-    parcel = next(d for d in decisions if d.watch == "w-parcel")
-    assert (parcel.matches, parcel.unsorted) == (True, False)

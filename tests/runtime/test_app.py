@@ -6,12 +6,12 @@ import os
 import re
 import subprocess
 import sys
+from datetime import time
 from pathlib import Path
 from typing import Any
 
 import pytest
 
-from nestor.cli import main
 from nestor.core import Component, ContractError
 from nestor.modules.channels import Address, Medium
 from nestor.modules.cognition import Outcome, TaskDelivered
@@ -169,7 +169,8 @@ OPTIONAL = """
 import sys
 from nestor.runtime import Family, Registry
 registry = Registry.installed()
-print(" ".join(registry.kinds(Family.CHANNEL)))
+for family in (Family.MODEL, Family.EXECUTOR, Family.CHANNEL):
+    print(" ".join(registry.kinds(family)))
 print(" ".join(sorted({m.partition(".")[0] for m in sys.modules} & {"pipecat", "aiortc", "numpy"})))
 """
 TEXT_ONLY = """
@@ -191,8 +192,9 @@ def without_voice(*args: str) -> subprocess.CompletedProcess[str]:
 
 def test_discovering_the_installed_adapters_imports_no_optional_dependency() -> None:
     found = subprocess.run([sys.executable, "-c", OPTIONAL], capture_output=True, text=True, timeout=60, check=True)
-    kinds, imported = found.stdout.splitlines()
-    assert "satellites" in kinds.split(), "the satellites channel is listed even when the voice extra is missing"
+    models, executors, channels, imported = found.stdout.splitlines()
+    assert "openai-compatible" in models.split() and "hermes" in executors.split(), "found through entry points"
+    assert "satellites" in channels.split(), "the satellites channel is listed even when the voice extra is missing"
     assert imported == ""
 
 
@@ -201,7 +203,7 @@ def test_a_text_only_configuration_passes_the_check_without_the_voice_extra(tmp_
     path.write_text(TEXT_ONLY.format(data_dir=tmp_path, channel="{kind: telegram, token: '1:a'}"))
     checked = without_voice("-c", str(path), "check")
     assert checked.returncode == 0, checked.stderr
-    assert "channels: telegram, admin on 127.0.0.1:8470" in checked.stdout
+    assert checked.stdout.strip() == f"{path}: OK — 0 executor(s), channels: telegram, admin on 127.0.0.1:8470"
 
 
 def test_satellites_in_writing_pass_the_check_without_the_voice_extra(tmp_path: Path) -> None:
@@ -222,13 +224,6 @@ def test_a_voice_for_satellites_without_the_extra_says_what_to_install(tmp_path:
         "nestor: channel 'satellites' (satellites) needs nestor-home[voice], which is not installed "
         "(no module 'pipecat'): pip install 'nestor-home[voice]'"
     )
-
-
-def test_the_command_line_checks_a_configuration(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    path = tmp_path / "nestor.yaml"
-    path.write_text(CONFIG.format(data_dir=tmp_path, replies=[]).replace("kind: scripted", "kind: absent"))
-    assert main(["-c", str(path), "check"]) == 2
-    assert "unknown model kind 'absent'" in capsys.readouterr().err
 
 
 FAST = Backoff(initial_s=0.01, maximum_s=0.02, healthy_after_s=60)
@@ -275,7 +270,8 @@ async def test_initiative_settings_reach_the_courier(tmp_path: Path) -> None:
     text = CONFIG.format(data_dir=tmp_path, replies=[]) + "initiative: {quiet_hours: '22:30-07:30', main_room: salon}\n"
     nestor = Nestor(parse_config(text, {}), Fakes().registry())
     assert nestor.courier.policy.main_room == "salon"
-    assert nestor.courier.policy.quiet_hours is not None and nestor.presence is None
+    quiet = nestor.courier.policy.quiet_hours
+    assert quiet is not None and (quiet.start, quiet.end) == (time(22, 30), time(7, 30))
 
 
 async def test_each_channel_brings_its_conversation_window_to_the_agent(tmp_path: Path) -> None:
@@ -283,23 +279,6 @@ async def test_each_channel_brings_its_conversation_window_to_the_agent(tmp_path
     profile = nestor.agent.channel(Address("memory", "x"))
     assert profile.ends_conversation_after_s(Medium.WRITTEN) == 4 * 3600, "writing's default"
     assert profile.ends_conversation_after_s(Medium.SPOKEN) == 300, "speech's default"
-
-
-def test_malformed_quiet_hours_are_a_configuration_error(tmp_path: Path) -> None:
-    from nestor.runtime import ConfigError
-
-    with pytest.raises(ConfigError, match="HH:MM-HH:MM"):
-        parse_config(CONFIG.format(data_dir=tmp_path, replies=[]) + "initiative: {quiet_hours: late}\n", {})
-
-
-def test_the_installed_adapters_are_found_through_entry_points() -> None:
-    registry = Registry.installed()
-    for family, kind in [
-        (Family.MODEL, "openai-compatible"),
-        (Family.EXECUTOR, "hermes"),
-        (Family.CHANNEL, "telegram"),
-    ]:
-        assert registry.get(family, kind).kind == kind
 
 
 async def test_the_command_line_serves_until_stopped(tmp_path: Path) -> None:
@@ -312,18 +291,6 @@ async def test_the_command_line_serves_until_stopped(tmp_path: Path) -> None:
     asyncio.get_running_loop().call_later(0.1, os.kill, os.getpid(), signal.SIGTERM)
     await asyncio.wait_for(run_until_stopped(nestor), timeout=5)
     assert nestor.database.path.exists()
-
-
-def test_the_command_line_reports_a_valid_configuration(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    path = tmp_path / "nestor.yaml"
-    path.write_text(
-        CONFIG.format(data_dir=tmp_path, replies=[])
-        .replace("kind: scripted, replies: []", "kind: openai-compatible, api_key: k, model: m, base_url: 'http://x'")
-        .replace("[{kind: remote, name: hermes}]", "[]")
-        .replace("[{kind: memory}]", "[{kind: telegram, token: '1:a'}]")
-    )
-    assert main(["-c", str(path), "check"]) == 0
-    assert "OK — 0 executor(s), channels: telegram" in capsys.readouterr().out
 
 
 async def test_memories_persist_in_the_database(tmp_path: Path) -> None:

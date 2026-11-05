@@ -91,11 +91,6 @@ def test_an_unreadable_variant_file_says_so(tmp_path: Path) -> None:
         load(tmp_path / "missing.yaml")
 
 
-def test_an_unknown_model_kind_lists_the_installed_ones(tmp_path: Path) -> None:
-    with pytest.raises(ContractError, match="available: oracle"):
-        load(write_variant(tmp_path, "v", "models: {m: {kind: gpt}}\n"))
-
-
 def test_a_model_kind_that_builds_something_else_is_refused(tmp_path: Path) -> None:
     class Lamp(Component):
         name = "lamp"

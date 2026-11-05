@@ -66,7 +66,7 @@ def journal() -> Journal:
 
 
 async def test_a_delegated_task_runs_in_the_background_and_is_logged(journal: Journal) -> None:
-    async with TaskManager(journal, [ScriptedExecutor("Trois soucis trouvés.", duration_s=0.01)]) as tasks:
+    async with TaskManager(journal, [ScriptedExecutor("Trois soucis trouvés.")]) as tasks:
         task = await tasks.delegate("Analyse le dépôt", origin=VOICE, requested_by=MATHIS, notify=Notify.MESSAGE)
         assert task.status is TaskStatus.RUNNING
         outcome = await tasks.wait(task.id)
@@ -75,14 +75,9 @@ async def test_a_delegated_task_runs_in_the_background_and_is_logged(journal: Jo
     started, ended = (await journal.history(TaskStarted))[0], (await journal.history(TaskEnded))[0]
     assert (started.origin, started.requested_by, started.notify) == (VOICE, MATHIS, Notify.MESSAGE)
     assert ended.status is TaskStatus.COMPLETED and ended.result == "Trois soucis trouvés."
-    assert [p.step for p in await journal.history(TaskProgressed)] == ["started"]
-
-
-async def test_progress_is_logged_before_the_end(journal: Journal) -> None:
-    async with TaskManager(journal, [ScriptedExecutor()]) as tasks:
-        await tasks.wait((await tasks.delegate("x", origin=VOICE)).id)
-    types = [e.event_type for e in await journal.history(TaskStarted, TaskProgressed, TaskEnded)]
-    assert types == ["task.started", "task.progress", "task.ended"]
+    logged = await journal.history(TaskStarted, TaskProgressed, TaskEnded)
+    assert [e.event_type for e in logged] == ["task.started", "task.progress", "task.ended"], "progress before the end"
+    assert [p.step for p in logged if isinstance(p, TaskProgressed)] == ["started"]
 
 
 async def test_remote_work_survives_a_restart_and_is_not_started_twice(journal: Journal) -> None:

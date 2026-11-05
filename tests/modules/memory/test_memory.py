@@ -4,7 +4,7 @@ from collections.abc import Mapping
 
 import pytest
 
-from nestor.core import ContractError, PersonId, utc_now
+from nestor.core import ContractError, Event, PersonId, ProviderError, utc_now
 from nestor.modules.channels import Address, InboundMessage, Sender
 from nestor.modules.cognition.model import ToolCall
 from nestor.modules.cognition.tools import Toolbox, ToolContext, ToolFailed
@@ -33,13 +33,16 @@ class TestInMemoryMemoryStore(MemoryStoreContract):
 
 
 async def test_the_contract_rejects_a_store_that_ignores_accents_badly() -> None:
-    class Literal(InMemoryMemoryStore):
+    class AccentBound(InMemoryMemoryStore):
+        """Matches words whatever their case, but only with the same accents."""
+
         async def search(self, query: str, *, about: PersonId | None = None, limit: int = 10) -> list:
-            return [m for m in self.memories.values() if query in m.text]
+            wanted = set(query.casefold().split())
+            return [m for m in self.memories.values() if wanted & set(m.text.casefold().split())]
 
     class Suite(MemoryStoreContract):
         def store(self) -> InMemoryMemoryStore:
-            return Literal()
+            return AccentBound()
 
     with pytest.raises(AssertionError):
         await Suite().test_a_memory_is_found_by_its_words_whatever_the_accents()
@@ -50,7 +53,7 @@ def memories() -> Memories:
     return Memories(Journal(MemoryEventLog()), InMemoryMemoryStore())
 
 
-async def test_every_change_is_logged_before_it_applies(memories: Memories) -> None:
+async def test_every_change_is_logged(memories: Memories) -> None:
     memory = await memories.remember(" Mathilde est végétarienne ", about=MATHILDE.id, source=VOICE, told_by=MATHIS.id)
     await memories.correct(memory.id, "Mathilde est végane", by=MATHIS.id)
     await memories.forget(memory.id, by=MATHIS.id)
@@ -66,6 +69,30 @@ async def test_every_change_is_logged_before_it_applies(memories: Memories) -> N
     assert [e.text for e in await journal.history(MemoryCorrected)] == ["Mathilde est végane"]
     assert len(await journal.history(MemoryForgotten)) == 1
     assert await memories.recall("Mathilde", vector=None) == []
+
+
+async def test_every_change_is_logged_before_it_applies() -> None:
+    class FullDisk(MemoryEventLog):
+        full = False
+
+        async def append(self, event: Event) -> int:
+            if self.full:
+                raise ProviderError("disk", "full", transient=False)
+            return await super().append(event)
+
+    log, store = FullDisk(), InMemoryMemoryStore()
+    memories = Memories(Journal(log), store)
+    kept = await memories.remember("Mathilde est végétarienne")
+    log.full = True
+
+    for change in (
+        memories.remember("Le chat s'appelle Biscotte"),
+        memories.correct(kept.id, "Mathilde est végane"),
+        memories.forget(kept.id),
+    ):
+        with pytest.raises(ProviderError):
+            await change
+    assert list(store.memories.values()) == [kept]
 
 
 async def test_unknown_or_empty_memories_are_refused(memories: Memories) -> None:

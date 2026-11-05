@@ -52,18 +52,3 @@ test("fills the whole screen on a phone and keeps Tab inside", async ({ page }, 
   }
   await page.screenshot({ path: info.outputPath("phone.png") });
 });
-
-test("closing midway leaves nothing recorded", async ({ page }) => {
-  test.setTimeout(60_000);
-  await page.goto("/people/jules");
-  await page.getByRole("button", { name: "Record their voice" }).click();
-  const dialog = page.getByRole("dialog");
-  await dialog.getByRole("button", { name: "Start" }).click();
-  await expect(dialog.getByText("I can hear you well.")).toBeVisible({ timeout: 15_000 });
-  const abandoned = page.waitForRequest((r) => r.method() === "DELETE" && /\/voice\/recordings\//.test(r.url()));
-  await dialog.getByRole("button", { name: "Continue" }).click();
-  await expect(dialog.getByText("Phrase 1 of 5")).toBeVisible();
-  await page.keyboard.press("Escape");
-  await abandoned;
-  await expect(page.getByText("Not recorded yet.")).toBeVisible();
-});

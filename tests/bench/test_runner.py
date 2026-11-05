@@ -2,6 +2,7 @@
 
 import json
 import subprocess
+from importlib.metadata import version
 from pathlib import Path
 
 import pytest
@@ -170,8 +171,8 @@ async def test_results_name_the_nestor_version_and_the_commit_of_this_source(tmp
     suite = Quiz()
     dataset, info = read_dataset(suite, write_cases(tmp_path))
     [run] = await run_suite(suite, dataset, info, [variant(tmp_path, suite)], Plan(), Cache(tmp_path / "c"))
-    assert run.nestor.count(".") == 2
-    assert run.commit is None or len(run.commit.removesuffix("+dirty")) == 40
+    assert run.nestor == version("nestor-home")
+    assert run.commit is not None and len(run.commit.removesuffix("+dirty")) == 40, "this source is tracked by git"
 
 
 def test_a_recording_keeps_tool_calls_and_a_reply_without_usage(tmp_path: Path) -> None:

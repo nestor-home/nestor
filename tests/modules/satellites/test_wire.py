@@ -14,8 +14,6 @@ from nestor.modules.satellites import (
     PairingState,
     PairingStatus,
     PairingTicket,
-    ProtocolUnsupported,
-    Software,
     UpdateState,
     wire,
 )
@@ -23,7 +21,7 @@ from nestor.modules.satellites.types import DeclaredCapability
 from nestor.testing.satellites import SOFTWARE
 
 MANIFEST = Manifest(
-    Device("reachy-salon", "reachy-mini", "salon"),
+    Device("reachy-salon", "reachy-mini", "salon", brand="pollen-robotics"),
     (DeclaredCapability(Capability("audio.capture"), {"formats": ["opus/48000"]}),),
     software=SOFTWARE,
 )
@@ -72,16 +70,6 @@ def test_a_manifest_keeps_the_parameters_of_its_capabilities() -> None:
     assert sent["payload"]["manifest"]["capabilities"] == [{"name": "audio.capture", "formats": ["opus/48000"]}]
 
 
-def test_a_manifest_names_its_software_and_may_name_its_maker() -> None:
-    manifest = Manifest(
-        Device("reachy", "reachy-mini", "salon", brand="pollen-robotics"), software=Software("nestor-reachy", "0.1.0")
-    )
-    data = wire.encode(wire.Hello(manifest=manifest, token="nst1_test"))
-    assert validator("hello").is_valid(data)
-    decoded = wire.decode(data).message
-    assert isinstance(decoded, wire.Hello) and decoded.manifest == manifest
-
-
 def _with(message: wire.Message, **payload: Any) -> dict[str, Any]:
     data = wire.encode(message)
     data["payload"] = {**data["payload"], **payload}
@@ -109,6 +97,7 @@ OFF_CONTRACT = {
     "unexpected field": _with(wire.Ack(of="x"), extra=1),
     "missing field": {**wire.encode(wire.Ack(of="x")), "payload": {}},
     "other protocol": _manifest(protocol="nestor.satellite/99"),
+    "another protocol family": _manifest(protocol="acme/1"),
     "no pairing method": _manifest(pairing_methods=[]),
     "device id with a colon": _manifest(device={"id": "voice:salon", "model": "m", "room": "salon"}),
     "capability without a family": _manifest(capabilities=[{"name": "camera"}]),
@@ -182,11 +171,6 @@ def test_the_committed_schemas_are_up_to_date() -> None:
     assert committed == wire.schemas(), "run `nestor satellites schemas` (wire.write_schemas()) and commit"
 
 
-def test_schemas_are_written_where_asked(tmp_path: Any) -> None:
-    written = wire.write_schemas(tmp_path)
-    assert {p.name for p in written} == set(wire.schemas())
-
-
 def test_a_message_type_is_defined_once() -> None:
     with pytest.raises(ContractError):
 
@@ -221,14 +205,6 @@ def test_an_off_contract_pairing_request_is_refused(body: dict[str, Any]) -> Non
     assert not validator("pairing.request").is_valid(body)
     with pytest.raises(ContractError):
         wire.PairingRequest.from_json(body)
-
-
-def test_another_protocol_version_is_refused_as_such() -> None:
-    other = MANIFEST.to_json() | {"protocol": "nestor.satellite/99"}
-    with pytest.raises(ProtocolUnsupported):
-        wire.PairingRequest.from_json({"manifest": other})
-    with pytest.raises(ContractError):
-        Manifest.from_json(MANIFEST.to_json() | {"protocol": "acme/1"})
 
 
 @pytest.mark.parametrize(

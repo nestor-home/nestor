@@ -357,12 +357,10 @@ async def test_structured_content_without_text_is_given_as_json(home: McpToolPro
 async def test_an_oversized_result_is_cut_with_a_marker(served_home: Served) -> None:
     async with provider_for(served_home, max_result_chars=100) as provider:
         output = await call(provider, "dump", size=250)
+        within = await call(provider, "dump", size=100)
 
     assert output == "x" * 100 + "\n[truncated: 150 more characters]"
-
-
-async def test_a_result_within_the_limit_is_unchanged(home: McpToolProvider) -> None:
-    assert await call(home, "dump", size=16_000) == "x" * 16_000
+    assert within == "x" * 100, "a result at the limit is unchanged"
 
 
 @ERAS
@@ -558,16 +556,6 @@ async def test_a_call_through_the_toolbox_is_logged(home: McpToolProvider) -> No
     [completed] = await journal.history(ToolCompleted)
     assert (called.name, dict(called.arguments)) == ("turn_on", {"name": "kitchen light"})
     assert (completed.ok, completed.output) == (True, "kitchen light is on")
-
-
-async def test_a_failed_call_through_the_toolbox_is_logged_as_failed(home: McpToolProvider) -> None:
-    journal = Journal(MemoryEventLog())
-
-    output = await Toolbox(journal, providers=[home]).call(ToolCall("c1", "offline", {}), CONTEXT)
-
-    assert "the device is offline" in json.loads(output)["error"]
-    [completed] = await journal.history(ToolCompleted)
-    assert not completed.ok and completed.output == output
 
 
 def test_settings_keep_header_values_secret() -> None:

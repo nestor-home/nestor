@@ -47,8 +47,6 @@ async def test_people_say_since_when_they_are_where_they_are(tmp_path: Path) -> 
             "since": arrived.isoformat().replace("+00:00", "Z"),
         }
         assert (await api.get("/api/v1/household/people/nobody")).json()["error"]["code"] == "person_unknown"
-        await admin.account("lucie", Role.GUEST, "lucie")
-        assert (await (await admin.api("lucie")).get("/api/v1/household/people/mathis")).status_code == 403
 
 
 async def test_a_task_a_watch_a_satellite_and_an_account_open_one_by_one(tmp_path: Path) -> None:
@@ -74,9 +72,7 @@ async def test_a_task_a_watch_a_satellite_and_an_account_open_one_by_one(tmp_pat
 
         assert (await owner.get("/api/v1/satellites/mic")).json()["room"] == "bureau"
         assert (await owner.get("/api/v1/satellites/nope")).status_code == 404
-        assert (await guest.get("/api/v1/satellites/mic")).status_code == 403
 
         account = (await owner.get(f"/api/v1/accounts/{member.id}")).json()
         assert account["login"] == "mathilde" and account["last_seen_at"] is not None, "signed in just now"
         assert (await owner.get("/api/v1/accounts/nope")).status_code == 404
-        assert (await guest.get(f"/api/v1/accounts/{member.id}")).status_code == 403

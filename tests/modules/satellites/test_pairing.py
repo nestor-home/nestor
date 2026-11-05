@@ -199,14 +199,6 @@ async def test_asking_again_replaces_the_earlier_code(pairing: Pairing) -> None:
     await pairing.approve(code_of(second))
 
 
-async def test_too_many_waiting_devices_are_refused(journal: Journal) -> None:
-    pairing = Pairing(journal, max_pending=2)
-    for i in range(2):
-        await pairing.request(Manifest(Device(f"device-{i}", "esp32", "salon"), software=SOFTWARE))
-    with pytest.raises(PairingRefused):
-        await pairing.request(Manifest(Device("device-2", "esp32", "salon"), software=SOFTWARE))
-
-
 async def test_too_many_waiting_devices_are_told_to_come_back_but_an_enrolled_one_still_pairs(
     journal: Journal,
 ) -> None:

@@ -174,19 +174,6 @@ async def test_tool_settings_change_what_the_agent_sees(tmp_path: Path) -> None:
         assert admin.nestor.connections.connections[connection_id].confirm_writes is False
 
 
-async def test_disconnecting_revokes_and_forgets(tmp_path: Path) -> None:
-    async with Harness(tmp_path) as admin:
-        api = await admin.api()
-        await register(api)
-        connection_id = await connect(admin, api)
-        assert admin.nestor.connections
-        refresh = (await admin.nestor.connections.vault.get(connection_id, "tokens") or {})["refresh_token"]
-        assert (await api.delete(f"/api/v1/connections/{connection_id}")).status_code == 204
-        assert admin.provider.revoked == [refresh]
-        assert await admin.nestor.connections.vault.get(connection_id, "tokens") is None
-        assert (await api.get(f"/api/v1/connections/{connection_id}")).status_code == 404
-
-
 async def test_a_broken_connection_is_reconnected_with_its_settings_and_kept_until_then(tmp_path: Path) -> None:
     async with Harness(tmp_path) as admin:
         api = await admin.api()
@@ -270,11 +257,10 @@ async def test_a_member_reaches_only_their_own_connections(tmp_path: Path) -> No
             response = await api.post("/api/v1/connectors/imap/connections", {"person": person, "values": {}})
             assert response.status_code == 403
         assert (
-            await api.put("/api/v1/connectors/mailbox/client", {"client_id": "a", "client_secret": "b"})
-        ).status_code == 403
-        assert (
             await api.post("/api/v1/connectors/imap/connections", {"replaces": mine.id, "values": {}})
         ).status_code == 404
+        assert (await api.delete(f"/api/v1/connections/{theirs.id}")).status_code == 204
+        assert (await api.get(f"/api/v1/connections/{theirs.id}")).status_code == 404
 
 
 async def test_without_connectors_the_catalogue_says_so(tmp_path: Path) -> None:

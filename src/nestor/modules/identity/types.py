@@ -4,23 +4,10 @@ import hashlib
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
-from typing import NewType
 
 from nestor.core import PersonId
 
-SpeakerLabel = NewType("SpeakerLabel", str)  # anonymous within a session: "spk-0", "spk-1"
-
 type Vector = tuple[float, ...]
-
-
-@dataclass(frozen=True, slots=True)
-class Segment:
-    """`speaker` spoke from `start_s` to `end_s` (seconds from the start of the stream). A diarizer may
-    revise past segments as it hears more: the latest list wins."""
-
-    start_s: float
-    end_s: float
-    speaker: SpeakerLabel
 
 
 class Identified(StrEnum):

@@ -29,14 +29,6 @@ class RecordingBody(Body):
     def beat(self) -> None:
         self.beats.append(self._clock())
 
-    def behavior_at(self, t: float) -> Behavior:
-        current = Behavior.IDLE
-        for at, behavior in self.behaviors:
-            if at > t:
-                break
-            current = behavior
-        return current
-
 
 class BodyContract:
     """Behaviour every `Body` adapter must show. Mix into a `Test…` class and implement `body()`."""

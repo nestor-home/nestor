@@ -10,7 +10,6 @@ import httpx
 import pytest
 
 from nestor.admin import AdminServer, AdminSettings
-from nestor.cli import main
 from nestor.core import ContractError, ProviderError
 from nestor.modules.initiative import Incoming, Watch, WatchTriggered
 from nestor.runtime import ConfigError, Nestor
@@ -94,23 +93,3 @@ async def test_a_mail_arriving_in_a_connected_mailbox_triggers_a_watch(tmp_path:
         admin.imap.inbox.deliver(Incoming(source="imap", kind="mail", title="Votre colis Colissimo"))
         event = await triggered.next(timeout_s=2)
         assert isinstance(event, WatchTriggered) and event.summary == "Colis livré."
-
-
-def test_the_command_line_checks_a_configuration_with_the_admin(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
-) -> None:
-    path = tmp_path / "nestor.yaml"
-    path.write_text(
-        CONFIG.format(data_dir=tmp_path, admin={"colour": "red"})
-        .replace("kind: scripted", "kind: openai-compatible, api_key: k, model: m, base_url: 'http://x'")
-        .replace("[{kind: remote, name: hermes}]", "[]")
-        .replace("[{kind: memory, name: telegram}]", "[{kind: telegram, token: '1:a'}]")
-        .replace("presence: {kind: static}\n", "")
-    )
-    monkeypatch.setenv("NESTOR_SECRET_KEY", "k" * 40)
-    assert main(["-c", str(path), "check"]) == 2
-    assert "colour" in capsys.readouterr().err
-
-    path.write_text(path.read_text().replace("{'colour': 'red'}", "{port: 8470}"))
-    assert main(["-c", str(path), "check"]) == 0
-    assert "admin on 127.0.0.1:8470" in capsys.readouterr().out

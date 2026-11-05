@@ -35,7 +35,7 @@ from nestor.modules.conversation import (
     TurnContext,
     UserTurn,
 )
-from nestor.modules.identity import Heard, Speaker
+from nestor.modules.identity import Heard
 from nestor.modules.journal import Journal
 from nestor.testing.cognition.model import ScriptedModel
 
@@ -88,11 +88,15 @@ async def test_the_conversation_survives_a_restart(make_agent: MakeAgent) -> Non
     ]
 
 
-async def test_conversations_do_not_share_their_history(make_agent: MakeAgent) -> None:
-    await make_agent("Ok.").respond(message("Secret de Telegram")).collect()
-    model = ScriptedModel("Oui ?")
-    await make_agent(model=model).respond(message("Salut", VOICE, "mic")).collect()
-    assert [m.content for m in model.requests[0].messages[1:]] == ["Salut"]
+async def test_conversations_do_not_share_their_history(make_agent: MakeAgent, journal: Journal) -> None:
+    model = ScriptedModel("Ok.", "Oui ?")
+    agent = make_agent(model=model)
+    await agent.respond(message("Secret de Telegram")).collect()
+    await agent.respond(message("Salut", VOICE, "mic")).collect()
+
+    assert [m.content for m in model.requests[1].messages[1:]] == ["Salut"]
+    telegram, voice = (t.exchange.conversation_id for t in await journal.history(UserTurn) if t.exchange)
+    assert telegram != voice, "each session holds its own conversations"
 
 
 async def test_the_agent_calls_tools_and_answers_with_their_result(make_agent: MakeAgent, journal: Journal) -> None:
@@ -175,6 +179,13 @@ async def test_a_tool_call_without_text_makes_no_empty_message(make_agent: MakeA
     assert await agent.respond(message("Allume")).collect() == ("C'est allumé.",)
     assert [t.text for t in await journal.history(AssistantTurn)] == ["C'est allumé."]
 
+    model = ScriptedModel("Oui.")
+    await make_agent(model=model, tools=[tool("light_on", light_on)]).respond(message("C'est fait ?")).collect()
+    roles = [m.role for m in model.requests[0].messages[1:]]
+    assert roles == [Role.USER, Role.ASSISTANT, Role.TOOL, Role.ASSISTANT, Role.USER], (
+        "the call, though it said nothing"
+    )
+
 
 async def test_voice_speaks_the_messages_as_one_text(make_agent: MakeAgent) -> None:
     reply = make_agent(model=Announcing(), tools=[tool("light_on", light_on)]).respond(message("Allume", VOICE, "mic"))
@@ -193,22 +204,6 @@ async def test_a_cut_across_messages_keeps_what_was_heard_of_each(make_agent: Ma
     model = ScriptedModel("Pardon.")
     await make_agent(model=model, tools=[tool("light_on", light_on)]).respond(message("Hein ?", VOICE, "mic")).collect()
     assert [m.content for m in model.requests[0].messages[1:] if m.role is Role.ASSISTANT] == ["Je regarde.", "C'est"]
-
-
-async def test_a_tool_round_is_part_of_the_history(make_agent: MakeAgent) -> None:
-    async def light(arguments: Mapping[str, object], context: ToolContext) -> str:
-        return "allumée"
-
-    await (
-        make_agent(ToolCall("c1", "light_on"), "Fait.", tools=[tool("light_on", light)])
-        .respond(message("Allume"))
-        .collect()
-    )
-    model = ScriptedModel("Oui.")
-    await make_agent(model=model, tools=[tool("light_on", light)]).respond(message("C'est fait ?")).collect()
-
-    roles = [m.role for m in model.requests[0].messages[1:]]
-    assert roles == [Role.USER, Role.ASSISTANT, Role.TOOL, Role.ASSISTANT, Role.USER]
 
 
 async def test_a_failing_tool_is_reported_to_the_model_not_raised(make_agent: MakeAgent, journal: Journal) -> None:
@@ -366,26 +361,6 @@ async def test_a_composed_message_uses_the_conversation_and_is_left_to_its_sende
     assert "not said by anyone here: task t1 completed" in last.content, "never taken for the person's words"
     assert await journal.history(NotificationTurn) == [], "a draft: nothing is said before it is delivered"
     assert [t.text for t in await journal.history(AssistantTurn)] == ["Je lance l'analyse."]
-
-
-async def test_an_answer_to_a_delivery_sees_what_it_was_about(make_agent: MakeAgent, journal: Journal) -> None:
-    """A task's result comes back as a tool's result does: the notification, then the message it caused, then the
-    person's question about it, all in one history the model can quote from."""
-    model = ScriptedModel("Le deuxième : la CI est rouge sur main.")
-    agent = make_agent(model=model)
-    notification = Notification("Result: 1. tests flaky 2. CI red on main 3. lockfile stale", "task t1 completed")
-    exchange = await agent.delivered(
-        TELEGRAM, MATHIS, notification, Medium.WRITTEN, ["Ton analyse est prête : trois soucis."]
-    )
-    await agent.respond(message("Et le deuxième point ?")).collect()
-
-    history = model.requests[0].messages[1:]
-    assert [m.role for m in history] == [Role.USER, Role.ASSISTANT, Role.USER]
-    assert "CI red on main" in history[0].content and history[2].content == "Et le deuxième point ?"
-    [internal] = await journal.history(NotificationTurn)
-    [said] = [t for t in await journal.history(AssistantTurn) if t.exchange == exchange]
-    assert internal.exchange == exchange and internal.person == MATHIS.id and said.text.startswith("Ton analyse")
-    assert [t.speaker for t in await journal.history(UserTurn)] == [Speaker.account(MATHIS.id)]
 
 
 async def test_instructions_carry_persona_channel_person_and_context(make_agent: MakeAgent) -> None:

@@ -1,11 +1,11 @@
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http } from "msw";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { I18nProvider } from "@/i18n";
 import { connectors } from "@/mocks/fixtures";
 import { server } from "@/mocks/server";
-import { renderWithProviders } from "@/test/render";
+import { renderApp, renderWithProviders } from "@/test/render";
 import { ConnectForm } from "./connect-form";
 
 const connector = (kind: string) => {
@@ -15,16 +15,21 @@ const connector = (kind: string) => {
 };
 
 describe("connecting an account", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
   it("picks the owner by typing part of the name, then sends the browser to the consent page", async () => {
+    // the browser leaves the admin for the provider: jsdom cannot navigate, so watch where it would go
+    const assign = vi.fn();
+    vi.stubGlobal("location", { origin: window.location.origin, href: window.location.href, assign });
+    const authorizations: string[] = [];
+    server.events.on("response:mocked", async ({ request, response }) => {
+      if (request.url.endsWith("/connectors/google/authorizations"))
+        authorizations.push(((await response.clone().json()) as { authorize_url: string }).authorize_url);
+    });
     const user = userEvent.setup();
-    const leave = vi.fn();
-    const onConnected = vi.fn();
-    renderWithProviders(
-      <I18nProvider>
-        <ConnectForm connector={connector("google")} replaces={null} onConnected={onConnected} leave={leave} />
-      </I18nProvider>,
-    );
-    const owner = screen.getByRole("combobox", { name: "Account of" });
+    renderApp("/connections/catalogue?connect=google");
+    const sheet = await screen.findByRole("dialog", { name: "Gmail" });
+    const owner = within(sheet).getByRole("combobox", { name: "Account of" });
     await user.click(owner);
     await user.clear(owner);
     await user.type(owner, "léa");
@@ -43,20 +48,20 @@ describe("connecting an account", () => {
         await held;
       }),
     );
-    await user.click(screen.getByRole("button", { name: "Connect" }));
-    expect(await screen.findByRole("button", { name: "Connecting…" })).toBeDisabled();
+    await user.click(within(sheet).getByRole("button", { name: "Connect" }));
+    expect(await within(sheet).findByRole("button", { name: "Connecting…" })).toBeDisabled();
+    expect(assign).not.toHaveBeenCalled();
     release();
-    await waitFor(() =>
-      expect(leave).toHaveBeenCalledWith(expect.stringMatching(/^\/connections\/c-.+\?connected=1$/)),
-    );
-    expect(screen.getByRole("button", { name: "Redirecting to the service…" })).toBeDisabled();
-    expect(onConnected).not.toHaveBeenCalled();
+    await waitFor(() => expect(assign).toHaveBeenCalledTimes(1));
+    expect(authorizations).toHaveLength(1);
+    expect(assign).toHaveBeenCalledWith(authorizations[0]);
+    expect(within(sheet).getByRole("button", { name: "Redirecting to the service…" })).toBeDisabled();
   });
 
   it("cannot start OAuth before the household's client exists", () => {
     renderWithProviders(
       <I18nProvider>
-        <ConnectForm connector={connector("google-calendar")} replaces={null} onConnected={vi.fn()} leave={vi.fn()} />
+        <ConnectForm connector={connector("google-calendar")} replaces={null} onConnected={vi.fn()} />
       </I18nProvider>,
     );
     expect(screen.getByRole("button", { name: "Connect" })).toBeDisabled();

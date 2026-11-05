@@ -204,7 +204,7 @@ def test_a_bad_password_writes_nothing(
 
 
 def test_a_bad_login_writes_nothing(tmp_path: Path) -> None:
-    with pytest.raises(Exception, match="a login is an email or a username"):
+    with pytest.raises(ContractError, match="a login is an email or a username"):
         initialise(tmp_path / "nestor.yaml", Setup(), login="moi !", password=PASSWORD)
     assert list(tmp_path.iterdir()) == []
 

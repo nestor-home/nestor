@@ -1,12 +1,13 @@
 """The release feed over HTTPS: what it reads, and what it refuses to take for a feed."""
 
 import json
+from typing import Any
 
 import httpx
 import pytest
 
 from nestor.adapters.releases import HttpReleaseFeed
-from nestor.core import ContractError, ProviderError
+from nestor.core import ProviderError
 
 URL = "https://example.org/releases.json"
 FEED = {"protocols": ["nestor.satellite/1"], "releases": [
@@ -55,14 +56,15 @@ async def test_an_unreachable_feed_is_transient() -> None:
     assert error.value.transient
 
 
-async def test_json_that_is_not_a_feed_is_refused() -> None:
-    async with feed(httpx.MockTransport(lambda _: httpx.Response(200, json={"releases": "none"}))) as releases:
-        with pytest.raises(ContractError):
-            await releases.fetch()
+async def test_it_closes_the_client_it_makes(monkeypatch: pytest.MonkeyPatch) -> None:
+    made: list[httpx.AsyncClient] = []
 
+    class Recorded(httpx.AsyncClient):
+        def __init__(self, **options: Any) -> None:
+            super().__init__(**options)
+            made.append(self)
 
-async def test_it_owns_the_client_it_makes() -> None:
-    releases = HttpReleaseFeed(URL)
-    async with releases:
-        assert releases._client is not None
-    assert releases._client is None
+    monkeypatch.setattr(httpx, "AsyncClient", Recorded)
+    async with HttpReleaseFeed(URL):
+        assert [client.is_closed for client in made] == [False]
+    assert [client.is_closed for client in made] == [True]

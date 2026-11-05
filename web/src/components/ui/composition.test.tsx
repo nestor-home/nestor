@@ -1,7 +1,8 @@
 /**
  * Each ui component mounted in its canonical composition, opened, driven by keyboard and checked
  * with axe: a missing part (an ItemText, a Title, a root around Command*), a bad nesting or a
- * selector that marks every item at once shows up here, before a screen uses it.
+ * selector that marks every item at once shows up here, before a screen uses it. A composition a
+ * screen already proves (the journal's facet popover, the Invite dialog) is checked there.
  */
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -23,8 +24,7 @@ import { Button } from "./button";
 import { Calendar } from "./calendar";
 import { Checkbox } from "./checkbox";
 import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxItem, ComboboxList } from "./combobox";
-import { Command, CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "./command";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "./dialog";
+import { CommandDialog, CommandInput, CommandItem, CommandList } from "./command";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,7 +34,6 @@ import {
   DropdownMenuTrigger,
 } from "./dropdown-menu";
 import { Label } from "./label";
-import { Popover, PopoverContent, PopoverTrigger } from "./popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./select";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "./sheet";
 import { Switch } from "./switch";
@@ -52,10 +51,10 @@ function mount(ui: React.ReactNode) {
   );
 }
 
-const highlighted = (root: HTMLElement, attribute = "data-highlighted") =>
+const highlighted = (root: HTMLElement) =>
   within(root)
     .queryAllByRole("option")
-    .filter((o) => o.hasAttribute(attribute) && o.getAttribute(attribute) !== "false");
+    .filter((o) => o.hasAttribute("data-highlighted") && o.getAttribute("data-highlighted") !== "false");
 
 describe("ui components in their canonical composition", () => {
   it("Select: opens from the keyboard, highlights one item at a time, chooses with Enter", async () => {
@@ -136,45 +135,6 @@ describe("ui components in their canonical composition", () => {
     await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("cuisine"));
   });
 
-  it("Command in a Popover: exactly one item selected, arrows move it, Enter runs it", async () => {
-    const user = userEvent.setup();
-    function Example() {
-      const [chosen, setChosen] = useState("");
-      return (
-        <>
-          <Popover>
-            <PopoverTrigger render={<Button variant="outline" />}>Pièce</PopoverTrigger>
-            <PopoverContent aria-label="Pièce">
-              <Command>
-                <CommandInput placeholder="Filtrer…" />
-                <CommandList>
-                  <CommandEmpty>Rien.</CommandEmpty>
-                  <CommandGroup heading="Pièces">
-                    {ROOMS.map((r) => (
-                      <CommandItem key={r} value={r} onSelect={setChosen}>
-                        {r}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
-          <output>{chosen}</output>
-        </>
-      );
-    }
-    mount(<Example />);
-    await user.click(screen.getByRole("button", { name: "Pièce" }));
-    const list = await screen.findByRole("listbox");
-    expect(highlighted(list, "data-selected")).toHaveLength(1);
-    await user.keyboard("{ArrowDown}");
-    expect(highlighted(list, "data-selected").map((o) => o.textContent)).toEqual(["cuisine"]);
-    await expectAccessible();
-    await user.keyboard("{Enter}");
-    expect(screen.getByRole("status")).toHaveTextContent("cuisine");
-  });
-
   it("CommandDialog: a named dialog whose input and list share cmdk's root", async () => {
     const user = userEvent.setup();
     mount(
@@ -190,35 +150,6 @@ describe("ui components in their canonical composition", () => {
     await user.type(screen.getByPlaceholderText("Aller à…"), "sat");
     expect(screen.getAllByRole("option").map((o) => o.textContent)).toEqual(["Satellites"]);
     await expectAccessible();
-  });
-
-  it("Dialog: named, traps focus, closes with Escape and gives focus back", async () => {
-    const user = userEvent.setup();
-    mount(
-      <Dialog>
-        <DialogTrigger render={<Button />}>Inviter…</DialogTrigger>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Inviter quelqu'un</DialogTitle>
-            <DialogDescription>Un lien pour choisir son mot de passe.</DialogDescription>
-          </DialogHeader>
-          <Label htmlFor="mail">Adresse</Label>
-          <input id="mail" />
-        </DialogContent>
-      </Dialog>,
-    );
-    const trigger = screen.getByRole("button", { name: "Inviter…" });
-    await user.click(trigger);
-    const dialog = await screen.findByRole("dialog", { name: "Inviter quelqu'un" });
-    // focus moves into the dialog; cycling through Base UI's focus guards needs a real browser
-    // (jsdom does not run them), so the e2e open-states spec checks the trap with Tab
-    await waitFor(() => expect(dialog.contains(document.activeElement)).toBe(true));
-    await user.tab();
-    expect(dialog.contains(document.activeElement)).toBe(true);
-    await expectAccessible();
-    await user.keyboard("{Escape}");
-    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
-    expect(trigger).toHaveFocus();
   });
 
   it("AlertDialog: named, its cancel closes it", async () => {

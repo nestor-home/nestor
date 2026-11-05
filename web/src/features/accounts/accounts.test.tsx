@@ -47,21 +47,12 @@ describe("accounts", () => {
     expect(await screen.findByText("Léa's account disabled.")).toBeInTheDocument();
   });
 
-  it("invites from a dialog that takes focus, closes on Escape and hands over the link", async () => {
+  // focus, Escape and focus back on this dialog are checked in a real browser (e2e/open-states.spec.ts)
+  it("invites from a dialog and hands over the link", async () => {
     const user = userEvent.setup();
     renderApp("/accounts");
-    const open = await screen.findByRole("button", { name: "Invite…" });
-    await user.click(open);
-    let dialog = await screen.findByRole("dialog", { name: "Invite someone" });
-    // focus goes into the dialog; cycling through the focus guards is checked in a real browser
-    // (e2e/open-states.spec.ts), jsdom does not run them
-    await waitFor(() => expect(dialog.contains(document.activeElement)).toBe(true));
-    await user.keyboard("{Escape}");
-    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
-    expect(open).toHaveFocus();
-
-    await user.click(open);
-    dialog = await screen.findByRole("dialog", { name: "Invite someone" });
+    await user.click(await screen.findByRole("button", { name: "Invite…" }));
+    const dialog = await screen.findByRole("dialog", { name: "Invite someone" });
     const person = within(dialog).getByRole("combobox", { name: "Household member" });
     await user.clear(person);
     await user.type(person, "jul");

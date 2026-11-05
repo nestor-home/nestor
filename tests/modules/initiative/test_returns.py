@@ -158,6 +158,8 @@ async def test_the_person_answering_a_result_is_answered_with_it_in_mind() -> No
     assert "Result: tout est vert" in history[0].content and "not said by anyone here" in history[0].content
     [internal] = await home.journal.history(NotificationTurn)
     assert (internal.about, internal.person, internal.address) == ("task t1 completed", MATHIS.id, TELEGRAM)
+    [said] = [t for t in await home.journal.history(AssistantTurn) if t.exchange == internal.exchange]
+    assert said.text == "Ton analyse est finie : tout est vert.", "the message and what caused it share their turn"
 
 
 async def test_a_result_asked_in_writing_goes_where_the_person_reads() -> None:

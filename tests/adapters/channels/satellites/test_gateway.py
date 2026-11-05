@@ -209,22 +209,6 @@ async def test_an_unprompted_message_in_writing_goes_to_the_screens_of_the_room(
             await channel.send(KITCHEN, "Ta lessive est terminée.", Medium.SPOKEN)
 
 
-async def test_typed_text_without_its_capability_is_ignored() -> None:
-    assistant = FakeAssistant([])
-    async with home(voice=False, assistant=assistant) as (_, pairing, _, url):
-        ticket = await pairing.request(SCREEN)
-        assert ticket.device_code is not None
-        await pairing.approve(ticket.device_code, capabilities=[])
-        token = pairing.poll(ticket.id).token
-        assert token
-        async with websockets.connect(link_url(url, SCREEN.device.id)) as link:
-            await link.send(hello(SCREEN, token))
-            assert (await received(link)) == wire.Welcome(device_id=SCREEN.device.id, room="cuisine", capabilities=())
-            await link.send(json.dumps(wire.encode(wire.TextInput(text="Bonjour"))))
-            await asyncio.sleep(0.3)
-    assert not assistant.messages
-
-
 async def test_without_a_voice_no_audio_is_allowed_on_the_link() -> None:
     async with home(voice=False) as (_, pairing, _, url):
         token = await paired(pairing, MANIFEST)

@@ -16,7 +16,7 @@ import { tr } from "@/i18n/runtime";
 import { cn } from "@/lib/utils";
 
 // Nestor: the state lives in localStorage (per browser, never sent to the server)
-export const SIDEBAR_STORAGE_KEY = "nestor.sidebar";
+const SIDEBAR_STORAGE_KEY = "nestor.sidebar";
 const SIDEBAR_WIDTH = "15rem";
 const SIDEBAR_WIDTH_MOBILE = "18rem";
 const SIDEBAR_WIDTH_ICON = "3.25rem";

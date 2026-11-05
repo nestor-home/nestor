@@ -2,6 +2,7 @@
 
 import asyncio
 import base64
+import contextlib
 import hashlib
 import json
 import urllib.parse
@@ -43,14 +44,16 @@ class Setup:
         self.mail = ScriptedConnector()
         self.imap = ScriptedConnector("imap", auth=AuthKind.SECRET, account="mathilde@free.fr")
         self.connections = Connections(self.journal, self.vault, self.provider, [self.mail, self.imap])
+        self.state = self.verifier = ""  # of the last flow completed by connect()
 
     async def connect(self) -> str:
         await self.connections.set_client("mailbox", "client-123", "s3cret")
         url = await self.connections.begin("mailbox", MATHIS, REDIRECT)
         query = dict(urllib.parse.parse_qsl(urllib.parse.urlsplit(url).query))
-        verifier = next(iter(self.connections._pending.values())).verifier  # what only Nestor knows
-        code = self.provider.authorize(query["client_id"], verifier)
-        connection = await self.connections.complete(query["state"], code)
+        self.verifier = next(iter(self.connections._pending.values())).verifier  # what only Nestor knows
+        code = self.provider.authorize(query["client_id"], self.verifier)
+        self.state = query["state"]
+        connection = await self.connections.complete(self.state, code)
         return connection.id
 
 
@@ -87,6 +90,9 @@ async def test_a_forged_or_replayed_callback_is_refused() -> None:
     await setup.connect()
     with pytest.raises(ContractError, match="unknown or expired"):
         await setup.connections.complete("forged-state", "code")
+    replayed = setup.provider.authorize("client-123", setup.verifier)  # a fresh code, the same flow
+    with pytest.raises(ContractError, match="unknown or expired"):
+        await setup.connections.complete(setup.state, replayed)
 
 
 async def test_a_code_obtained_with_another_verifier_is_refused_and_nothing_is_kept() -> None:
@@ -244,5 +250,11 @@ async def test_inbound_items_flow_from_connections_plugged_in_while_running() ->
 
     await setup.connections.disconnect(connection_id)
     await asyncio.sleep(0.01)
-    assert inbound._feeds == {}, "an unplugged account is no longer followed"
+    setup.mail.inbox.deliver(Incoming(source="mailbox", kind="mail", title="Après le débranchement"))
+    later = asyncio.ensure_future(anext(feed))
+    done, _ = await asyncio.wait({later}, timeout=0.1)
+    assert not done, "an unplugged account is no longer followed"
+    later.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await later
     await feed.aclose()

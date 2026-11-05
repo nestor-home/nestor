@@ -1,12 +1,12 @@
 """Wake-ups: when they are due, run once each time even across restarts, as a background turn with tools."""
 
-from datetime import UTC, datetime, time
+from datetime import datetime, time
 from typing import Any
 from zoneinfo import ZoneInfo
 
 import pytest
 
-from nestor.core import ContractError, PersonId
+from nestor.core import PersonId
 from nestor.modules.channels import Address
 from nestor.modules.cognition.model import ToolCall
 from nestor.modules.cognition.tools import Toolbox, ToolContext, ToolFailed
@@ -43,19 +43,6 @@ def test_a_recurring_wake_up_is_next_due_at_its_first_time_on_one_of_its_days() 
     assert weekdays.next_due(paris(6, 19), "Europe/Paris") == paris(9, 8), "Friday evening, then Monday"
     once = Schedule(id="o", instruction="x", at=paris(3, 9))
     assert (once.next_due(paris(2, 9), "UTC"), once.next_due(paris(3, 9), "UTC")) == (paris(3, 9), None)
-
-
-@pytest.mark.parametrize(
-    ("kwargs", "error"),
-    [
-        ({}, "either once"),
-        ({"at": datetime(2026, 11, 3, tzinfo=UTC), "times": (time(8),)}, "either once"),
-        ({"times": (time(8),), "days": ("monday",)}, "unknown days monday"),
-    ],
-)
-def test_a_wake_up_runs_either_once_or_at_times_on_known_days(kwargs: dict[str, Any], error: str) -> None:
-    with pytest.raises(ContractError, match=error):
-        Schedule(id="s", instruction="x", **kwargs)
 
 
 class Clock:
@@ -157,6 +144,7 @@ async def test_a_one_off_ends_once_run_and_a_cancelled_one_never_runs() -> None:
         ({"instruction": "x", "at": "demain"}, "cannot read the time"),
         ({"instruction": "x", "times": ["08:00"], "days": ["lundi"]}, "unknown days lundi"),
         ({"instruction": "x"}, "either once"),
+        ({"instruction": "x", "at": "2026-11-03T09:00", "times": ["08:00"]}, "either once"),
     ],
 )
 async def test_a_wake_up_that_cannot_be_set_says_why(arguments: dict[str, object], error: str) -> None:

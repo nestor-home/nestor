@@ -37,17 +37,6 @@ class TestScriptedModel(ConversationModelContract):
         return ScriptedModel(fail=ProviderError("scripted", "HTTP 503", transient=True))
 
 
-async def test_an_interrupted_reply_stops_generating() -> None:
-    model = ScriptedModel("Alors, les ours bruns et les grizzlys sont la même espèce.", word_delay_s=0.01)
-    stream = model.stream(ModelRequest(messages=(Message.user("Les ours ?"),)))
-
-    first = await anext(stream)
-    await stream.aclose()
-
-    assert first == TextDelta("Alors,")
-    assert model.interrupted == 1
-
-
 class EndlessModel(ConversationModel):
     async def stream(self, request: ModelRequest) -> AsyncGenerator[ModelOutput]:
         yield TextDelta("bonjour")

@@ -63,8 +63,10 @@ def test_the_feed_lists_each_release_with_its_changes_in_plain_text_breaking_one
 
 
 def test_the_changelog_of_this_checkout_makes_a_valid_feed() -> None:
-    releases = Releases.from_json(_script().feed((SCRIPT.parent.parent / "CHANGELOG.md").read_text()))
-    assert releases.latest is not None
+    root = SCRIPT.parent.parent
+    releases = Releases.from_json(_script().feed((root / "CHANGELOG.md").read_text()))
+    released = json.loads((root / ".release-please-manifest.json").read_text())["."]
+    assert releases.latest is not None and releases.latest.version == released
 
 
 def test_a_change_before_any_section_is_not_counted_in_the_previous_release_s_section() -> None:
