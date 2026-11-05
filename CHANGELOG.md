@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.9.0](https://github.com/nestor-home/nestor/compare/v0.8.1...v0.9.0) (2026-11-05)
+
+
+### ⚠ BREAKING CHANGES
+
+* one turn at a time, tools that answer later, large results aside ([#83](https://github.com/nestor-home/nestor/issues/83))
+* who is speaking, shared satellites and voice recognition ([#75](https://github.com/nestor-home/nestor/issues/75))
+
+### Features
+
+* one turn at a time, tools that answer later, large results aside ([#83](https://github.com/nestor-home/nestor/issues/83)) ([f02eea3](https://github.com/nestor-home/nestor/commit/f02eea310066c5d0070d56718f8fdcefdc3acf48))
+* who is speaking, shared satellites and voice recognition ([#75](https://github.com/nestor-home/nestor/issues/75)) ([1e0f70f](https://github.com/nestor-home/nestor/commit/1e0f70f4674c582403f5c191fe72004e273b91ac))
+
+
+### Bug Fixes
+
+* **admin:** say which account two people share, and where ([#71](https://github.com/nestor-home/nestor/issues/71)) ([16ec78e](https://github.com/nestor-home/nestor/commit/16ec78e38ee03178c5ee126759a21b34f1992a2f))
+* **deps:** update dependency lucide-react to v1.67.0 ([#66](https://github.com/nestor-home/nestor/issues/66)) ([baa1a35](https://github.com/nestor-home/nestor/commit/baa1a355e60da0257eaa6d98a09e96ffbc350900))
+* **deps:** update dependency lucide-react to v1.68.0 ([#82](https://github.com/nestor-home/nestor/issues/82)) ([0d5bc94](https://github.com/nestor-home/nestor/commit/0d5bc942926e63c34c28b43b79c7fc31daf4fda9))
+
 ## [0.8.1](https://github.com/nestor-home/nestor/compare/v0.8.0...v0.8.1) (2026-11-04)
 
 
