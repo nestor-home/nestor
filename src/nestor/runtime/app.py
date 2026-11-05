@@ -15,6 +15,7 @@ from nestor import __version__
 from nestor.adapters.i18n import FluentLocalizer, catalogue_dirs
 from nestor.adapters.oauth import HttpxTokenEndpoint
 from nestor.adapters.releases import HttpReleaseFeed, PipInstaller, probe
+from nestor.adapters.storage.file import FileBlobStore
 from nestor.adapters.storage.sqlite import (
     GENERATE,
     SQLiteActivityStore,
@@ -36,9 +37,9 @@ from nestor.modules.cognition import ConversationModel, Executor
 from nestor.modules.cognition.delegation.assistant import Delegation
 from nestor.modules.cognition.delegation.service import TaskManager
 from nestor.modules.cognition.embedding import Embedder
-from nestor.modules.cognition.tools import Toolbox, ToolProvider
+from nestor.modules.cognition.tools import Results, Toolbox, ToolProvider
 from nestor.modules.connectors import ConnectedInbound, Connections, Connector, ConnectorTools, TokenEndpoint
-from nestor.modules.conversation import Agent, ChannelProfile, ModelChoice, Persona, Speakers
+from nestor.modules.conversation import Agent, AgentSettings, ChannelProfile, ModelChoice, Persona, Speakers
 from nestor.modules.home import PresenceSource
 from nestor.modules.household import Account, Household, Person, SharedAccount
 from nestor.modules.identity import VoiceEmbedder, Voices
@@ -50,10 +51,10 @@ from nestor.modules.initiative import (
     MessageTools,
     Messenger,
     QuietHours,
+    Returns,
     ScheduleBook,
     Scheduler,
     ScheduleTools,
-    TaskAnnouncer,
     Triage,
     WatchBook,
     WatchKeeper,
@@ -73,6 +74,7 @@ log = logging.getLogger("nestor")
 
 SECRET_KEY = "NESTOR_SECRET_KEY"
 DATABASE = "nestor.db"
+BLOBS = "blobs"  # what is too heavy for the journal, by content
 
 
 def database_path(data_dir: Path) -> Path:
@@ -254,7 +256,8 @@ class Nestor:
         schedule_tools = ScheduleTools(self.schedule_book)
         connector_tools = [ConnectorTools(self.connections)] if self.connections else []
         self.confirmations = Confirmations(self.journal, self.household, self.message_book)
-        toolbox = Toolbox(
+        self.blobs = FileBlobStore(config.data_dir / BLOBS)
+        self.toolbox = toolbox = Toolbox(
             self.journal,
             providers=[
                 self.speakers,
@@ -268,6 +271,7 @@ class Nestor:
                 *connector_tools,
             ],
             in_writing=self.confirmations,
+            results=Results(self.journal, self.blobs, budget=config.agent.tool_result_chars),
         )
         self.agent = Agent(
             models=ModelChoice(
@@ -283,6 +287,9 @@ class Nestor:
             channels={c.channel_id: ChannelProfile(c.style, c.conversation_ends_after_s) for c in self.channels},
             context=[delegation, memory, watch_tools, message_tools, schedule_tools, self.confirmations],
             speakers=self.speakers,
+            settings=AgentSettings(
+                spoken_tool_wait_s=config.agent.spoken_tool_wait_s, written_tool_wait_s=config.agent.written_tool_wait_s
+            ),
         )
         initiative = config.initiative
         quiet_hours = QuietHours.parse(initiative.quiet_hours) if initiative.quiet_hours else None
@@ -299,7 +306,7 @@ class Nestor:
             follow_up_after_s=initiative.follow_up_after_s,
         )
         self.confirmations.attach(self.courier, lambda call, context: toolbox.call(call, context, confirmed=True))
-        self.announcer = TaskAnnouncer(self.journal, self.household, self.courier)
+        self.returns = Returns(self.journal, self.household, self.courier)
         self.messenger = Messenger(self.message_book, self.household, self.courier)
         self.scheduler = Scheduler(self.schedule_book, self.agent, self.household)
         self.watches = WatchKeeper(
@@ -354,11 +361,12 @@ class Nestor:
             self.speakers,
             *self.executors,
             *self.tools,
+            self.toolbox,  # after its tools: its calls in the background stop first
             *presence,
             self.tasks,
             *self.channels,
             self.courier,
-            self.announcer,
+            self.returns,
             self.message_book,
             self.messenger,
             self.confirmations,

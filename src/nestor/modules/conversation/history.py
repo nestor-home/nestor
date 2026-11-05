@@ -6,12 +6,12 @@ from typing import Protocol
 from nestor.core import Event
 from nestor.modules.channels import Exchange
 from nestor.modules.cognition.model import Message, Role, ToolCall
-from nestor.modules.cognition.tools import ToolCalled, ToolCompleted
+from nestor.modules.cognition.tools import ToolCalled, ToolCompleted, ToolDeferred
 from nestor.modules.conversation.events import AnswerCut, AssistantTurn, NotificationTurn, UserTurn
 from nestor.modules.conversation.types import Notification
 from nestor.modules.identity import Identified, Speaker
 
-HISTORY_EVENTS = (UserTurn, NotificationTurn, AssistantTurn, AnswerCut, ToolCalled, ToolCompleted)
+HISTORY_EVENTS = (UserTurn, NotificationTurn, AssistantTurn, AnswerCut, ToolCalled, ToolCompleted, ToolDeferred)
 
 
 type Names = Callable[[Speaker], str | None]
@@ -43,9 +43,10 @@ def to_messages(events: Sequence[Event], *, names: Names | None = None) -> tuple
     """Turn log events into model messages. A tool call without its result (crash midway, or cut by
     the window) is dropped, since models refuse unanswered calls. A message written just before a
     tool call goes back with it, as the model wrote them. An unprompted message comes after the notification that
-    caused it, so an answer to it knows what it was about. On a shared device, where several people may
+    caused it, so an answer to it knows what it was about. A call that went on in the background keeps what the model
+    received then; its result comes back later as a notification. On a shared device, where several people may
     speak in one conversation, `names` labels each message with who said it, when anyone knows."""
-    results = {e.call_id: e for e in events if isinstance(e, ToolCompleted)}
+    results = {e.call_id: e for e in events if isinstance(e, ToolCompleted | ToolDeferred)}
     cut = heard(events)
     messages: list[Message] = []
     for event in events:

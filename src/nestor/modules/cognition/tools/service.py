@@ -1,14 +1,16 @@
 """The toolbox: every tool the agent may call, run safely and logged."""
 
 import asyncio
+import contextlib
 import json
 import time
 from collections.abc import Iterable, Sequence
 
-from nestor.core import ContractError
+from nestor.core import Component, ContractError
 from nestor.modules.cognition.model import ToolCall, ToolSpec
-from nestor.modules.cognition.tools.events import ToolCalled, ToolCompleted
+from nestor.modules.cognition.tools.events import ToolCalled, ToolCompleted, ToolDeferred, ToolReturned
 from nestor.modules.cognition.tools.ports import InWriting, ToolProvider
+from nestor.modules.cognition.tools.results import Results
 from nestor.modules.cognition.tools.types import Risk, Tool, ToolContext, ToolFailed, ToolOutput
 from nestor.modules.identity import Identified
 from nestor.modules.journal import Journal
@@ -16,9 +18,13 @@ from nestor.modules.journal import Journal
 CONFIRMED = {"type": "boolean", "description": "true only once the person explicitly agreed to this exact action"}
 
 
-class Toolbox:
+class Toolbox(Component):
     """Fixed tools plus providers whose tools may change. A failing tool never breaks the
     conversation: the model receives the error and says so.
+
+    A turn waits for a call a while at most (`wait_s`): past that, the call goes on in the background, the model is told
+    its result will come back, and the turn ends; the agent stays available. The result comes back as `ToolReturned`,
+    which the conversation receives as a notification. A result too long for a turn goes to `results`.
 
     It is also where who asked matters, the same for every tool:
     - a sensitive call is confirmed by the person who asks: in the conversation on their own account (the model
@@ -28,24 +34,39 @@ class Toolbox:
       written to them rather than said in the room.
     """
 
+    name = "toolbox"
+
     def __init__(
         self,
         journal: Journal,
         tools: Iterable[Tool] = (),
         providers: Iterable[ToolProvider] = (),
         in_writing: InWriting | None = None,
+        results: Results | None = None,
     ) -> None:
         self._journal = journal
         self._fixed = tuple(tools)
-        self._providers = tuple(providers)
+        self._providers = (*providers, *((results,) if results else ()))
         self.in_writing = in_writing  # set once built: it runs confirmed calls through this toolbox
+        self._results = results
+        self._late: set[asyncio.Task[None]] = set()  # deferred calls still running
         self._tools()  # fail early on duplicate names
+
+    async def close(self) -> None:
+        """Stop the deferred calls: their results never come back (`Returns` tells so after a restart)."""
+        for task in tuple(self._late):
+            task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await task
 
     def specs(self) -> tuple[ToolSpec, ...]:
         return tuple(_spec(tool) for tool in self._tools().values())
 
-    async def call(self, call: ToolCall, context: ToolContext, *, confirmed: bool = False) -> str:
-        """Run `call` for `context`; `confirmed`: the person agreed to it in writing already."""
+    async def call(
+        self, call: ToolCall, context: ToolContext, *, confirmed: bool = False, wait_s: float | None = None
+    ) -> str:
+        """Run `call` for `context`; `confirmed`: the person agreed to it in writing already. `wait_s`: how long the
+        turn waits for it before it goes on in the background; `None`, until it ends."""
         await self._journal.publish(
             ToolCalled(
                 source="toolbox",
@@ -59,7 +80,15 @@ class Toolbox:
             )
         )
         started = time.monotonic()
-        output, ok = await self._run(call, context, confirmed=confirmed)
+        running = asyncio.create_task(self._result(call, context, confirmed=confirmed), name=f"tool {call.name}")
+        try:
+            await asyncio.wait({running}, timeout=wait_s)
+        except asyncio.CancelledError:  # the turn was cut: so is what it waited for
+            running.cancel()
+            raise
+        if not running.done():
+            return await self._defer(call, context, running, started)
+        output, ok = running.result()
         await self._journal.publish(
             ToolCompleted(
                 source="toolbox",
@@ -68,11 +97,60 @@ class Toolbox:
                 name=call.name,
                 output=output,
                 ok=ok,
-                duration_s=round(time.monotonic() - started, 3),
+                duration_s=_since(started),
                 exchange=context.exchange,
             )
         )
         return output
+
+    async def _defer(
+        self, call: ToolCall, context: ToolContext, running: asyncio.Task[tuple[str, bool]], started: float
+    ) -> str:
+        output = json.dumps(
+            {
+                "pending": f"{call.name} is still running. Its result will come back in this conversation by itself: "
+                "say so if it matters, do not wait for it or call it again."
+            }
+        )
+        await self._journal.publish(
+            ToolDeferred(
+                source="toolbox",
+                session=context.address.session,
+                address=context.address,
+                call_id=call.id,
+                name=call.name,
+                arguments=dict(call.arguments),
+                output=output,
+                person=context.person,
+                exchange=context.exchange,
+            )
+        )
+
+        async def returned() -> None:
+            result, ok = await running
+            await self._journal.publish(
+                ToolReturned(
+                    source="toolbox",
+                    session=context.address.session,
+                    call_id=call.id,
+                    name=call.name,
+                    output=result,
+                    ok=ok,
+                    duration_s=_since(started),
+                    exchange=context.exchange,
+                )
+            )
+
+        late = asyncio.create_task(returned(), name=f"tool {call.name} returning")
+        self._late.add(late)
+        late.add_done_callback(self._late.discard)
+        return output
+
+    async def _result(self, call: ToolCall, context: ToolContext, *, confirmed: bool) -> tuple[str, bool]:
+        output, ok = await self._run(call, context, confirmed=confirmed)
+        if ok and self._results is not None:
+            output = await self._results.fit(call, output, context)
+        return output, ok
 
     async def _run(self, call: ToolCall, context: ToolContext, *, confirmed: bool) -> tuple[str, bool]:
         tool = self._tools().get(call.name)
@@ -133,6 +211,10 @@ def _spec(tool: Tool) -> ToolSpec:
     parameters["properties"] = {**(existing if isinstance(existing, dict) else {}), "confirmed": CONFIRMED}
     description = f"{tool.spec.description} Sensitive: the person confirms first."
     return ToolSpec(tool.spec.name, description, parameters)
+
+
+def _since(started: float) -> float:
+    return round(time.monotonic() - started, 3)
 
 
 def _text(output: ToolOutput) -> str:

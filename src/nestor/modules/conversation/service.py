@@ -85,6 +85,12 @@ class AgentSettings:
     max_tool_rounds: int = 6
     history_events: int = 60
     slow_after_s: float = 4.0  # spoken channels say a filler when the first words take longer
+    # how long a turn waits for a tool before it goes on in the background: a voice cannot stay silent long
+    spoken_tool_wait_s: float = 3.0
+    written_tool_wait_s: float = 20.0
+
+    def tool_wait_s(self, medium: Medium) -> float:
+        return self.spoken_tool_wait_s if medium is Medium.SPOKEN else self.written_tool_wait_s
 
 
 class LiveReplies:
@@ -284,29 +290,31 @@ class AgentReply(Reply):
         try:
             opening = self._opening
             if isinstance(opening, InboundMessage):
-                self._speaker = await agent.speakers.of(
-                    opening, await agent.conversations.current(self._address, self._medium)
+                async with agent.conversations.free(self._address):  # after the turn in progress, if any
+                    await self._reply_to(opening)
+            else:  # a background turn belongs to no conversation; a notification's draft, to the open one if any
+                conversation = (
+                    None if self._unattended else await agent.conversations.current(self._address, self._medium)
                 )
-                self._person = agent.household.person(self._speaker.person) if self._speaker.person else None
-                self._turn = await agent.conversations.turn(self._address, self._medium)
-                conversation: str | None = self._turn.exchange.conversation_id
-                said = await self._turn.said(opening.text, self._medium, self._speaker)
-                agent.speakers.learn(opening.heard, said)
-                if phrase := await agent.speakers.enrolling(opening):  # a phrase of a voice being recorded
-                    self._say(phrase)
-                    await self._end_message()
-                    self._end_turn()
-                    return
-            elif self._unattended:  # a background turn belongs to no conversation
-                conversation = None
-            else:  # a notification's answer, drafted in the open conversation, if any
-                conversation = await agent.conversations.current(self._address, self._medium)
-            await self._answer(conversation)
-            await self._end_message()
+                await self._answer(conversation)
+                await self._end_message()
             self._end_turn()
         finally:
             self._agent.replies.set(self, None)
             self._chunks.put_nowait(None)
+
+    async def _reply_to(self, message: InboundMessage) -> None:
+        agent = self._agent
+        self._speaker = await agent.speakers.of(message, await agent.conversations.current(self._address, self._medium))
+        self._person = agent.household.person(self._speaker.person) if self._speaker.person else None
+        self._turn = await agent.conversations.turn(self._address, self._medium)
+        said = await self._turn.said(message.text, self._medium, self._speaker)
+        agent.speakers.learn(message.heard, said)
+        if phrase := await agent.speakers.enrolling(message):  # a phrase of a voice being recorded
+            self._say(phrase)
+        else:
+            await self._answer(self._turn.exchange.conversation_id)
+        await self._end_message()
 
     async def _answer(self, conversation: str | None) -> None:
         agent = self._agent
@@ -325,6 +333,7 @@ class AgentReply(Reply):
         ]
         exchange = self._turn.exchange if self._turn else None
         context = ToolContext(address=self._address, speaker=self._speaker, exchange=exchange)
+        wait_s = None if self._unattended else agent.settings.tool_wait_s(self._medium)  # nobody waits for a wake-up
         for _ in range(agent.settings.max_tool_rounds):
             try:
                 text, calls = await self._round(messages)
@@ -336,7 +345,7 @@ class AgentReply(Reply):
                 return
             messages.append(Message(role=Role.ASSISTANT, content=text, tool_calls=calls))
             agent.replies.set(self, ReplyPhase.THINKING)
-            outputs = await asyncio.gather(*(agent.toolbox.call(call, context) for call in calls))
+            outputs = await asyncio.gather(*(agent.toolbox.call(call, context, wait_s=wait_s) for call in calls))
             messages += [
                 Message(role=Role.TOOL, content=o, tool_call_id=c.id) for c, o in zip(calls, outputs, strict=True)
             ]

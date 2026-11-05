@@ -14,11 +14,14 @@ it while it lasts.
 
 This module is the only one that writes a conversation and reads it back, always in the journal: a `Turn` writes
 what happens in one turn (what opened it, the answers, a cut, a fallback), `history` reads a conversation as the
-model sees it.
+model sees it. It is also where turns wait for each other: one at a time per session (`free`).
 """
 
-from collections.abc import Callable
-from dataclasses import dataclass
+import asyncio
+import contextlib
+from collections.abc import AsyncGenerator, Callable
+from contextvars import ContextVar
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 
 from nestor.core import Event, PersonId, SessionId, new_id, utc_now
@@ -31,6 +34,7 @@ from nestor.modules.identity import Speaker
 from nestor.modules.journal import Journal
 
 SOURCE = "agent"
+_HELD: ContextVar[frozenset[SessionId]] = ContextVar("held", default=frozenset())  # sessions this task's turn holds
 
 
 class Turn:
@@ -105,6 +109,12 @@ class Turn:
         return event
 
 
+@dataclass(slots=True)
+class _Queue:
+    lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+    users: int = 0  # holding it or waiting for it
+
+
 @dataclass(frozen=True, slots=True)
 class _Open:
     id: str
@@ -126,6 +136,30 @@ class Conversations:
         self._clock = clock
         self._open: dict[SessionId, _Open] = {}
         self._loaded: set[SessionId] = set()
+        self._queues: dict[SessionId, _Queue] = {}
+
+    @contextlib.asynccontextmanager
+    async def free(self, address: Address) -> AsyncGenerator[None]:
+        """Wait for the session's turn in progress to end, then hold the session until this one ends: one turn at a
+        time, in the order they came (two typed messages, a notification that waits for the answer being written).
+        What the turn starts (its tools, a confirmation written to the same place) holds it too."""
+        session = address.session
+        if session in _HELD.get():
+            yield
+            return
+        queue = self._queues.setdefault(session, _Queue())
+        queue.users += 1
+        try:
+            async with queue.lock:
+                held = _HELD.set(_HELD.get() | {session})
+                try:
+                    yield
+                finally:
+                    _HELD.reset(held)
+        finally:
+            queue.users -= 1
+            if not queue.users:
+                del self._queues[session]
 
     async def turn(self, address: Address, medium: Medium) -> Turn:
         """A new turn in this session: in its open conversation, or in a new one when the last turn is
