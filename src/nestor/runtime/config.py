@@ -18,6 +18,8 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, ValidationIn
 
 from nestor.core import NestorError, PersonId
 from nestor.modules.channels import Address
+from nestor.modules.cognition.tools.results import RESULT_CHARS
+from nestor.modules.conversation import AgentSettings
 from nestor.modules.household import Account, Person
 from nestor.modules.identity import VoiceSettings
 from nestor.modules.initiative import QuietHours
@@ -150,6 +152,9 @@ class AdapterConfig(ComponentConfig):
     name: str | None = None
 
 
+_AGENT = AgentSettings()
+
+
 class AgentConfig(Section):
     """Which model of `models` answers in each medium. One left out takes the other's; with a single
     model, neither needs saying."""
@@ -159,6 +164,11 @@ class AgentConfig(Section):
     background: str | None = Field(
         default=None, json_schema_extra=LANGUAGE_MODEL
     )  # wake-ups: the written one by default
+    # how long a turn waits for a tool before it goes on in the background and its result comes back by itself
+    spoken_tool_wait_s: float = Field(default=_AGENT.spoken_tool_wait_s, gt=0, le=60)
+    written_tool_wait_s: float = Field(default=_AGENT.written_tool_wait_s, gt=0, le=600)
+    # past this, a tool's result goes to the blob store and the turn keeps its start and end
+    tool_result_chars: int = Field(default=RESULT_CHARS, ge=1000, le=200_000)
 
 
 class WatchesConfig(Section):

@@ -71,7 +71,7 @@ class Tool:
     risk: Risk = Risk.READ
     assess: Callable[[Mapping[str, object]], Risk] | None = None
     owner: PersonId | None = None
-    timeout_s: float = 10.0
+    timeout_s: float = 60.0  # at most: past the turn's wait, it goes on in the background
 
     @property
     def name(self) -> str:

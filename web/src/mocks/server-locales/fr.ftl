@@ -61,6 +61,10 @@ journal-delivery-considered = { $known ->
        *[other] { $status }
     }
     [watch] veille { $id }
+    [tool] résultat d'un outil{ $status ->
+        [failed] {" "}(en échec)
+       *[other] {""}
+    }
    *[other] { $about }
 }{ $follow_up ->
     [yes] {" "}(relance)
@@ -74,6 +78,10 @@ journal-delivered = Message transmis : { $subject ->
        *[other] { $status }
     }
     [watch] veille { $id }
+    [tool] résultat d'un outil{ $status ->
+        [failed] {" "}(en échec)
+       *[other] {""}
+    }
    *[other] { $about }
 }{ $follow_up ->
     [yes] {" "}(relance)
@@ -87,6 +95,10 @@ journal-delivery-failed = Message non transmis : { $subject ->
        *[other] { $status }
     }
     [watch] veille { $id }
+    [tool] résultat d'un outil{ $status ->
+        [failed] {" "}(en échec)
+       *[other] {""}
+    }
    *[other] { $about }
 }{ $follow_up ->
     [yes] {" "}(relance)

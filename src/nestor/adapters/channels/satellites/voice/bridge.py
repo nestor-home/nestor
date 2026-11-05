@@ -209,7 +209,8 @@ class AssistantBridge(FrameProcessor):
                     await self.push_frame(LLMTextFrame(text))
                     await self.push_frame(LLMFullResponseEndFrame())
                 self._show(text)
-                spoken.set_result(None)
+                if not spoken.done():  # the sender may have stopped waiting meanwhile
+                    spoken.set_result(None)
             finally:
                 _abandon(spoken)
 

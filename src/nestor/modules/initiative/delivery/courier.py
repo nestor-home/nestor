@@ -134,17 +134,21 @@ class Courier(Component):
     async def _send(
         self, person: Person | None, address: Address, medium: Medium, notification: Notification
     ) -> Address | None:
-        """Compose the answer to `notification` for this conversation, send it, then record both as its turn."""
+        """Compose the answer to `notification` for this conversation once it is free, send it, then record both as
+        its turn."""
         channel = self.channels.get(address.channel)
         if channel is None or not channel.reachable(address, medium):
             return None
-        texts = await self.agent.compose(address, person, notification, medium)
-        try:
+        conversations = self.agent.conversations
+        async with conversations.free(address):  # drafted after the answer being written, never in its middle
+            texts = await self.agent.compose(address, person, notification, medium)
+        try:  # sent without holding the conversation: a voice says it once the person is answered
             for text in texts:
                 await channel.send(address, text, medium)
         except ProviderError:
             return None
-        await self.agent.delivered(address, person, notification, medium, texts)
+        async with conversations.free(address):  # recorded after what was said meanwhile, as it was heard
+            await self.agent.delivered(address, person, notification, medium, texts)
         await self.journal.publish(
             Delivered(source=self.name, address=address, about=notification.about, person=person.id if person else None)
         )

@@ -37,7 +37,7 @@ from nestor.modules.cognition import (
     TaskProgressed,
     TaskStarted,
 )
-from nestor.modules.cognition.tools import ToolCalled, ToolCompleted
+from nestor.modules.cognition.tools import ResultStored, ToolCalled, ToolCompleted, ToolDeferred, ToolReturned
 from nestor.modules.connectors import ConnectionChanged, ConnectionCreated, ConnectionRemoved
 from nestor.modules.conversation import (
     AnswerCut,
@@ -60,6 +60,7 @@ from nestor.modules.initiative import (
     ScheduleCancelled,
     ScheduleCreated,
     ScheduleFired,
+    ToolResultDelivered,
     WatchCreated,
     WatchEnded,
     WatchSorted,
@@ -94,7 +95,8 @@ DETAIL_LIMIT = 600
 OTHER_KEY = "other"
 CLI = "cli"  # who did it, for an effect asked from the command line rather than by an account
 _SUBJECT = re.compile(
-    r"^(?:task (?P<task>\S+) (?P<status>\w+)|watch (?P<watch>\S+)|message (?P<message>\S+)(?P<bounce> undelivered)?)"
+    r"^(?:(?P<kind>task|tool) (?P<id>\S+) (?P<status>\w+)|watch (?P<watch>\S+)|message (?P<message>\S+)"
+    r"(?P<bounce> undelivered)?)"
     r"(?P<follow> \(follow-up\))?$"
 )
 
@@ -121,7 +123,19 @@ CATEGORIES = (
         "delivery",
         (DeliveryConsidered, Delivered, DeliveryFailed, MessageRequested, MessageDelivered, MessageUndelivered),
     ),
-    Category("tool", (ToolCalled, ToolCompleted, ConfirmationRequested, ConfirmationAnswered)),
+    Category(
+        "tool",
+        (
+            ToolCalled,
+            ToolCompleted,
+            ToolDeferred,
+            ToolReturned,
+            ResultStored,
+            ToolResultDelivered,
+            ConfirmationRequested,
+            ConfirmationAnswered,
+        ),
+    ),
     Category("task", (TaskStarted, TaskAttached, TaskProgressed, TaskCancelRequested, TaskEnded, TaskDelivered)),
     Category("watch", (WatchCreated, WatchSorted, WatchTriggered, WatchEnded)),
     Category("schedule", (ScheduleCreated, ScheduleFired, ScheduleCancelled)),
@@ -188,15 +202,16 @@ def unknown_message(event_type: str, fields: Mapping[str, object] | None = None)
 
 
 def subject(about: str) -> dict[str, str]:
-    """What an unprompted message was about, as arguments: `task 3f2a completed`, `watch 9d (follow-up)`,
+    """What an unprompted message was about, as arguments: `task 3f2a completed`, `tool c1 returned` (a call that
+    went on in the background), `watch 9d (follow-up)`,
     `message 7c` (passed on), `message 7c undelivered` (telling whoever asked that it did not get through)."""
     match = _SUBJECT.match(about)
     if match is None:
         return {"subject": "other", "id": "", "status": "", "follow_up": "no", "about": about}
-    kind = "task" if match["task"] else "watch" if match["watch"] else "message"
+    kind = match["kind"] or ("watch" if match["watch"] else "message")
     return {
         "subject": kind,
-        "id": match["task"] or match["watch"] or match["message"],
+        "id": match["id"] or match["watch"] or match["message"],
         "status": match["status"] or ("undelivered" if match["bounce"] else ""),
         "follow_up": "yes" if match["follow"] else "no",
         "about": about,
@@ -255,6 +270,18 @@ class EventDescriber:
                 tool=e.name,
             ),
             ToolCompleted: self._tool_completed,
+            ToolDeferred: lambda e: self._line(
+                e,
+                Message.of("journal-tool-deferred", tool=e.name),
+                people=[e.person],
+                channels=[e.address],
+                tool=e.name,
+            ),
+            ToolReturned: self._tool_returned,
+            ResultStored: lambda e: self._line(e, Message.of("journal-tool-result-stored", size=e.size)),
+            ToolResultDelivered: lambda e: self._line(
+                e, Message.of("journal-tool-result-delivered", tool=e.tool), channels=[e.address], tool=e.tool
+            ),
             TaskStarted: lambda e: self._line(
                 e,
                 Message.of("journal-task-started", task=e.task_id, executor=e.executor),
@@ -562,6 +589,12 @@ class EventDescriber:
             people=[e.person],
             channels=[e.address],
         )
+
+    def _tool_returned(self, e: ToolReturned) -> Line:
+        key = "journal-tool-returned" if e.ok else "journal-tool-returned-failed"
+        message = Message.of(key, tool=e.name, seconds=e.duration_s)
+        tone = Tone.NORMAL if e.ok else Tone.WARNING
+        return self._line(e, message, detail=e.output, tone=tone, tool=e.name, outcome=(e.ok, e.duration_s))
 
     def _tool_completed(self, e: ToolCompleted) -> Line:
         outcome = (e.ok, e.duration_s)

@@ -4,9 +4,17 @@ import asyncio
 
 from nestor.core import PersonId, new_id
 from nestor.core.i18n import Message
-from nestor.modules.channels import Address, Exchange, Medium
+from nestor.modules.channels import Address, Exchange, InboundMessage, Medium, Sender
 from nestor.modules.cognition.tools import Toolbox
-from nestor.modules.conversation import Agent, ModelChoice, Notification, Persona, UserTurn
+from nestor.modules.conversation import (
+    Agent,
+    AssistantTurn,
+    ModelChoice,
+    Notification,
+    NotificationTurn,
+    Persona,
+    UserTurn,
+)
 from nestor.modules.home import Granularity
 from nestor.modules.household import Account, Household, Person
 from nestor.modules.identity import Speaker
@@ -124,3 +132,21 @@ async def test_a_pending_follow_up_is_listed_until_it_is_sent() -> None:
         )
         await asyncio.sleep(0.1)
         assert sender.scheduled() == ()
+
+
+async def test_a_notification_waits_for_the_answer_being_written() -> None:
+    """Never in the middle of a turn: the message that comes by itself follows the answer in progress."""
+    sender, journal, _, telegram = courier(StaticPresence())
+    sender.agent.models = ModelChoice.single(
+        ScriptedModel("Je regarde ça tout de suite.", "Ton colis est arrivé.", word_delay_s=0.02)
+    )
+    asked = InboundMessage(address=TELEGRAM, sender=Sender("42"), text="Tu as vu mes mails ?")
+    async with sender:
+        reply = asyncio.create_task(sender.agent.respond(asked).collect())
+        await asyncio.sleep(0.01)  # the answer is being written
+        assert await sender.deliver(MATHIS, Notification("Le colis est arrivé.", "watch colis")) == TELEGRAM
+        await reply
+
+    turns = await journal.history(UserTurn, NotificationTurn, AssistantTurn)
+    assert [type(t).__name__ for t in turns] == ["UserTurn", "AssistantTurn", "NotificationTurn", "AssistantTurn"]
+    assert [text for _, text in telegram.sent] == ["Ton colis est arrivé."]

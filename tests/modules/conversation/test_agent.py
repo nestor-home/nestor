@@ -467,3 +467,30 @@ async def test_a_cut_is_shared_by_length_whatever_the_synthesis_made_of_the_word
     [_, second] = await journal.history(AssistantTurn)
     [cut] = await journal.history(AnswerCut)
     assert (cut.answer, cut.heard) == (second.id, "C'est")
+
+
+async def test_two_messages_sent_together_are_answered_one_after_the_other(make_agent: MakeAgent) -> None:
+    """One turn at a time per conversation: the second message is answered knowing the first answer."""
+    model = ScriptedModel("Il fait vingt degrés.", "Oui, au salon.", word_delay_s=0.01)
+    agent = make_agent(model=model)
+
+    first, second = await asyncio.gather(
+        agent.respond(message("Quelle température ?")).collect(), agent.respond(message("Au salon ?")).collect()
+    )
+
+    assert (first, second) == (("Il fait vingt degrés.",), ("Oui, au salon.",))
+    assert [m.content for m in model.requests[1].messages[1:]] == [
+        "Quelle température ?",
+        "Il fait vingt degrés.",
+        "Au salon ?",
+    ]
+
+
+async def test_an_interrupted_turn_frees_the_conversation_for_the_next(make_agent: MakeAgent) -> None:
+    agent = make_agent(model=ScriptedModel("Alors voilà une très longue histoire", "D'accord.", word_delay_s=0.05))
+    talking = agent.respond(message("Raconte", VOICE))
+    stream = aiter(talking)
+    await anext(stream)
+    await talking.interrupt("Alors")
+
+    assert await asyncio.wait_for(agent.respond(message("Stop", VOICE)).collect(), 1) == ("D'accord.",)

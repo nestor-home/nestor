@@ -33,6 +33,10 @@ journal-notification-turn = Pour { $assistant } : { $subject ->
        *[other] { $status }
     }
     [watch] veille { $id } déclenchée
+    [tool] résultat d'un outil{ $status ->
+        [failed] {" "}(en échec)
+       *[other] {""}
+    }
     [message] message { $id }{ $status ->
         [undelivered] {" "}non remis
        *[other] {" "}à transmettre
@@ -54,6 +58,11 @@ journal-detail-heard = Entendu : { $heard }
 journal-tool-called = Outil { $tool } appelé
 journal-tool-completed = Outil { $tool } terminé en { NUMBER($seconds, maximumFractionDigits: 1) } s
 journal-tool-failed = Outil { $tool } en échec
+journal-tool-deferred = Outil { $tool } toujours en cours : son résultat reviendra
+journal-tool-returned = Outil { $tool } a répondu après { NUMBER($seconds, maximumFractionDigits: 0) } s
+journal-tool-returned-failed = Outil { $tool } en échec après { NUMBER($seconds, maximumFractionDigits: 0) } s
+journal-tool-result-stored = Résultat long mis de côté ({ NUMBER($size) } caractères)
+journal-tool-result-delivered = Résultat de l'outil { $tool } transmis
 
 journal-task-started = Tâche { $task } confiée à { $executor }
 journal-task-attached = Tâche { $task } prise en charge par l'exécutant
@@ -78,6 +87,10 @@ journal-delivery-considered = { $known ->
        *[other] { $status }
     }
     [watch] veille { $id }
+    [tool] résultat d'un outil{ $status ->
+        [failed] {" "}(en échec)
+       *[other] {""}
+    }
     [message] message { $id }{ $status ->
         [undelivered] {" "}non remis
        *[other] {""}
@@ -95,6 +108,10 @@ journal-delivered = Message transmis : { $subject ->
        *[other] { $status }
     }
     [watch] veille { $id }
+    [tool] résultat d'un outil{ $status ->
+        [failed] {" "}(en échec)
+       *[other] {""}
+    }
     [message] message { $id }{ $status ->
         [undelivered] {" "}non remis
        *[other] {""}
@@ -119,6 +136,10 @@ journal-delivery-failed = Message non transmis : { $subject ->
        *[other] { $status }
     }
     [watch] veille { $id }
+    [tool] résultat d'un outil{ $status ->
+        [failed] {" "}(en échec)
+       *[other] {""}
+    }
     [message] message { $id }{ $status ->
         [undelivered] {" "}non remis
        *[other] {""}

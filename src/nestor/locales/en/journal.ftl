@@ -34,6 +34,10 @@ journal-notification-turn = For { $assistant }: { $subject ->
        *[other] { $status }
     }
     [watch] watch { $id } matched
+    [tool] result of a tool{ $status ->
+        [failed] {" "}(failed)
+       *[other] {""}
+    }
     [message] message { $id }{ $status ->
         [undelivered] {" "}not delivered
        *[other] {" "}to pass on
@@ -55,6 +59,11 @@ journal-detail-heard = Heard: { $heard }
 journal-tool-called = Tool { $tool } called
 journal-tool-completed = Tool { $tool } finished in { NUMBER($seconds, maximumFractionDigits: 1) } s
 journal-tool-failed = Tool { $tool } failed
+journal-tool-deferred = Tool { $tool } still running: its result will come back
+journal-tool-returned = Tool { $tool } answered after { NUMBER($seconds, maximumFractionDigits: 0) } s
+journal-tool-returned-failed = Tool { $tool } failed after { NUMBER($seconds, maximumFractionDigits: 0) } s
+journal-tool-result-stored = Long result kept aside ({ NUMBER($size) } characters)
+journal-tool-result-delivered = Result of tool { $tool } passed on
 
 journal-task-started = Task { $task } handed to { $executor }
 journal-task-attached = Task { $task } picked up by the executor
@@ -79,6 +88,10 @@ journal-delivery-considered = { $known ->
        *[other] { $status }
     }
     [watch] watch { $id }
+    [tool] result of a tool{ $status ->
+        [failed] {" "}(failed)
+       *[other] {""}
+    }
     [message] message { $id }{ $status ->
         [undelivered] {" "}not delivered
        *[other] {""}
@@ -96,6 +109,10 @@ journal-delivered = Message passed on: { $subject ->
        *[other] { $status }
     }
     [watch] watch { $id }
+    [tool] result of a tool{ $status ->
+        [failed] {" "}(failed)
+       *[other] {""}
+    }
     [message] message { $id }{ $status ->
         [undelivered] {" "}not delivered
        *[other] {""}
@@ -120,6 +137,10 @@ journal-delivery-failed = Message not passed on: { $subject ->
        *[other] { $status }
     }
     [watch] watch { $id }
+    [tool] result of a tool{ $status ->
+        [failed] {" "}(failed)
+       *[other] {""}
+    }
     [message] message { $id }{ $status ->
         [undelivered] {" "}not delivered
        *[other] {""}

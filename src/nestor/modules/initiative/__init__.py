@@ -3,7 +3,7 @@ the choice of where and when to say it.
 
 - `delivery`: the courier and its presence-aware policy
 - `watches`: durable watches, inbound sources, triage
-- `tasks`: announcing delegated task outcomes
+- `returns`: what comes back to a conversation by itself (ended tasks, results of deferred tool calls)
 - `messaging`: messages and questions passed on to someone of the household
 - `schedules`: wake-ups, the agent doing something later, once or regularly
 """
@@ -26,6 +26,7 @@ from nestor.modules.initiative.messaging import (
     MessageUndelivered,
     Messenger,
 )
+from nestor.modules.initiative.returns import Returns, ToolResultDelivered
 from nestor.modules.initiative.schedules import (
     Schedule,
     ScheduleBook,
@@ -35,7 +36,6 @@ from nestor.modules.initiative.schedules import (
     Scheduler,
     ScheduleTools,
 )
-from nestor.modules.initiative.tasks import TaskAnnouncer
 from nestor.modules.initiative.watches import (
     InboundEventSource,
     Incoming,
@@ -67,6 +67,7 @@ __all__ = [
     "Messenger",
     "Plan",
     "QuietHours",
+    "Returns",
     "Schedule",
     "ScheduleBook",
     "ScheduleCancelled",
@@ -74,7 +75,7 @@ __all__ = [
     "ScheduleFired",
     "ScheduleTools",
     "Scheduler",
-    "TaskAnnouncer",
+    "ToolResultDelivered",
     "Triage",
     "Verdict",
     "Watch",

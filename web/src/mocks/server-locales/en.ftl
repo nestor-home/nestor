@@ -62,6 +62,10 @@ journal-delivery-considered = { $known ->
        *[other] { $status }
     }
     [watch] watch { $id }
+    [tool] result of a tool{ $status ->
+        [failed] {" "}(failed)
+       *[other] {""}
+    }
    *[other] { $about }
 }{ $follow_up ->
     [yes] {" "}(follow-up)
@@ -75,6 +79,10 @@ journal-delivered = Message passed on: { $subject ->
        *[other] { $status }
     }
     [watch] watch { $id }
+    [tool] result of a tool{ $status ->
+        [failed] {" "}(failed)
+       *[other] {""}
+    }
    *[other] { $about }
 }{ $follow_up ->
     [yes] {" "}(follow-up)
@@ -88,6 +96,10 @@ journal-delivery-failed = Message not passed on: { $subject ->
        *[other] { $status }
     }
     [watch] watch { $id }
+    [tool] result of a tool{ $status ->
+        [failed] {" "}(failed)
+       *[other] {""}
+    }
    *[other] { $about }
 }{ $follow_up ->
     [yes] {" "}(follow-up)

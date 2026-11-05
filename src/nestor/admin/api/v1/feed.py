@@ -19,13 +19,14 @@ from nestor.core.events.codec import JSON
 from nestor.modules.accounts import Principal, Scope
 from nestor.modules.cognition import TaskEnded, TaskStarted
 from nestor.modules.cognition.delegation.events import TaskDelivered
-from nestor.modules.cognition.tools import ToolCalled, ToolCompleted
+from nestor.modules.cognition.tools import ResultStored, ToolCalled, ToolCompleted, ToolDeferred, ToolReturned
 from nestor.modules.conversation import AnswerCut, AssistantTurn, NotificationTurn, UserTurn
 from nestor.modules.identity import Identified
 from nestor.modules.initiative import (
     Delivered,
     DeliveryConsidered,
     DeliveryFailed,
+    ToolResultDelivered,
     WatchCreated,
     WatchEnded,
     WatchTriggered,
@@ -188,8 +189,12 @@ def _cause_rule(entry: Entry) -> _Rule | None:
     def of(cause: type, key: str) -> _Rule:
         return _Rule(frozenset({cause.event_type}), _same(key, payload.get(key)))  # ty: ignore[unresolved-attribute]
 
-    if kind == ToolCompleted.event_type:
+    if kind in (ToolCompleted.event_type, ToolDeferred.event_type, ResultStored.event_type):
         return of(ToolCalled, "call_id")
+    if kind == ToolReturned.event_type:
+        return of(ToolDeferred, "call_id")
+    if kind == ToolResultDelivered.event_type:
+        return of(ToolReturned, "call_id")
     if kind == TaskEnded.event_type:
         return of(TaskStarted, "task_id")
     if kind == TaskDelivered.event_type:
@@ -220,6 +225,8 @@ def _cause_rule(entry: Entry) -> _Rule | None:
             return _Rule(frozenset({WatchTriggered.event_type}), _same("watch_id", about["id"]))
         if about["subject"] == "task":
             return _Rule(frozenset({TaskEnded.event_type}), _same("task_id", about["id"]))
+        if about["subject"] == "tool":
+            return _Rule(frozenset({ToolReturned.event_type}), _same("call_id", about["id"]))
     return None
 
 
