@@ -80,7 +80,7 @@ def test_with_voice_satellites_speak_and_the_configuration_asks_for_its_key(tmp_
     assert set(secrets) == {"NESTOR_SECRET_KEY", "MODEL_API_KEY", "ELEVENLABS_API_KEY"}
     loaded = load_config(config, secrets)
     assert [c.kind for c in loaded.channels] == ["satellites"]
-    assert loaded.household[0].accounts == ("satellites:*",)
+    assert loaded.household[0].accounts == ()  # a satellite is a room: whoever is there may speak
 
 
 def test_a_local_model_passes_the_check_with_its_key_left_empty(

@@ -11,6 +11,7 @@ from dataclasses import dataclass
 
 from nestor.core import Component, ContractError, PersonId
 from nestor.modules.channels.types import Address, InboundMessage, Medium, Sender
+from nestor.modules.identity import Heard
 
 
 @dataclass(frozen=True, slots=True)
@@ -73,10 +74,22 @@ class Assistant(ABC):
 
     @abstractmethod
     def identify(self, address: Address, sender: Sender) -> PersonId | None:
-        """The household member behind a sender; `None` means a stranger, whom channels drop."""
+        """The household member behind an account; `None` means a stranger, whom channels drop. A shared device
+        asks nothing: it serves whoever is there (`InboundMessage.sender` is `None`)."""
 
     @abstractmethod
     def respond(self, message: InboundMessage) -> Reply: ...
+
+    @property
+    def voice_wait_s(self) -> float | None:
+        """How long a turn may wait for its voice to be recognised; `None` when voices are not, and a voice
+        channel need not hand any speech to `hear`."""
+        return None
+
+    async def hear(self, audio: bytes) -> Heard | None:
+        """Who said `audio` (16-bit mono PCM at 16 kHz), as far as their voice tells; `None` without recognition.
+        Called as soon as the speech ends, while it is transcribed, so that the turn does not wait for it."""
+        return None
 
 
 class Channel(Component, ABC):
@@ -85,7 +98,8 @@ class Channel(Component, ABC):
       when it raises, Nestor logs it and calls `serve` again after a pause, so it must be callable again;
     - `send` delivers an unprompted message (task result, initiative) through one of its `media` and
       raises `ProviderError` when it cannot: aloud with nobody connected, for instance;
-    - senders the channel cannot authenticate are dropped before reaching the assistant;
+    - senders the channel cannot authenticate are dropped before reaching the assistant, unless it is a shared
+      device that vouches for its place only (`sender=None`);
     - `conversation_ends_after_s` is how long a conversation on it lasts without a turn: what each
       turn's medium suggests, unless its configuration says otherwise.
     """

@@ -52,7 +52,13 @@ cfg-name-invalid = Lettres, chiffres, « _ », « . » et « - », en commençan
 cfg-add-kind = Ajouter : { $kind }
 cfg-choose-kind = Choisir…
 cfg-pick-title = { $slot } : ajouter
-cfg-pick-text = Les greffons installés sur cette instance. Le formulaire suit.
+cfg-pick-text = Les plugins installés sur cette instance.
+cfg-model-type-language = Modèles de langage (LLM)
+cfg-model-type-language-help = Pour répondre, à l'oral comme à l'écrit.
+cfg-model-type-embedding = Embeddings de texte
+cfg-model-type-embedding-help = Pour retrouver souvenirs et conversations par le sens.
+cfg-model-type-voice = Reconnaissance des voix
+cfg-model-type-voice-help = Pour savoir qui parle à un satellite.
 cfg-required-fields = { $count ->
     [0] rien d'obligatoire
     [one] 1 réglage obligatoire
@@ -62,9 +68,9 @@ cfg-slot-unset = Rien de configuré.
 cfg-slot-none = Aucun composant.
 cfg-slot-required = Il en faut au moins un pour démarrer.
 cfg-slot-optional = Facultatif.
-cfg-no-plugin = Aucun greffon de ce type n'est installé.
+cfg-no-plugin = Aucun plugin de ce type n'est installé.
 cfg-no-plugin-hint = Installez-en un dans l'environnement de Nestor, puis redémarrez.
-cfg-kind-missing = Le greffon « { $kind } » n'est pas installé : ce composant ne peut pas démarrer.
+cfg-kind-missing = Le plugin « { $kind } » n'est pas installé : ce composant ne peut pas démarrer.
 cfg-kind-missing-short = non installé
 cfg-remove = Retirer
 cfg-remove-title = Retirer { $name } ?
@@ -117,7 +123,7 @@ cfg-restart-ask = Un administrateur doit redémarrer l'instance.
 cfg-restart-title = Redémarrer { $agent } ?
 cfg-restart-text = { $agent } s'arrête proprement puis repart avec la même commande, quelques secondes en général.
 cfg-restart-channels = Les canaux se ferment : une conversation en cours est coupée.
-cfg-restart-tasks = Les tâches confiées à distance continuent ; leur suivi reprend après.
+cfg-restart-tasks = Les tâches déléguées continuent ; leur suivi reprend après.
 cfg-restart-apply = { $count ->
     [one] Le changement enregistré s'applique.
    *[other] Les changements enregistrés s'appliquent.
@@ -151,7 +157,7 @@ cfg-secret-delete = Supprimer
 cfg-secret-delete-label = Supprimer { $name }
 cfg-secret-delete-title = Supprimer { $name } ?
 cfg-secret-delete-text = La valeur est effacée du coffre ; rien ne permet de la retrouver.
-cfg-secret-in-use-text = La configuration y fait encore référence : supprimé, ces réglages ne pourront plus démarrer tant qu'ils n'auront pas changé.
+cfg-secret-in-use-text = La configuration l'utilise encore : les réglages concernés ne pourront plus démarrer.
 cfg-secret-delete-anyway = Supprimer quand même
 cfg-secret-deleted = Secret { $name } supprimé.
 
@@ -160,7 +166,7 @@ cfg-history = Historique
 cfg-history-intro = Chaque enregistrement garde la version précédente.
 cfg-history-versions = Versions précédentes
 cfg-history-empty = Aucune version précédente.
-cfg-history-empty-hint = La première apparaît au premier enregistrement depuis l'administration.
+cfg-history-empty-hint = La première apparaît au premier enregistrement depuis l'admin.
 cfg-history-size = { $size } octets
 cfg-history-version = Version du { $day } à { $time }
 cfg-history-would = { $count ->

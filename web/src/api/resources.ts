@@ -18,6 +18,7 @@ import type {
   ConnectRequest,
   ConnectResult,
   Credentials,
+  Heard,
   HistoryDocument,
   HistoryEntry,
   Id,
@@ -37,6 +38,7 @@ import type {
   OAuthClient,
   PairingMethods,
   Person,
+  PhraseVerdict,
   Satellite,
   Satellites,
   Secret,
@@ -46,6 +48,8 @@ import type {
   Tasks,
   ToolSettings,
   Updates,
+  Voice,
+  VoiceRecording,
   Watch,
   Watches,
 } from "./types";
@@ -54,6 +58,13 @@ import type {
 export function journalQuery({ kinds, ...rest }: JournalFilters) {
   return { ...rest, kinds: kinds?.length ? kinds.join(",") : undefined };
 }
+
+/** A WAV file as the body of a request: sent as it is, not as JSON. */
+const wav = (audio: ArrayBuffer) => ({
+  body: audio as unknown as string,
+  bodySerializer: (body: unknown) => body as ArrayBuffer,
+  headers: { "Content-Type": "audio/wav" },
+});
 
 const invitationLink = (url: string) =>
   url.startsWith("http") ? url : new URL(url, window.location.origin).toString();
@@ -258,6 +269,46 @@ export const api = {
   revoke: (device: string): Promise<void> =>
     unwrap(client.DELETE("/api/v1/satellites/{device_id}", { params: { path: { device_id: device } } })).then(
       () => undefined,
+    ),
+
+  // voices
+  voice: (person: Id): Promise<Voice> =>
+    unwrap(client.GET("/api/v1/household/people/{person_id}/voice", { params: { path: { person_id: person } } })),
+  startRecording: (person: Id, learning: boolean): Promise<VoiceRecording> =>
+    unwrap(
+      client.POST("/api/v1/household/people/{person_id}/voice/recording", {
+        params: { path: { person_id: person } },
+        body: { learning },
+      }),
+    ),
+  sayPhrase: (recording: Id, phrase: number, audio: ArrayBuffer): Promise<PhraseVerdict> =>
+    unwrap(
+      client.PUT("/api/v1/voice/recordings/{recording_id}/phrases/{phrase}", {
+        params: { path: { recording_id: recording, phrase } },
+        ...wav(audio),
+      }),
+    ),
+  finishRecording: (recording: Id): Promise<Voice> =>
+    unwrap(
+      client.POST("/api/v1/voice/recordings/{recording_id}/finish", { params: { path: { recording_id: recording } } }),
+    ),
+  abandonRecording: (recording: Id): Promise<void> =>
+    unwrap(
+      client.DELETE("/api/v1/voice/recordings/{recording_id}", { params: { path: { recording_id: recording } } }),
+    ).then(() => undefined),
+  hear: (audio: ArrayBuffer): Promise<Heard> => unwrap(client.POST("/api/v1/voice/hear", wav(audio))),
+  setVoiceLearning: (person: Id, learning: boolean): Promise<Voice> =>
+    unwrap(
+      client.PUT("/api/v1/household/people/{person_id}/voice/learning", {
+        params: { path: { person_id: person } },
+        body: { learning },
+      }),
+    ),
+  forgetVoice: (person: Id, learnedOnly = false): Promise<Voice> =>
+    unwrap(
+      client.DELETE("/api/v1/household/people/{person_id}/voice", {
+        params: { path: { person_id: person }, query: { learned_only: learnedOnly } },
+      }),
     ),
 
   // tasks, watches, memories

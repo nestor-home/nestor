@@ -5,6 +5,7 @@ from collections.abc import AsyncIterator, Callable
 
 from nestor.core import ContractError, PersonId
 from nestor.modules.channels import Address, Assistant, Channel, InboundMessage, Medium, MessageEnd, Reply, Sender
+from nestor.modules.identity import Heard
 
 
 class ScriptedReply(Reply):
@@ -30,7 +31,8 @@ class ScriptedReply(Reply):
 class ScriptedAssistant(Assistant):
     """Answers with `answer(message)` and keeps every message and reply for inspection.
 
-    Every sender is a household member unless `strangers` lists them.
+    Every account is a household member unless `strangers` lists them; `voice`, when given, is what every speech
+    handed to `hear` tells.
     """
 
     def __init__(
@@ -39,8 +41,11 @@ class ScriptedAssistant(Assistant):
         *,
         word_delay_s: float = 0.0,
         strangers: frozenset[str] = frozenset(),
+        voice: Heard | None = None,
     ) -> None:
         self._answer = answer
+        self._voice = voice
+        self.heard: list[bytes] = []
         self._strangers = strangers
         self._word_delay_s = word_delay_s
         self.messages: list[InboundMessage] = []
@@ -48,6 +53,14 @@ class ScriptedAssistant(Assistant):
 
     def identify(self, address: Address, sender: Sender) -> PersonId | None:
         return None if sender.id in self._strangers else PersonId(sender.id)
+
+    @property
+    def voice_wait_s(self) -> float | None:
+        return 0.5 if self._voice else None
+
+    async def hear(self, audio: bytes) -> Heard | None:
+        self.heard.append(audio)
+        return self._voice
 
     def respond(self, message: InboundMessage) -> ScriptedReply:
         self.messages.append(message)
@@ -73,7 +86,7 @@ class InMemoryChannel(Channel):
     async def serve(self, assistant: Assistant) -> None:
         while (item := await self._inbox.get()) is not None:
             message, answered = item
-            if assistant.identify(message.address, message.sender) is None:
+            if message.sender is not None and assistant.identify(message.address, message.sender) is None:
                 answered.set_result(None)
                 continue
             try:

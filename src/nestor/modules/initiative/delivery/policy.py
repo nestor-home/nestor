@@ -1,10 +1,13 @@
 """Where and how to deliver an unprompted message: a pure decision, explained in words.
 
+Spoken only when the home is sure, written otherwise:
 - the person wants it in writing, or is away → message where they read;
-- they are home → spoken by the satellite of the room they are in; when the home only knows that
-  they are home, by the household's main satellite; then a message if nobody reacts;
+- they are in a room with a satellite → said there; when the home only knows that they are home, by the
+  household's main satellite; then a message if nobody reacts;
+- they are in a room without a satellite → message;
 - quiet hours → nothing spoken unless urgent; the message still goes (the phone decides how to ring);
-- no presence information at all → the conversation it came from, else a message.
+- no presence information → message; said only back into a spoken conversation still going on, or when
+  there is nowhere to write (someone without a phone).
 """
 
 from collections.abc import Iterable
@@ -67,7 +70,9 @@ class DeliveryPolicy:
         now: datetime,
         written: bool = False,
         urgent: bool = False,
+        origin_open: bool = False,
     ) -> Plan:
+        """`origin_open`: the conversation it came from is spoken and still going on."""
         channels = tuple(channels)
         spoken_ids = {c.channel_id for c in channels if c.spoken}
         satellites = {
@@ -83,11 +88,9 @@ class DeliveryPolicy:
             return Plan(spoken=None, written=reach, reason=Message.of("delivery-quiet-hours"))
         if person is None or presence is None:
             back = origin if origin and origin.channel in spoken_ids else None
-            return Plan(
-                spoken=back,
-                written=reach or (None if back else origin),
-                reason=Message.of("delivery-no-presence"),
-            )
+            if back is not None and (origin_open or reach is None):
+                return Plan(spoken=back, written=reach, reason=Message.of("delivery-back-in-conversation"))
+            return Plan(spoken=None, written=reach or origin, reason=Message.of("delivery-no-presence"))
         if presence.of(person.id).home is False:
             return Plan(spoken=None, written=fallback, reason=Message.of("delivery-away", person=person.name))
         rooms = presence.rooms_where(person.id)

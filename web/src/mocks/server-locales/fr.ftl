@@ -330,3 +330,13 @@ error-pending-unknown = Plus aucun appareil n'attend avec cette demande.
 error-identify-unsupported = Cet appareil ne sait pas se signaler.
 error-satellite-offline = Ce satellite n'est pas connecté en ce moment.
 error-satellite-unknown = Ce satellite n'est pas ou plus appairé.
+
+# copied from Nestor's locales/fr/identity.ftl and errors.ftl
+voice-phrase-1 = Nestor, allume la lumière du salon.
+voice-phrase-2 = Quel temps fera-t-il demain matin ?
+voice-phrase-3 = Rappelle-moi d'appeler le plombier jeudi.
+voice-phrase-4 = Ajoute du pain, des pommes et du café à la liste de courses.
+voice-phrase-5 = Raconte-moi l'histoire d'un gardien de phare.
+error-voices-off = Les voix ne sont pas reconnues sur cette instance : choisissez un modèle de voix sous voices dans la configuration.
+error-voice-not-yours = Seule la personne enregistre sa voix, ou un propriétaire pour quelqu'un sans compte.
+error-audio-format = L'enregistrement doit être un WAV mono 16 bits à 16 kHz.

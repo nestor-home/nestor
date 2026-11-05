@@ -11,16 +11,98 @@ replays to the model, as Assist's chat log does. What must outlive it belongs in
 
 The open conversation of each session is rebuilt from the journal on first use, so a restart keeps
 it while it lasts.
+
+This module is the only one that writes a conversation and reads it back, always in the journal: a `Turn` writes
+what happens in one turn (what opened it, the answers, a cut, a fallback), `history` reads a conversation as the
+model sees it.
 """
 
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
-from nestor.core import SessionId, new_id, utc_now
+from nestor.core import Event, PersonId, SessionId, new_id, utc_now
 from nestor.modules.channels import Address, Exchange, Medium
-from nestor.modules.conversation.events import AssistantTurn, UserTurn
+from nestor.modules.cognition.model import Message
+from nestor.modules.conversation.events import AnswerCut, AssistantTurn, FallbackSpoken, NotificationTurn, UserTurn
+from nestor.modules.conversation.history import HISTORY_EVENTS, Names, in_conversation, to_messages
+from nestor.modules.conversation.types import FallbackReason, Notification
+from nestor.modules.identity import Speaker
 from nestor.modules.journal import Journal
+
+SOURCE = "agent"
+
+
+class Turn:
+    """One turn of a conversation, opened by a person's message or a notification: what is written in it goes
+    through here, in the order it happened."""
+
+    def __init__(self, conversations: "Conversations", address: Address, exchange: Exchange) -> None:
+        self._conversations, self.address, self.exchange = conversations, address, exchange
+        self._journal = conversations.journal
+
+    async def said(self, text: str, medium: Medium, speaker: Speaker) -> UserTurn:
+        """A person opened the turn."""
+        return await self._publish(
+            UserTurn(
+                source=SOURCE,
+                session=self.address.session,
+                address=self.address,
+                text=text,
+                medium=medium,
+                speaker=speaker,
+                exchange=self.exchange,
+            )
+        )
+
+    async def notified(self, notification: Notification, person: PersonId | None) -> NotificationTurn:
+        """Nestor opened the turn with a notification for `person`."""
+        return await self._publish(
+            NotificationTurn(
+                source=SOURCE,
+                session=self.address.session,
+                address=self.address,
+                text=notification.text,
+                about=notification.about,
+                exchange=self.exchange,
+                person=person,
+            )
+        )
+
+    async def answered(self, text: str, *, interrupted: bool = False) -> AssistantTurn:
+        return await self._publish(
+            AssistantTurn(
+                source=SOURCE,
+                session=self.address.session,
+                address=self.address,
+                text=text,
+                interrupted=interrupted,
+                exchange=self.exchange,
+            )
+        )
+
+    async def cut(self, answer: AssistantTurn, heard: str) -> AnswerCut:
+        """The person cut in while `answer` was spoken: only `heard` reached them."""
+        return await self._publish(
+            AnswerCut(
+                source=SOURCE, session=self.address.session, answer=answer.id, heard=heard, exchange=self.exchange
+            )
+        )
+
+    async def fell_back(self, reason: FallbackReason) -> FallbackSpoken:
+        return await self._publish(
+            FallbackSpoken(
+                source=SOURCE, session=self.address.session, address=self.address, reason=reason, exchange=self.exchange
+            )
+        )
+
+    def end(self) -> None:
+        """The turn is over (its answer was written or cut): the conversation's silence starts now."""
+        self._conversations.ended(self.exchange, self.address)
+
+    async def _publish[E: Event](self, event: E) -> E:
+        await self._journal.publish(event)
+        return event
 
 
 @dataclass(frozen=True, slots=True)
@@ -45,7 +127,7 @@ class Conversations:
         self._open: dict[SessionId, _Open] = {}
         self._loaded: set[SessionId] = set()
 
-    async def turn(self, address: Address, medium: Medium) -> Exchange:
+    async def turn(self, address: Address, medium: Medium) -> Turn:
         """A new turn in this session: in its open conversation, or in a new one when the last turn is
         too old. Nothing awaits between the decision and its record, so two turns starting together
         land in the same conversation."""
@@ -55,7 +137,25 @@ class Conversations:
         current = self._live(address, medium, now)
         conversation = current.id if current else new_id()
         self._open[session] = _Open(conversation, now)
-        return Exchange(conversation_id=conversation, turn_id=new_id())
+        return Turn(self, address, Exchange(conversation_id=conversation, turn_id=new_id()))
+
+    async def history(
+        self, address: Address, conversation: str | None, *, max_events: int = 60, names: Names | None = None
+    ) -> tuple[Message, ...]:
+        """A conversation's last turns as the model reads them, whatever process held them (restarts included);
+        nothing without one. Earlier conversations of the session are not replayed, as in Assist."""
+        if conversation is None:
+            return ()
+        events = await self.journal.history(
+            *HISTORY_EVENTS, session=address.session, newest_first=True, limit=max_events
+        )
+        return to_messages(in_conversation(reversed(events), conversation), names=names)
+
+    async def fell_back(self, address: Address, reason: FallbackReason) -> FallbackSpoken:
+        """A provider failed while drafting outside any turn (a notification's answer)."""
+        event = FallbackSpoken(source=SOURCE, session=address.session, address=address, reason=reason)
+        await self.journal.publish(event)
+        return event
 
     def ended(self, exchange: Exchange, address: Address) -> None:
         """The turn is over (its reply was written): the conversation's silence starts now."""
@@ -83,7 +183,9 @@ class Conversations:
     async def _load(self, session: SessionId) -> None:
         if session in self._loaded:
             return
-        latest = await self.journal.history(UserTurn, AssistantTurn, session=session, newest_first=True, limit=1)
+        latest = await self.journal.history(
+            UserTurn, NotificationTurn, AssistantTurn, session=session, newest_first=True, limit=1
+        )
         self._loaded.add(session)
         if latest and (exchange := latest[0].exchange) is not None:
             self._open.setdefault(session, _Open(exchange.conversation_id, latest[0].at))

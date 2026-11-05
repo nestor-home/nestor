@@ -20,7 +20,7 @@ from nestor.modules.cognition import (
     TextDelta,
     Usage,
 )
-from nestor.runtime.plugins import AdapterSettings, Family, Plugin, Services
+from nestor.runtime.plugins import AdapterSettings, Family, ModelType, Plugin, Services
 
 SERVED = "fake/word-overlap-1"
 _LISTED = re.compile(r'^- \[(?P<id>[^\]]+)\] "(?P<what>.*)"$', re.MULTILINE)
@@ -73,4 +73,4 @@ def _build(settings: FakeSettings, name: str, services: Services) -> FakeTriageM
     return FakeTriageModel()
 
 
-plugin = Plugin(Family.MODEL, "watch-triage-fake", FakeSettings, _build)
+plugin = Plugin(Family.MODEL, "watch-triage-fake", FakeSettings, _build, model_type=ModelType.LANGUAGE)

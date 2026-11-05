@@ -13,7 +13,7 @@ describe("tasks and watches", () => {
       await screen.findByRole("heading", { name: /Compare three green electricity offers/, level: 1 }),
     ).toBeInTheDocument();
     const chain = await screen.findByRole("article");
-    for (const step of ["handed over", "completed", "decision", "said out loud"])
+    for (const step of ["started", "completed", "decision", "said out loud"])
       expect(within(chain).getByText(step)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /a conversation/ })).toHaveAttribute("href", "/journal?session=s-elec");
   });

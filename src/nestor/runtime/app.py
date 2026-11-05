@@ -26,6 +26,7 @@ from nestor.adapters.storage.sqlite import (
     SQLiteVectorIndex,
     SQLiteVerifierStore,
 )
+from nestor.adapters.storage.sqlite.identity import SQLiteVoiceprintStore
 from nestor.core import Component, ContractError, ProviderError
 from nestor.core.i18n import Locale
 from nestor.modules.accounts import Accounts
@@ -37,9 +38,10 @@ from nestor.modules.cognition.delegation.service import TaskManager
 from nestor.modules.cognition.embedding import Embedder
 from nestor.modules.cognition.tools import Toolbox, ToolProvider
 from nestor.modules.connectors import ConnectedInbound, Connections, Connector, ConnectorTools, TokenEndpoint
-from nestor.modules.conversation import Agent, ChannelProfile, ModelChoice, Persona
+from nestor.modules.conversation import Agent, ChannelProfile, ModelChoice, Persona, Speakers
 from nestor.modules.home import PresenceSource
 from nestor.modules.household import Account, Household, Person, SharedAccount
+from nestor.modules.identity import VoiceEmbedder, Voices
 from nestor.modules.initiative import (
     Courier,
     DeliveryPolicy,
@@ -56,6 +58,7 @@ from nestor.modules.initiative import (
     WatchBook,
     WatchKeeper,
 )
+from nestor.modules.initiative.confirmations import Confirmations
 from nestor.modules.initiative.watches.assistant import WatchTools
 from nestor.modules.journal import Journal
 from nestor.modules.memory import Memories, SearchIndex
@@ -64,7 +67,7 @@ from nestor.modules.memory.episodes import Consolidator, Episodes
 from nestor.modules.satellites import Pairing, SatelliteHost
 from nestor.modules.system import ReleaseFeed, RestartRequested, Updates
 from nestor.runtime.config import AdapterConfig, ComponentConfig, ConfigError, NestorConfig
-from nestor.runtime.plugins import Family, Plugged, Registry, Services
+from nestor.runtime.plugins import Family, ModelType, Plugged, Registry, Services
 
 log = logging.getLogger("nestor")
 
@@ -130,7 +133,7 @@ class Nestor:
             found = self.models[key]
             if not isinstance(found, ConversationModel):
                 raise ConfigError(
-                    f"{role}: {key} searches memories and cannot answer; choose a conversation model",
+                    f"{role}: {key} embeds and cannot answer; choose a conversation model",
                     path=tuple(role.split(".")),
                     code="not_answering",
                     detail=key,
@@ -203,12 +206,33 @@ class Nestor:
         embedder = self.models[config.memory.embedder] if config.memory.embedder else None
         if embedder is not None and not isinstance(embedder, Embedder):
             raise ConfigError(
-                f"memory.embedder: {config.memory.embedder} is a conversation model and cannot search memories; "
-                "choose an embedding model",
+                f"memory.embedder: {config.memory.embedder} cannot search memories; choose a text embedding model",
                 path=("memory", "embedder"),
                 code="not_embedding",
                 detail=config.memory.embedder,
             )
+        voice_model = self.models[config.voices.embedder] if config.voices.embedder else None
+        if voice_model is not None and not isinstance(voice_model, VoiceEmbedder):
+            raise ConfigError(
+                f"voices.embedder: {config.voices.embedder} cannot tell voices apart; choose a voice model",
+                path=("voices", "embedder"),
+                code="not_voice",
+                detail=config.voices.embedder,
+            )
+        self.voiceprints = SQLiteVoiceprintStore(self.database)
+        self.voices = (
+            Voices(voice_model, self.voiceprints, self.journal, settings=config.voices.settings())
+            if voice_model is not None
+            else None
+        )
+        locale = Locale(config.persona.locale)
+        self.speakers = Speakers(
+            self.journal,
+            self.household,
+            self.voices,
+            say=lambda message: self.localizer.format(message, locale),
+            wait_s=config.voices.wait_s,
+        )
         self.memories, self.episodes, self._memory_parts = assemble_memories(
             self.journal, self.database, embedder, query_timeout_s=config.memory.query_timeout_s
         )
@@ -229,6 +253,22 @@ class Nestor:
         self.schedule_book = ScheduleBook(self.journal, timezone=config.persona.timezone)
         schedule_tools = ScheduleTools(self.schedule_book)
         connector_tools = [ConnectorTools(self.connections)] if self.connections else []
+        self.confirmations = Confirmations(self.journal, self.household, self.message_book)
+        toolbox = Toolbox(
+            self.journal,
+            providers=[
+                self.speakers,
+                delegation,
+                memory,
+                watch_tools,
+                message_tools,
+                schedule_tools,
+                self.confirmations,
+                *self.tools,
+                *connector_tools,
+            ],
+            in_writing=self.confirmations,
+        )
         self.agent = Agent(
             models=ModelChoice(
                 spoken=model("agent.spoken", roles["spoken"]),
@@ -239,20 +279,10 @@ class Nestor:
             localizer=self.localizer,
             journal=self.journal,
             household=self.household,
-            toolbox=Toolbox(
-                self.journal,
-                providers=[
-                    delegation,
-                    memory,
-                    watch_tools,
-                    message_tools,
-                    schedule_tools,
-                    *self.tools,
-                    *connector_tools,
-                ],
-            ),
+            toolbox=toolbox,
             channels={c.channel_id: ChannelProfile(c.style, c.conversation_ends_after_s) for c in self.channels},
-            context=[delegation, memory, watch_tools, message_tools, schedule_tools],
+            context=[delegation, memory, watch_tools, message_tools, schedule_tools, self.confirmations],
+            speakers=self.speakers,
         )
         initiative = config.initiative
         quiet_hours = QuietHours.parse(initiative.quiet_hours) if initiative.quiet_hours else None
@@ -268,6 +298,7 @@ class Nestor:
             presence=self.presence,
             follow_up_after_s=initiative.follow_up_after_s,
         )
+        self.confirmations.attach(self.courier, lambda call, context: toolbox.call(call, context, confirmed=True))
         self.announcer = TaskAnnouncer(self.journal, self.household, self.courier)
         self.messenger = Messenger(self.message_book, self.household, self.courier)
         self.scheduler = Scheduler(self.schedule_book, self.agent, self.household)
@@ -307,6 +338,7 @@ class Nestor:
         connections = [self.token_endpoint, self.connections] if self.token_endpoint and self.connections else []
         vault = [self.vault] if self.vault else []
         updates = [self.updates] if self.updates else []
+        voices = [self.voices] if self.voices else []
         return [
             self.database,
             *vault,
@@ -317,6 +349,9 @@ class Nestor:
             *connections,
             *self.models.values(),
             *self._memory_parts,  # after its embedder
+            self.voiceprints,
+            *voices,  # after its model and its store
+            self.speakers,
             *self.executors,
             *self.tools,
             *presence,
@@ -326,6 +361,7 @@ class Nestor:
             self.announcer,
             self.message_book,
             self.messenger,
+            self.confirmations,
             self.schedule_book,
             self.scheduler,
             self.watch_book,
@@ -410,17 +446,27 @@ def _connectors(
     return connectors
 
 
+type Model = ConversationModel | Embedder | VoiceEmbedder
+SERVED: Mapping[ModelType, type[Model]] = {  # what a model plugin builds, by the type it says it serves
+    ModelType.LANGUAGE: ConversationModel,
+    ModelType.EMBEDDING: Embedder,
+    ModelType.VOICE: VoiceEmbedder,
+}
+
+
 def build_models(
     config: NestorConfig, registry: Registry, services: Services, plugged: list[Plugged] | None = None
-) -> dict[str, ConversationModel | Embedder]:
-    """Every model of `models`, built but not started: each answers or embeds, as its plugin says."""
-    built: dict[str, ConversationModel | Embedder] = {}
+) -> dict[str, Model]:
+    """Every model of `models`, built but not started: each answers, embeds text or voices, as its plugin says."""
+    built: dict[str, Model] = {}
     for key, profile in config.models.items():
         model = _build(
             plugged if plugged is not None else [], registry, Family.MODEL, profile, key, services, Component
         )
-        if not isinstance(model, ConversationModel | Embedder):
-            raise ContractError(f"plugin {profile.kind!r} built a {type(model).__name__}, not a model")
+        served = registry.get(Family.MODEL, profile.kind).model_type
+        assert served is not None  # a model plugin says what it serves
+        if not isinstance(model, SERVED[served]):
+            raise ContractError(f"plugin {profile.kind!r} built a {type(model).__name__}, not a {served} model")
         built[key] = model
     return built
 

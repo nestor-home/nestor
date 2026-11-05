@@ -3,9 +3,11 @@ import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
 import { db } from "@/mocks/db";
+import { RESTART_MS } from "@/mocks/handlers";
 import { server } from "@/mocks/server";
 import { renderApp } from "@/test/render";
 import { markOf } from "./config-pages";
+import { RESTART_POLL_MS } from "./restart";
 
 const saveBar = () => screen.findByRole("region", { name: "Unsaved changes" });
 
@@ -15,7 +17,7 @@ describe("the configuration", () => {
     renderApp("/config/tools");
     await user.click(await screen.findByRole("button", { name: "Edit home" }));
     const sheet = await screen.findByRole("dialog", { name: "home" });
-    expect(within(sheet).getByRole("textbox", { name: "Address" })).toHaveValue(
+    expect(within(sheet).getByRole("textbox", { name: "URL" })).toHaveValue(
       "http://homeassistant.local:8123/mcp_server/sse",
     );
     expect(within(sheet).getByRole("combobox", { name: "Transport" })).toHaveTextContent("sse");
@@ -80,11 +82,11 @@ describe("the configuration", () => {
     await user.click(await screen.findByRole("button", { name: "Edit Jules" }));
     const sheet = await screen.findByRole("dialog", { name: "Jules" });
     await user.click(within(sheet).getByRole("button", { name: "Add" }));
-    await user.type(within(sheet).getByRole("textbox", { name: "Accounts on channels, item 2" }), "telegram:@jules");
+    await user.type(within(sheet).getByRole("textbox", { name: "Accounts, item 1" }), "telegram:@jules");
     await user.click(within(sheet).getByRole("button", { name: "Done" }));
     await user.click(await screen.findByRole("button", { name: "1 change" }));
     const changes = await screen.findByRole("dialog", { name: "Changes" });
-    expect(within(changes).getByText("household.2.accounts.1")).toBeInTheDocument();
+    expect(within(changes).getByText("household.2.accounts.0")).toBeInTheDocument();
     await user.keyboard("{Escape}");
     await user.click(await screen.findByRole("button", { name: "Edit Jules" }));
     const again = await screen.findByRole("dialog", { name: "Jules" });
@@ -162,11 +164,13 @@ describe("the configuration", () => {
     await user.click(screen.getByRole("button", { name: "Restart…" }));
     const dialog = await screen.findByRole("alertdialog", { name: "Restart Richie?" });
     expect(dialog).toHaveTextContent("Channels close");
-    expect(dialog).toHaveTextContent("Remote tasks keep running");
+    expect(dialog).toHaveTextContent("Delegated tasks keep running");
     await user.click(within(dialog).getByRole("button", { name: "Restart now" }));
     expect(await screen.findByText("Restarting, back in a moment.")).toBeInTheDocument();
-    // sessions live in the process's memory: the restarted instance asks to sign in again, then comes back
-    expect(await screen.findByText(/I'm back, configuration applied/, {}, { timeout: 8_000 })).toBeInTheDocument();
+    // sessions live in the process's memory: the restarted instance asks to sign in again, then comes back. The
+    // mock is down for real seconds, polled every second: a CI runner busy with other test files needs the slack
+    const back = { timeout: RESTART_MS + RESTART_POLL_MS + 8_000 };
+    expect(await screen.findByText(/I'm back, configuration applied/, {}, back)).toBeInTheDocument();
     expect(await screen.findByRole("heading", { name: "Sign in" })).toBeInTheDocument();
     expect(router.state.location.search).toEqual({ next: "/config/persona" });
     await user.type(screen.getByLabelText("Login"), "mathis");
@@ -218,8 +222,30 @@ describe("the configuration", () => {
     expect(await screen.findByRole("heading", { name: "Conversations" })).toBeInTheDocument();
     const field = await screen.findByRole("spinbutton", { name: "New conversation after (seconds)" });
     expect(field).toHaveAttribute("placeholder", "300");
-    expect(screen.getByText(/starts a new conversation/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Conversations/ })).toHaveAttribute("href", "/config/conversation");
+  });
+});
+
+describe("models by what they serve", () => {
+  it("are added by type, and a role is offered only the models of its type", async () => {
+    const user = userEvent.setup();
+    renderApp("/config/models");
+    await user.click(await screen.findByRole("button", { name: /^Add/ }));
+    const picker = await screen.findByRole("dialog");
+    const groups = within(picker)
+      .getAllByRole("region")
+      .map((g) => g.getAttribute("aria-label"));
+    expect(groups).toEqual(["Language models (LLM)", "Text embeddings", "Speaker recognition"]);
+    expect(
+      within(within(picker).getByRole("region", { name: "Speaker recognition" })).getByText("sherpa-onnx"),
+    ).toBeTruthy();
+    await user.keyboard("{Escape}");
+
+    expect(await screen.findByText(/sherpa-onnx · Speaker recognition/)).toBeInTheDocument();
+    await user.click(screen.getByRole("combobox", { name: "Spoken model" }));
+    const options = (await screen.findAllByRole("option")).map((o) => o.textContent);
+    expect(options).toContain("haiku");
+    expect(options).not.toContain("ears");
   });
 });
 
@@ -233,6 +259,12 @@ describe("a model's mark", () => {
   it("is the provider its address belongs to, as the runtime recognises it", () => {
     expect(markOf("openai-compatible", { base_url: "https://openrouter.ai/api/v1" }, schema)).toBe("openrouter");
     expect(markOf("openai-compatible", { base_url: "https://api.anthropic.com/v1" }, schema)).toBe("anthropic");
+  });
+
+  it("is the publisher of a catalogue model it names, else the runtime that runs it", () => {
+    const voice = { properties: { model: { "x-nestor": { brands: { "titanet-small": "nvidia" } } } } };
+    expect(markOf("sherpa-onnx-voice", { model: "titanet-small" }, voice)).toBe("nvidia");
+    expect(markOf("sherpa-onnx-voice", { model: "/models/mine.onnx" }, voice)).toBe("sherpa-onnx-voice");
   });
 
   it("is its kind for any other server, an address still to write, or a kind that publishes no hosts", () => {

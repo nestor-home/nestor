@@ -15,7 +15,7 @@ from zoneinfo import ZoneInfo
 from nestor.core import Component, PersonId, ProviderError, utc_now
 from nestor.modules.channels import Address, Medium
 from nestor.modules.cognition.model import ConversationModel, Message, ModelRequest, Role, json_answer
-from nestor.modules.conversation.events import AssistantTurn, UserTurn
+from nestor.modules.conversation.events import AssistantTurn, NotificationTurn, UserTurn
 from nestor.modules.household import Household
 from nestor.modules.journal import Journal
 from nestor.modules.memory.episodes.events import EpisodeSummarized
@@ -153,21 +153,21 @@ class Consolidator(Component):
         """Each turn is stamped when it is made, and may be published after a later one: the next read starts
         back from `SLACK` before this one."""
         reading = self._clock()
-        for event in await self.journal.history(UserTurn, AssistantTurn, since=self._read_since):
+        for event in await self.journal.history(UserTurn, NotificationTurn, AssistantTurn, since=self._read_since):
             self._follow(event)
         self._read_since = reading - SLACK
 
-    def _follow(self, event: UserTurn | AssistantTurn) -> None:
+    def _follow(self, event: UserTurn | NotificationTurn | AssistantTurn) -> None:
         if event.exchange is None or event.exchange.conversation_id in self._done:
-            return  # an unprompted message outside a turn, or a conversation already kept
+            return  # a message outside any turn, or a conversation already kept
         seen = self._open.get(event.exchange.conversation_id)
         if seen is None:
             seen = self._open[event.exchange.conversation_id] = _Open(event.address, event.at, event.at)
         seen.last_at = max(seen.last_at, event.at)
         if isinstance(event, UserTurn):
             seen.medium = event.medium
-            if event.person is not None:
-                seen.participants.add(event.person)
+        if isinstance(event, UserTurn | NotificationTurn) and event.person is not None:
+            seen.participants.add(event.person)  # who spoke, or whom Nestor told something
 
     async def _consolidate(self, conversation: str, known: str) -> int:
         seen = self._open[conversation]

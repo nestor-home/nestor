@@ -26,13 +26,15 @@ from nestor.modules.cognition.model import (
     ToolCallRequested,
 )
 from nestor.modules.cognition.tools import Toolbox, ToolContext
-from nestor.modules.conversation.conversations import Conversations
-from nestor.modules.conversation.events import AnswerCut, AssistantTurn, FallbackSpoken, UserTurn
-from nestor.modules.conversation.history import recent_history
+from nestor.modules.conversation.conversations import Conversations, Turn
+from nestor.modules.conversation.events import AssistantTurn
+from nestor.modules.conversation.history import notification_message
 from nestor.modules.conversation.persona import Instructions, Persona
 from nestor.modules.conversation.ports import ContextProvider, Layer, TurnContext
-from nestor.modules.conversation.types import FallbackReason, ReplyPhase
+from nestor.modules.conversation.speakers import Speakers
+from nestor.modules.conversation.types import FallbackReason, Notification, ReplyPhase
 from nestor.modules.household import Household, Person
+from nestor.modules.identity import Heard, Speaker
 from nestor.modules.journal import Journal
 
 
@@ -123,9 +125,12 @@ class Agent(Assistant):
         channels: Mapping[str, ChannelProfile] | None = None,
         localizer: Localizer,
         context: Iterable[ContextProvider] = (),
+        speakers: Speakers | None = None,
         settings: AgentSettings | None = None,
         clock: Callable[[], datetime] = utc_now,
     ) -> None:
+        """`speakers` tells who speaks on shared devices (with recognised voices when it has them); its tools and
+        guidance belong in `toolbox` and `context`."""
         self.models, self.persona, self.journal = models, persona, journal
         self.conversations = Conversations(
             journal,
@@ -134,8 +139,9 @@ class Agent(Assistant):
         )
         self.localizer = localizer
         self.household, self.toolbox = household, toolbox
+        self.speakers = speakers or Speakers(journal, household)
         self._channels = dict(channels or {})
-        self._context = tuple(context)
+        self._context = (self.speakers, *context)  # who speaks: the agent's own concern, on every turn
         self.settings = settings or AgentSettings()
         self.replies = LiveReplies()  # what it is answering right now
 
@@ -144,41 +150,63 @@ class Agent(Assistant):
         return person.id if person else None
 
     def respond(self, message: InboundMessage) -> Reply:
-        person = self.household.identify(message.address.channel, message.sender.id)
-        return AgentReply(self, message.address, person, message.medium, user=message.text)
+        return AgentReply(self, message.address, message.medium, message)
+
+    @property
+    def voice_wait_s(self) -> float | None:
+        return self.speakers.wait_s if self.speakers.voices is not None else None
+
+    async def hear(self, audio: bytes) -> Heard | None:
+        return await self.speakers.voices.hear(audio) if self.speakers.voices is not None else None
 
     async def compose(
-        self, address: Address, person: Person | None, instruction: str, medium: Medium
+        self, address: Address, person: Person | None, notification: Notification, medium: Medium
     ) -> tuple[str, ...]:
-        """Write unprompted messages for this conversation (a task result, an announcement), to be
-        delivered through `medium`.
+        """The answer to a notification (a task's result, a watch, a message to pass on) for this conversation, to be
+        delivered through `medium` to `person`: a draft, in the persona's voice and with the conversation's
+        history. Nothing is logged until it is delivered (`delivered`): a message that could not go out was
+        never said."""
+        return await AgentReply(self, address, medium, notification, person=person).collect()
 
-        `instruction` tells the agent what to convey; the text is written in the persona's voice,
-        with the conversation's history. It is not logged: whoever delivers it logs it once sent.
-        """
-        return await AgentReply(self, address, person, medium, instruction=instruction, record=False).collect()
+    async def delivered(
+        self,
+        address: Address,
+        person: Person | None,
+        notification: Notification,
+        medium: Medium,
+        texts: Sequence[str],
+    ) -> Exchange:
+        """Record a composed answer once sent: the notification opens a turn of the conversation, as a person's
+        message would, and the answer follows it. Replies to it later see both."""
+        turn = await self.conversations.turn(address, medium)
+        await turn.notified(notification, person.id if person else None)
+        for text in texts:
+            await turn.answered(text)
+        turn.end()
+        return turn.exchange
 
-    async def background(self, address: Address, person: Person | None, instruction: str) -> tuple[str, ...]:
+    async def background(self, address: Address, person: Person | None, notification: Notification) -> tuple[str, ...]:
         """Run a turn nobody waits for (a scheduled wake-up), on behalf of `person`, with the agent's tools and
         the background model, without any conversation's history. What it writes reaches no one: to tell
         someone, it uses its tools. Its tool calls are logged as usual."""
-        reply = AgentReply(
-            self, address, person, Medium.WRITTEN, instruction=instruction, record=False, unattended=True
-        )
-        return await reply.collect()
+        return await AgentReply(self, address, Medium.WRITTEN, notification, person=person, unattended=True).collect()
 
     def channel(self, address: Address) -> ChannelProfile:
         return self._channels.get(address.channel, ChannelProfile())
 
     async def instructions(
-        self, address: Address, person: Person | None, medium: Medium, said: str | None
+        self, address: Address, speaker: Speaker, medium: Medium, said: str | None, *, shared: bool = False
     ) -> Instructions:
-        turn = TurnContext(person=person, address=address, said=said)
+        """`shared`: the turn comes from a device anyone at home may use (`address.conversation` is its room)."""
+        person = self.household.person(speaker.person) if speaker.person else None
+        turn = TurnContext(person=person, speaker=speaker, address=address, said=said)
         sections = await asyncio.gather(*(p.context(turn) for p in self._context))
         return self.persona.instructions(
             medium=medium,
             style=self.channel(address).style,
             person=person,
+            speaker=speaker,
+            room=address.conversation if shared else None,
             now=utc_now(),
             guidance=tuple(g for p in self._context if (g := p.guidance())),
             people=self.household.people,
@@ -188,29 +216,31 @@ class Agent(Assistant):
 
 
 class AgentReply(Reply):
-    """One answer, produced in the background and streamed through a queue so that a channel can
-    interrupt it from another task at any time.
+    """One answer to what opens a turn: a person's message, or a notification of Nestor's. Produced in the background
+    and streamed through a queue so that a channel can interrupt it from another task at any time.
 
-    Each round of the model that writes something is a message of its own, logged as soon as it
-    ends, before the tools it asked for run: the journal keeps the order the user saw. A voice
-    channel usually receives a message long before it is played: an interruption that comes after
-    it was logged is recorded as an `AnswerCut`, so the history keeps only what the user heard.
-    """
+    The answer to a message is the conversation's as it goes: each round of the model that writes something is a message
+    of its own, logged as soon as it ends, before the tools it asked for run, so the journal keeps the order the user
+    saw. A voice channel usually receives a message long before it is played: an interruption that comes after it was
+    logged is recorded as an `AnswerCut`, so the history keeps only what the user heard.
+
+    The answer to a notification is a draft, logged with its notification by whoever delivers it (`Agent.delivered`);
+    `unattended`, a turn nobody takes part in (a wake-up), without any conversation's history."""
 
     def __init__(
         self,
         agent: Agent,
         address: Address,
-        person: Person | None,
         medium: Medium,
+        opening: InboundMessage | Notification,
         *,
-        user: str | None = None,
-        instruction: str | None = None,
-        record: bool = True,
+        person: Person | None = None,
         unattended: bool = False,
     ) -> None:
+        """`person`: whom a notification is for (who sent a message is found when the turn starts)."""
         self._agent, self._address, self._person, self._medium = agent, address, person, medium
-        self._user, self._instruction, self._record = user, instruction, record
+        self._speaker = Speaker.account(person.id) if person else Speaker.unknown()
+        self._opening = opening
         self._unattended = unattended
         self._chunks: asyncio.Queue[str | MessageEnd | None] = asyncio.Queue()
         self._message: list[str] = []  # the message being written
@@ -218,7 +248,7 @@ class AgentReply(Reply):
         self._worker: asyncio.Task[None] | None = None
         self._interrupted = False
         self._over = False
-        self._exchange: Exchange | None = None  # the turn this reply belongs to, once it started
+        self._turn: Turn | None = None  # the turn this reply writes in, once a message opened it
 
     async def __aiter__(self) -> AsyncIterator[str | MessageEnd]:
         if self._worker is not None:
@@ -238,19 +268,12 @@ class AgentReply(Reply):
             with contextlib.suppress(asyncio.CancelledError):
                 await self._worker
         *parts, rest = _share(heard, [text for text, _ in self._ended])
-        for (text, turn), part in zip(self._ended, parts, strict=True):
-            if turn is not None and _letters(part) < _letters(text):
-                await self._agent.journal.publish(
-                    AnswerCut(
-                        source="agent",
-                        session=self._address.session,
-                        answer=turn.id,
-                        heard=part,
-                        exchange=self._exchange,
-                    )
-                )
-        if self._record and ("".join(self._message).strip() or not self._ended):
-            await self._log(rest, interrupted=True)
+        if self._turn is not None:
+            for (text, answer), part in zip(self._ended, parts, strict=True):
+                if answer is not None and _letters(part) < _letters(text):
+                    await self._turn.cut(answer, part)
+            if "".join(self._message).strip() or not self._ended:
+                await self._turn.answered(rest, interrupted=True)
         self._message.clear()
         self._end_turn()
         self._chunks.put_nowait(None)
@@ -259,24 +282,24 @@ class AgentReply(Reply):
         agent = self._agent
         agent.replies.set(self, ReplyPhase.THINKING)
         try:
-            if self._record:
-                exchange = self._exchange = await agent.conversations.turn(self._address, self._medium)
-                conversation: str | None = exchange.conversation_id
-                if self._user is not None:
-                    await agent.journal.publish(
-                        UserTurn(
-                            source="agent",
-                            session=self._address.session,
-                            address=self._address,
-                            text=self._user,
-                            medium=self._medium,
-                            person=self._person.id if self._person else None,
-                            exchange=exchange,
-                        )
-                    )
+            opening = self._opening
+            if isinstance(opening, InboundMessage):
+                self._speaker = await agent.speakers.of(
+                    opening, await agent.conversations.current(self._address, self._medium)
+                )
+                self._person = agent.household.person(self._speaker.person) if self._speaker.person else None
+                self._turn = await agent.conversations.turn(self._address, self._medium)
+                conversation: str | None = self._turn.exchange.conversation_id
+                said = await self._turn.said(opening.text, self._medium, self._speaker)
+                agent.speakers.learn(opening.heard, said)
+                if phrase := await agent.speakers.enrolling(opening):  # a phrase of a voice being recorded
+                    self._say(phrase)
+                    await self._end_message()
+                    self._end_turn()
+                    return
             elif self._unattended:  # a background turn belongs to no conversation
                 conversation = None
-            else:  # a composed message: the open conversation's turns, if any
+            else:  # a notification's answer, drafted in the open conversation, if any
                 conversation = await agent.conversations.current(self._address, self._medium)
             await self._answer(conversation)
             await self._end_message()
@@ -287,19 +310,21 @@ class AgentReply(Reply):
 
     async def _answer(self, conversation: str | None) -> None:
         agent = self._agent
-        history = await recent_history(
-            agent.journal, self._address, conversation, max_events=agent.settings.history_events
+        history = await agent.conversations.history(
+            self._address, conversation, max_events=agent.settings.history_events, names=agent.speakers.name_of
         )
-        instructions = await agent.instructions(self._address, self._person, self._medium, self._said(history))
+        opening = self._opening
+        if isinstance(opening, Notification):  # not in the journal yet: read as it will be once delivered
+            history = (*history, notification_message(opening))
+        shared = isinstance(opening, InboundMessage) and opening.sender is None
+        said = self._said(history)
+        instructions = await agent.instructions(self._address, self._speaker, self._medium, said, shared=shared)
         messages = [
             Message(role=Role.SYSTEM, layers=(instructions.stable, instructions.household), content=instructions.turn),
             *history,
         ]
-        if self._instruction is not None:
-            messages.append(Message(role=Role.SYSTEM, content=self._instruction))
-        context = ToolContext(
-            address=self._address, person=self._person.id if self._person else None, exchange=self._exchange
-        )
+        exchange = self._turn.exchange if self._turn else None
+        context = ToolContext(address=self._address, speaker=self._speaker, exchange=exchange)
         for _ in range(agent.settings.max_tool_rounds):
             try:
                 text, calls = await self._round(messages)
@@ -317,11 +342,9 @@ class AgentReply(Reply):
             ]
 
     def _said(self, history: Sequence[Message]) -> str | None:
-        """What a module looks up for this turn: the person's last messages of the conversation, so that a
-        follow-up ("and for her?") keeps its subject, or what the agent is asked to convey."""
+        """What a module looks up for this turn: the last messages that opened turns of the conversation (a
+        person's, Nestor's notifications), so that a follow-up ("and for her?") keeps its subject."""
         said = [m.content for m in history if m.role is Role.USER][-SAID_MESSAGES:]
-        if self._instruction is not None:
-            said.append(self._instruction)
         return " ".join(said) or None
 
     async def _round(self, messages: list[Message]) -> tuple[str, tuple[ToolCall, ...]]:
@@ -367,20 +390,15 @@ class AgentReply(Reply):
             self._say(" ")  # keep what was said, then excuse the cut
         agent = self._agent
         self._say(agent.localizer.format(agent.persona.fallback(reason), agent.persona.locale))
-        await self._agent.journal.publish(
-            FallbackSpoken(
-                source="agent",
-                session=self._address.session,
-                address=self._address,
-                reason=reason,
-                exchange=self._exchange,
-            )
-        )
+        if self._turn is not None:
+            await self._turn.fell_back(reason)
+        else:
+            await agent.conversations.fell_back(self._address, reason)
 
     def _say(self, text: str) -> None:
         self._message.append(text)
         self._chunks.put_nowait(text)
-        if self._record:  # a composed message is only words to send later: still thinking
+        if self._turn is not None:  # a draft is only words to send later: still thinking
             self._agent.replies.set(self, ReplyPhase.SPEAKING)
 
     async def _end_message(self, *, last: bool = True) -> None:
@@ -390,25 +408,13 @@ class AgentReply(Reply):
         if not text:
             return
         self._chunks.put_nowait(MessageEnd(last=last))
-        self._ended.append((text, await self._log(text, interrupted=False) if self._record else None))
+        self._ended.append((text, await self._turn.answered(text) if self._turn else None))
 
     def _end_turn(self) -> None:
         """The reply is over, written or cut: the conversation's silence starts now."""
-        if not self._over and self._exchange is not None:
-            self._agent.conversations.ended(self._exchange, self._address)
+        if not self._over and self._turn is not None:
+            self._turn.end()
         self._over = True
-
-    async def _log(self, text: str, *, interrupted: bool) -> AssistantTurn:
-        turn = AssistantTurn(
-            source="agent",
-            session=self._address.session,
-            address=self._address,
-            text=text,
-            interrupted=interrupted,
-            exchange=self._exchange,
-        )
-        await self._agent.journal.publish(turn)
-        return turn
 
 
 def _share(heard: str, messages: list[str]) -> list[str]:

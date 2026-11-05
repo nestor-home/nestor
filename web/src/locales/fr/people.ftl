@@ -1,13 +1,13 @@
 ## Les personnes du foyer.
 
 people-title = Personnes
-people-intro = On les ajoute dans Configuration › Foyer.
-people-empty = Personne n'est déclaré dans la configuration du foyer.
+people-intro = Elles s'ajoutent dans Configuration › Foyer.
+people-empty = Personne dans le foyer pour l'instant.
 people-not-found = Cette personne n'est pas dans le foyer.
 people-has-account = a un compte
 people-no-account = pas de compte
 people-presence-unknown = présence inconnue
-people-presence-away = pas à la maison
+people-presence-away = dehors
 people-presence-home = à la maison
 people-presence-home-room = à la maison · { $room }
 people-since = depuis
@@ -20,10 +20,10 @@ people-tab-presence = Présence
 people-today = Aujourd'hui, { $name } apparaît dans { $count ->
     [one] 1 événement
    *[other] { $count } événements
-} du journal, dont { $spoken ->
-    [0] aucune prise de parole
-    [one] 1 prise de parole
-   *[other] { $spoken } prises de parole
+}, dont { $spoken ->
+    [0] aucun message
+    [one] 1 message
+   *[other] { $spoken } messages
 } de { $assistant }.
 people-today-nothing = Rien ne concerne { $name } aujourd'hui.
 people-recent = Récemment
@@ -31,9 +31,9 @@ people-recent-empty = Rien encore à propos de { $name }.
 people-recognised-on = reconnu sur
 people-reached-on = prévenu d'abord sur
 people-reached-origin = la conversation d'origine
-people-admin = administration
+people-admin = compte admin
 people-conversations-empty = Aucune conversation avec { $name } dans le journal.
-people-connections-hint = Ses comptes donnent à l'assistant ses outils : mail, agenda.
+people-connections-hint = Ses comptes connectés (mail, agenda) donnent des outils à l'assistant.
 people-open-catalogue = ouvrir le catalogue
 people-connections-empty = Aucun compte connecté pour { $name }.
-people-presence-empty = Aucun changement de présence connu : le système de la maison ne la suit peut-être pas.
+people-presence-empty = Aucun changement de présence connu.

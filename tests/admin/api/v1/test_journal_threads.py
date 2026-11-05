@@ -12,8 +12,9 @@ from nestor.modules.accounts import Role
 from nestor.modules.channels import Address, Exchange, InboundMessage, Medium, Sender
 from nestor.modules.cognition import TaskEnded, TaskStarted, TaskStatus
 from nestor.modules.cognition.delegation.events import TaskDelivered
-from nestor.modules.conversation import Conversations, UserTurn
+from nestor.modules.conversation import AssistantTurn, Conversations, NotificationTurn, UserTurn
 from nestor.modules.home import PresenceChanged
+from nestor.modules.identity import Speaker
 from nestor.modules.initiative import Delivered, DeliveryConsidered, WatchCreated, WatchTriggered
 from nestor.modules.memory import MemoryRecorded
 
@@ -78,6 +79,32 @@ async def test_a_task_chains_from_its_start_to_its_result(tmp_path: Path) -> Non
         assert started["cause"] is None
 
 
+async def test_an_unprompted_message_chains_from_its_delivery_through_its_cue(tmp_path: Path) -> None:
+    async with Harness(tmp_path) as admin:
+        turn = Exchange(conversation_id="c1", turn_id="t1")
+        for event in (
+            DeliveryConsidered(source="courier", about="task t1 completed", reason=REASON, written=TELEGRAM),
+            NotificationTurn(
+                source="agent",
+                session=TELEGRAM.session,
+                address=TELEGRAM,
+                text="Result: ok",
+                about="task t1 completed",
+                exchange=turn,
+                person=PersonId("mathis"),
+            ),
+            AssistantTurn(
+                source="agent", session=TELEGRAM.session, address=TELEGRAM, text="C'est fait.", exchange=turn
+            ),
+        ):
+            await admin.nestor.journal.publish(event)
+        found = by_type(await items(await admin.api()))
+        considered, notification = found["initiative.considered"][0], found["conversation.turn.notification"][0]
+        answered = found["conversation.turn.assistant"][0]
+    assert notification["cause"] == considered["position"] and answered["cause"] == notification["position"]
+    assert notification["text"] == "Pour Richie : tâche t1 terminée" and notification["detail"] == "Result: ok"
+
+
 async def test_the_position_cursor_pages_back_through_a_filtered_journal(tmp_path: Path) -> None:
     async with Harness(tmp_path) as admin:
         for n in range(5):
@@ -88,7 +115,7 @@ async def test_the_position_cursor_pages_back_through_a_filtered_journal(tmp_pat
                     source="agent",
                     address=TELEGRAM,
                     text=f"m{n}",
-                    person=MATHIS,
+                    speaker=Speaker.account(MATHIS),
                 )
             )
             await admin.nestor.journal.publish(MemoryRecorded(source="memory", memory_id=f"x{n}", text=f"s{n}"))
@@ -110,7 +137,7 @@ async def test_every_filter_narrows_the_journal(tmp_path: Path) -> None:
                 session=TELEGRAM.session,
                 address=TELEGRAM,
                 text="Le dentiste",
-                person=MATHIS,
+                speaker=Speaker.account(MATHIS),
             )
         )
         await journal.publish(
@@ -121,7 +148,7 @@ async def test_every_filter_narrows_the_journal(tmp_path: Path) -> None:
                 session=VOICE.session,
                 address=VOICE,
                 text="Bonsoir",
-                person=MATHILDE,
+                speaker=Speaker.account(MATHILDE),
             )
         )
         await journal.publish(PresenceChanged(source="presence", person=MATHIS, home=True, room="cuisine"))
@@ -154,7 +181,7 @@ async def test_each_facet_is_counted_ignoring_its_own_selection(tmp_path: Path) 
                     source="agent",
                     address=address,
                     text=text,
-                    person=person,
+                    speaker=Speaker.account(person),
                 )
             )
         await journal.publish(PresenceChanged(source="presence", person=MATHIS, home=True, room="salon"))
@@ -190,7 +217,7 @@ async def test_one_entry_comes_with_its_record_and_only_to_who_may_read_it(tmp_p
                 source="agent",
                 address=TELEGRAM,
                 text="secret",
-                person=MATHIS,
+                speaker=Speaker.account(MATHIS),
             )
         )
         api = await admin.api()

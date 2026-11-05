@@ -2,7 +2,7 @@
 
 jr-title = Journal
 jr-loading = Chargement du journal…
-jr-empty = Rien dans le journal pour ces filtres.
+jr-empty = Aucun événement pour ces filtres.
 jr-empty-hint = Élargissez la période ou retirez un filtre.
 jr-older = Plus ancien
 jr-beginning = Début du journal
@@ -23,13 +23,13 @@ jr-event-count = { $count ->
 jr-day-list = Journal du { $day }
 
 jr-search-label = Chercher dans le journal
-jr-search-placeholder = Chercher : colis, facture, Jules…
+jr-search-placeholder = Colis, facture, Jules…
 jr-search-clear = Effacer la recherche
 jr-range-hour = Dernière heure
 jr-range-today = Aujourd'hui
 jr-range-day = 24 dernières heures
 jr-range-week = 7 derniers jours
-jr-range-all = Toute la période
+jr-range-all = Depuis le début
 jr-range-since = Depuis { $from }
 jr-range-until = Jusqu'à { $to }
 jr-range-between = { $from } → { $to }
@@ -46,7 +46,7 @@ jr-facet-channel = Canal
 jr-facet-room = Pièce
 jr-facet-clear = Effacer les filtres
 jr-facet-search = Filtrer : { $facet }…
-jr-facet-empty = Aucune valeur de ce nom.
+jr-facet-empty = Aucun résultat.
 jr-facet-selected = { $count } choisis
 
 jr-histogram-label = { $count ->
@@ -55,15 +55,15 @@ jr-histogram-label = { $count ->
 } entre { $from } et { $to }
 
 jr-story-thread = Conversation
-jr-story-chain = Enchaînement
+jr-story-chain = Séquence
 jr-story-single = Événement
 jr-thread-title = { $count ->
     [0] Conversation
    *[other] Conversation · { $people }
 }
-jr-thread-open = Ouvrir cette conversation seule
+jr-thread-open = Ouvrir la conversation
 jr-thread-link = fil
-jr-thread-earlier = … début du fil sur une page plus ancienne
+jr-thread-earlier = … la conversation commence plus tôt
 jr-entry-label = { $text } : { $detail }
 jr-tool-count = { $count ->
     [one] 1 outil
@@ -98,7 +98,7 @@ jr-channel-voice = voix
 jr-why = pourquoi
 jr-why-label = pourquoi :
 
-step-task-started = confiée
+step-task-started = lancée
 step-task-progressed = étape
 step-task-delivered = résultat transmis
 step-task-cancelled = annulée
@@ -123,10 +123,10 @@ jr-related-watch = Veille
 jr-related-connection = Connexion
 jr-related-satellite = Satellite
 jr-related-memory = Souvenir
-jr-related-cause = Causé par
-jr-raw = Enregistrement brut
-jr-raw-copy = l'enregistrement
-jr-all-in-journal = tout dans le journal
+jr-related-cause = Déclenché par
+jr-raw = JSON
+jr-raw-copy = le JSON
+jr-all-in-journal = voir le journal
 jr-subject-conversation = Conversation
 jr-subject-session = Session
 jr-subject-task = Tâche

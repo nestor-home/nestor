@@ -32,6 +32,7 @@ from nestor.admin.state import AdminState, state
 from nestor.core.i18n import Message
 from nestor.modules.accounts import Scope
 from nestor.runtime.editing import ConfigEditor, Diff, EditRefused, Problem, dotted
+from nestor.runtime.plugins import ModelType
 from nestor.runtime.secrets import ConfigSecrets, preview
 
 router = APIRouter(tags=["config"])
@@ -44,6 +45,7 @@ class SlotOut(BaseModel):
     required: bool
     title: str
     kinds: dict[str, dict[str, Any]]  # JSON Schema of each installed plugin's settings, by kind
+    model_types: dict[str, ModelType]  # what each kind of the model slot serves (empty elsewhere)
 
 
 class ConfigSchemaOut(BaseModel):
@@ -190,6 +192,7 @@ async def get_config_schema(request: Request, caller: Manager) -> ConfigSchemaOu
             required=slot["required"],
             title=words.text_or(Message(f"config-slot-{key}"), _humanize(key)),
             kinds=_render(slot["kinds"], words),
+            model_types=slot["model_types"],
         )
         for key, slot in editor.schema.slots().items()
     }

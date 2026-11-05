@@ -27,6 +27,8 @@ def value_text(value: float | None, unit: Unit) -> str:
             return f"{value * 1000:.0f} ms" if value < 10 else f"{value:.1f} s"
         case Unit.COST:
             return f"{value:.4f}"
+        case Unit.BYTES:
+            return f"{value / 1e6:.1f} MB"
         case _:  # Unit.COUNT
             return f"{value:.0f}" if float(value).is_integer() else f"{value:.2f}"
 

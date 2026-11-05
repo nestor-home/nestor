@@ -19,8 +19,10 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, ValidationIn
 from nestor.core import NestorError, PersonId
 from nestor.modules.channels import Address
 from nestor.modules.household import Account, Person
+from nestor.modules.identity import VoiceSettings
 from nestor.modules.initiative import QuietHours
 from nestor.modules.memory.recall import RecallSettings, Strategy
+from nestor.runtime.plugins import ModelType
 
 _MODEL_KEY = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]*")
 _VARIABLE = re.compile(r"\$\{(?:(?P<secret>secret):)?(?P<name>[A-Za-z_][A-Za-z0-9_.-]*)\}")
@@ -34,7 +36,10 @@ type SecretLookup = Callable[[str], str | None]  # a secret's value by name, Non
 
 
 ADVANCED: dict[str, Any] = {"advanced": True}  # forms fold such a field away by default
-MODEL_REFERENCE: dict[str, Any] = {"reference": "models"}  # forms offer the keys of `models`
+# a key of `models`, of the type of model the field takes: forms offer only those
+LANGUAGE_MODEL: dict[str, Any] = {"reference": "models", "model_type": ModelType.LANGUAGE.value}
+EMBEDDING_MODEL: dict[str, Any] = {"reference": "models", "model_type": ModelType.EMBEDDING.value}
+VOICE_MODEL: dict[str, Any] = {"reference": "models", "model_type": ModelType.VOICE.value}
 
 
 def _located[T](parse: Callable[[str], T], value: str) -> T:
@@ -149,17 +154,17 @@ class AgentConfig(Section):
     """Which model of `models` answers in each medium. One left out takes the other's; with a single
     model, neither needs saying."""
 
-    spoken: str | None = Field(default=None, json_schema_extra=MODEL_REFERENCE)  # the voice: first words fast
-    written: str | None = Field(default=None, json_schema_extra=MODEL_REFERENCE)  # writing allows a few seconds
+    spoken: str | None = Field(default=None, json_schema_extra=LANGUAGE_MODEL)  # the voice: first words fast
+    written: str | None = Field(default=None, json_schema_extra=LANGUAGE_MODEL)  # writing allows a few seconds
     background: str | None = Field(
-        default=None, json_schema_extra=MODEL_REFERENCE
+        default=None, json_schema_extra=LANGUAGE_MODEL
     )  # wake-ups: the written one by default
 
 
 class WatchesConfig(Section):
     """The model that sorts incoming items for the watches: the agent's written one by default."""
 
-    model: str | None = Field(default=None, json_schema_extra=MODEL_REFERENCE)
+    model: str | None = Field(default=None, json_schema_extra=LANGUAGE_MODEL)
 
 
 _RECALL = RecallSettings()
@@ -175,9 +180,9 @@ class MemoryConfig(Section):
     recent_episodes: int = Field(default=_RECALL.recent_episodes, ge=0, le=20)  # whoever speaks: latest conversations
     found_episodes: int = Field(default=_RECALL.found_episodes, ge=0, le=20)  # and older ones their words find
     # the model that summarizes each conversation once it is over: the background one by default
-    consolidation: str | None = Field(default=None, json_schema_extra=MODEL_REFERENCE)
+    consolidation: str | None = Field(default=None, json_schema_extra=LANGUAGE_MODEL)
     # an embedding model of `models`: memories are then found by meaning as well as by words
-    embedder: str | None = Field(default=None, json_schema_extra=MODEL_REFERENCE)
+    embedder: str | None = Field(default=None, json_schema_extra=EMBEDDING_MODEL)
     # how long a turn waits for the question's vector before searching by words only
     query_timeout_s: float = Field(default=1.0, gt=0, json_schema_extra=ADVANCED)
 
@@ -191,16 +196,48 @@ class MemoryConfig(Section):
         )
 
 
+_VOICES = VoiceSettings()
+
+
+class VoicesConfig(Section):
+    """Who speaks on a shared device (a satellite), from their voice: a voice model of `models` turns speech into
+    voiceprints, compared on this machine. Without it, whoever speaks there is someone of the household, nobody
+    in particular, and the agent asks who when it matters."""
+
+    embedder: str | None = Field(default=None, json_schema_extra=VOICE_MODEL)
+    # the similarity from which a voice is someone's: the model's own, calibrated on the `speaker-id` bench
+    threshold: float | None = Field(default=None, gt=0, lt=1, json_schema_extra=ADVANCED)
+    # how long a turn waits for its voiceprint (computed while the speech is transcribed)
+    wait_s: float = Field(default=0.5, gt=0, json_schema_extra=ADVANCED)
+    keep: int = Field(default=_VOICES.keep, ge=0, le=500, json_schema_extra=ADVANCED)  # learned voiceprints a person
+    per_room: int = Field(default=_VOICES.per_room, ge=0, le=500, json_schema_extra=ADVANCED)  # of them from one room
+    anchor_weight: float = Field(default=_VOICES.anchor_weight, ge=0, le=1, json_schema_extra=ADVANCED)
+    learn_margin: float = Field(default=_VOICES.learn_margin, ge=0, lt=1, json_schema_extra=ADVANCED)
+    learn_lead: float = Field(default=_VOICES.learn_lead, ge=0, lt=1, json_schema_extra=ADVANCED)
+
+    def settings(self) -> VoiceSettings:
+        return VoiceSettings(
+            threshold=self.threshold,
+            keep=self.keep,
+            per_room=self.per_room,
+            anchor_weight=self.anchor_weight,
+            learn_margin=self.learn_margin,
+            learn_lead=self.learn_lead,
+        )
+
+
 class NestorConfig(Section):
     data_dir: Path = Field(default=Path("data"), json_schema_extra=ADVANCED)
     persona: PersonaConfig
     household: tuple[PersonConfig, ...] = Field(min_length=1)
     # the models it may use, under names the household chooses; the roles below refer to them by name. A
-    # model answers (`openai-compatible`) or embeds (`openai-compatible-embeddings`): each role checks which
+    # model answers (`openai-compatible`), embeds text (`openai-compatible-embeddings`) or voices
+    # (`sherpa-onnx-voice`): each role checks which
     models: dict[str, ComponentConfig] = Field(min_length=1)
     agent: AgentConfig = Field(default=AgentConfig(), validate_default=True)
     watches: WatchesConfig = WatchesConfig()
     memory: MemoryConfig = MemoryConfig()
+    voices: VoicesConfig = VoicesConfig()
     executors: tuple[AdapterConfig, ...] = ()
     channels: tuple[AdapterConfig, ...] = Field(min_length=1)
     tools: tuple[AdapterConfig, ...] = ()  # tool providers (an MCP server: Home Assistant, Linear…)
@@ -236,6 +273,12 @@ class NestorConfig(Section):
     @classmethod
     def _memory(cls, value: MemoryConfig, info: ValidationInfo) -> MemoryConfig:
         _known(info, {"embedder": value.embedder, "consolidation": value.consolidation})
+        return value
+
+    @field_validator("voices")
+    @classmethod
+    def _voices(cls, value: VoicesConfig, info: ValidationInfo) -> VoicesConfig:
+        _known(info, {"embedder": value.embedder})
         return value
 
     def roles(self, answering: Collection[str]) -> dict[str, str]:

@@ -20,6 +20,8 @@ import groqSvg from "@lobehub/icons-static-svg/icons/groq.svg?raw";
 import hermesagentSvg from "@lobehub/icons-static-svg/icons/hermesagent.svg?raw";
 import lmstudioSvg from "@lobehub/icons-static-svg/icons/lmstudio.svg?raw";
 import mistralSvg from "@lobehub/icons-static-svg/icons/mistral.svg?raw";
+import modelscopeSvg from "@lobehub/icons-static-svg/icons/modelscope.svg?raw";
+import nvidiaSvg from "@lobehub/icons-static-svg/icons/nvidia.svg?raw";
 import ollamaSvg from "@lobehub/icons-static-svg/icons/ollama.svg?raw";
 import openaiSvg from "@lobehub/icons-static-svg/icons/openai.svg?raw";
 import openrouterSvg from "@lobehub/icons-static-svg/icons/openrouter.svg?raw";
@@ -45,6 +47,7 @@ import {
   siMistralai,
   siModelcontextprotocol,
   siNotion,
+  siNvidia,
   siOpenrouter,
   siPipecat,
   siPython,
@@ -159,6 +162,10 @@ const BRANDS = {
   kokoro: monogram("Kokoro", "K"),
   silero: monogram("Silero VAD", "S"),
   "smart-turn": simple("Smart Turn (Pipecat)", siPipecat), // Pipecat's model: its maker's mark
+  // voice recognition: the publisher of each model, else the runtime that runs it
+  nvidia: lobe("NVIDIA", nvidiaSvg, siNvidia),
+  modelscope: lobe("ModelScope (Alibaba)", modelscopeSvg),
+  "sherpa-onnx": monogram("sherpa-onnx", "so"),
   // devices and their software
   reachy: monogram("Reachy Mini (Pollen Robotics)", "R"),
   "raspberry-pi": simple("Raspberry Pi", siRaspberrypi),
@@ -181,6 +188,7 @@ const ALIASES: Record<string, BrandSlug> = {
   "pollen-robotics": "reachy",
   "reachy-mini": "reachy",
   "openai-compatible-embeddings": "openai-compatible",
+  "sherpa-onnx-voice": "sherpa-onnx",
   lmstudio: "lm-studio",
   "llama.cpp": "llama-cpp",
   "nestor-satellite-python": "python",

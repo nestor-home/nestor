@@ -15,14 +15,14 @@ home-state-working = travaille
 home-state-concerned = préoccupé
 home-state-sleeping = en veille
 home-state-idle = disponible
-home-state-degraded = fonctionne en mode dégradé
+home-state-degraded = en mode dégradé
 
 ## Ce qu'il dit, à la première personne
 home-say-delivered = Je viens de parler à { $people } ({ $where }).
 home-say-listening = J'écoute { $people } ({ $where }).
 home-say-answering = Je réponds à { $people }.
 home-say-tool = Je consulte { $tool }.
-home-say-presence-room = { $people } est au { $room }.
+home-say-presence-room = { $people } est dans « { $room } ».
 home-say-presence-away = { $people } vient de partir.
 home-say-memory = C'est noté, je m'en souviendrai.
 home-say-working = { $count ->
@@ -37,7 +37,7 @@ home-say-concerned = { $count ->
    *[other] J'ai besoin de vous pour { $count } choses.
 }
 home-say-sleeping = Heures calmes : je me tais jusqu'à { $until }.
-home-say-idle = Tout est calme. Je suis là si besoin.
+home-say-idle = Tout est calme.
 
 ## Les colonnes
 home-needs = Ce que j'attends de vous
@@ -52,13 +52,13 @@ home-now = En ce moment
 home-task-starting = démarrage
 home-talking = Conversation avec { $people }
 home-talking-someone = Conversation en cours
-home-nothing-now = Rien en cours. J'attends qu'on me parle.
+home-nothing-now = Rien en cours.
 home-next = À venir
 home-quiet-now = Silence jusqu'à { $until }, sauf urgence.
 home-quiet-later = Heures calmes de { $from } à { $to }.
-home-upcoming = Je l'écrirai à { $person } sur { $channel } à { $time }.
-home-upcoming-someone = Je l'écrirai sur { $channel } à { $time }.
-home-upcoming-unless = Sauf si quelqu'un répond d'ici là.
+home-upcoming = Relance à { $person } sur { $channel } à { $time }.
+home-upcoming-someone = Relance sur { $channel } à { $time }.
+home-upcoming-unless = Sauf réponse d'ici là.
 home-watch-triggered = déclenchée
 
 ## Sa journée, ce qu'il sait

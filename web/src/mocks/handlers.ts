@@ -28,7 +28,7 @@ import {
 import { arriving, CANCELLED, KIND_LABELS, METHODS, PROTOCOL, ROLE_LABEL, tools as toolsOf } from "./fixtures";
 import { fr, inFrench } from "./french";
 import { facets, filtersOf, matching, withoutRecord } from "./journal";
-import { errorText, type Lang, localize, toItem } from "./messages";
+import { errorText, type Lang, localize, render, toItem } from "./messages";
 
 type In<N extends keyof components["schemas"]> = components["schemas"][N];
 
@@ -98,6 +98,7 @@ let downUntil = 0;
 /** Back to a running instance, between tests. */
 export function resetServer(): void {
   downUntil = 0;
+  recordings.clear();
   for (const timer of pending) clearTimeout(timer);
   pending.clear();
 }
@@ -142,7 +143,185 @@ function journalize(draft: Omit<JournalItem, "id" | "at" | "uid" | "kind_label">
   return entry;
 }
 
+// -- voices -----------------------------------------------------------------------------------------
+
+/** A guided recording in progress, as the mock server keeps it: phrases kept, attempts by phrase. */
+interface MockRecording {
+  id: string;
+  person: string;
+  learning: boolean;
+  taken: Set<number>;
+  attempts: Map<number, number>;
+}
+const recordings = new Map<string, MockRecording>();
+/** How many recordings are open (started, neither finished nor abandoned). */
+export const recordingsInProgress = () => recordings.size;
+const PHRASES = [1, 2, 3, 4, 5].map((n) => `voice-phrase-${n}`);
+
+/** Their own voice; an owner, the voice of someone without an account (as the server decides). */
+function mayManageVoice(person: string): boolean {
+  const account = signedIn();
+  if (!account) return false;
+  if (account.person === person) return true;
+  return account.role === "owner" && !db.people.find((p) => p.id === person)?.account;
+}
+
+const silentVoice = { enrolled: false, learning: true, learned: 0, enrolled_at: null, last_learned_at: null };
+
+const voiceOut = (person: string): In<"VoiceOut"> => ({
+  ...(db.voices[person] ?? silentVoice),
+  manageable: mayManageVoice(person),
+});
+
+/** The samples of a 16-bit mono WAV at 16 kHz, or null when it is anything else. */
+async function wavSeconds(request: Request): Promise<number | null> {
+  const body = await request.arrayBuffer();
+  if (request.headers.get("Content-Type") !== "audio/wav" || body.byteLength < 44) return null;
+  const view = new DataView(body);
+  const text = (at: number) => String.fromCharCode(...new Uint8Array(body, at, 4));
+  if (text(0) !== "RIFF" || text(8) !== "WAVE" || view.getUint16(20, true) !== 1) return null;
+  if (view.getUint16(22, true) !== 1 || view.getUint32(24, true) !== 16_000 || view.getUint16(34, true) !== 16) {
+    return null;
+  }
+  return view.getUint32(40, true) / 2 / 16_000;
+}
+
+/** The person a recording is for, when the reader may manage that voice; else the refusal. */
+function managedRecording(id: string): MockRecording | Response {
+  const recording = recordings.get(id);
+  if (!recording) return fail(404, "not_found", "error-resource-not-found", { what: "Recording" });
+  if (!mayManageVoice(recording.person)) return fail(403, "voice_not_yours", "error-voice-not-yours");
+  return recording;
+}
+
+const voiceHandlers = [
+  http.get(`${API}/household/people/:id/voice`, ({ request, params }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    if (!db.people.some((p) => p.id === params.id)) return fail(404, "person_unknown", "error-person-unknown");
+    return json(voiceOut(String(params.id)));
+  }),
+
+  http.post(`${API}/household/people/:id/voice/recording`, async ({ request, params }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    const person = String(params.id);
+    if (!db.people.some((p) => p.id === person)) return fail(404, "person_unknown", "error-person-unknown");
+    if (!mayManageVoice(person)) return fail(403, "voice_not_yours", "error-voice-not-yours");
+    const { learning } = (await request.json()) as In<"RecordingIn">;
+    const id = newId("rec");
+    recordings.set(id, { id, person, learning, taken: new Set(), attempts: new Map() });
+    return HttpResponse.json(
+      {
+        id,
+        person,
+        phrases: PHRASES.map((p) => render(lang, { id: p, args: {} })),
+        next: 0,
+      } satisfies In<"RecordingOut">,
+      { status: 201 },
+    );
+  }),
+
+  /** Every phrase passes but the second, refused once as too short: the flow shows a retry. */
+  http.put(`${API}/voice/recordings/:id/phrases/:n`, async ({ request, params }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    const recording = managedRecording(String(params.id));
+    if (recording instanceof Response) return recording;
+    const phrase = Number(params.n);
+    if (!(phrase >= 0 && phrase < PHRASES.length)) return fail(400, "audio_format", "error-audio-format");
+    const seconds = await wavSeconds(request);
+    if (seconds === null) return fail(400, "audio_format", "error-audio-format");
+    await delay(400);
+    const attempts = (recording.attempts.get(phrase) ?? 0) + 1;
+    recording.attempts.set(phrase, attempts);
+    const problem = seconds < 0.5 || (phrase === 1 && attempts === 1) ? "too_short" : null;
+    if (!problem) recording.taken.add(phrase);
+    return json({
+      kept: !problem,
+      problem,
+      taken: recording.taken.size,
+      total: PHRASES.length,
+    } satisfies In<"PhraseOut">);
+  }),
+
+  http.post(`${API}/voice/recordings/:id/finish`, async ({ request, params }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    const recording = managedRecording(String(params.id));
+    if (recording instanceof Response) return recording;
+    if (recording.taken.size < PHRASES.length)
+      return fail(409, "recording_incomplete", "error-status", { status: 409 });
+    await delay(500);
+    recordings.delete(recording.id);
+    const learned = db.voices[recording.person];
+    db.voices[recording.person] = {
+      enrolled: true,
+      learning: recording.learning,
+      learned: learned?.learned ?? 0,
+      enrolled_at: new Date().toISOString(),
+      last_learned_at: learned?.last_learned_at ?? null,
+    };
+    save();
+    return json(voiceOut(recording.person));
+  }),
+
+  http.delete(`${API}/voice/recordings/:id`, ({ request, params }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    const recording = managedRecording(String(params.id));
+    if (recording instanceof Response) return recording;
+    recordings.delete(recording.id);
+    return noContent();
+  }),
+
+  /** The voice recorded last is the one recognised, comfortably above the threshold. */
+  http.post(`${API}/voice/hear`, async ({ request }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    if ((await wavSeconds(request)) === null) return fail(400, "audio_format", "error-audio-format");
+    await delay(300);
+    const [person] = Object.entries(db.voices)
+      .filter(([, v]) => v.enrolled && v.enrolled_at)
+      .sort(([, a], [, b]) => (b.enrolled_at ?? "").localeCompare(a.enrolled_at ?? ""))
+      .map(([id]) => id);
+    const name = db.people.find((p) => p.id === person)?.name ?? null;
+    return json({
+      person: person ?? null,
+      name,
+      score: person ? 0.82 : 0.31,
+      threshold: 0.55,
+    } satisfies In<"HeardOut">);
+  }),
+
+  http.put(`${API}/household/people/:id/voice/learning`, async ({ request, params }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    const person = String(params.id);
+    if (!mayManageVoice(person)) return fail(403, "voice_not_yours", "error-voice-not-yours");
+    const { learning } = (await request.json()) as In<"LearningIn">;
+    db.voices[person] = { ...(db.voices[person] ?? silentVoice), learning };
+    save();
+    return json(voiceOut(person));
+  }),
+
+  http.delete(`${API}/household/people/:id/voice`, async ({ request, params }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    const person = String(params.id);
+    if (!mayManageVoice(person)) return fail(403, "voice_not_yours", "error-voice-not-yours");
+    await delay(200);
+    const voice = db.voices[person];
+    if (new URL(request.url).searchParams.get("learned_only") === "true" && voice) {
+      db.voices[person] = { ...voice, learned: 0, last_learned_at: null };
+    } else delete db.voices[person];
+    save();
+    return json(voiceOut(person));
+  }),
+];
+
 export const handlers = [
+  ...voiceHandlers,
   // -- session ----------------------------------------------------------------------------------
   http.get(`${API}/me`, async ({ request }) => {
     listen(request);

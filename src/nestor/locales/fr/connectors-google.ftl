@@ -1,10 +1,10 @@
 # Le connecteur Google (Gmail) : son nom, sa description et le guide affiché avant de le connecter.
 
 connector-google-title = Google (Gmail)
-connector-google-description = Chercher et lire les mails Gmail ; les nouveaux mails reçus peuvent nourrir les veilles. Lecture seule.
+connector-google-description = Recherche et lecture des mails Gmail, en lecture seule. Les nouveaux mails alimentent les veilles.
 connector-google-setup =
-    Nestor se connecte à Google avec votre propre client OAuth : aucun secret partagé n'est livré avec
-    Nestor. Comptez une dizaine de minutes, une seule fois par foyer.
+    Nestor se connecte à Google avec votre propre client OAuth. Comptez une dizaine de minutes, une
+    seule fois par foyer.
 
     1. Ouvrez la console Google Cloud (https://console.cloud.google.com/), choisissez « Sélectionner un
        projet » puis « Nouveau projet », donnez-lui un nom (par exemple « Nestor ») et créez-le. Vérifiez
@@ -19,10 +19,9 @@ connector-google-setup =
     4. Dans « Accès aux données », ajoutez les champs d'application openid, email et
        https://www.googleapis.com/auth/gmail.readonly (lecture seule : Nestor ne peut ni envoyer, ni
        supprimer, ni modifier vos mails).
-    5. Dans « Audience », cliquez sur « Publier l'application » pour la passer « En production ». C'est
-       important : tant que l'application reste « En test », Google fait expirer l'autorisation au bout
-       de 7 jours et il faudrait reconnecter le compte chaque semaine. Inutile de demander la validation
-       de Google : l'application ne sert qu'à vous.
+    5. Dans « Audience », cliquez sur « Publier l'application » pour la passer « En production ». Sinon,
+       Google fait expirer l'autorisation au bout de 7 jours. Inutile de demander la validation de
+       Google : l'application ne sert qu'à vous.
     6. Dans « Clients », choisissez « Créer un client », type « Application Web ». Sous « URI de
        redirection autorisés », collez exactement l'adresse de retour affichée par Nestor ci-dessous.
        Créez, puis copiez l'ID client et le code secret (le secret n'est plus affiché ensuite).

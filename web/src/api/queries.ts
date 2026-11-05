@@ -8,6 +8,7 @@ export const keys = {
   me: ["me"] as const,
   people: ["people"] as const,
   person: (id: Id) => ["people", id] as const,
+  voice: (id: Id) => ["people", id, "voice"] as const,
   accounts: ["accounts"] as const,
   account: (id: Id) => ["accounts", id] as const,
   invitations: ["invitations"] as const,
@@ -51,6 +52,8 @@ export const meQuery = queryOptions({
 
 export const peopleQuery = queryOptions({ queryKey: keys.people, queryFn: api.people, staleTime: 30_000 });
 export const personQuery = (id: Id) => queryOptions({ queryKey: keys.person(id), queryFn: () => api.person(id) });
+export const voiceQuery = (id: Id) =>
+  queryOptions({ queryKey: keys.voice(id), queryFn: () => api.voice(id), retry: false });
 export const accountsQuery = queryOptions({ queryKey: keys.accounts, queryFn: api.accounts });
 export const accountQuery = (id: Id) => queryOptions({ queryKey: keys.account(id), queryFn: () => api.account(id) });
 export const invitationsQuery = queryOptions({ queryKey: keys.invitations, queryFn: api.invitations });

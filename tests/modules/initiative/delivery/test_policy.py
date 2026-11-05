@@ -95,13 +95,21 @@ def test_a_written_request_is_always_written() -> None:
     assert (result.spoken, result.written) == (None, TELEGRAM)
 
 
-def test_without_presence_it_goes_back_to_the_conversation() -> None:
-    spoken = plan(None, origin=Address("voice", "salon"))
-    written = plan(None, origin=Address("web", "x"))
-    assert (spoken.spoken, spoken.written) == (Address("voice", "salon"), TELEGRAM)
+def test_without_presence_it_is_written_unless_the_spoken_conversation_is_still_going_on() -> None:
+    later = plan(None, origin=Address("voice", "salon"))
+    going_on = plan(None, origin=Address("voice", "salon"), origin_open=True)
+    written = plan(None, origin=Address("web", "x"), origin_open=True)
+    assert (later.spoken, later.written) == (None, TELEGRAM)
+    assert (going_on.spoken, going_on.written) == (Address("voice", "salon"), TELEGRAM)
     assert (written.spoken, written.written) == (None, TELEGRAM)
     stranger = POLICY.plan(None, channels=CHANNELS, presence=None, origin=Address("web", "x"), now=NOON)
     assert (stranger.spoken, stranger.written) == (None, Address("web", "x"))
+
+
+def test_without_presence_someone_with_nowhere_to_write_is_told_aloud() -> None:
+    grandma = Person(id=PersonId("mamie"), name="Mamie")
+    found = POLICY.plan(grandma, channels=CHANNELS, presence=None, origin=Address("voice", "salon"), now=NOON)
+    assert (found.spoken, found.written) == (Address("voice", "salon"), None)
 
 
 @pytest.mark.parametrize(

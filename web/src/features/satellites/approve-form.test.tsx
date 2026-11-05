@@ -36,7 +36,7 @@ describe("approving a satellite", () => {
     );
     await user.type(screen.getByLabelText("Code shown by the device"), "12a45");
     await user.click(screen.getByRole("button", { name: "Pair" }));
-    expect(screen.getByRole("alert")).toHaveTextContent("The code is 6 digits, read on the device.");
+    expect(screen.getByRole("alert")).toHaveTextContent("The code has 6 digits.");
     expect(screen.getByLabelText("Code shown by the device")).toHaveAttribute("aria-invalid", "true");
     expect(sent).toHaveLength(0);
   });
@@ -52,7 +52,7 @@ describe("approving a satellite", () => {
     await user.type(screen.getByLabelText("Code shown by the device"), "424 242");
     await user.click(screen.getByRole("checkbox", { name: /head movements/ }));
     await user.click(screen.getByRole("button", { name: "Pair" }));
-    expect(await screen.findByText("Satellite reachy-mini-hallway (hallway) paired.")).toBeInTheDocument();
+    expect(await screen.findByText("Satellite reachy-mini-hallway paired in the hallway.")).toBeInTheDocument();
     expect(sent).toEqual([
       {
         code: "424242",

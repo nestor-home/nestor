@@ -31,8 +31,8 @@
             "secret_values": false,
             "advanced": false,
             "group": "persona",
-            "title": "Character",
-            "help": "Who the assistant is and how it speaks, in its own words."
+            "title": "Personality",
+            "help": "Who the assistant is and how it speaks."
           }
         },
         "locale": {
@@ -49,7 +49,7 @@
             "advanced": false,
             "group": "persona",
             "title": "Language",
-            "help": "The household's language (BCP 47, e.g. fr-FR): fixed phrases and the admin's default."
+            "help": "E.g. en-US. Language of fixed phrases and, by default, of the admin."
           }
         },
         "language": {
@@ -65,8 +65,8 @@
             "secret_values": false,
             "advanced": false,
             "group": "persona",
-            "title": "Language named to the model",
-            "help": null
+            "title": "Reply language",
+            "help": "Its name in the prompt, e.g. English."
           }
         },
         "timezone": {
@@ -142,8 +142,8 @@
             "secret_values": false,
             "advanced": false,
             "group": "household",
-            "title": "Accounts on channels",
-            "help": "How each channel knows this person: telegram:123456789, voice:*."
+            "title": "Accounts",
+            "help": "How channels recognise this person, e.g. telegram:123456789."
           }
         },
         "reach": {
@@ -201,7 +201,8 @@
             "group": "agent",
             "reference": "models",
             "title": "Spoken model",
-            "help": "Answers aloud; the voice starts on its first sentence. Without one, the written model speaks too."
+            "help": "For spoken replies. The written model by default.",
+            "model_type": "language"
           }
         },
         "written": {
@@ -226,7 +227,8 @@
             "group": "agent",
             "reference": "models",
             "title": "Written model",
-            "help": "Answers in writing. Without one, the spoken model writes too."
+            "help": "For written replies. The spoken model by default.",
+            "model_type": "language"
           }
         }
       },
@@ -259,7 +261,8 @@
             "group": "watches",
             "reference": "models",
             "title": "Sorting model",
-            "help": "Decides which watches each incoming item concerns. The written model by default."
+            "help": "Picks the watches each incoming item concerns. The written model by default.",
+            "model_type": "language"
           }
         }
       },
@@ -284,7 +287,7 @@
             "advanced": false,
             "group": "conversation",
             "title": "New conversation after (seconds)",
-            "help": "A message sent this long after the last turn starts a new conversation: the assistant no longer replays the earlier turns. Memories stay."
+            "help": null
           }
         }
       },
@@ -315,7 +318,7 @@
             "advanced": false,
             "group": "initiative",
             "title": "Quiet hours",
-            "help": "For example 22:30-07:30: nothing is said aloud then, unless urgent."
+            "help": "E.g. 22:30-07:30. Nothing aloud, unless urgent."
           }
         },
         "main_room": {
@@ -339,7 +342,7 @@
             "advanced": false,
             "group": "initiative",
             "title": "Main room",
-            "help": null
+            "help": "Where to speak when the home only knows someone is in."
           }
         },
         "follow_up_after_s": {
@@ -424,8 +427,8 @@
             "secret_values": false,
             "advanced": false,
             "group": "admin",
-            "title": "Public address",
-            "help": "How the household's browsers reach the admin, e.g. https://nestor.example.org."
+            "title": "Public URL",
+            "help": "The admin's URL, e.g. https://nestor.example.org."
           }
         },
         "relay_url": {
@@ -468,7 +471,7 @@
             "group": "updates",
             "reference": null,
             "title": "Check for new releases",
-            "help": "Once a day, Nestor reads its release feed and the admin says when a newer release is out. Nothing is installed."
+            "help": "Once a day, without installing anything."
           }
         },
         "feed": {
@@ -486,7 +489,7 @@
             "group": "updates",
             "reference": null,
             "title": "Release feed",
-            "help": "Where the list of releases is read from."
+            "help": null
           }
         }
       },
@@ -511,7 +514,7 @@
             "advanced": true,
             "group": "core",
             "title": "Data folder",
-            "help": "Where the database, the vault and the configuration history live."
+            "help": "Database, vault and configuration history."
           }
         }
       }
@@ -567,7 +570,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "model-openai-compatible",
-                "title": "Address of the API",
+                "title": "Base URL",
                 "help": null,
                 "brands": {
                   "anthropic.com": "anthropic",
@@ -634,8 +637,8 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "model-openai-compatible",
-                "title": "Extra request fields",
-                "help": "Sent as is with every request, e.g. the provider's routing options."
+                "title": "Extra JSON fields",
+                "help": "Added to every request, e.g. OpenRouter's routing."
               }
             },
             "connect_timeout_s": {
@@ -678,7 +681,380 @@
           "required": ["kind", "base_url", "model"],
           "title": "OpenAICompatibleSettings",
           "type": "object"
+        },
+        "openai-compatible-embeddings": {
+          "additionalProperties": false,
+          "description": "An embedding model's profile.",
+          "properties": {
+            "kind": {
+              "const": "openai-compatible-embeddings",
+              "type": "string",
+              "x-nestor": {
+                "field": "kind",
+                "title_id": "config-model-openai-compatible-embeddings-kind",
+                "help_id": "config-model-openai-compatible-embeddings-kind-help",
+                "fallback_title_id": "config-field-kind",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-embeddings",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Kind",
+                "help": null
+              }
+            },
+            "base_url": {
+              "title": "Base Url",
+              "type": "string",
+              "x-nestor": {
+                "field": "base_url",
+                "title_id": "config-model-openai-compatible-embeddings-base_url",
+                "help_id": "config-model-openai-compatible-embeddings-base_url-help",
+                "fallback_title_id": "config-field-base_url",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-embeddings",
+                "reference": null,
+                "model_type": null,
+                "brands": {
+                  "anthropic.com": "anthropic",
+                  "generativelanguage.googleapis.com": "gemini",
+                  "groq.com": "groq",
+                  "mistral.ai": "mistral",
+                  "openai.com": "openai",
+                  "openrouter.ai": "openrouter"
+                },
+                "title": "Base URL",
+                "help": null
+              }
+            },
+            "api_key": {
+              "anyOf": [
+                {
+                  "format": "password",
+                  "type": "string",
+                  "writeOnly": true
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Api Key",
+              "x-nestor": {
+                "field": "api_key",
+                "title_id": "config-model-openai-compatible-embeddings-api_key",
+                "help_id": "config-model-openai-compatible-embeddings-api_key-help",
+                "fallback_title_id": "config-field-api_key",
+                "secret": true,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-embeddings",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "API key",
+                "help": null
+              }
+            },
+            "model": {
+              "title": "Model",
+              "type": "string",
+              "x-nestor": {
+                "field": "model",
+                "title_id": "config-model-openai-compatible-embeddings-model",
+                "help_id": "config-model-openai-compatible-embeddings-model-help",
+                "fallback_title_id": "config-field-model",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-embeddings",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Model",
+                "help": null
+              }
+            },
+            "dimensions": {
+              "exclusiveMinimum": 0,
+              "title": "Dimensions",
+              "type": "integer",
+              "x-nestor": {
+                "field": "dimensions",
+                "title_id": "config-model-openai-compatible-embeddings-dimensions",
+                "help_id": "config-model-openai-compatible-embeddings-dimensions-help",
+                "fallback_title_id": "config-field-dimensions",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-embeddings",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Dimensions",
+                "help": "Size of the vectors the model returns."
+              }
+            },
+            "send_dimensions": {
+              "default": false,
+              "title": "Send Dimensions",
+              "type": "boolean",
+              "x-nestor": {
+                "field": "send_dimensions",
+                "title_id": "config-model-openai-compatible-embeddings-send_dimensions",
+                "help_id": "config-model-openai-compatible-embeddings-send_dimensions-help",
+                "fallback_title_id": "config-field-send_dimensions",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-embeddings",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Ask for these dimensions",
+                "help": "For models that shorten their vectors (Matryoshka)."
+              }
+            },
+            "query_prefix": {
+              "default": "",
+              "title": "Query Prefix",
+              "type": "string",
+              "x-nestor": {
+                "field": "query_prefix",
+                "title_id": "config-model-openai-compatible-embeddings-query_prefix",
+                "help_id": "config-model-openai-compatible-embeddings-query_prefix-help",
+                "fallback_title_id": "config-field-query_prefix",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-embeddings",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Query prefix",
+                "help": "E.g. query: for models that expect one."
+              }
+            },
+            "document_prefix": {
+              "default": "",
+              "title": "Document Prefix",
+              "type": "string",
+              "x-nestor": {
+                "field": "document_prefix",
+                "title_id": "config-model-openai-compatible-embeddings-document_prefix",
+                "help_id": "config-model-openai-compatible-embeddings-document_prefix-help",
+                "fallback_title_id": "config-field-document_prefix",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-embeddings",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Document prefix",
+                "help": "E.g. passage: for models that expect one."
+              }
+            },
+            "batch_size": {
+              "default": 64,
+              "exclusiveMinimum": 0,
+              "title": "Batch Size",
+              "type": "integer",
+              "x-nestor": {
+                "field": "batch_size",
+                "title_id": "config-model-openai-compatible-embeddings-batch_size",
+                "help_id": "config-model-openai-compatible-embeddings-batch_size-help",
+                "fallback_title_id": "config-field-batch_size",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-openai-compatible-embeddings",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Texts per request",
+                "help": null
+              }
+            },
+            "extra_body": {
+              "additionalProperties": true,
+              "title": "Extra Body",
+              "type": "object",
+              "x-nestor": {
+                "field": "extra_body",
+                "title_id": "config-model-openai-compatible-embeddings-extra_body",
+                "help_id": "config-model-openai-compatible-embeddings-extra_body-help",
+                "fallback_title_id": "config-field-extra_body",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-openai-compatible-embeddings",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Extra JSON fields",
+                "help": null
+              }
+            },
+            "connect_timeout_s": {
+              "default": 5.0,
+              "exclusiveMinimum": 0,
+              "title": "Connect Timeout S",
+              "type": "number",
+              "x-nestor": {
+                "field": "connect_timeout_s",
+                "title_id": "config-model-openai-compatible-embeddings-connect_timeout_s",
+                "help_id": "config-model-openai-compatible-embeddings-connect_timeout_s-help",
+                "fallback_title_id": "config-field-connect_timeout_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-openai-compatible-embeddings",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Connection timeout (seconds)",
+                "help": null
+              }
+            },
+            "read_timeout_s": {
+              "default": 30.0,
+              "exclusiveMinimum": 0,
+              "title": "Read Timeout S",
+              "type": "number",
+              "x-nestor": {
+                "field": "read_timeout_s",
+                "title_id": "config-model-openai-compatible-embeddings-read_timeout_s",
+                "help_id": "config-model-openai-compatible-embeddings-read_timeout_s-help",
+                "fallback_title_id": "config-field-read_timeout_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-openai-compatible-embeddings",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Read timeout (seconds)",
+                "help": null
+              }
+            }
+          },
+          "required": ["kind", "base_url", "model", "dimensions"],
+          "title": "OpenAICompatibleEmbedderSettings",
+          "type": "object"
+        },
+        "sherpa-onnx-voice": {
+          "additionalProperties": false,
+          "description": "A voice model run by sherpa-onnx.",
+          "properties": {
+            "kind": {
+              "const": "sherpa-onnx-voice",
+              "type": "string",
+              "x-nestor": {
+                "field": "kind",
+                "title_id": "config-model-sherpa-onnx-voice-kind",
+                "help_id": "config-model-sherpa-onnx-voice-kind-help",
+                "fallback_title_id": "config-field-kind",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-sherpa-onnx-voice",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Kind",
+                "help": null
+              }
+            },
+            "model": {
+              "examples": ["titanet-small", "3dspeaker-campplus-zh-en", "3dspeaker-eres2net"],
+              "title": "Model",
+              "type": "string",
+              "x-nestor": {
+                "field": "model",
+                "title_id": "config-model-sherpa-onnx-voice-model",
+                "help_id": "config-model-sherpa-onnx-voice-model-help",
+                "fallback_title_id": "config-field-model",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-sherpa-onnx-voice",
+                "reference": null,
+                "model_type": null,
+                "brands": {
+                  "3dspeaker-campplus-zh-en": "modelscope",
+                  "3dspeaker-eres2net": "modelscope",
+                  "titanet-small": "nvidia"
+                },
+                "title": "Voice model",
+                "help": "titanet-small, 3dspeaker-campplus-zh-en or 3dspeaker-eres2net (downloaded once), or the path to an .onnx file."
+              }
+            },
+            "threads": {
+              "default": 1,
+              "exclusiveMinimum": 0,
+              "maximum": 16,
+              "title": "Threads",
+              "type": "integer",
+              "x-nestor": {
+                "field": "threads",
+                "title_id": "config-model-sherpa-onnx-voice-threads",
+                "help_id": "config-model-sherpa-onnx-voice-threads-help",
+                "fallback_title_id": "config-field-threads",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-sherpa-onnx-voice",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "CPU threads",
+                "help": "One is enough."
+              }
+            },
+            "threshold": {
+              "anyOf": [
+                {
+                  "exclusiveMaximum": 1,
+                  "exclusiveMinimum": 0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Threshold",
+              "x-nestor": {
+                "field": "threshold",
+                "title_id": "config-model-sherpa-onnx-voice-threshold",
+                "help_id": "config-model-sherpa-onnx-voice-threshold-help",
+                "fallback_title_id": "config-field-threshold",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-sherpa-onnx-voice",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Recognition threshold",
+                "help": "The catalogue's by default. Required for an .onnx file of your own."
+              }
+            }
+          },
+          "required": ["kind", "model"],
+          "title": "SherpaOnnxVoiceSettings",
+          "type": "object"
         }
+      },
+      "model_types": {
+        "openai-compatible": "language",
+        "openai-compatible-embeddings": "embedding",
+        "sherpa-onnx-voice": "voice"
       }
     },
     "channels": {
@@ -740,7 +1116,7 @@
                     "secret_values": false,
                     "advanced": false,
                     "group": "channel-satellites-elevenlabssettings",
-                    "title": "Voice identifier",
+                    "title": "Voice ID",
                     "help": null
                   }
                 },
@@ -758,7 +1134,7 @@
                     "advanced": false,
                     "group": "channel-satellites-elevenlabssettings",
                     "title": "Language",
-                    "help": "The language spoken to the assistant, for transcription (e.g. fr)."
+                    "help": "For transcription, e.g. en."
                   }
                 },
                 "stt_model": {
@@ -965,7 +1341,7 @@
                 "advanced": true,
                 "group": "channel-satellites",
                 "title": "New conversation after (seconds)",
-                "help": "Empty: each turn decides, 5 minutes when spoken as Home Assistant Assist, 4 hours when typed. Past this silence, the assistant no longer replays the earlier turns. Memories stay."
+                "help": "Past this silence, the assistant no longer rereads earlier exchanges. By default, 5 min spoken, 4 h written."
               }
             },
             "host": {
@@ -1025,8 +1401,8 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "channel-satellites",
-                "title": "Public address",
-                "help": "How satellites reach this server, e.g. http://nestor.local:8471. It goes into pairing addresses."
+                "title": "Public URL",
+                "help": "The one satellites use, e.g. http://nestor.local:8471."
               }
             },
             "voice": {
@@ -1049,7 +1425,7 @@
                 "advanced": false,
                 "group": "channel-satellites",
                 "title": "Voice",
-                "help": "Without it, satellites talk in writing only. Needs the voice extra."
+                "help": "Without it, satellites work in writing only. Needs the voice extra."
               }
             },
             "send_timeout_s": {
@@ -1132,7 +1508,7 @@
                 "advanced": true,
                 "group": "channel-telegram",
                 "title": "New conversation after (seconds)",
-                "help": "Empty: 4 hours, as a messaging thread picked up later in the day. Past this silence, the assistant no longer replays the earlier messages. Memories stay."
+                "help": "Past this silence, the assistant no longer rereads earlier messages. 4 h by default."
               }
             },
             "token": {
@@ -1166,7 +1542,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "channel-telegram",
-                "title": "API address",
+                "title": "API URL",
                 "help": null
               }
             },
@@ -1185,7 +1561,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "channel-telegram",
-                "title": "Wait for new messages (seconds)",
+                "title": "Long polling timeout (seconds)",
                 "help": null
               }
             },
@@ -1227,8 +1603,8 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "channel-telegram",
-                "title": "Apology when an answer fails",
-                "help": "Left empty: the default apology. An empty text keeps the bot silent."
+                "title": "Message on error",
+                "help": null
               }
             }
           },
@@ -1236,7 +1612,8 @@
           "title": "TelegramSettings",
           "type": "object"
         }
-      }
+      },
+      "model_types": {}
     },
     "executors": {
       "family": "executor",
@@ -1291,7 +1668,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "executor-hermes",
-                "title": "Address of the API",
+                "title": "Base URL",
                 "help": null,
                 "brands": {
                   "anthropic.com": "anthropic",
@@ -1349,8 +1726,8 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "executor-hermes",
-                "title": "What its tools allow",
-                "help": "The central agent reads it to decide what to hand over."
+                "title": "What it can do",
+                "help": "The assistant uses it to decide what to hand over."
               }
             },
             "instructions": {
@@ -1411,7 +1788,8 @@
           "title": "HermesSettings",
           "type": "object"
         }
-      }
+      },
+      "model_types": {}
     },
     "tools": {
       "family": "tools",
@@ -1482,7 +1860,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "tools-mcp",
-                "title": "Address",
+                "title": "URL",
                 "help": null
               }
             },
@@ -1546,7 +1924,7 @@
                 "advanced": false,
                 "group": "tools-mcp",
                 "title": "HTTP headers",
-                "help": "Sent with every request. Values are kept as secrets."
+                "help": "Values are stored as secrets."
               }
             },
             "timeout_s": {
@@ -1609,7 +1987,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "tools-mcp",
-                "title": "Tools left out",
+                "title": "Excluded tools",
                 "help": null
               }
             },
@@ -1629,7 +2007,7 @@
                 "advanced": false,
                 "group": "tools-mcp",
                 "title": "Tool risks",
-                "help": "By server tool name, over what the server declares."
+                "help": "By tool name; overrides what the server declares."
               }
             },
             "max_result_chars": {
@@ -1646,7 +2024,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "tools-mcp",
-                "title": "Longest tool result (characters)",
+                "title": "Max tool result size (characters)",
                 "help": null
               }
             },
@@ -1681,7 +2059,7 @@
                 "advanced": false,
                 "group": "tools-mcp",
                 "title": "Protocol negotiation",
-                "help": "legacy skips the discovery probe of recent servers."
+                "help": "legacy skips detecting the 2026-07-28 protocol version."
               }
             }
           },
@@ -1689,14 +2067,16 @@
           "title": "McpSettings",
           "type": "object"
         }
-      }
+      },
+      "model_types": {}
     },
     "inbound": {
       "family": "inbound",
       "shape": "list",
       "required": false,
       "title": "Inbound sources",
-      "kinds": {}
+      "kinds": {},
+      "model_types": {}
     },
     "presence": {
       "family": "presence",
@@ -1751,7 +2131,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "presence-home-assistant",
-                "title": "Address",
+                "title": "URL",
                 "help": null
               }
             },
@@ -1789,7 +2169,7 @@
                 "advanced": false,
                 "group": "presence-home-assistant",
                 "title": "Person entities",
-                "help": "Each household person id with its entity, e.g. alice: person.alice."
+                "help": "Each household person and their entity, e.g. alice: person.alice."
               }
             },
             "rooms": {
@@ -1808,7 +2188,7 @@
                 "advanced": false,
                 "group": "presence-home-assistant",
                 "title": "Room trackers",
-                "help": "Optional: each person id with the sensor telling their room (Bermuda, ESPresense)."
+                "help": "The sensor telling each person's room, e.g. Bermuda or ESPresense."
               }
             },
             "occupancy_sensors": {
@@ -1835,7 +2215,7 @@
                 "advanced": false,
                 "group": "presence-home-assistant",
                 "title": "Occupancy sensors",
-                "help": "Left empty: every occupancy, presence or motion sensor with an area."
+                "help": "Left empty: all those with an area (presence, occupancy, motion)."
               }
             },
             "sync_timeout_s": {
@@ -1897,7 +2277,8 @@
           "title": "HomeAssistantSettings",
           "type": "object"
         }
-      }
+      },
+      "model_types": {}
     },
     "connectors": {
       "family": "connector",
@@ -1954,7 +2335,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "connector-google",
-                "title": "Check interval (seconds)",
+                "title": "Polling interval (seconds)",
                 "help": null
               }
             },
@@ -2121,7 +2502,7 @@
                 "advanced": false,
                 "group": "connector-imap",
                 "title": "IDLE renewed after (seconds)",
-                "help": "Under 1740: servers drop IDLE after 29 minutes."
+                "help": "Under 1740: servers drop IDLE after 29 min."
               }
             },
             "poll_s": {
@@ -2138,7 +2519,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "connector-imap",
-                "title": "Check interval without IDLE (seconds)",
+                "title": "Polling interval without IDLE (seconds)",
                 "help": null
               }
             },
@@ -2255,7 +2636,8 @@
           "type": "object",
           "required": ["kind"]
         }
-      }
+      },
+      "model_types": {}
     }
   }
 }

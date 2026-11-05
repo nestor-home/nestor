@@ -10,6 +10,7 @@ from nestor.modules.cognition.model import ToolCall
 from nestor.modules.cognition.tools import Toolbox, ToolContext, ToolFailed
 from nestor.modules.conversation import Agent, Layer, ModelChoice, Persona, TurnContext
 from nestor.modules.household import Account, Household, Person
+from nestor.modules.identity import Speaker
 from nestor.modules.journal import Journal
 from nestor.modules.memory import Memories, MemoryCorrected, MemoryForgotten, MemoryRecorded
 from nestor.modules.memory.assistant import MemoryTools
@@ -21,7 +22,7 @@ from nestor.testing.journal import MemoryEventLog
 from nestor.testing.memory import InMemoryEpisodeStore, InMemoryMemoryStore, MemoryStoreContract
 
 VOICE, TELEGRAM = Address("voice", "salon"), Address("telegram", "42")
-MATHIS = Person(id=PersonId("mathis"), name="Mathis", accounts=(Account.parse("voice:*"), Account.parse("telegram:42")))
+MATHIS = Person(id=PersonId("mathis"), name="Mathis", accounts=(Account.parse("telegram:42"),))
 MATHILDE = Person(id=PersonId("mathilde"), name="Mathilde")
 HOUSEHOLD = Household([MATHIS, MATHILDE])
 
@@ -113,7 +114,7 @@ async def test_a_fact_told_by_voice_is_known_later_on_telegram() -> None:
 async def test_the_tools_recall_correct_and_forget_by_id() -> None:
     memories = Memories(Journal(MemoryEventLog()), InMemoryMemoryStore())
     tools = {t.name: t for t in memory_tools(memories, memories.journal).tools()}
-    context = ToolContext(address=TELEGRAM, person=MATHIS.id)
+    context = ToolContext(address=TELEGRAM, speaker=Speaker.account(MATHIS.id))
 
     def data(output: object) -> Mapping[str, object]:
         assert isinstance(output, Mapping)
@@ -148,7 +149,7 @@ async def test_beyond_its_budget_a_turn_adds_what_its_words_find_to_the_latest()
     tools = memory_tools(memories, memories.journal, recall=RecallSettings(recent=1))
 
     def turn(said: str | None) -> TurnContext:
-        return TurnContext(person=MATHIS, address=TELEGRAM, said=said)
+        return TurnContext(person=MATHIS, speaker=Speaker.account(MATHIS.id), address=TELEGRAM, said=said)
 
     greeted = await tools.context(turn("Bonjour"))
     assert "végétarienne" in greeted[Layer.HOUSEHOLD] and "1234" not in greeted[Layer.HOUSEHOLD], "the latest"

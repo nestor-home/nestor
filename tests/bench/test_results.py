@@ -78,6 +78,7 @@ async def test_the_html_page_loads_nothing_from_the_network_and_escapes_what_it_
         (3.0, Unit.COUNT, "3"),
         (2.5, Unit.COUNT, "2.50"),
         (0.00123, Unit.COST, "0.0012"),
+        (26_534_365, Unit.BYTES, "26.5 MB"),
     ],
 )
 def test_values_are_shown_in_their_unit(value: float | None, unit: Unit, text: str) -> None:

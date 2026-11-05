@@ -20,7 +20,8 @@ from nestor.modules.accounts import Principal, Scope
 from nestor.modules.cognition import TaskEnded, TaskStarted
 from nestor.modules.cognition.delegation.events import TaskDelivered
 from nestor.modules.cognition.tools import ToolCalled, ToolCompleted
-from nestor.modules.conversation import AnswerCut, AssistantTurn, UserTurn
+from nestor.modules.conversation import AnswerCut, AssistantTurn, NotificationTurn, UserTurn
+from nestor.modules.identity import Identified
 from nestor.modules.initiative import (
     Delivered,
     DeliveryConsidered,
@@ -149,7 +150,14 @@ class Audience:
         return audience
 
     def learn(self, entry: Entry) -> None:
-        mine = _payload(entry).get("person") == self.principal.person
+        """A conversation on the person's own account is theirs to read whole; on a shared device (a satellite),
+        only what they said and what concerns them is: others speak there too."""
+        speaker = _payload(entry).get("speaker")
+        mine = (
+            isinstance(speaker, dict)
+            and speaker.get("person") == self.principal.person
+            and speaker.get("by") == Identified.ACCOUNT.value
+        )
         if entry.type == UserTurn.event_type and mine and entry.record.get("session"):
             self._sessions.add(str(entry.record["session"]))
 
@@ -195,7 +203,12 @@ def _cause_rule(entry: Entry) -> _Rule | None:
         return _Rule(frozenset({AssistantTurn.event_type}), lambda c: c.record.get("id") == answer)
     if kind == AssistantTurn.event_type:
         turn = _exchange(entry).get("turn_id")
-        return _Rule(frozenset({UserTurn.event_type}), lambda c: _exchange(c).get("turn_id") == turn)
+        openers = frozenset(
+            {UserTurn.event_type, NotificationTurn.event_type}
+        )  # a person's message, or Nestor's notification
+        return _Rule(openers, lambda c: _exchange(c).get("turn_id") == turn)
+    if kind == NotificationTurn.event_type:
+        return of(DeliveryConsidered, "about")
     if kind in (Delivered.event_type, DeliveryFailed.event_type):
         return of(DeliveryConsidered, "about")
     if kind == DeliveryConsidered.event_type:

@@ -11,7 +11,7 @@ role-name = { $role ->
 scope-name = { $scope ->
     [accounts-manage] manage accounts
     [accounts-owners-manage] manage owners
-    [system-read] see what is plugged in
+    [system-read] see the system status
     [config-manage] edit the configuration and restart
     [household-read] see the household
     [household-connections-manage] manage every connection
@@ -43,7 +43,7 @@ task-status = { $status ->
 }
 connection-status = { $status ->
     [connected] connected
-    [needs_reauth] to authorise again
+    [needs_reauth] needs reauthorising
     [error] error
    *[other] { $status }
 }
@@ -68,8 +68,8 @@ capability-audio-speech_activity = speech detection
 capability-vision-person_detection = person detection (no image sent)
 capability-expression-emotion = expressions
 capability-motion-head = head movements
-capability-device-identify = identify (light, motion or sound)
-capability-device-update = update its own software (on request)
+capability-device-identify = identification (light, motion or sound)
+capability-device-update = remote updates
 
 # Pairing methods (`pairing-method-<method, dots as dashes>`), and what the person does.
 pairing-method-device_code-display = Code on its screen
@@ -81,8 +81,8 @@ pairing-method-enrollment-qr-hint = Show the QR code to the device's camera.
 pairing-method-enrollment-input = Code typed on the device
 pairing-method-enrollment-input-hint = Type this code on the device.
 pairing-method-enrollment-provisioning = Configuration
-pairing-method-enrollment-provisioning-hint = Give the device the pairing address, in NESTOR_PAIRING_URI or its settings.
+pairing-method-enrollment-provisioning-hint = Give the pairing URI to the device (NESTOR_PAIRING_URI or its settings).
 
 # Why a connection needs authorising again, or is in error.
-connection-refresh-refused = The service refused to renew the access: it was revoked or has expired. Connect the account again.
-connection-no-refresh-token = The access has expired and the service gave no way to renew it. Connect the account again.
+connection-refresh-refused = Access revoked or expired. Reconnect the account.
+connection-no-refresh-token = Access expired and cannot be renewed. Reconnect the account.

@@ -22,7 +22,7 @@ async def test_an_account_reads_in_the_household_language_until_it_chooses_anoth
         chosen = (await api.put("/api/v1/me/locale", {"locale": "EN"})).json()
         assert chosen["locale"] == "en" and chosen["account"]["role_label"] == "owner"
         missing = await api.get("/api/v1/memories/nope")
-        assert missing.json()["error"]["message"] == "This does not exist (or no longer)."
+        assert missing.json()["error"]["message"] == "Not found."
         kinds = (await api.get("/api/v1/journal/facets")).json()["kinds"]
         assert {"key": "account", "label": "Accounts", "count": 3} in kinds
         (changed,) = await admin.nestor.journal.history(AccountLocaleChanged)
@@ -37,8 +37,8 @@ async def test_the_household_reads_the_journal_each_in_their_language(tmp_path: 
         await lucie.put("/api/v1/me/locale", {"locale": "en"})
         english = (await lucie.get("/api/v1/journal", kinds="account")).json()["items"]
         french = (await (await admin.api()).get("/api/v1/journal", kinds="account")).json()["items"]
-        assert english[-1]["text"] == "Account mathis opened (owner)"
-        assert french[-1]["text"] == "Compte mathis ouvert (propriétaire)"
+        assert english[-1]["text"] == "Account mathis created (owner)"
+        assert french[-1]["text"] == "Compte mathis créé (propriétaire)"
         assert (
             english[-1]["message"]
             == french[-1]["message"]

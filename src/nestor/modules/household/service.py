@@ -3,7 +3,7 @@
 from collections.abc import Iterable
 
 from nestor.core import ContractError, PersonId
-from nestor.modules.household.types import ANYONE, Account, Person
+from nestor.modules.household.types import Account, Person
 
 
 class SharedAccount(ContractError):
@@ -41,5 +41,5 @@ class Household:
         return found.name if found else default
 
     def identify(self, channel: str, sender: str) -> Person | None:
-        """The person behind a sender, or `None` for a stranger."""
-        return self._accounts.get((channel, sender)) or self._accounts.get((channel, ANYONE))
+        """The person behind an account, or `None` for a stranger."""
+        return self._accounts.get((channel, sender))

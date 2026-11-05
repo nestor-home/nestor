@@ -47,7 +47,7 @@ describe("the home: the agent first, then the house, the work, the day", () => {
     for (const c of db.system.components) c.health = "ok";
     (db.config.document.initiative as Record<string, unknown>).quiet_hours = null;
     renderApp("/");
-    expect(await screen.findByText("All is calm. I'm here if you need me.")).toBeInTheDocument();
+    expect(await screen.findByText("All quiet.")).toBeInTheDocument();
     expect(screen.getByText(/Richie · available/)).toBeInTheDocument();
     await waitFor(() =>
       expect(screen.queryByRole("heading", { name: /What I need from you/ })).not.toBeInTheDocument(),
@@ -71,6 +71,6 @@ describe("the home: the agent first, then the house, the work, the day", () => {
   it("says when it will write, from the agent's initiative", async () => {
     renderApp("/");
     const next = await band("Coming up");
-    expect(await within(next).findByText(/I'll write it to Mathis on telegram at \d\d:\d\d\./)).toBeInTheDocument();
+    expect(await within(next).findByText(/Follow-up to Mathis on telegram at \d\d:\d\d\./)).toBeInTheDocument();
   });
 });

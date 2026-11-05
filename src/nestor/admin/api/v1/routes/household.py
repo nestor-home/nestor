@@ -27,7 +27,7 @@ class PresenceOut(BaseModel):
 class PersonOut(BaseModel):
     id: str
     name: str
-    channel_accounts: list[str]  # how channels know them: "telegram:123", "voice:*"
+    channel_accounts: list[str]  # the accounts channels authenticate them by: "telegram:123"
     reach: str | None  # where the assistant writes to them
     presence: PresenceOut | None  # None: no presence source is plugged in
     connections: list[ConnectionOut]  # only those the caller reaches

@@ -28,8 +28,9 @@ from pipecat.frames.frames import (
 from pipecat.processors.aggregators.llm_context import LLMContext
 from pipecat.processors.frame_processor import FrameDirection, FrameProcessor, FrameProcessorSetup
 
+from nestor.adapters.channels.satellites.voice.listener import VoiceListener
 from nestor.core import ProviderError
-from nestor.modules.channels import Address, Assistant, InboundMessage, Medium, Reply, Sender
+from nestor.modules.channels import Address, Assistant, InboundMessage, Medium, Reply
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +82,7 @@ class _Answer:
 class AssistantBridge(FrameProcessor):
     """Turns each user turn into a message for the assistant and streams its reply to the synthesis.
 
-    - Strangers (`identify` returns `None`) are not answered.
+    - Whoever speaks is answered: a satellite is a place. `listener`, when voices are recognised, says who it was.
     - One reply at a time: a new turn or the user cutting in drops the current one, and a reply cut
       before its end is interrupted with the text played so far.
     - `announce` speaks an unprompted message once nobody has spoken for `quiet_s`.
@@ -94,21 +95,20 @@ class AssistantBridge(FrameProcessor):
         assistant: Assistant,
         *,
         address: Address,
-        sender: Sender,
         played: PlayedText,
+        listener: VoiceListener | None = None,
         quiet_s: float = 0.5,
         shown: Callable[[str], None] | None = None,
     ) -> None:
         super().__init__()
         self._assistant = assistant
-        self._address, self._sender = address, sender
+        self._address, self._listener = address, listener
         self._shown = shown
         self._played = played
         self._quiet_s = quiet_s
         self._answer: _Answer | None = None
         self._user_speaking = False
         self._bot_speaking = False
-        self._told_stranger = False
         self._speaking = asyncio.Lock()  # a response's frames are never interleaved with another's
         self._announcements: asyncio.Queue[tuple[str, asyncio.Future[None]]] = asyncio.Queue()
 
@@ -151,14 +151,11 @@ class AssistantBridge(FrameProcessor):
         context.set_messages([])  # the conversation lives in the assistant, not in the pipeline
         if not text:
             return
-        if self._assistant.identify(self._address, self._sender) is None:
-            if not self._told_stranger:
-                logger.info("voice: %s is not a known speaker in %s, ignoring speech", self._sender.id, self._address)
-                self._told_stranger = True
-            return
         await self._cut()
+        wait_s = self._assistant.voice_wait_s
+        heard = await self._listener.heard(wait_s) if self._listener is not None and wait_s else None
         reply = self._assistant.respond(
-            InboundMessage(address=self._address, sender=self._sender, text=text, medium=Medium.SPOKEN)
+            InboundMessage(address=self._address, sender=None, text=text, medium=Medium.SPOKEN, heard=heard)
         )
         start = LLMFullResponseStartFrame()
         self._answer = _Answer(reply, start, self.create_task(self._stream(reply, start)))

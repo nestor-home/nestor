@@ -1,9 +1,13 @@
 /** Every screen, and its main overlays open, passes axe: names, roles, labels, no nested controls. */
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, it } from "vitest";
+import { beforeEach, describe, it, vi } from "vitest";
 import { expectAccessible } from "@/test/axe";
+import { microphone, speak } from "@/test/microphone";
 import { renderApp, settle } from "@/test/render";
+
+vi.mock("@/lib/audio/microphone", () => import("@/test/microphone").then((m) => m.module()));
+beforeEach(() => microphone.reset());
 
 const SCREENS: [string, string | RegExp][] = [
   ["/", /Hello|Good evening|Good night|Good morning/],
@@ -11,6 +15,8 @@ const SCREENS: [string, string | RegExp][] = [
   ["/journal?conversation=conv-s-elec", "Journal"],
   ["/people", "People"],
   ["/people/lea", "Léa"],
+  ["/people/mathis", "Mathis"],
+  ["/people/jules", "Jules"],
   ["/memories", "Memories"],
   ["/watches", "Watches"],
   ["/watches/w-9d41", /News from the school/],
@@ -56,7 +62,7 @@ describe("accessibility of every screen", () => {
     await settle(queryClient);
     const [entry] = await screen.findAllByRole("button", { name: / said/ });
     if (entry) await user.click(entry);
-    await screen.findByRole("heading", { name: "Raw record" });
+    await screen.findByRole("heading", { name: "JSON" });
     await settle(queryClient);
     await expectAccessible();
   });
@@ -83,7 +89,7 @@ describe("accessibility of every screen", () => {
     await expectAccessible();
     await user.click(within(sheet).getByRole("button", { name: /^QR code/ }));
     await user.click(within(sheet).getByRole("button", { name: "Start" }));
-    await within(sheet).findByRole("img", { name: /QR code of the pairing address/ });
+    await within(sheet).findByRole("img", { name: /QR code of the pairing URI/ });
     await settle(queryClient);
     await expectAccessible();
   });
@@ -102,6 +108,34 @@ describe("accessibility of every screen", () => {
     if (approve) await user.click(approve);
     await screen.findByRole("dialog");
     await settle(queryClient);
+    await expectAccessible();
+  });
+
+  it("the voice recording, at each of its steps", async () => {
+    const user = userEvent.setup();
+    const { queryClient } = renderApp("/people/jules");
+    await user.click(await screen.findByRole("button", { name: "Record their voice" }));
+    const dialog = await screen.findByRole("dialog", { name: "Record Jules's voice" });
+    await settle(queryClient);
+    await expectAccessible();
+    await user.click(within(dialog).getByRole("button", { name: "Start" }));
+    await within(dialog).findByRole("combobox", { name: "Microphone" });
+    await speak();
+    await within(dialog).findByText("I can hear you well.");
+    await expectAccessible();
+    await user.click(within(dialog).getByRole("button", { name: "Continue" }));
+    await within(dialog).findByRole("progressbar", { name: "Phrases kept" });
+    await speak();
+    await within(dialog).findByText("Phrase 2 of 5");
+    await expectAccessible();
+    await speak(); // refused once by the mock
+    await within(dialog).findByText("That was a bit short. Once more?");
+    for (const n of [3, 4, 5]) {
+      await speak();
+      await within(dialog).findByText(`Phrase ${n} of 5`);
+    }
+    await speak();
+    await within(dialog).findByRole("button", { name: "Try it" });
     await expectAccessible();
   });
 });

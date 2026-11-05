@@ -1,6 +1,6 @@
-# The memory-recall bench suite: do the memories a turn needs reach its instructions.
+# The memory-recall bench suite: do the memories a turn needs reach its prompt.
 
-bench-memory-recall-description = which memories reach a turn's instructions, and how many useless ones with them, per retrieval strategy
+bench-memory-recall-description = which memories reach a turn's prompt, and how many useless ones with them, per retrieval strategy
 bench-memory-recall-no-header = the dataset must start with {"{"}"dataset": "memory-recall", "version": <number>{"}"}
 bench-memory-recall-bad-record = line { $line } of the dataset: neither a memory (memory, text), an episode (episode, summary) nor a case (case, said, kind: direct, paraphrase, contradiction, premise, other-person, episode, private or none)
 bench-memory-recall-unknown = case { $case }: unknown memory { $memory }

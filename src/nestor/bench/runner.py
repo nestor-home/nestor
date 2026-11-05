@@ -10,6 +10,7 @@ import hashlib
 import json
 import random
 import subprocess
+import sys
 import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
@@ -23,9 +24,9 @@ from nestor.bench.metrics import engine_metrics
 from nestor.bench.ports import Suite, Trial
 from nestor.bench.recording import CURRENT_CASE, Cache, CaseLog, MeasuredModel
 from nestor.bench.results import DatasetInfo, Run
-from nestor.bench.types import Case, CaseResult, Dataset, Summary
+from nestor.bench.types import Case, CaseResult, Dataset, Startup, Summary
 from nestor.bench.variants import Variant
-from nestor.core import utc_now
+from nestor.core import Component, utc_now
 from nestor.core.i18n import Message
 
 
@@ -37,7 +38,9 @@ class Plan:
     concurrency: int = 4  # cases in flight at once
 
 
-def read_dataset[S](suite: Suite[S, Any], source: Traversable | Path) -> tuple[Dataset[S], DatasetInfo]:
+def read_dataset[S](suite: Suite[S, Any], source: Traversable | Path | None) -> tuple[Dataset[S], DatasetInfo]:
+    if source is None:
+        raise BenchError(Message.of("bench-no-dataset", suite=suite.name))
     try:
         content = source.read_bytes()
     except OSError:
@@ -53,7 +56,7 @@ def read_dataset[S](suite: Suite[S, Any], source: Traversable | Path) -> tuple[D
         if not isinstance(record, dict):
             raise BenchError(Message.of("bench-dataset-invalid-line", path=str(source), line=number))
         records.append(record)
-    dataset = suite.load(records)
+    dataset = suite.load(records, source)
     info = DatasetInfo(
         source=str(source),
         sha256=hashlib.sha256(content).hexdigest(),
@@ -79,6 +82,7 @@ async def run_suite[S](
     started = utc_now()
     results: dict[str, list[CaseResult]] = {v.name: [] for v in variants}
     gate = asyncio.Semaphore(plan.concurrency)
+    startups: dict[str, Startup] = {}
     total = len(dataset.cases) * len(variants) * plan.repeat
     async with contextlib.AsyncExitStack() as stack:
         for variant in variants:
@@ -86,6 +90,8 @@ async def run_suite[S](
                 await stack.enter_async_context(model)
             if variant.embedder is not None:
                 await stack.enter_async_context(variant.embedder)
+            if variant.voices is not None:
+                startups[variant.name] = await _started(stack, variant.voices)
         measured = {v.name: _measured(v, cache, plan.replay) for v in variants}
 
         async def one(case: Case, variant: Variant[Any], repetition: int) -> None:
@@ -97,6 +103,8 @@ async def run_suite[S](
                 repetition=repetition,
                 seed=plan.seed,
                 embedder=variant.embedder,
+                voices=variant.voices,
+                voices_started=startups.get(variant.name),
             )
             async with gate:
                 log = CaseLog(case=case.id, repetition=repetition, seed=plan.seed)
@@ -149,6 +157,25 @@ async def run_suite[S](
             )
         )
     return runs
+
+
+async def _started(stack: contextlib.AsyncExitStack, component: Component) -> Startup:
+    """Start a model measured: the time it took and how much the process's peak memory grew (variants start one
+    after the other, so each one's growth is its own, the first carrying the runtime libraries it loads)."""
+    before, clock = _peak_memory(), time.perf_counter()
+    await stack.enter_async_context(component)
+    seconds, after = time.perf_counter() - clock, _peak_memory()
+    return Startup(seconds=seconds, memory_bytes=None if before is None or after is None else after - before)
+
+
+def _peak_memory() -> int | None:
+    """The process's peak resident memory in bytes (kilobytes on Linux, bytes on macOS)."""
+    if sys.platform == "win32":  # pragma: no cover - no `resource` module there
+        return None
+    import resource
+
+    peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    return peak if sys.platform == "darwin" else peak * 1024
 
 
 def _measured(variant: Variant[Any], cache: Cache, replay: bool) -> dict[str, MeasuredModel]:

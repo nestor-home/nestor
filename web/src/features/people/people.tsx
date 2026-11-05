@@ -27,6 +27,7 @@ import { KindMark } from "@/lib/brands";
 import { startOfToday } from "@/lib/dates";
 import { roleLabel } from "@/lib/labels";
 import { useCan, useMe } from "@/lib/session";
+import { PersonVoice } from "./voice";
 
 export function PresenceMark({ presence }: { presence: Presence | null }) {
   const t = useT();
@@ -200,6 +201,7 @@ export function PersonOverview({ person: p }: { person: Person }) {
             <p className="text-ink-muted">{p.account ? t("people-has-account") : t("people-no-account")}</p>
           )}
         </div>
+        <PersonVoice person={p} />
       </aside>
     </WithAside>
   );

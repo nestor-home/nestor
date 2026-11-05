@@ -4,21 +4,47 @@ and the turn it belongs to (`exchange`)."""
 from nestor.core import Event, PersonId
 from nestor.modules.channels import Address, Exchange, Medium
 from nestor.modules.conversation.types import FallbackReason
+from nestor.modules.identity import Speaker
 
 
 class UserTurn(Event, event_type="conversation.turn.user"):
-    """A message to the assistant, said or typed (`medium`). Its `exchange.turn_id` is the turn it opens."""
+    """A message to the assistant, said or typed (`medium`), and who said it as far as anyone knows (`speaker`). Its
+    `exchange.turn_id` is the turn it opens."""
 
     address: Address
     text: str
     exchange: Exchange
     medium: Medium
+    speaker: Speaker
+
+    @property
+    def person(self) -> PersonId | None:
+        return self.speaker.person
+
+
+class SpeakerDeclared(Event, event_type="speaker.declared"):
+    """Someone on a shared device said who they are: it holds for the rest of the conversation, unless their voice
+    says otherwise. It personalises; it never authorises."""
+
+    address: Address
+    person: PersonId
+    exchange: Exchange | None = None
+
+
+class NotificationTurn(Event, event_type="conversation.turn.notification"):
+    """A notification Nestor brought into the conversation (a task's result, a watch, a message to pass on): it opens
+    the turn its answer belongs to. Said by nobody in the conversation; `person` is whom it is for."""
+
+    address: Address
+    text: str
+    about: str
+    exchange: Exchange
     person: PersonId | None = None
 
 
 class AssistantTurn(Event, event_type="conversation.turn.assistant"):
-    """What the user actually received: on voice, only the part played before an interruption. In the
-    turn it answers, or in a turn of its own when it was unprompted (a delivery)."""
+    """What the user actually received: on voice, only the part played before an interruption. In the turn it
+    answers: a person's message, or a notification of Nestor's (an unprompted message)."""
 
     address: Address
     text: str

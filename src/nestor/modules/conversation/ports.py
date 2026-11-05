@@ -7,6 +7,7 @@ from enum import StrEnum
 
 from nestor.modules.channels import Address
 from nestor.modules.household import Person
+from nestor.modules.identity import Speaker
 
 
 class Layer(StrEnum):
@@ -25,6 +26,7 @@ class TurnContext:
     """What a turn is about, for the modules that add to its instructions."""
 
     person: Person | None  # who speaks, when known
+    speaker: Speaker  # how it is known: give what belongs to them only when `speaker.private`
     address: Address
     said: str | None  # the person's last messages, or what the agent is asked to convey: what to look up
 

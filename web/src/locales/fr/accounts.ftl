@@ -1,15 +1,15 @@
 ## Comptes d'administration, rôles et invitations.
 
 acc-title = Comptes
-acc-intro = Reconnaître une voix ou un visage ne remplace jamais un compte.
+acc-intro = Qui peut se connecter à l'admin, et avec quel rôle.
 acc-tab-accounts = Comptes
 acc-tab-invitations = Invitations
 acc-invite = Inviter…
 acc-invite-title = Inviter quelqu'un
-acc-invite-description = La personne reçoit un lien pour choisir son mot de passe.
+acc-invite-description = Vous obtenez un lien à lui envoyer.
 acc-invite-sent = { $has_person ->
-    [yes] Envoyez ce lien à <strong>{ $person }</strong> : il sert une seule fois, pendant sept jours, et ne sera plus affiché.
-   *[no] Envoyez ce lien à la personne invitée : il sert une seule fois, pendant sept jours, et ne sera plus affiché.
+    [yes] Envoyez ce lien à <strong>{ $person }</strong>. Valable une fois, pendant sept jours ; il ne sera plus affiché.
+   *[no] Envoyez ce lien à la personne invitée. Valable une fois, pendant sept jours ; il ne sera plus affiché.
 }
 acc-invite-link = le lien d'invitation
 acc-invite-done = Terminé
@@ -23,7 +23,7 @@ acc-person-none = Aucune
 acc-person-none-lower = aucune
 acc-inviting = Invitation…
 acc-invite-create = Créer l'invitation
-acc-last-owner = Dernier propriétaire actif : le foyer doit en garder au moins un.
+acc-last-owner = Il faut au moins un propriétaire actif.
 acc-role-changed = { $name } est maintenant { $role }.
 acc-disabled-done = Compte de { $name } désactivé.
 acc-enabled-done = Compte de { $name } réactivé.
@@ -44,11 +44,11 @@ acc-revoke-text = Le lien envoyé à { $email } cessera de fonctionner.
 acc-not-found = Ce compte n'existe pas.
 acc-field-person = personne
 acc-field-created = créé
-acc-field-seen = vu
+acc-field-seen = dernière connexion
 acc-enable = Réactiver
 acc-disable-section = Désactiver
 acc-disable = Désactiver…
-acc-disable-hint = Ses sessions sont fermées ; son journal, ses connexions et ses souvenirs restent.
+acc-disable-hint = Son journal, ses connexions et ses souvenirs sont conservés.
 acc-disable-title = Désactiver le compte de { $name } ?
 acc-disable-confirm = Désactiver
-acc-disable-text = Ses sessions sont fermées et il ne peut plus se connecter. Vous pourrez le réactiver.
+acc-disable-text = Il ne pourra plus se connecter. Vous pourrez le réactiver.

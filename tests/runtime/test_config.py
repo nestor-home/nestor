@@ -18,7 +18,7 @@ persona:
 household:
   - id: mathis
     name: Mathis
-    accounts: ["telegram:42", "voice:*"]
+    accounts: ["telegram:42", "voice:salon"]
     reach: telegram:42
 models:
   haiku:
@@ -37,7 +37,7 @@ def test_a_valid_file_gives_people_adapters_and_secrets() -> None:
 
     person = config.household[0].to_person()
     assert (person.name, person.reach) == ("Mathis", Address("telegram", "42"))
-    assert [str(a) for a in person.accounts] == ["telegram:42", "voice:*"]
+    assert [str(a) for a in person.accounts] == ["telegram:42", "voice:salon"]
     assert config.models["haiku"].kind == "openai-compatible"
     assert config.models["haiku"].settings() == {"api_key": "sk-test", "model": "anthropic/claude-haiku-5.5"}
     assert config.channels[0].settings() == {"token": "123:abc"}
@@ -179,10 +179,11 @@ def test_a_line_the_dot_env_cannot_parse_is_skipped_with_its_line_named(
         ("persona: [unclosed", "not valid YAML"),
         (VALID.replace("household:", "people:"), "household: Field required"),
         (VALID.replace("  name: Richie", "  name: Richie\n  mood: grumpy"), "persona.mood: Extra inputs"),
-        (VALID.replace('"voice:*"', '"voice"'), "invalid account 'voice'"),
+        (VALID.replace('"voice:salon"', '"voice"'), "invalid account 'voice'"),
+        (VALID.replace('"voice:salon"', '"voice:*"'), "not anyone"),
         (VALID.replace("channels:\n  - kind: telegram\n    token: ${TELEGRAM_TOKEN}", "channels: []"), "channels"),
     ],
-    ids=["yaml", "missing-section", "unknown-key", "bad-account", "no-channel"],
+    ids=["yaml", "missing-section", "unknown-key", "bad-account", "anyone-account", "no-channel"],
 )
 def test_an_invalid_file_says_where_and_why(text: str, reason: str) -> None:
     with pytest.raises(ConfigError, match=reason):

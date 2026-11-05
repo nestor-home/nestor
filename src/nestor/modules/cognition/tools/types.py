@@ -7,6 +7,7 @@ from enum import StrEnum
 from nestor.core import NestorError, PersonId
 from nestor.modules.channels import Address, Exchange
 from nestor.modules.cognition.model import ToolSpec
+from nestor.modules.identity import Speaker
 
 type ToolOutput = str | Mapping[str, object] | list[object]
 
@@ -14,17 +15,45 @@ type ToolOutput = str | Mapping[str, object] | list[object]
 class Risk(StrEnum):
     READ = "read"  # observes only
     WRITE = "write"  # changes something that can be undone (a light, a note)
-    SENSITIVE = "sensitive"  # sends, buys, unlocks: needs confirmation
+    SENSITIVE = "sensitive"  # unlocks, disarms, opens the garage, sends for someone: confirmed by the person first
+
+
+_NOBODY = Speaker.unknown()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ToolContext:
     """Who asked, and in which conversation: `exchange` is the turn the call belongs to, for the events
-    the tool writes."""
+    the tool writes. `speaker` says how sure anyone is of who asked."""
 
     address: Address
-    person: PersonId | None = None
+    speaker: Speaker = _NOBODY
     exchange: Exchange | None = None
+
+    @property
+    def person(self) -> PersonId | None:
+        return self.speaker.person
+
+
+@dataclass(frozen=True, slots=True)
+class SensitiveWhen:
+    """The calls of a tool that are sensitive for what they act on: one of the `arguments`' values appears in the
+    call's argument of that name, ignoring case (`garage` in `device_class`, `lock` in `domain`, `porte` in a
+    `name`). A rule written by the household for its own devices: a home server's tools cover lights and locks
+    alike."""
+
+    tool: str
+    arguments: Mapping[str, tuple[str, ...]]
+
+    def matches(self, tool: str, arguments: Mapping[str, object]) -> bool:
+        if tool != self.tool:
+            return False
+        for name, values in self.arguments.items():
+            given = arguments.get(name)
+            found = given if isinstance(given, list | tuple) else [given] if given is not None else []
+            if any(v.casefold() in str(g).casefold() for g in found for v in values):
+                return True
+        return False
 
 
 class ToolFailed(NestorError):
@@ -33,11 +62,24 @@ class ToolFailed(NestorError):
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Tool:
+    """`risk` is the tool's; `assess`, when given, decides it call by call from the arguments (turning a light off is
+    a write, unlocking the door is sensitive). `owner` is the person whose own data it reads or acts on (their
+    mailbox): it serves them only."""
+
     spec: ToolSpec
     run: Callable[[Mapping[str, object], ToolContext], Awaitable[ToolOutput]]
     risk: Risk = Risk.READ
+    assess: Callable[[Mapping[str, object]], Risk] | None = None
+    owner: PersonId | None = None
     timeout_s: float = 10.0
 
     @property
     def name(self) -> str:
         return self.spec.name
+
+    def risk_of(self, arguments: Mapping[str, object]) -> Risk:
+        return self.assess(arguments) if self.assess is not None else self.risk
+
+    @property
+    def may_need_confirming(self) -> bool:
+        return self.risk is Risk.SENSITIVE or self.assess is not None

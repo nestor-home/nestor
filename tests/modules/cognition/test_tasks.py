@@ -23,6 +23,7 @@ from nestor.modules.cognition.delegation.assistant import Delegation
 from nestor.modules.cognition.delegation.service import INTERRUPTED, TaskManager
 from nestor.modules.cognition.tools import ToolContext
 from nestor.modules.conversation import TurnContext
+from nestor.modules.identity import Speaker
 from nestor.modules.journal import Journal
 from nestor.testing.cognition import (
     FakeRemote,
@@ -208,7 +209,7 @@ async def test_delegating_needs_a_started_manager_and_a_known_executor(journal: 
 
 
 async def test_the_agent_delegates_follows_and_cancels_through_its_tools(journal: Journal) -> None:
-    context = ToolContext(address=VOICE, person=MATHIS)
+    context = ToolContext(address=VOICE, speaker=Speaker.account(MATHIS))
     async with TaskManager(journal, [ScriptedRemoteExecutor(duration_s=None)]) as tasks:
         tools = {t.name: t for t in Delegation(tasks).tools()}
         started = data(
@@ -242,12 +243,21 @@ async def test_the_instructions_say_what_executors_can_do_and_what_runs(journal:
     async with TaskManager(journal, []) as none:
         assert Delegation(none).tools() == ()
         assert "No executor is plugged in" in Delegation(none).guidance()
-        assert await Delegation(none).context(TurnContext(person=None, address=VOICE, said=None)) == {}
+        assert (
+            await Delegation(none).context(
+                TurnContext(person=None, speaker=Speaker.unknown(), address=VOICE, said=None)
+            )
+            == {}
+        )
     async with TaskManager(journal, [ScriptedRemoteExecutor(duration_s=None)]) as tasks:
         await tasks.delegate("Réserver un resto", origin=VOICE)
         guidance, running = (
             Delegation(tasks).guidance(),
-            str(await Delegation(tasks).context(TurnContext(person=None, address=VOICE, said=None))),
+            str(
+                await Delegation(tasks).context(
+                    TurnContext(person=None, speaker=Speaker.unknown(), address=VOICE, said=None)
+                )
+            ),
         )
     assert "scripted-remote: carry out scripted remote tasks" in guidance and "Réserver" not in guidance
     assert "Réserver un resto" in running

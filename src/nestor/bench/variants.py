@@ -30,6 +30,7 @@ from nestor.bench.ports import Knobs, Suite
 from nestor.core.i18n import Locale, Localizer, Message
 from nestor.modules.cognition import ConversationModel
 from nestor.modules.cognition.embedding import Embedder
+from nestor.modules.identity import VoiceEmbedder
 from nestor.runtime.app import build_models
 from nestor.runtime.config import NestorConfig, environment, validate_config
 from nestor.runtime.plugins import Family, Registry, Services
@@ -49,6 +50,7 @@ class Variant[K: Knobs]:
     config: NestorConfig
     models: Mapping[str, ConversationModel]  # by role, built but not started
     embedder: Embedder | None = None  # the `memory.embedder`, built but not started, when the suite uses one
+    voices: VoiceEmbedder | None = None  # the `voices.embedder`, built but not started, when the suite uses one
     described: Mapping[str, Mapping[str, Any]]  # each role's model: its name, kind and settings, secrets masked
 
     def record(self) -> dict[str, Any]:
@@ -79,7 +81,8 @@ def load_variant[K: Knobs](
     config = validate_config(merged, environ if environ is not None else environment(path), origin=str(path))
     services = Services(data_dir=config.data_dir, localizer=localizer, locale=Locale(config.persona.locale))
     built = build_models(config, registry, services)
-    roles = config.roles([k for k, m in built.items() if isinstance(m, ConversationModel)])
+    answering = [k for k, m in built.items() if isinstance(m, ConversationModel)]
+    roles = config.roles(answering) if suite.models else {}  # a suite that calls no model needs none answering
     described: dict[str, Mapping[str, Any]] = {}
 
     def chosen[M](role: str, key: str, expected: type[M]) -> M:
@@ -93,6 +96,9 @@ def load_variant[K: Knobs](
     models = {role: chosen(role, roles[role], ConversationModel) for role in suite.models}
     key = config.memory.embedder
     embedder = chosen("embedder", key, Embedder) if suite.embedder and key else None
+    voices = config.voices.embedder
+    if suite.voices and voices is None:
+        raise BenchError(Message.of("bench-variant-no-voices", path=str(path)))
     return Variant(
         name=knobs.name or path.stem,
         source=path,
@@ -101,6 +107,7 @@ def load_variant[K: Knobs](
         models=models,
         described=described,
         embedder=embedder,
+        voices=chosen("voices", voices, VoiceEmbedder) if suite.voices and voices else None,
     )
 
 

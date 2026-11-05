@@ -589,6 +589,20 @@ async def test_the_plugin_builds_a_provider_from_its_configuration(served_home: 
         assert [(t.name, t.risk) for t in provider.tools()] == [("turn_on", Risk.SENSITIVE)]
 
 
+async def test_some_calls_of_a_tool_are_sensitive_by_what_they_act_on(served_home: Served, tmp_path: Any) -> None:
+    """Home Assistant's `HassTurnOn` drives lights and the garage alike: the household says which calls matter."""
+    sensitive = [{"tool": "turn_on", "arguments": {"device_class": ["garage", "gate"], "name": ["porte"]}}]
+    raw = {"url": served_home.url(), "token": TOKEN, "include": ["turn_on"], "sensitive": sensitive}
+    provider = plugin.create(
+        raw, "home", Services(data_dir=tmp_path, localizer=EchoLocalizer(), locale=Locale("fr-FR"))
+    )
+    async with provider:
+        [tool] = provider.tools()
+    assert tool.risk_of({"name": "Salon", "device_class": "light"}) is tool.risk is Risk.WRITE
+    assert tool.risk_of({"name": "Garage", "device_class": ["Garage"]}) is Risk.SENSITIVE
+    assert tool.risk_of({"name": "Porte d'entrée"}) is Risk.SENSITIVE  # by its name, when the call gives no class
+
+
 # --- live ------------------------------------------------------------------------------------
 
 

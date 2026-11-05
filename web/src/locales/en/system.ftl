@@ -26,16 +26,16 @@ sys-health-unknown = unknown
 upd-available = New release
 upd-available-version = Update available: { $version }
 upd-title = Nestor { $version } is here
-upd-description = What changed since your version, and how to update.
+upd-description = Release notes and how to update.
 upd-behind = { $count ->
     [one] one release behind
    *[other] { $count } releases behind
 }
 upd-install = Install { $version }
 upd-install-title = Install Nestor { $version }?
-upd-install-description = Nestor installs the new release, checks it accepts your configuration, then restarts. Conversations pause for a moment. If anything goes wrong, it stays on { $running }.
+upd-install-description = Nestor installs the new release, checks your configuration, then restarts. If it fails, it stays on { $running }.
 upd-install-confirm = Install and restart
-upd-install-hint = It restarts once installed.
+upd-install-hint = Restarts after installing.
 upd-installing = Installing { $version }…
 upd-failed = { $version } did not install. Nestor stays on { $running }.
 upd-breaking = This release changes the data or the configuration: read the notes before updating.
@@ -50,10 +50,10 @@ upd-kind-feature = Features
 upd-kind-fix = Fixes
 upd-kind-other = Other
 upd-how = Update
-upd-how-container = Nestor runs in a container: pull the new image, then start it again, in the folder of compose.yaml.
-upd-how-uv-tool = On Nestor's machine, update the tool:
-upd-how-pip = On Nestor's machine, update the package:
-upd-how-editable = Nestor runs from a development checkout: update it with git.
-upd-then-restart = Then restart Nestor to run the new version.
+upd-how-container = In the folder of compose.yaml:
+upd-how-uv-tool = On Nestor's machine:
+upd-how-pip = On Nestor's machine:
+upd-how-editable = Nestor runs from a checkout: update it with git.
+upd-then-restart = Then restart Nestor.
 upd-then-ask = Then ask an administrator to restart Nestor.
 upd-command = the command

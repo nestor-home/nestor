@@ -74,7 +74,7 @@ async def test_an_expired_or_withdrawn_invitation_is_refused(tmp_path: Path) -> 
         refused = await guest.post("/api/v1/invitations/inspect", {"token": withdrawn["token"]})
         assert refused.json()["error"]["message"] == "Cette invitation a été retirée."
         unknown = await guest.post("/api/v1/invitations/inspect", {"token": "nothing"})
-        assert unknown.json()["error"]["message"] == "Cette invitation est inconnue."
+        assert unknown.json()["error"]["message"] == "Invitation introuvable."
         assert (await owner.delete("/api/v1/invitations/nope")).status_code == 404
 
 

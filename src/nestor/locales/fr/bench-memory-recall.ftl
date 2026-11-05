@@ -1,6 +1,6 @@
-# La suite de banc memory-recall : les souvenirs utiles à un tour arrivent-ils dans ses consignes.
+# La suite de banc memory-recall : les souvenirs utiles à un tour arrivent-ils dans son prompt.
 
-bench-memory-recall-description = quels souvenirs arrivent dans les consignes d'un tour, et combien d'inutiles avec eux, par stratégie de récupération
+bench-memory-recall-description = quels souvenirs arrivent dans le prompt d'un tour, et combien d'inutiles avec eux, par stratégie de récupération
 bench-memory-recall-no-header = le jeu de données doit commencer par {"{"}"dataset": "memory-recall", "version": <nombre>{"}"}
 bench-memory-recall-bad-record = ligne { $line } du jeu : ni un souvenir (memory, text), ni un épisode (episode, summary), ni un cas (case, said, kind : direct, paraphrase, contradiction, premise, other-person, episode, private ou none)
 bench-memory-recall-unknown = cas { $case } : souvenir inconnu { $memory }

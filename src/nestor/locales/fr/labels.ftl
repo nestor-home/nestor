@@ -10,7 +10,7 @@ role-name = { $role ->
 scope-name = { $scope ->
     [accounts-manage] gérer les comptes
     [accounts-owners-manage] gérer les propriétaires
-    [system-read] voir ce qui est branché
+    [system-read] voir l'état du système
     [config-manage] modifier la configuration et redémarrer
     [household-read] voir le foyer
     [household-connections-manage] gérer toutes les connexions
@@ -66,8 +66,8 @@ capability-audio-playback = haut-parleur
 capability-audio-speech_activity = détection de parole
 capability-vision-person_detection = détection de personnes (sans image transmise)
 capability-expression-emotion = expressions
-capability-device-identify = se signaler (lumière, mouvement ou son)
-capability-device-update = mettre à jour son logiciel (sur demande)
+capability-device-identify = identification (lumière, mouvement ou son)
+capability-device-update = mises à jour à distance
 capability-motion-head = mouvements de tête
 
 # Méthodes d'appairage (`pairing-method-<méthode, points en tirets>`), et ce que fait la personne.
@@ -80,8 +80,8 @@ pairing-method-enrollment-qr-hint = Montrez le QR code à la caméra de l'appare
 pairing-method-enrollment-input = Code saisi sur l'appareil
 pairing-method-enrollment-input-hint = Saisissez ce code sur l'appareil.
 pairing-method-enrollment-provisioning = Configuration
-pairing-method-enrollment-provisioning-hint = Donnez à l'appareil l'adresse d'appairage, dans NESTOR_PAIRING_URI ou ses réglages.
+pairing-method-enrollment-provisioning-hint = Donnez l'URI d'appairage à l'appareil (NESTOR_PAIRING_URI ou ses réglages).
 
 # Pourquoi une connexion doit être réautorisée, ou est en erreur.
-connection-refresh-refused = Le service a refusé de renouveler l'accès : il a été révoqué ou a expiré. Reconnectez le compte.
-connection-no-refresh-token = L'accès a expiré et le service n'a donné aucun moyen de le renouveler. Reconnectez le compte.
+connection-refresh-refused = Accès révoqué ou expiré. Reconnectez le compte.
+connection-no-refresh-token = Accès expiré, sans renouvellement possible. Reconnectez le compte.

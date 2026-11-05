@@ -59,7 +59,7 @@ async def test_the_system_lists_every_plugged_component_and_paired_satellite(tmp
             c for c in (await api.get("/api/v1/system")).json()["components"] if c["name"] == "reachy-salon"
         )
         assert satellite["health"] == "unavailable" and satellite["details"] == {"room": "salon"}
-        assert satellite["health_detail"] == "Aucune connexion active depuis la pièce « salon »."
+        assert satellite["health_detail"] == "Aucun satellite connecté dans salon."
 
 
 async def test_the_system_is_for_those_who_run_the_household(tmp_path: Path) -> None:

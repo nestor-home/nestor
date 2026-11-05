@@ -15,6 +15,7 @@ import type {
   Task,
   Tool,
   Updates,
+  Voice,
   Watch,
 } from "@/api";
 import type { ConfigDb } from "./config";
@@ -55,10 +56,11 @@ export interface Db {
   system: SystemInfo;
   updates: Updates;
   config: ConfigDb;
+  voices: Record<string, Omit<Voice, "manageable">>; // by person; absent: never recorded
 }
 
 /** Bumped when the shape changes; the stress fixture keeps its own copy. */
-const KEY = () => (stressed() ? "nestor.mock.db.v11.stress" : "nestor.mock.db.v11");
+const KEY = () => (stressed() ? "nestor.mock.db.v13.stress" : "nestor.mock.db.v13");
 
 export function fresh(): Db {
   const connections = fixtures.connections();
@@ -83,6 +85,7 @@ export function fresh(): Db {
     system: fixtures.system(),
     updates: fixtures.updates(),
     config: config.fresh(),
+    voices: fixtures.voices(),
   };
   if (stressed()) stress(state);
   return state;

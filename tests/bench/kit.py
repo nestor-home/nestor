@@ -28,7 +28,7 @@ from nestor.modules.cognition import (
 from nestor.modules.cognition import (
     Message as Said,
 )
-from nestor.runtime.plugins import AdapterSettings, Family, Plugin, Registry, Services
+from nestor.runtime.plugins import AdapterSettings, Family, ModelType, Plugin, Registry, Services
 from nestor.testing.i18n import EchoLocalizer
 
 CASES = [
@@ -74,7 +74,7 @@ def _build(settings: OracleSettings, name: str, services: Services) -> Oracle:
     return oracle
 
 
-ORACLE = Plugin(Family.MODEL, "oracle", OracleSettings, _build)
+ORACLE = Plugin(Family.MODEL, "oracle", OracleSettings, _build, model_type=ModelType.LANGUAGE)
 
 
 class QuizKnobs(Knobs):
@@ -95,7 +95,7 @@ class Quiz(Suite[str, QuizKnobs]):
         assert self._dataset is not None
         return self._dataset
 
-    def load(self, records: Sequence[Mapping[str, Any]]) -> Dataset[str]:
+    def load(self, records: Sequence[Mapping[str, Any]], source: Traversable | Path) -> Dataset[str]:
         return Dataset(version=1, cases=tuple(Case(id=r["case"], data=r) for r in records), shared="answer:")
 
     async def run(self, case: Case, shared: str, trial: Trial[QuizKnobs]) -> Mapping[str, Any]:

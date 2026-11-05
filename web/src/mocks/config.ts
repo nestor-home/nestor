@@ -52,9 +52,9 @@ export function document(): ConfigDocument {
         "You are Richie, the Lambert household's assistant. You speak plainly, warmly and with a touch of humour, and you get to the point.",
     },
     household: [
-      { id: "mathis", name: "Mathis", accounts: ["satellites:*", "telegram:@mathis_l"], reach: "telegram:@mathis_l" },
-      { id: "lea", name: "Léa", accounts: ["satellites:*", "telegram:@lea_lambert"], reach: "voice" },
-      { id: "jules", name: "Jules", accounts: ["satellites:*"] },
+      { id: "mathis", name: "Mathis", accounts: ["telegram:@mathis_l"], reach: "telegram:@mathis_l" },
+      { id: "lea", name: "Léa", accounts: ["telegram:@lea_lambert"], reach: "voice" },
+      { id: "jules", name: "Jules" },
       { id: "odile", name: "Odile", accounts: ["telegram:@odile.m"], reach: "telegram:@odile.m" },
     ],
     models: {
@@ -71,6 +71,7 @@ export function document(): ConfigDocument {
         api_key: environ("MODEL_API_KEY"),
         model: "anthropic/claude-haiku-4.5",
       },
+      ears: { kind: "sherpa-onnx-voice", model: "titanet-small" },
     },
     agent: { spoken: "haiku", written: "sonnet" },
     watches: { model: "haiku" },

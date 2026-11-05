@@ -2,9 +2,8 @@
 voice session runs on that connection until it or its link ends (A1-A3).
 
 A session's address is `<channel>:<room>`, the device's paired room, so a conversation continues
-across reconnections and with what is typed there; the speaker is known as the room (map it in the
-household, e.g. an account `satellites:*`). Unprompted messages go to the most recent session of a
-room. Limits: one speaker identity per room (no voice recognition yet).
+across reconnections and with what is typed there. Whoever is in the room may speak; who it is comes from
+their voice when voices are recognised. Unprompted messages go to the most recent session of a room.
 """
 
 import asyncio
@@ -23,7 +22,7 @@ from nestor.adapters.channels.satellites.voice.providers import Speech
 from nestor.adapters.channels.satellites.voice.session import SessionSettings, VoiceSession
 from nestor.adapters.channels.satellites.voice.webrtc import PeerConnections
 from nestor.core import ContractError, ProviderError
-from nestor.modules.channels import Address, Assistant, Sender
+from nestor.modules.channels import Address, Assistant
 from nestor.modules.satellites import TEXT_DISPLAY
 
 logger = logging.getLogger(__name__)
@@ -118,7 +117,6 @@ class SatelliteVoice(AudioOffers):
             speech=self.speech,
             assistant=self._assistant,
             address=Address(self._channel_id, device.room),
-            sender=Sender(device.room),
             settings=self._settings,
             body=body,
             shown=shown,

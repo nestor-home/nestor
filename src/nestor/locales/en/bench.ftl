@@ -2,23 +2,23 @@
 
 ## The command.
 
-bench-help = measure parts of Nestor on a dataset and compare configurations
+bench-help = measure Nestor on a dataset and compare configurations
 bench-list-help = the installed suites
 bench-run-help = run a suite against one or more variants
-bench-run-description = Run every case of a suite against every variant, at every repetition. A variant is a fragment of nestor.yaml (the model under test…) with the suite's knobs under `bench:`. Each model call is measured and recorded in the cache, so --replay can score the run again without calling a provider.
+bench-run-description = Run every case of a suite against every variant, at every repetition. A variant is a fragment of nestor.yaml (the model under test…) with the suite's knobs under `bench:`. Each model call is measured and cached: --replay replays a run without calling a provider.
 bench-suite-help = the suite to run (see `nestor bench list`)
 bench-variant-help = a variant file; repeat the option to compare several
 bench-repeat-help = how many times to run each case (default: 1)
 bench-cases-help = a dataset of your own, in the suite's JSONL format (default: the suite's)
-bench-replay-help = answer from the recorded replies only: no provider is called
+bench-replay-help = replay cached replies, without calling a provider
 bench-seed-help = the seed of the cases' order and of the cache keys (default: 0)
 bench-concurrency-help = cases in flight at once (default: 4; 1 for the steadiest latencies)
 bench-results-help = where runs are written (default: bench-results)
-bench-cache-help = where model replies are recorded (default: .bench-cache)
+bench-cache-help = where model replies are cached (default: .bench-cache)
 bench-compare-help = compare runs side by side, in the terminal and as an HTML page
 bench-runs-help = a run's folder, or its results.json
 bench-out-help = the HTML page to write (default: next to the first run)
-bench-report-help = one run's table and findings, and its HTML report written again
+bench-report-help = show one run's table and findings, and regenerate its HTML report
 
 bench-list-line = { $suite }: { $description }
 bench-running = { $suite }: { $cases } cases × { $variants ->
@@ -41,9 +41,11 @@ bench-dataset-unreadable = cannot read the dataset { $path }
 bench-dataset-invalid-line = { $path }, line { $line }: not a JSON object
 bench-variant-unreadable = { $path } is not a YAML mapping (a fragment of nestor.yaml)
 bench-variant-invalid = { $path }, section bench: { $problems }
-bench-variant-not-a-model = { $path }: { $kind } does not build the model this role needs
+bench-variant-not-a-model = { $path }: { $kind } does not provide the model type this role expects
+bench-no-dataset = { $suite } ships no dataset: give one with --cases
+bench-variant-no-voices = { $path }: this suite needs a voice model, set voices.embedder
 bench-no-recording = no recorded reply for case { $case } ({ $role }): run it once without --replay
-bench-cache-unreadable = the cache file { $path } is damaged: delete it
+bench-cache-unreadable = the cache file { $path } is corrupted: delete it
 bench-results-unreadable = { $path } is not a bench run (no readable results.json)
 bench-same-variant-name = two variants have the same name ({ $names }): set bench.name in one of them
 

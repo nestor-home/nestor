@@ -31,12 +31,16 @@ async def test_the_schema_gives_every_section_and_every_installed_plugin_its_for
         )
         assert schema["section_titles"]["household"] == "Foyer"
         locale = schema["sections"]["persona"]["properties"]["locale"]["x-nestor"]
-        assert locale["title"] == "Langue" and locale["help"].startswith("La langue du foyer")
+        assert locale["title"] == "Langue" and locale["help"].startswith("Ex. fr-FR")
         assert locale["title_id"] == "config-persona-locale" and locale["group"] == "persona"
         slots = schema["slots"]
         assert slots["channels"]["shape"] == "list" and slots["channels"]["required"]
         assert slots["channels"]["title"] == "Canaux"
         assert (slots["models"]["shape"], slots["presence"]["shape"]) == ("named", "one")
+        assert slots["models"]["model_types"] == {"scripted": "language", "tagged-voices": "voice"}
+        assert slots["channels"]["model_types"] == {}
+        spoken = schema["sections"]["agent"]["properties"]["spoken"]["x-nestor"]
+        assert (spoken["reference"], spoken["model_type"]) == ("models", "language")
         spoken = schema["sections"]["agent"]["properties"]["spoken"]["x-nestor"]
         assert (spoken["reference"], spoken["title"]) == ("models", "Modèle à l'oral"), "it takes a name of `models`"
         tool = slots["tools"]["kinds"]["weather"]
@@ -131,7 +135,7 @@ async def test_a_configuration_that_cannot_be_used_is_not_written_and_says_where
             (("tools", 1, "kind"), "unknown_kind"),
         }
         message = next(p for p in problems if p["code"] == "unknown_kind")
-        assert message["message"] == "tools.1.kind : aucun greffon « teleporter » n'est installé."
+        assert message["message"] == "tools.1.kind : aucun plugin « teleporter » n'est installé."
         assert admin.config_path.read_text() == before
         assert await admin.app.state.admin.secrets.value("tools.weather.api_key") is None, "nor any secret"
 
@@ -146,7 +150,7 @@ async def test_models_are_named_by_the_household_and_the_agent_refers_to_them(tm
             (
                 ("agent",),
                 "agent : plusieurs modèles peuvent répondre (main, vite). "
-                "Choisissez celui de l'oral, celui de l'écrit, ou les deux.",
+                "Choisissez le modèle à l'oral, à l'écrit, ou les deux.",
             )
         ], "with two models, the agent must say which, in the reader's language"
         edited["agent"] = {"spoken": "vite", "written": "lent"}
@@ -168,7 +172,7 @@ async def test_an_account_two_people_claim_is_located_at_the_second(tmp_path: Pa
         [problem] = problems
         index = len(edited["household"]) - 1
         assert problem["path"] == ["household", index, "accounts", 1], "on the account, in the dialog of who added it"
-        said = ": déjà le compte d'une autre personne. Un compte ne désigne qu'une personne."
+        said = " : ce compte appartient déjà à une autre personne."
         assert problem["message"].endswith(said), "in the reader's language"
 
 

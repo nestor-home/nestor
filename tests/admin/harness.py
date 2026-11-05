@@ -20,12 +20,13 @@ from nestor.modules.accounts import Account, Role
 from nestor.modules.channels import Medium
 from nestor.modules.cognition.tools import Tool, ToolProvider
 from nestor.modules.connectors import AuthKind, SecretField
-from nestor.runtime import AdapterSettings, Family, Nestor, Plugin, Registry
+from nestor.runtime import AdapterSettings, Family, ModelType, Nestor, Plugin, Registry
 from nestor.runtime.config import parse_config
 from nestor.testing.channels import InMemoryChannel
 from nestor.testing.cognition import FakeRemote, ScriptedModel, ScriptedRemoteExecutor
 from nestor.testing.connectors import FakeProvider, ScriptedConnector
 from nestor.testing.home import StaticPresence
+from nestor.testing.identity import TaggedVoices
 from nestor.testing.system import StaticReleaseFeed
 
 PASSWORD = "correct horse battery"
@@ -144,6 +145,7 @@ class Harness:
         heartbeat_s: float = 15.0,
         quiet_hours: str | None = None,
         speaker: bool = False,
+        voices: bool = False,
     ) -> None:
         self.confirms_stop, self.replies = confirms_stop, replies
         self.provider = FakeProvider()
@@ -169,6 +171,11 @@ class Harness:
             text += "connectors: []\n"
         if quiet_hours:
             text += f"initiative: {{quiet_hours: '{quiet_hours}'}}\n"
+        if voices:
+            text = text.replace(
+                "models: {main: {kind: scripted}}",
+                "models: {main: {kind: scripted}, ears: {kind: tagged-voices}}\nvoices: {embedder: ears}",
+            )
         if speaker:
             text = text.replace(
                 "channels: [{kind: memory, name: telegram}]",
@@ -198,7 +205,20 @@ class Harness:
     def registry(self) -> Registry:
         return Registry(
             [
-                Plugin(Family.MODEL, "scripted", NoSettings, lambda s, n, x: ScriptedModel(*self.replies)),
+                Plugin(
+                    Family.MODEL,
+                    "scripted",
+                    NoSettings,
+                    lambda s, n, x: ScriptedModel(*self.replies),
+                    model_type=ModelType.LANGUAGE,
+                ),
+                Plugin(
+                    Family.MODEL,
+                    "tagged-voices",
+                    NoSettings,
+                    lambda s, n, x: TaggedVoices(),
+                    model_type=ModelType.VOICE,
+                ),
                 Plugin(Family.CHANNEL, "memory", NoSettings, lambda s, name, x: InMemoryChannel(name)),
                 Plugin(Family.CHANNEL, "speaker", NoSettings, lambda s, name, x: Speaker(name)),
                 Plugin(

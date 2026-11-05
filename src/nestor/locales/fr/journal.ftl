@@ -12,6 +12,7 @@ journal-kind = { $kind ->
     [connection] Connexions
     [presence] Présence
     [satellite] Satellites
+    [voice] Voix
     [observation] Observations
     [account] Comptes
    *[other] Autres
@@ -19,7 +20,24 @@ journal-kind = { $kind ->
 
 journal-user-said = { $known ->
     [no] Quelqu'un a dit
-   *[yes] { $person } a dit
+   *[yes] { $by ->
+        [voice] { $person } a dit (voix reconnue)
+        [said] { $person } a dit (nom annoncé)
+       *[other] { $person } a dit
+    }
+}
+journal-notification-turn = Pour { $assistant } : { $subject ->
+    [task] tâche { $id } { $status ->
+        [completed] terminée
+        [failed] en échec
+       *[other] { $status }
+    }
+    [watch] veille { $id } déclenchée
+    [message] message { $id }{ $status ->
+        [undelivered] {" "}non remis
+       *[other] {" "}à transmettre
+    }
+   *[other] { $about }
 }
 journal-assistant-answered = { $assistant } a répondu
 journal-assistant-interrupted = { $assistant } a répondu (interrompu)
@@ -30,7 +48,7 @@ journal-fallback = Réponse de secours : { $reason ->
     [synthesis_unavailable] synthèse vocale indisponible
    *[other] { $reason }
 }
-journal-answer-cut = Réponse coupée par la personne
+journal-answer-cut = Réponse interrompue
 journal-detail-heard = Entendu : { $heard }
 
 journal-tool-called = Outil { $tool } appelé
@@ -38,9 +56,9 @@ journal-tool-completed = Outil { $tool } terminé en { NUMBER($seconds, maximumF
 journal-tool-failed = Outil { $tool } en échec
 
 journal-task-started = Tâche { $task } confiée à { $executor }
-journal-task-attached = Tâche { $task } suivie chez l'exécutant
+journal-task-attached = Tâche { $task } prise en charge par l'exécutant
 journal-task-progressed = Tâche { $task } : nouvelle étape
-journal-task-cancel-requested = Arrêt demandé pour la tâche { $task }
+journal-task-cancel-requested = Annulation demandée pour la tâche { $task }
 journal-task-ended = Tâche { $task } { $status ->
     [completed] terminée
     [failed] en échec
@@ -50,8 +68,8 @@ journal-task-ended = Tâche { $task } { $status ->
 journal-task-delivered = Résultat de la tâche { $task } transmis
 
 journal-delivery-considered = { $known ->
-    [no] Décision de parler
-   *[yes] Décision de parler à { $person }
+    [no] Message
+   *[yes] Message pour { $person }
 } : { $subject ->
     [task] tâche { $id } { $status ->
         [completed] terminée
@@ -87,10 +105,10 @@ journal-delivered = Message transmis : { $subject ->
    *[no] {""}
 }
 journal-message-requested = { $kind ->
-    [question] Question pour { $to }
-    [answer] Réponse transmise à { $to }
-   *[other] Message pour { $to }
-} de la part de { $by }
+    [question] Question de { $by } pour { $to }
+    [answer] Réponse de { $by } pour { $to }
+   *[other] Message de { $by } pour { $to }
+}
 journal-message-delivered = Message { $id } remis
 journal-message-undelivered = Message { $id } non remis
 journal-delivery-failed = Message non transmis : { $subject ->
@@ -129,18 +147,18 @@ journal-schedule-fired = Réveil { $id } déclenché
 journal-schedule-cancelled = Réveil { $id } annulé
 journal-watch-created = Veille créée : { $what }
 journal-watch-sorted = { $unsorted ->
-    [yes] « { $item } » n'a pas pu être trié : le modèle de tri n'a pas répondu, rien n'a été annoncé
+    [yes] « { $item } » non trié : le modèle n'a pas répondu
    *[no] { $matched ->
-        [0] « { $item } » lu pour { $asked } { $asked ->
+        [0] « { $item } » vérifié pour { $asked } { $asked ->
             [one] veille
            *[other] veilles
-        } : rien pour elles
-       *[other] « { $item } » lu pour { $asked } { $asked ->
+        } : aucune ne correspond
+       *[other] « { $item } » vérifié pour { $asked } { $asked ->
             [one] veille
            *[other] veilles
         } : { $matched } { $matched ->
-            [one] concernée
-           *[other] concernées
+            [one] correspond
+           *[other] correspondent
         }
     }
 }
@@ -149,7 +167,7 @@ journal-watch-triggered = { $urgent ->
    *[no] Veille { $watch } déclenchée par « { $item } »
 }
 journal-watch-ended = Veille { $watch } { $reason ->
-    [matched] trouvée
+    [matched] déclenchée
     [expired] expirée
     [cancelled] annulée
    *[other] { $reason }
@@ -179,65 +197,65 @@ journal-presence-changed = { $where ->
     [away] { $person } n'est plus à la maison
     [room] { $person } est dans la pièce « { $room } »
     [home] { $person } est à la maison
-   *[unknown] { $person } n'est plus localisé·e
+   *[unknown] { $person } : position inconnue
 }
 
-journal-satellite-pairing-requested = Le satellite { $device } ({ $model }, pièce « { $room } ») demande l'appairage
+journal-satellite-pairing-requested = Satellite { $device } ({ $model }, { $room }) demande à être appairé
 journal-detail-declares = { $count ->
-    [0] Déclare : rien
+    [0] Déclare : aucune capacité
    *[other] Déclare : { $capabilities }
 }
 journal-satellite-paired = { $proof ->
-    [enrollment_code] Satellite { $device } appairé avec un code d'ajout (pièce « { $room } »)
-   *[device_code] Satellite { $device } appairé avec son code (pièce « { $room } »)
+    [enrollment_code] Satellite { $device } appairé avec un code d'ajout ({ $room })
+   *[device_code] Satellite { $device } appairé avec son code ({ $room })
 }
 journal-detail-allowed = { $count ->
-    [0] Autorisé : rien
+    [0] Autorisé : aucune capacité
    *[other] Autorisé : { $capabilities }
 }
 journal-satellite-revoked = Satellite { $device } révoqué
-journal-satellite-connected = Satellite { $device } connecté (pièce « { $room } »)
-journal-satellite-disconnected = Satellite { $device } déconnecté (pièce « { $room } »)
+journal-satellite-connected = Satellite { $device } connecté ({ $room })
+journal-satellite-disconnected = Satellite { $device } déconnecté ({ $room })
 journal-detail-software = { $name } { $version }
-journal-satellite-update-requested = { $device } invité à passer de { $running } à { $target }
+journal-satellite-update-requested = { $device } : mise à jour de { $running } vers { $target } demandée
 journal-satellite-update-reported = { $state ->
     [available] { $device } : version { $target } disponible
     [installing] { $device } installe { $target }
-    [failed] { $device } n'a pas pu démarrer { $target } et est revenu à sa version
+    [failed] { $device } : échec de { $target }, retour à la version précédente
    *[current] { $device } est à jour
 }
 journal-satellite-addition-started = { $proof ->
     [enrollment_code] Code d'ajout créé pour un satellite
-   *[device_code] Ajout d'un satellite par le code qu'il présente
+   *[device_code] Ajout d'un satellite par son code
 }
 journal-satellite-addition-completed = Satellite { $device } ajouté
 journal-satellite-addition-cancelled = Ajout de satellite annulé
-journal-satellite-addition-expired = Ajout de satellite expiré sans servir
+journal-satellite-addition-expired = Ajout de satellite expiré
 journal-satellite-enrollment-refused = { $reason ->
     [expired] { $device } a présenté un code d'ajout expiré
     [used] { $device } a présenté un code d'ajout déjà utilisé
     [cancelled] { $device } a présenté un code d'ajout annulé
    *[unknown] { $device } a présenté un mauvais code d'ajout
 }
-journal-satellite-identify-requested = { $device } invité à se signaler
+journal-satellite-identify-requested = { $device } : identification demandée
 journal-person-detected = { $count ->
-    [one] { $count } personne vue par { $device } (pièce « { $room } »)
-   *[other] { $count } personnes vues par { $device } (pièce « { $room } »)
+    [one] { $count } personne vue par { $device } ({ $room })
+   *[other] { $count } personnes vues par { $device } ({ $room })
 }
 journal-detail-confidence = Confiance : { NUMBER($confidence, style: "percent") }
 journal-speech-activity = { $active ->
-    [yes] Parole détectée près de { $device } (pièce « { $room } »)
-   *[no] Fin de parole près de { $device } (pièce « { $room } »)
+    [yes] Parole détectée près de { $device } ({ $room })
+   *[no] Fin de parole près de { $device } ({ $room })
 }
 
-journal-account-created = Compte { $login } ouvert ({ role-name })
+journal-account-created = Compte { $login } créé ({ role-name })
 journal-account-role-changed = Compte { $login } : rôle { role-name }
 journal-account-disabled = Compte { $login } désactivé
 journal-account-enabled = Compte { $login } réactivé
 journal-account-password-changed = Mot de passe du compte { $login } changé
 journal-account-locale-changed = { $chosen ->
-    [no] Le compte { $login } lit désormais dans la langue du foyer
-   *[yes] Le compte { $login } lit désormais en { $locale }
+    [no] Compte { $login } : langue du foyer
+   *[yes] Compte { $login } : langue { $locale }
 }
 journal-account-invited = { $known ->
     [no] Invitation ({ role-name })
@@ -260,14 +278,23 @@ journal-login-failed = { $known ->
     }
 }
 
-journal-observation-speaker-identified = { $known ->
-    [no] Voix non reconnue
-   *[yes] Voix de { $person } reconnue
+journal-speaker-declared = { $person } a donné son nom
+journal-voice-enrolled = Voix de { $person } enregistrée ({ $where })
+journal-voice-forgotten = { $learned ->
+    [yes] Apprentissage de la voix de { $person } effacé
+   *[no] Voix de { $person } effacée
 }
-journal-identity-enrolled = Empreinte vocale enregistrée pour { $person }
-journal-identity-forgotten = Empreinte vocale de { $person } supprimée
+journal-voice-learning = { $learning ->
+    [yes] Apprentissage de la voix de { $person } activé
+   *[no] Apprentissage de la voix de { $person } désactivé
+}
+journal-confirmation-requested = Confirmation demandée par écrit à { $person } : { $tool }
+journal-confirmation-answered = { $approved ->
+    [yes] Confirmé par écrit
+   *[no] Refusé par écrit
+}
 
-journal-behavior-changed = Attitude : { $behavior ->
+journal-behavior-changed = État : { $behavior ->
     [idle] au repos
     [listening] à l'écoute
     [thinking] réfléchit
@@ -309,8 +336,8 @@ journal-system-restart-requested = Redémarrage demandé { $via ->
     [cli] depuis la ligne de commande
    *[admin] par { $login }
 }
-journal-system-update-requested = Mise à jour de { $running } vers { $target } { $via ->
+journal-system-update-requested = Mise à jour de { $running } vers { $target } demandée { $via ->
     [cli] depuis la ligne de commande
    *[admin] par { $login }
 }
-journal-system-update-failed = { $target } ne s'est pas installée : Nestor garde sa version
+journal-system-update-failed = Échec de l'installation de { $target } : Nestor reste sur sa version

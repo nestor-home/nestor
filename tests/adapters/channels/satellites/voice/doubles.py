@@ -26,6 +26,7 @@ from nestor.adapters.channels.satellites.voice.eager import EagerSentenceFlush
 from nestor.adapters.channels.satellites.voice.providers import Speech
 from nestor.core import Capability, PersonId, utc_now
 from nestor.modules.channels import Address, Assistant, InboundMessage, MessageEnd, Reply, Sender
+from nestor.modules.identity import Heard
 from nestor.modules.satellites import AUDIO_CAPTURE, AUDIO_PLAYBACK, PROTOCOL, Satellite, wire
 from nestor.testing.satellites import SOFTWARE
 
@@ -163,7 +164,7 @@ class TimedReply(Reply):
 
 
 class FakeAssistant(Assistant):
-    """Answers with `answers` in order; every sender is a household member except `strangers`."""
+    """Answers with `answers` in order. With `voice`, it recognises voices: every speech it hears is that one."""
 
     def __init__(
         self,
@@ -172,20 +173,29 @@ class FakeAssistant(Assistant):
         clock: ScenarioClock | None = None,
         ttft_s: float = 0.3,
         token_interval_s: float = 0.02,
-        strangers: frozenset[str] = frozenset(),
+        voice: Heard | None = None,
         fail: bool = False,
     ) -> None:
         self._answers = list(answers)
         self._clock = clock
         self._ttft_s, self._token_interval_s = ttft_s, token_interval_s
-        self._strangers = strangers
+        self._voice = voice
+        self.heard: list[bytes] = []  # every speech handed to `hear`
         self._fail = fail
         self.messages: list[InboundMessage] = []
         self.arrivals: list[float] = []
         self.replies: list[TimedReply] = []
 
     def identify(self, address: Address, sender: Sender) -> PersonId | None:
-        return None if sender.id in self._strangers else PersonId(sender.id)
+        return PersonId(sender.id)
+
+    @property
+    def voice_wait_s(self) -> float | None:
+        return 0.5 if self._voice else None
+
+    async def hear(self, audio: bytes) -> Heard | None:
+        self.heard.append(audio)
+        return self._voice
 
     def respond(self, message: InboundMessage) -> TimedReply:
         self.messages.append(message)

@@ -54,7 +54,7 @@ from nestor import __version__
 from nestor.core import Health, ProviderError
 from nestor.core.i18n import Message
 from nestor.modules.cognition.model import ToolSpec
-from nestor.modules.cognition.tools import Risk, Tool, ToolContext, ToolFailed, ToolProvider
+from nestor.modules.cognition.tools import Risk, SensitiveWhen, Tool, ToolContext, ToolFailed, ToolProvider
 
 logger = logging.getLogger(__name__)
 
@@ -149,7 +149,8 @@ class McpToolProvider(ToolProvider):
 
     `include` and `exclude` select tools by their name on the server; `risks` overrides the risk
     derived from the tool's annotations (read-only → read, destructive → sensitive, else write).
-    Annotations are hints from the server: set `risks` for anything that matters.
+    Annotations are hints from the server: set `risks` for anything that matters. `sensitive` makes some
+    calls of a tool sensitive by what they act on (a lock, the garage), where the tool also drives lights.
     """
 
     def __init__(
@@ -164,6 +165,7 @@ class McpToolProvider(ToolProvider):
         include: Sequence[str] | None = None,
         exclude: Sequence[str] = (),
         risks: Mapping[str, Risk] | None = None,
+        sensitive: Sequence[SensitiveWhen] = (),
         max_result_chars: int = 16_000,
         retry_after_s: float = 30.0,
         negotiation: Negotiation = "auto",
@@ -175,6 +177,7 @@ class McpToolProvider(ToolProvider):
         self._include = None if include is None else frozenset(include)
         self._exclude = frozenset(exclude)
         self._risks = dict(risks or {})
+        self._sensitive = tuple(sensitive)
         self._negotiation: Negotiation = negotiation
         self._session: _Session | None = None
         self._lock = asyncio.Lock()
@@ -343,8 +346,15 @@ class McpToolProvider(ToolProvider):
             name = _unique(_INVALID_NAME_CHARACTERS.sub("_", remote.name)[:MAX_NAME_LENGTH] or "tool", taken)
             taken.add(name)
             spec = ToolSpec(name, remote.description or remote.title or remote.name, dict(remote.input_schema))
+            risk, rules = self._risk(remote), [r for r in self._sensitive if r.tool == remote.name]
             tools.append(
-                Tool(spec=spec, run=self._runner(remote.name), risk=self._risk(remote), timeout_s=self._timeout_s)
+                Tool(
+                    spec=spec,
+                    run=self._runner(remote.name),
+                    risk=risk,
+                    assess=_assessed(remote.name, risk, rules) if rules else None,
+                    timeout_s=self._timeout_s,
+                )
             )
         return tuple(tools)
 
@@ -463,3 +473,10 @@ def _reason(error: BaseException) -> str:
     while isinstance(error, BaseExceptionGroup):
         error = error.exceptions[0]
     return f"{type(error).__name__}: {error}" if str(error) else type(error).__name__
+
+
+def _assessed(name: str, risk: Risk, rules: Sequence[SensitiveWhen]) -> Callable[[Mapping[str, object]], Risk]:
+    def assess(arguments: Mapping[str, object]) -> Risk:
+        return Risk.SENSITIVE if any(rule.matches(name, arguments) for rule in rules) else risk
+
+    return assess

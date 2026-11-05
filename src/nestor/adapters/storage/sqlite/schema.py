@@ -104,4 +104,23 @@ CREATE TABLE account_activity (
 ) STRICT;
 """
 
-MIGRATIONS: tuple[str, ...] = (EVENTS + MEMORIES + EPISODES + SECRETS + VERIFIERS + ACTIVITY,)
+VOICES = """
+CREATE TABLE voices (
+    person TEXT PRIMARY KEY,
+    space TEXT NOT NULL,  -- the voice model's space: voiceprints of another one are never compared
+    learning INTEGER NOT NULL,  -- whether everyday turns may still add to it
+    enrolled_at TEXT NOT NULL
+) STRICT;
+CREATE TABLE voiceprints (
+    person TEXT NOT NULL REFERENCES voices (person) ON DELETE CASCADE,
+    anchor INTEGER NOT NULL,  -- 1: from the recording the person agreed to; 0: learned since
+    vector BLOB NOT NULL,  -- unit length, float64
+    turn TEXT,  -- the turn a learned one comes from
+    room TEXT,
+    at TEXT NOT NULL
+) STRICT;
+CREATE INDEX voiceprints_by_person ON voiceprints (person, anchor, at);
+CREATE INDEX voiceprints_by_turn ON voiceprints (turn);
+"""
+
+MIGRATIONS: tuple[str, ...] = (EVENTS + MEMORIES + EPISODES + SECRETS + VERIFIERS + ACTIVITY + VOICES,)

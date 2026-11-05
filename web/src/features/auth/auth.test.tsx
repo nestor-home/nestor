@@ -48,7 +48,7 @@ describe("accepting an invitation", () => {
     await user.clear(screen.getByLabelText("Confirm the password"));
     await user.type(screen.getByLabelText("Confirm the password"), "my grandmother's tee");
     await user.click(screen.getByRole("button", { name: "Accept the invitation" }));
-    expect(screen.getByRole("alert")).toHaveTextContent("The two passwords differ.");
+    expect(screen.getByRole("alert")).toHaveTextContent("The passwords do not match.");
 
     await user.clear(screen.getByLabelText("Confirm the password"));
     await user.type(screen.getByLabelText("Confirm the password"), "my grandmother's tea");

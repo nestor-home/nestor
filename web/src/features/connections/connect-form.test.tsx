@@ -60,7 +60,7 @@ describe("connecting an account", () => {
       </I18nProvider>,
     );
     expect(screen.getByRole("button", { name: "Connect" })).toBeDisabled();
-    expect(screen.getByText("Register the household's OAuth client first.")).toBeInTheDocument();
+    expect(screen.getByText("Register the OAuth client first.")).toBeInTheDocument();
   });
 
   it("connects a secret-based service at once, with trimmed values", async () => {

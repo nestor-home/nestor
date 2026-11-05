@@ -170,6 +170,18 @@ for (const width of [390, 1440]) {
       expect(await overflows(page)).toEqual([]);
     });
 
+    test("nothing overflows while recording a voice", async ({ page }) => {
+      await page.goto("/people/marie-amelie");
+      await page.getByRole("button", { name: "Record their voice" }).click();
+      const dialog = page.getByRole("dialog");
+      await expect(dialog.getByRole("button", { name: "Start" })).toBeVisible();
+      await page.waitForTimeout(300);
+      expect(await overflows(page)).toEqual([]);
+      await dialog.getByRole("button", { name: "Start" }).click();
+      await expect(dialog.getByText("I can hear you well.")).toBeVisible({ timeout: 15_000 });
+      expect(await overflows(page)).toEqual([]);
+    });
+
     test("nothing overflows in a component's sheet and the changes", async ({ page }) => {
       await page.goto("/config/tools");
       await page.getByRole("button", { name: `Edit ${LONG_WORD}` }).click();

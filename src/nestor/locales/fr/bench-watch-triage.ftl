@@ -12,7 +12,7 @@ bench-watch-triage-urgent-precision = urgence, précision
 bench-watch-triage-urgent-recall = urgence, rappel
 bench-watch-triage-missed = correspondances manquées
 bench-watch-triage-false-alarms = fausses alertes
-bench-watch-triage-unsorted = laissées non triées
+bench-watch-triage-unsorted = non triés
 
 bench-watch-triage-missed-list = Correspondances manquées
 bench-watch-triage-false-alarms-list = Fausses alertes

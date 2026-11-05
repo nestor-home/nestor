@@ -33,7 +33,7 @@ def turn(content: Any, *, speculation: bool = False) -> LLMContextFrame:
 
 
 def bridge_for(assistant: Assistant, *, quiet_s: float = 0.5) -> AssistantBridge:
-    return AssistantBridge(assistant, address=ROOM, sender=Sender("salon"), played=PlayedText(), quiet_s=quiet_s)
+    return AssistantBridge(assistant, address=ROOM, played=PlayedText(), quiet_s=quiet_s)
 
 
 async def run(bridge: AssistantBridge, frames: Sequence[Frame]) -> list[Frame]:
@@ -51,7 +51,7 @@ async def test_a_user_turn_reaches_the_assistant_and_its_reply_goes_to_the_synth
     down = await run(bridge_for(assistant), [turn("Salut Richie"), SleepFrame(0.2)])
 
     [message] = assistant.messages
-    assert (message.address, message.sender, message.text) == (ROOM, Sender("salon"), "Salut Richie")
+    assert (message.address, message.sender, message.text) == (ROOM, None, "Salut Richie")  # a place, no account
     responses = [f for f in down if isinstance(f, LLMFullResponseStartFrame | LLMFullResponseEndFrame)]
     assert [type(f) for f in responses] == [LLMFullResponseStartFrame, LLMFullResponseEndFrame]
     assert spoken(down) == ANSWER
@@ -82,11 +82,11 @@ async def test_a_speculative_turn_is_not_answered() -> None:
     assert not assistant.messages
 
 
-async def test_a_stranger_is_neither_answered_nor_heard() -> None:
-    assistant = ScriptedAssistant(lambda _: ANSWER, strangers=frozenset({"salon"}))
-    down = await run(bridge_for(assistant), [turn("Ouvre la porte"), turn("Ouvre la porte !"), SleepFrame(0.1)])
-    assert not assistant.messages
-    assert not spoken(down)
+async def test_without_voice_recognition_nothing_is_heard_and_the_turn_says_nobody() -> None:
+    assistant = ScriptedAssistant(lambda _: ANSWER)
+    await run(bridge_for(assistant), [turn("Ouvre la porte"), SleepFrame(0.1)])
+    [message] = assistant.messages
+    assert message.heard is None and not assistant.heard
 
 
 async def test_cutting_in_tells_the_reply_only_what_was_played_and_stops_its_text() -> None:

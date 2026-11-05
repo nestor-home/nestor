@@ -31,8 +31,8 @@
             "secret_values": false,
             "advanced": false,
             "group": "persona",
-            "title": "Caractère",
-            "help": "Qui est l'assistant et comment il parle, avec ses propres mots."
+            "title": "Personnalité",
+            "help": "Qui est l'assistant et comment il parle."
           }
         },
         "locale": {
@@ -49,7 +49,7 @@
             "advanced": false,
             "group": "persona",
             "title": "Langue",
-            "help": "La langue du foyer (BCP 47, ex. fr-FR) : phrases fixes et langue par défaut de l'administration."
+            "help": "Ex. fr-FR. Langue des textes fixes et, par défaut, de l'admin."
           }
         },
         "language": {
@@ -65,8 +65,8 @@
             "secret_values": false,
             "advanced": false,
             "group": "persona",
-            "title": "Langue nommée au modèle",
-            "help": null
+            "title": "Langue des réponses",
+            "help": "Son nom dans le prompt, ex. français."
           }
         },
         "timezone": {
@@ -142,8 +142,8 @@
             "secret_values": false,
             "advanced": false,
             "group": "household",
-            "title": "Comptes sur les canaux",
-            "help": "Comment chaque canal connaît cette personne : telegram:123456789, voice:*."
+            "title": "Comptes",
+            "help": "Comment les canaux reconnaissent cette personne, ex. telegram:123456789."
           }
         },
         "reach": {
@@ -201,7 +201,8 @@
             "group": "agent",
             "reference": "models",
             "title": "Modèle à l'oral",
-            "help": "Répond à voix haute ; la voix part dès sa première phrase. Sans lui, le modèle de l'écrit parle aussi."
+            "help": "Pour les réponses parlées. Par défaut, le modèle à l'écrit.",
+            "model_type": "language"
           }
         },
         "written": {
@@ -226,7 +227,8 @@
             "group": "agent",
             "reference": "models",
             "title": "Modèle à l'écrit",
-            "help": "Répond par écrit. Sans lui, le modèle de l'oral écrit aussi."
+            "help": "Pour les réponses écrites. Par défaut, le modèle à l'oral.",
+            "model_type": "language"
           }
         }
       },
@@ -259,7 +261,8 @@
             "group": "watches",
             "reference": "models",
             "title": "Modèle de tri",
-            "help": "Décide quelles veilles concerne chaque élément reçu. Par défaut, le modèle de l'écrit."
+            "help": "Choisit les veilles concernées par chaque élément reçu. Par défaut, le modèle à l'écrit.",
+            "model_type": "language"
           }
         }
       },
@@ -284,7 +287,7 @@
             "advanced": false,
             "group": "conversation",
             "title": "Nouvelle conversation après (secondes)",
-            "help": "Un message envoyé ce délai après le dernier tour ouvre une nouvelle conversation : l'assistant ne reprend plus les tours précédents. Les souvenirs restent."
+            "help": null
           }
         }
       },
@@ -315,7 +318,7 @@
             "advanced": false,
             "group": "initiative",
             "title": "Heures calmes",
-            "help": "Par exemple 22:30-07:30 : rien n'est dit à voix haute, sauf urgence."
+            "help": "Ex. 22:30-07:30. Rien à voix haute, sauf urgence."
           }
         },
         "main_room": {
@@ -339,7 +342,7 @@
             "advanced": false,
             "group": "initiative",
             "title": "Pièce principale",
-            "help": null
+            "help": "Où parler quand on sait seulement que quelqu'un est à la maison."
           }
         },
         "follow_up_after_s": {
@@ -424,8 +427,8 @@
             "secret_values": false,
             "advanced": false,
             "group": "admin",
-            "title": "Adresse publique",
-            "help": "Comment les navigateurs du foyer joignent l'administration, ex. https://nestor.example.org."
+            "title": "URL publique",
+            "help": "L'URL de l'admin, ex. https://nestor.example.org."
           }
         },
         "relay_url": {
@@ -468,7 +471,7 @@
             "group": "updates",
             "reference": null,
             "title": "Chercher les nouvelles versions",
-            "help": "Une fois par jour, Nestor lit la liste de ses versions et l'admin signale une version plus récente. Rien n'est installé."
+            "help": "Une fois par jour, sans rien installer."
           }
         },
         "feed": {
@@ -485,8 +488,8 @@
             "advanced": true,
             "group": "updates",
             "reference": null,
-            "title": "Liste des versions",
-            "help": "L'adresse où la liste des versions est lue."
+            "title": "Flux des versions",
+            "help": null
           }
         }
       },
@@ -511,7 +514,7 @@
             "advanced": true,
             "group": "core",
             "title": "Dossier des données",
-            "help": "Là où vivent la base de données, le coffre et l'historique de la configuration."
+            "help": "Base de données, coffre et historique de la configuration."
           }
         }
       }
@@ -567,7 +570,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "model-openai-compatible",
-                "title": "Adresse de l'API",
+                "title": "Base URL",
                 "help": null,
                 "brands": {
                   "anthropic.com": "anthropic",
@@ -634,8 +637,8 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "model-openai-compatible",
-                "title": "Champs de requête supplémentaires",
-                "help": "Envoyés tels quels avec chaque requête, ex. les options de routage du fournisseur."
+                "title": "Champs JSON supplémentaires",
+                "help": "Ajoutés à chaque requête, ex. le routage d'OpenRouter."
               }
             },
             "connect_timeout_s": {
@@ -652,7 +655,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "model-openai-compatible",
-                "title": "Délai de connexion (secondes)",
+                "title": "Timeout de connexion (secondes)",
                 "help": null
               }
             },
@@ -670,7 +673,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "model-openai-compatible",
-                "title": "Délai de lecture (secondes)",
+                "title": "Timeout de lecture (secondes)",
                 "help": null
               }
             }
@@ -678,7 +681,380 @@
           "required": ["kind", "base_url", "model"],
           "title": "OpenAICompatibleSettings",
           "type": "object"
+        },
+        "openai-compatible-embeddings": {
+          "additionalProperties": false,
+          "description": "An embedding model's profile.",
+          "properties": {
+            "kind": {
+              "const": "openai-compatible-embeddings",
+              "type": "string",
+              "x-nestor": {
+                "field": "kind",
+                "title_id": "config-model-openai-compatible-embeddings-kind",
+                "help_id": "config-model-openai-compatible-embeddings-kind-help",
+                "fallback_title_id": "config-field-kind",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-embeddings",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Type",
+                "help": null
+              }
+            },
+            "base_url": {
+              "title": "Base Url",
+              "type": "string",
+              "x-nestor": {
+                "field": "base_url",
+                "title_id": "config-model-openai-compatible-embeddings-base_url",
+                "help_id": "config-model-openai-compatible-embeddings-base_url-help",
+                "fallback_title_id": "config-field-base_url",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-embeddings",
+                "reference": null,
+                "model_type": null,
+                "brands": {
+                  "anthropic.com": "anthropic",
+                  "generativelanguage.googleapis.com": "gemini",
+                  "groq.com": "groq",
+                  "mistral.ai": "mistral",
+                  "openai.com": "openai",
+                  "openrouter.ai": "openrouter"
+                },
+                "title": "Base URL",
+                "help": null
+              }
+            },
+            "api_key": {
+              "anyOf": [
+                {
+                  "format": "password",
+                  "type": "string",
+                  "writeOnly": true
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Api Key",
+              "x-nestor": {
+                "field": "api_key",
+                "title_id": "config-model-openai-compatible-embeddings-api_key",
+                "help_id": "config-model-openai-compatible-embeddings-api_key-help",
+                "fallback_title_id": "config-field-api_key",
+                "secret": true,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-embeddings",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Clé d'API",
+                "help": null
+              }
+            },
+            "model": {
+              "title": "Model",
+              "type": "string",
+              "x-nestor": {
+                "field": "model",
+                "title_id": "config-model-openai-compatible-embeddings-model",
+                "help_id": "config-model-openai-compatible-embeddings-model-help",
+                "fallback_title_id": "config-field-model",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-embeddings",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Modèle",
+                "help": null
+              }
+            },
+            "dimensions": {
+              "exclusiveMinimum": 0,
+              "title": "Dimensions",
+              "type": "integer",
+              "x-nestor": {
+                "field": "dimensions",
+                "title_id": "config-model-openai-compatible-embeddings-dimensions",
+                "help_id": "config-model-openai-compatible-embeddings-dimensions-help",
+                "fallback_title_id": "config-field-dimensions",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-embeddings",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Dimensions",
+                "help": "Taille des vecteurs renvoyés par le modèle."
+              }
+            },
+            "send_dimensions": {
+              "default": false,
+              "title": "Send Dimensions",
+              "type": "boolean",
+              "x-nestor": {
+                "field": "send_dimensions",
+                "title_id": "config-model-openai-compatible-embeddings-send_dimensions",
+                "help_id": "config-model-openai-compatible-embeddings-send_dimensions-help",
+                "fallback_title_id": "config-field-send_dimensions",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-embeddings",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Demander ces dimensions",
+                "help": "Pour les modèles qui raccourcissent leurs vecteurs (Matryoshka)."
+              }
+            },
+            "query_prefix": {
+              "default": "",
+              "title": "Query Prefix",
+              "type": "string",
+              "x-nestor": {
+                "field": "query_prefix",
+                "title_id": "config-model-openai-compatible-embeddings-query_prefix",
+                "help_id": "config-model-openai-compatible-embeddings-query_prefix-help",
+                "fallback_title_id": "config-field-query_prefix",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-embeddings",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Préfixe des requêtes",
+                "help": "Ex. query: pour les modèles qui l'attendent."
+              }
+            },
+            "document_prefix": {
+              "default": "",
+              "title": "Document Prefix",
+              "type": "string",
+              "x-nestor": {
+                "field": "document_prefix",
+                "title_id": "config-model-openai-compatible-embeddings-document_prefix",
+                "help_id": "config-model-openai-compatible-embeddings-document_prefix-help",
+                "fallback_title_id": "config-field-document_prefix",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-embeddings",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Préfixe des documents",
+                "help": "Ex. passage: pour les modèles qui l'attendent."
+              }
+            },
+            "batch_size": {
+              "default": 64,
+              "exclusiveMinimum": 0,
+              "title": "Batch Size",
+              "type": "integer",
+              "x-nestor": {
+                "field": "batch_size",
+                "title_id": "config-model-openai-compatible-embeddings-batch_size",
+                "help_id": "config-model-openai-compatible-embeddings-batch_size-help",
+                "fallback_title_id": "config-field-batch_size",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-openai-compatible-embeddings",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Textes par requête",
+                "help": null
+              }
+            },
+            "extra_body": {
+              "additionalProperties": true,
+              "title": "Extra Body",
+              "type": "object",
+              "x-nestor": {
+                "field": "extra_body",
+                "title_id": "config-model-openai-compatible-embeddings-extra_body",
+                "help_id": "config-model-openai-compatible-embeddings-extra_body-help",
+                "fallback_title_id": "config-field-extra_body",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-openai-compatible-embeddings",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Champs JSON supplémentaires",
+                "help": null
+              }
+            },
+            "connect_timeout_s": {
+              "default": 5.0,
+              "exclusiveMinimum": 0,
+              "title": "Connect Timeout S",
+              "type": "number",
+              "x-nestor": {
+                "field": "connect_timeout_s",
+                "title_id": "config-model-openai-compatible-embeddings-connect_timeout_s",
+                "help_id": "config-model-openai-compatible-embeddings-connect_timeout_s-help",
+                "fallback_title_id": "config-field-connect_timeout_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-openai-compatible-embeddings",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Timeout de connexion (secondes)",
+                "help": null
+              }
+            },
+            "read_timeout_s": {
+              "default": 30.0,
+              "exclusiveMinimum": 0,
+              "title": "Read Timeout S",
+              "type": "number",
+              "x-nestor": {
+                "field": "read_timeout_s",
+                "title_id": "config-model-openai-compatible-embeddings-read_timeout_s",
+                "help_id": "config-model-openai-compatible-embeddings-read_timeout_s-help",
+                "fallback_title_id": "config-field-read_timeout_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-openai-compatible-embeddings",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Timeout de lecture (secondes)",
+                "help": null
+              }
+            }
+          },
+          "required": ["kind", "base_url", "model", "dimensions"],
+          "title": "OpenAICompatibleEmbedderSettings",
+          "type": "object"
+        },
+        "sherpa-onnx-voice": {
+          "additionalProperties": false,
+          "description": "A voice model run by sherpa-onnx.",
+          "properties": {
+            "kind": {
+              "const": "sherpa-onnx-voice",
+              "type": "string",
+              "x-nestor": {
+                "field": "kind",
+                "title_id": "config-model-sherpa-onnx-voice-kind",
+                "help_id": "config-model-sherpa-onnx-voice-kind-help",
+                "fallback_title_id": "config-field-kind",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-sherpa-onnx-voice",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Type",
+                "help": null
+              }
+            },
+            "model": {
+              "examples": ["titanet-small", "3dspeaker-campplus-zh-en", "3dspeaker-eres2net"],
+              "title": "Model",
+              "type": "string",
+              "x-nestor": {
+                "field": "model",
+                "title_id": "config-model-sherpa-onnx-voice-model",
+                "help_id": "config-model-sherpa-onnx-voice-model-help",
+                "fallback_title_id": "config-field-model",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-sherpa-onnx-voice",
+                "reference": null,
+                "model_type": null,
+                "brands": {
+                  "3dspeaker-campplus-zh-en": "modelscope",
+                  "3dspeaker-eres2net": "modelscope",
+                  "titanet-small": "nvidia"
+                },
+                "title": "Modèle de voix",
+                "help": "titanet-small, 3dspeaker-campplus-zh-en ou 3dspeaker-eres2net (téléchargé une fois), ou le chemin d'un fichier .onnx."
+              }
+            },
+            "threads": {
+              "default": 1,
+              "exclusiveMinimum": 0,
+              "maximum": 16,
+              "title": "Threads",
+              "type": "integer",
+              "x-nestor": {
+                "field": "threads",
+                "title_id": "config-model-sherpa-onnx-voice-threads",
+                "help_id": "config-model-sherpa-onnx-voice-threads-help",
+                "fallback_title_id": "config-field-threads",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-sherpa-onnx-voice",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Threads CPU",
+                "help": "Un seul suffit."
+              }
+            },
+            "threshold": {
+              "anyOf": [
+                {
+                  "exclusiveMaximum": 1,
+                  "exclusiveMinimum": 0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Threshold",
+              "x-nestor": {
+                "field": "threshold",
+                "title_id": "config-model-sherpa-onnx-voice-threshold",
+                "help_id": "config-model-sherpa-onnx-voice-threshold-help",
+                "fallback_title_id": "config-field-threshold",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-sherpa-onnx-voice",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Seuil de reconnaissance",
+                "help": "Par défaut, celui du catalogue. Obligatoire pour un fichier .onnx à vous."
+              }
+            }
+          },
+          "required": ["kind", "model"],
+          "title": "SherpaOnnxVoiceSettings",
+          "type": "object"
         }
+      },
+      "model_types": {
+        "openai-compatible": "language",
+        "openai-compatible-embeddings": "embedding",
+        "sherpa-onnx-voice": "voice"
       }
     },
     "channels": {
@@ -740,7 +1116,7 @@
                     "secret_values": false,
                     "advanced": false,
                     "group": "channel-satellites-elevenlabssettings",
-                    "title": "Identifiant de la voix",
+                    "title": "ID de la voix",
                     "help": null
                   }
                 },
@@ -758,7 +1134,7 @@
                     "advanced": false,
                     "group": "channel-satellites-elevenlabssettings",
                     "title": "Langue",
-                    "help": "La langue parlée à l'assistant, pour la transcription (ex. fr)."
+                    "help": "Pour la transcription, ex. fr."
                   }
                 },
                 "stt_model": {
@@ -882,7 +1258,7 @@
                     "advanced": false,
                     "group": "channel-satellites-voicesettings",
                     "title": "Dossier des clips de secours",
-                    "help": "stt.wav et tts.wav, joués quand la transcription ou la synthèse est en panne."
+                    "help": "stt.wav et tts.wav, joués si la transcription ou la synthèse tombe en panne."
                   }
                 },
                 "quiet_s": {
@@ -965,7 +1341,7 @@
                 "advanced": true,
                 "group": "channel-satellites",
                 "title": "Nouvelle conversation après (secondes)",
-                "help": "Vide : chaque tour décide, 5 minutes à l'oral comme Assist de Home Assistant, 4 heures à l'écrit. Après ce silence, l'assistant ne reprend plus les tours précédents. Les souvenirs restent."
+                "help": "Passé ce silence, l'assistant ne relit plus les échanges précédents. Par défaut, 5 min à l'oral, 4 h à l'écrit."
               }
             },
             "host": {
@@ -1025,8 +1401,8 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "channel-satellites",
-                "title": "Adresse publique",
-                "help": "Comment les satellites joignent ce serveur, par ex. http://nestor.local:8471. Elle figure dans les adresses d'appairage."
+                "title": "URL publique",
+                "help": "Celle que les satellites utilisent, ex. http://nestor.local:8471."
               }
             },
             "voice": {
@@ -1049,7 +1425,7 @@
                 "advanced": false,
                 "group": "channel-satellites",
                 "title": "Voix",
-                "help": "Sans elle, les satellites ne parlent que par écrit. Demande l’extra voice."
+                "help": "Sans elle, les satellites fonctionnent par écrit seulement. Nécessite l'extra voice."
               }
             },
             "send_timeout_s": {
@@ -1066,7 +1442,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "channel-satellites",
-                "title": "Délai d'envoi (secondes)",
+                "title": "Timeout d'envoi (secondes)",
                 "help": null
               }
             }
@@ -1132,7 +1508,7 @@
                 "advanced": true,
                 "group": "channel-telegram",
                 "title": "Nouvelle conversation après (secondes)",
-                "help": "Vide : 4 heures, comme une discussion reprise plus tard dans la journée. Après ce silence, l'assistant ne reprend plus les messages précédents. Les souvenirs restent."
+                "help": "Passé ce silence, l'assistant ne relit plus les messages précédents. 4 h par défaut."
               }
             },
             "token": {
@@ -1149,7 +1525,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "channel-telegram",
-                "title": "Jeton",
+                "title": "Token",
                 "help": null
               }
             },
@@ -1166,7 +1542,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "channel-telegram",
-                "title": "Adresse de l'API",
+                "title": "URL de l'API",
                 "help": null
               }
             },
@@ -1185,7 +1561,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "channel-telegram",
-                "title": "Attente des nouveaux messages (secondes)",
+                "title": "Timeout du long polling (secondes)",
                 "help": null
               }
             },
@@ -1203,7 +1579,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "channel-telegram",
-                "title": "Délai d'une requête (secondes)",
+                "title": "Timeout des requêtes (secondes)",
                 "help": null
               }
             },
@@ -1227,8 +1603,8 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "channel-telegram",
-                "title": "Excuse quand une réponse échoue",
-                "help": "Vide : l'excuse par défaut. Un texte vide laisse le bot muet."
+                "title": "Message en cas d'erreur",
+                "help": null
               }
             }
           },
@@ -1236,7 +1612,8 @@
           "title": "TelegramSettings",
           "type": "object"
         }
-      }
+      },
+      "model_types": {}
     },
     "executors": {
       "family": "executor",
@@ -1291,7 +1668,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "executor-hermes",
-                "title": "Adresse de l'API",
+                "title": "Base URL",
                 "help": null,
                 "brands": {
                   "anthropic.com": "anthropic",
@@ -1349,8 +1726,8 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "executor-hermes",
-                "title": "Ce que ses outils permettent",
-                "help": "L'agent central la lit pour choisir ce qu'il confie."
+                "title": "Ce qu'il sait faire",
+                "help": "L'assistant s'en sert pour décider quoi lui confier."
               }
             },
             "instructions": {
@@ -1384,7 +1761,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "executor-hermes",
-                "title": "Délai (secondes)",
+                "title": "Timeout (secondes)",
                 "help": null
               }
             },
@@ -1402,7 +1779,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "executor-hermes",
-                "title": "Délai d'arrêt (secondes)",
+                "title": "Timeout d'arrêt (secondes)",
                 "help": null
               }
             }
@@ -1411,7 +1788,8 @@
           "title": "HermesSettings",
           "type": "object"
         }
-      }
+      },
+      "model_types": {}
     },
     "tools": {
       "family": "tools",
@@ -1482,7 +1860,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "tools-mcp",
-                "title": "Adresse",
+                "title": "URL",
                 "help": null
               }
             },
@@ -1524,8 +1902,8 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "tools-mcp",
-                "title": "Jeton",
-                "help": "Envoyé comme Authorization: Bearer."
+                "title": "Token",
+                "help": "Envoyé en Authorization: Bearer."
               }
             },
             "headers": {
@@ -1546,7 +1924,7 @@
                 "advanced": false,
                 "group": "tools-mcp",
                 "title": "En-têtes HTTP",
-                "help": "Envoyés avec chaque requête. Les valeurs sont gardées secrètes."
+                "help": "Valeurs stockées comme secrets."
               }
             },
             "timeout_s": {
@@ -1563,7 +1941,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "tools-mcp",
-                "title": "Délai (secondes)",
+                "title": "Timeout (secondes)",
                 "help": null
               }
             },
@@ -1609,7 +1987,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "tools-mcp",
-                "title": "Outils écartés",
+                "title": "Outils exclus",
                 "help": null
               }
             },
@@ -1629,7 +2007,7 @@
                 "advanced": false,
                 "group": "tools-mcp",
                 "title": "Risques des outils",
-                "help": "Par nom d'outil du serveur, au-dessus de ce qu'il déclare."
+                "help": "Par nom d'outil ; remplace ce que le serveur déclare."
               }
             },
             "max_result_chars": {
@@ -1646,7 +2024,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "tools-mcp",
-                "title": "Résultat d'outil maximal (caractères)",
+                "title": "Taille max. d'un résultat d'outil (caractères)",
                 "help": null
               }
             },
@@ -1681,7 +2059,7 @@
                 "advanced": false,
                 "group": "tools-mcp",
                 "title": "Négociation du protocole",
-                "help": "legacy saute la détection des serveurs récents."
+                "help": "legacy saute la détection de la version 2026-07-28 du protocole."
               }
             }
           },
@@ -1689,14 +2067,16 @@
           "title": "McpSettings",
           "type": "object"
         }
-      }
+      },
+      "model_types": {}
     },
     "inbound": {
       "family": "inbound",
       "shape": "list",
       "required": false,
       "title": "Sources entrantes",
-      "kinds": {}
+      "kinds": {},
+      "model_types": {}
     },
     "presence": {
       "family": "presence",
@@ -1751,7 +2131,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "presence-home-assistant",
-                "title": "Adresse",
+                "title": "URL",
                 "help": null
               }
             },
@@ -1769,7 +2149,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "presence-home-assistant",
-                "title": "Jeton",
+                "title": "Token",
                 "help": null
               }
             },
@@ -1789,7 +2169,7 @@
                 "advanced": false,
                 "group": "presence-home-assistant",
                 "title": "Entités personne",
-                "help": "L'identifiant de chaque personne du foyer et son entité, ex. alice: person.alice."
+                "help": "Chaque personne du foyer et son entité, ex. alice: person.alice."
               }
             },
             "rooms": {
@@ -1808,7 +2188,7 @@
                 "advanced": false,
                 "group": "presence-home-assistant",
                 "title": "Suivi des pièces",
-                "help": "Facultatif : l'identifiant de chaque personne et le capteur qui donne sa pièce (Bermuda, ESPresense)."
+                "help": "Le capteur qui donne la pièce de chaque personne, ex. Bermuda ou ESPresense."
               }
             },
             "occupancy_sensors": {
@@ -1835,7 +2215,7 @@
                 "advanced": false,
                 "group": "presence-home-assistant",
                 "title": "Capteurs de présence",
-                "help": "Vide : tous les capteurs de présence, d'occupation ou de mouvement rattachés à une pièce."
+                "help": "Vide : tous ceux rattachés à une pièce (présence, occupation, mouvement)."
               }
             },
             "sync_timeout_s": {
@@ -1852,7 +2232,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "presence-home-assistant",
-                "title": "Délai de synchronisation (secondes)",
+                "title": "Timeout de synchronisation (secondes)",
                 "help": null
               }
             },
@@ -1897,7 +2277,8 @@
           "title": "HomeAssistantSettings",
           "type": "object"
         }
-      }
+      },
+      "model_types": {}
     },
     "connectors": {
       "family": "connector",
@@ -1954,7 +2335,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "connector-google",
-                "title": "Intervalle de vérification (secondes)",
+                "title": "Intervalle de polling (secondes)",
                 "help": null
               }
             },
@@ -2102,7 +2483,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "connector-imap",
-                "title": "Délai (secondes)",
+                "title": "Timeout (secondes)",
                 "help": null
               }
             },
@@ -2121,7 +2502,7 @@
                 "advanced": false,
                 "group": "connector-imap",
                 "title": "IDLE renouvelé après (secondes)",
-                "help": "Moins de 1740 : les serveurs coupent l'IDLE après 29 minutes."
+                "help": "Moins de 1740 : les serveurs coupent IDLE après 29 min."
               }
             },
             "poll_s": {
@@ -2138,7 +2519,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "connector-imap",
-                "title": "Intervalle de vérification sans IDLE (secondes)",
+                "title": "Intervalle de polling sans IDLE (secondes)",
                 "help": null
               }
             },
@@ -2255,7 +2636,8 @@
           "type": "object",
           "required": ["kind"]
         }
-      }
+      },
+      "model_types": {}
     }
   }
 }

@@ -5,6 +5,7 @@ from datetime import datetime
 from enum import StrEnum
 
 from nestor.core import ContractError, SessionId, new_id, utc_now
+from nestor.modules.identity import Heard
 
 
 class Medium(StrEnum):
@@ -82,10 +83,15 @@ class Media:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class InboundMessage:
+    """A message to the assistant. `sender` is the account the channel authenticated; `None` on a shared device (a
+    satellite), which vouches for the place only: whoever is there may speak. `heard` is what their voice told,
+    when it was said and voices are recognised."""
+
     address: Address
-    sender: Sender
+    sender: Sender | None
     text: str
     medium: Medium = Medium.WRITTEN  # typed or said: the answer takes the same way
     media: tuple[Media, ...] = ()
+    heard: Heard | None = None
     id: str = field(default_factory=new_id)
     at: datetime = field(default_factory=utc_now)

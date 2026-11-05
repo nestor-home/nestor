@@ -76,7 +76,7 @@ test("satellites: the approvals page answers", async ({ page }) => {
   await expect(page.getByRole("heading", { name: /Appairés|Paired/ })).toBeVisible();
 });
 
-test("an invitation is created and its link handed over once", async ({ page }) => {
+test("an invitation is created and its link started once", async ({ page }) => {
   await signIn(page);
   await page.goto("/accounts");
   await page.getByRole("button", { name: /Inviter…|Invite…/ }).click();

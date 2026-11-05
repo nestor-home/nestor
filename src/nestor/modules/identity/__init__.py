@@ -1,21 +1,45 @@
-"""Identity: who speaks when (diarization) and who that is (speaker identification), opt-in.
+"""Identity: who speaks, opt-in. A satellite is a place: who speaks there is told turn by turn, by their voice when
+they recorded it, by what they say otherwise, and nobody in particular when neither tells.
 
 Recognising a voice personalises the conversation; it never authorises a sensitive action on its own.
-Models are chosen later on benchmarks: these ports and their doubles come first.
 """
 
-from nestor.modules.identity.events import SpeakerEnrolled, SpeakerForgotten, SpeakerIdentified
-from nestor.modules.identity.ports import Diarizer, SpeakerIdentifier
-from nestor.modules.identity.types import Identification, Segment, SpeakerLabel, Voiceprint
+from nestor.modules.identity.events import VoiceEnrolled, VoiceForgotten, VoiceLearningChanged
+from nestor.modules.identity.ports import Diarizer, VoiceEmbedder, VoiceprintStore
+from nestor.modules.identity.service import PHRASES, Check, Enrollment, Problem, Voices, VoiceSettings, VoiceStatus
+from nestor.modules.identity.types import (
+    Heard,
+    Identified,
+    Learned,
+    Profile,
+    Segment,
+    Speaker,
+    SpeakerLabel,
+    Vector,
+    VoiceSpace,
+)
 
 __all__ = [
+    "PHRASES",
+    "Check",
     "Diarizer",
-    "Identification",
+    "Enrollment",
+    "Heard",
+    "Identified",
+    "Learned",
+    "Problem",
+    "Profile",
     "Segment",
-    "SpeakerEnrolled",
-    "SpeakerForgotten",
-    "SpeakerIdentified",
-    "SpeakerIdentifier",
+    "Speaker",
     "SpeakerLabel",
-    "Voiceprint",
+    "Vector",
+    "VoiceEmbedder",
+    "VoiceEnrolled",
+    "VoiceForgotten",
+    "VoiceLearningChanged",
+    "VoiceSettings",
+    "VoiceSpace",
+    "VoiceStatus",
+    "VoiceprintStore",
+    "Voices",
 ]

@@ -130,7 +130,7 @@ def annotate(schema: dict[str, Any], scope: str, advanced: Iterable[str] = ()) -
     """Adds `x-nestor` to every property: its title and help message ids (`config-<scope>-<field>`,
     `…-help`), whether it is `secret` (a `SecretStr`, optional or not) or holds `secret_values` (a map
     whose every value is one), advanced, its group, the named slot whose names it takes (`reference`),
-    and the hosts it names a brand by (`brands`, host suffix → brand: a model's `base_url`)."""
+    the type of model it takes (`model_type`), and the brands it names (`brands`: a host suffix or a value)."""
 
     def walk(node: Any, group: str) -> None:
         if isinstance(node, dict):
@@ -146,6 +146,7 @@ def annotate(schema: dict[str, Any], scope: str, advanced: Iterable[str] = ()) -
                         "advanced": bool(prop.pop("advanced", False)) or name in advanced,
                         "group": group,
                         "reference": prop.pop("reference", None),
+                        "model_type": prop.pop("model_type", None),  # the type of model a reference takes
                         "brands": prop.pop("brands", None),
                     }
             for key, child in node.items():
@@ -181,6 +182,12 @@ class ConfigSchema:
                 "shape": slot.shape.value,
                 "required": slot.required,
                 "kinds": {kind: self.kind(slot, kind) for kind in self.registry.kinds(slot.family)},
+                # what each kind of the model slot serves: forms group them and offer each role its type
+                "model_types": {
+                    kind: served.value
+                    for kind in self.registry.kinds(slot.family)
+                    if (served := self.registry.get(slot.family, kind).model_type) is not None
+                },
             }
             for slot in SLOTS
         }
