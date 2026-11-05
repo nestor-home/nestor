@@ -6,7 +6,7 @@ from collections.abc import Iterable, Mapping
 
 import pytest
 
-from nestor.core import PersonId, ProviderError
+from nestor.core import Event, PersonId, ProviderError
 from nestor.modules.channels import Address, InboundMessage, Medium, Sender
 from nestor.modules.cognition import Notify, TaskDelivered, TaskEnded, TaskStarted, TaskStatus
 from nestor.modules.cognition.model import Role, ToolCall, ToolSpec
@@ -251,7 +251,7 @@ def slow_tool(done: asyncio.Event, result: str = "12 mails non lus") -> Tool:
     return Tool(spec=ToolSpec("count_mails", "Count unread mails"), run=count)
 
 
-async def until(journal: Journal, event: type) -> None:
+async def until(journal: Journal, event: type[Event]) -> None:
     if not await journal.history(event):
         await journal.subscribe(event).next(timeout_s=1)
 
