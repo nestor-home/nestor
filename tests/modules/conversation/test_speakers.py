@@ -102,22 +102,14 @@ async def test_saying_who_speaks_takes_back_what_a_mistaken_voice_taught(journal
     voices = await voices_of(journal, "mathis")
     found = speakers(journal, voices)
     heard = await voices.hear(tagged("mathis", take=4))
-    exchange = await Conversations(journal, ends_after_s=lambda a, m: 300).turn(VOICE, Medium.SPOKEN)
-    turn = UserTurn(
-        source="agent",
-        session=VOICE.session,
-        address=VOICE,
-        text="Coucou",
-        medium=Medium.SPOKEN,
-        speaker=Speaker(MATHIS.id, Identified.VOICE, heard.score),
-        exchange=exchange,
-    )
-    await journal.publish(turn)
-    found.learn(heard, turn)
+    turn = await Conversations(journal, ends_after_s=lambda a, m: 300).turn(VOICE, Medium.SPOKEN)
+    said = await turn.said("Coucou", Medium.SPOKEN, Speaker(MATHIS.id, Identified.VOICE, heard.score))
+    found.learn(heard, said)
     await found.close()
     assert voices.status(MATHIS.id).learned == 1
     [tool] = [t for t in found.tools() if t.name == "speaker_is"]
-    await tool.run({"person": "lea"}, ToolContext(address=VOICE, speaker=Speaker.unknown(), exchange=exchange))
+    unknown = ToolContext(address=VOICE, speaker=Speaker.unknown(), exchange=turn.exchange)
+    await tool.run({"person": "lea"}, unknown)
     assert voices.status(MATHIS.id).learned == 0
 
 

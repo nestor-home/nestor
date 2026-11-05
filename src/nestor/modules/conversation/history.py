@@ -1,32 +1,20 @@
-"""A conversation's recent history, rebuilt from the journal for the model."""
+"""How the journal's turns read as the model's messages: pure functions, used by `Conversations.history`."""
 
 from collections.abc import Callable, Iterable, Sequence
 from typing import Protocol
 
 from nestor.core import Event
-from nestor.modules.channels import Address, Exchange
+from nestor.modules.channels import Exchange
 from nestor.modules.cognition.model import Message, Role, ToolCall
 from nestor.modules.cognition.tools import ToolCalled, ToolCompleted
 from nestor.modules.conversation.events import AnswerCut, AssistantTurn, NotificationTurn, UserTurn
 from nestor.modules.conversation.types import Notification
 from nestor.modules.identity import Identified, Speaker
-from nestor.modules.journal import Journal
 
 HISTORY_EVENTS = (UserTurn, NotificationTurn, AssistantTurn, AnswerCut, ToolCalled, ToolCompleted)
 
 
 type Names = Callable[[Speaker], str | None]
-
-
-async def recent_history(
-    journal: Journal, address: Address, conversation: str | None, *, max_events: int = 60, names: Names | None = None
-) -> tuple[Message, ...]:
-    """The last turns of this conversation, whatever the process that held them (restarts included);
-    nothing without one. Earlier conversations of the session are not replayed, as in Assist."""
-    if conversation is None:
-        return ()
-    events = await journal.history(*HISTORY_EVENTS, session=address.session, newest_first=True, limit=max_events)
-    return to_messages(in_conversation(reversed(events), conversation), names=names)
 
 
 class InExchange(Protocol):

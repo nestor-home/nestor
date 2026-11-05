@@ -26,9 +26,9 @@ from nestor.modules.cognition.model import (
     ToolCallRequested,
 )
 from nestor.modules.cognition.tools import Toolbox, ToolContext
-from nestor.modules.conversation.conversations import Conversations
-from nestor.modules.conversation.events import AnswerCut, AssistantTurn, FallbackSpoken, NotificationTurn, UserTurn
-from nestor.modules.conversation.history import notification_message, recent_history
+from nestor.modules.conversation.conversations import Conversations, Turn
+from nestor.modules.conversation.events import AssistantTurn
+from nestor.modules.conversation.history import notification_message
 from nestor.modules.conversation.persona import Instructions, Persona
 from nestor.modules.conversation.ports import ContextProvider, Layer, TurnContext
 from nestor.modules.conversation.speakers import Speakers
@@ -169,28 +169,21 @@ class Agent(Assistant):
         return await AgentReply(self, address, medium, notification, person=person).collect()
 
     async def delivered(
-        self, address: Address, person: Person | None, notification: Notification, medium: Medium, texts: Sequence[str]
+        self,
+        address: Address,
+        person: Person | None,
+        notification: Notification,
+        medium: Medium,
+        texts: Sequence[str],
     ) -> Exchange:
-        """Record a composed answer once sent: the notification opens a turn of the conversation, as a person's message
-        would, and the answer follows it. Replies to it later see both."""
-        exchange = await self.conversations.turn(address, medium)
-        await self.journal.publish(
-            NotificationTurn(
-                source="agent",
-                session=address.session,
-                address=address,
-                text=notification.text,
-                about=notification.about,
-                exchange=exchange,
-                person=person.id if person else None,
-            )
-        )
+        """Record a composed answer once sent: the notification opens a turn of the conversation, as a person's
+        message would, and the answer follows it. Replies to it later see both."""
+        turn = await self.conversations.turn(address, medium)
+        await turn.notified(notification, person.id if person else None)
         for text in texts:
-            await self.journal.publish(
-                AssistantTurn(source="agent", session=address.session, address=address, text=text, exchange=exchange)
-            )
-        self.conversations.ended(exchange, address)
-        return exchange
+            await turn.answered(text)
+        turn.end()
+        return turn.exchange
 
     async def background(self, address: Address, person: Person | None, notification: Notification) -> tuple[str, ...]:
         """Run a turn nobody waits for (a scheduled wake-up), on behalf of `person`, with the agent's tools and
@@ -248,7 +241,6 @@ class AgentReply(Reply):
         self._agent, self._address, self._person, self._medium = agent, address, person, medium
         self._speaker = Speaker.account(person.id) if person else Speaker.unknown()
         self._opening = opening
-        self._record = isinstance(opening, InboundMessage)
         self._unattended = unattended
         self._chunks: asyncio.Queue[str | MessageEnd | None] = asyncio.Queue()
         self._message: list[str] = []  # the message being written
@@ -256,7 +248,7 @@ class AgentReply(Reply):
         self._worker: asyncio.Task[None] | None = None
         self._interrupted = False
         self._over = False
-        self._exchange: Exchange | None = None  # the turn this reply belongs to, once it started
+        self._turn: Turn | None = None  # the turn this reply writes in, once a message opened it
 
     async def __aiter__(self) -> AsyncIterator[str | MessageEnd]:
         if self._worker is not None:
@@ -276,19 +268,12 @@ class AgentReply(Reply):
             with contextlib.suppress(asyncio.CancelledError):
                 await self._worker
         *parts, rest = _share(heard, [text for text, _ in self._ended])
-        for (text, turn), part in zip(self._ended, parts, strict=True):
-            if turn is not None and _letters(part) < _letters(text):
-                await self._agent.journal.publish(
-                    AnswerCut(
-                        source="agent",
-                        session=self._address.session,
-                        answer=turn.id,
-                        heard=part,
-                        exchange=self._exchange,
-                    )
-                )
-        if self._record and ("".join(self._message).strip() or not self._ended):
-            await self._log(rest, interrupted=True)
+        if self._turn is not None:
+            for (text, answer), part in zip(self._ended, parts, strict=True):
+                if answer is not None and _letters(part) < _letters(text):
+                    await self._turn.cut(answer, part)
+            if "".join(self._message).strip() or not self._ended:
+                await self._turn.answered(rest, interrupted=True)
         self._message.clear()
         self._end_turn()
         self._chunks.put_nowait(None)
@@ -303,21 +288,12 @@ class AgentReply(Reply):
                     opening, await agent.conversations.current(self._address, self._medium)
                 )
                 self._person = agent.household.person(self._speaker.person) if self._speaker.person else None
-                exchange = self._exchange = await agent.conversations.turn(self._address, self._medium)
-                conversation: str | None = exchange.conversation_id
-                turn = UserTurn(
-                    source="agent",
-                    session=self._address.session,
-                    address=self._address,
-                    text=opening.text,
-                    medium=self._medium,
-                    speaker=self._speaker,
-                    exchange=exchange,
-                )
-                await agent.journal.publish(turn)
-                agent.speakers.learn(opening.heard, turn)
-                if said := await agent.speakers.enrolling(opening):  # a phrase of a voice being recorded
-                    self._say(said)
+                self._turn = await agent.conversations.turn(self._address, self._medium)
+                conversation: str | None = self._turn.exchange.conversation_id
+                said = await self._turn.said(opening.text, self._medium, self._speaker)
+                agent.speakers.learn(opening.heard, said)
+                if phrase := await agent.speakers.enrolling(opening):  # a phrase of a voice being recorded
+                    self._say(phrase)
                     await self._end_message()
                     self._end_turn()
                     return
@@ -334,12 +310,8 @@ class AgentReply(Reply):
 
     async def _answer(self, conversation: str | None) -> None:
         agent = self._agent
-        history = await recent_history(
-            agent.journal,
-            self._address,
-            conversation,
-            max_events=agent.settings.history_events,
-            names=agent.speakers.name_of,
+        history = await agent.conversations.history(
+            self._address, conversation, max_events=agent.settings.history_events, names=agent.speakers.name_of
         )
         opening = self._opening
         if isinstance(opening, Notification):  # not in the journal yet: read as it will be once delivered
@@ -351,7 +323,8 @@ class AgentReply(Reply):
             Message(role=Role.SYSTEM, layers=(instructions.stable, instructions.household), content=instructions.turn),
             *history,
         ]
-        context = ToolContext(address=self._address, speaker=self._speaker, exchange=self._exchange)
+        exchange = self._turn.exchange if self._turn else None
+        context = ToolContext(address=self._address, speaker=self._speaker, exchange=exchange)
         for _ in range(agent.settings.max_tool_rounds):
             try:
                 text, calls = await self._round(messages)
@@ -417,20 +390,15 @@ class AgentReply(Reply):
             self._say(" ")  # keep what was said, then excuse the cut
         agent = self._agent
         self._say(agent.localizer.format(agent.persona.fallback(reason), agent.persona.locale))
-        await self._agent.journal.publish(
-            FallbackSpoken(
-                source="agent",
-                session=self._address.session,
-                address=self._address,
-                reason=reason,
-                exchange=self._exchange,
-            )
-        )
+        if self._turn is not None:
+            await self._turn.fell_back(reason)
+        else:
+            await agent.conversations.fell_back(self._address, reason)
 
     def _say(self, text: str) -> None:
         self._message.append(text)
         self._chunks.put_nowait(text)
-        if self._record:  # a draft is only words to send later: still thinking
+        if self._turn is not None:  # a draft is only words to send later: still thinking
             self._agent.replies.set(self, ReplyPhase.SPEAKING)
 
     async def _end_message(self, *, last: bool = True) -> None:
@@ -440,25 +408,13 @@ class AgentReply(Reply):
         if not text:
             return
         self._chunks.put_nowait(MessageEnd(last=last))
-        self._ended.append((text, await self._log(text, interrupted=False) if self._record else None))
+        self._ended.append((text, await self._turn.answered(text) if self._turn else None))
 
     def _end_turn(self) -> None:
         """The reply is over, written or cut: the conversation's silence starts now."""
-        if not self._over and self._exchange is not None:
-            self._agent.conversations.ended(self._exchange, self._address)
+        if not self._over and self._turn is not None:
+            self._turn.end()
         self._over = True
-
-    async def _log(self, text: str, *, interrupted: bool) -> AssistantTurn:
-        turn = AssistantTurn(
-            source="agent",
-            session=self._address.session,
-            address=self._address,
-            text=text,
-            interrupted=interrupted,
-            exchange=self._exchange,
-        )
-        await self._agent.journal.publish(turn)
-        return turn
 
 
 def _share(heard: str, messages: list[str]) -> list[str]:
