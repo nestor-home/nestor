@@ -143,7 +143,7 @@
             "advanced": false,
             "group": "household",
             "title": "Accounts on channels",
-            "help": "How each channel knows this person: telegram:123456789, voice:*."
+            "help": "The accounts channels recognise this person by: telegram:123456789. Satellites need none: anyone in the room can talk to them."
           }
         },
         "reach": {

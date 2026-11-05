@@ -18,17 +18,20 @@ import { freeName, getAt, isRecord, move, NAME, type Path, problemsUnder, rename
 import { type ConfigPage, pageTitle } from "./sections";
 
 /**
- * What a component's mark shows: the provider one of its fields names, by the hosts the runtime
- * recognises in it (`x-nestor.brands`, as the runtime itself brands a model), else its kind.
+ * What a component's mark shows: the provider one of its fields names, as the runtime itself brands it
+ * (`x-nestor.brands`: a host suffix for an address, `base_url`; a value for a name, a catalogue
+ * model), else its kind.
  */
 export function markOf(kind: string, entry: Record<string, unknown>, schema: unknown): string {
   const fields = isRecord(schema) && isRecord(schema.properties) ? Object.entries(schema.properties) : [];
   for (const [name, field] of fields) {
     const brands = isRecord(field) && isRecord(field["x-nestor"]) ? field["x-nestor"].brands : undefined;
     const value = entry[name];
-    if (!isRecord(brands) || typeof value !== "string" || !URL.canParse(value)) continue;
-    const host = new URL(value).hostname;
-    const found = Object.entries(brands).find(([suffix]) => host === suffix || host.endsWith(`.${suffix}`));
+    if (!isRecord(brands) || typeof value !== "string") continue;
+    const host = URL.canParse(value) ? new URL(value).hostname : null;
+    const found = Object.entries(brands).find(([key]) =>
+      host === null ? key === value : host === key || host.endsWith(`.${key}`),
+    );
     if (typeof found?.[1] === "string") return found[1];
   }
   return kind;

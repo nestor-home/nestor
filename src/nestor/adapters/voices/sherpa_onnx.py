@@ -6,10 +6,9 @@ this machine, so no voice leaves the house.
 (any speaker model sherpa-onnx loads; its `threshold` must then be given, since nobody calibrated it).
 
 Each catalogued model carries the threshold calibrated on the `speaker-id` bench: the similarity at which one
-pair of different voices in a hundred is taken for the same (French read speech, see `bench/speaker-id`).
-Measured on a Mac, not on a Raspberry Pi; with real satellite microphones, not at all. The WeSpeaker models of the
-same releases are left out (sherpa-onnx does not take the mean off their features), and so is 3D-Speaker's English
-CAM++: they barely tell voices apart (equal error rate 0.12 to 0.46 on the bench).
+pair of different voices in a hundred is taken for the same. The WeSpeaker models of the same releases are left
+out (sherpa-onnx does not take the mean off their features), and so is 3D-Speaker's English CAM++: they barely tell
+voices apart (equal error rate 0.12 to 0.46 on the bench).
 """
 
 import asyncio
@@ -45,11 +44,13 @@ class Catalogued:
     threshold: float  # calibrated on the `speaker-id` bench: one false accept in a hundred pairs
     license: str
     trained_on: str
+    brand: str  # who published the model: the mark the admin shows for it
 
 
 CATALOGUE: Mapping[str, Catalogued] = {
     "titanet-small": Catalogued(
         file="nemo_en_titanet_small.onnx",
+        brand="nvidia",
         sha256="ad4a1802485d8b34c722d2a9d04249662f2ece5d28a7a039063ca22f515a789e",
         size=40257283,
         dimensions=192,
@@ -59,6 +60,7 @@ CATALOGUE: Mapping[str, Catalogued] = {
     ),
     "3dspeaker-campplus-zh-en": Catalogued(
         file="3dspeaker_speech_campplus_sv_zh_en_16k-common_advanced.onnx",
+        brand="modelscope",
         sha256="aa3cfc16963a10586a9393f5035d6d6b57e98d358b347f80c2a30bf4f00ceba2",
         size=28281164,
         dimensions=192,
@@ -68,6 +70,7 @@ CATALOGUE: Mapping[str, Catalogued] = {
     ),
     "3dspeaker-eres2net": Catalogued(
         file="3dspeaker_speech_eres2net_sv_en_voxceleb_16k.onnx",
+        brand="modelscope",
         sha256="c59158379255ad66e161679cca6af8d52d51e389e3224ab7d7a7baae295c2db5",
         size=26485263,
         dimensions=192,
@@ -83,7 +86,6 @@ class SherpaOnnxVoice(VoiceEmbedder):
     in a worker thread, so turns may embed at once."""
 
     name = "sherpa-onnx-voice"
-    brand = "sherpa-onnx"
 
     def __init__(
         self,
@@ -97,6 +99,7 @@ class SherpaOnnxVoice(VoiceEmbedder):
     ) -> None:
         self._model, self._threads, self._release, self._provider = model, threads, release, provider
         self._catalogued = CATALOGUE.get(model)
+        self.brand = self._catalogued.brand if self._catalogued else "sherpa-onnx"
         if threshold is None:
             if self._catalogued is None:
                 raise ContractError(f"{provider}: {model!r} is not in the catalogue, so it needs a `threshold`")
@@ -205,7 +208,10 @@ def _sha256(path: Path) -> str:
 class SherpaOnnxVoiceSettings(AdapterSettings):
     """A voice model run by sherpa-onnx."""
 
-    model: str = Field(json_schema_extra={"examples": list(CATALOGUE)})  # a catalogue name, or an `.onnx` path
+    # a catalogue name, or an `.onnx` path; the admin shows the mark of whoever published a catalogue model
+    model: str = Field(
+        json_schema_extra={"examples": list(CATALOGUE), "brands": {name: m.brand for name, m in CATALOGUE.items()}}
+    )
     # CPU threads of one voiceprint: a Raspberry Pi has 4 cores, and the voice pipeline needs the others
     threads: PositiveInt = Field(default=1, le=16, json_schema_extra={"advanced": True})
     # the similarity from which two voices are one: the catalogue's by default, required for a file of one's own

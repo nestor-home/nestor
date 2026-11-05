@@ -82,11 +82,11 @@ describe("the configuration", () => {
     await user.click(await screen.findByRole("button", { name: "Edit Jules" }));
     const sheet = await screen.findByRole("dialog", { name: "Jules" });
     await user.click(within(sheet).getByRole("button", { name: "Add" }));
-    await user.type(within(sheet).getByRole("textbox", { name: "Accounts on channels, item 2" }), "telegram:@jules");
+    await user.type(within(sheet).getByRole("textbox", { name: "Accounts on channels, item 1" }), "telegram:@jules");
     await user.click(within(sheet).getByRole("button", { name: "Done" }));
     await user.click(await screen.findByRole("button", { name: "1 change" }));
     const changes = await screen.findByRole("dialog", { name: "Changes" });
-    expect(within(changes).getByText("household.2.accounts.1")).toBeInTheDocument();
+    expect(within(changes).getByText("household.2.accounts.0")).toBeInTheDocument();
     await user.keyboard("{Escape}");
     await user.click(await screen.findByRole("button", { name: "Edit Jules" }));
     const again = await screen.findByRole("dialog", { name: "Jules" });
@@ -237,6 +237,12 @@ describe("a model's mark", () => {
   it("is the provider its address belongs to, as the runtime recognises it", () => {
     expect(markOf("openai-compatible", { base_url: "https://openrouter.ai/api/v1" }, schema)).toBe("openrouter");
     expect(markOf("openai-compatible", { base_url: "https://api.anthropic.com/v1" }, schema)).toBe("anthropic");
+  });
+
+  it("is the publisher of a catalogue model it names, else the runtime that runs it", () => {
+    const voice = { properties: { model: { "x-nestor": { brands: { "titanet-small": "nvidia" } } } } };
+    expect(markOf("sherpa-onnx-voice", { model: "titanet-small" }, voice)).toBe("nvidia");
+    expect(markOf("sherpa-onnx-voice", { model: "/models/mine.onnx" }, voice)).toBe("sherpa-onnx-voice");
   });
 
   it("is its kind for any other server, an address still to write, or a kind that publishes no hosts", () => {

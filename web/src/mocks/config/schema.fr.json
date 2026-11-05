@@ -143,7 +143,7 @@
             "advanced": false,
             "group": "household",
             "title": "Comptes sur les canaux",
-            "help": "Comment chaque canal connaît cette personne : telegram:123456789, voice:*."
+            "help": "Les comptes par lesquels les canaux reconnaissent cette personne : telegram:123456789. Les satellites n'en demandent pas : tout le monde dans la pièce peut leur parler."
           }
         },
         "reach": {
