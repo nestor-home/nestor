@@ -20,7 +20,7 @@ from nestor.modules.accounts import Principal, Scope
 from nestor.modules.cognition import TaskEnded, TaskStarted
 from nestor.modules.cognition.delegation.events import TaskDelivered
 from nestor.modules.cognition.tools import ToolCalled, ToolCompleted
-from nestor.modules.conversation import AnswerCut, AssistantTurn, UserTurn
+from nestor.modules.conversation import AnswerCut, AssistantTurn, InternalTurn, UserTurn
 from nestor.modules.identity import Identified
 from nestor.modules.initiative import (
     Delivered,
@@ -203,7 +203,10 @@ def _cause_rule(entry: Entry) -> _Rule | None:
         return _Rule(frozenset({AssistantTurn.event_type}), lambda c: c.record.get("id") == answer)
     if kind == AssistantTurn.event_type:
         turn = _exchange(entry).get("turn_id")
-        return _Rule(frozenset({UserTurn.event_type}), lambda c: _exchange(c).get("turn_id") == turn)
+        openers = frozenset({UserTurn.event_type, InternalTurn.event_type})  # a person's message, or Nestor's cue
+        return _Rule(openers, lambda c: _exchange(c).get("turn_id") == turn)
+    if kind == InternalTurn.event_type:
+        return of(DeliveryConsidered, "about")
     if kind in (Delivered.event_type, DeliveryFailed.event_type):
         return of(DeliveryConsidered, "about")
     if kind == DeliveryConsidered.event_type:

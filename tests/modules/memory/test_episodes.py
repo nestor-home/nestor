@@ -9,7 +9,7 @@ import pytest
 from nestor.core import PersonId, new_id
 from nestor.modules.channels import Address, Exchange, Medium
 from nestor.modules.cognition.tools import ToolContext, ToolFailed
-from nestor.modules.conversation import AnswerCut, AssistantTurn, Layer, TurnContext, UserTurn
+from nestor.modules.conversation import AnswerCut, AssistantTurn, InternalTurn, Layer, TurnContext, UserTurn
 from nestor.modules.household import Account, Household, Person
 from nestor.modules.identity import Speaker
 from nestor.modules.journal import Journal
@@ -112,6 +112,35 @@ async def test_a_conversation_is_summarized_once_its_silence_has_passed_and_its_
     transcript = asked.messages[-1].content
     assert "[19:00] Léa: Tu connais Da Marco ?" in transcript and "[19:00] Richie: Oui, rue Mercière." in transcript
     assert "untrusted data" in asked.messages[0].content and "French" in asked.messages[0].content
+
+
+async def test_a_message_nestor_brought_is_summarized_with_what_it_was_about() -> None:
+    home = Home(SUMMARY)
+    async with home.consolidator:
+        turn = Exchange(conversation_id="c9", turn_id=new_id())
+        await home.journal.publish(
+            InternalTurn(
+                source="test",
+                session=CHAT.session,
+                address=CHAT,
+                text="Result: CI red on main",
+                about="task t1 completed",
+                exchange=turn,
+                person=LEA.id,
+                at=START,
+            )
+        )
+        await home.journal.publish(
+            AssistantTurn(
+                source="test", session=CHAT.session, address=CHAT, text="Ta CI est rouge.", exchange=turn, at=START
+            )
+        )
+        home.clock.now = START + timedelta(hours=2)
+        assert await home.consolidator.consolidate_due() == 1
+    (summarized,) = await home.journal.history(EpisodeSummarized)
+    transcript = home.model.requests[0].messages[-1].content
+    assert summarized.participants == ("lea",), "whom Nestor told something took part"
+    assert "(for Richie, task t1 completed): Result: CI red on main" in transcript and "Ta CI est rouge." in transcript
 
 
 async def test_a_restart_summarizes_what_ended_while_stopped_and_never_twice() -> None:

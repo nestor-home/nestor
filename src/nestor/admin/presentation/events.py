@@ -39,7 +39,14 @@ from nestor.modules.cognition import (
 )
 from nestor.modules.cognition.tools import ToolCalled, ToolCompleted
 from nestor.modules.connectors import ConnectionChanged, ConnectionCreated, ConnectionRemoved
-from nestor.modules.conversation import AnswerCut, AssistantTurn, FallbackSpoken, SpeakerDeclared, UserTurn
+from nestor.modules.conversation import (
+    AnswerCut,
+    AssistantTurn,
+    FallbackSpoken,
+    InternalTurn,
+    SpeakerDeclared,
+    UserTurn,
+)
 from nestor.modules.home import PresenceChanged
 from nestor.modules.household import Household
 from nestor.modules.identity import VoiceEnrolled, VoiceForgotten, VoiceLearningChanged
@@ -109,7 +116,7 @@ class Category:
 
 
 CATEGORIES = (
-    Category("conversation", (UserTurn, AssistantTurn, FallbackSpoken, AnswerCut)),
+    Category("conversation", (UserTurn, InternalTurn, AssistantTurn, FallbackSpoken, AnswerCut)),
     Category(
         "delivery",
         (DeliveryConsidered, Delivered, DeliveryFailed, MessageRequested, MessageDelivered, MessageUndelivered),
@@ -217,6 +224,13 @@ class EventDescriber:
         self._categories = {e: c for c in CATEGORIES for e in c.events}
         self._describers: Mapping[type[Event], Callable[..., Line]] = {
             UserTurn: self._user_turn,
+            InternalTurn: lambda e: self._line(
+                e,
+                Message("journal-internal-turn", {**subject(e.about), "assistant": self.assistant}),
+                detail=e.text,
+                people=[e.person],
+                channels=[e.address],
+            ),
             AssistantTurn: lambda e: self._line(
                 e,
                 Message.of(

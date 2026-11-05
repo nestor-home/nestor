@@ -5,6 +5,7 @@ import contextlib
 
 from nestor.core import Component
 from nestor.modules.cognition.delegation import Notify, TaskDelivered, TaskEnded, TaskStarted, TaskStatus
+from nestor.modules.conversation import Cue
 from nestor.modules.household import Household, Person
 from nestor.modules.initiative.delivery.courier import Courier
 from nestor.modules.journal import Journal, Subscription
@@ -46,8 +47,7 @@ class TaskAnnouncer(Component):
         written = started.notify is Notify.MESSAGE
         address = await self.courier.deliver(
             person,
-            _instruction(started, ended, person, written=written),
-            about=f"task {ended.task_id} {ended.status.value}",
+            Cue(_instruction(started, ended, person, written=written), f"task {ended.task_id} {ended.status.value}"),
             origin=started.origin,
             written=written,
         )

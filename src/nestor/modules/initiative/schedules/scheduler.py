@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 
 from nestor.core import Component
 from nestor.modules.channels import Address
-from nestor.modules.conversation import Agent
+from nestor.modules.conversation import Agent, Cue
 from nestor.modules.household import Household
 from nestor.modules.initiative.schedules.book import ScheduleBook
 from nestor.modules.initiative.schedules.types import Schedule
@@ -43,7 +43,7 @@ class Scheduler(Component):
                 await self.agent.background(
                     schedule.created_in or Address("schedule", schedule.id),
                     self.household.person(schedule.owner) if schedule.owner else None,
-                    self._instruction(schedule, due_at),
+                    Cue(self._instruction(schedule, due_at), f"schedule {schedule.id}"),
                 )
             except Exception:  # one wake-up failing never stops the others
                 log.exception("wake-up %s failed", schedule.id)

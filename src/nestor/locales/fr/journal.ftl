@@ -26,6 +26,19 @@ journal-user-said = { $known ->
        *[other] { $person } a dit
     }
 }
+journal-internal-turn = Pour { $assistant } : { $subject ->
+    [task] tâche { $id } { $status ->
+        [completed] terminée
+        [failed] en échec
+       *[other] { $status }
+    }
+    [watch] veille { $id } déclenchée
+    [message] message { $id }{ $status ->
+        [undelivered] {" "}non remis
+       *[other] {" "}à transmettre
+    }
+   *[other] { $about }
+}
 journal-assistant-answered = { $assistant } a répondu
 journal-assistant-interrupted = { $assistant } a répondu (interrompu)
 journal-fallback = Réponse de secours : { $reason ->

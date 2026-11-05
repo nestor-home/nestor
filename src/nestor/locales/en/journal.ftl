@@ -27,6 +27,19 @@ journal-user-said = { $known ->
        *[other] { $person } said
     }
 }
+journal-internal-turn = For { $assistant }: { $subject ->
+    [task] task { $id } { $status ->
+        [completed] completed
+        [failed] failed
+       *[other] { $status }
+    }
+    [watch] watch { $id } matched
+    [message] message { $id }{ $status ->
+        [undelivered] {" "}not delivered
+       *[other] {" "}to pass on
+    }
+   *[other] { $about }
+}
 journal-assistant-answered = { $assistant } answered
 journal-assistant-interrupted = { $assistant } answered (interrupted)
 journal-fallback = Fallback answer: { $reason ->

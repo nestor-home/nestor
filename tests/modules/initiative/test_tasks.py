@@ -3,10 +3,11 @@
 import pytest
 
 from nestor.core import PersonId, ProviderError
-from nestor.modules.channels import Address, Medium
+from nestor.modules.channels import Address, InboundMessage, Medium, Sender
 from nestor.modules.cognition import Notify, TaskDelivered, TaskEnded, TaskStarted, TaskStatus
+from nestor.modules.cognition.model import Role
 from nestor.modules.cognition.tools import Toolbox
-from nestor.modules.conversation import Agent, AssistantTurn, ModelChoice, Persona
+from nestor.modules.conversation import Agent, AssistantTurn, InternalTurn, ModelChoice, Persona
 from nestor.modules.household import Account, Household, Person
 from nestor.modules.initiative import Courier, Delivered, DeliveryFailed, TaskAnnouncer
 from nestor.modules.journal import Journal
@@ -45,8 +46,11 @@ class VoiceChannel(InMemoryChannel):
 
 
 class Home:
-    def __init__(self, *, voice: VoiceChannel | None = None, model: ScriptedModel | None = None) -> None:
-        self.journal = Journal(MemoryEventLog())
+    def __init__(
+        self, *, voice: VoiceChannel | None = None, model: ScriptedModel | None = None, journal: Journal | None = None
+    ) -> None:
+        """`journal`: another home's, to start again on what it wrote (a restart)."""
+        self.journal = journal or Journal(MemoryEventLog())
         self.household = Household([MATHIS])
         self.model = model or ScriptedModel(*["Ton analyse est finie : tout est vert."] * 3)
         self.agent = Agent(
@@ -120,6 +124,23 @@ async def test_a_result_after_the_spoken_conversation_is_over_is_written() -> No
     async with home.announcer():
         pass
     assert home.voice.sent == [] and home.telegram.sent == [(TELEGRAM, "Ton analyse est finie : tout est vert.")]
+
+
+async def test_the_person_answering_a_result_is_answered_with_it_in_mind() -> None:
+    """The result comes back into the conversation it is delivered in, as a tool's result does: the person's next
+    message is answered knowing it, even after a restart."""
+    home = Home(model=ScriptedModel("Ton analyse est finie : tout est vert.", "Oui, tout est vert."))
+    await home.task("t1", still_talking=False)
+    async with home.announcer():
+        pass
+    restarted = Home(model=home.model, journal=home.journal)
+    reply = InboundMessage(address=TELEGRAM, sender=Sender("42"), text="Tout ? Même les tests ?")
+    assert await restarted.agent.respond(reply).collect() == ("Oui, tout est vert.",)
+    history = home.model.requests[1].messages[1:]
+    assert [m.role for m in history] == [Role.USER, Role.ASSISTANT, Role.USER]
+    assert "Result: tout est vert" in history[0].content and "not said by anyone here" in history[0].content
+    [internal] = await home.journal.history(InternalTurn)
+    assert (internal.about, internal.person, internal.address) == ("task t1 completed", MATHIS.id, TELEGRAM)
 
 
 async def test_a_result_asked_in_writing_goes_where_the_person_reads() -> None:

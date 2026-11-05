@@ -19,7 +19,7 @@ from datetime import datetime, timedelta
 
 from nestor.core import SessionId, new_id, utc_now
 from nestor.modules.channels import Address, Exchange, Medium
-from nestor.modules.conversation.events import AssistantTurn, UserTurn
+from nestor.modules.conversation.events import AssistantTurn, InternalTurn, UserTurn
 from nestor.modules.journal import Journal
 
 
@@ -83,7 +83,9 @@ class Conversations:
     async def _load(self, session: SessionId) -> None:
         if session in self._loaded:
             return
-        latest = await self.journal.history(UserTurn, AssistantTurn, session=session, newest_first=True, limit=1)
+        latest = await self.journal.history(
+            UserTurn, InternalTurn, AssistantTurn, session=session, newest_first=True, limit=1
+        )
         self._loaded.add(session)
         if latest and (exchange := latest[0].exchange) is not None:
             self._open.setdefault(session, _Open(exchange.conversation_id, latest[0].at))

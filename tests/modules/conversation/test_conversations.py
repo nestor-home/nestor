@@ -18,6 +18,7 @@ from nestor.modules.conversation import (
     AnswerCut,
     AssistantTurn,
     ChannelProfile,
+    Cue,
     FallbackReason,
     FallbackSpoken,
     UserTurn,
@@ -263,14 +264,34 @@ async def test_a_composed_message_sees_only_the_open_conversation(
     await make_agent("Je lance l'analyse.", clock=clock).respond(message("Analyse")).collect()
     model = ScriptedModel("C'est fini.", "C'est fini.")
     agent = make_agent(model=model, clock=clock)
-    await agent.compose(TELEGRAM, MATHIS, "Task finished.", Medium.WRITTEN)
+    cue = Cue("Task finished.", "task t1 completed")
+    await agent.compose(TELEGRAM, MATHIS, cue, Medium.WRITTEN)
     clock.now += timedelta(hours=5)
-    await agent.compose(TELEGRAM, MATHIS, "Task finished.", Medium.WRITTEN)
+    await agent.compose(TELEGRAM, MATHIS, cue, Medium.WRITTEN)
 
     soon, late = ([m.role for m in r.messages] for r in model.requests)
-    assert soon == [Role.SYSTEM, Role.USER, Role.ASSISTANT, Role.SYSTEM]
-    assert late == [Role.SYSTEM, Role.SYSTEM]
-    assert len(await journal.history(UserTurn)) == 1, "composing is not a turn"
+    assert soon == [Role.SYSTEM, Role.USER, Role.ASSISTANT, Role.USER]  # the conversation, then the cue
+    assert late == [Role.SYSTEM, Role.USER]
+    assert len(await journal.history(UserTurn)) == 1, "a draft is not a turn"
+
+
+def test_a_cue_keeps_the_beginning_and_end_of_a_long_result() -> None:
+    long = "début " + "x" * 20_000 + " fin"
+    cue = Cue(long, "task t1 completed")
+    assert (
+        len(cue.text) < 8100 and cue.text.startswith("début") and cue.text.endswith("fin") and "[… cut …]" in cue.text
+    )
+    assert Cue("court", "task t1 completed").text == "court"
+
+
+async def test_a_delivered_message_keeps_its_conversation_open_across_a_restart(
+    make_agent: MakeAgent, journal: Journal, clock: Clock
+) -> None:
+    delivered = await make_agent(clock=clock).delivered(
+        TELEGRAM, MATHIS, Cue("Fini.", "task t1 completed"), Medium.WRITTEN, ["C'est fini."]
+    )
+    restarted = make_agent(clock=clock)
+    assert await restarted.conversations.current(TELEGRAM, Medium.WRITTEN) == delivered.conversation_id
 
 
 def test_an_exchange_is_written_as_plain_data() -> None:

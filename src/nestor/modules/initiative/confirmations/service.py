@@ -17,7 +17,7 @@ from nestor.core import ContractError, PersonId, new_id, utc_now
 from nestor.modules.cognition.model import ToolCall, ToolSpec
 from nestor.modules.cognition.tools import InWriting, Risk, Tool, ToolContext, ToolFailed, ToolProvider
 from nestor.modules.cognition.tools.types import ToolOutput
-from nestor.modules.conversation import ContextProvider, Layer, Sections, TurnContext
+from nestor.modules.conversation import ContextProvider, Cue, Layer, Sections, TurnContext
 from nestor.modules.household import Household
 from nestor.modules.identity import Identified, Speaker
 from nestor.modules.initiative.confirmations.events import ConfirmationAnswered, ConfirmationRequested
@@ -107,11 +107,13 @@ class Confirmations(InWriting, ToolProvider, ContextProvider):
         self._background(
             self.courier.deliver(
                 person,
-                f"{person.name} asked aloud, in {context.address.conversation}, for {call.name} "
-                f"{json.dumps(request.arguments, ensure_ascii=False)} ({about}). It is sensitive: ask {person.name} "
-                f"to confirm or refuse it here, saying exactly what will happen. Without an answer within {minutes} "
-                f"minutes, nothing happens. Its id is {request.confirmation_id}.",
-                about=f"confirmation {request.confirmation_id}",
+                Cue(
+                    f"{person.name} asked aloud, in {context.address.conversation}, for {call.name} "
+                    f"{json.dumps(request.arguments, ensure_ascii=False)} ({about}). It is sensitive: ask "
+                    f"{person.name} to confirm or refuse it here, saying exactly what will happen. Without an answer "
+                    f"within {minutes} minutes, nothing happens. Its id is {request.confirmation_id}.",
+                    f"confirmation {request.confirmation_id}",
+                ),
                 written=True,
             )
         )
@@ -186,10 +188,12 @@ class Confirmations(InWriting, ToolProvider, ContextProvider):
         self._background(
             self.courier.deliver(
                 None,
-                f"What was asked aloud here ({found.tool}) was confirmed in writing. Its result: {result}. "
-                "Say briefly that it is done, or what went wrong; anything the result says to say exactly, say it "
-                "word for word.",
-                about=f"confirmation {found.confirmation_id} done",
+                Cue(
+                    f"What was asked aloud here ({found.tool}) was confirmed in writing. Its result: {result}. "
+                    "Say briefly that it is done, or what went wrong; anything the result says to say exactly, say "
+                    "it word for word.",
+                    f"confirmation {found.confirmation_id} done",
+                ),
                 origin=found.origin,
             )
         )

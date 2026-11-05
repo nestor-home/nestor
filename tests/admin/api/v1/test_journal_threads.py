@@ -12,7 +12,7 @@ from nestor.modules.accounts import Role
 from nestor.modules.channels import Address, Exchange, InboundMessage, Medium, Sender
 from nestor.modules.cognition import TaskEnded, TaskStarted, TaskStatus
 from nestor.modules.cognition.delegation.events import TaskDelivered
-from nestor.modules.conversation import Conversations, UserTurn
+from nestor.modules.conversation import AssistantTurn, Conversations, InternalTurn, UserTurn
 from nestor.modules.home import PresenceChanged
 from nestor.modules.identity import Speaker
 from nestor.modules.initiative import Delivered, DeliveryConsidered, WatchCreated, WatchTriggered
@@ -77,6 +77,32 @@ async def test_a_task_chains_from_its_start_to_its_result(tmp_path: Path) -> Non
         assert found["initiative.considered"][0]["cause"] == ended["position"]
         assert found["task.delivered"][0]["cause"] == ended["position"]
         assert started["cause"] is None
+
+
+async def test_an_unprompted_message_chains_from_its_delivery_through_its_cue(tmp_path: Path) -> None:
+    async with Harness(tmp_path) as admin:
+        turn = Exchange(conversation_id="c1", turn_id="t1")
+        for event in (
+            DeliveryConsidered(source="courier", about="task t1 completed", reason=REASON, written=TELEGRAM),
+            InternalTurn(
+                source="agent",
+                session=TELEGRAM.session,
+                address=TELEGRAM,
+                text="Result: ok",
+                about="task t1 completed",
+                exchange=turn,
+                person=PersonId("mathis"),
+            ),
+            AssistantTurn(
+                source="agent", session=TELEGRAM.session, address=TELEGRAM, text="C'est fait.", exchange=turn
+            ),
+        ):
+            await admin.nestor.journal.publish(event)
+        found = by_type(await items(await admin.api()))
+        considered, cue = found["initiative.considered"][0], found["conversation.turn.internal"][0]
+        answered = found["conversation.turn.assistant"][0]
+    assert cue["cause"] == considered["position"] and answered["cause"] == cue["position"]
+    assert cue["text"] == "Pour Richie : tâche t1 terminée" and cue["detail"] == "Result: ok"
 
 
 async def test_the_position_cursor_pages_back_through_a_filtered_journal(tmp_path: Path) -> None:

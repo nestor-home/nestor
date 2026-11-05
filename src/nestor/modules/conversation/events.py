@@ -31,9 +31,20 @@ class SpeakerDeclared(Event, event_type="speaker.declared"):
     exchange: Exchange | None = None
 
 
+class InternalTurn(Event, event_type="conversation.turn.internal"):
+    """A cue Nestor brought into the conversation (a task's result, a watch, a message to pass on): it opens the turn
+    its answer belongs to. Said by nobody in the conversation; `person` is whom it is for."""
+
+    address: Address
+    text: str
+    about: str
+    exchange: Exchange
+    person: PersonId | None = None
+
+
 class AssistantTurn(Event, event_type="conversation.turn.assistant"):
-    """What the user actually received: on voice, only the part played before an interruption. In the
-    turn it answers, or in a turn of its own when it was unprompted (a delivery)."""
+    """What the user actually received: on voice, only the part played before an interruption. In the turn it
+    answers: a person's message, or a cue of Nestor's (an unprompted message)."""
 
     address: Address
     text: str

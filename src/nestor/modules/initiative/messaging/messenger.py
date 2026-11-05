@@ -5,6 +5,7 @@ import asyncio
 import contextlib
 
 from nestor.core import Component
+from nestor.modules.conversation import Cue
 from nestor.modules.household import Household, Person
 from nestor.modules.initiative.delivery.courier import Courier
 from nestor.modules.initiative.messaging.book import MessageBook
@@ -40,8 +41,7 @@ class Messenger(Component):
         sender = self.household.person(message.requested_by) if message.requested_by else None
         address = await self.courier.deliver(
             person,
-            self._instruction(message, person, sender),
-            about=f"message {message.message_id}",
+            Cue(self._instruction(message, person, sender), f"message {message.message_id}"),
             # the conversation it was asked in is a way back only to whoever asked: never someone else's
             origin=message.origin if sender is not None and sender.id == person.id else None,
             written=message.in_writing,
@@ -54,9 +54,11 @@ class Messenger(Component):
         if sender is not None and sender.id != person.id:
             await self.courier.deliver(
                 sender,
-                f"You could not reach {person.name} to pass this on: {message.text}\n"
-                f"Tell {sender.name} now, briefly, that the message did not get through.",
-                about=f"message {message.message_id} undelivered",
+                Cue(
+                    f"You could not reach {person.name} to pass this on: {message.text}\n"
+                    f"Tell {sender.name} now, briefly, that the message did not get through.",
+                    f"message {message.message_id} undelivered",
+                ),
                 origin=message.origin,
             )
 
