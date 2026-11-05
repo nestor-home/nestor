@@ -196,6 +196,6 @@ config-model-sherpa-onnx-voice-model = Voice model
 config-model-sherpa-onnx-voice-model-help = titanet-small, 3dspeaker-campplus-zh-en or 3dspeaker-eres2net, downloaded once; or the path to an .onnx file of your own.
 config-field-threads = CPU threads
 config-model-sherpa-onnx-voice-threads = CPU threads
-config-model-sherpa-onnx-voice-threads-help = Per voiceprint. One leaves the rest of a Raspberry Pi to the voice.
+config-model-sherpa-onnx-voice-threads-help = How many CPU threads recognising a voice uses. One is enough and leaves the rest of the CPU to speech.
 config-model-sherpa-onnx-voice-threshold = Recognition threshold
 config-model-sherpa-onnx-voice-threshold-help = The catalogue's by default, measured on the speaker-id bench. Required for a file of your own.

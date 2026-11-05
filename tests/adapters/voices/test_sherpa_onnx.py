@@ -29,6 +29,7 @@ TINY = Catalogued(
     threshold=0.42,
     license="test",
     trained_on="nothing",
+    brand="nvidia",
 )
 
 
