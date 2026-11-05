@@ -122,11 +122,11 @@ describe("updating a satellite", () => {
     renderApp("/satellites/reachy-living-room");
     await user.click(await screen.findByRole("button", { name: "Update available" }));
     const dialog = await screen.findByRole("dialog", { name: "Living room Reachy: version 0.4.1" });
-    expect(within(dialog).getByRole("link", { name: /What changes in 0\.4\.1/ })).toHaveAttribute(
+    expect(within(dialog).getByRole("link", { name: /What's new in 0\.4\.1/ })).toHaveAttribute(
       "href",
       "https://github.com/nestor-home/nestor-reachy/releases/tag/v0.4.1",
     );
-    expect(within(dialog).getByText(/goes back to 0\.4\.0 by itself/)).toBeVisible();
+    expect(within(dialog).getByText(/goes back to 0\.4\.0/)).toBeVisible();
     expect(sent).toHaveLength(0);
     await user.click(within(dialog).getByRole("button", { name: "Update to 0.4.1" }));
     expect(await screen.findByText("Living room Reachy is updating.")).toBeVisible();
@@ -143,8 +143,8 @@ describe("updating a satellite", () => {
     renderApp("/satellites/reachy-living-room");
     await user.click(await screen.findByRole("button", { name: "Update failed" }));
     const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByText("0.4.1 did not start, so it went back to its version.")).toBeVisible();
-    expect(within(dialog).getByText("The device gave no release notes for this version.")).toBeVisible();
+    expect(within(dialog).getByText("0.4.1 did not start: back to the previous version.")).toBeVisible();
+    expect(within(dialog).getByText("No release notes.")).toBeVisible();
     expect(within(dialog).queryByRole("button", { name: /Update to/ })).toBeNull();
   });
 

@@ -31,8 +31,8 @@
             "secret_values": false,
             "advanced": false,
             "group": "persona",
-            "title": "Character",
-            "help": "Who the assistant is and how it speaks, in its own words."
+            "title": "Personality",
+            "help": "Who the assistant is and how it speaks."
           }
         },
         "locale": {
@@ -49,7 +49,7 @@
             "advanced": false,
             "group": "persona",
             "title": "Language",
-            "help": "The household's language (BCP 47, e.g. fr-FR): fixed phrases and the admin's default."
+            "help": "E.g. en-US. Language of fixed phrases and, by default, of the admin."
           }
         },
         "language": {
@@ -65,8 +65,8 @@
             "secret_values": false,
             "advanced": false,
             "group": "persona",
-            "title": "Language named to the model",
-            "help": null
+            "title": "Reply language",
+            "help": "Its name in the prompt, e.g. English."
           }
         },
         "timezone": {
@@ -142,8 +142,8 @@
             "secret_values": false,
             "advanced": false,
             "group": "household",
-            "title": "Accounts on channels",
-            "help": "The accounts channels recognise this person by: telegram:123456789. Satellites need none: anyone in the room can talk to them."
+            "title": "Accounts",
+            "help": "How channels recognise this person, e.g. telegram:123456789."
           }
         },
         "reach": {
@@ -201,7 +201,7 @@
             "group": "agent",
             "reference": "models",
             "title": "Spoken model",
-            "help": "Answers aloud; the voice starts on its first sentence. Without one, the written model speaks too.",
+            "help": "For spoken replies. The written model by default.",
             "model_type": "language"
           }
         },
@@ -227,7 +227,7 @@
             "group": "agent",
             "reference": "models",
             "title": "Written model",
-            "help": "Answers in writing. Without one, the spoken model writes too.",
+            "help": "For written replies. The spoken model by default.",
             "model_type": "language"
           }
         }
@@ -261,7 +261,7 @@
             "group": "watches",
             "reference": "models",
             "title": "Sorting model",
-            "help": "Decides which watches each incoming item concerns. The written model by default.",
+            "help": "Picks the watches each incoming item concerns. The written model by default.",
             "model_type": "language"
           }
         }
@@ -287,7 +287,7 @@
             "advanced": false,
             "group": "conversation",
             "title": "New conversation after (seconds)",
-            "help": "A message sent this long after the last turn starts a new conversation: the assistant no longer replays the earlier turns. Memories stay."
+            "help": null
           }
         }
       },
@@ -318,7 +318,7 @@
             "advanced": false,
             "group": "initiative",
             "title": "Quiet hours",
-            "help": "For example 22:30-07:30: nothing is said aloud then, unless urgent."
+            "help": "E.g. 22:30-07:30. Nothing aloud, unless urgent."
           }
         },
         "main_room": {
@@ -342,7 +342,7 @@
             "advanced": false,
             "group": "initiative",
             "title": "Main room",
-            "help": null
+            "help": "Where to speak when the home only knows someone is in."
           }
         },
         "follow_up_after_s": {
@@ -427,8 +427,8 @@
             "secret_values": false,
             "advanced": false,
             "group": "admin",
-            "title": "Public address",
-            "help": "How the household's browsers reach the admin, e.g. https://nestor.example.org."
+            "title": "Public URL",
+            "help": "The admin's URL, e.g. https://nestor.example.org."
           }
         },
         "relay_url": {
@@ -471,7 +471,7 @@
             "group": "updates",
             "reference": null,
             "title": "Check for new releases",
-            "help": "Once a day, Nestor reads its release feed and the admin says when a newer release is out. Nothing is installed."
+            "help": "Once a day, without installing anything."
           }
         },
         "feed": {
@@ -489,7 +489,7 @@
             "group": "updates",
             "reference": null,
             "title": "Release feed",
-            "help": "Where the list of releases is read from."
+            "help": null
           }
         }
       },
@@ -514,7 +514,7 @@
             "advanced": true,
             "group": "core",
             "title": "Data folder",
-            "help": "Where the database, the vault and the configuration history live."
+            "help": "Database, vault and configuration history."
           }
         }
       }
@@ -570,7 +570,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "model-openai-compatible",
-                "title": "Address of the API",
+                "title": "Base URL",
                 "help": null,
                 "brands": {
                   "anthropic.com": "anthropic",
@@ -637,8 +637,8 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "model-openai-compatible",
-                "title": "Extra request fields",
-                "help": "Sent as is with every request, e.g. the provider's routing options."
+                "title": "Extra JSON fields",
+                "help": "Added to every request, e.g. OpenRouter's routing."
               }
             },
             "connect_timeout_s": {
@@ -727,7 +727,7 @@
                   "openai.com": "openai",
                   "openrouter.ai": "openrouter"
                 },
-                "title": "Address of the API",
+                "title": "Base URL",
                 "help": null
               }
             },
@@ -796,7 +796,7 @@
                 "model_type": null,
                 "brands": null,
                 "title": "Dimensions",
-                "help": "Of the vectors the model returns, or asks for when shortening them."
+                "help": "Size of the vectors the model returns."
               }
             },
             "send_dimensions": {
@@ -835,8 +835,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
-                "title": "Before a question",
-                "help": "What the model expects before a question, e.g. query: (none by default)."
+                "title": "Query prefix",
+                "help": "E.g. query: for models that expect one."
               }
             },
             "document_prefix": {
@@ -855,8 +855,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
-                "title": "Before a document",
-                "help": "What the model expects before a stored text, e.g. passage: (none by default)."
+                "title": "Document prefix",
+                "help": "E.g. passage: for models that expect one."
               }
             },
             "batch_size": {
@@ -896,7 +896,7 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
-                "title": "Extra request fields",
+                "title": "Extra JSON fields",
                 "help": null
               }
             },
@@ -991,7 +991,7 @@
                   "titanet-small": "nvidia"
                 },
                 "title": "Voice model",
-                "help": "titanet-small, 3dspeaker-campplus-zh-en or 3dspeaker-eres2net, downloaded once; or the path to an .onnx file of your own."
+                "help": "titanet-small, 3dspeaker-campplus-zh-en or 3dspeaker-eres2net (downloaded once), or the path to an .onnx file."
               }
             },
             "threads": {
@@ -1013,7 +1013,7 @@
                 "model_type": null,
                 "brands": null,
                 "title": "CPU threads",
-                "help": "How many CPU threads recognising a voice uses. One is enough and leaves the rest of the CPU to speech."
+                "help": "One is enough."
               }
             },
             "threshold": {
@@ -1042,7 +1042,7 @@
                 "model_type": null,
                 "brands": null,
                 "title": "Recognition threshold",
-                "help": "The catalogue's by default, measured on the speaker-id bench. Required for a file of your own."
+                "help": "The catalogue's by default. Required for an .onnx file of your own."
               }
             }
           },
@@ -1116,7 +1116,7 @@
                     "secret_values": false,
                     "advanced": false,
                     "group": "channel-satellites-elevenlabssettings",
-                    "title": "Voice identifier",
+                    "title": "Voice ID",
                     "help": null
                   }
                 },
@@ -1134,7 +1134,7 @@
                     "advanced": false,
                     "group": "channel-satellites-elevenlabssettings",
                     "title": "Language",
-                    "help": "The language spoken to the assistant, for transcription (e.g. fr)."
+                    "help": "For transcription, e.g. en."
                   }
                 },
                 "stt_model": {
@@ -1341,7 +1341,7 @@
                 "advanced": true,
                 "group": "channel-satellites",
                 "title": "New conversation after (seconds)",
-                "help": "Empty: each turn decides, 5 minutes when spoken as Home Assistant Assist, 4 hours when typed. Past this silence, the assistant no longer replays the earlier turns. Memories stay."
+                "help": "Past this silence, the assistant no longer rereads earlier exchanges. By default, 5 min spoken, 4 h written."
               }
             },
             "host": {
@@ -1401,8 +1401,8 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "channel-satellites",
-                "title": "Public address",
-                "help": "How satellites reach this server, e.g. http://nestor.local:8471. It goes into pairing addresses."
+                "title": "Public URL",
+                "help": "The one satellites use, e.g. http://nestor.local:8471."
               }
             },
             "voice": {
@@ -1425,7 +1425,7 @@
                 "advanced": false,
                 "group": "channel-satellites",
                 "title": "Voice",
-                "help": "Without it, satellites talk in writing only. Needs the voice extra."
+                "help": "Without it, satellites work in writing only. Needs the voice extra."
               }
             },
             "send_timeout_s": {
@@ -1508,7 +1508,7 @@
                 "advanced": true,
                 "group": "channel-telegram",
                 "title": "New conversation after (seconds)",
-                "help": "Empty: 4 hours, as a messaging thread picked up later in the day. Past this silence, the assistant no longer replays the earlier messages. Memories stay."
+                "help": "Past this silence, the assistant no longer rereads earlier messages. 4 h by default."
               }
             },
             "token": {
@@ -1542,7 +1542,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "channel-telegram",
-                "title": "API address",
+                "title": "API URL",
                 "help": null
               }
             },
@@ -1561,7 +1561,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "channel-telegram",
-                "title": "Wait for new messages (seconds)",
+                "title": "Long polling timeout (seconds)",
                 "help": null
               }
             },
@@ -1603,8 +1603,8 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "channel-telegram",
-                "title": "Apology when an answer fails",
-                "help": "Left empty: the default apology. An empty text keeps the bot silent."
+                "title": "Message on error",
+                "help": null
               }
             }
           },
@@ -1668,7 +1668,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "executor-hermes",
-                "title": "Address of the API",
+                "title": "Base URL",
                 "help": null,
                 "brands": {
                   "anthropic.com": "anthropic",
@@ -1726,8 +1726,8 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "executor-hermes",
-                "title": "What its tools allow",
-                "help": "The central agent reads it to decide what to hand over."
+                "title": "What it can do",
+                "help": "The assistant uses it to decide what to hand over."
               }
             },
             "instructions": {
@@ -1860,7 +1860,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "tools-mcp",
-                "title": "Address",
+                "title": "URL",
                 "help": null
               }
             },
@@ -1924,7 +1924,7 @@
                 "advanced": false,
                 "group": "tools-mcp",
                 "title": "HTTP headers",
-                "help": "Sent with every request. Values are kept as secrets."
+                "help": "Values are stored as secrets."
               }
             },
             "timeout_s": {
@@ -1987,7 +1987,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "tools-mcp",
-                "title": "Tools left out",
+                "title": "Excluded tools",
                 "help": null
               }
             },
@@ -2007,7 +2007,7 @@
                 "advanced": false,
                 "group": "tools-mcp",
                 "title": "Tool risks",
-                "help": "By server tool name, over what the server declares."
+                "help": "By tool name; overrides what the server declares."
               }
             },
             "max_result_chars": {
@@ -2024,7 +2024,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "tools-mcp",
-                "title": "Longest tool result (characters)",
+                "title": "Max tool result size (characters)",
                 "help": null
               }
             },
@@ -2059,7 +2059,7 @@
                 "advanced": false,
                 "group": "tools-mcp",
                 "title": "Protocol negotiation",
-                "help": "legacy skips the discovery probe of recent servers."
+                "help": "legacy skips detecting the 2026-07-28 protocol version."
               }
             }
           },
@@ -2131,7 +2131,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "presence-home-assistant",
-                "title": "Address",
+                "title": "URL",
                 "help": null
               }
             },
@@ -2169,7 +2169,7 @@
                 "advanced": false,
                 "group": "presence-home-assistant",
                 "title": "Person entities",
-                "help": "Each household person id with its entity, e.g. alice: person.alice."
+                "help": "Each household person and their entity, e.g. alice: person.alice."
               }
             },
             "rooms": {
@@ -2188,7 +2188,7 @@
                 "advanced": false,
                 "group": "presence-home-assistant",
                 "title": "Room trackers",
-                "help": "Optional: each person id with the sensor telling their room (Bermuda, ESPresense)."
+                "help": "The sensor telling each person's room, e.g. Bermuda or ESPresense."
               }
             },
             "occupancy_sensors": {
@@ -2215,7 +2215,7 @@
                 "advanced": false,
                 "group": "presence-home-assistant",
                 "title": "Occupancy sensors",
-                "help": "Left empty: every occupancy, presence or motion sensor with an area."
+                "help": "Left empty: all those with an area (presence, occupancy, motion)."
               }
             },
             "sync_timeout_s": {
@@ -2335,7 +2335,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "connector-google",
-                "title": "Check interval (seconds)",
+                "title": "Polling interval (seconds)",
                 "help": null
               }
             },
@@ -2502,7 +2502,7 @@
                 "advanced": false,
                 "group": "connector-imap",
                 "title": "IDLE renewed after (seconds)",
-                "help": "Under 1740: servers drop IDLE after 29 minutes."
+                "help": "Under 1740: servers drop IDLE after 29 min."
               }
             },
             "poll_s": {
@@ -2519,7 +2519,7 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "connector-imap",
-                "title": "Check interval without IDLE (seconds)",
+                "title": "Polling interval without IDLE (seconds)",
                 "help": null
               }
             },

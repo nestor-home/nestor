@@ -21,9 +21,9 @@ class Phrasebook:
         return self.localizer.format(message, self.locale)
 
     def text_or(self, message: Message, fallback: str) -> str:
-        """The message's text, or `fallback` when no catalogue has it (the localizer then gives its id)."""
-        text = self.text(message)
-        return fallback if text == message.id else text
+        """The message's text, or `fallback` when no catalogue has it: an optional message (a field's help) is
+        not missing."""
+        return self.text(message) if self.localizer.knows(message.id) else fallback
 
     def summary(self, message: Message) -> tuple[Message, str]:
         """A journal summary and its text; an event no catalogue describes shows its type."""

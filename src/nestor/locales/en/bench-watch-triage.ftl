@@ -12,7 +12,7 @@ bench-watch-triage-urgent-precision = urgent, precision
 bench-watch-triage-urgent-recall = urgent, recall
 bench-watch-triage-missed = missed matches
 bench-watch-triage-false-alarms = false alarms
-bench-watch-triage-unsorted = left unsorted
+bench-watch-triage-unsorted = unsorted
 
 bench-watch-triage-missed-list = Missed matches
 bench-watch-triage-false-alarms-list = False alarms

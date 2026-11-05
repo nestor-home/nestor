@@ -71,6 +71,9 @@ class FluentLocalizer(Localizer):
         chosen = negotiate(locale, self._bundles, self._default)
         return chosen, self._texts[chosen]
 
+    def knows(self, message_id: str) -> bool:
+        return any(bundle.has_message(message_id) for bundle in self._bundles.values())
+
     def format(self, message: Message, locale: Locale | str | None = None) -> str:
         chosen = negotiate(locale or self._default, self._bundles, self._default)
         for candidate in dict.fromkeys((chosen, self._default)):

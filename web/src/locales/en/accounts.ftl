@@ -1,15 +1,15 @@
 ## Admin accounts, roles and invitations.
 
 acc-title = Accounts
-acc-intro = Recognising a voice or a face never replaces an account.
+acc-intro = Who can sign in to the admin, and with which role.
 acc-tab-accounts = Accounts
 acc-tab-invitations = Invitations
 acc-invite = Invite…
 acc-invite-title = Invite someone
-acc-invite-description = They receive a link to choose their password.
+acc-invite-description = You get a link to send them.
 acc-invite-sent = { $has_person ->
-    [yes] Send this link to <strong>{ $person }</strong>: it works once, for seven days, and will not be shown again.
-   *[no] Send this link to the person you invite: it works once, for seven days, and will not be shown again.
+    [yes] Send this link to <strong>{ $person }</strong>. It works once, for seven days, and will not be shown again.
+   *[no] Send this link to the person you invite. It works once, for seven days, and will not be shown again.
 }
 acc-invite-link = the invitation link
 acc-invite-done = Done
@@ -23,7 +23,7 @@ acc-person-none = None
 acc-person-none-lower = none
 acc-inviting = Inviting…
 acc-invite-create = Create the invitation
-acc-last-owner = Last active owner: the household must keep at least one.
+acc-last-owner = At least one active owner is required.
 acc-role-changed = { $name } is now { $role }.
 acc-disabled-done = { $name }'s account disabled.
 acc-enabled-done = { $name }'s account enabled again.
@@ -44,11 +44,11 @@ acc-revoke-text = The link sent to { $email } will stop working.
 acc-not-found = This account does not exist.
 acc-field-person = person
 acc-field-created = created
-acc-field-seen = seen
+acc-field-seen = last sign-in
 acc-enable = Enable again
 acc-disable-section = Disable
 acc-disable = Disable…
-acc-disable-hint = Their sessions are closed; their journal, connections and memories stay.
+acc-disable-hint = Their journal, connections and memories are kept.
 acc-disable-title = Disable { $name }'s account?
 acc-disable-confirm = Disable
-acc-disable-text = Their sessions are closed and they can no longer sign in. You can enable the account again.
+acc-disable-text = They can no longer sign in. You can enable the account again.

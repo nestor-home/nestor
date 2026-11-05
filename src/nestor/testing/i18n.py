@@ -20,6 +20,9 @@ class EchoLocalizer(Localizer):
     def default(self) -> Locale:
         return self._default
 
+    def knows(self, message_id: str) -> bool:
+        return True
+
     def format(self, message: Message, locale: Locale | str | None = None) -> str:
         args = ", ".join(f"{k}={v}" for k, v in sorted(message.args.items()))
         return f"{message.id}({args})" if args else message.id
@@ -56,4 +59,8 @@ class LocalizerContract:
             Message.of("contract-default-only"), self.default
         )
         assert localizer.format(Message.of("contract-nowhere"), self.other) == "contract-nowhere"
+
+    def test_it_knows_which_messages_exist(self) -> None:
+        localizer = self.localizer()
+        assert localizer.knows("contract-default-only") and not localizer.knows("contract-nowhere")
         assert set(localizer.locales) >= {self.default, self.other} and localizer.default == self.default

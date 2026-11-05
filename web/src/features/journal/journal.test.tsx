@@ -107,7 +107,7 @@ describe("the journal", () => {
     expect(document.activeElement).toHaveAttribute("data-journal-entry");
     await user.keyboard("{Enter}");
     const sheet = await screen.findByRole("dialog");
-    expect(await within(sheet).findByRole("heading", { name: "Raw record" })).toBeInTheDocument();
+    expect(await within(sheet).findByRole("heading", { name: "JSON" })).toBeInTheDocument();
     expect(router.state.location.search).toHaveProperty("event");
     await user.keyboard("{Escape}");
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
@@ -122,7 +122,7 @@ describe("the journal", () => {
     expect(screen.getByRole("searchbox", { name: "Search the journal" })).toHaveFocus();
     await user.keyboard("grapefruit{Enter}");
     await waitFor(() => expect(router.state.location.search).toEqual({ q: "grapefruit" }));
-    expect(await screen.findByText("Nothing in the journal for these filters.")).toBeInTheDocument();
+    expect(await screen.findByText("No events for these filters.")).toBeInTheDocument();
   });
 
   it("loads older events on request", async () => {

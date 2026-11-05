@@ -7,7 +7,7 @@ bench-speaker-id-unknown = imposteurs sans enregistrements : { $speakers }
 bench-speaker-id-too-few = { $speaker } doit avoir au moins { $needed } enregistrements
 bench-speaker-id-bad-audio = { $path } n'est pas un fichier WAV 16 bits
 
-bench-speaker-id-eer = taux d'égale erreur
+bench-speaker-id-eer = EER (taux d'égale erreur)
 bench-speaker-id-threshold = seuil utilisé
 bench-speaker-id-far = fausses acceptations au seuil (paires de voix)
 bench-speaker-id-frr = faux rejets au seuil
@@ -29,10 +29,10 @@ bench-speaker-id-replay-on-frr-last = rejeu avec apprentissage : non reconnu, de
 bench-speaker-id-learned = tours appris pendant le rejeu
 bench-speaker-id-retakes = phrases d'enregistrement redites
 bench-speaker-id-failed-enrollments = enregistrements échoués
-bench-speaker-id-cold-start = démarrage à froid (chargement, puis une première empreinte)
+bench-speaker-id-cold-start = cold start (chargement et première empreinte)
 bench-speaker-id-latency-p50 = latence d'une empreinte, médiane
 bench-speaker-id-latency-p95 = latence d'une empreinte, 95e centile
-bench-speaker-id-rtf-p50 = facteur temps réel, médian (latence par seconde de parole)
+bench-speaker-id-rtf-p50 = RTF, médiane (latence par seconde de parole)
 bench-speaker-id-model-size = modèle sur disque
 bench-speaker-id-memory = mémoire ajoutée au chargement
 

@@ -2082,6 +2082,12 @@ export interface components {
             methods: components["schemas"]["MethodOut"][];
             recommended: components["schemas"]["PairingMethod"];
         };
+        /**
+         * ModelType
+         * @description What a model plugin serves: roles and forms only offer the models of the type they need.
+         * @enum {string}
+         */
+        ModelType: "language" | "embedding" | "voice";
         /** NestorOut */
         NestorOut: {
             /** Version */
@@ -2414,6 +2420,10 @@ export interface components {
                 [key: string]: {
                     [key: string]: unknown;
                 };
+            };
+            /** Model Types */
+            model_types: {
+                [key: string]: components["schemas"]["ModelType"];
             };
         };
         /** SoftwareOut */

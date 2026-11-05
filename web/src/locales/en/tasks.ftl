@@ -14,10 +14,10 @@ task-took = took { $duration }
 task-cancel = Stop
 task-cancel-action = Stop…
 task-cancel-title = Stop this task?
-task-cancel-description = The executor is told to stop; what is already done stays done.
-task-cancel-notice = Stopping task { $id }.
+task-cancel-description = What is already done is kept.
+task-cancel-notice = Stopping task { $id }…
 task-story = How it went
-task-story-empty = The journal keeps no trace of this task.
+task-story-empty = No trace in the journal.
 task-error = error
 task-result = result
 task-asked-in = asked in
@@ -31,5 +31,5 @@ task-delivered = { $spoken ->
     [none] {""}
    *[other] , in the { $room }
 },
-task-delivery-pending = When it ends, the result will be told to the person wherever they are.
+task-delivery-pending = The result will reach the person wherever they are.
 task-delivery-none = No delivery.

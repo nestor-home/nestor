@@ -30,7 +30,7 @@ async def test_a_broken_connection_says_why_in_the_readers_language(tmp_path: Pa
         await connections._mark(connection, Status.NEEDS_REAUTH, Message.of("connection-refresh-refused"))
         reason = (await api.get(f"/api/v1/connections/{connection.id}")).json()["status_reason"]
         assert reason["message"] == {"id": "connection-refresh-refused", "args": {}}
-        assert reason["text"].startswith("Le service a refusé de renouveler l'accès")
+        assert reason["text"].startswith("Accès révoqué ou expiré")
         await connections.configure(connection.id, confirm_writes=False)
         assert connections.connections[connection.id].status_reason, "changing a setting keeps the reason"
 

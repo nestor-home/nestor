@@ -8,7 +8,7 @@ describe("accounts", () => {
   it("protects the last active owner and says why", async () => {
     renderApp("/accounts");
     expect(await screen.findByRole("combobox", { name: "Role of Mathis" })).toHaveAttribute("data-disabled");
-    expect(screen.getByText("Last active owner: the household must keep at least one.")).toBeInTheDocument();
+    expect(screen.getByText("At least one active owner is required.")).toBeInTheDocument();
   });
 
   it("changes a role from the keyboard", async () => {

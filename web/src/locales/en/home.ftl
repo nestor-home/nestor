@@ -15,7 +15,7 @@ home-state-working = working
 home-state-concerned = concerned
 home-state-sleeping = resting
 home-state-idle = available
-home-state-degraded = running degraded
+home-state-degraded = degraded
 
 ## What it says, in the first person
 home-say-delivered = I just spoke to { $people } ({ $where }).
@@ -37,7 +37,7 @@ home-say-concerned = { $count ->
    *[other] I need you for { $count } things.
 }
 home-say-sleeping = Quiet hours: I'll keep silent until { $until }.
-home-say-idle = All is calm. I'm here if you need me.
+home-say-idle = All quiet.
 
 ## The columns
 home-needs = What I need from you
@@ -52,13 +52,13 @@ home-now = Right now
 home-task-starting = starting
 home-talking = Talking with { $people }
 home-talking-someone = Conversation under way
-home-nothing-now = Nothing under way. I'm waiting to be spoken to.
+home-nothing-now = Nothing right now.
 home-next = Coming up
 home-quiet-now = Silence until { $until }, unless urgent.
 home-quiet-later = Quiet hours from { $from } to { $to }.
-home-upcoming = I'll write it to { $person } on { $channel } at { $time }.
-home-upcoming-someone = I'll write it on { $channel } at { $time }.
-home-upcoming-unless = Unless someone answers before then.
+home-upcoming = Follow-up to { $person } on { $channel } at { $time }.
+home-upcoming-someone = Follow-up on { $channel } at { $time }.
+home-upcoming-unless = Unless someone answers first.
 home-watch-triggered = triggered
 
 ## Its day, what it knows

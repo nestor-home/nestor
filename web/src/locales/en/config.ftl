@@ -52,13 +52,13 @@ cfg-name-invalid = Letters, digits, “_”, “.” and “-”, starting with 
 cfg-add-kind = Add: { $kind }
 cfg-choose-kind = Choose…
 cfg-pick-title = { $slot }: add
-cfg-pick-text = The plugins installed on this instance. The form comes next.
+cfg-pick-text = The plugins installed on this instance.
 cfg-model-type-language = Language models (LLM)
-cfg-model-type-language-help = Write the answers: aloud, in writing, on wake-ups.
+cfg-model-type-language-help = To answer, aloud or in writing.
 cfg-model-type-embedding = Text embeddings
-cfg-model-type-embedding-help = Find memories and past conversations by meaning.
-cfg-model-type-voice = Voice recognition
-cfg-model-type-voice-help = Tell who is speaking to a satellite.
+cfg-model-type-embedding-help = To find memories and past conversations by meaning.
+cfg-model-type-voice = Speaker recognition
+cfg-model-type-voice-help = To know who is speaking to a satellite.
 cfg-required-fields = { $count ->
     [0] nothing required
     [one] 1 required setting
@@ -123,7 +123,7 @@ cfg-restart-ask = An administrator needs to restart the instance.
 cfg-restart-title = Restart { $agent }?
 cfg-restart-text = { $agent } stops cleanly and starts again with the same command, usually in a few seconds.
 cfg-restart-channels = Channels close: a conversation under way is cut.
-cfg-restart-tasks = Remote tasks keep running; following them resumes after.
+cfg-restart-tasks = Delegated tasks keep running; following them resumes after.
 cfg-restart-apply = { $count ->
     [one] The saved change applies.
    *[other] The saved changes apply.
@@ -157,7 +157,7 @@ cfg-secret-delete = Delete
 cfg-secret-delete-label = Delete { $name }
 cfg-secret-delete-title = Delete { $name }?
 cfg-secret-delete-text = The value is erased from the vault; nothing can bring it back.
-cfg-secret-in-use-text = The configuration still refers to it: once deleted, those settings cannot start until they change.
+cfg-secret-in-use-text = The configuration still uses it: the settings concerned will no longer start.
 cfg-secret-delete-anyway = Delete anyway
 cfg-secret-deleted = Secret { $name } deleted.
 

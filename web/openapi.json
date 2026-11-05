@@ -11685,6 +11685,16 @@
         ],
         "title": "MethodsOut"
       },
+      "ModelType": {
+        "type": "string",
+        "enum": [
+          "language",
+          "embedding",
+          "voice"
+        ],
+        "title": "ModelType",
+        "description": "What a model plugin serves: roles and forms only offer the models of the type they need."
+      },
       "NestorOut": {
         "properties": {
           "version": {
@@ -12678,6 +12688,13 @@
             },
             "type": "object",
             "title": "Kinds"
+          },
+          "model_types": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ModelType"
+            },
+            "type": "object",
+            "title": "Model Types"
           }
         },
         "type": "object",
@@ -12686,7 +12703,8 @@
           "shape",
           "required",
           "title",
-          "kinds"
+          "kinds",
+          "model_types"
         ],
         "title": "SlotOut"
       },

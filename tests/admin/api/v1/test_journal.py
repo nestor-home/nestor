@@ -64,7 +64,7 @@ async def test_items_are_said_in_french_with_the_reason_of_a_decision(tmp_path: 
             )
         )
         (item,) = (await (await admin.api()).get("/api/v1/journal", kinds="delivery")).json()["items"]
-        assert item["text"] == "Décision de parler à Mathis : veille w1"
+        assert item["text"] == "Message pour Mathis : veille w1"
         assert item["message"]["id"] == "journal-delivery-considered" and item["message"]["args"]["id"] == "w1"
         assert item["reason"] == {
             "message": {"id": "delivery-in-room", "args": {"person": "Mathis", "room": "salon"}},
@@ -85,7 +85,7 @@ async def test_sign_ins_are_in_the_journal_without_secrets(tmp_path: Path) -> No
         assert summaries[:3] == [
             "Connexion refusée au compte mathis : mot de passe incorrect",
             "Connexion de mathis",
-            "Compte mathis ouvert (propriétaire)",
+            "Compte mathis créé (propriétaire)",
         ]
 
 
@@ -321,16 +321,16 @@ async def test_the_important_events_are_told_in_the_readers_language(tmp_path: P
         for sentence in (
             "Richie a répondu (interrompu)",
             "Réponse de secours : modèle trop lent",
-            "Réponse coupée par la personne",
+            "Réponse interrompue",
             "Entendu : Je surv",
             "Outil create_watch appelé",
             "Outil create_watch terminé en 0,2 s",
             "Outil mailbox_send en échec",
-            "« Colis livré » lu pour 2 veilles : 1 concernée",
-            "« Newsletter » lu pour 1 veille : rien pour elles",
-            "« Facture » n'a pas pu être trié : le modèle de tri n'a pas répondu, rien n'a été annoncé",
+            "« Colis livré » vérifié pour 2 veilles : 1 correspond",
+            "« Newsletter » vérifié pour 1 veille : aucune ne correspond",
+            "« Facture » non trié : le modèle n'a pas répondu",
             "Veille w1 déclenchée par « Colis livré » (urgent)",
-            "Veille w1 trouvée",
+            "Veille w1 déclenchée",
             "Message transmis : veille w1",
             "Message non transmis : veille w2",
             "Essayé : aucun canal disponible",
@@ -338,13 +338,13 @@ async def test_the_important_events_are_told_in_the_readers_language(tmp_path: P
             "Mathis est dans la pièce « salon »",
             "Mathis n'est plus à la maison",
             "Mathis est à la maison",
-            "ghost n'est plus localisé·e",
+            "ghost : position inconnue",
             "Tâche t1 confiée à hermes",
             "Tâche t1 en échec (12 s)",
             "Connexion c1 à réautoriser",
-            "Le satellite reachy-salon (reachy-mini, pièce « salon ») demande l'appairage",
+            "Satellite reachy-salon (reachy-mini, salon) demande à être appairé",
             "Déclare : micro, haut-parleur",
-            "Satellite reachy-salon appairé avec son code (pièce « salon »)",
+            "Satellite reachy-salon appairé avec son code (salon)",
             "Autorisé : micro, haut-parleur",
             "Satellite reachy-salon révoqué",
             "Satellite reachy-salon connecté",
@@ -370,12 +370,12 @@ async def test_going_back_to_the_households_language_is_told_and_never_breaks_th
         page = await api.get("/api/v1/journal", kinds="account")
         assert page.status_code == 200, page.text
         reset, chosen = page.json()["items"][:2]
-        assert reset["text"] == "Le compte mathis lit désormais dans la langue du foyer"
+        assert reset["text"] == "Compte mathis : langue du foyer"
         assert reset["message"] == {
             "id": "journal-account-locale-changed",
             "args": {"login": "mathis", "role": "owner", "locale": "", "chosen": "no"},
         }
-        assert chosen["text"] == "Le compte mathis lit désormais en en"
+        assert chosen["text"] == "Compte mathis : langue en"
         facets = await api.get("/api/v1/journal/facets")
         assert facets.status_code == 200 and facets.json()["total"] >= 4
 

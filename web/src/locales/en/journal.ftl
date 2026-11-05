@@ -2,7 +2,7 @@
 
 jr-title = Journal
 jr-loading = Loading the journal…
-jr-empty = Nothing in the journal for these filters.
+jr-empty = No events for these filters.
 jr-empty-hint = Widen the time range or drop a filter.
 jr-older = Older
 jr-beginning = Beginning of the journal
@@ -23,7 +23,7 @@ jr-event-count = { $count ->
 jr-day-list = Journal of { $day }
 
 jr-search-label = Search the journal
-jr-search-placeholder = Search: parcel, invoice, Jules…
+jr-search-placeholder = Parcel, invoice, Jules…
 jr-search-clear = Clear the search
 jr-range-hour = Last hour
 jr-range-today = Today
@@ -46,7 +46,7 @@ jr-facet-channel = Channel
 jr-facet-room = Room
 jr-facet-clear = Clear filters
 jr-facet-search = Filter { $facet }…
-jr-facet-empty = No such value.
+jr-facet-empty = No results.
 jr-facet-selected = { $count } selected
 
 jr-histogram-label = { $count ->
@@ -55,15 +55,15 @@ jr-histogram-label = { $count ->
 } between { $from } and { $to }
 
 jr-story-thread = Conversation
-jr-story-chain = Chain of events
+jr-story-chain = Sequence
 jr-story-single = Event
 jr-thread-title = { $count ->
     [0] Conversation
    *[other] Conversation · { $people }
 }
-jr-thread-open = Open this conversation alone
+jr-thread-open = Open the conversation
 jr-thread-link = thread
-jr-thread-earlier = … the thread starts on an older page
+jr-thread-earlier = … the conversation started earlier
 jr-entry-label = { $text }: { $detail }
 jr-tool-count = { $count ->
     [one] 1 tool
@@ -98,7 +98,7 @@ jr-channel-voice = voice
 jr-why = why
 jr-why-label = why:
 
-step-task-started = handed over
+step-task-started = started
 step-task-progressed = step
 step-task-delivered = result delivered
 step-task-cancelled = cancelled
@@ -124,9 +124,9 @@ jr-related-connection = Connection
 jr-related-satellite = Satellite
 jr-related-memory = Memory
 jr-related-cause = Caused by
-jr-raw = Raw record
-jr-raw-copy = the record
-jr-all-in-journal = everything in the journal
+jr-raw = JSON
+jr-raw-copy = the JSON
+jr-all-in-journal = see the journal
 jr-subject-conversation = Conversation
 jr-subject-session = Session
 jr-subject-task = Task

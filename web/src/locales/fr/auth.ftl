@@ -7,18 +7,18 @@ auth-sign-in = Se connecter
 auth-signing-in = Connexion…
 auth-invitation-title = Invitation
 auth-invitation-checking = Vérification de l'invitation…
-auth-invitation-invalid = Ce lien ne permet pas de créer un compte.
+auth-invitation-invalid = Lien d'invitation invalide ou expiré.
 auth-go-to-login = Aller à la connexion
 auth-welcome = Bienvenue
-auth-invitation-intro = Vous êtes invité·e à l'administration du foyer comme <strong>{ $role }</strong>{ $has_person ->
+auth-invitation-intro = Vous êtes invité·e comme <strong>{ $role }</strong>{ $has_person ->
     [no] {""}
    *[yes] , pour { $person }
-}. Choisissez votre identifiant et votre mot de passe.
+}. Choisissez un identifiant et un mot de passe.
 auth-password-hint = Au moins { $min } caractères. Une phrase marche très bien.
 auth-password-repeat = Confirmez le mot de passe
 auth-password-too-short = Au moins { $min } caractères.
-auth-password-mismatch = Les deux mots de passe diffèrent.
+auth-password-mismatch = Les mots de passe ne correspondent pas.
 auth-accept = Accepter l'invitation
 auth-accepting = Création du compte…
 auth-login = Identifiant
-auth-login-hint = Ce que vous taperez pour vous connecter : lettres et chiffres.
+auth-login-hint = Lettres et chiffres.

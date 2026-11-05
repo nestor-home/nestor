@@ -1,10 +1,10 @@
 # The Google (Gmail) connector: its name, description and the guide shown before connecting it.
 
 connector-google-title = Google (Gmail)
-connector-google-description = Search and read Gmail; new inbox mail can feed watches. Read only.
+connector-google-description = Search and read Gmail, read only. New mail feeds watches.
 connector-google-setup =
-    Nestor connects to Google with your own OAuth client: no shared secret ships with Nestor. Allow
-    about ten minutes, once per household.
+    Nestor connects to Google with your own OAuth client. Allow about ten minutes, once per
+    household.
 
     1. Open the Google Cloud console (https://console.cloud.google.com/), choose “Select a project”,
        then “New project”, give it a name (for instance “Nestor”) and create it. Check that it is
@@ -19,9 +19,8 @@ connector-google-setup =
     4. In “Data access”, add the scopes openid, email and
        https://www.googleapis.com/auth/gmail.readonly (read only: Nestor can neither send, delete nor
        change your mail).
-    5. In “Audience”, click “Publish app” to move it “In production”. This matters: while the app stays
-       “Testing”, Google expires the authorisation after 7 days and the account would have to be
-       reconnected every week. No need to ask Google for verification: the app only serves you.
+    5. In “Audience”, click “Publish app” to move it “In production”. Otherwise Google expires the
+       authorisation after 7 days. No need to ask Google for verification: the app only serves you.
     6. In “Clients”, choose “Create client”, type “Web application”. Under “Authorised redirect URIs”,
        paste exactly the return address Nestor shows below. Create, then copy the client ID and the
        client secret (the secret is not shown again).

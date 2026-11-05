@@ -50,7 +50,7 @@ recording-keeps = { $own ->
     [yes] I keep a voiceprint of your voice, never the sound.
    *[no] I keep a voiceprint of { $name }'s voice, never the sound.
 }
-recording-use = It tells me who is talking to the satellites, so I answer with the right reminders, accounts and memories.
+recording-use = It tells me who is talking to the satellites.
 recording-not-a-password = It is not a password: for anything sensitive, I always ask for a confirmation.
 recording-other-agrees = { $name } reads the phrases, and has to agree.
 recording-learning = Learn over time
@@ -72,7 +72,7 @@ recording-microphone-quiet = I can barely hear you. Move closer to the microphon
 recording-microphone-noisy = It's too noisy around you. Find a quieter spot.
 recording-microphone-denied = The browser refuses the microphone. Allow it in the site settings, then try again.
 recording-microphone-missing = No microphone found. Plug one in, then try again.
-recording-microphone-insecure = The browser only opens the microphone on a secure address: https, or localhost.
+recording-microphone-insecure = The microphone only opens over HTTPS or on localhost.
 recording-microphone-unsupported = This browser gives no access to the microphone.
 recording-microphone-failed = The microphone could not open.
 recording-retry = Try again

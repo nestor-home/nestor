@@ -62,7 +62,7 @@ describe("accessibility of every screen", () => {
     await settle(queryClient);
     const [entry] = await screen.findAllByRole("button", { name: / said/ });
     if (entry) await user.click(entry);
-    await screen.findByRole("heading", { name: "Raw record" });
+    await screen.findByRole("heading", { name: "JSON" });
     await settle(queryClient);
     await expectAccessible();
   });
@@ -89,7 +89,7 @@ describe("accessibility of every screen", () => {
     await expectAccessible();
     await user.click(within(sheet).getByRole("button", { name: /^QR code/ }));
     await user.click(within(sheet).getByRole("button", { name: "Start" }));
-    await within(sheet).findByRole("img", { name: /QR code of the pairing address/ });
+    await within(sheet).findByRole("img", { name: /QR code of the pairing URI/ });
     await settle(queryClient);
     await expectAccessible();
   });

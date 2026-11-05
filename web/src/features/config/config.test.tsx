@@ -17,7 +17,7 @@ describe("the configuration", () => {
     renderApp("/config/tools");
     await user.click(await screen.findByRole("button", { name: "Edit home" }));
     const sheet = await screen.findByRole("dialog", { name: "home" });
-    expect(within(sheet).getByRole("textbox", { name: "Address" })).toHaveValue(
+    expect(within(sheet).getByRole("textbox", { name: "URL" })).toHaveValue(
       "http://homeassistant.local:8123/mcp_server/sse",
     );
     expect(within(sheet).getByRole("combobox", { name: "Transport" })).toHaveTextContent("sse");
@@ -82,7 +82,7 @@ describe("the configuration", () => {
     await user.click(await screen.findByRole("button", { name: "Edit Jules" }));
     const sheet = await screen.findByRole("dialog", { name: "Jules" });
     await user.click(within(sheet).getByRole("button", { name: "Add" }));
-    await user.type(within(sheet).getByRole("textbox", { name: "Accounts on channels, item 1" }), "telegram:@jules");
+    await user.type(within(sheet).getByRole("textbox", { name: "Accounts, item 1" }), "telegram:@jules");
     await user.click(within(sheet).getByRole("button", { name: "Done" }));
     await user.click(await screen.findByRole("button", { name: "1 change" }));
     const changes = await screen.findByRole("dialog", { name: "Changes" });
@@ -164,7 +164,7 @@ describe("the configuration", () => {
     await user.click(screen.getByRole("button", { name: "Restart…" }));
     const dialog = await screen.findByRole("alertdialog", { name: "Restart Richie?" });
     expect(dialog).toHaveTextContent("Channels close");
-    expect(dialog).toHaveTextContent("Remote tasks keep running");
+    expect(dialog).toHaveTextContent("Delegated tasks keep running");
     await user.click(within(dialog).getByRole("button", { name: "Restart now" }));
     expect(await screen.findByText("Restarting, back in a moment.")).toBeInTheDocument();
     // sessions live in the process's memory: the restarted instance asks to sign in again, then comes back. The
@@ -222,7 +222,6 @@ describe("the configuration", () => {
     expect(await screen.findByRole("heading", { name: "Conversations" })).toBeInTheDocument();
     const field = await screen.findByRole("spinbutton", { name: "New conversation after (seconds)" });
     expect(field).toHaveAttribute("placeholder", "300");
-    expect(screen.getByText(/starts a new conversation/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Conversations/ })).toHaveAttribute("href", "/config/conversation");
   });
 });
@@ -236,13 +235,13 @@ describe("models by what they serve", () => {
     const groups = within(picker)
       .getAllByRole("region")
       .map((g) => g.getAttribute("aria-label"));
-    expect(groups).toEqual(["Language models (LLM)", "Text embeddings", "Voice recognition"]);
+    expect(groups).toEqual(["Language models (LLM)", "Text embeddings", "Speaker recognition"]);
     expect(
-      within(within(picker).getByRole("region", { name: "Voice recognition" })).getByText("sherpa-onnx"),
+      within(within(picker).getByRole("region", { name: "Speaker recognition" })).getByText("sherpa-onnx"),
     ).toBeTruthy();
     await user.keyboard("{Escape}");
 
-    expect(await screen.findByText(/sherpa-onnx · Voice recognition/)).toBeInTheDocument();
+    expect(await screen.findByText(/sherpa-onnx · Speaker recognition/)).toBeInTheDocument();
     await user.click(screen.getByRole("combobox", { name: "Spoken model" }));
     const options = (await screen.findAllByRole("option")).map((o) => o.textContent);
     expect(options).toContain("haiku");

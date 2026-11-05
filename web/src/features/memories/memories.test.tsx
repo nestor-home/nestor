@@ -11,7 +11,7 @@ describe("memories", () => {
     const card = (await screen.findByText("Jules has handball practice on Wednesdays at 3 pm.")).closest(
       "li",
     ) as HTMLElement;
-    expect(within(card).getByRole("link", { name: /where it learnt it/ })).toHaveAttribute(
+    expect(within(card).getByRole("link", { name: /source/ })).toHaveAttribute(
       "href",
       expect.stringContaining("session=s-jules"),
     );
@@ -22,7 +22,7 @@ describe("memories", () => {
     await user.clear(text);
     await user.type(text, "Jules is allergic to peanuts and cashews.");
     await user.keyboard("{Meta>}{Enter}{/Meta}");
-    expect(await screen.findByText("Corrected.")).toBeInTheDocument();
+    expect(await screen.findByText("Memory corrected.")).toBeInTheDocument();
     expect(db.memories.find((m) => m.id === "m-01")?.text).toContain("cashews");
   });
 

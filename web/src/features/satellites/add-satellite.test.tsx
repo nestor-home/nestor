@@ -46,7 +46,7 @@ describe("adding a satellite", () => {
 
     const [code] = await within(sheet).findAllByText(/^[0-9A-Z]{4}-[0-9A-Z]{4}$/);
     const canonical = code?.textContent?.replace("-", "") ?? "";
-    expect(within(sheet).getByRole("img", { name: /QR code of the pairing address/ })).toBeInTheDocument();
+    expect(within(sheet).getByRole("img", { name: /QR code of the pairing URI/ })).toBeInTheDocument();
     expect(sheet).toHaveTextContent(`NESTOR_PAIRING_URI="nestor+http://nestor.local:8471/?code=${canonical}"`);
     expect(sheet).toHaveTextContent(`nestor-satellite run --pairing-uri`);
     expect(within(sheet).getByRole("list", { name: "Progress of the addition" })).toHaveTextContent(
@@ -67,13 +67,13 @@ describe("adding a satellite", () => {
     const { user, sheet } = await openAdd();
     await user.click(within(sheet).getByRole("button", { name: /^Code said aloud/ }));
     await user.click(within(sheet).getByRole("button", { name: "Start" }));
-    expect(await within(sheet).findByText(/I'm waiting for the device to turn up/)).toBeInTheDocument();
+    expect(await within(sheet).findByText(/Waiting for the device/)).toBeInTheDocument();
 
     deviceTurnsUp();
     const candidate = await within(sheet).findByText("reachy-mini-veranda", {}, { timeout: 5_000 });
     expect(candidate).toBeInTheDocument();
     await user.click(within(sheet).getByRole("button", { name: "Identify" }));
-    expect(await screen.findByText("Asked: the device makes itself noticed in a moment.")).toBeInTheDocument();
+    expect(await screen.findByText("The device will identify itself.")).toBeInTheDocument();
 
     await user.type(within(sheet).getByLabelText("Code shown by the device"), "424 242");
     await user.click(within(sheet).getByRole("button", { name: "Pair" }));
@@ -87,7 +87,7 @@ describe("adding a satellite", () => {
     await user.click(within(sheet).getByRole("button", { name: "Start" }));
     await within(sheet).findAllByText(/^[0-9A-Z]{4}-[0-9A-Z]{4}$/);
     await user.click(within(sheet).getByRole("button", { name: "Cancel the addition" }));
-    expect(await screen.findByText("Addition cancelled: its code no longer pairs anything.")).toBeInTheDocument();
+    expect(await screen.findByText("Addition cancelled: its code no longer works.")).toBeInTheDocument();
     expect(db.additions[0]?.status).toBe("cancelled");
   });
 

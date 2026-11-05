@@ -1,4 +1,4 @@
 # The admin itself, outside the API's errors.
 
 admin-front-missing-title = The admin interface is not built
-admin-front-missing = Build it from the repository: cd web && pnpm install && pnpm build, then reload this page. The API stays available under /api/v1.
+admin-front-missing = Run cd web && pnpm install && pnpm build in the repository, then reload the page. The API is still available at /api/v1.

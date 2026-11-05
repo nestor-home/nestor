@@ -50,7 +50,7 @@ recording-keeps = { $own ->
     [yes] Je garde une empreinte de ta voix, jamais le son.
    *[no] Je garde une empreinte de la voix de { $name }, jamais le son.
 }
-recording-use = Elle me sert à savoir qui me parle sur les satellites, pour répondre avec les bons rappels, comptes et souvenirs.
+recording-use = Elle me sert à savoir qui me parle sur les satellites.
 recording-not-a-password = Ce n'est pas un mot de passe : pour une action sensible, je demande toujours une confirmation.
 recording-other-agrees = C'est { $name } qui lit les phrases, et qui doit être d'accord.
 recording-learning = Apprendre au fil du temps
@@ -72,7 +72,7 @@ recording-microphone-quiet = Je t'entends à peine. Rapproche-toi du micro, ou p
 recording-microphone-noisy = Il y a trop de bruit autour de toi. Trouve un endroit plus calme.
 recording-microphone-denied = Le navigateur refuse le micro. Autorise-le dans les réglages du site, puis réessaie.
 recording-microphone-missing = Aucun micro trouvé. Branches-en un, puis réessaie.
-recording-microphone-insecure = Le navigateur n'ouvre le micro que sur une adresse sécurisée : https, ou localhost.
+recording-microphone-insecure = Le micro ne s'ouvre qu'en HTTPS ou sur localhost.
 recording-microphone-unsupported = Ce navigateur ne donne pas accès au micro.
 recording-microphone-failed = Le micro n'a pas pu s'ouvrir.
 recording-retry = Réessayer

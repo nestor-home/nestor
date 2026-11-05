@@ -12,7 +12,9 @@ class Localizer(ABC):
     - `format` never raises: an unknown locale falls back to the closest available one, then the
       default; a message missing in that locale falls back to the default locale, then to its id;
     - arguments are interpolated, plurals follow the locale's rules;
-    - `locales` lists what can really be rendered.
+    - `locales` lists what can really be rendered;
+    - `knows` says whether any catalogue has a message, so an optional one (a field's help) is looked up
+      without the warning a missing message deserves.
     """
 
     @property
@@ -25,3 +27,6 @@ class Localizer(ABC):
 
     @abstractmethod
     def format(self, message: Message, locale: Locale | str | None = None) -> str: ...
+
+    @abstractmethod
+    def knows(self, message_id: str) -> bool: ...
