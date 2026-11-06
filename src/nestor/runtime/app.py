@@ -42,7 +42,7 @@ from nestor.modules.connectors import ConnectedInbound, Connections, Connector, 
 from nestor.modules.conversation import Agent, AgentSettings, ChannelProfile, ModelChoice, Persona, Speakers
 from nestor.modules.home import PresenceSource
 from nestor.modules.household import Account, Household, Person, SharedAccount
-from nestor.modules.identity import VoiceEmbedder, Voices
+from nestor.modules.identity import Departures, VoiceEmbedder, Voices
 from nestor.modules.initiative import (
     Courier,
     DeliveryPolicy,
@@ -366,7 +366,8 @@ class Nestor:
             *self.models.values(),
             *self._memory_parts,  # after its embedder
             self.voiceprints,
-            *voices,  # after its model and its store
+            Departures(self.voiceprints, self.journal, [p.id for p in self.household.people]),  # after its store
+            *voices,  # after its model, its store, and who left
             self.speakers,
             *self.executors,
             *self.tools,

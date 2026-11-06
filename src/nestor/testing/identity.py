@@ -125,6 +125,12 @@ class MemoryVoiceprintStore(VoiceprintStore):
     async def keep_only(self, space: VoiceSpace) -> None:
         self.voices = {p: (s, profile) for p, (s, profile) in self.voices.items() if s == space.id}
 
+    async def keep_people(self, people: Collection[PersonId]) -> frozenset[PersonId]:
+        gone = frozenset(self.voices) - frozenset(people)
+        for person in gone:
+            del self.voices[person]
+        return gone
+
 
 class VoiceEmbedderContract:
     """Implement `embedder()` and `speech(speaker, take)`: a few seconds of that speaker's `take`-th sentence for
@@ -215,6 +221,19 @@ class VoiceprintStoreContract:
         assert again.anchor == (unit([0.0, 1.0, 0.0]),) and again.learned == () and not again.learning
         assert hugo_now.learned == () and hugo_now.anchor and not hugo_now.learning
         assert set(left) == {hugo}
+
+    async def test_keeping_the_household_erases_everyone_else_in_every_space(self) -> None:
+        lea, hugo, odile = PersonId("lea"), PersonId("hugo"), PersonId("odile")
+        async with self.store() as store:
+            await store.enroll(lea, self.SPACE, [unit([1.0, 0.0, 0.0])], learning=True, at=self.AT)
+            await store.learn(lea, _sample(1, turn="t-lea"), keep=50, per_room=20)
+            await store.enroll(hugo, self.SPACE, [unit([0.0, 1.0, 0.0])], learning=True, at=self.AT)
+            other = VoiceSpace(model="n", dimensions=3)  # a voice of an older model is erased too
+            await store.enroll(odile, other, [unit([0.0, 0.0, 1.0])], learning=False, at=self.AT)
+            gone = await store.keep_people([hugo])
+            left = await store.profiles(self.SPACE)
+            again = await store.keep_people([hugo])
+        assert gone == {lea, odile} and set(left) == {hugo} and again == frozenset()
 
     async def test_another_model_keeps_nothing_of_the_previous(self) -> None:
         lea, other = PersonId("lea"), VoiceSpace(model="n", dimensions=3)

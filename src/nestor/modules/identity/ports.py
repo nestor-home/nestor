@@ -45,7 +45,8 @@ class VoiceprintStore(Component, ABC):
     - `learn` adds a learned voiceprint, then drops the oldest beyond `keep`, and beyond `per_room` in its room;
     - `unlearn` removes what was learned from the given turns, wherever it is, and says whose voices changed;
     - `forget` erases a person's voice, or only what was learned;
-    - `keep_only` erases every profile of another space (the model changed).
+    - `keep_only` erases every profile of another space (the model changed);
+    - `keep_people` erases the voice of everyone else, whatever its space, and says whose.
     """
 
     @abstractmethod
@@ -70,3 +71,6 @@ class VoiceprintStore(Component, ABC):
 
     @abstractmethod
     async def keep_only(self, space: VoiceSpace) -> None: ...
+
+    @abstractmethod
+    async def keep_people(self, people: Collection[PersonId]) -> frozenset[PersonId]: ...

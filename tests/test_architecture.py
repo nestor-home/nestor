@@ -83,7 +83,8 @@ def test_the_guard_catches_a_forbidden_import(tmp_path: Path, layer: str, source
 
 
 # What people read is in `locales/*.ftl`, rendered by a `Localizer`: never a sentence in Python (test
-# doubles aside: their data is French on purpose).
+# doubles aside: their data is French on purpose). What the model reads (prompts, tool descriptions) is English
+# in the code on purpose, so the guard looks for French only.
 SENTENCE_FREE_EXCEPTIONS = ("testing/",)
 _FRENCH = re.compile(r"[àâçéèêëîïôûùüÿœæÀÂÇÉÈÊËÎÏÔÛÙÜŸŒ«»]")
 

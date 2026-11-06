@@ -353,3 +353,17 @@ def _kept(learned: tuple[Learned, ...], settings: VoiceSettings) -> tuple[Learne
             rooms[sample.room] = rooms.get(sample.room, 0) + 1
             kept.append(sample)
     return tuple(reversed(kept))
+
+
+class Departures(Component):
+    """Contract: at start, the voice of anyone no longer in the household is erased, whether recognition is on or not
+    (a voiceprint is biometric: it does not outlive the person's place here), and each erasure is journaled."""
+
+    name = "departures"
+
+    def __init__(self, store: VoiceprintStore, journal: Journal, household: Collection[PersonId]) -> None:
+        self.store, self.journal, self.household = store, journal, frozenset(household)
+
+    async def start(self) -> None:
+        for person in sorted(await self.store.keep_people(self.household)):
+            await self.journal.publish(VoiceForgotten(source=self.name, person=person, by=None))

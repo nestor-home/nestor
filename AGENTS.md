@@ -103,6 +103,10 @@ runtime may assemble the built-in storage adapters, and the admin may use FastAP
   (`from nestor.modules.cognition import Executor`), not from its files, outside that module.
 - Python 3.12+ syntax (`type` aliases, `X | None`), fully typed and checked with `ty`; `ruff`,
   line length 120. Code, docstrings and identifiers in English.
+- **Texts**: what people read goes through Fluent (`locales/<lang>/*.ftl`), in every locale shipped.
+  What the model reads stays in English in the code, whatever the household's language: the prompt's
+  rules, tool names and descriptions, and their schemas (the model answers in the persona's language).
+  Logs, exception messages for developers and the command line's help are English too.
 - No secrets in the repository; secrets come from the environment.
 - Keep the repository lean: no new Markdown files unless users or agents need them.
 - **The admin API has one contract.** A closed set in a response or a query is its domain `StrEnum`

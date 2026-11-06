@@ -73,3 +73,9 @@ class MemoryVoiceprints(VoiceprintStore):
 
     async def keep_only(self, space: VoiceSpace) -> None:
         self._profiles = {p: (s, profile) for p, (s, profile) in self._profiles.items() if s == space.id}
+
+    async def keep_people(self, people: Collection[PersonId]) -> frozenset[PersonId]:
+        gone = frozenset(self._profiles) - frozenset(people)
+        for person in gone:
+            del self._profiles[person]
+        return gone

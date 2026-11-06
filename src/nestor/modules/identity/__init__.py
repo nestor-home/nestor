@@ -6,7 +6,16 @@ Recognising a voice personalises the conversation; it never authorises a sensiti
 
 from nestor.modules.identity.events import VoiceEnrolled, VoiceForgotten, VoiceLearningChanged
 from nestor.modules.identity.ports import VoiceEmbedder, VoiceprintStore
-from nestor.modules.identity.service import PHRASES, Check, Enrollment, Problem, Voices, VoiceSettings, VoiceStatus
+from nestor.modules.identity.service import (
+    PHRASES,
+    Check,
+    Departures,
+    Enrollment,
+    Problem,
+    Voices,
+    VoiceSettings,
+    VoiceStatus,
+)
 from nestor.modules.identity.types import (
     Heard,
     Identified,
@@ -20,6 +29,7 @@ from nestor.modules.identity.types import (
 __all__ = [
     "PHRASES",
     "Check",
+    "Departures",
     "Enrollment",
     "Heard",
     "Identified",
