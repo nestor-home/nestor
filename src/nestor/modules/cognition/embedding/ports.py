@@ -1,4 +1,5 @@
-"""The embedding ports: a model that turns text into vectors, and an index that finds the nearest ones.
+"""The embedding ports: the embedding model type, which turns text into vectors, and an index that finds the
+nearest ones.
 
 Vectors are a projection: the texts they come from live elsewhere (the journal, the memory store), so an index
 can always be rebuilt, for instance after switching to another model.
@@ -7,18 +8,20 @@ can always be rebuilt, for instance after switching to another model.
 from abc import ABC, abstractmethod
 from collections.abc import Collection, Mapping, Sequence
 
-from nestor.core import Component
+from nestor.core import Component, Model, ModelType
 from nestor.modules.cognition.embedding.types import EmbeddingSpace, Indexed, Vector
 
 
-class Embedder(Component, ABC):
+class EmbeddingModel(Model, ABC):
     """Turns texts into vectors of its `space`.
 
-    Contract (checked by `nestor.testing.cognition.EmbedderContract`):
+    Contract (checked by `nestor.testing.cognition.EmbeddingModelContract`):
     - `embed_documents` returns one vector per text, in order, each of `space.dimensions`;
     - `embed_query` embeds a question: many models expect it worded or prefixed apart from documents;
     - a provider failure raises `ProviderError`, never a vendor exception.
     """
+
+    type = ModelType.EMBEDDING
 
     @property
     @abstractmethod

@@ -5,7 +5,7 @@ Recognising a voice personalises the conversation; it never authorises a sensiti
 """
 
 from nestor.modules.identity.events import VoiceEnrolled, VoiceForgotten, VoiceLearningChanged
-from nestor.modules.identity.ports import VoiceEmbedder, VoiceprintStore
+from nestor.modules.identity.ports import SpeakerModel, VoiceprintStore
 from nestor.modules.identity.service import (
     PHRASES,
     Check,
@@ -37,8 +37,8 @@ __all__ = [
     "Problem",
     "Profile",
     "Speaker",
+    "SpeakerModel",
     "Vector",
-    "VoiceEmbedder",
     "VoiceEnrolled",
     "VoiceForgotten",
     "VoiceLearningChanged",

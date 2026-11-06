@@ -8,7 +8,7 @@ describe("vendor marks", () => {
     expect(brandOf("pollen-robotics")).toBe("reachy");
     expect(brandOf("openai")).toBe("openai");
     expect(brandOf("mistral")).toBe("mistral");
-    expect(brandOf("openai-compatible-embeddings")).toBe("openai-compatible");
+    expect(brandOf("reachy-mini")).toBe("reachy");
     expect(brandOf("telegram:42")).toBe("telegram");
     expect(brandOf("someone-else")).toBeNull();
   });

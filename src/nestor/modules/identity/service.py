@@ -1,6 +1,6 @@
 """Voices: who speaks, from their voice, with their consent.
 
-A voice model (`VoiceEmbedder`) turns speech into a voiceprint; everything else is here, the same for every model:
+A voice model (`SpeakerModel`) turns speech into a voiceprint; everything else is here, the same for every model:
 
 - recognising: a turn's voiceprint is compared with each enrolled person's, the anchor (the recording they
   agreed to) weighing a fixed share so that learning cannot drift away from it;
@@ -20,7 +20,7 @@ from enum import StrEnum
 from nestor.core import Component, ContractError, PersonId, ProviderError, new_id, utc_now
 from nestor.modules.identity.audio import centroid, clipped, duration_s, level_dbfs, samples, similarity, unit
 from nestor.modules.identity.events import VoiceEnrolled, VoiceForgotten, VoiceLearningChanged
-from nestor.modules.identity.ports import VoiceEmbedder, VoiceprintStore
+from nestor.modules.identity.ports import SpeakerModel, VoiceprintStore
 from nestor.modules.identity.types import Heard, Learned, Profile, Vector
 from nestor.modules.journal import Journal
 
@@ -108,7 +108,7 @@ class Voices(Component):
 
     def __init__(
         self,
-        embedder: VoiceEmbedder,
+        embedder: SpeakerModel,
         store: VoiceprintStore,
         journal: Journal,
         *,

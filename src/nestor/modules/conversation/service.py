@@ -15,9 +15,9 @@ from nestor.core import ContractError, PersonId, ProviderError, utc_now
 from nestor.core.i18n import Localizer
 from nestor.modules.channels import Address, Assistant, Exchange, InboundMessage, Medium, MessageEnd, Reply, Sender
 from nestor.modules.cognition.model import (
-    ConversationModel,
     Finished,
     FinishReason,
+    LanguageModel,
     Message,
     ModelRequest,
     Role,
@@ -57,23 +57,23 @@ class ModelChoice:
     """The model that answers in each medium: the voice needs its first words fast, writing allows more.
     `background` runs the turns nobody waits for (a scheduled wake-up): the written one by default."""
 
-    spoken: ConversationModel
-    written: ConversationModel
-    background: ConversationModel | None = None
+    spoken: LanguageModel
+    written: LanguageModel
+    background: LanguageModel | None = None
 
     @classmethod
-    def single(cls, model: ConversationModel) -> "ModelChoice":
+    def single(cls, model: LanguageModel) -> "ModelChoice":
         return cls(spoken=model, written=model)
 
-    def of(self, medium: Medium) -> ConversationModel:
+    def of(self, medium: Medium) -> LanguageModel:
         return self.spoken if medium is Medium.SPOKEN else self.written
 
     @property
-    def unattended(self) -> ConversationModel:
+    def unattended(self) -> LanguageModel:
         return self.background or self.written
 
-    def distinct(self) -> tuple[ConversationModel, ...]:
-        found: list[ConversationModel] = []
+    def distinct(self) -> tuple[LanguageModel, ...]:
+        found: list[LanguageModel] = []
         for model in (self.spoken, self.written, self.unattended):
             if all(model is not other for other in found):
                 found.append(model)

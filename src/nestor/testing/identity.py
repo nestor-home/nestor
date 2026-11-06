@@ -15,8 +15,8 @@ from nestor.core import ContractError, PersonId, ProviderError
 from nestor.modules.identity import (
     Learned,
     Profile,
+    SpeakerModel,
     Vector,
-    VoiceEmbedder,
     VoiceprintStore,
     VoiceSpace,
 )
@@ -46,7 +46,7 @@ def speaker_of(audio: bytes) -> tuple[str, int] | None:
     return speaker, int(take or 0)
 
 
-class TaggedVoices(VoiceEmbedder):
+class TaggedVoices(SpeakerModel):
     """A voice model for tagged audio: one direction per speaker, nudged by each take. Two takes of a voice are about
     0.9 alike, two voices about 0. `failing` makes it fail like a model that cannot run."""
 
@@ -132,11 +132,11 @@ class MemoryVoiceprintStore(VoiceprintStore):
         return gone
 
 
-class VoiceEmbedderContract:
+class SpeakerModelContract:
     """Implement `embedder()` and `speech(speaker, take)`: a few seconds of that speaker's `take`-th sentence for
     this model (recordings for a real one)."""
 
-    def embedder(self) -> VoiceEmbedder:
+    def embedder(self) -> SpeakerModel:
         raise NotImplementedError
 
     def speech(self, speaker: str, take: int) -> bytes:

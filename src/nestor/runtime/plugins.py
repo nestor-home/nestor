@@ -4,6 +4,10 @@ Built-in and third-party adapters declare themselves the same way, in their pack
 
     [project.entry-points."nestor.adapters"]
     telegram = "nestor.adapters.channels.telegram:plugin"
+    elevenlabs-transcription = "nestor.adapters.models.elevenlabs.transcription:plugin"
+
+A model plugin serves one type of model for a provider: its kind is the provider, `serves` the type's base class
+(`TranscriptionModel`), and the configuration names it by both (`type: transcription`, `provider: elevenlabs`).
 
 Discovering plugins loads every entry point, so a plugin module imports only what its settings need.
 An adapter relying on optional dependencies imports them when it is built and names, in `requires`,
@@ -15,12 +19,12 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from importlib.metadata import entry_points
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, cast
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, SecretStr, ValidationError
 from pydantic_core import PydanticCustomError
 
-from nestor.core import Component, ContractError
+from nestor.core import Component, ContractError, Model, ModelType
 from nestor.core.i18n import Locale, Localizer
 from nestor.modules.connectors import Connector
 
@@ -28,23 +32,13 @@ ENTRY_POINTS = "nestor.adapters"
 
 
 class Family(StrEnum):
-    MODEL = "model"  # builds a model: what it serves is its `ModelType`
+    MODEL = "model"  # builds a `Model` of the type it serves, for a provider
     EXECUTOR = "executor"
     CHANNEL = "channel"
     PRESENCE = "presence"
     TOOLS = "tools"
     INBOUND = "inbound"
     CONNECTOR = "connector"  # builds a `Connector`: a service the household plugs accounts into from the admin
-
-
-class ModelType(StrEnum):
-    """What a model plugin serves: roles and forms only offer the models of the type they need."""
-
-    LANGUAGE = "language"  # writes the answers (a `ConversationModel`)
-    EMBEDDING = "embedding"  # turns text into vectors, to search by meaning (an `Embedder`)
-    SPEAKER = "speaker"  # turns speech into voiceprints, to tell voices apart (a `VoiceEmbedder`)
-    TRANSCRIPTION = "transcription"  # turns a person's speech into text, for a voice channel (a `Transcriber`)
-    SPEECH = "speech"  # gives the assistant its voice, for a voice channel (a `Synthesizer`)
 
 
 def _filled(value: SecretStr) -> SecretStr:
@@ -70,7 +64,7 @@ class ChannelSettings(AdapterSettings):
     conversation_ends_after_s: float | None = Field(default=None, gt=0, json_schema_extra={"advanced": True})
 
 
-def _no_models(key: str, wanted: ModelType, path: tuple[str | int, ...]) -> Component:
+def _no_models(key: str, wanted: type[Model], path: tuple[str | int, ...]) -> Model:
     raise ContractError(f"{'.'.join(map(str, path))}: no model named {key!r} here (models are not built yet)")
 
 
@@ -81,9 +75,13 @@ class Services:
     data_dir: Path
     localizer: Localizer  # renders what adapters say to people (a channel's apology, a setup guide…)
     locale: Locale  # the household's language (the persona's locale)
-    # a model of `models` an adapter's settings name, by key, of the type the field takes, at its path in those
-    # settings; the runtime refuses an unknown key or a model of another type (models are built first)
-    model: Callable[[str, ModelType, tuple[str | int, ...]], Component] = field(default=_no_models)
+    # finds a model of `models` by key (see `model`); the runtime lends it once models are built
+    models: Callable[[str, type[Model], tuple[str | int, ...]], Model] = field(default=_no_models)
+
+    def model[M: Model](self, key: str, wanted: type[M], path: tuple[str | int, ...]) -> M:
+        """The model of `models` an adapter's settings name by `key`, at `path` in those settings: the runtime
+        refuses an unknown key or a model of another type than `wanted`."""
+        return cast(M, self.models(key, wanted, path))
 
 
 @dataclass(frozen=True, slots=True)
@@ -93,11 +91,22 @@ class Plugin[S: AdapterSettings]:
     settings: type[S]
     build: Callable[[S, str, Services], Component | Connector]  # settings, the instance name, services
     requires: str | None = None  # the optional dependencies `build` imports, as a pip requirement ("pkg[extra]")
-    model_type: ModelType | None = None  # what a plugin of the model family serves: it must say
+    serves: type[Model] | None = None  # the type of model a plugin of the model family builds: it must say
 
     def __post_init__(self) -> None:
-        if (self.family is Family.MODEL) != (self.model_type is not None):
-            raise ContractError(f"plugin {self.kind!r}: a model plugin says its model_type, and only a model plugin")
+        if (self.family is Family.MODEL) != (self.serves is not None):
+            raise ContractError(
+                f"plugin {self.kind!r}: a model plugin says the type it serves, and only a model plugin"
+            )
+
+    @property
+    def model_type(self) -> ModelType | None:
+        return self.serves.type if self.serves is not None else None
+
+    @property
+    def id(self) -> str:
+        """What tells it apart in its family: its kind, and for a model, its provider and type (`elevenlabs-speech`)."""
+        return f"{self.kind}-{self.serves.type}" if self.serves is not None else self.kind
 
     def create(self, raw: Mapping[str, Any], name: str, services: Services) -> Any:
         """The built adapter (a `Connector` for the connector family, a `Component` otherwise); the
@@ -105,14 +114,14 @@ class Plugin[S: AdapterSettings]:
         try:
             settings = self.settings.model_validate(raw)
         except ValidationError as error:
-            raise ContractError(f"{self.family} {name!r} ({self.kind}): {_explain(error)}") from None
+            raise ContractError(f"{self.family} {name!r} ({self.id}): {_explain(error)}") from None
         try:
             return self.build(settings, name, services)
         except ModuleNotFoundError as missing:
             if self.requires is None:
                 raise
             raise ContractError(
-                f"{self.family} {name!r} ({self.kind}) needs {self.requires}, which is not installed "
+                f"{self.family} {name!r} ({self.id}) needs {self.requires}, which is not installed "
                 f"(no module {(missing.name or '').partition('.')[0]!r}): pip install '{self.requires}'"
             ) from None
 
@@ -133,7 +142,7 @@ class Plugged:
     """One configured adapter as the runtime built it: what the admin's system page lists."""
 
     family: Family
-    kind: str
+    id: str  # the plugin's (`Plugin.id`)
     name: str
     component: Component | Connector
     origin: Distribution | None
@@ -166,27 +175,27 @@ class Registry:
         return tuple(dict.fromkeys(p.build.__module__.partition(".")[0] for p in self._plugins.values()))
 
     def register(self, plugin: Plugin[Any], origin: Distribution | None = None) -> None:
-        key = (plugin.family, plugin.kind)
+        key = (plugin.family, plugin.id)
         if key in self._plugins:
-            raise ContractError(f"two plugins provide the {plugin.family} kind {plugin.kind!r}")
+            raise ContractError(f"two plugins provide the {plugin.family} {plugin.id!r}")
         self._plugins[key] = plugin
         if origin is not None:
             self._origins[key] = origin
 
-    def origin(self, family: Family, kind: str) -> Distribution | None:
+    def origin(self, family: Family, id: str) -> Distribution | None:
         """Where an installed plugin comes from; `None` for one registered by code (tests)."""
-        return self._origins.get((family, kind))
+        return self._origins.get((family, id))
 
-    def kinds(self, family: Family) -> list[str]:
-        """The kinds installed for a family, sorted."""
-        return sorted(k for f, k in self._plugins if f is family)
+    def ids(self, family: Family) -> list[str]:
+        """The ids of the plugins installed for a family (`Plugin.id`), sorted."""
+        return sorted(i for f, i in self._plugins if f is family)
 
-    def get(self, family: Family, kind: str) -> Plugin[Any]:
+    def get(self, family: Family, id: str) -> Plugin[Any]:
         try:
-            return self._plugins[(family, kind)]
+            return self._plugins[(family, id)]
         except KeyError:
-            known = ", ".join(self.kinds(family)) or "none installed"
-            raise ContractError(f"unknown {family} kind {kind!r} (available: {known})") from None
+            known = ", ".join(self.ids(family)) or "none installed"
+            raise ContractError(f"no {family} plugin {id!r} is installed (available: {known})") from None
 
 
 def _explain(error: ValidationError) -> str:

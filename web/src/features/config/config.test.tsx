@@ -271,8 +271,8 @@ describe("a model's mark", () => {
 
   it("is the publisher of a catalogue model it names, else the runtime that runs it", () => {
     const voice = { properties: { model: { "x-nestor": { brands: { "titanet-small": "nvidia" } } } } };
-    expect(markOf("sherpa-onnx-voice", { model: "titanet-small" }, voice)).toBe("nvidia");
-    expect(markOf("sherpa-onnx-voice", { model: "/models/mine.onnx" }, voice)).toBe("sherpa-onnx-voice");
+    expect(markOf("sherpa-onnx", { model: "titanet-small" }, voice)).toBe("nvidia");
+    expect(markOf("sherpa-onnx", { model: "/models/mine.onnx" }, voice)).toBe("sherpa-onnx");
   });
 
   it("is its kind for any other server, an address still to write, or a kind that publishes no hosts", () => {

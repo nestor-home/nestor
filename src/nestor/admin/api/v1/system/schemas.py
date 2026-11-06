@@ -9,7 +9,7 @@ from nestor import __version__
 from nestor.admin.api.v1.agent.schemas import AgentOut
 from nestor.admin.api.v1.shared import Input
 from nestor.admin.presentation import Phrasebook
-from nestor.core import Component, Health
+from nestor.core import Component, Health, Model, ModelType
 from nestor.core.i18n import Message
 from nestor.modules.connectors import Connector
 from nestor.modules.satellites import Satellite
@@ -21,7 +21,8 @@ from nestor.runtime.plugins import Family
 class ComponentOut(BaseModel):
     slot: Family | Literal["satellite"]  # a plugin's family, or a paired satellite
     name: str  # the configured instance (`telegram`, `triage-model`), or a satellite's device id
-    adapter: str  # the plugin's kind (`openai-compatible`), or a satellite's model
+    adapter: str  # the plugin's id (`telegram`, `openai-compatible-language`), or a satellite's model
+    model_type: ModelType | None  # what a model serves (None for any other component)
     brand: str | None  # the vendor or protocol, as a slug ("openrouter", "homeassistant")
     version: str | None  # the plugin's package version, or the version of the software a satellite runs
     distribution: str | None  # the package it comes from (`nestor-home` for built-ins), or a satellite's software
@@ -39,7 +40,8 @@ class ComponentOut(BaseModel):
         return cls(
             slot=plugged.family,
             name=plugged.name,
-            adapter=plugged.kind,
+            adapter=plugged.id,
+            model_type=built.type if isinstance(built, Model) else None,
             brand=brand or (component.brand if component else None),
             version=plugged.origin.version if plugged.origin else None,
             distribution=plugged.origin.name if plugged.origin else None,
@@ -57,6 +59,7 @@ class ComponentOut(BaseModel):
             slot="satellite",
             name=satellite.id,
             adapter=satellite.model,
+            model_type=None,
             brand=satellite.brand,
             version=satellite.software.version,
             distribution=satellite.software.name,

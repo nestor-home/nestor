@@ -4,13 +4,11 @@ import pytest
 
 from nestor.adapters.channels.satellites import plugin
 from nestor.adapters.channels.satellites.channel import SatellitesChannel
-from nestor.adapters.channels.satellites.voice.eager import EagerSentenceFlush
-from nestor.adapters.channels.satellites.voice.providers import ElevenLabsSynthesizer, ElevenLabsTranscriber
-from nestor.adapters.speech import elevenlabs
-from nestor.core import Component, ContractError
+from nestor.adapters.models.elevenlabs import speech, transcription
+from nestor.core import ContractError, Model
 from nestor.core.i18n import Locale
 from nestor.modules.channels import Address, Medium
-from nestor.runtime.plugins import ModelType, Services
+from nestor.runtime.plugins import Services
 from nestor.testing.i18n import EchoLocalizer
 
 SPEECH = {"api_key": "xi-test", "voice_id": "GPAQQPp9dazaB2bl4zg9"}
@@ -20,14 +18,14 @@ VOICE = {"transcription": "ears", "speech": "mouth"}
 def services(tmp_path: Path) -> Services:
     bare = Services(tmp_path, localizer=EchoLocalizer(), locale=Locale("fr-FR"))
     models = {
-        "ears": elevenlabs.transcription.create({"api_key": "xi-test", "language": "fr"}, "ears", bare),
-        "mouth": elevenlabs.speech.create(SPEECH, "mouth", bare),
+        "ears": transcription.plugin.create({"api_key": "xi-test", "language": "fr"}, "ears", bare),
+        "mouth": speech.plugin.create(SPEECH, "mouth", bare),
     }
 
-    def model(key: str, wanted: ModelType, path: tuple[str | int, ...]) -> Component:
+    def model(key: str, wanted: type[Model], path: tuple[str | int, ...]) -> Model:
         return models[key]
 
-    return Services(tmp_path, localizer=EchoLocalizer(), locale=Locale("fr-FR"), model=model)
+    return Services(tmp_path, localizer=EchoLocalizer(), locale=Locale("fr-FR"), models=model)
 
 
 def test_without_a_voice_satellites_only_write(tmp_path: Path) -> None:
@@ -58,18 +56,6 @@ def test_with_a_voice_satellites_also_speak_in_its_style(tmp_path: Path) -> None
 def test_an_incomplete_or_unknown_configuration_is_rejected(raw: dict, tmp_path: Path) -> None:
     with pytest.raises(ContractError):
         plugin.create(raw, "satellites", services(tmp_path))
-
-
-def test_the_api_key_is_never_shown() -> None:
-    assert "xi-test" not in repr(elevenlabs.ElevenLabsSpeechSettings.model_validate(SPEECH))
-    assert "xi-test" not in repr(elevenlabs.ElevenLabsTranscriptionSettings.model_validate({"api_key": "xi-test"}))
-
-
-def test_elevenlabs_speech_releases_a_complete_sentence_without_waiting_for_more_text(tmp_path: Path) -> None:
-    ears, mouth = (services(tmp_path).model(key, ModelType.SPEECH, ()) for key in ("ears", "mouth"))
-    assert isinstance(ears, ElevenLabsTranscriber) and isinstance(mouth, ElevenLabsSynthesizer)
-    assert isinstance(mouth.tts(), EagerSentenceFlush)
-    assert ears.stt() is not ears.stt(), "each session gets its own transcription"
 
 
 @pytest.mark.parametrize(("configured", "said"), [({}, "voice-stt-down"), ({"stt_fallback": "Pardon ?"}, "Pardon ?")])

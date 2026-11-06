@@ -1,19 +1,19 @@
-"""Ports of speaker identity: a model that turns a voice into a voiceprint, and where voiceprints are kept. Comparing
-voices, learning them and forgetting them is the core's (`Voices`), the same for every model."""
+"""Ports of speaker identity: the speaker model type, which turns a voice into a voiceprint, and where voiceprints
+are kept. Comparing voices, learning them and forgetting them is the core's (`Voices`), the same for every model."""
 
 from abc import ABC, abstractmethod
 from collections.abc import Collection, Mapping, Sequence
 from datetime import datetime
 
-from nestor.core import Component, PersonId
+from nestor.core import Component, Model, ModelType, PersonId
 from nestor.modules.identity.types import Learned, Profile, Vector, VoiceSpace
 
 
-class VoiceEmbedder(Component, ABC):
+class SpeakerModel(Model, ABC):
     """Turns speech into a voiceprint of its `space`: a model plugged under `models`, chosen on the `speaker-id`
     bench.
 
-    Contract (checked by `nestor.testing.identity.VoiceEmbedderContract`):
+    Contract (checked by `nestor.testing.identity.SpeakerModelContract`):
     - `embed` takes 16-bit little-endian mono PCM at `sample_rate` and returns one vector of `space.dimensions`;
       two utterances of one voice are closer (cosine) than two voices;
     - the work runs off the event loop: a turn waits for it while the transcription runs;
@@ -22,6 +22,7 @@ class VoiceEmbedder(Component, ABC):
     - a model that cannot run raises `ProviderError`, never a vendor exception.
     """
 
+    type = ModelType.SPEAKER
     sample_rate: int = 16000
 
     @property

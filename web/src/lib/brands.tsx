@@ -187,8 +187,6 @@ const ALIASES: Record<string, BrandSlug> = {
   homeassistant: "home-assistant",
   "pollen-robotics": "reachy",
   "reachy-mini": "reachy",
-  "openai-compatible-embeddings": "openai-compatible",
-  "sherpa-onnx-voice": "sherpa-onnx",
   "elevenlabs-transcription": "elevenlabs",
   "elevenlabs-speech": "elevenlabs",
   lmstudio: "lm-studio",

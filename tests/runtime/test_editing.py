@@ -6,12 +6,18 @@ from nestor.runtime.plugins import Registry
 DOCUMENT = {
     "models": {
         "haiku": {
-            "kind": "openai-compatible",
+            "type": "language",
+            "provider": "openai-compatible",
             "base_url": "https://openrouter.ai/api/v1",
             "api_key": "sk-1",
             "model": "h",
         },
-        "local": {"kind": "openai-compatible", "base_url": "http://localhost:11434/v1", "model": "qwen3"},
+        "local": {
+            "type": "language",
+            "provider": "openai-compatible",
+            "base_url": "http://localhost:11434/v1",
+            "model": "qwen3",
+        },
     },
     "channels": [{"kind": "telegram", "name": "famille", "token": "1:a"}],
 }

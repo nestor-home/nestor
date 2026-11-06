@@ -17,9 +17,11 @@ from nestor.core import PersonId
 from nestor.core.i18n import Message
 from nestor.modules.accounts import Account, Role
 from nestor.modules.channels import Medium
+from nestor.modules.cognition import LanguageModel
 from nestor.modules.cognition.tools import Tool, ToolProvider
 from nestor.modules.connectors import AuthKind, SecretField
-from nestor.runtime import AdapterSettings, Family, ModelType, Nestor, Plugin, Registry
+from nestor.modules.identity import SpeakerModel
+from nestor.runtime import AdapterSettings, Family, Nestor, Plugin, Registry
 from nestor.runtime.config import parse_config
 from nestor.testing.channels import InMemoryChannel
 from nestor.testing.cognition import FakeRemote, ScriptedModel, ScriptedRemoteExecutor
@@ -39,7 +41,7 @@ household:
   - {{id: mathis, name: Mathis, accounts: ["memory:user"], reach: "memory:main"}}
   - {{id: mathilde, name: Mathilde}}
   - {{id: lucie, name: Lucie}}
-models: {{main: {{kind: scripted}}}}
+models: {{main: {{type: language, provider: scripted}}}}
 executors: [{{kind: remote, name: hermes}}]
 channels: [{{kind: memory, name: telegram}}]
 presence: {{kind: static}}
@@ -172,8 +174,9 @@ class Harness:
             text += f"initiative: {{quiet_hours: '{quiet_hours}'}}\n"
         if voices:
             text = text.replace(
-                "models: {main: {kind: scripted}}",
-                "models: {main: {kind: scripted}, ears: {kind: tagged-voices}}\nvoices: {embedder: ears}",
+                "models: {main: {type: language, provider: scripted}}",
+                "models: {main: {type: language, provider: scripted}, ears: {type: speaker, provider: tagged-voices}}"
+                "\nvoices: {embedder: ears}",
             )
         if speaker:
             text = text.replace(
@@ -209,14 +212,14 @@ class Harness:
                     "scripted",
                     NoSettings,
                     lambda s, n, x: ScriptedModel(*self.replies),
-                    model_type=ModelType.LANGUAGE,
+                    serves=LanguageModel,
                 ),
                 Plugin(
                     Family.MODEL,
                     "tagged-voices",
                     NoSettings,
                     lambda s, n, x: TaggedVoices(),
-                    model_type=ModelType.SPEAKER,
+                    serves=SpeakerModel,
                 ),
                 Plugin(Family.CHANNEL, "memory", NoSettings, lambda s, name, x: InMemoryChannel(name)),
                 Plugin(Family.CHANNEL, "speaker", NoSettings, lambda s, name, x: Speaker(name)),

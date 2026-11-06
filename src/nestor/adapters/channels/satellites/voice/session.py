@@ -16,12 +16,13 @@ from pipecat.transports.base_transport import BaseTransport
 from pipecat.workers.runner import WorkerRunner
 
 from nestor.adapters.channels.satellites.voice.bridge import AssistantBridge, PlayedText
-from nestor.adapters.channels.satellites.voice.eager import ResponseWatcher
 from nestor.adapters.channels.satellites.voice.embodiment import Embodiment
 from nestor.adapters.channels.satellites.voice.listener import VoiceListener
-from nestor.adapters.channels.satellites.voice.providers import IN_SAMPLE_RATE, Speech
 from nestor.adapters.channels.satellites.voice.resilience import Injector, Outage, SpeechFallbacks
+from nestor.adapters.channels.satellites.voice.speech import Speech
 from nestor.adapters.channels.satellites.voice.turns import TurnSettings, user_turns
+from nestor.adapters.models.pipecat import SAMPLE_RATE
+from nestor.adapters.models.pipecat.eager import ResponseWatcher
 from nestor.modules.behavior import Body
 from nestor.modules.channels import Address, Assistant
 
@@ -82,7 +83,7 @@ class VoiceSession:
         self._worker = PipelineWorker(
             pipeline,
             params=PipelineParams(
-                audio_in_sample_rate=IN_SAMPLE_RATE, audio_out_sample_rate=OUT_SAMPLE_RATE, enable_metrics=True
+                audio_in_sample_rate=SAMPLE_RATE, audio_out_sample_rate=OUT_SAMPLE_RATE, enable_metrics=True
             ),
             observers=[latency, fallbacks, *embodiment],
             idle_timeout_secs=None,

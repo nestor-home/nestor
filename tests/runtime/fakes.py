@@ -1,7 +1,9 @@
 """Plugins backed by the test kit's doubles: Nestor assembled without any provider."""
 
 from nestor.modules.channels import Assistant
-from nestor.runtime.plugins import AdapterSettings, Family, ModelType, Plugin, Registry, Services
+from nestor.modules.cognition import LanguageModel
+from nestor.modules.cognition.embedding import EmbeddingModel
+from nestor.runtime.plugins import AdapterSettings, Family, Plugin, Registry, Services
 from nestor.testing.channels import InMemoryChannel
 from nestor.testing.cognition import ConceptEmbedder, FakeRemote, ScriptedModel, ScriptedRemoteExecutor
 from nestor.testing.cognition.model import Reply
@@ -55,15 +57,13 @@ class Fakes:
         flaky = Plugin(Family.CHANNEL, "flaky", FlakySettings, self._flaky)
         crashing = Plugin(Family.CHANNEL, "crashing", NoSettings, lambda s, name, x: CrashingChannel(name))
         inbox = Plugin(Family.INBOUND, "inbox", NoSettings, lambda s, name, x: QueuedSource(self.inbox))
-        concepts = Plugin(
-            Family.MODEL, "concepts", NoSettings, lambda s, n, x: self.embedder, model_type=ModelType.EMBEDDING
-        )
+        concepts = Plugin(Family.MODEL, "concepts", NoSettings, lambda s, n, x: self.embedder, serves=EmbeddingModel)
         return Registry(
             [self.model_plugin(), self.channel_plugin(), self.executor_plugin(), crashing, flaky, inbox, concepts]
         )
 
     def model_plugin(self) -> Plugin[ModelSettings]:
-        return Plugin(Family.MODEL, "scripted", ModelSettings, self._model, model_type=ModelType.LANGUAGE)
+        return Plugin(Family.MODEL, "scripted", ModelSettings, self._model, serves=LanguageModel)
 
     def channel_plugin(self) -> Plugin[NoSettings]:
         return Plugin(Family.CHANNEL, "memory", NoSettings, self._channel)

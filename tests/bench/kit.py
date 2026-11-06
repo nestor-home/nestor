@@ -17,9 +17,9 @@ from nestor.bench.variants import Variant, load_variant
 from nestor.core import ProviderError
 from nestor.core.i18n import Message
 from nestor.modules.cognition import (
-    ConversationModel,
     Finished,
     FinishReason,
+    LanguageModel,
     ModelOutput,
     ModelRequest,
     TextDelta,
@@ -28,7 +28,7 @@ from nestor.modules.cognition import (
 from nestor.modules.cognition import (
     Message as Said,
 )
-from nestor.runtime.plugins import AdapterSettings, Family, ModelType, Plugin, Registry, Services
+from nestor.runtime.plugins import AdapterSettings, Family, Plugin, Registry, Services
 from nestor.testing.i18n import EchoLocalizer
 
 CASES = [
@@ -38,7 +38,7 @@ CASES = [
 ]
 
 
-class Oracle(ConversationModel):
+class Oracle(LanguageModel):
     """Answers from a table, reports usage and the model it says it is; counts the requests it got."""
 
     name = "oracle"
@@ -74,7 +74,7 @@ def _build(settings: OracleSettings, name: str, services: Services) -> Oracle:
     return oracle
 
 
-ORACLE = Plugin(Family.MODEL, "oracle", OracleSettings, _build, model_type=ModelType.LANGUAGE)
+ORACLE = Plugin(Family.MODEL, "oracle", OracleSettings, _build, serves=LanguageModel)
 
 
 class QuizKnobs(Knobs):
@@ -142,7 +142,8 @@ def write_variant(folder: Path, name: str, text: str) -> Path:
 
 
 ALL_RIGHT = (
-    "models: {m: {kind: oracle, replies: {capital of France: Paris, two plus two: '4', colour of the sky: blue}}}\n"
+    "models: {m: {type: language, provider: oracle, "
+    "replies: {capital of France: Paris, two plus two: '4', colour of the sky: blue}}}\n"
 )
 
 

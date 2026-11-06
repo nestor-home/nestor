@@ -43,7 +43,8 @@ household:
 
 models:                            # any names: the roles refer to them
   main:
-    kind: openai-compatible
+    type: language
+    provider: openai-compatible
     base_url: {base_url}
     api_key: ${{MODEL_API_KEY}}      # may stay empty for a local server that needs no key
     model: {model}
@@ -56,11 +57,13 @@ channels:
 """
 
 SPEECH_MODELS = """  ears:                            # hears people speak to a satellite
-    kind: elevenlabs-transcription
+    type: transcription
+    provider: elevenlabs
     api_key: ${{ELEVENLABS_API_KEY}}
     language: {locale}
   voice:                           # the assistant's voice
-    kind: elevenlabs-speech
+    type: speech
+    provider: elevenlabs
     api_key: ${{ELEVENLABS_API_KEY}}
     voice_id: GPAQQPp9dazaB2bl4zg9
 """
@@ -75,7 +78,7 @@ VOICE = """  - kind: satellites               # devices people type on or talk t
 TEXT_ONLY = """  - kind: satellites               # devices people type on: `nestor satellites add`
     host: 0.0.0.0
     # Their voice needs `pip install '{requirement}'`, a transcription and a speech model under models
-    # (e.g. kind: elevenlabs-transcription and kind: elevenlabs-speech), then:
+    # (e.g. ElevenLabs: {{type: transcription, provider: elevenlabs}}, {{type: speech, provider: elevenlabs}}), then:
     # voice: {{transcription: ears, speech: voice}}
   - kind: telegram
     token: ${{TELEGRAM_BOT_TOKEN}}   # from @BotFather
@@ -100,7 +103,7 @@ FOOTER = """
 #         arguments: *doors
 
 # voices:                           # who speaks to a satellite, from their voice: pip install 'nestor-home[voice-id]'
-#   embedder: voices               # with, under models:  voices: {{kind: sherpa-onnx-voice, model: titanet-small}}
+#   embedder: voices               # under models: {{type: speaker, provider: sherpa-onnx, model: titanet-small}}
 
 admin:                             # who signs in is in the database: `nestor accounts create-owner`
   host: 0.0.0.0

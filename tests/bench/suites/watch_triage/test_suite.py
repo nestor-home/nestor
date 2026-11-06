@@ -92,7 +92,12 @@ async def test_every_algorithm_runs_end_to_end_on_the_fake_model_the_same_way_tw
     for algorithm in ("batch", "per-watch"):
         path = tmp_path / f"{algorithm}.yaml"
         path.write_text(
-            json.dumps({"models": {"fake": {"kind": "watch-triage-fake"}}, "bench": {"algorithm": algorithm}})
+            json.dumps(
+                {
+                    "models": {"fake": {"type": "language", "provider": "watch-triage-fake"}},
+                    "bench": {"algorithm": algorithm},
+                }
+            )
         )
         variants.append(load_variant(path, suite, registry, EchoLocalizer(), environ={}))
     dataset, info = read_dataset(suite, suite.dataset())

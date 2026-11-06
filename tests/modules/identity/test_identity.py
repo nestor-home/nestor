@@ -19,8 +19,8 @@ from nestor.modules.identity import (
 from nestor.modules.journal import Journal
 from nestor.testing.identity import (
     MemoryVoiceprintStore,
+    SpeakerModelContract,
     TaggedVoices,
-    VoiceEmbedderContract,
     VoiceprintStoreContract,
     tagged,
 )
@@ -29,7 +29,7 @@ from nestor.testing.journal import MemoryEventLog
 LEA, HUGO = PersonId("lea"), PersonId("hugo")
 
 
-class TestTaggedVoices(VoiceEmbedderContract):
+class TestTaggedVoices(SpeakerModelContract):
     def embedder(self) -> TaggedVoices:
         return TaggedVoices()
 

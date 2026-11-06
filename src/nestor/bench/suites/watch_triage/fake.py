@@ -2,7 +2,7 @@
 try). It is a crude word-overlap judge, not a baseline worth beating: a watch matches when one of its
 distinctive words is in the item, and an item is urgent when it says so.
 
-    models: {fake: {kind: watch-triage-fake}}
+    models: {fake: {type: language, provider: watch-triage-fake}}
 """
 
 import json
@@ -11,16 +11,16 @@ import unicodedata
 from collections.abc import AsyncGenerator
 
 from nestor.modules.cognition import (
-    ConversationModel,
     Finished,
     FinishReason,
+    LanguageModel,
     ModelOutput,
     ModelRequest,
     Role,
     TextDelta,
     Usage,
 )
-from nestor.runtime.plugins import AdapterSettings, Family, ModelType, Plugin, Services
+from nestor.runtime.plugins import AdapterSettings, Family, Plugin, Services
 
 SERVED = "fake/word-overlap-1"
 _LISTED = re.compile(r'^- \[(?P<id>[^\]]+)\] "(?P<what>.*)"$', re.MULTILINE)
@@ -45,7 +45,7 @@ def _judge(what: str, item: str) -> bool:
     return any(word in item for word in _words(what))
 
 
-class FakeTriageModel(ConversationModel):
+class FakeTriageModel(LanguageModel):
     name = "watch-triage-fake"
 
     async def stream(self, request: ModelRequest) -> AsyncGenerator[ModelOutput]:
@@ -73,4 +73,4 @@ def _build(settings: FakeSettings, name: str, services: Services) -> FakeTriageM
     return FakeTriageModel()
 
 
-plugin = Plugin(Family.MODEL, "watch-triage-fake", FakeSettings, _build, model_type=ModelType.LANGUAGE)
+plugin = Plugin(Family.MODEL, "watch-triage-fake", FakeSettings, _build, serves=LanguageModel)

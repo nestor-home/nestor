@@ -17,7 +17,7 @@ import yaml
 from dotenv import dotenv_values
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, ValidationInfo, field_validator
 
-from nestor.core import NestorError, PersonId
+from nestor.core import ModelType, NestorError, PersonId
 from nestor.modules.channels import Address
 from nestor.modules.cognition.tools.results import RESULT_CHARS
 from nestor.modules.conversation import AgentSettings
@@ -25,7 +25,6 @@ from nestor.modules.household import Account, Person
 from nestor.modules.identity import VoiceSettings
 from nestor.modules.initiative import QuietHours
 from nestor.modules.memory.recall import RecallSettings, Strategy
-from nestor.runtime.plugins import ModelType
 
 _MODEL_KEY = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]*")
 _VARIABLE = re.compile(r"\$\{(?:(?P<secret>secret):)?(?P<name>[A-Za-z_][A-Za-z0-9_.-]*)\}")
@@ -168,6 +167,26 @@ class ComponentConfig(BaseModel):
     model_config = ConfigDict(extra="allow", frozen=True)
     kind: str
 
+    @property
+    def plugin(self) -> str:
+        """The id of the plugin it picks (`Plugin.id`)."""
+        return self.kind
+
+    def settings(self) -> dict[str, Any]:
+        return dict(self.model_extra or {})
+
+
+class ModelConfig(BaseModel):
+    """A model of `models`: its `type` and its `provider` pick the plugin; the other keys are its settings."""
+
+    model_config = ConfigDict(extra="allow", frozen=True)
+    type: ModelType
+    provider: str
+
+    @property
+    def plugin(self) -> str:
+        return f"{self.provider}-{self.type}"
+
     def settings(self) -> dict[str, Any]:
         return dict(self.model_extra or {})
 
@@ -270,7 +289,7 @@ class NestorConfig(Section):
     # the models it may use, under names the household chooses; the roles below refer to them by name. A
     # model answers (`openai-compatible`), embeds text (`openai-compatible-embeddings`) or voices
     # (`sherpa-onnx-voice`): each role checks which
-    models: dict[str, ComponentConfig] = Field(min_length=1)
+    models: dict[str, ModelConfig] = Field(min_length=1)
     agent: AgentConfig = Field(default=AgentConfig(), validate_default=True)
     watches: WatchesConfig = WatchesConfig()
     memory: MemoryConfig = MemoryConfig()
@@ -288,7 +307,7 @@ class NestorConfig(Section):
 
     @field_validator("models")
     @classmethod
-    def _model_keys(cls, value: dict[str, ComponentConfig]) -> dict[str, ComponentConfig]:
+    def _model_keys(cls, value: dict[str, ModelConfig]) -> dict[str, ModelConfig]:
         for key in value:
             if not _MODEL_KEY.fullmatch(key):
                 raise ValueError(f"{key!r} cannot name a model: letters, digits, `_`, `.` and `-`, starting with one")
@@ -341,9 +360,9 @@ class NestorConfig(Section):
         }
 
 
-def _known(info: ValidationInfo, references: Mapping[str, str | None]) -> Mapping[str, ComponentConfig]:
+def _known(info: ValidationInfo, references: Mapping[str, str | None]) -> Mapping[str, ModelConfig]:
     """The models declared before, once each reference is checked to name one of them."""
-    models: Mapping[str, ComponentConfig] = info.data.get("models") or {}
+    models: Mapping[str, ModelConfig] = info.data.get("models") or {}
     for field, key in references.items():
         if key is not None and models and key not in models:
             raise ValueError(f"{field}: no model named {key!r} in models ({', '.join(models)})")

@@ -1478,6 +1478,7 @@ export interface components {
             name: string;
             /** Adapter */
             adapter: string;
+            model_type: components["schemas"]["ModelType"] | null;
             /** Brand */
             brand: string | null;
             /** Version */
@@ -2077,7 +2078,6 @@ export interface components {
         };
         /**
          * ModelType
-         * @description What a model plugin serves: roles and forms only offer the models of the type they need.
          * @enum {string}
          */
         ModelType: "language" | "embedding" | "speaker" | "transcription" | "speech";
@@ -2423,6 +2423,8 @@ export interface components {
             required: boolean;
             /** Title */
             title: string;
+            /** Picks */
+            picks: string[];
             /** Kinds */
             kinds: {
                 [key: string]: {

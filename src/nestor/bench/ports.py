@@ -19,9 +19,9 @@ from pydantic import BaseModel, ConfigDict
 
 from nestor.bench.types import Case, CaseResult, Dataset, Startup, Summary
 from nestor.core import ContractError
-from nestor.modules.cognition import ConversationModel
-from nestor.modules.cognition.embedding import Embedder
-from nestor.modules.identity import VoiceEmbedder
+from nestor.modules.cognition import LanguageModel
+from nestor.modules.cognition.embedding import EmbeddingModel
+from nestor.modules.identity import SpeakerModel
 from nestor.runtime.config import NestorConfig
 from nestor.runtime.plugins import Plugin
 
@@ -40,14 +40,14 @@ class Trial[K: Knobs]:
     variant: str
     knobs: K
     config: NestorConfig  # the variant's fragment over the defaults of a configuration
-    models: Mapping[str, ConversationModel]  # by role, measured and cached by the engine
+    models: Mapping[str, LanguageModel]  # by role, measured and cached by the engine
     repetition: int
     seed: int
-    embedder: Embedder | None = None  # the variant's `memory.embedder`, started, when the suite asks for it
-    voices: VoiceEmbedder | None = None  # the variant's `voices.embedder`, started, when the suite asks for it
+    embedder: EmbeddingModel | None = None  # the variant's `memory.embedder`, started, when the suite asks for it
+    voices: SpeakerModel | None = None  # the variant's `voices.embedder`, started, when the suite asks for it
     voices_started: Startup | None = None  # how starting it went: a voice model is measured, never replayed
 
-    def model(self, role: str) -> ConversationModel:
+    def model(self, role: str) -> LanguageModel:
         try:
             return self.models[role]
         except KeyError:

@@ -11,14 +11,13 @@ import httpx
 import pytest
 import respx
 
-from nestor.adapters.voices import CATALOGUE, Catalogued, SherpaOnnxVoice, plugin
-from nestor.adapters.voices.sherpa_onnx import FOLDER, RELEASE
+from nestor.adapters.models.sherpa_onnx.speaker import CATALOGUE, FOLDER, RELEASE, Catalogued, SherpaOnnxSpeaker, plugin
 from nestor.core import ContractError, ProviderError
 from nestor.core.i18n import Locale
-from nestor.modules.identity import VoiceEmbedder
+from nestor.modules.identity import SpeakerModel
 from nestor.runtime.plugins import Services
 from nestor.testing.i18n import EchoLocalizer
-from nestor.testing.identity import VoiceEmbedderContract
+from nestor.testing.identity import SpeakerModelContract
 
 NOT_A_MODEL = b"not an onnx model"
 TINY = Catalogued(
@@ -51,7 +50,7 @@ def releases() -> Iterator[respx.MockRouter]:
 
 def test_a_catalogued_model_brings_its_space_and_calibrated_threshold(tmp_path: Path) -> None:
     voices = plugin.create({"model": "titanet-small"}, "voice", services(tmp_path))
-    assert isinstance(voices, SherpaOnnxVoice)
+    assert isinstance(voices, SherpaOnnxSpeaker)
     model = CATALOGUE["titanet-small"]
     assert voices.space.dimensions == model.dimensions and voices.space.model == "titanet-small"
     assert voices.threshold == model.threshold
@@ -64,13 +63,13 @@ def test_a_model_file_of_ones_own_needs_its_threshold(tmp_path: Path) -> None:
     with pytest.raises(ContractError, match="threshold"):
         plugin.create({"model": str(tmp_path / "mine.onnx")}, "voice", services(tmp_path))
     with pytest.raises(ContractError, match="threshold"):
-        SherpaOnnxVoice(model="mine.onnx", data_dir=tmp_path)
+        SherpaOnnxSpeaker(model="mine.onnx", data_dir=tmp_path)
     with pytest.raises(ContractError, match="threads"):
         plugin.create({"model": "titanet-small", "threads": 0}, "voice", services(tmp_path))
 
 
 async def test_a_model_file_that_is_missing_or_not_a_model_fails_to_start(tmp_path: Path) -> None:
-    missing = SherpaOnnxVoice(model=str(tmp_path / "mine.onnx"), data_dir=tmp_path, threshold=0.5)
+    missing = SherpaOnnxSpeaker(model=str(tmp_path / "mine.onnx"), data_dir=tmp_path, threshold=0.5)
     with pytest.raises(ContractError, match="once it is loaded"):
         _ = missing.space
     with pytest.raises(ProviderError, match="no model file") as raised:
@@ -83,14 +82,14 @@ async def test_a_model_file_that_is_missing_or_not_a_model_fails_to_start(tmp_pa
 
 async def test_a_voiceprint_before_start_is_a_mistake(tmp_path: Path) -> None:
     with pytest.raises(ContractError, match="before start"):
-        await SherpaOnnxVoice(model="titanet-small", data_dir=tmp_path).embed(b"\0\0" * 16000)
+        await SherpaOnnxSpeaker(model="titanet-small", data_dir=tmp_path).embed(b"\0\0" * 16000)
 
 
 async def test_a_catalogued_model_is_downloaded_once_and_checked(
     tmp_path: Path, tiny: Catalogued, releases: respx.MockRouter
 ) -> None:
     route = releases.get(RELEASE + tiny.file).respond(200, content=NOT_A_MODEL)
-    voices = SherpaOnnxVoice(model="tiny", data_dir=tmp_path)
+    voices = SherpaOnnxSpeaker(model="tiny", data_dir=tmp_path)
     with pytest.raises(ProviderError, match=r"cannot load tiny\.onnx"):  # the right file, but no real model
         await voices.start()
     assert (tmp_path / FOLDER / tiny.file).read_bytes() == NOT_A_MODEL
@@ -104,7 +103,7 @@ async def test_a_download_that_does_not_match_its_sha256_is_never_kept(
 ) -> None:
     releases.get(RELEASE + tiny.file).respond(200, content=b"tampered")
     with pytest.raises(ProviderError, match="sha256") as raised:
-        await SherpaOnnxVoice(model="tiny", data_dir=tmp_path).start()
+        await SherpaOnnxSpeaker(model="tiny", data_dir=tmp_path).start()
     assert not raised.value.transient
     assert list((tmp_path / FOLDER).iterdir()) == []
 
@@ -123,7 +122,7 @@ async def test_a_failed_download_is_a_transient_provider_error(
     else:
         route.mock(return_value=answer)
     with pytest.raises(ProviderError) as raised:
-        await SherpaOnnxVoice(model="tiny", data_dir=tmp_path).start()
+        await SherpaOnnxSpeaker(model="tiny", data_dir=tmp_path).start()
     assert raised.value.transient
     assert list((tmp_path / FOLDER).iterdir()) == []
 
@@ -146,9 +145,9 @@ def _recording(name: str) -> bytes:
 
 
 @pytest.mark.live
-class TestSherpaOnnxVoiceLive(VoiceEmbedderContract):
-    def embedder(self) -> VoiceEmbedder:
-        return SherpaOnnxVoice(model="titanet-small", data_dir=CACHE)
+class TestSherpaOnnxVoiceLive(SpeakerModelContract):
+    def embedder(self) -> SpeakerModel:
+        return SherpaOnnxSpeaker(model="titanet-small", data_dir=CACHE)
 
     def speech(self, speaker: str, take: int) -> bytes:
         return _recording(SAMPLES[speaker][take])

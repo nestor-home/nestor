@@ -21,7 +21,7 @@ import nestor.modules
 from nestor.adapters.i18n import FluentLocalizer, catalogue_dirs
 from nestor.admin.api.v1.errors import ErrorCode
 from nestor.admin.presentation import EventDescriber, Kind, Phrasebook
-from nestor.core import Event, PersonId
+from nestor.core import Event, ModelType, PersonId
 from nestor.core.i18n import Locale, Message
 from nestor.modules.accounts import InvitationStatus, Role
 from nestor.modules.cognition.delegation.types import TaskStatus
@@ -32,7 +32,6 @@ from nestor.modules.journal import Entry
 from nestor.runtime import Registry
 from nestor.runtime.config import ProblemCode
 from nestor.runtime.editing import ConfigSchema
-from nestor.runtime.plugins import ModelType
 
 REGISTRY = Registry.installed()
 LOCALIZER = FluentLocalizer(catalogue_dirs(["nestor", *REGISTRY.packages()]))

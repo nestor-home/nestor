@@ -22,7 +22,8 @@ household:
     reach: telegram:42
 models:
   haiku:
-    kind: openai-compatible
+    type: language
+    provider: openai-compatible
     api_key: ${OPENROUTER_API_KEY}
     model: anthropic/claude-haiku-5.5
 channels:
@@ -38,13 +39,15 @@ def test_a_valid_file_gives_people_adapters_and_secrets() -> None:
     person = config.household[0].to_person()
     assert (person.name, person.reach) == ("Mathis", Address("telegram", "42"))
     assert [str(a) for a in person.accounts] == ["telegram:42", "voice:salon"]
-    assert config.models["haiku"].kind == "openai-compatible"
+    assert (config.models["haiku"].type, config.models["haiku"].provider) == ("language", "openai-compatible")
     assert config.models["haiku"].settings() == {"api_key": "sk-test", "model": "anthropic/claude-haiku-5.5"}
     assert config.channels[0].settings() == {"token": "123:abc"}
 
 
 TWO_MODELS = VALID.replace(
-    "channels:", "  local: {kind: openai-compatible, base_url: http://localhost:11434/v1, model: qwen3}\nchannels:"
+    "channels:",
+    "  local: {type: language, provider: openai-compatible, base_url: http://localhost:11434/v1, model: qwen3}"
+    "\nchannels:",
 )
 
 

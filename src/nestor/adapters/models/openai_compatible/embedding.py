@@ -1,4 +1,4 @@
-"""Embedder over any OpenAI-compatible `/embeddings` endpoint (OpenRouter, OpenAI, Mistral, Ollama, vLLM…).
+"""EmbeddingModel over any OpenAI-compatible `/embeddings` endpoint (OpenRouter, OpenAI, Mistral, Ollama, vLLM…).
 
 Speaks the wire protocol with httpx, no vendor SDK. The profile says everything about the model: its name, the
 dimension of its vectors, the prefixes it expects before a question or a document (`query_prefix: "query: "`
@@ -17,12 +17,12 @@ from pydantic import Field, PositiveFloat, PositiveInt
 
 from nestor.adapters.models.common import MAX_DETAIL, EndpointSettings, brand, detail, provider_error, retryable
 from nestor.core import ContractError, ProviderError
-from nestor.modules.cognition.embedding import Embedder, EmbeddingSpace, Vector
-from nestor.runtime.plugins import Family, ModelType, Plugin, Services
+from nestor.modules.cognition.embedding import EmbeddingModel, EmbeddingSpace, Vector
+from nestor.runtime.plugins import Family, Plugin, Services
 
 
-class OpenAICompatibleEmbedder(Embedder):
-    name = "openai-compatible-embeddings"
+class OpenAICompatibleEmbedding(EmbeddingModel):
+    name = "openai-compatible"
 
     def __init__(
         self,
@@ -118,7 +118,7 @@ class OpenAICompatibleEmbedder(Embedder):
         return provider_error(self._provider, self._api_key, message, transient=transient)
 
 
-class OpenAICompatibleEmbedderSettings(EndpointSettings):
+class OpenAICompatibleEmbeddingSettings(EndpointSettings):
     """An embedding model's profile."""
 
     model: str
@@ -132,8 +132,8 @@ class OpenAICompatibleEmbedderSettings(EndpointSettings):
     read_timeout_s: PositiveFloat = Field(default=30.0, json_schema_extra={"advanced": True})
 
 
-def build(settings: OpenAICompatibleEmbedderSettings, name: str, services: Services) -> OpenAICompatibleEmbedder:
-    return OpenAICompatibleEmbedder(
+def build(settings: OpenAICompatibleEmbeddingSettings, name: str, services: Services) -> OpenAICompatibleEmbedding:
+    return OpenAICompatibleEmbedding(
         base_url=settings.base_url,
         api_key=settings.api_key.get_secret_value() if settings.api_key else None,
         model=settings.model,
@@ -151,8 +151,8 @@ def build(settings: OpenAICompatibleEmbedderSettings, name: str, services: Servi
 
 plugin = Plugin(
     Family.MODEL,
-    "openai-compatible-embeddings",
-    OpenAICompatibleEmbedderSettings,
+    "openai-compatible",
+    OpenAICompatibleEmbeddingSettings,
     build,
-    model_type=ModelType.EMBEDDING,
+    serves=EmbeddingModel,
 )

@@ -18,8 +18,8 @@ from pipecat.transports.smallwebrtc.transport import SmallWebRTCTransport
 
 from nestor.adapters.channels.satellites.gateway import AudioOffers
 from nestor.adapters.channels.satellites.link import RemoteBody, SatelliteLink
-from nestor.adapters.channels.satellites.voice.providers import Speech
 from nestor.adapters.channels.satellites.voice.session import SessionSettings, VoiceSession
+from nestor.adapters.channels.satellites.voice.speech import Speech
 from nestor.adapters.channels.satellites.voice.webrtc import PeerConnections
 from nestor.core import ContractError, ProviderError
 from nestor.modules.channels import Address, Assistant

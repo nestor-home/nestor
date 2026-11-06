@@ -67,10 +67,15 @@ class Slot:
     family: Family
     shape: Shape
     required: bool
+    picks: tuple[str, ...] = ("kind",)  # the keys of an entry that pick its plugin, whose values make its id
+
+    def plugin(self, entry: Mapping[str, Any]) -> str:
+        """The id of the plugin an entry picks (`Plugin.id`): `telegram`, `elevenlabs-speech`."""
+        return "-".join(str(entry.get(key)) for key in self.picks)
 
 
 SLOTS = (
-    Slot("models", Family.MODEL, Shape.NAMED, required=True),
+    Slot("models", Family.MODEL, Shape.NAMED, required=True, picks=("provider", "type")),
     Slot("channels", Family.CHANNEL, Shape.LIST, required=True),
     Slot("executors", Family.EXECUTOR, Shape.LIST, required=False),
     Slot("tools", Family.TOOLS, Shape.LIST, required=False),
@@ -182,11 +187,12 @@ class ConfigSchema:
                 "family": slot.family.value,
                 "shape": slot.shape.value,
                 "required": slot.required,
-                "kinds": {kind: self.kind(slot, kind) for kind in self.registry.kinds(slot.family)},
-                # what each kind of the model slot serves: forms group them and offer each role its type
+                "picks": list(slot.picks),
+                "kinds": {kind: self.kind(slot, kind) for kind in self.registry.ids(slot.family)},
+                # what each plugin of the model slot serves: forms group them and offer each role its type
                 "model_types": {
                     kind: served.value
-                    for kind in self.registry.kinds(slot.family)
+                    for kind in self.registry.ids(slot.family)
                     if (served := self.registry.get(slot.family, kind).model_type) is not None
                 },
             }
@@ -194,16 +200,19 @@ class ConfigSchema:
         }
 
     def kind(self, slot: Slot, kind: str) -> dict[str, Any]:
-        """A plugin's settings as a slot holds them: with its `kind`, and a `name` unless its key is one."""
-        schema = self.registry.get(slot.family, kind).settings.model_json_schema()
+        """A plugin's settings as a slot holds them: with what picks it (its `kind`, or a model's `provider` and
+        `type`), and a `name` unless its key is one."""
+        plugin = self.registry.get(slot.family, kind)
+        schema = plugin.settings.model_json_schema()
         schema.setdefault("properties", {})
+        values = {"kind": plugin.kind, "provider": plugin.kind, "type": plugin.model_type}
         name = {"name": {"type": "string", "description": "the instance's name; the kind by default"}}
         schema["properties"] = {
-            "kind": {"const": kind, "type": "string"},
+            **{key: {"const": values[key], "type": "string"} for key in slot.picks},
             **(name if slot.shape is not Shape.NAMED else {}),
             **schema["properties"],
         }
-        schema["required"] = ["kind", *schema.get("required", [])]
+        schema["required"] = [*slot.picks, *schema.get("required", [])]
         return annotate(schema, f"{slot.family.value}-{kind}")
 
     def secrets_of(self, document: Mapping[str, Any]) -> dict[Path_, str]:
@@ -212,13 +221,13 @@ class ConfigSchema:
         found: dict[Path_, str] = {}
         for slot, index, entry in entries(document):
             try:
-                model = self.registry.get(slot.family, str(entry.get("kind"))).settings
+                model = self.registry.get(slot.family, slot.plugin(entry)).settings
             except NestorError:
                 continue
             where: Path_ = (slot.key,) if slot.shape is Shape.ONE else (slot.key, index)
             label = {
                 Shape.ONE: [slot.key],
-                Shape.LIST: [slot.key, str(entry.get("name") or entry.get("kind"))],
+                Shape.LIST: [slot.key, str(entry.get("name") or slot.plugin(entry))],
                 Shape.NAMED: [slot.key, str(index)],
             }[slot.shape]
             for path, shape in secret_fields(model).items():
@@ -472,11 +481,11 @@ class ConfigEditor:
         for slot, index, entry in entries(resolved):
             where: Path_ = (slot.key,) if slot.shape is Shape.ONE else (slot.key, index)
             try:
-                plugin = self.registry.get(slot.family, str(entry.get("kind")))
+                plugin = self.registry.get(slot.family, slot.plugin(entry))
             except NestorError:
-                problems.append(Problem((*where, "kind"), ProblemCode.UNKNOWN_KIND, str(entry.get("kind"))))
+                problems.append(Problem((*where, slot.picks[0]), ProblemCode.UNKNOWN_KIND, slot.plugin(entry)))
                 continue
-            own = ("kind",) if slot.shape is Shape.NAMED else ("kind", "name")
+            own = slot.picks if slot.shape is Shape.NAMED else (*slot.picks, "name")
             settings = {k: v for k, v in entry.items() if k not in own}
             try:
                 plugin.settings.model_validate(settings)
