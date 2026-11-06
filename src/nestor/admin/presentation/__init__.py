@@ -3,7 +3,6 @@ No sentence lives here: they are in `nestor/locales/*/*.ftl`."""
 
 from nestor.admin.presentation.events import (
     CATEGORIES,
-    Category,
     EventDescriber,
     Kind,
     Line,
@@ -15,7 +14,6 @@ from nestor.admin.presentation.phrasebook import Phrasebook, capability_message
 
 __all__ = [
     "CATEGORIES",
-    "Category",
     "EventDescriber",
     "Kind",
     "Line",

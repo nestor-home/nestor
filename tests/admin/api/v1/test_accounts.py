@@ -29,7 +29,7 @@ async def test_an_invited_person_opens_their_account_and_is_signed_in(tmp_path: 
 
         guest = await admin.api(None)
         preview = (await guest.post("/api/v1/invitations/inspect", {"token": token})).json()
-        assert preview["role_label"] == "membre" and preview["person"]["id"] == "mathilde"
+        assert preview["role"] == "member" and preview["person"]["id"] == "mathilde"
         weak = await guest.post("/api/v1/invitations/accept", {"token": token, "login": "mathilde", "password": "x"})
         assert weak.json()["error"]["code"] == "weak_password"
         bad = await guest.post(

@@ -1,16 +1,27 @@
-"""The API's OpenAPI document: committed for the front, which generates its client from it."""
+"""What the front builds on: the API's OpenAPI document, from which it generates its client, and the answers its
+mock server gives as this version would. Both are committed and must match the server."""
 
 import json
 from pathlib import Path
 
-from nestor.admin import openapi_text
+from nestor.adapters.i18n import FluentLocalizer, catalogue_dirs
+from nestor.admin import mock_answers, openapi_text
 from nestor.cli import main
+from nestor.runtime import Registry
 
-COMMITTED = Path(__file__).resolve().parents[4] / "web" / "openapi.json"
+WEB = Path(__file__).resolve().parents[4] / "web"
+COMMITTED = WEB / "openapi.json"
+MOCKS = WEB / "src" / "mocks" / "server"
 
 
 def test_the_committed_document_is_up_to_date() -> None:
     assert COMMITTED.read_text() == openapi_text(), "run `nestor admin openapi` and commit web/openapi.json"
+
+
+def test_the_mock_server_answers_as_this_version_does() -> None:
+    registry = Registry.installed()
+    answers = mock_answers(registry, FluentLocalizer(catalogue_dirs(["nestor", *registry.packages()])))
+    assert {p.name: p.read_text() for p in MOCKS.iterdir()} == answers, "run `nestor admin mocks` and commit them"
 
 
 def test_every_operation_has_a_unique_camel_case_id_and_documents_its_errors() -> None:

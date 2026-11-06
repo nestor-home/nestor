@@ -1,7 +1,7 @@
 """What is plugged in: every configured adapter and paired satellite, its brand, version and health."""
 
 from datetime import date
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
@@ -19,6 +19,7 @@ from nestor.modules.accounts import Scope
 from nestor.modules.connectors import Connector
 from nestor.modules.system import ChangeKind, InstallKind, Release
 from nestor.runtime import Plugged
+from nestor.runtime.plugins import Family
 
 router = APIRouter(tags=["system"])
 Reader = Annotated[Caller, Depends(allowed(Scope.SYSTEM_READ))]
@@ -26,7 +27,7 @@ Restarter = Annotated[Caller, Depends(allowed(Scope.CONFIG_MANAGE, local=True))]
 
 
 class ComponentOut(BaseModel):
-    slot: str  # model, executor, channel, presence, tools, inbound, connector, satellite
+    slot: Family | Literal["satellite"]  # a plugin's family, or a paired satellite
     name: str  # the configured instance (`telegram`, `triage-model`), or a satellite's device id
     adapter: str  # the plugin's kind (`openai-compatible`), or a satellite's model
     brand: str | None  # the vendor or protocol, as a slug ("openrouter", "homeassistant")
@@ -87,7 +88,7 @@ def _component(plugged: Plugged, words: Phrasebook) -> ComponentOut:
     brand = built.info.brand if isinstance(built, Connector) else None
     detail = component.health_detail() if component else None
     return ComponentOut(
-        slot=plugged.family.value,
+        slot=plugged.family,
         name=plugged.name,
         adapter=plugged.kind,
         brand=brand or (component.brand if component else None),

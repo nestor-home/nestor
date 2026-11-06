@@ -176,7 +176,7 @@ async def test_each_facet_is_counted_ignoring_its_own_selection(tmp_path: Path) 
         people = {f["key"]: f["count"] for f in facets["people"]}
         assert people == {"mathis": 2, "mathilde": 1}, "people counted among conversations, whoever they are"
         assert facets["channels"] == [{"key": "telegram", "label": "telegram", "count": 2}]
-        assert {"key": "conversation", "label": "Conversations", "count": 2} in facets["kinds"]
+        assert {"key": "conversation", "count": 2} in facets["kinds"]
         assert {"key": "mathilde", "label": "Mathilde", "count": 1} in facets["people"]
         assert {f["key"]: f["count"] for f in facets["rooms"]} == {}
         histogram = facets["histogram"]

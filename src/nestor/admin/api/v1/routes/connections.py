@@ -37,7 +37,6 @@ class ToolOut(BaseModel):
     name: str
     description: str
     risk: Risk
-    risk_label: str
     enabled: bool
 
 
@@ -49,7 +48,6 @@ class ConnectionOut(BaseModel):
     account: str  # what the person recognises: "mathis@gmail.com"
     owner: PersonRef | None  # None: the whole household
     status: Status
-    status_label: str
     status_reason: ReasonOut | None  # why it needs authorising again or is in error
     confirm_writes: bool
     disabled_tools: list[str]
@@ -120,7 +118,6 @@ def connection_out(admin: AdminState, connection: Connection, words: Phrasebook,
         account=connection.account,
         owner=People(admin.nestor.household).ref(connection.owner),
         status=connection.status,
-        status_label=words.connection_status(connection.status),
         status_reason=ReasonOut(message=MessageOut.of(reason), text=words.text(reason))
         if (reason := connection.status_reason) and connection.status is not Status.CONNECTED
         else None,
@@ -148,7 +145,6 @@ def connection_detail(admin: AdminState, connection: Connection, words: Phrasebo
                 name=t.name,
                 description=t.spec.description,
                 risk=t.risk,
-                risk_label=words.risk(t.risk),
                 enabled=t.name not in connection.disabled_tools,
             )
             for t in tools

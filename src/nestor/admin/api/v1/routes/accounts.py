@@ -7,12 +7,10 @@ from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel
 
 from nestor.admin.api.v1.errors import ApiError
-from nestor.admin.api.v1.language import reader_locale
 from nestor.admin.api.v1.models import AccountOut, Input, People, PersonRef
 from nestor.admin.api.v1.passwords import checked_login, checked_password
 from nestor.admin.api.v1.routes.session import MeOut, open_session
 from nestor.admin.api.v1.security import Caller, allowed, same_origin
-from nestor.admin.presentation import Phrasebook
 from nestor.admin.state import AdminState, state
 from nestor.core import PersonId
 from nestor.modules.accounts import Invitation, InvitationStatus, Role, Scope
@@ -37,10 +35,8 @@ class InvitationIn(Input):
 class InvitationOut(BaseModel):
     id: str
     role: Role
-    role_label: str
     person: PersonRef | None
     status: InvitationStatus
-    status_label: str
     created_at: datetime
     expires_at: datetime
 
@@ -57,7 +53,6 @@ class InvitationTokenIn(Input):
 
 class InvitationPreview(BaseModel):
     role: Role
-    role_label: str
     person: PersonRef | None
     expires_at: datetime
 
@@ -75,15 +70,13 @@ class InvitationAcceptIn(Input):
 async def list_accounts(request: Request, caller: Manager) -> list[AccountOut]:
     admin = state(request)
     people = People(admin.nestor.household)
-    return [AccountOut.of(a, people, caller.phrasebook, admin.accounts) for a in admin.accounts.listed()]
+    return [AccountOut.of(a, people, admin.accounts) for a in admin.accounts.listed()]
 
 
 @router.get("/accounts/{account_id}")
 async def get_account(request: Request, caller: Manager, account_id: str) -> AccountOut:
     admin = state(request)
-    return AccountOut.of(
-        admin.accounts.get(account_id), People(admin.nestor.household), caller.phrasebook, admin.accounts
-    )
+    return AccountOut.of(admin.accounts.get(account_id), People(admin.nestor.household), admin.accounts)
 
 
 @router.put("/accounts/{account_id}/role")
@@ -91,7 +84,7 @@ async def change_account_role(request: Request, caller: Manager, account_id: str
     """409 `last_owner` when it would leave no owner."""
     admin = state(request)
     account = await admin.accounts.change_role(account_id, body.role, by=caller.principal)
-    return AccountOut.of(account, People(admin.nestor.household), caller.phrasebook, admin.accounts)
+    return AccountOut.of(account, People(admin.nestor.household), admin.accounts)
 
 
 @router.post("/accounts/{account_id}/disable")
@@ -100,14 +93,14 @@ async def disable_account(request: Request, caller: Manager, account_id: str) ->
     admin = state(request)
     account = await admin.accounts.disable(account_id, by=caller.principal)
     admin.sessions.revoke(account.id)
-    return AccountOut.of(account, People(admin.nestor.household), caller.phrasebook, admin.accounts)
+    return AccountOut.of(account, People(admin.nestor.household), admin.accounts)
 
 
 @router.post("/accounts/{account_id}/enable")
 async def enable_account(request: Request, caller: Manager, account_id: str) -> AccountOut:
     admin = state(request)
     account = await admin.accounts.enable(account_id, by=caller.principal)
-    return AccountOut.of(account, People(admin.nestor.household), caller.phrasebook, admin.accounts)
+    return AccountOut.of(account, People(admin.nestor.household), admin.accounts)
 
 
 @router.put("/accounts/{account_id}/password", status_code=204)
@@ -128,7 +121,7 @@ async def reset_account_password(request: Request, caller: Manager, account_id: 
 async def list_invitations(request: Request, caller: Manager) -> list[InvitationOut]:
     admin = state(request)
     invitations = sorted(admin.accounts.invitations.values(), key=lambda i: i.created_at, reverse=True)
-    return [_invitation(admin, i, caller.phrasebook) for i in invitations]
+    return [_invitation(admin, i) for i in invitations]
 
 
 @router.post("/invitations", status_code=201)
@@ -138,7 +131,7 @@ async def create_invitation(request: Request, caller: Manager, body: InvitationI
     person = PersonId(body.person) if body.person else None
     invitation, token = await admin.accounts.invite(body.role, person, by=caller.principal)
     url = f"{admin.base_url(request)}/invitation#token={token}"
-    return InvitationCreated(invitation=_invitation(admin, invitation, caller.phrasebook), token=str(token), url=url)
+    return InvitationCreated(invitation=_invitation(admin, invitation), token=str(token), url=url)
 
 
 @router.delete("/invitations/{invitation_id}", status_code=204)
@@ -152,10 +145,8 @@ async def inspect_invitation(request: Request, body: InvitationTokenIn) -> Invit
     """What an invitation offers, before accepting it (no session needed)."""
     admin = state(request)
     invitation = await admin.accounts.invitation(body.token)
-    words = Phrasebook(admin.nestor.localizer, reader_locale(request))
     return InvitationPreview(
         role=invitation.role,
-        role_label=words.role(invitation.role),
         person=People(admin.nestor.household).ref(invitation.person),
         expires_at=invitation.expires_at,
     )
@@ -171,15 +162,13 @@ async def accept_invitation(request: Request, response: Response, body: Invitati
     return open_session(request, response, account)
 
 
-def _invitation(admin: AdminState, invitation: Invitation, words: Phrasebook) -> InvitationOut:
+def _invitation(admin: AdminState, invitation: Invitation) -> InvitationOut:
     status = invitation.status(admin.accounts.now())
     return InvitationOut(
         id=invitation.id,
         role=invitation.role,
-        role_label=words.role(invitation.role),
         person=People(admin.nestor.household).ref(invitation.person),
         status=status,
-        status_label=words.invitation_status(status),
         created_at=invitation.created_at,
         expires_at=invitation.expires_at,
     )

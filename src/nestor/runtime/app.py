@@ -67,7 +67,7 @@ from nestor.modules.memory.assistant import MemoryTools
 from nestor.modules.memory.episodes import Consolidator, Episodes
 from nestor.modules.satellites import Pairing, SatelliteHost
 from nestor.modules.system import ReleaseFeed, RestartRequested, Updates
-from nestor.runtime.config import AdapterConfig, ComponentConfig, ConfigError, NestorConfig
+from nestor.runtime.config import AdapterConfig, ComponentConfig, ConfigError, NestorConfig, ProblemCode
 from nestor.runtime.plugins import Family, ModelType, Plugged, Registry, Services
 
 log = logging.getLogger("nestor")
@@ -137,7 +137,7 @@ class Nestor:
                 raise ConfigError(
                     f"{role}: {key} embeds and cannot answer; choose a conversation model",
                     path=tuple(role.split(".")),
-                    code="not_answering",
+                    code=ProblemCode.NOT_ANSWERING,
                     detail=key,
                 )
             return found
@@ -210,7 +210,7 @@ class Nestor:
             raise ConfigError(
                 f"memory.embedder: {config.memory.embedder} cannot search memories; choose a text embedding model",
                 path=("memory", "embedder"),
-                code="not_embedding",
+                code=ProblemCode.NOT_EMBEDDING,
                 detail=config.memory.embedder,
             )
         voice_model = self.models[config.voices.embedder] if config.voices.embedder else None
@@ -218,7 +218,7 @@ class Nestor:
             raise ConfigError(
                 f"voices.embedder: {config.voices.embedder} cannot tell voices apart; choose a voice model",
                 path=("voices", "embedder"),
-                code="not_voice",
+                code=ProblemCode.NOT_VOICE,
                 detail=config.voices.embedder,
             )
         self.voiceprints = SQLiteVoiceprintStore(self.database)
@@ -433,7 +433,7 @@ def _household(config: NestorConfig) -> Household:
         raise ConfigError(
             str(error),
             path=claims[1],
-            code="shared_account",
+            code=ProblemCode.SHARED_ACCOUNT,
         ) from None
 
 

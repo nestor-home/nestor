@@ -15,16 +15,22 @@ from enum import Enum
 from typing import Any, get_args, get_origin, get_type_hints
 
 import pytest
+from fluent.syntax import FluentParser, ast
 
 import nestor.modules
 from nestor.adapters.i18n import FluentLocalizer, catalogue_dirs
 from nestor.admin.api.v1.errors import ErrorCode
-from nestor.admin.presentation import EventDescriber, Phrasebook
+from nestor.admin.presentation import EventDescriber, Kind, Phrasebook
 from nestor.core import Event, PersonId
 from nestor.core.i18n import Locale, Message
+from nestor.modules.accounts import InvitationStatus, Role
+from nestor.modules.cognition.delegation.types import TaskStatus
+from nestor.modules.cognition.tools.types import Risk
+from nestor.modules.connectors.types import AuthKind, Status
 from nestor.modules.household import Household, Person
 from nestor.modules.journal import Entry
 from nestor.runtime import Registry
+from nestor.runtime.config import ProblemCode
 from nestor.runtime.editing import ConfigSchema
 
 REGISTRY = Registry.installed()
@@ -140,11 +146,33 @@ def test_no_shipped_sentence_uses_an_em_dash() -> None:
         assert "—" not in text, [line for line in text.splitlines() if "—" in line]
 
 
-def test_every_error_the_api_sends_has_its_sentence_in_every_locale() -> None:
+def test_every_error_the_api_sends_and_every_configuration_problem_has_its_sentence_in_every_locale() -> None:
+    said = [f"error-{code}" for code in get_args(ErrorCode)] + [f"config-error-{code}" for code in ProblemCode]
     missing = {
-        (locale, f"error-{code.replace('_', '-')}")
-        for code in get_args(ErrorCode)
-        for locale, ids in IDS.items()
-        if f"error-{code.replace('_', '-')}" not in ids
+        (locale, id.replace("_", "-")) for id in said for locale, ids in IDS.items() if id.replace("_", "-") not in ids
     }
     assert not missing, sorted(missing)
+
+
+# The admin labels these values through the server's select messages, keyed by the value the API sends.
+SELECTS = {
+    "role-name": Role,
+    "invitation-status": InvitationStatus,
+    "task-status": TaskStatus,
+    "connection-status": Status,
+    "tool-risk": Risk,
+    "auth-kind": AuthKind,
+    "journal-kind": Kind,
+}
+
+
+@pytest.mark.parametrize(("message", "values"), SELECTS.items(), ids=list(SELECTS))
+def test_every_value_the_admin_labels_has_its_own_variant_in_every_locale(message: str, values: type[Enum]) -> None:
+    for locale in IDS:
+        resource = FluentParser().parse(LOCALIZER.source(locale)[1])
+        (entry,) = [e for e in resource.body if isinstance(e, ast.Message) and e.id.name == message]
+        assert entry.value is not None
+        (select,) = [p.expression for p in entry.value.elements if isinstance(p, ast.Placeable)]
+        assert isinstance(select, ast.SelectExpression)
+        keys = {v.key.name for v in select.variants if isinstance(v.key, ast.Identifier)}
+        assert {v.value for v in values} <= keys, (locale, message, {v.value for v in values} - keys)

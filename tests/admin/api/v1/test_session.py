@@ -16,7 +16,7 @@ async def test_signing_in_returns_who_is_signed_in_with_scopes_and_csrf_token(tm
         me = response.json()
         assert response.status_code == 200
         assert me["account"]["login"] == "mathis" and me["account"]["role"] == "owner"
-        assert me["account"]["role_label"] == "propriétaire" and me["account"]["person"] == {
+        assert me["account"]["person"] == {
             "id": "mathis",
             "name": "Mathis",
         }

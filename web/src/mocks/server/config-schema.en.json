@@ -15,7 +15,10 @@
             "secret_values": false,
             "advanced": false,
             "group": "persona",
-            "title": "Nom",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Name",
             "help": null
           }
         },
@@ -31,8 +34,11 @@
             "secret_values": false,
             "advanced": false,
             "group": "persona",
-            "title": "Personnalité",
-            "help": "Qui est l'assistant et comment il parle."
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Personality",
+            "help": "Who the assistant is and how it speaks."
           }
         },
         "locale": {
@@ -48,8 +54,11 @@
             "secret_values": false,
             "advanced": false,
             "group": "persona",
-            "title": "Langue",
-            "help": "Ex. fr-FR. Langue des textes fixes et, par défaut, de l'admin."
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Language",
+            "help": "E.g. en-US. Language of fixed phrases and, by default, of the admin."
           }
         },
         "language": {
@@ -65,8 +74,11 @@
             "secret_values": false,
             "advanced": false,
             "group": "persona",
-            "title": "Langue des réponses",
-            "help": "Son nom dans le prompt, ex. français."
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Reply language",
+            "help": "Its name in the prompt, e.g. English."
           }
         },
         "timezone": {
@@ -82,12 +94,18 @@
             "secret_values": false,
             "advanced": false,
             "group": "persona",
-            "title": "Fuseau horaire",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Time zone",
             "help": null
           }
         }
       },
-      "required": ["name", "character"],
+      "required": [
+        "name",
+        "character"
+      ],
       "title": "PersonaConfig",
       "type": "object"
     },
@@ -106,7 +124,10 @@
             "secret_values": false,
             "advanced": false,
             "group": "household",
-            "title": "Identifiant",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Identifier",
             "help": null
           }
         },
@@ -122,7 +143,10 @@
             "secret_values": false,
             "advanced": false,
             "group": "household",
-            "title": "Nom",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Name",
             "help": null
           }
         },
@@ -142,8 +166,11 @@
             "secret_values": false,
             "advanced": false,
             "group": "household",
-            "title": "Comptes",
-            "help": "Comment les canaux reconnaissent cette personne, ex. telegram:123456789."
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Accounts",
+            "help": "How channels recognise this person, e.g. telegram:123456789."
           }
         },
         "reach": {
@@ -166,12 +193,43 @@
             "secret_values": false,
             "advanced": false,
             "group": "household",
-            "title": "Où lui écrire",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Where to write to them",
             "help": null
+          }
+        },
+        "may_message": {
+          "default": [
+            "*"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "title": "May Message",
+          "type": "array",
+          "x-nestor": {
+            "field": "may_message",
+            "title_id": "config-household-may_message",
+            "help_id": "config-household-may_message-help",
+            "fallback_title_id": "config-field-may_message",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "household",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "May send a message to",
+            "help": "Through the assistant: person identifiers, or * for everyone."
           }
         }
       },
-      "required": ["id", "name"],
+      "required": [
+        "id",
+        "name"
+      ],
       "title": "PersonConfig",
       "type": "object"
     },
@@ -200,9 +258,10 @@
             "advanced": false,
             "group": "agent",
             "reference": "models",
-            "title": "Modèle à l'oral",
-            "help": "Pour les réponses parlées. Par défaut, le modèle à l'écrit.",
-            "model_type": "language"
+            "model_type": "language",
+            "brands": null,
+            "title": "Spoken model",
+            "help": "For spoken replies. The written model by default."
           }
         },
         "written": {
@@ -226,9 +285,103 @@
             "advanced": false,
             "group": "agent",
             "reference": "models",
-            "title": "Modèle à l'écrit",
-            "help": "Pour les réponses écrites. Par défaut, le modèle à l'oral.",
-            "model_type": "language"
+            "model_type": "language",
+            "brands": null,
+            "title": "Written model",
+            "help": "For written replies. The spoken model by default."
+          }
+        },
+        "background": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Background",
+          "x-nestor": {
+            "field": "background",
+            "title_id": "config-agent-background",
+            "help_id": "config-agent-background-help",
+            "fallback_title_id": "config-field-background",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "agent",
+            "reference": "models",
+            "model_type": "language",
+            "brands": null,
+            "title": "Background model",
+            "help": "For what nobody waits for, such as scheduled wake-ups. The written model by default."
+          }
+        },
+        "spoken_tool_wait_s": {
+          "default": 3.0,
+          "exclusiveMinimum": 0,
+          "maximum": 60,
+          "title": "Spoken Tool Wait S",
+          "type": "number",
+          "x-nestor": {
+            "field": "spoken_tool_wait_s",
+            "title_id": "config-agent-spoken_tool_wait_s",
+            "help_id": "config-agent-spoken_tool_wait_s-help",
+            "fallback_title_id": "config-field-spoken_tool_wait_s",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "agent",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Tool wait when speaking (s)",
+            "help": "Past this, the tool keeps running in the background and its result comes back in the conversation."
+          }
+        },
+        "written_tool_wait_s": {
+          "default": 20.0,
+          "exclusiveMinimum": 0,
+          "maximum": 600,
+          "title": "Written Tool Wait S",
+          "type": "number",
+          "x-nestor": {
+            "field": "written_tool_wait_s",
+            "title_id": "config-agent-written_tool_wait_s",
+            "help_id": "config-agent-written_tool_wait_s-help",
+            "fallback_title_id": "config-field-written_tool_wait_s",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "agent",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Tool wait when writing (s)",
+            "help": "Past this, the tool keeps running in the background and its result comes back in the conversation."
+          }
+        },
+        "tool_result_chars": {
+          "default": 8000,
+          "maximum": 200000,
+          "minimum": 1000,
+          "title": "Tool Result Chars",
+          "type": "integer",
+          "x-nestor": {
+            "field": "tool_result_chars",
+            "title_id": "config-agent-tool_result_chars",
+            "help_id": "config-agent-tool_result_chars-help",
+            "fallback_title_id": "config-field-tool_result_chars",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "agent",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Tool result size (characters)",
+            "help": "A longer result is stored aside: the model sees its start and end, and reads the rest when it needs it."
           }
         }
       },
@@ -260,38 +413,215 @@
             "advanced": false,
             "group": "watches",
             "reference": "models",
-            "title": "Modèle de tri",
-            "help": "Choisit les veilles concernées par chaque élément reçu. Par défaut, le modèle à l'écrit.",
-            "model_type": "language"
+            "model_type": "language",
+            "brands": null,
+            "title": "Sorting model",
+            "help": "Picks the watches each incoming item concerns. The written model by default."
           }
         }
       },
       "title": "WatchesConfig",
       "type": "object"
     },
-    "conversation": {
+    "memory": {
+      "$defs": {
+        "Strategy": {
+          "enum": [
+            "both",
+            "recent",
+            "search"
+          ],
+          "title": "Strategy",
+          "type": "string"
+        }
+      },
       "additionalProperties": false,
+      "description": "Which memories each turn's instructions carry (`memory-recall` bench): the latest up to `recent`, cached\nwith the household, then those the person's last messages find among the others.",
       "properties": {
-        "ends_after_s": {
-          "default": 300.0,
-          "exclusiveMinimum": 0,
-          "title": "Ends After S",
-          "type": "number",
+        "strategy": {
+          "$ref": "#/$defs/Strategy",
+          "default": "both",
           "x-nestor": {
-            "field": "ends_after_s",
-            "title_id": "config-conversation-ends_after_s",
-            "help_id": "config-conversation-ends_after_s-help",
-            "fallback_title_id": "config-field-ends_after_s",
+            "field": "strategy",
+            "title_id": "config-memory-strategy",
+            "help_id": "config-memory-strategy-help",
+            "fallback_title_id": "config-field-strategy",
             "secret": false,
             "secret_values": false,
             "advanced": false,
-            "group": "conversation",
-            "title": "Nouvelle conversation après (secondes)",
+            "group": "memory",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Memory selection",
+            "help": "both: the latest, then those the conversation brings up; recent: the latest only; search: those the conversation brings up only."
+          }
+        },
+        "recent": {
+          "default": 150,
+          "maximum": 1000,
+          "minimum": 0,
+          "title": "Recent",
+          "type": "integer",
+          "x-nestor": {
+            "field": "recent",
+            "title_id": "config-memory-recent",
+            "help_id": "config-memory-recent-help",
+            "fallback_title_id": "config-field-recent",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "memory",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Latest memories per turn",
             "help": null
+          }
+        },
+        "found": {
+          "default": 12,
+          "maximum": 50,
+          "minimum": 0,
+          "title": "Found",
+          "type": "integer",
+          "x-nestor": {
+            "field": "found",
+            "title_id": "config-memory-found",
+            "help_id": "config-memory-found-help",
+            "fallback_title_id": "config-field-found",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "memory",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Memories found per turn",
+            "help": null
+          }
+        },
+        "recent_episodes": {
+          "default": 3,
+          "maximum": 20,
+          "minimum": 0,
+          "title": "Recent Episodes",
+          "type": "integer",
+          "x-nestor": {
+            "field": "recent_episodes",
+            "title_id": "config-memory-recent_episodes",
+            "help_id": "config-memory-recent_episodes-help",
+            "fallback_title_id": "config-field-recent_episodes",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "memory",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Recent conversations per turn",
+            "help": "Those of whoever speaks, summarized."
+          }
+        },
+        "found_episodes": {
+          "default": 4,
+          "maximum": 20,
+          "minimum": 0,
+          "title": "Found Episodes",
+          "type": "integer",
+          "x-nestor": {
+            "field": "found_episodes",
+            "title_id": "config-memory-found_episodes",
+            "help_id": "config-memory-found_episodes-help",
+            "fallback_title_id": "config-field-found_episodes",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "memory",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Older conversations found per turn",
+            "help": null
+          }
+        },
+        "consolidation": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Consolidation",
+          "x-nestor": {
+            "field": "consolidation",
+            "title_id": "config-memory-consolidation",
+            "help_id": "config-memory-consolidation-help",
+            "fallback_title_id": "config-field-consolidation",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "memory",
+            "reference": "models",
+            "model_type": "language",
+            "brands": null,
+            "title": "Summarizing model",
+            "help": "Summarizes each finished conversation. The background model by default."
+          }
+        },
+        "embedder": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Embedder",
+          "x-nestor": {
+            "field": "embedder",
+            "title_id": "config-memory-embedder",
+            "help_id": "config-memory-embedder-help",
+            "fallback_title_id": "config-field-embedder",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "memory",
+            "reference": "models",
+            "model_type": "embedding",
+            "brands": null,
+            "title": "Embedding model",
+            "help": "Searches memories by meaning. Without one, by keywords only."
+          }
+        },
+        "query_timeout_s": {
+          "default": 1.0,
+          "exclusiveMinimum": 0,
+          "title": "Query Timeout S",
+          "type": "number",
+          "x-nestor": {
+            "field": "query_timeout_s",
+            "title_id": "config-memory-query_timeout_s",
+            "help_id": "config-memory-query_timeout_s-help",
+            "fallback_title_id": "config-field-query_timeout_s",
+            "secret": false,
+            "secret_values": false,
+            "advanced": true,
+            "group": "memory",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Embedding timeout (seconds)",
+            "help": "Past it, the search uses keywords only."
           }
         }
       },
-      "title": "ConversationConfig",
+      "title": "MemoryConfig",
       "type": "object"
     },
     "initiative": {
@@ -317,8 +647,11 @@
             "secret_values": false,
             "advanced": false,
             "group": "initiative",
-            "title": "Heures calmes",
-            "help": "Ex. 22:30-07:30. Rien à voix haute, sauf urgence."
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Quiet hours",
+            "help": "E.g. 22:30-07:30. Nothing aloud, unless urgent."
           }
         },
         "main_room": {
@@ -341,8 +674,11 @@
             "secret_values": false,
             "advanced": false,
             "group": "initiative",
-            "title": "Pièce principale",
-            "help": "Où parler quand on sait seulement que quelqu'un est à la maison."
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Main room",
+            "help": "Where to speak when the home only knows someone is in."
           }
         },
         "follow_up_after_s": {
@@ -359,7 +695,10 @@
             "secret_values": false,
             "advanced": true,
             "group": "initiative",
-            "title": "Relance écrite après (secondes)",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Written follow-up after (seconds)",
             "help": null
           }
         }
@@ -384,7 +723,10 @@
             "secret_values": false,
             "advanced": false,
             "group": "admin",
-            "title": "Hôte",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Host",
             "help": null
           }
         },
@@ -403,6 +745,9 @@
             "secret_values": false,
             "advanced": false,
             "group": "admin",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
             "title": "Port",
             "help": null
           }
@@ -427,8 +772,11 @@
             "secret_values": false,
             "advanced": false,
             "group": "admin",
-            "title": "URL publique",
-            "help": "L'URL de l'admin, ex. https://nestor.example.org."
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Public URL",
+            "help": "The admin's URL, e.g. https://nestor.example.org."
           }
         },
         "relay_url": {
@@ -444,7 +792,10 @@
             "secret_values": false,
             "advanced": true,
             "group": "admin",
-            "title": "Relais OAuth",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "OAuth relay",
             "help": null
           }
         }
@@ -454,7 +805,7 @@
     },
     "updates": {
       "additionalProperties": false,
-      "description": "Whether Nestor reads its release feed to tell the admin about newer releases. It never installs\nanything: the household updates the way it installed Nestor.",
+      "description": "Whether Nestor reads its release feed to tell the admin about newer releases. It installs one only\nwhen a person asks in the admin, and only where it runs from its own Python environment.",
       "properties": {
         "check": {
           "default": true,
@@ -470,8 +821,10 @@
             "advanced": false,
             "group": "updates",
             "reference": null,
-            "title": "Chercher les nouvelles versions",
-            "help": "Une fois par jour, sans rien installer."
+            "model_type": null,
+            "brands": null,
+            "title": "Check for new releases",
+            "help": "Once a day, without installing anything."
           }
         },
         "feed": {
@@ -488,7 +841,9 @@
             "advanced": true,
             "group": "updates",
             "reference": null,
-            "title": "Flux des versions",
+            "model_type": null,
+            "brands": null,
+            "title": "Release feed",
             "help": null
           }
         }
@@ -513,34 +868,37 @@
             "secret_values": false,
             "advanced": true,
             "group": "core",
-            "title": "Dossier des données",
-            "help": "Base de données, coffre et historique de la configuration."
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Data folder",
+            "help": "Database, vault and configuration history."
           }
         }
       }
     }
   },
   "section_titles": {
-    "persona": "Personnage",
-    "household": "Foyer",
+    "persona": "Persona",
+    "household": "Household",
     "agent": "Agent",
-    "watches": "Veilles",
-    "conversation": "Conversations",
+    "watches": "Watches",
+    "memory": "Memory",
     "initiative": "Initiative",
-    "admin": "Administration",
-    "updates": "Mises à jour",
-    "data_dir": "Données"
+    "admin": "Admin",
+    "updates": "Updates",
+    "data_dir": "Data"
   },
   "slots": {
     "models": {
       "family": "model",
       "shape": "named",
       "required": true,
-      "title": "Modèles",
+      "title": "Models",
       "kinds": {
         "openai-compatible": {
           "additionalProperties": false,
-          "description": "Configuration of an OpenAI-compatible model; `api_key` should come from the environment.",
+          "description": "Configuration of an OpenAI-compatible chat model.",
           "properties": {
             "kind": {
               "const": "openai-compatible",
@@ -554,7 +912,10 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "model-openai-compatible",
-                "title": "Type",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Kind",
                 "help": null
               }
             },
@@ -570,8 +931,8 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "model-openai-compatible",
-                "title": "Base URL",
-                "help": null,
+                "reference": null,
+                "model_type": null,
                 "brands": {
                   "anthropic.com": "anthropic",
                   "generativelanguage.googleapis.com": "gemini",
@@ -579,7 +940,9 @@
                   "mistral.ai": "mistral",
                   "openai.com": "openai",
                   "openrouter.ai": "openrouter"
-                }
+                },
+                "title": "Base URL",
+                "help": null
               }
             },
             "api_key": {
@@ -604,7 +967,10 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "model-openai-compatible",
-                "title": "Clé d'API",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "API key",
                 "help": null
               }
             },
@@ -620,7 +986,10 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "model-openai-compatible",
-                "title": "Modèle",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Model",
                 "help": null
               }
             },
@@ -637,8 +1006,11 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "model-openai-compatible",
-                "title": "Champs JSON supplémentaires",
-                "help": "Ajoutés à chaque requête, ex. le routage d'OpenRouter."
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Extra JSON fields",
+                "help": "Added to every request, e.g. OpenRouter's routing."
               }
             },
             "connect_timeout_s": {
@@ -655,7 +1027,10 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "model-openai-compatible",
-                "title": "Timeout de connexion (secondes)",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Connection timeout (seconds)",
                 "help": null
               }
             },
@@ -673,12 +1048,46 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "model-openai-compatible",
-                "title": "Timeout de lecture (secondes)",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Read timeout (seconds)",
                 "help": null
+              }
+            },
+            "cache_control": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Cache Control",
+              "x-nestor": {
+                "field": "cache_control",
+                "title_id": "config-model-openai-compatible-cache_control",
+                "help_id": "config-model-openai-compatible-cache_control-help",
+                "fallback_title_id": "config-field-cache_control",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-openai-compatible",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Prompt caching",
+                "help": "On by default for OpenRouter and Anthropic."
               }
             }
           },
-          "required": ["kind", "base_url", "model"],
+          "required": [
+            "kind",
+            "base_url",
+            "model"
+          ],
           "title": "OpenAICompatibleSettings",
           "type": "object"
         },
@@ -701,7 +1110,7 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
-                "title": "Type",
+                "title": "Kind",
                 "help": null
               }
             },
@@ -756,7 +1165,7 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
-                "title": "Clé d'API",
+                "title": "API key",
                 "help": null
               }
             },
@@ -775,7 +1184,7 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
-                "title": "Modèle",
+                "title": "Model",
                 "help": null
               }
             },
@@ -796,7 +1205,7 @@
                 "model_type": null,
                 "brands": null,
                 "title": "Dimensions",
-                "help": "Taille des vecteurs renvoyés par le modèle."
+                "help": "Size of the vectors the model returns."
               }
             },
             "send_dimensions": {
@@ -815,8 +1224,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
-                "title": "Demander ces dimensions",
-                "help": "Pour les modèles qui raccourcissent leurs vecteurs (Matryoshka)."
+                "title": "Ask for these dimensions",
+                "help": "For models that shorten their vectors (Matryoshka)."
               }
             },
             "query_prefix": {
@@ -835,8 +1244,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
-                "title": "Préfixe des requêtes",
-                "help": "Ex. query: pour les modèles qui l'attendent."
+                "title": "Query prefix",
+                "help": "E.g. query: for models that expect one."
               }
             },
             "document_prefix": {
@@ -855,8 +1264,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
-                "title": "Préfixe des documents",
-                "help": "Ex. passage: pour les modèles qui l'attendent."
+                "title": "Document prefix",
+                "help": "E.g. passage: for models that expect one."
               }
             },
             "batch_size": {
@@ -876,7 +1285,7 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
-                "title": "Textes par requête",
+                "title": "Texts per request",
                 "help": null
               }
             },
@@ -896,7 +1305,7 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
-                "title": "Champs JSON supplémentaires",
+                "title": "Extra JSON fields",
                 "help": null
               }
             },
@@ -917,7 +1326,7 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
-                "title": "Timeout de connexion (secondes)",
+                "title": "Connection timeout (seconds)",
                 "help": null
               }
             },
@@ -938,12 +1347,17 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
-                "title": "Timeout de lecture (secondes)",
+                "title": "Read timeout (seconds)",
                 "help": null
               }
             }
           },
-          "required": ["kind", "base_url", "model", "dimensions"],
+          "required": [
+            "kind",
+            "base_url",
+            "model",
+            "dimensions"
+          ],
           "title": "OpenAICompatibleEmbedderSettings",
           "type": "object"
         },
@@ -966,12 +1380,16 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
-                "title": "Type",
+                "title": "Kind",
                 "help": null
               }
             },
             "model": {
-              "examples": ["titanet-small", "3dspeaker-campplus-zh-en", "3dspeaker-eres2net"],
+              "examples": [
+                "titanet-small",
+                "3dspeaker-campplus-zh-en",
+                "3dspeaker-eres2net"
+              ],
               "title": "Model",
               "type": "string",
               "x-nestor": {
@@ -990,8 +1408,8 @@
                   "3dspeaker-eres2net": "modelscope",
                   "titanet-small": "nvidia"
                 },
-                "title": "Modèle de voix",
-                "help": "titanet-small, 3dspeaker-campplus-zh-en ou 3dspeaker-eres2net (téléchargé une fois), ou le chemin d'un fichier .onnx."
+                "title": "Voice model",
+                "help": "titanet-small, 3dspeaker-campplus-zh-en or 3dspeaker-eres2net (downloaded once), or the path to an .onnx file."
               }
             },
             "threads": {
@@ -1012,8 +1430,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
-                "title": "Threads CPU",
-                "help": "Un seul suffit."
+                "title": "CPU threads",
+                "help": "One is enough."
               }
             },
             "threshold": {
@@ -1041,12 +1459,15 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
-                "title": "Seuil de reconnaissance",
-                "help": "Par défaut, celui du catalogue. Obligatoire pour un fichier .onnx à vous."
+                "title": "Recognition threshold",
+                "help": "The catalogue's by default. Required for an .onnx file of your own."
               }
             }
           },
-          "required": ["kind", "model"],
+          "required": [
+            "kind",
+            "model"
+          ],
           "title": "SherpaOnnxVoiceSettings",
           "type": "object"
         }
@@ -1061,7 +1482,7 @@
       "family": "channel",
       "shape": "list",
       "required": true,
-      "title": "Canaux",
+      "title": "Channels",
       "kinds": {
         "satellites": {
           "$defs": {
@@ -1082,7 +1503,10 @@
                     "secret_values": false,
                     "advanced": false,
                     "group": "channel-satellites-elevenlabssettings",
-                    "title": "Fournisseur",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "title": "Provider",
                     "help": null
                   }
                 },
@@ -1100,7 +1524,10 @@
                     "secret_values": false,
                     "advanced": false,
                     "group": "channel-satellites-elevenlabssettings",
-                    "title": "Clé d'API",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "title": "API key",
                     "help": null
                   }
                 },
@@ -1116,7 +1543,10 @@
                     "secret_values": false,
                     "advanced": false,
                     "group": "channel-satellites-elevenlabssettings",
-                    "title": "ID de la voix",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "title": "Voice ID",
                     "help": null
                   }
                 },
@@ -1133,8 +1563,11 @@
                     "secret_values": false,
                     "advanced": false,
                     "group": "channel-satellites-elevenlabssettings",
-                    "title": "Langue",
-                    "help": "Pour la transcription, ex. fr."
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "title": "Language",
+                    "help": "For transcription, e.g. en."
                   }
                 },
                 "stt_model": {
@@ -1150,7 +1583,10 @@
                     "secret_values": false,
                     "advanced": false,
                     "group": "channel-satellites-elevenlabssettings",
-                    "title": "Modèle de transcription",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "title": "Transcription model",
                     "help": null
                   }
                 },
@@ -1167,12 +1603,18 @@
                     "secret_values": false,
                     "advanced": false,
                     "group": "channel-satellites-elevenlabssettings",
-                    "title": "Modèle de synthèse vocale",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "title": "Speech synthesis model",
                     "help": null
                   }
                 }
               },
-              "required": ["api_key", "voice_id"],
+              "required": [
+                "api_key",
+                "voice_id"
+              ],
               "title": "ElevenLabsSettings",
               "type": "object"
             },
@@ -1191,7 +1633,10 @@
                     "secret_values": false,
                     "advanced": false,
                     "group": "channel-satellites-voicesettings",
-                    "title": "Services vocaux",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "title": "Speech services",
                     "help": null
                   }
                 },
@@ -1208,7 +1653,10 @@
                     "secret_values": false,
                     "advanced": false,
                     "group": "channel-satellites-voicesettings",
-                    "title": "Style d'écriture",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "title": "Writing style",
                     "help": null
                   }
                 },
@@ -1232,7 +1680,10 @@
                     "secret_values": false,
                     "advanced": false,
                     "group": "channel-satellites-voicesettings",
-                    "title": "Phrase dite si la transcription échoue",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "title": "Said when transcription fails",
                     "help": null
                   }
                 },
@@ -1257,8 +1708,11 @@
                     "secret_values": false,
                     "advanced": false,
                     "group": "channel-satellites-voicesettings",
-                    "title": "Dossier des clips de secours",
-                    "help": "stt.wav et tts.wav, joués si la transcription ou la synthèse tombe en panne."
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "title": "Fallback clips folder",
+                    "help": "stt.wav and tts.wav, played when transcription or synthesis is down."
                   }
                 },
                 "quiet_s": {
@@ -1275,12 +1729,17 @@
                     "secret_values": false,
                     "advanced": false,
                     "group": "channel-satellites-voicesettings",
-                    "title": "Silence avant de prendre la parole (secondes)",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "title": "Silence before speaking up (seconds)",
                     "help": null
                   }
                 }
               },
-              "required": ["speech"],
+              "required": [
+                "speech"
+              ],
               "title": "VoiceSettings",
               "type": "object"
             }
@@ -1299,7 +1758,10 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "channel-satellites",
-                "title": "Type",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Kind",
                 "help": null
               }
             },
@@ -1315,7 +1777,10 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "channel-satellites",
-                "title": "Nom",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Name",
                 "help": null
               }
             },
@@ -1340,8 +1805,11 @@
                 "secret_values": false,
                 "advanced": true,
                 "group": "channel-satellites",
-                "title": "Nouvelle conversation après (secondes)",
-                "help": "Passé ce silence, l'assistant ne relit plus les échanges précédents. Par défaut, 5 min à l'oral, 4 h à l'écrit."
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "New conversation after (seconds)",
+                "help": "Past this silence, the assistant no longer rereads earlier exchanges. By default, 5 min spoken, 4 h written."
               }
             },
             "host": {
@@ -1357,7 +1825,10 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "channel-satellites",
-                "title": "Hôte",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Host",
                 "help": null
               }
             },
@@ -1376,6 +1847,9 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "channel-satellites",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
                 "title": "Port",
                 "help": null
               }
@@ -1401,8 +1875,11 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "channel-satellites",
-                "title": "URL publique",
-                "help": "Celle que les satellites utilisent, ex. http://nestor.local:8471."
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Public URL",
+                "help": "The one satellites use, e.g. http://nestor.local:8471."
               }
             },
             "voice": {
@@ -1424,8 +1901,11 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "channel-satellites",
-                "title": "Voix",
-                "help": "Sans elle, les satellites fonctionnent par écrit seulement. Nécessite l'extra voice."
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Voice",
+                "help": "Without it, satellites work in writing only. Needs the voice extra."
               }
             },
             "send_timeout_s": {
@@ -1442,14 +1922,19 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "channel-satellites",
-                "title": "Timeout d'envoi (secondes)",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Send timeout (seconds)",
                 "help": null
               }
             }
           },
           "title": "SatellitesSettings",
           "type": "object",
-          "required": ["kind"]
+          "required": [
+            "kind"
+          ]
         },
         "telegram": {
           "additionalProperties": false,
@@ -1466,7 +1951,10 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "channel-telegram",
-                "title": "Type",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Kind",
                 "help": null
               }
             },
@@ -1482,7 +1970,10 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "channel-telegram",
-                "title": "Nom",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Name",
                 "help": null
               }
             },
@@ -1507,8 +1998,11 @@
                 "secret_values": false,
                 "advanced": true,
                 "group": "channel-telegram",
-                "title": "Nouvelle conversation après (secondes)",
-                "help": "Passé ce silence, l'assistant ne relit plus les messages précédents. 4 h par défaut."
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "New conversation after (seconds)",
+                "help": "Past this silence, the assistant no longer rereads earlier messages. 4 h by default."
               }
             },
             "token": {
@@ -1525,6 +2019,9 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "channel-telegram",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
                 "title": "Token",
                 "help": null
               }
@@ -1542,7 +2039,10 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "channel-telegram",
-                "title": "URL de l'API",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "API URL",
                 "help": null
               }
             },
@@ -1561,7 +2061,10 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "channel-telegram",
-                "title": "Timeout du long polling (secondes)",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Long polling timeout (seconds)",
                 "help": null
               }
             },
@@ -1579,7 +2082,10 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "channel-telegram",
-                "title": "Timeout des requêtes (secondes)",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Request timeout (seconds)",
                 "help": null
               }
             },
@@ -1603,12 +2109,18 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "channel-telegram",
-                "title": "Message en cas d'erreur",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Message on error",
                 "help": null
               }
             }
           },
-          "required": ["kind", "token"],
+          "required": [
+            "kind",
+            "token"
+          ],
           "title": "TelegramSettings",
           "type": "object"
         }
@@ -1619,7 +2131,7 @@
       "family": "executor",
       "shape": "list",
       "required": false,
-      "title": "Exécutants",
+      "title": "Executors",
       "kinds": {
         "hermes": {
           "additionalProperties": false,
@@ -1636,7 +2148,10 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "executor-hermes",
-                "title": "Type",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Kind",
                 "help": null
               }
             },
@@ -1652,7 +2167,10 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "executor-hermes",
-                "title": "Nom",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Name",
                 "help": null
               }
             },
@@ -1668,16 +2186,11 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "executor-hermes",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
                 "title": "Base URL",
-                "help": null,
-                "brands": {
-                  "anthropic.com": "anthropic",
-                  "generativelanguage.googleapis.com": "gemini",
-                  "groq.com": "groq",
-                  "mistral.ai": "mistral",
-                  "openai.com": "openai",
-                  "openrouter.ai": "openrouter"
-                }
+                "help": null
               }
             },
             "api_key": {
@@ -1694,7 +2207,10 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "executor-hermes",
-                "title": "Clé d'API",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "API key",
                 "help": null
               }
             },
@@ -1710,7 +2226,10 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "executor-hermes",
-                "title": "Modèle",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Model",
                 "help": null
               }
             },
@@ -1726,8 +2245,11 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "executor-hermes",
-                "title": "Ce qu'il sait faire",
-                "help": "L'assistant s'en sert pour décider quoi lui confier."
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "What it can do",
+                "help": "The assistant uses it to decide what to hand over."
               }
             },
             "instructions": {
@@ -1743,7 +2265,10 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "executor-hermes",
-                "title": "Consignes",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Instructions",
                 "help": null
               }
             },
@@ -1761,7 +2286,10 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "executor-hermes",
-                "title": "Timeout (secondes)",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Timeout (seconds)",
                 "help": null
               }
             },
@@ -1779,12 +2307,21 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "executor-hermes",
-                "title": "Timeout d'arrêt (secondes)",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Stop timeout (seconds)",
                 "help": null
               }
             }
           },
-          "required": ["kind", "base_url", "api_key", "model", "description"],
+          "required": [
+            "kind",
+            "base_url",
+            "api_key",
+            "model",
+            "description"
+          ],
           "title": "HermesSettings",
           "type": "object"
         }
@@ -1795,23 +2332,89 @@
       "family": "tools",
       "shape": "list",
       "required": false,
-      "title": "Outils",
+      "title": "Tools",
       "kinds": {
         "mcp": {
           "$defs": {
             "McpTransport": {
-              "enum": ["streamable-http", "sse"],
+              "enum": [
+                "streamable-http",
+                "sse"
+              ],
               "title": "McpTransport",
               "type": "string"
             },
             "Negotiation": {
-              "enum": ["auto", "legacy"],
+              "enum": [
+                "auto",
+                "legacy"
+              ],
               "type": "string"
             },
             "Risk": {
-              "enum": ["read", "write", "sensitive"],
+              "enum": [
+                "read",
+                "write",
+                "sensitive"
+              ],
               "title": "Risk",
               "type": "string"
+            },
+            "SensitiveCalls": {
+              "additionalProperties": false,
+              "description": "Calls of `tool` confirmed by the person first when one of these values appears in an argument: Home\nAssistant's `HassTurnOn` and `HassTurnOff` drive lights and locks alike.",
+              "properties": {
+                "tool": {
+                  "title": "Tool",
+                  "type": "string",
+                  "x-nestor": {
+                    "field": "tool",
+                    "title_id": "config-tools-mcp-sensitivecalls-tool",
+                    "help_id": "config-tools-mcp-sensitivecalls-tool-help",
+                    "fallback_title_id": "config-field-tool",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "tools-mcp-sensitivecalls",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "title": "Tool",
+                    "help": "Name on the server, e.g. intent__HassTurnOff."
+                  }
+                },
+                "arguments": {
+                  "additionalProperties": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "title": "Arguments",
+                  "type": "object",
+                  "x-nestor": {
+                    "field": "arguments",
+                    "title_id": "config-tools-mcp-sensitivecalls-arguments",
+                    "help_id": "config-tools-mcp-sensitivecalls-arguments-help",
+                    "fallback_title_id": "config-field-arguments",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "tools-mcp-sensitivecalls",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "title": "Sensitive values",
+                    "help": "By argument, e.g. device_class: garage, gate; domain: lock."
+                  }
+                }
+              },
+              "required": [
+                "tool",
+                "arguments"
+              ],
+              "title": "SensitiveCalls",
+              "type": "object"
             }
           },
           "additionalProperties": false,
@@ -1828,7 +2431,10 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "tools-mcp",
-                "title": "Type",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Kind",
                 "help": null
               }
             },
@@ -1844,7 +2450,10 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "tools-mcp",
-                "title": "Nom",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Name",
                 "help": null
               }
             },
@@ -1860,6 +2469,9 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "tools-mcp",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
                 "title": "URL",
                 "help": null
               }
@@ -1876,6 +2488,9 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "tools-mcp",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
                 "title": "Transport",
                 "help": null
               }
@@ -1902,8 +2517,11 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "tools-mcp",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
                 "title": "Token",
-                "help": "Envoyé en Authorization: Bearer."
+                "help": "Sent as Authorization: Bearer."
               }
             },
             "headers": {
@@ -1923,8 +2541,11 @@
                 "secret_values": true,
                 "advanced": false,
                 "group": "tools-mcp",
-                "title": "En-têtes HTTP",
-                "help": "Valeurs stockées comme secrets."
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "HTTP headers",
+                "help": "Values are stored as secrets."
               }
             },
             "timeout_s": {
@@ -1941,7 +2562,10 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "tools-mcp",
-                "title": "Timeout (secondes)",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Timeout (seconds)",
                 "help": null
               }
             },
@@ -1968,8 +2592,11 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "tools-mcp",
-                "title": "Outils proposés",
-                "help": "Noms des outils du serveur. Vide : tous."
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Tools offered",
+                "help": "Server tool names. Left empty: all of them."
               }
             },
             "exclude": {
@@ -1987,7 +2614,10 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "tools-mcp",
-                "title": "Outils exclus",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Excluded tools",
                 "help": null
               }
             },
@@ -2006,8 +2636,33 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "tools-mcp",
-                "title": "Risques des outils",
-                "help": "Par nom d'outil ; remplace ce que le serveur déclare."
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Tool risks",
+                "help": "By tool name; overrides what the server declares."
+              }
+            },
+            "sensitive": {
+              "items": {
+                "$ref": "#/$defs/SensitiveCalls"
+              },
+              "title": "Sensitive",
+              "type": "array",
+              "x-nestor": {
+                "field": "sensitive",
+                "title_id": "config-tools-mcp-sensitive",
+                "help_id": "config-tools-mcp-sensitive-help",
+                "fallback_title_id": "config-field-sensitive",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-mcp",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Calls to confirm",
+                "help": "By what they act on, e.g. locks, the alarm, the garage."
               }
             },
             "retry_after_s": {
@@ -2024,7 +2679,10 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "tools-mcp",
-                "title": "Attente avant reconnexion (secondes)",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Wait before reconnecting (seconds)",
                 "help": null
               }
             },
@@ -2040,12 +2698,18 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "tools-mcp",
-                "title": "Négociation du protocole",
-                "help": "legacy saute la détection de la version 2026-07-28 du protocole."
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Protocol negotiation",
+                "help": "legacy skips detecting the 2026-07-28 protocol version."
               }
             }
           },
-          "required": ["kind", "url"],
+          "required": [
+            "kind",
+            "url"
+          ],
           "title": "McpSettings",
           "type": "object"
         }
@@ -2056,7 +2720,7 @@
       "family": "inbound",
       "shape": "list",
       "required": false,
-      "title": "Sources entrantes",
+      "title": "Inbound sources",
       "kinds": {},
       "model_types": {}
     },
@@ -2064,7 +2728,7 @@
       "family": "presence",
       "shape": "one",
       "required": false,
-      "title": "Présence",
+      "title": "Presence",
       "kinds": {
         "home-assistant": {
           "additionalProperties": false,
@@ -2081,7 +2745,10 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "presence-home-assistant",
-                "title": "Type",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Kind",
                 "help": null
               }
             },
@@ -2097,7 +2764,10 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "presence-home-assistant",
-                "title": "Nom",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Name",
                 "help": null
               }
             },
@@ -2113,6 +2783,9 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "presence-home-assistant",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
                 "title": "URL",
                 "help": null
               }
@@ -2131,6 +2804,9 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "presence-home-assistant",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
                 "title": "Token",
                 "help": null
               }
@@ -2150,8 +2826,11 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "presence-home-assistant",
-                "title": "Entités personne",
-                "help": "Chaque personne du foyer et son entité, ex. alice: person.alice."
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Person entities",
+                "help": "Each household person and their entity, e.g. alice: person.alice."
               }
             },
             "rooms": {
@@ -2169,8 +2848,11 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "presence-home-assistant",
-                "title": "Suivi des pièces",
-                "help": "Le capteur qui donne la pièce de chaque personne, ex. Bermuda ou ESPresense."
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Room trackers",
+                "help": "The sensor telling each person's room, e.g. Bermuda or ESPresense."
               }
             },
             "occupancy_sensors": {
@@ -2196,8 +2878,11 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "presence-home-assistant",
-                "title": "Capteurs de présence",
-                "help": "Vide : tous ceux rattachés à une pièce (présence, occupation, mouvement)."
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Occupancy sensors",
+                "help": "Left empty: all those with an area (presence, occupancy, motion)."
               }
             },
             "sync_timeout_s": {
@@ -2214,7 +2899,10 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "presence-home-assistant",
-                "title": "Timeout de synchronisation (secondes)",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Sync timeout (seconds)",
                 "help": null
               }
             },
@@ -2232,7 +2920,10 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "presence-home-assistant",
-                "title": "Attente minimale avant reconnexion (secondes)",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Shortest wait before reconnecting (seconds)",
                 "help": null
               }
             },
@@ -2250,12 +2941,19 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "presence-home-assistant",
-                "title": "Attente maximale avant reconnexion (secondes)",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Longest wait before reconnecting (seconds)",
                 "help": null
               }
             }
           },
-          "required": ["kind", "url", "token"],
+          "required": [
+            "kind",
+            "url",
+            "token"
+          ],
           "title": "HomeAssistantSettings",
           "type": "object"
         }
@@ -2266,7 +2964,7 @@
       "family": "connector",
       "shape": "list",
       "required": false,
-      "title": "Connecteurs",
+      "title": "Connectors",
       "kinds": {
         "google": {
           "additionalProperties": false,
@@ -2283,7 +2981,10 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "connector-google",
-                "title": "Type",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Kind",
                 "help": null
               }
             },
@@ -2299,7 +3000,10 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "connector-google",
-                "title": "Nom",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Name",
                 "help": null
               }
             },
@@ -2317,7 +3021,10 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "connector-google",
-                "title": "Intervalle de polling (secondes)",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Polling interval (seconds)",
                 "help": null
               }
             },
@@ -2335,7 +3042,10 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "connector-google",
-                "title": "Attente quand les identifiants sont refusés (secondes)",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Wait while credentials are refused (seconds)",
                 "help": null
               }
             },
@@ -2353,7 +3063,10 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "connector-google",
-                "title": "Premier nouvel essai après (secondes)",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "First retry after (seconds)",
                 "help": null
               }
             },
@@ -2371,7 +3084,10 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "connector-google",
-                "title": "Attente maximale entre deux essais (secondes)",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Longest wait between retries (seconds)",
                 "help": null
               }
             },
@@ -2389,7 +3105,10 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "connector-google",
-                "title": "Longueur maximale d'un message lu (caractères)",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Longest message body read (characters)",
                 "help": null
               }
             },
@@ -2407,14 +3126,19 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "connector-google",
-                "title": "Longueur d'un extrait (caractères)",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Excerpt length (characters)",
                 "help": null
               }
             }
           },
           "title": "GoogleSettings",
           "type": "object",
-          "required": ["kind"]
+          "required": [
+            "kind"
+          ]
         },
         "imap": {
           "additionalProperties": false,
@@ -2431,7 +3155,10 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "connector-imap",
-                "title": "Type",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Kind",
                 "help": null
               }
             },
@@ -2447,7 +3174,10 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "connector-imap",
-                "title": "Nom",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Name",
                 "help": null
               }
             },
@@ -2465,7 +3195,10 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "connector-imap",
-                "title": "Timeout (secondes)",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Timeout (seconds)",
                 "help": null
               }
             },
@@ -2483,8 +3216,11 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "connector-imap",
-                "title": "IDLE renouvelé après (secondes)",
-                "help": "Moins de 1740 : les serveurs coupent IDLE après 29 min."
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "IDLE renewed after (seconds)",
+                "help": "Under 1740: servers drop IDLE after 29 min."
               }
             },
             "poll_s": {
@@ -2501,7 +3237,10 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "connector-imap",
-                "title": "Intervalle de polling sans IDLE (secondes)",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Polling interval without IDLE (seconds)",
                 "help": null
               }
             },
@@ -2519,7 +3258,10 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "connector-imap",
-                "title": "Taille maximale d'un message lu (octets)",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Largest message read (bytes)",
                 "help": null
               }
             },
@@ -2537,7 +3279,10 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "connector-imap",
-                "title": "Attente quand les identifiants sont refusés (secondes)",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Wait while credentials are refused (seconds)",
                 "help": null
               }
             },
@@ -2555,7 +3300,10 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "connector-imap",
-                "title": "Premier nouvel essai après (secondes)",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "First retry after (seconds)",
                 "help": null
               }
             },
@@ -2573,7 +3321,10 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "connector-imap",
-                "title": "Attente maximale entre deux essais (secondes)",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Longest wait between retries (seconds)",
                 "help": null
               }
             },
@@ -2591,7 +3342,10 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "connector-imap",
-                "title": "Longueur maximale d'un message lu (caractères)",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Longest message body read (characters)",
                 "help": null
               }
             },
@@ -2609,14 +3363,19 @@
                 "secret_values": false,
                 "advanced": false,
                 "group": "connector-imap",
-                "title": "Longueur d'un extrait (caractères)",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Excerpt length (characters)",
                 "help": null
               }
             }
           },
           "title": "ImapSettings",
           "type": "object",
-          "required": ["kind"]
+          "required": [
+            "kind"
+          ]
         }
       },
       "model_types": {}

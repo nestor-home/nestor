@@ -86,7 +86,7 @@ class Filters:
         facets, and when `other` is asked (events of no known kind have no type list)."""
         types = None
         if kinds and self.kinds and Kind.OTHER not in self.kinds:
-            types = frozenset().union(*(c.types for c in CATEGORIES if c.key in self.kinds))
+            types = frozenset(e.event_type for kind in self.kinds for e in CATEGORIES.get(kind, ()))
         return LogQuery(
             types=types,
             session=SessionId(self.session) if self.session else None,
@@ -271,7 +271,6 @@ class Feed:
             at=line.at,
             type=entry.type,
             kind=line.kind,
-            kind_label=self.words.kind(line.kind),
             message=MessageOut.of(message),
             text=text,
             detail=line.detail,

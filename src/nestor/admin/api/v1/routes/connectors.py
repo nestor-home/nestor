@@ -52,7 +52,6 @@ class ConnectorOut(BaseModel):
     title: str
     description: str
     auth: AuthKind
-    auth_label: str
     setup: str  # the step-by-step guide, plain text with line breaks; empty without one
     fields: list[FieldOut]
     inbound: list[str]  # what it brings to watches ("mail")
@@ -160,7 +159,6 @@ async def _connector_out(admin: AdminState, request: Request, connector: Connect
         title=words.text(info.title),
         description=words.text(info.description),
         auth=info.auth,
-        auth_label=words.auth(info.auth),
         setup=words.text(info.setup) if info.setup else "",
         fields=[
             FieldOut(name=f.name, label=words.text(f.label), secret=f.secret, default=f.default) for f in info.fields

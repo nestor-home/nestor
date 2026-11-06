@@ -69,7 +69,5 @@ def _person(admin: AdminState, caller: Caller, person: Person, usage: Usage) -> 
             for c in connections
             if c.owner == person.id and reaches(caller.principal, c.owner)
         ],
-        account=AccountOut.of(account, People(nestor.household), caller.phrasebook, admin.accounts)
-        if account
-        else None,
+        account=AccountOut.of(account, People(nestor.household), admin.accounts) if account else None,
     )

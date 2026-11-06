@@ -25,10 +25,7 @@ async def test_a_member_sees_and_stops_their_own_tasks_only(tmp_path: Path) -> N
         api = await admin.api("mathilde")
         listed = (await api.get("/api/v1/tasks")).json()
         assert [t["objective"] for t in listed["running"]] == ["Trouver un plombier"]
-        assert (
-            listed["running"][0]["status_label"] == "en cours"
-            and listed["running"][0]["requested_by"]["id"] == "mathilde"
-        )
+        assert listed["running"][0]["status"] == "running" and listed["running"][0]["requested_by"]["id"] == "mathilde"
         assert (await api.post(f"/api/v1/tasks/{his.id}/cancel")).status_code == 404
         stopped = (await api.post(f"/api/v1/tasks/{hers.id}/cancel")).json()
         assert stopped["confirmed"] and stopped["task"]["status"] == "cancelled"

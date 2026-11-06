@@ -19,7 +19,7 @@ components: the form offers the names the document gives them.
 """
 
 from datetime import datetime
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel, Field
@@ -31,7 +31,7 @@ from nestor.admin.presentation import Phrasebook
 from nestor.admin.state import AdminState, state
 from nestor.core.i18n import Message
 from nestor.modules.accounts import Scope
-from nestor.runtime.editing import ConfigEditor, Diff, EditRefused, Problem, dotted
+from nestor.runtime.editing import ConfigEditor, ConfigSchema, Diff, EditRefused, Problem, Shape, dotted
 from nestor.runtime.plugins import ModelType
 from nestor.runtime.secrets import ConfigSecrets, preview
 
@@ -41,7 +41,7 @@ Manager = Annotated[Caller, Depends(allowed(Scope.CONFIG_MANAGE))]
 
 class SlotOut(BaseModel):
     family: str  # the plugin family the slot takes (`channel`)
-    shape: Literal["one", "list", "named"]  # one component, a list, or components under names other keys use
+    shape: Shape  # one component, a list, or components under names other keys use
     required: bool
     title: str
     kinds: dict[str, dict[str, Any]]  # JSON Schema of each installed plugin's settings, by kind
@@ -183,8 +183,10 @@ async def _write(
 async def get_config_schema(request: Request, caller: Manager) -> ConfigSchemaOut:
     """JSON Schemas of every section and of every installed plugin's settings, with `x-nestor` on each
     property (see the module documentation)."""
-    editor = _editor(state(request))
-    words = caller.phrasebook
+    return schema_out(_editor(state(request)).schema, caller.phrasebook)
+
+
+def schema_out(schema: ConfigSchema, words: Phrasebook) -> ConfigSchemaOut:
     slots = {
         key: SlotOut(
             family=slot["family"],
@@ -194,9 +196,9 @@ async def get_config_schema(request: Request, caller: Manager) -> ConfigSchemaOu
             kinds=_render(slot["kinds"], words),
             model_types=slot["model_types"],
         )
-        for key, slot in editor.schema.slots().items()
+        for key, slot in schema.slots().items()
     }
-    sections = _render(editor.schema.sections(), words)
+    sections = _render(schema.sections(), words)
     titles = {name: words.text_or(Message(f"config-section-{name}"), _humanize(name)) for name in sections}
     return ConfigSchemaOut(sections=sections, section_titles=titles, slots=slots)
 

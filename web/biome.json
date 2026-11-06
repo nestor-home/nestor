@@ -11,6 +11,7 @@
       "!src/routeTree.gen.ts",
       "!src/api/schema.gen.ts",
       "!openapi.json",
+      "!src/mocks/server",
       "!test-results",
       "!playwright-report",
       "!src/assets/brands"

@@ -11,6 +11,7 @@ config-error-secret = { $path }: the secret { $detail } is not set.
 config-error-no-answering-model = { $path }: several models can answer ({ $detail }). Choose the spoken model, the written model, or both.
 config-error-not-answering = { $path }: { $detail } cannot answer. Choose an LLM.
 config-error-not-embedding = { $path }: { $detail } is not an embedding model.
+config-error-not-voice = { $path }: { $detail } cannot tell voices apart. Choose a voice model.
 config-error-shared-account = { $path }: this account already belongs to someone else.
 
 config-section-persona = Persona

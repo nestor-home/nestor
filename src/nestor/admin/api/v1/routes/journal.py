@@ -44,8 +44,7 @@ class HistogramOut(BaseModel):
 
 
 class KindFacetOut(BaseModel):
-    key: Kind
-    label: str
+    key: Kind  # labelled by the front with `journal-kind`
     count: int
 
 
@@ -128,11 +127,11 @@ async def get_journal_facets(request: Request, caller: Reader, filters: Chosen) 
     """Counts for the same filters, over the newest 10 000 entries of the range."""
     feed = await _feed(request, caller, filters)
     facets = await feed.facets()
-    words, people = caller.phrasebook, People(state(request).nestor.household)
+    people = People(state(request).nestor.household)
     return JournalFacets(
         total=facets.total,
         truncated=facets.truncated,
-        kinds=[KindFacetOut(key=k, label=words.kind(k), count=n) for k, n in facets.kinds.most_common()],
+        kinds=[KindFacetOut(key=k, count=n) for k, n in facets.kinds.most_common()],
         people=[
             FacetOut(key=k, label=ref.name if (ref := people.ref(PersonId(k))) else k, count=n)
             for k, n in facets.people.most_common()

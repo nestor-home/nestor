@@ -51,7 +51,7 @@ async def test_the_catalogue_says_how_to_connect_each_service(tmp_path: Path) ->
         mailbox, imap = catalogue["mailbox"], catalogue["imap"]
         assert mailbox["title"] == "Messagerie" and "Créez un projet" in mailbox["setup"]
         assert mailbox["oauth"] == {"registered": False, "client_id": None, "redirect_uri": RELAY, "relayed": True}
-        assert imap["oauth"] is None and imap["auth_label"] == "identifiants"
+        assert imap["oauth"] is None and imap["auth"] == "secret"
         assert {"name": "server", "label": "Serveur", "secret": False, "default": None} in imap["fields"]
         registered = await register(api)
         assert registered["oauth"]["registered"] and registered["oauth"]["client_id"] == "client-123"
@@ -76,7 +76,7 @@ async def test_a_full_oauth_flow_through_the_relay(tmp_path: Path) -> None:
         response = await admin.come_back(**admin.consent(authorize))
         connection_id = urllib.parse.urlsplit(response.headers["location"]).path.rsplit("/", 1)[1]
         detail = (await api.get(f"/api/v1/connections/{connection_id}")).json()
-        assert detail["account"] == "mathis@example.com" and detail["status_label"] == "connectée"
+        assert detail["account"] == "mathis@example.com" and detail["status"] == "connected"
         assert detail["owner"] == {"id": "mathis", "name": "Mathis"}
         assert {t["name"]: t["risk"] for t in detail["tools"]} == {
             "mailbox_search": "read",

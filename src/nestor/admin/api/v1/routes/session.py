@@ -11,7 +11,6 @@ from nestor.admin.api.v1.models import AccountOut, AgentOut, Input, People
 from nestor.admin.api.v1.passwords import checked_password
 from nestor.admin.api.v1.security import Caller, same_origin, signed_in
 from nestor.admin.auth import Session
-from nestor.admin.presentation import Phrasebook
 from nestor.admin.state import AdminState, state
 from nestor.modules.accounts import Account, Scope
 
@@ -114,9 +113,8 @@ def open_session(request: Request, response: Response, account: Account) -> MeOu
 
 def _me(admin: AdminState, account: Account, session: Session) -> MeOut:
     locale = account_locale(admin, account)
-    words = Phrasebook(admin.nestor.localizer, locale)
     return MeOut(
-        account=AccountOut.of(account, People(admin.nestor.household), words, admin.accounts),
+        account=AccountOut.of(account, People(admin.nestor.household), admin.accounts),
         locale=locale,
         scopes=sorted(account.principal().scopes),
         csrf_token=session.csrf,

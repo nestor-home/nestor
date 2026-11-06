@@ -13,18 +13,14 @@ async def test_an_account_reads_in_the_household_language_until_it_chooses_anoth
     async with Harness(tmp_path) as admin:
         api = await admin.api()
         me = (await api.get("/api/v1/me")).json()
-        assert (
-            me["locale"] == "fr" and me["account"]["locale"] is None and me["account"]["role_label"] == "propriétaire"
-        )
+        assert me["locale"] == "fr" and me["account"]["locale"] is None
 
         unknown = await api.put("/api/v1/me/locale", {"locale": "tlh"})
         assert unknown.status_code == 400 and unknown.json()["error"]["message"] == "Cette langue n'est pas disponible."
         chosen = (await api.put("/api/v1/me/locale", {"locale": "EN"})).json()
-        assert chosen["locale"] == "en" and chosen["account"]["role_label"] == "owner"
+        assert chosen["locale"] == "en"
         missing = await api.get("/api/v1/memories/nope")
         assert missing.json()["error"]["message"] == "Not found."
-        kinds = (await api.get("/api/v1/journal/facets")).json()["kinds"]
-        assert {"key": "account", "label": "Accounts", "count": 3} in kinds
         (changed,) = await admin.nestor.journal.history(AccountLocaleChanged)
         assert changed.locale == "en"
         assert (await api.put("/api/v1/me/locale", {"locale": None})).json()["locale"] == "fr"

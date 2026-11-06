@@ -72,7 +72,7 @@ async def test_items_are_said_in_french_with_the_reason_of_a_decision(tmp_path: 
         }
         assert item["tone"] == "decision" and item["links"]["delivery"] == "watch:w1" and item["links"]["watch"] == "w1"
         assert item["detail_text"] == "Prévu : à voix haute sur voice:salon" and item["detail"] == ""
-        assert (item["kind"], item["kind_label"]) == ("delivery", "Prises de parole")
+        assert item["kind"] == "delivery"
         assert item["people"] == [{"id": "mathis", "name": "Mathis"}] and item["channels"] == ["voice"]
 
 

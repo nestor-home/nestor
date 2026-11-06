@@ -9290,10 +9290,6 @@
           "role": {
             "$ref": "#/components/schemas/Role"
           },
-          "role_label": {
-            "type": "string",
-            "title": "Role Label"
-          },
           "person": {
             "anyOf": [
               {
@@ -9342,7 +9338,6 @@
           "id",
           "login",
           "role",
-          "role_label",
           "person",
           "disabled",
           "created_at",
@@ -9819,7 +9814,15 @@
       "ComponentOut": {
         "properties": {
           "slot": {
-            "type": "string",
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Family"
+              },
+              {
+                "type": "string",
+                "const": "satellite"
+              }
+            ],
             "title": "Slot"
           },
           "name": {
@@ -10021,10 +10024,6 @@
           "status": {
             "$ref": "#/components/schemas/Status"
           },
-          "status_label": {
-            "type": "string",
-            "title": "Status Label"
-          },
           "status_reason": {
             "anyOf": [
               {
@@ -10088,7 +10087,6 @@
           "account",
           "owner",
           "status",
-          "status_label",
           "status_reason",
           "confirm_writes",
           "disabled_tools",
@@ -10141,10 +10139,6 @@
           },
           "status": {
             "$ref": "#/components/schemas/Status"
-          },
-          "status_label": {
-            "type": "string",
-            "title": "Status Label"
           },
           "status_reason": {
             "anyOf": [
@@ -10202,7 +10196,6 @@
           "account",
           "owner",
           "status",
-          "status_label",
           "status_reason",
           "confirm_writes",
           "disabled_tools",
@@ -10273,10 +10266,6 @@
           "auth": {
             "$ref": "#/components/schemas/AuthKind"
           },
-          "auth_label": {
-            "type": "string",
-            "title": "Auth Label"
-          },
           "setup": {
             "type": "string",
             "title": "Setup"
@@ -10313,7 +10302,6 @@
           "title",
           "description",
           "auth",
-          "auth_label",
           "setup",
           "fields",
           "inbound",
@@ -10608,6 +10596,19 @@
           "count"
         ],
         "title": "FacetOut"
+      },
+      "Family": {
+        "type": "string",
+        "enum": [
+          "model",
+          "executor",
+          "channel",
+          "presence",
+          "tools",
+          "inbound",
+          "connector"
+        ],
+        "title": "Family"
       },
       "FieldOut": {
         "properties": {
@@ -10914,10 +10915,6 @@
           "role": {
             "$ref": "#/components/schemas/Role"
           },
-          "role_label": {
-            "type": "string",
-            "title": "Role Label"
-          },
           "person": {
             "anyOf": [
               {
@@ -10930,10 +10927,6 @@
           },
           "status": {
             "$ref": "#/components/schemas/InvitationStatus"
-          },
-          "status_label": {
-            "type": "string",
-            "title": "Status Label"
           },
           "created_at": {
             "type": "string",
@@ -10950,10 +10943,8 @@
         "required": [
           "id",
           "role",
-          "role_label",
           "person",
           "status",
-          "status_label",
           "created_at",
           "expires_at"
         ],
@@ -10963,10 +10954,6 @@
         "properties": {
           "role": {
             "$ref": "#/components/schemas/Role"
-          },
-          "role_label": {
-            "type": "string",
-            "title": "Role Label"
           },
           "person": {
             "anyOf": [
@@ -10987,7 +10974,6 @@
         "type": "object",
         "required": [
           "role",
-          "role_label",
           "person",
           "expires_at"
         ],
@@ -11110,10 +11096,6 @@
           },
           "kind": {
             "$ref": "#/components/schemas/Kind"
-          },
-          "kind_label": {
-            "type": "string",
-            "title": "Kind Label"
           },
           "message": {
             "$ref": "#/components/schemas/MessageOut"
@@ -11242,7 +11224,6 @@
           "at",
           "type",
           "kind",
-          "kind_label",
           "message",
           "text",
           "detail",
@@ -11316,10 +11297,6 @@
           "key": {
             "$ref": "#/components/schemas/Kind"
           },
-          "label": {
-            "type": "string",
-            "title": "Label"
-          },
           "count": {
             "type": "integer",
             "title": "Count"
@@ -11328,7 +11305,6 @@
         "type": "object",
         "required": [
           "key",
-          "label",
           "count"
         ],
         "title": "KindFacetOut"
@@ -12182,6 +12158,24 @@
         "title": "Problem",
         "description": "Why a phrase of an enrollment is asked again."
       },
+      "ProblemCode": {
+        "type": "string",
+        "enum": [
+          "missing",
+          "extra",
+          "invalid",
+          "unknown_kind",
+          "reference",
+          "secret",
+          "no_answering_model",
+          "not_answering",
+          "not_embedding",
+          "not_voice",
+          "shared_account"
+        ],
+        "title": "ProblemCode",
+        "description": "What is wrong in a configuration; each names its message, `config-error-<code>`."
+      },
       "ProblemOut": {
         "properties": {
           "path": {
@@ -12199,8 +12193,7 @@
             "title": "Path"
           },
           "code": {
-            "type": "string",
-            "title": "Code"
+            "$ref": "#/components/schemas/ProblemCode"
           },
           "message_id": {
             "type": "string",
@@ -12773,6 +12766,15 @@
         "type": "object",
         "title": "SecretsIn"
       },
+      "Shape": {
+        "type": "string",
+        "enum": [
+          "one",
+          "list",
+          "named"
+        ],
+        "title": "Shape"
+      },
       "SlotOut": {
         "properties": {
           "family": {
@@ -12780,13 +12782,7 @@
             "title": "Family"
           },
           "shape": {
-            "type": "string",
-            "enum": [
-              "one",
-              "list",
-              "named"
-            ],
-            "title": "Shape"
+            "$ref": "#/components/schemas/Shape"
           },
           "required": {
             "type": "boolean",
@@ -12952,10 +12948,6 @@
           "status": {
             "$ref": "#/components/schemas/TaskStatus"
           },
-          "status_label": {
-            "type": "string",
-            "title": "Status Label"
-          },
           "requested_by": {
             "anyOf": [
               {
@@ -13032,7 +13024,6 @@
           "objective",
           "executor",
           "status",
-          "status_label",
           "requested_by",
           "origin",
           "delivered",
@@ -13100,10 +13091,6 @@
           "risk": {
             "$ref": "#/components/schemas/Risk"
           },
-          "risk_label": {
-            "type": "string",
-            "title": "Risk Label"
-          },
           "enabled": {
             "type": "boolean",
             "title": "Enabled"
@@ -13114,7 +13101,6 @@
           "name",
           "description",
           "risk",
-          "risk_label",
           "enabled"
         ],
         "title": "ToolOut"

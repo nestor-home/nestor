@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from nestor.admin.api.v1.errors import not_found
 from nestor.admin.api.v1.models import OriginOut, People, PersonRef
 from nestor.admin.api.v1.security import Caller, allowed
-from nestor.admin.presentation import Phrasebook, subject
+from nestor.admin.presentation import subject
 from nestor.admin.state import AdminState, state
 from nestor.modules.accounts import Scope
 from nestor.modules.channels import Address
@@ -38,7 +38,6 @@ class TaskOut(BaseModel):
     objective: str
     executor: str
     status: TaskStatus
-    status_label: str
     requested_by: PersonRef | None
     origin: OriginOut
     delivered: DeliveredOut | None  # where and when its result reached the person
@@ -93,14 +92,13 @@ async def deliveries(admin: AdminState) -> dict[str, DeliveredOut]:
     return found
 
 
-def _task(task: Task, people: People, words: Phrasebook, afterwards: Afterwards) -> TaskOut:
+def _task(task: Task, people: People, afterwards: Afterwards) -> TaskOut:
     outcome = task.outcome
     return TaskOut(
         id=task.id,
         objective=task.objective,
         executor=task.executor,
         status=task.status,
-        status_label=words.task_status(task.status),
         requested_by=people.ref(task.requested_by),
         origin=OriginOut(session=str(task.origin), channel=task.origin.channel),
         delivered=afterwards.delivered.get(task.id),
@@ -119,12 +117,8 @@ async def list_tasks(request: Request, caller: Manager) -> TasksOut:
     manager = nestor.tasks
     afterwards = await Afterwards.of(state(request))
     return TasksOut(
-        running=[_task(t, people, caller.phrasebook, afterwards) for t in manager.running() if _reaches(caller, t)],
-        recent=[
-            _task(t, people, caller.phrasebook, afterwards)
-            for t in reversed(manager.recent(RECENT))
-            if _reaches(caller, t)
-        ],
+        running=[_task(t, people, afterwards) for t in manager.running() if _reaches(caller, t)],
+        recent=[_task(t, people, afterwards) for t in reversed(manager.recent(RECENT)) if _reaches(caller, t)],
     )
 
 
@@ -135,7 +129,7 @@ async def get_task(request: Request, caller: Manager, task_id: str) -> TaskOut:
     task = nestor.tasks.tasks.get(task_id)
     if task is None or not _reaches(caller, task):
         raise not_found("task_unknown")
-    return _task(task, People(nestor.household), caller.phrasebook, await Afterwards.of(state(request)))
+    return _task(task, People(nestor.household), await Afterwards.of(state(request)))
 
 
 @router.post("/tasks/{task_id}/cancel")
@@ -147,6 +141,6 @@ async def cancel_task(request: Request, caller: Manager, task_id: str) -> Cancel
         raise not_found("task_unknown")
     outcome = await nestor.tasks.cancel(task_id)
     return CancelOut(
-        task=_task(task, People(nestor.household), caller.phrasebook, await Afterwards.of(state(request))),
+        task=_task(task, People(nestor.household), await Afterwards.of(state(request))),
         confirmed=outcome.status is TaskStatus.CANCELLED,
     )

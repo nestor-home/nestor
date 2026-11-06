@@ -6,13 +6,14 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from nestor.admin.api.v1.errors import ErrorCode
-from nestor.admin.presentation import Kind, Phrasebook, Tone
+from nestor.admin.presentation import Kind, Tone
 from nestor.core import Health, PersonId
 from nestor.core.i18n import Message
 from nestor.modules.accounts import Account, Accounts, Role
 from nestor.modules.activity import Activity, AgentActivity
 from nestor.modules.household import Household
 from nestor.runtime import Nestor
+from nestor.runtime.config import ProblemCode
 
 
 class Input(BaseModel):
@@ -25,7 +26,7 @@ class ProblemOut(BaseModel):
     """What is wrong in an edited configuration, located by its path in the document."""
 
     path: list[str | int]  # `["channels", 0, "token"]`; empty: the document as a whole
-    code: str  # missing, extra, invalid, unknown_kind, reference (an environment variable), secret
+    code: ProblemCode
     message_id: str  # `config-error-<code>`, with `args` {path, detail}
     args: dict[str, str | int | float]
     message: str
@@ -118,7 +119,6 @@ class JournalItem(BaseModel):
     at: datetime
     type: str  # the event type, e.g. `conversation.turn.user`
     kind: Kind
-    kind_label: str
     message: MessageOut  # the summary; deliveries carry `args.follow_up` ("yes" / "no")
     text: str
     detail: str  # raw content (what was said, a tool's output): never translated; "" without
@@ -144,7 +144,6 @@ class AccountOut(BaseModel):
     id: str
     login: str
     role: Role
-    role_label: str
     person: PersonRef | None
     disabled: bool
     created_at: datetime
@@ -152,12 +151,11 @@ class AccountOut(BaseModel):
     last_seen_at: datetime | None  # its last sign-in or request (to the minute); None: never since it was opened
 
     @classmethod
-    def of(cls, account: Account, people: People, words: Phrasebook, accounts: Accounts) -> "AccountOut":
+    def of(cls, account: Account, people: People, accounts: Accounts) -> "AccountOut":
         return cls(
             id=account.id,
             login=account.login,
             role=account.role,
-            role_label=words.role(account.role),
             person=people.ref(account.person),
             disabled=account.disabled,
             created_at=account.created_at,
