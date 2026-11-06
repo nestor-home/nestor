@@ -28,7 +28,7 @@ describe("approving a satellite", () => {
   it("refuses a code that is not six digits, without asking the server", async () => {
     const user = userEvent.setup();
     const sent = captureApprovals();
-    renderWithProviders(
+    await renderWithProviders(
       <I18nProvider>
         <ApproveForm request={reachy} />
       </I18nProvider>,
@@ -43,7 +43,7 @@ describe("approving a satellite", () => {
   it("sends the code and the narrowed capabilities for this pairing", async () => {
     const user = userEvent.setup();
     const sent = captureApprovals();
-    renderWithProviders(
+    await renderWithProviders(
       <I18nProvider>
         <ApproveForm request={reachy} />
       </I18nProvider>,
@@ -71,7 +71,7 @@ describe("approving a satellite", () => {
 
   it("says when no device waits for that code", async () => {
     const user = userEvent.setup();
-    renderWithProviders(
+    await renderWithProviders(
       <I18nProvider>
         <ApproveForm request={reachy} />
       </I18nProvider>,
@@ -84,7 +84,7 @@ describe("approving a satellite", () => {
   it("explains an unreachable Nestor", async () => {
     server.use(http.post("/api/v1/satellites/approvals", () => HttpResponse.error()));
     const user = userEvent.setup();
-    renderWithProviders(
+    await renderWithProviders(
       <I18nProvider>
         <ApproveForm request={reachy} />
       </I18nProvider>,

@@ -13,6 +13,8 @@ import {
 import { NoticeProvider } from "@/components/notices";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { I18nProvider } from "@/i18n";
+import { DEFAULT_LOCALE } from "@/i18n/catalog";
+import { fetchCatalogue } from "@/i18n/provider";
 import { ThemeProvider } from "@/lib/theme";
 import { CSRF } from "@/mocks/handlers";
 import { toItem } from "@/mocks/messages";
@@ -70,10 +72,11 @@ export function renderApp(path: string) {
 }
 
 /** One component with the providers it needs, outside the router, as a signed-in owner. */
-export function renderWithProviders(ui: ReactNode) {
+/** Renders `ui` with the app's providers, once the server's catalogue has arrived (as the app shows it). */
+export async function renderWithProviders(ui: ReactNode) {
   setCsrfToken(CSRF);
   const queryClient = testQueryClient();
-  return {
+  const rendered = {
     queryClient,
     ...render(
       <ThemeProvider>
@@ -85,9 +88,12 @@ export function renderWithProviders(ui: ReactNode) {
       </ThemeProvider>,
     ),
   };
+  await act(async () => {
+    await fetchCatalogue(DEFAULT_LOCALE);
+  });
+  return rendered;
 }
 
-/** The server's message for each event type (`presentation/events.py`). */
 /** The English line the mock journal writes for an event type (`mocks/messages.ts` reads it as the server's message). */
 const TITLE_OF: Record<string, string> = {
   "conversation.turn.user": "Jules said",
