@@ -338,6 +338,15 @@ class Nestor:
         hosts = (c for c in self.channels if isinstance(c, SatelliteHost))
         return next((url for host in hosts if (url := host.satellite_url(seen_as))), None)
 
+    def spoken_channels(self) -> frozenset[str]:
+        """The ids of the channels people speak through: their conversations are rooms."""
+        return frozenset(c.channel_id for c in self.channels if c.spoken)
+
+    def heard_rooms(self) -> frozenset[str] | None:
+        """Rooms a spoken channel can hear right now; `None` without any spoken channel to tell."""
+        spoken = [c.rooms for c in self.channels if c.spoken]
+        return frozenset().union(*spoken) if spoken else None
+
     @property
     def components(self) -> Sequence[Component]:
         """In start order; they are closed in reverse."""

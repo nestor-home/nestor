@@ -25,6 +25,12 @@ class SessionCookie:
             path="/",
         )
 
+    def open(self, response: Response, account_id: str, *, secure: bool) -> Session:
+        """A fresh session for the account, its cookie on `response`."""
+        session = self.sessions.open(account_id)
+        self.give(response, session, secure=secure)
+        return session
+
     @staticmethod
     def clear(response: Response) -> None:
         response.delete_cookie(COOKIE, path="/")

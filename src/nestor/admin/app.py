@@ -16,8 +16,8 @@ from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException
 
 from nestor.admin import front
-from nestor.admin.api import v1
-from nestor.admin.api.v1.openapi import operation_id
+from nestor.admin.api.v1.app import browser, operation_id, router
+from nestor.admin.api.v1.errors import ApiError, localized
 from nestor.admin.settings import AdminSettings
 from nestor.admin.state import AdminState
 from nestor.core import ContractError, ProviderError
@@ -46,8 +46,8 @@ def create_app(nestor: Nestor, settings: AdminSettings) -> FastAPI:
     )
     app.state.admin = AdminState(nestor, settings)
     app.mount("/static/relay", StaticFiles(directory=RELAY), name="relay")
-    app.include_router(v1.router())
-    app.include_router(v1.browser)
+    app.include_router(router())
+    app.include_router(browser)
 
     @app.get("/health", include_in_schema=False)
     async def health() -> dict[str, str]:
@@ -63,11 +63,11 @@ def create_app(nestor: Nestor, settings: AdminSettings) -> FastAPI:
             response.headers["Cache-Control"] = "no-store"
         return response
 
-    for error in (v1.ApiError, AccessDenied, ContractError, ProviderError, RequestValidationError, HTTPException):
+    for error in (ApiError, AccessDenied, ContractError, ProviderError, RequestValidationError, HTTPException):
         app.add_exception_handler(error, _error)
     return app
 
 
 async def _error(request: Request, error: Exception) -> Response:
     """Every error is the API's JSON, in the reader's language."""
-    return v1.localized(request, error)
+    return localized(request, error)

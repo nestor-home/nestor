@@ -3,7 +3,7 @@
 A layer above the runtime: it is built on an assembled `Nestor` and served next to it by `AdminServer`.
 """
 
-from nestor.admin.api.v1 import api_app, mock_answers, openapi_text
+from nestor.admin.api.v1.app import api_app, mock_answers, openapi_text
 from nestor.admin.app import create_app
 from nestor.admin.auth import read_token, token_path
 from nestor.admin.server import AdminServer
