@@ -77,7 +77,7 @@ class Down(InMemoryChannel):
 async def test_the_agent_is_online_until_its_model_or_a_channel_cannot_serve(tmp_path: Path) -> None:
     async with Harness(tmp_path) as admin:
         api = await admin.api()
-        assert (await api.get("/api/v1/me")).json()["agent"] == {"name": "Richie", "status": "online"}
+        assert (await api.get("/api/v1/me")).json()["agent"] == {"name": "Richie", "status": "started"}
         admin.nestor.channels.append(Down("broken"))
         assert (await api.get("/api/v1/me")).json()["agent"]["status"] == "degraded"
         assert (await api.get("/api/v1/system")).json()["agent"] == {"name": "Richie", "status": "degraded"}

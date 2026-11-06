@@ -130,7 +130,7 @@ const meOut = (account: In<"AccountOut">): In<"MeOut"> => ({
   scopes: SCOPES[account.role],
   csrf_token: CSRF,
   assistant: db.system.agent.name,
-  agent: { name: db.system.agent.name, status: "online" },
+  agent: { name: db.system.agent.name, status: "started" },
   restart_required: db.config.restart_required,
   pending_changes: db.config.pending_changes,
 });
@@ -555,7 +555,7 @@ export const handlers = [
       guard(request) ??
       json({
         nestor: db.system.nestor,
-        agent: { name: db.system.agent.name, status: "online" },
+        agent: { name: db.system.agent.name, status: "started" },
         restart_required: db.config.restart_required,
         pending_changes: db.config.pending_changes,
         components: db.system.components,

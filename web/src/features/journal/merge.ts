@@ -10,7 +10,7 @@ export function matches(item: JournalItem, f: JournalFilters): boolean {
     (!f.room || item.room === f.room) &&
     (!q || `${item.text} ${item.detail_text} ${item.reason?.text ?? ""}`.toLowerCase().includes(q)) &&
     (!f.from || item.at >= f.from) &&
-    (!f.to || item.at <= f.to) &&
+    (!f.to || item.at < f.to) && // `to` excluded, as the API does
     (!f.tone || item.tone === f.tone) &&
     (!f.session || item.links.session === f.session) &&
     (!f.conversation || item.links.conversation === f.conversation) &&

@@ -882,7 +882,7 @@ export function updates(): Updates {
 export function system(): SystemInfo {
   return {
     nestor: { version: "0.9.0" },
-    agent: { name: ASSISTANT, status: "online" },
+    agent: { name: ASSISTANT, status: "started" },
     restart_required: false,
     pending_changes: [],
     components: [

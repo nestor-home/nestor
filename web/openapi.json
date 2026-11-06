@@ -9596,12 +9596,7 @@
             "title": "Name"
           },
           "status": {
-            "type": "string",
-            "enum": [
-              "online",
-              "degraded"
-            ],
-            "title": "Status"
+            "$ref": "#/components/schemas/Health"
           }
         },
         "type": "object",

@@ -16,14 +16,15 @@ const SOURCES = import.meta.glob("../locales/*/*.ftl", { query: "?raw", import: 
   string
 >;
 
-/** Nestor's own catalogue (`src/nestor/locales`), built into the admin of the same version. */
-const CORE = import.meta.glob("../../../src/nestor/locales/*/*.ftl", {
+/** The labels of the values the API sends (`role-name`, `journal-kind`…), from Nestor's own catalogue, built into
+ * the admin of the same version so screens read before `GET /i18n` answers. */
+const CORE = import.meta.glob("../../../src/nestor/locales/*/labels.ftl", {
   query: "?raw",
   import: "default",
   eager: true,
 }) as Record<string, string>;
 
-/** The server's catalogue of a locale as this version ships it, before plugins add theirs. */
+/** The server's labels of a locale as this version ships them, until its whole catalogue is fetched. */
 export function coreOf(locale: Locale): string {
   return Object.entries(CORE)
     .filter(([path]) => path.includes(`/locales/${locale}/`))

@@ -1400,11 +1400,7 @@ export interface components {
         AgentOut: {
             /** Name */
             name: string;
-            /**
-             * Status
-             * @enum {string}
-             */
-            status: "online" | "degraded";
+            status: components["schemas"]["Health"];
         };
         /** ApprovalIn */
         ApprovalIn: {
@@ -10130,7 +10126,6 @@ type ReadonlyArray<T> = [
     unknown[]
 ] ? Readonly<Exclude<T, undefined>> : Readonly<Exclude<T, undefined>[]>;
 export const activityValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Activity"]> = ["listening", "speaking", "thinking", "working", "sleeping", "idle"];
-export const agentOutStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["AgentOut"]["status"]> = ["online", "degraded"];
 export const authKindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["AuthKind"]> = ["oauth2", "secret", "none"];
 export const changeKindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ChangeKind"]> = ["breaking", "feature", "fix", "other"];
 export const errorDetailCodeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ErrorDetail"]["code"]> = ["addition_over", "addition_unknown", "audio_format", "bad_token", "client_incomplete", "client_missing", "config_history_unknown", "config_invalid", "config_unavailable", "conflict", "connection_unknown", "connector_unknown", "cross_origin", "csrf_failed", "empty_memory", "fields_missing", "forbidden", "http_error", "identify_unsupported", "invalid", "invalid_code", "invalid_credentials", "invalid_login", "invalid_request", "invitation_expired", "invitation_revoked", "invitation_unknown", "invitation_used", "journal_entry_unknown", "last_owner", "memory_shared", "memory_unknown", "method_not_allowed", "no_connectors", "no_secret_key", "not_a_device_code_method", "not_found", "not_oauth", "oauth", "own_connections_only", "pairing_refused", "pending_unknown", "person_required", "person_unknown", "provider_error", "provider_refused", "restart_unconfirmed", "satellite_offline", "satellite_unknown", "secret_in_use", "secret_unknown", "task_unknown", "throttled", "too_many_additions", "unauthenticated", "unknown_locale", "unknown_person", "unknown_tool", "unsupported_media_type", "update_not_installable", "update_unavailable", "update_unconfirmed", "update_unsupported", "use_me_password", "voice_not_yours", "voices_off", "watch_unknown", "weak_password", "wrong_password"];

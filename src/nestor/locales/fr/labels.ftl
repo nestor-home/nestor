@@ -85,3 +85,20 @@ pairing-method-enrollment-provisioning-hint = Donnez l'URI d'appairage à l'appa
 # Pourquoi une connexion doit être réautorisée, ou est en erreur.
 connection-refresh-refused = Accès révoqué ou expiré. Reconnectez le compte.
 connection-no-refresh-token = Accès expiré, sans renouvellement possible. Reconnectez le compte.
+
+journal-kind = { $kind ->
+    [conversation] Conversations
+    [delivery] Prises de parole
+    [tool] Outils
+    [task] Tâches
+    [watch] Veilles
+    [schedule] Réveils
+    [memory] Souvenirs
+    [connection] Connexions
+    [presence] Présence
+    [satellite] Satellites
+    [voice] Voix
+    [observation] Observations
+    [account] Comptes
+   *[other] Autres
+}

@@ -39,7 +39,6 @@ from nestor.modules.satellites import PairingMethod
 from nestor.modules.satellites.wire import SCHEMAS, write_schemas
 from nestor.runtime.app import Nestor, open_accounts, run_until_stopped
 from nestor.runtime.config import ENV_FILE, SECRET_KEY, NestorConfig, environment, load_config
-from nestor.runtime.plugins import Registry
 from nestor.runtime.secrets import ConfigFile, open_secrets, preview
 
 OPENAPI = Path("web") / "openapi.json"
@@ -240,10 +239,8 @@ def _openapi(out: Path) -> int:
 
 
 def _mocks(out: Path) -> int:
-    registry = Registry.installed()
-    localizer = FluentLocalizer(catalogue_dirs(["nestor", *registry.packages()]))
     out.mkdir(parents=True, exist_ok=True)
-    for name, text in mock_answers(registry, localizer).items():
+    for name, text in mock_answers(FluentLocalizer(catalogue_dirs(["nestor"]))).items():
         (out / name).write_text(text)
     print(f"wrote {out}")
     return 0

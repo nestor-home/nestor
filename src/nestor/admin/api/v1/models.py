@@ -1,7 +1,6 @@
 """Shapes shared by several resources of the API. Field names are the wire contract of the front."""
 
 from datetime import datetime
-from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -168,13 +167,13 @@ class AgentOut(BaseModel):
     """The assistant itself, as the front's sidebar shows it."""
 
     name: str  # the persona's name ("Richie")
-    status: Literal["online", "degraded"]  # degraded: its model or one of its channels cannot serve now
+    status: Health  # started, or degraded when its model or one of its channels cannot serve now
 
     @classmethod
     def of(cls, nestor: Nestor) -> "AgentOut":
         required = [*nestor.agent.models.distinct(), *nestor.channels]
         degraded = any(c.health() is not Health.STARTED for c in required)
-        return cls(name=nestor.config.persona.name, status="degraded" if degraded else "online")
+        return cls(name=nestor.config.persona.name, status=Health.DEGRADED if degraded else Health.STARTED)
 
 
 class AgentActivityOut(BaseModel):

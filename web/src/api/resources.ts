@@ -26,7 +26,7 @@ const wav = (audio: ArrayBuffer) => ({
 });
 
 /** An operation whose answer the screens do not read. */
-const done = (call: Parameters<typeof unwrap>[0]): Promise<void> => unwrap(call).then(() => undefined);
+const done = (call: Parameters<typeof unwrap>[0]): Promise<void> => done(call);
 
 /** How connecting ends: on the provider's consent page, or connected at once. */
 export type ConnectResult = { kind: "redirect"; url: string } | { kind: "connected"; connection: Connection };
@@ -50,9 +50,7 @@ export const api = {
   invitations: () => unwrap(client.GET("/api/v1/invitations")),
   invite: (body: NewInvitation) => unwrap(client.POST("/api/v1/invitations", { body })),
   revokeInvitation: (id: Id) =>
-    unwrap(client.DELETE("/api/v1/invitations/{invitation_id}", { params: { path: { invitation_id: id } } })).then(
-      () => undefined,
-    ),
+    done(client.DELETE("/api/v1/invitations/{invitation_id}", { params: { path: { invitation_id: id } } })),
   changeAccount: async (id: Id, change: AccountChange) => {
     const path = { params: { path: { account_id: id } } };
     if (change.role)
@@ -110,9 +108,7 @@ export const api = {
   setSecret: (name: string, value: string) =>
     unwrap(client.PUT("/api/v1/config/secrets/{name}", { params: { path: { name } }, body: { value } })),
   deleteSecret: (name: string, force = false) =>
-    unwrap(client.DELETE("/api/v1/config/secrets/{name}", { params: { path: { name }, query: { force } } })).then(
-      () => undefined,
-    ),
+    done(client.DELETE("/api/v1/config/secrets/{name}", { params: { path: { name }, query: { force } } })),
 
   // connectors and connections
   connectors: () => unwrap(client.GET("/api/v1/connectors")),
@@ -140,9 +136,7 @@ export const api = {
   configureTools: (id: Id, body: ToolSettings) =>
     unwrap(client.PATCH("/api/v1/connections/{connection_id}", { params: { path: { connection_id: id } }, body })),
   disconnect: (id: Id) =>
-    unwrap(client.DELETE("/api/v1/connections/{connection_id}", { params: { path: { connection_id: id } } })).then(
-      () => undefined,
-    ),
+    done(client.DELETE("/api/v1/connections/{connection_id}", { params: { path: { connection_id: id } } })),
 
   // satellites
   satellites: () => unwrap(client.GET("/api/v1/satellites")),
@@ -151,17 +145,13 @@ export const api = {
   addition: (id: Id, signal?: AbortSignal) =>
     unwrap(client.GET("/api/v1/satellites/additions/{addition_id}", { params: { path: { addition_id: id } }, signal })),
   cancelAddition: (id: Id) =>
-    unwrap(client.DELETE("/api/v1/satellites/additions/{addition_id}", { params: { path: { addition_id: id } } })).then(
-      () => undefined,
-    ),
+    done(client.DELETE("/api/v1/satellites/additions/{addition_id}", { params: { path: { addition_id: id } } })),
   identifyPending: (pairing: Id) =>
     done(
       client.POST("/api/v1/satellites/pending/{pairing_id}/identify", { params: { path: { pairing_id: pairing } } }),
     ),
   identify: (device: string) =>
-    unwrap(client.POST("/api/v1/satellites/{device_id}/identify", { params: { path: { device_id: device } } })).then(
-      () => undefined,
-    ),
+    done(client.POST("/api/v1/satellites/{device_id}/identify", { params: { path: { device_id: device } } })),
   /** Asks a connected satellite to install the newer version it reported; answers that version. */
   updateSatellite: async (device: string) =>
     (await unwrap(client.POST("/api/v1/satellites/{device_id}/update", { params: { path: { device_id: device } } })))
@@ -171,9 +161,7 @@ export const api = {
   approve: (pairing: Id, body: Approval) =>
     unwrap(client.POST("/api/v1/satellites/approvals", { body: { ...body, pairing_id: pairing } })),
   revoke: (device: string) =>
-    unwrap(client.DELETE("/api/v1/satellites/{device_id}", { params: { path: { device_id: device } } })).then(
-      () => undefined,
-    ),
+    done(client.DELETE("/api/v1/satellites/{device_id}", { params: { path: { device_id: device } } })),
 
   // voices
   voice: (person: Id) =>
@@ -220,16 +208,12 @@ export const api = {
   watches: () => unwrap(client.GET("/api/v1/watches")),
   watch: (id: Id) => unwrap(client.GET("/api/v1/watches/{watch_id}", { params: { path: { watch_id: id } } })),
   cancelWatch: (id: Id) =>
-    unwrap(client.POST("/api/v1/watches/{watch_id}/cancel", { params: { path: { watch_id: id } } })).then(
-      () => undefined,
-    ),
+    done(client.POST("/api/v1/watches/{watch_id}/cancel", { params: { path: { watch_id: id } } })),
   memories: (query: MemoryQuery) => unwrap(client.GET("/api/v1/memories", { params: { query } })),
   correctMemory: (id: Id, text: string) =>
     unwrap(client.PATCH("/api/v1/memories/{memory_id}", { params: { path: { memory_id: id } }, body: { text } })),
   forgetMemory: (id: Id) =>
-    unwrap(client.DELETE("/api/v1/memories/{memory_id}", { params: { path: { memory_id: id } } })).then(
-      () => undefined,
-    ),
+    done(client.DELETE("/api/v1/memories/{memory_id}", { params: { path: { memory_id: id } } })),
 };
 
 export type Api = typeof api;

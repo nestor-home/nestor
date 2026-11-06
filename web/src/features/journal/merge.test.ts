@@ -24,6 +24,12 @@ describe("matches", () => {
     expect(matches(item, { room: "bureau" })).toBe(false);
     expect(matches(item, { q: "colis" })).toBe(false);
   });
+
+  it("keeps the time range as the API does: from included, to excluded", () => {
+    const at = liveItem({ at: "2026-10-30T10:00:00Z" });
+    expect(matches(at, { from: "2026-10-30T10:00:00Z" })).toBe(true);
+    expect(matches(at, { to: "2026-10-30T10:00:00Z" })).toBe(false);
+  });
 });
 
 describe("merge", () => {

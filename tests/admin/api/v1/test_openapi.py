@@ -7,7 +7,6 @@ from pathlib import Path
 from nestor.adapters.i18n import FluentLocalizer, catalogue_dirs
 from nestor.admin import mock_answers, openapi_text
 from nestor.cli import main
-from nestor.runtime import Registry
 
 WEB = Path(__file__).resolve().parents[4] / "web"
 COMMITTED = WEB / "openapi.json"
@@ -19,8 +18,7 @@ def test_the_committed_document_is_up_to_date() -> None:
 
 
 def test_the_mock_server_answers_as_this_version_does() -> None:
-    registry = Registry.installed()
-    answers = mock_answers(registry, FluentLocalizer(catalogue_dirs(["nestor", *registry.packages()])))
+    answers = mock_answers(FluentLocalizer(catalogue_dirs(["nestor"])))
     assert {p.name: p.read_text() for p in MOCKS.iterdir()} == answers, "run `nestor admin mocks` and commit them"
 
 

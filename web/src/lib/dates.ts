@@ -47,8 +47,7 @@ export function calendarDay(day: string): string {
   );
 }
 
-/** `4 min 05 s` until `iso`, never negative. */
-/** Time left until `end` (an instant, or milliseconds since the epoch). */
+/** `4 min 05 s` until `end` (an instant, or milliseconds since the epoch), never negative. */
 export function remaining(end: string | number, now: Date = new Date()): string {
   const seconds = Math.max(0, Math.round((new Date(end).getTime() - now.getTime()) / 1000));
   return tr("remaining", { minutes: Math.floor(seconds / 60), seconds: String(seconds % 60).padStart(2, "0") });

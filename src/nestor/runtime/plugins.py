@@ -108,6 +108,9 @@ class Plugin[S: AdapterSettings]:
             ) from None
 
 
+BUILT_IN = "nestor-home"  # the distribution of Nestor's own plugins
+
+
 @dataclass(frozen=True, slots=True)
 class Distribution:
     """The installed package a plugin comes from (`nestor-home` for the built-in ones)."""
@@ -135,10 +138,13 @@ class Registry:
             self.register(plugin)
 
     @classmethod
-    def installed(cls) -> "Registry":
-        """Every plugin declared by an installed package."""
+    def installed(cls, *, distribution: str | None = None) -> "Registry":
+        """Every plugin declared by an installed package, or only by `distribution` (`nestor-home`: the built-in
+        ones, whatever else is installed)."""
         registry = cls()
         for entry in entry_points(group=ENTRY_POINTS):
+            if distribution is not None and (entry.dist is None or entry.dist.name != distribution):
+                continue
             plugin = entry.load()
             if not isinstance(plugin, Plugin):
                 raise ContractError(f"entry point {entry.name!r} ({entry.value}) is not a nestor Plugin")

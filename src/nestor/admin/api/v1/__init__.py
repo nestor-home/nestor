@@ -35,6 +35,7 @@ from nestor.core.i18n import Localizer
 from nestor.modules.accounts import GRANTS
 from nestor.runtime import Registry
 from nestor.runtime.editing import ConfigSchema
+from nestor.runtime.plugins import BUILT_IN
 
 PREFIX = "/api/v1"
 # Written out rather than left to FastAPI, which takes them from `http.HTTPStatus`: Python 3.13 renamed
@@ -95,10 +96,11 @@ def openapi_text() -> str:
     return openapi.text(api_app())
 
 
-def mock_answers(registry: Registry, localizer: Localizer) -> dict[str, str]:
-    """What the admin's mock server answers as a real instance would, by file name: the configuration's schemas
-    in each shipped locale, the journal kind of each event type, and the scopes each role grants. What
-    `nestor admin mocks` writes."""
+def mock_answers(localizer: Localizer) -> dict[str, str]:
+    """What the admin's mock server answers as an instance of this version would, by file name: the configuration's
+    schemas in each shipped locale (Nestor's own plugins only, whatever else is installed), the journal kind of each
+    event type, and the scopes each role grants, said with Nestor's own catalogue. What `nestor admin mocks` writes."""
+    registry = Registry.installed(distribution=BUILT_IN)
     schema = ConfigSchema(registry)
     answers: dict[str, Any] = {
         f"config-schema.{locale}.json": config.schema_out(schema, Phrasebook(localizer, locale)).model_dump(mode="json")

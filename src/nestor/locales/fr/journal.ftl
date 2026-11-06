@@ -1,22 +1,6 @@
 # Le journal de l'administration : une phrase par événement (`journal-*`), son détail et sa catégorie.
 
 journal-other = { $type }
-journal-kind = { $kind ->
-    [conversation] Conversations
-    [delivery] Prises de parole
-    [tool] Outils
-    [task] Tâches
-    [watch] Veilles
-    [schedule] Réveils
-    [memory] Souvenirs
-    [connection] Connexions
-    [presence] Présence
-    [satellite] Satellites
-    [voice] Voix
-    [observation] Observations
-    [account] Comptes
-   *[other] Autres
-}
 
 journal-user-said = { $known ->
     [no] Quelqu'un a dit
