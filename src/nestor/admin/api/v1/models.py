@@ -6,11 +6,11 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from nestor.admin.api.v1.errors import ErrorCode
-from nestor.admin.presentation import Phrasebook
+from nestor.admin.presentation import Kind, Phrasebook, Tone
 from nestor.core import Health, PersonId
 from nestor.core.i18n import Message
 from nestor.modules.accounts import Account, Accounts, Role
-from nestor.modules.activity import AgentActivity
+from nestor.modules.activity import Activity, AgentActivity
 from nestor.modules.household import Household
 from nestor.runtime import Nestor
 
@@ -72,23 +72,6 @@ class MessageOut(BaseModel):
     @classmethod
     def of(cls, message: Message) -> "MessageOut":
         return cls(id=message.id, args=dict(message.args))
-
-
-Tone = Literal["normal", "decision", "warning"]
-Kind = Literal[
-    "conversation",
-    "delivery",
-    "tool",
-    "task",
-    "watch",
-    "memory",
-    "connection",
-    "presence",
-    "satellite",
-    "observation",
-    "account",
-    "other",
-]
 
 
 class LinksOut(BaseModel):
@@ -193,7 +176,7 @@ class AgentActivityOut(BaseModel):
     """What the agent is doing now, from what really runs: `GET /agent/activity`, and `event: activity` on
     the journal's stream at its start and on every change."""
 
-    state: Literal["idle", "listening", "thinking", "speaking", "working", "sleeping"]
+    state: Activity
     since: datetime  # when it entered this state (as this instance saw it: its start at the earliest)
     replies: int  # answers being produced now
     tasks: int  # delegated tasks running
@@ -203,7 +186,7 @@ class AgentActivityOut(BaseModel):
     @classmethod
     def of(cls, activity: AgentActivity) -> "AgentActivityOut":
         return cls(
-            state=activity.state.value,
+            state=activity.state,
             since=activity.since,
             replies=activity.replies,
             tasks=activity.tasks,

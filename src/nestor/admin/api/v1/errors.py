@@ -85,7 +85,6 @@ ErrorCode = Literal[
     "throttled",
     "too_many_additions",
     "unauthenticated",
-    "unknown_kind",
     "unknown_locale",
     "unknown_person",
     "unknown_tool",

@@ -92,7 +92,6 @@ from nestor.modules.system import ConfigChanged, RestartRequested, SecretChanged
 
 log = logging.getLogger(__name__)
 DETAIL_LIMIT = 600
-OTHER_KEY = "other"
 CLI = "cli"  # who did it, for an effect asked from the command line rather than by an account
 _SUBJECT = re.compile(
     r"^(?:(?P<kind>task|tool) (?P<id>\S+) (?P<status>\w+)|watch (?P<watch>\S+)|message (?P<message>\S+)"
@@ -107,9 +106,28 @@ class Tone(StrEnum):
     WARNING = "warning"  # a failure worth a look
 
 
+class Kind(StrEnum):
+    """What the journal groups entries by: the facets of its filters, one per category, and `other`."""
+
+    CONVERSATION = "conversation"
+    DELIVERY = "delivery"
+    TOOL = "tool"
+    TASK = "task"
+    WATCH = "watch"
+    SCHEDULE = "schedule"
+    MEMORY = "memory"
+    CONNECTION = "connection"
+    PRESENCE = "presence"
+    SATELLITE = "satellite"
+    VOICE = "voice"
+    OBSERVATION = "observation"
+    ACCOUNT = "account"
+    OTHER = "other"  # an event of no category: a plugin's, or a type this version does not know
+
+
 @dataclass(frozen=True, slots=True)
 class Category:
-    key: str
+    key: Kind
     events: tuple[type[Event], ...]
 
     @property
@@ -118,13 +136,13 @@ class Category:
 
 
 CATEGORIES = (
-    Category("conversation", (UserTurn, NotificationTurn, AssistantTurn, FallbackSpoken, AnswerCut)),
+    Category(Kind.CONVERSATION, (UserTurn, NotificationTurn, AssistantTurn, FallbackSpoken, AnswerCut)),
     Category(
-        "delivery",
+        Kind.DELIVERY,
         (DeliveryConsidered, Delivered, DeliveryFailed, MessageRequested, MessageDelivered, MessageUndelivered),
     ),
     Category(
-        "tool",
+        Kind.TOOL,
         (
             ToolCalled,
             ToolCompleted,
@@ -136,14 +154,14 @@ CATEGORIES = (
             ConfirmationAnswered,
         ),
     ),
-    Category("task", (TaskStarted, TaskAttached, TaskProgressed, TaskCancelRequested, TaskEnded, TaskDelivered)),
-    Category("watch", (WatchCreated, WatchSorted, WatchTriggered, WatchEnded)),
-    Category("schedule", (ScheduleCreated, ScheduleFired, ScheduleCancelled)),
-    Category("memory", (MemoryRecorded, MemoryCorrected, MemoryForgotten, EpisodeSummarized)),
-    Category("connection", (ConnectionCreated, ConnectionChanged, ConnectionRemoved)),
-    Category("presence", (PresenceChanged,)),
+    Category(Kind.TASK, (TaskStarted, TaskAttached, TaskProgressed, TaskCancelRequested, TaskEnded, TaskDelivered)),
+    Category(Kind.WATCH, (WatchCreated, WatchSorted, WatchTriggered, WatchEnded)),
+    Category(Kind.SCHEDULE, (ScheduleCreated, ScheduleFired, ScheduleCancelled)),
+    Category(Kind.MEMORY, (MemoryRecorded, MemoryCorrected, MemoryForgotten, EpisodeSummarized)),
+    Category(Kind.CONNECTION, (ConnectionCreated, ConnectionChanged, ConnectionRemoved)),
+    Category(Kind.PRESENCE, (PresenceChanged,)),
     Category(
-        "satellite",
+        Kind.SATELLITE,
         (
             SatellitePairingRequested,
             SatellitePaired,
@@ -160,10 +178,10 @@ CATEGORIES = (
             SatelliteIdentifyRequested,
         ),
     ),
-    Category("voice", (SpeakerDeclared, VoiceEnrolled, VoiceForgotten, VoiceLearningChanged)),
-    Category("observation", (PersonDetected, SpeechActivityObserved)),
+    Category(Kind.VOICE, (SpeakerDeclared, VoiceEnrolled, VoiceForgotten, VoiceLearningChanged)),
+    Category(Kind.OBSERVATION, (PersonDetected, SpeechActivityObserved)),
     Category(
-        "account",
+        Kind.ACCOUNT,
         (
             AccountCreated,
             AccountRoleChanged,
@@ -182,7 +200,7 @@ CATEGORIES = (
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Line:
     at: datetime
-    kind: str  # a category key, or `other`
+    kind: Kind
     message: Message  # the summary
     detail: str = ""  # raw content: what was said, a tool's output (never translated)
     detail_message: Message | None = None  # a detail that is a sentence of ours
@@ -548,7 +566,7 @@ class EventDescriber:
         except ContractError:  # written by a plugin no longer installed, or by a newer version
             payload = entry.record.get("payload")
             fields = payload if isinstance(payload, dict) else {}
-            return Line(at=at, kind=OTHER_KEY, message=unknown_message(entry.type, fields))
+            return Line(at=at, kind=Kind.OTHER, message=unknown_message(entry.type, fields))
         try:
             describer = self._describers.get(type(event))
             if describer:
@@ -559,7 +577,7 @@ class EventDescriber:
             category = self._categories.get(type(event))
             return Line(
                 at=at,
-                kind=category.key if category else OTHER_KEY,
+                kind=category.key if category else Kind.OTHER,
                 message=Message.of("journal-other", type=entry.type),
                 tone=Tone.WARNING,
             )
@@ -684,7 +702,7 @@ class EventDescriber:
         category = self._categories.get(type(event))
         return Line(
             at=event.at,
-            kind=category.key if category else OTHER_KEY,
+            kind=category.key if category else Kind.OTHER,
             message=message,
             detail=detail,
             detail_message=detail_message,

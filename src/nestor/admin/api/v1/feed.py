@@ -9,10 +9,9 @@ from collections import Counter
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import cast
 
-from nestor.admin.api.v1.models import JournalItem, Kind, LinksOut, MessageOut, OutcomeOut, People, ReasonOut
-from nestor.admin.presentation import CATEGORIES, EventDescriber, Phrasebook, subject
+from nestor.admin.api.v1.models import JournalItem, LinksOut, MessageOut, OutcomeOut, People, ReasonOut
+from nestor.admin.presentation import CATEGORIES, EventDescriber, Kind, Phrasebook, Tone, subject
 from nestor.admin.state import AdminState
 from nestor.core import SessionId
 from nestor.core.events.codec import JSON
@@ -59,12 +58,12 @@ def _text(value: JSON) -> str | None:
 class Filters:
     """What a reader asked for. `kinds` empty means every kind; ids select one thread."""
 
-    kinds: frozenset[str] = frozenset()
+    kinds: frozenset[Kind] = frozenset()
     person: str = ""
     channel: str = ""
     room: str = ""
     q: str = ""
-    tone: str = ""
+    tone: Tone | None = None
     since: datetime | None = None
     until: datetime | None = None
     session: str = ""
@@ -86,7 +85,7 @@ class Filters:
         """What the log can filter itself; the rest is checked on each item. Kinds are left out for
         facets, and when `other` is asked (events of no known kind have no type list)."""
         types = None
-        if kinds and self.kinds and "other" not in self.kinds:
+        if kinds and self.kinds and Kind.OTHER not in self.kinds:
             types = frozenset().union(*(c.types for c in CATEGORIES if c.key in self.kinds))
         return LogQuery(
             types=types,
@@ -233,7 +232,7 @@ def _cause_rule(entry: Entry) -> _Rule | None:
 @dataclass(slots=True)
 class Facets:
     total: int = 0
-    kinds: Counter[str] = field(default_factory=Counter)
+    kinds: Counter[Kind] = field(default_factory=Counter)
     people: Counter[str] = field(default_factory=Counter)
     channels: Counter[str] = field(default_factory=Counter)
     rooms: Counter[str] = field(default_factory=Counter)
@@ -271,7 +270,7 @@ class Feed:
             id=str(entry.record["id"]),
             at=line.at,
             type=entry.type,
-            kind=cast(Kind, line.kind),
+            kind=line.kind,
             kind_label=self.words.kind(line.kind),
             message=MessageOut.of(message),
             text=text,
@@ -281,7 +280,7 @@ class Feed:
             reason=ReasonOut(message=MessageOut.of(line.reason), text=self.words.text(line.reason))
             if line.reason
             else None,
-            tone=line.tone.value,
+            tone=line.tone,
             people=[ref for p in sorted(line.people) if (ref := self.people.ref(p))],
             channels=sorted(line.channels),
             room=room,

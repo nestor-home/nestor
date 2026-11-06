@@ -52,7 +52,6 @@ error-satellite-offline = Ce satellite n'est pas connecté en ce moment.
 error-update-unsupported = Cet appareil ne prend pas en charge les mises à jour.
 error-update-unavailable = Ce satellite n'a trouvé aucune nouvelle version.
 error-satellite-unknown = Ce satellite n'est pas appairé.
-error-unknown-kind = Catégorie inconnue : { $kind }.
 error-task-unknown = Cette tâche n'existe pas ou est déjà terminée.
 error-watch-unknown = Cette veille n'existe pas ou est déjà terminée.
 error-memory-unknown = Souvenir introuvable.

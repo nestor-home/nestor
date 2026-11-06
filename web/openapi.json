@@ -4744,12 +4744,15 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "string",
-              "description": "kind keys, comma-separated",
-              "default": "",
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/Kind"
+              },
+              "description": "keep these kinds; none: every kind",
+              "default": [],
               "title": "Kinds"
             },
-            "description": "kind keys, comma-separated"
+            "description": "keep these kinds; none: every kind"
           },
           {
             "name": "person",
@@ -4832,14 +4835,14 @@
             "in": "query",
             "required": false,
             "schema": {
-              "enum": [
-                "",
-                "normal",
-                "decision",
-                "warning"
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Tone"
+                },
+                {
+                  "type": "null"
+                }
               ],
-              "type": "string",
-              "default": "",
               "title": "Tone"
             }
           },
@@ -5012,12 +5015,15 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "string",
-              "description": "kind keys, comma-separated",
-              "default": "",
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/Kind"
+              },
+              "description": "keep these kinds; none: every kind",
+              "default": [],
               "title": "Kinds"
             },
-            "description": "kind keys, comma-separated"
+            "description": "keep these kinds; none: every kind"
           },
           {
             "name": "person",
@@ -5100,14 +5106,14 @@
             "in": "query",
             "required": false,
             "schema": {
-              "enum": [
-                "",
-                "normal",
-                "decision",
-                "warning"
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Tone"
+                },
+                {
+                  "type": "null"
+                }
               ],
-              "type": "string",
-              "default": "",
               "title": "Tone"
             }
           },
@@ -5296,12 +5302,15 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "string",
-              "description": "kind keys, comma-separated",
-              "default": "",
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/Kind"
+              },
+              "description": "keep these kinds; none: every kind",
+              "default": [],
               "title": "Kinds"
             },
-            "description": "kind keys, comma-separated"
+            "description": "keep these kinds; none: every kind"
           },
           {
             "name": "person",
@@ -5384,14 +5393,14 @@
             "in": "query",
             "required": false,
             "schema": {
-              "enum": [
-                "",
-                "normal",
-                "decision",
-                "warning"
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Tone"
+                },
+                {
+                  "type": "null"
+                }
               ],
-              "type": "string",
-              "default": "",
               "title": "Tone"
             }
           },
@@ -9342,6 +9351,19 @@
         ],
         "title": "AccountOut"
       },
+      "Activity": {
+        "type": "string",
+        "enum": [
+          "listening",
+          "speaking",
+          "thinking",
+          "working",
+          "sleeping",
+          "idle"
+        ],
+        "title": "Activity",
+        "description": "What the agent is doing, the first that holds in this order."
+      },
       "AdditionIn": {
         "properties": {
           "method": {
@@ -9533,16 +9555,7 @@
       "AgentActivityOut": {
         "properties": {
           "state": {
-            "type": "string",
-            "enum": [
-              "idle",
-              "listening",
-              "thinking",
-              "speaking",
-              "working",
-              "sleeping"
-            ],
-            "title": "State"
+            "$ref": "#/components/schemas/Activity"
           },
           "since": {
             "type": "string",
@@ -10495,7 +10508,6 @@
               "throttled",
               "too_many_additions",
               "unauthenticated",
-              "unknown_kind",
               "unknown_locale",
               "unknown_person",
               "unknown_tool",
@@ -11035,7 +11047,7 @@
           },
           "kinds": {
             "items": {
-              "$ref": "#/components/schemas/FacetOut"
+              "$ref": "#/components/schemas/KindFacetOut"
             },
             "type": "array",
             "title": "Kinds"
@@ -11097,22 +11109,7 @@
             "title": "Type"
           },
           "kind": {
-            "type": "string",
-            "enum": [
-              "conversation",
-              "delivery",
-              "tool",
-              "task",
-              "watch",
-              "memory",
-              "connection",
-              "presence",
-              "satellite",
-              "observation",
-              "account",
-              "other"
-            ],
-            "title": "Kind"
+            "$ref": "#/components/schemas/Kind"
           },
           "kind_label": {
             "type": "string",
@@ -11164,13 +11161,7 @@
             ]
           },
           "tone": {
-            "type": "string",
-            "enum": [
-              "normal",
-              "decision",
-              "warning"
-            ],
-            "title": "Tone"
+            "$ref": "#/components/schemas/Tone"
           },
           "people": {
             "items": {
@@ -11298,6 +11289,49 @@
           "next_before"
         ],
         "title": "JournalPage"
+      },
+      "Kind": {
+        "type": "string",
+        "enum": [
+          "conversation",
+          "delivery",
+          "tool",
+          "task",
+          "watch",
+          "schedule",
+          "memory",
+          "connection",
+          "presence",
+          "satellite",
+          "voice",
+          "observation",
+          "account",
+          "other"
+        ],
+        "title": "Kind",
+        "description": "What the journal groups entries by: the facets of its filters, one per category, and `other`."
+      },
+      "KindFacetOut": {
+        "properties": {
+          "key": {
+            "$ref": "#/components/schemas/Kind"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "count"
+        ],
+        "title": "KindFacetOut"
       },
       "LanguagesOut": {
         "properties": {
@@ -13034,6 +13068,15 @@
           "recent"
         ],
         "title": "TasksOut"
+      },
+      "Tone": {
+        "type": "string",
+        "enum": [
+          "normal",
+          "decision",
+          "warning"
+        ],
+        "title": "Tone"
       },
       "ToolOut": {
         "properties": {

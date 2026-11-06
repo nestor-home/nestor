@@ -38,6 +38,8 @@ jobs:
           cache: pnpm
           cache-dependency-path: web/pnpm-lock.yaml
       - run: mkdir -p .claude/skills && pnpm install --frozen-lockfile  # agent skills folder, git-ignored
+      - name: the client is generated from web/openapi.json (the server's tests keep that file current)
+        run: pnpm api:generate && git diff --exit-code -- src/api/schema.gen.ts
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test

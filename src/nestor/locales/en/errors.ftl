@@ -52,7 +52,6 @@ error-satellite-offline = This satellite is not connected right now.
 error-update-unsupported = This device does not support updates.
 error-update-unavailable = This satellite found no new version.
 error-satellite-unknown = This satellite is not paired.
-error-unknown-kind = Unknown kind: { $kind }.
 error-task-unknown = This task does not exist or has already ended.
 error-watch-unknown = This watch does not exist or has already ended.
 error-memory-unknown = Memory not found.

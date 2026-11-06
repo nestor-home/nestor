@@ -146,10 +146,11 @@ async def test_every_filter_narrows_the_journal(tmp_path: Path) -> None:
         assert details(await items(api, channel="telegram")) == {"Le dentiste"}
         assert details(await items(api, person="mathilde")) == {"Bonsoir", "Aime le thé"}, "memories about them too"
         assert {i["tone"] for i in await items(api, tone="decision")} == {"decision"}
-        assert details(await items(api, kinds="conversation,presence", person="mathilde")) == {"Bonsoir"}
+        assert details(await items(api, kinds=["conversation", "presence"], person="mathilde")) == {"Bonsoir"}
         assert await items(api, **{"from": (utc_now() + timedelta(hours=1)).isoformat()}) == []
         assert len(await items(api, to=(utc_now() + timedelta(hours=1)).isoformat(), kinds="conversation")) == 2
-        assert (await api.get("/api/v1/journal", kinds="conversation,gossip")).json()["error"]["code"] == "unknown_kind"
+        refused = (await api.get("/api/v1/journal", kinds=["conversation", "gossip"])).json()["error"]
+        assert (refused["code"], refused["args"]) == ("invalid_request", {"fields": "kinds.1"})
 
 
 async def test_each_facet_is_counted_ignoring_its_own_selection(tmp_path: Path) -> None:

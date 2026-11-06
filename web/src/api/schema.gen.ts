@@ -1321,6 +1321,12 @@ export interface components {
             /** Last Seen At */
             last_seen_at: string | null;
         };
+        /**
+         * Activity
+         * @description What the agent is doing, the first that holds in this order.
+         * @enum {string}
+         */
+        Activity: "listening" | "speaking" | "thinking" | "working" | "sleeping" | "idle";
         /** AdditionIn */
         AdditionIn: {
             method: components["schemas"]["PairingMethod"];
@@ -1374,11 +1380,7 @@ export interface components {
          *     the journal's stream at its start and on every change.
          */
         AgentActivityOut: {
-            /**
-             * State
-             * @enum {string}
-             */
-            state: "idle" | "listening" | "thinking" | "speaking" | "working" | "sleeping";
+            state: components["schemas"]["Activity"];
             /**
              * Since
              * Format: date-time
@@ -1674,7 +1676,7 @@ export interface components {
              * Code
              * @enum {string}
              */
-            code: "addition_over" | "addition_unknown" | "audio_format" | "bad_token" | "client_incomplete" | "client_missing" | "config_history_unknown" | "config_invalid" | "config_unavailable" | "conflict" | "connection_unknown" | "connector_unknown" | "cross_origin" | "csrf_failed" | "empty_memory" | "fields_missing" | "forbidden" | "http_error" | "identify_unsupported" | "invalid" | "invalid_code" | "invalid_credentials" | "invalid_login" | "invalid_request" | "invitation_expired" | "invitation_revoked" | "invitation_unknown" | "invitation_used" | "journal_entry_unknown" | "last_owner" | "memory_shared" | "memory_unknown" | "method_not_allowed" | "no_connectors" | "no_secret_key" | "not_a_device_code_method" | "not_found" | "not_oauth" | "oauth" | "own_connections_only" | "pairing_refused" | "pending_unknown" | "person_required" | "person_unknown" | "provider_error" | "provider_refused" | "restart_unconfirmed" | "satellite_offline" | "satellite_unknown" | "secret_in_use" | "secret_unknown" | "task_unknown" | "throttled" | "too_many_additions" | "unauthenticated" | "unknown_kind" | "unknown_locale" | "unknown_person" | "unknown_tool" | "unsupported_media_type" | "update_not_installable" | "update_unavailable" | "update_unconfirmed" | "update_unsupported" | "use_me_password" | "voice_not_yours" | "voices_off" | "watch_unknown" | "weak_password" | "wrong_password";
+            code: "addition_over" | "addition_unknown" | "audio_format" | "bad_token" | "client_incomplete" | "client_missing" | "config_history_unknown" | "config_invalid" | "config_unavailable" | "conflict" | "connection_unknown" | "connector_unknown" | "cross_origin" | "csrf_failed" | "empty_memory" | "fields_missing" | "forbidden" | "http_error" | "identify_unsupported" | "invalid" | "invalid_code" | "invalid_credentials" | "invalid_login" | "invalid_request" | "invitation_expired" | "invitation_revoked" | "invitation_unknown" | "invitation_used" | "journal_entry_unknown" | "last_owner" | "memory_shared" | "memory_unknown" | "method_not_allowed" | "no_connectors" | "no_secret_key" | "not_a_device_code_method" | "not_found" | "not_oauth" | "oauth" | "own_connections_only" | "pairing_refused" | "pending_unknown" | "person_required" | "person_unknown" | "provider_error" | "provider_refused" | "restart_unconfirmed" | "satellite_offline" | "satellite_unknown" | "secret_in_use" | "secret_unknown" | "task_unknown" | "throttled" | "too_many_additions" | "unauthenticated" | "unknown_locale" | "unknown_person" | "unknown_tool" | "unsupported_media_type" | "update_not_installable" | "update_unavailable" | "update_unconfirmed" | "update_unsupported" | "use_me_password" | "voice_not_yours" | "voices_off" | "watch_unknown" | "weak_password" | "wrong_password";
             /** Message Id */
             message_id: string;
             /** Args */
@@ -1871,7 +1873,7 @@ export interface components {
             /** Truncated */
             truncated: boolean;
             /** Kinds */
-            kinds: components["schemas"]["FacetOut"][];
+            kinds: components["schemas"]["KindFacetOut"][];
             /** People */
             people: components["schemas"]["FacetOut"][];
             /** Channels */
@@ -1898,11 +1900,7 @@ export interface components {
             at: string;
             /** Type */
             type: string;
-            /**
-             * Kind
-             * @enum {string}
-             */
-            kind: "conversation" | "delivery" | "tool" | "task" | "watch" | "memory" | "connection" | "presence" | "satellite" | "observation" | "account" | "other";
+            kind: components["schemas"]["Kind"];
             /** Kind Label */
             kind_label: string;
             message: components["schemas"]["MessageOut"];
@@ -1924,11 +1922,7 @@ export interface components {
             /** Detail Text */
             detail_text: string;
             reason: components["schemas"]["ReasonOut"] | null;
-            /**
-             * Tone
-             * @enum {string}
-             */
-            tone: "normal" | "decision" | "warning";
+            tone: components["schemas"]["Tone"];
             /** People */
             people: components["schemas"]["PersonRef"][];
             /** Channels */
@@ -1950,6 +1944,20 @@ export interface components {
             items: components["schemas"]["JournalItem"][];
             /** Next Before */
             next_before: number | null;
+        };
+        /**
+         * Kind
+         * @description What the journal groups entries by: the facets of its filters, one per category, and `other`.
+         * @enum {string}
+         */
+        Kind: "conversation" | "delivery" | "tool" | "task" | "watch" | "schedule" | "memory" | "connection" | "presence" | "satellite" | "voice" | "observation" | "account" | "other";
+        /** KindFacetOut */
+        KindFacetOut: {
+            key: components["schemas"]["Kind"];
+            /** Label */
+            label: string;
+            /** Count */
+            count: number;
         };
         /** LanguagesOut */
         LanguagesOut: {
@@ -2506,6 +2514,11 @@ export interface components {
             /** Recent */
             recent: components["schemas"]["TaskOut"][];
         };
+        /**
+         * Tone
+         * @enum {string}
+         */
+        Tone: "normal" | "decision" | "warning";
         /** ToolOut */
         ToolOut: {
             /** Name */
@@ -6668,8 +6681,8 @@ export interface operations {
                 /** @description a position: entries strictly before it */
                 before?: number | null;
                 limit?: number;
-                /** @description kind keys, comma-separated */
-                kinds?: string;
+                /** @description keep these kinds; none: every kind */
+                kinds?: components["schemas"]["Kind"][];
                 person?: string;
                 channel?: string;
                 room?: string;
@@ -6677,7 +6690,7 @@ export interface operations {
                 q?: string;
                 from?: string | null;
                 to?: string | null;
-                tone?: "" | "normal" | "decision" | "warning";
+                tone?: components["schemas"]["Tone"] | null;
                 session?: string;
                 conversation?: string;
                 task?: string;
@@ -6777,8 +6790,8 @@ export interface operations {
     getJournalFacets: {
         parameters: {
             query?: {
-                /** @description kind keys, comma-separated */
-                kinds?: string;
+                /** @description keep these kinds; none: every kind */
+                kinds?: components["schemas"]["Kind"][];
                 person?: string;
                 channel?: string;
                 room?: string;
@@ -6786,7 +6799,7 @@ export interface operations {
                 q?: string;
                 from?: string | null;
                 to?: string | null;
-                tone?: "" | "normal" | "decision" | "warning";
+                tone?: components["schemas"]["Tone"] | null;
                 session?: string;
                 conversation?: string;
                 task?: string;
@@ -6887,8 +6900,8 @@ export interface operations {
         parameters: {
             query?: {
                 after?: number | null;
-                /** @description kind keys, comma-separated */
-                kinds?: string;
+                /** @description keep these kinds; none: every kind */
+                kinds?: components["schemas"]["Kind"][];
                 person?: string;
                 channel?: string;
                 room?: string;
@@ -6896,7 +6909,7 @@ export interface operations {
                 q?: string;
                 from?: string | null;
                 to?: string | null;
-                tone?: "" | "normal" | "decision" | "warning";
+                tone?: components["schemas"]["Tone"] | null;
                 session?: string;
                 conversation?: string;
                 task?: string;

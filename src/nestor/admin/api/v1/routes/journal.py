@@ -4,24 +4,23 @@ import asyncio
 import json
 from collections.abc import AsyncIterator
 from datetime import datetime
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Header, Query, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from nestor.admin.api.v1.errors import ApiError, not_found
+from nestor.admin.api.v1.errors import not_found
 from nestor.admin.api.v1.feed import Audience, Feed, Filters
 from nestor.admin.api.v1.models import AgentActivityOut, JournalItem, People
 from nestor.admin.api.v1.security import Caller, allowed
-from nestor.admin.presentation import CATEGORIES, OTHER_KEY
+from nestor.admin.presentation import Kind, Tone
 from nestor.admin.state import AdminState, state
 from nestor.core import PersonId, utc_now
 from nestor.modules.accounts import Scope
 
 router = APIRouter(tags=["journal"])
 Reader = Annotated[Caller, Depends(allowed(Scope.JOURNAL_READ_ALL, Scope.JOURNAL_READ_OWN))]
-KINDS = frozenset(c.key for c in CATEGORIES) | {OTHER_KEY}
 BUCKETS_S = (60, 300, 900, 1800, 3600, 3 * 3600, 6 * 3600, 12 * 3600, 86400, 7 * 86400, 30 * 86400)
 MAX_BUCKETS = 60
 
@@ -44,10 +43,16 @@ class HistogramOut(BaseModel):
     counts: list[int]  # entries kept by every filter, per bucket from `from`
 
 
+class KindFacetOut(BaseModel):
+    key: Kind
+    label: str
+    count: int
+
+
 class JournalFacets(BaseModel):
     total: int  # entries kept by every filter
     truncated: bool  # counted over the newest entries in range only (see the API documentation)
-    kinds: list[FacetOut]
+    kinds: list[KindFacetOut]
     people: list[FacetOut]
     channels: list[FacetOut]
     rooms: list[FacetOut]
@@ -60,14 +65,14 @@ class JournalEntryOut(BaseModel):
 
 
 def journal_filters(
-    kinds: Annotated[str, Query(description="kind keys, comma-separated")] = "",
+    kinds: Annotated[tuple[Kind, ...], Query(description="keep these kinds; none: every kind")] = (),
     person: str = "",
     channel: str = "",
     room: str = "",
     q: Annotated[str, Query(description="words in the rendered text or the raw content")] = "",
     from_: Annotated[datetime | None, Query(alias="from")] = None,
     to: datetime | None = None,
-    tone: Annotated[Literal["", "normal", "decision", "warning"], Query()] = "",
+    tone: Tone | None = None,
     session: str = "",
     conversation: str = "",
     task: str = "",
@@ -75,11 +80,8 @@ def journal_filters(
     connection: str = "",
     satellite: str = "",
 ) -> Filters:
-    chosen = frozenset(k.strip() for k in kinds.split(",") if k.strip())
-    if unknown := chosen - KINDS:
-        raise ApiError(400, "unknown_kind", kind=", ".join(sorted(unknown)))
     return Filters(
-        kinds=chosen,
+        kinds=frozenset(kinds),
         person=person,
         channel=channel,
         room=room,
@@ -130,7 +132,7 @@ async def get_journal_facets(request: Request, caller: Reader, filters: Chosen) 
     return JournalFacets(
         total=facets.total,
         truncated=facets.truncated,
-        kinds=[FacetOut(key=k, label=words.kind(k), count=n) for k, n in facets.kinds.most_common()],
+        kinds=[KindFacetOut(key=k, label=words.kind(k), count=n) for k, n in facets.kinds.most_common()],
         people=[
             FacetOut(key=k, label=ref.name if (ref := people.ref(PersonId(k))) else k, count=n)
             for k, n in facets.people.most_common()
