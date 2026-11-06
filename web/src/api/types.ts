@@ -8,7 +8,6 @@ import type { components, paths } from "./schema.gen";
 type S = components["schemas"];
 
 export type Id = string;
-export type Instant = string; // ISO 8601 with offset
 
 // -- who is using the admin -----------------------------------------------------------------------
 
@@ -19,7 +18,6 @@ export type Agent = S["AgentOut"];
 export type Me = S["MeOut"];
 export type Credentials = S["LoginIn"];
 export type Invitation = S["InvitationOut"];
-export type InvitationStatus = S["InvitationStatus"];
 export type InvitationCreated = S["InvitationCreated"];
 export type InvitationPreview = S["InvitationPreview"];
 export type NewInvitation = S["InvitationIn"];
@@ -56,14 +54,12 @@ export type JournalFilters = Omit<NonNullable<Query<"/api/v1/journal">>, "before
 export type AuthKind = S["AuthKind"];
 export type ConnectionStatus = S["Status"];
 export type Risk = S["Risk"];
-export type ConnectorField = S["FieldOut"];
 export type Connector = S["ConnectorOut"];
 export type Connection = S["ConnectionOut"];
 export type ConnectionDetail = S["ConnectionDetail"];
 export type Tool = S["ToolOut"];
 export type OAuthClient = S["ClientIn"];
 export type ConnectRequest = S["SecretsIn"];
-export type ConnectResult = { kind: "redirect"; url: string } | { kind: "connected"; connection: Connection };
 export type ToolSettings = S["ConnectionSettingsIn"];
 
 // -- satellites -----------------------------------------------------------------------------------
@@ -73,12 +69,9 @@ export type PairingMethodId = S["PairingMethod"];
 export type PairingMethod = S["MethodOut"];
 export type PairingMethods = S["MethodsOut"];
 export type PairingRequest = S["PendingOut"];
-export type AdditionStage = S["Stage"];
 export type Addition = S["AdditionOut"];
 export type NewAddition = S["AdditionIn"];
 export type StartedAddition = S["StartedOut"];
-export type Software = S["SoftwareOut"];
-export type UpdateState = S["UpdateState"];
 export type SatelliteUpdate = S["UpdateOut"];
 export type Satellite = S["SatelliteOut"];
 export type Satellites = S["SatellitesOut"];

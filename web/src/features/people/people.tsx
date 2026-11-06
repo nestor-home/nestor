@@ -265,7 +265,7 @@ export function PersonPresence({ person: p }: { person: Person }) {
   return (
     <ActivityList
       filters={{ person: p.id, kinds: ["presence"] }}
-      search={{ person: p.id, kinds: "presence" }}
+      search={{ person: p.id, kinds: ["presence"] }}
       limit={20}
       empty={t("people-presence-empty")}
     />

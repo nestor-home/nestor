@@ -34,6 +34,7 @@ import {
   type StartedAddition,
   satellitesQuery,
 } from "@/api";
+import { pairingMethodValues } from "@/api/schema.gen";
 import { AgentFigure } from "@/components/agent-figure";
 import { CopyField } from "@/components/copy-field";
 import { Field } from "@/components/field";
@@ -50,6 +51,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useNow } from "@/hooks/use-now";
 import { useT } from "@/i18n";
 import { remaining } from "@/lib/dates";
+import { oneOf } from "@/lib/enums";
 import { cn } from "@/lib/utils";
 import { ApproveForm } from "./approve-form";
 
@@ -133,9 +135,9 @@ function Choose({ onStarted }: { onStarted: (started: StartedAddition) => void }
   const queryClient = useQueryClient();
   const method = chosen ?? methods.data?.recommended ?? null;
   const start = useMutation({
-    mutationFn: () =>
+    mutationFn: (method: PairingMethodId) =>
       api.startAddition({
-        method: method as PairingMethodId,
+        method,
         name: name.trim() || undefined,
         room: room.trim() ? roomSlug(room) : undefined,
         capabilities: limited ? [...limited].sort() : undefined,
@@ -154,7 +156,7 @@ function Choose({ onStarted }: { onStarted: (started: StartedAddition) => void }
       return;
     }
     setRoomError(null);
-    start.mutate();
+    if (method) start.mutate(method);
   };
   const groups: { proof: PairingMethod["proof"]; title: string }[] = [
     { proof: "device_code", title: t("sat-add-device-code") },
@@ -172,7 +174,7 @@ function Choose({ onStarted }: { onStarted: (started: StartedAddition) => void }
               value={method ? [method] : []}
               onValueChange={(value: string[]) => {
                 const next = value.find((v) => v !== method);
-                if (next) setChosen(next as PairingMethodId);
+                if (oneOf(pairingMethodValues, next)) setChosen(next);
               }}
               className="grid w-full gap-2"
             >

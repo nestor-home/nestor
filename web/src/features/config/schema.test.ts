@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import schemaFr from "@/mocks/config/schema.fr.json";
+import type { ConfigProblem } from "@/api";
+import schemaFr from "@/mocks/server/config-schema.fr.json";
 import { controlOf, getAt, type JsonSchema, problemsUnder, resolve, setAt, typedSecret } from "./schema";
 
 const SCHEMA = schemaFr as unknown as {
@@ -62,7 +63,7 @@ describe("editing a document", () => {
   });
 
   it("finds the problems under a component, not its neighbours'", () => {
-    const problems = [
+    const problems: ConfigProblem[] = [
       { path: ["channels", 0, "room"], code: "invalid", message_id: "x", args: {}, message: "" },
       { path: ["channels", 1, "token"], code: "missing", message_id: "x", args: {}, message: "" },
       { path: ["channels", 10], code: "invalid", message_id: "x", args: {}, message: "" },

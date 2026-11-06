@@ -7,7 +7,7 @@
  * - anything else stays a single event.
  * Stories are ordered by their latest event, so a story that moves comes back to the top.
  */
-import type { Id, JournalItem, PersonRef } from "@/api";
+import type { Id, JournalItem, Kind, PersonRef } from "@/api";
 import { is, starts } from "@/lib/events";
 
 export interface ToolCall {
@@ -54,7 +54,7 @@ export interface Single extends Common {
 
 export type Story = Thread | Chain | Single;
 
-const CONVERSATIONAL = new Set(["conversation", "tool", "memory"]);
+const CONVERSATIONAL = new Set<Kind>(["conversation", "tool", "memory"]);
 
 /** Which story an event belongs to. Tasks and watches win over the conversation they came from. */
 export function storyKey(item: JournalItem): string {

@@ -6,23 +6,19 @@
  */
 import { FluentBundle, FluentResource } from "@fluent/bundle";
 import type { EventLinks, JournalItem, Kind, Message, PersonRef, Tone } from "@/api";
+import { kindValues } from "@/api/schema.gen";
+import { coreOf } from "@/i18n/catalog";
+import { oneOf } from "@/lib/enums";
 import { inFrench } from "./french";
+import kinds from "./server/journal-kinds.json";
 
 export type Lang = "en" | "fr";
-
-const SERVER: Record<string, string> = import.meta.glob("../../../src/nestor/locales/*/*.ftl", {
-  query: "?raw",
-  import: "default",
-  eager: true,
-});
 
 const bundles: Record<Lang, FluentBundle> = { en: bundle("en"), fr: bundle("fr") };
 
 function bundle(locale: Lang): FluentBundle {
   const b = new FluentBundle(locale, { useIsolating: false });
-  for (const [path, source] of Object.entries(SERVER)) {
-    if (path.includes(`/locales/${locale}/`)) b.addResource(new FluentResource(source));
-  }
+  b.addResource(new FluentResource(coreOf(locale)));
   return b;
 }
 
@@ -52,33 +48,6 @@ function seconds(text: string): number {
   if (/ms$/.test(text)) return n(/([\d.]+)\s*ms/) / 1000;
   return n(/(\d+)\s*h/) * 3600 + n(/(\d+)\s*min/) * 60 + n(/h\s*(\d+)$/) * 60 + n(/([\d.]+)\s*s$/);
 }
-
-/** The server's event type for each of its messages (the `events.py` of each Nestor module). */
-export const TYPE_OF: Record<string, string> = {
-  "journal-user-said": "conversation.turn.user",
-  "journal-assistant-answered": "conversation.turn.assistant",
-  "journal-assistant-interrupted": "conversation.turn.assistant",
-  "journal-answer-cut": "conversation.turn.cut",
-  "journal-fallback": "conversation.fallback",
-  "journal-tool-called": "agent.tool.called",
-  "journal-tool-completed": "agent.tool.completed",
-  "journal-tool-failed": "agent.tool.completed",
-  "journal-task-started": "task.started",
-  "journal-task-progressed": "task.progress",
-  "journal-task-ended": "task.ended",
-  "journal-watch-created": "watch.created",
-  "journal-watch-triggered": "watch.triggered",
-  "journal-delivery-considered": "initiative.considered",
-  "journal-delivered": "initiative.delivered",
-  "journal-delivery-failed": "initiative.undeliverable",
-  "journal-memory-recorded": "memory.recorded",
-  "journal-connection-created": "connection.created",
-  "journal-connection-changed": "connection.changed",
-  "journal-presence-changed": "presence.changed",
-  "journal-satellite-pairing-requested": "satellite.pairing.requested",
-  "journal-person-detected": "observation.person.detected",
-  "journal-speech-activity": "observation.speech.activity",
-};
 
 /** Mock events are written as their English line; this reads them back as the server's messages. */
 const TITLES: [RegExp, (m: RegExpMatchArray) => Message][] = [
@@ -157,7 +126,6 @@ function parse(table: typeof TITLES, text: string): Message {
 /** A mock event as day.ts writes it: its English title and reason, and only the links it has. */
 export interface Draft {
   type: string;
-  kind: Kind;
   title: string;
   detail?: string;
   reason?: string;
@@ -184,15 +152,21 @@ const NO_LINKS: EventLinks = {
   memory: null,
 };
 
+/** The journal kind of an event type, as the server groups them (`nestor admin mocks`); `other` when none. */
+const KINDS: Record<string, string> = kinds;
+const kindOf = (type: string): Kind => {
+  const kind = KINDS[type];
+  return oneOf(kindValues, kind) ? kind : "other";
+};
+
 /** The item the server would send for a draft, at its place in the journal (texts in English). */
 export function toItem(draft: Draft, where: { position: number; id: string; at: string }): JournalItem {
   const message = parse(TITLES, draft.title);
   const detail = draft.detail ?? "";
   return {
     ...where,
-    type: TYPE_OF[message.id] ?? draft.type,
-    kind: draft.kind,
-    kind_label: "",
+    type: draft.type,
+    kind: kindOf(draft.type),
     message,
     text: draft.title,
     detail,
@@ -218,7 +192,6 @@ const said = (lang: Lang, message: Message) => render(lang, lang === "fr" ? inFr
 export function localize(item: JournalItem, lang: Lang): JournalItem {
   return {
     ...item,
-    kind_label: render(lang, msg("journal-kind", { kind: item.kind })),
     text: item.message.id === "journal-other" ? item.text : said(lang, item.message),
     reason: item.reason ? { ...item.reason, text: said(lang, item.reason.message) } : null,
   };

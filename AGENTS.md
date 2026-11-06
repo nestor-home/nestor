@@ -109,9 +109,13 @@ runtime may assemble the built-in storage adapters, and the admin may use FastAP
   (never a `Literal` or a `str` restating it, never a `cast`), so `web/openapi.json` lists its values.
   The admin reads the client generated from that file (`pnpm api:generate`: `src/api/schema.gen.ts`,
   with each enum's values) and names its schemas in `src/api/types.ts`; no hand-written shape, union
-  or list repeats the server, and the mocks keep their state in those types. CI checks that both
-  files are current. A table the admin keys by a server enum is a `Record` over it, so a new value
-  fails the typecheck until the admin handles it.
+  or list repeats the server, and the mocks keep their state in those types. The API sends values,
+  not their labels: the admin ships Nestor's catalogue and labels a value with the server's select
+  message (`role-name`, `task-status`, `journal-kind`…), which has a variant for every value. What
+  the mock server answers beyond the schema (configuration schemas, the kind of each event type, the
+  scopes of each role) is written by `nestor admin mocks` into `web/src/mocks/server/`. Tests check
+  that `openapi.json` and those files are current, and CI that the client is. A table the admin keys
+  by a server enum is a `Record` over it, so a new value fails the typecheck until the admin handles it.
 
 ## Tests
 

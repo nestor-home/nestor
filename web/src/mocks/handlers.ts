@@ -3,23 +3,12 @@
  * its state and every answer typed as the API's generated schemas, so the mocks cannot drift from it.
  */
 import { HttpResponse, http, type JsonBodyType, delay as latency, sse } from "msw";
-import type { Account, Connection, ConnectionDetail, JournalItem, Kind, Me, Person, Satellite } from "@/api";
 import type { components } from "@/api/schema.gen";
 import * as config from "./config";
 import { LIVE } from "./day";
 import { db, type MockAddition, save } from "./db";
-import {
-  arriving,
-  CANCELLED,
-  METHODS,
-  type MockPending,
-  type MockPerson,
-  PROTOCOL,
-  ROLE_LABEL,
-  SCOPES,
-  tools as toolsOf,
-} from "./fixtures";
-import { fr, inFrench } from "./french";
+import { arriving, METHODS, type MockPending, type MockPerson, PROTOCOL, SCOPES, tools as toolsOf } from "./fixtures";
+import { inFrench } from "./french";
 import { facets, filtersOf, matching } from "./journal";
 import { type Draft, errorText, type Lang, localize, render, toItem } from "./messages";
 
@@ -119,13 +108,14 @@ const owners = () => db.accounts.filter((a) => a.role === "owner" && !a.disabled
 let sequence = 0;
 const newId = (prefix: string) => `${prefix}-${Date.now().toString(36)}${(sequence++).toString(36)}`;
 
-const kindLabel = (kind: Kind) => render(lang, { id: "journal-kind", args: { kind } });
+/** A person of the mock household as the API names them: `{id, name}`. */
+const refOf = (id: string): In<"PersonRef"> => ({ id, name: db.people.find((p) => p.id === id)?.name ?? id });
 
-const itemOut = (item: JournalItem) => localize(item, lang);
+const itemOut = (item: In<"JournalItem">) => localize(item, lang);
 
 /** A new journal entry at the next position, as the stream and the list will send it. */
-function journalize(draft: Draft): JournalItem {
-  const position = Math.max(0, ...db.journal.map((e) => e.item.position)) + 1;
+function journalize(draft: Draft): In<"JournalItem"> {
+  const position = db.journal.reduce((last, e) => Math.max(last, e.item.position), 0) + 1;
   const item = toItem(draft, { position, id: newId("e"), at: new Date().toISOString() });
   db.journal.unshift({ item, record: { type: item.type, version: 1, at: item.at, ...item.links } });
   save();
@@ -134,7 +124,7 @@ function journalize(draft: Draft): JournalItem {
 
 // -- what the server composes from its state --------------------------------------------------------
 
-const meOut = (account: Account): Me => ({
+const meOut = (account: In<"AccountOut">): In<"MeOut"> => ({
   account,
   locale: account.locale ?? lang,
   scopes: SCOPES[account.role],
@@ -145,13 +135,13 @@ const meOut = (account: Account): Me => ({
   pending_changes: db.config.pending_changes,
 });
 
-const personOut = ({ account, ...person }: MockPerson): Person => ({
+const personOut = ({ account, ...person }: MockPerson): In<"PersonOut"> => ({
   ...person,
   account: db.accounts.find((a) => a.id === account) ?? null,
   connections: db.connections.filter((c) => c.owner?.id === person.id),
 });
 
-const connectionDetail = (connection: Connection): ConnectionDetail => ({
+const connectionDetail = (connection: In<"ConnectionOut">): In<"ConnectionDetail"> => ({
   ...connection,
   tools: db.tools[connection.id] ?? [],
 });
@@ -396,7 +386,6 @@ export const handlers = [
     if (!invitation) return fail(404, "invitation_unknown");
     return json({
       role: invitation.role,
-      role_label: invitation.role_label,
       person: invitation.person,
       expires_at: invitation.expires_at,
     } satisfies In<"InvitationPreview">);
@@ -410,11 +399,10 @@ export const handlers = [
     if (!invitation) return fail(404, "invitation_unknown");
     if (body.password.length < 12) return fail(400, "weak_password", { length: 12 });
     if (db.accounts.some((a) => a.login === body.login)) return fail(409, "conflict");
-    const account: Account = {
+    const account: In<"AccountOut"> = {
       id: newId("acc"),
       login: body.login,
       role: invitation.role,
-      role_label: invitation.role_label,
       person: invitation.person,
       locale: lang,
       disabled: false,
@@ -423,7 +411,6 @@ export const handlers = [
     };
     db.accounts.push(account);
     invitation.status = "accepted";
-    invitation.status_label = fr("accepted", "acceptée");
     db.signedIn = account.id;
     save();
     return json(meOut(account), { status: 201 });
@@ -455,10 +442,8 @@ export const handlers = [
     const invitation: In<"InvitationOut"> = {
       id: newId("inv"),
       role: body.role,
-      role_label: ROLE_LABEL[body.role],
-      person: person ? { id: person.id, name: person.name } : null,
+      person: person ? refOf(person.id) : null,
       status: "pending",
-      status_label: fr("pending", "en attente"),
       created_at: new Date().toISOString(),
       expires_at: new Date(Date.now() + 7 * 86_400_000).toISOString(),
     };
@@ -495,7 +480,6 @@ export const handlers = [
       return fail(409, "last_owner");
     }
     account.role = role;
-    account.role_label = ROLE_LABEL[role];
     save();
     return json(account);
   }),
@@ -532,7 +516,7 @@ export const handlers = [
     await delay(120);
     const filters = filtersOf(new URL(request.url));
     if (Array.isArray(filters)) return fail(422, "invalid_request", { fields: filters.join(", ") });
-    return json(facets(journal(), filters, kindLabel));
+    return json(facets(journal(), filters));
   }),
 
   http.get(`${API}/journal/stream`, () => new HttpResponse(null, { status: 204 })),
@@ -881,7 +865,6 @@ export const handlers = [
     const task = db.tasks.find((t) => t.id === params.id);
     if (!task) return notFound("task");
     task.status = "cancelled";
-    task.status_label = CANCELLED;
     task.ended_at = new Date().toISOString();
     save();
     return json({ task, confirmed: true } satisfies In<"CancelOut">);
@@ -956,7 +939,7 @@ export const handlers = [
         {
           about: "watch w-2b77",
           delivery: "watch:w-2b77",
-          person: { id: "mathis", name: "Mathis" },
+          person: refOf("mathis"),
           spoken_on: "voice:bureau",
           written_on: "telegram:mathis",
           due_at: soon,
@@ -1099,10 +1082,10 @@ function plug(
   person: string | null,
   replaces: string | null,
   values: Record<string, string>,
-): Connection {
+): In<"ConnectionOut"> {
   const connector = db.connectors.find((c) => c.kind === kind);
   const replaced = db.connections.find((c) => c.id === replaces);
-  const connection: Connection = {
+  const connection: In<"ConnectionOut"> = {
     id: newId("c"),
     kind,
     title: connector?.title ?? kind,
@@ -1110,9 +1093,8 @@ function plug(
       values.username ||
       values.name ||
       (connector?.auth === "oauth2" ? `${person ?? "household"}@gmail.com` : (connector?.title ?? kind)),
-    owner: person ? { id: person, name: db.people.find((p) => p.id === person)?.name ?? person } : null,
+    owner: person ? refOf(person) : null,
     status: "connected",
-    status_label: fr("connected", "connectée"),
     status_reason: null,
     confirm_writes: replaced?.confirm_writes ?? true,
     disabled_tools: [],
@@ -1127,7 +1109,6 @@ function plug(
   if (replaced) db.connections = db.connections.filter((c) => c.id !== replaced.id);
   journalize({
     type: "connection.created",
-    kind: "connection",
     title: `Account ${connection.account} connected (${connection.title})`,
     people: connection.owner ? [connection.owner] : [],
     links: { connection: connection.id },
@@ -1254,9 +1235,9 @@ function advance(now = Date.now()): void {
 function pair(
   pending: MockPending,
   choice: { name: string | null; room: string | null; capabilities: string[] | null },
-): Satellite {
+): In<"SatelliteOut"> {
   const approver = signedIn();
-  const satellite: Satellite = {
+  const satellite: In<"SatelliteOut"> = {
     id: pending.device.id,
     name: choice.name,
     can_identify: pending.can_identify,

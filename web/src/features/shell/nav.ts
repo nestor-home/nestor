@@ -55,9 +55,7 @@ export const NAV: NavGroup[] = [
 
 export function visibleNav(scopes: readonly Scope[]): NavGroup[] {
   const allowed = permissions(scopes);
-  return NAV.map((g) => ({ ...g, items: g.items.filter((i) => allowed.includes(i.scope)) })).filter(
-    (g) => g.items.length,
-  );
+  return NAV.map((g) => ({ ...g, items: g.items.filter((i) => allowed.has(i.scope)) })).filter((g) => g.items.length);
 }
 
 export function flatNav(scopes: readonly Scope[]): NavItem[] {

@@ -119,7 +119,6 @@ export function liveItem({
     message: { id, args: { name: "Jules" } },
     position: ++livePosition,
     id: `live-${Math.random().toString(36).slice(2)}`,
-    kind_label: "Conversations",
     at: new Date().toISOString(),
     type: "conversation.turn.user",
     kind: "conversation",

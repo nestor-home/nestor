@@ -2,12 +2,15 @@ import { useQuery } from "@tanstack/react-query";
 import type { LinkProps } from "@tanstack/react-router";
 import type { LucideIcon } from "lucide-react";
 import { CircleAlert, Hourglass, KeyRound, MessageSquareOff, RadioTower, ServerCrash } from "lucide-react";
-import { connectionsQuery, journalLatestQuery, satellitesQuery, systemQuery, tasksQuery } from "@/api";
+import { type Component, connectionsQuery, journalLatestQuery, satellitesQuery, systemQuery, tasksQuery } from "@/api";
 import { tr } from "@/i18n/runtime";
 import { startOfToday } from "@/lib/dates";
 import { is } from "@/lib/events";
 import { rendered, say } from "@/lib/messages";
 import { useCan } from "@/lib/session";
+
+/** Components that already speak for themselves: connections, tools and satellites. */
+const SPEAK_FOR_THEMSELVES = new Set<Component["slot"]>(["satellite", "tools", "connector"]);
 
 export interface Attention {
   key: string;
@@ -105,8 +108,7 @@ export function useAttention(): { items: Attention[]; ready: boolean } {
     });
   }
   for (const c of system.data?.components ?? []) {
-    // connections, tools and satellites already speak for themselves above
-    if (c.health !== "unavailable" || ["satellite", "tools", "connector"].includes(c.slot)) continue;
+    if (c.health !== "unavailable" || SPEAK_FOR_THEMSELVES.has(c.slot)) continue;
     items.push({
       key: `component-${c.slot}-${c.name}`,
       icon: ServerCrash,

@@ -49,7 +49,7 @@ export interface KindStyle {
 }
 
 /** Every kind the API sends (`Kind`): a new one fails the typecheck here until it has its look. */
-export const KIND: Record<Kind, KindStyle> = {
+const KIND: Record<Kind, KindStyle> = {
   conversation: { icon: MessageSquareText, tone: "text-ink", rail: "bg-ink/25" },
   delivery: { icon: Megaphone, tone: "text-ember", rail: "bg-ember/50" },
   tool: { icon: Wrench, tone: "text-ink-muted", rail: "bg-rule-strong" },

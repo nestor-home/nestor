@@ -52,7 +52,7 @@ export function stress(db: Db, now = Date.now()): void {
   const mathis = db.accounts[0];
   if (mathis) mathis.login = `mathis.lambert.${"main-administrator".repeat(2)}@example.org`;
 
-  let position = Math.max(0, ...db.journal.map((e) => e.item.position));
+  let position = db.journal.reduce((last, e) => Math.max(last, e.item.position), 0);
   const events: JournalEvent[] = [];
   const ev = (d: Omit<Draft, "title"> & { text: string }, ago: number) => {
     const { text, ...draft } = d;
@@ -63,7 +63,6 @@ export function stress(db: Db, now = Date.now()): void {
   ev(
     {
       type: "conversation.turn.user",
-      kind: "conversation",
       text: "Marie-Amélie said",
       detail: `Look at this document ${LONG_URL} and tell me whether ${LONG_WORD} appears in it, it is urgent.`,
       people: [MARIE],
@@ -76,7 +75,6 @@ export function stress(db: Db, now = Date.now()): void {
   ev(
     {
       type: "agent.tool.called",
-      kind: "tool",
       text: `Tool ${LONG_WORD} called`,
       detail: JSON_ARGS,
       tool: LONG_WORD,
@@ -88,7 +86,6 @@ export function stress(db: Db, now = Date.now()): void {
   ev(
     {
       type: "agent.tool.completed",
-      kind: "tool",
       text: `Tool ${LONG_WORD} failed`,
       detail: PROVIDER_ERROR,
       tool: LONG_WORD,
@@ -102,7 +99,6 @@ export function stress(db: Db, now = Date.now()): void {
   ev(
     {
       type: "conversation.turn.assistant",
-      kind: "conversation",
       text: "Richie answered",
       detail: `${LONG_SENTENCE}\n\nThe link you gave me: ${LONG_URL}`,
       channels: ["web"],
@@ -113,7 +109,6 @@ export function stress(db: Db, now = Date.now()): void {
   ev(
     {
       type: "initiative.undeliverable",
-      kind: "delivery",
       text: `Message not passed on: ${LONG_WORD}`,
       detail: PROVIDER_ERROR,
       people: [MARIE],
@@ -130,7 +125,6 @@ export function stress(db: Db, now = Date.now()): void {
     objective: `${LONG_SENTENCE} The file is here: ${LONG_URL}`,
     executor: "hermes",
     status: "running",
-    status_label: "running",
     requested_by: MARIE,
     started_at: at(20),
     ended_at: null,

@@ -10,7 +10,7 @@ import { Status } from "@/components/status";
 import { Button } from "@/components/ui/button";
 import { useNow } from "@/hooks/use-now";
 import { useT } from "@/i18n";
-import { deadline, remaining } from "@/lib/dates";
+import { remaining } from "@/lib/dates";
 import { CAPABILITY_ICON } from "@/lib/icons";
 import { useCan, useMe } from "@/lib/session";
 import { AddSatelliteButton, IdentifyButton } from "./add-satellite";
@@ -81,7 +81,7 @@ function Pending({
                 <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
                   <Status tone="pending">
                     <span className="tabular">
-                      {t("sat-expires-in", { remaining: remaining(deadline(r.expires_in_s, receivedAt), now) })}
+                      {t("sat-expires-in", { remaining: remaining(receivedAt + r.expires_in_s * 1000, now) })}
                     </span>
                   </Status>
                   <span className="flex gap-1.5 text-ink-muted">

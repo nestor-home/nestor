@@ -1,22 +1,23 @@
 /** The mock journal's queries: the same filters and counts the API computes. */
-import type { Facet, JournalEvent, JournalFacets, JournalFilters, JournalItem, Kind, PersonRef } from "@/api";
+import type { Facet, JournalEvent, JournalFacets, JournalFilters, JournalItem } from "@/api";
 import { kindValues, toneValues } from "@/api/schema.gen";
+import { matches } from "@/features/journal/merge";
+import { oneOf } from "@/lib/enums";
 
 const text = (url: URL, key: string) => url.searchParams.get(key) || undefined;
-/** Whether `value` is one of an enum's values, as the API's schema lists them. */
-const oneOf = <T extends string>(values: readonly T[], value: string): value is T =>
-  (values as readonly string[]).includes(value);
 
 /** The filters of a request, or the names of the parameters the API would refuse (422). */
 export function filtersOf(url: URL): JournalFilters | string[] {
   const asked = url.searchParams.getAll("kinds");
   const kinds = asked.filter((k) => oneOf(kindValues, k));
-  const tone = text(url, "tone");
-  const refused = [
-    ...asked.flatMap((k, i) => (oneOf(kindValues, k) ? [] : [`kinds.${i}`])),
-    ...(tone && !oneOf(toneValues, tone) ? ["tone"] : []),
-  ];
-  if (refused.length) return refused;
+  const asTone = text(url, "tone");
+  const tone = oneOf(toneValues, asTone) ? asTone : undefined;
+  if (kinds.length < asked.length || tone !== asTone) {
+    return [
+      ...asked.flatMap((k, i) => (oneOf(kindValues, k) ? [] : [`kinds.${i}`])),
+      ...(tone !== asTone ? ["tone"] : []),
+    ];
+  }
   return {
     kinds,
     person: text(url, "person"),
@@ -25,7 +26,7 @@ export function filtersOf(url: URL): JournalFilters | string[] {
     q: text(url, "q"),
     from: text(url, "from"),
     to: text(url, "to"),
-    tone: tone && oneOf(toneValues, tone) ? tone : undefined,
+    tone,
     session: text(url, "session"),
     conversation: text(url, "conversation"),
     task: text(url, "task"),
@@ -37,41 +38,29 @@ export function filtersOf(url: URL): JournalFilters | string[] {
 
 type Facetable = "kinds" | "person" | "channel" | "room";
 
-function accepts(e: JournalItem, f: JournalFilters, ignore?: Facetable): boolean {
-  const q = f.q?.toLowerCase();
-  return (
-    (ignore === "kinds" || !f.kinds?.length || f.kinds.includes(e.kind)) &&
-    (ignore === "person" || !f.person || e.people.some((p) => p.id === f.person)) &&
-    (ignore === "channel" || !f.channel || e.channels.includes(f.channel)) &&
-    (ignore === "room" || !f.room || e.room === f.room) &&
-    (!q || `${e.text} ${e.detail_text} ${e.reason?.text ?? ""}`.toLowerCase().includes(q)) &&
-    (!f.from || e.at >= f.from) &&
-    (!f.to || e.at <= f.to) &&
-    (!f.tone || e.tone === f.tone) &&
-    (!f.session || e.links.session === f.session) &&
-    (!f.conversation || e.links.conversation === f.conversation) &&
-    (!f.task || e.links.task === f.task) &&
-    (!f.watch || e.links.watch === f.watch) &&
-    (!f.connection || e.links.connection === f.connection) &&
-    (!f.satellite || e.links.satellite === f.satellite)
-  );
-}
+/** The filters with one facet's own selection set aside: a facet counts for the other filters. */
+const accepts = (e: JournalItem, f: JournalFilters, ignore?: Facetable) =>
+  matches(e, ignore ? { ...f, [ignore]: undefined } : f);
 
 export function matching(events: JournalEvent[], f: JournalFilters): JournalItem[] {
   return events.map((e) => e.item).filter((e) => accepts(e, f));
 }
 
-function tally<K extends string>(values: K[], label: (key: K) => string): { key: K; label: string; count: number }[] {
+function counted<K extends string>(values: K[]): { key: K; count: number }[] {
   const counts = new Map<K, number>();
   for (const v of values) counts.set(v, (counts.get(v) ?? 0) + 1);
-  return [...counts]
-    .map(([key, count]) => ({ key, label: label(key), count }))
+  return [...counts].map(([key, count]) => ({ key, count })).sort((a, b) => b.count - a.count);
+}
+
+function tally(values: string[], label: (key: string) => string): Facet[] {
+  return counted(values)
+    .map(({ key, count }) => ({ key, label: label(key), count }))
     .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
 }
 
 const BUCKETS = 48;
 
-export function facets(events: JournalEvent[], f: JournalFilters, kindLabel: (kind: Kind) => string): JournalFacets {
+export function facets(events: JournalEvent[], f: JournalFilters): JournalFacets {
   const items = events.map((e) => e.item);
   const of = (ignore: Facetable) => items.filter((e) => accepts(e, f, ignore));
   const all = items.filter((e) => accepts(e, f));
@@ -83,16 +72,16 @@ export function facets(events: JournalEvent[], f: JournalFilters, kindLabel: (ki
     const i = Math.floor((new Date(e.at).getTime() - from.getTime()) / 1000 / bucket);
     if (i >= 0 && i < BUCKETS) counts[i] = (counts[i] ?? 0) + 1;
   }
-  const names = new Map<string, string>(of("person").flatMap((e) => e.people.map((p: PersonRef) => [p.id, p.name])));
-  const plain = (values: string[]): Facet[] => tally(values, (v) => names.get(v) ?? v);
+  const byPerson = of("person");
+  const names = new Map<string, string>(byPerson.flatMap((e) => e.people.map((p) => [p.id, p.name])));
   return {
     total: all.length,
     truncated: false,
-    kinds: tally(
-      of("kinds").map((e) => e.kind),
-      kindLabel,
+    kinds: counted(of("kinds").map((e) => e.kind)),
+    people: tally(
+      byPerson.flatMap((e) => e.people.map((p) => p.id)),
+      (v) => names.get(v) ?? v,
     ),
-    people: plain(of("person").flatMap((e) => e.people.map((p) => p.id))),
     channels: tally(
       of("channel").flatMap((e) => e.channels),
       (c) => c,

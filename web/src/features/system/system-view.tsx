@@ -7,17 +7,16 @@ import { useT } from "@/i18n";
 import { BrandMark, brandOf } from "@/lib/brands";
 
 /** The slots the page groups components by (`ComponentOut.slot`), in this order. */
-const SLOTS: { slot: Component["slot"]; title: string; hint?: string }[] = [
-  { slot: "model", title: "sys-slot-model" },
-  { slot: "speech", title: "sys-slot-speech" },
-  { slot: "executor", title: "sys-slot-executor" },
-  { slot: "channel", title: "sys-slot-channel" },
-  { slot: "presence", title: "sys-slot-presence" },
-  { slot: "tools", title: "sys-slot-tools" },
-  { slot: "connector", title: "sys-slot-connector" },
-  { slot: "satellite", title: "sys-slot-satellite" },
-  { slot: "storage", title: "sys-slot-storage" },
-];
+const SLOTS: Record<Component["slot"], string> = {
+  model: "sys-slot-model",
+  executor: "sys-slot-executor",
+  channel: "sys-slot-channel",
+  presence: "sys-slot-presence",
+  tools: "sys-slot-tools",
+  inbound: "sys-slot-inbound",
+  connector: "sys-slot-connector",
+  satellite: "sys-slot-satellite",
+};
 
 const HEALTH: Record<Health, { tone: StatusTone; label: string }> = {
   started: { tone: "ok", label: "sys-health-ok" },
@@ -43,12 +42,11 @@ export function SystemView() {
           {unwell.length ? t("sys-unwell", { count: unwell.length }) : t("sys-all-well")}
         </span>
       </p>
-      {SLOTS.map(({ slot, title, hint }) => {
+      {Object.entries(SLOTS).map(([slot, title]) => {
         const list = components.filter((c) => c.slot === slot);
         if (!list.length) return null;
         return (
           <Section key={slot} title={t(title)} count={list.length}>
-            {hint ? <p className="-mt-1 mb-3 text-sm text-ink-muted">{t(hint)}</p> : null}
             <RowList>
               {list.map((c) => (
                 <ComponentRow key={`${c.slot}-${c.name}`} component={c} />

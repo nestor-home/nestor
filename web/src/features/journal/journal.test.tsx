@@ -62,7 +62,7 @@ describe("the journal", () => {
   });
 
   it("ignores live events the filters exclude", async () => {
-    const { stream } = renderApp("/journal?kinds=tool");
+    const { stream } = renderApp(`/journal?kinds=${encodeURIComponent(JSON.stringify(["tool"]))}`);
     await stories();
     stream.emit(liveItem({ kind: "conversation", detail: "Filtered out", links: { session: "s-x" } }));
     expect(screen.queryByText(/Filtered out/)).not.toBeInTheDocument();

@@ -15,26 +15,10 @@ duration-h = { $hours } h { $minutes }
 household-everyone = tout le foyer
 household-nobody = personne
 
-role-owner = propriétaire
-role-admin = administrateur
-role-member = membre
 role-owner-hint = Tout, y compris les comptes et les rôles.
 role-admin-hint = Connexions, satellites et supervision, sans les comptes.
 role-member-hint = Son journal, ses connexions et ses souvenirs.
 
-connection-status-connected = connectée
-connection-status-needs-reauth = à réautoriser
-connection-status-error = erreur
-risk-read = lecture
-risk-write = écriture
-risk-sensitive = sensible
-auth-oauth2 = OAuth
-auth-secret = identifiants
-auth-none = aucune
-task-status-running = en cours
-task-status-completed = terminée
-task-status-failed = en échec
-task-status-cancelled = annulée
 
 action-cancel = Annuler
 action-save = Enregistrer
@@ -65,7 +49,6 @@ household-everyone-capital = Tout le foyer
 breadcrumbs = Fil d'Ariane
 person-picker-empty = Aucune personne de ce nom.
 action-show-choices = Afficher les choix
-role-guest = invité
 role-guest-hint = Son journal seulement.
 
 # Les marques génériques, nommées par des mots plutôt que par une marque (src/lib/brands.tsx).

@@ -2,28 +2,11 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { type Me, meQuery, type Scope } from "@/api";
 
-/** What a screen may show or do: the server's finer scopes, grouped as reading or changing a part of the admin. */
-export type Permission =
-  | "journal:read"
-  | "connections:read"
-  | "connections:write"
-  | "satellites:read"
-  | "satellites:write"
-  | "system:read"
-  | "tasks:read"
-  | "tasks:write"
-  | "watches:read"
-  | "watches:write"
-  | "memories:read"
-  | "memories:write"
-  | "people:read"
-  | "accounts:read"
-  | "accounts:write"
-  | "config:manage"
-  | "agent:read";
-
-/** Every scope the server grants, by name: a new one fails the typecheck here until it is placed. */
-const PERMISSIONS: Record<Scope, Permission[]> = {
+/**
+ * Every scope the server grants, by name, as what a screen may show or do: reading or changing a part
+ * of the admin. A new scope fails the typecheck here until it is placed.
+ */
+const PERMISSIONS = {
   "accounts.manage": ["accounts:read", "accounts:write"],
   "accounts.owners.manage": ["accounts:read", "accounts:write"],
   "household.read": ["people:read", "connections:read", "tasks:read", "watches:read", "memories:read"],
@@ -41,10 +24,20 @@ const PERMISSIONS: Record<Scope, Permission[]> = {
   "watches.manage.own": ["watches:read", "watches:write"],
   "config.manage": ["config:manage"],
   "agent.read": ["agent:read"],
-};
+} as const satisfies Record<Scope, readonly string[]>;
 
-export function permissions(scopes: readonly Scope[]): Permission[] {
-  return [...new Set(scopes.flatMap((s) => PERMISSIONS[s]))];
+export type Permission = (typeof PERMISSIONS)[Scope][number];
+
+/** Per list of scopes (one per `/me` answer): computed once, read on every render. */
+const granted = new WeakMap<readonly Scope[], ReadonlySet<Permission>>();
+
+export function permissions(scopes: readonly Scope[]): ReadonlySet<Permission> {
+  let found = granted.get(scopes);
+  if (!found) {
+    found = new Set(scopes.flatMap((s) => PERMISSIONS[s]));
+    granted.set(scopes, found);
+  }
+  return found;
 }
 
 /** The signed-in account. Only used below the `_app` layout, which loads it before rendering. */
@@ -53,7 +46,7 @@ export function useMe(): Me {
 }
 
 export function can(me: Pick<Me, "scopes">, permission: Permission): boolean {
-  return permissions(me.scopes).includes(permission);
+  return permissions(me.scopes).has(permission);
 }
 
 export function useCan(permission: Permission): boolean {

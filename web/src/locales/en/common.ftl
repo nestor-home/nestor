@@ -15,26 +15,10 @@ duration-h = { $hours } h { $minutes }
 household-everyone = whole household
 household-nobody = nobody
 
-role-owner = owner
-role-admin = administrator
-role-member = member
 role-owner-hint = Everything, accounts and roles included.
 role-admin-hint = Connections, satellites and supervision, without accounts.
 role-member-hint = Their own journal, connections and memories.
 
-connection-status-connected = connected
-connection-status-needs-reauth = needs reauthorisation
-connection-status-error = error
-risk-read = read
-risk-write = write
-risk-sensitive = sensitive
-auth-oauth2 = OAuth
-auth-secret = credentials
-auth-none = none
-task-status-running = running
-task-status-completed = completed
-task-status-failed = failed
-task-status-cancelled = cancelled
 
 action-cancel = Cancel
 action-save = Save
@@ -65,7 +49,6 @@ household-everyone-capital = Whole household
 breadcrumbs = Breadcrumbs
 person-picker-empty = Nobody by that name.
 action-show-choices = Show the choices
-role-guest = guest
 role-guest-hint = Their own journal only.
 
 # Generic marks, named in words rather than by a brand (src/lib/brands.tsx).

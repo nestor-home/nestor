@@ -8,14 +8,13 @@ sys-unwell = { $count ->
 }
 sys-all-well = all is well
 sys-slot-model = Models
-sys-slot-speech = Speech
 sys-slot-executor = Executors
 sys-slot-channel = Channels
 sys-slot-presence = Presence
 sys-slot-tools = Tools
+sys-slot-inbound = Inbound sources
 sys-slot-connector = Connectors
 sys-slot-satellite = Satellites
-sys-slot-storage = Storage and runtime
 sys-health-ok = ok
 sys-health-degraded = degraded
 sys-health-down = down

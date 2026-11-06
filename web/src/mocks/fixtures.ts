@@ -25,7 +25,10 @@ import type {
   Voice,
   Watch,
 } from "@/api";
+import { scopeValues } from "@/api/schema.gen";
+import { oneOf } from "@/lib/enums";
 import { fr } from "./french";
+import grants from "./server/role-scopes.json";
 
 export const ASSISTANT = "Richie";
 
@@ -37,42 +40,13 @@ export const ref = (id: string): PersonRef => ({ id, name: NAMES[id] ?? id });
 export const minutes = (n: number, from = Date.now()) => new Date(from - n * 60_000).toISOString();
 const ahead = (seconds: number) => new Date(Date.now() + seconds * 1000).toISOString();
 
-/** The server's scopes for each role (what `/me` sends). */
-const OWN: Scope[] = ["journal.read.own", "memory.manage.own"];
-const MEMBER: Scope[] = [
-  ...OWN,
-  "household.read",
-  "agent.read",
-  "own.connections.manage",
-  "tasks.manage.own",
-  "watches.manage.own",
-];
-const ADMIN: Scope[] = [
-  ...MEMBER,
-  "accounts.manage",
-  "household.connections.manage",
-  "satellites.manage",
-  "system.read",
-  "config.manage",
-  "journal.read.all",
-  "memory.manage.all",
-  "tasks.manage",
-  "watches.manage.all",
-];
-
-/** Nestor's grants table (`permissions/grants.py`): owners hold every scope. */
+/** The scopes each role grants (Nestor's `GRANTS`, written by `nestor admin mocks`): what `/me` sends. */
+const granted = (scopes: string[]) => scopes.filter((s) => oneOf(scopeValues, s));
 export const SCOPES: Record<Role, Scope[]> = {
-  owner: [...ADMIN, "accounts.owners.manage"],
-  admin: ADMIN,
-  member: MEMBER,
-  guest: OWN,
-};
-
-export const ROLE_LABEL: Record<Role, string> = {
-  owner: fr("owner", "propriétaire"),
-  admin: fr("administrator", "administrateur"),
-  member: fr("member", "membre"),
-  guest: fr("guest", "invité"),
+  owner: granted(grants.owner),
+  admin: granted(grants.admin),
+  member: granted(grants.member),
+  guest: granted(grants.guest),
 };
 
 /** The rooms of the house, as Home Assistant names its areas. */
@@ -149,7 +123,6 @@ export function accounts(): Account[] {
     id,
     login,
     role,
-    role_label: ROLE_LABEL[role],
     person: person ? ref(person) : null,
     locale,
     disabled,
@@ -168,10 +141,8 @@ export function invitations(): Invitation[] {
     {
       id: "inv-odile",
       role: "member",
-      role_label: ROLE_LABEL.member,
       person: ref("odile"),
       status: "pending",
-      status_label: fr("pending", "en attente"),
       created_at: minutes(60 * 24 * 2),
       expires_at: ahead(60 * 60 * 24 * 5),
     },
@@ -192,8 +163,6 @@ const googleSetup = (api: string) =>
 4. Créez des identifiants « ID client OAuth », type « Application Web ».
 5. Déclarez l'URI de redirection ci-dessous, puis copiez l'identifiant et le secret.`,
   );
-const OAUTH = fr("OAuth", "OAuth");
-const CREDENTIALS = fr("credentials", "identifiants");
 const MAILBOX = fr("Mailbox (IMAP)", "Boîte mail (IMAP)");
 const MCP_SERVER = fr("MCP server", "Serveur MCP");
 
@@ -208,7 +177,6 @@ export function connectors(): Connector[] {
         "Lire, chercher et rédiger des courriels ; surveiller ce qui arrive dans la boîte.",
       ),
       auth: "oauth2",
-      auth_label: OAUTH,
       inbound: ["mail"],
       setup: googleSetup("Gmail"),
       fields: [],
@@ -225,7 +193,6 @@ export function connectors(): Connector[] {
       title: MAILBOX,
       description: fr("Any mailbox over IMAP.", "N'importe quelle boîte mail par IMAP."),
       auth: "secret",
-      auth_label: CREDENTIALS,
       inbound: ["mail"],
       setup: fr(
         "Use an app password rather than your main password when the provider offers one.",
@@ -263,7 +230,6 @@ export function connectors(): Connector[] {
         "Les outils d'un serveur Model Context Protocol, local ou distant : Home Assistant, vos scripts…",
       ),
       auth: "secret",
-      auth_label: CREDENTIALS,
       inbound: [],
       setup: fr(
         "Give the server's HTTP address (“streamable HTTP” transport). The token is optional.",
@@ -295,7 +261,6 @@ export function connectors(): Connector[] {
         "Consulter les agendas du foyer et y ajouter des événements.",
       ),
       auth: "oauth2",
-      auth_label: OAUTH,
       inbound: [],
       setup: googleSetup("Google Calendar"),
       fields: [],
@@ -309,7 +274,6 @@ export function connectors(): Connector[] {
   ];
 }
 
-const CONNECTED = fr("connected", "connectée");
 /** Why a connection needs a look, as the server words it: a message and its text. */
 const reason = (text: string) => ({ message: { id: "connection-status-reason", args: {} }, text });
 /** Léa's MCP server of recipes. */
@@ -325,7 +289,6 @@ export function connections(): Connection[] {
       account: "mathis.lambert27@gmail.com",
       owner: ref("mathis"),
       status: "needs_reauth",
-      status_label: fr("to authorise again", "à réautoriser"),
       status_reason: reason(
         fr(
           "Google refused to renew the token (invalid_grant).",
@@ -347,7 +310,6 @@ export function connections(): Connection[] {
       account: "lea@lambert.family",
       owner: ref("lea"),
       status: "connected",
-      status_label: CONNECTED,
       status_reason: null,
       confirm_writes: true,
       disabled_tools: [],
@@ -364,7 +326,6 @@ export function connections(): Connection[] {
       account: fr("Home Assistant · home", "Home Assistant · maison"),
       owner: null,
       status: "connected",
-      status_label: CONNECTED,
       status_reason: null,
       confirm_writes: false,
       disabled_tools: [],
@@ -381,7 +342,6 @@ export function connections(): Connection[] {
       account: LEA_RECIPES,
       owner: ref("lea"),
       status: "error",
-      status_label: fr("error", "erreur"),
       status_reason: reason(
         fr(
           "Connection refused by http://192.168.1.20:8808/mcp.",
@@ -398,10 +358,6 @@ export function connections(): Connection[] {
   ];
 }
 
-const READ = fr("read", "lecture");
-const WRITE = fr("write", "écriture");
-const SENSITIVE = fr("sensitive", "sensible");
-
 export function tools(kind: string): Tool[] {
   if (kind === "google" || kind === "imap") {
     return [
@@ -412,35 +368,30 @@ export function tools(kind: string): Tool[] {
           "Chercher des courriels par expéditeur, sujet ou date.",
         ),
         risk: "read",
-        risk_label: READ,
         enabled: true,
       },
       {
         name: "mail_read",
         description: fr("Read an email and its text attachments.", "Lire un courriel et ses pièces jointes texte."),
         risk: "read",
-        risk_label: READ,
         enabled: true,
       },
       {
         name: "mail_draft",
         description: fr("Draft a reply without sending it.", "Préparer un brouillon de réponse, sans l'envoyer."),
         risk: "write",
-        risk_label: WRITE,
         enabled: true,
       },
       {
         name: "mail_label",
         description: fr("File an email (labels, archive).", "Classer un courriel (libellés, archivage)."),
         risk: "write",
-        risk_label: WRITE,
         enabled: false,
       },
       {
         name: "mail_send",
         description: fr("Send an email on the person's behalf.", "Envoyer un courriel au nom de la personne."),
         risk: "sensitive",
-        risk_label: SENSITIVE,
         enabled: false,
       },
     ];
@@ -450,35 +401,30 @@ export function tools(kind: string): Tool[] {
       name: "ha_get_state",
       description: fr("Read the state of a device or sensor.", "Lire l'état d'un appareil ou d'un capteur."),
       risk: "read",
-      risk_label: READ,
       enabled: true,
     },
     {
       name: "ha_list_areas",
       description: fr("List the rooms and their devices.", "Lister les pièces et leurs appareils."),
       risk: "read",
-      risk_label: READ,
       enabled: true,
     },
     {
       name: "ha_turn_on",
       description: fr("Turn on a light, a plug or a scene.", "Allumer une lumière, une prise ou une scène."),
       risk: "write",
-      risk_label: WRITE,
       enabled: true,
     },
     {
       name: "ha_turn_off",
       description: fr("Turn off a light, a plug or a scene.", "Éteindre une lumière, une prise ou une scène."),
       risk: "write",
-      risk_label: WRITE,
       enabled: true,
     },
     {
       name: "ha_unlock",
       description: fr("Unlock a smart lock.", "Déverrouiller une serrure connectée."),
       risk: "sensitive",
-      risk_label: SENSITIVE,
       enabled: false,
     },
   ];
@@ -650,8 +596,6 @@ export function satellites(): Satellite[] {
   ];
 }
 
-const RUNNING = fr("running", "en cours");
-
 /** What the tasks are about, also written in the journal. */
 export const CLAIM = fr(
   "Prepare the health insurance claim for Jules's glasses.",
@@ -694,7 +638,6 @@ export function tasks(): Task[] {
       objective: CLAIM,
       executor: "hermes",
       status: "running",
-      status_label: RUNNING,
       requested_by: ref("mathis"),
       started_at: minutes(30.9),
       ended_at: null,
@@ -709,7 +652,6 @@ export function tasks(): Task[] {
       objective: SHOPPING,
       executor: "codex",
       status: "running",
-      status_label: RUNNING,
       requested_by: ref("lea"),
       started_at: minutes(11.9),
       ended_at: null,
@@ -724,7 +666,6 @@ export function tasks(): Task[] {
       objective: ENERGY,
       executor: "hermes",
       status: "completed",
-      status_label: fr("completed", "terminée"),
       requested_by: ref("mathis"),
       started_at: minutes(351.6),
       ended_at: minutes(251),
@@ -739,7 +680,6 @@ export function tasks(): Task[] {
       objective: fr("Cancel the gym membership.", "Résilier l'abonnement à la salle de sport."),
       executor: "hermes",
       status: "failed",
-      status_label: fr("failed", "en échec"),
       requested_by: ref("lea"),
       started_at: minutes(60 * 26),
       ended_at: minutes(60 * 26 - 9),
@@ -754,7 +694,6 @@ export function tasks(): Task[] {
       objective: fr("Sum up Jules's homework for the week.", "Récapituler les devoirs de Jules pour la semaine."),
       executor: "codex",
       status: "cancelled",
-      status_label: CANCELLED,
       requested_by: ref("jules"),
       started_at: minutes(60 * 30),
       ended_at: minutes(60 * 30 - 1),
@@ -768,7 +707,6 @@ export function tasks(): Task[] {
 }
 
 /** A task's label once cancelled (the admin can cancel one). */
-export const CANCELLED = fr("cancelled", "annulée");
 
 export function watches(): Watch[] {
   return [
@@ -968,43 +906,6 @@ export function system(): SystemInfo {
         health_detail: null,
       }),
       component({
-        slot: "speech",
-        name: fr("Speech recognition", "Reconnaissance vocale"),
-        adapter: "nestor.adapters.speech.elevenlabs",
-        brand: "elevenlabs",
-        version: "scribe_v2_realtime",
-        health: "started",
-        health_detail: null,
-        capabilities: ["partials", "en"],
-      }),
-      component({
-        slot: "speech",
-        name: fr("Speech synthesis", "Synthèse vocale"),
-        adapter: "nestor.adapters.speech.elevenlabs",
-        brand: "elevenlabs",
-        version: "eleven_flash_v2_5",
-        health: "degraded",
-        health_detail: fr("High latency since 13:40 (p95 1.9 s)", "Latence élevée depuis 13:40 (p95 1,9 s)"),
-      }),
-      component({
-        slot: "speech",
-        name: fr("Speech detection", "Détection de parole"),
-        adapter: "nestor.adapters.speech.silero",
-        brand: "silero",
-        version: "5.1",
-        health: "started",
-        health_detail: null,
-      }),
-      component({
-        slot: "speech",
-        name: fr("End of turn", "Fin de tour"),
-        adapter: "nestor.adapters.speech.smart_turn",
-        brand: "smart-turn",
-        version: "3.0",
-        health: "started",
-        health_detail: null,
-      }),
-      component({
         slot: "executor",
         name: "Hermes",
         adapter: "nestor.adapters.executors.hermes",
@@ -1132,33 +1033,6 @@ export function system(): SystemInfo {
         version: PROTOCOL,
         health: "started",
         health_detail: BEDROOM,
-      }),
-      component({
-        slot: "storage",
-        name: fr("Journal and state", "Journal et état"),
-        adapter: "nestor.adapters.storage.sqlite",
-        brand: "sqlite",
-        version: "3.50.4 · WAL",
-        health: "started",
-        health_detail: fr("212 MB, 48,112 events", "212 Mo, 48 112 événements"),
-      }),
-      component({
-        slot: "storage",
-        name: fr("Replication", "Réplication"),
-        adapter: "litestream",
-        brand: "litestream",
-        version: "0.5.2",
-        health: "started",
-        health_detail: fr("Last replica 12 s ago", "Dernière réplique il y a 12 s"),
-      }),
-      component({
-        slot: "storage",
-        name: fr("Container", "Conteneur"),
-        adapter: "docker",
-        brand: "docker",
-        version: "nestor:0.9.0",
-        health: "started",
-        health_detail: null,
       }),
     ],
   };

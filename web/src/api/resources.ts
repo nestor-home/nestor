@@ -2,56 +2,20 @@
 import { client, unwrap } from "./client";
 import type {
   AcceptInvitation,
-  Account,
-  Addition,
-  AgentActivity,
   Approval,
   ConfigDocument,
-  ConfigPreview,
-  ConfigSchema,
-  ConfigState,
-  ConfigWritten,
   Connection,
-  ConnectionDetail,
   Connector,
   ConnectRequest,
-  ConnectResult,
   Credentials,
-  Heard,
-  HistoryDocument,
-  HistoryEntry,
   Id,
-  Initiative,
-  Invitation,
-  InvitationCreated,
-  InvitationPreview,
-  JournalEvent,
-  JournalFacets,
   JournalFilters,
-  JournalPage,
-  Me,
-  Memory,
   MemoryQuery,
   NewAddition,
   NewInvitation,
   OAuthClient,
-  PairingMethods,
-  Person,
-  PhraseVerdict,
   Role,
-  Satellite,
-  Satellites,
-  Secret,
-  StartedAddition,
-  SystemInfo,
-  Task,
-  Tasks,
   ToolSettings,
-  Updates,
-  Voice,
-  VoiceRecording,
-  Watch,
-  Watches,
 } from "./types";
 
 /** A WAV file as the body of a request: sent as it is, not as JSON. */
@@ -61,31 +25,35 @@ const wav = (audio: ArrayBuffer) => ({
   headers: { "Content-Type": "audio/wav" },
 });
 
+/** An operation whose answer the screens do not read. */
+const done = (call: Parameters<typeof unwrap>[0]): Promise<void> => unwrap(call).then(() => undefined);
+
+/** How connecting ends: on the provider's consent page, or connected at once. */
+export type ConnectResult = { kind: "redirect"; url: string } | { kind: "connected"; connection: Connection };
+
 /** What the accounts screen changes: one of the role, or whether it may sign in. */
 export type AccountChange = { role?: Role; disabled?: boolean };
 
 export const api = {
   // session
-  me: (signal?: AbortSignal): Promise<Me> => unwrap(client.GET("/api/v1/me", { signal })),
-  login: (body: Credentials): Promise<Me> => unwrap(client.POST("/api/v1/session", { body })),
-  logout: (): Promise<void> => unwrap(client.DELETE("/api/v1/session")).then(() => undefined),
-  setLocale: (locale: string | null): Promise<Me> => unwrap(client.PUT("/api/v1/me/locale", { body: { locale } })),
-  invitation: (token: string): Promise<InvitationPreview> =>
-    unwrap(client.POST("/api/v1/invitations/inspect", { body: { token } })),
-  acceptInvitation: (token: string, body: AcceptInvitation): Promise<Me> =>
+  me: (signal?: AbortSignal) => unwrap(client.GET("/api/v1/me", { signal })),
+  login: (body: Credentials) => unwrap(client.POST("/api/v1/session", { body })),
+  logout: () => done(client.DELETE("/api/v1/session")),
+  setLocale: (locale: string | null) => unwrap(client.PUT("/api/v1/me/locale", { body: { locale } })),
+  invitation: (token: string) => unwrap(client.POST("/api/v1/invitations/inspect", { body: { token } })),
+  acceptInvitation: (token: string, body: AcceptInvitation) =>
     unwrap(client.POST("/api/v1/invitations/accept", { body: { token, ...body } })),
 
   // accounts
-  accounts: (): Promise<Account[]> => unwrap(client.GET("/api/v1/accounts")),
-  account: (id: Id): Promise<Account> =>
-    unwrap(client.GET("/api/v1/accounts/{account_id}", { params: { path: { account_id: id } } })),
-  invitations: (): Promise<Invitation[]> => unwrap(client.GET("/api/v1/invitations")),
-  invite: (body: NewInvitation): Promise<InvitationCreated> => unwrap(client.POST("/api/v1/invitations", { body })),
-  revokeInvitation: (id: Id): Promise<void> =>
+  accounts: () => unwrap(client.GET("/api/v1/accounts")),
+  account: (id: Id) => unwrap(client.GET("/api/v1/accounts/{account_id}", { params: { path: { account_id: id } } })),
+  invitations: () => unwrap(client.GET("/api/v1/invitations")),
+  invite: (body: NewInvitation) => unwrap(client.POST("/api/v1/invitations", { body })),
+  revokeInvitation: (id: Id) =>
     unwrap(client.DELETE("/api/v1/invitations/{invitation_id}", { params: { path: { invitation_id: id } } })).then(
       () => undefined,
     ),
-  changeAccount: async (id: Id, change: AccountChange): Promise<Account> => {
+  changeAccount: async (id: Id, change: AccountChange) => {
     const path = { params: { path: { account_id: id } } };
     if (change.role)
       return await unwrap(client.PUT("/api/v1/accounts/{account_id}/role", { ...path, body: { role: change.role } }));
@@ -94,29 +62,28 @@ export const api = {
   },
 
   // household
-  people: (): Promise<Person[]> => unwrap(client.GET("/api/v1/household/people")),
-  person: (id: Id): Promise<Person> =>
+  people: () => unwrap(client.GET("/api/v1/household/people")),
+  person: (id: Id) =>
     unwrap(client.GET("/api/v1/household/people/{person_id}", { params: { path: { person_id: id } } })),
 
   // journal
-  journal: (filters: JournalFilters, before?: number, signal?: AbortSignal, limit?: number): Promise<JournalPage> =>
+  journal: (filters: JournalFilters, before?: number, signal?: AbortSignal, limit?: number) =>
     unwrap(client.GET("/api/v1/journal", { params: { query: { ...filters, before, limit } }, signal })),
-  journalFacets: (filters: JournalFilters, signal?: AbortSignal): Promise<JournalFacets> =>
+  journalFacets: (filters: JournalFilters, signal?: AbortSignal) =>
     unwrap(client.GET("/api/v1/journal/facets", { params: { query: filters }, signal })),
-  journalEvent: (position: number): Promise<JournalEvent> =>
+  journalEvent: (position: number) =>
     unwrap(client.GET("/api/v1/journal/{position}", { params: { path: { position } } })),
 
   // system
-  system: (): Promise<SystemInfo> => unwrap(client.GET("/api/v1/system")),
-  updates: (): Promise<Updates> => unwrap(client.GET("/api/v1/system/updates")),
+  system: () => unwrap(client.GET("/api/v1/system")),
+  updates: () => unwrap(client.GET("/api/v1/system/updates")),
   /** Installs the newest release where Nestor runs, then restarts on it: a person's confirmed action. */
-  installUpdate: (version: string): Promise<Updates> =>
+  installUpdate: (version: string) =>
     unwrap(client.POST("/api/v1/system/updates/install", { body: { version, confirm: true } })),
   /** Asks for a restart: always a person's explicit, confirmed action. */
-  restart: (): Promise<void> =>
-    unwrap(client.POST("/api/v1/system/restart", { body: { confirm: true } })).then(() => undefined),
+  restart: () => done(client.POST("/api/v1/system/restart", { body: { confirm: true } })),
   /** Whether the instance answers at all (outside the API: it is up before a session is). */
-  health: async (signal?: AbortSignal): Promise<boolean> => {
+  health: async (signal?: AbortSignal) => {
     try {
       return (await globalThis.fetch("/health", { cache: "no-store", signal })).ok;
     } catch {
@@ -125,34 +92,32 @@ export const api = {
   },
 
   // the agent
-  activity: (signal?: AbortSignal): Promise<AgentActivity> => unwrap(client.GET("/api/v1/agent/activity", { signal })),
-  initiative: (signal?: AbortSignal): Promise<Initiative> => unwrap(client.GET("/api/v1/agent/initiative", { signal })),
+  activity: (signal?: AbortSignal) => unwrap(client.GET("/api/v1/agent/activity", { signal })),
+  initiative: (signal?: AbortSignal) => unwrap(client.GET("/api/v1/agent/initiative", { signal })),
 
   // configuration
-  configSchema: (): Promise<ConfigSchema> => unwrap(client.GET("/api/v1/config/schema")),
-  config: (): Promise<ConfigState> => unwrap(client.GET("/api/v1/config")),
-  previewConfig: (document: ConfigDocument, signal?: AbortSignal): Promise<ConfigPreview> =>
+  configSchema: () => unwrap(client.GET("/api/v1/config/schema")),
+  config: () => unwrap(client.GET("/api/v1/config")),
+  previewConfig: (document: ConfigDocument, signal?: AbortSignal) =>
     unwrap(client.POST("/api/v1/config/preview", { body: { document }, signal })),
-  writeConfig: (document: ConfigDocument): Promise<ConfigWritten> =>
-    unwrap(client.PUT("/api/v1/config", { body: { document } })),
-  configHistory: (): Promise<HistoryEntry[]> => unwrap(client.GET("/api/v1/config/history")),
-  configVersion: (id: Id): Promise<HistoryDocument> =>
+  writeConfig: (document: ConfigDocument) => unwrap(client.PUT("/api/v1/config", { body: { document } })),
+  configHistory: () => unwrap(client.GET("/api/v1/config/history")),
+  configVersion: (id: Id) =>
     unwrap(client.GET("/api/v1/config/history/{entry_id}", { params: { path: { entry_id: id } } })),
-  restoreConfig: (id: Id): Promise<ConfigWritten> =>
+  restoreConfig: (id: Id) =>
     unwrap(client.POST("/api/v1/config/history/{entry_id}/restore", { params: { path: { entry_id: id } } })),
-  secrets: (): Promise<Secret[]> => unwrap(client.GET("/api/v1/config/secrets")),
-  setSecret: (name: string, value: string): Promise<Secret> =>
+  secrets: () => unwrap(client.GET("/api/v1/config/secrets")),
+  setSecret: (name: string, value: string) =>
     unwrap(client.PUT("/api/v1/config/secrets/{name}", { params: { path: { name } }, body: { value } })),
-  deleteSecret: (name: string, force = false): Promise<void> =>
+  deleteSecret: (name: string, force = false) =>
     unwrap(client.DELETE("/api/v1/config/secrets/{name}", { params: { path: { name }, query: { force } } })).then(
       () => undefined,
     ),
 
   // connectors and connections
-  connectors: (): Promise<Connector[]> => unwrap(client.GET("/api/v1/connectors")),
-  connector: (kind: string): Promise<Connector> =>
-    unwrap(client.GET("/api/v1/connectors/{kind}", { params: { path: { kind } } })),
-  setClient: (kind: string, body: OAuthClient): Promise<Connector> =>
+  connectors: () => unwrap(client.GET("/api/v1/connectors")),
+  connector: (kind: string) => unwrap(client.GET("/api/v1/connectors/{kind}", { params: { path: { kind } } })),
+  setClient: (kind: string, body: OAuthClient) =>
     unwrap(client.PUT("/api/v1/connectors/{kind}/client", { params: { path: { kind } }, body })),
   /** OAuth answers with the provider's consent page; other connectors connect at once. */
   connect: async (kind: string, request: ConnectRequest, auth: Connector["auth"]): Promise<ConnectResult> => {
@@ -169,82 +134,79 @@ export const api = {
     const made = await unwrap(client.POST("/api/v1/connectors/{kind}/connections", { ...path, body: request }));
     return { kind: "connected", connection: made };
   },
-  connections: (): Promise<Connection[]> => unwrap(client.GET("/api/v1/connections")),
-  connection: (id: Id): Promise<ConnectionDetail> =>
+  connections: () => unwrap(client.GET("/api/v1/connections")),
+  connection: (id: Id) =>
     unwrap(client.GET("/api/v1/connections/{connection_id}", { params: { path: { connection_id: id } } })),
-  configureTools: (id: Id, body: ToolSettings): Promise<ConnectionDetail> =>
+  configureTools: (id: Id, body: ToolSettings) =>
     unwrap(client.PATCH("/api/v1/connections/{connection_id}", { params: { path: { connection_id: id } }, body })),
-  disconnect: (id: Id): Promise<void> =>
+  disconnect: (id: Id) =>
     unwrap(client.DELETE("/api/v1/connections/{connection_id}", { params: { path: { connection_id: id } } })).then(
       () => undefined,
     ),
 
   // satellites
-  satellites: (): Promise<Satellites> => unwrap(client.GET("/api/v1/satellites")),
-  pairingMethods: (): Promise<PairingMethods> => unwrap(client.GET("/api/v1/satellites/pairing-methods")),
-  startAddition: (body: NewAddition): Promise<StartedAddition> =>
-    unwrap(client.POST("/api/v1/satellites/additions", { body })),
-  addition: (id: Id, signal?: AbortSignal): Promise<Addition> =>
+  satellites: () => unwrap(client.GET("/api/v1/satellites")),
+  pairingMethods: () => unwrap(client.GET("/api/v1/satellites/pairing-methods")),
+  startAddition: (body: NewAddition) => unwrap(client.POST("/api/v1/satellites/additions", { body })),
+  addition: (id: Id, signal?: AbortSignal) =>
     unwrap(client.GET("/api/v1/satellites/additions/{addition_id}", { params: { path: { addition_id: id } }, signal })),
-  cancelAddition: (id: Id): Promise<void> =>
+  cancelAddition: (id: Id) =>
     unwrap(client.DELETE("/api/v1/satellites/additions/{addition_id}", { params: { path: { addition_id: id } } })).then(
       () => undefined,
     ),
-  identifyPending: (pairing: Id): Promise<void> =>
-    unwrap(
+  identifyPending: (pairing: Id) =>
+    done(
       client.POST("/api/v1/satellites/pending/{pairing_id}/identify", { params: { path: { pairing_id: pairing } } }),
-    ).then(() => undefined),
-  identify: (device: string): Promise<void> =>
+    ),
+  identify: (device: string) =>
     unwrap(client.POST("/api/v1/satellites/{device_id}/identify", { params: { path: { device_id: device } } })).then(
       () => undefined,
     ),
   /** Asks a connected satellite to install the newer version it reported; answers that version. */
-  updateSatellite: async (device: string): Promise<string> =>
+  updateSatellite: async (device: string) =>
     (await unwrap(client.POST("/api/v1/satellites/{device_id}/update", { params: { path: { device_id: device } } })))
       .version,
-  satellite: (device: string): Promise<Satellite> =>
+  satellite: (device: string) =>
     unwrap(client.GET("/api/v1/satellites/{device_id}", { params: { path: { device_id: device } } })),
-  approve: (pairing: Id, body: Approval): Promise<Satellite> =>
+  approve: (pairing: Id, body: Approval) =>
     unwrap(client.POST("/api/v1/satellites/approvals", { body: { ...body, pairing_id: pairing } })),
-  revoke: (device: string): Promise<void> =>
+  revoke: (device: string) =>
     unwrap(client.DELETE("/api/v1/satellites/{device_id}", { params: { path: { device_id: device } } })).then(
       () => undefined,
     ),
 
   // voices
-  voice: (person: Id): Promise<Voice> =>
+  voice: (person: Id) =>
     unwrap(client.GET("/api/v1/household/people/{person_id}/voice", { params: { path: { person_id: person } } })),
-  startRecording: (person: Id, learning: boolean): Promise<VoiceRecording> =>
+  startRecording: (person: Id, learning: boolean) =>
     unwrap(
       client.POST("/api/v1/household/people/{person_id}/voice/recording", {
         params: { path: { person_id: person } },
         body: { learning },
       }),
     ),
-  sayPhrase: (recording: Id, phrase: number, audio: ArrayBuffer): Promise<PhraseVerdict> =>
+  sayPhrase: (recording: Id, phrase: number, audio: ArrayBuffer) =>
     unwrap(
       client.PUT("/api/v1/voice/recordings/{recording_id}/phrases/{phrase}", {
         params: { path: { recording_id: recording, phrase } },
         ...wav(audio),
       }),
     ),
-  finishRecording: (recording: Id): Promise<Voice> =>
+  finishRecording: (recording: Id) =>
     unwrap(
       client.POST("/api/v1/voice/recordings/{recording_id}/finish", { params: { path: { recording_id: recording } } }),
     ),
-  abandonRecording: (recording: Id): Promise<void> =>
-    unwrap(
-      client.DELETE("/api/v1/voice/recordings/{recording_id}", { params: { path: { recording_id: recording } } }),
-    ).then(() => undefined),
-  hear: (audio: ArrayBuffer): Promise<Heard> => unwrap(client.POST("/api/v1/voice/hear", wav(audio))),
-  setVoiceLearning: (person: Id, learning: boolean): Promise<Voice> =>
+  abandonRecording: (recording: Id) =>
+    done(client.DELETE("/api/v1/voice/recordings/{recording_id}", { params: { path: { recording_id: recording } } })),
+  hear: (audio: ArrayBuffer) => unwrap(client.POST("/api/v1/voice/hear", wav(audio))),
+  setVoiceLearning: (person: Id, learning: boolean) =>
     unwrap(
       client.PUT("/api/v1/household/people/{person_id}/voice/learning", {
         params: { path: { person_id: person } },
         body: { learning },
       }),
     ),
-  forgetVoice: (person: Id, learnedOnly = false): Promise<Voice> =>
+  forgetVoice: (person: Id, learnedOnly = false) =>
     unwrap(
       client.DELETE("/api/v1/household/people/{person_id}/voice", {
         params: { path: { person_id: person }, query: { learned_only: learnedOnly } },
@@ -252,21 +214,19 @@ export const api = {
     ),
 
   // tasks, watches, memories
-  tasks: (): Promise<Tasks> => unwrap(client.GET("/api/v1/tasks")),
-  task: (id: Id): Promise<Task> => unwrap(client.GET("/api/v1/tasks/{task_id}", { params: { path: { task_id: id } } })),
-  cancelTask: (id: Id): Promise<void> =>
-    unwrap(client.POST("/api/v1/tasks/{task_id}/cancel", { params: { path: { task_id: id } } })).then(() => undefined),
-  watches: (): Promise<Watches> => unwrap(client.GET("/api/v1/watches")),
-  watch: (id: Id): Promise<Watch> =>
-    unwrap(client.GET("/api/v1/watches/{watch_id}", { params: { path: { watch_id: id } } })),
-  cancelWatch: (id: Id): Promise<void> =>
+  tasks: () => unwrap(client.GET("/api/v1/tasks")),
+  task: (id: Id) => unwrap(client.GET("/api/v1/tasks/{task_id}", { params: { path: { task_id: id } } })),
+  cancelTask: (id: Id) => done(client.POST("/api/v1/tasks/{task_id}/cancel", { params: { path: { task_id: id } } })),
+  watches: () => unwrap(client.GET("/api/v1/watches")),
+  watch: (id: Id) => unwrap(client.GET("/api/v1/watches/{watch_id}", { params: { path: { watch_id: id } } })),
+  cancelWatch: (id: Id) =>
     unwrap(client.POST("/api/v1/watches/{watch_id}/cancel", { params: { path: { watch_id: id } } })).then(
       () => undefined,
     ),
-  memories: (query: MemoryQuery): Promise<Memory[]> => unwrap(client.GET("/api/v1/memories", { params: { query } })),
-  correctMemory: (id: Id, text: string): Promise<Memory> =>
+  memories: (query: MemoryQuery) => unwrap(client.GET("/api/v1/memories", { params: { query } })),
+  correctMemory: (id: Id, text: string) =>
     unwrap(client.PATCH("/api/v1/memories/{memory_id}", { params: { path: { memory_id: id } }, body: { text } })),
-  forgetMemory: (id: Id): Promise<void> =>
+  forgetMemory: (id: Id) =>
     unwrap(client.DELETE("/api/v1/memories/{memory_id}", { params: { path: { memory_id: id } } })).then(
       () => undefined,
     ),

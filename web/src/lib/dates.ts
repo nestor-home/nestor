@@ -48,14 +48,11 @@ export function calendarDay(day: string): string {
 }
 
 /** `4 min 05 s` until `iso`, never negative. */
-export function remaining(iso: string, now: Date = new Date()): string {
-  const seconds = Math.max(0, Math.round((new Date(iso).getTime() - now.getTime()) / 1000));
+/** Time left until `end` (an instant, or milliseconds since the epoch). */
+export function remaining(end: string | number, now: Date = new Date()): string {
+  const seconds = Math.max(0, Math.round((new Date(end).getTime() - now.getTime()) / 1000));
   return tr("remaining", { minutes: Math.floor(seconds / 60), seconds: String(seconds % 60).padStart(2, "0") });
 }
-
-/** When something sent as "seconds left" ends: counted from when the answer arrived, not on the server's clock. */
-export const deadline = (secondsLeft: number, receivedAt: number): string =>
-  new Date(receivedAt + secondsLeft * 1000).toISOString();
 
 function yesterdayOf(now: Date): Date {
   const d = new Date(now);

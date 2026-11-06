@@ -1,20 +1,21 @@
 /**
  * The configuration file as the mock server keeps it: the document as written (references stay
  * `${…}`), the vault of secrets, the history of earlier files, and the checks Nestor runs before
- * writing. The schemas are the ones a real instance answered (`config/schema.{fr,en}.json`).
+ * writing. The schemas are what this version of Nestor answers (`server/`, `nestor admin mocks`).
  */
 import type { ConfigDocument, ConfigProblem } from "@/api";
 import type { components } from "@/api/schema.gen";
 import type { JsonSchema } from "@/features/config/schema";
-import schemaEn from "./config/schema.en.json";
-import schemaFr from "./config/schema.fr.json";
 import { minutes } from "./fixtures";
 import type { Lang } from "./messages";
 import { render } from "./messages";
+import schemaEn from "./server/config-schema.en.json";
+import schemaFr from "./server/config-schema.fr.json";
 
 type S = components["schemas"];
 type Change = S["DiffOut"]["added"][number];
 
+/** A JSON module types its strings as `string`, not as the schema's enums: `nestor admin mocks` wrote them from it. */
 export const SCHEMAS: Record<Lang, S["ConfigSchemaOut"]> = {
   fr: schemaFr as S["ConfigSchemaOut"],
   en: schemaEn as S["ConfigSchemaOut"],
@@ -34,7 +35,7 @@ export interface ConfigDb {
   vault: Record<string, VaultSecret>;
 }
 
-const SLOTS = ["models", "channels", "executors", "tools", "inbound", "presence", "connectors"];
+const SLOTS = Object.keys(SCHEMAS.fr.slots);
 
 /** References as a configuration file writes them. */
 const vault = (name: string) => `\${secret:${name}}`;
@@ -317,7 +318,7 @@ function typeOk(node: JsonSchema, value: unknown): boolean {
   );
 }
 
-type Found = { path: Path; code: string; detail: string };
+type Found = { path: Path; code: ConfigProblem["code"]; detail: string };
 
 function check(node: JsonSchema, root: JsonSchema, value: unknown, path: Path, out: Found[], lang: Lang): void {
   const schema = resolve(node, root);

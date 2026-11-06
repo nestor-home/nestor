@@ -32,6 +32,7 @@ from nestor.admin.api.v1.routes import (
 from nestor.admin.api.v1.security import CSRF_HEADER, json_only
 from nestor.admin.presentation import CATEGORIES, Phrasebook
 from nestor.core.i18n import Localizer
+from nestor.modules.accounts import GRANTS
 from nestor.runtime import Registry
 from nestor.runtime.editing import ConfigSchema
 
@@ -96,13 +97,15 @@ def openapi_text() -> str:
 
 def mock_answers(registry: Registry, localizer: Localizer) -> dict[str, str]:
     """What the admin's mock server answers as a real instance would, by file name: the configuration's schemas
-    in each shipped locale, and the journal kind of each event type. What `nestor admin mocks` writes."""
+    in each shipped locale, the journal kind of each event type, and the scopes each role grants. What
+    `nestor admin mocks` writes."""
     schema = ConfigSchema(registry)
     answers: dict[str, Any] = {
         f"config-schema.{locale}.json": config.schema_out(schema, Phrasebook(localizer, locale)).model_dump(mode="json")
         for locale in localizer.locales
     }
     answers["journal-kinds.json"] = {e.event_type: kind for kind, events in CATEGORIES.items() for e in events}
+    answers["role-scopes.json"] = {role: sorted(scopes) for role, scopes in GRANTS.items()}
     return {name: json.dumps(answer, indent=2, ensure_ascii=False) + "\n" for name, answer in sorted(answers.items())}
 
 

@@ -1,0 +1,52 @@
+{
+  "owner": [
+    "accounts.manage",
+    "accounts.owners.manage",
+    "agent.read",
+    "config.manage",
+    "household.connections.manage",
+    "household.read",
+    "journal.read.all",
+    "journal.read.own",
+    "memory.manage.all",
+    "memory.manage.own",
+    "own.connections.manage",
+    "satellites.manage",
+    "system.read",
+    "tasks.manage",
+    "tasks.manage.own",
+    "watches.manage.all",
+    "watches.manage.own"
+  ],
+  "admin": [
+    "accounts.manage",
+    "agent.read",
+    "config.manage",
+    "household.connections.manage",
+    "household.read",
+    "journal.read.all",
+    "journal.read.own",
+    "memory.manage.all",
+    "memory.manage.own",
+    "own.connections.manage",
+    "satellites.manage",
+    "system.read",
+    "tasks.manage",
+    "tasks.manage.own",
+    "watches.manage.all",
+    "watches.manage.own"
+  ],
+  "member": [
+    "agent.read",
+    "household.read",
+    "journal.read.own",
+    "memory.manage.own",
+    "own.connections.manage",
+    "tasks.manage.own",
+    "watches.manage.own"
+  ],
+  "guest": [
+    "journal.read.own",
+    "memory.manage.own"
+  ]
+}

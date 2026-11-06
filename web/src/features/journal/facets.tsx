@@ -1,7 +1,8 @@
 import { Check, ChevronDown, SlidersHorizontal, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
-import type { Facet, JournalFacets } from "@/api";
+import type { JournalFacets, Kind } from "@/api";
+import { kindValues } from "@/api/schema.gen";
 import { BottomSheet } from "@/components/overlay-form";
 import { RowList } from "@/components/page";
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,9 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useT } from "@/i18n";
 import { KindMark } from "@/lib/brands";
-import { type KindStyle, kindStyle } from "@/lib/icons";
+import { oneOf } from "@/lib/enums";
+import { kindStyle } from "@/lib/icons";
+import { kindLabel } from "@/lib/labels";
 import { number } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import type { JournalSearch } from "./search";
@@ -22,15 +25,29 @@ import type { JournalSearch } from "./search";
 /** Filters that come from a link elsewhere (a task's page, a connection's activity…), shown so they can be removed. */
 const SUBJECTS = ["session", "conversation", "task", "watch", "connection", "satellite", "tone"] as const;
 
+/** A value of a facet as the filters show it. */
+interface Choice {
+  key: string;
+  label: string;
+  count: number;
+  icon?: ReactNode;
+}
+
 interface Group {
   id: "kinds" | "person" | "channel" | "room";
   label: string;
-  facets: Facet[] | undefined;
+  facets: Choice[] | undefined;
   selected: string[];
   multiple: boolean;
-  render?: (facet: Facet) => ReactNode;
   onChange: (value: string[]) => void;
 }
+
+function kindIcon(kind: Kind): ReactNode {
+  const style = kindStyle(kind);
+  return <style.icon className={cn("size-3.5", style.tone)} aria-hidden="true" />;
+}
+
+const channelIcon = (channel: string): ReactNode => <KindMark kind={channel} className="size-3.5" label={false} />;
 
 function useGroups(
   facets: JournalFacets | undefined,
@@ -38,20 +55,14 @@ function useGroups(
   onChange: (next: JournalSearch) => void,
 ): Group[] {
   const t = useT();
-  const kinds = search.kinds?.split(",") ?? [];
-  const styles = new Map<string, KindStyle>(facets?.kinds.map((f) => [f.key, kindStyle(f.key)]));
   return [
     {
       id: "kinds",
       label: t("jr-facet-kind"),
-      facets: facets?.kinds,
-      selected: kinds,
+      facets: facets?.kinds.map(({ key, count }) => ({ key, count, label: kindLabel(key), icon: kindIcon(key) })),
+      selected: search.kinds ?? [],
       multiple: true,
-      render: (f) => {
-        const style = styles.get(f.key);
-        return style ? <style.icon className={cn("size-3.5", style.tone)} aria-hidden="true" /> : null;
-      },
-      onChange: (value) => onChange({ ...search, kinds: value.length ? value.join(",") : undefined }),
+      onChange: (value) => onChange({ ...search, kinds: value.filter((k) => oneOf(kindValues, k)) }),
     },
     {
       id: "person",
@@ -64,10 +75,9 @@ function useGroups(
     {
       id: "channel",
       label: t("jr-facet-channel"),
-      facets: facets?.channels,
+      facets: facets?.channels.map((f) => ({ ...f, icon: channelIcon(f.key) })),
       selected: search.channel ? [search.channel] : [],
       multiple: false,
-      render: (f) => <KindMark kind={f.key} className="size-3.5" label={false} />,
       onChange: (value) => onChange({ ...search, channel: value[0] }),
     },
     {
@@ -206,7 +216,7 @@ export function FilterSheet({
                           >
                             {on ? <Check className="size-3" /> : null}
                           </span>
-                          {g.render?.(f)}
+                          {f.icon}
                           <span className="flex-1 truncate">{f.label}</span>
                           <span className="font-mono text-[0.72rem] text-ink-faint tabular">{number(f.count)}</span>
                         </button>
@@ -241,7 +251,7 @@ export function FilterSheet({
           onClick={() => group.onChange(group.selected.filter((k) => k !== facet.key))}
           aria-label={t("jr-chip-remove", { value: facet.label })}
         >
-          {group.render?.(facet)}
+          {facet.icon}
           {facet.label}
           <X className="text-ink-faint" aria-hidden="true" />
         </Button>
@@ -256,14 +266,12 @@ function FacetFilter({
   facets,
   selected,
   multiple = false,
-  render,
   onChange,
 }: {
   label: string;
-  facets: Facet[] | undefined;
+  facets: Choice[] | undefined;
   selected: string[];
   multiple?: boolean;
-  render?: (facet: Facet) => ReactNode;
   onChange: (value: string[]) => void;
 }) {
   const t = useT();
@@ -322,7 +330,7 @@ function FacetFilter({
                     >
                       {on ? <Check className="size-2.5" /> : null}
                     </span>
-                    {render?.(f)}
+                    {f.icon}
                     <span className="flex-1 truncate">{f.label}</span>
                     <span className="font-mono text-[0.7rem] text-ink-faint tabular">{number(f.count)}</span>
                   </CommandItem>

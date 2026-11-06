@@ -2,6 +2,7 @@ import { Localized } from "@fluent/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 import { api, type InvitationCreated, keys, type Role } from "@/api";
+import { roleValues } from "@/api/schema.gen";
 import { Choice } from "@/components/choice";
 import { CopyField } from "@/components/copy-field";
 import { Field } from "@/components/field";
@@ -12,9 +13,12 @@ import { Button } from "@/components/ui/button";
 import { useT } from "@/i18n";
 import { roleHint, roleLabel } from "@/lib/labels";
 
+/** Roles from the least to the most trusted, as the choices list them. */
+const ORDER: Record<Role, number> = { guest: 0, member: 1, admin: 2, owner: 3 };
+
 /** The roles as options, in the active locale (called at render, not at import). */
 export function roleOptions(): { value: Role; label: string }[] {
-  return (["guest", "member", "admin", "owner"] as Role[]).map((r) => ({ value: r, label: roleLabel(r) }));
+  return [...roleValues].sort((a, b) => ORDER[a] - ORDER[b]).map((r) => ({ value: r, label: roleLabel(r) }));
 }
 
 /** Invite someone: once created, the dialog shows the link to send (it is shown only once). */
