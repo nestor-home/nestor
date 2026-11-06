@@ -896,6 +896,190 @@
       "required": true,
       "title": "Modèles",
       "kinds": {
+        "elevenlabs-speech": {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "elevenlabs-speech",
+              "type": "string",
+              "x-nestor": {
+                "field": "kind",
+                "title_id": "config-model-elevenlabs-speech-kind",
+                "help_id": "config-model-elevenlabs-speech-kind-help",
+                "fallback_title_id": "config-field-kind",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-elevenlabs-speech",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Type",
+                "help": null
+              }
+            },
+            "api_key": {
+              "format": "password",
+              "title": "Api Key",
+              "type": "string",
+              "writeOnly": true,
+              "x-nestor": {
+                "field": "api_key",
+                "title_id": "config-model-elevenlabs-speech-api_key",
+                "help_id": "config-model-elevenlabs-speech-api_key-help",
+                "fallback_title_id": "config-field-api_key",
+                "secret": true,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-elevenlabs-speech",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Clé d'API",
+                "help": null
+              }
+            },
+            "voice_id": {
+              "minLength": 1,
+              "title": "Voice Id",
+              "type": "string",
+              "x-nestor": {
+                "field": "voice_id",
+                "title_id": "config-model-elevenlabs-speech-voice_id",
+                "help_id": "config-model-elevenlabs-speech-voice_id-help",
+                "fallback_title_id": "config-field-voice_id",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-elevenlabs-speech",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "ID de la voix",
+                "help": "Une voix de votre bibliothèque ElevenLabs."
+              }
+            },
+            "model": {
+              "default": "eleven_v4_turbo",
+              "title": "Model",
+              "type": "string",
+              "x-nestor": {
+                "field": "model",
+                "title_id": "config-model-elevenlabs-speech-model",
+                "help_id": "config-model-elevenlabs-speech-model-help",
+                "fallback_title_id": "config-field-model",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-elevenlabs-speech",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Modèle",
+                "help": "Ex. eleven_v4_turbo."
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "api_key",
+            "voice_id"
+          ],
+          "title": "ElevenLabsSpeechSettings",
+          "type": "object"
+        },
+        "elevenlabs-transcription": {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "elevenlabs-transcription",
+              "type": "string",
+              "x-nestor": {
+                "field": "kind",
+                "title_id": "config-model-elevenlabs-transcription-kind",
+                "help_id": "config-model-elevenlabs-transcription-kind-help",
+                "fallback_title_id": "config-field-kind",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-elevenlabs-transcription",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Type",
+                "help": null
+              }
+            },
+            "api_key": {
+              "format": "password",
+              "title": "Api Key",
+              "type": "string",
+              "writeOnly": true,
+              "x-nestor": {
+                "field": "api_key",
+                "title_id": "config-model-elevenlabs-transcription-api_key",
+                "help_id": "config-model-elevenlabs-transcription-api_key-help",
+                "fallback_title_id": "config-field-api_key",
+                "secret": true,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-elevenlabs-transcription",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Clé d'API",
+                "help": null
+              }
+            },
+            "model": {
+              "default": "scribe_v2_realtime",
+              "title": "Model",
+              "type": "string",
+              "x-nestor": {
+                "field": "model",
+                "title_id": "config-model-elevenlabs-transcription-model",
+                "help_id": "config-model-elevenlabs-transcription-model-help",
+                "fallback_title_id": "config-field-model",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-elevenlabs-transcription",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Modèle",
+                "help": "Ex. scribe_v2_realtime."
+              }
+            },
+            "language": {
+              "default": "en",
+              "minLength": 2,
+              "title": "Language",
+              "type": "string",
+              "x-nestor": {
+                "field": "language",
+                "title_id": "config-model-elevenlabs-transcription-language",
+                "help_id": "config-model-elevenlabs-transcription-language-help",
+                "fallback_title_id": "config-field-language",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-elevenlabs-transcription",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Langue",
+                "help": "La langue parlée, ex. fr."
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "api_key"
+          ],
+          "title": "ElevenLabsTranscriptionSettings",
+          "type": "object"
+        },
         "openai-compatible": {
           "additionalProperties": false,
           "description": "Configuration of an OpenAI-compatible chat model.",
@@ -1473,9 +1657,11 @@
         }
       },
       "model_types": {
+        "elevenlabs-speech": "speech",
+        "elevenlabs-transcription": "transcription",
         "openai-compatible": "language",
         "openai-compatible-embeddings": "embedding",
-        "sherpa-onnx-voice": "voice"
+        "sherpa-onnx-voice": "speaker"
       }
     },
     "channels": {
@@ -1486,144 +1672,32 @@
       "kinds": {
         "satellites": {
           "$defs": {
-            "ElevenLabsSettings": {
-              "additionalProperties": false,
-              "properties": {
-                "provider": {
-                  "const": "elevenlabs",
-                  "default": "elevenlabs",
-                  "title": "Provider",
-                  "type": "string",
-                  "x-nestor": {
-                    "field": "provider",
-                    "title_id": "config-channel-satellites-elevenlabssettings-provider",
-                    "help_id": "config-channel-satellites-elevenlabssettings-provider-help",
-                    "fallback_title_id": "config-field-provider",
-                    "secret": false,
-                    "secret_values": false,
-                    "advanced": false,
-                    "group": "channel-satellites-elevenlabssettings",
-                    "reference": null,
-                    "model_type": null,
-                    "brands": null,
-                    "title": "Fournisseur",
-                    "help": null
-                  }
-                },
-                "api_key": {
-                  "format": "password",
-                  "title": "Api Key",
-                  "type": "string",
-                  "writeOnly": true,
-                  "x-nestor": {
-                    "field": "api_key",
-                    "title_id": "config-channel-satellites-elevenlabssettings-api_key",
-                    "help_id": "config-channel-satellites-elevenlabssettings-api_key-help",
-                    "fallback_title_id": "config-field-api_key",
-                    "secret": true,
-                    "secret_values": false,
-                    "advanced": false,
-                    "group": "channel-satellites-elevenlabssettings",
-                    "reference": null,
-                    "model_type": null,
-                    "brands": null,
-                    "title": "Clé d'API",
-                    "help": null
-                  }
-                },
-                "voice_id": {
-                  "title": "Voice Id",
-                  "type": "string",
-                  "x-nestor": {
-                    "field": "voice_id",
-                    "title_id": "config-channel-satellites-elevenlabssettings-voice_id",
-                    "help_id": "config-channel-satellites-elevenlabssettings-voice_id-help",
-                    "fallback_title_id": "config-field-voice_id",
-                    "secret": false,
-                    "secret_values": false,
-                    "advanced": false,
-                    "group": "channel-satellites-elevenlabssettings",
-                    "reference": null,
-                    "model_type": null,
-                    "brands": null,
-                    "title": "ID de la voix",
-                    "help": null
-                  }
-                },
-                "language": {
-                  "default": "en",
-                  "title": "Language",
-                  "type": "string",
-                  "x-nestor": {
-                    "field": "language",
-                    "title_id": "config-channel-satellites-elevenlabssettings-language",
-                    "help_id": "config-channel-satellites-elevenlabssettings-language-help",
-                    "fallback_title_id": "config-field-language",
-                    "secret": false,
-                    "secret_values": false,
-                    "advanced": false,
-                    "group": "channel-satellites-elevenlabssettings",
-                    "reference": null,
-                    "model_type": null,
-                    "brands": null,
-                    "title": "Langue",
-                    "help": "Pour la transcription, ex. fr."
-                  }
-                },
-                "stt_model": {
-                  "default": "scribe_v2_realtime",
-                  "title": "Stt Model",
-                  "type": "string",
-                  "x-nestor": {
-                    "field": "stt_model",
-                    "title_id": "config-channel-satellites-elevenlabssettings-stt_model",
-                    "help_id": "config-channel-satellites-elevenlabssettings-stt_model-help",
-                    "fallback_title_id": "config-field-stt_model",
-                    "secret": false,
-                    "secret_values": false,
-                    "advanced": false,
-                    "group": "channel-satellites-elevenlabssettings",
-                    "reference": null,
-                    "model_type": null,
-                    "brands": null,
-                    "title": "Modèle de transcription",
-                    "help": null
-                  }
-                },
-                "tts_model": {
-                  "default": "eleven_v4_turbo",
-                  "title": "Tts Model",
-                  "type": "string",
-                  "x-nestor": {
-                    "field": "tts_model",
-                    "title_id": "config-channel-satellites-elevenlabssettings-tts_model",
-                    "help_id": "config-channel-satellites-elevenlabssettings-tts_model-help",
-                    "fallback_title_id": "config-field-tts_model",
-                    "secret": false,
-                    "secret_values": false,
-                    "advanced": false,
-                    "group": "channel-satellites-elevenlabssettings",
-                    "reference": null,
-                    "model_type": null,
-                    "brands": null,
-                    "title": "Modèle de synthèse vocale",
-                    "help": null
-                  }
-                }
-              },
-              "required": [
-                "api_key",
-                "voice_id"
-              ],
-              "title": "ElevenLabsSettings",
-              "type": "object"
-            },
             "VoiceSettings": {
               "additionalProperties": false,
               "description": "How satellites allowed audio are heard and answered aloud (needs the `voice` extra).",
               "properties": {
+                "transcription": {
+                  "title": "Transcription",
+                  "type": "string",
+                  "x-nestor": {
+                    "field": "transcription",
+                    "title_id": "config-channel-satellites-voicesettings-transcription",
+                    "help_id": "config-channel-satellites-voicesettings-transcription-help",
+                    "fallback_title_id": "config-field-transcription",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "channel-satellites-voicesettings",
+                    "reference": "models",
+                    "model_type": "transcription",
+                    "brands": null,
+                    "title": "Modèle de transcription",
+                    "help": "Entend ce que disent les personnes : un modèle de transcription de Modèles."
+                  }
+                },
                 "speech": {
-                  "$ref": "#/$defs/ElevenLabsSettings",
+                  "title": "Speech",
+                  "type": "string",
                   "x-nestor": {
                     "field": "speech",
                     "title_id": "config-channel-satellites-voicesettings-speech",
@@ -1633,11 +1707,11 @@
                     "secret_values": false,
                     "advanced": false,
                     "group": "channel-satellites-voicesettings",
-                    "reference": null,
-                    "model_type": null,
+                    "reference": "models",
+                    "model_type": "speech",
                     "brands": null,
-                    "title": "Services vocaux",
-                    "help": null
+                    "title": "Modèle de synthèse vocale",
+                    "help": "Donne sa voix à l'assistant : un modèle de synthèse vocale de Modèles."
                   }
                 },
                 "style": {
@@ -1738,6 +1812,7 @@
                 }
               },
               "required": [
+                "transcription",
                 "speech"
               ],
               "title": "VoiceSettings",

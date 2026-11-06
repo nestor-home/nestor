@@ -11766,7 +11766,9 @@
         "enum": [
           "language",
           "embedding",
-          "voice"
+          "speaker",
+          "transcription",
+          "speech"
         ],
         "title": "ModelType",
         "description": "What a model plugin serves: roles and forms only offer the models of the type they need."
@@ -12165,7 +12167,10 @@
           "no_answering_model",
           "not_answering",
           "not_embedding",
-          "not_voice",
+          "not_speaker",
+          "not_transcribing",
+          "not_speaking",
+          "unknown_model",
           "shared_account"
         ],
         "title": "ProblemCode",

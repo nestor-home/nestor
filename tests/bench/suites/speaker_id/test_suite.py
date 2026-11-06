@@ -43,7 +43,7 @@ def _build(settings: TaggedSettings, name: str, services: Services) -> TaggedVoi
     return Muted(threshold=settings.threshold)
 
 
-TAGGED = Plugin(Family.MODEL, "tagged-voices", TaggedSettings, _build, model_type=ModelType.VOICE)
+TAGGED = Plugin(Family.MODEL, "tagged-voices", TaggedSettings, _build, model_type=ModelType.SPEAKER)
 VARIANT = "models: {voice: {kind: tagged-voices}}\nvoices: {embedder: voice}\n"
 
 

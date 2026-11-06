@@ -24,7 +24,7 @@ describe("reading a plugin's schema (as a real instance sends it)", () => {
     expect(controlOf(prop(mcp, "kind"), mcp, "kind")).toBe("const");
     expect(controlOf(prop(satellites, "voice"), satellites, "voice")).toBe("object"); // an object, or null
     const voice = resolve(prop(satellites, "voice"), satellites).schema;
-    expect(controlOf(prop(voice, "speech"), satellites, "speech")).toBe("object");
+    expect(controlOf(prop(voice, "speech"), satellites, "speech")).toBe("reference"); // a speech model of `models`
     expect(controlOf(prop(voice, "fallback_clips"), satellites, "fallback_clips")).toBe("path");
     expect(controlOf(prop(voice, "style"), satellites, "style")).toBe("long-text");
     expect(controlOf({ type: "boolean" }, satellites, "enabled")).toBe("boolean");

@@ -73,7 +73,19 @@ export function document(): ConfigDocument {
         api_key: environ("MODEL_API_KEY"),
         model: "anthropic/claude-haiku-4.5",
       },
-      ears: { kind: "sherpa-onnx-voice", model: "titanet-small" },
+      voices: { kind: "sherpa-onnx-voice", model: "titanet-small" },
+      scribe: {
+        kind: "elevenlabs-transcription",
+        api_key: vault("models.elevenlabs.api_key"),
+        model: "scribe_v2_realtime",
+        language: "en",
+      },
+      victor: {
+        kind: "elevenlabs-speech",
+        api_key: vault("models.elevenlabs.api_key"),
+        voice_id: "Xb7hH8MSUJpSbSDYk0k2",
+        model: "eleven_v4_turbo",
+      },
     },
     agent: { spoken: "haiku", written: "sonnet" },
     watches: { model: "haiku" },
@@ -81,9 +93,7 @@ export function document(): ConfigDocument {
       {
         kind: "satellites",
         port: 8471,
-        voice: {
-          speech: { api_key: vault("channels.satellites.voice.speech.api_key"), voice_id: "Xb7hH8MSUJpSbSDYk0k2" },
-        },
+        voice: { transcription: "scribe", speech: "victor" },
       },
       { kind: "telegram", token: environ("TELEGRAM_TOKEN") },
     ],
@@ -137,7 +147,7 @@ export function fresh(): ConfigDb {
       { id: "20261021T090455031000Z", at: minutes(60 * 24 * 9), document: oldest },
     ],
     vault: {
-      "channels.satellites.voice.speech.api_key": { value: "sk_e1d0a8c7b6f5", at: minutes(60 * 24 * 30) },
+      "models.elevenlabs.api_key": { value: "sk_e1d0a8c7b6f5", at: minutes(60 * 24 * 30) },
       "executors.hermes.api_key": { value: "hermes-7c0f2b91", at: minutes(60 * 24 * 12) },
       "tools.home.token": { value: "eyJhbGciOiJIUzI1NiJ9.home", at: minutes(60 * 24 * 12) },
       "presence.token": { value: "eyJhbGciOiJIUzI1NiJ9.presence", at: minutes(60 * 24 * 12) },

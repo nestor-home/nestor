@@ -243,5 +243,5 @@ plugin = Plugin(
     SherpaOnnxVoiceSettings,
     build,
     requires="nestor-home[voice-id]",
-    model_type=ModelType.VOICE,
+    model_type=ModelType.SPEAKER,
 )

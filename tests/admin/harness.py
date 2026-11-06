@@ -216,7 +216,7 @@ class Harness:
                     "tagged-voices",
                     NoSettings,
                     lambda s, n, x: TaggedVoices(),
-                    model_type=ModelType.VOICE,
+                    model_type=ModelType.SPEAKER,
                 ),
                 Plugin(Family.CHANNEL, "memory", NoSettings, lambda s, name, x: InMemoryChannel(name)),
                 Plugin(Family.CHANNEL, "speaker", NoSettings, lambda s, name, x: Speaker(name)),

@@ -237,7 +237,13 @@ describe("models by what they serve", () => {
     const groups = within(picker)
       .getAllByRole("region")
       .map((g) => g.getAttribute("aria-label"));
-    expect(groups).toEqual(["Language models (LLM)", "Text embeddings", "Speaker recognition"]);
+    expect(groups).toEqual([
+      "Language models (LLM)",
+      "Text embeddings",
+      "Speaker recognition",
+      "Speech recognition",
+      "Speech synthesis",
+    ]);
     expect(
       within(within(picker).getByRole("region", { name: "Speaker recognition" })).getByText("sherpa-onnx"),
     ).toBeTruthy();

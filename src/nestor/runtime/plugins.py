@@ -11,7 +11,7 @@ the requirement that installs them: a configuration using it without them fails 
 """
 
 from collections.abc import Callable, Iterable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
 from importlib.metadata import entry_points
 from pathlib import Path
@@ -42,7 +42,9 @@ class ModelType(StrEnum):
 
     LANGUAGE = "language"  # writes the answers (a `ConversationModel`)
     EMBEDDING = "embedding"  # turns text into vectors, to search by meaning (an `Embedder`)
-    VOICE = "voice"  # turns speech into voiceprints, to tell voices apart (a `VoiceEmbedder`)
+    SPEAKER = "speaker"  # turns speech into voiceprints, to tell voices apart (a `VoiceEmbedder`)
+    TRANSCRIPTION = "transcription"  # turns a person's speech into text, for a voice channel (a `Transcriber`)
+    SPEECH = "speech"  # gives the assistant its voice, for a voice channel (a `Synthesizer`)
 
 
 def _filled(value: SecretStr) -> SecretStr:
@@ -68,6 +70,10 @@ class ChannelSettings(AdapterSettings):
     conversation_ends_after_s: float | None = Field(default=None, gt=0, json_schema_extra={"advanced": True})
 
 
+def _no_models(key: str, wanted: ModelType, path: tuple[str | int, ...]) -> Component:
+    raise ContractError(f"{'.'.join(map(str, path))}: no model named {key!r} here (models are not built yet)")
+
+
 @dataclass(frozen=True, slots=True)
 class Services:
     """What the runtime lends to adapter factories."""
@@ -75,6 +81,9 @@ class Services:
     data_dir: Path
     localizer: Localizer  # renders what adapters say to people (a channel's apology, a setup guide…)
     locale: Locale  # the household's language (the persona's locale)
+    # a model of `models` an adapter's settings name, by key, of the type the field takes, at its path in those
+    # settings; the runtime refuses an unknown key or a model of another type (models are built first)
+    model: Callable[[str, ModelType, tuple[str | int, ...]], Component] = field(default=_no_models)
 
 
 @dataclass(frozen=True, slots=True)

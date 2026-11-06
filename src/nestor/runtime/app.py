@@ -7,7 +7,7 @@ import os
 import signal
 from collections.abc import AsyncGenerator, Callable, Iterable, Mapping, Sequence
 from contextlib import AsyncExitStack
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Self, cast
 
@@ -32,7 +32,7 @@ from nestor.core import Component, ContractError, ProviderError
 from nestor.core.i18n import Locale
 from nestor.modules.accounts import Accounts
 from nestor.modules.activity import ActivityMonitor
-from nestor.modules.channels import Channel
+from nestor.modules.channels import Channel, Synthesizer, Transcriber
 from nestor.modules.cognition import ConversationModel, Executor
 from nestor.modules.cognition.delegation.assistant import Delegation
 from nestor.modules.cognition.delegation.service import TaskManager
@@ -128,40 +128,51 @@ class Nestor:
             self.journal, SQLiteVerifierStore(self.database), self.household, SQLiteActivityStore(self.database)
         )
 
-        self.models = build_models(config, registry, services, self.plugged)
+        self.models = models = build_models(config, registry, services, self.plugged)
+        services = replace(services, model=lambda key, wanted, path: chosen(models, key, SERVED[wanted], path))
         roles = config.roles([k for k, m in self.models.items() if isinstance(m, ConversationModel)])
 
         def model(role: str, key: str) -> ConversationModel:
-            found = self.models[key]
-            if not isinstance(found, ConversationModel):
-                raise ConfigError(
-                    f"{role}: {key} embeds and cannot answer; choose a conversation model",
-                    path=tuple(role.split(".")),
-                    code=ProblemCode.NOT_ANSWERING,
-                    detail=key,
-                )
-            return found
+            return chosen(models, key, ConversationModel, tuple(role.split(".")))
 
         self.executors = [
-            _build(self.plugged, registry, Family.EXECUTOR, c, c.name or c.kind, services, Executor)
-            for c in config.executors
+            _build(self.plugged, registry, Family.EXECUTOR, c, c.name or c.kind, ("executors", i), services, Executor)
+            for i, c in enumerate(config.executors)
         ]
         self.channels = [
-            _build(self.plugged, registry, Family.CHANNEL, c, c.name or c.kind, services, Channel)
-            for c in config.channels
+            _build(self.plugged, registry, Family.CHANNEL, c, c.name or c.kind, ("channels", i), services, Channel)
+            for i, c in enumerate(config.channels)
         ]
         if len({c.channel_id for c in self.channels}) != len(self.channels):
             raise ContractError("two channels have the same name: give each a distinct `name`")
         self.tools = [
-            _build(self.plugged, registry, Family.TOOLS, c, c.name or c.kind, services, ToolProvider)
-            for c in config.tools
+            _build(self.plugged, registry, Family.TOOLS, c, c.name or c.kind, ("tools", i), services, ToolProvider)
+            for i, c in enumerate(config.tools)
         ]
         self.inbound = [
-            _build(self.plugged, registry, Family.INBOUND, c, c.name or c.kind, services, InboundEventSource)
-            for c in config.inbound
+            _build(
+                self.plugged,
+                registry,
+                Family.INBOUND,
+                c,
+                c.name or c.kind,
+                ("inbound", i),
+                services,
+                InboundEventSource,
+            )
+            for i, c in enumerate(config.inbound)
         ]
         self.presence = (
-            _build(self.plugged, registry, Family.PRESENCE, config.presence, "presence", services, PresenceSource)
+            _build(
+                self.plugged,
+                registry,
+                Family.PRESENCE,
+                config.presence,
+                "presence",
+                ("presence",),
+                services,
+                PresenceSource,
+            )
             if config.presence
             else None
         )
@@ -205,22 +216,14 @@ class Nestor:
                 channel.host_satellites(self.pairing, self.journal)
         self.tasks = TaskManager(self.journal, self.executors)
         delegation = Delegation(self.tasks)
-        embedder = self.models[config.memory.embedder] if config.memory.embedder else None
-        if embedder is not None and not isinstance(embedder, Embedder):
-            raise ConfigError(
-                f"memory.embedder: {config.memory.embedder} cannot search memories; choose a text embedding model",
-                path=("memory", "embedder"),
-                code=ProblemCode.NOT_EMBEDDING,
-                detail=config.memory.embedder,
-            )
-        voice_model = self.models[config.voices.embedder] if config.voices.embedder else None
-        if voice_model is not None and not isinstance(voice_model, VoiceEmbedder):
-            raise ConfigError(
-                f"voices.embedder: {config.voices.embedder} cannot tell voices apart; choose a voice model",
-                path=("voices", "embedder"),
-                code=ProblemCode.NOT_VOICE,
-                detail=config.voices.embedder,
-            )
+        embedder = (
+            chosen(models, config.memory.embedder, Embedder, ("memory", "embedder")) if config.memory.embedder else None
+        )
+        voice_model = (
+            chosen(models, config.voices.embedder, VoiceEmbedder, ("voices", "embedder"))
+            if config.voices.embedder
+            else None
+        )
         self.voiceprints = SQLiteVoiceprintStore(self.database)
         self.voices = (
             Voices(voice_model, self.voiceprints, self.journal, settings=config.voices.settings())
@@ -457,19 +460,50 @@ def _connectors(
         chosen = tuple(AdapterConfig(kind=kind) for kind in registry.kinds(Family.CONNECTOR))
     else:
         chosen = ()
-    connectors = [_build(plugged, registry, Family.CONNECTOR, c, c.name or c.kind, services, Connector) for c in chosen]
+    connectors = [
+        _build(plugged, registry, Family.CONNECTOR, c, c.name or c.kind, ("connectors", i), services, Connector)
+        for i, c in enumerate(chosen)
+    ]
     kinds = [c.info.kind for c in connectors]
     if len(set(kinds)) != len(kinds):
         raise ContractError("two connectors declare the same kind: configure each service once")
     return connectors
 
 
-type Model = ConversationModel | Embedder | VoiceEmbedder
+type Model = ConversationModel | Embedder | VoiceEmbedder | Transcriber | Synthesizer
 SERVED: Mapping[ModelType, type[Model]] = {  # what a model plugin builds, by the type it says it serves
     ModelType.LANGUAGE: ConversationModel,
     ModelType.EMBEDDING: Embedder,
-    ModelType.VOICE: VoiceEmbedder,
+    ModelType.SPEAKER: VoiceEmbedder,
+    ModelType.TRANSCRIPTION: Transcriber,
+    ModelType.SPEECH: Synthesizer,
 }
+# why a model of another type is refused where one of these is wanted
+_REFUSED: Mapping[type[Model], tuple[ProblemCode, str]] = {
+    ConversationModel: (ProblemCode.NOT_ANSWERING, "cannot answer; choose a conversation model"),
+    Embedder: (ProblemCode.NOT_EMBEDDING, "cannot search memories; choose a text embedding model"),
+    VoiceEmbedder: (ProblemCode.NOT_SPEAKER, "cannot tell voices apart; choose a speaker recognition model"),
+    Transcriber: (ProblemCode.NOT_TRANSCRIBING, "cannot transcribe speech; choose a transcription model"),
+    Synthesizer: (ProblemCode.NOT_SPEAKING, "cannot speak; choose a speech model"),
+}
+
+
+def chosen[M: Model](models: Mapping[str, Model], key: str, wanted: type[M], path: tuple[str | int, ...]) -> M:
+    """The model `key` names where the configuration, at `path`, wants one of type `wanted`."""
+    where = ".".join(map(str, path))
+    found = models.get(key)
+    if found is None:
+        known = ", ".join(models) or "none"
+        raise ConfigError(
+            f"{where}: no model named {key!r} in models ({known})",
+            path=path,
+            code=ProblemCode.UNKNOWN_MODEL,
+            detail=key,
+        )
+    if not isinstance(found, wanted):
+        code, why = _REFUSED[wanted]
+        raise ConfigError(f"{where}: {key} {why}", path=path, code=code, detail=key)
+    return found
 
 
 def build_models(
@@ -479,7 +513,14 @@ def build_models(
     built: dict[str, Model] = {}
     for key, profile in config.models.items():
         model = _build(
-            plugged if plugged is not None else [], registry, Family.MODEL, profile, key, services, Component
+            plugged if plugged is not None else [],
+            registry,
+            Family.MODEL,
+            profile,
+            key,
+            ("models", key),
+            services,
+            Component,
         )
         served = registry.get(Family.MODEL, profile.kind).model_type
         assert served is not None  # a model plugin says what it serves
@@ -495,10 +536,18 @@ def _build[C](
     family: Family,
     config: ComponentConfig,
     name: str,
+    where: tuple[str | int, ...],
     services: Services,
     expected: type[C],
 ) -> C:
-    component = registry.get(family, config.kind).create(config.settings(), name, services)
+    """The adapter `config` describes, named `name`, at `where` in the configuration."""
+    try:
+        component = registry.get(family, config.kind).create(config.settings(), name, services)
+    except ConfigError as error:  # what its settings name, located in the whole document
+        path = (*where, *error.path)
+        raise ConfigError(
+            f"{'.'.join(map(str, where))}.{error}", path=path, code=error.code, detail=error.detail
+        ) from None
     if not isinstance(component, expected):
         raise ContractError(f"plugin {config.kind!r} built a {type(component).__name__}, not a {expected.__name__}")
     plugged.append(Plugged(family, config.kind, name, component, registry.origin(family, config.kind)))

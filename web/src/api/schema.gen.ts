@@ -2080,7 +2080,7 @@ export interface components {
          * @description What a model plugin serves: roles and forms only offer the models of the type they need.
          * @enum {string}
          */
-        ModelType: "language" | "embedding" | "voice";
+        ModelType: "language" | "embedding" | "speaker" | "transcription" | "speech";
         /** NestorOut */
         NestorOut: {
             /** Version */
@@ -2208,7 +2208,7 @@ export interface components {
          * @description What is wrong in a configuration; each names its message, `config-error-<code>`.
          * @enum {string}
          */
-        ProblemCode: "missing" | "extra" | "invalid" | "unknown_kind" | "reference" | "secret" | "no_answering_model" | "not_answering" | "not_embedding" | "not_voice" | "shared_account";
+        ProblemCode: "missing" | "extra" | "invalid" | "unknown_kind" | "reference" | "secret" | "no_answering_model" | "not_answering" | "not_embedding" | "not_speaker" | "not_transcribing" | "not_speaking" | "unknown_model" | "shared_account";
         /**
          * ProblemOut
          * @description What is wrong in an edited configuration, located by its path in the document.
@@ -10134,10 +10134,10 @@ export const healthValues: ReadonlyArray<FlattenedDeepRequired<components>["sche
 export const installKindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["InstallKind"]> = ["container", "editable", "uv-tool", "pip"];
 export const invitationStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["InvitationStatus"]> = ["pending", "accepted", "expired", "revoked"];
 export const kindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Kind"]> = ["conversation", "delivery", "tool", "task", "watch", "schedule", "memory", "connection", "presence", "satellite", "voice", "observation", "account", "other"];
-export const modelTypeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ModelType"]> = ["language", "embedding", "voice"];
+export const modelTypeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ModelType"]> = ["language", "embedding", "speaker", "transcription", "speech"];
 export const pairingMethodValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PairingMethod"]> = ["device_code.display", "device_code.speech", "enrollment.input", "enrollment.provisioning", "enrollment.qr"];
 export const problemValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Problem"]> = ["too_short", "too_quiet", "too_loud", "other_voice"];
-export const problemCodeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ProblemCode"]> = ["missing", "extra", "invalid", "unknown_kind", "reference", "secret", "no_answering_model", "not_answering", "not_embedding", "not_voice", "shared_account"];
+export const problemCodeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ProblemCode"]> = ["missing", "extra", "invalid", "unknown_kind", "reference", "secret", "no_answering_model", "not_answering", "not_embedding", "not_speaker", "not_transcribing", "not_speaking", "unknown_model", "shared_account"];
 export const proofValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Proof"]> = ["device_code", "enrollment_code"];
 export const riskValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Risk"]> = ["read", "write", "sensitive"];
 export const roleValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Role"]> = ["owner", "admin", "member", "guest"];

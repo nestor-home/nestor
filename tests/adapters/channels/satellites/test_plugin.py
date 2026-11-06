@@ -2,21 +2,32 @@ from pathlib import Path
 
 import pytest
 
-from nestor.adapters.channels.satellites import ElevenLabsSettings, plugin
+from nestor.adapters.channels.satellites import plugin
 from nestor.adapters.channels.satellites.channel import SatellitesChannel
 from nestor.adapters.channels.satellites.voice.eager import EagerSentenceFlush
-from nestor.adapters.channels.satellites.voice.providers import ElevenLabsSpeech
-from nestor.core import ContractError
+from nestor.adapters.channels.satellites.voice.providers import ElevenLabsSynthesizer, ElevenLabsTranscriber
+from nestor.adapters.speech import elevenlabs
+from nestor.core import Component, ContractError
 from nestor.core.i18n import Locale
 from nestor.modules.channels import Address, Medium
-from nestor.runtime.plugins import Services
+from nestor.runtime.plugins import ModelType, Services
 from nestor.testing.i18n import EchoLocalizer
 
 SPEECH = {"api_key": "xi-test", "voice_id": "GPAQQPp9dazaB2bl4zg9"}
+VOICE = {"transcription": "ears", "speech": "mouth"}
 
 
 def services(tmp_path: Path) -> Services:
-    return Services(tmp_path, localizer=EchoLocalizer(), locale=Locale("fr-FR"))
+    bare = Services(tmp_path, localizer=EchoLocalizer(), locale=Locale("fr-FR"))
+    models = {
+        "ears": elevenlabs.transcription.create({"api_key": "xi-test", "language": "fr"}, "ears", bare),
+        "mouth": elevenlabs.speech.create(SPEECH, "mouth", bare),
+    }
+
+    def model(key: str, wanted: ModelType, path: tuple[str | int, ...]) -> Component:
+        return models[key]
+
+    return Services(tmp_path, localizer=EchoLocalizer(), locale=Locale("fr-FR"), model=model)
 
 
 def test_without_a_voice_satellites_only_write(tmp_path: Path) -> None:
@@ -28,19 +39,18 @@ def test_without_a_voice_satellites_only_write(tmp_path: Path) -> None:
 
 
 def test_with_a_voice_satellites_also_speak_in_its_style(tmp_path: Path) -> None:
-    raw = {"voice": {"speech": SPEECH, "style": "Use [laughs] sparingly."}}
+    raw = {"voice": {**VOICE, "style": "Use [laughs] sparingly."}}
     channel = plugin.create(raw, "satellites", services(tmp_path))
     assert isinstance(channel, SatellitesChannel)
     assert (channel.media, channel.style) == ({Medium.WRITTEN, Medium.SPOKEN}, "Use [laughs] sparingly.")
-    assert channel.details() == {"speech": "elevenlabs"}
     assert not channel.reachable(Address("satellites", "salon"), Medium.SPOKEN), "nobody is connected yet"
 
 
 @pytest.mark.parametrize(
     "raw",
     [
-        {"voice": {"speech": {"voice_id": "v"}}},  # no key
-        {"voice": {"speech": SPEECH, "microphone": "usb"}},  # unknown key
+        {"voice": {"speech": "mouth"}},  # nothing to hear with
+        {"voice": {**VOICE, "microphone": "usb"}},  # unknown key
         {"room": "salon"},  # rooms belong to devices
         {"port": 70000},
     ],
@@ -51,20 +61,22 @@ def test_an_incomplete_or_unknown_configuration_is_rejected(raw: dict, tmp_path:
 
 
 def test_the_api_key_is_never_shown() -> None:
-    assert "xi-test" not in repr(ElevenLabsSettings.model_validate(SPEECH))
+    assert "xi-test" not in repr(elevenlabs.ElevenLabsSpeechSettings.model_validate(SPEECH))
+    assert "xi-test" not in repr(elevenlabs.ElevenLabsTranscriptionSettings.model_validate({"api_key": "xi-test"}))
 
 
-def test_elevenlabs_speech_releases_a_complete_sentence_without_waiting_for_more_text() -> None:
-    speech = ElevenLabsSpeech(ElevenLabsSettings.model_validate(SPEECH))
-    assert isinstance(speech.tts(), EagerSentenceFlush)
-    assert speech.stt() is not speech.stt(), "each session gets its own transcription"
+def test_elevenlabs_speech_releases_a_complete_sentence_without_waiting_for_more_text(tmp_path: Path) -> None:
+    ears, mouth = (services(tmp_path).model(key, ModelType.SPEECH, ()) for key in ("ears", "mouth"))
+    assert isinstance(ears, ElevenLabsTranscriber) and isinstance(mouth, ElevenLabsSynthesizer)
+    assert isinstance(mouth.tts(), EagerSentenceFlush)
+    assert ears.stt() is not ears.stt(), "each session gets its own transcription"
 
 
 @pytest.mark.parametrize(("configured", "said"), [({}, "voice-stt-down"), ({"stt_fallback": "Pardon ?"}, "Pardon ?")])
 def test_the_transcription_fallback_is_in_the_households_language_unless_configured(
     tmp_path: Path, configured: dict[str, str], said: str
 ) -> None:
-    channel = plugin.create({"voice": {"speech": SPEECH, **configured}}, "satellites", services(tmp_path))
+    channel = plugin.create({"voice": {**VOICE, **configured}}, "satellites", services(tmp_path))
     assert isinstance(channel, SatellitesChannel) and channel._voice is not None
     assert channel._voice._settings.stt_phrase == said
 

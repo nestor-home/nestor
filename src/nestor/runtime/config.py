@@ -42,7 +42,9 @@ ADVANCED: dict[str, Any] = {"advanced": True}  # forms fold such a field away by
 # a key of `models`, of the type of model the field takes: forms offer only those
 LANGUAGE_MODEL: dict[str, Any] = {"reference": "models", "model_type": ModelType.LANGUAGE.value}
 EMBEDDING_MODEL: dict[str, Any] = {"reference": "models", "model_type": ModelType.EMBEDDING.value}
-VOICE_MODEL: dict[str, Any] = {"reference": "models", "model_type": ModelType.VOICE.value}
+SPEAKER_MODEL: dict[str, Any] = {"reference": "models", "model_type": ModelType.SPEAKER.value}
+TRANSCRIPTION_MODEL: dict[str, Any] = {"reference": "models", "model_type": ModelType.TRANSCRIPTION.value}
+SPEECH_MODEL: dict[str, Any] = {"reference": "models", "model_type": ModelType.SPEECH.value}
 
 
 def _located[T](parse: Callable[[str], T], value: str) -> T:
@@ -65,7 +67,10 @@ class ProblemCode(StrEnum):
     NO_ANSWERING_MODEL = "no_answering_model"
     NOT_ANSWERING = "not_answering"
     NOT_EMBEDDING = "not_embedding"
-    NOT_VOICE = "not_voice"
+    NOT_SPEAKER = "not_speaker"
+    NOT_TRANSCRIBING = "not_transcribing"
+    NOT_SPEAKING = "not_speaking"
+    UNKNOWN_MODEL = "unknown_model"  # an adapter's settings name a model `models` does not have
     SHARED_ACCOUNT = "shared_account"
 
 
@@ -232,11 +237,11 @@ _VOICES = VoiceSettings()
 
 
 class VoicesConfig(Section):
-    """Who speaks on a shared device (a satellite), from their voice: a voice model of `models` turns speech into
+    """Who speaks on a shared device (a satellite), from their voice: a speaker model of `models` turns speech into
     voiceprints, compared on this machine. Without it, whoever speaks there is someone of the household, nobody
     in particular, and the agent asks who when it matters."""
 
-    embedder: str | None = Field(default=None, json_schema_extra=VOICE_MODEL)
+    embedder: str | None = Field(default=None, json_schema_extra=SPEAKER_MODEL)
     # the similarity from which a voice is someone's: the model's own, calibrated on the `speaker-id` bench
     threshold: float | None = Field(default=None, gt=0, lt=1, json_schema_extra=ADVANCED)
     # how long a turn waits for its voiceprint (computed while the speech is transcribed)

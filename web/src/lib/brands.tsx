@@ -189,6 +189,8 @@ const ALIASES: Record<string, BrandSlug> = {
   "reachy-mini": "reachy",
   "openai-compatible-embeddings": "openai-compatible",
   "sherpa-onnx-voice": "sherpa-onnx",
+  "elevenlabs-transcription": "elevenlabs",
+  "elevenlabs-speech": "elevenlabs",
   lmstudio: "lm-studio",
   "llama.cpp": "llama-cpp",
   "nestor-satellite-python": "python",

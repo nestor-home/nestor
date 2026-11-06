@@ -3,9 +3,9 @@ a channel with a `voice` section does, and without the `voice` extra that fails 
 to install."""
 
 from nestor.adapters.channels.satellites.settings import SatellitesSettings
-from nestor.core import Component
+from nestor.core import Component, ContractError
 from nestor.core.i18n import Message
-from nestor.runtime.plugins import Family, Plugin, Services
+from nestor.runtime.plugins import Family, ModelType, Plugin, Services
 
 VOICE_REQUIREMENT = "nestor-home[voice]"
 
@@ -16,14 +16,24 @@ def build(settings: SatellitesSettings, name: str, services: Services) -> Compon
     voice = None
     if settings.voice is not None:
         from nestor.adapters.channels.satellites.voice.audio import SatelliteVoice
-        from nestor.adapters.channels.satellites.voice.providers import ElevenLabsSpeech
+        from nestor.adapters.channels.satellites.voice.providers import (
+            ModelSpeech,
+            PipecatSynthesizer,
+            PipecatTranscriber,
+        )
         from nestor.adapters.channels.satellites.voice.resilience import load_clips
         from nestor.adapters.channels.satellites.voice.session import SessionSettings
 
         said = settings.voice
+        transcriber = services.model(said.transcription, ModelType.TRANSCRIPTION, ("voice", "transcription"))
+        synthesizer = services.model(said.speech, ModelType.SPEECH, ("voice", "speech"))
+        if not isinstance(transcriber, PipecatTranscriber) or not isinstance(synthesizer, PipecatSynthesizer):
+            raise ContractError(
+                f"{name}: the voice runs Pipecat services; {said.transcription} or {said.speech} has none"
+            )
         voice = SatelliteVoice(
             name,
-            speech=ElevenLabsSpeech(said.speech),
+            speech=ModelSpeech(transcriber, synthesizer),
             settings=SessionSettings(
                 stt_phrase=said.stt_fallback
                 if said.stt_fallback is not None

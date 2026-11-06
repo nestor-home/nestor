@@ -32,6 +32,7 @@ from nestor.modules.journal import Entry
 from nestor.runtime import Registry
 from nestor.runtime.config import ProblemCode
 from nestor.runtime.editing import ConfigSchema
+from nestor.runtime.plugins import ModelType
 
 REGISTRY = Registry.installed()
 LOCALIZER = FluentLocalizer(catalogue_dirs(["nestor", *REGISTRY.packages()]))
@@ -163,6 +164,8 @@ SELECTS = {
     "tool-risk": Risk,
     "auth-kind": AuthKind,
     "journal-kind": Kind,
+    "model-type": ModelType,
+    "model-type-help": ModelType,
 }
 
 

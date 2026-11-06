@@ -60,9 +60,7 @@ def test_a_first_configuration_is_in_english_unless_another_language_is_chosen(t
     initialise(tmp_path / "fr" / "nestor.yaml", chosen, login="moi", password=PASSWORD)
     french = load_config(tmp_path / "fr" / "nestor.yaml", env_of(tmp_path / "fr" / ".env"))
     assert (french.persona.locale, french.persona.language, french.persona.timezone) == ("fr", "French", "Europe/Paris")
-    assert french.channels[0].settings()["voice"]["speech"]["language"] == "fr", (
-        "the transcription follows the household"
-    )
+    assert french.models["ears"].settings()["language"] == "fr", "the transcription follows the household"
 
 
 def test_without_voice_satellites_write_and_telegram_asks_for_its_bot_token(tmp_path: Path) -> None:

@@ -80,6 +80,19 @@ Vectors live in the instance's SQLite database (sqlite-vec), one table per embed
 dimension, its prefixes): switching models embeds every memory again at the next start, and the old vectors go.
 With a hosted model, memories leave the house to be embedded.
 
+Satellites hear and speak through two more models: one that transcribes (`transcription`) and one that gives
+the assistant its voice (`speech`), named by the channel's `voice`. Like any model, they show in the admin's Models
+and System pages, and another provider is another plugin:
+
+```yaml
+models:
+  ears: {kind: elevenlabs-transcription, api_key: ${ELEVENLABS_API_KEY}, language: en}
+  voice: {kind: elevenlabs-speech, api_key: ${ELEVENLABS_API_KEY}, voice_id: GPAQQPp9dazaB2bl4zg9}
+channels:
+  - kind: satellites
+    voice: {transcription: ears, speech: voice}
+```
+
 Past conversations are remembered too. Once a conversation is over (its channel's silence has passed), the
 `memory.consolidation` model (the background one by default) writes its episode: what it was about, for whoever
 took part, and the lasting facts nobody asked to remember. Each turn then carries the latest conversations of

@@ -1,6 +1,6 @@
 import { ArrowDown, ArrowUp, CircleAlert, Pencil, Plus, Trash2 } from "lucide-react";
 import { type ReactElement, type ReactNode, useId, useState } from "react";
-import type { ModelType } from "@/api";
+import { modelTypeValues } from "@/api/schema.gen";
 import { Confirm } from "@/components/confirm";
 import { FormActions } from "@/components/form-actions";
 import { FormDialog, FormSheet } from "@/components/overlay-form";
@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useT } from "@/i18n";
 import { brandName, brandOf, KindMark } from "@/lib/brands";
+import { modelTypeHint, modelTypeLabel } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 import { useConfigEditor } from "./editor";
 import { ObjectFields, Problems } from "./fields";
@@ -410,7 +411,7 @@ function NamedSlot({ slotKey, slot }: { slotKey: string; slot: Slot }) {
                 title={name}
                 subtitle={
                   slot.model_types[kind]
-                    ? `${kindTitle(kind)} · ${t(`cfg-model-type-${slot.model_types[kind]}`)}`
+                    ? `${kindTitle(kind)} · ${modelTypeLabel(slot.model_types[kind])}`
                     : kindTitle(kind)
                 }
                 detail={summary(entry)}
@@ -492,7 +493,6 @@ function NameField({ name, taken, onRename }: { name: string; taken: string[]; o
 }
 
 /** The model types, in the order the picker shows them. */
-const MODEL_TYPES: readonly ModelType[] = ["language", "embedding", "voice"];
 
 /** Choosing what to add: every installed plugin of the slot, with its mark; models grouped by what they serve. */
 function KindPicker({ slot, onPick, trigger }: { slot: Slot; onPick: (kind: string) => void; trigger: ReactElement }) {
@@ -501,7 +501,10 @@ function KindPicker({ slot, onPick, trigger }: { slot: Slot; onPick: (kind: stri
     <FormDialog trigger={trigger} title={t("cfg-pick-title", { slot: slot.title })} description={t("cfg-pick-text")}>
       {(close) => {
         const kinds = Object.keys(slot.kinds);
-        const typed = MODEL_TYPES.map((type) => ({ type, kinds: kinds.filter((k) => slot.model_types[k] === type) }));
+        const typed = modelTypeValues.map((type) => ({
+          type,
+          kinds: kinds.filter((k) => slot.model_types[k] === type),
+        }));
         const groups = Object.keys(slot.model_types).length
           ? typed.filter((g) => g.kinds.length)
           : [{ type: null, kinds }];
@@ -528,14 +531,11 @@ function KindPicker({ slot, onPick, trigger }: { slot: Slot; onPick: (kind: stri
         return (
           <div className="grid gap-5">
             {groups.map((group) => (
-              <section
-                key={group.type ?? "all"}
-                aria-label={group.type ? t(`cfg-model-type-${group.type}`) : undefined}
-              >
+              <section key={group.type ?? "all"} aria-label={group.type ? modelTypeLabel(group.type) : undefined}>
                 {group.type ? (
                   <header className="mb-2">
-                    <h3 className="text-[0.92rem] font-medium text-ink">{t(`cfg-model-type-${group.type}`)}</h3>
-                    <p className="text-[0.82rem] text-ink-muted">{t(`cfg-model-type-${group.type}-help`)}</p>
+                    <h3 className="text-[0.92rem] font-medium text-ink">{modelTypeLabel(group.type)}</h3>
+                    <p className="text-[0.82rem] text-ink-muted">{modelTypeHint(group.type)}</p>
                   </header>
                 ) : null}
                 <ul className="grid gap-1.5">{group.kinds.map(option)}</ul>
