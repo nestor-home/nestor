@@ -16,6 +16,7 @@ describe("the day's marks", () => {
     ];
     const marks = marksOf(items);
     expect(marks.map((m) => m.kind)).toEqual(["conversation", "delivery"]);
-    expect(marks[0]).toMatchObject({ count: 3, people: ["lea", "jules"] });
+    expect(marks[0]?.count).toBe(3);
+    expect(marks[0]?.people.map((p) => p.id)).toEqual(["lea", "jules"]);
   });
 });
