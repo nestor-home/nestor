@@ -4,15 +4,29 @@ may see it but not change it: its existence is not disclosed."""
 
 from nestor.admin.api.v1.errors import ApiError, not_found
 from nestor.admin.api.v1.security import Caller
-from nestor.admin.api.v1.shared import People, connecting_of, connections_of
+from nestor.admin.api.v1.shared import People
+from nestor.admin.connecting import Connecting
 from nestor.admin.state import AdminState
 from nestor.core import PersonId
 from nestor.modules.accounts import Principal, Scope
 from nestor.modules.cognition import TaskStatus
 from nestor.modules.cognition.delegation.service import Task
-from nestor.modules.connectors import Connection
+from nestor.modules.connectors import Connection, Connections
 from nestor.modules.initiative import Watch
 from nestor.modules.memory import Memory
+
+
+def connections_of(admin: AdminState) -> Connections:
+    if admin.nestor.connections is None:
+        raise ApiError(404, "no_connectors")
+    return admin.nestor.connections
+
+
+def connecting_of(admin: AdminState) -> Connecting:
+    connections_of(admin)
+    assert admin.connecting is not None  # built whenever connections are
+    return admin.connecting
+
 
 # -- people ----------------------------------------------------------------------------------------------
 

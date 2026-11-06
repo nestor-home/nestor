@@ -5,7 +5,7 @@ from datetime import datetime
 from pydantic import BaseModel
 
 from nestor.admin.api.v1.shared import Input, People, PersonRef
-from nestor.modules.accounts import Accounts, Invitation, InvitationStatus, Role
+from nestor.modules.accounts import Account, Accounts, Invitation, InvitationStatus, Role
 
 
 class RoleIn(Input):
@@ -65,3 +65,27 @@ class InvitationAcceptIn(Input):
     token: str
     login: str
     password: str
+
+
+class AccountOut(BaseModel):
+    id: str
+    login: str
+    role: Role
+    person: PersonRef | None
+    disabled: bool
+    created_at: datetime
+    locale: str | None  # the language it chose; None: the household's
+    last_seen_at: datetime | None  # its last sign-in or request (to the minute); None: never since it was opened
+
+    @classmethod
+    def of(cls, account: Account, people: People, accounts: Accounts) -> "AccountOut":
+        return cls(
+            id=account.id,
+            login=account.login,
+            role=account.role,
+            person=people.ref(account.person),
+            disabled=account.disabled,
+            created_at=account.created_at,
+            locale=account.locale,
+            last_seen_at=accounts.last_seen(account.id),
+        )

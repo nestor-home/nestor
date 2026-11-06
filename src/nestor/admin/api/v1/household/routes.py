@@ -5,9 +5,9 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Request
 
 from nestor.admin.api.v1.access import household_person
+from nestor.admin.api.v1.connections.schemas import Usage
 from nestor.admin.api.v1.household.schemas import PersonOut
 from nestor.admin.api.v1.security import Caller, allowed
-from nestor.admin.api.v1.shared import Usage
 from nestor.admin.state import state
 from nestor.modules.accounts import Scope
 

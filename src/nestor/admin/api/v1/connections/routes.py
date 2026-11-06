@@ -10,12 +10,11 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query, Request, Response
 from fastapi.responses import RedirectResponse
 
-from nestor.admin.api.v1.access import reachable_connection, reaches_connections_of
+from nestor.admin.api.v1.access import connections_of, reachable_connection, reaches_connections_of
 from nestor.admin.api.v1.connections.callback import connected, failed
-from nestor.admin.api.v1.connections.schemas import ConnectionSettingsIn
+from nestor.admin.api.v1.connections.schemas import ConnectionDetail, ConnectionOut, ConnectionSettingsIn, Usage
 from nestor.admin.api.v1.errors import ApiError
 from nestor.admin.api.v1.security import Caller, allowed
-from nestor.admin.api.v1.shared import ConnectionDetail, ConnectionOut, Usage, connections_of
 from nestor.admin.settings import CALLBACK_PATH
 from nestor.admin.state import state
 from nestor.core import ContractError, ProviderError

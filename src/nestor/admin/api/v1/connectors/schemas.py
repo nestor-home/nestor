@@ -3,7 +3,8 @@
 from fastapi import Request
 from pydantic import BaseModel, Field
 
-from nestor.admin.api.v1.shared import Input, connections_of
+from nestor.admin.api.v1.access import connections_of
+from nestor.admin.api.v1.shared import Input
 from nestor.admin.presentation import Phrasebook
 from nestor.admin.state import AdminState
 from nestor.modules.connectors import AuthKind, Connector

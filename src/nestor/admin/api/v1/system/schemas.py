@@ -6,7 +6,8 @@ from typing import Literal
 from pydantic import BaseModel
 
 from nestor import __version__
-from nestor.admin.api.v1.shared import AgentOut, Input
+from nestor.admin.api.v1.agent.schemas import AgentOut
+from nestor.admin.api.v1.shared import Input
 from nestor.admin.presentation import Phrasebook
 from nestor.core import Component, Health
 from nestor.core.i18n import Message

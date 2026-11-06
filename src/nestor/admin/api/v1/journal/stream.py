@@ -6,9 +6,9 @@ import json
 from collections.abc import AsyncIterator
 from typing import Any
 
+from nestor.admin.api.v1.agent.schemas import AgentActivityOut
 from nestor.admin.api.v1.journal.feed import Feed
 from nestor.admin.api.v1.security import Caller
-from nestor.admin.api.v1.shared import AgentActivityOut
 from nestor.admin.state import AdminState
 from nestor.modules.accounts import Scope
 

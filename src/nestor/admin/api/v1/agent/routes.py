@@ -5,9 +5,9 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
 
-from nestor.admin.api.v1.agent.schemas import InitiativeOut, QuietHoursOut, ScheduledDeliveryOut
+from nestor.admin.api.v1.agent.schemas import AgentActivityOut, InitiativeOut, QuietHoursOut, ScheduledDeliveryOut
 from nestor.admin.api.v1.security import Caller, allowed
-from nestor.admin.api.v1.shared import AgentActivityOut, People
+from nestor.admin.api.v1.shared import People
 from nestor.admin.state import state
 from nestor.modules.accounts import Scope
 

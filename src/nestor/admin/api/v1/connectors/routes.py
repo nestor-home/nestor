@@ -9,7 +9,8 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
 
-from nestor.admin.api.v1.access import connection_owner, replaced_connection
+from nestor.admin.api.v1.access import connecting_of, connection_owner, connections_of, replaced_connection
+from nestor.admin.api.v1.connections.schemas import ConnectionDetail, Usage
 from nestor.admin.api.v1.connectors.schemas import (
     AuthorizationIn,
     AuthorizationOut,
@@ -20,7 +21,6 @@ from nestor.admin.api.v1.connectors.schemas import (
 from nestor.admin.api.v1.errors import ApiError
 from nestor.admin.api.v1.language import reader_locale
 from nestor.admin.api.v1.security import Caller, allowed
-from nestor.admin.api.v1.shared import ConnectionDetail, Usage, connecting_of, connections_of
 from nestor.admin.presentation import Phrasebook
 from nestor.admin.state import state
 from nestor.core import ProviderError

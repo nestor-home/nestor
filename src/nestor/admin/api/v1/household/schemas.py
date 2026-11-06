@@ -5,8 +5,10 @@ from datetime import datetime
 from pydantic import BaseModel
 
 from nestor.admin.api.v1.access import reaches_connections_of
+from nestor.admin.api.v1.accounts.schemas import AccountOut
+from nestor.admin.api.v1.connections.schemas import ConnectionOut, Usage
 from nestor.admin.api.v1.security import Caller
-from nestor.admin.api.v1.shared import AccountOut, ConnectionOut, People, Usage
+from nestor.admin.api.v1.shared import People
 from nestor.admin.state import AdminState
 from nestor.modules.accounts import Scope
 from nestor.modules.home import Whereabouts

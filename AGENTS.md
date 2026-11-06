@@ -124,8 +124,10 @@ runtime may assemble the built-in storage adapters, and the admin may use FastAP
   3. What a resource reads or decides gets a module named for it (`journal/feed.py`,
      `tasks/afterwards.py`); domain knowledge goes down into `modules/` or the runtime
      (`Nestor.heard_rooms`), sessions into `admin/auth` (`SessionCookie.open`).
-  4. No resource imports another: shared shapes are in `shared.py`, who may reach what in `access.py`
-     (one rule per thing, on `Caller`), the error shapes in `errors.py`.
+  4. A resource imports nothing of another but its `schemas.py`, to send a shape that resource owns (the
+     household sends `ConnectionOut`). `shared.py` holds only what every resource builds on (`Input`,
+     `PersonRef`, `People`, `MessageOut`), `access.py` who may reach what (one rule per thing, on
+     `Caller`) and whether a feature is on, `errors.py` the error shapes.
   5. Tests follow the same tree (`tests/admin/api/v1/<resource>/`); what crosses resources (the OpenAPI
      document, permissions) stays at the top. Moving code keeps `web/openapi.json` byte for byte.
 

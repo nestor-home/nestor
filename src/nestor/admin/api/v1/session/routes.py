@@ -7,8 +7,7 @@ from fastapi import APIRouter, Depends, Request, Response
 from nestor.admin.api.v1.errors import ApiError
 from nestor.admin.api.v1.passwords import checked_password
 from nestor.admin.api.v1.security import Caller, same_origin, signed_in
-from nestor.admin.api.v1.session.schemas import LocaleIn, LoginIn, PasswordChangeIn
-from nestor.admin.api.v1.shared import MeOut
+from nestor.admin.api.v1.session.schemas import LocaleIn, LoginIn, MeOut, PasswordChangeIn
 from nestor.admin.state import state
 
 router = APIRouter(tags=["session"])

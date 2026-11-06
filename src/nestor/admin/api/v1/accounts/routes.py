@@ -5,6 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Request, Response
 
 from nestor.admin.api.v1.accounts.schemas import (
+    AccountOut,
     InvitationAcceptIn,
     InvitationCreated,
     InvitationIn,
@@ -17,7 +18,8 @@ from nestor.admin.api.v1.accounts.schemas import (
 from nestor.admin.api.v1.errors import ApiError
 from nestor.admin.api.v1.passwords import checked_login, checked_password
 from nestor.admin.api.v1.security import Caller, allowed, same_origin
-from nestor.admin.api.v1.shared import AccountOut, MeOut, People
+from nestor.admin.api.v1.session.schemas import MeOut
+from nestor.admin.api.v1.shared import People
 from nestor.admin.state import state
 from nestor.core import PersonId
 from nestor.modules.accounts import Scope

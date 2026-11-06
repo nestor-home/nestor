@@ -6,7 +6,10 @@ from pydantic import BaseModel
 
 from nestor.admin.api.v1.shared import People, PersonRef
 from nestor.admin.presentation import subject
+from nestor.core import Health
+from nestor.modules.activity import Activity, AgentActivity
 from nestor.modules.initiative import DeliveryPolicy, FollowUp
+from nestor.runtime import Nestor
 
 
 class QuietHoursOut(BaseModel):
@@ -54,3 +57,39 @@ class ScheduledDeliveryOut(BaseModel):
 class InitiativeOut(BaseModel):
     quiet_hours: QuietHoursOut | None  # None: the agent may speak up at any hour
     upcoming: list[ScheduledDeliveryOut]  # soonest first; with `journal.read.own` only, those for one's person
+
+
+class AgentOut(BaseModel):
+    """The assistant itself, as the front's sidebar shows it."""
+
+    name: str  # the persona's name ("Richie")
+    status: Health  # started, or degraded when its model or one of its channels cannot serve now
+
+    @classmethod
+    def of(cls, nestor: Nestor) -> "AgentOut":
+        required = [*nestor.agent.models.distinct(), *nestor.channels]
+        degraded = any(c.health() is not Health.STARTED for c in required)
+        return cls(name=nestor.config.persona.name, status=Health.DEGRADED if degraded else Health.STARTED)
+
+
+class AgentActivityOut(BaseModel):
+    """What the agent is doing now, from what really runs: `GET /agent/activity`, and `event: activity` on
+    the journal's stream at its start and on every change."""
+
+    state: Activity
+    since: datetime  # when it entered this state (as this instance saw it: its start at the earliest)
+    replies: int  # answers being produced now
+    tasks: int  # delegated tasks running
+    listening_rooms: list[str]  # where a satellite hears someone speak
+    quiet: bool  # within the quiet hours now
+
+    @classmethod
+    def of(cls, activity: AgentActivity) -> "AgentActivityOut":
+        return cls(
+            state=activity.state,
+            since=activity.since,
+            replies=activity.replies,
+            tasks=activity.tasks,
+            listening_rooms=list(activity.listening_rooms),
+            quiet=activity.quiet,
+        )

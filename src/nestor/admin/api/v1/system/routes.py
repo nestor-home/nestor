@@ -5,9 +5,9 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Request
 
 from nestor import __version__
+from nestor.admin.api.v1.agent.schemas import AgentOut
 from nestor.admin.api.v1.errors import ApiError
 from nestor.admin.api.v1.security import Caller, allowed
-from nestor.admin.api.v1.shared import AgentOut
 from nestor.admin.api.v1.system.schemas import (
     ComponentOut,
     InstallIn,
