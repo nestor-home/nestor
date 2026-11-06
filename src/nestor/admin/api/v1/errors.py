@@ -9,9 +9,11 @@ from typing import Any, Literal
 from fastapi import Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 from starlette.exceptions import HTTPException
 
 from nestor.admin.api.v1.language import reader_locale
+from nestor.admin.presentation import Phrasebook
 from nestor.admin.state import state
 from nestor.core import ContractError, ProviderError
 from nestor.core.i18n import Locale, Localizer, Message
@@ -27,6 +29,8 @@ from nestor.modules.accounts import (
     UnknownPerson,
     WrongPassword,
 )
+from nestor.runtime.config import ProblemCode
+from nestor.runtime.editing import Problem, dotted
 
 # Every code the API sends: the type checker refuses any other, and the OpenAPI document lists them for the front.
 ErrorCode = Literal[
@@ -85,7 +89,6 @@ ErrorCode = Literal[
     "throttled",
     "too_many_additions",
     "unauthenticated",
-    "unknown_kind",
     "unknown_locale",
     "unknown_person",
     "unknown_tool",
@@ -101,6 +104,41 @@ ErrorCode = Literal[
     "weak_password",
     "wrong_password",
 ]
+
+
+class ProblemOut(BaseModel):
+    """What is wrong in an edited configuration, located by its path in the document."""
+
+    path: list[str | int]  # `["channels", 0, "token"]`; empty: the document as a whole
+    code: ProblemCode
+    message_id: str  # `config-error-<code>`, with `args` {path, detail}
+    args: dict[str, str | int | float]
+    message: str
+
+    @classmethod
+    def of(cls, problem: Problem, words: Phrasebook) -> "ProblemOut":
+        message = Message.of(
+            f"config-error-{problem.code.replace('_', '-')}", path=dotted(problem.path), detail=problem.detail
+        )
+        return cls(
+            path=list(problem.path),
+            code=problem.code,
+            message_id=message.id,
+            args=dict(message.args),
+            message=words.text(message),
+        )
+
+
+class ErrorDetail(BaseModel):
+    code: ErrorCode  # for programs: `invalid_credentials`, `last_owner`…
+    message_id: str  # `error-<code with dashes>`, for a front rendering with its own catalogue
+    args: dict[str, str | int | float]
+    message: str  # rendered in the reader's language, shown as is
+    problems: list[ProblemOut] | None = None  # a configuration refused: what is wrong, where
+
+
+class ErrorOut(BaseModel):
+    error: ErrorDetail
 
 
 class ApiError(Exception):

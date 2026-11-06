@@ -5,7 +5,7 @@
  */
 import { ArrowDown, ArrowUp, ChevronRight, KeyRound, Plus, X } from "lucide-react";
 import { type ReactNode, useId, useState } from "react";
-import type { ConfigProblem, JsonSchema } from "@/api";
+import type { ConfigProblem } from "@/api";
 import { Choice } from "@/components/choice";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -28,6 +28,7 @@ import {
   isReference,
   isShown,
   isTyped,
+  type JsonSchema,
   keyOf,
   move,
   type Path,
@@ -529,7 +530,13 @@ function ListControl({ id, node, root, path, required, label }: ControlProps) {
           {fallback ? t("cfg-list-default", { value: fallback }) : t("cfg-list-empty")}
         </p>
       )}
-      <Button variant="outline" size="sm" className="justify-self-start" onClick={() => write([...items, ""])}>
+      <Button
+        variant="outline"
+        size="sm"
+        className="justify-self-start"
+        aria-label={t("cfg-add-item-to", { field: label })}
+        onClick={() => write([...items, ""])}
+      >
         <Plus /> {t("cfg-add-item")}
       </Button>
     </div>

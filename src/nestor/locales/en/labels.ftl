@@ -86,3 +86,20 @@ pairing-method-enrollment-provisioning-hint = Give the pairing URI to the device
 # Why a connection needs authorising again, or is in error.
 connection-refresh-refused = Access revoked or expired. Reconnect the account.
 connection-no-refresh-token = Access expired and cannot be renewed. Reconnect the account.
+
+journal-kind = { $kind ->
+    [conversation] Conversations
+    [delivery] Unprompted messages
+    [tool] Tools
+    [task] Tasks
+    [watch] Watches
+    [schedule] Wake-ups
+    [memory] Memories
+    [connection] Connections
+    [presence] Presence
+    [satellite] Satellites
+    [voice] Voices
+    [observation] Observations
+    [account] Accounts
+   *[other] Other
+}

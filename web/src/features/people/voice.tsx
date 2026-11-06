@@ -50,7 +50,7 @@ function VoiceState({ person, voice }: { person: Person; voice: Voice }) {
   const notify = useNotify();
   const queryClient = useQueryClient();
   const [recording, setRecording] = useState(false);
-  const own = me.account.person === person.id ? "yes" : "no";
+  const own = me.account.person?.id === person.id ? "yes" : "no";
   const remember = (next: Voice) => queryClient.setQueryData(keys.voice(person.id), next);
   const learning = useMutation({
     mutationFn: (on: boolean) => api.setVoiceLearning(person.id, on),

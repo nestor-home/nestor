@@ -11,19 +11,18 @@ import {
   type ConfigDiff,
   type ConfigDocument,
   type ConfigProblem,
-  type ConfigSchema,
   type ConfigState,
   configQuery,
   configSchemaQuery,
   keys,
 } from "@/api";
 import { Failure, Loading } from "@/components/states";
-import { type Path, setAt } from "./schema";
+import { type Path, type Schemas, setAt } from "./schema";
 
 const PREVIEW_DELAY_MS = 400;
 
 export interface ConfigEditor {
-  schema: ConfigSchema;
+  schema: Schemas;
   state: ConfigState;
   /** What the file holds now (masked), and the edited document. */
   base: ConfigDocument;
@@ -71,7 +70,7 @@ export function ConfigEditorProvider({ children }: { children: ReactNode }) {
   );
 }
 
-function Editing({ schema, state, children }: { schema: ConfigSchema; state: ConfigState; children: ReactNode }) {
+function Editing({ schema, state, children }: { schema: Schemas; state: ConfigState; children: ReactNode }) {
   const queryClient = useQueryClient();
   const base = state.document;
   const [draft, setDraft] = useState<ConfigDocument>(base);

@@ -5,7 +5,7 @@ import { browserLocale, DEFAULT_LOCALE, isLocale, type Locale } from "./catalog"
 const fetched = new Map<Locale, Promise<string>>();
 
 /** Once per locale and page: the server's catalogue in Fluent syntax. */
-function fetchCatalogue(locale: Locale): Promise<string> {
+export function fetchCatalogue(locale: Locale): Promise<string> {
   let pending = fetched.get(locale);
   if (!pending) {
     pending = fetch(`/api/v1/i18n/${locale}`, { credentials: "same-origin" }).then((r) => (r.ok ? r.text() : ""));

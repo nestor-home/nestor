@@ -3,7 +3,12 @@ import { liveItem } from "@/test/render";
 import { matches, merge } from "./merge";
 
 describe("matches", () => {
-  const item = liveItem({ kind: "delivery", people: ["lea"], channels: ["whatsapp"], room: "salon" });
+  const item = liveItem({
+    kind: "delivery",
+    people: [{ id: "lea", name: "Léa" }],
+    channels: ["whatsapp"],
+    room: "salon",
+  });
 
   it("keeps an item every filter accepts", () => {
     expect(matches(item, {})).toBe(true);
@@ -18,6 +23,12 @@ describe("matches", () => {
     expect(matches(item, { channel: "voice" })).toBe(false);
     expect(matches(item, { room: "bureau" })).toBe(false);
     expect(matches(item, { q: "colis" })).toBe(false);
+  });
+
+  it("keeps the time range as the API does: from included, to excluded", () => {
+    const at = liveItem({ at: "2026-10-30T10:00:00Z" });
+    expect(matches(at, { from: "2026-10-30T10:00:00Z" })).toBe(true);
+    expect(matches(at, { to: "2026-10-30T10:00:00Z" })).toBe(false);
   });
 });
 

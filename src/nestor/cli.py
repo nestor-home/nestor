@@ -17,7 +17,7 @@ from typing import Any
 import httpx
 
 from nestor.adapters.i18n import FluentLocalizer, catalogue_dirs
-from nestor.admin import AdminServer, openapi_text, read_token, token_path
+from nestor.admin import AdminServer, mock_answers, openapi_text, read_token, token_path
 from nestor.bench import Suites
 from nestor.bench.cli import add_commands as add_bench_commands
 from nestor.bench.cli import main as bench
@@ -42,6 +42,7 @@ from nestor.runtime.config import ENV_FILE, SECRET_KEY, NestorConfig, environmen
 from nestor.runtime.secrets import ConfigFile, open_secrets, preview
 
 OPENAPI = Path("web") / "openapi.json"
+MOCKS = Path("web") / "src" / "mocks" / "server"
 CONFORMANCE_DEADLINE_S = 15.0
 
 
@@ -63,6 +64,8 @@ def main(argv: list[str] | None = None) -> int:
     admin = commands.add_parser("admin", help="the admin web interface").add_subparsers(dest="action", required=True)
     openapi = admin.add_parser("openapi", help="write the API's OpenAPI document (the web front's client)")
     openapi.add_argument("--out", type=Path, default=OPENAPI, help=f"file (default: {OPENAPI})")
+    mocks = admin.add_parser("mocks", help="write what the web front's mock server answers as this version would")
+    mocks.add_argument("--out", type=Path, default=MOCKS, help=f"folder (default: {MOCKS})")
     satellites = commands.add_parser("satellites", help="pair satellites with the running instance").add_subparsers(
         dest="action", required=True
     )
@@ -109,7 +112,7 @@ def main(argv: list[str] | None = None) -> int:
     environ = environment(args.config)  # the shell's variables, completed by the `.env` next to the configuration
     try:
         if args.command == "admin":
-            return _openapi(args.out)
+            return _openapi(args.out) if args.action == "openapi" else _mocks(args.out)
         if args.command == "accounts":
             return _create_owner(load_config(args.config, environ), args.login, args.person)
         if args.command == "init":
@@ -231,6 +234,14 @@ def _create_owner(config: NestorConfig, login: str | None, person: str | None) -
 def _openapi(out: Path) -> int:
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(openapi_text())
+    print(f"wrote {out}")
+    return 0
+
+
+def _mocks(out: Path) -> int:
+    out.mkdir(parents=True, exist_ok=True)
+    for name, text in mock_answers(FluentLocalizer(catalogue_dirs(["nestor"]))).items():
+        (out / name).write_text(text)
     print(f"wrote {out}")
     return 0
 

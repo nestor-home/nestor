@@ -1,0 +1,3384 @@
+{
+  "sections": {
+    "persona": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string",
+          "x-nestor": {
+            "field": "name",
+            "title_id": "config-persona-name",
+            "help_id": "config-persona-name-help",
+            "fallback_title_id": "config-field-name",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "persona",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Nom",
+            "help": null
+          }
+        },
+        "character": {
+          "title": "Character",
+          "type": "string",
+          "x-nestor": {
+            "field": "character",
+            "title_id": "config-persona-character",
+            "help_id": "config-persona-character-help",
+            "fallback_title_id": "config-field-character",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "persona",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Personnalité",
+            "help": "Qui est l'assistant et comment il parle."
+          }
+        },
+        "locale": {
+          "default": "en",
+          "title": "Locale",
+          "type": "string",
+          "x-nestor": {
+            "field": "locale",
+            "title_id": "config-persona-locale",
+            "help_id": "config-persona-locale-help",
+            "fallback_title_id": "config-field-locale",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "persona",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Langue",
+            "help": "Ex. fr-FR. Langue des textes fixes et, par défaut, de l'admin."
+          }
+        },
+        "language": {
+          "default": "English",
+          "title": "Language",
+          "type": "string",
+          "x-nestor": {
+            "field": "language",
+            "title_id": "config-persona-language",
+            "help_id": "config-persona-language-help",
+            "fallback_title_id": "config-field-language",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "persona",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Langue des réponses",
+            "help": "Son nom dans le prompt, ex. français."
+          }
+        },
+        "timezone": {
+          "default": "UTC",
+          "title": "Timezone",
+          "type": "string",
+          "x-nestor": {
+            "field": "timezone",
+            "title_id": "config-persona-timezone",
+            "help_id": "config-persona-timezone-help",
+            "fallback_title_id": "config-field-timezone",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "persona",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Fuseau horaire",
+            "help": null
+          }
+        }
+      },
+      "required": [
+        "name",
+        "character"
+      ],
+      "title": "PersonaConfig",
+      "type": "object"
+    },
+    "household": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string",
+          "x-nestor": {
+            "field": "id",
+            "title_id": "config-household-id",
+            "help_id": "config-household-id-help",
+            "fallback_title_id": "config-field-id",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "household",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Identifiant",
+            "help": null
+          }
+        },
+        "name": {
+          "title": "Name",
+          "type": "string",
+          "x-nestor": {
+            "field": "name",
+            "title_id": "config-household-name",
+            "help_id": "config-household-name-help",
+            "fallback_title_id": "config-field-name",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "household",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Nom",
+            "help": null
+          }
+        },
+        "accounts": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Accounts",
+          "type": "array",
+          "x-nestor": {
+            "field": "accounts",
+            "title_id": "config-household-accounts",
+            "help_id": "config-household-accounts-help",
+            "fallback_title_id": "config-field-accounts",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "household",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Comptes",
+            "help": "Comment les canaux reconnaissent cette personne, ex. telegram:123456789."
+          }
+        },
+        "reach": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reach",
+          "x-nestor": {
+            "field": "reach",
+            "title_id": "config-household-reach",
+            "help_id": "config-household-reach-help",
+            "fallback_title_id": "config-field-reach",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "household",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Où lui écrire",
+            "help": null
+          }
+        },
+        "may_message": {
+          "default": [
+            "*"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "title": "May Message",
+          "type": "array",
+          "x-nestor": {
+            "field": "may_message",
+            "title_id": "config-household-may_message",
+            "help_id": "config-household-may_message-help",
+            "fallback_title_id": "config-field-may_message",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "household",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Peut envoyer un message à",
+            "help": "Via l'assistant : identifiants de personnes, ou * pour tout le monde."
+          }
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ],
+      "title": "PersonConfig",
+      "type": "object"
+    },
+    "agent": {
+      "additionalProperties": false,
+      "description": "Which model of `models` answers in each medium. One left out takes the other's; with a single\nmodel, neither needs saying.",
+      "properties": {
+        "spoken": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Spoken",
+          "x-nestor": {
+            "field": "spoken",
+            "title_id": "config-agent-spoken",
+            "help_id": "config-agent-spoken-help",
+            "fallback_title_id": "config-field-spoken",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "agent",
+            "reference": "models",
+            "model_type": "language",
+            "brands": null,
+            "title": "Modèle à l'oral",
+            "help": "Pour les réponses parlées. Par défaut, le modèle à l'écrit."
+          }
+        },
+        "written": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Written",
+          "x-nestor": {
+            "field": "written",
+            "title_id": "config-agent-written",
+            "help_id": "config-agent-written-help",
+            "fallback_title_id": "config-field-written",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "agent",
+            "reference": "models",
+            "model_type": "language",
+            "brands": null,
+            "title": "Modèle à l'écrit",
+            "help": "Pour les réponses écrites. Par défaut, le modèle à l'oral."
+          }
+        },
+        "background": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Background",
+          "x-nestor": {
+            "field": "background",
+            "title_id": "config-agent-background",
+            "help_id": "config-agent-background-help",
+            "fallback_title_id": "config-field-background",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "agent",
+            "reference": "models",
+            "model_type": "language",
+            "brands": null,
+            "title": "Modèle en arrière-plan",
+            "help": "Pour ce que personne n'attend, comme les réveils programmés. Par défaut, le modèle à l'écrit."
+          }
+        },
+        "spoken_tool_wait_s": {
+          "default": 3.0,
+          "exclusiveMinimum": 0,
+          "maximum": 60,
+          "title": "Spoken Tool Wait S",
+          "type": "number",
+          "x-nestor": {
+            "field": "spoken_tool_wait_s",
+            "title_id": "config-agent-spoken_tool_wait_s",
+            "help_id": "config-agent-spoken_tool_wait_s-help",
+            "fallback_title_id": "config-field-spoken_tool_wait_s",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "agent",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Attente des outils à l'oral (s)",
+            "help": "Au-delà, l'outil continue en arrière-plan et son résultat revient dans la conversation."
+          }
+        },
+        "written_tool_wait_s": {
+          "default": 20.0,
+          "exclusiveMinimum": 0,
+          "maximum": 600,
+          "title": "Written Tool Wait S",
+          "type": "number",
+          "x-nestor": {
+            "field": "written_tool_wait_s",
+            "title_id": "config-agent-written_tool_wait_s",
+            "help_id": "config-agent-written_tool_wait_s-help",
+            "fallback_title_id": "config-field-written_tool_wait_s",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "agent",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Attente des outils à l'écrit (s)",
+            "help": "Au-delà, l'outil continue en arrière-plan et son résultat revient dans la conversation."
+          }
+        },
+        "tool_result_chars": {
+          "default": 8000,
+          "maximum": 200000,
+          "minimum": 1000,
+          "title": "Tool Result Chars",
+          "type": "integer",
+          "x-nestor": {
+            "field": "tool_result_chars",
+            "title_id": "config-agent-tool_result_chars",
+            "help_id": "config-agent-tool_result_chars-help",
+            "fallback_title_id": "config-field-tool_result_chars",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "agent",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Taille d'un résultat d'outil (caractères)",
+            "help": "Un résultat plus long est mis de côté : le modèle en voit le début et la fin, et lit la suite au besoin."
+          }
+        }
+      },
+      "title": "AgentConfig",
+      "type": "object"
+    },
+    "watches": {
+      "additionalProperties": false,
+      "description": "The model that sorts incoming items for the watches: the agent's written one by default.",
+      "properties": {
+        "model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model",
+          "x-nestor": {
+            "field": "model",
+            "title_id": "config-watches-model",
+            "help_id": "config-watches-model-help",
+            "fallback_title_id": "config-field-model",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "watches",
+            "reference": "models",
+            "model_type": "language",
+            "brands": null,
+            "title": "Modèle de tri",
+            "help": "Choisit les veilles concernées par chaque élément reçu. Par défaut, le modèle à l'écrit."
+          }
+        }
+      },
+      "title": "WatchesConfig",
+      "type": "object"
+    },
+    "memory": {
+      "$defs": {
+        "Strategy": {
+          "enum": [
+            "both",
+            "recent",
+            "search"
+          ],
+          "title": "Strategy",
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Which memories each turn's instructions carry (`memory-recall` bench): the latest up to `recent`, cached\nwith the household, then those the person's last messages find among the others.",
+      "properties": {
+        "strategy": {
+          "$ref": "#/$defs/Strategy",
+          "default": "both",
+          "x-nestor": {
+            "field": "strategy",
+            "title_id": "config-memory-strategy",
+            "help_id": "config-memory-strategy-help",
+            "fallback_title_id": "config-field-strategy",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "memory",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Choix des souvenirs",
+            "help": "both : les plus récents, puis ceux que la conversation évoque ; recent : les récents seuls ; search : ceux que la conversation évoque seuls."
+          }
+        },
+        "recent": {
+          "default": 150,
+          "maximum": 1000,
+          "minimum": 0,
+          "title": "Recent",
+          "type": "integer",
+          "x-nestor": {
+            "field": "recent",
+            "title_id": "config-memory-recent",
+            "help_id": "config-memory-recent-help",
+            "fallback_title_id": "config-field-recent",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "memory",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Souvenirs récents par tour",
+            "help": null
+          }
+        },
+        "found": {
+          "default": 12,
+          "maximum": 50,
+          "minimum": 0,
+          "title": "Found",
+          "type": "integer",
+          "x-nestor": {
+            "field": "found",
+            "title_id": "config-memory-found",
+            "help_id": "config-memory-found-help",
+            "fallback_title_id": "config-field-found",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "memory",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Souvenirs trouvés par tour",
+            "help": null
+          }
+        },
+        "recent_episodes": {
+          "default": 3,
+          "maximum": 20,
+          "minimum": 0,
+          "title": "Recent Episodes",
+          "type": "integer",
+          "x-nestor": {
+            "field": "recent_episodes",
+            "title_id": "config-memory-recent_episodes",
+            "help_id": "config-memory-recent_episodes-help",
+            "fallback_title_id": "config-field-recent_episodes",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "memory",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Conversations récentes par tour",
+            "help": "Celles de la personne qui parle, résumées."
+          }
+        },
+        "found_episodes": {
+          "default": 4,
+          "maximum": 20,
+          "minimum": 0,
+          "title": "Found Episodes",
+          "type": "integer",
+          "x-nestor": {
+            "field": "found_episodes",
+            "title_id": "config-memory-found_episodes",
+            "help_id": "config-memory-found_episodes-help",
+            "fallback_title_id": "config-field-found_episodes",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "memory",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Anciennes conversations trouvées par tour",
+            "help": null
+          }
+        },
+        "consolidation": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Consolidation",
+          "x-nestor": {
+            "field": "consolidation",
+            "title_id": "config-memory-consolidation",
+            "help_id": "config-memory-consolidation-help",
+            "fallback_title_id": "config-field-consolidation",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "memory",
+            "reference": "models",
+            "model_type": "language",
+            "brands": null,
+            "title": "Modèle de résumé",
+            "help": "Résume chaque conversation terminée. Par défaut, le modèle en arrière-plan."
+          }
+        },
+        "embedder": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Embedder",
+          "x-nestor": {
+            "field": "embedder",
+            "title_id": "config-memory-embedder",
+            "help_id": "config-memory-embedder-help",
+            "fallback_title_id": "config-field-embedder",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "memory",
+            "reference": "models",
+            "model_type": "embedding",
+            "brands": null,
+            "title": "Modèle d'embedding",
+            "help": "Cherche les souvenirs par le sens. Sans lui, par mots-clés seulement."
+          }
+        },
+        "query_timeout_s": {
+          "default": 1.0,
+          "exclusiveMinimum": 0,
+          "title": "Query Timeout S",
+          "type": "number",
+          "x-nestor": {
+            "field": "query_timeout_s",
+            "title_id": "config-memory-query_timeout_s",
+            "help_id": "config-memory-query_timeout_s-help",
+            "fallback_title_id": "config-field-query_timeout_s",
+            "secret": false,
+            "secret_values": false,
+            "advanced": true,
+            "group": "memory",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Timeout de l'embedding (secondes)",
+            "help": "Au-delà, la recherche se fait par mots-clés seulement."
+          }
+        }
+      },
+      "title": "MemoryConfig",
+      "type": "object"
+    },
+    "initiative": {
+      "additionalProperties": false,
+      "properties": {
+        "quiet_hours": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Quiet Hours",
+          "x-nestor": {
+            "field": "quiet_hours",
+            "title_id": "config-initiative-quiet_hours",
+            "help_id": "config-initiative-quiet_hours-help",
+            "fallback_title_id": "config-field-quiet_hours",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "initiative",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Heures calmes",
+            "help": "Ex. 22:30-07:30. Rien à voix haute, sauf urgence."
+          }
+        },
+        "main_room": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Main Room",
+          "x-nestor": {
+            "field": "main_room",
+            "title_id": "config-initiative-main_room",
+            "help_id": "config-initiative-main_room-help",
+            "fallback_title_id": "config-field-main_room",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "initiative",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Pièce principale",
+            "help": "Où parler quand on sait seulement que quelqu'un est à la maison."
+          }
+        },
+        "follow_up_after_s": {
+          "default": 180.0,
+          "exclusiveMinimum": 0,
+          "title": "Follow Up After S",
+          "type": "number",
+          "x-nestor": {
+            "field": "follow_up_after_s",
+            "title_id": "config-initiative-follow_up_after_s",
+            "help_id": "config-initiative-follow_up_after_s-help",
+            "fallback_title_id": "config-field-follow_up_after_s",
+            "secret": false,
+            "secret_values": false,
+            "advanced": true,
+            "group": "initiative",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Relance écrite après (secondes)",
+            "help": null
+          }
+        }
+      },
+      "title": "InitiativeConfig",
+      "type": "object"
+    },
+    "admin": {
+      "additionalProperties": false,
+      "description": "The admin web interface; without this section, Nestor serves none. Who may sign in is not\nconfigured here: accounts live in the database (`nestor init`, `nestor accounts create-owner`).",
+      "properties": {
+        "host": {
+          "default": "127.0.0.1",
+          "title": "Host",
+          "type": "string",
+          "x-nestor": {
+            "field": "host",
+            "title_id": "config-admin-host",
+            "help_id": "config-admin-host-help",
+            "fallback_title_id": "config-field-host",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "admin",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Hôte",
+            "help": null
+          }
+        },
+        "port": {
+          "default": 8470,
+          "maximum": 65535,
+          "minimum": 0,
+          "title": "Port",
+          "type": "integer",
+          "x-nestor": {
+            "field": "port",
+            "title_id": "config-admin-port",
+            "help_id": "config-admin-port-help",
+            "fallback_title_id": "config-field-port",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "admin",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Port",
+            "help": null
+          }
+        },
+        "public_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Public Url",
+          "x-nestor": {
+            "field": "public_url",
+            "title_id": "config-admin-public_url",
+            "help_id": "config-admin-public_url-help",
+            "fallback_title_id": "config-field-public_url",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "admin",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "URL publique",
+            "help": "L'URL de l'admin, ex. https://nestor.example.org."
+          }
+        },
+        "relay_url": {
+          "default": "https://nestorhome.dev/redirect/oauth",
+          "title": "Relay Url",
+          "type": "string",
+          "x-nestor": {
+            "field": "relay_url",
+            "title_id": "config-admin-relay_url",
+            "help_id": "config-admin-relay_url-help",
+            "fallback_title_id": "config-field-relay_url",
+            "secret": false,
+            "secret_values": false,
+            "advanced": true,
+            "group": "admin",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Relais OAuth",
+            "help": null
+          }
+        }
+      },
+      "title": "AdminConfig",
+      "type": "object"
+    },
+    "updates": {
+      "additionalProperties": false,
+      "description": "Whether Nestor reads its release feed to tell the admin about newer releases. It installs one only\nwhen a person asks in the admin, and only where it runs from its own Python environment.",
+      "properties": {
+        "check": {
+          "default": true,
+          "title": "Check",
+          "type": "boolean",
+          "x-nestor": {
+            "field": "check",
+            "title_id": "config-updates-check",
+            "help_id": "config-updates-check-help",
+            "fallback_title_id": "config-field-check",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "updates",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Chercher les nouvelles versions",
+            "help": "Une fois par jour, sans rien installer."
+          }
+        },
+        "feed": {
+          "default": "https://github.com/nestor-home/nestor/releases/latest/download/releases.json",
+          "title": "Feed",
+          "type": "string",
+          "x-nestor": {
+            "field": "feed",
+            "title_id": "config-updates-feed",
+            "help_id": "config-updates-feed-help",
+            "fallback_title_id": "config-field-feed",
+            "secret": false,
+            "secret_values": false,
+            "advanced": true,
+            "group": "updates",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Flux des versions",
+            "help": null
+          }
+        }
+      },
+      "title": "UpdatesConfig",
+      "type": "object"
+    },
+    "data_dir": {
+      "type": "object",
+      "properties": {
+        "data_dir": {
+          "default": "data",
+          "format": "path",
+          "title": "Data Dir",
+          "type": "string",
+          "x-nestor": {
+            "field": "data_dir",
+            "title_id": "config-core-data_dir",
+            "help_id": "config-core-data_dir-help",
+            "fallback_title_id": "config-field-data_dir",
+            "secret": false,
+            "secret_values": false,
+            "advanced": true,
+            "group": "core",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "title": "Dossier des données",
+            "help": "Base de données, coffre et historique de la configuration."
+          }
+        }
+      }
+    }
+  },
+  "section_titles": {
+    "persona": "Personnage",
+    "household": "Foyer",
+    "agent": "Agent",
+    "watches": "Veilles",
+    "memory": "Mémoire",
+    "initiative": "Initiative",
+    "admin": "Administration",
+    "updates": "Mises à jour",
+    "data_dir": "Données"
+  },
+  "slots": {
+    "models": {
+      "family": "model",
+      "shape": "named",
+      "required": true,
+      "title": "Modèles",
+      "kinds": {
+        "openai-compatible": {
+          "additionalProperties": false,
+          "description": "Configuration of an OpenAI-compatible chat model.",
+          "properties": {
+            "kind": {
+              "const": "openai-compatible",
+              "type": "string",
+              "x-nestor": {
+                "field": "kind",
+                "title_id": "config-model-openai-compatible-kind",
+                "help_id": "config-model-openai-compatible-kind-help",
+                "fallback_title_id": "config-field-kind",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Type",
+                "help": null
+              }
+            },
+            "base_url": {
+              "title": "Base Url",
+              "type": "string",
+              "x-nestor": {
+                "field": "base_url",
+                "title_id": "config-model-openai-compatible-base_url",
+                "help_id": "config-model-openai-compatible-base_url-help",
+                "fallback_title_id": "config-field-base_url",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible",
+                "reference": null,
+                "model_type": null,
+                "brands": {
+                  "anthropic.com": "anthropic",
+                  "generativelanguage.googleapis.com": "gemini",
+                  "groq.com": "groq",
+                  "mistral.ai": "mistral",
+                  "openai.com": "openai",
+                  "openrouter.ai": "openrouter"
+                },
+                "title": "Base URL",
+                "help": null
+              }
+            },
+            "api_key": {
+              "anyOf": [
+                {
+                  "format": "password",
+                  "type": "string",
+                  "writeOnly": true
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Api Key",
+              "x-nestor": {
+                "field": "api_key",
+                "title_id": "config-model-openai-compatible-api_key",
+                "help_id": "config-model-openai-compatible-api_key-help",
+                "fallback_title_id": "config-field-api_key",
+                "secret": true,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Clé d'API",
+                "help": null
+              }
+            },
+            "model": {
+              "title": "Model",
+              "type": "string",
+              "x-nestor": {
+                "field": "model",
+                "title_id": "config-model-openai-compatible-model",
+                "help_id": "config-model-openai-compatible-model-help",
+                "fallback_title_id": "config-field-model",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Modèle",
+                "help": null
+              }
+            },
+            "extra_body": {
+              "additionalProperties": true,
+              "title": "Extra Body",
+              "type": "object",
+              "x-nestor": {
+                "field": "extra_body",
+                "title_id": "config-model-openai-compatible-extra_body",
+                "help_id": "config-model-openai-compatible-extra_body-help",
+                "fallback_title_id": "config-field-extra_body",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Champs JSON supplémentaires",
+                "help": "Ajoutés à chaque requête, ex. le routage d'OpenRouter."
+              }
+            },
+            "connect_timeout_s": {
+              "default": 5.0,
+              "exclusiveMinimum": 0,
+              "title": "Connect Timeout S",
+              "type": "number",
+              "x-nestor": {
+                "field": "connect_timeout_s",
+                "title_id": "config-model-openai-compatible-connect_timeout_s",
+                "help_id": "config-model-openai-compatible-connect_timeout_s-help",
+                "fallback_title_id": "config-field-connect_timeout_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Timeout de connexion (secondes)",
+                "help": null
+              }
+            },
+            "read_timeout_s": {
+              "default": 30.0,
+              "exclusiveMinimum": 0,
+              "title": "Read Timeout S",
+              "type": "number",
+              "x-nestor": {
+                "field": "read_timeout_s",
+                "title_id": "config-model-openai-compatible-read_timeout_s",
+                "help_id": "config-model-openai-compatible-read_timeout_s-help",
+                "fallback_title_id": "config-field-read_timeout_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Timeout de lecture (secondes)",
+                "help": null
+              }
+            },
+            "cache_control": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Cache Control",
+              "x-nestor": {
+                "field": "cache_control",
+                "title_id": "config-model-openai-compatible-cache_control",
+                "help_id": "config-model-openai-compatible-cache_control-help",
+                "fallback_title_id": "config-field-cache_control",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-openai-compatible",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Prompt caching",
+                "help": "Activé par défaut pour OpenRouter et Anthropic."
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "base_url",
+            "model"
+          ],
+          "title": "OpenAICompatibleSettings",
+          "type": "object"
+        },
+        "openai-compatible-embeddings": {
+          "additionalProperties": false,
+          "description": "An embedding model's profile.",
+          "properties": {
+            "kind": {
+              "const": "openai-compatible-embeddings",
+              "type": "string",
+              "x-nestor": {
+                "field": "kind",
+                "title_id": "config-model-openai-compatible-embeddings-kind",
+                "help_id": "config-model-openai-compatible-embeddings-kind-help",
+                "fallback_title_id": "config-field-kind",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-embeddings",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Type",
+                "help": null
+              }
+            },
+            "base_url": {
+              "title": "Base Url",
+              "type": "string",
+              "x-nestor": {
+                "field": "base_url",
+                "title_id": "config-model-openai-compatible-embeddings-base_url",
+                "help_id": "config-model-openai-compatible-embeddings-base_url-help",
+                "fallback_title_id": "config-field-base_url",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-embeddings",
+                "reference": null,
+                "model_type": null,
+                "brands": {
+                  "anthropic.com": "anthropic",
+                  "generativelanguage.googleapis.com": "gemini",
+                  "groq.com": "groq",
+                  "mistral.ai": "mistral",
+                  "openai.com": "openai",
+                  "openrouter.ai": "openrouter"
+                },
+                "title": "Base URL",
+                "help": null
+              }
+            },
+            "api_key": {
+              "anyOf": [
+                {
+                  "format": "password",
+                  "type": "string",
+                  "writeOnly": true
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Api Key",
+              "x-nestor": {
+                "field": "api_key",
+                "title_id": "config-model-openai-compatible-embeddings-api_key",
+                "help_id": "config-model-openai-compatible-embeddings-api_key-help",
+                "fallback_title_id": "config-field-api_key",
+                "secret": true,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-embeddings",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Clé d'API",
+                "help": null
+              }
+            },
+            "model": {
+              "title": "Model",
+              "type": "string",
+              "x-nestor": {
+                "field": "model",
+                "title_id": "config-model-openai-compatible-embeddings-model",
+                "help_id": "config-model-openai-compatible-embeddings-model-help",
+                "fallback_title_id": "config-field-model",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-embeddings",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Modèle",
+                "help": null
+              }
+            },
+            "dimensions": {
+              "exclusiveMinimum": 0,
+              "title": "Dimensions",
+              "type": "integer",
+              "x-nestor": {
+                "field": "dimensions",
+                "title_id": "config-model-openai-compatible-embeddings-dimensions",
+                "help_id": "config-model-openai-compatible-embeddings-dimensions-help",
+                "fallback_title_id": "config-field-dimensions",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-embeddings",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Dimensions",
+                "help": "Taille des vecteurs renvoyés par le modèle."
+              }
+            },
+            "send_dimensions": {
+              "default": false,
+              "title": "Send Dimensions",
+              "type": "boolean",
+              "x-nestor": {
+                "field": "send_dimensions",
+                "title_id": "config-model-openai-compatible-embeddings-send_dimensions",
+                "help_id": "config-model-openai-compatible-embeddings-send_dimensions-help",
+                "fallback_title_id": "config-field-send_dimensions",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-embeddings",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Demander ces dimensions",
+                "help": "Pour les modèles qui raccourcissent leurs vecteurs (Matryoshka)."
+              }
+            },
+            "query_prefix": {
+              "default": "",
+              "title": "Query Prefix",
+              "type": "string",
+              "x-nestor": {
+                "field": "query_prefix",
+                "title_id": "config-model-openai-compatible-embeddings-query_prefix",
+                "help_id": "config-model-openai-compatible-embeddings-query_prefix-help",
+                "fallback_title_id": "config-field-query_prefix",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-embeddings",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Préfixe des requêtes",
+                "help": "Ex. query: pour les modèles qui l'attendent."
+              }
+            },
+            "document_prefix": {
+              "default": "",
+              "title": "Document Prefix",
+              "type": "string",
+              "x-nestor": {
+                "field": "document_prefix",
+                "title_id": "config-model-openai-compatible-embeddings-document_prefix",
+                "help_id": "config-model-openai-compatible-embeddings-document_prefix-help",
+                "fallback_title_id": "config-field-document_prefix",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-embeddings",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Préfixe des documents",
+                "help": "Ex. passage: pour les modèles qui l'attendent."
+              }
+            },
+            "batch_size": {
+              "default": 64,
+              "exclusiveMinimum": 0,
+              "title": "Batch Size",
+              "type": "integer",
+              "x-nestor": {
+                "field": "batch_size",
+                "title_id": "config-model-openai-compatible-embeddings-batch_size",
+                "help_id": "config-model-openai-compatible-embeddings-batch_size-help",
+                "fallback_title_id": "config-field-batch_size",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-openai-compatible-embeddings",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Textes par requête",
+                "help": null
+              }
+            },
+            "extra_body": {
+              "additionalProperties": true,
+              "title": "Extra Body",
+              "type": "object",
+              "x-nestor": {
+                "field": "extra_body",
+                "title_id": "config-model-openai-compatible-embeddings-extra_body",
+                "help_id": "config-model-openai-compatible-embeddings-extra_body-help",
+                "fallback_title_id": "config-field-extra_body",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-openai-compatible-embeddings",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Champs JSON supplémentaires",
+                "help": null
+              }
+            },
+            "connect_timeout_s": {
+              "default": 5.0,
+              "exclusiveMinimum": 0,
+              "title": "Connect Timeout S",
+              "type": "number",
+              "x-nestor": {
+                "field": "connect_timeout_s",
+                "title_id": "config-model-openai-compatible-embeddings-connect_timeout_s",
+                "help_id": "config-model-openai-compatible-embeddings-connect_timeout_s-help",
+                "fallback_title_id": "config-field-connect_timeout_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-openai-compatible-embeddings",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Timeout de connexion (secondes)",
+                "help": null
+              }
+            },
+            "read_timeout_s": {
+              "default": 30.0,
+              "exclusiveMinimum": 0,
+              "title": "Read Timeout S",
+              "type": "number",
+              "x-nestor": {
+                "field": "read_timeout_s",
+                "title_id": "config-model-openai-compatible-embeddings-read_timeout_s",
+                "help_id": "config-model-openai-compatible-embeddings-read_timeout_s-help",
+                "fallback_title_id": "config-field-read_timeout_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-openai-compatible-embeddings",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Timeout de lecture (secondes)",
+                "help": null
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "base_url",
+            "model",
+            "dimensions"
+          ],
+          "title": "OpenAICompatibleEmbedderSettings",
+          "type": "object"
+        },
+        "sherpa-onnx-voice": {
+          "additionalProperties": false,
+          "description": "A voice model run by sherpa-onnx.",
+          "properties": {
+            "kind": {
+              "const": "sherpa-onnx-voice",
+              "type": "string",
+              "x-nestor": {
+                "field": "kind",
+                "title_id": "config-model-sherpa-onnx-voice-kind",
+                "help_id": "config-model-sherpa-onnx-voice-kind-help",
+                "fallback_title_id": "config-field-kind",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-sherpa-onnx-voice",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Type",
+                "help": null
+              }
+            },
+            "model": {
+              "examples": [
+                "titanet-small",
+                "3dspeaker-campplus-zh-en",
+                "3dspeaker-eres2net"
+              ],
+              "title": "Model",
+              "type": "string",
+              "x-nestor": {
+                "field": "model",
+                "title_id": "config-model-sherpa-onnx-voice-model",
+                "help_id": "config-model-sherpa-onnx-voice-model-help",
+                "fallback_title_id": "config-field-model",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-sherpa-onnx-voice",
+                "reference": null,
+                "model_type": null,
+                "brands": {
+                  "3dspeaker-campplus-zh-en": "modelscope",
+                  "3dspeaker-eres2net": "modelscope",
+                  "titanet-small": "nvidia"
+                },
+                "title": "Modèle de voix",
+                "help": "titanet-small, 3dspeaker-campplus-zh-en ou 3dspeaker-eres2net (téléchargé une fois), ou le chemin d'un fichier .onnx."
+              }
+            },
+            "threads": {
+              "default": 1,
+              "exclusiveMinimum": 0,
+              "maximum": 16,
+              "title": "Threads",
+              "type": "integer",
+              "x-nestor": {
+                "field": "threads",
+                "title_id": "config-model-sherpa-onnx-voice-threads",
+                "help_id": "config-model-sherpa-onnx-voice-threads-help",
+                "fallback_title_id": "config-field-threads",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-sherpa-onnx-voice",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Threads CPU",
+                "help": "Un seul suffit."
+              }
+            },
+            "threshold": {
+              "anyOf": [
+                {
+                  "exclusiveMaximum": 1,
+                  "exclusiveMinimum": 0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Threshold",
+              "x-nestor": {
+                "field": "threshold",
+                "title_id": "config-model-sherpa-onnx-voice-threshold",
+                "help_id": "config-model-sherpa-onnx-voice-threshold-help",
+                "fallback_title_id": "config-field-threshold",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-sherpa-onnx-voice",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Seuil de reconnaissance",
+                "help": "Par défaut, celui du catalogue. Obligatoire pour un fichier .onnx à vous."
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "model"
+          ],
+          "title": "SherpaOnnxVoiceSettings",
+          "type": "object"
+        }
+      },
+      "model_types": {
+        "openai-compatible": "language",
+        "openai-compatible-embeddings": "embedding",
+        "sherpa-onnx-voice": "voice"
+      }
+    },
+    "channels": {
+      "family": "channel",
+      "shape": "list",
+      "required": true,
+      "title": "Canaux",
+      "kinds": {
+        "satellites": {
+          "$defs": {
+            "ElevenLabsSettings": {
+              "additionalProperties": false,
+              "properties": {
+                "provider": {
+                  "const": "elevenlabs",
+                  "default": "elevenlabs",
+                  "title": "Provider",
+                  "type": "string",
+                  "x-nestor": {
+                    "field": "provider",
+                    "title_id": "config-channel-satellites-elevenlabssettings-provider",
+                    "help_id": "config-channel-satellites-elevenlabssettings-provider-help",
+                    "fallback_title_id": "config-field-provider",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "channel-satellites-elevenlabssettings",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "title": "Fournisseur",
+                    "help": null
+                  }
+                },
+                "api_key": {
+                  "format": "password",
+                  "title": "Api Key",
+                  "type": "string",
+                  "writeOnly": true,
+                  "x-nestor": {
+                    "field": "api_key",
+                    "title_id": "config-channel-satellites-elevenlabssettings-api_key",
+                    "help_id": "config-channel-satellites-elevenlabssettings-api_key-help",
+                    "fallback_title_id": "config-field-api_key",
+                    "secret": true,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "channel-satellites-elevenlabssettings",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "title": "Clé d'API",
+                    "help": null
+                  }
+                },
+                "voice_id": {
+                  "title": "Voice Id",
+                  "type": "string",
+                  "x-nestor": {
+                    "field": "voice_id",
+                    "title_id": "config-channel-satellites-elevenlabssettings-voice_id",
+                    "help_id": "config-channel-satellites-elevenlabssettings-voice_id-help",
+                    "fallback_title_id": "config-field-voice_id",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "channel-satellites-elevenlabssettings",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "title": "ID de la voix",
+                    "help": null
+                  }
+                },
+                "language": {
+                  "default": "en",
+                  "title": "Language",
+                  "type": "string",
+                  "x-nestor": {
+                    "field": "language",
+                    "title_id": "config-channel-satellites-elevenlabssettings-language",
+                    "help_id": "config-channel-satellites-elevenlabssettings-language-help",
+                    "fallback_title_id": "config-field-language",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "channel-satellites-elevenlabssettings",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "title": "Langue",
+                    "help": "Pour la transcription, ex. fr."
+                  }
+                },
+                "stt_model": {
+                  "default": "scribe_v2_realtime",
+                  "title": "Stt Model",
+                  "type": "string",
+                  "x-nestor": {
+                    "field": "stt_model",
+                    "title_id": "config-channel-satellites-elevenlabssettings-stt_model",
+                    "help_id": "config-channel-satellites-elevenlabssettings-stt_model-help",
+                    "fallback_title_id": "config-field-stt_model",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "channel-satellites-elevenlabssettings",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "title": "Modèle de transcription",
+                    "help": null
+                  }
+                },
+                "tts_model": {
+                  "default": "eleven_v4_turbo",
+                  "title": "Tts Model",
+                  "type": "string",
+                  "x-nestor": {
+                    "field": "tts_model",
+                    "title_id": "config-channel-satellites-elevenlabssettings-tts_model",
+                    "help_id": "config-channel-satellites-elevenlabssettings-tts_model-help",
+                    "fallback_title_id": "config-field-tts_model",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "channel-satellites-elevenlabssettings",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "title": "Modèle de synthèse vocale",
+                    "help": null
+                  }
+                }
+              },
+              "required": [
+                "api_key",
+                "voice_id"
+              ],
+              "title": "ElevenLabsSettings",
+              "type": "object"
+            },
+            "VoiceSettings": {
+              "additionalProperties": false,
+              "description": "How satellites allowed audio are heard and answered aloud (needs the `voice` extra).",
+              "properties": {
+                "speech": {
+                  "$ref": "#/$defs/ElevenLabsSettings",
+                  "x-nestor": {
+                    "field": "speech",
+                    "title_id": "config-channel-satellites-voicesettings-speech",
+                    "help_id": "config-channel-satellites-voicesettings-speech-help",
+                    "fallback_title_id": "config-field-speech",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "channel-satellites-voicesettings",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "title": "Services vocaux",
+                    "help": null
+                  }
+                },
+                "style": {
+                  "default": "",
+                  "title": "Style",
+                  "type": "string",
+                  "x-nestor": {
+                    "field": "style",
+                    "title_id": "config-channel-satellites-voicesettings-style",
+                    "help_id": "config-channel-satellites-voicesettings-style-help",
+                    "fallback_title_id": "config-field-style",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "channel-satellites-voicesettings",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "title": "Style d'écriture",
+                    "help": null
+                  }
+                },
+                "stt_fallback": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Stt Fallback",
+                  "x-nestor": {
+                    "field": "stt_fallback",
+                    "title_id": "config-channel-satellites-voicesettings-stt_fallback",
+                    "help_id": "config-channel-satellites-voicesettings-stt_fallback-help",
+                    "fallback_title_id": "config-field-stt_fallback",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "channel-satellites-voicesettings",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "title": "Phrase dite si la transcription échoue",
+                    "help": null
+                  }
+                },
+                "fallback_clips": {
+                  "anyOf": [
+                    {
+                      "format": "path",
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Fallback Clips",
+                  "x-nestor": {
+                    "field": "fallback_clips",
+                    "title_id": "config-channel-satellites-voicesettings-fallback_clips",
+                    "help_id": "config-channel-satellites-voicesettings-fallback_clips-help",
+                    "fallback_title_id": "config-field-fallback_clips",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "channel-satellites-voicesettings",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "title": "Dossier des clips de secours",
+                    "help": "stt.wav et tts.wav, joués si la transcription ou la synthèse tombe en panne."
+                  }
+                },
+                "quiet_s": {
+                  "default": 0.5,
+                  "minimum": 0,
+                  "title": "Quiet S",
+                  "type": "number",
+                  "x-nestor": {
+                    "field": "quiet_s",
+                    "title_id": "config-channel-satellites-voicesettings-quiet_s",
+                    "help_id": "config-channel-satellites-voicesettings-quiet_s-help",
+                    "fallback_title_id": "config-field-quiet_s",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "channel-satellites-voicesettings",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "title": "Silence avant de prendre la parole (secondes)",
+                    "help": null
+                  }
+                }
+              },
+              "required": [
+                "speech"
+              ],
+              "title": "VoiceSettings",
+              "type": "object"
+            }
+          },
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "satellites",
+              "type": "string",
+              "x-nestor": {
+                "field": "kind",
+                "title_id": "config-channel-satellites-kind",
+                "help_id": "config-channel-satellites-kind-help",
+                "fallback_title_id": "config-field-kind",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-satellites",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Type",
+                "help": null
+              }
+            },
+            "name": {
+              "type": "string",
+              "description": "the instance's name; the kind by default",
+              "x-nestor": {
+                "field": "name",
+                "title_id": "config-channel-satellites-name",
+                "help_id": "config-channel-satellites-name-help",
+                "fallback_title_id": "config-field-name",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-satellites",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Nom",
+                "help": null
+              }
+            },
+            "conversation_ends_after_s": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Conversation Ends After S",
+              "x-nestor": {
+                "field": "conversation_ends_after_s",
+                "title_id": "config-channel-satellites-conversation_ends_after_s",
+                "help_id": "config-channel-satellites-conversation_ends_after_s-help",
+                "fallback_title_id": "config-field-conversation_ends_after_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "channel-satellites",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Nouvelle conversation après (secondes)",
+                "help": "Passé ce silence, l'assistant ne relit plus les échanges précédents. Par défaut, 5 min à l'oral, 4 h à l'écrit."
+              }
+            },
+            "host": {
+              "default": "localhost",
+              "title": "Host",
+              "type": "string",
+              "x-nestor": {
+                "field": "host",
+                "title_id": "config-channel-satellites-host",
+                "help_id": "config-channel-satellites-host-help",
+                "fallback_title_id": "config-field-host",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-satellites",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Hôte",
+                "help": null
+              }
+            },
+            "port": {
+              "default": 8471,
+              "maximum": 65535,
+              "minimum": 0,
+              "title": "Port",
+              "type": "integer",
+              "x-nestor": {
+                "field": "port",
+                "title_id": "config-channel-satellites-port",
+                "help_id": "config-channel-satellites-port-help",
+                "fallback_title_id": "config-field-port",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-satellites",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Port",
+                "help": null
+              }
+            },
+            "public_url": {
+              "anyOf": [
+                {
+                  "pattern": "^https?://",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Public Url",
+              "x-nestor": {
+                "field": "public_url",
+                "title_id": "config-channel-satellites-public_url",
+                "help_id": "config-channel-satellites-public_url-help",
+                "fallback_title_id": "config-field-public_url",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-satellites",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "URL publique",
+                "help": "Celle que les satellites utilisent, ex. http://nestor.local:8471."
+              }
+            },
+            "voice": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/VoiceSettings"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "x-nestor": {
+                "field": "voice",
+                "title_id": "config-channel-satellites-voice",
+                "help_id": "config-channel-satellites-voice-help",
+                "fallback_title_id": "config-field-voice",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-satellites",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Voix",
+                "help": "Sans elle, les satellites fonctionnent par écrit seulement. Nécessite l'extra voice."
+              }
+            },
+            "send_timeout_s": {
+              "default": 30.0,
+              "exclusiveMinimum": 0,
+              "title": "Send Timeout S",
+              "type": "number",
+              "x-nestor": {
+                "field": "send_timeout_s",
+                "title_id": "config-channel-satellites-send_timeout_s",
+                "help_id": "config-channel-satellites-send_timeout_s-help",
+                "fallback_title_id": "config-field-send_timeout_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-satellites",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Timeout d'envoi (secondes)",
+                "help": null
+              }
+            }
+          },
+          "title": "SatellitesSettings",
+          "type": "object",
+          "required": [
+            "kind"
+          ]
+        },
+        "telegram": {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "telegram",
+              "type": "string",
+              "x-nestor": {
+                "field": "kind",
+                "title_id": "config-channel-telegram-kind",
+                "help_id": "config-channel-telegram-kind-help",
+                "fallback_title_id": "config-field-kind",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-telegram",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Type",
+                "help": null
+              }
+            },
+            "name": {
+              "type": "string",
+              "description": "the instance's name; the kind by default",
+              "x-nestor": {
+                "field": "name",
+                "title_id": "config-channel-telegram-name",
+                "help_id": "config-channel-telegram-name-help",
+                "fallback_title_id": "config-field-name",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-telegram",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Nom",
+                "help": null
+              }
+            },
+            "conversation_ends_after_s": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Conversation Ends After S",
+              "x-nestor": {
+                "field": "conversation_ends_after_s",
+                "title_id": "config-channel-telegram-conversation_ends_after_s",
+                "help_id": "config-channel-telegram-conversation_ends_after_s-help",
+                "fallback_title_id": "config-field-conversation_ends_after_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "channel-telegram",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Nouvelle conversation après (secondes)",
+                "help": "Passé ce silence, l'assistant ne relit plus les messages précédents. 4 h par défaut."
+              }
+            },
+            "token": {
+              "format": "password",
+              "title": "Token",
+              "type": "string",
+              "writeOnly": true,
+              "x-nestor": {
+                "field": "token",
+                "title_id": "config-channel-telegram-token",
+                "help_id": "config-channel-telegram-token-help",
+                "fallback_title_id": "config-field-token",
+                "secret": true,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-telegram",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Token",
+                "help": null
+              }
+            },
+            "api_base": {
+              "default": "https://api.telegram.org",
+              "title": "Api Base",
+              "type": "string",
+              "x-nestor": {
+                "field": "api_base",
+                "title_id": "config-channel-telegram-api_base",
+                "help_id": "config-channel-telegram-api_base-help",
+                "fallback_title_id": "config-field-api_base",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-telegram",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "URL de l'API",
+                "help": null
+              }
+            },
+            "poll_timeout_s": {
+              "default": 30,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Poll Timeout S",
+              "type": "integer",
+              "x-nestor": {
+                "field": "poll_timeout_s",
+                "title_id": "config-channel-telegram-poll_timeout_s",
+                "help_id": "config-channel-telegram-poll_timeout_s-help",
+                "fallback_title_id": "config-field-poll_timeout_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-telegram",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Timeout du long polling (secondes)",
+                "help": null
+              }
+            },
+            "request_timeout_s": {
+              "default": 10.0,
+              "exclusiveMinimum": 0,
+              "title": "Request Timeout S",
+              "type": "number",
+              "x-nestor": {
+                "field": "request_timeout_s",
+                "title_id": "config-channel-telegram-request_timeout_s",
+                "help_id": "config-channel-telegram-request_timeout_s-help",
+                "fallback_title_id": "config-field-request_timeout_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-telegram",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Timeout des requêtes (secondes)",
+                "help": null
+              }
+            },
+            "apology": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Apology",
+              "x-nestor": {
+                "field": "apology",
+                "title_id": "config-channel-telegram-apology",
+                "help_id": "config-channel-telegram-apology-help",
+                "fallback_title_id": "config-field-apology",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-telegram",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Message en cas d'erreur",
+                "help": null
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "token"
+          ],
+          "title": "TelegramSettings",
+          "type": "object"
+        }
+      },
+      "model_types": {}
+    },
+    "executors": {
+      "family": "executor",
+      "shape": "list",
+      "required": false,
+      "title": "Exécutants",
+      "kinds": {
+        "hermes": {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "hermes",
+              "type": "string",
+              "x-nestor": {
+                "field": "kind",
+                "title_id": "config-executor-hermes-kind",
+                "help_id": "config-executor-hermes-kind-help",
+                "fallback_title_id": "config-field-kind",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "executor-hermes",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Type",
+                "help": null
+              }
+            },
+            "name": {
+              "type": "string",
+              "description": "the instance's name; the kind by default",
+              "x-nestor": {
+                "field": "name",
+                "title_id": "config-executor-hermes-name",
+                "help_id": "config-executor-hermes-name-help",
+                "fallback_title_id": "config-field-name",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "executor-hermes",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Nom",
+                "help": null
+              }
+            },
+            "base_url": {
+              "title": "Base Url",
+              "type": "string",
+              "x-nestor": {
+                "field": "base_url",
+                "title_id": "config-executor-hermes-base_url",
+                "help_id": "config-executor-hermes-base_url-help",
+                "fallback_title_id": "config-field-base_url",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "executor-hermes",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Base URL",
+                "help": null
+              }
+            },
+            "api_key": {
+              "format": "password",
+              "title": "Api Key",
+              "type": "string",
+              "writeOnly": true,
+              "x-nestor": {
+                "field": "api_key",
+                "title_id": "config-executor-hermes-api_key",
+                "help_id": "config-executor-hermes-api_key-help",
+                "fallback_title_id": "config-field-api_key",
+                "secret": true,
+                "secret_values": false,
+                "advanced": false,
+                "group": "executor-hermes",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Clé d'API",
+                "help": null
+              }
+            },
+            "model": {
+              "title": "Model",
+              "type": "string",
+              "x-nestor": {
+                "field": "model",
+                "title_id": "config-executor-hermes-model",
+                "help_id": "config-executor-hermes-model-help",
+                "fallback_title_id": "config-field-model",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "executor-hermes",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Modèle",
+                "help": null
+              }
+            },
+            "description": {
+              "title": "Description",
+              "type": "string",
+              "x-nestor": {
+                "field": "description",
+                "title_id": "config-executor-hermes-description",
+                "help_id": "config-executor-hermes-description-help",
+                "fallback_title_id": "config-field-description",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "executor-hermes",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Ce qu'il sait faire",
+                "help": "L'assistant s'en sert pour décider quoi lui confier."
+              }
+            },
+            "instructions": {
+              "default": "You carry out a task handed over by a home voice assistant. Use your tools and check the result, then write a short, factual report in the language of the task: what was done or found, and what could not be. No Markdown: the assistant will say it aloud. Never claim an action you did not perform.",
+              "title": "Instructions",
+              "type": "string",
+              "x-nestor": {
+                "field": "instructions",
+                "title_id": "config-executor-hermes-instructions",
+                "help_id": "config-executor-hermes-instructions-help",
+                "fallback_title_id": "config-field-instructions",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "executor-hermes",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Consignes",
+                "help": null
+              }
+            },
+            "timeout_s": {
+              "default": 15.0,
+              "exclusiveMinimum": 0,
+              "title": "Timeout S",
+              "type": "number",
+              "x-nestor": {
+                "field": "timeout_s",
+                "title_id": "config-executor-hermes-timeout_s",
+                "help_id": "config-executor-hermes-timeout_s-help",
+                "fallback_title_id": "config-field-timeout_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "executor-hermes",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Timeout (secondes)",
+                "help": null
+              }
+            },
+            "stop_timeout_s": {
+              "default": 10.0,
+              "exclusiveMinimum": 0,
+              "title": "Stop Timeout S",
+              "type": "number",
+              "x-nestor": {
+                "field": "stop_timeout_s",
+                "title_id": "config-executor-hermes-stop_timeout_s",
+                "help_id": "config-executor-hermes-stop_timeout_s-help",
+                "fallback_title_id": "config-field-stop_timeout_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "executor-hermes",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Timeout d'arrêt (secondes)",
+                "help": null
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "base_url",
+            "api_key",
+            "model",
+            "description"
+          ],
+          "title": "HermesSettings",
+          "type": "object"
+        }
+      },
+      "model_types": {}
+    },
+    "tools": {
+      "family": "tools",
+      "shape": "list",
+      "required": false,
+      "title": "Outils",
+      "kinds": {
+        "mcp": {
+          "$defs": {
+            "McpTransport": {
+              "enum": [
+                "streamable-http",
+                "sse"
+              ],
+              "title": "McpTransport",
+              "type": "string"
+            },
+            "Negotiation": {
+              "enum": [
+                "auto",
+                "legacy"
+              ],
+              "type": "string"
+            },
+            "Risk": {
+              "enum": [
+                "read",
+                "write",
+                "sensitive"
+              ],
+              "title": "Risk",
+              "type": "string"
+            },
+            "SensitiveCalls": {
+              "additionalProperties": false,
+              "description": "Calls of `tool` confirmed by the person first when one of these values appears in an argument: Home\nAssistant's `HassTurnOn` and `HassTurnOff` drive lights and locks alike.",
+              "properties": {
+                "tool": {
+                  "title": "Tool",
+                  "type": "string",
+                  "x-nestor": {
+                    "field": "tool",
+                    "title_id": "config-tools-mcp-sensitivecalls-tool",
+                    "help_id": "config-tools-mcp-sensitivecalls-tool-help",
+                    "fallback_title_id": "config-field-tool",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "tools-mcp-sensitivecalls",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "title": "Outil",
+                    "help": "Nom sur le serveur, ex. intent__HassTurnOff."
+                  }
+                },
+                "arguments": {
+                  "additionalProperties": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "title": "Arguments",
+                  "type": "object",
+                  "x-nestor": {
+                    "field": "arguments",
+                    "title_id": "config-tools-mcp-sensitivecalls-arguments",
+                    "help_id": "config-tools-mcp-sensitivecalls-arguments-help",
+                    "fallback_title_id": "config-field-arguments",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "tools-mcp-sensitivecalls",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "title": "Valeurs sensibles",
+                    "help": "Par argument, ex. device_class : garage, gate ; domain : lock."
+                  }
+                }
+              },
+              "required": [
+                "tool",
+                "arguments"
+              ],
+              "title": "SensitiveCalls",
+              "type": "object"
+            }
+          },
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "mcp",
+              "type": "string",
+              "x-nestor": {
+                "field": "kind",
+                "title_id": "config-tools-mcp-kind",
+                "help_id": "config-tools-mcp-kind-help",
+                "fallback_title_id": "config-field-kind",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-mcp",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Type",
+                "help": null
+              }
+            },
+            "name": {
+              "type": "string",
+              "description": "the instance's name; the kind by default",
+              "x-nestor": {
+                "field": "name",
+                "title_id": "config-tools-mcp-name",
+                "help_id": "config-tools-mcp-name-help",
+                "fallback_title_id": "config-field-name",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-mcp",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Nom",
+                "help": null
+              }
+            },
+            "url": {
+              "title": "Url",
+              "type": "string",
+              "x-nestor": {
+                "field": "url",
+                "title_id": "config-tools-mcp-url",
+                "help_id": "config-tools-mcp-url-help",
+                "fallback_title_id": "config-field-url",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-mcp",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "URL",
+                "help": null
+              }
+            },
+            "transport": {
+              "$ref": "#/$defs/McpTransport",
+              "default": "streamable-http",
+              "x-nestor": {
+                "field": "transport",
+                "title_id": "config-tools-mcp-transport",
+                "help_id": "config-tools-mcp-transport-help",
+                "fallback_title_id": "config-field-transport",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-mcp",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Transport",
+                "help": null
+              }
+            },
+            "token": {
+              "anyOf": [
+                {
+                  "format": "password",
+                  "type": "string",
+                  "writeOnly": true
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Token",
+              "x-nestor": {
+                "field": "token",
+                "title_id": "config-tools-mcp-token",
+                "help_id": "config-tools-mcp-token-help",
+                "fallback_title_id": "config-field-token",
+                "secret": true,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-mcp",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Token",
+                "help": "Envoyé en Authorization: Bearer."
+              }
+            },
+            "headers": {
+              "additionalProperties": {
+                "format": "password",
+                "type": "string",
+                "writeOnly": true
+              },
+              "title": "Headers",
+              "type": "object",
+              "x-nestor": {
+                "field": "headers",
+                "title_id": "config-tools-mcp-headers",
+                "help_id": "config-tools-mcp-headers-help",
+                "fallback_title_id": "config-field-headers",
+                "secret": false,
+                "secret_values": true,
+                "advanced": false,
+                "group": "tools-mcp",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "En-têtes HTTP",
+                "help": "Valeurs stockées comme secrets."
+              }
+            },
+            "timeout_s": {
+              "default": 10.0,
+              "exclusiveMinimum": 0,
+              "title": "Timeout S",
+              "type": "number",
+              "x-nestor": {
+                "field": "timeout_s",
+                "title_id": "config-tools-mcp-timeout_s",
+                "help_id": "config-tools-mcp-timeout_s-help",
+                "fallback_title_id": "config-field-timeout_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-mcp",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Timeout (secondes)",
+                "help": null
+              }
+            },
+            "include": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Include",
+              "x-nestor": {
+                "field": "include",
+                "title_id": "config-tools-mcp-include",
+                "help_id": "config-tools-mcp-include-help",
+                "fallback_title_id": "config-field-include",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-mcp",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Outils proposés",
+                "help": "Noms des outils du serveur. Vide : tous."
+              }
+            },
+            "exclude": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Exclude",
+              "type": "array",
+              "x-nestor": {
+                "field": "exclude",
+                "title_id": "config-tools-mcp-exclude",
+                "help_id": "config-tools-mcp-exclude-help",
+                "fallback_title_id": "config-field-exclude",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-mcp",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Outils exclus",
+                "help": null
+              }
+            },
+            "risks": {
+              "additionalProperties": {
+                "$ref": "#/$defs/Risk"
+              },
+              "title": "Risks",
+              "type": "object",
+              "x-nestor": {
+                "field": "risks",
+                "title_id": "config-tools-mcp-risks",
+                "help_id": "config-tools-mcp-risks-help",
+                "fallback_title_id": "config-field-risks",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-mcp",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Risques des outils",
+                "help": "Par nom d'outil ; remplace ce que le serveur déclare."
+              }
+            },
+            "sensitive": {
+              "items": {
+                "$ref": "#/$defs/SensitiveCalls"
+              },
+              "title": "Sensitive",
+              "type": "array",
+              "x-nestor": {
+                "field": "sensitive",
+                "title_id": "config-tools-mcp-sensitive",
+                "help_id": "config-tools-mcp-sensitive-help",
+                "fallback_title_id": "config-field-sensitive",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-mcp",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Appels à confirmer",
+                "help": "Selon ce sur quoi ils agissent, ex. serrures, alarme, garage."
+              }
+            },
+            "retry_after_s": {
+              "default": 30.0,
+              "exclusiveMinimum": 0,
+              "title": "Retry After S",
+              "type": "number",
+              "x-nestor": {
+                "field": "retry_after_s",
+                "title_id": "config-tools-mcp-retry_after_s",
+                "help_id": "config-tools-mcp-retry_after_s-help",
+                "fallback_title_id": "config-field-retry_after_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-mcp",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Attente avant reconnexion (secondes)",
+                "help": null
+              }
+            },
+            "negotiation": {
+              "$ref": "#/$defs/Negotiation",
+              "default": "auto",
+              "x-nestor": {
+                "field": "negotiation",
+                "title_id": "config-tools-mcp-negotiation",
+                "help_id": "config-tools-mcp-negotiation-help",
+                "fallback_title_id": "config-field-negotiation",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-mcp",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Négociation du protocole",
+                "help": "legacy saute la détection de la version 2026-07-28 du protocole."
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "url"
+          ],
+          "title": "McpSettings",
+          "type": "object"
+        }
+      },
+      "model_types": {}
+    },
+    "inbound": {
+      "family": "inbound",
+      "shape": "list",
+      "required": false,
+      "title": "Sources entrantes",
+      "kinds": {},
+      "model_types": {}
+    },
+    "presence": {
+      "family": "presence",
+      "shape": "one",
+      "required": false,
+      "title": "Présence",
+      "kinds": {
+        "home-assistant": {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "home-assistant",
+              "type": "string",
+              "x-nestor": {
+                "field": "kind",
+                "title_id": "config-presence-home-assistant-kind",
+                "help_id": "config-presence-home-assistant-kind-help",
+                "fallback_title_id": "config-field-kind",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "presence-home-assistant",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Type",
+                "help": null
+              }
+            },
+            "name": {
+              "type": "string",
+              "description": "the instance's name; the kind by default",
+              "x-nestor": {
+                "field": "name",
+                "title_id": "config-presence-home-assistant-name",
+                "help_id": "config-presence-home-assistant-name-help",
+                "fallback_title_id": "config-field-name",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "presence-home-assistant",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Nom",
+                "help": null
+              }
+            },
+            "url": {
+              "title": "Url",
+              "type": "string",
+              "x-nestor": {
+                "field": "url",
+                "title_id": "config-presence-home-assistant-url",
+                "help_id": "config-presence-home-assistant-url-help",
+                "fallback_title_id": "config-field-url",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "presence-home-assistant",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "URL",
+                "help": null
+              }
+            },
+            "token": {
+              "format": "password",
+              "title": "Token",
+              "type": "string",
+              "writeOnly": true,
+              "x-nestor": {
+                "field": "token",
+                "title_id": "config-presence-home-assistant-token",
+                "help_id": "config-presence-home-assistant-token-help",
+                "fallback_title_id": "config-field-token",
+                "secret": true,
+                "secret_values": false,
+                "advanced": false,
+                "group": "presence-home-assistant",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Token",
+                "help": null
+              }
+            },
+            "people": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "title": "People",
+              "type": "object",
+              "x-nestor": {
+                "field": "people",
+                "title_id": "config-presence-home-assistant-people",
+                "help_id": "config-presence-home-assistant-people-help",
+                "fallback_title_id": "config-field-people",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "presence-home-assistant",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Entités personne",
+                "help": "Chaque personne du foyer et son entité, ex. alice: person.alice."
+              }
+            },
+            "rooms": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "title": "Rooms",
+              "type": "object",
+              "x-nestor": {
+                "field": "rooms",
+                "title_id": "config-presence-home-assistant-rooms",
+                "help_id": "config-presence-home-assistant-rooms-help",
+                "fallback_title_id": "config-field-rooms",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "presence-home-assistant",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Suivi des pièces",
+                "help": "Le capteur qui donne la pièce de chaque personne, ex. Bermuda ou ESPresense."
+              }
+            },
+            "occupancy_sensors": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Occupancy Sensors",
+              "x-nestor": {
+                "field": "occupancy_sensors",
+                "title_id": "config-presence-home-assistant-occupancy_sensors",
+                "help_id": "config-presence-home-assistant-occupancy_sensors-help",
+                "fallback_title_id": "config-field-occupancy_sensors",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "presence-home-assistant",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Capteurs de présence",
+                "help": "Vide : tous ceux rattachés à une pièce (présence, occupation, mouvement)."
+              }
+            },
+            "sync_timeout_s": {
+              "default": 30.0,
+              "exclusiveMinimum": 0,
+              "title": "Sync Timeout S",
+              "type": "number",
+              "x-nestor": {
+                "field": "sync_timeout_s",
+                "title_id": "config-presence-home-assistant-sync_timeout_s",
+                "help_id": "config-presence-home-assistant-sync_timeout_s-help",
+                "fallback_title_id": "config-field-sync_timeout_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "presence-home-assistant",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Timeout de synchronisation (secondes)",
+                "help": null
+              }
+            },
+            "reconnect_min_s": {
+              "default": 1.0,
+              "exclusiveMinimum": 0,
+              "title": "Reconnect Min S",
+              "type": "number",
+              "x-nestor": {
+                "field": "reconnect_min_s",
+                "title_id": "config-presence-home-assistant-reconnect_min_s",
+                "help_id": "config-presence-home-assistant-reconnect_min_s-help",
+                "fallback_title_id": "config-field-reconnect_min_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "presence-home-assistant",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Attente minimale avant reconnexion (secondes)",
+                "help": null
+              }
+            },
+            "reconnect_max_s": {
+              "default": 60.0,
+              "exclusiveMinimum": 0,
+              "title": "Reconnect Max S",
+              "type": "number",
+              "x-nestor": {
+                "field": "reconnect_max_s",
+                "title_id": "config-presence-home-assistant-reconnect_max_s",
+                "help_id": "config-presence-home-assistant-reconnect_max_s-help",
+                "fallback_title_id": "config-field-reconnect_max_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "presence-home-assistant",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Attente maximale avant reconnexion (secondes)",
+                "help": null
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "url",
+            "token"
+          ],
+          "title": "HomeAssistantSettings",
+          "type": "object"
+        }
+      },
+      "model_types": {}
+    },
+    "connectors": {
+      "family": "connector",
+      "shape": "list",
+      "required": false,
+      "title": "Connecteurs",
+      "kinds": {
+        "google": {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "google",
+              "type": "string",
+              "x-nestor": {
+                "field": "kind",
+                "title_id": "config-connector-google-kind",
+                "help_id": "config-connector-google-kind-help",
+                "fallback_title_id": "config-field-kind",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "connector-google",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Type",
+                "help": null
+              }
+            },
+            "name": {
+              "type": "string",
+              "description": "the instance's name; the kind by default",
+              "x-nestor": {
+                "field": "name",
+                "title_id": "config-connector-google-name",
+                "help_id": "config-connector-google-name-help",
+                "fallback_title_id": "config-field-name",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "connector-google",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Nom",
+                "help": null
+              }
+            },
+            "poll_interval_s": {
+              "default": 30.0,
+              "exclusiveMinimum": 0,
+              "title": "Poll Interval S",
+              "type": "number",
+              "x-nestor": {
+                "field": "poll_interval_s",
+                "title_id": "config-connector-google-poll_interval_s",
+                "help_id": "config-connector-google-poll_interval_s-help",
+                "fallback_title_id": "config-field-poll_interval_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "connector-google",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Intervalle de polling (secondes)",
+                "help": null
+              }
+            },
+            "blocked_s": {
+              "default": 600.0,
+              "exclusiveMinimum": 0,
+              "title": "Blocked S",
+              "type": "number",
+              "x-nestor": {
+                "field": "blocked_s",
+                "title_id": "config-connector-google-blocked_s",
+                "help_id": "config-connector-google-blocked_s-help",
+                "fallback_title_id": "config-field-blocked_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "connector-google",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Attente quand les identifiants sont refusés (secondes)",
+                "help": null
+              }
+            },
+            "retry_initial_s": {
+              "default": 1.0,
+              "exclusiveMinimum": 0,
+              "title": "Retry Initial S",
+              "type": "number",
+              "x-nestor": {
+                "field": "retry_initial_s",
+                "title_id": "config-connector-google-retry_initial_s",
+                "help_id": "config-connector-google-retry_initial_s-help",
+                "fallback_title_id": "config-field-retry_initial_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "connector-google",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Premier nouvel essai après (secondes)",
+                "help": null
+              }
+            },
+            "retry_max_s": {
+              "default": 300.0,
+              "exclusiveMinimum": 0,
+              "title": "Retry Max S",
+              "type": "number",
+              "x-nestor": {
+                "field": "retry_max_s",
+                "title_id": "config-connector-google-retry_max_s",
+                "help_id": "config-connector-google-retry_max_s-help",
+                "fallback_title_id": "config-field-retry_max_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "connector-google",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Attente maximale entre deux essais (secondes)",
+                "help": null
+              }
+            },
+            "body_chars": {
+              "default": 20000,
+              "exclusiveMinimum": 0,
+              "title": "Body Chars",
+              "type": "integer",
+              "x-nestor": {
+                "field": "body_chars",
+                "title_id": "config-connector-google-body_chars",
+                "help_id": "config-connector-google-body_chars-help",
+                "fallback_title_id": "config-field-body_chars",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "connector-google",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Longueur maximale d'un message lu (caractères)",
+                "help": null
+              }
+            },
+            "excerpt_chars": {
+              "default": 2000,
+              "exclusiveMinimum": 0,
+              "title": "Excerpt Chars",
+              "type": "integer",
+              "x-nestor": {
+                "field": "excerpt_chars",
+                "title_id": "config-connector-google-excerpt_chars",
+                "help_id": "config-connector-google-excerpt_chars-help",
+                "fallback_title_id": "config-field-excerpt_chars",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "connector-google",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Longueur d'un extrait (caractères)",
+                "help": null
+              }
+            }
+          },
+          "title": "GoogleSettings",
+          "type": "object",
+          "required": [
+            "kind"
+          ]
+        },
+        "imap": {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "imap",
+              "type": "string",
+              "x-nestor": {
+                "field": "kind",
+                "title_id": "config-connector-imap-kind",
+                "help_id": "config-connector-imap-kind-help",
+                "fallback_title_id": "config-field-kind",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "connector-imap",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Type",
+                "help": null
+              }
+            },
+            "name": {
+              "type": "string",
+              "description": "the instance's name; the kind by default",
+              "x-nestor": {
+                "field": "name",
+                "title_id": "config-connector-imap-name",
+                "help_id": "config-connector-imap-name-help",
+                "fallback_title_id": "config-field-name",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "connector-imap",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Nom",
+                "help": null
+              }
+            },
+            "timeout_s": {
+              "default": 30.0,
+              "exclusiveMinimum": 0,
+              "title": "Timeout S",
+              "type": "number",
+              "x-nestor": {
+                "field": "timeout_s",
+                "title_id": "config-connector-imap-timeout_s",
+                "help_id": "config-connector-imap-timeout_s-help",
+                "fallback_title_id": "config-field-timeout_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "connector-imap",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Timeout (secondes)",
+                "help": null
+              }
+            },
+            "idle_s": {
+              "default": 1500.0,
+              "exclusiveMinimum": 0,
+              "title": "Idle S",
+              "type": "number",
+              "x-nestor": {
+                "field": "idle_s",
+                "title_id": "config-connector-imap-idle_s",
+                "help_id": "config-connector-imap-idle_s-help",
+                "fallback_title_id": "config-field-idle_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "connector-imap",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "IDLE renouvelé après (secondes)",
+                "help": "Moins de 1740 : les serveurs coupent IDLE après 29 min."
+              }
+            },
+            "poll_s": {
+              "default": 60.0,
+              "exclusiveMinimum": 0,
+              "title": "Poll S",
+              "type": "number",
+              "x-nestor": {
+                "field": "poll_s",
+                "title_id": "config-connector-imap-poll_s",
+                "help_id": "config-connector-imap-poll_s-help",
+                "fallback_title_id": "config-field-poll_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "connector-imap",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Intervalle de polling sans IDLE (secondes)",
+                "help": null
+              }
+            },
+            "fetch_bytes": {
+              "default": 1000000,
+              "exclusiveMinimum": 0,
+              "title": "Fetch Bytes",
+              "type": "integer",
+              "x-nestor": {
+                "field": "fetch_bytes",
+                "title_id": "config-connector-imap-fetch_bytes",
+                "help_id": "config-connector-imap-fetch_bytes-help",
+                "fallback_title_id": "config-field-fetch_bytes",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "connector-imap",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Taille maximale d'un message lu (octets)",
+                "help": null
+              }
+            },
+            "blocked_s": {
+              "default": 600.0,
+              "exclusiveMinimum": 0,
+              "title": "Blocked S",
+              "type": "number",
+              "x-nestor": {
+                "field": "blocked_s",
+                "title_id": "config-connector-imap-blocked_s",
+                "help_id": "config-connector-imap-blocked_s-help",
+                "fallback_title_id": "config-field-blocked_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "connector-imap",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Attente quand les identifiants sont refusés (secondes)",
+                "help": null
+              }
+            },
+            "retry_initial_s": {
+              "default": 1.0,
+              "exclusiveMinimum": 0,
+              "title": "Retry Initial S",
+              "type": "number",
+              "x-nestor": {
+                "field": "retry_initial_s",
+                "title_id": "config-connector-imap-retry_initial_s",
+                "help_id": "config-connector-imap-retry_initial_s-help",
+                "fallback_title_id": "config-field-retry_initial_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "connector-imap",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Premier nouvel essai après (secondes)",
+                "help": null
+              }
+            },
+            "retry_max_s": {
+              "default": 300.0,
+              "exclusiveMinimum": 0,
+              "title": "Retry Max S",
+              "type": "number",
+              "x-nestor": {
+                "field": "retry_max_s",
+                "title_id": "config-connector-imap-retry_max_s",
+                "help_id": "config-connector-imap-retry_max_s-help",
+                "fallback_title_id": "config-field-retry_max_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "connector-imap",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Attente maximale entre deux essais (secondes)",
+                "help": null
+              }
+            },
+            "body_chars": {
+              "default": 20000,
+              "exclusiveMinimum": 0,
+              "title": "Body Chars",
+              "type": "integer",
+              "x-nestor": {
+                "field": "body_chars",
+                "title_id": "config-connector-imap-body_chars",
+                "help_id": "config-connector-imap-body_chars-help",
+                "fallback_title_id": "config-field-body_chars",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "connector-imap",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Longueur maximale d'un message lu (caractères)",
+                "help": null
+              }
+            },
+            "excerpt_chars": {
+              "default": 2000,
+              "exclusiveMinimum": 0,
+              "title": "Excerpt Chars",
+              "type": "integer",
+              "x-nestor": {
+                "field": "excerpt_chars",
+                "title_id": "config-connector-imap-excerpt_chars",
+                "help_id": "config-connector-imap-excerpt_chars-help",
+                "fallback_title_id": "config-field-excerpt_chars",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "connector-imap",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Longueur d'un extrait (caractères)",
+                "help": null
+              }
+            }
+          },
+          "title": "ImapSettings",
+          "type": "object",
+          "required": [
+            "kind"
+          ]
+        }
+      },
+      "model_types": {}
+    }
+  }
+}

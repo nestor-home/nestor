@@ -1306,8 +1306,6 @@ export interface components {
             /** Login */
             login: string;
             role: components["schemas"]["Role"];
-            /** Role Label */
-            role_label: string;
             person: components["schemas"]["PersonRef"] | null;
             /** Disabled */
             disabled: boolean;
@@ -1321,6 +1319,12 @@ export interface components {
             /** Last Seen At */
             last_seen_at: string | null;
         };
+        /**
+         * Activity
+         * @description What the agent is doing, the first that holds in this order.
+         * @enum {string}
+         */
+        Activity: "listening" | "speaking" | "thinking" | "working" | "sleeping" | "idle";
         /** AdditionIn */
         AdditionIn: {
             method: components["schemas"]["PairingMethod"];
@@ -1374,11 +1378,7 @@ export interface components {
          *     the journal's stream at its start and on every change.
          */
         AgentActivityOut: {
-            /**
-             * State
-             * @enum {string}
-             */
-            state: "idle" | "listening" | "thinking" | "speaking" | "working" | "sleeping";
+            state: components["schemas"]["Activity"];
             /**
              * Since
              * Format: date-time
@@ -1400,11 +1400,7 @@ export interface components {
         AgentOut: {
             /** Name */
             name: string;
-            /**
-             * Status
-             * @enum {string}
-             */
-            status: "online" | "degraded";
+            status: components["schemas"]["Health"];
         };
         /** ApprovalIn */
         ApprovalIn: {
@@ -1477,7 +1473,7 @@ export interface components {
         /** ComponentOut */
         ComponentOut: {
             /** Slot */
-            slot: string;
+            slot: components["schemas"]["Family"] | "satellite";
             /** Name */
             name: string;
             /** Adapter */
@@ -1542,8 +1538,6 @@ export interface components {
             account: string;
             owner: components["schemas"]["PersonRef"] | null;
             status: components["schemas"]["Status"];
-            /** Status Label */
-            status_label: string;
             status_reason: components["schemas"]["ReasonOut"] | null;
             /** Confirm Writes */
             confirm_writes: boolean;
@@ -1577,8 +1571,6 @@ export interface components {
             account: string;
             owner: components["schemas"]["PersonRef"] | null;
             status: components["schemas"]["Status"];
-            /** Status Label */
-            status_label: string;
             status_reason: components["schemas"]["ReasonOut"] | null;
             /** Confirm Writes */
             confirm_writes: boolean;
@@ -1614,8 +1606,6 @@ export interface components {
             /** Description */
             description: string;
             auth: components["schemas"]["AuthKind"];
-            /** Auth Label */
-            auth_label: string;
             /** Setup */
             setup: string;
             /** Fields */
@@ -1674,7 +1664,7 @@ export interface components {
              * Code
              * @enum {string}
              */
-            code: "addition_over" | "addition_unknown" | "audio_format" | "bad_token" | "client_incomplete" | "client_missing" | "config_history_unknown" | "config_invalid" | "config_unavailable" | "conflict" | "connection_unknown" | "connector_unknown" | "cross_origin" | "csrf_failed" | "empty_memory" | "fields_missing" | "forbidden" | "http_error" | "identify_unsupported" | "invalid" | "invalid_code" | "invalid_credentials" | "invalid_login" | "invalid_request" | "invitation_expired" | "invitation_revoked" | "invitation_unknown" | "invitation_used" | "journal_entry_unknown" | "last_owner" | "memory_shared" | "memory_unknown" | "method_not_allowed" | "no_connectors" | "no_secret_key" | "not_a_device_code_method" | "not_found" | "not_oauth" | "oauth" | "own_connections_only" | "pairing_refused" | "pending_unknown" | "person_required" | "person_unknown" | "provider_error" | "provider_refused" | "restart_unconfirmed" | "satellite_offline" | "satellite_unknown" | "secret_in_use" | "secret_unknown" | "task_unknown" | "throttled" | "too_many_additions" | "unauthenticated" | "unknown_kind" | "unknown_locale" | "unknown_person" | "unknown_tool" | "unsupported_media_type" | "update_not_installable" | "update_unavailable" | "update_unconfirmed" | "update_unsupported" | "use_me_password" | "voice_not_yours" | "voices_off" | "watch_unknown" | "weak_password" | "wrong_password";
+            code: "addition_over" | "addition_unknown" | "audio_format" | "bad_token" | "client_incomplete" | "client_missing" | "config_history_unknown" | "config_invalid" | "config_unavailable" | "conflict" | "connection_unknown" | "connector_unknown" | "cross_origin" | "csrf_failed" | "empty_memory" | "fields_missing" | "forbidden" | "http_error" | "identify_unsupported" | "invalid" | "invalid_code" | "invalid_credentials" | "invalid_login" | "invalid_request" | "invitation_expired" | "invitation_revoked" | "invitation_unknown" | "invitation_used" | "journal_entry_unknown" | "last_owner" | "memory_shared" | "memory_unknown" | "method_not_allowed" | "no_connectors" | "no_secret_key" | "not_a_device_code_method" | "not_found" | "not_oauth" | "oauth" | "own_connections_only" | "pairing_refused" | "pending_unknown" | "person_required" | "person_unknown" | "provider_error" | "provider_refused" | "restart_unconfirmed" | "satellite_offline" | "satellite_unknown" | "secret_in_use" | "secret_unknown" | "task_unknown" | "throttled" | "too_many_additions" | "unauthenticated" | "unknown_locale" | "unknown_person" | "unknown_tool" | "unsupported_media_type" | "update_not_installable" | "update_unavailable" | "update_unconfirmed" | "update_unsupported" | "use_me_password" | "voice_not_yours" | "voices_off" | "watch_unknown" | "weak_password" | "wrong_password";
             /** Message Id */
             message_id: string;
             /** Args */
@@ -1699,6 +1689,11 @@ export interface components {
             /** Count */
             count: number;
         };
+        /**
+         * Family
+         * @enum {string}
+         */
+        Family: "model" | "executor" | "channel" | "presence" | "tools" | "inbound" | "connector";
         /** FieldOut */
         FieldOut: {
             /** Name */
@@ -1817,12 +1812,8 @@ export interface components {
             /** Id */
             id: string;
             role: components["schemas"]["Role"];
-            /** Role Label */
-            role_label: string;
             person: components["schemas"]["PersonRef"] | null;
             status: components["schemas"]["InvitationStatus"];
-            /** Status Label */
-            status_label: string;
             /**
              * Created At
              * Format: date-time
@@ -1837,8 +1828,6 @@ export interface components {
         /** InvitationPreview */
         InvitationPreview: {
             role: components["schemas"]["Role"];
-            /** Role Label */
-            role_label: string;
             person: components["schemas"]["PersonRef"] | null;
             /**
              * Expires At
@@ -1871,7 +1860,7 @@ export interface components {
             /** Truncated */
             truncated: boolean;
             /** Kinds */
-            kinds: components["schemas"]["FacetOut"][];
+            kinds: components["schemas"]["KindFacetOut"][];
             /** People */
             people: components["schemas"]["FacetOut"][];
             /** Channels */
@@ -1898,13 +1887,7 @@ export interface components {
             at: string;
             /** Type */
             type: string;
-            /**
-             * Kind
-             * @enum {string}
-             */
-            kind: "conversation" | "delivery" | "tool" | "task" | "watch" | "memory" | "connection" | "presence" | "satellite" | "observation" | "account" | "other";
-            /** Kind Label */
-            kind_label: string;
+            kind: components["schemas"]["Kind"];
             message: components["schemas"]["MessageOut"];
             /** Text */
             text: string;
@@ -1924,11 +1907,7 @@ export interface components {
             /** Detail Text */
             detail_text: string;
             reason: components["schemas"]["ReasonOut"] | null;
-            /**
-             * Tone
-             * @enum {string}
-             */
-            tone: "normal" | "decision" | "warning";
+            tone: components["schemas"]["Tone"];
             /** People */
             people: components["schemas"]["PersonRef"][];
             /** Channels */
@@ -1950,6 +1929,18 @@ export interface components {
             items: components["schemas"]["JournalItem"][];
             /** Next Before */
             next_before: number | null;
+        };
+        /**
+         * Kind
+         * @description What the journal groups entries by: the facets of its filters, one per category, and `other`.
+         * @enum {string}
+         */
+        Kind: "conversation" | "delivery" | "tool" | "task" | "watch" | "schedule" | "memory" | "connection" | "presence" | "satellite" | "voice" | "observation" | "account" | "other";
+        /** KindFacetOut */
+        KindFacetOut: {
+            key: components["schemas"]["Kind"];
+            /** Count */
+            count: number;
         };
         /** LanguagesOut */
         LanguagesOut: {
@@ -2072,8 +2063,7 @@ export interface components {
          */
         MethodOut: {
             id: components["schemas"]["PairingMethod"];
-            /** Proof */
-            proof: string;
+            proof: components["schemas"]["Proof"];
             /** Label */
             label: string;
             /** Hint */
@@ -2107,7 +2097,10 @@ export interface components {
             /** Relayed */
             relayed: boolean;
         };
-        /** OriginOut */
+        /**
+         * OriginOut
+         * @description Where something was asked for: a task, a watch.
+         */
         OriginOut: {
             /** Session */
             session: string;
@@ -2211,14 +2204,19 @@ export interface components {
          */
         Problem: "too_short" | "too_quiet" | "too_loud" | "other_voice";
         /**
+         * ProblemCode
+         * @description What is wrong in a configuration; each names its message, `config-error-<code>`.
+         * @enum {string}
+         */
+        ProblemCode: "missing" | "extra" | "invalid" | "unknown_kind" | "reference" | "secret" | "no_answering_model" | "not_answering" | "not_embedding" | "not_voice" | "shared_account";
+        /**
          * ProblemOut
          * @description What is wrong in an edited configuration, located by its path in the document.
          */
         ProblemOut: {
             /** Path */
             path: (string | number)[];
-            /** Code */
-            code: string;
+            code: components["schemas"]["ProblemCode"];
             /** Message Id */
             message_id: string;
             /** Args */
@@ -2228,6 +2226,12 @@ export interface components {
             /** Message */
             message: string;
         };
+        /**
+         * Proof
+         * @description Which way the pairing proof travelled.
+         * @enum {string}
+         */
+        Proof: "device_code" | "enrollment_code";
         /** QuietHoursOut */
         QuietHoursOut: {
             /** Start */
@@ -2405,15 +2409,16 @@ export interface components {
                 [key: string]: string;
             };
         };
+        /**
+         * Shape
+         * @enum {string}
+         */
+        Shape: "one" | "list" | "named";
         /** SlotOut */
         SlotOut: {
             /** Family */
             family: string;
-            /**
-             * Shape
-             * @enum {string}
-             */
-            shape: "one" | "list" | "named";
+            shape: components["schemas"]["Shape"];
             /** Required */
             required: boolean;
             /** Title */
@@ -2475,8 +2480,6 @@ export interface components {
             /** Executor */
             executor: string;
             status: components["schemas"]["TaskStatus"];
-            /** Status Label */
-            status_label: string;
             requested_by: components["schemas"]["PersonRef"] | null;
             origin: components["schemas"]["OriginOut"];
             delivered: components["schemas"]["DeliveredOut"] | null;
@@ -2506,6 +2509,11 @@ export interface components {
             /** Recent */
             recent: components["schemas"]["TaskOut"][];
         };
+        /**
+         * Tone
+         * @enum {string}
+         */
+        Tone: "normal" | "decision" | "warning";
         /** ToolOut */
         ToolOut: {
             /** Name */
@@ -2513,8 +2521,6 @@ export interface components {
             /** Description */
             description: string;
             risk: components["schemas"]["Risk"];
-            /** Risk Label */
-            risk_label: string;
             /** Enabled */
             enabled: boolean;
         };
@@ -6668,8 +6674,8 @@ export interface operations {
                 /** @description a position: entries strictly before it */
                 before?: number | null;
                 limit?: number;
-                /** @description kind keys, comma-separated */
-                kinds?: string;
+                /** @description keep these kinds; none: every kind */
+                kinds?: components["schemas"]["Kind"][];
                 person?: string;
                 channel?: string;
                 room?: string;
@@ -6677,7 +6683,7 @@ export interface operations {
                 q?: string;
                 from?: string | null;
                 to?: string | null;
-                tone?: "" | "normal" | "decision" | "warning";
+                tone?: components["schemas"]["Tone"] | null;
                 session?: string;
                 conversation?: string;
                 task?: string;
@@ -6777,8 +6783,8 @@ export interface operations {
     getJournalFacets: {
         parameters: {
             query?: {
-                /** @description kind keys, comma-separated */
-                kinds?: string;
+                /** @description keep these kinds; none: every kind */
+                kinds?: components["schemas"]["Kind"][];
                 person?: string;
                 channel?: string;
                 room?: string;
@@ -6786,7 +6792,7 @@ export interface operations {
                 q?: string;
                 from?: string | null;
                 to?: string | null;
-                tone?: "" | "normal" | "decision" | "warning";
+                tone?: components["schemas"]["Tone"] | null;
                 session?: string;
                 conversation?: string;
                 task?: string;
@@ -6887,8 +6893,8 @@ export interface operations {
         parameters: {
             query?: {
                 after?: number | null;
-                /** @description kind keys, comma-separated */
-                kinds?: string;
+                /** @description keep these kinds; none: every kind */
+                kinds?: components["schemas"]["Kind"][];
                 person?: string;
                 channel?: string;
                 room?: string;
@@ -6896,7 +6902,7 @@ export interface operations {
                 q?: string;
                 from?: string | null;
                 to?: string | null;
-                tone?: "" | "normal" | "decision" | "warning";
+                tone?: components["schemas"]["Tone"] | null;
                 session?: string;
                 conversation?: string;
                 task?: string;
@@ -10111,3 +10117,34 @@ export interface operations {
         };
     };
 }
+type FlattenedDeepRequired<T> = {
+    [K in keyof T]-?: FlattenedDeepRequired<T[K] extends unknown[] | undefined | null ? Extract<T[K], unknown[]>[number] : T[K]>;
+};
+type ReadonlyArray<T> = [
+    Exclude<T, undefined>
+] extends [
+    unknown[]
+] ? Readonly<Exclude<T, undefined>> : Readonly<Exclude<T, undefined>[]>;
+export const activityValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Activity"]> = ["listening", "speaking", "thinking", "working", "sleeping", "idle"];
+export const authKindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["AuthKind"]> = ["oauth2", "secret", "none"];
+export const changeKindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ChangeKind"]> = ["breaking", "feature", "fix", "other"];
+export const errorDetailCodeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ErrorDetail"]["code"]> = ["addition_over", "addition_unknown", "audio_format", "bad_token", "client_incomplete", "client_missing", "config_history_unknown", "config_invalid", "config_unavailable", "conflict", "connection_unknown", "connector_unknown", "cross_origin", "csrf_failed", "empty_memory", "fields_missing", "forbidden", "http_error", "identify_unsupported", "invalid", "invalid_code", "invalid_credentials", "invalid_login", "invalid_request", "invitation_expired", "invitation_revoked", "invitation_unknown", "invitation_used", "journal_entry_unknown", "last_owner", "memory_shared", "memory_unknown", "method_not_allowed", "no_connectors", "no_secret_key", "not_a_device_code_method", "not_found", "not_oauth", "oauth", "own_connections_only", "pairing_refused", "pending_unknown", "person_required", "person_unknown", "provider_error", "provider_refused", "restart_unconfirmed", "satellite_offline", "satellite_unknown", "secret_in_use", "secret_unknown", "task_unknown", "throttled", "too_many_additions", "unauthenticated", "unknown_locale", "unknown_person", "unknown_tool", "unsupported_media_type", "update_not_installable", "update_unavailable", "update_unconfirmed", "update_unsupported", "use_me_password", "voice_not_yours", "voices_off", "watch_unknown", "weak_password", "wrong_password"];
+export const familyValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Family"]> = ["model", "executor", "channel", "presence", "tools", "inbound", "connector"];
+export const healthValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Health"]> = ["started", "degraded", "unavailable"];
+export const installKindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["InstallKind"]> = ["container", "editable", "uv-tool", "pip"];
+export const invitationStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["InvitationStatus"]> = ["pending", "accepted", "expired", "revoked"];
+export const kindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Kind"]> = ["conversation", "delivery", "tool", "task", "watch", "schedule", "memory", "connection", "presence", "satellite", "voice", "observation", "account", "other"];
+export const modelTypeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ModelType"]> = ["language", "embedding", "voice"];
+export const pairingMethodValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PairingMethod"]> = ["device_code.display", "device_code.speech", "enrollment.input", "enrollment.provisioning", "enrollment.qr"];
+export const problemValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Problem"]> = ["too_short", "too_quiet", "too_loud", "other_voice"];
+export const problemCodeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ProblemCode"]> = ["missing", "extra", "invalid", "unknown_kind", "reference", "secret", "no_answering_model", "not_answering", "not_embedding", "not_voice", "shared_account"];
+export const proofValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Proof"]> = ["device_code", "enrollment_code"];
+export const riskValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Risk"]> = ["read", "write", "sensitive"];
+export const roleValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Role"]> = ["owner", "admin", "member", "guest"];
+export const scopeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Scope"]> = ["accounts.manage", "accounts.owners.manage", "household.read", "agent.read", "household.connections.manage", "own.connections.manage", "satellites.manage", "system.read", "config.manage", "journal.read.all", "journal.read.own", "memory.manage.all", "memory.manage.own", "tasks.manage", "tasks.manage.own", "watches.manage.all", "watches.manage.own"];
+export const shapeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Shape"]> = ["one", "list", "named"];
+export const stageValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Stage"]> = ["waiting", "device_seen", "paired", "cancelled", "expired"];
+export const statusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Status"]> = ["connected", "needs_reauth", "error"];
+export const taskStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["TaskStatus"]> = ["running", "completed", "failed", "cancelled"];
+export const toneValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Tone"]> = ["normal", "decision", "warning"];
+export const updateStateValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["UpdateState"]> = ["current", "available", "installing", "failed"];

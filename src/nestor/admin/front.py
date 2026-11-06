@@ -11,7 +11,7 @@ from pathlib import Path
 from fastapi import APIRouter, Request
 from fastapi.responses import FileResponse, HTMLResponse, Response
 
-from nestor.admin.api.v1 import ApiError
+from nestor.admin.api.v1.errors import ApiError
 from nestor.admin.api.v1.language import reader_locale
 from nestor.admin.presentation import Phrasebook
 from nestor.admin.state import state

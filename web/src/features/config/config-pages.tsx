@@ -1,6 +1,6 @@
 import { ArrowDown, ArrowUp, CircleAlert, Pencil, Plus, Trash2 } from "lucide-react";
 import { type ReactElement, type ReactNode, useId, useState } from "react";
-import type { ConfigSlot, JsonSchema, ModelType } from "@/api";
+import type { ModelType } from "@/api";
 import { Confirm } from "@/components/confirm";
 import { FormActions } from "@/components/form-actions";
 import { FormDialog, FormSheet } from "@/components/overlay-form";
@@ -14,7 +14,18 @@ import { brandName, brandOf, KindMark } from "@/lib/brands";
 import { cn } from "@/lib/utils";
 import { useConfigEditor } from "./editor";
 import { ObjectFields, Problems } from "./fields";
-import { freeName, getAt, isRecord, move, NAME, type Path, problemsUnder, renamed } from "./schema";
+import {
+  freeName,
+  getAt,
+  isRecord,
+  type JsonSchema,
+  move,
+  NAME,
+  type Path,
+  problemsUnder,
+  renamed,
+  type Slot,
+} from "./schema";
 import { type ConfigPage, pageTitle } from "./sections";
 
 /**
@@ -196,7 +207,7 @@ function summary(entry: Record<string, unknown>): string {
 }
 
 /** A slot that takes one component (the model, presence): shown and edited in place. */
-function OneSlot({ slotKey, slot, main }: { slotKey: string; slot: ConfigSlot; main: boolean }) {
+function OneSlot({ slotKey, slot, main }: { slotKey: string; slot: Slot; main: boolean }) {
   const t = useT();
   const { draft, set, problems } = useConfigEditor();
   const entry = getAt(draft, [slotKey]);
@@ -265,7 +276,7 @@ function OneSlot({ slotKey, slot, main }: { slotKey: string; slot: ConfigSlot; m
 }
 
 /** A slot that takes a list (channels, tools…): cards, each edited in a sheet. */
-function ManySlot({ slotKey, slot }: { slotKey: string; slot: ConfigSlot }) {
+function ManySlot({ slotKey, slot }: { slotKey: string; slot: Slot }) {
   const t = useT();
   const { draft, set, problems } = useConfigEditor();
   const entries = Array.isArray(draft[slotKey]) ? (draft[slotKey] as Record<string, unknown>[]) : [];
@@ -353,7 +364,7 @@ function ManySlot({ slotKey, slot }: { slotKey: string; slot: ConfigSlot }) {
 }
 
 /** A slot whose components have names other settings use (the models): cards by name, each edited in a sheet. */
-function NamedSlot({ slotKey, slot }: { slotKey: string; slot: ConfigSlot }) {
+function NamedSlot({ slotKey, slot }: { slotKey: string; slot: Slot }) {
   const t = useT();
   const { schema: config, draft, set, replace, problems } = useConfigEditor();
   const named = isRecord(draft[slotKey]) ? (draft[slotKey] as Record<string, Record<string, unknown>>) : {};
@@ -484,15 +495,7 @@ function NameField({ name, taken, onRename }: { name: string; taken: string[]; o
 const MODEL_TYPES: readonly ModelType[] = ["language", "embedding", "voice"];
 
 /** Choosing what to add: every installed plugin of the slot, with its mark; models grouped by what they serve. */
-function KindPicker({
-  slot,
-  onPick,
-  trigger,
-}: {
-  slot: ConfigSlot;
-  onPick: (kind: string) => void;
-  trigger: ReactElement;
-}) {
+function KindPicker({ slot, onPick, trigger }: { slot: Slot; onPick: (kind: string) => void; trigger: ReactElement }) {
   const t = useT();
   return (
     <FormDialog trigger={trigger} title={t("cfg-pick-title", { slot: slot.title })} description={t("cfg-pick-text")}>

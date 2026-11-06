@@ -1,34 +1,16 @@
 /**
  * The API v1 as Nestor answers it, on the mock state: the same paths, codes and error bodies,
- * every answer built as its generated DTO type (dto.ts) so the mocks cannot drift from the API.
+ * its state and every answer typed as the API's generated schemas, so the mocks cannot drift from it.
  */
 import { HttpResponse, http, type JsonBodyType, delay as latency, sse } from "msw";
-import type { Connection, JournalItem, PairingRequest, Satellite } from "@/api";
 import type { components } from "@/api/schema.gen";
 import * as config from "./config";
 import { LIVE } from "./day";
 import { db, type MockAddition, save } from "./db";
-import {
-  accountDto,
-  componentDto,
-  connectionDetailDto,
-  connectionDto,
-  connectorDto,
-  invitationDto,
-  journalItemDto,
-  meDto,
-  memoryDto,
-  pendingDto,
-  personDto,
-  personRef,
-  satelliteDto,
-  taskDto,
-  watchDto,
-} from "./dto";
-import { arriving, CANCELLED, KIND_LABELS, METHODS, PROTOCOL, ROLE_LABEL, tools as toolsOf } from "./fixtures";
-import { fr, inFrench } from "./french";
-import { facets, filtersOf, matching, withoutRecord } from "./journal";
-import { errorText, type Lang, localize, render, toItem } from "./messages";
+import { arriving, METHODS, type MockPending, type MockPerson, PROTOCOL, SCOPES, tools as toolsOf } from "./fixtures";
+import { inFrench } from "./french";
+import { facets, filtersOf, matching } from "./journal";
+import { catalogueOf, type Draft, errorText, type Lang, localize, render, toItem } from "./messages";
 
 type In<N extends keyof components["schemas"]> = components["schemas"][N];
 
@@ -126,27 +108,48 @@ const owners = () => db.accounts.filter((a) => a.role === "owner" && !a.disabled
 let sequence = 0;
 const newId = (prefix: string) => `${prefix}-${Date.now().toString(36)}${(sequence++).toString(36)}`;
 
-const kindLabel = (kind: string) => {
-  const label = KIND_LABELS[kind] ?? kind;
-  return lang === "fr" ? inFrench(label) : label;
-};
+/** A person of the mock household as the API names them: `{id, name}`. */
+const refOf = (id: string): In<"PersonRef"> => ({ id, name: db.people.find((p) => p.id === id)?.name ?? id });
 
-const itemOut = (item: JournalItem) => journalItemDto(localize(item, lang), kindLabel(item.kind));
+const itemOut = (item: In<"JournalItem">) => localize(item, lang);
 
 /** A new journal entry at the next position, as the stream and the list will send it. */
-function journalize(draft: Omit<JournalItem, "id" | "at" | "uid" | "kind_label">): JournalItem {
-  const position = Math.max(0, ...db.journal.map((e) => Number(e.id))) + 1;
-  const entry: JournalItem = {
-    ...draft,
-    id: String(position),
-    uid: newId("e"),
-    at: new Date().toISOString(),
-    kind_label: "",
-  };
-  db.journal.unshift({ ...entry, record: { type: entry.type, version: 1, at: entry.at, ...entry.links } });
+function journalize(draft: Draft): In<"JournalItem"> {
+  const position = db.journal.reduce((last, e) => Math.max(last, e.item.position), 0) + 1;
+  const item = toItem(draft, { position, id: newId("e"), at: new Date().toISOString() });
+  db.journal.unshift({ item, record: { type: item.type, version: 1, at: item.at, ...item.links } });
   save();
-  return entry;
+  return item;
 }
+
+// -- what the server composes from its state --------------------------------------------------------
+
+const meOut = (account: In<"AccountOut">): In<"MeOut"> => ({
+  account,
+  locale: account.locale ?? lang,
+  scopes: SCOPES[account.role],
+  csrf_token: CSRF,
+  assistant: db.system.agent.name,
+  agent: { name: db.system.agent.name, status: "started" },
+  restart_required: db.config.restart_required,
+  pending_changes: db.config.pending_changes,
+});
+
+const personOut = ({ account, ...person }: MockPerson): In<"PersonOut"> => ({
+  ...person,
+  account: db.accounts.find((a) => a.id === account) ?? null,
+  connections: db.connections.filter((c) => c.owner?.id === person.id),
+});
+
+const connectionDetail = (connection: In<"ConnectionOut">): In<"ConnectionDetail"> => ({
+  ...connection,
+  tools: db.tools[connection.id] ?? [],
+});
+
+const pendingOut = ({ expires_at, ...pending }: MockPending): In<"PendingOut"> => ({
+  ...pending,
+  expires_in_s: Math.max(0, Math.round((Date.parse(expires_at) - Date.now()) / 1000)),
+});
 
 // -- voices -----------------------------------------------------------------------------------------
 
@@ -167,7 +170,7 @@ const PHRASES = [1, 2, 3, 4, 5].map((n) => `voice-phrase-${n}`);
 function mayManageVoice(person: string): boolean {
   const account = signedIn();
   if (!account) return false;
-  if (account.person === person) return true;
+  if (account.person?.id === person) return true;
   return account.role === "owner" && !db.people.find((p) => p.id === person)?.account;
 }
 
@@ -333,7 +336,7 @@ export const handlers = [
     if (restarting()) return HttpResponse.error();
     await delay(120);
     const account = signedIn();
-    return account ? json(meDto(account, lang)) : fail(401, "unauthenticated");
+    return account ? json(meOut(account)) : fail(401, "unauthenticated");
   }),
 
   http.post(`${API}/session`, async ({ request }) => {
@@ -346,7 +349,7 @@ export const handlers = [
     db.signedIn = account.id;
     save();
     listen(request);
-    return json(meDto(account, lang));
+    return json(meOut(account));
   }),
 
   http.delete(`${API}/session`, () => {
@@ -364,15 +367,19 @@ export const handlers = [
     account.locale = locale;
     save();
     listen(request);
-    return json(meDto(account, lang));
+    return json(meOut(account));
   }),
 
   http.get(`${API}/i18n`, () =>
     HttpResponse.json({ locales: ["en", "fr"], default: "en", household: "en" } satisfies In<"LanguagesOut">),
   ),
 
-  // the server's own catalogue is not mocked: the mock renders `text` itself (messages.ts)
-  http.get(`${API}/i18n/:locale`, () => new HttpResponse("", { headers: { "Content-Type": "text/plain" } })),
+  // Nestor's own catalogue, as the server sends it (no plugin adds to it here)
+  http.get(`${API}/i18n/:locale`, ({ params }) =>
+    params.locale === "en" || params.locale === "fr"
+      ? new HttpResponse(catalogueOf(params.locale), { headers: { "Content-Type": "text/plain" } })
+      : new HttpResponse(null, { status: 404 }),
+  ),
 
   // -- invitations (no session, no CSRF: same origin only) ---------------------------------------
   http.post(`${API}/invitations/inspect`, async ({ request }) => {
@@ -383,8 +390,7 @@ export const handlers = [
     if (!invitation) return fail(404, "invitation_unknown");
     return json({
       role: invitation.role,
-      role_label: invitation.role_label,
-      person: invitation.person ? { id: invitation.person, name: invitation.person_name ?? invitation.person } : null,
+      person: invitation.person,
       expires_at: invitation.expires_at,
     } satisfies In<"InvitationPreview">);
   }),
@@ -397,13 +403,11 @@ export const handlers = [
     if (!invitation) return fail(404, "invitation_unknown");
     if (body.password.length < 12) return fail(400, "weak_password", { length: 12 });
     if (db.accounts.some((a) => a.login === body.login)) return fail(409, "conflict");
-    const account = {
+    const account: In<"AccountOut"> = {
       id: newId("acc"),
       login: body.login,
       role: invitation.role,
-      role_label: invitation.role_label,
       person: invitation.person,
-      person_name: invitation.person_name,
       locale: lang,
       disabled: false,
       created_at: new Date().toISOString(),
@@ -411,23 +415,22 @@ export const handlers = [
     };
     db.accounts.push(account);
     invitation.status = "accepted";
-    invitation.status_label = fr("accepted", "acceptée");
     db.signedIn = account.id;
     save();
-    return json(meDto(account, lang), { status: 201 });
+    return json(meOut(account), { status: 201 });
   }),
 
   // -- accounts ---------------------------------------------------------------------------------
-  http.get(`${API}/accounts`, ({ request }) => guard(request) ?? json(db.accounts.map(accountDto))),
+  http.get(`${API}/accounts`, ({ request }) => guard(request) ?? json(db.accounts)),
   http.get(`${API}/accounts/:id`, ({ request, params }) => {
     const refused = guard(request);
     if (refused) return refused;
     const account = db.accounts.find((a) => a.id === params.id);
-    return account ? json(accountDto(account)) : notFound("account");
+    return account ? json(account) : notFound("account");
   }),
   http.get(
     `${API}/invitations`,
-    ({ request }) => guard(request) ?? json(db.invitations.filter((i) => i.status === "pending").map(invitationDto)),
+    ({ request }) => guard(request) ?? json(db.invitations.filter((i) => i.status === "pending")),
   ),
 
   http.post(`${API}/invitations`, async ({ request }) => {
@@ -440,14 +443,11 @@ export const handlers = [
     if ((body.role === "member" || body.role === "guest") && !person) {
       return fail(400, "person_required");
     }
-    const invitation = {
+    const invitation: In<"InvitationOut"> = {
       id: newId("inv"),
       role: body.role,
-      role_label: ROLE_LABEL[body.role],
-      person: person?.id ?? null,
-      person_name: person?.name ?? null,
-      status: "pending" as const,
-      status_label: fr("pending", "en attente"),
+      person: person ? refOf(person.id) : null,
+      status: "pending",
       created_at: new Date().toISOString(),
       expires_at: new Date(Date.now() + 7 * 86_400_000).toISOString(),
     };
@@ -455,7 +455,7 @@ export const handlers = [
     save();
     return json(
       {
-        invitation: invitationDto(invitation),
+        invitation,
         token: invitation.id,
         url: `/invitation/${invitation.id}`,
       } satisfies In<"InvitationCreated">,
@@ -484,9 +484,8 @@ export const handlers = [
       return fail(409, "last_owner");
     }
     account.role = role;
-    account.role_label = ROLE_LABEL[role];
     save();
-    return json(accountDto(account));
+    return json(account);
   }),
 
   ...(["disable", "enable"] as const).map((action) =>
@@ -501,17 +500,17 @@ export const handlers = [
       }
       account.disabled = action === "disable";
       save();
-      return json(accountDto(account));
+      return json(account);
     }),
   ),
 
   // -- household --------------------------------------------------------------------------------
-  http.get(`${API}/household/people`, ({ request }) => guard(request) ?? json(db.people.map(personDto))),
+  http.get(`${API}/household/people`, ({ request }) => guard(request) ?? json(db.people.map(personOut))),
   http.get(`${API}/household/people/:id`, ({ request, params }) => {
     const refused = guard(request);
     if (refused) return refused;
     const person = db.people.find((p) => p.id === params.id);
-    return person ? json(personDto(person)) : fail(404, "person_unknown");
+    return person ? json(personOut(person)) : fail(404, "person_unknown");
   }),
 
   // -- journal ----------------------------------------------------------------------------------
@@ -519,7 +518,9 @@ export const handlers = [
     const refused = guard(request);
     if (refused) return refused;
     await delay(120);
-    return json(facets(journal(), filtersOf(new URL(request.url)), db.people, KIND_LABELS));
+    const filters = filtersOf(new URL(request.url));
+    if (Array.isArray(filters)) return fail(422, "invalid_request", { fields: filters.join(", ") });
+    return json(facets(journal(), filters));
   }),
 
   http.get(`${API}/journal/stream`, () => new HttpResponse(null, { status: 204 })),
@@ -527,9 +528,9 @@ export const handlers = [
   http.get(`${API}/journal/:position`, ({ request, params }) => {
     const refused = guard(request);
     if (refused) return refused;
-    const event = db.journal.find((e) => e.id === params.position);
+    const event = db.journal.find((e) => e.item.position === Number(params.position));
     if (!event) return notFound("event");
-    return json({ item: itemOut(withoutRecord(event)), record: event.record } satisfies In<"JournalEntryOut">);
+    return json({ item: itemOut(event.item), record: event.record } satisfies In<"JournalEntryOut">);
   }),
 
   http.get(`${API}/journal`, async ({ request }) => {
@@ -540,9 +541,11 @@ export const handlers = [
     const before = url.searchParams.get("before");
     const limit = Number(url.searchParams.get("limit") ?? PAGE);
     if (limit < 1 || limit > 200) return fail(422, "invalid_request", { fields: "limit" });
-    let items = matching(journal(), filtersOf(url));
-    if (before) items = items.filter((e) => Number(e.id) < Number(before));
-    const page = items.slice(0, limit).map((e) => itemOut(withoutRecord(e)));
+    const filters = filtersOf(url);
+    if (Array.isArray(filters)) return fail(422, "invalid_request", { fields: filters.join(", ") });
+    let items = matching(journal(), filters);
+    if (before) items = items.filter((e) => e.position < Number(before));
+    const page = items.slice(0, limit).map(itemOut);
     return json({
       items: page,
       next_before: items.length > limit ? (page.at(-1)?.position ?? null) : null,
@@ -556,10 +559,10 @@ export const handlers = [
       guard(request) ??
       json({
         nestor: db.system.nestor,
-        agent: { name: db.system.agent.name, status: "online" },
+        agent: { name: db.system.agent.name, status: "started" },
         restart_required: db.config.restart_required,
         pending_changes: db.config.pending_changes,
-        components: db.system.components.map(componentDto),
+        components: db.system.components,
       } satisfies In<"SystemOut">),
   ),
 
@@ -589,13 +592,13 @@ export const handlers = [
   }),
 
   // -- connectors -------------------------------------------------------------------------------
-  http.get(`${API}/connectors`, ({ request }) => guard(request) ?? json(db.connectors.map(connectorDto))),
+  http.get(`${API}/connectors`, ({ request }) => guard(request) ?? json(db.connectors)),
 
   http.get(`${API}/connectors/:kind`, ({ request, params }) => {
     const refused = guard(request);
     if (refused) return refused;
     const connector = db.connectors.find((c) => c.kind === params.kind);
-    return connector ? json(connectorDto(connector)) : fail(404, "connector_unknown", { kind: String(params.kind) });
+    return connector ? json(connector) : fail(404, "connector_unknown", { kind: String(params.kind) });
   }),
 
   http.put(`${API}/connectors/:kind/client`, async ({ request, params }) => {
@@ -608,9 +611,10 @@ export const handlers = [
     if (!body.client_id.trim() || !body.client_secret.trim()) {
       return fail(400, "client_incomplete");
     }
-    connector.client = { client_id: body.client_id.trim() };
+    if (!connector.oauth) return fail(400, "not_oauth");
+    connector.oauth = { ...connector.oauth, registered: true, client_id: body.client_id.trim() };
     save();
-    return json(connectorDto(connector));
+    return json(connector);
   }),
 
   http.post(`${API}/connectors/:kind/authorizations`, async ({ request, params }) => {
@@ -619,7 +623,7 @@ export const handlers = [
     await delay(400);
     const connector = db.connectors.find((c) => c.kind === params.kind);
     if (!connector) return fail(404, "connector_unknown", { kind: String(params.kind) });
-    if (!connector.client) return fail(400, "client_missing");
+    if (!connector.oauth?.registered) return fail(400, "client_missing");
     const body = (await request.json()) as In<"AuthorizationIn">;
     // the provider's consent page would come first; the mock connects and sends the browser back
     const connection = plug(connector.kind, body.person ?? null, body.replaces ?? null, {});
@@ -634,24 +638,24 @@ export const handlers = [
     if (!connector) return fail(404, "connector_unknown", { kind: String(params.kind) });
     const body = (await request.json()) as In<"SecretsIn">;
     const values = (body.values ?? {}) as Record<string, string>;
-    const missing = connector.fields.filter((f) => !f.optional && !values[f.name]?.trim());
+    const missing = connector.fields.filter((f) => f.default === null && !values[f.name]?.trim());
     if (missing.length) {
       return fail(400, "fields_missing", { fields: missing.map((f) => f.label).join(", ") });
     }
     if (values.host?.includes("invalid")) return fail(502, "provider_refused", { detail: "authentication failed" });
     const connection = plug(connector.kind, body.person ?? null, body.replaces ?? null, values);
-    return json(connectionDetailDto(connection), { status: 201 });
+    return json(connectionDetail(connection), { status: 201 });
   }),
 
   // -- connections ------------------------------------------------------------------------------
-  http.get(`${API}/connections`, ({ request }) => guard(request) ?? json(db.connections.map(connectionDto))),
+  http.get(`${API}/connections`, ({ request }) => guard(request) ?? json(db.connections)),
 
   http.get(`${API}/connections/:id`, async ({ request, params }) => {
     const refused = guard(request);
     if (refused) return refused;
     await delay(150);
     const connection = db.connections.find((c) => c.id === params.id);
-    return connection ? json(connectionDetailDto(connection)) : notFound("connection");
+    return connection ? json(connectionDetail(connection)) : notFound("connection");
   }),
 
   http.patch(`${API}/connections/:id`, async ({ request, params }) => {
@@ -666,9 +670,10 @@ export const handlers = [
     if (body.disabled_tools) {
       const off = new Set(body.disabled_tools);
       db.tools[connection.id] = (db.tools[connection.id] ?? []).map((t) => ({ ...t, enabled: !off.has(t.name) }));
+      connection.disabled_tools = [...off];
     }
     save();
-    return json(connectionDetailDto(connection));
+    return json(connectionDetail(connection));
   }),
 
   http.delete(`${API}/connections/:id`, async ({ request, params }) => {
@@ -687,8 +692,8 @@ export const handlers = [
     advance();
     const now = new Date().toISOString();
     return json({
-      pending: db.pairing.filter((p) => p.expires_at > now).map(pendingDto),
-      paired: db.satellites.map(satelliteDto),
+      pending: db.pairing.filter((p) => p.expires_at > now).map(pendingOut),
+      paired: db.satellites,
       additions: db.additions.filter((a) => a.status === "active").map(additionOut),
     } satisfies In<"SatellitesOut">);
   }),
@@ -764,7 +769,7 @@ export const handlers = [
   http.post(`${API}/satellites/pending/:id/identify`, ({ request, params }) => {
     const refused = guard(request);
     if (refused) return refused;
-    const pending = db.pairing.find((p) => p.id === params.id);
+    const pending = db.pairing.find((p) => p.pairing_id === params.id);
     if (!pending) return fail(404, "pending_unknown");
     if (!pending.can_identify) return fail(409, "identify_unsupported");
     return noContent();
@@ -778,7 +783,7 @@ export const handlers = [
     if (!/^\d{6}$/.test(body.code.replace(/\s/g, ""))) return fail(400, "invalid_code");
     const addition = body.addition_id ? db.additions.find((a) => a.id === body.addition_id) : undefined;
     if (body.addition_id && addition?.status !== "active") return fail(409, "addition_over");
-    const pending = db.pairing.find((p) => p.id === body.pairing_id);
+    const pending = db.pairing.find((p) => p.pairing_id === body.pairing_id);
     // the mock accepts 424242 as the code every device shows
     if (!pending || body.code.replace(/\s/g, "") !== "424242") return fail(400, "pairing_refused");
     const allowed = body.capabilities ?? addition?.capabilities ?? null;
@@ -792,14 +797,14 @@ export const handlers = [
       addition.device_id = satellite.id;
     }
     save();
-    return json(satelliteDto(satellite), { status: 201 });
+    return json(satellite, { status: 201 });
   }),
 
   http.get(`${API}/satellites/:id`, ({ request, params }) => {
     const refused = guard(request);
     if (refused) return refused;
     const satellite = db.satellites.find((x) => x.id === params.id);
-    return satellite ? json(satelliteDto(satellite)) : notFound("satellite");
+    return satellite ? json(satellite) : notFound("satellite");
   }),
 
   http.post(`${API}/satellites/:id/identify`, ({ request, params }) => {
@@ -845,8 +850,8 @@ export const handlers = [
     const refused = guard(request);
     if (refused) return refused;
     return json({
-      running: db.tasks.filter((t) => t.status === "running").map(taskDto),
-      recent: db.tasks.filter((t) => t.status !== "running").map(taskDto),
+      running: db.tasks.filter((t) => t.status === "running"),
+      recent: db.tasks.filter((t) => t.status !== "running"),
     } satisfies In<"TasksOut">);
   }),
 
@@ -854,7 +859,7 @@ export const handlers = [
     const refused = guard(request);
     if (refused) return refused;
     const task = db.tasks.find((t) => t.id === params.id);
-    return task ? json(taskDto(task)) : notFound("task");
+    return task ? json(task) : notFound("task");
   }),
 
   http.post(`${API}/tasks/:id/cancel`, async ({ request, params }) => {
@@ -864,24 +869,23 @@ export const handlers = [
     const task = db.tasks.find((t) => t.id === params.id);
     if (!task) return notFound("task");
     task.status = "cancelled";
-    task.status_label = CANCELLED;
     task.ended_at = new Date().toISOString();
     save();
-    return json({ task: taskDto(task), confirmed: true } satisfies In<"CancelOut">);
+    return json({ task, confirmed: true } satisfies In<"CancelOut">);
   }),
 
   http.get(`${API}/watches`, ({ request }) => {
     const refused = guard(request);
     if (refused) return refused;
     const kinds = [...new Set(db.connectors.flatMap((c) => c.inbound))];
-    return json({ watches: db.watches.map(watchDto), kinds } satisfies In<"WatchesOut">);
+    return json({ watches: db.watches, kinds } satisfies In<"WatchesOut">);
   }),
 
   http.get(`${API}/watches/:id`, ({ request, params }) => {
     const refused = guard(request);
     if (refused) return refused;
     const watch = db.watches.find((w) => w.id === params.id);
-    return watch ? json(watchDto(watch)) : notFound("watch");
+    return watch ? json(watch) : notFound("watch");
   }),
 
   http.post(`${API}/watches/:id/cancel`, ({ request, params }) => {
@@ -900,9 +904,7 @@ export const handlers = [
     const q = query.get("q")?.toLowerCase().trim();
     const about = query.get("about");
     return json(
-      db.memories
-        .filter((m) => (!q || m.text.toLowerCase().includes(q)) && (!about || m.about === about))
-        .map(memoryDto),
+      db.memories.filter((m) => (!q || m.text.toLowerCase().includes(q)) && (!about || m.about?.id === about)),
     );
   }),
 
@@ -917,7 +919,7 @@ export const handlers = [
     memory.text = text.trim();
     memory.updated_at = new Date().toISOString();
     save();
-    return json(memoryDto(memory));
+    return json(memory);
   }),
 
   http.delete(`${API}/memories/:id`, ({ request, params }) => {
@@ -941,7 +943,7 @@ export const handlers = [
         {
           about: "watch w-2b77",
           delivery: "watch:w-2b77",
-          person: { id: "mathis", name: "Mathis" },
+          person: refOf("mathis"),
           spoken_on: "voice:bureau",
           written_on: "telegram:mathis",
           due_at: soon,
@@ -1084,10 +1086,10 @@ function plug(
   person: string | null,
   replaces: string | null,
   values: Record<string, string>,
-): Connection {
+): In<"ConnectionOut"> {
   const connector = db.connectors.find((c) => c.kind === kind);
   const replaced = db.connections.find((c) => c.id === replaces);
-  const connection: Connection = {
+  const connection: In<"ConnectionOut"> = {
     id: newId("c"),
     kind,
     title: connector?.title ?? kind,
@@ -1095,9 +1097,8 @@ function plug(
       values.username ||
       values.name ||
       (connector?.auth === "oauth2" ? `${person ?? "household"}@gmail.com` : (connector?.title ?? kind)),
-    owner: person,
+    owner: person ? refOf(person) : null,
     status: "connected",
-    status_label: fr("connected", "connectée"),
     status_reason: null,
     confirm_writes: replaced?.confirm_writes ?? true,
     disabled_tools: [],
@@ -1110,23 +1111,13 @@ function plug(
   db.connections.push(connection);
   db.tools[connection.id] = replaced ? (db.tools[replaced.id] ?? []) : toolsOf(kind);
   if (replaced) db.connections = db.connections.filter((c) => c.id !== replaced.id);
-  journalize(
-    toItem({
-      type: "connection.created",
-      kind: "connection",
-      title: `Account ${connection.account} connected (${connection.title})`,
-      detail: "",
-      people: person ? [person] : [],
-      channels: [],
-      room: null,
-      tone: "normal",
-      links: { connection: connection.id },
-      cause: null,
-      outcome: null,
-      tool: null,
-      brand: connection.brand,
-    }),
-  );
+  journalize({
+    type: "connection.created",
+    title: `Account ${connection.account} connected (${connection.title})`,
+    people: connection.owner ? [connection.owner] : [],
+    links: { connection: connection.id },
+    brand: connection.brand,
+  });
   save();
   return connection;
 }
@@ -1237,7 +1228,7 @@ function advance(now = Date.now()): void {
       const satellite = pair(arriving(newId("pair"), a.room), a);
       a.status = "completed";
       a.device_id = satellite.id;
-    } else if (!db.pairing.some((p) => p.id === `pair-for-${a.id}`)) {
+    } else if (!db.pairing.some((p) => p.pairing_id === `pair-for-${a.id}`)) {
       db.pairing.push(arriving(`pair-for-${a.id}`, a.room));
     }
   }
@@ -1246,11 +1237,11 @@ function advance(now = Date.now()): void {
 
 /** Pairs a pending device, with what an addition decided. */
 function pair(
-  pending: PairingRequest,
+  pending: MockPending,
   choice: { name: string | null; room: string | null; capabilities: string[] | null },
-): Satellite {
+): In<"SatelliteOut"> {
   const approver = signedIn();
-  const satellite: Satellite = {
+  const satellite: In<"SatelliteOut"> = {
     id: pending.device.id,
     name: choice.name,
     can_identify: pending.can_identify,
@@ -1261,7 +1252,6 @@ function pair(
       : pending.capabilities,
     paired_at: new Date().toISOString(),
     approved_by: approver?.person ?? null,
-    approved_by_name: approver?.person_name ?? null,
     connected: true,
     last_seen_at: new Date().toISOString(),
     brand: pending.device.brand,
@@ -1270,7 +1260,7 @@ function pair(
     can_update: pending.capabilities.some((c) => c.name === "device.update"),
     update: null,
   };
-  db.pairing = db.pairing.filter((p) => p.id !== pending.id);
+  db.pairing = db.pairing.filter((p) => p.pairing_id !== pending.pairing_id);
   db.satellites = [...db.satellites.filter((s) => s.id !== satellite.id), satellite];
   return satellite;
 }
@@ -1278,7 +1268,9 @@ function pair(
 function additionOut(a: MockAddition): In<"AdditionOut"> {
   const method = METHODS.find((m) => m.id === a.method) ?? (METHODS[0] as (typeof METHODS)[number]);
   const candidates =
-    a.status === "active" && !a.code ? db.pairing.filter((p) => p.id === `pair-for-${a.id}`).map((p) => p.id) : [];
+    a.status === "active" && !a.code
+      ? db.pairing.filter((p) => p.pairing_id === `pair-for-${a.id}`).map((p) => p.pairing_id)
+      : [];
   const stage =
     a.status === "completed"
       ? "paired"
@@ -1299,7 +1291,7 @@ function additionOut(a: MockAddition): In<"AdditionOut"> {
     capabilities: a.capabilities ? a.capabilities.map((name) => ({ name, label: name })) : null,
     candidates,
     device_id: a.device_id,
-    created_by: personRef(creator?.person ?? null),
+    created_by: creator?.person ?? null,
     created_at: a.created_at,
     expires_at: a.expires_at,
     expires_in_s: a.status === "active" ? Math.max(0, Math.round((Date.parse(a.expires_at) - Date.now()) / 1000)) : 0,

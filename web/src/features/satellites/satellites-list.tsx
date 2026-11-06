@@ -29,11 +29,13 @@ export function SatellitesList({
   if (satellites.isPending) return <Loading lines={3} />;
   if (satellites.isError) return <Failure error={satellites.error} retry={() => void satellites.refetch()} />;
   const { pending, paired, additions } = satellites.data;
-  const request = pending.find((p) => p.id === approving);
+  const request = pending.find((p) => p.pairing_id === approving);
   return (
     <>
       {additions.length ? <Additions additions={additions} /> : null}
-      {pending.length ? <Pending requests={pending} onApprove={onApprove} /> : null}
+      {pending.length ? (
+        <Pending requests={pending} receivedAt={satellites.dataUpdatedAt} onApprove={onApprove} />
+      ) : null}
       <Section title={t("sat-paired")} count={paired.length}>
         {paired.length === 0 ? (
           <Empty hint={t("sat-paired-empty-hint")}>{t("sat-paired-empty")}</Empty>
@@ -50,7 +52,15 @@ export function SatellitesList({
   );
 }
 
-function Pending({ requests, onApprove }: { requests: PairingRequest[]; onApprove: (id: string) => void }) {
+function Pending({
+  requests,
+  receivedAt,
+  onApprove,
+}: {
+  requests: PairingRequest[];
+  receivedAt: number;
+  onApprove: (id: string) => void;
+}) {
   const t = useT();
   const canPair = useCan("satellites:write");
   const now = useNow();
@@ -59,7 +69,7 @@ function Pending({ requests, onApprove }: { requests: PairingRequest[]; onApprov
       <ul className="grid gap-3 sm:grid-cols-2">
         {requests.map((r) => {
           return (
-            <li key={r.id} className="rounded-md border border-rule bg-paper-raised p-5">
+            <li key={r.pairing_id} className="rounded-md border border-rule bg-paper-raised p-5">
               <div>
                 <div className="flex items-center gap-2">
                   <DeviceMark brand={r.device.brand} capabilities={r.capabilities} className="size-4 text-ink" />
@@ -70,7 +80,9 @@ function Pending({ requests, onApprove }: { requests: PairingRequest[]; onApprov
                 </p>
                 <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
                   <Status tone="pending">
-                    <span className="tabular">{t("sat-expires-in", { remaining: remaining(r.expires_at, now) })}</span>
+                    <span className="tabular">
+                      {t("sat-expires-in", { remaining: remaining(receivedAt + r.expires_in_s * 1000, now) })}
+                    </span>
                   </Status>
                   <span className="flex gap-1.5 text-ink-muted">
                     {r.capabilities.map((c) => {
@@ -84,10 +96,10 @@ function Pending({ requests, onApprove }: { requests: PairingRequest[]; onApprov
                 </p>
                 {canPair ? (
                   <div className="mt-4 flex flex-wrap gap-2">
-                    <Button size="sm" onClick={() => onApprove(r.id)}>
+                    <Button size="sm" onClick={() => onApprove(r.pairing_id)}>
                       {t("sat-approve")}
                     </Button>
-                    {r.can_identify ? <IdentifyButton pairing={r.id} /> : null}
+                    {r.can_identify ? <IdentifyButton pairing={r.pairing_id} /> : null}
                   </div>
                 ) : (
                   <p className="mt-4 text-sm text-ink-muted">{t("sat-approve-forbidden")}</p>

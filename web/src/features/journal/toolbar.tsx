@@ -111,7 +111,7 @@ export const JournalToolbar = forwardRef<
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger render={<Button variant="outline" className="max-w-72" />}>
             <CalendarRange aria-hidden="true" />
-            <span className="truncate tabular">{rangeLabel(search.from, search.to)}</span>
+            <span className="truncate tabular">{rangeLabel(search.from ?? undefined, search.to ?? undefined)}</span>
           </PopoverTrigger>
           <PopoverContent align="end" className="w-auto p-0" aria-label={t("jr-range-label")}>
             <div className="flex flex-col sm:flex-row">

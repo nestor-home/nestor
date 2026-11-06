@@ -2,16 +2,16 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ArrowUpRight, ChevronRight } from "lucide-react";
 import { type ReactNode, useState } from "react";
-import { type JournalItem, taskQuery, watchQuery } from "@/api";
+import { type JournalItem, type Kind, taskQuery, watchQuery } from "@/api";
 import { AgentFigure } from "@/components/agent-figure";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useT } from "@/i18n";
+import { tr } from "@/i18n/runtime";
 import { KindMark } from "@/lib/brands";
 import { dayLabel, hourMinute } from "@/lib/dates";
 import { is } from "@/lib/events";
 import { kindStyle } from "@/lib/icons";
 import { say, why } from "@/lib/messages";
-import { usePeopleNames } from "@/lib/people";
 import { useMe } from "@/lib/session";
 import { duration } from "@/lib/time";
 import { cn } from "@/lib/utils";
@@ -22,8 +22,8 @@ export type Density = "comfortable" | "compact";
 
 interface Props {
   density: Density;
-  open: (id: string) => void; // opens the event drawer
-  isNew: (id: string) => boolean;
+  open: (position: number) => void; // opens the event drawer
+  isNew: (position: number) => boolean;
   /** the full thread (its own page): every turn and every detail shown */
   unfolded?: boolean;
 }
@@ -46,7 +46,7 @@ function Entry({
   label,
 }: {
   item: JournalItem;
-  open: (id: string) => void;
+  open: (position: number) => void;
   className?: string;
   children: ReactNode;
   label: string;
@@ -55,7 +55,7 @@ function Entry({
     <button
       type="button"
       data-journal-entry=""
-      onClick={() => open(item.id)}
+      onClick={() => open(item.position)}
       aria-label={label}
       className={cn(
         "group/entry block w-full min-w-0 rounded-sm py-1 text-left hover:bg-paper-sunken/70 focus-visible:bg-paper-sunken/70",
@@ -75,10 +75,9 @@ function Clock({ iso, className }: { iso: string; className?: string }) {
   );
 }
 
-function StoryHeader({ story, title, link, kind }: { story: Story; title: ReactNode; link?: ReactNode; kind: string }) {
+function StoryHeader({ story, title, link, kind }: { story: Story; title: ReactNode; link?: ReactNode; kind: Kind }) {
   const style = kindStyle(kind);
   const Icon = style.icon;
-  const name = usePeopleNames();
   const { people, channels, rooms } = cast(story);
   const span =
     story.earliest.slice(0, 16) !== story.latest.slice(0, 16)
@@ -94,8 +93,8 @@ function StoryHeader({ story, title, link, kind }: { story: Story; title: ReactN
         {people.length || channels.length || rooms.length ? (
           <p className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[0.85rem] text-ink-muted">
             {people.map((p) => (
-              <span key={p} className="text-ink">
-                {name(p)}
+              <span key={p.id} className="text-ink">
+                {p.name}
               </span>
             ))}
             {channels.map((c) => (
@@ -140,10 +139,9 @@ const TAIL = 2;
 
 function ThreadCard({ thread, density, open, isNew, unfolded }: Props & { thread: Thread }) {
   const t = useT();
-  const name = usePeopleNames();
   const [all, setAll] = useState(Boolean(unfolded));
   const { people, channels, rooms } = cast(thread);
-  const fresh = thread.items.some((i) => isNew(i.id));
+  const fresh = thread.items.some((i) => isNew(i.position));
   const turns = thread.turns;
   const hidden = !all && turns.length > HEAD + TAIL + 1 ? turns.length - HEAD - TAIL : 0;
   const shown = hidden ? [...turns.slice(0, HEAD), null, ...turns.slice(-TAIL)] : turns;
@@ -156,7 +154,7 @@ function ThreadCard({ thread, density, open, isNew, unfolded }: Props & { thread
       <header className="flex min-w-0 items-baseline gap-3">
         <p className="min-w-0 flex-1 text-[0.92rem] text-ink-muted [overflow-wrap:anywhere]">
           <span className="font-medium text-ink">
-            {people.length ? people.map((p) => name(p)).join(", ") : t("jr-story-thread")}
+            {people.length ? people.map((p) => p.name).join(", ") : t("jr-story-thread")}
           </span>
           {channels.map((c) => (
             <span key={c}>
@@ -233,15 +231,14 @@ function TurnBlock({
   unfolded,
 }: {
   turn: Turn;
-  open: (id: string) => void;
+  open: (position: number) => void;
   first: boolean;
   unfolded: boolean;
 }) {
   const t = useT();
   const me = useMe();
-  const name = usePeopleNames();
   const { answer, cut } = partsOf(turn);
-  const who = turn.user ? name(turn.user.people[0]) : "";
+  const who = turn.user?.people[0]?.name ?? (turn.user ? tr("household-everyone") : "");
   const interrupted = Boolean(cut) || (answer ? is(answer, "interrupted") : false);
   return (
     <li className="grid gap-2.5">
@@ -261,11 +258,11 @@ function TurnBlock({
             <Entry
               item={turn.user}
               open={open}
-              label={t("jr-entry-label", { text: say(turn.user), detail: turn.user.detail })}
+              label={t("jr-entry-label", { text: say(turn.user), detail: turn.user.detail_text })}
               className="w-fit max-w-full rounded-2xl rounded-tl-sm bg-paper-sunken px-3.5 py-2"
             >
               <span className="block text-[0.98rem] leading-relaxed text-ink [overflow-wrap:anywhere]">
-                {turn.user.detail || say(turn.user)}
+                {turn.user.detail_text || say(turn.user)}
               </span>
             </Entry>
           </div>
@@ -284,7 +281,7 @@ function TurnBlock({
               <Entry
                 item={answer}
                 open={open}
-                label={t("jr-entry-label", { text: say(answer), detail: answer.detail })}
+                label={t("jr-entry-label", { text: say(answer), detail: answer.detail_text })}
                 className="py-0.5"
               >
                 <span
@@ -293,12 +290,12 @@ function TurnBlock({
                     interrupted ? "text-ink-muted" : "text-ink",
                   )}
                 >
-                  {answer.detail}
+                  {answer.detail_text}
                 </span>
               </Entry>
             ) : null}
             {cut ? (
-              <p className="mt-1 text-[0.88rem] text-ink-muted">{t("jr-cut-by", { heard: cut.detail || "…" })}</p>
+              <p className="mt-1 text-[0.88rem] text-ink-muted">{t("jr-cut-by", { heard: cut.detail_text || "…" })}</p>
             ) : null}
             <Between turn={turn} open={open} unfolded={unfolded} />
           </div>
@@ -313,7 +310,7 @@ function TurnBlock({
 }
 
 /** Everything between a message and its reply, in one quiet line that unfolds into the details. */
-function Between({ turn, open, unfolded }: { turn: Turn; open: (id: string) => void; unfolded: boolean }) {
+function Between({ turn, open, unfolded }: { turn: Turn; open: (position: number) => void; unfolded: boolean }) {
   const t = useT();
   const { calls, spawns, others } = partsOf(turn);
   if (!calls.length && !spawns.length && !others.length) return null;
@@ -367,7 +364,7 @@ function Between({ turn, open, unfolded }: { turn: Turn; open: (id: string) => v
                   <button
                     type="button"
                     data-journal-entry=""
-                    onClick={() => open(item.id)}
+                    onClick={() => open(item.position)}
                     className="flex min-w-0 items-baseline gap-2 text-left text-[0.88rem] text-ink-muted hover:text-ink"
                   >
                     <span
@@ -379,7 +376,7 @@ function Between({ turn, open, unfolded }: { turn: Turn; open: (id: string) => v
                     />
                     <span className="min-w-0 [overflow-wrap:anywhere]">
                       {say(item)}
-                      {item.detail ? <span className="text-ink-faint"> · {item.detail}</span> : null}
+                      {item.detail_text ? <span className="text-ink-faint"> · {item.detail_text}</span> : null}
                     </span>
                   </button>
                 </li>
@@ -401,7 +398,7 @@ const kindDot = (kind: string) =>
         ? "bg-kind-watch"
         : "bg-ink-faint";
 
-function CallDetail({ call, open }: { call: ToolCall; open: (id: string) => void }) {
+function CallDetail({ call, open }: { call: ToolCall; open: (position: number) => void }) {
   const t = useT();
   const ok = call.ended?.outcome?.ok;
   const seconds = call.ended?.outcome?.duration_s;
@@ -417,7 +414,7 @@ function CallDetail({ call, open }: { call: ToolCall; open: (id: string) => void
         <button
           type="button"
           data-journal-entry=""
-          onClick={() => (call.ended ?? call.started) && open((call.ended ?? call.started)?.id ?? "")}
+          onClick={() => (call.ended ?? call.started) && open((call.ended ?? call.started)?.position ?? 0)}
           className="font-mono text-[0.82rem] text-ink [overflow-wrap:anywhere] hover:underline"
           aria-label={t("jr-call-details", { tool: call.name })}
         >
@@ -428,8 +425,8 @@ function CallDetail({ call, open }: { call: ToolCall; open: (id: string) => void
           {seconds !== undefined && seconds !== null ? ` · ${duration(seconds)}` : ""}
         </span>
       </p>
-      {call.started?.detail ? <Code label={t("jr-call-arguments")}>{call.started.detail}</Code> : null}
-      {call.ended?.detail ? <Code label={t("jr-call-result")}>{call.ended.detail}</Code> : null}
+      {call.started?.detail_text ? <Code label={t("jr-call-arguments")}>{call.started.detail_text}</Code> : null}
+      {call.ended?.detail_text ? <Code label={t("jr-call-result")}>{call.ended.detail_text}</Code> : null}
     </li>
   );
 }
@@ -445,12 +442,11 @@ function Code({ label, children }: { label: string; children: string }) {
 }
 
 /** Compact: one line per turn, the person then the reply, cut short with the whole on hover. */
-function CompactTurn({ turn, open }: { turn: Turn; open: (id: string) => void }) {
+function CompactTurn({ turn, open }: { turn: Turn; open: (position: number) => void }) {
   const me = useMe();
-  const name = usePeopleNames();
   const { answer } = partsOf(turn);
-  const who = turn.user ? name(turn.user.people[0]) : "";
-  const line = `${who ? `${who} : ${turn.user?.detail ?? ""}` : ""}${answer ? ` → ${me.assistant} : ${answer.detail}` : ""}`;
+  const who = turn.user?.people[0]?.name ?? (turn.user ? tr("household-everyone") : "");
+  const line = `${who ? `${who} : ${turn.user?.detail_text ?? ""}` : ""}${answer ? ` → ${me.assistant} : ${answer.detail_text}` : ""}`;
   const target = turn.user ?? answer;
   return (
     <li className="min-w-0">
@@ -458,17 +454,17 @@ function CompactTurn({ turn, open }: { turn: Turn; open: (id: string) => void })
         type="button"
         data-journal-entry=""
         title={line}
-        onClick={() => target && open(target.id)}
+        onClick={() => target && open(target.position)}
         className="flex w-full min-w-0 items-baseline gap-2 rounded-sm px-1 py-0.5 text-left text-[0.92rem] hover:bg-paper-sunken"
       >
         {turn.user ? <Clock iso={turn.user.at} /> : null}
         <span className="min-w-0 truncate">
           {who ? <span className="font-medium text-ink">{who} : </span> : null}
-          <span className="text-ink">{turn.user?.detail}</span>
+          <span className="text-ink">{turn.user?.detail_text}</span>
           {answer ? (
             <span className="text-ink-muted">
               {" "}
-              → {me.assistant} : {answer.detail}
+              → {me.assistant} : {answer.detail_text}
             </span>
           ) : null}
         </span>
@@ -479,7 +475,7 @@ function CompactTurn({ turn, open }: { turn: Turn; open: (id: string) => void })
 
 // -- a chain ----------------------------------------------------------------------------------------
 
-function useChainTitle(chain: Chain): { title: string; link: ReactNode; kind: string } {
+function useChainTitle(chain: Chain): { title: string; link: ReactNode; kind: Kind } {
   const t = useT();
   const { type, id } = chain.subject;
   const task = useQuery({ ...taskQuery(id), enabled: type === "task", refetchInterval: false, retry: false });
@@ -517,7 +513,7 @@ function useChainTitle(chain: Chain): { title: string; link: ReactNode; kind: st
 
 function ChainCard({ chain, density, open, isNew }: Props & { chain: Chain }) {
   const { title, link, kind } = useChainTitle(chain);
-  const fresh = chain.items.some((i) => isNew(i.id));
+  const fresh = chain.items.some((i) => isNew(i.position));
   return (
     <Frame fresh={fresh} story={chain}>
       <StoryHeader story={chain} kind={kind} title={title} link={link} />
@@ -535,7 +531,7 @@ function ChainCard({ chain, density, open, isNew }: Props & { chain: Chain }) {
                 <button
                   type="button"
                   data-journal-entry=""
-                  onClick={() => open(item.id)}
+                  onClick={() => open(item.position)}
                   className={cn("hover:underline", look.tone)}
                 >
                   {look.label}
@@ -565,7 +561,7 @@ function ChainStep({
   day,
 }: {
   item: JournalItem;
-  open: (id: string) => void;
+  open: (position: number) => void;
   day: string | null; // the day, when the step is on another day than the one before
 }) {
   const t = useT();
@@ -597,8 +593,10 @@ function ChainStep({
             {why(item)}
           </span>
         ) : null}
-        {item.detail ? (
-          <span className="mt-0.5 block text-[0.92rem] text-ink-muted [overflow-wrap:anywhere]">{item.detail}</span>
+        {item.detail_text ? (
+          <span className="mt-0.5 block text-[0.92rem] text-ink-muted [overflow-wrap:anywhere]">
+            {item.detail_text}
+          </span>
         ) : null}
       </Entry>
     </li>
@@ -611,9 +609,8 @@ function SingleRow({ single, open, isNew }: Props & { single: Single }) {
   const { item } = single;
   const style = kindStyle(item.kind);
   const Icon = style.icon;
-  const name = usePeopleNames();
   return (
-    <div className={cn("px-4", isNew(item.id) && "just-arrived")}>
+    <div className={cn("px-4", isNew(item.position) && "just-arrived")}>
       <Entry item={item} open={open} label={say(item)}>
         <span className="grid grid-cols-[2.75rem_1.25rem_minmax(0,1fr)] items-baseline gap-x-2">
           <Clock iso={item.at} />
@@ -623,10 +620,10 @@ function SingleRow({ single, open, isNew }: Props & { single: Single }) {
               <span aria-hidden="true" className="mr-1.5 inline-block size-1.5 -translate-y-px rounded-full bg-brick" />
             ) : null}
             {say(item)}
-            {item.people.length && !say(item).includes(name(item.people[0])) ? (
-              <span className="ml-2 text-ink">{item.people.map(name).join(", ")}</span>
+            {item.people[0] && !say(item).includes(item.people[0].name) ? (
+              <span className="ml-2 text-ink">{item.people.map((p) => p.name).join(", ")}</span>
             ) : null}
-            {item.detail ? <span className="ml-2 text-ink-faint">{item.detail}</span> : null}
+            {item.detail_text ? <span className="ml-2 text-ink-faint">{item.detail_text}</span> : null}
           </span>
         </span>
       </Entry>

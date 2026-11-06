@@ -2,7 +2,6 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { I18nProvider } from "@/i18n";
 import { connectors } from "@/mocks/fixtures";
 import { server } from "@/mocks/server";
 import { renderApp, renderWithProviders } from "@/test/render";
@@ -58,11 +57,9 @@ describe("connecting an account", () => {
     expect(within(sheet).getByRole("button", { name: "Redirecting to the service…" })).toBeDisabled();
   });
 
-  it("cannot start OAuth before the household's client exists", () => {
-    renderWithProviders(
-      <I18nProvider>
-        <ConnectForm connector={connector("google-calendar")} replaces={null} onConnected={vi.fn()} />
-      </I18nProvider>,
+  it("cannot start OAuth before the household's client exists", async () => {
+    await renderWithProviders(
+      <ConnectForm connector={connector("google-calendar")} replaces={null} onConnected={vi.fn()} />,
     );
     expect(screen.getByRole("button", { name: "Connect" })).toBeDisabled();
     expect(screen.getByText("Register the OAuth client first.")).toBeInTheDocument();
@@ -71,11 +68,7 @@ describe("connecting an account", () => {
   it("connects a secret-based service at once, with trimmed values", async () => {
     const user = userEvent.setup();
     const onConnected = vi.fn();
-    renderWithProviders(
-      <I18nProvider>
-        <ConnectForm connector={connector("imap")} replaces={null} onConnected={onConnected} />
-      </I18nProvider>,
-    );
+    await renderWithProviders(<ConnectForm connector={connector("imap")} replaces={null} onConnected={onConnected} />);
     await user.type(screen.getByLabelText("IMAP server"), "imap.example.org ");
     await user.type(screen.getByLabelText("Username"), "lea@lambert.family ");
     await user.type(screen.getByLabelText("App password"), "s3cret-app");
@@ -88,11 +81,7 @@ describe("connecting an account", () => {
   it("shows the provider's refusal and lets the person try again", async () => {
     const user = userEvent.setup();
     const onConnected = vi.fn();
-    renderWithProviders(
-      <I18nProvider>
-        <ConnectForm connector={connector("imap")} replaces={null} onConnected={onConnected} />
-      </I18nProvider>,
-    );
+    await renderWithProviders(<ConnectForm connector={connector("imap")} replaces={null} onConnected={onConnected} />);
     await user.type(screen.getByLabelText("IMAP server"), "imap.invalid.example");
     await user.type(screen.getByLabelText("Username"), "lea");
     await user.type(screen.getByLabelText("App password"), "wrong");

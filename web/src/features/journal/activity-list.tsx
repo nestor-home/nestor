@@ -42,7 +42,7 @@ export function ActivityList({
             <li key={item.id}>
               <Link
                 to="/journal"
-                search={clean({ ...search, event: item.id })}
+                search={clean({ ...search, event: item.position })}
                 className="grid grid-cols-[1.25rem_1fr_auto] items-baseline gap-x-3 px-4 py-2.5 hover:bg-paper-sunken/60"
               >
                 <Icon className={cn("size-3.5 translate-y-0.5", style.tone)} aria-hidden="true" />
@@ -55,8 +55,8 @@ export function ActivityList({
                       <span className="text-[0.85rem] text-ember">{t("jr-why")} </span>
                       {why(item)}
                     </span>
-                  ) : item.detail ? (
-                    <span className="block truncate text-sm text-ink-muted">{item.detail}</span>
+                  ) : item.detail_text ? (
+                    <span className="block truncate text-sm text-ink-muted">{item.detail_text}</span>
                   ) : null}
                 </span>
                 <span className="flex items-center gap-2 text-[0.85rem] text-ink-faint">

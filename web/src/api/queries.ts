@@ -14,7 +14,7 @@ export const keys = {
   invitations: ["invitations"] as const,
   journal: (filters: JournalFilters) => ["journal", filters] as const,
   journalFacets: (filters: JournalFilters) => ["journal", "facets", filters] as const,
-  journalEvent: (id: Id) => ["journal", "event", id] as const,
+  journalEvent: (position: number) => ["journal", "event", position] as const,
   system: ["system"] as const,
   updates: ["system", "updates"] as const,
   connectors: ["connectors"] as const,
@@ -62,8 +62,8 @@ export const journalQuery = (filters: JournalFilters) =>
   infiniteQueryOptions({
     queryKey: keys.journal(filters),
     queryFn: ({ pageParam, signal }) => api.journal(filters, pageParam, signal),
-    initialPageParam: undefined as Id | undefined,
-    getNextPageParam: (last) => last.next ?? undefined,
+    initialPageParam: undefined as number | undefined,
+    getNextPageParam: (last) => last.next_before ?? undefined,
   });
 
 export const journalFacetsQuery = (filters: JournalFilters) =>
@@ -80,8 +80,8 @@ export const journalLatestQuery = (filters: JournalFilters, limit = 8) =>
     queryFn: ({ signal }) => api.journal(filters, undefined, signal, limit),
   });
 
-export const journalEventQuery = (id: Id) =>
-  queryOptions({ queryKey: keys.journalEvent(id), queryFn: () => api.journalEvent(id) });
+export const journalEventQuery = (position: number) =>
+  queryOptions({ queryKey: keys.journalEvent(position), queryFn: () => api.journalEvent(position) });
 
 export const systemQuery = queryOptions({ queryKey: keys.system, queryFn: api.system, refetchInterval: 15_000 });
 

@@ -17,7 +17,7 @@ export function SubjectStory({
   limit?: number;
 }) {
   const latest = useQuery(journalLatestQuery(filters, limit));
-  const [open, setOpen] = useState<string | undefined>();
+  const [open, setOpen] = useState<number | undefined>();
   if (latest.isPending) return <Loading lines={3} />;
   if (latest.isError) return <Failure error={latest.error} retry={() => void latest.refetch()} />;
   const stories = buildStories(latest.data.items);
@@ -31,7 +31,7 @@ export function SubjectStory({
           </li>
         ))}
       </ol>
-      <EventSheet id={open} onClose={() => setOpen(undefined)} />
+      <EventSheet position={open} onClose={() => setOpen(undefined)} />
     </>
   );
 }

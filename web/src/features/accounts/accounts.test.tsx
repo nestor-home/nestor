@@ -60,6 +60,6 @@ describe("accounts", () => {
     await user.click(within(dialog).getByRole("button", { name: "Create the invitation" }));
     expect(await within(dialog).findByText(/Send this link to/)).toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: "Copy the invitation link" })).toBeInTheDocument();
-    expect(db.invitations.some((i) => i.status === "pending" && i.person === "jules")).toBe(true);
+    expect(db.invitations.some((i) => i.status === "pending" && i.person?.id === "jules")).toBe(true);
   });
 });

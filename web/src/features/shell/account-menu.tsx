@@ -62,12 +62,12 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
           aria-hidden="true"
           className="grid size-7 shrink-0 place-items-center rounded-sm bg-ink font-serif text-sm text-paper"
         >
-          {(me.account.person_name ?? me.account.login).slice(0, 1).toUpperCase()}
+          {(me.account.person?.name ?? me.account.login).slice(0, 1).toUpperCase()}
         </span>
         {compact ? null : (
           <>
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm text-ink">{me.account.person_name ?? me.account.login}</span>
+              <span className="block truncate text-sm text-ink">{me.account.person?.name ?? me.account.login}</span>
               <span className="block truncate text-[0.85rem] text-ink-muted">{roleLabel(me.account.role)}</span>
             </span>
             <ChevronsUpDown className="size-4 text-ink-faint" aria-hidden="true" />

@@ -105,6 +105,31 @@ runtime may assemble the built-in storage adapters, and the admin may use FastAP
   line length 120. Code, docstrings and identifiers in English.
 - No secrets in the repository; secrets come from the environment.
 - Keep the repository lean: no new Markdown files unless users or agents need them.
+- **The admin API has one contract.** A closed set in a response or a query is its domain `StrEnum`
+  (never a `Literal` or a `str` restating it, never a `cast`), so `web/openapi.json` lists its values.
+  The admin reads the client generated from that file (`pnpm api:generate`: `src/api/schema.gen.ts`,
+  with each enum's values) and names its schemas in `src/api/types.ts`; no hand-written shape, union
+  or list repeats the server, and the mocks keep their state in those types. The API sends values,
+  not their labels: the admin ships Nestor's labels (`locales/*/labels.ftl`) and labels a value with the
+  server's select message (`role-name`, `task-status`, `journal-kind`…), which has a variant for every value. What
+  the mock server answers beyond the schema (configuration schemas, the kind of each event type, the
+  scopes of each role) is written by `nestor admin mocks` into `web/src/mocks/server/`. Tests check
+  that `openapi.json` and those files are current, and CI that the client is. A table the admin keys
+  by a server enum is a `Record` over it, so a new value fails the typecheck until the admin handles it.
+- **The admin API is laid out by resource** (`admin/api/v1/<resource>/`; `app.py` assembles them):
+  1. `schemas.py` holds what the resource takes and sends, nothing else; each `XOut` is built from the
+     domain by its `of`, so a conversion lives with the shape it produces.
+  2. `routes.py` holds the handlers and their dependencies, thin: check, call the domain, `XOut.of`. No
+     module-level helper.
+  3. What a resource reads or decides gets a module named for it (`journal/feed.py`,
+     `tasks/afterwards.py`); domain knowledge goes down into `modules/` or the runtime
+     (`Nestor.heard_rooms`), sessions into `admin/auth` (`SessionCookie.open`).
+  4. A resource imports nothing of another but its `schemas.py`, to send a shape that resource owns (the
+     household sends `ConnectionOut`). `shared.py` holds only what every resource builds on (`Input`,
+     `PersonRef`, `People`, `MessageOut`), `access.py` who may reach what (one rule per thing, on
+     `Caller`) and whether a feature is on, `errors.py` the error shapes.
+  5. Tests follow the same tree (`tests/admin/api/v1/<resource>/`); what crosses resources (the OpenAPI
+     document, permissions) stays at the top. Moving code keeps `web/openapi.json` byte for byte.
 
 ## Tests
 

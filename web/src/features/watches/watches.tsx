@@ -14,17 +14,16 @@ import { SubjectStory } from "@/features/journal/subject-story";
 import { useT } from "@/i18n";
 import { KindMark } from "@/lib/brands";
 import { moment } from "@/lib/dates";
-import { usePeopleNames } from "@/lib/people";
+import { personName } from "@/lib/people";
 import { useCan, useMe } from "@/lib/session";
 
 export function WatchesList() {
   const t = useT();
   const me = useMe();
   const watches = useQuery(watchesQuery);
-  const name = usePeopleNames();
   if (watches.isPending) return <Loading lines={2} />;
   if (watches.isError) return <Failure error={watches.error} retry={() => void watches.refetch()} />;
-  const { sources } = watches.data;
+  const sources = watches.data.kinds; // what the plugged sources can bring
   return (
     <>
       {sources.length === 0 ? (
@@ -55,7 +54,7 @@ export function WatchesList() {
                   <span className="min-w-0">
                     <span className="block text-ink">{w.what}</span>
                     <span className="mt-0.5 flex flex-wrap gap-x-3 text-[0.85rem] text-ink-muted">
-                      <span>{t("watch-for", { name: name(w.owner) })}</span>
+                      <span>{t("watch-for", { name: personName(w.owner) })}</span>
                       <span>{w.kinds.join(", ")}</span>
                       <span>{w.once ? t("watch-once") : t("watch-every-time")}</span>
                     </span>
@@ -99,7 +98,6 @@ export function WatchDetail({ id }: { id: string }) {
 
 function Loaded({ watch: w, trail }: { watch: Watch; trail: Crumb[] }) {
   const t = useT();
-  const name = usePeopleNames();
   const canCancel = useCan("watches:write");
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -119,7 +117,7 @@ function Loaded({ watch: w, trail }: { watch: Watch; trail: Crumb[] }) {
         title={w.what}
         meta={
           <>
-            <span>{t("watch-for", { name: name(w.owner) })}</span>
+            <span>{t("watch-for", { name: personName(w.owner) })}</span>
             <span>{t("watch-created", { when: moment(w.created_at) })}</span>
             {w.until ? <span>{t("watch-until", { when: moment(w.until) })}</span> : null}
           </>

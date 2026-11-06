@@ -27,7 +27,7 @@ import { useT } from "@/i18n";
 import { tr } from "@/i18n/runtime";
 import { moment } from "@/lib/dates";
 import { roleHint, roleLabel } from "@/lib/labels";
-import { usePeopleNames } from "@/lib/people";
+import { personName } from "@/lib/people";
 import { useCan, useMe } from "@/lib/session";
 import { InviteForm, roleOptions } from "./invite-form";
 import { isLastOwner } from "./rules";
@@ -90,11 +90,11 @@ function useChange(account: Account) {
     onSuccess: (updated, body) => {
       queryClient.setQueryData<Account[]>(keys.accounts, (all) => all?.map((a) => (a.id === updated.id ? updated : a)));
       if (body.role)
-        notify(tr("acc-role-changed", { name: updated.person_name ?? updated.login, role: roleLabel(updated.role) }));
+        notify(tr("acc-role-changed", { name: updated.person?.name ?? updated.login, role: roleLabel(updated.role) }));
       else
         notify(
           tr(updated.disabled ? "acc-disabled-done" : "acc-enabled-done", {
-            name: updated.person_name ?? updated.login,
+            name: updated.person?.name ?? updated.login,
           }),
         );
       if (updated.id === me.account.id) void queryClient.invalidateQueries({ queryKey: keys.me });
@@ -126,7 +126,7 @@ function AccountRow({ account, accounts }: { account: Account; accounts: Account
     <li className="grid gap-x-6 gap-y-2 px-5 py-3.5 sm:grid-cols-[minmax(0,1fr)_11rem_1rem] sm:items-center">
       <Link to="/accounts/$accountId" params={{ accountId: account.id }} className="group min-w-0">
         <span className="flex flex-wrap items-center gap-2">
-          <span className="text-ink group-hover:text-ember">{account.person_name ?? account.login}</span>
+          <span className="text-ink group-hover:text-ember">{account.person?.name ?? account.login}</span>
           {account.id === me.account.id ? <Tag tone="accent">{t("acc-you")}</Tag> : null}
           {account.disabled ? <Status tone="idle">{t("acc-disabled")}</Status> : null}
         </span>
@@ -136,7 +136,7 @@ function AccountRow({ account, accounts }: { account: Account; accounts: Account
       </Link>
       <div>
         <label htmlFor={roleId} className="sr-only">
-          {t("acc-role-of", { name: account.person_name ?? account.login })}
+          {t("acc-role-of", { name: account.person?.name ?? account.login })}
         </label>
         {editable ? (
           <Choice
@@ -184,7 +184,6 @@ export function InvitationsList() {
 
 function InvitationRow({ invitation }: { invitation: Invitation }) {
   const t = useT();
-  const name = usePeopleNames();
   const queryClient = useQueryClient();
   const revoke = useMutation({
     mutationFn: () => api.revokeInvitation(invitation.id),
@@ -193,11 +192,11 @@ function InvitationRow({ invitation }: { invitation: Invitation }) {
   return (
     <li className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5">
       <div>
-        <p className="text-sm">{invitation.person_name ?? roleLabel(invitation.role)}</p>
+        <p className="text-sm">{invitation.person?.name ?? roleLabel(invitation.role)}</p>
         <p className="text-[0.85rem] text-ink-muted">
           {t("acc-invitation-pending", {
             role: roleLabel(invitation.role),
-            person: invitation.person ? name(invitation.person) : "",
+            person: invitation.person ? personName(invitation.person) : "",
             has_person: invitation.person ? "yes" : "no",
             expires: moment(invitation.expires_at),
           })}
@@ -213,7 +212,7 @@ function InvitationRow({ invitation }: { invitation: Invitation }) {
         confirm={t("acc-revoke-confirm")}
         onConfirm={() => revoke.mutateAsync()}
       >
-        {t("acc-revoke-text", { email: invitation.person_name ?? roleLabel(invitation.role) })}
+        {t("acc-revoke-text", { email: invitation.person?.name ?? roleLabel(invitation.role) })}
       </Confirm>
     </li>
   );
@@ -224,7 +223,6 @@ export function AccountDetail({ id }: { id: string }) {
   const found = useQuery(accountQuery(id));
   const accounts = useQuery(accountsQuery); // whether this is the last owner
   const me = useMe();
-  const name = usePeopleNames();
   const editable = useCan("accounts:write");
   const account = found.data;
   const trail: Crumb[] = [{ label: t("acc-title"), link: { to: "/accounts" } }, { label: account?.login ?? id }];
@@ -243,7 +241,7 @@ export function AccountDetail({ id }: { id: string }) {
     <>
       <PageHeader
         crumbs={<Crumbs trail={trail} />}
-        title={account.person_name ?? account.login}
+        title={account.person?.name ?? account.login}
         meta={
           <>
             <span>{account.login}</span>
@@ -260,8 +258,8 @@ export function AccountDetail({ id }: { id: string }) {
         <Facts>
           <Fact term={t("acc-field-person")}>
             {account.person ? (
-              <Link to="/people/$personId" params={{ personId: account.person }} className="hover:text-ember">
-                {name(account.person)}
+              <Link to="/people/$personId" params={{ personId: account.person.id }} className="hover:text-ember">
+                {account.person.name}
               </Link>
             ) : (
               <span className="text-ink-muted">{t("acc-person-none-lower")}</span>
@@ -304,7 +302,7 @@ export function AccountDetail({ id }: { id: string }) {
                       {t("acc-disable")}
                     </Button>
                   }
-                  title={t("acc-disable-title", { name: account.person_name ?? account.login })}
+                  title={t("acc-disable-title", { name: account.person?.name ?? account.login })}
                   confirm={t("acc-disable-confirm")}
                   onConfirm={() => change.mutateAsync({ disabled: true })}
                 >

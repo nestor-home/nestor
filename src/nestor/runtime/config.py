@@ -9,6 +9,7 @@ are the process environment's, completed by the `.env` next to the file (`enviro
 import os
 import re
 from collections.abc import Callable, Collection, Mapping
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -52,13 +53,34 @@ def _located[T](parse: Callable[[str], T], value: str) -> T:
         raise ValueError(str(error)) from None
 
 
+class ProblemCode(StrEnum):
+    """What is wrong in a configuration; each names its message, `config-error-<code>`."""
+
+    MISSING = "missing"
+    EXTRA = "extra"
+    INVALID = "invalid"
+    UNKNOWN_KIND = "unknown_kind"  # no plugin of that kind is installed
+    REFERENCE = "reference"  # an environment variable that is not set
+    SECRET = "secret"  # a secret that is not set
+    NO_ANSWERING_MODEL = "no_answering_model"
+    NOT_ANSWERING = "not_answering"
+    NOT_EMBEDDING = "not_embedding"
+    NOT_VOICE = "not_voice"
+    SHARED_ACCOUNT = "shared_account"
+
+
 class ConfigError(NestorError):
     """The configuration cannot be used; the message says where and why. For the admin, which says it in the
     reader's language, `path` locates it in the document and `code` names its message (`config-error-<code>`,
     with `detail`)."""
 
     def __init__(
-        self, message: str, *, path: tuple[str | int, ...] = (), code: str = "invalid", detail: str | None = None
+        self,
+        message: str,
+        *,
+        path: tuple[str | int, ...] = (),
+        code: ProblemCode = ProblemCode.INVALID,
+        detail: str | None = None,
     ) -> None:
         super().__init__(message)
         self.path, self.code = path, code
@@ -302,7 +324,7 @@ class NestorConfig(Section):
             raise ConfigError(
                 f"agent: several models can answer ({among}); say which in `spoken`, `written` or both",
                 path=("agent",),
-                code="no_answering_model",
+                code=ProblemCode.NO_ANSWERING_MODEL,
                 detail=among,
             )
         return {

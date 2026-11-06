@@ -34,6 +34,7 @@ import {
   type StartedAddition,
   satellitesQuery,
 } from "@/api";
+import { pairingMethodValues } from "@/api/schema.gen";
 import { AgentFigure } from "@/components/agent-figure";
 import { CopyField } from "@/components/copy-field";
 import { Field } from "@/components/field";
@@ -50,6 +51,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useNow } from "@/hooks/use-now";
 import { useT } from "@/i18n";
 import { remaining } from "@/lib/dates";
+import { oneOf } from "@/lib/enums";
 import { cn } from "@/lib/utils";
 import { ApproveForm } from "./approve-form";
 
@@ -133,9 +135,9 @@ function Choose({ onStarted }: { onStarted: (started: StartedAddition) => void }
   const queryClient = useQueryClient();
   const method = chosen ?? methods.data?.recommended ?? null;
   const start = useMutation({
-    mutationFn: () =>
+    mutationFn: (method: PairingMethodId) =>
       api.startAddition({
-        method: method as PairingMethodId,
+        method,
         name: name.trim() || undefined,
         room: room.trim() ? roomSlug(room) : undefined,
         capabilities: limited ? [...limited].sort() : undefined,
@@ -154,7 +156,7 @@ function Choose({ onStarted }: { onStarted: (started: StartedAddition) => void }
       return;
     }
     setRoomError(null);
-    start.mutate();
+    if (method) start.mutate(method);
   };
   const groups: { proof: PairingMethod["proof"]; title: string }[] = [
     { proof: "device_code", title: t("sat-add-device-code") },
@@ -172,7 +174,7 @@ function Choose({ onStarted }: { onStarted: (started: StartedAddition) => void }
               value={method ? [method] : []}
               onValueChange={(value: string[]) => {
                 const next = value.find((v) => v !== method);
-                if (next) setChosen(next as PairingMethodId);
+                if (oneOf(pairingMethodValues, next)) setChosen(next);
               }}
               className="grid w-full gap-2"
             >
@@ -432,7 +434,7 @@ function Candidates({ addition }: { addition: Addition }) {
   const t = useT();
   const satellites = useQuery({ ...satellitesQuery, refetchInterval: 1_500 });
   const [chosen, setChosen] = useState<string | null>(null);
-  const waiting = (satellites.data?.pending ?? []).filter((p) => addition.candidates.includes(p.id));
+  const waiting = (satellites.data?.pending ?? []).filter((p) => addition.candidates.includes(p.pairing_id));
   if (addition.stage === "waiting" || !waiting.length)
     return (
       <div className="grid gap-2">
@@ -443,17 +445,22 @@ function Candidates({ addition }: { addition: Addition }) {
         <p className="text-[0.92rem] text-ink-muted">{addition.method.hint}</p>
       </div>
     );
-  const request = waiting.find((p) => p.id === chosen) ?? (waiting.length === 1 ? waiting[0] : undefined);
+  const request = waiting.find((p) => p.pairing_id === chosen) ?? (waiting.length === 1 ? waiting[0] : undefined);
   return (
     <div className="grid gap-5">
       <ul className="grid gap-2">
         {waiting.map((p) => (
-          <Candidate key={p.id} request={p} chosen={request?.id === p.id} onChoose={() => setChosen(p.id)} />
+          <Candidate
+            key={p.pairing_id}
+            request={p}
+            chosen={request?.pairing_id === p.pairing_id}
+            onChoose={() => setChosen(p.pairing_id)}
+          />
         ))}
       </ul>
       {request ? (
         <ApproveForm
-          key={request.id}
+          key={request.pairing_id}
           request={request}
           additionId={addition.id}
           granted={addition.capabilities?.map((c) => c.name)}
@@ -478,7 +485,7 @@ function Candidate({ request, chosen, onChoose }: { request: PairingRequest; cho
           {t("sat-model-room", { model: request.device.model, room: request.device.room })}
         </p>
       </div>
-      {request.can_identify ? <IdentifyButton pairing={request.id} /> : null}
+      {request.can_identify ? <IdentifyButton pairing={request.pairing_id} /> : null}
       {chosen ? null : (
         <Button variant="outline" size="sm" onClick={onChoose}>
           {t("sat-addition-this-one")}

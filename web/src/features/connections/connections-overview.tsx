@@ -9,14 +9,14 @@ import { buttonVariants } from "@/components/ui/button";
 import { useT } from "@/i18n";
 import { KindMark } from "@/lib/brands";
 import { authLabel } from "@/lib/labels";
-import { usePeopleNames } from "@/lib/people";
+import { rendered } from "@/lib/messages";
+import { personName } from "@/lib/people";
 import { useCan } from "@/lib/session";
 import { ConnectionStatusMark } from "./status";
 
 /** The accounts plugged in, the broken ones first: they are the ones that need someone. */
 export function ConnectedAccounts() {
   const connections = useQuery(connectionsQuery);
-  const name = usePeopleNames();
   const t = useT();
   if (connections.isPending) return <Loading lines={3} />;
   if (connections.isError) return <Failure error={connections.error} retry={() => void connections.refetch()} />;
@@ -49,7 +49,7 @@ export function ConnectedAccounts() {
             <span className="min-w-0">
               <span className="block truncate text-ink">{c.account}</span>
               <span className="block text-[0.85rem] text-ink-muted">
-                {c.title} · {name(c.owner)}
+                {c.title} · {personName(c.owner)}
               </span>
             </span>
             <span className="hidden text-[0.85rem] text-ink-muted sm:block">
@@ -64,7 +64,7 @@ export function ConnectedAccounts() {
                   ) : null}
                 </>
               ) : (
-                <span className="text-amber">{c.status_reason}</span>
+                <span className="text-amber">{rendered(c.status_reason)}</span>
               )}
             </span>
             <ConnectionStatusMark status={c.status} />
@@ -102,7 +102,9 @@ export function Catalogue({ onConnect }: { onConnect: (kind: string) => void }) 
                   {plugged ? ` · ${t("conn-accounts-count", { count: plugged })}` : ""}
                 </p>
               </div>
-              {c.auth === "oauth2" && !c.client ? <Tag tone="attention">{t("conn-client-to-create")}</Tag> : null}
+              {c.auth === "oauth2" && !c.oauth?.registered ? (
+                <Tag tone="attention">{t("conn-client-to-create")}</Tag>
+              ) : null}
             </div>
             <p className="mt-3 flex-1 text-sm text-ink-muted">{c.description}</p>
             {canConnect ? (

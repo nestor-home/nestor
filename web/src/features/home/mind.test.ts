@@ -8,14 +8,15 @@ const at = (minutesAgo: number) => new Date(NOW - minutesAgo * 60_000).toISOStri
 describe("the day's marks", () => {
   it("makes one mark per conversation, however many turns, and one per message delivered", () => {
     const items = [
-      liveItem({ at: at(30), links: { session: "s1" }, people: ["lea"] }),
+      liveItem({ at: at(30), links: { session: "s1" }, people: [{ id: "lea", name: "Léa" }] }),
       liveItem({ at: at(29), type: "conversation.turn.assistant", links: { session: "s1" }, people: [] }),
-      liveItem({ at: at(28), links: { session: "s1" }, people: ["jules"] }),
+      liveItem({ at: at(28), links: { session: "s1" }, people: [{ id: "jules", name: "Jules" }] }),
       liveItem({ at: at(10), type: "initiative.delivered", kind: "delivery", links: { delivery: "d1" } }),
       liveItem({ at: at(5), type: "agent.tool.called", kind: "tool" }),
     ];
     const marks = marksOf(items);
     expect(marks.map((m) => m.kind)).toEqual(["conversation", "delivery"]);
-    expect(marks[0]).toMatchObject({ count: 3, people: ["lea", "jules"] });
+    expect(marks[0]?.count).toBe(3);
+    expect(marks[0]?.people.map((p) => p.id)).toEqual(["lea", "jules"]);
   });
 });

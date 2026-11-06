@@ -83,7 +83,7 @@ export function JournalView({ search, onSearch }: { search: JournalSearch; onSea
         density={search.density ?? "comfortable"}
         open={(event) => onSearch({ ...search, event })}
       />
-      <EventSheet id={search.event} onClose={() => onSearch({ ...search, event: undefined })} />
+      <EventSheet position={search.event} onClose={() => onSearch({ ...search, event: undefined })} />
     </div>
   );
 }
@@ -97,7 +97,7 @@ function Stories({
   search: JournalSearch;
   following: boolean;
   density: Density;
-  open: (id: string) => void;
+  open: (position: number) => void;
 }) {
   const t = useT();
   const { query, stories, queued, flush, isNew } = useJournal(filtersOf(search), following);

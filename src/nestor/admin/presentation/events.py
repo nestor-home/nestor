@@ -92,7 +92,6 @@ from nestor.modules.system import ConfigChanged, RestartRequested, SecretChanged
 
 log = logging.getLogger(__name__)
 DETAIL_LIMIT = 600
-OTHER_KEY = "other"
 CLI = "cli"  # who did it, for an effect asked from the command line rather than by an account
 _SUBJECT = re.compile(
     r"^(?:(?P<kind>task|tool) (?P<id>\S+) (?P<status>\w+)|watch (?P<watch>\S+)|message (?P<message>\S+)"
@@ -107,82 +106,88 @@ class Tone(StrEnum):
     WARNING = "warning"  # a failure worth a look
 
 
-@dataclass(frozen=True, slots=True)
-class Category:
-    key: str
-    events: tuple[type[Event], ...]
+class Kind(StrEnum):
+    """What the journal groups entries by: the facets of its filters, one per category, and `other`."""
 
-    @property
-    def types(self) -> frozenset[str]:
-        return frozenset(e.event_type for e in self.events)
+    CONVERSATION = "conversation"
+    DELIVERY = "delivery"
+    TOOL = "tool"
+    TASK = "task"
+    WATCH = "watch"
+    SCHEDULE = "schedule"
+    MEMORY = "memory"
+    CONNECTION = "connection"
+    PRESENCE = "presence"
+    SATELLITE = "satellite"
+    VOICE = "voice"
+    OBSERVATION = "observation"
+    ACCOUNT = "account"
+    OTHER = "other"  # an event of no category: a plugin's, or a type this version does not know
 
 
-CATEGORIES = (
-    Category("conversation", (UserTurn, NotificationTurn, AssistantTurn, FallbackSpoken, AnswerCut)),
-    Category(
-        "delivery",
-        (DeliveryConsidered, Delivered, DeliveryFailed, MessageRequested, MessageDelivered, MessageUndelivered),
+CATEGORIES: Mapping[Kind, tuple[type[Event], ...]] = {
+    Kind.CONVERSATION: (UserTurn, NotificationTurn, AssistantTurn, FallbackSpoken, AnswerCut),
+    Kind.DELIVERY: (
+        DeliveryConsidered,
+        Delivered,
+        DeliveryFailed,
+        MessageRequested,
+        MessageDelivered,
+        MessageUndelivered,
     ),
-    Category(
-        "tool",
-        (
-            ToolCalled,
-            ToolCompleted,
-            ToolDeferred,
-            ToolReturned,
-            ResultStored,
-            ToolResultDelivered,
-            ConfirmationRequested,
-            ConfirmationAnswered,
-        ),
+    Kind.TOOL: (
+        ToolCalled,
+        ToolCompleted,
+        ToolDeferred,
+        ToolReturned,
+        ResultStored,
+        ToolResultDelivered,
+        ConfirmationRequested,
+        ConfirmationAnswered,
     ),
-    Category("task", (TaskStarted, TaskAttached, TaskProgressed, TaskCancelRequested, TaskEnded, TaskDelivered)),
-    Category("watch", (WatchCreated, WatchSorted, WatchTriggered, WatchEnded)),
-    Category("schedule", (ScheduleCreated, ScheduleFired, ScheduleCancelled)),
-    Category("memory", (MemoryRecorded, MemoryCorrected, MemoryForgotten, EpisodeSummarized)),
-    Category("connection", (ConnectionCreated, ConnectionChanged, ConnectionRemoved)),
-    Category("presence", (PresenceChanged,)),
-    Category(
-        "satellite",
-        (
-            SatellitePairingRequested,
-            SatellitePaired,
-            SatelliteRevoked,
-            SatelliteConnected,
-            SatelliteDisconnected,
-            SatelliteUpdateRequested,
-            SatelliteUpdateReported,
-            SatelliteAdditionStarted,
-            SatelliteAdditionCompleted,
-            SatelliteAdditionCancelled,
-            SatelliteAdditionExpired,
-            SatelliteEnrollmentRefused,
-            SatelliteIdentifyRequested,
-        ),
+    Kind.TASK: (TaskStarted, TaskAttached, TaskProgressed, TaskCancelRequested, TaskEnded, TaskDelivered),
+    Kind.WATCH: (WatchCreated, WatchSorted, WatchTriggered, WatchEnded),
+    Kind.SCHEDULE: (ScheduleCreated, ScheduleFired, ScheduleCancelled),
+    Kind.MEMORY: (MemoryRecorded, MemoryCorrected, MemoryForgotten, EpisodeSummarized),
+    Kind.CONNECTION: (ConnectionCreated, ConnectionChanged, ConnectionRemoved),
+    Kind.PRESENCE: (PresenceChanged,),
+    Kind.SATELLITE: (
+        SatellitePairingRequested,
+        SatellitePaired,
+        SatelliteRevoked,
+        SatelliteConnected,
+        SatelliteDisconnected,
+        SatelliteUpdateRequested,
+        SatelliteUpdateReported,
+        SatelliteAdditionStarted,
+        SatelliteAdditionCompleted,
+        SatelliteAdditionCancelled,
+        SatelliteAdditionExpired,
+        SatelliteEnrollmentRefused,
+        SatelliteIdentifyRequested,
     ),
-    Category("voice", (SpeakerDeclared, VoiceEnrolled, VoiceForgotten, VoiceLearningChanged)),
-    Category("observation", (PersonDetected, SpeechActivityObserved)),
-    Category(
-        "account",
-        (
-            AccountCreated,
-            AccountRoleChanged,
-            AccountDisabled,
-            AccountEnabled,
-            AccountPasswordChanged,
-            AccountLocaleChanged,
-            AccountInvited,
-            InvitationRevoked,
-            AccountLogin,
-        ),
+    Kind.VOICE: (SpeakerDeclared, VoiceEnrolled, VoiceForgotten, VoiceLearningChanged),
+    Kind.OBSERVATION: (PersonDetected, SpeechActivityObserved),
+    Kind.ACCOUNT: (
+        AccountCreated,
+        AccountRoleChanged,
+        AccountDisabled,
+        AccountEnabled,
+        AccountPasswordChanged,
+        AccountLocaleChanged,
+        AccountInvited,
+        InvitationRevoked,
+        AccountLogin,
     ),
-)
+}
+if missing := set(Kind) - {Kind.OTHER} - set(CATEGORIES):
+    raise ContractError(f"journal kinds without events: {sorted(missing)}")
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Line:
     at: datetime
-    kind: str  # a category key, or `other`
+    kind: Kind
     message: Message  # the summary
     detail: str = ""  # raw content: what was said, a tool's output (never translated)
     detail_message: Message | None = None  # a detail that is a sentence of ours
@@ -236,7 +241,7 @@ class EventDescriber:
         self, household: Household, assistant: str, phrasebook: Phrasebook, accounts: Accounts | None = None
     ) -> None:
         self.household, self.assistant, self.phrasebook, self.accounts = household, assistant, phrasebook, accounts
-        self._categories = {e: c for c in CATEGORIES for e in c.events}
+        self._categories = {e: kind for kind, events in CATEGORIES.items() for e in events}
         self._describers: Mapping[type[Event], Callable[..., Line]] = {
             UserTurn: self._user_turn,
             NotificationTurn: lambda e: self._line(
@@ -548,7 +553,7 @@ class EventDescriber:
         except ContractError:  # written by a plugin no longer installed, or by a newer version
             payload = entry.record.get("payload")
             fields = payload if isinstance(payload, dict) else {}
-            return Line(at=at, kind=OTHER_KEY, message=unknown_message(entry.type, fields))
+            return Line(at=at, kind=Kind.OTHER, message=unknown_message(entry.type, fields))
         try:
             describer = self._describers.get(type(event))
             if describer:
@@ -556,10 +561,9 @@ class EventDescriber:
             return self._line(event, unknown_message(event.event_type, event.to_record()["payload"]))  # ty: ignore[invalid-argument-type]
         except Exception:
             log.exception("cannot describe journal entry %s (%s)", entry.position, entry.type)
-            category = self._categories.get(type(event))
             return Line(
                 at=at,
-                kind=category.key if category else OTHER_KEY,
+                kind=self._categories.get(type(event), Kind.OTHER),
                 message=Message.of("journal-other", type=entry.type),
                 tone=Tone.WARNING,
             )
@@ -681,10 +685,9 @@ class EventDescriber:
     ) -> Line:
         if len(detail) > DETAIL_LIMIT:
             detail = detail[:DETAIL_LIMIT] + "…"
-        category = self._categories.get(type(event))
         return Line(
             at=event.at,
-            kind=category.key if category else OTHER_KEY,
+            kind=self._categories.get(type(event), Kind.OTHER),
             message=message,
             detail=detail,
             detail_message=detail_message,

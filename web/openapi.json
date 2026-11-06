@@ -4744,12 +4744,15 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "string",
-              "description": "kind keys, comma-separated",
-              "default": "",
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/Kind"
+              },
+              "description": "keep these kinds; none: every kind",
+              "default": [],
               "title": "Kinds"
             },
-            "description": "kind keys, comma-separated"
+            "description": "keep these kinds; none: every kind"
           },
           {
             "name": "person",
@@ -4832,14 +4835,14 @@
             "in": "query",
             "required": false,
             "schema": {
-              "enum": [
-                "",
-                "normal",
-                "decision",
-                "warning"
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Tone"
+                },
+                {
+                  "type": "null"
+                }
               ],
-              "type": "string",
-              "default": "",
               "title": "Tone"
             }
           },
@@ -5012,12 +5015,15 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "string",
-              "description": "kind keys, comma-separated",
-              "default": "",
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/Kind"
+              },
+              "description": "keep these kinds; none: every kind",
+              "default": [],
               "title": "Kinds"
             },
-            "description": "kind keys, comma-separated"
+            "description": "keep these kinds; none: every kind"
           },
           {
             "name": "person",
@@ -5100,14 +5106,14 @@
             "in": "query",
             "required": false,
             "schema": {
-              "enum": [
-                "",
-                "normal",
-                "decision",
-                "warning"
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Tone"
+                },
+                {
+                  "type": "null"
+                }
               ],
-              "type": "string",
-              "default": "",
               "title": "Tone"
             }
           },
@@ -5296,12 +5302,15 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "string",
-              "description": "kind keys, comma-separated",
-              "default": "",
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/Kind"
+              },
+              "description": "keep these kinds; none: every kind",
+              "default": [],
               "title": "Kinds"
             },
-            "description": "kind keys, comma-separated"
+            "description": "keep these kinds; none: every kind"
           },
           {
             "name": "person",
@@ -5384,14 +5393,14 @@
             "in": "query",
             "required": false,
             "schema": {
-              "enum": [
-                "",
-                "normal",
-                "decision",
-                "warning"
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Tone"
+                },
+                {
+                  "type": "null"
+                }
               ],
-              "type": "string",
-              "default": "",
               "title": "Tone"
             }
           },
@@ -9281,10 +9290,6 @@
           "role": {
             "$ref": "#/components/schemas/Role"
           },
-          "role_label": {
-            "type": "string",
-            "title": "Role Label"
-          },
           "person": {
             "anyOf": [
               {
@@ -9333,7 +9338,6 @@
           "id",
           "login",
           "role",
-          "role_label",
           "person",
           "disabled",
           "created_at",
@@ -9341,6 +9345,19 @@
           "last_seen_at"
         ],
         "title": "AccountOut"
+      },
+      "Activity": {
+        "type": "string",
+        "enum": [
+          "listening",
+          "speaking",
+          "thinking",
+          "working",
+          "sleeping",
+          "idle"
+        ],
+        "title": "Activity",
+        "description": "What the agent is doing, the first that holds in this order."
       },
       "AdditionIn": {
         "properties": {
@@ -9533,16 +9550,7 @@
       "AgentActivityOut": {
         "properties": {
           "state": {
-            "type": "string",
-            "enum": [
-              "idle",
-              "listening",
-              "thinking",
-              "speaking",
-              "working",
-              "sleeping"
-            ],
-            "title": "State"
+            "$ref": "#/components/schemas/Activity"
           },
           "since": {
             "type": "string",
@@ -9588,12 +9596,7 @@
             "title": "Name"
           },
           "status": {
-            "type": "string",
-            "enum": [
-              "online",
-              "degraded"
-            ],
-            "title": "Status"
+            "$ref": "#/components/schemas/Health"
           }
         },
         "type": "object",
@@ -9806,7 +9809,15 @@
       "ComponentOut": {
         "properties": {
           "slot": {
-            "type": "string",
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Family"
+              },
+              {
+                "type": "string",
+                "const": "satellite"
+              }
+            ],
             "title": "Slot"
           },
           "name": {
@@ -10008,10 +10019,6 @@
           "status": {
             "$ref": "#/components/schemas/Status"
           },
-          "status_label": {
-            "type": "string",
-            "title": "Status Label"
-          },
           "status_reason": {
             "anyOf": [
               {
@@ -10075,7 +10082,6 @@
           "account",
           "owner",
           "status",
-          "status_label",
           "status_reason",
           "confirm_writes",
           "disabled_tools",
@@ -10128,10 +10134,6 @@
           },
           "status": {
             "$ref": "#/components/schemas/Status"
-          },
-          "status_label": {
-            "type": "string",
-            "title": "Status Label"
           },
           "status_reason": {
             "anyOf": [
@@ -10189,7 +10191,6 @@
           "account",
           "owner",
           "status",
-          "status_label",
           "status_reason",
           "confirm_writes",
           "disabled_tools",
@@ -10260,10 +10261,6 @@
           "auth": {
             "$ref": "#/components/schemas/AuthKind"
           },
-          "auth_label": {
-            "type": "string",
-            "title": "Auth Label"
-          },
           "setup": {
             "type": "string",
             "title": "Setup"
@@ -10300,7 +10297,6 @@
           "title",
           "description",
           "auth",
-          "auth_label",
           "setup",
           "fields",
           "inbound",
@@ -10495,7 +10491,6 @@
               "throttled",
               "too_many_additions",
               "unauthenticated",
-              "unknown_kind",
               "unknown_locale",
               "unknown_person",
               "unknown_tool",
@@ -10596,6 +10591,19 @@
           "count"
         ],
         "title": "FacetOut"
+      },
+      "Family": {
+        "type": "string",
+        "enum": [
+          "model",
+          "executor",
+          "channel",
+          "presence",
+          "tools",
+          "inbound",
+          "connector"
+        ],
+        "title": "Family"
       },
       "FieldOut": {
         "properties": {
@@ -10902,10 +10910,6 @@
           "role": {
             "$ref": "#/components/schemas/Role"
           },
-          "role_label": {
-            "type": "string",
-            "title": "Role Label"
-          },
           "person": {
             "anyOf": [
               {
@@ -10918,10 +10922,6 @@
           },
           "status": {
             "$ref": "#/components/schemas/InvitationStatus"
-          },
-          "status_label": {
-            "type": "string",
-            "title": "Status Label"
           },
           "created_at": {
             "type": "string",
@@ -10938,10 +10938,8 @@
         "required": [
           "id",
           "role",
-          "role_label",
           "person",
           "status",
-          "status_label",
           "created_at",
           "expires_at"
         ],
@@ -10951,10 +10949,6 @@
         "properties": {
           "role": {
             "$ref": "#/components/schemas/Role"
-          },
-          "role_label": {
-            "type": "string",
-            "title": "Role Label"
           },
           "person": {
             "anyOf": [
@@ -10975,7 +10969,6 @@
         "type": "object",
         "required": [
           "role",
-          "role_label",
           "person",
           "expires_at"
         ],
@@ -11035,7 +11028,7 @@
           },
           "kinds": {
             "items": {
-              "$ref": "#/components/schemas/FacetOut"
+              "$ref": "#/components/schemas/KindFacetOut"
             },
             "type": "array",
             "title": "Kinds"
@@ -11097,26 +11090,7 @@
             "title": "Type"
           },
           "kind": {
-            "type": "string",
-            "enum": [
-              "conversation",
-              "delivery",
-              "tool",
-              "task",
-              "watch",
-              "memory",
-              "connection",
-              "presence",
-              "satellite",
-              "observation",
-              "account",
-              "other"
-            ],
-            "title": "Kind"
-          },
-          "kind_label": {
-            "type": "string",
-            "title": "Kind Label"
+            "$ref": "#/components/schemas/Kind"
           },
           "message": {
             "$ref": "#/components/schemas/MessageOut"
@@ -11164,13 +11138,7 @@
             ]
           },
           "tone": {
-            "type": "string",
-            "enum": [
-              "normal",
-              "decision",
-              "warning"
-            ],
-            "title": "Tone"
+            "$ref": "#/components/schemas/Tone"
           },
           "people": {
             "items": {
@@ -11251,7 +11219,6 @@
           "at",
           "type",
           "kind",
-          "kind_label",
           "message",
           "text",
           "detail",
@@ -11298,6 +11265,44 @@
           "next_before"
         ],
         "title": "JournalPage"
+      },
+      "Kind": {
+        "type": "string",
+        "enum": [
+          "conversation",
+          "delivery",
+          "tool",
+          "task",
+          "watch",
+          "schedule",
+          "memory",
+          "connection",
+          "presence",
+          "satellite",
+          "voice",
+          "observation",
+          "account",
+          "other"
+        ],
+        "title": "Kind",
+        "description": "What the journal groups entries by: the facets of its filters, one per category, and `other`."
+      },
+      "KindFacetOut": {
+        "properties": {
+          "key": {
+            "$ref": "#/components/schemas/Kind"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "count"
+        ],
+        "title": "KindFacetOut"
       },
       "LanguagesOut": {
         "properties": {
@@ -11715,8 +11720,7 @@
             "$ref": "#/components/schemas/PairingMethod"
           },
           "proof": {
-            "type": "string",
-            "title": "Proof"
+            "$ref": "#/components/schemas/Proof"
           },
           "label": {
             "type": "string",
@@ -11831,7 +11835,8 @@
           "session",
           "channel"
         ],
-        "title": "OriginOut"
+        "title": "OriginOut",
+        "description": "Where something was asked for: a task, a watch."
       },
       "OutcomeOut": {
         "properties": {
@@ -12148,6 +12153,24 @@
         "title": "Problem",
         "description": "Why a phrase of an enrollment is asked again."
       },
+      "ProblemCode": {
+        "type": "string",
+        "enum": [
+          "missing",
+          "extra",
+          "invalid",
+          "unknown_kind",
+          "reference",
+          "secret",
+          "no_answering_model",
+          "not_answering",
+          "not_embedding",
+          "not_voice",
+          "shared_account"
+        ],
+        "title": "ProblemCode",
+        "description": "What is wrong in a configuration; each names its message, `config-error-<code>`."
+      },
       "ProblemOut": {
         "properties": {
           "path": {
@@ -12165,8 +12188,7 @@
             "title": "Path"
           },
           "code": {
-            "type": "string",
-            "title": "Code"
+            "$ref": "#/components/schemas/ProblemCode"
           },
           "message_id": {
             "type": "string",
@@ -12204,6 +12226,15 @@
         ],
         "title": "ProblemOut",
         "description": "What is wrong in an edited configuration, located by its path in the document."
+      },
+      "Proof": {
+        "type": "string",
+        "enum": [
+          "device_code",
+          "enrollment_code"
+        ],
+        "title": "Proof",
+        "description": "Which way the pairing proof travelled."
       },
       "QuietHoursOut": {
         "properties": {
@@ -12730,6 +12761,15 @@
         "type": "object",
         "title": "SecretsIn"
       },
+      "Shape": {
+        "type": "string",
+        "enum": [
+          "one",
+          "list",
+          "named"
+        ],
+        "title": "Shape"
+      },
       "SlotOut": {
         "properties": {
           "family": {
@@ -12737,13 +12777,7 @@
             "title": "Family"
           },
           "shape": {
-            "type": "string",
-            "enum": [
-              "one",
-              "list",
-              "named"
-            ],
-            "title": "Shape"
+            "$ref": "#/components/schemas/Shape"
           },
           "required": {
             "type": "boolean",
@@ -12909,10 +12943,6 @@
           "status": {
             "$ref": "#/components/schemas/TaskStatus"
           },
-          "status_label": {
-            "type": "string",
-            "title": "Status Label"
-          },
           "requested_by": {
             "anyOf": [
               {
@@ -12989,7 +13019,6 @@
           "objective",
           "executor",
           "status",
-          "status_label",
           "requested_by",
           "origin",
           "delivered",
@@ -13035,6 +13064,15 @@
         ],
         "title": "TasksOut"
       },
+      "Tone": {
+        "type": "string",
+        "enum": [
+          "normal",
+          "decision",
+          "warning"
+        ],
+        "title": "Tone"
+      },
       "ToolOut": {
         "properties": {
           "name": {
@@ -13048,10 +13086,6 @@
           "risk": {
             "$ref": "#/components/schemas/Risk"
           },
-          "risk_label": {
-            "type": "string",
-            "title": "Risk Label"
-          },
           "enabled": {
             "type": "boolean",
             "title": "Enabled"
@@ -13062,7 +13096,6 @@
           "name",
           "description",
           "risk",
-          "risk_label",
           "enabled"
         ],
         "title": "ToolOut"

@@ -9,6 +9,7 @@ config-error-secret = { $path } : le secret { $detail } n'est pas défini.
 config-error-no-answering-model = { $path } : plusieurs modèles peuvent répondre ({ $detail }). Choisissez le modèle à l'oral, à l'écrit, ou les deux.
 config-error-not-answering = { $path } : { $detail } ne sait pas répondre. Choisissez un LLM.
 config-error-not-embedding = { $path } : { $detail } n'est pas un modèle d'embedding.
+config-error-not-voice = { $path } : { $detail } ne sait pas distinguer les voix. Choisissez un modèle de voix.
 config-error-shared-account = { $path } : ce compte appartient déjà à une autre personne.
 
 config-section-persona = Personnage

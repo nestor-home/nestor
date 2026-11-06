@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, type LinkProps } from "@tanstack/react-router";
 import { ArrowUpRight } from "lucide-react";
-import { type JournalEvent, journalEventQuery } from "@/api";
+import { type JournalEvent, type JournalItem, journalEventQuery } from "@/api";
 import { CopyButton } from "@/components/copy-field";
 import { SideSheet } from "@/components/overlay-form";
 import { Fact, Facts } from "@/components/page";
@@ -13,22 +13,21 @@ import { KindMark } from "@/lib/brands";
 import { moment } from "@/lib/dates";
 import { kindStyle } from "@/lib/icons";
 import { say, why } from "@/lib/messages";
-import { usePeopleNames } from "@/lib/people";
 import { duration } from "@/lib/time";
 import { cn } from "@/lib/utils";
 
 /** One event in full: what it says, what it relates to, and the raw record for debugging. */
-export function EventSheet({ id, onClose }: { id: string | undefined; onClose: () => void }) {
+export function EventSheet({ position, onClose }: { position: number | undefined; onClose: () => void }) {
   return (
-    <SideSheet open={Boolean(id)} onOpenChange={(open) => !open && onClose()}>
-      {id ? <EventDetail id={id} /> : null}
+    <SideSheet open={Boolean(position)} onOpenChange={(open) => !open && onClose()}>
+      {position ? <EventDetail position={position} /> : null}
     </SideSheet>
   );
 }
 
-function EventDetail({ id }: { id: string }) {
+function EventDetail({ position }: { position: number }) {
   const t = useT();
-  const event = useQuery(journalEventQuery(id));
+  const event = useQuery(journalEventQuery(position));
   if (event.isPending) {
     return (
       <div className="p-6">
@@ -55,16 +54,15 @@ interface Related {
   link: LinkProps;
 }
 
-function useRelated(event: JournalEvent): Related[] {
-  const name = usePeopleNames();
-  const { links } = event;
+function useRelated(item: JournalItem): Related[] {
+  const { links } = item;
   const related: Related[] = [];
-  for (const person of event.people)
+  for (const person of item.people)
     related.push({
       label: tr("jr-related-person"),
       person: true,
-      value: name(person),
-      link: { to: "/people/$personId", params: { personId: person } },
+      value: person.name,
+      link: { to: "/people/$personId", params: { personId: person.id } },
     });
   if (links.conversation)
     related.push({
@@ -104,21 +102,21 @@ function useRelated(event: JournalEvent): Related[] {
     });
   if (links.memory)
     related.push({ label: tr("jr-related-memory"), value: links.memory, link: { to: "/memories", search: {} } });
-  if (event.cause)
+  if (item.cause)
     related.push({
       label: tr("jr-related-cause"),
-      value: event.cause,
-      link: { to: "/journal", search: { event: event.cause } },
+      value: String(item.cause),
+      link: { to: "/journal", search: { event: item.cause } },
     });
   return related;
 }
 
-function Loaded({ event }: { event: JournalEvent }) {
+function Loaded({ event: { item: event, record } }: { event: JournalEvent }) {
   const t = useT();
   const style = kindStyle(event.kind);
   const Icon = style.icon;
   const related = useRelated(event);
-  const raw = JSON.stringify(event.record, null, 2);
+  const raw = JSON.stringify(record, null, 2);
   return (
     <>
       <SheetHeader className="border-b border-rule px-6 pt-6 pb-4">
@@ -141,7 +139,9 @@ function Loaded({ event }: { event: JournalEvent }) {
             {why(event)}
           </p>
         ) : null}
-        {event.detail ? <p className="text-[0.95rem] leading-relaxed whitespace-pre-line">{event.detail}</p> : null}
+        {event.detail_text ? (
+          <p className="text-[0.95rem] leading-relaxed whitespace-pre-line">{event.detail_text}</p>
+        ) : null}
 
         {related.length ? (
           <section aria-labelledby="related">

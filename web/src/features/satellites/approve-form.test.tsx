@@ -2,20 +2,24 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
-import type { Approval } from "@/api";
+import type { PairingRequest } from "@/api";
+import type { components } from "@/api/schema.gen";
 import { I18nProvider } from "@/i18n";
 import { pairing } from "@/mocks/fixtures";
 import { server } from "@/mocks/server";
 import { renderWithProviders } from "@/test/render";
 import { ApproveForm } from "./approve-form";
 
-const [reachy] = pairing();
-if (!reachy) throw new Error("fixture changed");
+const [waiting] = pairing();
+if (!waiting) throw new Error("fixture changed");
+const { expires_at: _, ...device } = waiting;
+const reachy: PairingRequest = { ...device, expires_in_s: 600 };
 
 function captureApprovals() {
-  const sent: Approval[] = [];
+  const sent: components["schemas"]["ApprovalIn"][] = [];
   server.events.on("request:start", async ({ request }) => {
-    if (request.url.endsWith("/satellites/approvals")) sent.push((await request.clone().json()) as Approval);
+    if (request.url.endsWith("/satellites/approvals"))
+      sent.push((await request.clone().json()) as components["schemas"]["ApprovalIn"]);
   });
   return sent;
 }
@@ -24,7 +28,7 @@ describe("approving a satellite", () => {
   it("refuses a code that is not six digits, without asking the server", async () => {
     const user = userEvent.setup();
     const sent = captureApprovals();
-    renderWithProviders(
+    await renderWithProviders(
       <I18nProvider>
         <ApproveForm request={reachy} />
       </I18nProvider>,
@@ -39,7 +43,7 @@ describe("approving a satellite", () => {
   it("sends the code and the narrowed capabilities for this pairing", async () => {
     const user = userEvent.setup();
     const sent = captureApprovals();
-    renderWithProviders(
+    await renderWithProviders(
       <I18nProvider>
         <ApproveForm request={reachy} />
       </I18nProvider>,
@@ -60,14 +64,14 @@ describe("approving a satellite", () => {
           "expression.emotion",
           "vision.person_detection",
         ],
-        pairing_id: reachy.id,
+        pairing_id: reachy.pairing_id,
       },
     ]);
   });
 
   it("says when no device waits for that code", async () => {
     const user = userEvent.setup();
-    renderWithProviders(
+    await renderWithProviders(
       <I18nProvider>
         <ApproveForm request={reachy} />
       </I18nProvider>,
@@ -80,7 +84,7 @@ describe("approving a satellite", () => {
   it("explains an unreachable Nestor", async () => {
     server.use(http.post("/api/v1/satellites/approvals", () => HttpResponse.error()));
     const user = userEvent.setup();
-    renderWithProviders(
+    await renderWithProviders(
       <I18nProvider>
         <ApproveForm request={reachy} />
       </I18nProvider>,

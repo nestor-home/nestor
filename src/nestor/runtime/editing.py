@@ -39,6 +39,7 @@ from nestor.runtime.config import (
     NestorConfig,
     PersonaConfig,
     PersonConfig,
+    ProblemCode,
     UpdatesConfig,
     WatchesConfig,
     references,
@@ -309,7 +310,7 @@ class Problem:
     """Why an edit cannot be written: where (a path of the document), what (`code`), and the detail."""
 
     path: Path_
-    code: str  # missing, extra, unknown_kind, reference, invalid
+    code: ProblemCode
     detail: str = ""
 
 
@@ -452,13 +453,13 @@ class ConfigEditor:
         for path, name, secret in references(document):
             if not secret:
                 if name not in self.environ:
-                    problems.append(Problem(path, "reference", name))
+                    problems.append(Problem(path, ProblemCode.REFERENCE, name))
                 continue
             if name in values:
                 continue
             found = await self.secrets.value(name) if self.secrets else None
             if found is None:
-                problems.append(Problem(path, "secret", name))
+                problems.append(Problem(path, ProblemCode.SECRET, name))
             else:
                 values[name] = found
         if problems:
@@ -473,7 +474,7 @@ class ConfigEditor:
             try:
                 plugin = self.registry.get(slot.family, str(entry.get("kind")))
             except NestorError:
-                problems.append(Problem((*where, "kind"), "unknown_kind", str(entry.get("kind"))))
+                problems.append(Problem((*where, "kind"), ProblemCode.UNKNOWN_KIND, str(entry.get("kind"))))
                 continue
             own = ("kind",) if slot.shape is Shape.NAMED else ("kind", "name")
             settings = {k: v for k, v in entry.items() if k not in own}
@@ -488,7 +489,7 @@ class ConfigEditor:
         except ConfigError as error:
             return [Problem(error.path, error.code, error.detail)]
         except NestorError as error:
-            return [Problem((), "invalid", str(error))]
+            return [Problem((), ProblemCode.INVALID, str(error))]
         return []
 
     def _diff(self, document: Mapping[str, Any], pending: Mapping[str, str]) -> Diff:
@@ -552,8 +553,8 @@ def _stamp(entry_id: str) -> datetime:
     return datetime.strptime(entry_id, "%Y%m%dT%H%M%S%fZ").replace(tzinfo=utc_now().tzinfo)
 
 
-_CODES = {"missing": "missing", "extra_forbidden": "extra"}
+_CODES = {"missing": ProblemCode.MISSING, "extra_forbidden": ProblemCode.EXTRA}
 
 
-def _code(kind: str) -> str:
-    return _CODES.get(kind, "invalid")
+def _code(kind: str) -> ProblemCode:
+    return _CODES.get(kind, ProblemCode.INVALID)

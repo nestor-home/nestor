@@ -3,7 +3,6 @@ import { Link } from "@tanstack/react-router";
 import { BookMarked, Gauge, House, MessageSquareText, Plug } from "lucide-react";
 import type { ReactNode } from "react";
 import {
-  accountsQuery,
   connectionsQuery,
   isMissing,
   journalFacetsQuery,
@@ -68,7 +67,7 @@ export function PeopleList() {
               </span>
             </span>
             <span className="hidden flex-wrap gap-x-3 text-[0.85rem] text-ink-muted sm:flex">
-              {p.channels.map((c) => (
+              {p.channel_accounts.map((c) => (
                 <span key={c} className="inline-flex items-center gap-1">
                   <KindMark kind={c} className="size-3" label={false} />
                   {c.split(":")[0]}
@@ -141,8 +140,7 @@ export function PersonOverview({ person: p }: { person: Person }) {
   const t = useT();
   const me = useMe();
   const today = useQuery(journalFacetsQuery({ person: p.id, from: startOfToday() }));
-  const accounts = useQuery({ ...accountsQuery, enabled: useCan("accounts:read") });
-  const account = accounts.data?.find((a) => a.id === p.account);
+  const account = useCan("accounts:read") ? p.account : null;
   const kinds = new Map(today.data?.kinds.map((k) => [k.key, k.count]));
   return (
     <WithAside>
@@ -172,7 +170,7 @@ export function PersonOverview({ person: p }: { person: Person }) {
         <div>
           <p className="label-mono mb-1.5">{t("people-recognised-on")}</p>
           <ul className="grid gap-1">
-            {p.channels.map((c) => (
+            {p.channel_accounts.map((c) => (
               <li key={c} className="inline-flex items-center gap-2 font-mono text-[0.8rem]">
                 <KindMark kind={c} className="size-3.5" />
                 {c}
@@ -225,7 +223,7 @@ export function PersonConnections({ person: p }: { person: Person }) {
   const t = useT();
   const connections = useQuery(connectionsQuery);
   if (connections.isPending) return <Loading lines={2} />;
-  const own = (connections.data ?? []).filter((c) => c.owner === p.id);
+  const own = (connections.data ?? []).filter((c) => c.owner?.id === p.id);
   if (own.length === 0) {
     return (
       <Empty
@@ -267,7 +265,7 @@ export function PersonPresence({ person: p }: { person: Person }) {
   return (
     <ActivityList
       filters={{ person: p.id, kinds: ["presence"] }}
-      search={{ person: p.id, kinds: "presence" }}
+      search={{ person: p.id, kinds: ["presence"] }}
       limit={20}
       empty={t("people-presence-empty")}
     />

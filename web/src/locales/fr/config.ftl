@@ -18,6 +18,7 @@ cfg-advanced = { $count ->
 cfg-default = Par défaut ({ $value })
 cfg-list-default = Vide : { $value } par défaut.
 cfg-list-empty = Aucun élément.
+cfg-add-item-to = Ajouter à { $field }
 cfg-add-item = Ajouter
 cfg-add-entry = Ajouter une entrée
 cfg-item-n = élément { $n }

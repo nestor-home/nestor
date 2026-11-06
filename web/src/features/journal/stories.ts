@@ -7,7 +7,7 @@
  * - anything else stays a single event.
  * Stories are ordered by their latest event, so a story that moves comes back to the top.
  */
-import type { Id, JournalItem } from "@/api";
+import type { Id, JournalItem, Kind, PersonRef } from "@/api";
 import { is, starts } from "@/lib/events";
 
 export interface ToolCall {
@@ -54,7 +54,7 @@ export interface Single extends Common {
 
 export type Story = Thread | Chain | Single;
 
-const CONVERSATIONAL = new Set(["conversation", "tool", "memory"]);
+const CONVERSATIONAL = new Set<Kind>(["conversation", "tool", "memory"]);
 
 /** Which story an event belongs to. Tasks and watches win over the conversation they came from. */
 export function storyKey(item: JournalItem): string {
@@ -79,7 +79,7 @@ export function storyKey(item: JournalItem): string {
 const byTime = (a: JournalItem, b: JournalItem) => {
   if (a.at !== b.at) return a.at < b.at ? -1 : 1;
   const user = Number(is(b, "userTurn")) - Number(is(a, "userTurn"));
-  return user || Number(a.id) - Number(b.id) || 0;
+  return user || a.position - b.position || 0;
 };
 
 export function buildStories(items: readonly JournalItem[]): Story[] {
@@ -171,14 +171,14 @@ function stepTime(step: Step): string {
 }
 
 /** The people and channels a story involves, for its header. */
-export function cast(story: Story): { people: Id[]; channels: string[]; rooms: string[] } {
-  const people = new Set<Id>();
+export function cast(story: Story): { people: PersonRef[]; channels: string[]; rooms: string[] } {
+  const people = new Map<Id, PersonRef>();
   const channels = new Set<string>();
   const rooms = new Set<string>();
   for (const item of story.items) {
-    for (const p of item.people) people.add(p);
+    for (const p of item.people) people.set(p.id, p);
     for (const c of item.channels) channels.add(c);
     if (item.room) rooms.add(item.room);
   }
-  return { people: [...people], channels: [...channels], rooms: [...rooms] };
+  return { people: [...people.values()], channels: [...channels], rooms: [...rooms] };
 }

@@ -9,7 +9,7 @@ import { join, relative } from "node:path";
 import { parse } from "@fluent/syntax";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
-import { LOCALES, sourcesOf } from "./catalog";
+import { coreOf, LOCALES, sourcesOf } from "./catalog";
 
 const ROOT = join(__dirname, "..");
 const SCANNED = ["features", "components", "routes"];
@@ -64,7 +64,8 @@ describe("the catalogues", () => {
   });
 
   it("define every id the code asks for", () => {
-    const known = new Set([...ids("en").values()].flatMap((s) => [...s]));
+    const server = parse(coreOf("en"), {}).body.flatMap((e) => (e.type === "Message" ? [e.id.name] : []));
+    const known = new Set([...[...ids("en").values()].flatMap((s) => [...s]), ...server]);
     const asked = new Set<string>();
     for (const path of [...SOURCES, ...files(join(ROOT, "lib"))]) {
       const text = readFileSync(path, "utf8");

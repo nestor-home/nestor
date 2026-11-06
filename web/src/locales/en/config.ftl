@@ -19,6 +19,7 @@ cfg-default = Default ({ $value })
 cfg-list-default = Empty: { $value } by default.
 cfg-list-empty = No items.
 cfg-add-item = Add
+cfg-add-item-to = Add to { $field }
 cfg-add-entry = Add an entry
 cfg-item-n = item { $n }
 cfg-item-of = { $field }, item { $n }

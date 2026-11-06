@@ -5,24 +5,33 @@
  * real server does with fluent.runtime.
  */
 import { FluentBundle, FluentResource } from "@fluent/bundle";
-import type { JournalEvent, JournalItem, Message } from "@/api";
+import type { EventLinks, JournalItem, Kind, Message, PersonRef, Tone } from "@/api";
+import { kindValues } from "@/api/schema.gen";
+import { oneOf } from "@/lib/enums";
 import { inFrench } from "./french";
+import kinds from "./server/journal-kinds.json";
 
 export type Lang = "en" | "fr";
 
-const SERVER: Record<string, string> = import.meta.glob("../../../src/nestor/locales/*/*.ftl", {
+/** Nestor's whole catalogue, as `GET /i18n/{locale}` sends it (the admin bundles only its labels). */
+const CATALOGUE = import.meta.glob("../../../src/nestor/locales/*/*.ftl", {
   query: "?raw",
   import: "default",
   eager: true,
-});
+}) as Record<string, string>;
+
+export function catalogueOf(locale: Lang): string {
+  return Object.entries(CATALOGUE)
+    .filter(([path]) => path.includes(`/locales/${locale}/`))
+    .map(([, text]) => text)
+    .join("\n");
+}
 
 const bundles: Record<Lang, FluentBundle> = { en: bundle("en"), fr: bundle("fr") };
 
 function bundle(locale: Lang): FluentBundle {
   const b = new FluentBundle(locale, { useIsolating: false });
-  for (const [path, source] of Object.entries(SERVER)) {
-    if (path.includes(`/locales/${locale}/`)) b.addResource(new FluentResource(source));
-  }
+  b.addResource(new FluentResource(catalogueOf(locale)));
   return b;
 }
 
@@ -52,33 +61,6 @@ function seconds(text: string): number {
   if (/ms$/.test(text)) return n(/([\d.]+)\s*ms/) / 1000;
   return n(/(\d+)\s*h/) * 3600 + n(/(\d+)\s*min/) * 60 + n(/h\s*(\d+)$/) * 60 + n(/([\d.]+)\s*s$/);
 }
-
-/** The server's event type for each of its messages (the `events.py` of each Nestor module). */
-export const TYPE_OF: Record<string, string> = {
-  "journal-user-said": "conversation.turn.user",
-  "journal-assistant-answered": "conversation.turn.assistant",
-  "journal-assistant-interrupted": "conversation.turn.assistant",
-  "journal-answer-cut": "conversation.turn.cut",
-  "journal-fallback": "conversation.fallback",
-  "journal-tool-called": "agent.tool.called",
-  "journal-tool-completed": "agent.tool.completed",
-  "journal-tool-failed": "agent.tool.completed",
-  "journal-task-started": "task.started",
-  "journal-task-progressed": "task.progress",
-  "journal-task-ended": "task.ended",
-  "journal-watch-created": "watch.created",
-  "journal-watch-triggered": "watch.triggered",
-  "journal-delivery-considered": "initiative.considered",
-  "journal-delivered": "initiative.delivered",
-  "journal-delivery-failed": "initiative.undeliverable",
-  "journal-memory-recorded": "memory.recorded",
-  "journal-connection-created": "connection.created",
-  "journal-connection-changed": "connection.changed",
-  "journal-presence-changed": "presence.changed",
-  "journal-satellite-pairing-requested": "satellite.pairing.requested",
-  "journal-person-detected": "observation.person.detected",
-  "journal-speech-activity": "observation.speech.activity",
-};
 
 /** Mock events are written as their English line; this reads them back as the server's messages. */
 const TITLES: [RegExp, (m: RegExpMatchArray) => Message][] = [
@@ -154,35 +136,77 @@ function parse(table: typeof TITLES, text: string): Message {
   return msg("journal-other", { type: text });
 }
 
-/** The server's shape for an event first written as its English title and reason. */
-export type Draft = Omit<JournalItem, "id" | "at" | "uid" | "kind_label" | "message" | "text" | "reason"> & {
+/** A mock event as day.ts writes it: its English title and reason, and only the links it has. */
+export interface Draft {
+  type: string;
   title: string;
+  detail?: string;
   reason?: string;
+  people?: PersonRef[];
+  channels?: string[];
+  room?: string | null;
+  tone?: Tone;
+  links?: Partial<EventLinks>;
+  outcome?: JournalItem["outcome"];
+  tool?: string | null;
+  brand?: string | null;
+}
+
+const NO_LINKS: EventLinks = {
+  session: null,
+  conversation: null,
+  turn: null,
+  call: null,
+  task: null,
+  watch: null,
+  delivery: null,
+  connection: null,
+  satellite: null,
+  memory: null,
 };
 
-export function toItem<T extends Draft>(
-  draft: T,
-): Omit<T, "title" | "reason"> & Pick<JournalItem, "message" | "text" | "reason"> {
-  const { title, reason, ...rest } = draft;
-  const message = parse(TITLES, title);
+/** The journal kind of an event type, as the server groups them (`nestor admin mocks`); `other` when none. */
+const KINDS: Record<string, string> = kinds;
+const kindOf = (type: string): Kind => {
+  const kind = KINDS[type];
+  return oneOf(kindValues, kind) ? kind : "other";
+};
+
+/** The item the server would send for a draft, at its place in the journal (texts in English). */
+export function toItem(draft: Draft, where: { position: number; id: string; at: string }): JournalItem {
+  const message = parse(TITLES, draft.title);
+  const detail = draft.detail ?? "";
   return {
-    ...rest,
-    type: TYPE_OF[message.id] ?? rest.type,
+    ...where,
+    type: draft.type,
+    kind: kindOf(draft.type),
     message,
-    text: title,
-    reason: reason ? { message: parse(REASONS, reason), text: reason } : null,
+    text: draft.title,
+    detail,
+    detail_message: null,
+    detail_text: detail,
+    reason: draft.reason ? { message: parse(REASONS, draft.reason), text: draft.reason } : null,
+    tone: draft.tone ?? "normal",
+    people: draft.people ?? [],
+    channels: draft.channels ?? [],
+    room: draft.room ?? null,
+    tool: draft.tool ?? null,
+    outcome: draft.outcome ?? null,
+    brand: draft.brand ?? draft.channels?.[0] ?? null,
+    links: { ...NO_LINKS, ...draft.links },
+    cause: null,
   };
 }
 
 /** A message in `lang`, the mock's own words in it (a room, what a watch is about) translated too. */
 const said = (lang: Lang, message: Message) => render(lang, lang === "fr" ? inFrench(message) : message);
 
-/** The event as the server sends it to an account reading `lang`. */
-export function localize<E extends JournalItem | JournalEvent>(event: E, lang: Lang): E {
+/** The item as the server sends it to an account reading `lang`. */
+export function localize(item: JournalItem, lang: Lang): JournalItem {
   return {
-    ...event,
-    text: event.message.id === "journal-other" ? event.text : said(lang, event.message),
-    reason: event.reason ? { ...event.reason, text: said(lang, event.reason.message) } : null,
+    ...item,
+    text: item.message.id === "journal-other" ? item.text : said(lang, item.message),
+    reason: item.reason ? { ...item.reason, text: said(lang, item.reason.message) } : null,
   };
 }
 

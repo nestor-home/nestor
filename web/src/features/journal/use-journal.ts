@@ -14,11 +14,11 @@ export function useJournal(filters: JournalFilters, following: boolean) {
   const query = useInfiniteQuery(journalQuery(filters));
   const [live, setLive] = useState<JournalItem[]>([]);
   const [queued, setQueued] = useState<JournalItem[]>([]);
-  const arrived = useRef(new Set<string>());
+  const arrived = useRef(new Set<number>());
 
   useLiveItems((item) => {
     if (!matches(item, filters)) return;
-    arrived.current.add(item.id);
+    arrived.current.add(item.position);
     if (following) setLive((lines) => [item, ...lines]);
     else setQueued((lines) => [item, ...lines]);
   });
@@ -31,7 +31,7 @@ export function useJournal(filters: JournalFilters, following: boolean) {
   const pages = query.data?.pages;
   const items = useMemo(() => merge(live, pages?.flatMap((p) => p.items) ?? []), [live, pages]);
   const stories = useMemo(() => buildStories(items), [items]);
-  const isNew = useCallback((id: string) => arrived.current.has(id), []);
+  const isNew = useCallback((position: number) => arrived.current.has(position), []);
 
   return { query, items, stories, queued, flush, isNew };
 }

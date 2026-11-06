@@ -43,8 +43,8 @@ function Invitation() {
           id="auth-invitation-intro"
           vars={{
             role: roleLabel(preview.role),
-            person: preview.person_name ?? "",
-            has_person: preview.person_name ? "yes" : "no",
+            person: preview.person?.name ?? "",
+            has_person: preview.person?.name ? "yes" : "no",
           }}
           elems={{ strong: <strong className="text-ink" /> }}
         >

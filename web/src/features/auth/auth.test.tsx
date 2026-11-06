@@ -54,7 +54,7 @@ describe("accepting an invitation", () => {
     await user.type(screen.getByLabelText("Confirm the password"), "my grandmother's tea");
     await user.click(screen.getByRole("button", { name: "Accept the invitation" }));
     await waitFor(() => expect(router.state.location.pathname).toBe("/journal"));
-    expect(db.accounts.some((a) => a.login === "odile" && a.role === "member" && a.person === "odile")).toBe(true);
+    expect(db.accounts.some((a) => a.login === "odile" && a.role === "member" && a.person?.id === "odile")).toBe(true);
   });
 
   it("explains a used or unknown link", async () => {

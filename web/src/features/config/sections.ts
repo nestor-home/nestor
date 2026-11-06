@@ -23,7 +23,7 @@ import {
   Workflow,
   Wrench,
 } from "lucide-react";
-import type { ConfigSchema } from "@/api";
+import type { Schemas } from "./schema";
 
 export type PageKind = "section" | "household" | "slots" | "secrets" | "history";
 
@@ -67,7 +67,7 @@ export const GROUP_LABEL: Record<ConfigPage["group"], string> = {
  * The pages for this instance's schema: the known ones it has, then a page for any section or slot
  * the schema adds (a plugin's, a newer Nestor's), so nothing in the file is out of reach.
  */
-export function pagesFor(schema: ConfigSchema): ConfigPage[] {
+export function pagesFor(schema: Schemas): ConfigPage[] {
   const known = new Set(PAGES.flatMap((p) => p.keys));
   const has = (p: ConfigPage) => !p.keys.length || p.keys.some((k) => k in schema.sections || k in schema.slots);
   const added = (keys: string[], kind: PageKind, group: ConfigPage["group"]): ConfigPage[] =>
@@ -81,15 +81,15 @@ export function pagesFor(schema: ConfigSchema): ConfigPage[] {
   return [...pages.slice(0, vault), ...extra, ...pages.slice(vault)];
 }
 
-export const pageOf = (slug: string, schema: ConfigSchema): ConfigPage | undefined =>
+export const pageOf = (slug: string, schema: Schemas): ConfigPage | undefined =>
   pagesFor(schema).find((p) => p.slug === slug);
 
 /** The page that edits a document key. */
-export const pageOfKey = (key: string, schema: ConfigSchema): ConfigPage | undefined =>
+export const pageOfKey = (key: string, schema: Schemas): ConfigPage | undefined =>
   pagesFor(schema).find((p) => p.keys.includes(key));
 
 /** A page's title in the reader's language: the schema's own, else the admin's catalogue. */
-export function pageTitle(page: ConfigPage, schema: ConfigSchema, t: (id: string) => string): string {
+export function pageTitle(page: ConfigPage, schema: Schemas, t: (id: string) => string): string {
   if (page.label) return t(page.label);
   const key = page.keys[0] ?? page.slug;
   return schema.section_titles[key] ?? schema.slots[key]?.title ?? key;

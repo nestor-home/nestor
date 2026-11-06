@@ -14,7 +14,7 @@ import { SubjectStory } from "@/features/journal/subject-story";
 import { useT } from "@/i18n";
 import { BrandMark, brandOf, KindMark } from "@/lib/brands";
 import { taskStatusLabel } from "@/lib/labels";
-import { usePeopleNames } from "@/lib/people";
+import { personName } from "@/lib/people";
 import { useCan } from "@/lib/session";
 import { duration } from "@/lib/time";
 
@@ -61,7 +61,6 @@ export function TasksList() {
 
 function TaskRows({ tasks }: { tasks: Task[] }) {
   const t = useT();
-  const name = usePeopleNames();
   return (
     <RowList>
       {tasks.map((task) => (
@@ -75,7 +74,7 @@ function TaskRows({ tasks }: { tasks: Task[] }) {
               <span className="block text-ink">{task.objective}</span>
               <span className="mt-0.5 flex flex-wrap items-center gap-x-3 text-[0.85rem] text-ink-muted">
                 <Executor name={task.executor} />
-                {task.requested_by ? <span>{t("task-for", { name: name(task.requested_by) })}</span> : null}
+                {task.requested_by ? <span>{t("task-for", { name: personName(task.requested_by) })}</span> : null}
                 <span>
                   {task.status === "running" ? (
                     <>
@@ -102,7 +101,6 @@ function TaskRows({ tasks }: { tasks: Task[] }) {
 export function TaskDetail({ id }: { id: string }) {
   const t = useT();
   const found = useQuery(taskQuery(id));
-  const name = usePeopleNames();
   const canCancel = useCan("tasks:write");
   const queryClient = useQueryClient();
   const notify = useNotify();
@@ -134,7 +132,7 @@ export function TaskDetail({ id }: { id: string }) {
           <>
             <TaskStatusMark status={task.status} />
             <Executor name={task.executor} />
-            {task.requested_by ? <span>{t("task-requested-by", { name: name(task.requested_by) })}</span> : null}
+            {task.requested_by ? <span>{t("task-requested-by", { name: personName(task.requested_by) })}</span> : null}
             <span>
               <Ago iso={task.started_at} />
             </span>

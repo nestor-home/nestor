@@ -67,7 +67,7 @@ from nestor.modules.memory.assistant import MemoryTools
 from nestor.modules.memory.episodes import Consolidator, Episodes
 from nestor.modules.satellites import Pairing, SatelliteHost
 from nestor.modules.system import ReleaseFeed, RestartRequested, Updates
-from nestor.runtime.config import AdapterConfig, ComponentConfig, ConfigError, NestorConfig
+from nestor.runtime.config import AdapterConfig, ComponentConfig, ConfigError, NestorConfig, ProblemCode
 from nestor.runtime.plugins import Family, ModelType, Plugged, Registry, Services
 
 log = logging.getLogger("nestor")
@@ -137,7 +137,7 @@ class Nestor:
                 raise ConfigError(
                     f"{role}: {key} embeds and cannot answer; choose a conversation model",
                     path=tuple(role.split(".")),
-                    code="not_answering",
+                    code=ProblemCode.NOT_ANSWERING,
                     detail=key,
                 )
             return found
@@ -210,7 +210,7 @@ class Nestor:
             raise ConfigError(
                 f"memory.embedder: {config.memory.embedder} cannot search memories; choose a text embedding model",
                 path=("memory", "embedder"),
-                code="not_embedding",
+                code=ProblemCode.NOT_EMBEDDING,
                 detail=config.memory.embedder,
             )
         voice_model = self.models[config.voices.embedder] if config.voices.embedder else None
@@ -218,7 +218,7 @@ class Nestor:
             raise ConfigError(
                 f"voices.embedder: {config.voices.embedder} cannot tell voices apart; choose a voice model",
                 path=("voices", "embedder"),
-                code="not_voice",
+                code=ProblemCode.NOT_VOICE,
                 detail=config.voices.embedder,
             )
         self.voiceprints = SQLiteVoiceprintStore(self.database)
@@ -338,6 +338,15 @@ class Nestor:
         hosts = (c for c in self.channels if isinstance(c, SatelliteHost))
         return next((url for host in hosts if (url := host.satellite_url(seen_as))), None)
 
+    def spoken_channels(self) -> frozenset[str]:
+        """The ids of the channels people speak through: their conversations are rooms."""
+        return frozenset(c.channel_id for c in self.channels if c.spoken)
+
+    def heard_rooms(self) -> frozenset[str] | None:
+        """Rooms a spoken channel can hear right now; `None` without any spoken channel to tell."""
+        spoken = [c.rooms for c in self.channels if c.spoken]
+        return frozenset().union(*spoken) if spoken else None
+
     @property
     def components(self) -> Sequence[Component]:
         """In start order; they are closed in reverse."""
@@ -433,7 +442,7 @@ def _household(config: NestorConfig) -> Household:
         raise ConfigError(
             str(error),
             path=claims[1],
-            code="shared_account",
+            code=ProblemCode.SHARED_ACCOUNT,
         ) from None
 
 

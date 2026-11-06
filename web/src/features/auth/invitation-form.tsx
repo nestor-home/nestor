@@ -21,7 +21,7 @@ export function InvitationForm({
   const t = useT();
   const queryClient = useQueryClient();
   const [login, setLogin] = useState(
-    (invitation.person_name ?? "")
+    (invitation.person?.name ?? "")
       .toLowerCase()
       .normalize("NFD")
       .replace(/[^a-z0-9]/g, ""),

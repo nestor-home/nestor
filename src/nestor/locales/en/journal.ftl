@@ -2,22 +2,6 @@
 # Plugins ship `journal-<event type, dots and underscores as dashes>` for their own events.
 
 journal-other = { $type }
-journal-kind = { $kind ->
-    [conversation] Conversations
-    [delivery] Unprompted messages
-    [tool] Tools
-    [task] Tasks
-    [watch] Watches
-    [schedule] Wake-ups
-    [memory] Memories
-    [connection] Connections
-    [presence] Presence
-    [satellite] Satellites
-    [voice] Voices
-    [observation] Observations
-    [account] Accounts
-   *[other] Other
-}
 
 journal-user-said = { $known ->
     [no] Someone said
