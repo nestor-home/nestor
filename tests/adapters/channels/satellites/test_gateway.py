@@ -18,10 +18,12 @@ from nestor.adapters.channels.satellites.server import DeviceServer
 from nestor.adapters.channels.satellites.voice.audio import SatelliteVoice
 from nestor.adapters.channels.satellites.voice.session import SessionSettings
 from nestor.core import ContractError, PersonId, ProviderError
-from nestor.modules.behavior import Behavior, Expression
+from nestor.modules.behavior import HEAD_MOTION, Behavior, Expression
 from nestor.modules.channels import Address, Assistant, InboundMessage, Medium, MessageEnd, Reply, Sender
 from nestor.modules.journal import Journal
 from nestor.modules.satellites import (
+    AUDIO_CAPTURE,
+    AUDIO_PLAYBACK,
     TEXT_DISPLAY,
     TEXT_INPUT,
     AttemptLimiter,
@@ -47,6 +49,11 @@ KITCHEN = Address("satellites", "cuisine")
 SCREEN = Manifest(
     Device("ecran-cuisine", "tablet", "cuisine"),
     (DeclaredCapability(TEXT_INPUT), DeclaredCapability(TEXT_DISPLAY)),
+    software=SOFTWARE,
+)
+SPEAKER = Manifest(  # types on a keypad, has no screen
+    Device("enceinte-cuisine", "raspberry-pi-4", "cuisine"),
+    tuple(DeclaredCapability(c) for c in (AUDIO_CAPTURE, AUDIO_PLAYBACK, HEAD_MOTION, TEXT_INPUT)),
     software=SOFTWARE,
 )
 
@@ -160,6 +167,26 @@ async def test_typed_text_is_answered_in_writing_on_a_screen() -> None:
     assert (message.address, message.text, message.medium) == (KITCHEN, "Quelle température ?", Medium.WRITTEN)
 
 
+async def test_typed_text_on_a_device_without_a_screen_is_answered_aloud() -> None:
+    assistant = FakeAssistant(["Il fait 21 degrés."], ttft_s=0.01)
+    async with home(assistant=assistant) as (channel, pairing, _, url):
+        satellite = ReferenceSatellite(url, SPEAKER)
+        running = asyncio.create_task(satellite.run())
+        await satellite.code_shown.wait()
+        assert satellite.code is not None
+        await pairing.approve(satellite.code)
+        await _until(lambda: channel.reachable(KITCHEN, Medium.SPOKEN))
+        await satellite.type("Quelle température ?")
+        await _until(lambda: wire.BehaviorIntent(behavior=Behavior.IDLE) in satellite.intents)
+        running.cancel()
+
+    (message,) = assistant.messages
+    assert (message.address, message.text, message.medium) == (KITCHEN, "Quelle température ?", Medium.SPOKEN)
+    assert wire.BehaviorIntent(behavior=Behavior.SPEAKING) in satellite.intents
+    assert sum(isinstance(i, wire.BeatIntent) for i in satellite.intents) == 4, "one beat per word played"
+    assert not any(isinstance(i, wire.TextIntent) for i in satellite.intents), "nothing to show it on"
+
+
 class LookingUp(Assistant):
     """Says it looks something up, then answers once the tool returned: two messages, one turn."""
 
@@ -207,22 +234,6 @@ async def test_an_unprompted_message_in_writing_goes_to_the_screens_of_the_room(
             assert await received(link) == wire.TextIntent(text="Ta lessive est terminée.")
         with pytest.raises(ContractError):
             await channel.send(KITCHEN, "Ta lessive est terminée.", Medium.SPOKEN)
-
-
-async def test_typed_text_without_its_capability_is_ignored() -> None:
-    assistant = FakeAssistant([])
-    async with home(voice=False, assistant=assistant) as (_, pairing, _, url):
-        ticket = await pairing.request(SCREEN)
-        assert ticket.device_code is not None
-        await pairing.approve(ticket.device_code, capabilities=[])
-        token = pairing.poll(ticket.id).token
-        assert token
-        async with websockets.connect(link_url(url, SCREEN.device.id)) as link:
-            await link.send(hello(SCREEN, token))
-            assert (await received(link)) == wire.Welcome(device_id=SCREEN.device.id, room="cuisine", capabilities=())
-            await link.send(json.dumps(wire.encode(wire.TextInput(text="Bonjour"))))
-            await asyncio.sleep(0.3)
-    assert not assistant.messages
 
 
 async def test_without_a_voice_no_audio_is_allowed_on_the_link() -> None:

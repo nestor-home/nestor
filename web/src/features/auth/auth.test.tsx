@@ -12,7 +12,7 @@ describe("signing in", () => {
     await user.type(await screen.findByLabelText("Login"), "lea");
     await user.type(screen.getByLabelText("Password"), "wrong");
     await user.click(screen.getByRole("button", { name: "Sign in" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Wrong address or password.");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Wrong login or password.");
 
     await user.clear(screen.getByLabelText("Password"));
     await user.type(screen.getByLabelText("Password"), "nestor");
@@ -60,8 +60,6 @@ describe("accepting an invitation", () => {
   it("explains a used or unknown link", async () => {
     db.signedIn = null;
     renderApp("/invitation/inv-perime");
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "This invitation does not exist, has expired or was already used.",
-    );
+    expect(await screen.findByRole("alert")).toHaveTextContent("Invitation not found.");
   });
 });

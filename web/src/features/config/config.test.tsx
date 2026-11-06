@@ -26,6 +26,8 @@ describe("the configuration", () => {
     expect(timeout).toHaveAttribute("placeholder", "10");
     expect(timeout).toHaveAttribute("min", "0");
     expect(within(sheet).getByRole("textbox", { name: "Tool risks, name 1" })).toHaveValue("HassTurnOff");
+    // the kind picks the plugin: it is never a setting
+    expect(within(sheet).queryByText("Kind")).not.toBeInTheDocument();
   });
 
   it("keeps a secret unless it is replaced, and never shows its value", async () => {

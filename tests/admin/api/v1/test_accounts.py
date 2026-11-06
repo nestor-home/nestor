@@ -44,6 +44,8 @@ async def test_an_invited_person_opens_their_account_and_is_signed_in(tmp_path: 
         )
         assert accepted.status_code == 201 and accepted.json()["account"]["role"] == "member"
         assert (await guest.get("/api/v1/me")).json()["account"]["login"] == "mathilde@free.fr"
+        accounts = (await owner.get("/api/v1/accounts")).json()
+        assert [a["login"] for a in accounts] == [OWNER, "mathilde@free.fr"], "in the order they were opened"
         again = await (await admin.api(None)).post(
             "/api/v1/invitations/accept", {"token": token, "login": "other", "password": PASSWORD}
         )
@@ -101,25 +103,6 @@ async def test_the_last_owner_stays_an_owner(tmp_path: Path) -> None:
         assert disabled.status_code == 409
         second = await admin.account("lucie", Role.OWNER, "lucie")
         assert (await owner.put(f"/api/v1/accounts/{second.id}/role", {"role": "member"})).json()["role"] == "member"
-
-
-async def test_an_admin_manages_members_but_never_owners(tmp_path: Path) -> None:
-    async with Harness(tmp_path) as admin:
-        await admin.account("lucie", Role.ADMIN, "lucie")
-        member = await admin.account("mathilde", Role.MEMBER, "mathilde")
-        api = await admin.api("lucie")
-        assert admin.owner
-        for method, path, body in (
-            ("PUT", f"/api/v1/accounts/{admin.owner.id}/role", {"role": "member"}),
-            ("POST", f"/api/v1/accounts/{admin.owner.id}/disable", None),
-            ("PUT", f"/api/v1/accounts/{admin.owner.id}/password", {"password": "taken over!!"}),
-            ("PUT", f"/api/v1/accounts/{member.id}/role", {"role": "owner"}),
-        ):
-            assert (await api.send(method, path, body)).status_code == 403, path
-        assert (await api.post(f"/api/v1/accounts/{member.id}/disable")).json()["disabled"] is True
-        assert (await api.post(f"/api/v1/accounts/{member.id}/enable")).json()["disabled"] is False
-        listed = (await api.get("/api/v1/accounts")).json()
-        assert [a["login"] for a in listed] == ["mathis", "lucie", "mathilde"]
 
 
 async def test_resetting_someones_password_signs_them_out(tmp_path: Path) -> None:

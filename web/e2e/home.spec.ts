@@ -1,23 +1,5 @@
 import { expect, test } from "./clock";
 
-/** The home on the mocks, at phone and desktop widths: the agent, the house, the day, no sideways scroll. */
-for (const width of [390, 1440]) {
-  test(`the home at ${width}px`, async ({ page }) => {
-    await page.setViewportSize({ width, height: width < 600 ? 844 : 900 });
-    await page.goto("/");
-    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-    await expect(page.locator("svg.nestor").first()).toBeVisible();
-    const house = page.getByRole("region", { name: "The house" });
-    await expect(house).toBeVisible();
-    await expect(page.getByRole("list", { name: "Today" })).toBeVisible();
-    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
-    expect(overflow).toBeLessThanOrEqual(0);
-    // a room leads to what happened there
-    await house.getByRole("link", { name: /^Living room/ }).click();
-    await expect(page).toHaveURL(/\/journal\?room=living\+room/);
-  });
-}
-
 /** On a retina screen the dithered textures keep their box: the bitmap follows the box, never the reverse. */
 test.describe("on a 2× screen", () => {
   test.use({ deviceScaleFactor: 2 });

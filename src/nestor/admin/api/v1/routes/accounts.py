@@ -135,10 +135,6 @@ async def list_invitations(request: Request, caller: Manager) -> list[Invitation
 async def create_invitation(request: Request, caller: Manager, body: InvitationIn) -> InvitationCreated:
     """A single-use link, valid 48 hours, carrying the role and the person."""
     admin = state(request)
-    if body.person is not None and not People(admin.nestor.household).known(body.person):
-        raise ApiError(400, "unknown_person")
-    if body.person is None and body.role in (Role.MEMBER, Role.GUEST):
-        raise ApiError(400, "person_required")
     person = PersonId(body.person) if body.person else None
     invitation, token = await admin.accounts.invite(body.role, person, by=caller.principal)
     url = f"{admin.base_url(request)}/invitation#token={token}"

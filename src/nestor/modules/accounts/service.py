@@ -14,7 +14,15 @@ from nestor.core import Component, ContractError, Event, PersonId, new_id, utc_n
 from nestor.core.i18n import Locale
 from nestor.modules.accounts.activity import ActivityStore
 from nestor.modules.accounts.credentials import Token, VerifierStore, decoy, hash_password, verify_password
-from nestor.modules.accounts.errors import AccountConflict, InvitationRefused, LastOwner, UnknownAccount, WrongPassword
+from nestor.modules.accounts.errors import (
+    AccountConflict,
+    InvitationRefused,
+    LastOwner,
+    PersonRequired,
+    UnknownAccount,
+    UnknownPerson,
+    WrongPassword,
+)
 from nestor.modules.accounts.events import (
     AccountCreated,
     AccountDisabled,
@@ -189,7 +197,7 @@ class Accounts(Component):
             raise InvitationRefused("unknown invitation")
         status = invitation.status(self._clock())
         if status is not InvitationStatus.PENDING:
-            raise InvitationRefused(_REFUSALS[status])
+            raise InvitationRefused(_REFUSALS[status], status=status)
         if digest is None:  # pending in the journal, but its verifier is gone: never accept it blindly
             raise InvitationRefused("unknown invitation")
         return invitation
@@ -217,7 +225,7 @@ class Accounts(Component):
             _may_grant(by, invitation.role)
             status = invitation.status(self._clock())
             if status is not InvitationStatus.PENDING:
-                raise InvitationRefused(_REFUSALS[status])
+                raise InvitationRefused(_REFUSALS[status], status=status)
             await self._publish(InvitationRevoked(source=self.name, invitation_id=invitation_id, by=by.account_id))
             await self.verifiers.forget(_invitation(invitation_id))
 
@@ -260,7 +268,7 @@ class Accounts(Component):
             if account.role is role:
                 return account
             if role in _PERSONAL and account.person is None:
-                raise ContractError("a member or guest account belongs to a person of the household")
+                raise PersonRequired("a member or guest account belongs to a person of the household")
             if account.role is Role.OWNER:
                 self._keep_an_owner(account)
             await self._publish(
@@ -326,9 +334,12 @@ class Accounts(Component):
     def _check_person(self, role: Role, person: PersonId | None) -> None:
         if person is None:
             if role in _PERSONAL:
-                raise ContractError("a member or guest account belongs to a person of the household")
+                raise PersonRequired("a member or guest account belongs to a person of the household")
             return
-        self.household.person(person)  # ContractError for a stranger
+        try:
+            self.household.person(person)
+        except ContractError as stranger:
+            raise UnknownPerson(str(stranger)) from None
         if self.of_person(person) is not None:
             raise AccountConflict(f"{person} already has an account")
 

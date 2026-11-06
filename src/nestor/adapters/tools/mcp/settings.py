@@ -1,6 +1,6 @@
 """Configuration of an MCP tool provider, as written under `tools:` in the Nestor configuration."""
 
-from pydantic import BaseModel, ConfigDict, Field, PositiveFloat, PositiveInt, SecretStr
+from pydantic import BaseModel, ConfigDict, Field, PositiveFloat, SecretStr
 
 from nestor.adapters.tools.mcp.provider import BearerToken, McpToolProvider, McpTransport, Negotiation
 from nestor.modules.cognition.tools import Risk, SensitiveWhen
@@ -26,7 +26,6 @@ class McpSettings(AdapterSettings):
     exclude: list[str] = Field(default_factory=list)
     risks: dict[str, Risk] = Field(default_factory=dict)  # by server tool name, over the annotations
     sensitive: list[SensitiveCalls] = Field(default_factory=list)  # calls confirmed first, by what they act on
-    max_result_chars: PositiveInt = 16_000
     retry_after_s: PositiveFloat = 30.0  # least delay between two reconnection attempts
     negotiation: Negotiation = "auto"  # `legacy` skips the 2026-07-28 discovery probe
 
@@ -43,7 +42,6 @@ def build(settings: McpSettings, name: str, services: Services) -> McpToolProvid
         exclude=settings.exclude,
         risks=settings.risks,
         sensitive=[SensitiveWhen(r.tool, {k: tuple(v) for k, v in r.arguments.items()}) for r in settings.sensitive],
-        max_result_chars=settings.max_result_chars,
         retry_after_s=settings.retry_after_s,
         negotiation=settings.negotiation,
     )

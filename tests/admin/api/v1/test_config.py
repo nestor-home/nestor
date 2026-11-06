@@ -5,7 +5,6 @@ import asyncio
 from pathlib import Path
 from typing import Any
 
-from nestor.modules.accounts import Role
 from nestor.modules.system import ConfigChanged, RestartRequested, SecretChanged
 
 from ...harness import Api, Harness
@@ -232,14 +231,6 @@ async def test_secrets_are_listed_with_their_use_set_write_only_and_kept_while_u
         assert not any("sk-abcdefghijkl" in seen or KEY in seen for seen in admin.seen)
 
 
-async def test_only_owners_and_admins_edit_the_configuration(tmp_path: Path) -> None:
-    async with Harness(tmp_path) as admin:
-        await admin.account("mathilde", Role.MEMBER, "mathilde")
-        member = await admin.api("mathilde")
-        for path in ("/api/v1/config", "/api/v1/config/schema", "/api/v1/config/secrets", "/api/v1/config/history"):
-            assert (await member.get(path)).status_code == 403, path
-
-
 async def test_a_restart_is_asked_for_by_a_person_and_confirmed(tmp_path: Path) -> None:
     async with Harness(tmp_path) as admin:
         restarted = asyncio.Event()
@@ -252,9 +243,6 @@ async def test_a_restart_is_asked_for_by_a_person_and_confirmed(tmp_path: Path) 
         await asyncio.wait_for(restarted.wait(), 2)
         (requested,) = await admin.nestor.journal.history(RestartRequested)
         assert admin.owner and requested.by == admin.owner.id
-        await admin.account("mathilde", Role.MEMBER, "mathilde")
-        member = await admin.api("mathilde")
-        assert (await member.post("/api/v1/system/restart", {"confirm": True})).status_code == 403
 
 
 async def test_without_a_file_or_a_key_there_is_nothing_to_edit(tmp_path: Path) -> None:

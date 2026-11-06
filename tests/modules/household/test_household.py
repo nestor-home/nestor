@@ -16,11 +16,6 @@ def test_a_sender_is_recognised_on_their_channel_only() -> None:
     assert household.identify("discord", "7") is None
 
 
-def test_the_household_lists_its_people() -> None:
-    assert Household([MATHIS, MATHILDE]).people == (MATHIS, MATHILDE)
-    assert Household([MATHIS]).person(PersonId("mathis")) == MATHIS
-
-
 def test_an_account_stands_for_one_person_not_anyone() -> None:
     """A shared device is a place, not an account: who speaks there is told by their voice or their words."""
     with pytest.raises(ContractError, match="not anyone"):
@@ -34,6 +29,7 @@ def test_an_account_cannot_belong_to_two_people() -> None:
 
 
 def test_an_unknown_person_or_malformed_account_is_a_clear_error() -> None:
+    assert Household([MATHIS]).person(PersonId("mathis")) == MATHIS
     with pytest.raises(ContractError, match="unknown person"):
         Household([MATHIS]).person(PersonId("nobody"))
     with pytest.raises(ContractError, match="channel:sender"):

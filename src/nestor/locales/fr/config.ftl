@@ -165,7 +165,6 @@ config-tools-mcp-include-help = Noms des outils du serveur. Vide : tous.
 config-field-exclude = Outils exclus
 config-field-headers = En-têtes HTTP
 config-tools-mcp-headers-help = Valeurs stockées comme secrets.
-config-field-max_result_chars = Taille max. d'un résultat d'outil (caractères)
 config-field-negotiation = Négociation du protocole
 config-tools-mcp-negotiation-help = legacy saute la détection de la version 2026-07-28 du protocole.
 config-field-retry_after_s = Attente avant reconnexion (secondes)

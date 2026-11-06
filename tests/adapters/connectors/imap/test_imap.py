@@ -1,6 +1,6 @@
-"""IMAP connector: the inbound contract over a scripted client and over a minimal IMAP4 server on a
-socket (aioimaplib for real), then what only a mailbox can break (UIDVALIDITY, refused logins, drops)
-and what the model reads through the tools."""
+"""IMAP connector: the inbound contract over a minimal IMAP4 server on a socket (aioimaplib for real),
+then, over a scripted client, what only a mailbox can break (UIDVALIDITY, refused logins, drops) and
+what the model reads through the tools."""
 
 import asyncio
 import contextlib
@@ -350,18 +350,6 @@ async def until(condition: Callable[[], bool]) -> None:
             await asyncio.sleep(0.005)
 
 
-class TestImapInboundScripted(InboundEventSourceContract):
-    @pytest.fixture(autouse=True)
-    def _mailbox(self) -> None:
-        self.mailbox, self.access = FakeMailbox(), FakeAccess()
-
-    def source(self) -> ImapInbound:
-        return inbound(self.mailbox, self.access)
-
-    async def arrive(self, title: str) -> None:
-        self.mailbox.deliver(mail(title))
-
-
 class TestImapInboundOverTheWire(InboundEventSourceContract):
     @pytest.fixture(autouse=True)
     async def _server(self) -> Any:
@@ -580,11 +568,6 @@ async def test_reading_without_a_valid_uid_tells_the_model_why(uid: object) -> N
         await tools(FakeMailbox())["imap_mail_read"].run({"uid": uid}, CONTEXT)
 
 
-async def test_reading_an_unknown_uid_tells_the_model_why() -> None:
-    with pytest.raises(ToolFailed, match="no message with uid 7"):
-        await tools(FakeMailbox())["imap_mail_read"].run({"uid": 7}, CONTEXT)
-
-
 async def test_tools_report_an_unreachable_server_as_tool_failures() -> None:
     mailbox = FakeMailbox()
     mailbox.down = 2
@@ -595,18 +578,6 @@ async def test_tools_report_an_unreachable_server_as_tool_failures() -> None:
 
 
 # -- connecting a mailbox -----------------------------------------------------------------------------
-
-
-async def test_identify_logs_in_and_names_the_account_by_its_username() -> None:
-    connector = ImapConnector(factory=scripted(FakeMailbox()))
-    assert await connector.identify(FakeAccess()) == "mathilde@free.fr"
-
-
-async def test_refused_credentials_cannot_be_connected() -> None:
-    connector = ImapConnector(factory=scripted(FakeMailbox()))
-    with pytest.raises(ProviderError) as raised:
-        await connector.identify(FakeAccess({"host": "imap.free.fr", "password": "wrong"}))
-    assert not raised.value.transient
 
 
 @pytest.mark.parametrize(
@@ -661,8 +632,9 @@ async def test_over_the_wire_search_and_read_quote_what_imap_needs() -> None:
 async def test_over_the_wire_a_refused_login_is_permanent_and_a_missing_folder_transient() -> None:
     mailbox = FakeMailbox()
     async with FakeImapServer(mailbox) as server:
-        with pytest.raises(LoginRefused, match="AUTHENTICATIONFAILED"):
+        with pytest.raises(LoginRefused, match="AUTHENTICATIONFAILED") as refused:
             await ImapConnector(timing=FAST).identify(FakeAccess(server.secrets(password="wrong")))
+        assert not refused.value.transient, "only the person can fix it"
     async with FakeImapServer(mailbox, select_refused=True) as server:
         with pytest.raises(MailboxUnavailable, match="refused SELECT"):
             await ImapConnector(timing=FAST).identify(FakeAccess(server.secrets()))

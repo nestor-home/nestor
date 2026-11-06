@@ -108,11 +108,30 @@ runtime may assemble the built-in storage adapters, and the admin may use FastAP
 
 ## Tests
 
-- Test behaviour, not implementation: never assert what the code merely restates, never test a
-  trivial getter. One behaviour per test, named as a sentence.
-- Every port has a **contract suite** in `nestor.testing`; doubles and real adapters run the same
-  suite (`class TestHermesExecutor(ExecutorContract)`). A suite proves its worth by rejecting a broken
-  double, so each suite has such a test.
-- Cover at least the happy path, a provider outage, a cancellation and a missing optional capability.
-- Uncovered code is either tested for a real behaviour or deleted — not excluded.
+A test earns its place by catching a bug no other test catches. Before writing one, answer:
+
+1. Which observable behaviour or contract does it protect, and which credible regression makes it fail?
+2. Why does no existing test prove it? A contract has **one owner**, at its strongest boundary: the real owner
+   with fake I/O beats a mocked collaborator. Extend the keeper's table rather than add a sibling test.
+3. Does it need an export, a parameter or a hook that only tests use? Then test at the real boundary instead,
+   and never add the seam.
+
+Write down how the code could fail before writing the test. Then:
+
+- Prove the test can fail: break the owner once (an inverted condition, a dropped write), see it red, restore it.
+  A fix or a regression test that never went red proves nothing.
+- Assert what a user or a caller observes. Never a private attribute, a call shape, a storage key, or an expected
+  value the code under test computed. Strict outcomes: "allowed" is the success status, not "not 403".
+- The name is a promise: a test called "without secrets" checks for the secrets; a contract that names accents
+  feeds accents.
+- Doubles are not under test. They run a port's contract suite only where they stand in for the real thing, and
+  mocks are fed by the real source (the admin's mocks read the server's catalogues and error codes).
+- Ports have a **contract suite** in `nestor.testing`; real adapters run it, and each suite rejects a broken
+  double.
+- Think through the provider outage, the cancellation, the restart and the missing optional capability when
+  listing how the code could fail; test those that are contracts, not each one by habit.
+- Coverage is measured, and stays above 95 % through real behaviours: uncovered code is tested for a behaviour
+  or deleted, never covered by a test written for the line, never excluded.
 - Hardware and network paths use doubles; real-provider tests are marked `live` and opt-in.
+- An audit marks every test (retain, fix, consolidate into a named keeper, delete with the proof that remains),
+  reads the owner before deciding, and breaks the owner to check every fix and merge.

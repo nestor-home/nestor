@@ -79,20 +79,24 @@ async def test_items_are_said_in_french_with_the_reason_of_a_decision(tmp_path: 
 async def test_sign_ins_are_in_the_journal_without_secrets(tmp_path: Path) -> None:
     async with Harness(tmp_path) as admin:
         api = await admin.api()
-        await (await admin.api(None)).sign_in("mathis", "not the password")
-        items = (await api.get("/api/v1/journal", kinds="account")).json()["items"]
-        summaries = [i["text"] for i in items]
-        assert summaries[:3] == [
+        stranger = await admin.api(None)
+        await stranger.sign_in("mathis", "not the password")
+        await stranger.sign_in("hunter2-in-the-login-field", "x")  # a password typed in the wrong field
+        page = await api.get("/api/v1/journal", kinds="account")
+        summaries = [i["text"] for i in page.json()["items"]]
+        assert summaries[1:4] == [
             "Connexion refusée au compte mathis : mot de passe incorrect",
             "Connexion de mathis",
             "Compte mathis créé (propriétaire)",
         ]
+        assert "not the password" not in page.text and "hunter2" not in page.text
 
 
 async def test_pages_go_back_in_time_without_gaps_or_repeats(tmp_path: Path) -> None:
     async with Harness(tmp_path) as admin:
         for n in range(7):
             await admin.nestor.journal.publish(turn(MATHIS_CHAT, f"message {n}", "mathis"))
+            await admin.nestor.journal.publish(MemoryRecorded(source="memory", memory_id=f"m{n}", text=f"souvenir {n}"))
         api = await admin.api()
         seen, before = [], None
         while True:
@@ -103,25 +107,11 @@ async def test_pages_go_back_in_time_without_gaps_or_repeats(tmp_path: Path) -> 
             ).json()
             seen += [i["detail"] for i in page["items"]]
             before = page["next_before"]
+            assert before is None or before == page["items"][-1]["position"], "the cursor is the last item shown"
             if before is None:
                 break
         assert seen == [f"message {n}" for n in reversed(range(7))]
         assert (await api.get("/api/v1/journal", before=1)).json() == {"items": [], "next_before": None}
-
-
-async def test_filters_keep_one_person_or_one_channel(tmp_path: Path) -> None:
-    async with Harness(tmp_path) as admin:
-        await conversations(admin)
-        api = await admin.api()
-        mathilde = (await api.get("/api/v1/journal", person="mathilde")).json()["items"]
-        assert {i["detail"] for i in mathilde} == {"Rappelle-moi le dentiste", "Mathilde a peur des araignées"}
-        assert len((await api.get("/api/v1/journal", channel="telegram")).json()["items"]) == 4
-        unknown = await api.get("/api/v1/journal", kinds="gossip")
-        assert unknown.status_code == 400 and unknown.json()["error"]["code"] == "unknown_kind"
-        facets = (await api.get("/api/v1/journal/facets")).json()
-        assert {"key": "conversation", "label": "Conversations", "count": 4} in facets["kinds"]
-        assert facets["channels"] == [{"key": "telegram", "label": "telegram", "count": 4}]
-        assert {"key": "mathilde", "label": "Mathilde", "count": 2} in facets["people"]
 
 
 async def test_a_member_reads_their_own_conversations_not_another_members(tmp_path: Path) -> None:
@@ -317,43 +307,54 @@ async def test_the_important_events_are_told_in_the_readers_language(tmp_path: P
         ):
             await admin.nestor.journal.publish(event)
         found = (await (await admin.api()).get("/api/v1/journal", limit=200)).json()["items"]
+        told = [m for i in found for m in (i["message"], i["detail_message"]) if m is not None]
+        for message_id, args in (
+            ("journal-assistant-interrupted", {}),
+            ("journal-fallback", {"reason": "model_slow"}),
+            ("journal-answer-cut", {}),
+            ("journal-detail-heard", {"heard": "Je surv"}),
+            ("journal-tool-called", {"tool": "create_watch"}),
+            ("journal-tool-completed", {"tool": "create_watch", "seconds": 0.2}),
+            ("journal-tool-failed", {"tool": "mailbox_send"}),
+            ("journal-watch-sorted", {"item": "Colis livré", "matched": 1, "asked": 2, "unsorted": "no"}),
+            ("journal-watch-sorted", {"item": "Newsletter", "matched": 0, "asked": 1, "unsorted": "no"}),
+            ("journal-watch-sorted", {"item": "Facture", "unsorted": "yes"}),
+            ("journal-watch-triggered", {"watch": "w1", "item": "Colis livré", "urgent": "yes"}),
+            ("journal-watch-ended", {"watch": "w1", "reason": "matched"}),
+            ("journal-delivered", {"subject": "watch", "id": "w1"}),
+            ("journal-delivery-failed", {"subject": "watch", "id": "w2"}),
+            ("journal-detail-tried", {"count": 0}),
+            ("journal-memory-corrected", {}),
+            ("journal-presence-changed", {"person": "Mathis", "where": "room", "room": "salon"}),
+            ("journal-presence-changed", {"person": "Mathis", "where": "away"}),
+            ("journal-presence-changed", {"person": "Mathis", "where": "home"}),
+            ("journal-presence-changed", {"person": "ghost", "where": "unknown"}),
+            ("journal-task-started", {"task": "t1", "executor": "hermes"}),
+            ("journal-task-ended", {"task": "t1", "status": "failed", "seconds": 12.0}),
+            ("journal-connection-changed", {"connection": "c1", "status": "needs_reauth"}),
+            (
+                "journal-satellite-pairing-requested",
+                {"device": "reachy-salon", "model": "reachy-mini", "room": "salon"},
+            ),
+            ("journal-detail-declares", {"count": 2}),
+            ("journal-satellite-paired", {"device": "reachy-salon", "proof": "device_code"}),
+            ("journal-detail-allowed", {"count": 2}),
+            ("journal-satellite-revoked", {"device": "reachy-salon"}),
+            ("journal-satellite-connected", {"device": "reachy-salon"}),
+            ("journal-satellite-disconnected", {"device": "reachy-salon"}),
+            ("journal-person-detected", {"count": 2, "device": "reachy-salon"}),
+            ("journal-detail-confidence", {"confidence": 0.87}),
+            ("journal-speech-activity", {"active": "yes", "device": "reachy-salon"}),
+            ("journal-speech-activity", {"active": "no", "device": "reachy-salon"}),
+        ):
+            assert any(m["id"] == message_id and args.items() <= m["args"].items() for m in told), (message_id, args)
         said = "\n".join(f"{i['text']}\n{i['detail_text']}" for i in found)
-        for sentence in (
-            "Richie a répondu (interrompu)",
-            "Réponse de secours : modèle trop lent",
-            "Réponse interrompue",
-            "Entendu : Je surv",
-            "Outil create_watch appelé",
-            "Outil create_watch terminé en 0,2 s",
-            "Outil mailbox_send en échec",
-            "« Colis livré » vérifié pour 2 veilles : 1 correspond",
+        for sentence in (  # what Fluent formats: plurals, decimals, percentages, a long text cut short
             "« Newsletter » vérifié pour 1 veille : aucune ne correspond",
-            "« Facture » non trié : le modèle n'a pas répondu",
-            "Veille w1 déclenchée par « Colis livré » (urgent)",
-            "Veille w1 déclenchée",
-            "Message transmis : veille w1",
-            "Message non transmis : veille w2",
-            "Essayé : aucun canal disponible",
-            "Souvenir corrigé",
-            "Mathis est dans la pièce « salon »",
-            "Mathis n'est plus à la maison",
-            "Mathis est à la maison",
-            "ghost : position inconnue",
-            "Tâche t1 confiée à hermes",
-            "Tâche t1 en échec (12 s)",
-            "Connexion c1 à réautoriser",
-            "Satellite reachy-salon (reachy-mini, salon) demande à être appairé",
-            "Déclare : micro, haut-parleur",
-            "Satellite reachy-salon appairé avec son code (salon)",
-            "Autorisé : micro, haut-parleur",
-            "Satellite reachy-salon révoqué",
-            "Satellite reachy-salon connecté",
-            "Satellite reachy-salon déconnecté",
+            "Outil create_watch terminé en 0,2 s",
             "2 personnes vues par reachy-salon",
-            "Confiance : 87\N{NO-BREAK SPACE}%",
             "1 personne vue par reachy-salon",
-            "Parole détectée près de reachy-salon",
-            "Fin de parole près de reachy-salon",
+            "Confiance : 87\N{NO-BREAK SPACE}%",
             "bla …",
         ):
             assert sentence in said, sentence

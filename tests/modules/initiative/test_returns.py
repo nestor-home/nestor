@@ -10,7 +10,7 @@ from nestor.core import Event, PersonId, ProviderError
 from nestor.modules.channels import Address, InboundMessage, Medium, Sender
 from nestor.modules.cognition import Notify, TaskDelivered, TaskEnded, TaskStarted, TaskStatus
 from nestor.modules.cognition.model import Role, ToolCall, ToolSpec
-from nestor.modules.cognition.tools import Tool, Toolbox, ToolContext, ToolDeferred, ToolReturned
+from nestor.modules.cognition.tools import Tool, Toolbox, ToolCalled, ToolContext, ToolDeferred, ToolReturned
 from nestor.modules.conversation import (
     Agent,
     AgentSettings,
@@ -64,6 +64,7 @@ class Home:
         model: ScriptedModel | None = None,
         journal: Journal | None = None,
         tools: Iterable[Tool] = (),
+        tool_wait_s: float = 0.05,
     ) -> None:
         """`journal`: another home's, to start again on what it wrote (a restart)."""
         self.journal = journal or Journal(MemoryEventLog())
@@ -76,7 +77,7 @@ class Home:
             household=self.household,
             localizer=EchoLocalizer(),
             toolbox=Toolbox(self.journal, tools),
-            settings=AgentSettings(written_tool_wait_s=0.05),
+            settings=AgentSettings(written_tool_wait_s=tool_wait_s),
         )
         self.voice = voice or VoiceChannel()
         self.telegram = InMemoryChannel("telegram")
@@ -158,6 +159,8 @@ async def test_the_person_answering_a_result_is_answered_with_it_in_mind() -> No
     assert "Result: tout est vert" in history[0].content and "not said by anyone here" in history[0].content
     [internal] = await home.journal.history(NotificationTurn)
     assert (internal.about, internal.person, internal.address) == ("task t1 completed", MATHIS.id, TELEGRAM)
+    [said] = [t for t in await home.journal.history(AssistantTurn) if t.exchange == internal.exchange]
+    assert said.text == "Ton analyse est finie : tout est vert.", "the message and what caused it share their turn"
 
 
 async def test_a_result_asked_in_writing_goes_where_the_person_reads() -> None:
@@ -294,6 +297,51 @@ async def test_a_call_cut_short_by_a_restart_is_said_to_have_failed() -> None:
     [returned] = await home.journal.history(ToolReturned)
     assert not returned.ok and "restarted" in returned.output
     assert "Failure:" in model.requests[2].messages[-1].content
+
+
+async def test_a_result_that_came_back_while_nobody_listened_is_delivered_once_at_the_next_start() -> None:
+    done = asyncio.Event()
+    model = ScriptedModel(ToolCall("c1", "count_mails"), "Je regarde.", "Tu as 12 mails non lus.")
+    home = Home(model=model, tools=[slow_tool(done)])
+    asked = InboundMessage(address=TELEGRAM, sender=Sender("42"), text="Combien de mails ?")
+    await home.agent.respond(asked).collect()
+    done.set()  # it ends while Returns is not running: only the journal keeps it
+    await until(home.journal, ToolReturned)
+
+    restarted = Home(model=model, journal=home.journal)
+    async with restarted.returns():
+        await until(restarted.journal, ToolResultDelivered)
+    async with restarted.returns():  # once only
+        pass
+
+    assert restarted.telegram.sent == [(TELEGRAM, "Tu as 12 mails non lus.")]
+    assert "Result: 12 mails non lus" in model.requests[2].messages[-1].content
+
+
+async def test_a_cut_turn_stops_the_call_it_was_waiting_for() -> None:
+    """Someone who cuts Nestor off drops what they asked: the call stops and nothing comes back later."""
+    stopped = asyncio.Event()
+
+    async def count(arguments: Mapping[str, object], context: ToolContext) -> str:
+        try:
+            await asyncio.sleep(10)
+        except asyncio.CancelledError:
+            stopped.set()
+            raise
+        return "12 mails non lus"
+
+    tool = Tool(spec=ToolSpec("count_mails", "Count unread mails"), run=count)
+    home = Home(model=ScriptedModel(ToolCall("c1", "count_mails")), tools=[tool], tool_wait_s=5)
+    async with home.returns():
+        reply = home.agent.respond(InboundMessage(address=TELEGRAM, sender=Sender("42"), text="Mes mails ?"))
+        reading = asyncio.create_task(reply.collect())
+        await until(home.journal, ToolCalled)
+        await reply.interrupt("")
+        await reading
+        await asyncio.wait_for(stopped.wait(), 1)
+
+    assert await home.journal.history(ToolDeferred, ToolReturned) == []
+    assert home.telegram.sent == []
 
 
 async def test_the_history_keeps_what_the_model_heard_when_the_call_went_on() -> None:

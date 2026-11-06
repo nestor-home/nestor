@@ -1,9 +1,9 @@
 """Connections from the admin: OAuth with PKCE, fresh tokens, consent for writes, clean unplugging."""
 
 import asyncio
-import base64
-import hashlib
+import contextlib
 import json
+import time
 import urllib.parse
 from dataclasses import replace
 
@@ -43,14 +43,13 @@ class Setup:
         self.mail = ScriptedConnector()
         self.imap = ScriptedConnector("imap", auth=AuthKind.SECRET, account="mathilde@free.fr")
         self.connections = Connections(self.journal, self.vault, self.provider, [self.mail, self.imap])
+        self.url = ""  # the authorisation URL of the last flow completed by connect()
 
     async def connect(self) -> str:
         await self.connections.set_client("mailbox", "client-123", "s3cret")
-        url = await self.connections.begin("mailbox", MATHIS, REDIRECT)
-        query = dict(urllib.parse.parse_qsl(urllib.parse.urlsplit(url).query))
-        verifier = next(iter(self.connections._pending.values())).verifier  # what only Nestor knows
-        code = self.provider.authorize(query["client_id"], verifier)
-        connection = await self.connections.complete(query["state"], code)
+        self.url = await self.connections.begin("mailbox", MATHIS, REDIRECT)
+        back = self.provider.consent(self.url)
+        connection = await self.connections.complete(back["state"], back["code"])
         return connection.id
 
 
@@ -59,14 +58,16 @@ async def test_the_authorization_url_carries_pkce_state_and_scopes() -> None:
     await setup.connections.set_client("mailbox", "client-123", "s3cret")
     url = await setup.connections.begin("mailbox", MATHIS, REDIRECT)
     query = dict(urllib.parse.parse_qsl(urllib.parse.urlsplit(url).query))
-    verifier = next(iter(setup.connections._pending.values())).verifier
+    other = dict(
+        urllib.parse.parse_qsl(urllib.parse.urlsplit(await setup.connections.begin("mailbox", MATHIS, REDIRECT)).query)
+    )
 
     assert url.startswith("https://provider.example/authorize?")
     assert (query["client_id"], query["redirect_uri"], query["scope"]) == ("client-123", REDIRECT, "mail.read")
     assert query["code_challenge_method"] == "S256" and query["access_type"] == "offline"
-    expected = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b"=").decode()
-    assert query["code_challenge"] == expected
     assert len(query["state"]) >= 32
+    assert (query["state"], query["code_challenge"]) != (other["state"], other["code_challenge"]), "fresh per flow"
+    # the challenge matches the verifier sent with the code: FakeProvider checks it, and the flows below complete
 
 
 async def test_completing_the_flow_records_the_account_and_never_logs_secrets() -> None:
@@ -87,15 +88,34 @@ async def test_a_forged_or_replayed_callback_is_refused() -> None:
     await setup.connect()
     with pytest.raises(ContractError, match="unknown or expired"):
         await setup.connections.complete("forged-state", "code")
+    replayed = setup.provider.consent(setup.url)  # a fresh, valid code for the flow already completed
+    with pytest.raises(ContractError, match="unknown or expired"):
+        await setup.connections.complete(replayed["state"], replayed["code"])
 
 
-async def test_a_code_obtained_with_another_verifier_is_refused_and_nothing_is_kept() -> None:
+async def test_an_authorisation_left_pending_over_ten_minutes_is_refused(monkeypatch: pytest.MonkeyPatch) -> None:
     setup = Setup()
     await setup.connections.set_client("mailbox", "client-123", "s3cret")
-    url = await setup.connections.begin("mailbox", MATHIS, REDIRECT)
-    state = dict(urllib.parse.parse_qsl(urllib.parse.urlsplit(url).query))["state"]
+    prompt = setup.provider.consent(await setup.connections.begin("mailbox", MATHIS, REDIRECT))
+    slow = setup.provider.consent(await setup.connections.begin("mailbox", MATHIS, REDIRECT))
+    started, elapsed = time.monotonic(), 0.0
+    monkeypatch.setattr(time, "monotonic", lambda: started + elapsed)
+
+    elapsed = 599.0
+    assert (await setup.connections.complete(prompt["state"], prompt["code"])).account == "mathis@example.com"
+    elapsed = 601.0
+    with pytest.raises(ContractError, match="unknown or expired"):
+        await setup.connections.complete(slow["state"], slow["code"])
+    assert len(setup.connections.connections) == 1
+
+
+async def test_a_code_issued_for_another_flow_is_refused_and_nothing_is_kept() -> None:
+    setup = Setup()
+    await setup.connections.set_client("mailbox", "client-123", "s3cret")
+    ours = setup.provider.consent(await setup.connections.begin("mailbox", MATHIS, REDIRECT))
+    injected = setup.provider.consent(await setup.connections.begin("mailbox", MATHIS, REDIRECT))
     with pytest.raises(ProviderError, match="invalid_grant"):
-        await setup.connections.complete(state, setup.provider.authorize("client-123", "stolen-verifier"))
+        await setup.connections.complete(ours["state"], injected["code"])  # its PKCE verifier is not ours
     assert setup.connections.connections == {}
 
 
@@ -244,5 +264,11 @@ async def test_inbound_items_flow_from_connections_plugged_in_while_running() ->
 
     await setup.connections.disconnect(connection_id)
     await asyncio.sleep(0.01)
-    assert inbound._feeds == {}, "an unplugged account is no longer followed"
+    setup.mail.inbox.deliver(Incoming(source="mailbox", kind="mail", title="Après le débranchement"))
+    later = asyncio.ensure_future(anext(feed))
+    done, _ = await asyncio.wait({later}, timeout=0.1)
+    assert not done, "an unplugged account is no longer followed"
+    later.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await later
     await feed.aclose()

@@ -308,9 +308,9 @@ class _Core:
 
 
 class FakeCore:
-    def __init__(self, *, deadline_s: float = 10.0, approve_after_s: float = 0.5, probe: ProtocolProbe | None = None):
+    def __init__(self, *, deadline_s: float = 10.0, approve_after_s: float = 0.5):
         self.deadline_s = deadline_s
-        self.probe = probe or ProtocolProbe()
+        self.probe = ProtocolProbe()
         self._approve_after_s = approve_after_s
 
     async def check(self, driver: Driver) -> Findings:

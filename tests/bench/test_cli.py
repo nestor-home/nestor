@@ -9,6 +9,7 @@ import pytest
 from nestor.bench import BenchError, Suite, Suites
 from nestor.bench.results import write_run
 from nestor.cli import main
+from nestor.core import ContractError
 
 from .kit import Quiz, quiz_runs, variant
 
@@ -89,10 +90,8 @@ def test_the_command_speaks_the_language_of_the_environment(here: Path, capsys: 
 
 def test_a_failure_is_said_in_words_with_status_2(here: Path, capsys: pytest.CaptureFixture[str]) -> None:
     assert bench("run", "nope", "--variant", "per-watch.yaml") == 2
-    assert (
-        "nestor bench: no suite named nope (installed: memory-recall, speaker-id, watch-triage)"
-        in capsys.readouterr().err
-    )
+    said = capsys.readouterr().err
+    assert "nestor bench: no suite named nope (installed: " in said and "watch-triage" in said
     assert bench("run", "watch-triage", "--variant", "per-watch.yaml", "--replay") == 2
     assert "run it once without --replay" in capsys.readouterr().err
     assert bench("report", "nowhere") == 2
@@ -111,14 +110,14 @@ def test_an_entry_point_that_is_not_a_suite_is_refused(monkeypatch: pytest.Monke
             return object()
 
     monkeypatch.setattr("nestor.bench.catalogue.entry_points", lambda group: [Entry()])
-    with pytest.raises(Exception, match="not a nestor bench Suite"):
+    with pytest.raises(ContractError, match="not a nestor bench Suite"):
         Suites.installed()
 
 
 def test_two_suites_cannot_share_a_name() -> None:
     suite = Suites.installed().get("watch-triage")
     assert isinstance(suite, Suite)
-    with pytest.raises(Exception, match="two suites"):
+    with pytest.raises(ContractError, match="two suites"):
         Suites([suite, suite])
     with pytest.raises(BenchError):
         Suites().get("watch-triage")

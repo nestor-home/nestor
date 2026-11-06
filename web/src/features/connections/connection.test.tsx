@@ -73,6 +73,6 @@ describe("a connection's pages", () => {
 
   it("says so when the connection is gone", async () => {
     renderApp("/connections/c-nope");
-    expect(await screen.findByRole("alert")).toHaveTextContent("Connection not found.");
+    expect(await screen.findByRole("alert")).toHaveTextContent("This connection does not exist or was removed.");
   });
 });

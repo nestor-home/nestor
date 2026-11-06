@@ -60,23 +60,28 @@ const journal = () => (lang === "fr" ? db.journal.map(inFrench) : db.journal);
 
 const noContent = () => new HttpResponse(null, { status: 204 });
 
-const fail = (status: number, code: string, id: string, args: Record<string, string | number> = {}) =>
-  HttpResponse.json({ error: { code, message_id: id, args, message: errorText(lang, id, args) } }, { status });
-
-const NOUNS: Record<string, Record<Lang, string>> = {
-  account: { fr: "Compte", en: "Account" },
-  event: { fr: "Événement", en: "Event" },
-  connector: { fr: "Connecteur", en: "Connector" },
-  connection: { fr: "Connexion", en: "Connection" },
-  task: { fr: "Tâche", en: "Task" },
-  memory: { fr: "Souvenir", en: "Memory" },
-  invitation: { fr: "Invitation", en: "Invitation" },
-  satellite: { fr: "Satellite", en: "Satellite" },
-  watch: { fr: "Veille", en: "Watch" },
+/** An API error as Nestor's `ApiError` writes it: its message is `error-<code with dashes>`. */
+const fail = (status: number, code: In<"ErrorDetail">["code"], args: Record<string, string | number> = {}) => {
+  const id = `error-${code.replace(/_/g, "-")}`;
+  return HttpResponse.json(
+    { error: { code, message_id: id, args, message: errorText(lang, id, args) } } satisfies In<"ErrorOut">,
+    { status },
+  );
 };
 
-const notFound = (what: keyof typeof NOUNS) =>
-  fail(404, "not_found", "error-resource-not-found", { what: NOUNS[what]?.[lang] ?? what });
+/** What Nestor answers when a thing is missing, by thing (`not_found` when it says no more). */
+const MISSING = {
+  account: "not_found",
+  event: "journal_entry_unknown",
+  connection: "connection_unknown",
+  task: "task_unknown",
+  memory: "memory_unknown",
+  invitation: "invitation_unknown",
+  satellite: "satellite_unknown",
+  watch: "watch_unknown",
+} as const;
+
+const notFound = (what: keyof typeof MISSING) => fail(404, MISSING[what]);
 
 const signedIn = () => db.accounts.find((a) => a.id === db.signedIn) ?? null;
 
@@ -84,8 +89,8 @@ const signedIn = () => db.accounts.find((a) => a.id === db.signedIn) ?? null;
 function guard(request: Request): Response | null {
   listen(request);
   if (restarting()) return HttpResponse.error();
-  if (!signedIn()) return fail(401, "unauthenticated", "error-session-expired");
-  if (request.method !== "GET" && request.headers.get("X-CSRF-Token") !== CSRF) return fail(403, "csrf", "error-csrf");
+  if (!signedIn()) return fail(401, "unauthenticated");
+  if (request.method !== "GET" && request.headers.get("X-CSRF-Token") !== CSRF) return fail(403, "csrf_failed");
   return null;
 }
 
@@ -189,8 +194,8 @@ async function wavSeconds(request: Request): Promise<number | null> {
 /** The person a recording is for, when the reader may manage that voice; else the refusal. */
 function managedRecording(id: string): MockRecording | Response {
   const recording = recordings.get(id);
-  if (!recording) return fail(404, "not_found", "error-resource-not-found", { what: "Recording" });
-  if (!mayManageVoice(recording.person)) return fail(403, "voice_not_yours", "error-voice-not-yours");
+  if (!recording) return fail(404, "not_found");
+  if (!mayManageVoice(recording.person)) return fail(403, "voice_not_yours");
   return recording;
 }
 
@@ -198,7 +203,7 @@ const voiceHandlers = [
   http.get(`${API}/household/people/:id/voice`, ({ request, params }) => {
     const refused = guard(request);
     if (refused) return refused;
-    if (!db.people.some((p) => p.id === params.id)) return fail(404, "person_unknown", "error-person-unknown");
+    if (!db.people.some((p) => p.id === params.id)) return fail(404, "person_unknown");
     return json(voiceOut(String(params.id)));
   }),
 
@@ -206,8 +211,8 @@ const voiceHandlers = [
     const refused = guard(request);
     if (refused) return refused;
     const person = String(params.id);
-    if (!db.people.some((p) => p.id === person)) return fail(404, "person_unknown", "error-person-unknown");
-    if (!mayManageVoice(person)) return fail(403, "voice_not_yours", "error-voice-not-yours");
+    if (!db.people.some((p) => p.id === person)) return fail(404, "person_unknown");
+    if (!mayManageVoice(person)) return fail(403, "voice_not_yours");
     const { learning } = (await request.json()) as In<"RecordingIn">;
     const id = newId("rec");
     recordings.set(id, { id, person, learning, taken: new Set(), attempts: new Map() });
@@ -229,9 +234,9 @@ const voiceHandlers = [
     const recording = managedRecording(String(params.id));
     if (recording instanceof Response) return recording;
     const phrase = Number(params.n);
-    if (!(phrase >= 0 && phrase < PHRASES.length)) return fail(400, "audio_format", "error-audio-format");
+    if (!(phrase >= 0 && phrase < PHRASES.length)) return fail(400, "audio_format");
     const seconds = await wavSeconds(request);
-    if (seconds === null) return fail(400, "audio_format", "error-audio-format");
+    if (seconds === null) return fail(400, "audio_format");
     await delay(400);
     const attempts = (recording.attempts.get(phrase) ?? 0) + 1;
     recording.attempts.set(phrase, attempts);
@@ -251,7 +256,7 @@ const voiceHandlers = [
     const recording = managedRecording(String(params.id));
     if (recording instanceof Response) return recording;
     if (recording.taken.size < PHRASES.length)
-      return fail(409, "recording_incomplete", "error-status", { status: 409 });
+      return fail(400, "invalid", { detail: "some phrases are still missing" });
     await delay(500);
     recordings.delete(recording.id);
     const learned = db.voices[recording.person];
@@ -279,7 +284,7 @@ const voiceHandlers = [
   http.post(`${API}/voice/hear`, async ({ request }) => {
     const refused = guard(request);
     if (refused) return refused;
-    if ((await wavSeconds(request)) === null) return fail(400, "audio_format", "error-audio-format");
+    if ((await wavSeconds(request)) === null) return fail(400, "audio_format");
     await delay(300);
     const [person] = Object.entries(db.voices)
       .filter(([, v]) => v.enrolled && v.enrolled_at)
@@ -298,7 +303,7 @@ const voiceHandlers = [
     const refused = guard(request);
     if (refused) return refused;
     const person = String(params.id);
-    if (!mayManageVoice(person)) return fail(403, "voice_not_yours", "error-voice-not-yours");
+    if (!mayManageVoice(person)) return fail(403, "voice_not_yours");
     const { learning } = (await request.json()) as In<"LearningIn">;
     db.voices[person] = { ...(db.voices[person] ?? silentVoice), learning };
     save();
@@ -309,7 +314,7 @@ const voiceHandlers = [
     const refused = guard(request);
     if (refused) return refused;
     const person = String(params.id);
-    if (!mayManageVoice(person)) return fail(403, "voice_not_yours", "error-voice-not-yours");
+    if (!mayManageVoice(person)) return fail(403, "voice_not_yours");
     await delay(200);
     const voice = db.voices[person];
     if (new URL(request.url).searchParams.get("learned_only") === "true" && voice) {
@@ -328,7 +333,7 @@ export const handlers = [
     if (restarting()) return HttpResponse.error();
     await delay(120);
     const account = signedIn();
-    return account ? json(meDto(account, lang)) : fail(401, "unauthenticated", "error-session-expired");
+    return account ? json(meDto(account, lang)) : fail(401, "unauthenticated");
   }),
 
   http.post(`${API}/session`, async ({ request }) => {
@@ -336,8 +341,8 @@ export const handlers = [
     await delay(300);
     const { login, password } = (await request.json()) as In<"LoginIn">;
     const account = db.accounts.find((a) => a.login.toLowerCase() === login.trim().toLowerCase());
-    if (!account || password !== "nestor") return fail(401, "bad_credentials", "error-bad-credentials");
-    if (account.disabled) return fail(403, "disabled", "error-account-disabled");
+    if (!account || password !== "nestor") return fail(401, "invalid_credentials");
+    if (account.disabled) return fail(401, "invalid_credentials");
     db.signedIn = account.id;
     save();
     listen(request);
@@ -355,7 +360,7 @@ export const handlers = [
     if (refused) return refused;
     const { locale } = (await request.json()) as In<"LocaleIn">;
     const account = signedIn();
-    if (!account) return fail(401, "unauthenticated", "error-session-expired");
+    if (!account) return fail(401, "unauthenticated");
     account.locale = locale;
     save();
     listen(request);
@@ -375,7 +380,7 @@ export const handlers = [
     await delay(150);
     const { token } = (await request.json()) as In<"InvitationTokenIn">;
     const invitation = db.invitations.find((i) => i.id === token && i.status === "pending");
-    if (!invitation) return fail(404, "invitation_unknown", "error-invitation-unknown");
+    if (!invitation) return fail(404, "invitation_unknown");
     return json({
       role: invitation.role,
       role_label: invitation.role_label,
@@ -389,9 +394,9 @@ export const handlers = [
     await delay(300);
     const body = (await request.json()) as In<"InvitationAcceptIn">;
     const invitation = db.invitations.find((i) => i.id === body.token && i.status === "pending");
-    if (!invitation) return fail(404, "invitation_unknown", "error-invitation-unknown");
-    if (body.password.length < 12) return fail(400, "weak_password", "error-weak-password", { min: 12 });
-    if (db.accounts.some((a) => a.login === body.login)) return fail(409, "account_exists", "error-account-exists");
+    if (!invitation) return fail(404, "invitation_unknown");
+    if (body.password.length < 12) return fail(400, "weak_password", { length: 12 });
+    if (db.accounts.some((a) => a.login === body.login)) return fail(409, "conflict");
     const account = {
       id: newId("acc"),
       login: body.login,
@@ -433,7 +438,7 @@ export const handlers = [
     const person = db.people.find((p) => p.id === body.person);
     // as the server: a member's or a guest's account belongs to a person of the household
     if ((body.role === "member" || body.role === "guest") && !person) {
-      return fail(400, "person_required", "error-invitation-person");
+      return fail(400, "person_required");
     }
     const invitation = {
       id: newId("inv"),
@@ -476,7 +481,7 @@ export const handlers = [
     if (!account) return notFound("account");
     const { role } = (await request.json()) as In<"RoleIn">;
     if (account.role === "owner" && role !== "owner" && owners().length <= 1) {
-      return fail(409, "last_owner", "error-last-owner");
+      return fail(409, "last_owner");
     }
     account.role = role;
     account.role_label = ROLE_LABEL[role];
@@ -492,7 +497,7 @@ export const handlers = [
       const account = db.accounts.find((a) => a.id === params.id);
       if (!account) return notFound("account");
       if (action === "disable" && account.role === "owner" && owners().length <= 1) {
-        return fail(409, "last_owner", "error-last-owner");
+        return fail(409, "last_owner");
       }
       account.disabled = action === "disable";
       save();
@@ -506,7 +511,7 @@ export const handlers = [
     const refused = guard(request);
     if (refused) return refused;
     const person = db.people.find((p) => p.id === params.id);
-    return person ? json(personDto(person)) : fail(404, "person_unknown", "error-person-unknown");
+    return person ? json(personDto(person)) : fail(404, "person_unknown");
   }),
 
   // -- journal ----------------------------------------------------------------------------------
@@ -534,7 +539,7 @@ export const handlers = [
     const url = new URL(request.url);
     const before = url.searchParams.get("before");
     const limit = Number(url.searchParams.get("limit") ?? PAGE);
-    if (limit < 1 || limit > 200) return fail(422, "invalid", "error-invalid-request");
+    if (limit < 1 || limit > 200) return fail(422, "invalid_request", { fields: "limit" });
     let items = matching(journal(), filtersOf(url));
     if (before) items = items.filter((e) => Number(e.id) < Number(before));
     const page = items.slice(0, limit).map((e) => itemOut(withoutRecord(e)));
@@ -564,10 +569,10 @@ export const handlers = [
     const refused = guard(request);
     if (refused) return refused;
     const body = (await request.json()) as In<"InstallIn">;
-    if (!body.confirm) return fail(400, "update_unconfirmed", "error-update-unconfirmed");
+    if (!body.confirm) return fail(400, "update_unconfirmed");
     const updates = db.updates;
     if (!updates.installable || body.version !== updates.releases[0]?.version || updates.installing) {
-      return fail(409, "update_not_installable", "error-update-not-installable");
+      return fail(409, "update_not_installable");
     }
     updates.installing = body.version;
     updates.failed = null;
@@ -590,7 +595,7 @@ export const handlers = [
     const refused = guard(request);
     if (refused) return refused;
     const connector = db.connectors.find((c) => c.kind === params.kind);
-    return connector ? json(connectorDto(connector)) : notFound("connector");
+    return connector ? json(connectorDto(connector)) : fail(404, "connector_unknown", { kind: String(params.kind) });
   }),
 
   http.put(`${API}/connectors/:kind/client`, async ({ request, params }) => {
@@ -598,10 +603,10 @@ export const handlers = [
     if (refused) return refused;
     await delay(250);
     const connector = db.connectors.find((c) => c.kind === params.kind);
-    if (!connector) return notFound("connector");
+    if (!connector) return fail(404, "connector_unknown", { kind: String(params.kind) });
     const body = (await request.json()) as In<"ClientIn">;
     if (!body.client_id.trim() || !body.client_secret.trim()) {
-      return fail(400, "client_incomplete", "error-client-incomplete");
+      return fail(400, "client_incomplete");
     }
     connector.client = { client_id: body.client_id.trim() };
     save();
@@ -613,8 +618,8 @@ export const handlers = [
     if (refused) return refused;
     await delay(400);
     const connector = db.connectors.find((c) => c.kind === params.kind);
-    if (!connector) return notFound("connector");
-    if (!connector.client) return fail(400, "client_missing", "error-client-missing");
+    if (!connector) return fail(404, "connector_unknown", { kind: String(params.kind) });
+    if (!connector.client) return fail(400, "client_missing");
     const body = (await request.json()) as In<"AuthorizationIn">;
     // the provider's consent page would come first; the mock connects and sends the browser back
     const connection = plug(connector.kind, body.person ?? null, body.replaces ?? null, {});
@@ -626,14 +631,14 @@ export const handlers = [
     if (refused) return refused;
     await delay(500);
     const connector = db.connectors.find((c) => c.kind === params.kind);
-    if (!connector) return notFound("connector");
+    if (!connector) return fail(404, "connector_unknown", { kind: String(params.kind) });
     const body = (await request.json()) as In<"SecretsIn">;
     const values = (body.values ?? {}) as Record<string, string>;
     const missing = connector.fields.filter((f) => !f.optional && !values[f.name]?.trim());
     if (missing.length) {
-      return fail(400, "fields_missing", "error-fields-missing", { fields: missing.map((f) => f.label).join(", ") });
+      return fail(400, "fields_missing", { fields: missing.map((f) => f.label).join(", ") });
     }
-    if (values.host?.includes("invalid")) return fail(502, "provider_refused", "error-provider-refused");
+    if (values.host?.includes("invalid")) return fail(502, "provider_refused", { detail: "authentication failed" });
     const connection = plug(connector.kind, body.person ?? null, body.replaces ?? null, values);
     return json(connectionDetailDto(connection), { status: 201 });
   }),
@@ -699,9 +704,8 @@ export const handlers = [
     if (refused) return refused;
     const body = (await request.json()) as In<"AdditionIn">;
     if (body.room !== null && body.room !== undefined && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(body.room))
-      return fail(400, "invalid", "error-invalid-request");
-    if (db.additions.filter((a) => a.status === "active").length >= 8)
-      return fail(409, "too_many_additions", "error-too-many-additions");
+      return fail(422, "invalid_request", { fields: "room" });
+    if (db.additions.filter((a) => a.status === "active").length >= 8) return fail(409, "too_many_additions");
     await delay(250);
     const enrollment = body.method.startsWith("enrollment.");
     const now = Date.now();
@@ -744,14 +748,14 @@ export const handlers = [
     if (refused) return refused;
     advance();
     const addition = db.additions.find((a) => a.id === params.id);
-    return addition ? json(additionOut(addition)) : fail(404, "addition_unknown", "error-addition-unknown");
+    return addition ? json(additionOut(addition)) : fail(404, "addition_unknown");
   }),
 
   http.delete(`${API}/satellites/additions/:id`, ({ request, params }) => {
     const refused = guard(request);
     if (refused) return refused;
     const addition = db.additions.find((a) => a.id === params.id && a.status === "active");
-    if (!addition) return fail(404, "addition_unknown", "error-addition-unknown");
+    if (!addition) return fail(404, "addition_unknown");
     addition.status = "cancelled";
     save();
     return noContent();
@@ -761,8 +765,8 @@ export const handlers = [
     const refused = guard(request);
     if (refused) return refused;
     const pending = db.pairing.find((p) => p.id === params.id);
-    if (!pending) return fail(404, "pending_unknown", "error-pending-unknown");
-    if (!pending.can_identify) return fail(409, "identify_unsupported", "error-identify-unsupported");
+    if (!pending) return fail(404, "pending_unknown");
+    if (!pending.can_identify) return fail(409, "identify_unsupported");
     return noContent();
   }),
 
@@ -771,13 +775,12 @@ export const handlers = [
     if (refused) return refused;
     await delay(400);
     const body = (await request.json()) as In<"ApprovalIn">;
-    if (!/^\d{6}$/.test(body.code.replace(/\s/g, ""))) return fail(400, "invalid_code", "error-invalid-code");
+    if (!/^\d{6}$/.test(body.code.replace(/\s/g, ""))) return fail(400, "invalid_code");
     const addition = body.addition_id ? db.additions.find((a) => a.id === body.addition_id) : undefined;
-    if (body.addition_id && addition?.status !== "active") return fail(409, "addition_over", "error-addition-over");
+    if (body.addition_id && addition?.status !== "active") return fail(409, "addition_over");
     const pending = db.pairing.find((p) => p.id === body.pairing_id);
     // the mock accepts 424242 as the code every device shows
-    if (!pending || body.code.replace(/\s/g, "") !== "424242")
-      return fail(400, "pairing_refused", "error-pairing-refused");
+    if (!pending || body.code.replace(/\s/g, "") !== "424242") return fail(400, "pairing_refused");
     const allowed = body.capabilities ?? addition?.capabilities ?? null;
     const satellite = pair(pending, {
       name: addition?.name ?? null,
@@ -803,9 +806,9 @@ export const handlers = [
     const refused = guard(request);
     if (refused) return refused;
     const satellite = db.satellites.find((x) => x.id === params.id);
-    if (!satellite) return fail(404, "satellite_unknown", "error-satellite-unknown");
-    if (!satellite.can_identify) return fail(409, "identify_unsupported", "error-identify-unsupported");
-    if (!satellite.connected) return fail(409, "satellite_offline", "error-satellite-offline");
+    if (!satellite) return fail(404, "satellite_unknown");
+    if (!satellite.can_identify) return fail(409, "identify_unsupported");
+    if (!satellite.connected) return fail(409, "satellite_offline");
     return noContent();
   }),
 
@@ -813,11 +816,11 @@ export const handlers = [
     const refused = guard(request);
     if (refused) return refused;
     const satellite = db.satellites.find((x) => x.id === params.id);
-    if (!satellite) return fail(404, "satellite_unknown", "error-satellite-unknown");
-    if (!satellite.can_update) return fail(409, "update_unsupported", "error-update-unsupported");
-    if (!satellite.connected) return fail(409, "satellite_offline", "error-satellite-offline");
+    if (!satellite) return fail(404, "satellite_unknown");
+    if (!satellite.can_update) return fail(409, "update_unsupported");
+    if (!satellite.connected) return fail(409, "satellite_offline");
     const version = satellite.update?.state === "available" ? satellite.update.version : null;
-    if (!version) return fail(409, "update_unavailable", "error-update-unavailable");
+    if (!version) return fail(409, "update_unavailable");
     satellite.update = { state: "installing", version, notes: satellite.update?.notes ?? null };
     save();
     // it installs, restarts and says hello again on the new version
@@ -910,7 +913,7 @@ export const handlers = [
     const memory = db.memories.find((m) => m.id === params.id);
     if (!memory) return notFound("memory");
     const { text } = (await request.json()) as In<"CorrectionIn">;
-    if (!text.trim()) return fail(400, "empty", "error-memory-empty");
+    if (!text.trim()) return fail(400, "empty_memory");
     memory.text = text.trim();
     memory.updated_at = new Date().toISOString();
     save();
@@ -954,7 +957,7 @@ export const handlers = [
     const refused = guard(request);
     if (refused) return refused;
     const body = (await request.json()) as In<"RestartIn">;
-    if (!body.confirm) return fail(400, "restart_unconfirmed", "error-restart-unconfirmed");
+    if (!body.confirm) return fail(400, "restart_unconfirmed");
     // what a restart applies: the file as written; nothing is pending any more
     const name = (db.config.document.persona as { name?: string } | undefined)?.name;
     if (name) db.system.agent.name = name;
@@ -1019,7 +1022,7 @@ export const handlers = [
     const refused = guard(request);
     if (refused) return refused;
     const entry = db.config.history.find((h) => h.id === params.id);
-    if (!entry) return fail(404, "config_history_unknown", "error-config-history-unknown");
+    if (!entry) return fail(404, "config_history_unknown");
     return HttpResponse.json({
       id: entry.id,
       at: entry.at,
@@ -1031,7 +1034,7 @@ export const handlers = [
     const refused = guard(request);
     if (refused) return refused;
     const entry = db.config.history.find((h) => h.id === params.id);
-    if (!entry) return fail(404, "config_history_unknown", "error-config-history-unknown");
+    if (!entry) return fail(404, "config_history_unknown");
     await delay(300);
     return writeConfig(config.masked(entry.document));
   }),
@@ -1055,7 +1058,7 @@ export const handlers = [
     if (refused) return refused;
     const { value } = (await request.json()) as In<"SecretIn">;
     await delay(200);
-    if (!value) return fail(422, "invalid", "error-invalid-request");
+    if (!value) return fail(422, "invalid_request", { fields: "value" });
     db.config.vault[String(params.name)] = { value, at: new Date().toISOString() };
     save();
     return HttpResponse.json(secretOut(String(params.name)) satisfies In<"SecretOut">);
@@ -1067,8 +1070,8 @@ export const handlers = [
     const name = String(params.name);
     const used = config.usedSecrets(db.config.document)[name] ?? [];
     const force = new URL(request.url).searchParams.get("force") === "true";
-    if (used.length && !force) return fail(409, "secret_in_use", "error-secret-in-use", { paths: used.join(", ") });
-    if (!(name in db.config.vault)) return fail(404, "secret_unknown", "error-secret-unknown");
+    if (used.length && !force) return fail(409, "secret_in_use", { paths: used.join(", ") });
+    if (!(name in db.config.vault)) return fail(404, "secret_unknown");
     delete db.config.vault[name];
     save();
     return noContent();
@@ -1162,7 +1165,9 @@ function writeConfig(document: In<"DocumentIn">["document"]) {
     const args = { count: problems.length };
     const message = errorText(lang, "error-config-invalid", args);
     return HttpResponse.json(
-      { error: { code: "config_invalid", message_id: "error-config-invalid", args, message, problems } },
+      {
+        error: { code: "config_invalid", message_id: "error-config-invalid", args, message, problems },
+      } satisfies In<"ErrorOut">,
       { status: 422 },
     );
   }

@@ -1,9 +1,10 @@
-"""Admin plumbing: settings that cannot work are refused, guessing ages out, sessions expire and are revoked."""
+"""Admin plumbing: settings that cannot work are refused, guessing ages out, sessions expire and are revoked,
+an OAuth flow waiting for the provider is taken once and does not wait forever."""
 
 import pytest
 
 from nestor.admin import AdminSettings
-from nestor.admin.auth import LoginThrottle, SessionStore
+from nestor.admin.auth import LoginThrottle, PendingFlows, SessionStore
 from nestor.core import ContractError
 
 
@@ -53,3 +54,16 @@ def test_revoking_an_account_closes_its_sessions_but_the_kept_one() -> None:
     assert store.revoke("a", keep=kept) == 1
     assert store.alive(kept) and not store.alive(other) and store.alive(someone_else)
     assert store.find(store.cookie(other)) is None
+
+
+def test_an_oauth_flow_is_taken_once_ages_out_and_the_oldest_goes_when_full() -> None:
+    now = [0.0]
+    flows = PendingFlows(ttl_s=10, limit=2, clock=lambda: now[0])
+    for state in ("oldest", "kept", "newest"):  # over the limit: the oldest goes
+        flows.add(state, kind="mailbox", owner=None, account_id="a", replaces=None)
+    assert flows.take("oldest") is None
+    taken = flows.take("kept")
+    assert taken is not None and (taken.kind, taken.account_id) == ("mailbox", "a")
+    assert flows.take("kept") is None, "a state is used once"
+    now[0] = 11
+    assert flows.take("newest") is None, "a provider coming back too late completes nothing"

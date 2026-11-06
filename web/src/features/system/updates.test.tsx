@@ -1,7 +1,9 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
+import { RESTART_POLL_MS } from "@/features/config/restart";
 import { db } from "@/mocks/db";
+import { RESTART_MS } from "@/mocks/handlers";
 import { server } from "@/mocks/server";
 import { renderApp } from "@/test/render";
 
@@ -58,7 +60,14 @@ describe("a newer Nestor", () => {
     );
     // the mock installs, then restarts on 0.10.0 (no newer release) and signs everyone out
     expect(await screen.findByText("Restarting, back in a moment.", {}, { timeout: 8_000 })).toBeVisible();
-  }, 15_000);
+    const back = { timeout: RESTART_MS + RESTART_POLL_MS + 8_000 };
+    expect(await screen.findByRole("heading", { name: "Sign in" }, back)).toBeInTheDocument();
+    await user.type(screen.getByLabelText("Login"), "mathis");
+    await user.type(screen.getByLabelText("Password"), "nestor");
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
+    expect(await screen.findByRole("navigation", { name: "Sections" })).toBeVisible();
+    await waitFor(() => expect(screen.queryByRole("button", { name: /New release/ })).toBeNull());
+  }, 30_000);
 
   it("goes back to the notes when the confirmation is cancelled", async () => {
     const user = userEvent.setup();

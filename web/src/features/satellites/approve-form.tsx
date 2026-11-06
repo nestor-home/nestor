@@ -14,7 +14,7 @@ import { CAPABILITY_ICON } from "@/lib/icons";
 const CODE = /^\d{6}$/;
 
 /** What the person typed, as the code: spaces and dashes people add while reading are ignored. */
-export function normaliseCode(typed: string): string {
+function normaliseCode(typed: string): string {
   return typed.replace(/[\s-]/g, "");
 }
 

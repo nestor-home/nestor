@@ -111,10 +111,6 @@ class Consolidator(Component):
                 await self._worker
             self._worker = None
 
-    def pending(self) -> tuple[str, ...]:
-        """The conversations not summarized yet, open or over."""
-        return tuple(self._open)
-
     async def consolidate_due(self) -> int:
         """Read the turns written since the last time, then consolidate every conversation whose silence has
         passed; returns how many were."""

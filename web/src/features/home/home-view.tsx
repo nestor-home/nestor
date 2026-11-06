@@ -26,6 +26,7 @@ import { Ago } from "@/components/ago";
 import { BowTie } from "@/components/bow-tie";
 import { Dither } from "@/components/dither";
 import { type Quiet, useAgentPresence } from "@/features/agent/presence";
+import { merge } from "@/features/journal/merge";
 import { useAttention } from "@/features/shell/attention";
 import { useLiveItems } from "@/features/shell/live";
 import { useT } from "@/i18n";
@@ -36,7 +37,7 @@ import { say } from "@/lib/messages";
 import { usePeopleNames } from "@/lib/people";
 import { useCan, useMe } from "@/lib/session";
 import { cn } from "@/lib/utils";
-import { elsewhere, lineOf, type Mark, marksOf, merge, nodeOf, type RoomNode, roomsOf } from "./mind";
+import { elsewhere, lineOf, type Mark, marksOf, nodeOf, type RoomNode, roomsOf } from "./mind";
 
 function greeting(now = new Date()): string {
   const h = now.getHours();
@@ -86,7 +87,7 @@ export function HomeView() {
     setLastLive(Date.now());
   });
   const now = useNow(Date.now() - lastLive < 30_000);
-  const items = useMemo(() => merge(day.data?.items ?? [], live), [day.data, live]);
+  const items = useMemo(() => merge(live, day.data?.items ?? []), [day.data, live]);
   const paired = satellites.data?.paired ?? [];
   const running = tasks.data?.running ?? [];
   const rooms = roomsOf({ people: people.data ?? [], satellites: paired, items });

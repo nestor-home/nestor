@@ -2010,24 +2010,6 @@
                 "help": "By tool name; overrides what the server declares."
               }
             },
-            "max_result_chars": {
-              "default": 16000,
-              "exclusiveMinimum": 0,
-              "title": "Max Result Chars",
-              "type": "integer",
-              "x-nestor": {
-                "field": "max_result_chars",
-                "title_id": "config-tools-mcp-max_result_chars",
-                "help_id": "config-tools-mcp-max_result_chars-help",
-                "fallback_title_id": "config-field-max_result_chars",
-                "secret": false,
-                "secret_values": false,
-                "advanced": false,
-                "group": "tools-mcp",
-                "title": "Max tool result size (characters)",
-                "help": null
-              }
-            },
             "retry_after_s": {
               "default": 30.0,
               "exclusiveMinimum": 0,

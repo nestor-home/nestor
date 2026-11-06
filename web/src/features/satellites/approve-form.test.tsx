@@ -7,7 +7,7 @@ import { I18nProvider } from "@/i18n";
 import { pairing } from "@/mocks/fixtures";
 import { server } from "@/mocks/server";
 import { renderWithProviders } from "@/test/render";
-import { ApproveForm, normaliseCode } from "./approve-form";
+import { ApproveForm } from "./approve-form";
 
 const [reachy] = pairing();
 if (!reachy) throw new Error("fixture changed");
@@ -21,11 +21,6 @@ function captureApprovals() {
 }
 
 describe("approving a satellite", () => {
-  it("accepts the code as people read it", () => {
-    expect(normaliseCode("424 242")).toBe("424242");
-    expect(normaliseCode("424-242")).toBe("424242");
-  });
-
   it("refuses a code that is not six digits, without asking the server", async () => {
     const user = userEvent.setup();
     const sent = captureApprovals();
@@ -49,7 +44,8 @@ describe("approving a satellite", () => {
         <ApproveForm request={reachy} />
       </I18nProvider>,
     );
-    await user.type(screen.getByLabelText("Code shown by the device"), "424 242");
+    // as people read it: spaces and dashes are not part of the code
+    await user.type(screen.getByLabelText("Code shown by the device"), "424-242");
     await user.click(screen.getByRole("checkbox", { name: /head movements/ }));
     await user.click(screen.getByRole("button", { name: "Pair" }));
     expect(await screen.findByText("Satellite reachy-mini-hallway paired in the hallway.")).toBeInTheDocument();

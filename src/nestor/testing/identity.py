@@ -4,21 +4,17 @@ The doubles treat audio as tagged PCM (`voice:mathis#2|` followed by a tone), so
 any model: each speaker has a voice of their own, each take of it differs a little, like two sentences do.
 """
 
-import itertools
 import math
 import random
 from array import array
-from collections.abc import AsyncIterable, AsyncIterator, Collection, Mapping, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
 from nestor.core import ContractError, PersonId, ProviderError
 from nestor.modules.identity import (
-    Diarizer,
     Learned,
     Profile,
-    Segment,
-    SpeakerLabel,
     Vector,
     VoiceEmbedder,
     VoiceprintStore,
@@ -130,53 +126,6 @@ class MemoryVoiceprintStore(VoiceprintStore):
         self.voices = {p: (s, profile) for p, (s, profile) in self.voices.items() if s == space.id}
 
 
-class TaggedDiarizer(Diarizer):
-    """Labels each chunk by its tag, merging consecutive chunks of the same speaker."""
-
-    name = "tagged-diarizer"
-
-    async def diarize(self, audio: AsyncIterable[bytes]) -> AsyncIterator[list[Segment]]:
-        labels: dict[str, SpeakerLabel] = {}
-        segments: list[Segment] = []
-        position = 0.0
-        async for chunk in audio:
-            duration = len(chunk) / (2 * self.sample_rate)
-            found = speaker_of(chunk)
-            if found is not None:
-                label = labels.setdefault(found[0], SpeakerLabel(f"spk-{len(labels)}"))
-                if segments and segments[-1].speaker == label and segments[-1].end_s == position:
-                    segments[-1] = Segment(segments[-1].start_s, position + duration, label)
-                else:
-                    segments.append(Segment(position, position + duration, label))
-                yield list(segments)
-            position += duration
-
-
-class DiarizerContract:
-    """Implement `diarizer()` and `speech(speaker, seconds)`: audio of that speaker for this model."""
-
-    def diarizer(self) -> Diarizer:
-        raise NotImplementedError
-
-    def speech(self, speaker: str, seconds: float) -> bytes:
-        raise NotImplementedError
-
-    async def test_two_speakers_get_two_labels_in_order(self) -> None:
-        chunks = [self.speech("a", 2.0), self.speech("b", 2.0), self.speech("a", 2.0)]
-
-        async def audio() -> AsyncIterator[bytes]:
-            for chunk in chunks:
-                yield chunk
-
-        async with self.diarizer() as diarizer:
-            final: list[Segment] = []
-            async for segmentation in diarizer.diarize(audio()):
-                final = segmentation
-        assert [s.speaker for s in final][:1] == [final[-1].speaker], "the first speaker keeps their label"
-        assert len({s.speaker for s in final}) == 2
-        assert all(a.start_s <= b.start_s for a, b in itertools.pairwise(final))
-
-
 class VoiceEmbedderContract:
     """Implement `embedder()` and `speech(speaker, take)`: a few seconds of that speaker's `take`-th sentence for
     this model (recordings for a real one)."""
@@ -231,9 +180,12 @@ class VoiceprintStoreContract:
             await store.enroll(lea, self.SPACE, [unit([1.0, 0.0, 0.0])], learning=True, at=self.AT)
             for n in range(5):
                 await store.learn(lea, _sample(n, room="salon"), keep=4, per_room=3)
-            await store.learn(lea, _sample(5, room="cuisine"), keep=4, per_room=3)
-            learned = (await store.profiles(self.SPACE))[lea].learned
-        assert [s.turn for s in learned] == ["t2", "t3", "t4", "t5"]  # 3 from the living room, then 4 in all
+            per_room = [s.turn for s in (await store.profiles(self.SPACE))[lea].learned]
+            for n in (5, 6):
+                await store.learn(lea, _sample(n, room="cuisine"), keep=4, per_room=3)
+            in_all = [s.turn for s in (await store.profiles(self.SPACE))[lea].learned]
+        assert per_room == ["t2", "t3", "t4"], "3 per room, though 4 in all would fit"
+        assert in_all == ["t3", "t4", "t5", "t6"], "4 in all, though each room keeps 3"
 
     async def test_unlearning_says_whose_voice_changed(self) -> None:
         lea, hugo = PersonId("lea"), PersonId("hugo")

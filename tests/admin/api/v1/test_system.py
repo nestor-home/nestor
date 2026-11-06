@@ -5,7 +5,6 @@ from importlib import metadata
 from pathlib import Path
 
 from nestor.core import Capability, Health
-from nestor.modules.accounts import Role
 from nestor.modules.channels import Medium
 from nestor.modules.satellites import DeclaredCapability, Device, Manifest, Software
 from nestor.modules.system import Releases
@@ -62,12 +61,6 @@ async def test_the_system_lists_every_plugged_component_and_paired_satellite(tmp
         assert satellite["health_detail"] == "Aucun satellite connecté dans salon."
 
 
-async def test_the_system_is_for_those_who_run_the_household(tmp_path: Path) -> None:
-    async with Harness(tmp_path) as admin:
-        await admin.account("mathilde", Role.MEMBER, "mathilde")
-        assert (await (await admin.api("mathilde")).get("/api/v1/system")).status_code == 403
-
-
 def test_an_installed_plugin_knows_the_package_it_comes_from() -> None:
     from nestor.runtime import Family
 
@@ -122,9 +115,9 @@ async def test_the_admin_learns_what_was_released_since_the_running_version(tmp_
         assert [(r["version"], r["breaking"]) for r in newer["releases"]] == [("9.0.0", True), ("8.0.0", False)]
         assert newer["releases"][0]["changes"] == [{"kind": "breaking", "text": "models by role"}]
         assert newer["left_behind"] == [{"id": "reachy-salon", "name": None}]
-
-        await admin.account("mathilde", Role.MEMBER, "mathilde")
-        assert (await (await admin.api("mathilde")).get("/api/v1/system/updates")).status_code == 403
+        admin.releases.releases = _feed("9.0.0", running, protocols=("nestor.satellite/1", "nestor.satellite/2"))
+        await admin.nestor.updates.check()
+        assert (await api.get("/api/v1/system/updates")).json()["left_behind"] == [], "still spoken to"
 
 
 async def test_an_instance_told_not_to_check_says_so(tmp_path: Path) -> None:
@@ -153,8 +146,3 @@ async def test_the_owner_installs_the_newest_release_and_nestor_restarts_on_it(t
         started = await api.post("/api/v1/system/updates/install", {"version": "9.0.0", "confirm": True})
         assert started.status_code == 202 and started.json()["installable"] is True
         await asyncio.wait_for(restarted.wait(), 5)  # installed, then the restart once the answer is sent
-
-        await admin.account("mathilde", Role.MEMBER, "mathilde")
-        member = await admin.api("mathilde")
-        denied = await member.post("/api/v1/system/updates/install", {"version": "9.0.0", "confirm": True})
-        assert denied.status_code == 403

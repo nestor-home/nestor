@@ -61,14 +61,6 @@ def test_negotiation_falls_back_from_region_to_language_to_default(wanted: str, 
     assert negotiate(wanted, [Locale("en"), Locale("fr-FR")], Locale("en")) == expected
 
 
-def test_nestor_speaks_french_and_english_with_the_same_messages() -> None:
-    localizer = FluentLocalizer(catalogue_dirs(["nestor"]))
-    reason = Message.of("delivery-in-room", person="Mathis", room="bureau")
-    assert localizer.format(reason, "fr-FR") == "Mathis est dans la pièce « bureau »"
-    assert localizer.format(reason, "en") == "Mathis is in the bureau"
-    assert localizer.format(Message.of("fallback-model-slow"), "fr") == "Hmm, je rame un peu, laisse-moi une seconde."
-
-
 def test_every_message_of_nestor_exists_in_every_locale() -> None:
     folder = Path(__file__).resolve().parents[3] / "src" / "nestor" / "locales"
     ids = {

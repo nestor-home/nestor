@@ -46,8 +46,9 @@ class Clock:
 
 
 class Home:
-    def __init__(self, *replies: Reply) -> None:
-        self.journal = Journal(MemoryEventLog())
+    def __init__(self, *replies: Reply, journal: Journal | None = None) -> None:
+        """`journal`: another home's, to start again on what it wrote (a restart)."""
+        self.journal = journal or Journal(MemoryEventLog())
         self.household = Household([MATHIS, MAMIE])
         self.opened: list[Mapping[str, object]] = []
         self.clock = Clock()
@@ -166,6 +167,27 @@ async def test_only_the_person_asked_answers_on_their_account_before_it_expires(
         late = await home.call("answer_confirmation", yes, Speaker.account(MATHIS.id), at=CHAT)
         assert home.confirmations.waiting(MATHIS.id) == ()
     assert "on their account" in aloud["error"] and "expired" in late["error"] and home.opened == []
+
+
+async def test_a_confirmation_still_waiting_when_nestor_stops_is_answered_after_it_restarts() -> None:
+    home = Home("Confirmes-tu ?", "Confirmes-tu ?")
+    async with home:
+        await home.call("turn_on", GARAGE, VOICE_OF_MATHIS)
+        await home.call("turn_on", {**GARAGE, "name": "Portail"}, VOICE_OF_MATHIS)
+        waiting, refused = await home.journal.history(ConfirmationRequested)
+        no = {"confirmation_id": refused.confirmation_id, "approve": False}
+        await home.call("answer_confirmation", no, Speaker.account(MATHIS.id), at=CHAT)
+
+    restarted = Home("Le garage s'ouvre.", journal=home.journal)
+    async with restarted:
+        assert [c.confirmation_id for c in restarted.confirmations.waiting(MATHIS.id)] == [waiting.confirmation_id]
+        yes = {"confirmation_id": waiting.confirmation_id, "approve": True}
+        done = await restarted.call("answer_confirmation", yes, Speaker.account(MATHIS.id), at=CHAT)
+        again = await restarted.call(
+            "answer_confirmation", {**no, "approve": True}, Speaker.account(MATHIS.id), at=CHAT
+        )
+    assert done["status"] == "done" and restarted.opened == [{**GARAGE, "by": MATHIS.id, "at": str(SALON)}]
+    assert "nothing waits" in again["error"], "an answered confirmation stays answered"
 
 
 async def test_on_ones_account_it_is_confirmed_in_the_conversation() -> None:

@@ -7,7 +7,15 @@ scopes. Accounts are rebuilt from the journal; password hashes and invitation di
 
 from nestor.modules.accounts.activity import ActivityStore
 from nestor.modules.accounts.credentials import MIN_LENGTH, Token, VerifierStore, hash_password, verify_password
-from nestor.modules.accounts.errors import AccountConflict, InvitationRefused, LastOwner, UnknownAccount, WrongPassword
+from nestor.modules.accounts.errors import (
+    AccountConflict,
+    InvitationRefused,
+    LastOwner,
+    PersonRequired,
+    UnknownAccount,
+    UnknownPerson,
+    WrongPassword,
+)
 from nestor.modules.accounts.events import (
     AccountCreated,
     AccountDisabled,
@@ -45,11 +53,13 @@ __all__ = [
     "InvitationRevoked",
     "InvitationStatus",
     "LastOwner",
+    "PersonRequired",
     "Principal",
     "Role",
     "Scope",
     "Token",
     "UnknownAccount",
+    "UnknownPerson",
     "VerifierStore",
     "WrongPassword",
     "hash_password",

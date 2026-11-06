@@ -65,6 +65,8 @@ async def test_a_stopped_install_kills_its_command() -> None:
     started = asyncio.create_task(pip_installer._run(["sleep", "30"]))
     await asyncio.sleep(0.2)
     started.cancel()
+    done, _ = await asyncio.wait({started}, timeout=2)
+    assert done, "the command was waited for instead of killed"
     with pytest.raises(asyncio.CancelledError):
         await started
 

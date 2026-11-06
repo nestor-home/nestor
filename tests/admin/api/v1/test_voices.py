@@ -49,11 +49,17 @@ async def test_a_person_records_their_voice_phrase_by_phrase_and_is_then_recogni
         heard = (await send_wav(api, "POST", "/api/v1/voice/hear", wav(tagged("mathis", take=9)))).json()
         stranger = (await send_wav(api, "POST", "/api/v1/voice/hear", wav(tagged("someone")))).json()
         enrolled = await admin.nestor.journal.history(VoiceEnrolled)
+        stopped = (await api.put("/api/v1/household/people/mathis/voice/learning", {"learning": False})).json()
+        learned_gone = (await api.delete("/api/v1/household/people/mathis/voice?learned_only=true")).json()
+        erased = (await api.delete("/api/v1/household/people/mathis/voice")).json()
+        forgotten = await admin.nestor.journal.history(VoiceForgotten)
     assert not before["enrolled"] and before["manageable"]
     assert done["enrolled"] and done["learning"] and done["learned"] == 0
     assert (heard["person"], heard["name"]) == ("mathis", "Mathis") and heard["score"] >= heard["threshold"]
     assert stranger["person"] is None
     assert [(e.person, e.where) for e in enrolled] == [("mathis", "admin")]
+    assert stopped["learning"] is False and learned_gone["enrolled"] and not erased["enrolled"]
+    assert [e.learned_only for e in forgotten] == [True, False]
 
 
 async def test_only_the_person_or_an_owner_for_someone_without_an_account_records_a_voice(tmp_path: Path) -> None:
@@ -73,22 +79,6 @@ async def test_an_owner_records_the_voice_of_someone_without_an_account(tmp_path
     async with Harness(tmp_path, voices=True) as admin:
         started = await (await admin.api()).post("/api/v1/household/people/lucie/voice/recording", {})
         assert started.status_code == 201 and started.json()["person"] == "lucie"
-
-
-async def test_learning_stops_and_a_voice_is_erased_on_request(tmp_path: Path) -> None:
-    async with Harness(tmp_path, voices=True) as admin:
-        api = await admin.api()
-        recording = (await api.post("/api/v1/household/people/mathis/voice/recording", {})).json()
-        for phrase in range(5):
-            await send_wav(api, "PUT", f"/api/v1/voice/recordings/{recording['id']}/phrases/{phrase}",
-                           wav(tagged("mathis", take=phrase)))  # fmt: skip
-        await api.post(f"/api/v1/voice/recordings/{recording['id']}/finish")
-        stopped = (await api.put("/api/v1/household/people/mathis/voice/learning", {"learning": False})).json()
-        learned_gone = (await api.delete("/api/v1/household/people/mathis/voice?learned_only=true")).json()
-        erased = (await api.delete("/api/v1/household/people/mathis/voice")).json()
-        forgotten = await admin.nestor.journal.history(VoiceForgotten)
-    assert stopped["learning"] is False and learned_gone["enrolled"] and not erased["enrolled"]
-    assert [e.learned_only for e in forgotten] == [True, False]
 
 
 async def test_a_recording_abandoned_or_in_a_wrong_format_keeps_nothing(tmp_path: Path) -> None:

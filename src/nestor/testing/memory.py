@@ -61,7 +61,7 @@ class MemoryStoreContract:
         async with self.store() as store:
             await store.put(Memory(text="Mathilde est végétarienne", about=mathilde))
             await store.put(Memory(text="Le code du portail est 1234"))
-            found = await store.search("menu vegetarien pour MATHILDE")
+            found = await store.search("menu VEGETARIENNE ce soir")  # its only word in common, without accents
         assert [m.text for m in found][:1] == ["Mathilde est végétarienne"]
 
     async def test_a_search_about_someone_keeps_their_memories_and_the_household_ones(self) -> None:
@@ -168,7 +168,7 @@ class EpisodeStoreContract:
         async with self.store() as store:
             await store.put(episode("e1", "Léa a parlé du restaurant Da Marco", "lea", ended=at, topics=("dîner",)))
             await store.put(episode("e2", "Hugo et le restaurant chinois", "hugo", ended=at))
-            assert [e.id for e in await store.search("RESTAURANT diner", person=PersonId("lea"), limit=5)] == ["e1"]
+            assert [e.id for e in await store.search("DINER", person=PersonId("lea"), limit=5)] == ["e1"], "its topic"
             assert await store.search("Da Marco", person=PersonId("hugo"), limit=5) == []
 
     async def test_the_latest_come_first_within_the_dates_asked(self) -> None:

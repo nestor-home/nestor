@@ -78,7 +78,8 @@ async def test_vectors_follow_corrections_and_forgetting(tmp_path: Path) -> None
         assert ids["chat"] in [m.id for m in await recall(memories, "saucisse", limit=3)]
         await memories.forget(ids["est"])
         await settled(memories)
-        assert ids["est"] not in [m.id for m in await recall(memories, "jambon", limit=3)]
+        assert memories.index is not None
+        assert ids["est"] not in await memories.index.vectors.fingerprints(embedder.space, "memory")
 
 
 async def test_a_new_model_embeds_every_memory_again_and_an_unchanged_one_is_never_embedded_twice(

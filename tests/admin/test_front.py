@@ -46,6 +46,8 @@ async def test_without_a_build_a_page_says_how_to_make_one(tmp_path: Path) -> No
         response = await admin.browser.get("/invitation")
         assert response.status_code == 503 and "pnpm build" in response.text
         assert (await admin.browser.get("/health")).json() == {"status": "ok"}
+        posted = await admin.browser.post("/satellites", json={"code": "123456"})
+        assert posted.status_code == 405 and posted.json()["error"]["code"] == "method_not_allowed", "read only"
 
 
 async def test_an_unknown_api_address_is_never_the_front(tmp_path: Path, built: Path) -> None:

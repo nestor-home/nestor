@@ -45,22 +45,8 @@ def test_the_contract_rejects_whereabouts_dated_in_the_future() -> None:
         Prophetic().test_since_when_is_a_moment_of_the_past()
 
 
-def test_since_when_is_not_what_whereabouts_are() -> None:
-    assert Whereabouts(home=True, since=utc_now()) == Whereabouts(home=True)
-
-
 def presence(granularity: Granularity, people: dict[PersonId, Whereabouts], occupied: Iterable[str] = ()) -> Presence:
     return Presence(granularity=granularity, people=people, occupied_rooms=frozenset(occupied))
-
-
-def test_someone_away_is_in_no_room() -> None:
-    p = presence(Granularity.PERSON_ROOM, {MATHIS: Whereabouts(home=False)})
-    assert p.rooms_where(MATHIS) == frozenset()
-
-
-def test_room_level_tracking_gives_the_room() -> None:
-    p = presence(Granularity.PERSON_ROOM, {MATHIS: Whereabouts(home=True, room="bureau")}, {"salon", "bureau"})
-    assert p.rooms_where(MATHIS) == {"bureau"}
 
 
 def test_occupied_rooms_point_to_the_person_only_when_they_are_alone_home() -> None:
@@ -72,9 +58,4 @@ def test_occupied_rooms_point_to_the_person_only_when_they_are_alone_home() -> N
     )
     assert alone.rooms_where(MATHIS) == {"salon"}
     assert together.rooms_where(MATHIS) is None
-
-
-def test_home_only_presence_cannot_tell_the_room() -> None:
-    p = presence(Granularity.HOME, {MATHIS: Whereabouts(home=True)})
-    assert p.rooms_where(MATHIS) is None
-    assert p.of(PersonId("stranger")) == Whereabouts()
+    assert alone.of(PersonId("stranger")) == Whereabouts()

@@ -20,21 +20,16 @@ export function ConnectForm({
   connector,
   replaces,
   onConnected,
-  leave,
 }: {
   connector: Connector;
   replaces: string | null;
   onConnected: (connection: Connection) => void;
-  leave?: (url: string) => void;
 }) {
   const t = useT();
   const oauth = connector.auth === "oauth2";
   const [person, setPerson] = useState("");
   const [values, setValues] = useState<Record<string, string>>({});
-  const { phase, connect, error } = useConnect(connector.kind, connector.auth, {
-    onConnected,
-    ...(leave ? { leave } : {}),
-  });
+  const { phase, connect, error } = useConnect(connector.kind, connector.auth, onConnected);
   const blocked = oauth && !connector.client;
   const busy = phase === "pending" || phase === "redirecting";
 

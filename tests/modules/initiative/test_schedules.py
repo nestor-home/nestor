@@ -1,14 +1,14 @@
 """Wake-ups: when they are due, run once each time even across restarts, as a background turn with tools."""
 
-from datetime import UTC, datetime, time
+from datetime import datetime, time
 from typing import Any
 from zoneinfo import ZoneInfo
 
 import pytest
 
-from nestor.core import ContractError, PersonId
+from nestor.core import PersonId, ProviderError
 from nestor.modules.channels import Address
-from nestor.modules.cognition.model import ToolCall
+from nestor.modules.cognition.model import ModelRequest, ToolCall
 from nestor.modules.cognition.tools import Toolbox, ToolContext, ToolFailed
 from nestor.modules.conversation import Agent, AssistantTurn, ModelChoice, Persona, TurnContext
 from nestor.modules.household import Household, Person
@@ -43,19 +43,6 @@ def test_a_recurring_wake_up_is_next_due_at_its_first_time_on_one_of_its_days() 
     assert weekdays.next_due(paris(6, 19), "Europe/Paris") == paris(9, 8), "Friday evening, then Monday"
     once = Schedule(id="o", instruction="x", at=paris(3, 9))
     assert (once.next_due(paris(2, 9), "UTC"), once.next_due(paris(3, 9), "UTC")) == (paris(3, 9), None)
-
-
-@pytest.mark.parametrize(
-    ("kwargs", "error"),
-    [
-        ({}, "either once"),
-        ({"at": datetime(2026, 11, 3, tzinfo=UTC), "times": (time(8),)}, "either once"),
-        ({"times": (time(8),), "days": ("monday",)}, "unknown days monday"),
-    ],
-)
-def test_a_wake_up_runs_either_once_or_at_times_on_known_days(kwargs: dict[str, Any], error: str) -> None:
-    with pytest.raises(ContractError, match=error):
-        Schedule(id="s", instruction="x", **kwargs)
 
 
 class Clock:
@@ -119,6 +106,26 @@ async def test_a_wake_up_runs_its_instruction_once_each_time_it_is_due_with_the_
     assert await home.journal.history(AssistantTurn) == [], "what it writes reaches no one"
 
 
+@pytest.mark.parametrize(
+    "failure", [ProviderError("openrouter", "503", transient=True), RuntimeError("bug")], ids=["model down", "bug"]
+)
+async def test_a_wake_up_that_fails_does_not_stop_the_others_nor_runs_again(failure: Exception) -> None:
+    def fails(request: ModelRequest) -> str:
+        raise failure
+
+    home = Home(fails, "Fait.", now=paris(2, 7))
+    async with home.book:
+        await home.schedule(instruction="Arrose les plantes", times=["08:00"])
+        await home.schedule(instruction="Ouvre les volets", times=["08:00"])
+        home.clock.now = paris(2, 8, 1)
+        assert await home.scheduler.wake_due() == 2
+        assert await home.scheduler.wake_due() == 0, "a failed wake-up is not retried in a loop"
+
+    woken = [r.messages[-1].content for r in home.background.requests]
+    assert len(woken) == 2 and "Ouvre les volets" in woken[1]
+    assert len(await home.journal.history(ScheduleFired)) == 2
+
+
 async def test_a_wake_up_missed_while_stopped_runs_once_when_back_then_follows_its_times() -> None:
     home = Home(*["Fait."] * 3, now=paris(2, 7))
     async with home.book:
@@ -157,6 +164,7 @@ async def test_a_one_off_ends_once_run_and_a_cancelled_one_never_runs() -> None:
         ({"instruction": "x", "at": "demain"}, "cannot read the time"),
         ({"instruction": "x", "times": ["08:00"], "days": ["lundi"]}, "unknown days lundi"),
         ({"instruction": "x"}, "either once"),
+        ({"instruction": "x", "at": "2026-11-03T09:00", "times": ["08:00"]}, "either once"),
     ],
 )
 async def test_a_wake_up_that_cannot_be_set_says_why(arguments: dict[str, object], error: str) -> None:

@@ -2,7 +2,6 @@
 
 import asyncio
 import json
-import urllib.parse
 from collections.abc import MutableMapping, Sequence
 from dataclasses import replace
 from enum import StrEnum
@@ -277,12 +276,7 @@ class Harness:
 
     def consent(self, authorize_url: str) -> dict[str, str]:
         """Approve at the provider: the query it sends back to `redirect_uri` (code and state)."""
-        query = dict(urllib.parse.parse_qsl(urllib.parse.urlsplit(authorize_url).query))
-        connections = self.nestor.connections
-        assert connections is not None
-        issued = query["state"].split(".")[0]
-        verifier = connections._pending[issued].verifier  # what only Nestor knows, checked by the provider
-        return {"state": query["state"], "code": self.provider.authorize(query["client_id"], verifier)}
+        return self.provider.consent(authorize_url)
 
 
 class EventStream:

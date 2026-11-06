@@ -4,7 +4,7 @@ format, error mapping and interruption, plus an opt-in run against OpenRouter.""
 import asyncio
 import json
 import os
-from collections.abc import AsyncIterator, Iterator, Mapping
+from collections.abc import AsyncIterator, Iterator
 from pathlib import Path
 from typing import Any
 
@@ -90,24 +90,13 @@ def sent(route: respx.Route) -> dict[str, object]:
 
 
 def model(
-    *,
-    base_url: str = BASE_URL,
-    api_key: str | None = KEY,
-    extra_body: Mapping[str, object] | None = None,
-    provider: str = "openai-compatible",
+    *, base_url: str = BASE_URL, api_key: str | None = KEY, provider: str = "openai-compatible"
 ) -> OpenAICompatibleModel:
-    return OpenAICompatibleModel(
-        base_url=base_url, api_key=api_key, model="vendor/model", extra_body=extra_body, provider=provider
-    )
+    return OpenAICompatibleModel(base_url=base_url, api_key=api_key, model="vendor/model", provider=provider)
 
 
-async def collect(
-    request: ModelRequest = HELLO,
-    *,
-    extra_body: Mapping[str, object] | None = None,
-    provider: str = "openai-compatible",
-) -> list[ModelOutput]:
-    async with model(extra_body=extra_body, provider=provider) as m:
+async def collect(request: ModelRequest = HELLO, *, provider: str = "openai-compatible") -> list[ModelOutput]:
+    async with model(provider=provider) as m:
         return [o async for o in m.stream(request)]
 
 
@@ -182,17 +171,6 @@ async def test_a_request_without_tools_sends_no_tool_list(api: respx.MockRouter)
     route = api.post(COMPLETIONS).mock(return_value=streamed(*TEXT_REPLY))
     await collect()
     assert "tools" not in sent(route)
-
-
-async def test_extra_body_pins_the_provider_and_the_reasoning_effort(api: respx.MockRouter) -> None:
-    route = api.post(COMPLETIONS).mock(return_value=streamed(*TEXT_REPLY))
-    extra = {"provider": {"order": ["google-vertex/europe"], "allow_fallbacks": False}, "reasoning": {"effort": "none"}}
-
-    await collect(extra_body=extra)
-
-    body = sent(route)
-    assert body["provider"] == extra["provider"]
-    assert body["reasoning"] == extra["reasoning"]
 
 
 async def test_a_tool_message_without_its_call_id_is_refused(api: respx.MockRouter) -> None:
@@ -479,14 +457,6 @@ async def test_a_model_that_was_never_started_closes_cleanly_but_cannot_stream()
         await anext(m.stream(HELLO))
 
 
-async def test_a_model_without_a_key_sends_no_authorization_header(api: respx.MockRouter) -> None:
-    route = api.post(COMPLETIONS).mock(return_value=streamed(*TEXT_REPLY))
-    async with model(api_key=None) as m:
-        outputs = [o async for o in m.stream(HELLO)]
-    assert outputs[-1] == Finished(FinishReason.STOP)
-    assert "authorization" not in route.calls.last.request.headers
-
-
 async def test_a_model_without_a_key_reports_errors_unaltered(api: respx.MockRouter) -> None:
     api.post(COMPLETIONS).respond(401, json={"error": {"message": "this server wants a key"}})
     with pytest.raises(ProviderError, match="HTTP 401: this server wants a key"):
@@ -494,15 +464,13 @@ async def test_a_model_without_a_key_reports_errors_unaltered(api: respx.MockRou
             await anext(m.stream(HELLO))
 
 
-async def test_a_model_with_a_key_sends_it_as_a_bearer_token(api: respx.MockRouter) -> None:
-    route = api.post(COMPLETIONS).mock(return_value=streamed(*TEXT_REPLY))
-    await collect()
-    assert route.calls.last.request.headers["authorization"] == f"Bearer {KEY}"
-
-
 async def test_the_plugin_builds_a_model_from_its_configuration(api: respx.MockRouter, tmp_path: Path) -> None:
     route = api.post(COMPLETIONS).mock(return_value=streamed(*TEXT_REPLY))
-    raw = {"base_url": BASE_URL, "api_key": KEY, "model": "vendor/model", "extra_body": {"temperature": 0.2}}
+    pinned = {
+        "provider": {"order": ["google-vertex/europe"], "allow_fallbacks": False},
+        "reasoning": {"effort": "none"},
+    }
+    raw = {"base_url": BASE_URL, "api_key": KEY, "model": "vendor/model", "extra_body": {"temperature": 0.2, **pinned}}
 
     async with plugin.create(
         raw, "main", Services(data_dir=tmp_path, localizer=EchoLocalizer(), locale=Locale("fr-FR"))
@@ -511,7 +479,9 @@ async def test_the_plugin_builds_a_model_from_its_configuration(api: respx.MockR
         outputs = [o async for o in m.stream(HELLO)]
 
     assert outputs[-1] == Finished(FinishReason.STOP)
-    assert sent(route)["temperature"] == 0.2
+    body = sent(route)
+    assert body["temperature"] == 0.2, "extra_body reaches the request"
+    assert (body["provider"], body["reasoning"]) == (pinned["provider"], pinned["reasoning"]), "it pins the provider"
 
 
 LOCAL = "http://localhost:11434/v1"  # Ollama

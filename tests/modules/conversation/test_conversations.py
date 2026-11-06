@@ -7,7 +7,7 @@ import pytest
 
 from nestor.core import Event, ProviderError, utc_now
 from nestor.core.events import JSON
-from nestor.modules.channels import Address, Exchange, Medium
+from nestor.modules.channels import Address, Medium
 from nestor.modules.cognition import TaskStarted
 from nestor.modules.cognition.delegation.assistant import Delegation
 from nestor.modules.cognition.delegation.service import TaskManager
@@ -24,7 +24,6 @@ from nestor.modules.conversation import (
     UserTurn,
 )
 from nestor.modules.household import Household
-from nestor.modules.identity import Speaker
 from nestor.modules.journal import Journal
 from nestor.modules.memory import Memories, MemoryRecorded
 from nestor.modules.memory.assistant import MemoryTools
@@ -55,63 +54,33 @@ async def conversation_of_each_turn(journal: Journal) -> list[str | None]:
     return [t.exchange.conversation_id if t.exchange else None for t in await journal.history(UserTurn)]
 
 
-WHOLE_EXCHANGE = ["Quelle température ?", "Il fait 21 degrés.", "Et dehors ?"]
-
-
 async def two_turns(agent: Agent, address: Address, sender: str, pause: timedelta, clock: Clock) -> None:
     await agent.respond(message("Quelle température ?", address, sender)).collect()
     clock.now += pause
     await agent.respond(message("Et dehors ?", address, sender)).collect()
 
 
-async def test_a_spoken_follow_up_within_five_minutes_stays_in_the_conversation(
-    make_agent: MakeAgent, journal: Journal, clock: Clock
+@pytest.mark.parametrize(
+    ("address", "sender", "pause", "same"),
+    [
+        (VOICE, "mic", timedelta(minutes=4), True),
+        (VOICE, "mic", timedelta(minutes=6), False),
+        (TELEGRAM, "42", timedelta(hours=2), True),
+        (TELEGRAM, "42", timedelta(hours=9), False),
+    ],
+    ids=["spoken-4min", "spoken-6min", "written-2h", "written-9h"],
+)
+async def test_a_turn_stays_in_the_conversation_while_its_medium_allows_and_sees_only_it(
+    make_agent: MakeAgent, journal: Journal, clock: Clock, address: Address, sender: str, pause: timedelta, same: bool
 ) -> None:
+    """Spoken: 5 minutes, as Assist. Written: hours, as a messaging thread."""
     model = ScriptedModel("Il fait 21 degrés.", "Douze.")
-    await two_turns(make_agent(model=model, clock=clock), VOICE, "mic", timedelta(minutes=4), clock)
+    await two_turns(make_agent(model=model, clock=clock), address, sender, pause, clock)
 
     first, second = await conversation_of_each_turn(journal)
-    assert first == second
-    assert [m.content for m in model.requests[1].messages[1:]] == [
-        "Quelle température ?",
-        "Il fait 21 degrés.",
-        "Et dehors ?",
-    ]
-
-
-async def test_a_spoken_turn_after_six_minutes_opens_a_new_conversation_without_the_earlier_turns(
-    make_agent: MakeAgent, journal: Journal, clock: Clock
-) -> None:
-    model = ScriptedModel("Il fait 21 degrés.", "Douze.")
-    await two_turns(make_agent(model=model, clock=clock), VOICE, "mic", timedelta(minutes=6), clock)
-
-    first, second = await conversation_of_each_turn(journal)
-    assert first != second
-    assert [m.content for m in model.requests[1].messages[1:]] == ["Et dehors ?"]
-
-
-async def test_a_written_reply_two_hours_later_stays_in_the_conversation_and_sees_it(
-    make_agent: MakeAgent, journal: Journal, clock: Clock
-) -> None:
-    model = ScriptedModel("Il fait 21 degrés.", "Douze.")
-    await two_turns(make_agent(model=model, clock=clock), TELEGRAM, "42", timedelta(hours=2), clock)
-
-    first, second = await conversation_of_each_turn(journal)
-    assert first == second
-    assert [m.content for m in model.requests[1].messages[1:]] == [
-        "Quelle température ?",
-        "Il fait 21 degrés.",
-        "Et dehors ?",
-    ]
-
-
-async def test_a_written_reply_the_next_morning_opens_a_new_conversation(
-    make_agent: MakeAgent, journal: Journal, clock: Clock
-) -> None:
-    await two_turns(make_agent("Oui.", "Oui.", clock=clock), TELEGRAM, "42", timedelta(hours=9), clock)
-
-    first, second = await conversation_of_each_turn(journal)
-    assert first != second
+    assert (first == second) is same
+    replayed = [m.content for m in model.requests[1].messages[1:]]
+    assert replayed == (["Quelle température ?", "Il fait 21 degrés.", "Et dehors ?"] if same else ["Et dehors ?"])
 
 
 async def test_a_channel_without_a_profile_gets_the_default_of_writing(
@@ -185,15 +154,6 @@ async def test_a_spoken_turn_after_a_long_silence_opens_a_new_conversation(
 
     first, second = await conversation_of_each_turn(journal)
     assert first != second, "a spoken turn waits only as long as speech allows"
-
-
-async def test_sessions_hold_their_own_conversations(make_agent: MakeAgent, journal: Journal) -> None:
-    agent = make_agent("Oui.", "Oui.")
-    await agent.respond(message("Salut")).collect()
-    await agent.respond(message("Salut", VOICE, "mic")).collect()
-
-    telegram, voice = await conversation_of_each_turn(journal)
-    assert telegram != voice
 
 
 async def test_the_open_conversation_survives_a_restart(make_agent: MakeAgent, journal: Journal, clock: Clock) -> None:
@@ -285,28 +245,3 @@ def test_a_cue_keeps_the_beginning_and_end_of_a_long_result() -> None:
         and "[… cut …]" in notification.text
     )
     assert Notification("court", "task t1 completed").text == "court"
-
-
-async def test_a_delivered_message_keeps_its_conversation_open_across_a_restart(
-    make_agent: MakeAgent, journal: Journal, clock: Clock
-) -> None:
-    delivered = await make_agent(clock=clock).delivered(
-        TELEGRAM, MATHIS, Notification("Fini.", "task t1 completed"), Medium.WRITTEN, ["C'est fini."]
-    )
-    restarted = make_agent(clock=clock)
-    assert await restarted.conversations.current(TELEGRAM, Medium.WRITTEN) == delivered.conversation_id
-
-
-def test_an_exchange_is_written_as_plain_data() -> None:
-    turn = UserTurn(
-        medium=Medium.WRITTEN,
-        source="agent",
-        address=TELEGRAM,
-        text="Salut",
-        exchange=Exchange(conversation_id="c1", turn_id="t1"),
-        speaker=Speaker.unknown(),
-    )
-    record = turn.to_record()
-    payload = record["payload"]
-    assert isinstance(payload, dict) and payload["exchange"] == {"conversation_id": "c1", "turn_id": "t1"}
-    assert Event.from_record(record) == turn

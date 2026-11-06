@@ -1,13 +1,12 @@
-"""Ports of speaker identity: a model that turns a voice into a voiceprint, where voiceprints are kept, and who
-speaks when. Comparing voices, learning them and forgetting them is the core's (`Voices`), the same for every
-model."""
+"""Ports of speaker identity: a model that turns a voice into a voiceprint, and where voiceprints are kept. Comparing
+voices, learning them and forgetting them is the core's (`Voices`), the same for every model."""
 
 from abc import ABC, abstractmethod
-from collections.abc import AsyncIterable, AsyncIterator, Collection, Mapping, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from datetime import datetime
 
 from nestor.core import Component, PersonId
-from nestor.modules.identity.types import Learned, Profile, Segment, Vector, VoiceSpace
+from nestor.modules.identity.types import Learned, Profile, Vector, VoiceSpace
 
 
 class VoiceEmbedder(Component, ABC):
@@ -71,18 +70,3 @@ class VoiceprintStore(Component, ABC):
 
     @abstractmethod
     async def keep_only(self, space: VoiceSpace) -> None: ...
-
-
-class Diarizer(Component, ABC):
-    """Who speaks when, with anonymous labels stable within one stream.
-
-    Contract (checked by `nestor.testing.identity.DiarizerContract`): each yielded list is the whole
-    current segmentation (revisions allowed), segments are ordered and do not overlap for one
-    speaker, and the stream ends when the audio ends.
-    """
-
-    sample_rate: int = 16000
-
-    @abstractmethod
-    def diarize(self, audio: AsyncIterable[bytes]) -> AsyncIterator[list[Segment]]:
-        """16-bit mono PCM chunks at `sample_rate` in, segmentations out."""

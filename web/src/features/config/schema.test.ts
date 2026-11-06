@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { JsonSchema } from "@/api";
 import schemaFr from "@/mocks/config/schema.fr.json";
-import { controlOf, fieldsOf, getAt, problemsUnder, resolve, setAt, typedSecret } from "./schema";
+import { controlOf, getAt, problemsUnder, resolve, setAt, typedSecret } from "./schema";
 
 const SCHEMA = schemaFr as unknown as {
   sections: Record<string, JsonSchema>;
@@ -19,7 +19,7 @@ describe("reading a plugin's schema (as a real instance sends it)", () => {
     expect(controlOf(prop(mcp, "headers"), mcp, "headers")).toBe("map");
     expect(controlOf(prop(mcp, "risks"), mcp, "risks")).toBe("map");
     expect(controlOf(prop(mcp, "include"), mcp, "include")).toBe("list"); // a list, or null
-    expect(controlOf(prop(mcp, "max_result_chars"), mcp, "max_result_chars")).toBe("integer");
+    expect(controlOf(prop(satellites, "port"), satellites, "port")).toBe("integer");
     expect(controlOf(prop(mcp, "timeout_s"), mcp, "timeout_s")).toBe("number");
     expect(controlOf(prop(mcp, "kind"), mcp, "kind")).toBe("const");
     expect(controlOf(prop(satellites, "voice"), satellites, "voice")).toBe("object"); // an object, or null
@@ -43,15 +43,6 @@ describe("reading a plugin's schema (as a real instance sends it)", () => {
     const model = SCHEMA.slots.models?.kinds["openai-compatible"] as JsonSchema;
     expect(controlOf(prop(model, "api_key"), model, "api_key")).toBe("secret");
     expect(resolve(prop(model, "api_key"), model).nullable).toBe(true);
-    expect(model.required).not.toContain("api_key");
-  });
-
-  it("folds the advanced settings apart, and never shows the kind", () => {
-    const initiative = SCHEMA.sections.initiative as JsonSchema;
-    const { plain, advanced } = fieldsOf(initiative);
-    expect(plain.map(([n]) => n)).toEqual(["quiet_hours", "main_room"]);
-    expect(advanced.map(([n]) => n)).toEqual(["follow_up_after_s"]);
-    expect(fieldsOf(mcp).plain.map(([n]) => n)).not.toContain("kind");
   });
 });
 

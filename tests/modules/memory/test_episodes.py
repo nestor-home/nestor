@@ -153,7 +153,7 @@ async def test_a_restart_summarizes_what_ended_while_stopped_and_never_twice() -
         assert await home.consolidator.consolidate_due() == 1, "picked up from the journal"
     home.consolidator = home.build()
     async with home.consolidator:
-        assert home.consolidator.pending() == ()
+        assert await home.consolidator.consolidate_due() == 0
     assert len(await home.journal.history(EpisodeSummarized)) == 1
 
 
@@ -175,8 +175,10 @@ async def test_a_summary_that_cannot_be_written_is_tried_again_then_waits_for_th
         for _ in range(4):
             await home.consolidator.consolidate_due()
         assert len(home.model.requests) == 3, "three attempts, then it waits"
-        assert home.consolidator.pending() == ("c1",)
     assert await home.journal.history(EpisodeSummarized) == []
+    home.consolidator = home.build()
+    async with home.consolidator:
+        assert await home.consolidator.consolidate_due() == 1, "tried again at the next start"
 
 
 async def test_an_odd_answer_and_a_broken_memory_never_make_a_conversation_kept_twice() -> None:
@@ -193,7 +195,7 @@ async def test_an_odd_answer_and_a_broken_memory_never_make_a_conversation_kept_
         home.clock.now = START + timedelta(hours=2)
         for _ in range(3):
             await home.consolidator.consolidate_due()
-    assert len(home.model.requests) == 1 and home.consolidator.pending() == ()
+    assert len(home.model.requests) == 1
     assert len(await home.journal.history(EpisodeSummarized)) == 1
 
 

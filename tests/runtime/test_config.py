@@ -125,6 +125,8 @@ def test_without_a_dot_env_the_environment_is_used_as_is(tmp_path: Path) -> None
     assert environment(config, ENV) == ENV
     with pytest.raises(ConfigError, match=r"TELEGRAM_TOKEN is not set \(in the environment or the \.env next"):
         load_config(config, environment(config, {"OPENROUTER_API_KEY": "sk"}))
+    with pytest.raises(ConfigError, match="cannot read"):
+        load_config(tmp_path / "absent.yaml")
 
 
 DOT_ENV = """# written by nestor init, then filled by hand
@@ -182,17 +184,10 @@ def test_a_line_the_dot_env_cannot_parse_is_skipped_with_its_line_named(
         (VALID.replace('"voice:salon"', '"voice"'), "invalid account 'voice'"),
         (VALID.replace('"voice:salon"', '"voice:*"'), "not anyone"),
         (VALID.replace("channels:\n  - kind: telegram\n    token: ${TELEGRAM_TOKEN}", "channels: []"), "channels"),
+        (VALID + "initiative: {quiet_hours: late}\n", "initiative.quiet_hours: .*HH:MM-HH:MM"),
     ],
-    ids=["yaml", "missing-section", "unknown-key", "bad-account", "anyone-account", "no-channel"],
+    ids=["yaml", "missing-section", "unknown-key", "bad-account", "anyone-account", "no-channel", "quiet-hours"],
 )
 def test_an_invalid_file_says_where_and_why(text: str, reason: str) -> None:
     with pytest.raises(ConfigError, match=reason):
         parse_config(text, ENV)
-
-
-def test_a_file_is_read_with_the_environment(tmp_path: Path) -> None:
-    path = tmp_path / "nestor.yaml"
-    path.write_text(VALID)
-    assert load_config(path, ENV).persona.name == "Richie"
-    with pytest.raises(ConfigError, match="cannot read"):
-        load_config(tmp_path / "absent.yaml")

@@ -80,8 +80,9 @@ def task_ended_record(**overrides: Any) -> dict[str, Any]:
         ({"payload": {"task_id": "t1", "colour": "red"}}, "invalid payload"),
         ({"payload": {"task_id": "t1", "status": "exploded", "duration_s": 1}}, "exploded"),
         ({"payload": {"task_id": ["t1"], "status": "completed", "duration_s": 1}}, "cannot decode"),
+        ({"payload": "garbled"}, "invalid payload"),
     ],
-    ids=["unknown-type", "newer-version", "unknown-field", "invalid-enum", "corrupted-value"],
+    ids=["unknown-type", "newer-version", "unknown-field", "invalid-enum", "corrupted-value", "garbled-payload"],
 )
 def test_an_invalid_record_is_refused_with_its_reason(overrides: dict[str, Any], reason: str) -> None:
     with pytest.raises(ContractError, match=reason):
@@ -101,32 +102,6 @@ def test_a_payload_that_is_not_plain_data_cannot_be_logged() -> None:
 
     with pytest.raises(ContractError, match="cannot encode set"):
         Opaque(source="test", value={1, 2}).to_record()
-
-
-def test_a_rich_payload_survives_the_log() -> None:
-    from dataclasses import dataclass
-    from datetime import UTC, datetime
-
-    @dataclass(frozen=True)
-    class Call:
-        name: str
-        arguments: dict[str, object]
-
-    class Scheduled(Event, event_type="test.scheduled"):
-        call: Call
-        due: datetime
-        attempts: tuple[int, ...]
-        context: object = None
-
-    event = Scheduled(
-        source="test",
-        call=Call("set_light", {"room": "salon", "levels": [1, 2]}),
-        due=datetime(2026, 10, 29, 18, 30, tzinfo=UTC),
-        attempts=(1, 2),
-        context={"free": "form"},
-    )
-
-    assert Event.from_record(json.loads(json.dumps(event.to_record()))) == event
 
 
 class Renamed(Event, event_type="testing.renamed", version=2):
@@ -171,5 +146,3 @@ def test_an_event_that_bumped_its_version_without_upgrading_refuses_its_older_re
     }
     with pytest.raises(ContractError, match="cannot be upgraded"):
         Event.from_record(record)
-    with pytest.raises(ContractError, match="invalid payload"):
-        Event.from_record({**record, "type": "connection.changed", "payload": "garbled"})

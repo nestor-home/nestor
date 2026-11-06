@@ -5,6 +5,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from nestor.admin.api.v1.errors import ErrorCode
 from nestor.admin.presentation import Phrasebook
 from nestor.core import Health, PersonId
 from nestor.core.i18n import Message
@@ -31,7 +32,7 @@ class ProblemOut(BaseModel):
 
 
 class ErrorDetail(BaseModel):
-    code: str  # for programs: `invalid_credentials`, `last_owner`…
+    code: ErrorCode  # for programs: `invalid_credentials`, `last_owner`…
     message_id: str  # `error-<code with dashes>`, for a front rendering with its own catalogue
     args: dict[str, str | int | float]
     message: str  # rendered in the reader's language, shown as is
