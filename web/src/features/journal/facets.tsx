@@ -9,7 +9,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useT } from "@/i18n";
 import { KindMark } from "@/lib/brands";
-import { kindStyle } from "@/lib/icons";
+import { type KindStyle, kindStyle } from "@/lib/icons";
 import { number } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import type { JournalSearch } from "./search";
@@ -39,6 +39,7 @@ function useGroups(
 ): Group[] {
   const t = useT();
   const kinds = search.kinds?.split(",") ?? [];
+  const styles = new Map<string, KindStyle>(facets?.kinds.map((f) => [f.key, kindStyle(f.key)]));
   return [
     {
       id: "kinds",
@@ -47,8 +48,8 @@ function useGroups(
       selected: kinds,
       multiple: true,
       render: (f) => {
-        const style = kindStyle(f.key);
-        return <style.icon className={cn("size-3.5", style.tone)} aria-hidden="true" />;
+        const style = styles.get(f.key);
+        return style ? <style.icon className={cn("size-3.5", style.tone)} aria-hidden="true" /> : null;
       },
       onChange: (value) => onChange({ ...search, kinds: value.length ? value.join(",") : undefined }),
     },

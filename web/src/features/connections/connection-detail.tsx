@@ -14,7 +14,8 @@ import { ActivityList } from "@/features/journal/activity-list";
 import { useT } from "@/i18n";
 import { KindMark } from "@/lib/brands";
 import { moment } from "@/lib/dates";
-import { usePeopleNames } from "@/lib/people";
+import { rendered } from "@/lib/messages";
+import { personName } from "@/lib/people";
 import { useCan, useMe } from "@/lib/session";
 import { ago } from "@/lib/time";
 import { ConnectionStatusMark } from "./status";
@@ -26,7 +27,6 @@ export function useConnection(id: string) {
 /** The frame of a connection's pages: where it sits, what it is, its tabs. */
 export function ConnectionFrame({ id, children }: { id: string; children: ReactNode }) {
   const connection = useConnection(id);
-  const name = usePeopleNames();
   const t = useT();
   const trail: Crumb[] = [
     { label: t("conn-title"), link: { to: "/connections" } },
@@ -58,7 +58,7 @@ export function ConnectionFrame({ id, children }: { id: string; children: ReactN
           <>
             <ConnectionStatusMark status={c.status} />
             <span>{c.title}</span>
-            <span>{t("conn-owner", { name: name(c.owner) })}</span>
+            <span>{t("conn-owner", { name: personName(c.owner) })}</span>
             <span>{t("conn-connected-at", { when: moment(c.created_at) })}</span>
           </>
         }
@@ -79,14 +79,13 @@ export function ConnectionFrame({ id, children }: { id: string; children: ReactN
 
 export function ConnectionOverview({ connection: c }: { connection: ConnectionDetail }) {
   const me = useMe();
-  const name = usePeopleNames();
   const editable = useCan("connections:write");
   const t = useT();
   const enabled = c.tools.filter((tool) => tool.enabled);
   const writes = enabled.filter((tool) => tool.risk !== "read").length;
   const summary = [
     c.owner
-      ? t("conn-summary-owned", { service: c.title, name: name(c.owner) })
+      ? t("conn-summary-owned", { service: c.title, name: personName(c.owner) })
       : t("conn-summary-household", { service: c.title }),
     c.last_used_at
       ? t("conn-summary-usage-last", { assistant: me.assistant, count: c.calls_today, ago: ago(c.last_used_at) })
@@ -105,7 +104,9 @@ export function ConnectionOverview({ connection: c }: { connection: ConnectionDe
         <Panel marked className="grid gap-3 bg-amber-soft/40 sm:grid-cols-[1fr_auto] sm:items-center">
           <div>
             <p className="text-ink">{t("conn-broken", { assistant: me.assistant })}</p>
-            {c.status_reason ? <p className="mt-1 font-mono text-xs text-ink-muted">{c.status_reason}</p> : null}
+            {c.status_reason ? (
+              <p className="mt-1 font-mono text-xs text-ink-muted">{rendered(c.status_reason)}</p>
+            ) : null}
           </div>
           {editable ? (
             <Link

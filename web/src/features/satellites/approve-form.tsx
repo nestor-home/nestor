@@ -45,7 +45,7 @@ export function ApproveForm({
   );
   const approve = useMutation({
     mutationFn: () =>
-      api.approve(request.id, {
+      api.approve(request.pairing_id, {
         code: normaliseCode(code),
         capabilities: [...granted].sort(),
         ...(additionId ? { addition_id: additionId } : {}),
@@ -67,7 +67,7 @@ export function ApproveForm({
     approve.mutate();
   }
 
-  const codeId = `code-${request.id}`;
+  const codeId = `code-${request.pairing_id}`;
   return (
     <form onSubmit={submit} className="grid gap-5" noValidate>
       <div className="rounded-md bg-paper-sunken px-5 py-5">
@@ -95,7 +95,7 @@ export function ApproveForm({
         ) : (
           <ul className="grid gap-2 sm:grid-cols-2">
             {request.capabilities.map((c) => {
-              const id = `${request.id}-${c.name}`;
+              const id = `${request.pairing_id}-${c.name}`;
               return (
                 <li key={c.name}>
                   <label htmlFor={id} className="flex items-start gap-2.5">

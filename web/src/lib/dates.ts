@@ -53,6 +53,10 @@ export function remaining(iso: string, now: Date = new Date()): string {
   return tr("remaining", { minutes: Math.floor(seconds / 60), seconds: String(seconds % 60).padStart(2, "0") });
 }
 
+/** When something sent as "seconds left" ends: counted from when the answer arrived, not on the server's clock. */
+export const deadline = (secondsLeft: number, receivedAt: number): string =>
+  new Date(receivedAt + secondsLeft * 1000).toISOString();
+
 function yesterdayOf(now: Date): Date {
   const d = new Date(now);
   d.setDate(now.getDate() - 1);

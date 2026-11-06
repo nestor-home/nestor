@@ -42,12 +42,12 @@ export function InviteForm({ onDone }: { onDone: () => void }) {
       <div role="status" className="grid gap-3">
         <Localized
           id="acc-invite-sent"
-          vars={{ person: sent.invitation.person_name ?? "", has_person: sent.invitation.person_name ? "yes" : "no" }}
+          vars={{ person: sent.invitation.person?.name ?? "", has_person: sent.invitation.person ? "yes" : "no" }}
           elems={{ strong: <strong /> }}
         >
           <p className="text-sm" />
         </Localized>
-        <CopyField value={sent.link} label={t("acc-invite-link")} />
+        <CopyField value={new URL(sent.url, window.location.origin).toString()} label={t("acc-invite-link")} />
         <FormActions>
           <Button variant="outline" onClick={onDone}>
             {t("acc-invite-done")}

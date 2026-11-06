@@ -2,7 +2,14 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryHistory, RouterProvider } from "@tanstack/react-router";
 import { act, render } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { type AgentActivity, type JournalItem, type JournalStream, type LiveStatus, setCsrfToken } from "@/api";
+import {
+  type AgentActivity,
+  type EventLinks,
+  type JournalItem,
+  type JournalStream,
+  type LiveStatus,
+  setCsrfToken,
+} from "@/api";
 import { NoticeProvider } from "@/components/notices";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { I18nProvider } from "@/i18n";
@@ -98,30 +105,51 @@ const MESSAGE_OF: Record<string, string> = {
   "presence.changed": "journal-presence-changed",
 };
 
-export function liveItem(overrides: Partial<JournalItem> = {}): JournalItem {
+let livePosition = 100_000;
+
+/** A journal item as the stream sends it; `links` lists only the ones the test cares about. */
+export function liveItem({
+  links,
+  ...overrides
+}: Partial<Omit<JournalItem, "links">> & { links?: Partial<EventLinks> } = {}): JournalItem {
   const type = overrides.type ?? "conversation.turn.user";
   const id = MESSAGE_OF[type] ?? "journal-other";
+  const detail = overrides.detail ?? "";
   return {
     message: { id, args: { name: "Jules" } },
-    id: String(100_000 + Math.floor(Math.random() * 900_000)),
-    uid: `live-${Math.random().toString(36).slice(2)}`,
+    position: ++livePosition,
+    id: `live-${Math.random().toString(36).slice(2)}`,
     kind_label: "Conversations",
     at: new Date().toISOString(),
     type: "conversation.turn.user",
     kind: "conversation",
     text: "Jules said",
-    detail: "",
+    detail,
+    detail_message: null,
+    detail_text: detail,
     reason: null,
-    people: ["jules"],
+    people: [{ id: "jules", name: "Jules" }],
     channels: ["voice"],
     room: null,
     tone: "normal",
-    links: {},
     cause: null,
     outcome: null,
     tool: null,
     brand: "voice",
     ...overrides,
+    links: {
+      session: null,
+      conversation: null,
+      turn: null,
+      call: null,
+      task: null,
+      watch: null,
+      delivery: null,
+      connection: null,
+      satellite: null,
+      memory: null,
+      ...links,
+    },
   };
 }
 

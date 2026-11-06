@@ -105,6 +105,13 @@ runtime may assemble the built-in storage adapters, and the admin may use FastAP
   line length 120. Code, docstrings and identifiers in English.
 - No secrets in the repository; secrets come from the environment.
 - Keep the repository lean: no new Markdown files unless users or agents need them.
+- **The admin API has one contract.** A closed set in a response or a query is its domain `StrEnum`
+  (never a `Literal` or a `str` restating it, never a `cast`), so `web/openapi.json` lists its values.
+  The admin reads the client generated from that file (`pnpm api:generate`: `src/api/schema.gen.ts`,
+  with each enum's values) and names its schemas in `src/api/types.ts`; no hand-written shape, union
+  or list repeats the server, and the mocks keep their state in those types. CI checks that both
+  files are current. A table the admin keys by a server enum is a `Record` over it, so a new value
+  fails the typecheck until the admin handles it.
 
 ## Tests
 

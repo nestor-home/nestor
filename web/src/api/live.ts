@@ -1,6 +1,4 @@
-import { journalItem } from "./adapt";
 import { url } from "./client";
-import type { ActivityDto, JournalItemDto } from "./dto";
 import type { AgentActivity, JournalItem } from "./types";
 
 export type LiveStatus = "connecting" | "open" | "closed";
@@ -26,7 +24,7 @@ export const eventSourceStream: JournalStream = {
     source.onerror = () => onStatus(source.readyState === EventSource.CLOSED ? "closed" : "connecting");
     source.addEventListener("item", (event) => {
       try {
-        onItem(journalItem(JSON.parse((event as MessageEvent<string>).data) as JournalItemDto));
+        onItem(JSON.parse((event as MessageEvent<string>).data) as JournalItem);
       } catch {
         // a malformed line is dropped: the paged list remains the reference
       }
@@ -34,7 +32,7 @@ export const eventSourceStream: JournalStream = {
     // what the agent is doing: once at connect, then on every change
     source.addEventListener("activity", (event) => {
       try {
-        onActivity?.(JSON.parse((event as MessageEvent<string>).data) as ActivityDto);
+        onActivity?.(JSON.parse((event as MessageEvent<string>).data) as AgentActivity);
       } catch {
         // dropped: GET /agent/activity stays the reference
       }

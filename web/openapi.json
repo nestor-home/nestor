@@ -11749,8 +11749,7 @@
             "$ref": "#/components/schemas/PairingMethod"
           },
           "proof": {
-            "type": "string",
-            "title": "Proof"
+            "$ref": "#/components/schemas/Proof"
           },
           "label": {
             "type": "string",
@@ -11865,7 +11864,8 @@
           "session",
           "channel"
         ],
-        "title": "OriginOut"
+        "title": "OriginOut",
+        "description": "Where something was asked for: a task, a watch."
       },
       "OutcomeOut": {
         "properties": {
@@ -12238,6 +12238,15 @@
         ],
         "title": "ProblemOut",
         "description": "What is wrong in an edited configuration, located by its path in the document."
+      },
+      "Proof": {
+        "type": "string",
+        "enum": [
+          "device_code",
+          "enrollment_code"
+        ],
+        "title": "Proof",
+        "description": "Which way the pairing proof travelled."
       },
       "QuietHoursOut": {
         "properties": {

@@ -2,7 +2,62 @@
  * Reading `/config/schema`: what control a property needs, its label, whether it is secret or
  * advanced, and the document paths the forms edit. Pure functions, tested on their own.
  */
-import type { ConfigDocument, ConfigProblem, JsonSchema, SecretShown } from "@/api";
+import type { ConfigDocument, ConfigProblem, ConfigSchema, ConfigSlot, ModelType } from "@/api";
+
+/** A JSON Schema as `/config/schema` sends it, with Nestor's `x-nestor` annotations. */
+export interface JsonSchema {
+  type?: string | string[];
+  title?: string;
+  description?: string;
+  properties?: Record<string, JsonSchema>;
+  required?: string[];
+  additionalProperties?: boolean | JsonSchema;
+  items?: JsonSchema;
+  anyOf?: JsonSchema[];
+  enum?: (string | number)[];
+  const?: unknown;
+  default?: unknown;
+  format?: string;
+  writeOnly?: boolean;
+  minimum?: number;
+  maximum?: number;
+  exclusiveMinimum?: number;
+  minLength?: number;
+  $ref?: string;
+  $defs?: Record<string, JsonSchema>;
+  "x-nestor"?: {
+    field?: string;
+    title?: string;
+    help?: string | null;
+    secret?: boolean;
+    /** a map whose values are secrets (MCP headers): each value is kept or replaced on its own */
+    secret_values?: boolean;
+    advanced?: boolean;
+    group?: string;
+    /** the named slot (`models`) whose names the property takes */
+    reference?: string | null;
+    /** the type of model the reference takes: only those are offered */
+    model_type?: ModelType | null;
+  };
+}
+
+/**
+ * `/config/schema` read as what it is: JSON Schemas (sent as free JSON) with Nestor's `x-nestor`
+ * annotations, by section and by plugin kind.
+ */
+export interface Schemas extends Omit<ConfigSchema, "sections" | "slots"> {
+  sections: Record<string, JsonSchema>;
+  slots: Record<string, Slot>;
+}
+
+/** A slot of components, with the settings of each kind as JSON Schema. */
+export type Slot = Omit<ConfigSlot, "kinds"> & { kinds: Record<string, JsonSchema> };
+
+/** A secret as the configuration shows it: never its value. */
+export interface SecretShown {
+  set: boolean;
+  preview: string | null;
+}
 
 export type Path = (string | number)[];
 

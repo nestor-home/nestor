@@ -30,7 +30,7 @@ export function ConnectForm({
   const [person, setPerson] = useState("");
   const [values, setValues] = useState<Record<string, string>>({});
   const { phase, connect, error } = useConnect(connector.kind, connector.auth, onConnected);
-  const blocked = oauth && !connector.client;
+  const blocked = oauth && !connector.oauth?.registered;
   const busy = phase === "pending" || phase === "redirecting";
 
   function submit(event: FormEvent) {
@@ -58,7 +58,7 @@ export function ConnectForm({
           : connector.fields.map((f) => (
               <Field
                 key={f.name}
-                label={f.optional ? t("conn-field-optional", { label: f.label }) : f.label}
+                label={f.default !== null ? t("conn-field-optional", { label: f.label }) : f.label}
                 htmlFor={`field-${f.name}`}
               >
                 <Input
@@ -67,8 +67,8 @@ export function ConnectForm({
                   type={f.secret ? "password" : "text"}
                   autoComplete={f.secret ? "new-password" : "off"}
                   spellCheck={false}
-                  required={!f.optional}
-                  placeholder={f.placeholder ? `${f.placeholder}…` : undefined}
+                  required={f.default === null}
+                  placeholder={f.default ? `${f.default}…` : undefined}
                   className={f.secret ? undefined : "font-mono"}
                   value={values[f.name] ?? ""}
                   onChange={(e) => setValues((v) => ({ ...v, [f.name]: e.target.value }))}

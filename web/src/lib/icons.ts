@@ -4,6 +4,7 @@
  */
 import type { LucideIcon } from "lucide-react";
 import {
+  AlarmClock,
   AudioLines,
   BookMarked,
   Bot,
@@ -37,6 +38,7 @@ import {
   Workflow,
   Wrench,
 } from "lucide-react";
+import type { Kind } from "@/api";
 
 export interface KindStyle {
   icon: LucideIcon;
@@ -46,12 +48,14 @@ export interface KindStyle {
   rail: string;
 }
 
-export const KIND: Record<string, KindStyle> = {
+/** Every kind the API sends (`Kind`): a new one fails the typecheck here until it has its look. */
+export const KIND: Record<Kind, KindStyle> = {
   conversation: { icon: MessageSquareText, tone: "text-ink", rail: "bg-ink/25" },
   delivery: { icon: Megaphone, tone: "text-ember", rail: "bg-ember/50" },
   tool: { icon: Wrench, tone: "text-ink-muted", rail: "bg-rule-strong" },
   task: { icon: Workflow, tone: "text-kind-task", rail: "bg-kind-task/45" },
   watch: { icon: Radar, tone: "text-kind-watch", rail: "bg-kind-watch/45" },
+  schedule: { icon: AlarmClock, tone: "text-ink-muted", rail: "bg-rule-strong" },
   memory: { icon: BookMarked, tone: "text-sage", rail: "bg-sage/45" },
   connection: { icon: Plug, tone: "text-ink-muted", rail: "bg-rule-strong" },
   presence: { icon: House, tone: "text-ink-muted", rail: "bg-rule-strong" },
@@ -59,11 +63,10 @@ export const KIND: Record<string, KindStyle> = {
   voice: { icon: AudioLines, tone: "text-ink-muted", rail: "bg-rule-strong" },
   observation: { icon: ScanEye, tone: "text-ink-faint", rail: "bg-rule" },
   account: { icon: KeyRound, tone: "text-ink-muted", rail: "bg-rule" },
+  other: { icon: CircleDashed, tone: "text-ink-muted", rail: "bg-rule" },
 };
 
-export function kindStyle(kind: string): KindStyle {
-  return KIND[kind] ?? { icon: CircleDashed, tone: "text-ink-muted", rail: "bg-rule" };
-}
+export const kindStyle = (kind: Kind): KindStyle => KIND[kind];
 
 export const STATUS_ICON = {
   ok: CircleCheck,

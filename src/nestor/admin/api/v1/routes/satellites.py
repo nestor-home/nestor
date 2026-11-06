@@ -38,6 +38,7 @@ from nestor.modules.satellites import (
     PairingMethod,
     PairingRefused,
     PendingPairing,
+    Proof,
     Satellite,
     SatellitePaired,
     Software,
@@ -63,7 +64,7 @@ class MethodOut(BaseModel):
     """A pairing method, in the reader's language."""
 
     id: PairingMethod
-    proof: str  # device_code: the device presents a code to type here; enrollment_code: a code made here
+    proof: Proof  # device_code: the device presents a code to type here; enrollment_code: a code made here
     label: str
     hint: str  # what the person does, in one sentence
 
@@ -365,7 +366,7 @@ def _method(method: PairingMethod, words: Phrasebook) -> MethodOut:
     key = method.value.replace(".", "-")
     return MethodOut(
         id=method,
-        proof=method.proof.value,
+        proof=method.proof,
         label=words.text(Message.of(f"pairing-method-{key}")),
         hint=words.text(Message.of(f"pairing-method-{key}-hint")),
     )
@@ -388,7 +389,7 @@ def _pending(pending: PendingPairing, words: Phrasebook, now: datetime) -> Pendi
 
 
 def _addition(addition: Addition, pending: list[PendingPairing], people: People, words: Phrasebook) -> AdditionOut:
-    device_code = addition.method.proof.value == "device_code"
+    device_code = addition.method.proof is Proof.DEVICE_CODE
     active = addition.status is AdditionStatus.ACTIVE
     candidates = [p.id for p in pending] if device_code and active else []
     stage = {

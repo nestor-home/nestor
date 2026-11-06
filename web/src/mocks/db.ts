@@ -8,8 +8,6 @@ import type {
   JournalEvent,
   Memory,
   PairingMethodId,
-  PairingRequest,
-  Person,
   Satellite,
   SystemInfo,
   Task,
@@ -21,6 +19,7 @@ import type {
 import type { ConfigDb } from "./config";
 import * as config from "./config";
 import { day } from "./day";
+import type { MockPending, MockPerson } from "./fixtures";
 import * as fixtures from "./fixtures";
 import { stress, stressed } from "./stress";
 
@@ -40,14 +39,14 @@ export interface MockAddition {
 
 export interface Db {
   signedIn: string | null; // account id
-  people: Person[];
+  people: MockPerson[];
   accounts: Account[];
   invitations: Invitation[];
-  journal: JournalEvent[]; // newest first, with raw records
+  journal: JournalEvent[]; // newest first
   connectors: Connector[];
   connections: Connection[];
   tools: Record<string, Tool[]>; // by connection id
-  pairing: PairingRequest[];
+  pairing: MockPending[];
   additions: MockAddition[];
   satellites: Satellite[];
   tasks: Task[];
@@ -60,13 +59,15 @@ export interface Db {
 }
 
 /** Bumped when the shape changes; the stress fixture keeps its own copy. */
-const KEY = () => (stressed() ? "nestor.mock.db.v13.stress" : "nestor.mock.db.v13");
+const KEY = () => (stressed() ? "nestor.mock.db.v14.stress" : "nestor.mock.db.v14");
 
 export function fresh(): Db {
   const connections = fixtures.connections();
   const journal = day();
-  const learnt = journal.find((e) => e.links.memory === "m-07")?.id ?? null;
-  const memories = fixtures.memories().map((m) => (m.learnt_event === "LEARNT" ? { ...m, learnt_event: learnt } : m));
+  const learnt = journal.find((e) => e.item.links.memory === "m-07")?.item.position ?? null;
+  const memories = fixtures
+    .memories()
+    .map((m) => (m.learnt_event === fixtures.LEARNT ? { ...m, learnt_event: learnt } : m));
   const state: Db = {
     signedIn: "acc-mathis",
     people: fixtures.people(),

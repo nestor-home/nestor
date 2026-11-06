@@ -4,7 +4,7 @@
  * the home renders it.
  */
 
-import type { Component, Connection, JournalItem, Person, Satellite, Task, Watch } from "@/api";
+import type { Component, Connection, JournalItem, Person, PersonRef, Satellite, Task, Watch } from "@/api";
 import type { FigureState } from "@/components/agent-figure";
 import { is } from "@/lib/events";
 
@@ -83,7 +83,7 @@ export interface Mark {
   minute: number;
   item: JournalItem; // the first event of what it stands for
   count: number; // events it stands for (turns of a conversation)
-  people: string[];
+  people: PersonRef[];
   channels: string[];
   room: string | null;
 }
@@ -118,7 +118,7 @@ export function marksOf(items: readonly JournalItem[]): Mark[] {
       const known = sessions.get(talk);
       if (known) {
         known.count += 1;
-        for (const p of item.people) if (!known.people.includes(p)) known.people.push(p);
+        for (const p of item.people) if (!known.people.some((k) => k.id === p.id)) known.people.push(p);
         continue;
       }
       const m = mark("conversation", item);
@@ -147,16 +147,15 @@ const RECENT_MS = 10 * 60_000;
 
 /**
  * What the agent says, in its own words: about the latest event when it is recent, else about what
- * it is busy with, what needs a person, or the quiet. `names` turns person ids into names.
+ * it is busy with, what needs a person, or the quiet.
  */
 export function lineOf(
   latest: JournalItem | null,
   state: AgentState,
   context: { tasks: readonly Task[]; troubled: number; quietUntil: string | null },
-  names: (id: string) => string,
   now = Date.now(),
 ): Line {
-  const people = (i: JournalItem) => i.people.map(names).join(", ");
+  const people = (i: JournalItem) => i.people.map((p) => p.name).join(", ");
   if (latest && now - new Date(latest.at).getTime() < RECENT_MS) {
     const where = latest.room ?? latest.channels[0] ?? "";
     if (is(latest, "delivered") && latest.people.length)

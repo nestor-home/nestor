@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel
 
 from nestor.admin.api.v1.errors import not_found
-from nestor.admin.api.v1.models import People, PersonRef
+from nestor.admin.api.v1.models import OriginOut, People, PersonRef
 from nestor.admin.api.v1.security import Caller, allowed
 from nestor.admin.state import AdminState, state
 from nestor.modules.accounts import Scope
@@ -19,11 +19,6 @@ from nestor.modules.initiative import Watch, WatchTriggered
 
 router = APIRouter(tags=["watches"])
 Manager = Annotated[Caller, Depends(allowed(Scope.WATCHES_MANAGE_ALL, Scope.WATCHES_MANAGE_OWN))]
-
-
-class OriginOut(BaseModel):
-    session: str  # the conversation it was asked in
-    channel: str
 
 
 class WatchOut(BaseModel):

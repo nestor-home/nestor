@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
 
 from nestor.admin.api.v1.errors import not_found
-from nestor.admin.api.v1.models import People, PersonRef
+from nestor.admin.api.v1.models import OriginOut, People, PersonRef
 from nestor.admin.api.v1.security import Caller, allowed
 from nestor.admin.presentation import Phrasebook, subject
 from nestor.admin.state import AdminState, state
@@ -25,11 +25,6 @@ from nestor.modules.initiative import Delivered
 router = APIRouter(tags=["tasks"])
 Manager = Annotated[Caller, Depends(allowed(Scope.TASKS_MANAGE, Scope.TASKS_MANAGE_OWN))]
 RECENT = 20
-
-
-class OriginOut(BaseModel):
-    session: str  # the conversation it was asked in
-    channel: str
 
 
 class DeliveredOut(BaseModel):

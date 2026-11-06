@@ -3,7 +3,12 @@ import { liveItem } from "@/test/render";
 import { matches, merge } from "./merge";
 
 describe("matches", () => {
-  const item = liveItem({ kind: "delivery", people: ["lea"], channels: ["whatsapp"], room: "salon" });
+  const item = liveItem({
+    kind: "delivery",
+    people: [{ id: "lea", name: "Léa" }],
+    channels: ["whatsapp"],
+    room: "salon",
+  });
 
   it("keeps an item every filter accepts", () => {
     expect(matches(item, {})).toBe(true);

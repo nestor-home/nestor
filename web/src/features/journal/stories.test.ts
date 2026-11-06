@@ -1,11 +1,10 @@
 import { describe, expect, it } from "vitest";
-import type { JournalItem } from "@/api";
 import { liveItem } from "@/test/render";
 import { buildStories, type Chain, type Thread } from "./stories";
 
 let minute = 0;
 const at = () => new Date(Date.UTC(2026, 9, 30, 9, minute++)).toISOString();
-const ev = (overrides: Partial<JournalItem>) => liveItem({ at: at(), ...overrides });
+const ev = (overrides: Parameters<typeof liveItem>[0]) => liveItem({ at: at(), ...overrides });
 
 describe("stories", () => {
   it("threads a conversation: each turn with its tool call, answer and what it started", () => {
@@ -69,7 +68,8 @@ describe("stories", () => {
       // another conversation of the same session: its own thread
       said("u3", "r3"),
     ];
-    items[6] = { ...(items[6] as JournalItem), links: { session: "telegram:42", conversation: "c2", turn: "r3" } };
+    const moved = items[6];
+    if (moved) moved.links = { ...moved.links, session: "telegram:42", conversation: "c2", turn: "r3" };
     const stories = buildStories(items);
     expect(stories.map((st) => st.key)).toEqual(["conversation:c2", "conversation:c1"]);
     const thread = stories[1] as Thread;

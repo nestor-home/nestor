@@ -5,7 +5,7 @@
  * real server does with fluent.runtime.
  */
 import { FluentBundle, FluentResource } from "@fluent/bundle";
-import type { JournalEvent, JournalItem, Message } from "@/api";
+import type { EventLinks, JournalItem, Kind, Message, PersonRef, Tone } from "@/api";
 import { inFrench } from "./french";
 
 export type Lang = "en" | "fr";
@@ -154,35 +154,73 @@ function parse(table: typeof TITLES, text: string): Message {
   return msg("journal-other", { type: text });
 }
 
-/** The server's shape for an event first written as its English title and reason. */
-export type Draft = Omit<JournalItem, "id" | "at" | "uid" | "kind_label" | "message" | "text" | "reason"> & {
+/** A mock event as day.ts writes it: its English title and reason, and only the links it has. */
+export interface Draft {
+  type: string;
+  kind: Kind;
   title: string;
+  detail?: string;
   reason?: string;
+  people?: PersonRef[];
+  channels?: string[];
+  room?: string | null;
+  tone?: Tone;
+  links?: Partial<EventLinks>;
+  outcome?: JournalItem["outcome"];
+  tool?: string | null;
+  brand?: string | null;
+}
+
+const NO_LINKS: EventLinks = {
+  session: null,
+  conversation: null,
+  turn: null,
+  call: null,
+  task: null,
+  watch: null,
+  delivery: null,
+  connection: null,
+  satellite: null,
+  memory: null,
 };
 
-export function toItem<T extends Draft>(
-  draft: T,
-): Omit<T, "title" | "reason"> & Pick<JournalItem, "message" | "text" | "reason"> {
-  const { title, reason, ...rest } = draft;
-  const message = parse(TITLES, title);
+/** The item the server would send for a draft, at its place in the journal (texts in English). */
+export function toItem(draft: Draft, where: { position: number; id: string; at: string }): JournalItem {
+  const message = parse(TITLES, draft.title);
+  const detail = draft.detail ?? "";
   return {
-    ...rest,
-    type: TYPE_OF[message.id] ?? rest.type,
+    ...where,
+    type: TYPE_OF[message.id] ?? draft.type,
+    kind: draft.kind,
+    kind_label: "",
     message,
-    text: title,
-    reason: reason ? { message: parse(REASONS, reason), text: reason } : null,
+    text: draft.title,
+    detail,
+    detail_message: null,
+    detail_text: detail,
+    reason: draft.reason ? { message: parse(REASONS, draft.reason), text: draft.reason } : null,
+    tone: draft.tone ?? "normal",
+    people: draft.people ?? [],
+    channels: draft.channels ?? [],
+    room: draft.room ?? null,
+    tool: draft.tool ?? null,
+    outcome: draft.outcome ?? null,
+    brand: draft.brand ?? draft.channels?.[0] ?? null,
+    links: { ...NO_LINKS, ...draft.links },
+    cause: null,
   };
 }
 
 /** A message in `lang`, the mock's own words in it (a room, what a watch is about) translated too. */
 const said = (lang: Lang, message: Message) => render(lang, lang === "fr" ? inFrench(message) : message);
 
-/** The event as the server sends it to an account reading `lang`. */
-export function localize<E extends JournalItem | JournalEvent>(event: E, lang: Lang): E {
+/** The item as the server sends it to an account reading `lang`. */
+export function localize(item: JournalItem, lang: Lang): JournalItem {
   return {
-    ...event,
-    text: event.message.id === "journal-other" ? event.text : said(lang, event.message),
-    reason: event.reason ? { ...event.reason, text: said(lang, event.reason.message) } : null,
+    ...item,
+    kind_label: render(lang, msg("journal-kind", { kind: item.kind })),
+    text: item.message.id === "journal-other" ? item.text : said(lang, item.message),
+    reason: item.reason ? { ...item.reason, text: said(lang, item.reason.message) } : null,
   };
 }
 

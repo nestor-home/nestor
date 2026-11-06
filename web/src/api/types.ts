@@ -1,730 +1,134 @@
 /**
- * The admin's view of the API v1: what screens read. `adapt.ts` builds these from the generated
- * DTOs (`dto.ts`, from `web/openapi.json`), so a change of the API breaks the build there, not on
- * a screen. Differences are deliberate and few: people as ids (names come from `/household/people`),
- * a journal item's `id` is its position (the cursor), scopes grouped as the screens use them.
+ * The API v1 as screens read it: names for the schemas generated from `web/openapi.json`
+ * (`pnpm api:generate`). Nothing here restates a server shape, so a change of the API breaks the
+ * screens that read it. Types the server never sends (the admin's own state) live with their screens.
  */
+import type { components, paths } from "./schema.gen";
+
+type S = components["schemas"];
 
 export type Id = string;
 export type Instant = string; // ISO 8601 with offset
 
 // -- who is using the admin -----------------------------------------------------------------------
 
-export type Role = "owner" | "admin" | "member" | "guest";
-export type Locale = "en" | "fr";
-
-/** What a screen may show or do, derived from the server's finer scopes (adapt.ts). */
-export type Scope =
-  | "journal:read"
-  | "connections:read"
-  | "connections:write"
-  | "satellites:read"
-  | "satellites:write"
-  | "system:read"
-  | "tasks:read"
-  | "tasks:write"
-  | "watches:read"
-  | "watches:write"
-  | "memories:read"
-  | "memories:write"
-  | "people:read"
-  | "accounts:read"
-  | "accounts:write"
-  | "config:manage"
-  | "agent:read";
-
-export interface Account {
-  id: Id;
-  login: string;
-  role: Role;
-  role_label: string;
-  person: Id | null;
-  person_name: string | null;
-  locale: string | null; // null: the household's language
-  disabled: boolean;
-  created_at: Instant;
-  last_seen_at: Instant | null;
-}
-
-/** A message the server owns: its catalogue id and arguments, and its text in the account's locale. */
-export interface Message {
-  id: string;
-  args: Record<string, string | number>;
-}
-
-export interface Rendered {
-  message: Message;
-  text: string;
-}
-
-export interface Agent {
-  name: string; // the instance's persona: "Richie", "Alfred"
-  status: "online" | "degraded";
-}
-
-export interface Me {
-  locale: string; // the language the server speaks to this account
-  restart_required: boolean; // the configuration changed since Nestor started
-  pending_changes: string[]; // which parts, as paths: "persona.name"
-  account: Account;
-  scopes: Scope[];
-  csrf_token: string;
-  assistant: string;
-  agent: Agent;
-}
-
-export interface Credentials {
-  login: string;
-  password: string;
-}
-
-export type InvitationStatus = "pending" | "accepted" | "expired" | "revoked";
-
-export interface Invitation {
-  id: Id;
-  role: Role;
-  role_label: string;
-  person: Id | null;
-  person_name: string | null;
-  status: InvitationStatus;
-  status_label: string;
-  created_at: Instant;
-  expires_at: Instant;
-}
-
-export interface InvitationCreated {
-  invitation: Invitation;
-  link: string; // the one-time link to hand over; never shown again
-}
-
-export interface InvitationPreview {
-  role: Role;
-  role_label: string;
-  person_name: string | null;
-  expires_at: Instant;
-}
-
-export interface NewInvitation {
-  role: Role;
-  person: Id | null;
-}
-
-export interface AcceptInvitation {
-  login: string;
-  password: string;
-}
-
-export interface AccountChange {
-  role?: Role;
-  disabled?: boolean;
-}
+export type Role = S["Role"];
+export type Scope = S["Scope"];
+export type Account = S["AccountOut"];
+export type Agent = S["AgentOut"];
+export type Me = S["MeOut"];
+export type Credentials = S["LoginIn"];
+export type Invitation = S["InvitationOut"];
+export type InvitationStatus = S["InvitationStatus"];
+export type InvitationCreated = S["InvitationCreated"];
+export type InvitationPreview = S["InvitationPreview"];
+export type NewInvitation = S["InvitationIn"];
+export type AcceptInvitation = Omit<S["InvitationAcceptIn"], "token">;
+export type Languages = S["LanguagesOut"];
 
 // -- the household --------------------------------------------------------------------------------
 
-export interface Presence {
-  home: boolean | null; // null: unknown
-  room: string | null;
-  since: Instant | null;
-}
+export type PersonRef = S["PersonRef"];
+export type Presence = S["PresenceOut"];
+export type Person = S["PersonOut"];
+export type Voice = S["VoiceOut"];
+export type VoiceRecording = S["RecordingOut"];
+export type PhraseProblem = S["Problem"];
+export type PhraseVerdict = S["PhraseOut"];
+export type Heard = S["HeardOut"];
 
-export interface Person {
-  id: Id;
-  name: string;
-  channels: string[]; // where they are recognised: "voice", "telegram:@mathis"
-  reach: string | null; // where unprompted messages go first
-  presence: Presence | null; // null without a home system
-  account: Id | null; // their admin account, if any
-  account_login: string | null;
-}
+// -- server-owned texts and the journal -----------------------------------------------------------
 
-/** A person's voice, as Nestor recognises it: recorded with consent, then improved as they talk. */
-export interface Voice {
-  enrolled: boolean;
-  learning: boolean; // everyday turns still improve it
-  learned: number; // voiceprints learned since the recording
-  enrolled_at: Instant | null;
-  last_learned_at: Instant | null;
-  manageable: boolean; // whether this account may record, change or erase it
-}
-
-/** A guided recording in progress: the phrases to read, in the reader's language. */
-export interface VoiceRecording {
-  id: Id;
-  person: Id;
-  phrases: string[];
-  next: number | null; // the first phrase still to say
-}
-
-/** Why a phrase is asked again. */
-export type PhraseProblem = "too_short" | "too_quiet" | "too_loud" | "other_voice";
-
-export interface PhraseVerdict {
-  kept: boolean;
-  problem: PhraseProblem | null;
-  taken: number; // phrases kept so far
-  total: number;
-}
-
-/** Who a recording sounds like, as satellites would recognise it. */
-export interface Heard {
-  person: Id | null; // null: nobody recognised
-  name: string | null;
-  score: number; // how alike, 0 to 1
-  threshold: number; // recognised from there
-}
-
-// -- journal --------------------------------------------------------------------------------------
-
-export type Tone = "normal" | "decision" | "warning";
-
-/**
- * Identifiers tying an event to the others of its story. The journal builds threads (a
- * conversation: turns and the tool calls they caused) and chains (a watch triggered → triaged →
- * announced → followed up; a task started → progressing → ended → delivered) from these only.
- */
-export interface EventLinks {
-  session?: Id; // where people talk: `telegram:42`, `voice:salon`
-  conversation?: Id; // one conversation in the session: turns within its inactivity window
-  turn?: Id; // one message and all it caused
-  call?: Id;
-  task?: Id;
-  watch?: Id;
-  delivery?: Id;
-  connection?: Id;
-  satellite?: string;
-  memory?: Id;
-}
-
-export interface JournalItem {
-  id: Id; // the position in the journal, as a string: the cursor and the drawer's `event=`
-  uid: Id; // the event's own id
-  at: Instant;
-  type: string; // "conversation.turn.user"
-  kind: string; // "conversation", "delivery", "tool", "task", "watch"…
-  kind_label: string;
-  message: Message;
-  text: string;
-  detail: string; // what was said, the arguments, the outcome
-  reason: Rendered | null;
-  people: Id[];
-  channels: string[];
-  room: string | null;
-  tone: Tone;
-  links: EventLinks;
-  cause: Id | null; // the position of the event that led to this one
-  outcome: { ok: boolean; duration_s: number | null } | null;
-  tool: string | null;
-  brand: string | null;
-}
-
-export interface JournalEvent extends JournalItem {
-  record: Record<string, unknown>;
-}
-
-export interface JournalPage {
-  items: JournalItem[];
-  next: Id | null;
-}
-
-export interface JournalFilters {
-  kinds?: string[];
-  person?: Id;
-  channel?: string;
-  room?: string;
-  q?: string;
-  from?: Instant;
-  to?: Instant;
-  tone?: Tone;
-  session?: Id;
-  conversation?: Id;
-  task?: Id;
-  watch?: Id;
-  connection?: Id;
-  satellite?: string;
-}
-
-export interface Facet {
-  key: string;
-  label: string;
-  count: number;
-}
-
-export interface JournalFacets {
-  total: number;
-  truncated: boolean; // counted over the latest events only
-  kinds: Facet[];
-  people: Facet[];
-  channels: Facet[];
-  rooms: Facet[];
-  histogram: { from: Instant; to: Instant; bucket_s: number; counts: number[] };
-}
+export type Message = S["MessageOut"];
+export type Rendered = S["ReasonOut"]; // a message and its text in the reader's language
+export type Tone = S["Tone"];
+export type Kind = S["Kind"];
+export type EventLinks = S["LinksOut"];
+export type JournalItem = S["JournalItem"];
+export type JournalEvent = S["JournalEntryOut"];
+export type JournalPage = S["JournalPage"];
+export type JournalFacets = S["JournalFacets"];
+export type Facet = S["FacetOut"];
+export type JournalFilters = Omit<NonNullable<Query<"/api/v1/journal">>, "before" | "limit">;
 
 // -- connectors and connections -------------------------------------------------------------------
 
-export type AuthKind = "oauth2" | "secret" | "none";
-export type ConnectionStatus = "connected" | "needs_reauth" | "error";
-export type Risk = "read" | "write" | "sensitive";
-
-export interface ConnectorField {
-  name: string;
-  label: string;
-  secret: boolean;
-  optional: boolean; // it has a default
-  placeholder: string | null; // its default, shown as an example
-}
-
-export interface Connector {
-  kind: string;
-  brand: string | null;
-  title: string;
-  description: string;
-  auth: AuthKind;
-  auth_label: string;
-  inbound: string[];
-  setup: string;
-  fields: ConnectorField[];
-  client: { client_id: string } | null; // the household's OAuth client, once registered
-  redirect_uri: string | null;
-  relayed: boolean;
-}
-
-export interface Connection {
-  id: Id;
-  kind: string;
-  title: string;
-  account: string;
-  owner: Id | null;
-  status: ConnectionStatus;
-  status_label: string;
-  status_reason: string | null; // why it needs a look, in the reader's language
-  confirm_writes: boolean;
-  disabled_tools: string[];
-  created_at: Instant;
-  brand: string | null;
-  last_used_at: Instant | null;
-  calls_today: number;
-  watches: number;
-}
-
-export interface Tool {
-  name: string;
-  description: string;
-  risk: Risk;
-  risk_label: string;
-  enabled: boolean;
-}
-
-export interface ConnectionDetail extends Connection {
-  tools: Tool[];
-}
-
-export interface OAuthClient {
-  client_id: string;
-  client_secret: string;
-}
-
-export interface ConnectRequest {
-  person: Id | null;
-  replaces: Id | null;
-  values: Record<string, string>;
-}
-
+export type AuthKind = S["AuthKind"];
+export type ConnectionStatus = S["Status"];
+export type Risk = S["Risk"];
+export type ConnectorField = S["FieldOut"];
+export type Connector = S["ConnectorOut"];
+export type Connection = S["ConnectionOut"];
+export type ConnectionDetail = S["ConnectionDetail"];
+export type Tool = S["ToolOut"];
+export type OAuthClient = S["ClientIn"];
+export type ConnectRequest = S["SecretsIn"];
 export type ConnectResult = { kind: "redirect"; url: string } | { kind: "connected"; connection: Connection };
-
-export interface ToolSettings {
-  disabled_tools: string[];
-  confirm_writes: boolean;
-}
+export type ToolSettings = S["ConnectionSettingsIn"];
 
 // -- satellites -----------------------------------------------------------------------------------
 
-export interface Capability {
-  name: string;
-  label: string;
-}
-
-export type PairingMethodId =
-  | "device_code.display"
-  | "device_code.speech"
-  | "enrollment.input"
-  | "enrollment.provisioning"
-  | "enrollment.qr";
-
-/** A way to prove a person meant to pair a device, in the reader's language. */
-export interface PairingMethod {
-  id: PairingMethodId;
-  proof: "device_code" | "enrollment_code";
-  label: string;
-  hint: string; // what the person does, in one sentence
-}
-
-export interface PairingMethods {
-  methods: PairingMethod[]; // recommended order
-  recommended: PairingMethodId;
-}
-
-/** A device asking to be paired, waiting for a proof. */
-export interface PairingRequest {
-  id: Id; // the pairing id
-  device: { id: string; model: string; room: string; brand: string | null };
-  software: Software; // what it declares it runs
-  capabilities: Capability[];
-  methods: PairingMethod[]; // the recommended one first
-  recommended_method: PairingMethodId;
-  can_identify: boolean;
-  expires_at: Instant; // computed from `expires_in_s` when received
-}
-
-export type AdditionStage = "waiting" | "device_seen" | "paired" | "cancelled" | "expired";
-
-/** A satellite being added from the admin, with the method a person picked. */
-export interface Addition {
-  id: Id;
-  method: PairingMethod;
-  stage: AdditionStage;
-  name: string | null;
-  room: string | null;
-  capabilities: Capability[] | null;
-  candidates: Id[]; // pending devices that may be this one (device code methods)
-  device_id: string | null;
-  created_by: Id | null;
-  created_at: Instant;
-  expires_at: Instant; // computed from `expires_in_s` when received
-}
-
-export interface NewAddition {
-  method: PairingMethodId;
-  name?: string;
-  room?: string;
-  capabilities?: string[];
-}
-
-/** The enrollment code and its pairing URI are only in this answer. */
-export interface StartedAddition {
-  addition: Addition;
-  code: string | null; // grouped: `K7QF-2M9X`
-  uri: string | null; // null when no host serves satellites
-}
-
-/** The software a device runs, named as its package is where it is installed from. */
-export interface Software {
-  name: string;
-  version: string;
-}
-
-export type UpdateState = "current" | "available" | "installing" | "failed";
-
-/** What a connected device last reported about its software; `version` is the newer one. */
-export interface SatelliteUpdate {
-  state: UpdateState;
-  version: string | null;
-  notes: string | null; // what that version changes, an https address the device found: opened, never fetched
-}
-
-export interface Satellite {
-  id: string;
-  name: string | null;
-  can_identify: boolean;
-  model: string;
-  room: string;
-  capabilities: Capability[];
-  paired_at: Instant;
-  approved_by: Id | null;
-  approved_by_name: string | null;
-  connected: boolean | null;
-  last_seen_at: Instant | null;
-  brand: string | null;
-  software: Software; // as it last declared
-  protocol: string;
-  can_update: boolean; // allowed device.update
-  update: SatelliteUpdate | null; // null while offline or before it reports
-}
-
-export interface Satellites {
-  pending: PairingRequest[];
-  paired: Satellite[];
-  additions: Addition[];
-}
-
-export interface Approval {
-  code: string;
-  capabilities?: string[];
-  addition_id?: Id; // when the approval completes an addition
-}
+export type Capability = S["CapabilityOut"];
+export type PairingMethodId = S["PairingMethod"];
+export type PairingMethod = S["MethodOut"];
+export type PairingMethods = S["MethodsOut"];
+export type PairingRequest = S["PendingOut"];
+export type AdditionStage = S["Stage"];
+export type Addition = S["AdditionOut"];
+export type NewAddition = S["AdditionIn"];
+export type StartedAddition = S["StartedOut"];
+export type Software = S["SoftwareOut"];
+export type UpdateState = S["UpdateState"];
+export type SatelliteUpdate = S["UpdateOut"];
+export type Satellite = S["SatelliteOut"];
+export type Satellites = S["SatellitesOut"];
+export type Approval = Omit<S["ApprovalIn"], "pairing_id">;
 
 // -- tasks, watches, memories ---------------------------------------------------------------------
 
-export type TaskStatus = "running" | "completed" | "failed" | "cancelled";
+export type TaskStatus = S["TaskStatus"];
+export type Task = S["TaskOut"];
+export type Tasks = S["TasksOut"];
+export type Watch = S["WatchOut"];
+export type Watches = S["WatchesOut"];
+export type Memory = S["MemoryOut"];
+export type MemoryQuery = NonNullable<Query<"/api/v1/memories">>;
 
-export interface Task {
-  id: Id;
-  objective: string;
-  executor: string;
-  status: TaskStatus;
-  status_label: string;
-  requested_by: Id | null;
-  started_at: Instant;
-  ended_at: Instant | null;
-  steps: string[];
-  result: string | null;
-  error: string | null;
-  origin: { session: Id | null; channel: string | null } | null;
-  delivered: { at: Instant; channel: string; room: string | null } | null;
-}
+// -- system ---------------------------------------------------------------------------------------
 
-export interface Tasks {
-  running: Task[];
-  recent: Task[];
-}
+export type Health = S["Health"];
+export type Component = S["ComponentOut"];
+export type ChangeKind = S["ChangeKind"];
+export type Release = S["ReleaseOut"];
+export type Installation = S["InstallKind"];
+export type Updates = S["UpdatesOut"];
+export type SystemInfo = S["SystemOut"];
 
-export interface Watch {
-  id: Id;
-  what: string;
-  owner: Id | null;
-  kinds: string[];
-  once: boolean;
-  created_at: Instant;
-  until: Instant | null;
-  origin: { session: Id | null; channel: string | null } | null;
-  triggered: number;
-  last_triggered_at: Instant | null;
-}
+// -- the agent ------------------------------------------------------------------------------------
 
-export interface Watches {
-  watches: Watch[];
-  sources: string[]; // inbound kinds available right now: ["mail"]
-}
+export type AgentActivity = S["AgentActivityOut"];
+export type UpcomingDelivery = S["ScheduledDeliveryOut"];
+export type Initiative = S["InitiativeOut"];
 
-export interface Memory {
-  id: Id;
-  text: string;
-  about: Id | null;
-  told_by: Id | null;
-  channel: string | null;
-  updated_at: Instant;
-  learnt_event: Id | null; // the journal position it was recorded at
-  session: Id | null;
-  editable: boolean;
-}
+// -- configuration --------------------------------------------------------------------------------
 
-export interface MemoryQuery {
-  q?: string;
-  about?: Id;
-}
-
-// -- system -------------------------------------------------------------------------------------
-
-export type Slot = string; // "model", "speech", "executor", "channel", "presence", "tools", "connector", "satellite", "storage"…
-export type Health = "ok" | "degraded" | "down" | "unknown";
-
-export interface Component {
-  id: Id;
-  slot: Slot;
-  name: string;
-  adapter: string;
-  brand: string | null;
-  version: string | null;
-  distribution: string | null;
-  health: Health;
-  health_detail: string | null;
-  capabilities: string[];
-  details: Record<string, string>;
-}
-
-export type ChangeKind = "breaking" | "feature" | "fix" | "other";
-
-/** One release of Nestor, from its release feed: the changelog lines are English plain text. */
-export interface Release {
-  version: string;
-  date: string; // YYYY-MM-DD
-  url: string;
-  breaking: boolean;
-  changes: { kind: ChangeKind; text: string }[];
-}
-
-/** What was released since the running version (`GET /system/updates`), and whether it installs from here. */
-export type Installation = "container" | "editable" | "uv-tool" | "pip";
-
-export interface Updates {
-  running: string;
-  releases: Release[]; // newer than the running one, newest first
-  left_behind: { id: string; name: string | null }[]; // satellites the newest release no longer speaks to
-  installation: Installation | null; // how Nestor is installed; null when it does not check for releases
-  commands: string[]; // what to run to update it by hand
-  installable: boolean; // the newest release installs from the admin (a Python environment, not a container)
-  installing: string | null; // being installed: a restart follows
-  failed: string | null; // did not install: the running version stayed
-}
-
-export interface SystemInfo {
-  nestor: { version: string };
-  agent: Agent;
-  restart_required: boolean;
-  pending_changes: string[];
-  components: Component[];
-}
-
-// -- the agent -------------------------------------------------------------------------------
-
-/** What the agent is doing now (`GET /agent/activity`, and `event: activity` on the stream). */
-export interface AgentActivity {
-  state: "idle" | "listening" | "thinking" | "speaking" | "working" | "sleeping";
-  since: Instant;
-  replies: number;
-  tasks: number;
-  listening_rooms: string[];
-  quiet: boolean;
-}
-
-/** A written follow-up of something said aloud: sent at `due_at` unless someone answers first. */
-export interface UpcomingDelivery {
-  about: string;
-  delivery: string;
-  person: { id: Id; name: string } | null;
-  spoken_on: string; // `voice:salon`
-  written_on: string; // `telegram:7`
-  due_at: Instant;
-}
-
-export interface Initiative {
-  quiet_hours: { start: string; end: string; timezone: string; active: boolean } | null;
-  upcoming: UpcomingDelivery[];
-}
-
-// -- configuration -----------------------------------------------------------------------------
-
-/** A JSON Schema as `/config/schema` sends it, with Nestor's `x-nestor` annotations. */
-export interface JsonSchema {
-  type?: string | string[];
-  title?: string;
-  description?: string;
-  properties?: Record<string, JsonSchema>;
-  required?: string[];
-  additionalProperties?: boolean | JsonSchema;
-  items?: JsonSchema;
-  anyOf?: JsonSchema[];
-  enum?: (string | number)[];
-  const?: unknown;
-  default?: unknown;
-  format?: string;
-  writeOnly?: boolean;
-  minimum?: number;
-  maximum?: number;
-  exclusiveMinimum?: number;
-  minLength?: number;
-  $ref?: string;
-  $defs?: Record<string, JsonSchema>;
-  "x-nestor"?: {
-    field?: string;
-    title?: string;
-    help?: string | null;
-    secret?: boolean;
-    /** a map whose values are secrets (MCP headers): each value is kept or replaced on its own */
-    secret_values?: boolean;
-    advanced?: boolean;
-    group?: string;
-    /** the named slot (`models`) whose names the property takes */
-    reference?: string | null;
-    /** the type of model the reference takes: only those are offered */
-    model_type?: ModelType | null;
-  };
-}
-
-/** What a model plugin serves. */
-export type ModelType = "language" | "embedding" | "voice";
-
-export interface ConfigSlot {
-  family: string;
-  /** one component, a list, or components under names other settings refer to */
-  shape: "one" | "list" | "named";
-  required: boolean;
-  title: string;
-  kinds: Record<string, JsonSchema>;
-  /** what each kind of the model slot serves */
-  model_types: Record<string, ModelType>;
-}
-
-export interface ConfigSchema {
-  sections: Record<string, JsonSchema>;
-  section_titles: Record<string, string>;
-  slots: Record<string, ConfigSlot>;
-}
-
-/** A secret as the configuration shows it: never its value. */
-export interface SecretShown {
-  set: boolean;
-  preview: string | null;
-}
-
-export type ConfigDocument = Record<string, unknown>;
-
-export interface ConfigState {
-  document: ConfigDocument;
-  path: string;
-  restart_required: boolean;
-  pending_changes: string[];
-}
-
-export interface ConfigProblem {
-  path: (string | number)[];
-  code: string;
-  message_id: string;
-  args: Record<string, string | number>;
-  message: string;
-}
-
-export interface ConfigChange {
-  path: string;
-  before: unknown;
-  after: unknown;
-  secret: boolean;
-}
-
-export interface ConfigDiff {
-  added: ConfigChange[];
-  removed: ConfigChange[];
-  changed: ConfigChange[];
-}
-
-export interface ConfigPreview {
-  valid: boolean;
-  problems: ConfigProblem[];
-  diff: ConfigDiff;
-}
-
-export interface ConfigWritten {
-  diff: ConfigDiff;
-  restart_required: boolean;
-  pending_changes: string[];
-}
-
-export interface HistoryEntry {
-  id: Id;
-  at: Instant;
-  size: number;
-}
-
-export interface HistoryDocument {
-  id: Id;
-  at: Instant;
-  document: ConfigDocument;
-}
-
-export interface Secret {
-  name: string;
-  set: boolean;
-  preview: string | null;
-  used_by: string[]; // configuration paths that reference it
-}
+export type ModelType = S["ModelType"];
+export type ConfigSlot = S["SlotOut"];
+export type ConfigSchema = S["ConfigSchemaOut"];
+export type ConfigDocument = S["ConfigOut"]["document"];
+export type ConfigState = S["ConfigOut"];
+export type ConfigProblem = S["ProblemOut"];
+export type ConfigChange = S["ChangeOut"];
+export type ConfigDiff = S["DiffOut"];
+export type ConfigPreview = S["PreviewOut"];
+export type ConfigWritten = S["WrittenOut"];
+export type HistoryEntry = S["HistoryEntryOut"];
+export type HistoryDocument = S["HistoryDocumentOut"];
+export type Secret = S["SecretOut"];
 
 // -- errors ---------------------------------------------------------------------------------------
 
-export interface ErrorBody {
-  error: {
-    code: string;
-    message_id?: string;
-    args?: Record<string, string | number>;
-    message: string;
-    problems?: ConfigProblem[] | null;
-  };
-}
+export type ErrorCode = S["ErrorDetail"]["code"];
+export type ErrorBody = S["ErrorOut"];
+
+type Query<P extends keyof paths> = paths[P] extends { get: { parameters: { query?: infer Q } } } ? Q : never;

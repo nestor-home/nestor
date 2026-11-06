@@ -17,7 +17,7 @@ import { useT } from "@/i18n";
 import { tr } from "@/i18n/runtime";
 import { moment } from "@/lib/dates";
 import { CAPABILITY_ICON } from "@/lib/icons";
-import { usePeopleNames } from "@/lib/people";
+import { personName } from "@/lib/people";
 import { useCan, useMe } from "@/lib/session";
 import { IdentifyButton } from "./add-satellite";
 import { DeviceMark } from "./device-mark";
@@ -106,7 +106,6 @@ export function SatelliteFrame({ id, children }: { id: string; children: ReactNo
 export function SatelliteOverview({ satellite: s }: { satellite: Satellite }) {
   const t = useT();
   const me = useMe();
-  const name = usePeopleNames();
   const canRevoke = useCan("satellites:write");
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -131,7 +130,7 @@ export function SatelliteOverview({ satellite: s }: { satellite: Satellite }) {
       <Facts>
         <Fact term={t("sat-paired-at")}>
           {s.approved_by
-            ? t("sat-paired-by", { when: moment(s.paired_at), name: name(s.approved_by) })
+            ? t("sat-paired-by", { when: moment(s.paired_at), name: personName(s.approved_by) })
             : moment(s.paired_at)}
         </Fact>
         <Fact term={t("sat-last-seen")}>{s.last_seen_at ? <Ago iso={s.last_seen_at} /> : "—"}</Fact>

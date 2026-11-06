@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { JsonSchema } from "@/api";
 import schemaFr from "@/mocks/config/schema.fr.json";
-import { controlOf, getAt, problemsUnder, resolve, setAt, typedSecret } from "./schema";
+import { controlOf, getAt, type JsonSchema, problemsUnder, resolve, setAt, typedSecret } from "./schema";
 
 const SCHEMA = schemaFr as unknown as {
   sections: Record<string, JsonSchema>;

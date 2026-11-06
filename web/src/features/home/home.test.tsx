@@ -30,7 +30,9 @@ describe("the home: the agent first, then the house, the work, the day", () => {
     const { stream } = renderApp("/");
     const today = await screen.findByRole("list", { name: "Today" });
     await waitFor(() => expect(within(today).getAllByRole("listitem").length).toBeGreaterThan(0));
-    stream.emit(liveItem({ uid: "live-1", room: "kitchen", links: { session: "s-live" }, people: ["lea"] }));
+    stream.emit(
+      liveItem({ id: "live-1", room: "kitchen", links: { session: "s-live" }, people: [{ id: "lea", name: "Léa" }] }),
+    );
     expect(await screen.findByText(/I'm listening to Léa \(kitchen\)/)).toBeInTheDocument();
     await waitFor(() =>
       expect(within(today).getAllByRole("link")[0]).toHaveAttribute("href", "/journal?session=s-live"),
@@ -43,8 +45,8 @@ describe("the home: the agent first, then the house, the work, the day", () => {
     db.pairing = [];
     for (const s of db.satellites) s.connected = true;
     for (const t of db.tasks) if (t.status === "running" || t.status === "failed") t.status = "completed";
-    db.journal = db.journal.filter((e) => !e.type.endsWith("delivery_failed"));
-    for (const c of db.system.components) c.health = "ok";
+    db.journal = db.journal.filter((e) => !e.item.type.endsWith("delivery_failed"));
+    for (const c of db.system.components) c.health = "started";
     (db.config.document.initiative as Record<string, unknown>).quiet_hours = null;
     renderApp("/");
     expect(await screen.findByText("All quiet.")).toBeInTheDocument();

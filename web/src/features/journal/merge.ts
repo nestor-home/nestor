@@ -5,10 +5,10 @@ export function matches(item: JournalItem, f: JournalFilters): boolean {
   const q = f.q?.toLowerCase();
   return (
     (!f.kinds?.length || f.kinds.includes(item.kind)) &&
-    (!f.person || item.people.includes(f.person)) &&
+    (!f.person || item.people.some((p) => p.id === f.person)) &&
     (!f.channel || item.channels.includes(f.channel)) &&
     (!f.room || item.room === f.room) &&
-    (!q || `${item.text} ${item.detail} ${item.reason?.text ?? ""}`.toLowerCase().includes(q)) &&
+    (!q || `${item.text} ${item.detail_text} ${item.reason?.text ?? ""}`.toLowerCase().includes(q)) &&
     (!f.from || item.at >= f.from) &&
     (!f.to || item.at <= f.to) &&
     (!f.tone || item.tone === f.tone) &&

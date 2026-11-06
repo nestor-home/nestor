@@ -34,7 +34,6 @@ import { activeLocale, tr } from "@/i18n/runtime";
 import { brandName, brandOf } from "@/lib/brands";
 import { hourMinute, startOfToday } from "@/lib/dates";
 import { say } from "@/lib/messages";
-import { usePeopleNames } from "@/lib/people";
 import { useCan, useMe } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import { elsewhere, lineOf, type Mark, marksOf, nodeOf, type RoomNode, roomsOf } from "./mind";
@@ -49,7 +48,7 @@ const LIVE = { saccades: true };
 
 /** The thread page of an event's conversation (its session for records that predate conversations). */
 const threadOf = (item: JournalItem) =>
-  item.links.conversation ? { conversation: item.links.conversation } : { session: item.links.session };
+  item.links.conversation ? { conversation: item.links.conversation } : { session: item.links.session ?? undefined };
 
 const clock = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
 
@@ -70,7 +69,6 @@ export function HomeView() {
   const canWatches = useCan("watches:read");
   const canSatellites = useCan("satellites:read");
   const canPeople = useCan("people:read");
-  const name = usePeopleNames();
   const day = useQuery(journalLatestQuery({ from: startOfToday() }, 200));
   const people = useQuery({ ...peopleQuery, enabled: canPeople });
   const satellites = useQuery({ ...satellitesQuery, enabled: canSatellites });
@@ -98,7 +96,6 @@ export function HomeView() {
     latest,
     state,
     { tasks: running, troubled: attention.length, quietUntil: quiet?.active ? clock(quiet.to) : null },
-    name,
     now,
   );
   const focus = latest ? nodeOf(latest, paired) : null;
@@ -109,7 +106,7 @@ export function HomeView() {
   return (
     <div className="grid gap-16 md:gap-20">
       <Hero
-        greeting={t("home-hello", { greeting: greeting(date), name: me.account.person_name ?? me.account.login })}
+        greeting={t("home-hello", { greeting: greeting(date), name: me.account.person?.name ?? me.account.login })}
         date={new Intl.DateTimeFormat(activeLocale(), { weekday: "long", day: "numeric", month: "long" }).format(date)}
         agent={me.agent.name}
         state={state}
@@ -325,7 +322,6 @@ function Now({
   now: number;
 }) {
   const t = useT();
-  const name = usePeopleNames();
   const talks = new Map<string, JournalItem>();
   for (const i of items) {
     const talk = i.links.conversation ?? i.links.session;
@@ -356,10 +352,10 @@ function Now({
               <Link to="/journal" search={threadOf(i)} className="group block">
                 <span className="text-[1.05rem] text-ink group-hover:underline">
                   {i.people.length
-                    ? t("home-talking", { people: i.people.map((p) => name(p)).join(", ") })
+                    ? t("home-talking", { people: i.people.map((p) => p.name).join(", ") })
                     : t("home-talking-someone")}
                 </span>
-                <span className="mt-1 block text-[0.92rem] text-ink-muted">{i.detail || say(i)}</span>
+                <span className="mt-1 block text-[0.92rem] text-ink-muted">{i.detail_text || say(i)}</span>
               </Link>
             </li>
           ))}
@@ -442,7 +438,6 @@ const MARK_TONE: Record<Mark["kind"], string> = {
 /** Today's notable moments, newest first, each a way into the journal. */
 function Today({ marks }: { marks: Mark[] }) {
   const t = useT();
-  const name = usePeopleNames();
   const latest = [...marks].reverse().slice(0, 8);
   return (
     <Band
@@ -459,16 +454,16 @@ function Today({ marks }: { marks: Mark[] }) {
             const text =
               m.kind === "conversation"
                 ? m.people.length
-                  ? t("home-moment-conversation", { people: m.people.map((p) => name(p)).join(", "), count: m.count })
+                  ? t("home-moment-conversation", { people: m.people.map((p) => p.name).join(", "), count: m.count })
                   : t("home-moment-conversation-someone", { count: m.count })
-                : m.item.detail && m.kind === "delivery"
-                  ? m.item.detail
+                : m.item.detail_text && m.kind === "delivery"
+                  ? m.item.detail_text
                   : say(m.item);
             return (
               <li key={m.key}>
                 <Link
                   to="/journal"
-                  search={m.kind === "conversation" ? threadOf(m.item) : { event: m.item.id }}
+                  search={m.kind === "conversation" ? threadOf(m.item) : { event: m.item.position }}
                   className="group grid grid-cols-[3.2rem_0.6rem_1fr] items-baseline gap-x-3 py-2.5"
                 >
                   <time dateTime={m.at} className="font-mono text-[0.85rem] text-ink-muted tabular">
@@ -499,7 +494,6 @@ function Today({ marks }: { marks: Mark[] }) {
 /** What it learnt: the latest memories, today's first. */
 function Knows() {
   const t = useT();
-  const name = usePeopleNames();
   const memories = useQuery({ ...memoriesQuery({}), enabled: useCan("memories:read") });
   const latest = [...(memories.data ?? [])].sort((a, b) => b.updated_at.localeCompare(a.updated_at)).slice(0, 4);
   if (!latest.length) return null;
@@ -516,12 +510,12 @@ function Knows() {
       <ul className="grid gap-x-12 gap-y-6 md:grid-cols-2">
         {latest.map((m) => (
           <li key={m.id}>
-            <Link to="/memories" search={m.about ? { about: m.about } : {}} className="group block">
+            <Link to="/memories" search={m.about ? { about: m.about.id } : {}} className="group block">
               <span className="block font-serif text-[1.2rem] leading-snug text-ink group-hover:underline">
                 {m.text}
               </span>
               <span className="mt-1.5 block text-[0.88rem] text-ink-muted">
-                {m.about ? `${name(m.about)} · ` : ""}
+                {m.about ? `${m.about.name} · ` : ""}
                 {m.updated_at >= today ? (
                   t("home-learnt-today", { time: hourMinute(m.updated_at) })
                 ) : (

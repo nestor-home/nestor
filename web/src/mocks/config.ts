@@ -3,8 +3,9 @@
  * `${…}`), the vault of secrets, the history of earlier files, and the checks Nestor runs before
  * writing. The schemas are the ones a real instance answered (`config/schema.{fr,en}.json`).
  */
-import type { ConfigDocument, ConfigProblem, JsonSchema } from "@/api";
+import type { ConfigDocument, ConfigProblem } from "@/api";
 import type { components } from "@/api/schema.gen";
+import type { JsonSchema } from "@/features/config/schema";
 import schemaEn from "./config/schema.en.json";
 import schemaFr from "./config/schema.fr.json";
 import { minutes } from "./fixtures";

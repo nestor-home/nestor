@@ -36,6 +36,7 @@ const LONG_SENTENCE =
 const PROVIDER_ERROR = `invalid_grant: Token has been expired or revoked. (request_id=${"9f8e7d6c5b4a".repeat(5)}) at ${LONG_URL}`;
 const LONG_NAME = "Marie-Amélie Bérengère de La Tour d'Auvergne-Lauraguais";
 const LONG_ROOM = "second-floor-guest-bedroom-on-the-garden-side-under-the-eaves";
+const MARIE = { id: "marie-amelie", name: LONG_NAME };
 
 /** Adds the stress shapes to a fresh mock state. */
 export function stress(db: Db, now = Date.now()): void {
@@ -43,42 +44,20 @@ export function stress(db: Db, now = Date.now()): void {
   db.people.push({
     id: "marie-amelie",
     name: LONG_NAME,
-    channels: ["voice", `telegram:@${"marie_amelie_de_la_tour".repeat(2)}`, "web"],
+    channel_accounts: ["voice", `telegram:@${"marie_amelie_de_la_tour".repeat(2)}`, "web"],
     reach: `telegram:@${"marie_amelie_de_la_tour".repeat(2)}`,
     presence: { home: true, room: LONG_ROOM, since: at(3) },
     account: null,
-    account_login: null,
   });
   const mathis = db.accounts[0];
   if (mathis) mathis.login = `mathis.lambert.${"main-administrator".repeat(2)}@example.org`;
 
-  let position = Math.max(0, ...db.journal.map((e) => Number(e.id) || 0));
+  let position = Math.max(0, ...db.journal.map((e) => e.item.position));
   const events: JournalEvent[] = [];
-  const ev = (d: Partial<Omit<Draft, "title">> & Pick<Draft, "type" | "kind"> & { text: string }, ago: number) => {
-    const id = String(++position);
-    const { text, ...rest } = d;
-    const item = toItem({
-      detail: "",
-      people: [],
-      channels: [],
-      room: null,
-      tone: "normal",
-      links: {},
-      cause: null,
-      outcome: null,
-      tool: null,
-      brand: null,
-      ...rest,
-      title: text,
-    });
-    events.push({
-      ...item,
-      id,
-      uid: `stress-${id}`,
-      at: at(ago),
-      kind_label: "",
-      record: { type: d.type, payload: { text: d.detail, url: LONG_URL, args: JSON_ARGS } },
-    });
+  const ev = (d: Omit<Draft, "title"> & { text: string }, ago: number) => {
+    const { text, ...draft } = d;
+    const item = toItem({ ...draft, title: text }, { position: ++position, id: `stress-${position}`, at: at(ago) });
+    events.push({ item, record: { type: d.type, payload: { text: d.detail, url: LONG_URL, args: JSON_ARGS } } });
   };
   const session = { session: "s-stress", turn: "t-stress" };
   ev(
@@ -87,7 +66,7 @@ export function stress(db: Db, now = Date.now()): void {
       kind: "conversation",
       text: "Marie-Amélie said",
       detail: `Look at this document ${LONG_URL} and tell me whether ${LONG_WORD} appears in it, it is urgent.`,
-      people: ["marie-amelie"],
+      people: [MARIE],
       channels: ["web"],
       room: LONG_ROOM,
       links: session,
@@ -137,7 +116,7 @@ export function stress(db: Db, now = Date.now()): void {
       kind: "delivery",
       text: `Message not passed on: ${LONG_WORD}`,
       detail: PROVIDER_ERROR,
-      people: ["marie-amelie"],
+      people: [MARIE],
       channels: ["telegram"],
       tone: "warning",
       links: { delivery: "d-stress" },
@@ -152,7 +131,7 @@ export function stress(db: Db, now = Date.now()): void {
     executor: "hermes",
     status: "running",
     status_label: "running",
-    requested_by: "marie-amelie",
+    requested_by: MARIE,
     started_at: at(20),
     ended_at: null,
     steps: [`Downloading ${LONG_URL}`, `Analysing ${LONG_WORD}`],
@@ -164,7 +143,7 @@ export function stress(db: Db, now = Date.now()): void {
   db.watches.unshift({
     id: `w-${"fedcba9876543210".repeat(2)}`,
     what: `Tell ${LONG_NAME} when ${LONG_WORD} replies about ${LONG_URL}`,
-    owner: "marie-amelie",
+    owner: MARIE,
     kinds: ["mail"],
     once: false,
     created_at: at(300),
@@ -176,9 +155,10 @@ export function stress(db: Db, now = Date.now()): void {
   db.memories.unshift({
     id: "m-stress",
     text: `${LONG_NAME} keeps her papers at ${LONG_URL} and calls it ${LONG_WORD}.`,
-    about: "marie-amelie",
-    told_by: "marie-amelie",
-    channel: "web",
+    about: MARIE,
+    told_by: MARIE,
+    learnt_in: "web",
+    created_at: at(10),
     updated_at: at(10),
     learnt_event: null,
     session: "s-stress",
@@ -188,7 +168,7 @@ export function stress(db: Db, now = Date.now()): void {
   if (connection) {
     connection.account = `${"a.very.long.mailbox.identifier".repeat(2)}@example-household-provider.org`;
     connection.status = "error";
-    connection.status_reason = PROVIDER_ERROR;
+    connection.status_reason = { message: { id: "connection-status-reason", args: {} }, text: PROVIDER_ERROR };
   }
   const satellite = db.satellites[0];
   if (satellite) satellite.room = LONG_ROOM;

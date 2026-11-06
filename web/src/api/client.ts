@@ -1,7 +1,7 @@
 import createClient from "openapi-fetch";
 import { activeLocale, hasMessage, tr } from "@/i18n/runtime";
-import type { paths } from "./dto";
-import type { ConfigProblem, ErrorBody } from "./types";
+import type { paths } from "./schema.gen";
+import type { ConfigProblem, ErrorBody, ErrorCode } from "./types";
 
 export const API_BASE = "/api/v1";
 
@@ -9,7 +9,7 @@ export const API_BASE = "/api/v1";
 export class ApiError extends Error {
   constructor(
     readonly status: number,
-    readonly code: string,
+    readonly code: ErrorCode | "network" | "error", // the API's code, or a failure that never reached it
     message: string,
     readonly messageId: string | null = null,
     readonly args: Record<string, string | number> = {},
@@ -70,7 +70,7 @@ export function url(path: string, query?: Record<string, string | number | undef
 }
 
 /** The data of a call, or the API's refusal as an ApiError; a network failure says Nestor is down. */
-export async function unwrap<T>(call: Promise<{ data?: T; error?: unknown; response: Response }>): Promise<T> {
+export async function unwrap<T>(call: Promise<{ data?: T; error?: ErrorBody; response: Response }>): Promise<T> {
   let result: Awaited<typeof call>;
   try {
     result = await call;
@@ -82,17 +82,10 @@ export async function unwrap<T>(call: Promise<{ data?: T; error?: unknown; respo
   throw toError(result.response.status, result.error);
 }
 
-function toError(status: number, data: unknown): ApiError {
-  const error = (data as Partial<ErrorBody> | undefined)?.error;
+function toError(status: number, body: ErrorBody | undefined): ApiError {
+  const error = body?.error; // undefined when no API answered (a proxy, a server going down)
   if (error?.message) {
-    return new ApiError(
-      status,
-      error.code ?? "error",
-      error.message,
-      error.message_id ?? null,
-      error.args ?? {},
-      error.problems ?? [],
-    );
+    return new ApiError(status, error.code, error.message, error.message_id, error.args, error.problems ?? []);
   }
   if (status === 401)
     return new ApiError(status, "unauthenticated", tr("error-unauthenticated"), "error-unauthenticated");

@@ -6,7 +6,7 @@ import { connectionsQuery, journalLatestQuery, satellitesQuery, systemQuery, tas
 import { tr } from "@/i18n/runtime";
 import { startOfToday } from "@/lib/dates";
 import { is } from "@/lib/events";
-import { say } from "@/lib/messages";
+import { rendered, say } from "@/lib/messages";
 import { useCan } from "@/lib/session";
 
 export interface Attention {
@@ -45,20 +45,20 @@ export function useAttention(): { items: Attention[]; ready: boolean } {
       title: tr(c.status === "needs_reauth" ? "attention-reauth" : "attention-connection-error", {
         account: c.account,
       }),
-      detail: c.status_reason ?? tr("attention-tools-hidden"),
+      detail: rendered(c.status_reason) || tr("attention-tools-hidden"),
       action: tr(c.status === "needs_reauth" ? "attention-reconnect" : "action-see"),
       link: { to: "/connections/$connectionId", params: { connectionId: c.id } },
     });
   }
   for (const p of satellites.data?.pending ?? []) {
     items.push({
-      key: `pairing-${p.id}`,
+      key: `pairing-${p.pairing_id}`,
       icon: Hourglass,
       tone: "attention",
       title: tr("attention-pairing", { device: p.device.id }),
       detail: tr("attention-pairing-detail", { model: p.device.model, room: p.device.room }),
       action: tr("attention-approve"),
-      link: { to: "/satellites", search: { approve: p.id } },
+      link: { to: "/satellites", search: { approve: p.pairing_id } },
     });
   }
   for (const s of satellites.data?.paired ?? []) {
@@ -85,9 +85,9 @@ export function useAttention(): { items: Attention[]; ready: boolean } {
       icon: MessageSquareOff,
       tone: "error",
       title: say(f),
-      detail: f.detail,
+      detail: f.detail_text,
       action: tr("attention-understand"),
-      link: { to: "/journal", search: { event: f.id } },
+      link: { to: "/journal", search: { event: f.position } },
       at: f.at,
     });
   }
@@ -106,9 +106,9 @@ export function useAttention(): { items: Attention[]; ready: boolean } {
   }
   for (const c of system.data?.components ?? []) {
     // connections, tools and satellites already speak for themselves above
-    if (c.health !== "down" || ["satellite", "tools", "connector"].includes(c.slot)) continue;
+    if (c.health !== "unavailable" || ["satellite", "tools", "connector"].includes(c.slot)) continue;
     items.push({
-      key: `component-${c.id}`,
+      key: `component-${c.slot}-${c.name}`,
       icon: ServerCrash,
       tone: "error",
       title: tr("attention-component-down", { name: c.name }),

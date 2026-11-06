@@ -43,6 +43,13 @@ class ErrorOut(BaseModel):
     error: ErrorDetail
 
 
+class OriginOut(BaseModel):
+    """Where something was asked for: a task, a watch."""
+
+    session: str  # the conversation it was asked in
+    channel: str
+
+
 class PersonRef(BaseModel):
     id: str
     name: str

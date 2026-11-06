@@ -14,11 +14,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useT } from "@/i18n";
 import { KindMark } from "@/lib/brands";
-import { usePeopleNames } from "@/lib/people";
 
 export function MemoryCard({ memory, editable }: { memory: Memory; editable: boolean }) {
   const t = useT();
-  const name = usePeopleNames();
   const queryClient = useQueryClient();
   const notify = useNotify();
   const forget = useMutation({
@@ -38,18 +36,22 @@ export function MemoryCard({ memory, editable }: { memory: Memory; editable: boo
           <span>
             {t("mem-about-label")}{" "}
             {memory.about ? (
-              <Link to="/people/$personId" params={{ personId: memory.about }} className="text-ember hover:underline">
-                {name(memory.about)}
+              <Link
+                to="/people/$personId"
+                params={{ personId: memory.about.id }}
+                className="text-ember hover:underline"
+              >
+                {memory.about.name}
               </Link>
             ) : (
               <span className="text-ember">{t("household-everyone")}</span>
             )}
           </span>
-          {memory.told_by ? <span>{t("mem-told-by", { name: name(memory.told_by) })}</span> : null}
-          {memory.channel ? (
+          {memory.told_by ? <span>{t("mem-told-by", { name: memory.told_by.name })}</span> : null}
+          {memory.learnt_in ? (
             <span className="inline-flex items-center gap-1">
-              <KindMark kind={memory.channel} className="size-3" label={false} />
-              {memory.channel}
+              <KindMark kind={memory.learnt_in} className="size-3" label={false} />
+              {memory.learnt_in}
             </span>
           ) : null}
           <Ago iso={memory.updated_at} />

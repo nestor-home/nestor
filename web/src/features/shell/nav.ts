@@ -1,13 +1,14 @@
 import type { LucideIcon } from "lucide-react";
 import type { Scope } from "@/api";
 import { SECTION_ICON } from "@/lib/icons";
+import { type Permission, permissions } from "@/lib/session";
 
 export type SectionPath = keyof typeof SECTION_ICON;
 
 export interface NavItem {
   to: SectionPath;
   label: string; // a message id of shell.ftl
-  scope: Scope;
+  scope: Permission;
   key: string; // `g` then this key
   icon: LucideIcon;
 }
@@ -17,7 +18,7 @@ export interface NavGroup {
   items: NavItem[];
 }
 
-const item = (to: SectionPath, label: string, scope: Scope, key: string): NavItem => ({
+const item = (to: SectionPath, label: string, scope: Permission, key: string): NavItem => ({
   to,
   label,
   scope,
@@ -53,7 +54,8 @@ export const NAV: NavGroup[] = [
 ];
 
 export function visibleNav(scopes: readonly Scope[]): NavGroup[] {
-  return NAV.map((g) => ({ ...g, items: g.items.filter((i) => scopes.includes(i.scope)) })).filter(
+  const allowed = permissions(scopes);
+  return NAV.map((g) => ({ ...g, items: g.items.filter((i) => allowed.includes(i.scope)) })).filter(
     (g) => g.items.length,
   );
 }

@@ -14,7 +14,7 @@ import { useT } from "@/i18n";
 
 /** The household's own OAuth client at the provider (Home Assistant's "application credentials"). */
 export function OAuthClientSection({ connector }: { connector: Connector }) {
-  const registered = connector.client;
+  const registered = connector.oauth?.registered ? connector.oauth : null;
   const t = useT();
   return (
     <section aria-labelledby="oauth-client" className="grid gap-4">
@@ -52,11 +52,11 @@ export function OAuthClientSection({ connector }: { connector: Connector }) {
           ) : null}
         </>
       )}
-      {connector.redirect_uri ? (
+      {connector.oauth ? (
         <div className="grid gap-1.5">
           <p className="text-[0.8rem] font-medium">{t("conn-redirect-uri")}</p>
-          <CopyField value={connector.redirect_uri} label={t("conn-redirect-uri-label")} />
-          {connector.relayed ? <p className="text-xs text-ink-muted">{t("conn-relayed")}</p> : null}
+          <CopyField value={connector.oauth.redirect_uri} label={t("conn-redirect-uri-label")} />
+          {connector.oauth.relayed ? <p className="text-xs text-ink-muted">{t("conn-relayed")}</p> : null}
         </div>
       ) : null}
       <FormDialog
