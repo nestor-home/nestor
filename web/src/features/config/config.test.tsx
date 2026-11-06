@@ -83,7 +83,7 @@ describe("the configuration", () => {
     renderApp("/config/household");
     await user.click(await screen.findByRole("button", { name: "Edit Jules" }));
     const sheet = await screen.findByRole("dialog", { name: "Jules" });
-    await user.click(within(sheet).getByRole("button", { name: "Add" }));
+    await user.click(within(sheet).getByRole("button", { name: "Add to Accounts" }));
     await user.type(within(sheet).getByRole("textbox", { name: "Accounts, item 1" }), "telegram:@jules");
     await user.click(within(sheet).getByRole("button", { name: "Done" }));
     await user.click(await screen.findByRole("button", { name: "1 change" }));
@@ -219,12 +219,12 @@ describe("the configuration", () => {
     expect(within(changes).getByText("secret changed")).toBeInTheDocument();
   });
 
-  it("shows any section the schema has, such as when a conversation ends", async () => {
-    renderApp("/config/conversation");
-    expect(await screen.findByRole("heading", { name: "Conversations" })).toBeInTheDocument();
-    const field = await screen.findByRole("spinbutton", { name: "New conversation after (seconds)" });
-    expect(field).toHaveAttribute("placeholder", "300");
-    expect(screen.getByRole("link", { name: /Conversations/ })).toHaveAttribute("href", "/config/conversation");
+  it("shows any section the schema has, such as which memories each turn carries", async () => {
+    renderApp("/config/memory");
+    expect(await screen.findByRole("heading", { name: "Memory" })).toBeInTheDocument();
+    const field = await screen.findByRole("spinbutton", { name: "Latest memories per turn" });
+    expect(field).toHaveAttribute("placeholder", "150");
+    expect(screen.getByRole("link", { name: /Memory/ })).toHaveAttribute("href", "/config/memory");
   });
 });
 

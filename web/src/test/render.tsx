@@ -15,6 +15,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { I18nProvider } from "@/i18n";
 import { ThemeProvider } from "@/lib/theme";
 import { CSRF } from "@/mocks/handlers";
+import { toItem } from "@/mocks/messages";
 import { createAppRouter } from "@/router";
 
 /** A journal stream the test drives by hand. */
@@ -87,69 +88,40 @@ export function renderWithProviders(ui: ReactNode) {
 }
 
 /** The server's message for each event type (`presentation/events.py`). */
-const MESSAGE_OF: Record<string, string> = {
-  "conversation.turn.user": "journal-user-said",
-  "conversation.turn.assistant": "journal-assistant-answered",
-  "conversation.turn.cut": "journal-answer-cut",
-  "agent.tool.called": "journal-tool-called",
-  "agent.tool.completed": "journal-tool-completed",
-  "task.started": "journal-task-started",
-  "task.progress": "journal-task-progressed",
-  "task.ended": "journal-task-ended",
-  "watch.created": "journal-watch-created",
-  "watch.triggered": "journal-watch-triggered",
-  "initiative.considered": "journal-delivery-considered",
-  "initiative.delivered": "journal-delivered",
-  "initiative.undeliverable": "journal-delivery-failed",
-  "memory.recorded": "journal-memory-recorded",
-  "presence.changed": "journal-presence-changed",
+/** The English line the mock journal writes for an event type (`mocks/messages.ts` reads it as the server's message). */
+const TITLE_OF: Record<string, string> = {
+  "conversation.turn.user": "Jules said",
+  "conversation.turn.assistant": "Richie answered",
+  "conversation.turn.cut": "Answer cut off",
+  "conversation.fallback": "Fallback answer: model too slow",
+  "agent.tool.called": "Tool weather called",
+  "agent.tool.completed": "Tool weather finished in 1.2 s",
+  "task.started": "Task T handed to hermes",
+  "task.progress": "Task T: new step",
+  "task.ended": "Task T completed (2 min)",
+  "watch.created": "Watch created: the parcel",
+  "watch.triggered": "Watch w1 triggered by “Your parcel has shipped”",
+  "initiative.considered": "Decided to speak to jules: watch w1",
+  "initiative.delivered": "Message passed on: watch w1",
+  "initiative.undeliverable": "Message not passed on: watch w1",
+  "presence.changed": "Jules is in the kitchen",
+  "observation.person.detected": "1 person seen by reachy (room “salon”)",
 };
 
 let livePosition = 100_000;
 
-/** A journal item as the stream sends it; `links` lists only the ones the test cares about. */
+/** A journal item as the stream sends it, built as the mock server builds its own; `links` lists only the ones
+ * the test cares about. */
 export function liveItem({
   links,
   ...overrides
 }: Partial<Omit<JournalItem, "links">> & { links?: Partial<EventLinks> } = {}): JournalItem {
   const type = overrides.type ?? "conversation.turn.user";
-  const id = MESSAGE_OF[type] ?? "journal-other";
-  const detail = overrides.detail ?? "";
-  return {
-    message: { id, args: { name: "Jules" } },
-    position: ++livePosition,
-    id: `live-${Math.random().toString(36).slice(2)}`,
-    at: new Date().toISOString(),
-    type: "conversation.turn.user",
-    kind: "conversation",
-    text: "Jules said",
-    detail,
-    detail_message: null,
-    detail_text: detail,
-    reason: null,
-    people: [{ id: "jules", name: "Jules" }],
-    channels: ["voice"],
-    room: null,
-    tone: "normal",
-    cause: null,
-    outcome: null,
-    tool: null,
-    brand: "voice",
-    ...overrides,
-    links: {
-      session: null,
-      conversation: null,
-      turn: null,
-      call: null,
-      task: null,
-      watch: null,
-      delivery: null,
-      connection: null,
-      satellite: null,
-      memory: null,
-      ...links,
-    },
-  };
+  const item = toItem(
+    { type, title: TITLE_OF[type] ?? type, people: [{ id: "jules", name: "Jules" }], channels: ["voice"], links },
+    { position: ++livePosition, id: `live-${Math.random().toString(36).slice(2)}`, at: new Date().toISOString() },
+  );
+  return { ...item, ...overrides, detail_text: overrides.detail_text ?? overrides.detail ?? item.detail_text };
 }
 
 /** Waits, inside act(), until no query is fetching: what a person sees once the page has loaded. */

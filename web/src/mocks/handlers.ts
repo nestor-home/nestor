@@ -10,7 +10,7 @@ import { db, type MockAddition, save } from "./db";
 import { arriving, METHODS, type MockPending, type MockPerson, PROTOCOL, SCOPES, tools as toolsOf } from "./fixtures";
 import { inFrench } from "./french";
 import { facets, filtersOf, matching } from "./journal";
-import { type Draft, errorText, type Lang, localize, render, toItem } from "./messages";
+import { catalogueOf, type Draft, errorText, type Lang, localize, render, toItem } from "./messages";
 
 type In<N extends keyof components["schemas"]> = components["schemas"][N];
 
@@ -374,8 +374,12 @@ export const handlers = [
     HttpResponse.json({ locales: ["en", "fr"], default: "en", household: "en" } satisfies In<"LanguagesOut">),
   ),
 
-  // the server's own catalogue is not mocked: the mock renders `text` itself (messages.ts)
-  http.get(`${API}/i18n/:locale`, () => new HttpResponse("", { headers: { "Content-Type": "text/plain" } })),
+  // Nestor's own catalogue, as the server sends it (no plugin adds to it here)
+  http.get(`${API}/i18n/:locale`, ({ params }) =>
+    params.locale === "en" || params.locale === "fr"
+      ? new HttpResponse(catalogueOf(params.locale), { headers: { "Content-Type": "text/plain" } })
+      : new HttpResponse(null, { status: 404 }),
+  ),
 
   // -- invitations (no session, no CSRF: same origin only) ---------------------------------------
   http.post(`${API}/invitations/inspect`, async ({ request }) => {

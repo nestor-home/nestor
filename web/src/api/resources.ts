@@ -26,7 +26,7 @@ const wav = (audio: ArrayBuffer) => ({
 });
 
 /** An operation whose answer the screens do not read. */
-const done = (call: Parameters<typeof unwrap>[0]): Promise<void> => done(call);
+const done = (call: Parameters<typeof unwrap>[0]): Promise<void> => unwrap(call).then(() => undefined);
 
 /** How connecting ends: on the provider's consent page, or connected at once. */
 export type ConnectResult = { kind: "redirect"; url: string } | { kind: "connected"; connection: Connection };

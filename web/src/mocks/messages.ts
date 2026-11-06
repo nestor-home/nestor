@@ -7,18 +7,31 @@
 import { FluentBundle, FluentResource } from "@fluent/bundle";
 import type { EventLinks, JournalItem, Kind, Message, PersonRef, Tone } from "@/api";
 import { kindValues } from "@/api/schema.gen";
-import { coreOf } from "@/i18n/catalog";
 import { oneOf } from "@/lib/enums";
 import { inFrench } from "./french";
 import kinds from "./server/journal-kinds.json";
 
 export type Lang = "en" | "fr";
 
+/** Nestor's whole catalogue, as `GET /i18n/{locale}` sends it (the admin bundles only its labels). */
+const CATALOGUE = import.meta.glob("../../../src/nestor/locales/*/*.ftl", {
+  query: "?raw",
+  import: "default",
+  eager: true,
+}) as Record<string, string>;
+
+export function catalogueOf(locale: Lang): string {
+  return Object.entries(CATALOGUE)
+    .filter(([path]) => path.includes(`/locales/${locale}/`))
+    .map(([, text]) => text)
+    .join("\n");
+}
+
 const bundles: Record<Lang, FluentBundle> = { en: bundle("en"), fr: bundle("fr") };
 
 function bundle(locale: Lang): FluentBundle {
   const b = new FluentBundle(locale, { useIsolating: false });
-  b.addResource(new FluentResource(coreOf(locale)));
+  b.addResource(new FluentResource(catalogueOf(locale)));
   return b;
 }
 

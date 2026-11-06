@@ -530,7 +530,13 @@ function ListControl({ id, node, root, path, required, label }: ControlProps) {
           {fallback ? t("cfg-list-default", { value: fallback }) : t("cfg-list-empty")}
         </p>
       )}
-      <Button variant="outline" size="sm" className="justify-self-start" onClick={() => write([...items, ""])}>
+      <Button
+        variant="outline"
+        size="sm"
+        className="justify-self-start"
+        aria-label={t("cfg-add-item-to", { field: label })}
+        onClick={() => write([...items, ""])}
+      >
         <Plus /> {t("cfg-add-item")}
       </Button>
     </div>
