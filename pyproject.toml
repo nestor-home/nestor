@@ -51,9 +51,11 @@ voice-id = ["sherpa-onnx==2.0.1"]
 nestor = "nestor.cli:main"
 
 [project.entry-points."nestor.adapters"]
-openai-compatible = "nestor.adapters.models.openai_compatible:plugin"
-openai-compatible-embeddings = "nestor.adapters.models.openai_embeddings:plugin"
-sherpa-onnx-voice = "nestor.adapters.voices.sherpa_onnx:plugin"
+openai-compatible-language = "nestor.adapters.models.openai_compatible.language:plugin"
+openai-compatible-embedding = "nestor.adapters.models.openai_compatible.embedding:plugin"
+elevenlabs-transcription = "nestor.adapters.models.elevenlabs.transcription:plugin"
+elevenlabs-speech = "nestor.adapters.models.elevenlabs.speech:plugin"
+sherpa-onnx-speaker = "nestor.adapters.models.sherpa_onnx.speaker:plugin"
 hermes = "nestor.adapters.executors.hermes:plugin"
 telegram = "nestor.adapters.channels.telegram:plugin"
 satellites = "nestor.adapters.channels.satellites:plugin"

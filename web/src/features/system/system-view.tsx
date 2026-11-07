@@ -5,6 +5,7 @@ import { Failure, Loading } from "@/components/states";
 import { Status, type StatusTone } from "@/components/status";
 import { useT } from "@/i18n";
 import { BrandMark, brandOf } from "@/lib/brands";
+import { modelTypeLabel } from "@/lib/labels";
 
 /** The slots the page groups components by (`ComponentOut.slot`), in this order. */
 const SLOTS: Record<Component["slot"], string> = {
@@ -67,7 +68,12 @@ function ComponentRow({ component: c }: { component: Component }) {
     <li className="grid grid-cols-[1.5rem_minmax(0,1fr)_auto] items-start gap-x-4 gap-y-1 px-5 py-3 sm:grid-cols-[1.5rem_minmax(0,1.3fr)_minmax(0,1fr)_7rem]">
       {brand ? <BrandMark brand={brand} className="mt-0.5 size-4.5 text-ink" /> : <span />}
       <div className="min-w-0">
-        <p className="text-ink">{c.name}</p>
+        <p className="text-ink">
+          {c.name}
+          {c.model_type ? (
+            <span className="ml-2 text-[0.85rem] text-ink-muted">{modelTypeLabel(c.model_type)}</span>
+          ) : null}
+        </p>
         <p className="truncate font-mono text-[0.7rem] text-ink-faint">{c.adapter}</p>
         {c.health_detail ? (
           <p className={c.health === "started" ? "mt-0.5 text-xs text-ink-muted" : "mt-0.5 text-xs text-amber"}>

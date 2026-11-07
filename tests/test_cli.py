@@ -115,7 +115,10 @@ def test_a_restart_stops_the_process_cleanly_then_runs_the_same_command_line(
     config = tmp_path / "nestor.yaml"
     config.write_text(
         CONFIG.format(data_dir=tmp_path, admin="null")
-        .replace("kind: scripted", "kind: openai-compatible, api_key: k, model: m, base_url: 'http://x'")
+        .replace(
+            "type: language, provider: scripted",
+            "type: language, provider: openai-compatible, api_key: k, model: m, base_url: 'http://x'",
+        )
         .replace("[{kind: remote, name: hermes}]", "[]")
         .replace("[{kind: memory, name: telegram}]", "[{kind: telegram, token: '1:a'}]")
         .replace("presence: {kind: static}\n", "")
@@ -215,8 +218,8 @@ def test_every_command_reads_the_dot_env_next_to_the_configuration_and_the_shell
     config.write_text(
         CONFIG.format(data_dir="${NESTOR_DATA}", admin="null")
         .replace(
-            "kind: scripted",
-            "kind: openai-compatible, api_key: '${OPENROUTER_API_KEY}', model: m, base_url: 'http://x'",
+            "type: language, provider: scripted",
+            "type: language, provider: openai-compatible, api_key: '${OPENROUTER_API_KEY}', model: m, base_url: 'http://x'",
         )
         .replace("[{kind: remote, name: hermes}]", "[]")
         .replace("[{kind: memory, name: telegram}]", "[{kind: telegram, token: '${secret:bot}'}]")

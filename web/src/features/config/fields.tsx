@@ -32,6 +32,7 @@ import {
   keyOf,
   move,
   type Path,
+  pluginOf,
   problemsByPath,
   problemsUnder,
   resolve,
@@ -341,8 +342,9 @@ function ReferenceControl({ id, node, root, path, required }: ControlProps) {
   const slot = getAt(draft, [reference]);
   // only the components that can serve here: a role that answers is offered no voice model
   const wanted = node["x-nestor"]?.model_type;
-  const served = schema.slots[reference]?.model_types ?? {};
-  const fits = (entry: unknown) => !wanted || (isRecord(entry) && served[String(entry.kind)] === wanted);
+  const target = schema.slots[reference];
+  const fits = (entry: unknown) =>
+    !wanted || (isRecord(entry) && target !== undefined && target.model_types[pluginOf(target, entry)] === wanted);
   const names = isRecord(slot) ? Object.keys(slot).filter((name) => fits(slot[name])) : [];
   const value = typeof field.value === "string" ? field.value : "";
   // a name the draft no longer has stays shown, so the problem the preview finds has its value

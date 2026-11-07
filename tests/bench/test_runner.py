@@ -32,7 +32,9 @@ def metric(run: Run, id: str) -> float | None:
 async def test_every_case_runs_against_every_variant_and_repetition(tmp_path: Path) -> None:
     suite = Quiz()
     right = variant(tmp_path, suite)
-    wrong = variant(tmp_path, suite, "wrong", "models: {m: {kind: oracle, replies: {two plus two: '5'}}}\n")
+    wrong = variant(
+        tmp_path, suite, "wrong", "models: {m: {type: language, provider: oracle, replies: {two plus two: '5'}}}\n"
+    )
     runs = await quiz_runs(tmp_path, right, wrong, plan=Plan(repeat=2))
     assert [r.variant for r in runs] == ["right", "wrong"]
     assert [(r.case, r.repetition) for r in runs[0].results] == [
@@ -45,7 +47,7 @@ async def test_every_case_runs_against_every_variant_and_repetition(tmp_path: Pa
 
 async def test_a_run_records_the_model_that_answered_tokens_cost_and_calls(tmp_path: Path) -> None:
     suite = Quiz()
-    text = "models: {m: {kind: oracle, served: oracle/v1-2026-10, replies: {two plus two: '4'}}}\n"
+    text = "models: {m: {type: language, provider: oracle, served: oracle/v1-2026-10, replies: {two plus two: '4'}}}\n"
     [run] = await quiz_runs(tmp_path, variant(tmp_path, suite, "served", text))
     assert run.served_models == ("oracle/v1-2026-10",)
     first = run.results[1].calls[0]
@@ -84,14 +86,16 @@ async def test_another_seed_or_model_is_not_answered_from_the_recordings_of_the_
     await quiz_runs(tmp_path, variant(tmp_path, suite))
     with pytest.raises(BenchError):
         await quiz_runs(tmp_path, variant(tmp_path, suite), plan=Plan(replay=True, seed=1))
-    other = "models: {m: {kind: oracle, served: other, replies: {}}}\n"
+    other = "models: {m: {type: language, provider: oracle, served: other, replies: {}}}\n"
     with pytest.raises(BenchError):
         await quiz_runs(tmp_path, variant(tmp_path, suite, "other", other), plan=Plan(replay=True))
 
 
 async def test_a_provider_outage_is_counted_and_never_recorded_as_an_answer(tmp_path: Path) -> None:
     suite = Quiz()
-    text = "models: {m: {kind: oracle, fail_on: two plus two, replies: {capital of France: Paris}}}\n"
+    text = (
+        "models: {m: {type: language, provider: oracle, fail_on: two plus two, replies: {capital of France: Paris}}}\n"
+    )
     [run] = await quiz_runs(tmp_path, variant(tmp_path, suite, "flaky", text))
     assert metric(run, "provider-errors") == 1
     assert run.results[1].output == {"reply": ""}

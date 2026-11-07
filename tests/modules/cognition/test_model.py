@@ -6,7 +6,7 @@ import pytest
 
 from nestor.core import ProviderError
 from nestor.modules.cognition import (
-    ConversationModel,
+    LanguageModel,
     Message,
     ModelOutput,
     ModelRequest,
@@ -14,7 +14,7 @@ from nestor.modules.cognition import (
     ToolCall,
     ToolSpec,
 )
-from nestor.testing.cognition import ConversationModelContract, ScriptedModel
+from nestor.testing.cognition import LanguageModelContract, ScriptedModel
 
 LIGHT = ToolSpec("set_light", "Allume ou éteint une lampe.")
 
@@ -26,28 +26,28 @@ def answer(request: ModelRequest) -> str | ToolCall:
     return "Ça va très bien, merci."
 
 
-class TestScriptedModel(ConversationModelContract):
-    def model(self) -> ConversationModel:
+class TestScriptedModel(LanguageModelContract):
+    def model(self) -> LanguageModel:
         return ScriptedModel(answer)
 
     def tool_request(self) -> ModelRequest:
         return ModelRequest(messages=(Message.user("Allume le salon."),), tools=(LIGHT,))
 
-    def unavailable_model(self) -> ConversationModel:
+    def unavailable_model(self) -> LanguageModel:
         return ScriptedModel(fail=ProviderError("scripted", "HTTP 503", transient=True))
 
 
-class EndlessModel(ConversationModel):
+class EndlessModel(LanguageModel):
     async def stream(self, request: ModelRequest) -> AsyncGenerator[ModelOutput]:
         yield TextDelta("bonjour")
 
 
 async def test_the_model_contract_rejects_a_missing_finished_and_a_silent_outage() -> None:
-    class Suite(ConversationModelContract):
-        def model(self) -> ConversationModel:
+    class Suite(LanguageModelContract):
+        def model(self) -> LanguageModel:
             return EndlessModel()
 
-        def unavailable_model(self) -> ConversationModel:
+        def unavailable_model(self) -> LanguageModel:
             return EndlessModel()  # "works" although its provider is down
 
     with pytest.raises(AssertionError, match="did not end with Finished"):

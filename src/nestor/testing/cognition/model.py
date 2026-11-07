@@ -5,9 +5,9 @@ from collections.abc import AsyncGenerator, Callable
 
 from nestor.core import ProviderError
 from nestor.modules.cognition import (
-    ConversationModel,
     Finished,
     FinishReason,
+    LanguageModel,
     Message,
     ModelOutput,
     ModelRequest,
@@ -19,7 +19,7 @@ from nestor.modules.cognition import (
 type Reply = str | ToolCall | Callable[[ModelRequest], str | ToolCall]
 
 
-class ScriptedModel(ConversationModel):
+class ScriptedModel(LanguageModel):
     """Answers each request with the next scripted reply: text (streamed word by word), a tool call,
     or a policy that picks one of those from the request (what a real model would decide)."""
 
@@ -53,18 +53,18 @@ class ScriptedModel(ConversationModel):
             raise
 
 
-class ConversationModelContract:
-    """Behaviour every `ConversationModel` adapter must show. Mix into a `Test…` class and implement
+class LanguageModelContract:
+    """Behaviour every `LanguageModel` adapter must show. Mix into a `Test…` class and implement
     `model()`, `tool_request()` and `unavailable_model()`."""
 
-    def model(self) -> ConversationModel:
+    def model(self) -> LanguageModel:
         raise NotImplementedError
 
     def tool_request(self) -> ModelRequest:
         """A request this model answers with a call to one of the offered tools."""
         raise NotImplementedError
 
-    def unavailable_model(self) -> ConversationModel:
+    def unavailable_model(self) -> LanguageModel:
         """The same adapter when its provider fails (bad key, unreachable endpoint…)."""
         raise NotImplementedError
 

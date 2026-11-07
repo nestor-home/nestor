@@ -1,0 +1,57 @@
+"""ElevenLabs voices as a speech model.
+
+Retained on measurements (voice proof of concept): v4 Turbo, which only the Text-to-Dialogue endpoint serves over
+WebSocket (the text-to-speech WebSocket refuses it).
+"""
+
+from typing import TYPE_CHECKING
+
+from pydantic import Field
+
+from nestor.adapters.models.pipecat import PipecatSpeech
+from nestor.modules.channels import SpeechModel
+from nestor.runtime.plugins import AdapterSettings, Family, Plugin, RequiredSecret, Services
+
+if TYPE_CHECKING:
+    from pipecat.services.tts_service import TTSService
+
+
+class ElevenLabsSpeech(PipecatSpeech):
+    brand = "elevenlabs"
+
+    def __init__(self, *, api_key: str, model: str, voice_id: str, name: str) -> None:
+        self.name = name
+        self._api_key, self._model, self._voice_id = api_key, model, voice_id
+
+    def details(self) -> dict[str, str]:
+        return {"model": self._model, "voice": self._voice_id}
+
+    def tts(self) -> "TTSService":
+        from pipecat.services.elevenlabs.dialogue.tts import ElevenLabsDialogueTTSService
+
+        from nestor.adapters.models.pipecat.eager import EagerSentenceFlush
+
+        class EagerDialogue(EagerSentenceFlush, ElevenLabsDialogueTTSService):
+            """Speaks a complete sentence without waiting for the rest of the stream."""
+
+        return EagerDialogue(
+            api_key=self._api_key,
+            settings=ElevenLabsDialogueTTSService.Settings(voice=self._voice_id, model=self._model),
+        )
+
+
+class ElevenLabsSpeechSettings(AdapterSettings):
+    api_key: RequiredSecret
+    voice_id: str = Field(min_length=1)  # a voice of the account's library
+    model: str = "eleven_v4_turbo"
+
+
+def build(settings: ElevenLabsSpeechSettings, name: str, services: Services) -> ElevenLabsSpeech:
+    return ElevenLabsSpeech(
+        api_key=settings.api_key.get_secret_value(), model=settings.model, voice_id=settings.voice_id, name=name
+    )
+
+
+plugin = Plugin(
+    Family.MODEL, "elevenlabs", ElevenLabsSpeechSettings, build, requires="nestor-home[voice]", serves=SpeechModel
+)

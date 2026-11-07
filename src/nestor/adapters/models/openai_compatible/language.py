@@ -1,4 +1,4 @@
-"""Conversation model over any OpenAI-compatible Chat Completions endpoint (OpenRouter, vLLM, Ollama…).
+"""Language model over any OpenAI-compatible Chat Completions endpoint (OpenRouter, vLLM, Ollama…).
 
 Speaks the wire protocol directly with httpx and Server-Sent Events: no vendor SDK. Every streamed
 payload is a single-line `data:` JSON chunk, as all OpenAI-compatible servers send them, and the
@@ -33,9 +33,9 @@ from nestor.adapters.models.common import (
 )
 from nestor.core import ContractError, ProviderError, new_id
 from nestor.modules.cognition import (
-    ConversationModel,
     Finished,
     FinishReason,
+    LanguageModel,
     Message,
     ModelOutput,
     ModelRequest,
@@ -46,7 +46,7 @@ from nestor.modules.cognition import (
     ToolSpec,
     Usage,
 )
-from nestor.runtime.plugins import Family, ModelType, Plugin, Services
+from nestor.runtime.plugins import Family, Plugin, Services
 
 _FINISH_REASONS = {
     "stop": FinishReason.STOP,
@@ -59,7 +59,7 @@ _FINISH_REASONS = {
 _CACHE_CONTROL = frozenset({"openrouter", "anthropic"})  # the brands that read `cache_control` breakpoints
 
 
-class OpenAICompatibleModel(ConversationModel):
+class OpenAICompatibleLanguage(LanguageModel):
     """Streams replies from `{base_url}/chat/completions`.
 
     `extra_body` is merged last into every request body: OpenRouter's `provider` pinning, `reasoning`
@@ -272,7 +272,7 @@ def _usage(usage: dict[str, Any]) -> Usage | None:
     )
 
 
-class OpenAICompatibleSettings(EndpointSettings):
+class OpenAICompatibleLanguageSettings(EndpointSettings):
     """Configuration of an OpenAI-compatible chat model."""
 
     model: str
@@ -283,8 +283,8 @@ class OpenAICompatibleSettings(EndpointSettings):
     cache_control: bool | None = Field(default=None, json_schema_extra={"advanced": True})
 
 
-def build(settings: OpenAICompatibleSettings, name: str, services: Services) -> OpenAICompatibleModel:
-    return OpenAICompatibleModel(
+def build(settings: OpenAICompatibleLanguageSettings, name: str, services: Services) -> OpenAICompatibleLanguage:
+    return OpenAICompatibleLanguage(
         base_url=settings.base_url,
         api_key=settings.api_key.get_secret_value() if settings.api_key else None,
         model=settings.model,
@@ -296,4 +296,4 @@ def build(settings: OpenAICompatibleSettings, name: str, services: Services) -> 
     )
 
 
-plugin = Plugin(Family.MODEL, "openai-compatible", OpenAICompatibleSettings, build, model_type=ModelType.LANGUAGE)
+plugin = Plugin(Family.MODEL, "openai-compatible", OpenAICompatibleLanguageSettings, build, serves=LanguageModel)

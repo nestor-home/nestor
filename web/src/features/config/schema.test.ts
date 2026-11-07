@@ -24,7 +24,7 @@ describe("reading a plugin's schema (as a real instance sends it)", () => {
     expect(controlOf(prop(mcp, "kind"), mcp, "kind")).toBe("const");
     expect(controlOf(prop(satellites, "voice"), satellites, "voice")).toBe("object"); // an object, or null
     const voice = resolve(prop(satellites, "voice"), satellites).schema;
-    expect(controlOf(prop(voice, "speech"), satellites, "speech")).toBe("object");
+    expect(controlOf(prop(voice, "speech"), satellites, "speech")).toBe("reference"); // a speech model of `models`
     expect(controlOf(prop(voice, "fallback_clips"), satellites, "fallback_clips")).toBe("path");
     expect(controlOf(prop(voice, "style"), satellites, "style")).toBe("long-text");
     expect(controlOf({ type: "boolean" }, satellites, "enabled")).toBe("boolean");
@@ -40,7 +40,7 @@ describe("reading a plugin's schema (as a real instance sends it)", () => {
   });
 
   it("leaves a model's key optional, for a local server that needs none", () => {
-    const model = SCHEMA.slots.models?.kinds["openai-compatible"] as JsonSchema;
+    const model = SCHEMA.slots.models?.kinds["openai-compatible-language"] as JsonSchema;
     expect(controlOf(prop(model, "api_key"), model, "api_key")).toBe("secret");
     expect(resolve(prop(model, "api_key"), model).nullable).toBe(true);
   });

@@ -61,19 +61,35 @@ export function document(): ConfigDocument {
     ],
     models: {
       sonnet: {
-        kind: "openai-compatible",
+        type: "language",
+        provider: "openai-compatible",
         base_url: "https://openrouter.ai/api/v1",
         api_key: environ("MODEL_API_KEY"),
         model: "anthropic/claude-sonnet-4.6",
         extra_body: { provider: { order: ["anthropic"] } },
       },
       haiku: {
-        kind: "openai-compatible",
+        type: "language",
+        provider: "openai-compatible",
         base_url: "https://openrouter.ai/api/v1",
         api_key: environ("MODEL_API_KEY"),
         model: "anthropic/claude-haiku-4.5",
       },
-      ears: { kind: "sherpa-onnx-voice", model: "titanet-small" },
+      voices: { type: "speaker", provider: "sherpa-onnx", model: "titanet-small" },
+      scribe: {
+        type: "transcription",
+        provider: "elevenlabs",
+        api_key: vault("models.elevenlabs.api_key"),
+        model: "scribe_v2_realtime",
+        language: "en",
+      },
+      victor: {
+        type: "speech",
+        provider: "elevenlabs",
+        api_key: vault("models.elevenlabs.api_key"),
+        voice_id: "Xb7hH8MSUJpSbSDYk0k2",
+        model: "eleven_v4_turbo",
+      },
     },
     agent: { spoken: "haiku", written: "sonnet" },
     watches: { model: "haiku" },
@@ -81,9 +97,7 @@ export function document(): ConfigDocument {
       {
         kind: "satellites",
         port: 8471,
-        voice: {
-          speech: { api_key: vault("channels.satellites.voice.speech.api_key"), voice_id: "Xb7hH8MSUJpSbSDYk0k2" },
-        },
+        voice: { transcription: "scribe", speech: "victor" },
       },
       { kind: "telegram", token: environ("TELEGRAM_TOKEN") },
     ],
@@ -137,7 +151,7 @@ export function fresh(): ConfigDb {
       { id: "20261021T090455031000Z", at: minutes(60 * 24 * 9), document: oldest },
     ],
     vault: {
-      "channels.satellites.voice.speech.api_key": { value: "sk_e1d0a8c7b6f5", at: minutes(60 * 24 * 30) },
+      "models.elevenlabs.api_key": { value: "sk_e1d0a8c7b6f5", at: minutes(60 * 24 * 30) },
       "executors.hermes.api_key": { value: "hermes-7c0f2b91", at: minutes(60 * 24 * 12) },
       "tools.home.token": { value: "eyJhbGciOiJIUzI1NiJ9.home", at: minutes(60 * 24 * 12) },
       "presence.token": { value: "eyJhbGciOiJIUzI1NiJ9.presence", at: minutes(60 * 24 * 12) },
@@ -167,6 +181,10 @@ function isSecret(node: JsonSchema): boolean {
 
 type Slot = S["SlotOut"];
 
+/** The id of the plugin an entry picks, as the server reads it (`Slot.plugin`). */
+const pluginOf = (slot: Slot, entry: Record<string, unknown>): string =>
+  slot.picks.map((key) => String(entry[key] ?? "")).join("-");
+
 /** The components a slot holds in a document: where each is, and the name its secrets are kept under. */
 function entriesOf(slot: Slot, key: string, value: unknown): { where: Path; label: string[]; entry: unknown }[] {
   if (value === undefined || value === null) return [];
@@ -177,7 +195,7 @@ function entriesOf(slot: Slot, key: string, value: unknown): { where: Path; labe
   if (slot.shape === "list")
     return (Array.isArray(value) ? value : [value]).map((entry, index) => ({
       where: [key, index],
-      label: [key, String(isObject(entry) ? (entry.name ?? entry.kind) : index)],
+      label: [key, String(isObject(entry) ? (entry.name ?? pluginOf(slot, entry)) : index)],
       entry,
     }));
   return [{ where: [key], label: [key], entry: value }];
@@ -192,7 +210,7 @@ export function secretsOf(doc: ConfigDocument): { path: Path; name: string }[] {
     if (!slot) continue;
     for (const { where, label, entry } of entriesOf(slot, key, doc[key])) {
       if (!isObject(entry)) continue;
-      const kind = slot.kinds[String(entry.kind)] as JsonSchema | undefined;
+      const kind = slot.kinds[pluginOf(slot, entry)] as JsonSchema | undefined;
       if (!kind) continue;
       const walk = (node: JsonSchema, value: Record<string, unknown>, path: string[]) => {
         for (const [name, child] of Object.entries(node.properties ?? {})) {
@@ -421,9 +439,10 @@ export function problems(
         continue;
       }
       for (const { where, entry } of entries) {
-        const kind = isObject(entry) ? (slot.kinds[String(entry.kind)] as JsonSchema | undefined) : undefined;
+        const plugin = isObject(entry) ? pluginOf(slot, entry) : "";
+        const kind = slot.kinds[plugin] as JsonSchema | undefined;
         if (!kind) {
-          found.push({ path: [...where, "kind"], code: "unknown_kind", detail: String(isObject(entry) && entry.kind) });
+          found.push({ path: [...where, slot.picks[0] ?? "kind"], code: "unknown_kind", detail: plugin });
           continue;
         }
         check(kind, kind, entry, where, found, lang);

@@ -1,16 +1,16 @@
 """Doubles and contract suites for embeddings: an embedder that knows a few concepts, and the behaviour every
-`Embedder` and `VectorIndex` adapter must show."""
+`EmbeddingModel` and `VectorIndex` adapter must show."""
 
 import math
 from collections.abc import Mapping, Sequence
 from contextlib import AbstractAsyncContextManager
 
 from nestor.core import ProviderError
-from nestor.modules.cognition.embedding import Embedder, EmbeddingSpace, Indexed, Vector, VectorIndex
+from nestor.modules.cognition.embedding import EmbeddingModel, EmbeddingSpace, Indexed, Vector, VectorIndex
 from nestor.testing.text import folded_words
 
 
-class ConceptEmbedder(Embedder):
+class ConceptEmbedder(EmbeddingModel):
     """Deterministic: a text's vector counts the concepts its words stand for, so that different words of one
     meaning come close ("jambon" and "végétarienne" both stand for `meat`). Words it does not know count for
     nothing; a text with none is a vector of zeros but one, so that every vector has a direction."""
@@ -45,14 +45,14 @@ class ConceptEmbedder(Embedder):
         return [x / norm for x in vector]
 
 
-class EmbedderContract:
-    """Behaviour every `Embedder` adapter must show. Mix into a `Test…` class and implement `embedder()` and
+class EmbeddingModelContract:
+    """Behaviour every `EmbeddingModel` adapter must show. Mix into a `Test…` class and implement `embedder()` and
     `unavailable_embedder()`."""
 
-    def embedder(self) -> Embedder:
+    def embedder(self) -> EmbeddingModel:
         raise NotImplementedError
 
-    def unavailable_embedder(self) -> Embedder:
+    def unavailable_embedder(self) -> EmbeddingModel:
         raise NotImplementedError
 
     async def test_one_vector_per_text_in_order_of_the_space_dimension(self) -> None:

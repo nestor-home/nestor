@@ -15,7 +15,7 @@ from collections.abc import Awaitable, Callable, Collection, Sequence
 from typing import Protocol
 
 from nestor.core import Component, ProviderError
-from nestor.modules.cognition.embedding import Embedder, Indexed, Vector, VectorIndex, fingerprint
+from nestor.modules.cognition.embedding import EmbeddingModel, Indexed, Vector, VectorIndex, fingerprint
 
 log = logging.getLogger("nestor.memory")
 BATCH = 64  # items embedded and stored together: a failure loses at most one batch
@@ -46,7 +46,7 @@ class SearchIndex[T: Searchable](Component):
         self,
         kind: str,
         corpus: Corpus[T],
-        embedder: Embedder,
+        embedder: EmbeddingModel,
         vectors: VectorIndex,
         *,
         query_timeout_s: float = 1.0,

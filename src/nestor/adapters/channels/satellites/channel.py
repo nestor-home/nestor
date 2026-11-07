@@ -12,7 +12,6 @@ place, not an account: whoever is there may speak, and who it is comes from thei
 
 import asyncio
 import logging
-from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
 from fastapi import WebSocket
@@ -71,9 +70,6 @@ class SatellitesChannel(Channel, SatelliteHost):
         self._gateway: SatelliteGateway | None = None
         self._server: DeviceServer | None = None
         self._closed = asyncio.Event()
-
-    def details(self) -> Mapping[str, str]:
-        return {"speech": self._voice.speech.brand} if self._voice and self._voice.speech.brand else {}
 
     def host_satellites(self, pairing: Pairing, journal: Journal) -> None:
         self._hosting = (pairing, journal)

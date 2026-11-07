@@ -9828,6 +9828,16 @@
             "type": "string",
             "title": "Adapter"
           },
+          "model_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ModelType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "brand": {
             "anyOf": [
               {
@@ -9902,6 +9912,7 @@
           "slot",
           "name",
           "adapter",
+          "model_type",
           "brand",
           "version",
           "distribution",
@@ -11766,10 +11777,11 @@
         "enum": [
           "language",
           "embedding",
-          "voice"
+          "speaker",
+          "transcription",
+          "speech"
         ],
-        "title": "ModelType",
-        "description": "What a model plugin serves: roles and forms only offer the models of the type they need."
+        "title": "ModelType"
       },
       "NestorOut": {
         "properties": {
@@ -12165,7 +12177,10 @@
           "no_answering_model",
           "not_answering",
           "not_embedding",
-          "not_voice",
+          "not_speaker",
+          "not_transcribing",
+          "not_speaking",
+          "unknown_model",
           "shared_account"
         ],
         "title": "ProblemCode",
@@ -12787,6 +12802,13 @@
             "type": "string",
             "title": "Title"
           },
+          "picks": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Picks"
+          },
           "kinds": {
             "additionalProperties": {
               "additionalProperties": true,
@@ -12809,6 +12831,7 @@
           "shape",
           "required",
           "title",
+          "picks",
           "kinds",
           "model_types"
         ],

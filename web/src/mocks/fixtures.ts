@@ -834,11 +834,13 @@ export function memories(): Memory[] {
 }
 
 const component = (
-  c: Omit<Component, "capabilities" | "distribution" | "details"> & { capabilities?: string[] },
+  c: Omit<Component, "capabilities" | "distribution" | "details" | "model_type"> &
+    Partial<Pick<Component, "capabilities" | "model_type">>,
 ): Component => ({
   capabilities: [],
   distribution: null,
   details: {},
+  model_type: null,
   ...c,
 });
 
@@ -889,7 +891,8 @@ export function system(): SystemInfo {
       component({
         slot: "model",
         name: "sonnet",
-        adapter: "nestor.adapters.model.openrouter",
+        adapter: "openai-compatible-language",
+        model_type: "language",
         brand: "openrouter",
         version: "anthropic/claude-sonnet-4.6",
         health: "started",
@@ -899,9 +902,30 @@ export function system(): SystemInfo {
       component({
         slot: "model",
         name: "haiku",
-        adapter: "nestor.adapters.model.openrouter",
+        adapter: "openai-compatible-language",
+        model_type: "language",
         brand: "anthropic",
         version: "anthropic/claude-haiku-4.5",
+        health: "started",
+        health_detail: null,
+      }),
+      component({
+        slot: "model",
+        name: "scribe",
+        adapter: "elevenlabs-transcription",
+        model_type: "transcription",
+        brand: "elevenlabs",
+        version: "scribe_v2_realtime",
+        health: "started",
+        health_detail: null,
+      }),
+      component({
+        slot: "model",
+        name: "victor",
+        adapter: "elevenlabs-speech",
+        model_type: "speech",
+        brand: "elevenlabs",
+        version: "eleven_v4_turbo",
         health: "started",
         health_detail: null,
       }),

@@ -48,7 +48,8 @@ when the extra is installed and you want it.
 Every command reads the `.env` next to the configuration at each start: no need to source it. A variable
 already set in the environment (the shell, a service manager) wins over the file.
 
-Models are any OpenAI-compatible server. Hosted providers need a key (`MODEL_API_KEY` in the `.env`);
+Each model has a type (`language`, `embedding`, `speaker`, `transcription`, `speech`) and a provider, the plugin
+that serves it. Language and embedding models are any OpenAI-compatible server. Hosted providers need a key (`MODEL_API_KEY` in the `.env`);
 local ones (Ollama `http://localhost:11434/v1`, LM Studio `http://localhost:1234/v1`, vLLM, llama.cpp)
 need none: leave it empty and no `Authorization` header is sent.
 
@@ -57,8 +58,8 @@ single model, every role uses it:
 
 ```yaml
 models:
-  haiku: {kind: openai-compatible, base_url: https://openrouter.ai/api/v1, api_key: ${MODEL_API_KEY}, model: anthropic/claude-haiku-5.5}
-  sonnet: {kind: openai-compatible, base_url: https://openrouter.ai/api/v1, api_key: ${MODEL_API_KEY}, model: anthropic/claude-sonnet-5.5}
+  haiku: {type: language, provider: openai-compatible, base_url: https://openrouter.ai/api/v1, api_key: ${MODEL_API_KEY}, model: anthropic/claude-haiku-5.5}
+  sonnet: {type: language, provider: openai-compatible, base_url: https://openrouter.ai/api/v1, api_key: ${MODEL_API_KEY}, model: anthropic/claude-sonnet-5.5}
 agent:
   spoken: haiku     # answers aloud: the voice starts on its first sentence
   written: sonnet   # answers in writing; either one left out takes the other
@@ -66,12 +67,12 @@ watches:
   model: haiku      # sorts incoming items; the written model by default
 ```
 
-An embedding model is declared with the others; its kind says it embeds. With `memory.embedder`, memories are
+An embedding model is declared with the others; its type says it embeds. With `memory.embedder`, memories are
 found by meaning as well as by words (FTS5 and vectors, fused by reciprocal rank); without it, by words only:
 
 ```yaml
 models:
-  te3: {kind: openai-compatible-embeddings, base_url: https://openrouter.ai/api/v1, api_key: ${MODEL_API_KEY}, model: openai/text-embedding-3-small, dimensions: 1536}
+  te3: {type: embedding, provider: openai-compatible, base_url: https://openrouter.ai/api/v1, api_key: ${MODEL_API_KEY}, model: openai/text-embedding-3-small, dimensions: 1536}
 memory:
   embedder: te3     # any model you like: Nestor recommends none
 ```
@@ -79,6 +80,19 @@ memory:
 Vectors live in the instance's SQLite database (sqlite-vec), one table per embedding space (the model served, its
 dimension, its prefixes): switching models embeds every memory again at the next start, and the old vectors go.
 With a hosted model, memories leave the house to be embedded.
+
+Satellites hear and speak through two more models: one that transcribes (`transcription`) and one that gives
+the assistant its voice (`speech`), named by the channel's `voice`. Like any model, they show in the admin's Models
+and System pages, and another provider is another plugin:
+
+```yaml
+models:
+  ears: {type: transcription, provider: elevenlabs, api_key: ${ELEVENLABS_API_KEY}, language: en}
+  voice: {type: speech, provider: elevenlabs, api_key: ${ELEVENLABS_API_KEY}, voice_id: GPAQQPp9dazaB2bl4zg9}
+channels:
+  - kind: satellites
+    voice: {transcription: ears, speech: voice}
+```
 
 Past conversations are remembered too. Once a conversation is over (its channel's silence has passed), the
 `memory.consolidation` model (the background one by default) writes its episode: what it was about, for whoever
@@ -173,7 +187,8 @@ A variant is a fragment of `nestor.yaml` (a whole one works too), with the suite
 ```yaml
 models:
   mistral-small:
-    kind: openai-compatible
+    type: language
+    provider: openai-compatible
     base_url: https://openrouter.ai/api/v1
     api_key: ${OPENROUTER_API_KEY}
     model: mistralai/mistral-small-3.2
@@ -186,7 +201,7 @@ Two suites ship: `watch-triage` (which mails match a watch) and `memory-recall` 
 turn's instructions; it calls no model, its knobs are the `memory` settings).
 
 A suite calls the models of the roles it measures (`watches` for watch-triage); with a single model in the
-variant, every role takes it. `models: {fake: {kind: watch-triage-fake}}` runs the suite without a network,
+variant, every role takes it. `models: {fake: {type: language, provider: watch-triage-fake}}` runs the suite without a network,
 on a deterministic word-overlap judge. A run writes `bench-results/<suite>/<started>-<variant>/results.json` (dataset hash, variant with its
 secrets masked, the models the provider says answered, Nestor's version and commit, every case's output and
 model calls with latency, tokens and cost) and a self-contained `report.html`; model replies are recorded in

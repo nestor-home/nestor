@@ -60,9 +60,7 @@ def test_a_first_configuration_is_in_english_unless_another_language_is_chosen(t
     initialise(tmp_path / "fr" / "nestor.yaml", chosen, login="moi", password=PASSWORD)
     french = load_config(tmp_path / "fr" / "nestor.yaml", env_of(tmp_path / "fr" / ".env"))
     assert (french.persona.locale, french.persona.language, french.persona.timezone) == ("fr", "French", "Europe/Paris")
-    assert french.channels[0].settings()["voice"]["speech"]["language"] == "fr", (
-        "the transcription follows the household"
-    )
+    assert french.models["ears"].settings()["language"] == "fr", "the transcription follows the household"
 
 
 def test_without_voice_satellites_write_and_telegram_asks_for_its_bot_token(tmp_path: Path) -> None:
@@ -101,7 +99,7 @@ def test_a_hosted_model_with_its_key_left_empty_fails_the_check_naming_the_varia
     initialise(config, Setup(), login="me", password=PASSWORD)  # OpenRouter, Telegram: both keys empty
     assert main(["-c", str(config), "check"]) == 2
     err = capsys.readouterr().err
-    assert "model 'main' (openai-compatible): api_key: openrouter.ai requires an API key" in err
+    assert "model 'main' (openai-compatible-language): api_key: openrouter.ai requires an API key" in err
     assert f"MODEL_API_KEY is empty (in {tmp_path / '.env'} or the environment), used by models.main.api_key" in err
     assert "TELEGRAM_BOT_TOKEN" not in err, "only the variables behind the error are named"
 
@@ -213,7 +211,7 @@ EXISTING = """
 data_dir: {data_dir}
 persona: {{name: Richie, character: Tu es Richie.}}
 household: [{{id: mathis, name: Mathis}}, {{id: lucie, name: Lucie}}]
-models: {{main: {{kind: openai-compatible, api_key: k, model: m, base_url: "http://x"}}}}
+models: {{main: {{type: language, provider: openai-compatible, api_key: k, model: m, base_url: "http://x"}}}}
 channels: [{{kind: telegram, token: "1:a"}}]
 admin: {{port: 8470}}
 """

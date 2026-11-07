@@ -50,6 +50,7 @@ src/nestor/
 │   └── suites/           suites, one folder each with its dataset (`nestor.benches` entry points)
 ├── cli.py                the `nestor` command, above runtime and admin
 ├── adapters/             adapters/<family>/<vendor>/ — the only place for third-party SDKs
+│   └── models/           <provider>/<type>.py: each model a provider serves (see "Models" below)
 │   └── storage/          SQLite (one WAL database, migrations in schema.py), blobs on disk
 └── testing/              doubles and contract suites, mirroring modules/ (shipped with the package)
 tests/                    mirrors src/nestor
@@ -86,6 +87,19 @@ runtime may assemble the built-in storage adapters, and the admin may use FastAP
 7. **Measure before adopting.** Providers, models and tuning are chosen on reproducible benchmarks;
    untested capabilities are labelled as such.
 
+## Models
+
+A model is one of five types (`ModelType`: language, embedding, speaker, transcription, speech). Each type is an
+abstract class deriving from `nestor.core.Model`, owned by the module that uses it (`LanguageModel` in cognition,
+`EmbeddingModel` in cognition.embedding, `SpeakerModel` in identity, `TranscriptionModel` and `SpeechModel` in
+channels), with its contract suite in `nestor.testing` when it has methods to check. A provider serves a type in
+`adapters/models/<provider>/<type>.py`: a class `<Provider><Type>` deriving from the type, its
+`<Provider><Type>Settings`, `build`, and `plugin = Plugin(Family.MODEL, "<provider>", Settings, build,
+serves=<Type>Model)`, declared as the entry point `<provider>-<type>`. The configuration names a model by
+`type` and `provider`; the runtime builds it and checks it is of that type. Transcription and speech models run in the
+voice pipeline: they derive from `adapters/models/pipecat` and wrap their Pipecat service, so a new provider is a few
+lines. A new type is a member of `ModelType`, its base class and its contract, nothing else.
+
 ## Code conventions
 
 - **Ports** are abstract classes deriving from `Component` (name, capabilities, `start`/`close`,
@@ -103,6 +117,10 @@ runtime may assemble the built-in storage adapters, and the admin may use FastAP
   (`from nestor.modules.cognition import Executor`), not from its files, outside that module.
 - Python 3.12+ syntax (`type` aliases, `X | None`), fully typed and checked with `ty`; `ruff`,
   line length 120. Code, docstrings and identifiers in English.
+- **Texts**: what people read goes through Fluent (`locales/<lang>/*.ftl`), in every locale shipped.
+  What the model reads stays in English in the code, whatever the household's language: the prompt's
+  rules, tool names and descriptions, and their schemas (the model answers in the persona's language).
+  Logs, exception messages for developers and the command line's help are English too.
 - No secrets in the repository; secrets come from the environment.
 - Keep the repository lean: no new Markdown files unless users or agents need them.
 - **The admin API has one contract.** A closed set in a response or a query is its domain `StrEnum`

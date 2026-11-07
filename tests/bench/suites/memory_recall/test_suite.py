@@ -11,7 +11,8 @@ from nestor.bench.runner import Plan, read_dataset, run_suite
 from nestor.bench.suites.memory_recall import MemoryRecall
 from nestor.bench.variants import load_variant
 from nestor.core.i18n import Message
-from nestor.runtime.plugins import AdapterSettings, Family, ModelType, Plugin, Registry
+from nestor.modules.cognition.embedding import EmbeddingModel
+from nestor.runtime.plugins import AdapterSettings, Family, Plugin, Registry
 from nestor.testing.cognition import ConceptEmbedder
 from nestor.testing.i18n import EchoLocalizer
 
@@ -43,11 +44,12 @@ CONCEPTS = Plugin(
     "concepts",
     ConceptSettings,
     lambda settings, name, services: ConceptEmbedder({"jambon": "meat", "vegetarienne": "meat"}),
-    model_type=ModelType.EMBEDDING,
+    serves=EmbeddingModel,
 )
-SEARCHING = "models: {sens: {kind: concepts}}\nmemory: {strategy: search, recent_episodes: 0, embedder: sens}\n"
+SEARCHING = "models: {sens: {type: embedding, provider: concepts}}\n"
+SEARCHING += "memory: {strategy: search, recent_episodes: 0, embedder: sens}\n"
 NOTHING = "{strategy: recent, recent: 0, recent_episodes: 0, found_episodes: 0}"  # remembers, never carries
-BLIND = f"models: {{sens: {{kind: concepts}}}}\nmemory: {NOTHING}\n"
+BLIND = f"models: {{sens: {{type: embedding, provider: concepts}}}}\nmemory: {NOTHING}\n"
 
 
 async def bench(folder: Path, name: str, text: str) -> Run:
