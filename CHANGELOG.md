@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.9.1](https://github.com/nestor-home/nestor/compare/v0.9.0...v0.9.1) (2026-11-07)
+
+
+### Bug Fixes
+
+* **deps:** update dependency @tanstack/react-query to v5.106.0 ([#87](https://github.com/nestor-home/nestor/issues/87)) ([54fe986](https://github.com/nestor-home/nestor/commit/54fe986466fe6e69a4e0c2a00574e6721ee674ad))
+* **deps:** update dependency @tanstack/react-query to v5.106.1 ([#93](https://github.com/nestor-home/nestor/issues/93)) ([2307b06](https://github.com/nestor-home/nestor/commit/2307b0665352cdeec6b0f7a0f0adddcc6cc34e3b))
+* **deps:** update dependency lucide-react to v1.69.0 ([#92](https://github.com/nestor-home/nestor/issues/92)) ([75f2b17](https://github.com/nestor-home/nestor/commit/75f2b17f41540615f3e26228bb6488514ac59e64))
+* **deps:** update dependency lucide-react to v1.70.0 ([#99](https://github.com/nestor-home/nestor/issues/99)) ([9b366d7](https://github.com/nestor-home/nestor/commit/9b366d76a8749046919b603955336e4a47bcdf34))
+* one contract between the API and the admin ([#94](https://github.com/nestor-home/nestor/issues/94)) ([0a6dec6](https://github.com/nestor-home/nestor/commit/0a6dec6b480248f631ae3ed66a881c63e25b554d))
+
 ## [0.9.0](https://github.com/nestor-home/nestor/compare/v0.8.1...v0.9.0) (2026-11-05)
 
 
