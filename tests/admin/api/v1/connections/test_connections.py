@@ -234,7 +234,7 @@ async def test_credentials_the_service_refuses_are_reported(tmp_path: Path) -> N
         async def refuse(access: object) -> str:
             raise ProviderError("imap", "authentication failed", transient=False)
 
-        admin.imap.identify = refuse  # ty: ignore[invalid-assignment]
+        admin.imap.identify = refuse
         api = await admin.api()
         response = await api.post("/api/v1/connectors/imap/connections", {"values": {"server": "s", "password": "p"}})
         assert response.status_code == 502 and "authentication failed" in response.json()["error"]["message"]
