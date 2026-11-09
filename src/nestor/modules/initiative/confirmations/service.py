@@ -10,10 +10,11 @@ import asyncio
 import json
 import logging
 from collections.abc import Awaitable, Callable, Coroutine, Mapping, Sequence
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
 
-from nestor.core import ContractError, PersonId, SessionId, new_id, utc_now
+from nestor.core import ContractError, NestorError, PersonId, SessionId, new_id, utc_now
 from nestor.modules.cognition.model import ToolCall, ToolSpec
 from nestor.modules.cognition.tools import InWriting, Risk, Tool, ToolContext, ToolFailed, ToolProvider
 from nestor.modules.cognition.tools.types import ToolOutput
@@ -34,6 +35,26 @@ HOW_TO_CONFIRM = (
 _FOUND = 4000  # characters of a private result written to its owner: the composer summarises it
 
 type Run = Callable[[ToolCall, ToolContext], Awaitable[str]]
+
+
+@dataclass(frozen=True, slots=True)
+class Answered:
+    """What came of an answer: refused, nothing ran; approved, what the action answered."""
+
+    approved: bool
+    result: str | None = None
+
+
+class NothingWaits(NestorError):
+    """No confirmation waits under this id: it was answered, or it expired."""
+
+
+class NotTheirs(NestorError):
+    """Someone else answered: only `person` may."""
+
+    def __init__(self, person: str) -> None:
+        super().__init__(f"only {person} may answer it")
+        self.person = person
 
 
 class Confirmations(InWriting, ToolProvider, ContextProvider):
@@ -89,26 +110,27 @@ class Confirmations(InWriting, ToolProvider, ContextProvider):
         return tuple(c for c in self.pending() if c.person == person)
 
     async def answer(
-        self, confirmation_id: str, person: PersonId, *, approved: bool, session: SessionId | None
-    ) -> Mapping[str, object]:
-        """The person's answer, from their own account (a conversation, the admin): approved, the action runs as
-        theirs where it was asked and the room hears it is done. `ToolFailed` when nothing of theirs waits under
-        this id."""
-        found = next((c for c in self.pending() if c.confirmation_id == confirmation_id), None)
-        if found is None:
-            raise ToolFailed("nothing waits under this id: it was answered, or it expired")
+        self, confirmation_id: str, person: PersonId, *, approved: bool, session: SessionId | None = None
+    ) -> Answered:
+        """The person's answer, from their own account (a conversation, the admin; `session` where it is given, the
+        conversation it was asked in by default): approved, the action runs as theirs where it was asked and the
+        room hears it is done. `NothingWaits` when nothing waits under this id, `NotTheirs` for anyone else."""
+        found = self._pending.get(confirmation_id)
+        if found is None or found.expires_at <= self._clock():
+            raise NothingWaits(confirmation_id)
         if person != found.person:
-            raise ToolFailed(
-                f"only {self.household.name_of(found.person, 'its person')} may answer it, on their account"
-            )
+            raise NotTheirs(self.household.name_of(found.person, "its person"))
         del self._pending[found.confirmation_id]
         await self.journal.publish(
             ConfirmationAnswered(
-                source=self.name, session=session, confirmation_id=found.confirmation_id, approved=approved
+                source=self.name,
+                session=session or found.origin.session,
+                confirmation_id=found.confirmation_id,
+                approved=approved,
             )
         )
         if not approved:
-            return {"status": "refused: nothing was done"}
+            return Answered(approved=False)
         if self._run is None:
             raise ContractError("confirmations are attached to the toolbox before serving")
         call = ToolCall(new_id(), found.tool, dict(found.arguments))
@@ -126,7 +148,7 @@ class Confirmations(InWriting, ToolProvider, ContextProvider):
                 origin=found.origin,
             )
         )
-        return {"status": "done", "result": result}
+        return Answered(approved=True, result=result)
 
     # --- the toolbox's written channel ------------------------------------------------------------
 
@@ -207,12 +229,20 @@ class Confirmations(InWriting, ToolProvider, ContextProvider):
     async def _answer(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
         if context.speaker.by is not Identified.ACCOUNT or context.person is None:
             raise ToolFailed("only its person may answer it, on their account")
-        return await self.answer(
-            str(arguments["confirmation_id"]),
-            context.person,
-            approved=arguments["approve"] is True,
-            session=context.address.session,
-        )
+        try:
+            answered = await self.answer(
+                str(arguments["confirmation_id"]),
+                context.person,
+                approved=arguments["approve"] is True,
+                session=context.address.session,
+            )
+        except NothingWaits:
+            raise ToolFailed("nothing waits under this id: it was answered, or it expired") from None
+        except NotTheirs as error:
+            raise ToolFailed(f"only {error.person} may answer it, on their account") from None
+        if not answered.approved:
+            return {"status": "refused: nothing was done"}
+        return {"status": "done", "result": answered.result}
 
     def _background(self, work: Coroutine[Any, Any, Any]) -> None:
         task = asyncio.create_task(work)

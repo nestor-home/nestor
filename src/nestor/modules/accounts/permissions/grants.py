@@ -4,7 +4,7 @@ from collections.abc import Mapping
 
 from nestor.modules.accounts.permissions.types import Role, Scope
 
-_OWN = frozenset({Scope.JOURNAL_READ_OWN, Scope.MEMORY_MANAGE_OWN})
+_OWN = frozenset({Scope.JOURNAL_READ_OWN, Scope.MEMORY_MANAGE_OWN, Scope.MESSAGES_READ_OWN})
 _MEMBER = _OWN | {
     Scope.AGENT_READ,
     Scope.HOUSEHOLD_READ,
@@ -24,6 +24,7 @@ _ADMIN = _MEMBER | {
     Scope.TASKS_MANAGE,
     Scope.WATCHES_MANAGE_ALL,
     Scope.SCHEDULES_MANAGE_ALL,
+    Scope.MESSAGES_READ_ALL,
 }
 
 GRANTS: Mapping[Role, frozenset[Scope]] = {

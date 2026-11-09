@@ -130,15 +130,20 @@ class Installation:
 
     def presence(self) -> Presence:
         people = {person: self._whereabouts(person, entity) for person, entity in self._mapping.people.items()}
-        occupied = frozenset()
-        if self.granularity >= Granularity.OCCUPIED_ROOMS:
-            occupied = frozenset(area for entity, area in self._sensors.items() if self._state(entity) == "on")
-        return Presence(granularity=self.granularity, people=people, occupied_rooms=occupied)
+        return Presence(granularity=self.granularity, people=people, occupied_rooms=self._occupied())
+
+    def _occupied(self) -> frozenset[str]:
+        if not self.granularity.at_least(Granularity.OCCUPIED_ROOMS):
+            return frozenset()
+        return frozenset(area for entity, area in self._sensors.items() if self._state(entity) == "on")
+
+    def room_of(self, label: str) -> str | None:
+        """The area a label names: its id, name or alias."""
+        return self._areas.resolve(label)
 
     def rooms(self) -> tuple[Room, ...]:
         """Every area, occupied or not when a sensor in it tells, in Home Assistant's order."""
-        watched = set(self._sensors.values())
-        occupied = self.presence().occupied_rooms
+        watched, occupied = set(self._sensors.values()), self._occupied()
         return tuple(
             Room(id=area, name=name, occupied=area in occupied if area in watched else None)
             for area, name in self._area_list
@@ -146,14 +151,15 @@ class Installation:
 
     def residents(self) -> tuple[Resident, ...]:
         """The `person` entities, by their name in Home Assistant."""
+        people = sorted(entity for entity in self._states if entity.startswith("person."))
         return tuple(
             Resident(
                 entity=entity,
                 name=str(state.attributes.get("friendly_name") or entity.removeprefix("person.")),
                 home=None if state.state in UNKNOWN_STATES else state.state == "home",
             )
-            for entity, state in sorted(self._states.items())
-            if entity.startswith("person.")
+            for entity in people
+            if (state := self._states[entity])
         )
 
     def _whereabouts(self, person: PersonId, entity: str) -> Whereabouts:

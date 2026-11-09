@@ -920,7 +920,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Schedules */
+        /**
+         * List Schedules
+         * @description Soonest first.
+         */
         get: operations["listSchedules"];
         put?: never;
         post?: never;
@@ -954,7 +957,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Messages */
+        /**
+         * List Messages
+         * @description Each list oldest first, as the book keeps them.
+         */
         get: operations["listMessages"];
         put?: never;
         post?: never;
@@ -1647,6 +1653,8 @@ export interface components {
             slots: {
                 [key: string]: components["schemas"]["SlotOut"];
             };
+            /** Suggestions */
+            suggestions: components["schemas"]["Suggest"][];
         };
         /** ConfirmationOut */
         ConfirmationOut: {
@@ -1856,10 +1864,10 @@ export interface components {
         };
         /**
          * Granularity
-         * @description How much the presence source can tell, from coarse to fine.
-         * @enum {integer}
+         * @description How much the presence source can tell, from coarse to fine (`at_least` compares).
+         * @enum {string}
          */
-        Granularity: 1 | 2 | 3;
+        Granularity: "home" | "occupied_rooms" | "person_room";
         /**
          * Health
          * @description What a running component can tell about itself.
@@ -1922,13 +1930,7 @@ export interface components {
         };
         /** HomeOut */
         HomeOut: {
-            /** Name */
-            name: string;
-            /** Brand */
-            brand: string | null;
-            health: components["schemas"]["Health"];
-            /** Health Detail */
-            health_detail: string | null;
+            component: components["schemas"]["ComponentOut"];
             /** Connected */
             connected: boolean;
             granularity: components["schemas"]["Granularity"];
@@ -2546,6 +2548,8 @@ export interface components {
             occupied: boolean | null;
             /** People */
             people: components["schemas"]["PersonRef"][];
+            /** Satellites */
+            satellites: string[];
         };
         /** SatelliteOut */
         SatelliteOut: {
@@ -2640,7 +2644,7 @@ export interface components {
          * @description What an action needs. Code checks scopes, never roles: the role table is the only place they meet.
          * @enum {string}
          */
-        Scope: "accounts.manage" | "accounts.owners.manage" | "household.read" | "agent.read" | "household.connections.manage" | "own.connections.manage" | "satellites.manage" | "system.read" | "config.manage" | "journal.read.all" | "journal.read.own" | "memory.manage.all" | "memory.manage.own" | "tasks.manage" | "tasks.manage.own" | "watches.manage.all" | "watches.manage.own" | "schedules.manage.all" | "schedules.manage.own";
+        Scope: "accounts.manage" | "accounts.owners.manage" | "household.read" | "agent.read" | "household.connections.manage" | "own.connections.manage" | "satellites.manage" | "system.read" | "config.manage" | "journal.read.all" | "journal.read.own" | "memory.manage.all" | "memory.manage.own" | "tasks.manage" | "tasks.manage.own" | "watches.manage.all" | "watches.manage.own" | "schedules.manage.all" | "schedules.manage.own" | "messages.read.all" | "messages.read.own";
         /** SecretIn */
         SecretIn: {
             /** Value */
@@ -2721,6 +2725,12 @@ export interface components {
          * @enum {string}
          */
         Status: "connected" | "needs_reauth" | "error";
+        /**
+         * Suggest
+         * @description What a map's keys or values may be picked from in a form (`suggest_keys`, `suggest_values` of a field).
+         * @enum {string}
+         */
+        Suggest: "people" | "residents";
         /** SystemOut */
         SystemOut: {
             nestor: components["schemas"]["NestorOut"];
@@ -10959,7 +10969,7 @@ export const changeKindValues: ReadonlyArray<FlattenedDeepRequired<components>["
 export const dayValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Day"]> = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 export const errorDetailCodeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ErrorDetail"]["code"]> = ["addition_over", "addition_unknown", "audio_format", "bad_token", "client_incomplete", "client_missing", "config_history_unknown", "config_invalid", "config_unavailable", "conflict", "connection_unknown", "connector_unknown", "cross_origin", "csrf_failed", "empty_memory", "fields_missing", "forbidden", "http_error", "identify_unsupported", "invalid", "invalid_code", "invalid_credentials", "invalid_login", "invalid_request", "invitation_expired", "invitation_revoked", "invitation_unknown", "invitation_used", "journal_entry_unknown", "last_owner", "memory_shared", "memory_unknown", "method_not_allowed", "no_connectors", "no_secret_key", "not_a_device_code_method", "not_found", "not_oauth", "oauth", "own_connections_only", "pairing_refused", "pending_unknown", "person_required", "person_unknown", "provider_error", "provider_refused", "restart_unconfirmed", "satellite_offline", "satellite_unknown", "secret_in_use", "secret_unknown", "task_unknown", "throttled", "too_many_additions", "unauthenticated", "unknown_locale", "unknown_person", "unknown_tool", "unsupported_media_type", "update_not_installable", "update_unavailable", "update_unconfirmed", "update_unsupported", "use_me_password", "voice_not_yours", "voices_off", "watch_unknown", "schedule_unknown", "confirmation_unknown", "weak_password", "wrong_password"];
 export const familyValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Family"]> = ["model", "executor", "channel", "home", "tools", "inbound", "connector"];
-export const granularityValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Granularity"]> = [1, 2, 3];
+export const granularityValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Granularity"]> = ["home", "occupied_rooms", "person_room"];
 export const healthValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Health"]> = ["started", "degraded", "unavailable"];
 export const installKindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["InstallKind"]> = ["container", "editable", "uv-tool", "pip"];
 export const invitationStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["InvitationStatus"]> = ["pending", "accepted", "expired", "revoked"];
@@ -10971,10 +10981,11 @@ export const problemCodeValues: ReadonlyArray<FlattenedDeepRequired<components>[
 export const proofValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Proof"]> = ["device_code", "enrollment_code"];
 export const riskValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Risk"]> = ["read", "write", "sensitive"];
 export const roleValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Role"]> = ["owner", "admin", "member", "guest"];
-export const scopeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Scope"]> = ["accounts.manage", "accounts.owners.manage", "household.read", "agent.read", "household.connections.manage", "own.connections.manage", "satellites.manage", "system.read", "config.manage", "journal.read.all", "journal.read.own", "memory.manage.all", "memory.manage.own", "tasks.manage", "tasks.manage.own", "watches.manage.all", "watches.manage.own", "schedules.manage.all", "schedules.manage.own"];
+export const scopeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Scope"]> = ["accounts.manage", "accounts.owners.manage", "household.read", "agent.read", "household.connections.manage", "own.connections.manage", "satellites.manage", "system.read", "config.manage", "journal.read.all", "journal.read.own", "memory.manage.all", "memory.manage.own", "tasks.manage", "tasks.manage.own", "watches.manage.all", "watches.manage.own", "schedules.manage.all", "schedules.manage.own", "messages.read.all", "messages.read.own"];
 export const shapeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Shape"]> = ["one", "list", "named"];
 export const stageValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Stage"]> = ["waiting", "device_seen", "paired", "cancelled", "expired"];
 export const statusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Status"]> = ["connected", "needs_reauth", "error"];
+export const suggestValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Suggest"]> = ["people", "residents"];
 export const taskStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["TaskStatus"]> = ["running", "completed", "failed", "cancelled"];
 export const toneValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Tone"]> = ["normal", "decision", "warning"];
 export const updateStateValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["UpdateState"]> = ["current", "available", "installing", "failed"];

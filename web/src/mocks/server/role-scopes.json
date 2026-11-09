@@ -10,6 +10,8 @@
     "journal.read.own",
     "memory.manage.all",
     "memory.manage.own",
+    "messages.read.all",
+    "messages.read.own",
     "own.connections.manage",
     "satellites.manage",
     "schedules.manage.all",
@@ -30,6 +32,8 @@
     "journal.read.own",
     "memory.manage.all",
     "memory.manage.own",
+    "messages.read.all",
+    "messages.read.own",
     "own.connections.manage",
     "satellites.manage",
     "schedules.manage.all",
@@ -45,6 +49,7 @@
     "household.read",
     "journal.read.own",
     "memory.manage.own",
+    "messages.read.own",
     "own.connections.manage",
     "schedules.manage.own",
     "tasks.manage.own",
@@ -52,6 +57,7 @@
   ],
   "guest": [
     "journal.read.own",
-    "memory.manage.own"
+    "memory.manage.own",
+    "messages.read.own"
   ]
 }

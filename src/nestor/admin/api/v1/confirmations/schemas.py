@@ -27,7 +27,7 @@ class ConfirmationOut(BaseModel):
             person=person,
             tool=request.tool,
             arguments=dict(request.arguments),
-            origin=OriginOut(session=str(request.origin), channel=request.origin.channel),
+            origin=OriginOut.of(request.origin),
             expires_at=request.expires_at,
             yours=request.person == caller_person,
         )

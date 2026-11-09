@@ -104,7 +104,9 @@ export function HomeView() {
   const focus = latest ? nodeOf(latest, paired) : null;
   const initiative = useQuery({ ...initiativeQuery, enabled: useCan("agent:read") });
   const later = initiative.data?.upcoming ?? [];
-  const soon = (schedules.data?.schedules ?? []).filter((s) => s.next_due).slice(0, 3);
+  const soon = (schedules.data?.schedules ?? [])
+    .flatMap((s) => (s.next_due ? [{ ...s, next_due: s.next_due }] : []))
+    .slice(0, 3);
   const upcoming = (watches.data?.watches.length ?? 0) > 0 || Boolean(quiet) || later.length > 0 || soon.length > 0;
 
   return (
@@ -383,7 +385,7 @@ function Next({
   watches: { id: string; what: string; last_triggered_at: string | null }[];
   quiet: Quiet | null;
   upcoming: UpcomingDelivery[];
-  schedules: Schedule[];
+  schedules: (Schedule & { next_due: string })[];
 }) {
   const t = useT();
   return (
@@ -421,9 +423,7 @@ function Next({
           <li key={s.id}>
             <Link to="/schedules" className="group block">
               <span className="text-[1.05rem] leading-snug text-ink group-hover:underline">{s.instruction}</span>
-              {s.next_due ? (
-                <span className="mt-1 block text-[0.92rem] text-ink-muted">{moment(s.next_due)}</span>
-              ) : null}
+              <span className="mt-1 block text-[0.92rem] text-ink-muted">{moment(s.next_due)}</span>
             </Link>
           </li>
         ))}

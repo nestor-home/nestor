@@ -3,7 +3,6 @@
 `schedules.manage.all` reaches every wake-up; `schedules.manage.own` those set for the account's person.
 """
 
-from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request, Response
@@ -16,17 +15,18 @@ from nestor.admin.state import state
 from nestor.modules.accounts import Scope
 
 router = APIRouter(tags=["schedules"])
-EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
 Manager = Annotated[Caller, Depends(allowed(Scope.SCHEDULES_MANAGE_ALL, Scope.SCHEDULES_MANAGE_OWN))]
 
 
 @router.get("/schedules")
 async def list_schedules(request: Request, caller: Manager) -> SchedulesOut:
-    book = state(request).nestor.schedule_book
-    people = People(state(request).nestor.household)
-    found = [ScheduleOut.of(s, book, people) for s in book.schedules.values() if reaches_schedule(caller, s)]
-    found.sort(key=lambda s: (s.next_due is None, s.next_due or EPOCH))
-    return SchedulesOut(schedules=found, timezone=book.timezone)
+    """Soonest first."""
+    nestor = state(request).nestor
+    book, people = nestor.schedule_book, People(nestor.household)
+    return SchedulesOut(
+        schedules=[ScheduleOut.of(s, book, people) for s in book.upcoming() if reaches_schedule(caller, s)],
+        timezone=book.timezone,
+    )
 
 
 @router.post("/schedules/{schedule_id}/cancel", status_code=204)

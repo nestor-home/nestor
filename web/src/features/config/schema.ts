@@ -2,7 +2,7 @@
  * Reading `/config/schema`: what control a property needs, its label, whether it is secret or
  * advanced, and the document paths the forms edit. Pure functions, tested on their own.
  */
-import type { ConfigDocument, ConfigProblem, ConfigSchema, ConfigSlot, ModelType } from "@/api";
+import type { ConfigDocument, ConfigProblem, ConfigSchema, ConfigSlot, ModelType, Suggest } from "@/api";
 
 /** A JSON Schema as `/config/schema` sends it, with Nestor's `x-nestor` annotations. */
 export interface JsonSchema {
@@ -39,12 +39,10 @@ export interface JsonSchema {
     /** the type of model the reference takes: only those are offered */
     model_type?: ModelType | null;
     /** what a map's keys and values are picked from: the household's people, the home system's residents */
-    suggest_keys?: Suggestion | null;
-    suggest_values?: Suggestion | null;
+    suggest_keys?: Suggest | null;
+    suggest_values?: Suggest | null;
   };
 }
-
-export type Suggestion = "people" | "residents";
 
 /**
  * `/config/schema` read as what it is: JSON Schemas (sent as free JSON) with Nestor's `x-nestor`

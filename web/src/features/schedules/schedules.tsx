@@ -1,18 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
-import { MessageSquareText, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { api, keys, type Schedule, schedulesQuery } from "@/api";
 import { Confirm } from "@/components/confirm";
 import { useNotify } from "@/components/notices";
+import { OriginLink } from "@/components/origin-link";
 import { RowList, Section } from "@/components/page";
 import { Empty, Failure, Loading } from "@/components/states";
 import { Tag } from "@/components/status";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/i18n";
 import { tr } from "@/i18n/runtime";
-import { KindMark, kindName } from "@/lib/brands";
 import { moment } from "@/lib/dates";
-import { dayLabel } from "@/lib/labels";
+import { weekdayLabel } from "@/lib/labels";
 import { personName } from "@/lib/people";
 import { useCan, useMe } from "@/lib/session";
 
@@ -55,9 +54,9 @@ function ScheduleRows({ schedules }: { schedules: Schedule[] }) {
 }
 
 /** When a recurring one runs, in words: `Saturday, Sunday · 08:00`, `every day · 08:00, 18:00`. */
-export function rhythm(s: Schedule): string {
+function rhythm(s: Schedule): string {
   const times = s.times.join(", ");
-  const days = s.days.length ? s.days.map(dayLabel).join(", ") : tr("schedule-every-day");
+  const days = s.days.length ? s.days.map(weekdayLabel).join(", ") : tr("schedule-every-day");
   return `${days} · ${times}`;
 }
 
@@ -81,17 +80,7 @@ function ScheduleRow({ schedule: s }: { schedule: Schedule }) {
           <span>{t("schedule-for", { name: personName(s.owner) })}</span>
           {s.recurring ? <Tag>{rhythm(s)}</Tag> : null}
           {s.next_due ? <span>{t("schedule-next", { when: moment(s.next_due) })}</span> : null}
-          {s.origin ? (
-            <Link
-              to="/journal"
-              search={{ session: s.origin.session }}
-              className="inline-flex items-center gap-1 hover:text-ember"
-            >
-              <MessageSquareText className="size-3.5" aria-hidden="true" />
-              <KindMark kind={s.origin.channel} className="size-3" label={false} />
-              {t("schedule-set-in", { channel: kindName(s.origin.channel) })}
-            </Link>
-          ) : null}
+          {s.origin ? <OriginLink origin={s.origin} /> : null}
         </p>
       </div>
       {canCancel ? (

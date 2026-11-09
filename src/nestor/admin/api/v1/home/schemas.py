@@ -1,15 +1,19 @@
 """The home system as the admin shows it: whether it answers, how finely it places people, its rooms, who it knows
 and how the household is tied to it, and the actions it offers the agent."""
 
+from collections.abc import Sequence
+
 from pydantic import BaseModel
 
 from nestor.admin.api.v1.household.schemas import PresenceOut
 from nestor.admin.api.v1.shared import People, PersonRef
+from nestor.admin.api.v1.system.schemas import ComponentOut
 from nestor.admin.presentation import Phrasebook
-from nestor.core import Health, PersonId
 from nestor.modules.cognition.tools import Risk, Tool
-from nestor.modules.home import Granularity, Home, Presence
+from nestor.modules.home import Granularity, Home
 from nestor.modules.household import Household
+from nestor.modules.satellites import Satellite
+from nestor.runtime import Plugged
 
 
 class RoomOut(BaseModel):
@@ -17,6 +21,7 @@ class RoomOut(BaseModel):
     name: str
     occupied: bool | None  # None: nothing in it tells
     people: list[PersonRef]  # who is in it, when the home places people in rooms
+    satellites: list[str]  # the paired satellites in it, by id
 
 
 class ResidentOut(BaseModel):
@@ -50,12 +55,9 @@ class HomeToolOut(BaseModel):
 
 
 class HomeOut(BaseModel):
-    name: str  # the configured instance
-    brand: str | None
-    health: Health
-    health_detail: str | None
+    component: ComponentOut  # as the system page shows it: its plugin, brand, health
     connected: bool
-    granularity: Granularity  # 1 home or away, 2 occupied rooms, 3 who is in which room
+    granularity: Granularity  # what it tells: who is home, which rooms are occupied, who is in which room
     rooms: list[RoomOut]
     residents: list[ResidentOut]
     people: list[TiedPersonOut]  # every household person, tied or not
@@ -63,19 +65,23 @@ class HomeOut(BaseModel):
     tools: list[HomeToolOut]
 
     @classmethod
-    def of(cls, home: Home, household: Household, words: Phrasebook) -> "HomeOut":
+    def of(
+        cls, plugged: Plugged, home: Home, household: Household, satellites: Sequence[Satellite], words: Phrasebook
+    ) -> "HomeOut":
         overview, presence, people = home.overview(), home.presence.presence(), People(household)
         tied = {entity: person for person, entity in overview.people.items()}
-        detail = home.health_detail()
         return cls(
-            name=home.name,
-            brand=home.brand,
-            health=home.health(),
-            health_detail=words.text(detail) if detail else None,
+            component=ComponentOut.of(plugged, words),
             connected=overview.connected,
             granularity=overview.granularity,
             rooms=[
-                RoomOut(id=r.id, name=r.name, occupied=r.occupied, people=_in(r.id, presence, people))
+                RoomOut(
+                    id=r.id,
+                    name=r.name,
+                    occupied=r.occupied,
+                    people=[ref for p in presence.people_in(r.id) if (ref := people.ref(p))],
+                    satellites=[s.id for s in satellites if home.room_of(s.room) == r.id],
+                )
                 for r in overview.rooms
             ],
             residents=[
@@ -94,7 +100,3 @@ class HomeOut(BaseModel):
             unplaced_sensors=list(overview.unplaced_sensors),
             tools=[HomeToolOut.of(t) for t in sorted(home.tools.tools(), key=lambda t: t.name)],
         )
-
-
-def _in(room: str, presence: Presence, people: People) -> list[PersonRef]:
-    return [ref for p, w in presence.people.items() if w.room == room and (ref := people.ref(PersonId(p)))]

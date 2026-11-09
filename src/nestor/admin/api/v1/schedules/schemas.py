@@ -26,11 +26,11 @@ class ScheduleOut(BaseModel):
             id=schedule.id,
             instruction=schedule.instruction,
             owner=people.ref(schedule.owner),
-            origin=OriginOut(session=str(origin), channel=origin.channel) if origin else None,
+            origin=OriginOut.of(origin) if origin else None,
             recurring=schedule.recurring,
             once_at=schedule.at,
             times=[t.strftime("%H:%M") for t in schedule.times],
-            days=[Day(d) for d in schedule.days],
+            days=list(schedule.days),
             next_due=book.next_due(schedule),
         )
 

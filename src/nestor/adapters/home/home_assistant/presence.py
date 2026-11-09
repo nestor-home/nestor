@@ -113,6 +113,9 @@ class HomeAssistantPresence(PresenceSource):
             unplaced_sensors=tuple(installation.unplaced_sensors),
         )
 
+    def room_of(self, label: str) -> str | None:
+        return self._installation.room_of(label) if self._installation is not None else None
+
     def presence(self) -> Presence:
         if self._installation is None:
             unknown = dict.fromkeys(self._mapping.people, Whereabouts())

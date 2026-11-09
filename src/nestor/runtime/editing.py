@@ -95,6 +95,13 @@ SECTIONS: Mapping[str, Any] = {
 }
 
 
+class Suggest(StrEnum):
+    """What a map's keys or values may be picked from in a form (`suggest_keys`, `suggest_values` of a field)."""
+
+    PEOPLE = "people"  # the household's person ids
+    RESIDENTS = "residents"  # the people the home system knows (its person entities)
+
+
 class SecretShape(StrEnum):
     VALUE = "value"  # one secret: `SecretStr`, or `SecretStr | None`
     MAP = "map"  # a mapping whose every value is a secret: `dict[str, SecretStr]`
@@ -154,8 +161,6 @@ def annotate(schema: dict[str, Any], scope: str, advanced: Iterable[str] = ()) -
                         "reference": prop.pop("reference", None),
                         "model_type": prop.pop("model_type", None),  # the type of model a reference takes
                         "brands": prop.pop("brands", None),
-                        # what a map's keys and values are picked from: "people" (the household's ids), "residents"
-                        # (the home system's person entities)
                         "suggest_keys": prop.pop("suggest_keys", None),
                         "suggest_values": prop.pop("suggest_values", None),
                     }

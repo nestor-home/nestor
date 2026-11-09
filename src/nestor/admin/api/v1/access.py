@@ -147,7 +147,7 @@ def reachable_schedule(admin: AdminState, caller: Caller, schedule_id: str) -> S
     return schedule
 
 
-def reaches_person_of(caller: Caller, *people: PersonId | None) -> bool:
-    """What concerns these people (a message between two, a confirmation): all of it with `journal.read.all`, what
-    concerns the account's person with `journal.read.own`."""
-    return any(caller.principal.reaches(p, every=Scope.JOURNAL_READ_ALL, own=Scope.JOURNAL_READ_OWN) for p in people)
+def reaches_message_of(caller: Caller, *people: PersonId | None) -> bool:
+    """A message between these people, or a confirmation waiting for one of them: every one with
+    `messages.read.all`, those concerning the account's person with `messages.read.own`."""
+    return any(caller.principal.reaches(p, every=Scope.MESSAGES_READ_ALL, own=Scope.MESSAGES_READ_OWN) for p in people)

@@ -56,3 +56,4 @@ brand-satellites = Satellites
 brand-voice = Voix
 brand-openai-compatible = API compatible OpenAI
 brand-sdk = SDK { $language }
+origin-a-conversation = une conversation

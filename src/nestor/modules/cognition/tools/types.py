@@ -46,9 +46,13 @@ class SensitiveWhen:
     tool: str | None
     arguments: Mapping[str, tuple[str, ...]]
 
-    def matches(self, tool: str, arguments: Mapping[str, object]) -> bool:
-        if self.tool is not None and tool != self.tool:
-            return False
+    def applies_to(self, tool: str, risk: Risk) -> bool:
+        """Whether it judges this tool's calls: the tool it names, or any with `tool` `None`. A rule never makes a
+        tool that only reads sensitive."""
+        return risk is not Risk.READ and self.tool in (None, tool)
+
+    def matches(self, arguments: Mapping[str, object]) -> bool:
+        """Whether a call it applies to acts on what it names."""
         for name, values in self.arguments.items():
             given = arguments.get(name)
             found = given if isinstance(given, list | tuple) else [given] if given is not None else []

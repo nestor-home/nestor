@@ -18,5 +18,5 @@ export const taskStatusLabel = (status: TaskStatus) => tr("task-status", { statu
 export const kindLabel = (kind: Kind) => tr("journal-kind", { kind });
 export const modelTypeLabel = (type: ModelType) => tr("model-type", { type });
 export const modelTypeHint = (type: ModelType) => tr("model-type-help", { type });
-export const dayLabel = (day: Day) => tr("schedule-day", { day });
+export const weekdayLabel = (day: Day) => tr("schedule-day", { day });
 export const granularityLabel = (granularity: Granularity) => tr("home-granularity", { granularity });

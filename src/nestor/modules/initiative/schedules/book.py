@@ -2,13 +2,15 @@
 
 import asyncio
 from collections.abc import Callable
-from datetime import datetime, time
+from datetime import UTC, datetime, time
 
 from nestor.core import Component, PersonId, new_id, utc_now
 from nestor.modules.channels import Address, Exchange
 from nestor.modules.initiative.schedules.events import ScheduleCancelled, ScheduleCreated, ScheduleFired
-from nestor.modules.initiative.schedules.types import Schedule
+from nestor.modules.initiative.schedules.types import Day, Schedule
 from nestor.modules.journal import Journal
+
+EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
 
 
 class ScheduleBook(Component):
@@ -35,7 +37,7 @@ class ScheduleBook(Component):
         created_in: Address | None = None,
         at: datetime | None = None,
         times: tuple[time, ...] = (),
-        days: tuple[str, ...] = (),
+        days: tuple[Day, ...] = (),
         exchange: Exchange | None = None,
     ) -> Schedule:
         schedule = Schedule(
@@ -68,6 +70,11 @@ class ScheduleBook(Component):
         await self.journal.publish(event)
         self._take(event)
 
+    def upcoming(self) -> list[Schedule]:
+        """Every wake-up, soonest due first; one-offs already past last."""
+        due = {s.id: self.next_due(s) for s in self.schedules.values()}
+        return sorted(self.schedules.values(), key=lambda s: (due[s.id] is None, due[s.id] or s.at or EPOCH))
+
     def next_due(self, schedule: Schedule) -> datetime | None:
         return schedule.next_due(self._since[schedule.id], self.timezone)
 
@@ -85,7 +92,7 @@ class ScheduleBook(Component):
                 created_in=event.created_in,
                 at=event.once_at,
                 times=tuple(time.fromisoformat(t) for t in event.times),
-                days=event.days,
+                days=tuple(Day(d) for d in event.days),
             )
             self._since[event.schedule_id] = event.at  # the event's time: due from its creation on
         elif isinstance(event, ScheduleFired) and (schedule := self.schedules.get(event.schedule_id)):

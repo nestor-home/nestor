@@ -2727,11 +2727,19 @@
             },
             "SensitiveCalls": {
               "additionalProperties": false,
-              "description": "Calls of `tool` confirmed by the person first when one of these values appears in an argument: Home\nAssistant's `HassTurnOn` and `HassTurnOff` drive lights and locks alike.",
+              "description": "Calls confirmed by the person first when one of these values appears in an argument: a server's tools may\ndrive harmless and dangerous things alike.",
               "properties": {
                 "tool": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
                   "title": "Tool",
-                  "type": "string",
                   "x-nestor": {
                     "field": "tool",
                     "title_id": "config-tools-mcp-sensitivecalls-tool",
@@ -2779,7 +2787,6 @@
                 }
               },
               "required": [
-                "tool",
                 "arguments"
               ],
               "title": "SensitiveCalls",
@@ -3964,5 +3971,9 @@
       },
       "model_types": {}
     }
-  }
+  },
+  "suggestions": [
+    "people",
+    "residents"
+  ]
 }

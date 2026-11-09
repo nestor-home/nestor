@@ -2,16 +2,17 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { CircleAlert, ShieldCheck } from "lucide-react";
 import type { ReactNode } from "react";
-import { type Home, type HomeRoom, homeQuery, satellitesQuery } from "@/api";
+import { type Home, homeQuery, satellitesQuery } from "@/api";
 import { Fact, Facts, PageHeader, Panel, RowList, Section } from "@/components/page";
+import { RiskTag } from "@/components/risk-tag";
 import { Empty, Failure, Loading } from "@/components/states";
 import { Status, Tag } from "@/components/status";
 import { buttonVariants } from "@/components/ui/button";
 import { PresenceMark } from "@/features/people/people";
-import { HEALTH } from "@/features/system/system-view";
+import { HEALTH, UNKNOWN } from "@/features/system/system-view";
 import { useT } from "@/i18n";
 import { KindMark } from "@/lib/brands";
-import { granularityLabel, riskLabel } from "@/lib/labels";
+import { granularityLabel } from "@/lib/labels";
 import { useCan } from "@/lib/session";
 
 /** The home system (Home Assistant): whether it answers, who is where, its rooms, who it knows, and its actions. */
@@ -40,16 +41,16 @@ export function HouseView() {
 
 function Loaded({ home, configure }: { home: Home; configure: ReactNode }) {
   const t = useT();
-  const health = HEALTH[home.health];
+  const health = home.component.health ? HEALTH[home.component.health] : UNKNOWN;
   return (
     <>
       <PageHeader
         title={t("house-title")}
         meta={
           <>
-            {home.brand ? <KindMark kind={home.brand} className="size-4 text-ink" /> : null}
+            {home.component.brand ? <KindMark kind={home.component.brand} className="size-4 text-ink" /> : null}
             <Status tone={health.tone}>{t(health.label)}</Status>
-            {home.health_detail ? <span>{home.health_detail}</span> : null}
+            {home.component.health_detail ? <span>{home.component.health_detail}</span> : null}
           </>
         }
         actions={configure}
@@ -111,7 +112,7 @@ function Loaded({ home, configure }: { home: Home; configure: ReactNode }) {
                     <span className="block text-[0.85rem] text-ink-muted">{tool.description}</span>
                   </span>
                   <span className="flex flex-wrap gap-1.5">
-                    <Tag tone={tool.risk === "sensitive" ? "attention" : undefined}>{riskLabel(tool.risk)}</Tag>
+                    <RiskTag risk={tool.risk} />
                     {tool.confirmed_when ? <Tag icon={ShieldCheck}>{t("house-action-confirmed-when")}</Tag> : null}
                   </span>
                 </li>
@@ -142,11 +143,7 @@ function Loaded({ home, configure }: { home: Home; configure: ReactNode }) {
 function Rooms({ home }: { home: Home }) {
   const t = useT();
   const satellites = useQuery(satellitesQuery);
-  // a satellite's room is the household's word for it: the area's id or its name
-  const devices = (room: HomeRoom) =>
-    (satellites.data?.paired ?? []).filter((s) =>
-      [room.id, room.name].some((label) => label.localeCompare(s.room, undefined, { sensitivity: "base" }) === 0),
-    );
+  const names = new Map((satellites.data?.paired ?? []).map((s) => [s.id, s.name ?? s.id]));
   if (!home.connected) return null;
   return (
     <Section title={t("house-rooms")} count={home.rooms.length}>
@@ -167,11 +164,7 @@ function Rooms({ home }: { home: Home }) {
                   {room.people.length ? room.people.map((p) => p.name).join(", ") : t("house-room-nobody")}
                 </Fact>
                 <Fact term={t("house-room-satellites")}>
-                  {devices(room).length
-                    ? devices(room)
-                        .map((s) => s.name ?? s.id)
-                        .join(", ")
-                    : "—"}
+                  {room.satellites.length ? room.satellites.map((id) => names.get(id) ?? id).join(", ") : "—"}
                 </Fact>
               </Facts>
             </Panel>

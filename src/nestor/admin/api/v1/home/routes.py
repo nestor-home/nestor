@@ -18,4 +18,7 @@ Reader = Annotated[Caller, Depends(allowed(Scope.HOUSEHOLD_READ))]
 async def get_home(request: Request, caller: Reader) -> HomeOut | None:
     """The home as it is now; `null` when no home system is plugged in."""
     nestor = state(request).nestor
-    return HomeOut.of(nestor.home, nestor.household, caller.phrasebook) if nestor.home else None
+    if nestor.home is None:
+        return None
+    plugged = next(p for p in nestor.plugged if p.component is nestor.home)
+    return HomeOut.of(plugged, nestor.home, nestor.household, nestor.pairing.satellites(), caller.phrasebook)

@@ -9,7 +9,6 @@ schedule-recurring = Recurring
 schedule-for = for { $name }
 schedule-next = next { $when }
 schedule-every-day = every day
-schedule-set-in = set on { $channel }
 schedule-cancel = Cancel
 schedule-cancel-for = Cancel “{ $what }”
 schedule-cancel-title = Cancel this reminder?

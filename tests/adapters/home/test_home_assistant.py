@@ -23,6 +23,7 @@ from nestor.adapters.home.home_assistant import (
 from nestor.adapters.home.home_assistant.client import websocket_url
 from nestor.core import ContractError, Health, PersonId, ProviderError
 from nestor.core.i18n import Locale
+from nestor.modules.cognition.tools import Risk
 from nestor.modules.home import Granularity, Presence, Resident, Room, Whereabouts
 from nestor.runtime import Services
 from nestor.testing.home import PresenceSourceContract
@@ -624,8 +625,9 @@ def test_by_default_locks_the_alarm_and_doors_need_a_go_ahead_whatever_the_tool_
     arguments: dict[str, Any], sensitive: bool
 ) -> None:
     rule = HomeAssistantSettings(url="http://ha.local:8123", token=TOKEN).sensitive.rule()
-    assert rule.matches("intent__HassTurnOff", arguments) is sensitive
-    assert rule.matches("light__HassLightSet", arguments) is sensitive
+    assert rule.applies_to("intent__HassTurnOff", Risk.WRITE) and rule.applies_to("light__HassLightSet", Risk.WRITE)
+    assert not rule.applies_to("homeassistant__GetLiveContext", Risk.READ), "a rule never makes a read sensitive"
+    assert rule.matches(arguments) is sensitive
 
 
 def test_a_reverse_proxy_prefix_is_kept_in_the_websocket_url() -> None:

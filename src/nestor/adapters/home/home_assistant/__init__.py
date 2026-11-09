@@ -23,6 +23,7 @@ from nestor.adapters.tools.mcp import BearerToken, McpToolProvider
 from nestor.core import ContractError, PersonId
 from nestor.modules.cognition.tools import SensitiveWhen
 from nestor.runtime import AdapterSettings, Family, Plugin, RequiredSecret, Services
+from nestor.runtime.editing import Suggest
 
 __all__ = ["HomeAssistant", "HomeAssistantPresence", "HomeAssistantSettings", "PresenceMapping", "plugin"]
 
@@ -45,10 +46,10 @@ class HomeAssistantSettings(AdapterSettings):
     url: str
     token: RequiredSecret
     people: dict[str, str] = Field(  # household person id → person entity
-        default_factory=dict, json_schema_extra={"suggest_keys": "people", "suggest_values": "residents"}
+        default_factory=dict, json_schema_extra={"suggest_keys": Suggest.PEOPLE, "suggest_values": Suggest.RESIDENTS}
     )
     rooms: dict[str, str] = Field(  # household person id → room tracker entity
-        default_factory=dict, json_schema_extra={"suggest_keys": "people"}
+        default_factory=dict, json_schema_extra={"suggest_keys": Suggest.PEOPLE}
     )
     occupancy_sensors: list[str] | None = None  # `None`: every occupancy, presence or motion sensor with an area
     sensitive: SensitiveTargets = SensitiveTargets()

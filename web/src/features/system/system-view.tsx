@@ -25,7 +25,7 @@ export const HEALTH: Record<Health, { tone: StatusTone; label: string }> = {
   unavailable: { tone: "error", label: "sys-health-down" },
 };
 /** A component that tells nothing about itself. */
-const UNKNOWN = { tone: "idle", label: "sys-health-unknown" } as const;
+export const UNKNOWN = { tone: "idle", label: "sys-health-unknown" } as const;
 
 export function SystemView() {
   const t = useT();

@@ -65,11 +65,8 @@ export type ToolSettings = S["ConnectionSettingsIn"];
 // -- the home -------------------------------------------------------------------------------------
 
 export type Home = S["HomeOut"];
-export type HomeRoom = S["RoomOut"];
-export type Resident = S["ResidentOut"];
-export type TiedPerson = S["TiedPersonOut"];
-export type HomeTool = S["HomeToolOut"];
 export type Granularity = S["Granularity"];
+export type Suggest = S["Suggest"];
 
 // -- satellites -----------------------------------------------------------------------------------
 
@@ -95,11 +92,9 @@ export type Watch = S["WatchOut"];
 export type Watches = S["WatchesOut"];
 export type Day = S["Day"];
 export type Schedule = S["ScheduleOut"];
-export type Schedules = S["SchedulesOut"];
 export type PassedMessage = S["PassedMessageOut"];
 export type Messages = S["MessagesOut"];
 export type Confirmation = S["ConfirmationOut"];
-export type Answered = S["AnsweredOut"];
 export type Memory = S["MemoryOut"];
 export type MemoryQuery = NonNullable<Query<"/api/v1/memories">>;
 

@@ -5,17 +5,17 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
 
-from nestor.admin.api.v1.access import reaches_person_of
+from nestor.admin.api.v1.access import reaches_message_of
 from nestor.admin.api.v1.confirmations.schemas import AnsweredOut, AnswerIn, ConfirmationOut
 from nestor.admin.api.v1.errors import not_found
 from nestor.admin.api.v1.security import Caller, allowed
 from nestor.admin.api.v1.shared import People
 from nestor.admin.state import state
 from nestor.modules.accounts import Scope
-from nestor.modules.cognition.tools import ToolFailed
+from nestor.modules.initiative.confirmations import NothingWaits, NotTheirs
 
 router = APIRouter(tags=["confirmations"])
-Reader = Annotated[Caller, Depends(allowed(Scope.JOURNAL_READ_ALL, Scope.JOURNAL_READ_OWN))]
+Reader = Annotated[Caller, Depends(allowed(Scope.MESSAGES_READ_ALL, Scope.MESSAGES_READ_OWN))]
 
 
 @router.get("/confirmations")
@@ -26,22 +26,19 @@ async def list_confirmations(request: Request, caller: Reader) -> list[Confirmat
     return [
         ConfirmationOut.of(c, people, caller.person)
         for c in nestor.confirmations.pending()
-        if reaches_person_of(caller, c.person)
+        if reaches_message_of(caller, c.person)
     ]
 
 
 @router.post("/confirmations/{confirmation_id}/answer")
 async def answer_confirmation(request: Request, caller: Reader, confirmation_id: str, body: AnswerIn) -> AnsweredOut:
     """Only the person asked may answer; 404 for anyone else, or once answered or expired."""
-    confirmations = state(request).nestor.confirmations
-    found = next((c for c in confirmations.pending() if c.confirmation_id == confirmation_id), None)
-    if found is None or caller.person is None or found.person != caller.person:
+    if caller.person is None:
         raise not_found("confirmation_unknown")
     try:
-        answered = await confirmations.answer(
-            found.confirmation_id, caller.person, approved=body.approved, session=found.origin.session
+        answered = await state(request).nestor.confirmations.answer(
+            confirmation_id, caller.person, approved=body.approved
         )
-    except ToolFailed:  # answered or expired meanwhile
+    except (NothingWaits, NotTheirs):
         raise not_found("confirmation_unknown") from None
-    result = answered.get("result")
-    return AnsweredOut(approved=body.approved, result=str(result) if result is not None else None)
+    return AnsweredOut(approved=answered.approved, result=answered.result)

@@ -73,6 +73,10 @@ class StaticHome(Home):
     def tools(self) -> StaticTools:
         return self._tools
 
+    def room_of(self, label: str) -> str | None:
+        wanted = label.strip().casefold()
+        return next((r.id for r in self.rooms if wanted in (r.id.casefold(), r.name.casefold())), None)
+
     def overview(self) -> HomeOverview:
         return HomeOverview(
             connected=self.connected,
@@ -98,9 +102,9 @@ class PresenceSourceContract:
         presence = source.presence()
         assert presence.granularity is source.granularity
         assert dict(presence.people) == dict(self.expected())
-        if source.granularity < Granularity.PERSON_ROOM:
+        if not source.granularity.at_least(Granularity.PERSON_ROOM):
             assert all(w.room is None for w in presence.people.values()), "rooms reported beyond the granularity"
-        if source.granularity < Granularity.OCCUPIED_ROOMS:
+        if not source.granularity.at_least(Granularity.OCCUPIED_ROOMS):
             assert not presence.occupied_rooms, "occupied rooms reported beyond the granularity"
 
     def test_since_when_is_a_moment_of_the_past(self) -> None:

@@ -4,20 +4,29 @@ actions with the ones that need a go-ahead."""
 from pathlib import Path
 
 from nestor.modules.accounts import Role
+from nestor.modules.satellites import Device, Manifest
+from nestor.testing.satellites import SOFTWARE, pair_by_code
 
 from ....harness import Harness
 
 
 async def test_the_home_shows_its_rooms_residents_ties_and_actions(tmp_path: Path) -> None:
     async with Harness(tmp_path) as admin:
+        await pair_by_code(admin.nestor.pairing, Manifest(Device("mic", "esp32", "SALON"), software=SOFTWARE))
         home = (await (await admin.api()).get("/api/v1/home")).json()
         offered = {spec.name for spec in admin.nestor.toolbox.specs()}
     assert {"lights", "unlock"} <= offered, "the home's actions are the agent's tools"
 
-    assert (home["connected"], home["granularity"], home["health"]) == (True, 1, "started")
+    assert (home["connected"], home["granularity"], home["component"]["health"]) == (True, "home", "started")
     assert home["rooms"] == [
-        {"id": "salon", "name": "Salon", "occupied": True, "people": [{"id": "mathis", "name": "Mathis"}]},
-        {"id": "cuisine", "name": "Cuisine", "occupied": None, "people": []},
+        {
+            "id": "salon",
+            "name": "Salon",
+            "occupied": True,
+            "people": [{"id": "mathis", "name": "Mathis"}],
+            "satellites": ["mic"],  # its room named as the home names it, case aside
+        },
+        {"id": "cuisine", "name": "Cuisine", "occupied": None, "people": [], "satellites": []},
     ]
     assert home["residents"] == [
         {"entity": "person.mathis", "name": "Mathis", "home": True, "person": {"id": "mathis", "name": "Mathis"}},

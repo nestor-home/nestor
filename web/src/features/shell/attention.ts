@@ -15,7 +15,6 @@ import {
   type Component,
   confirmationsQuery,
   connectionsQuery,
-  homeQuery,
   journalLatestQuery,
   satellitesQuery,
   systemQuery,
@@ -56,7 +55,6 @@ export function useAttention(): { items: Attention[]; ready: boolean } {
   const system = useQuery({ ...systemQuery, enabled: canSatellites });
   const spoken = useQuery(journalLatestQuery({ kinds: ["delivery"], from: startOfToday() }, 100));
   const confirmations = useQuery({ ...confirmationsQuery, enabled: useCan("messages:read") });
-  const home = useQuery({ ...homeQuery, enabled: useCan("home:read") });
 
   const items: Attention[] = [];
   for (const c of confirmations.data ?? []) {
@@ -71,13 +69,14 @@ export function useAttention(): { items: Attention[]; ready: boolean } {
       link: { to: "/messages" },
     });
   }
-  if (home.data && home.data.health !== "started") {
+  const home = system.data?.components.find((c) => c.slot === "home");
+  if (home?.health && home.health !== "started") {
     items.push({
       key: "home",
       icon: House,
-      tone: home.data.health === "unavailable" ? "error" : "attention",
-      title: tr("attention-home", { health: home.data.health }),
-      detail: home.data.health_detail ?? "",
+      tone: home.health === "unavailable" ? "error" : "attention",
+      title: tr("attention-home", { health: home.health }),
+      detail: home.health_detail ?? "",
       action: tr("action-see"),
       link: { to: "/house" },
     });

@@ -46,7 +46,7 @@ class TaskOut(BaseModel):
             executor=task.executor,
             status=task.status,
             requested_by=people.ref(task.requested_by),
-            origin=OriginOut(session=str(task.origin), channel=task.origin.channel),
+            origin=OriginOut.of(task.origin),
             delivered=DeliveredOut.of(delivery) if delivery else None,
             started_at=task.started_at,
             ended_at=afterwards.ended.get(task.id) if outcome else None,

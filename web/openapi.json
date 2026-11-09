@@ -6450,6 +6450,7 @@
           "schedules"
         ],
         "summary": "List Schedules",
+        "description": "Soonest first.",
         "operationId": "listSchedules",
         "responses": {
           "200": {
@@ -6656,6 +6657,7 @@
           "messages"
         ],
         "summary": "List Messages",
+        "description": "Each list oldest first, as the book keeps them.",
         "operationId": "listMessages",
         "responses": {
           "200": {
@@ -10663,13 +10665,21 @@
             },
             "type": "object",
             "title": "Slots"
+          },
+          "suggestions": {
+            "items": {
+              "$ref": "#/components/schemas/Suggest"
+            },
+            "type": "array",
+            "title": "Suggestions"
           }
         },
         "type": "object",
         "required": [
           "sections",
           "section_titles",
-          "slots"
+          "slots",
+          "suggestions"
         ],
         "title": "ConfigSchemaOut"
       },
@@ -11395,14 +11405,14 @@
         "title": "FieldOut"
       },
       "Granularity": {
-        "type": "integer",
+        "type": "string",
         "enum": [
-          1,
-          2,
-          3
+          "home",
+          "occupied_rooms",
+          "person_room"
         ],
         "title": "Granularity",
-        "description": "How much the presence source can tell, from coarse to fine."
+        "description": "How much the presence source can tell, from coarse to fine (`at_least` compares)."
       },
       "Health": {
         "type": "string",
@@ -11540,34 +11550,8 @@
       },
       "HomeOut": {
         "properties": {
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "brand": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Brand"
-          },
-          "health": {
-            "$ref": "#/components/schemas/Health"
-          },
-          "health_detail": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Health Detail"
+          "component": {
+            "$ref": "#/components/schemas/ComponentOut"
           },
           "connected": {
             "type": "boolean",
@@ -11614,10 +11598,7 @@
         },
         "type": "object",
         "required": [
-          "name",
-          "brand",
-          "health",
-          "health_detail",
+          "component",
           "connected",
           "granularity",
           "rooms",
@@ -13476,6 +13457,13 @@
             },
             "type": "array",
             "title": "People"
+          },
+          "satellites": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Satellites"
           }
         },
         "type": "object",
@@ -13483,7 +13471,8 @@
           "id",
           "name",
           "occupied",
-          "people"
+          "people",
+          "satellites"
         ],
         "title": "RoomOut"
       },
@@ -13821,7 +13810,9 @@
           "watches.manage.all",
           "watches.manage.own",
           "schedules.manage.all",
-          "schedules.manage.own"
+          "schedules.manage.own",
+          "messages.read.all",
+          "messages.read.own"
         ],
         "title": "Scope",
         "description": "What an action needs. Code checks scopes, never roles: the role table is the only place they meet."
@@ -14050,6 +14041,15 @@
           "error"
         ],
         "title": "Status"
+      },
+      "Suggest": {
+        "type": "string",
+        "enum": [
+          "people",
+          "residents"
+        ],
+        "title": "Suggest",
+        "description": "What a map's keys or values may be picked from in a form (`suggest_keys`, `suggest_values` of a field)."
       },
       "SystemOut": {
         "properties": {

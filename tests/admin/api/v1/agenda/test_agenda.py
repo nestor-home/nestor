@@ -10,6 +10,7 @@ from nestor.modules.channels import Address
 from nestor.modules.cognition.model import ToolCall
 from nestor.modules.cognition.tools import ToolContext
 from nestor.modules.identity import Identified, Speaker
+from nestor.modules.initiative import Day
 
 from ....harness import Harness
 
@@ -21,7 +22,7 @@ MATHIS, MATHILDE = PersonId("mathis"), PersonId("mathilde")
 async def test_wake_ups_come_soonest_first_each_to_whom_it_was_set_for_and_cancel(tmp_path: Path) -> None:
     async with Harness(tmp_path) as admin:
         book = admin.nestor.schedule_book
-        later = await book.create("Arrose les plantes", owner=MATHILDE, times=(time(8),), days=("sat", "sun"))
+        later = await book.create("Arrose les plantes", owner=MATHILDE, times=(time(8),), days=(Day.SAT, Day.SUN))
         soon = await book.create(
             "Rappelle le pain", owner=MATHIS, created_in=TELEGRAM, at=utc_now() + timedelta(hours=1)
         )

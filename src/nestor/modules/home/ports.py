@@ -46,3 +46,8 @@ class Home(Component, ABC):
 
     @abstractmethod
     def overview(self) -> HomeOverview: ...
+
+    @abstractmethod
+    def room_of(self, label: str) -> str | None:
+        """The room a household's word names (a satellite's room: an area's id, name or alias), `None` when the
+        home does not know it or does not answer."""

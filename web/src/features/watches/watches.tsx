@@ -1,18 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { MessageSquareText } from "lucide-react";
 import { api, isMissing, keys, type Watch, watchesQuery, watchQuery } from "@/api";
 import { Ago } from "@/components/ago";
 import { Confirm } from "@/components/confirm";
 import { type Crumb, Crumbs } from "@/components/crumbs";
 import { useNotify } from "@/components/notices";
+import { OriginLink } from "@/components/origin-link";
 import { PageHeader, RowArrow, RowList, Section, WithAside } from "@/components/page";
 import { Empty, Failure, Loading } from "@/components/states";
 import { Tag } from "@/components/status";
 import { Button } from "@/components/ui/button";
 import { SubjectStory } from "@/features/journal/subject-story";
 import { useT } from "@/i18n";
-import { KindMark } from "@/lib/brands";
 import { moment } from "@/lib/dates";
 import { personName } from "@/lib/people";
 import { useCan, useMe } from "@/lib/session";
@@ -152,23 +151,10 @@ function Loaded({ watch: w, trail }: { watch: Watch; trail: Crumb[] }) {
             <p className="label-mono mb-1.5">{t("watch-rhythm")}</p>
             <p>{w.once ? t("watch-rhythm-once") : t("watch-rhythm-every")}</p>
           </div>
-          {w.origin?.session ? (
+          {w.origin ? (
             <div>
               <p className="label-mono mb-1.5">{t("watch-asked-in")}</p>
-              <Link
-                to="/journal"
-                search={{ session: w.origin.session }}
-                className="inline-flex items-center gap-2 text-ink hover:text-ember"
-              >
-                <MessageSquareText className="size-4" aria-hidden="true" />
-                {t("watch-a-conversation")}
-                {w.origin.channel ? (
-                  <span className="inline-flex items-center gap-1 text-[0.85rem] text-ink-muted">
-                    <KindMark kind={w.origin.channel} className="size-3" label={false} />
-                    {w.origin.channel}
-                  </span>
-                ) : null}
-              </Link>
+              <OriginLink origin={w.origin} />
             </div>
           ) : null}
         </aside>

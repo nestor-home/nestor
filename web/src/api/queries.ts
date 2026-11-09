@@ -138,14 +138,13 @@ export const schedulesQuery = queryOptions({
   queryFn: api.schedules,
   refetchInterval: 60_000,
 });
-export const messagesQuery = queryOptions({ queryKey: keys.messages, queryFn: api.messages, refetchInterval: 30_000 });
-/** A confirmation expires within minutes: kept fresh while someone looks. */
+export const messagesQuery = queryOptions({ queryKey: keys.messages, queryFn: api.messages, refetchInterval: 60_000 });
 export const confirmationsQuery = queryOptions({
   queryKey: keys.confirmations,
   queryFn: api.confirmations,
-  refetchInterval: 15_000,
+  refetchInterval: 60_000,
 });
-export const homeQuery = queryOptions({ queryKey: keys.home, queryFn: api.home, refetchInterval: 30_000 });
+export const homeQuery = queryOptions({ queryKey: keys.home, queryFn: api.home, refetchInterval: 60_000 });
 export const memoriesQuery = (query: MemoryQuery) =>
   queryOptions({ queryKey: keys.memories(query), queryFn: () => api.memories(query) });
 

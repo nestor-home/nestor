@@ -7,7 +7,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, ChevronRight, KeyRound, Plus, X } from "lucide-react";
 import { type ReactNode, useId, useState } from "react";
-import { type ConfigProblem, homeQuery } from "@/api";
+import { type ConfigProblem, homeQuery, type Suggest } from "@/api";
 import { Choice } from "@/components/choice";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -38,7 +38,6 @@ import {
   problemsByPath,
   problemsUnder,
   resolve,
-  type Suggestion,
   titleOf,
   typedSecret,
 } from "./schema";
@@ -550,7 +549,7 @@ function ListControl({ id, node, root, path, required, label }: ControlProps) {
 
 /** A map of names to values (headers, risks, people to entities). */
 /** What a map's keys or values may be picked from: the household's people in the draft, the home's residents. */
-function useSuggestions(source: Suggestion | null | undefined): string[] {
+function useSuggestions(source: Suggest | null | undefined): string[] {
   const { draft } = useConfigEditor();
   const home = useQuery({ ...homeQuery, enabled: source === "residents" });
   if (source === "people") {

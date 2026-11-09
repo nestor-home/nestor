@@ -840,18 +840,29 @@ export function home(): Home {
   const crowd = people();
   const of = (id: string) => crowd.find((p) => p.id === id)?.presence ?? null;
   return {
-    name: "home",
-    brand: "homeassistant",
-    health: "started",
-    health_detail: null,
+    component: component({
+      slot: "home",
+      name: "home",
+      adapter: "home-assistant",
+      brand: "homeassistant",
+      version: "2026.10.2",
+      health: "started",
+      health_detail: null,
+    }),
     connected: true,
-    granularity: 3,
+    granularity: "person_room",
     rooms: [
-      { id: LIVING_ROOM, name: fr("Living room", "Salon"), occupied: true, people: [ref("mathis"), ref("jules")] },
-      { id: KITCHEN, name: fr("Kitchen", "Cuisine"), occupied: false, people: [] },
-      { id: OFFICE, name: fr("Office", "Bureau"), occupied: null, people: [] },
-      { id: HALLWAY, name: fr("Hallway", "Entrée"), occupied: false, people: [] },
-      { id: BEDROOM, name: fr("Bedroom", "Chambre"), occupied: false, people: [] },
+      {
+        id: LIVING_ROOM,
+        name: fr("Living room", "Salon"),
+        occupied: true,
+        people: [ref("mathis"), ref("jules")],
+        satellites: ["reachy-living-room"],
+      },
+      { id: KITCHEN, name: fr("Kitchen", "Cuisine"), occupied: false, people: [], satellites: [] },
+      { id: OFFICE, name: fr("Office", "Bureau"), occupied: null, people: [], satellites: ["reachy-office"] },
+      { id: HALLWAY, name: fr("Hallway", "Entrée"), occupied: false, people: [], satellites: [] },
+      { id: BEDROOM, name: fr("Bedroom", "Chambre"), occupied: false, people: [], satellites: ["pi-bedroom"] },
     ],
     residents: [
       { entity: "person.mathis", name: "Mathis", home: true, person: ref("mathis") },

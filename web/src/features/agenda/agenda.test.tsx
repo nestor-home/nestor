@@ -39,7 +39,9 @@ describe("reminders", () => {
     expect(within(recurring).getByText("Saturday, Sunday · 09:00")).toBeInTheDocument();
     expect(within(recurring).getByText("every day · 10:00")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Cancel “Remind Mathis to buy bread.”" }));
-    await user.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Cancel the reminder" }));
+    await user.click(
+      within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Cancel the reminder" }),
+    );
     await waitFor(() => expect(db.schedules.map((s) => s.id)).not.toContain("sc-bread"));
     expect(await screen.findByText("Cancelled: it will not run again.")).toBeInTheDocument();
   });

@@ -63,7 +63,7 @@ class Home:
         garage_rule = SensitiveWhen("turn_on", {"device_class": ("garage",)})
 
         def device(arguments: Mapping[str, object]) -> Risk:
-            return Risk.SENSITIVE if garage_rule.matches("turn_on", arguments) else Risk.WRITE
+            return Risk.SENSITIVE if garage_rule.matches(arguments) else Risk.WRITE
 
         self.book = MessageBook(self.journal)
         self.confirmations = Confirmations(self.journal, self.household, self.book, clock=self.clock)
