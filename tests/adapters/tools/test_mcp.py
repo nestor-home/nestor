@@ -274,14 +274,18 @@ async def test_tools_are_discovered_with_their_description_and_parameters(
     assert turn_on.spec.parameters["properties"] == {"name": {"title": "Name", "type": "string"}}
 
 
-async def test_risk_follows_the_annotations_unless_overridden(served_home: Served) -> None:
-    async with provider_for(served_home, risks={"turn_on": Risk.SENSITIVE}) as provider:
-        risks = {t.name: t.risk for t in provider.tools()}
+async def test_annotations_tell_reading_from_writing_and_only_the_household_makes_a_tool_sensitive(
+    served_home: Served,
+) -> None:
+    async with provider_for(served_home) as provider:
+        given = {t.name: t.risk for t in provider.tools()}
+    async with provider_for(served_home, risks={"unlock": Risk.SENSITIVE}) as provider:
+        chosen = {t.name: t.risk for t in provider.tools()}
 
-    assert risks["get_live_context"] is Risk.READ
-    assert risks["unlock"] is Risk.SENSITIVE  # destructive
-    assert risks["dump"] is Risk.WRITE  # no annotation: it may change something
-    assert risks["turn_on"] is Risk.SENSITIVE  # overridden
+    assert given["get_live_context"] is Risk.READ
+    assert given["unlock"] is Risk.WRITE, "destructive is MCP's default for a tool that writes: it asks no one"
+    assert given["dump"] is Risk.WRITE
+    assert chosen["unlock"] is Risk.SENSITIVE
 
 
 async def test_only_included_tools_minus_excluded_ones_are_offered(served_home: Served) -> None:
@@ -439,16 +443,20 @@ async def test_the_token_never_reaches_the_logs(served_home: Served, caplog: Log
     assert caplog.text and TOKEN not in caplog.text
 
 
-async def test_a_failing_server_at_start_leaves_its_tools_missing_without_failing(caplog: LogCapture) -> None:
-    served = Served(lambda: failing(503))
+@pytest.mark.parametrize("status", [404, 503], ids=["still starting", "failing"])
+async def test_a_server_failing_or_still_starting_leaves_its_tools_missing_without_failing(
+    status: int, caplog: LogCapture
+) -> None:
+    served = Served(lambda: failing(status))
     await served.start()
     try:
         async with provider_for(served) as provider:
             assert provider.tools() == ()
+            assert provider.health() is Health.UNAVAILABLE
     finally:
         await served.stop()
 
-    assert "answered HTTP 503" in caplog.text
+    assert f"answered HTTP {status}" in caplog.text
 
 
 async def test_a_server_that_never_answers_times_out_at_start(caplog: LogCapture) -> None:

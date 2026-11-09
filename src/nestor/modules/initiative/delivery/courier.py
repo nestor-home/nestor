@@ -35,6 +35,14 @@ class FollowUp:
     due_at: datetime
 
 
+@dataclass(frozen=True, slots=True)
+class _Sent:
+    """A conversation took a notification: `said` whether the agent had something to tell there."""
+
+    address: Address
+    said: bool
+
+
 class Courier(Component):
     name = "courier"
 
@@ -78,7 +86,8 @@ class Courier(Component):
     ) -> Address | None:
         """Deliver now what `notification` brings to `person`; returns where, or `None` (logged as `DeliveryFailed`)
         when nothing could take it. Wherever it goes, the notification and its answer become a turn of that
-        conversation. `to` is a place asked for (a channel someone named): it is written there, whatever the policy.
+        conversation; an answer that says nothing (a check that found nothing) is sent nowhere else and leaves none.
+        `to` is a place asked for (a channel someone named): it is written there, whatever the policy.
         `private`: its content is the person's (a mail): aloud, others may hear, so the room only hears that something
         waits for them and the content is written at once; aloud in full only with nowhere to write."""
         plan = (
@@ -109,13 +118,13 @@ class Courier(Component):
             notice = Notification(f"{notification.text}\n\n{NOTICE}", f"{notification.about} (notice)")
             noticed = await self._send(person, plan.spoken, Medium.SPOKEN, notice)
             if noticed and (written_to := await self._send(person, plan.written, Medium.WRITTEN, notification)):
-                return written_to
+                return written_to.address
         elif plan.spoken and (spoken := await self._send(person, plan.spoken, Medium.SPOKEN, notification)):
-            if plan.follow_up:
+            if plan.follow_up and spoken.said:
                 self._watch_reaction(person, plan, notification)
-            return spoken
+            return spoken.address
         if plan.written and (written_to := await self._send(person, plan.written, Medium.WRITTEN, notification)):
-            return written_to
+            return written_to.address
         tried = tuple(a for a in (plan.spoken, plan.written) if a)
         await self.journal.publish(
             DeliveryFailed(
@@ -133,15 +142,17 @@ class Courier(Component):
 
     async def _send(
         self, person: Person | None, address: Address, medium: Medium, notification: Notification
-    ) -> Address | None:
+    ) -> _Sent | None:
         """Compose the answer to `notification` for this conversation once it is free, send it, then record both as
-        its turn."""
+        its turn. `None`: this conversation could not take it."""
         channel = self.channels.get(address.channel)
         if channel is None or not channel.reachable(address, medium):
             return None
         conversations = self.agent.conversations
         async with conversations.free(address):  # drafted after the answer being written, never in its middle
             texts = await self.agent.compose(address, person, notification, medium)
+        if not texts:  # the agent had nothing to tell: it was handled here, nothing was said
+            return _Sent(address, said=False)
         try:  # sent without holding the conversation: a voice says it once the person is answered
             for text in texts:
                 await channel.send(address, text, medium)
@@ -152,7 +163,7 @@ class Courier(Component):
         await self.journal.publish(
             Delivered(source=self.name, address=address, about=notification.about, person=person.id if person else None)
         )
-        return address
+        return _Sent(address, said=True)
 
     def _watch_reaction(self, person: Person | None, plan: Plan, notification: Notification) -> None:
         assert plan.spoken is not None and plan.written is not None

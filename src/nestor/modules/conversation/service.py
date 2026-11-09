@@ -54,12 +54,10 @@ SAID_MESSAGES = 3  # the person's messages a turn looks things up with, as NVIDI
 
 @dataclass(frozen=True, slots=True)
 class ModelChoice:
-    """The model that answers in each medium: the voice needs its first words fast, writing allows more.
-    `background` runs the turns nobody waits for (a scheduled wake-up): the written one by default."""
+    """The model that answers in each medium: the voice needs its first words fast, writing allows more."""
 
     spoken: LanguageModel
     written: LanguageModel
-    background: LanguageModel | None = None
 
     @classmethod
     def single(cls, model: LanguageModel) -> "ModelChoice":
@@ -68,16 +66,8 @@ class ModelChoice:
     def of(self, medium: Medium) -> LanguageModel:
         return self.spoken if medium is Medium.SPOKEN else self.written
 
-    @property
-    def unattended(self) -> LanguageModel:
-        return self.background or self.written
-
     def distinct(self) -> tuple[LanguageModel, ...]:
-        found: list[LanguageModel] = []
-        for model in (self.spoken, self.written, self.unattended):
-            if all(model is not other for other in found):
-                found.append(model)
-        return tuple(found)
+        return (self.spoken,) if self.spoken is self.written else (self.spoken, self.written)
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -191,12 +181,6 @@ class Agent(Assistant):
         turn.end()
         return turn.exchange
 
-    async def background(self, address: Address, person: Person | None, notification: Notification) -> tuple[str, ...]:
-        """Run a turn nobody waits for (a scheduled wake-up), on behalf of `person`, with the agent's tools and
-        the background model, without any conversation's history. What it writes reaches no one: to tell
-        someone, it uses its tools. Its tool calls are logged as usual."""
-        return await AgentReply(self, address, Medium.WRITTEN, notification, person=person, unattended=True).collect()
-
     def channel(self, address: Address) -> ChannelProfile:
         return self._channels.get(address.channel, ChannelProfile())
 
@@ -230,8 +214,7 @@ class AgentReply(Reply):
     saw. A voice channel usually receives a message long before it is played: an interruption that comes after it was
     logged is recorded as an `AnswerCut`, so the history keeps only what the user heard.
 
-    The answer to a notification is a draft, logged with its notification by whoever delivers it (`Agent.delivered`);
-    `unattended`, a turn nobody takes part in (a wake-up), without any conversation's history."""
+    The answer to a notification is a draft, logged with its notification by whoever delivers it (`Agent.delivered`)."""
 
     def __init__(
         self,
@@ -241,13 +224,11 @@ class AgentReply(Reply):
         opening: InboundMessage | Notification,
         *,
         person: Person | None = None,
-        unattended: bool = False,
     ) -> None:
         """`person`: whom a notification is for (who sent a message is found when the turn starts)."""
         self._agent, self._address, self._person, self._medium = agent, address, person, medium
         self._speaker = Speaker.account(person.id) if person else Speaker.unknown()
         self._opening = opening
-        self._unattended = unattended
         self._chunks: asyncio.Queue[str | MessageEnd | None] = asyncio.Queue()
         self._message: list[str] = []  # the message being written
         self._ended: list[tuple[str, AssistantTurn | None]] = []  # the messages written, logged if recorded
@@ -292,11 +273,8 @@ class AgentReply(Reply):
             if isinstance(opening, InboundMessage):
                 async with agent.conversations.free(self._address):  # after the turn in progress, if any
                     await self._reply_to(opening)
-            else:  # a background turn belongs to no conversation; a notification's draft, to the open one if any
-                conversation = (
-                    None if self._unattended else await agent.conversations.current(self._address, self._medium)
-                )
-                await self._answer(conversation)
+            else:  # a notification's draft belongs to the conversation open there, if any
+                await self._answer(await agent.conversations.current(self._address, self._medium))
                 await self._end_message()
             self._end_turn()
         finally:
@@ -333,7 +311,7 @@ class AgentReply(Reply):
         ]
         exchange = self._turn.exchange if self._turn else None
         context = ToolContext(address=self._address, speaker=self._speaker, exchange=exchange)
-        wait_s = None if self._unattended else agent.settings.tool_wait_s(self._medium)  # nobody waits for a wake-up
+        wait_s = agent.settings.tool_wait_s(self._medium)
         for _ in range(agent.settings.max_tool_rounds):
             try:
                 text, calls = await self._round(messages)
@@ -362,7 +340,7 @@ class AgentReply(Reply):
         request = ModelRequest(messages=tuple(messages), tools=agent.toolbox.specs())
         text: list[str] = []
         calls: list[ToolCall] = []
-        model = agent.models.unattended if self._unattended else agent.models.of(self._medium)
+        model = agent.models.of(self._medium)
         stream = model.stream(request)
         spoken = self._medium is Medium.SPOKEN
         filler = self._slow_filler() if spoken and not self._message and not self._ended else None

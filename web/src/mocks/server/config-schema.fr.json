@@ -222,7 +222,7 @@
             "model_type": null,
             "brands": null,
             "title": "Peut envoyer un message à",
-            "help": "Via l'assistant : identifiants de personnes, ou * pour tout le monde."
+            "help": "Via l'assistant, à d'autres que soi : identifiants de personnes, ou * pour tout le monde. On peut toujours s'écrire à soi-même."
           }
         }
       },
@@ -289,33 +289,6 @@
             "brands": null,
             "title": "Modèle à l'écrit",
             "help": "Pour les réponses écrites. Par défaut, le modèle à l'oral."
-          }
-        },
-        "background": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Background",
-          "x-nestor": {
-            "field": "background",
-            "title_id": "config-agent-background",
-            "help_id": "config-agent-background-help",
-            "fallback_title_id": "config-field-background",
-            "secret": false,
-            "secret_values": false,
-            "advanced": false,
-            "group": "agent",
-            "reference": "models",
-            "model_type": "language",
-            "brands": null,
-            "title": "Modèle en arrière-plan",
-            "help": "Pour ce que personne n'attend, comme les réveils programmés. Par défaut, le modèle à l'écrit."
           }
         },
         "spoken_tool_wait_s": {
@@ -569,7 +542,7 @@
             "model_type": "language",
             "brands": null,
             "title": "Modèle de résumé",
-            "help": "Résume chaque conversation terminée. Par défaut, le modèle en arrière-plan."
+            "help": "Résume chaque conversation terminée. Par défaut, le modèle à l'écrit."
           }
         },
         "embedder": {

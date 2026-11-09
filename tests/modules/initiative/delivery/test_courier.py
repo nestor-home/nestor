@@ -64,11 +64,20 @@ def courier(
     )
 
 
+async def followed(sender: Courier) -> None:
+    """Wait until every follow-up has run (sent, or given up on a reaction), whatever the machine's load."""
+    for _ in range(500):
+        if not sender.scheduled():
+            return
+        await asyncio.sleep(0.01)
+    raise AssertionError("the follow-ups did not run")
+
+
 async def test_an_unanswered_announcement_is_followed_by_a_message() -> None:
     sender, journal, voice, telegram = courier(StaticPresence().set("mathis", home=True))
     async with sender:
         assert await sender.deliver(MATHIS, Notification("Le colis est arrivé.", "watch colis")) == SALON
-        await asyncio.sleep(0.05)
+        await followed(sender)
     assert [a for a, _ in voice.sent] == [SALON]
     assert [a for a, _ in telegram.sent] == [TELEGRAM]
     considered = (await journal.history(DeliveryConsidered))[0]
@@ -101,7 +110,7 @@ async def test_a_reaction_cancels_the_follow_up() -> None:
                 speaker=Speaker.unknown(),
             )
         )
-        await asyncio.sleep(0.05)
+        await followed(sender)
     assert telegram.sent == []
 
 
@@ -130,8 +139,7 @@ async def test_a_pending_follow_up_is_listed_until_it_is_sent() -> None:
             SALON,
             TELEGRAM,
         )
-        await asyncio.sleep(0.1)
-        assert sender.scheduled() == ()
+        await followed(sender)
 
 
 async def test_a_notification_waits_for_the_answer_being_written() -> None:

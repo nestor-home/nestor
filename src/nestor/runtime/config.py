@@ -108,7 +108,9 @@ class PersonConfig(Section):
     name: str
     accounts: tuple[str, ...] = ()
     reach: str | None = None
-    may_message: tuple[str, ...] = ("*",)  # whom they may have the agent write to: person ids, or "*"
+    may_message: tuple[str, ...] = (
+        "*",
+    )  # whom else they may have the agent write to: person ids, or "*" (themselves always)
 
     @field_validator("accounts")
     @classmethod
@@ -207,9 +209,6 @@ class AgentConfig(Section):
 
     spoken: str | None = Field(default=None, json_schema_extra=LANGUAGE_MODEL)  # the voice: first words fast
     written: str | None = Field(default=None, json_schema_extra=LANGUAGE_MODEL)  # writing allows a few seconds
-    background: str | None = Field(
-        default=None, json_schema_extra=LANGUAGE_MODEL
-    )  # wake-ups: the written one by default
     # how long a turn waits for a tool before it goes on in the background and its result comes back by itself
     spoken_tool_wait_s: float = Field(default=_AGENT.spoken_tool_wait_s, gt=0, le=60)
     written_tool_wait_s: float = Field(default=_AGENT.written_tool_wait_s, gt=0, le=600)
@@ -235,7 +234,7 @@ class MemoryConfig(Section):
     found: int = Field(default=_RECALL.found, ge=0, le=50)
     recent_episodes: int = Field(default=_RECALL.recent_episodes, ge=0, le=20)  # whoever speaks: latest conversations
     found_episodes: int = Field(default=_RECALL.found_episodes, ge=0, le=20)  # and older ones their words find
-    # the model that summarizes each conversation once it is over: the background one by default
+    # the model that summarizes each conversation once it is over: the written one by default
     consolidation: str | None = Field(default=None, json_schema_extra=LANGUAGE_MODEL)
     # an embedding model of `models`: memories are then found by meaning as well as by words
     embedder: str | None = Field(default=None, json_schema_extra=EMBEDDING_MODEL)
@@ -316,7 +315,7 @@ class NestorConfig(Section):
     @field_validator("agent")
     @classmethod
     def _agent(cls, value: AgentConfig, info: ValidationInfo) -> AgentConfig:
-        _known(info, {"spoken": value.spoken, "written": value.written, "background": value.background})
+        _known(info, {"spoken": value.spoken, "written": value.written})
         return value
 
     @field_validator("watches")
@@ -338,8 +337,7 @@ class NestorConfig(Section):
         return value
 
     def roles(self, answering: Collection[str]) -> dict[str, str]:
-        """The key of the model each role uses, defaults applied: `spoken`, `written`, `background`, `watches`,
-        `consolidation`.
+        """The key of the model each role uses, defaults applied: `spoken`, `written`, `watches`, `consolidation`.
         `answering` are the models that answer (not those that embed): with a single one, every role takes it."""
         sole = next(iter(answering)) if len(answering) == 1 else None
         written = self.agent.written or self.agent.spoken or sole
@@ -354,9 +352,8 @@ class NestorConfig(Section):
         return {
             "spoken": self.agent.spoken or written,
             "written": written,
-            "background": self.agent.background or written,
             "watches": self.watches.model or written,
-            "consolidation": self.memory.consolidation or self.agent.background or written,
+            "consolidation": self.memory.consolidation or written,
         }
 
 

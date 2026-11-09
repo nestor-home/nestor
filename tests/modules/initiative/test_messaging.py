@@ -37,6 +37,7 @@ MATHILDE = Person(
     id=PersonId("mathilde"), name="Mathilde", accounts=(Account.parse("telegram:7"),), reach=MATHILDE_CHAT
 )
 LUCIE = Person(id=PersonId("lucie"), name="Lucie", may_message=("mathis",))
+JULES = Person(id=PersonId("jules"), name="Jules", may_message=())  # may have the agent write to no one else
 ODILE = Person(id=PersonId("odile"), name="Odile")  # no account anywhere: unreachable
 
 
@@ -54,7 +55,7 @@ def question_id(request: ModelRequest) -> str:
 class Home:
     def __init__(self, *replies: Reply, presence: StaticPresence | None = None) -> None:
         self.journal = Journal(MemoryEventLog())
-        self.household = Household([MATHIS, MATHILDE, LUCIE, ODILE])
+        self.household = Household([MATHIS, MATHILDE, LUCIE, ODILE, JULES])
         self.model = ScriptedModel(*replies)
         self.build(presence or StaticPresence().set("mathilde", home=False).set("mathis", home=False))
 
@@ -206,6 +207,7 @@ async def test_a_message_that_cannot_get_through_is_told_to_whoever_asked() -> N
     [
         (None, {"person": "mathis", "text": "Tu viens ?", "expects_reply": True}, "ask who is asking first"),
         (LUCIE, {"person": "mathilde", "text": "Coucou"}, "Lucie may not have you write to Mathilde"),
+        (JULES, {"person": "mathis", "text": "Coucou"}, "Jules may not have you write to Mathis"),
         (MATHIS, {"person": "Gaston", "text": "Coucou"}, "no one called Gaston"),
         (MATHIS, {"person": "odile", "text": "Coucou", "channel": "telegram"}, "Odile has no account on telegram"),
         (MATHIS, {"person": "mathis", "text": "Oui", "answers": "nope"}, "no open question nope"),
@@ -221,3 +223,10 @@ async def test_a_message_that_may_not_be_sent_is_refused_and_nothing_is_asked(
         assert await home.send(LUCIE, person="Mathis", text="Je suis rentrée.") is not None, "a name works too"
         await home.settled(1)
     assert [m.to for m in await home.journal.history(MessageRequested)] == ["mathis"]
+
+
+async def test_anyone_may_have_a_message_written_to_themselves_whoever_else_they_may_write_to() -> None:
+    home = Home()
+    async with home:
+        assert await home.send(JULES, person="jules", text="Pense au pain.") is not None
+    assert [m.to for m in await home.journal.history(MessageRequested)] == ["jules"]

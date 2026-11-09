@@ -282,7 +282,6 @@ class Nestor:
             models=ModelChoice(
                 spoken=model("agent.spoken", roles["spoken"]),
                 written=model("agent.written", roles["written"]),
-                background=model("agent.background", roles["background"]),
             ),
             persona=Persona(**{**config.persona.model_dump(), "locale": Locale(config.persona.locale)}),
             localizer=self.localizer,
@@ -313,7 +312,7 @@ class Nestor:
         self.confirmations.attach(self.courier, lambda call, context: toolbox.call(call, context, confirmed=True))
         self.returns = Returns(self.journal, self.household, self.courier)
         self.messenger = Messenger(self.message_book, self.household, self.courier)
-        self.scheduler = Scheduler(self.schedule_book, self.agent, self.household)
+        self.scheduler = Scheduler(self.schedule_book, self.household, self.courier)
         self.watches = WatchKeeper(
             self.watch_book,
             self.household,

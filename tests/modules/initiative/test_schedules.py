@@ -1,4 +1,5 @@
-"""Wake-ups: when they are due, run once each time even across restarts, as a background turn with tools."""
+"""Wake-ups: when they are due, run once each time even across restarts, with the agent's tools, and what they find
+reaches whoever set them, as a task's result does."""
 
 from datetime import datetime, time
 from typing import Any
@@ -10,10 +11,12 @@ from nestor.core import PersonId, ProviderError
 from nestor.modules.channels import Address
 from nestor.modules.cognition.model import ModelRequest, ToolCall
 from nestor.modules.cognition.tools import Toolbox, ToolContext, ToolFailed
-from nestor.modules.conversation import Agent, AssistantTurn, ModelChoice, Persona, TurnContext
+from nestor.modules.conversation import Agent, AssistantTurn, ModelChoice, NotificationTurn, Persona, TurnContext
 from nestor.modules.household import Household, Person
 from nestor.modules.identity import Speaker
 from nestor.modules.initiative import (
+    Courier,
+    DeliveryFailed,
     Schedule,
     ScheduleBook,
     ScheduleCancelled,
@@ -22,6 +25,7 @@ from nestor.modules.initiative import (
     ScheduleTools,
 )
 from nestor.modules.journal import Journal
+from nestor.testing.channels import InMemoryChannel
 from nestor.testing.cognition import ScriptedModel
 from nestor.testing.cognition.model import Reply
 from nestor.testing.i18n import EchoLocalizer
@@ -57,7 +61,7 @@ class Home:
     def __init__(self, *replies: Reply, now: datetime) -> None:
         self.journal = Journal(MemoryEventLog())
         self.clock = Clock(now)
-        self.written, self.background = ScriptedModel(*replies), ScriptedModel(*replies)
+        self.model = ScriptedModel(*replies)
         self.build()
 
     def build(self) -> None:
@@ -65,7 +69,7 @@ class Home:
         self.tools = ScheduleTools(self.book)
         household = Household([MATHIS])
         self.agent = Agent(
-            models=ModelChoice(spoken=self.written, written=self.written, background=self.background),
+            models=ModelChoice.single(self.model),
             persona=Persona(name="Richie", character="Tu es Richie.", timezone="Europe/Paris"),
             journal=self.journal,
             household=household,
@@ -73,19 +77,25 @@ class Home:
             toolbox=Toolbox(self.journal, providers=[self.tools]),
             context=[self.tools],
         )
-        self.scheduler = Scheduler(self.book, self.agent, household)
+        self.telegram = InMemoryChannel("telegram")
+        self.courier = Courier(self.journal, self.agent, [self.telegram])
+        self.scheduler = Scheduler(self.book, household, self.courier)
 
     async def schedule(self, **arguments: object) -> Any:
         tool = next(t for t in self.tools.tools() if t.spec.name == "schedule")
         return await tool.run(arguments, ToolContext(address=CHAT, speaker=Speaker.account(MATHIS.id)))
 
 
-async def test_a_wake_up_runs_its_instruction_once_each_time_it_is_due_with_the_background_model() -> None:
+async def test_a_wake_up_runs_once_each_time_it_is_due_with_its_tools_and_tells_whoever_set_it() -> None:
     home = Home(
-        ToolCall("c1", "list_schedules", {}), "Fait.", ToolCall("c2", "list_schedules", {}), "Fait.", now=paris(2, 7)
+        ToolCall("c1", "list_schedules", {}),
+        "Voici les nouvelles.",
+        ToolCall("c2", "list_schedules", {}),
+        "Et celles du jour.",
+        now=paris(2, 7),
     )
     async with home.book:
-        await home.schedule(instruction="Envoie à Mathis les nouvelles sur Telegram", times=["08:00"])
+        await home.schedule(instruction="Envoie à Mathis les nouvelles", times=["08:00"])
         assert await home.scheduler.wake_due() == 0
         home.clock.now = paris(2, 8, 1)
         assert await home.scheduler.wake_due() == 1
@@ -94,16 +104,23 @@ async def test_a_wake_up_runs_its_instruction_once_each_time_it_is_due_with_the_
         assert await home.scheduler.wake_due() == 1
 
     assert [e.due_at for e in await home.journal.history(ScheduleFired)] == [paris(2, 8), paris(3, 8)]
-    assert home.written.requests == [], "a wake-up runs on the background model"
-    woken = home.background.requests[0]
-    assert (
-        "set for Mathis is due now (Monday 08:00): Envoie à Mathis les nouvelles sur Telegram"
-        in woken.messages[-1].content
-    )
-    assert "use message_person" in woken.messages[-1].content
-    assert len(woken.messages) == 2, "no conversation's history"
-    assert len(home.background.requests) == 4, "its tools run as in any turn"
-    assert await home.journal.history(AssistantTurn) == [], "what it writes reaches no one"
+    woken = home.model.requests[0].messages[-1].content
+    assert "Mathis set is due now (Monday 08:00): Envoie à Mathis les nouvelles" in woken
+    assert len(home.model.requests) == 4, "its tools run as in any turn"
+    assert home.telegram.sent == [(CHAT, "Voici les nouvelles."), (CHAT, "Et celles du jour.")], "where it was set"
+    assert len(await home.journal.history(NotificationTurn)) == 2, "each one a turn of that conversation"
+
+
+async def test_a_wake_up_with_nothing_to_tell_sends_nothing_and_leaves_no_turn() -> None:
+    home = Home(ToolCall("c1", "list_schedules", {}), "", now=paris(2, 7))
+    async with home.book:
+        await home.schedule(instruction="Si le prix passe sous 1 600 €, dis-le à Mathis", times=["10:00"])
+        home.clock.now = paris(2, 10, 1)
+        assert await home.scheduler.wake_due() == 1
+
+    assert len(home.model.requests) == 2, "it checked once, and nothing was tried anywhere else"
+    assert home.telegram.sent == []
+    assert await home.journal.history(NotificationTurn, AssistantTurn, DeliveryFailed) == []
 
 
 @pytest.mark.parametrize(
@@ -113,7 +130,7 @@ async def test_a_wake_up_that_fails_does_not_stop_the_others_nor_runs_again(fail
     def fails(request: ModelRequest) -> str:
         raise failure
 
-    home = Home(fails, "Fait.", now=paris(2, 7))
+    home = Home(fails, "Volets ouverts.", now=paris(2, 7))
     async with home.book:
         await home.schedule(instruction="Arrose les plantes", times=["08:00"])
         await home.schedule(instruction="Ouvre les volets", times=["08:00"])
@@ -121,8 +138,9 @@ async def test_a_wake_up_that_fails_does_not_stop_the_others_nor_runs_again(fail
         assert await home.scheduler.wake_due() == 2
         assert await home.scheduler.wake_due() == 0, "a failed wake-up is not retried in a loop"
 
-    woken = [r.messages[-1].content for r in home.background.requests]
-    assert len(woken) == 2 and "Ouvre les volets" in woken[1]
+    woken = [r.messages[-1].content for r in home.model.requests]
+    assert "Ouvre les volets" in woken[-1]
+    assert (CHAT, "Volets ouverts.") in home.telegram.sent
     assert len(await home.journal.history(ScheduleFired)) == 2
 
 

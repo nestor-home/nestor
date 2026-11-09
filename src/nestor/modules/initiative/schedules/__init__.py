@@ -1,5 +1,6 @@
-"""Wake-ups: the agent does something later, once or on chosen days, as a background turn with its tools.
-Journaled, run once per time it is due, kept across restarts."""
+"""Wake-ups: the agent does something later, once or on chosen days, with its tools, and tells whoever set it what
+they need to know, delivered where they are like a task's result. Journaled, run once per time it is due, kept
+across restarts."""
 
 from nestor.modules.initiative.schedules.assistant import ScheduleTools
 from nestor.modules.initiative.schedules.book import ScheduleBook

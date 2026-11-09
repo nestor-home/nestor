@@ -14,9 +14,10 @@ from nestor.modules.initiative.schedules.types import DAYS, Schedule
 HOW_TO_SCHEDULE = (
     'When someone asks you to do something later or regularly ("every morning at 8, send me the news", '
     '"remind me tomorrow at 9 to call the plumber"), call schedule with the instruction you will follow then, '
-    "complete enough to act on alone (who to tell, how, what to look up), and either `at` for once or `times` with "
-    "`days` to repeat. When it is due, you wake up with your tools; to tell someone, you use message_person. "
-    "Times are in the household's clock. Confirm briefly when it is set."
+    "complete enough to act on alone (what to look up, what to tell), and either `at` for once or `times` with `days` "
+    "to repeat. When it is due, you wake up with your tools and what you write reaches whoever set it, where they "
+    "are; to tell someone else, you use message_person. Times are in the household's clock. Confirm briefly when it "
+    "is set."
 )
 
 
