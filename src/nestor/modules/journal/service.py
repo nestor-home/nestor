@@ -3,7 +3,6 @@
 import asyncio
 from collections.abc import AsyncIterator
 from datetime import datetime
-from typing import cast
 
 from nestor.core import ContractError, Event, SessionId
 from nestor.modules.journal.ports import EventLog
@@ -86,4 +85,4 @@ class Journal:
             newest_first=newest_first,
         )
         events = [entry.event() for entry in await self.log.read(query)]
-        return cast(list[E], [e for e in events if isinstance(e, types)])  # ty cannot narrow on a TypeVar tuple
+        return [e for e in events if isinstance(e, types)]

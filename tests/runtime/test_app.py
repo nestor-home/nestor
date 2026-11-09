@@ -173,7 +173,7 @@ def test_an_installed_entry_point_that_is_not_a_plugin_is_named(monkeypatch: pyt
 
 def test_an_adapter_whose_optional_dependencies_are_missing_names_the_requirement_to_install(tmp_path: Path) -> None:
     def build(settings: NoSettings, name: str, services: Services) -> Component:
-        import nestor_absent_sdk  # ty: ignore[unresolved-import]  # an optional dependency, not installed
+        import nestor_absent_sdk  # ty: ignore[import-not-found]  # an optional dependency, not installed
 
         raise AssertionError(nestor_absent_sdk)
 
@@ -190,7 +190,7 @@ def test_an_adapter_whose_optional_dependencies_are_missing_names_the_requiremen
 
 def test_a_missing_module_in_an_adapter_without_optional_dependencies_is_a_bug_shown_as_such(tmp_path: Path) -> None:
     def build(settings: NoSettings, name: str, services: Services) -> Component:
-        import nestor_absent_sdk  # ty: ignore[unresolved-import]
+        import nestor_absent_sdk  # ty: ignore[import-not-found]
 
         raise AssertionError(nestor_absent_sdk)
 
