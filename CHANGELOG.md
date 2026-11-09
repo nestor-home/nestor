@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.10.0](https://github.com/nestor-home/nestor/compare/v0.9.0...v0.10.0) (2026-11-09)
+
+
+### ⚠ BREAKING CHANGES
+
+* one standard for every model, speech as models, a removed person's voice erased
+
+### Features
+
+* one standard for every model, speech as models, a removed person's voice erased ([0481836](https://github.com/nestor-home/nestor/commit/0481836b7f51b55783f7b16cd4805d17f91a6091))
+
+
+### Bug Fixes
+
+* **deps:** update dependency @tanstack/react-query to v5.106.0 ([#87](https://github.com/nestor-home/nestor/issues/87)) ([54fe986](https://github.com/nestor-home/nestor/commit/54fe986466fe6e69a4e0c2a00574e6721ee674ad))
+* **deps:** update dependency @tanstack/react-query to v5.106.1 ([#93](https://github.com/nestor-home/nestor/issues/93)) ([2307b06](https://github.com/nestor-home/nestor/commit/2307b0665352cdeec6b0f7a0f0adddcc6cc34e3b))
+* **deps:** update dependency @tanstack/react-query to v5.107.0 ([#102](https://github.com/nestor-home/nestor/issues/102)) ([64ab8c0](https://github.com/nestor-home/nestor/commit/64ab8c048af83a182a7e60e0679254a8e7e08833))
+* **deps:** update dependency @tanstack/react-query to v5.107.1 ([#103](https://github.com/nestor-home/nestor/issues/103)) ([e360e79](https://github.com/nestor-home/nestor/commit/e360e797604ea553e80d363778ece7e45ee4018e))
+* **deps:** update dependency lucide-react to v1.69.0 ([#92](https://github.com/nestor-home/nestor/issues/92)) ([75f2b17](https://github.com/nestor-home/nestor/commit/75f2b17f41540615f3e26228bb6488514ac59e64))
+* **deps:** update dependency lucide-react to v1.70.0 ([#99](https://github.com/nestor-home/nestor/issues/99)) ([9b366d7](https://github.com/nestor-home/nestor/commit/9b366d76a8749046919b603955336e4a47bcdf34))
+* **deps:** update dependency pipecat-ai to v1.15.0 ([3faa127](https://github.com/nestor-home/nestor/commit/3faa127b7d331c1ffc854d5f18fd41cdf3608a9b))
+* **deps:** update dependency simple-icons to v16.37.0 ([#105](https://github.com/nestor-home/nestor/issues/105)) ([e871aa7](https://github.com/nestor-home/nestor/commit/e871aa704fc705aa091e916312d50ea886347cff))
+* one contract between the API and the admin ([#94](https://github.com/nestor-home/nestor/issues/94)) ([0a6dec6](https://github.com/nestor-home/nestor/commit/0a6dec6b480248f631ae3ed66a881c63e25b554d))
+
 ## [0.9.0](https://github.com/nestor-home/nestor/compare/v0.8.1...v0.9.0) (2026-11-05)
 
 
