@@ -115,7 +115,7 @@ class BackchannelAwareStart(BaseUserTurnStartStrategy):
             self._bot_speaking = False
         elif isinstance(frame, VADUserStartedSpeakingFrame):
             if not self._bot_speaking:
-                await self.trigger_user_turn_started()
+                await self.report_user_turn_started()
                 return ProcessFrameResult.STOP
             self._cancel_timer()
             self._timer = asyncio.create_task(self._interrupt_if_long())
@@ -125,7 +125,7 @@ class BackchannelAwareStart(BaseUserTurnStartStrategy):
             heard = frame.text.strip()
             if heard and not (self._bot_speaking and is_backchannel(heard)):
                 # Words while silent (very short speech, late VAD) or a real reply over the assistant.
-                await self.trigger_user_turn_started()
+                await self.report_user_turn_started()
                 return ProcessFrameResult.STOP
             if self._bot_speaking and isinstance(frame, TranscriptionFrame):
                 await self.trigger_reset_aggregation()
@@ -134,7 +134,7 @@ class BackchannelAwareStart(BaseUserTurnStartStrategy):
     async def _interrupt_if_long(self) -> None:
         await asyncio.sleep(self._long_speech_s)
         self._timer = None
-        await self.trigger_user_turn_started()
+        await self.report_user_turn_started()
 
     def _cancel_timer(self) -> None:
         timer, self._timer = self._timer, None
