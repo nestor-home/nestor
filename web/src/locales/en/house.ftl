@@ -20,7 +20,7 @@ house-resident-untied = tied to nobody
 house-actions = Actions
 house-actions-empty = No action available.
 house-actions-empty-hint = The home system's MCP server does not answer, or exposes nothing to Assist.
-house-action-confirmed-when = confirmed for locks, alarm, doors
+house-action-confirmed-when = confirmed depending on its target
 house-unplaced = { $count ->
     [one] 1 occupancy sensor has no room: it is ignored.
    *[other] { $count } occupancy sensors have no room: they are ignored.

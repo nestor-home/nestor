@@ -33,13 +33,13 @@ class SensitiveTargets(BaseModel):
     these values in the call's `domain`, `device_class` or `name`, ignoring case. Lights, heating and media are not."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
-    domains: list[str] = Field(default_factory=lambda: ["lock", "alarm_control_panel"])
-    device_classes: list[str] = Field(default_factory=lambda: ["garage", "gate", "door"])
-    names: list[str] = Field(default_factory=lambda: ["lock", "alarm", "garage", "gate", "door"])
+    domains: tuple[str, ...] = ("lock", "alarm_control_panel")
+    device_classes: tuple[str, ...] = ("garage", "gate", "door")
+    names: tuple[str, ...] = ("lock", "alarm", "garage", "gate", "door")
 
     def rule(self) -> SensitiveWhen:
         targets = {"domain": self.domains, "device_class": self.device_classes, "name": self.names}
-        return SensitiveWhen(None, {key: tuple(values) for key, values in targets.items() if values})
+        return SensitiveWhen(None, {key: values for key, values in targets.items() if values})
 
 
 class HomeAssistantSettings(AdapterSettings):

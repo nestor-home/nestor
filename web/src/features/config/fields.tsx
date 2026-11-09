@@ -547,7 +547,6 @@ function ListControl({ id, node, root, path, required, label }: ControlProps) {
   );
 }
 
-/** A map of names to values (headers, risks, people to entities). */
 /** What a map's keys or values may be picked from: the household's people in the draft, the home's residents. */
 function useSuggestions(source: Suggest | null | undefined): string[] {
   const { draft } = useConfigEditor();
@@ -562,6 +561,7 @@ function useSuggestions(source: Suggest | null | undefined): string[] {
   return [];
 }
 
+/** A map of names to values (headers, risks, people to entities). */
 function MapControl({ id, node, root, path, required, label }: ControlProps) {
   const t = useT();
   const keys = useSuggestions(node["x-nestor"]?.suggest_keys);

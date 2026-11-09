@@ -20,7 +20,7 @@ house-resident-untied = relié à personne
 house-actions = Actions
 house-actions-empty = Aucune action disponible.
 house-actions-empty-hint = Le serveur MCP du système domotique ne répond pas, ou n'expose rien à Assist.
-house-action-confirmed-when = confirmée pour serrures, alarme, portes
+house-action-confirmed-when = confirmée selon sa cible
 house-unplaced = { $count ->
     [one] 1 capteur de présence n'a pas de pièce : il est ignoré.
    *[other] { $count } capteurs de présence n'ont pas de pièce : ils sont ignorés.

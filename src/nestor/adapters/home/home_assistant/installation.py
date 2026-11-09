@@ -151,15 +151,14 @@ class Installation:
 
     def residents(self) -> tuple[Resident, ...]:
         """The `person` entities, by their name in Home Assistant."""
-        people = sorted(entity for entity in self._states if entity.startswith("person."))
         return tuple(
             Resident(
                 entity=entity,
                 name=str(state.attributes.get("friendly_name") or entity.removeprefix("person.")),
                 home=None if state.state in UNKNOWN_STATES else state.state == "home",
             )
-            for entity in people
-            if (state := self._states[entity])
+            for entity, state in sorted(self._states.items())
+            if entity.startswith("person.")
         )
 
     def _whereabouts(self, person: PersonId, entity: str) -> Whereabouts:

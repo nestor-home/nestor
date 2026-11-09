@@ -18,7 +18,7 @@ describe("the home", () => {
     expect(within(rooms).getByText("Living room Reachy")).toBeInTheDocument();
     expect(within(rooms).getByText("Mathis, Jules")).toBeInTheDocument();
     const actions = screen.getByRole("region", { name: /^Actions/ });
-    expect(within(actions).getAllByText("confirmed for locks, alarm, doors")).toHaveLength(3);
+    expect(within(actions).getAllByText("confirmed depending on its target")).toHaveLength(3);
     expect(screen.getByText("binary_sensor.garage_motion")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Configure" })).toHaveAttribute("href", "/config/home");
   });
@@ -53,7 +53,7 @@ describe("messages", () => {
     renderApp("/messages");
     const waiting = await screen.findByRole("region", { name: /^To confirm/ });
     expect(await within(waiting).findByText(/Front door/)).toBeInTheDocument();
-    expect(screen.getByText("« Do you need the car tomorrow? »")).toBeInTheDocument();
+    expect(screen.getByText("“Do you need the car tomorrow?”")).toBeInTheDocument();
     expect(screen.getByText("from Léa to Odile")).toBeInTheDocument();
     await user.click(within(waiting).getByRole("button", { name: "Approve" }));
     await user.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Approve" }));
@@ -69,7 +69,7 @@ describe("messages", () => {
             error: {
               code: "confirmation_unknown",
               message_id: "error-confirmation-unknown",
-              message: "Nothing of yours waits under this id: it was answered, or it expired.",
+              message: "This request no longer waits for your go-ahead: it was answered, or it expired.",
               args: {},
             },
           },

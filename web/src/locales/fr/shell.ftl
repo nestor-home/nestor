@@ -48,7 +48,7 @@ attention-connection-error = { $account } ne répond plus
 attention-tools-hidden = Ses outils sont suspendus.
 attention-reconnect = Reconnecter
 attention-confirmation = { $tool } attend votre accord
-attention-confirmation-detail = Demandé à voix haute ; expire dans { $left }.
+attention-confirmation-detail = Demandé à voix haute ; sans réponse, abandonné à { $at }.
 attention-answer = Répondre
 attention-home = { $health ->
     [unavailable] Le système domotique ne répond pas

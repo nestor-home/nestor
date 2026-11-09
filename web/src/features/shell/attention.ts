@@ -21,7 +21,7 @@ import {
   tasksQuery,
 } from "@/api";
 import { tr } from "@/i18n/runtime";
-import { remaining, startOfToday } from "@/lib/dates";
+import { hourMinute, startOfToday } from "@/lib/dates";
 import { is } from "@/lib/events";
 import { rendered, say } from "@/lib/messages";
 import { useCan } from "@/lib/session";
@@ -52,7 +52,7 @@ export function useAttention(): { items: Attention[]; ready: boolean } {
   const connections = useQuery({ ...connectionsQuery, enabled: canConnections });
   const satellites = useQuery({ ...satellitesQuery, enabled: canSatellites });
   const tasks = useQuery({ ...tasksQuery, enabled: canTasks });
-  const system = useQuery({ ...systemQuery, enabled: canSatellites });
+  const system = useQuery({ ...systemQuery, enabled: useCan("system:read") });
   const spoken = useQuery(journalLatestQuery({ kinds: ["delivery"], from: startOfToday() }, 100));
   const confirmations = useQuery({ ...confirmationsQuery, enabled: useCan("messages:read") });
 
@@ -64,7 +64,7 @@ export function useAttention(): { items: Attention[]; ready: boolean } {
       icon: ShieldQuestion,
       tone: "attention",
       title: tr("attention-confirmation", { tool: c.tool }),
-      detail: tr("attention-confirmation-detail", { left: remaining(c.expires_at) }),
+      detail: tr("attention-confirmation-detail", { at: hourMinute(c.expires_at) }),
       action: tr("attention-answer"),
       link: { to: "/messages" },
     });

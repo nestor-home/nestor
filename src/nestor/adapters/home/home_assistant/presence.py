@@ -157,7 +157,7 @@ class HomeAssistantPresence(PresenceSource):
         self._installation, self._granularity = installation, installation.granularity
         if unplaced := installation.unplaced_sensors:
             logger.warning("%s: occupancy sensors without an area, ignored: %s", self.name, ", ".join(unplaced))
-        logger.info("%s: connected, presence granularity %s", self.name, self._granularity.name)
+        logger.info("%s: connected, presence granularity %s", self.name, self._granularity)
         return _Live(session, installation)
 
     async def _sync(self, session: HomeAssistantSession) -> Installation:

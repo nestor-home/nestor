@@ -3145,6 +3145,10 @@
               "description": "What an action of Home Assistant acts on that makes it need the person's go-ahead, whatever the tool: one of\nthese values in the call's `domain`, `device_class` or `name`, ignoring case. Lights, heating and media are not.",
               "properties": {
                 "domains": {
+                  "default": [
+                    "lock",
+                    "alarm_control_panel"
+                  ],
                   "items": {
                     "type": "string"
                   },
@@ -3165,10 +3169,15 @@
                     "suggest_keys": null,
                     "suggest_values": null,
                     "title": "Domains",
-                    "help": "E.g. lock, alarm_control_panel."
+                    "help": "The Home Assistant domain of what the call acts on."
                   }
                 },
                 "device_classes": {
+                  "default": [
+                    "garage",
+                    "gate",
+                    "door"
+                  ],
                   "items": {
                     "type": "string"
                   },
@@ -3189,10 +3198,17 @@
                     "suggest_keys": null,
                     "suggest_values": null,
                     "title": "Device classes",
-                    "help": "E.g. garage, gate, door."
+                    "help": "The device class of what the call acts on."
                   }
                 },
                 "names": {
+                  "default": [
+                    "lock",
+                    "alarm",
+                    "garage",
+                    "gate",
+                    "door"
+                  ],
                   "items": {
                     "type": "string"
                   },
@@ -3213,7 +3229,7 @@
                     "suggest_keys": null,
                     "suggest_values": null,
                     "title": "Words in the name",
-                    "help": "Ignoring case, e.g. door, portail."
+                    "help": "Found in the name of what the call acts on, ignoring case: add the words of your language."
                   }
                 }
               },

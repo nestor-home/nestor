@@ -10,7 +10,7 @@ import { Tag } from "@/components/status";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/i18n";
 import { KindMark, kindName } from "@/lib/brands";
-import { remaining } from "@/lib/dates";
+import { hourMinute } from "@/lib/dates";
 import { personName } from "@/lib/people";
 
 /** What waits on someone: sensitive actions to confirm, questions to answer, messages on their way. */
@@ -60,7 +60,7 @@ function MessageRows({ messages, empty }: { messages: PassedMessage[]; empty: st
     <RowList>
       {messages.map((m) => (
         <li key={m.id} className="px-5 py-3.5">
-          <p className="[overflow-wrap:anywhere] text-ink">« {m.text} »</p>
+          <p className="[overflow-wrap:anywhere] text-ink">{t("message-quoted", { text: m.text })}</p>
           <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.85rem] text-ink-muted">
             <span>
               {m.requested_by
@@ -91,7 +91,6 @@ function ConfirmationRow({ confirmation: c }: { confirmation: Confirmation }) {
       void queryClient.invalidateQueries({ queryKey: keys.confirmations });
       notify(answered.approved ? t("confirmation-done-notice") : t("confirmation-refused-notice"));
     },
-    onError: (error) => notify(messageOf(error)),
   });
   const what = Object.entries(c.arguments)
     .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : String(v)}`)
@@ -109,12 +108,17 @@ function ConfirmationRow({ confirmation: c }: { confirmation: Confirmation }) {
             <KindMark kind={c.origin.channel} className="size-3" label={false} />
             {t("confirmation-asked-in", { channel: kindName(c.origin.channel) })}
           </span>
-          <span>{t("confirmation-expires", { left: remaining(c.expires_at) })}</span>
+          <span>{t("confirmation-expires", { at: hourMinute(c.expires_at) })}</span>
         </p>
       </div>
       {c.yours ? (
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" disabled={answer.isPending} onClick={() => answer.mutate(false)}>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={answer.isPending}
+            onClick={() => answer.mutate(false, { onError: (error) => notify(messageOf(error)) })}
+          >
             <X /> {t("confirmation-refuse")}
           </Button>
           <Confirm

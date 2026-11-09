@@ -160,9 +160,11 @@ function Rooms({ home }: { home: Home }) {
                 )}
               </p>
               <Facts narrow>
-                <Fact term={t("house-room-people")}>
-                  {room.people.length ? room.people.map((p) => p.name).join(", ") : t("house-room-nobody")}
-                </Fact>
+                {home.granularity === "person_room" ? ( // only then does the home place people in rooms
+                  <Fact term={t("house-room-people")}>
+                    {room.people.length ? room.people.map((p) => p.name).join(", ") : t("house-room-nobody")}
+                  </Fact>
+                ) : null}
                 <Fact term={t("house-room-satellites")}>
                   {room.satellites.length ? room.satellites.map((id) => names.get(id) ?? id).join(", ") : "—"}
                 </Fact>

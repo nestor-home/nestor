@@ -4,7 +4,7 @@
  * the home renders it.
  */
 
-import type { Component, Connection, JournalItem, Person, PersonRef, Satellite, Task, Watch } from "@/api";
+import type { Component, Connection, Home, JournalItem, Person, PersonRef, Satellite, Task, Watch } from "@/api";
 import type { FigureState } from "@/components/agent-figure";
 import { is } from "@/lib/events";
 
@@ -13,10 +13,12 @@ export type AgentState = FigureState;
 // -- the household as the agent perceives it -------------------------------------------------------
 
 export interface RoomNode {
-  key: string; // "room:salon"
-  room: string;
+  key: string; // "room:salon", the satellites' room; "area:kitchen", a room only the home system knows
+  room: string; // what to call it
+  journal: string | null; // the room the journal files its events under, when a satellite is there
   people: Person[];
   satellites: Satellite[];
+  occupied: boolean | null; // what the home system's sensors say; null: no sensor, or no home system
   active: number; // events in this room today
 }
 
@@ -24,20 +26,33 @@ export interface MindInput {
   people: readonly Person[];
   satellites: readonly Satellite[];
   items: readonly JournalItem[]; // today's
+  home?: Home | null; // the home system, when one is plugged in and the account may see it
 }
 
-/** The rooms that matter now: where devices are, where people are, where things happened today. */
-export function roomsOf({ people, satellites, items }: MindInput, limit = 6): RoomNode[] {
+/** The rooms that matter now: where devices are, where people are, where things happened today. The home
+ * system's rooms when it answers (with their sensors), and the satellites' rooms it does not know. */
+export function roomsOf({ people, satellites, items, home }: MindInput, limit = 6): RoomNode[] {
   const rooms = new Map<string, RoomNode>();
-  const room = (name: string) => {
-    const found = rooms.get(name) ?? { key: `room:${name}`, room: name, people: [], satellites: [], active: 0 };
-    rooms.set(name, found);
+  const node = (key: string, room: string, journal: string | null): RoomNode => {
+    const found = rooms.get(key) ?? { key, room, journal, people: [], satellites: [], occupied: null, active: 0 };
+    rooms.set(key, found);
     return found;
   };
-  for (const s of satellites) room(s.room).satellites.push(s);
-  for (const p of people) if (p.presence?.home && p.presence.room) room(p.presence.room).people.push(p);
-  for (const i of items) if (i.room) room(i.room).active += 1;
-  const weight = (r: RoomNode) => r.people.length * 100 + r.satellites.length * 10 + r.active;
+  const placed = new Map<string, RoomNode>(); // a satellite's room → the home system's room it is in
+  for (const area of home?.connected ? home.rooms : []) {
+    const here = satellites.filter((s) => area.satellites.includes(s.id));
+    const room = here[0]?.room ?? null;
+    const found = node(room ? `room:${room}` : `area:${area.id}`, area.name, room);
+    found.occupied = area.occupied;
+    found.people = people.filter((p) => area.people.some((q) => q.id === p.id));
+    for (const s of here) placed.set(s.room, found);
+  }
+  const byRoom = (room: string) => placed.get(room) ?? node(`room:${room}`, room, room);
+  for (const s of satellites) if (!byRoom(s.room).satellites.includes(s)) byRoom(s.room).satellites.push(s);
+  if (!home?.connected)
+    for (const p of people) if (p.presence?.home && p.presence.room) byRoom(p.presence.room).people.push(p);
+  for (const i of items) if (i.room) byRoom(i.room).active += 1;
+  const weight = (r: RoomNode) => r.people.length * 100 + (r.occupied ? 50 : 0) + r.satellites.length * 10 + r.active;
   return [...rooms.values()].sort((a, b) => weight(b) - weight(a) || a.room.localeCompare(b.room)).slice(0, limit);
 }
 
