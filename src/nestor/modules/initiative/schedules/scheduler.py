@@ -1,4 +1,5 @@
-"""Wakes the agent when a schedule is due: it runs the instruction as a background turn, with its tools."""
+"""Wakes the agent when a schedule is due: the instruction is a notification for whoever set it, which the courier
+delivers like a task's result. The agent does what it asks with its tools and tells them what they need to know."""
 
 import asyncio
 import contextlib
@@ -7,9 +8,9 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from nestor.core import Component
-from nestor.modules.channels import Address
-from nestor.modules.conversation import Agent, Notification
-from nestor.modules.household import Household
+from nestor.modules.conversation import Notification
+from nestor.modules.household import Household, Person
+from nestor.modules.initiative.delivery import Courier
 from nestor.modules.initiative.schedules.book import ScheduleBook
 from nestor.modules.initiative.schedules.types import Schedule
 
@@ -20,8 +21,8 @@ IDLE_S = 3600.0  # the longest sleep between two looks at the clock, against dri
 class Scheduler(Component):
     name = "scheduler"
 
-    def __init__(self, book: ScheduleBook, agent: Agent, household: Household) -> None:
-        self.book, self.agent, self.household = book, agent, household
+    def __init__(self, book: ScheduleBook, household: Household, courier: Courier) -> None:
+        self.book, self.household, self.courier = book, household, courier
         self._worker: asyncio.Task[None] | None = None
 
     async def start(self) -> None:
@@ -39,23 +40,22 @@ class Scheduler(Component):
         due = self.book.due()
         for schedule, due_at in due:
             await self.book.fired(schedule.id, due_at)  # before it runs: never twice
-            try:
-                await self.agent.background(
-                    schedule.created_in or Address("schedule", schedule.id),
-                    self.household.person(schedule.owner) if schedule.owner else None,
-                    Notification(self._instruction(schedule, due_at), f"schedule {schedule.id}"),
-                )
+            owner = self.household.person(schedule.owner) if schedule.owner else None
+            notification = Notification(self._instruction(schedule, due_at, owner), f"schedule {schedule.id}")
+            try:  # where it was set, or wherever its owner is reached; a delivery nothing took is journaled
+                await self.courier.deliver(owner, notification, origin=schedule.created_in)
             except Exception:  # one wake-up failing never stops the others
                 log.exception("wake-up %s failed", schedule.id)
         return len(due)
 
-    def _instruction(self, schedule: Schedule, due_at: datetime) -> str:
+    def _instruction(self, schedule: Schedule, due_at: datetime, owner: Person | None) -> str:
         local = due_at.astimezone(ZoneInfo(self.book.timezone))
-        owner = self.household.person(schedule.owner).name if schedule.owner else None
-        whose = f", set for {owner}" if owner else ""
+        whose, who = (f" {owner.name} set", owner.name) if owner else ("", "the person")
         return (
-            f"A wake-up you scheduled{whose} is due now ({local:%A %H:%M}): {schedule.instruction}\n"
-            "Nobody reads what you write here: do it with your tools, and to tell someone, use message_person."
+            f"A wake-up{whose} is due now ({local:%A %H:%M}): {schedule.instruction}\n"
+            f"Do it now, with your tools if it needs them. What you write goes to {who}: tell them, briefly and in "
+            "your own words, what they need to know, and write nothing at all if there is nothing for them (a check "
+            "that found nothing)."
         )
 
     async def _run(self) -> None:

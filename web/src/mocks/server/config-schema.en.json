@@ -222,7 +222,7 @@
             "model_type": null,
             "brands": null,
             "title": "May send a message to",
-            "help": "Through the assistant: person identifiers, or * for everyone."
+            "help": "Through the assistant, to others: person identifiers, or * for everyone. Anyone may write to themselves."
           }
         }
       },
@@ -289,33 +289,6 @@
             "brands": null,
             "title": "Written model",
             "help": "For written replies. The spoken model by default."
-          }
-        },
-        "background": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Background",
-          "x-nestor": {
-            "field": "background",
-            "title_id": "config-agent-background",
-            "help_id": "config-agent-background-help",
-            "fallback_title_id": "config-field-background",
-            "secret": false,
-            "secret_values": false,
-            "advanced": false,
-            "group": "agent",
-            "reference": "models",
-            "model_type": "language",
-            "brands": null,
-            "title": "Background model",
-            "help": "For what nobody waits for, such as scheduled wake-ups. The written model by default."
           }
         },
         "spoken_tool_wait_s": {
@@ -569,7 +542,7 @@
             "model_type": "language",
             "brands": null,
             "title": "Summarizing model",
-            "help": "Summarizes each finished conversation. The background model by default."
+            "help": "Summarizes each finished conversation. The written model by default."
           }
         },
         "embedder": {

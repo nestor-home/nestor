@@ -147,10 +147,11 @@ class _Session:
 class McpToolProvider(ToolProvider):
     """Offers the tools of one MCP server; tool names are the server's, made valid and unique.
 
-    `include` and `exclude` select tools by their name on the server; `risks` overrides the risk
-    derived from the tool's annotations (read-only → read, destructive → sensitive, else write).
-    Annotations are hints from the server: set `risks` for anything that matters. `sensitive` makes some
-    calls of a tool sensitive by what they act on (a lock, the garage), where the tool also drives lights.
+    `include` and `exclude` select tools by their name on the server. A tool's annotations only tell reading from
+    writing: MCP holds any tool that writes destructive unless it says otherwise, and Home Assistant marks turning on
+    a light so, so the hint cannot tell what needs a person's go-ahead. What does is the household's to say: `risks`
+    sets a tool's risk by its name, `sensitive` makes some calls of a tool sensitive by what they act on (a lock, the
+    garage), where the tool also drives lights.
     """
 
     def __init__(
@@ -185,8 +186,8 @@ class McpToolProvider(ToolProvider):
         self._retry: asyncio.Task[None] | None = None
 
     async def start(self) -> None:
-        """Opens the session now. Refused credentials fail loudly; a server that is down or failing
-        only leaves its tools missing — the home may reboot with Nestor — until it answers again."""
+        """Opens the session now. Refused credentials fail loudly: only a person can fix them. A server that is down,
+        failing or still starting only leaves its tools missing (the home may reboot with Nestor) until it answers."""
         self._closed = False
         try:
             await self._open()
@@ -361,9 +362,7 @@ class McpToolProvider(ToolProvider):
         if remote.name in self._risks:
             return self._risks[remote.name]
         hints = remote.annotations or ToolAnnotations()
-        if hints.read_only_hint:
-            return Risk.READ
-        return Risk.SENSITIVE if hints.destructive_hint else Risk.WRITE
+        return Risk.READ if hints.read_only_hint else Risk.WRITE
 
     def _runner(self, remote_name: str) -> Callable[[Mapping[str, object], ToolContext], Any]:
         async def run(arguments: Mapping[str, object], context: ToolContext) -> str:
@@ -456,8 +455,8 @@ def _describe(block: ContentBlock) -> str:
 def _refusal(error: Exception, status: int | None) -> _Unreachable:
     if status in (401, 403):
         return _Unreachable(f"the server refused the credentials (HTTP {status})", transient=False)
-    if status is not None:
-        return _Unreachable(f"the server answered HTTP {status}", transient=status == 429 or status >= 500)
+    if status is not None:  # a server still starting answers 404 (Home Assistant before its MCP is loaded)
+        return _Unreachable(f"the server answered HTTP {status}", transient=True)
     return _Unreachable(f"unreachable ({_reason(error)})", transient=True)
 
 

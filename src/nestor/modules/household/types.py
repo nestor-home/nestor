@@ -35,10 +35,11 @@ class Person:
     name: str
     accounts: tuple[Account, ...] = ()
     reach: Address | None = None  # where to write when they are not in the conversation
-    may_message: tuple[str, ...] = (ANYONE,)  # whom they may have the agent write to: person ids, or everyone
+    may_message: tuple[str, ...] = (ANYONE,)  # whom else they may have the agent write to: person ids, or everyone
 
     def may_write_to(self, other: PersonId) -> bool:
-        return ANYONE in self.may_message or other in self.may_message
+        """Anyone may have the agent write to themselves (a reminder); `may_message` says whom else."""
+        return other == self.id or ANYONE in self.may_message or other in self.may_message
 
     def address_on(self, channel: str) -> Address | None:
         """Where to write to them on `channel`: their account there."""

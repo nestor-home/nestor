@@ -78,7 +78,9 @@ async def test_the_quiet_hours_and_scheduled_follow_ups_are_readable_each_to_who
     tmp_path: Path,
 ) -> None:
     start, end = around_now(-2).split("-")  # from in two hours to two hours ago: not now, so it may speak
-    async with Harness(tmp_path, quiet_hours=f"{start}-{end}", speaker=True) as admin:
+    async with Harness(
+        tmp_path, quiet_hours=f"{start}-{end}", speaker=True, replies=("Ton colis est arrivé.",)
+    ) as admin:
         mathis = admin.nestor.household.person(PersonId("mathis"))
         before = utc_now()
         spoken = await admin.nestor.courier.deliver(mathis, Notification("Le colis est arrivé.", "watch w1"))
