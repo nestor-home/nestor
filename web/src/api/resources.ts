@@ -209,6 +209,19 @@ export const api = {
   watch: (id: Id) => unwrap(client.GET("/api/v1/watches/{watch_id}", { params: { path: { watch_id: id } } })),
   cancelWatch: (id: Id) =>
     done(client.POST("/api/v1/watches/{watch_id}/cancel", { params: { path: { watch_id: id } } })),
+  schedules: () => unwrap(client.GET("/api/v1/schedules")),
+  cancelSchedule: (id: Id) =>
+    done(client.POST("/api/v1/schedules/{schedule_id}/cancel", { params: { path: { schedule_id: id } } })),
+  messages: () => unwrap(client.GET("/api/v1/messages")),
+  confirmations: () => unwrap(client.GET("/api/v1/confirmations")),
+  answerConfirmation: (id: Id, approved: boolean) =>
+    unwrap(
+      client.POST("/api/v1/confirmations/{confirmation_id}/answer", {
+        params: { path: { confirmation_id: id } },
+        body: { approved },
+      }),
+    ),
+  home: () => unwrap(client.GET("/api/v1/home")),
   memories: (query: MemoryQuery) => unwrap(client.GET("/api/v1/memories", { params: { query } })),
   correctMemory: (id: Id, text: string) =>
     unwrap(client.PATCH("/api/v1/memories/{memory_id}", { params: { path: { memory_id: id } }, body: { text } })),

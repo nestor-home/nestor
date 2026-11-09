@@ -62,6 +62,15 @@ export type OAuthClient = S["ClientIn"];
 export type ConnectRequest = S["SecretsIn"];
 export type ToolSettings = S["ConnectionSettingsIn"];
 
+// -- the home -------------------------------------------------------------------------------------
+
+export type Home = S["HomeOut"];
+export type HomeRoom = S["RoomOut"];
+export type Resident = S["ResidentOut"];
+export type TiedPerson = S["TiedPersonOut"];
+export type HomeTool = S["HomeToolOut"];
+export type Granularity = S["Granularity"];
+
 // -- satellites -----------------------------------------------------------------------------------
 
 export type Capability = S["CapabilityOut"];
@@ -84,6 +93,13 @@ export type Task = S["TaskOut"];
 export type Tasks = S["TasksOut"];
 export type Watch = S["WatchOut"];
 export type Watches = S["WatchesOut"];
+export type Day = S["Day"];
+export type Schedule = S["ScheduleOut"];
+export type Schedules = S["SchedulesOut"];
+export type PassedMessage = S["PassedMessageOut"];
+export type Messages = S["MessagesOut"];
+export type Confirmation = S["ConfirmationOut"];
+export type Answered = S["AnsweredOut"];
 export type Memory = S["MemoryOut"];
 export type MemoryQuery = NonNullable<Query<"/api/v1/memories">>;
 

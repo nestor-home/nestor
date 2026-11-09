@@ -7,6 +7,10 @@ nav-people = People
 nav-memories = Memories
 nav-watches = Watches
 nav-tasks = Tasks
+nav-house = Home
+nav-group-agenda = Agenda
+nav-schedules = Reminders
+nav-messages = Messages
 nav-group-installation = Setup
 nav-connections = Connections
 nav-satellites = Satellites
@@ -43,6 +47,13 @@ attention-reauth = { $account } needs reauthorising
 attention-connection-error = { $account } no longer answers
 attention-tools-hidden = Its tools are paused.
 attention-reconnect = Reconnect
+attention-confirmation = { $tool } waits for your go-ahead
+attention-confirmation-detail = Asked aloud; it expires in { $left }.
+attention-answer = Answer
+attention-home = { $health ->
+    [unavailable] The home system does not answer
+   *[other] The home system answers in part
+}
 attention-pairing = { $device } is waiting to be paired
 attention-pairing-detail = { $model }, { $room }: type the code it shows.
 attention-approve = Approve

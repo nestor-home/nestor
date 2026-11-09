@@ -16,7 +16,9 @@ import {
   memoriesQuery,
   type Person,
   peopleQuery,
+  type Schedule,
   satellitesQuery,
+  schedulesQuery,
   tasksQuery,
   type UpcomingDelivery,
   watchesQuery,
@@ -32,7 +34,7 @@ import { useLiveItems } from "@/features/shell/live";
 import { useT } from "@/i18n";
 import { activeLocale, tr } from "@/i18n/runtime";
 import { brandName, brandOf } from "@/lib/brands";
-import { hourMinute, startOfToday } from "@/lib/dates";
+import { hourMinute, moment, startOfToday } from "@/lib/dates";
 import { say } from "@/lib/messages";
 import { useCan, useMe } from "@/lib/session";
 import { cn } from "@/lib/utils";
@@ -74,6 +76,7 @@ export function HomeView() {
   const satellites = useQuery({ ...satellitesQuery, enabled: canSatellites });
   const tasks = useQuery({ ...tasksQuery, enabled: canTasks });
   const watches = useQuery({ ...watchesQuery, enabled: canWatches });
+  const schedules = useQuery({ ...schedulesQuery, enabled: useCan("schedules:read") });
   const { items: attention } = useAttention();
   const { state, latest, quiet } = useAgentPresence();
 
@@ -101,7 +104,8 @@ export function HomeView() {
   const focus = latest ? nodeOf(latest, paired) : null;
   const initiative = useQuery({ ...initiativeQuery, enabled: useCan("agent:read") });
   const later = initiative.data?.upcoming ?? [];
-  const upcoming = (watches.data?.watches.length ?? 0) > 0 || Boolean(quiet) || later.length > 0;
+  const soon = (schedules.data?.schedules ?? []).filter((s) => s.next_due).slice(0, 3);
+  const upcoming = (watches.data?.watches.length ?? 0) > 0 || Boolean(quiet) || later.length > 0 || soon.length > 0;
 
   return (
     <div className="grid gap-16 md:gap-20">
@@ -142,7 +146,9 @@ export function HomeView() {
       <div className={cn("grid gap-14 md:gap-10", upcoming ? "md:grid-cols-3" : "md:grid-cols-2")}>
         {canPeople ? <House rooms={rooms} away={away} focus={focus} /> : null}
         <Now running={running} items={items} now={now} />
-        {upcoming ? <Next watches={watches.data?.watches ?? []} quiet={quiet} upcoming={later} /> : null}
+        {upcoming ? (
+          <Next watches={watches.data?.watches ?? []} quiet={quiet} upcoming={later} schedules={soon} />
+        ) : null}
       </div>
 
       <Today marks={marks} />
@@ -372,10 +378,12 @@ function Next({
   watches,
   quiet,
   upcoming,
+  schedules,
 }: {
   watches: { id: string; what: string; last_triggered_at: string | null }[];
   quiet: Quiet | null;
   upcoming: UpcomingDelivery[];
+  schedules: Schedule[];
 }) {
   const t = useT();
   return (
@@ -406,6 +414,16 @@ function Next({
                     })}
               </span>
               <span className="mt-1 block text-[0.92rem] text-ink-muted">{t("home-upcoming-unless")}</span>
+            </Link>
+          </li>
+        ))}
+        {schedules.map((s) => (
+          <li key={s.id}>
+            <Link to="/schedules" className="group block">
+              <span className="text-[1.05rem] leading-snug text-ink group-hover:underline">{s.instruction}</span>
+              {s.next_due ? (
+                <span className="mt-1 block text-[0.92rem] text-ink-muted">{moment(s.next_due)}</span>
+              ) : null}
             </Link>
           </li>
         ))}

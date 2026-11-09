@@ -72,8 +72,8 @@ schedule-day = { $day ->
    *[sun] Sunday
 }
 home-granularity = { $granularity ->
-    [1] home or away
-    [2] occupied rooms
+    [1] who is home
+    [2] which rooms are occupied
    *[3] who is in which room
 }
 

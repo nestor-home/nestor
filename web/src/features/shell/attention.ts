@@ -1,16 +1,34 @@
 import { useQuery } from "@tanstack/react-query";
 import type { LinkProps } from "@tanstack/react-router";
 import type { LucideIcon } from "lucide-react";
-import { CircleAlert, Hourglass, KeyRound, MessageSquareOff, RadioTower, ServerCrash } from "lucide-react";
-import { type Component, connectionsQuery, journalLatestQuery, satellitesQuery, systemQuery, tasksQuery } from "@/api";
+import {
+  CircleAlert,
+  Hourglass,
+  House,
+  KeyRound,
+  MessageSquareOff,
+  RadioTower,
+  ServerCrash,
+  ShieldQuestion,
+} from "lucide-react";
+import {
+  type Component,
+  confirmationsQuery,
+  connectionsQuery,
+  homeQuery,
+  journalLatestQuery,
+  satellitesQuery,
+  systemQuery,
+  tasksQuery,
+} from "@/api";
 import { tr } from "@/i18n/runtime";
-import { startOfToday } from "@/lib/dates";
+import { remaining, startOfToday } from "@/lib/dates";
 import { is } from "@/lib/events";
 import { rendered, say } from "@/lib/messages";
 import { useCan } from "@/lib/session";
 
 /** Components that already speak for themselves: connections, tools and satellites. */
-const SPEAK_FOR_THEMSELVES = new Set<Component["slot"]>(["satellite", "tools", "connector"]);
+const SPEAK_FOR_THEMSELVES = new Set<Component["slot"]>(["satellite", "tools", "connector", "home"]);
 
 export interface Attention {
   key: string;
@@ -37,8 +55,33 @@ export function useAttention(): { items: Attention[]; ready: boolean } {
   const tasks = useQuery({ ...tasksQuery, enabled: canTasks });
   const system = useQuery({ ...systemQuery, enabled: canSatellites });
   const spoken = useQuery(journalLatestQuery({ kinds: ["delivery"], from: startOfToday() }, 100));
+  const confirmations = useQuery({ ...confirmationsQuery, enabled: useCan("messages:read") });
+  const home = useQuery({ ...homeQuery, enabled: useCan("home:read") });
 
   const items: Attention[] = [];
+  for (const c of confirmations.data ?? []) {
+    if (!c.yours) continue;
+    items.push({
+      key: `confirmation-${c.id}`,
+      icon: ShieldQuestion,
+      tone: "attention",
+      title: tr("attention-confirmation", { tool: c.tool }),
+      detail: tr("attention-confirmation-detail", { left: remaining(c.expires_at) }),
+      action: tr("attention-answer"),
+      link: { to: "/messages" },
+    });
+  }
+  if (home.data && home.data.health !== "started") {
+    items.push({
+      key: "home",
+      icon: House,
+      tone: home.data.health === "unavailable" ? "error" : "attention",
+      title: tr("attention-home", { health: home.data.health }),
+      detail: home.data.health_detail ?? "",
+      action: tr("action-see"),
+      link: { to: "/house" },
+    });
+  }
   for (const c of connections.data ?? []) {
     if (c.status === "connected") continue;
     items.push({

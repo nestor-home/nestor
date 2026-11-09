@@ -13,8 +13,11 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppConfigRouteImport } from './routes/_app/config'
+import { Route as AppHouseRouteImport } from './routes/_app/house'
 import { Route as AppJournalRouteImport } from './routes/_app/journal'
 import { Route as AppMemoriesRouteImport } from './routes/_app/memories'
+import { Route as AppMessagesRouteImport } from './routes/_app/messages'
+import { Route as AppSchedulesRouteImport } from './routes/_app/schedules'
 import { Route as AppSystemRouteImport } from './routes/_app/system'
 import { Route as InvitationTokenRouteImport } from './routes/invitation.$token'
 import { Route as AppAccountsIndexRouteImport } from './routes/_app/accounts/index'
@@ -68,6 +71,11 @@ const AppConfigRoute = AppConfigRouteImport.update({
   path: '/config',
   getParentRoute: () => AppRoute,
 } as any)
+const AppHouseRoute = AppHouseRouteImport.update({
+  id: '/house',
+  path: '/house',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppJournalRoute = AppJournalRouteImport.update({
   id: '/journal',
   path: '/journal',
@@ -76,6 +84,16 @@ const AppJournalRoute = AppJournalRouteImport.update({
 const AppMemoriesRoute = AppMemoriesRouteImport.update({
   id: '/memories',
   path: '/memories',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppMessagesRoute = AppMessagesRouteImport.update({
+  id: '/messages',
+  path: '/messages',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSchedulesRoute = AppSchedulesRouteImport.update({
+  id: '/schedules',
+  path: '/schedules',
   getParentRoute: () => AppRoute,
 } as any)
 const AppSystemRoute = AppSystemRouteImport.update({
@@ -261,8 +279,11 @@ export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/login': typeof LoginRoute
   '/config': typeof AppConfigRouteWithChildren
+  '/house': typeof AppHouseRoute
   '/journal': typeof AppJournalRoute
   '/memories': typeof AppMemoriesRoute
+  '/messages': typeof AppMessagesRoute
+  '/schedules': typeof AppSchedulesRoute
   '/system': typeof AppSystemRoute
   '/invitation/$token': typeof InvitationTokenRoute
   '/accounts/$accountId': typeof AppAccountsAccountIdRoute
@@ -299,8 +320,11 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
+  '/house': typeof AppHouseRoute
   '/journal': typeof AppJournalRoute
   '/memories': typeof AppMemoriesRoute
+  '/messages': typeof AppMessagesRoute
+  '/schedules': typeof AppSchedulesRoute
   '/system': typeof AppSystemRoute
   '/invitation/$token': typeof InvitationTokenRoute
   '/': typeof AppIndexRoute
@@ -338,8 +362,11 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
   '/_app/config': typeof AppConfigRouteWithChildren
+  '/_app/house': typeof AppHouseRoute
   '/_app/journal': typeof AppJournalRoute
   '/_app/memories': typeof AppMemoriesRoute
+  '/_app/messages': typeof AppMessagesRoute
+  '/_app/schedules': typeof AppSchedulesRoute
   '/_app/system': typeof AppSystemRoute
   '/invitation/$token': typeof InvitationTokenRoute
   '/_app/': typeof AppIndexRoute
@@ -381,8 +408,11 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/config'
+    | '/house'
     | '/journal'
     | '/memories'
+    | '/messages'
+    | '/schedules'
     | '/system'
     | '/invitation/$token'
     | '/accounts/$accountId'
@@ -419,8 +449,11 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
+    | '/house'
     | '/journal'
     | '/memories'
+    | '/messages'
+    | '/schedules'
     | '/system'
     | '/invitation/$token'
     | '/'
@@ -457,8 +490,11 @@ export interface FileRouteTypes {
     | '/_app'
     | '/login'
     | '/_app/config'
+    | '/_app/house'
     | '/_app/journal'
     | '/_app/memories'
+    | '/_app/messages'
+    | '/_app/schedules'
     | '/_app/system'
     | '/invitation/$token'
     | '/_app/'
@@ -531,6 +567,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppConfigRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/house': {
+      id: '/_app/house'
+      path: '/house'
+      fullPath: '/house'
+      preLoaderRoute: typeof AppHouseRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/journal': {
       id: '/_app/journal'
       path: '/journal'
@@ -543,6 +586,20 @@ declare module '@tanstack/react-router' {
       path: '/memories'
       fullPath: '/memories'
       preLoaderRoute: typeof AppMemoriesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/messages': {
+      id: '/_app/messages'
+      path: '/messages'
+      fullPath: '/messages'
+      preLoaderRoute: typeof AppMessagesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/schedules': {
+      id: '/_app/schedules'
+      path: '/schedules'
+      fullPath: '/schedules'
+      preLoaderRoute: typeof AppSchedulesRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/system': {
@@ -860,8 +917,11 @@ const AppSatellitesSatelliteIdRouteWithChildren =
 
 interface AppRouteChildren {
   AppConfigRoute: typeof AppConfigRouteWithChildren
+  AppHouseRoute: typeof AppHouseRoute
   AppJournalRoute: typeof AppJournalRoute
   AppMemoriesRoute: typeof AppMemoriesRoute
+  AppMessagesRoute: typeof AppMessagesRoute
+  AppSchedulesRoute: typeof AppSchedulesRoute
   AppSystemRoute: typeof AppSystemRoute
   AppIndexRoute: typeof AppIndexRoute
   AppAccountsAccountIdRoute: typeof AppAccountsAccountIdRoute
@@ -883,8 +943,11 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppConfigRoute: AppConfigRouteWithChildren,
+  AppHouseRoute: AppHouseRoute,
   AppJournalRoute: AppJournalRoute,
   AppMemoriesRoute: AppMemoriesRoute,
+  AppMessagesRoute: AppMessagesRoute,
+  AppSchedulesRoute: AppSchedulesRoute,
   AppSystemRoute: AppSystemRoute,
   AppIndexRoute: AppIndexRoute,
   AppAccountsAccountIdRoute: AppAccountsAccountIdRoute,

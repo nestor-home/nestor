@@ -38,8 +38,13 @@ export interface JsonSchema {
     reference?: string | null;
     /** the type of model the reference takes: only those are offered */
     model_type?: ModelType | null;
+    /** what a map's keys and values are picked from: the household's people, the home system's residents */
+    suggest_keys?: Suggestion | null;
+    suggest_values?: Suggestion | null;
   };
 }
+
+export type Suggestion = "people" | "residents";
 
 /**
  * `/config/schema` read as what it is: JSON Schemas (sent as free JSON) with Nestor's `x-nestor`

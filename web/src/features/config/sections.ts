@@ -49,7 +49,7 @@ export const PAGES: ConfigPage[] = [
   { slug: "executors", kind: "slots", keys: ["executors"], icon: Workflow, group: "parts" },
   { slug: "tools", kind: "slots", keys: ["tools"], icon: Wrench, group: "parts" },
   { slug: "inbound", kind: "slots", keys: ["inbound"], icon: Download, group: "parts" },
-  { slug: "presence", kind: "slots", keys: ["presence"], icon: House, group: "parts" },
+  { slug: "home", kind: "slots", keys: ["home"], icon: House, group: "parts" },
   { slug: "connectors", kind: "slots", keys: ["connectors"], icon: Plug, group: "parts" },
   { slug: "admin", kind: "section", keys: ["admin", "data_dir"], icon: Server, group: "instance" },
   { slug: "secrets", kind: "secrets", keys: [], icon: KeyRound, group: "vault", label: "cfg-secrets" },

@@ -214,6 +214,12 @@ export function brandName(slug: BrandSlug): string {
   return "name" in brand ? brand.name : tr(brand.message, brand.args);
 }
 
+/** What people call a plugin kind or a channel: its brand's name when it has one (`telegram` → Telegram). */
+export function kindName(kind: string): string {
+  const slug = brandOf(kind);
+  return slug ? brandName(slug) : kind;
+}
+
 /**
  * A brand's mark at the size of the other icons (16px in UI text unless `className` sizes it).
  * `label` false when the name is written next to it, so it is not read twice.

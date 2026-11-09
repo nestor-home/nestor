@@ -44,8 +44,12 @@ class SensitiveTargets(BaseModel):
 class HomeAssistantSettings(AdapterSettings):
     url: str
     token: RequiredSecret
-    people: dict[str, str] = Field(default_factory=dict)  # household person id → person entity
-    rooms: dict[str, str] = Field(default_factory=dict)  # household person id → room tracker entity
+    people: dict[str, str] = Field(  # household person id → person entity
+        default_factory=dict, json_schema_extra={"suggest_keys": "people", "suggest_values": "residents"}
+    )
+    rooms: dict[str, str] = Field(  # household person id → room tracker entity
+        default_factory=dict, json_schema_extra={"suggest_keys": "people"}
+    )
     occupancy_sensors: list[str] | None = None  # `None`: every occupancy, presence or motion sensor with an area
     sensitive: SensitiveTargets = SensitiveTargets()
     sync_timeout_s: PositiveFloat = Field(default=30.0, json_schema_extra={"advanced": True})

@@ -2,13 +2,17 @@
 
 import type {
   Account,
+  Confirmation,
   Connection,
   Connector,
+  Home,
   Invitation,
   JournalEvent,
   Memory,
+  Messages,
   PairingMethodId,
   Satellite,
+  Schedule,
   SystemInfo,
   Task,
   Tool,
@@ -51,6 +55,10 @@ export interface Db {
   satellites: Satellite[];
   tasks: Task[];
   watches: Watch[];
+  schedules: Schedule[];
+  messages: Messages;
+  confirmations: Confirmation[];
+  home: Home | null;
   memories: Memory[];
   system: SystemInfo;
   updates: Updates;
@@ -59,7 +67,7 @@ export interface Db {
 }
 
 /** Bumped when the shape changes; the stress fixture keeps its own copy. */
-const KEY = () => (stressed() ? "nestor.mock.db.v14.stress" : "nestor.mock.db.v14");
+const KEY = () => (stressed() ? "nestor.mock.db.v15.stress" : "nestor.mock.db.v15");
 
 export function fresh(): Db {
   const connections = fixtures.connections();
@@ -82,6 +90,10 @@ export function fresh(): Db {
     satellites: fixtures.satellites(),
     tasks: fixtures.tasks(),
     watches: fixtures.watches(),
+    schedules: fixtures.schedules(),
+    messages: fixtures.messages(),
+    confirmations: fixtures.confirmations(),
+    home: fixtures.home(),
     memories,
     system: fixtures.system(),
     updates: fixtures.updates(),

@@ -29,14 +29,6 @@ async def list_schedules(request: Request, caller: Manager) -> SchedulesOut:
     return SchedulesOut(schedules=found, timezone=book.timezone)
 
 
-@router.get("/schedules/{schedule_id}")
-async def get_schedule(request: Request, caller: Manager, schedule_id: str) -> ScheduleOut:
-    """One wake-up; 404 when unknown, ended or out of reach."""
-    admin = state(request)
-    schedule = reachable_schedule(admin, caller, schedule_id)
-    return ScheduleOut.of(schedule, admin.nestor.schedule_book, People(admin.nestor.household))
-
-
 @router.post("/schedules/{schedule_id}/cancel", status_code=204)
 async def cancel_schedule(request: Request, caller: Manager, schedule_id: str) -> Response:
     admin = state(request)
