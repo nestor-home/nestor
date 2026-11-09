@@ -102,7 +102,7 @@ function ScheduleRow({ schedule: s }: { schedule: Schedule }) {
             </Button>
           }
           title={t("schedule-cancel-title")}
-          confirm={t("schedule-cancel")}
+          confirm={t("schedule-cancel-confirm")}
           onConfirm={() => cancel.mutateAsync()}
         >
           {t("schedule-cancel-description", { what: s.instruction })}

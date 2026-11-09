@@ -13,5 +13,6 @@ schedule-set-in = programmé sur { $channel }
 schedule-cancel = Annuler
 schedule-cancel-for = Annuler « { $what } »
 schedule-cancel-title = Annuler ce rappel ?
+schedule-cancel-confirm = Annuler le rappel
 schedule-cancel-description = « { $what } » ne sera plus exécuté.
 schedule-cancelled-notice = Annulé : il ne sera plus exécuté.

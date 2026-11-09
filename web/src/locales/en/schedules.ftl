@@ -13,5 +13,6 @@ schedule-set-in = set on { $channel }
 schedule-cancel = Cancel
 schedule-cancel-for = Cancel “{ $what }”
 schedule-cancel-title = Cancel this reminder?
+schedule-cancel-confirm = Cancel the reminder
 schedule-cancel-description = “{ $what }” will not run again.
 schedule-cancelled-notice = Cancelled: it will not run again.

@@ -32,7 +32,7 @@ src/nestor/
 │   │   ├── tools/        direct tools, the toolbox that runs and logs them
 │   │   └── delegation/   executors, durable tasks rebuilt from the journal, delegation tools
 │   ├── household/        people and their accounts on channels
-│   ├── home/             presence as the home system knows it (device control goes through its MCP server)
+│   ├── home/             the home system plugged once (`Home`): its presence, its actions as tools, its rooms
 │   ├── memory/           memories per person: journaled changes, searchable store, agent tools
 │   ├── identity/         diarization and speaker identification ports (opt-in, never authorisation)
 │   ├── connectors/       third-party services plugged in from the admin: OAuth, vault, tools, inbound
