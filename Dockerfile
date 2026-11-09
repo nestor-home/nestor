@@ -1,7 +1,7 @@
 # Nestor server image. Build: docker build -t nestor . — run with compose.yaml.
 
 # The admin front, built into the Python package's static folder (see web/vite.config.ts).
-FROM node:22-slim AS web
+FROM node:26-slim AS web
 RUN corepack enable
 WORKDIR /web
 COPY web/package.json web/pnpm-lock.yaml web/pnpm-workspace.yaml ./
