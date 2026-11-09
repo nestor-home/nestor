@@ -12,7 +12,7 @@ from nestor.modules.accounts import Principal, Scope
 from nestor.modules.cognition import TaskStatus
 from nestor.modules.cognition.delegation.service import Task
 from nestor.modules.connectors import Connection, Connections
-from nestor.modules.initiative import Watch
+from nestor.modules.initiative import Schedule, Watch
 from nestor.modules.memory import Memory
 
 
@@ -134,3 +134,20 @@ def reachable_watch(admin: AdminState, caller: Caller, watch_id: str) -> Watch:
     if watch is None or not reaches_watch(caller, watch):
         raise not_found("watch_unknown")
     return watch
+
+
+def reaches_schedule(caller: Caller, schedule: Schedule) -> bool:
+    return caller.principal.reaches(schedule.owner, every=Scope.SCHEDULES_MANAGE_ALL, own=Scope.SCHEDULES_MANAGE_OWN)
+
+
+def reachable_schedule(admin: AdminState, caller: Caller, schedule_id: str) -> Schedule:
+    schedule = admin.nestor.schedule_book.schedules.get(schedule_id)
+    if schedule is None or not reaches_schedule(caller, schedule):
+        raise not_found("schedule_unknown")
+    return schedule
+
+
+def reaches_person_of(caller: Caller, *people: PersonId | None) -> bool:
+    """What concerns these people (a message between two, a confirmation): all of it with `journal.read.all`, what
+    concerns the account's person with `journal.read.own`."""
+    return any(caller.principal.reaches(p, every=Scope.JOURNAL_READ_ALL, own=Scope.JOURNAL_READ_OWN) for p in people)

@@ -2888,16 +2888,92 @@
       "kinds": {},
       "model_types": {}
     },
-    "presence": {
-      "family": "presence",
+    "home": {
+      "family": "home",
       "shape": "one",
       "required": false,
-      "title": "Présence",
+      "title": "Maison",
       "picks": [
         "kind"
       ],
       "kinds": {
         "home-assistant": {
+          "$defs": {
+            "SensitiveTargets": {
+              "additionalProperties": false,
+              "description": "What an action of Home Assistant acts on that makes it need the person's go-ahead, whatever the tool: one of\nthese values in the call's `domain`, `device_class` or `name`, ignoring case. Lights, heating and media are not.",
+              "properties": {
+                "domains": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "title": "Domains",
+                  "type": "array",
+                  "x-nestor": {
+                    "field": "domains",
+                    "title_id": "config-home-home-assistant-sensitivetargets-domains",
+                    "help_id": "config-home-home-assistant-sensitivetargets-domains-help",
+                    "fallback_title_id": "config-field-domains",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "home-home-assistant-sensitivetargets",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "title": "Domaines",
+                    "help": "Ex. lock, alarm_control_panel."
+                  }
+                },
+                "device_classes": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "title": "Device Classes",
+                  "type": "array",
+                  "x-nestor": {
+                    "field": "device_classes",
+                    "title_id": "config-home-home-assistant-sensitivetargets-device_classes",
+                    "help_id": "config-home-home-assistant-sensitivetargets-device_classes-help",
+                    "fallback_title_id": "config-field-device_classes",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "home-home-assistant-sensitivetargets",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "title": "Classes d'appareil",
+                    "help": "Ex. garage, gate, door."
+                  }
+                },
+                "names": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "title": "Names",
+                  "type": "array",
+                  "x-nestor": {
+                    "field": "names",
+                    "title_id": "config-home-home-assistant-sensitivetargets-names",
+                    "help_id": "config-home-home-assistant-sensitivetargets-names-help",
+                    "fallback_title_id": "config-field-names",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "home-home-assistant-sensitivetargets",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "title": "Mots dans le nom",
+                    "help": "Sans tenir compte de la casse, ex. porte, portail."
+                  }
+                }
+              },
+              "title": "SensitiveTargets",
+              "type": "object"
+            }
+          },
           "additionalProperties": false,
           "properties": {
             "kind": {
@@ -2905,13 +2981,13 @@
               "type": "string",
               "x-nestor": {
                 "field": "kind",
-                "title_id": "config-presence-home-assistant-kind",
-                "help_id": "config-presence-home-assistant-kind-help",
+                "title_id": "config-home-home-assistant-kind",
+                "help_id": "config-home-home-assistant-kind-help",
                 "fallback_title_id": "config-field-kind",
                 "secret": false,
                 "secret_values": false,
                 "advanced": false,
-                "group": "presence-home-assistant",
+                "group": "home-home-assistant",
                 "reference": null,
                 "model_type": null,
                 "brands": null,
@@ -2924,13 +3000,13 @@
               "description": "the instance's name; the kind by default",
               "x-nestor": {
                 "field": "name",
-                "title_id": "config-presence-home-assistant-name",
-                "help_id": "config-presence-home-assistant-name-help",
+                "title_id": "config-home-home-assistant-name",
+                "help_id": "config-home-home-assistant-name-help",
                 "fallback_title_id": "config-field-name",
                 "secret": false,
                 "secret_values": false,
                 "advanced": false,
-                "group": "presence-home-assistant",
+                "group": "home-home-assistant",
                 "reference": null,
                 "model_type": null,
                 "brands": null,
@@ -2943,18 +3019,18 @@
               "type": "string",
               "x-nestor": {
                 "field": "url",
-                "title_id": "config-presence-home-assistant-url",
-                "help_id": "config-presence-home-assistant-url-help",
+                "title_id": "config-home-home-assistant-url",
+                "help_id": "config-home-home-assistant-url-help",
                 "fallback_title_id": "config-field-url",
                 "secret": false,
                 "secret_values": false,
                 "advanced": false,
-                "group": "presence-home-assistant",
+                "group": "home-home-assistant",
                 "reference": null,
                 "model_type": null,
                 "brands": null,
                 "title": "URL",
-                "help": null
+                "help": "L'adresse de Home Assistant, ex. http://homeassistant.local:8123."
               }
             },
             "token": {
@@ -2964,18 +3040,18 @@
               "writeOnly": true,
               "x-nestor": {
                 "field": "token",
-                "title_id": "config-presence-home-assistant-token",
-                "help_id": "config-presence-home-assistant-token-help",
+                "title_id": "config-home-home-assistant-token",
+                "help_id": "config-home-home-assistant-token-help",
                 "fallback_title_id": "config-field-token",
                 "secret": true,
                 "secret_values": false,
                 "advanced": false,
-                "group": "presence-home-assistant",
+                "group": "home-home-assistant",
                 "reference": null,
                 "model_type": null,
                 "brands": null,
                 "title": "Token",
-                "help": null
+                "help": "Un jeton d'accès longue durée (votre profil dans Home Assistant, Sécurité)."
               }
             },
             "people": {
@@ -2986,13 +3062,13 @@
               "type": "object",
               "x-nestor": {
                 "field": "people",
-                "title_id": "config-presence-home-assistant-people",
-                "help_id": "config-presence-home-assistant-people-help",
+                "title_id": "config-home-home-assistant-people",
+                "help_id": "config-home-home-assistant-people-help",
                 "fallback_title_id": "config-field-people",
                 "secret": false,
                 "secret_values": false,
                 "advanced": false,
-                "group": "presence-home-assistant",
+                "group": "home-home-assistant",
                 "reference": null,
                 "model_type": null,
                 "brands": null,
@@ -3008,13 +3084,13 @@
               "type": "object",
               "x-nestor": {
                 "field": "rooms",
-                "title_id": "config-presence-home-assistant-rooms",
-                "help_id": "config-presence-home-assistant-rooms-help",
+                "title_id": "config-home-home-assistant-rooms",
+                "help_id": "config-home-home-assistant-rooms-help",
                 "fallback_title_id": "config-field-rooms",
                 "secret": false,
                 "secret_values": false,
                 "advanced": false,
-                "group": "presence-home-assistant",
+                "group": "home-home-assistant",
                 "reference": null,
                 "model_type": null,
                 "brands": null,
@@ -3038,18 +3114,54 @@
               "title": "Occupancy Sensors",
               "x-nestor": {
                 "field": "occupancy_sensors",
-                "title_id": "config-presence-home-assistant-occupancy_sensors",
-                "help_id": "config-presence-home-assistant-occupancy_sensors-help",
+                "title_id": "config-home-home-assistant-occupancy_sensors",
+                "help_id": "config-home-home-assistant-occupancy_sensors-help",
                 "fallback_title_id": "config-field-occupancy_sensors",
                 "secret": false,
                 "secret_values": false,
                 "advanced": false,
-                "group": "presence-home-assistant",
+                "group": "home-home-assistant",
                 "reference": null,
                 "model_type": null,
                 "brands": null,
                 "title": "Capteurs de présence",
                 "help": "Vide : tous ceux rattachés à une pièce (présence, occupation, mouvement)."
+              }
+            },
+            "sensitive": {
+              "$ref": "#/$defs/SensitiveTargets",
+              "default": {
+                "domains": [
+                  "lock",
+                  "alarm_control_panel"
+                ],
+                "device_classes": [
+                  "garage",
+                  "gate",
+                  "door"
+                ],
+                "names": [
+                  "lock",
+                  "alarm",
+                  "garage",
+                  "gate",
+                  "door"
+                ]
+              },
+              "x-nestor": {
+                "field": "sensitive",
+                "title_id": "config-home-home-assistant-sensitive",
+                "help_id": "config-home-home-assistant-sensitive-help",
+                "fallback_title_id": "config-field-sensitive",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "home-home-assistant",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Actions à confirmer",
+                "help": "La personne confirme d'abord une action sur ce qui correspond. Lumières, chauffage et médias jamais."
               }
             },
             "sync_timeout_s": {
@@ -3059,13 +3171,13 @@
               "type": "number",
               "x-nestor": {
                 "field": "sync_timeout_s",
-                "title_id": "config-presence-home-assistant-sync_timeout_s",
-                "help_id": "config-presence-home-assistant-sync_timeout_s-help",
+                "title_id": "config-home-home-assistant-sync_timeout_s",
+                "help_id": "config-home-home-assistant-sync_timeout_s-help",
                 "fallback_title_id": "config-field-sync_timeout_s",
                 "secret": false,
                 "secret_values": false,
-                "advanced": false,
-                "group": "presence-home-assistant",
+                "advanced": true,
+                "group": "home-home-assistant",
                 "reference": null,
                 "model_type": null,
                 "brands": null,
@@ -3080,13 +3192,13 @@
               "type": "number",
               "x-nestor": {
                 "field": "reconnect_min_s",
-                "title_id": "config-presence-home-assistant-reconnect_min_s",
-                "help_id": "config-presence-home-assistant-reconnect_min_s-help",
+                "title_id": "config-home-home-assistant-reconnect_min_s",
+                "help_id": "config-home-home-assistant-reconnect_min_s-help",
                 "fallback_title_id": "config-field-reconnect_min_s",
                 "secret": false,
                 "secret_values": false,
-                "advanced": false,
-                "group": "presence-home-assistant",
+                "advanced": true,
+                "group": "home-home-assistant",
                 "reference": null,
                 "model_type": null,
                 "brands": null,
@@ -3101,17 +3213,38 @@
               "type": "number",
               "x-nestor": {
                 "field": "reconnect_max_s",
-                "title_id": "config-presence-home-assistant-reconnect_max_s",
-                "help_id": "config-presence-home-assistant-reconnect_max_s-help",
+                "title_id": "config-home-home-assistant-reconnect_max_s",
+                "help_id": "config-home-home-assistant-reconnect_max_s-help",
                 "fallback_title_id": "config-field-reconnect_max_s",
                 "secret": false,
                 "secret_values": false,
-                "advanced": false,
-                "group": "presence-home-assistant",
+                "advanced": true,
+                "group": "home-home-assistant",
                 "reference": null,
                 "model_type": null,
                 "brands": null,
                 "title": "Attente maximale avant reconnexion (secondes)",
+                "help": null
+              }
+            },
+            "tool_timeout_s": {
+              "default": 10.0,
+              "exclusiveMinimum": 0,
+              "title": "Tool Timeout S",
+              "type": "number",
+              "x-nestor": {
+                "field": "tool_timeout_s",
+                "title_id": "config-home-home-assistant-tool_timeout_s",
+                "help_id": "config-home-home-assistant-tool_timeout_s-help",
+                "fallback_title_id": "config-field-tool_timeout_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "home-home-assistant",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Délai d'une action (s)",
                 "help": null
               }
             }

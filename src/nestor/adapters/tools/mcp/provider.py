@@ -346,7 +346,8 @@ class McpToolProvider(ToolProvider):
             name = _unique(_INVALID_NAME_CHARACTERS.sub("_", remote.name)[:MAX_NAME_LENGTH] or "tool", taken)
             taken.add(name)
             spec = ToolSpec(name, remote.description or remote.title or remote.name, dict(remote.input_schema))
-            risk, rules = self._risk(remote), [r for r in self._sensitive if r.tool == remote.name]
+            risk = self._risk(remote)
+            rules = [r for r in self._sensitive if r.tool == remote.name or (r.tool is None and risk is not Risk.READ)]
             tools.append(
                 Tool(
                     spec=spec,

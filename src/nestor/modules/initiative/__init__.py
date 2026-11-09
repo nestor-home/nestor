@@ -28,6 +28,7 @@ from nestor.modules.initiative.messaging import (
 )
 from nestor.modules.initiative.returns import Returns, ToolResultDelivered
 from nestor.modules.initiative.schedules import (
+    Day,
     Schedule,
     ScheduleBook,
     ScheduleCancelled,
@@ -52,6 +53,7 @@ from nestor.modules.initiative.watches import (
 
 __all__ = [
     "Courier",
+    "Day",
     "Delivered",
     "DeliveryConsidered",
     "DeliveryFailed",

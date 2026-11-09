@@ -1,10 +1,11 @@
-"""Double and contract suite for the presence port."""
+"""Doubles for the home ports, and the presence port's contract suite."""
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from datetime import datetime
 
 from nestor.core import PersonId, utc_now
-from nestor.modules.home import Granularity, Presence, PresenceSource, Whereabouts
+from nestor.modules.cognition.tools import Tool, ToolProvider
+from nestor.modules.home import Granularity, Home, HomeOverview, Presence, PresenceSource, Resident, Room, Whereabouts
 
 
 class StaticPresence(PresenceSource):
@@ -31,6 +32,55 @@ class StaticPresence(PresenceSource):
     ) -> "StaticPresence":
         self.people[PersonId(person)] = Whereabouts(home=home, room=room, since=since)
         return self
+
+
+class StaticTools(ToolProvider):
+    """Tools given by the test."""
+
+    name = "static-tools"
+
+    def __init__(self, tools: Sequence[Tool] = ()) -> None:
+        self.given = tuple(tools)
+
+    def tools(self) -> Sequence[Tool]:
+        return self.given
+
+
+class StaticHome(Home):
+    """A home set by the test: its presence, its tools, its rooms and residents; `connected` says if it answers."""
+
+    name = "static-home"
+
+    def __init__(
+        self,
+        presence: StaticPresence | None = None,
+        tools: Sequence[Tool] = (),
+        *,
+        rooms: Sequence[Room] = (),
+        residents: Sequence[Resident] = (),
+        people: Mapping[str, str] | None = None,
+        connected: bool = True,
+    ) -> None:
+        self._presence, self._tools = presence or StaticPresence(), StaticTools(tools)
+        self.rooms, self.residents, self.connected = tuple(rooms), tuple(residents), connected
+        self.people = {PersonId(p): e for p, e in (people or {}).items()}
+
+    @property
+    def presence(self) -> StaticPresence:
+        return self._presence
+
+    @property
+    def tools(self) -> StaticTools:
+        return self._tools
+
+    def overview(self) -> HomeOverview:
+        return HomeOverview(
+            connected=self.connected,
+            granularity=self._presence.granularity,
+            rooms=self.rooms if self.connected else (),
+            residents=self.residents if self.connected else (),
+            people=dict(self.people),
+        )
 
 
 class PresenceSourceContract:

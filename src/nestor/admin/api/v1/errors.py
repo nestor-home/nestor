@@ -101,6 +101,8 @@ ErrorCode = Literal[
     "voice_not_yours",
     "voices_off",
     "watch_unknown",
+    "schedule_unknown",
+    "confirmation_unknown",
     "weak_password",
     "wrong_password",
 ]

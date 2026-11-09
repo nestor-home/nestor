@@ -54,7 +54,7 @@ type Path_ = tuple[str | int, ...]
 
 
 class Shape(StrEnum):
-    ONE = "one"  # one component, or none when optional (presence)
+    ONE = "one"  # one component, or none when optional (the home)
     LIST = "list"  # components in order (channels)
     NAMED = "named"  # components under names the household chooses, that other keys refer to (models)
 
@@ -80,7 +80,7 @@ SLOTS = (
     Slot("executors", Family.EXECUTOR, Shape.LIST, required=False),
     Slot("tools", Family.TOOLS, Shape.LIST, required=False),
     Slot("inbound", Family.INBOUND, Shape.LIST, required=False),
-    Slot("presence", Family.PRESENCE, Shape.ONE, required=False),
+    Slot("home", Family.HOME, Shape.ONE, required=False),
     Slot("connectors", Family.CONNECTOR, Shape.LIST, required=False),
 )
 SECTIONS: Mapping[str, Any] = {

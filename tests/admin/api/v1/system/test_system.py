@@ -45,7 +45,7 @@ async def test_the_system_lists_every_plugged_component_and_paired_satellite(tmp
         system = (await api.get("/api/v1/system")).json()
         assert system["nestor"] == {"version": metadata.version("nestor-home")}
         by_name = {(c["slot"], c["name"]): c for c in system["components"]}
-        assert {"model", "executor", "channel", "presence", "connector"} <= {f for f, _ in by_name}
+        assert {"model", "executor", "channel", "home", "connector"} <= {f for f, _ in by_name}
         assert by_name[("channel", "telegram")]["health"] == "started"
         assert by_name[("connector", "mailbox")]["version"] is None, "registered by code, not by a package"
         satellite = by_name[("satellite", "reachy-salon")]

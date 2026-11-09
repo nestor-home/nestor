@@ -48,3 +48,35 @@ class Presence:
         if self.granularity >= Granularity.OCCUPIED_ROOMS and alone:
             return self.occupied_rooms
         return None
+
+
+@dataclass(frozen=True, slots=True)
+class Room:
+    """An area of the home system. `occupied` is `None` when nothing in it tells (no occupancy sensor)."""
+
+    id: str
+    name: str
+    occupied: bool | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class Resident:
+    """Someone the home system knows (a Home Assistant `person`), to tie to a person of the household."""
+
+    entity: str
+    name: str
+    home: bool | None = None
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class HomeOverview:
+    """What the home system can show of itself: whether it answers, how finely it places people, its rooms, who it
+    knows, how the household is tied to it, and what it could not use. Served from the live view, never fetched."""
+
+    connected: bool
+    granularity: Granularity
+    rooms: tuple[Room, ...] = ()
+    residents: tuple[Resident, ...] = ()
+    people: Mapping[PersonId, str] = field(default_factory=dict)  # household person → resident entity
+    trackers: Mapping[PersonId, str] = field(default_factory=dict)  # household person → room tracker entity
+    unplaced_sensors: tuple[str, ...] = ()  # occupancy sensors it ignores: no room in the home system

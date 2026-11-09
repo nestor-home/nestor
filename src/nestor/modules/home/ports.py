@@ -1,9 +1,10 @@
-"""The presence port."""
+"""The home ports: the home system Nestor lives with, and the presence it relays."""
 
 from abc import ABC, abstractmethod
 
 from nestor.core import Component
-from nestor.modules.home.types import Granularity, Presence
+from nestor.modules.cognition.tools import ToolProvider
+from nestor.modules.home.types import Granularity, HomeOverview, Presence
 
 
 class PresenceSource(Component, ABC):
@@ -22,3 +23,26 @@ class PresenceSource(Component, ABC):
 
     @abstractmethod
     def presence(self) -> Presence: ...
+
+
+class Home(Component, ABC):
+    """The home system the household lives with (Home Assistant…), plugged once: who is home and where, the actions
+    it offers the agent, and what it can show of itself.
+
+    Contract:
+    - `presence` and `tools` are its own: it starts and closes them with itself;
+    - `overview()` is cheap (the live view) and never raises: disconnected, it says so and keeps its configuration;
+    - a home system that does not answer at start leaves the home unavailable, never stops Nestor; refused
+      credentials raise `ProviderError`, not transient.
+    """
+
+    @property
+    @abstractmethod
+    def presence(self) -> PresenceSource: ...
+
+    @property
+    @abstractmethod
+    def tools(self) -> ToolProvider: ...
+
+    @abstractmethod
+    def overview(self) -> HomeOverview: ...

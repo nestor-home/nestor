@@ -13,11 +13,17 @@ import pytest
 from websockets.asyncio.server import Server, ServerConnection, serve
 from websockets.exceptions import ConnectionClosed
 
-from nestor.adapters.home.home_assistant import HomeAssistantPresence, PresenceMapping, plugin
+from nestor.adapters.home.home_assistant import (
+    HomeAssistant,
+    HomeAssistantPresence,
+    HomeAssistantSettings,
+    PresenceMapping,
+    plugin,
+)
 from nestor.adapters.home.home_assistant.client import websocket_url
 from nestor.core import ContractError, Health, PersonId, ProviderError
 from nestor.core.i18n import Locale
-from nestor.modules.home import Granularity, Presence, Whereabouts
+from nestor.modules.home import Granularity, Presence, Resident, Room, Whereabouts
 from nestor.runtime import Services
 from nestor.testing.home import PresenceSourceContract
 from nestor.testing.i18n import EchoLocalizer
@@ -236,10 +242,10 @@ async def home() -> AsyncIterator[FakeHomeAssistant]:
 
 @pytest.fixture
 async def started() -> AsyncIterator[Callable[..., Any]]:
-    """Starts sources and closes them after the test."""
-    sources: list[HomeAssistantPresence] = []
+    """Starts sources (or whole homes) and closes them after the test."""
+    sources: list[HomeAssistantPresence | HomeAssistant] = []
 
-    async def start(source: HomeAssistantPresence) -> HomeAssistantPresence:
+    async def start[S: HomeAssistantPresence | HomeAssistant](source: S) -> S:
         sources.append(source)
         await source.start()
         return source
@@ -553,10 +559,11 @@ async def test_close_is_idempotent_and_leaves_presence_unknown(home: FakeHomeAss
     assert source.presence().of(ALICE) == Whereabouts()
 
 
-async def test_the_plugin_builds_a_source_from_its_configuration(
+async def test_the_plugin_builds_the_home_its_presence_and_its_overview_from_one_configuration(
     home: FakeHomeAssistant, started: Any, tmp_path: Path
 ) -> None:
     home.state("person.alice", "home")
+    home.state("person.bob", "not_home", friendly_name="Bob Martin")
     home.state("sensor.alice_area", "Office")
     home.sensor("binary_sensor.kitchen_motion", "on", area_id="kitchen")
     home.sensor("binary_sensor.office_motion", "on", area_id="office")
@@ -565,15 +572,60 @@ async def test_the_plugin_builds_a_source_from_its_configuration(
         "token": TOKEN,
         "people": {"alice": "person.alice"},
         "rooms": {"alice": "sensor.alice_area"},
-        "occupancy_sensors": ["binary_sensor.kitchen_motion"],
+        "occupancy_sensors": ["binary_sensor.kitchen_motion", "binary_sensor.hall_motion"],
     }
-    source = plugin.create(raw, "home", Services(data_dir=tmp_path, localizer=EchoLocalizer(), locale=Locale("fr-FR")))
-    assert isinstance(source, HomeAssistantPresence) and source.name == "home"
-    await started(source)
-    presence = source.presence()
+    built = plugin.create(raw, "home", Services(data_dir=tmp_path, localizer=EchoLocalizer(), locale=Locale("fr-FR")))
+    assert isinstance(built, HomeAssistant) and built.name == "home"
+    await started(built)
+    presence = built.presence.presence()
     assert presence.granularity is Granularity.PERSON_ROOM
     assert people_of(presence) == {ALICE: Whereabouts(home=True, room="office")}
     assert presence.occupied_rooms == {"kitchen"}
+    overview = built.overview()
+    assert overview.connected and overview.people == {ALICE: "person.alice"}
+    assert overview.trackers == {ALICE: "sensor.alice_area"}
+    assert overview.rooms == (
+        Room("living_room", "Living Room"),
+        Room("kitchen", "Kitchen", occupied=True),
+        Room("office", "Office"),
+    ), "occupied only where a sensor tells"
+    assert overview.residents == (
+        Resident("person.alice", "Alice", home=True),
+        Resident("person.bob", "Bob Martin", home=False),
+    )
+    assert overview.unplaced_sensors == ("binary_sensor.hall_motion",)
+    assert built.health() is Health.DEGRADED, "its MCP server does not answer here: presence alone"
+
+
+async def test_a_home_assistant_that_does_not_answer_leaves_the_home_unavailable_and_says_how_it_is_tied(
+    started: Any, tmp_path: Path
+) -> None:
+    async with FakeHomeAssistant() as gone:
+        url = gone.url
+    raw = {"url": url, "token": TOKEN, "people": {"alice": "person.alice"}, "reconnect_min_s": 30}
+    built = plugin.create(raw, "home", Services(data_dir=tmp_path, localizer=EchoLocalizer(), locale=Locale("fr-FR")))
+    assert isinstance(built, HomeAssistant)
+    await started(built)
+    overview = built.overview()
+    assert (overview.connected, overview.rooms, overview.people) == (False, (), {ALICE: "person.alice"})
+    assert built.health() is Health.UNAVAILABLE and built.tools.tools() == ()
+
+
+@pytest.mark.parametrize(
+    ("arguments", "sensitive"),
+    [
+        ({"name": "Salon", "domain": ["light"]}, False),
+        ({"name": "Front door", "domain": ["lock"]}, True),
+        ({"name": "Portail", "device_class": ["gate"]}, True),
+        ({"name": "Garage door"}, True),
+    ],
+)
+def test_by_default_locks_the_alarm_and_doors_need_a_go_ahead_whatever_the_tool_not_lights(
+    arguments: dict[str, Any], sensitive: bool
+) -> None:
+    rule = HomeAssistantSettings(url="http://ha.local:8123", token=TOKEN).sensitive.rule()
+    assert rule.matches("intent__HassTurnOff", arguments) is sensitive
+    assert rule.matches("light__HassLightSet", arguments) is sensitive
 
 
 def test_a_reverse_proxy_prefix_is_kept_in_the_websocket_url() -> None:

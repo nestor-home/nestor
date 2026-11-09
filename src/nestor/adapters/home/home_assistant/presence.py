@@ -25,7 +25,7 @@ from nestor.adapters.home.home_assistant.installation import (
 )
 from nestor.core import Health, ProviderError
 from nestor.core.i18n import Message
-from nestor.modules.home import Granularity, Presence, PresenceSource, Whereabouts
+from nestor.modules.home import Granularity, HomeOverview, Presence, PresenceSource, Whereabouts
 
 logger = logging.getLogger(__name__)
 
@@ -96,6 +96,22 @@ class HomeAssistantPresence(PresenceSource):
 
     def health_detail(self) -> Message | None:
         return None if self._installation is not None else Message.of("health-home-assistant-disconnected")
+
+    def overview(self) -> HomeOverview:
+        """What the live view shows of the installation; disconnected, only how the household is tied to it."""
+        installation = self._installation
+        people, trackers = dict(self._mapping.people), dict(self._mapping.rooms)
+        if installation is None:
+            return HomeOverview(connected=False, granularity=self._granularity, people=people, trackers=trackers)
+        return HomeOverview(
+            connected=True,
+            granularity=installation.granularity,
+            rooms=installation.rooms(),
+            residents=installation.residents(),
+            people=people,
+            trackers=trackers,
+            unplaced_sensors=tuple(installation.unplaced_sensors),
+        )
 
     def presence(self) -> Presence:
         if self._installation is None:

@@ -2,12 +2,24 @@
 
 from dataclasses import dataclass
 from datetime import datetime, time, timedelta
+from enum import StrEnum
 from zoneinfo import ZoneInfo
 
 from nestor.core import ContractError, PersonId
 from nestor.modules.channels import Address
 
-DAYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
+
+class Day(StrEnum):
+    MON = "mon"
+    TUE = "tue"
+    WED = "wed"
+    THU = "thu"
+    FRI = "fri"
+    SAT = "sat"
+    SUN = "sun"
+
+
+DAYS = tuple(Day)  # Monday first, as `datetime.weekday()` counts
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

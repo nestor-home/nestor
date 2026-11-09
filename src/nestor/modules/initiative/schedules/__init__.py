@@ -6,9 +6,10 @@ from nestor.modules.initiative.schedules.assistant import ScheduleTools
 from nestor.modules.initiative.schedules.book import ScheduleBook
 from nestor.modules.initiative.schedules.events import ScheduleCancelled, ScheduleCreated, ScheduleFired
 from nestor.modules.initiative.schedules.scheduler import Scheduler
-from nestor.modules.initiative.schedules.types import Schedule
+from nestor.modules.initiative.schedules.types import Day, Schedule
 
 __all__ = [
+    "Day",
     "Schedule",
     "ScheduleBook",
     "ScheduleCancelled",

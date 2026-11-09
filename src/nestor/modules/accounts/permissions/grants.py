@@ -11,6 +11,7 @@ _MEMBER = _OWN | {
     Scope.OWN_CONNECTIONS,
     Scope.TASKS_MANAGE_OWN,
     Scope.WATCHES_MANAGE_OWN,
+    Scope.SCHEDULES_MANAGE_OWN,
 }
 _ADMIN = _MEMBER | {
     Scope.ACCOUNTS_MANAGE,
@@ -22,6 +23,7 @@ _ADMIN = _MEMBER | {
     Scope.MEMORY_MANAGE_ALL,
     Scope.TASKS_MANAGE,
     Scope.WATCHES_MANAGE_ALL,
+    Scope.SCHEDULES_MANAGE_ALL,
 }
 
 GRANTS: Mapping[Role, frozenset[Scope]] = {
