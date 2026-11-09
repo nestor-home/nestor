@@ -15,9 +15,9 @@ from nestor.modules.cognition.delegation import (
     TaskStatus,
 )
 from nestor.modules.cognition.model import (
-    ConversationModel,
     Finished,
     FinishReason,
+    LanguageModel,
     Message,
     ModelOutput,
     ModelRequest,
@@ -30,10 +30,10 @@ from nestor.modules.cognition.model import (
 )
 
 __all__ = [
-    "ConversationModel",
     "Executor",
     "FinishReason",
     "Finished",
+    "LanguageModel",
     "Message",
     "ModelOutput",
     "ModelRequest",

@@ -125,3 +125,15 @@ class SQLiteVoiceprintStore(VoiceprintStore):
 
     async def keep_only(self, space: VoiceSpace) -> None:
         await self.database.write(lambda c: c.execute("DELETE FROM voices WHERE space != ?", (space.id,)))
+
+    async def keep_people(self, people: Collection[PersonId]) -> frozenset[PersonId]:
+        kept = list(people)
+        marks = ", ".join("?" * len(kept))
+        others = f"person NOT IN ({marks})" if kept else "1 = 1"
+
+        def write(c: sqlite3.Connection) -> frozenset[PersonId]:
+            gone = c.execute(f"SELECT person FROM voices WHERE {others}", kept).fetchall()
+            c.execute(f"DELETE FROM voices WHERE {others}", kept)
+            return frozenset(PersonId(p) for (p,) in gone)
+
+        return await self.database.write(write)

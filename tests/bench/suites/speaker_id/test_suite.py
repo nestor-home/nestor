@@ -19,8 +19,8 @@ from nestor.bench.suites.speaker_id.store import MemoryVoiceprints
 from nestor.bench.suites.speaker_id.suite import accepted, equal_error_rate, read_pcm, threshold_for
 from nestor.bench.variants import load_variant
 from nestor.core import ProviderError
-from nestor.modules.identity import Vector, VoiceprintStore
-from nestor.runtime.plugins import AdapterSettings, Family, ModelType, Plugin, Registry, Services
+from nestor.modules.identity import SpeakerModel, Vector, VoiceprintStore
+from nestor.runtime.plugins import AdapterSettings, Family, Plugin, Registry, Services
 from nestor.testing.i18n import EchoLocalizer
 from nestor.testing.identity import TaggedVoices, VoiceprintStoreContract, speaker_of, tagged
 
@@ -43,8 +43,8 @@ def _build(settings: TaggedSettings, name: str, services: Services) -> TaggedVoi
     return Muted(threshold=settings.threshold)
 
 
-TAGGED = Plugin(Family.MODEL, "tagged-voices", TaggedSettings, _build, model_type=ModelType.VOICE)
-VARIANT = "models: {voice: {kind: tagged-voices}}\nvoices: {embedder: voice}\n"
+TAGGED = Plugin(Family.MODEL, "tagged-voices", TaggedSettings, _build, serves=SpeakerModel)
+VARIANT = "models: {voice: {type: speaker, provider: tagged-voices}}\nvoices: {embedder: voice}\n"
 
 
 def write_wav(path: Path, pcm: bytes, *, rate: int = 16000, channels: int = 1, width: int = 2) -> None:
@@ -174,7 +174,7 @@ def test_the_suite_ships_no_recordings(tmp_path: Path) -> None:
 
 def test_a_variant_without_a_voice_model_is_refused(tmp_path: Path) -> None:
     path = tmp_path / "v.yaml"
-    path.write_text("models: {voice: {kind: tagged-voices}}\n")
+    path.write_text("models: {voice: {type: speaker, provider: tagged-voices}}\n")
     with pytest.raises(BenchError) as raised:
         load_variant(path, SpeakerId(), Registry([TAGGED]), EchoLocalizer(), environ={})
     assert raised.value.message.id == "bench-variant-no-voices"

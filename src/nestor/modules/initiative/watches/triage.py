@@ -9,7 +9,7 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 from nestor.core import ProviderError
-from nestor.modules.cognition.model import ConversationModel, Message, ModelRequest, Role, json_answer
+from nestor.modules.cognition.model import LanguageModel, Message, ModelRequest, Role, json_answer
 from nestor.modules.initiative.watches.types import Incoming, Verdict, Watch
 
 QUESTION = """You sort incoming items for a home assistant. People asked to be told about these things:
@@ -30,7 +30,7 @@ class Triage:
     not announced, since an outage would otherwise announce every item, and the journal keeps it.
     """
 
-    def __init__(self, model: ConversationModel, *, language: str = "English") -> None:
+    def __init__(self, model: LanguageModel, *, language: str = "English") -> None:
         self.model, self.language = model, language
 
     async def verdicts(self, watches: Sequence[Watch], item: Incoming) -> Mapping[str, Verdict] | None:

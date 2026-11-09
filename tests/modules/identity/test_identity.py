@@ -7,6 +7,7 @@ import pytest
 
 from nestor.core import ContractError, PersonId
 from nestor.modules.identity import (
+    Departures,
     Problem,
     VoiceEnrolled,
     VoiceForgotten,
@@ -18,8 +19,8 @@ from nestor.modules.identity import (
 from nestor.modules.journal import Journal
 from nestor.testing.identity import (
     MemoryVoiceprintStore,
+    SpeakerModelContract,
     TaggedVoices,
-    VoiceEmbedderContract,
     VoiceprintStoreContract,
     tagged,
 )
@@ -28,7 +29,7 @@ from nestor.testing.journal import MemoryEventLog
 LEA, HUGO = PersonId("lea"), PersonId("hugo")
 
 
-class TestTaggedVoices(VoiceEmbedderContract):
+class TestTaggedVoices(SpeakerModelContract):
     def embedder(self) -> TaggedVoices:
         return TaggedVoices()
 
@@ -222,6 +223,19 @@ async def test_voices_of_another_model_are_erased_on_start() -> None:
     async with found:
         assert not found.status(LEA).enrolled
     assert store.voices == {}
+
+
+async def test_the_voice_of_someone_who_left_the_household_is_erased_on_start_and_journaled() -> None:
+    store = MemoryVoiceprintStore()
+    before, _, _ = voices(store)
+    async with before:
+        await enroll(before, LEA)
+        await enroll(before, HUGO)
+    after, journal, _ = voices(store)
+    async with Departures(store, journal, [HUGO]), after:  # started in this order, as the runtime does
+        assert not after.status(LEA).enrolled and after.status(HUGO).enrolled
+    assert set(store.voices) == {HUGO}
+    assert [(e.person, e.by, e.learned_only) for e in await journal.history(VoiceForgotten)] == [(LEA, None, False)]
 
 
 async def test_the_configured_threshold_wins_over_the_models() -> None:

@@ -9,9 +9,9 @@ from pydantic import BaseModel, Field
 from nestor.admin.api.v1.errors import ProblemOut
 from nestor.admin.api.v1.shared import Input
 from nestor.admin.presentation import Phrasebook
+from nestor.core import ModelType
 from nestor.core.i18n import Message
 from nestor.runtime.editing import ConfigSchema, Diff, Shape
-from nestor.runtime.plugins import ModelType
 from nestor.runtime.secrets import ConfigSecrets, preview
 
 
@@ -42,8 +42,9 @@ class SlotOut(BaseModel):
     shape: Shape  # one component, a list, or components under names other keys use
     required: bool
     title: str
-    kinds: dict[str, dict[str, Any]]  # JSON Schema of each installed plugin's settings, by kind
-    model_types: dict[str, ModelType]  # what each kind of the model slot serves (empty elsewhere)
+    picks: list[str]  # the keys of an entry that pick its plugin: `kind`, or a model's `provider` and `type`
+    kinds: dict[str, dict[str, Any]]  # JSON Schema of each installed plugin's settings, by plugin id (picks' values)
+    model_types: dict[str, ModelType]  # what each plugin of the model slot serves (empty elsewhere)
 
 
 class ConfigSchemaOut(BaseModel):
@@ -58,6 +59,7 @@ class ConfigSchemaOut(BaseModel):
                 family=slot["family"],
                 shape=slot["shape"],
                 required=slot["required"],
+                picks=slot["picks"],
                 title=words.text_or(Message(f"config-slot-{key}"), _humanize(key)),
                 kinds=_render(slot["kinds"], words),
                 model_types=slot["model_types"],

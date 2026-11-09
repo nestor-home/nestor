@@ -102,3 +102,20 @@ journal-kind = { $kind ->
     [account] Comptes
    *[other] Autres
 }
+
+model-type = { $type ->
+    [language] Modèles de langage (LLM)
+    [embedding] Embeddings de texte
+    [speaker] Reconnaissance du locuteur
+    [transcription] Reconnaissance de la parole
+    [speech] Synthèse vocale
+   *[other] Autres modèles
+}
+model-type-help = { $type ->
+    [language] Pour répondre, à l'oral comme à l'écrit.
+    [embedding] Pour retrouver souvenirs et conversations par le sens.
+    [speaker] Pour savoir qui parle à un satellite.
+    [transcription] Pour entendre ce qu'on dit à un satellite.
+    [speech] Pour donner sa voix à l'assistant.
+   *[other] { "" }
+}

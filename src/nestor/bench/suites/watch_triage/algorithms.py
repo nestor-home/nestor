@@ -11,7 +11,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 
-from nestor.modules.cognition import ConversationModel
+from nestor.modules.cognition import LanguageModel
 from nestor.modules.initiative.watches import Incoming, Triage, Watch
 
 
@@ -31,7 +31,7 @@ class Decision:
 
 
 async def decide(
-    algorithm: Algorithm, model: ConversationModel, watches: Sequence[Watch], item: Incoming, *, language: str
+    algorithm: Algorithm, model: LanguageModel, watches: Sequence[Watch], item: Incoming, *, language: str
 ) -> list[Decision]:
     concerned = [w for w in watches if item.kind in w.kinds]
     if not concerned:

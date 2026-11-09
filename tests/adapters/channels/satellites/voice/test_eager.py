@@ -7,7 +7,7 @@ from pipecat.processors.aggregators.llm_context import LLMContext
 from pipecat.tests.utils import SleepFrame, run_test
 
 from nestor.adapters.channels.satellites.voice.bridge import AssistantBridge, PlayedText
-from nestor.adapters.channels.satellites.voice.eager import ResponseWatcher, SentenceFlushFrame
+from nestor.adapters.models.pipecat.eager import ResponseWatcher, SentenceFlushFrame
 from nestor.core import PersonId
 from nestor.modules.channels import Address, Assistant, InboundMessage, MessageEnd, Reply, Sender
 

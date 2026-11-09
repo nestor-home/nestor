@@ -7,15 +7,15 @@ from nestor.testing.cognition.delegation import (
     ScriptedExecutor,
     ScriptedRemoteExecutor,
 )
-from nestor.testing.cognition.embedding import ConceptEmbedder, EmbedderContract, VectorIndexContract
-from nestor.testing.cognition.model import ConversationModelContract, ScriptedModel
+from nestor.testing.cognition.embedding import ConceptEmbedder, EmbeddingModelContract, VectorIndexContract
+from nestor.testing.cognition.model import LanguageModelContract, ScriptedModel
 
 __all__ = [
     "ConceptEmbedder",
-    "ConversationModelContract",
-    "EmbedderContract",
+    "EmbeddingModelContract",
     "ExecutorContract",
     "FakeRemote",
+    "LanguageModelContract",
     "RemoteExecutorContract",
     "ScriptedExecutor",
     "ScriptedModel",

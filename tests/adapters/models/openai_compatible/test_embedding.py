@@ -11,21 +11,21 @@ import httpx
 import pytest
 import respx
 
-from nestor.adapters.models import OpenAICompatibleEmbedder
-from nestor.adapters.models.openai_embeddings import plugin
+from nestor.adapters.models.openai_compatible import OpenAICompatibleEmbedding
+from nestor.adapters.models.openai_compatible.embedding import plugin
 from nestor.core import ContractError, ProviderError
 from nestor.core.i18n import Locale
 from nestor.runtime.plugins import Services
-from nestor.testing.cognition import EmbedderContract
+from nestor.testing.cognition import EmbeddingModelContract
 from nestor.testing.i18n import EchoLocalizer
 
 BASE_URL = "https://embed.test/v1"
 KEY = "sk-embed-0123456789"
 
 
-def embedder(**kwargs: Any) -> OpenAICompatibleEmbedder:
+def embedder(**kwargs: Any) -> OpenAICompatibleEmbedding:
     settings: dict[str, Any] = {"base_url": BASE_URL, "api_key": KEY, "model": "vendor/embed", "dimensions": 3}
-    return OpenAICompatibleEmbedder(**(settings | kwargs))
+    return OpenAICompatibleEmbedding(**(settings | kwargs))
 
 
 def answer(request: httpx.Request) -> httpx.Response:
@@ -41,16 +41,16 @@ def api() -> Iterator[respx.MockRouter]:
         yield router
 
 
-class TestOpenAICompatibleEmbedder(EmbedderContract):
+class TestOpenAICompatibleEmbedder(EmbeddingModelContract):
     @pytest.fixture(autouse=True)
     def _endpoint(self, api: respx.MockRouter) -> None:
         api.post(f"{BASE_URL}/embeddings").mock(side_effect=answer)
         api.post("https://down.test/v1/embeddings").respond(401, json={"error": {"message": "No auth"}})
 
-    def embedder(self) -> OpenAICompatibleEmbedder:
+    def embedder(self) -> OpenAICompatibleEmbedding:
         return embedder()
 
-    def unavailable_embedder(self) -> OpenAICompatibleEmbedder:
+    def unavailable_embedder(self) -> OpenAICompatibleEmbedding:
         return embedder(base_url="https://down.test/v1")
 
 
@@ -119,7 +119,7 @@ async def test_the_space_is_the_model_served_its_dimension_and_prefixes_not_the_
 def test_the_plugin_builds_an_embedder_from_its_profile(tmp_path: Path) -> None:
     raw = {"base_url": BASE_URL, "model": "vendor/embed", "dimensions": 768, "query_prefix": "query: "}
     built = plugin.create(raw, "te3", Services(data_dir=tmp_path, localizer=EchoLocalizer(), locale=Locale("en")))
-    assert isinstance(built, OpenAICompatibleEmbedder)
+    assert isinstance(built, OpenAICompatibleEmbedding)
     assert (built.space.dimensions, built.space.query_prefix) == (768, "query: ")
 
 
@@ -128,7 +128,7 @@ async def test_openrouter_embeds_for_real() -> None:
     key = os.environ.get("OPENROUTER_API_KEY")
     if not key:
         pytest.skip("OPENROUTER_API_KEY is not set")
-    async with OpenAICompatibleEmbedder(
+    async with OpenAICompatibleEmbedding(
         base_url="https://openrouter.ai/api/v1", api_key=key, model="openai/text-embedding-3-small", dimensions=1536
     ) as e:
         (vector,) = await e.embed_documents(["Léa est végétarienne."])

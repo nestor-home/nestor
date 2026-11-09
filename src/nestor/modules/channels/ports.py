@@ -9,7 +9,7 @@ from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 
-from nestor.core import Component, ContractError, PersonId
+from nestor.core import Component, ContractError, Model, ModelType, PersonId
 from nestor.modules.channels.types import Address, InboundMessage, Medium, Sender
 from nestor.modules.identity import Heard
 
@@ -139,3 +139,20 @@ class Channel(Component, ABC):
         """Whether `send` can deliver through `medium` now (aloud needs someone connected). Cheap;
         `send` may still fail."""
         return to.channel == self.channel_id and medium in self.media
+
+
+class TranscriptionModel(Model, ABC):
+    """Turns a person's speech into text, as they speak (speech to text).
+
+    How it streams (a realtime pipeline, its frames and timings) is the voice adapter's business: an implementation
+    also gives that adapter what it runs. The core only knows that the model hears.
+    """
+
+    type = ModelType.TRANSCRIPTION
+
+
+class SpeechModel(Model, ABC):
+    """Gives the assistant its voice: turns what it says into speech, as it is written (text to speech). Like
+    `TranscriptionModel`, it gives the voice adapter what it runs."""
+
+    type = ModelType.SPEECH

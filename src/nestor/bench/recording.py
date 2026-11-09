@@ -19,9 +19,9 @@ from nestor.bench.types import Call
 from nestor.core import ContractError, ProviderError
 from nestor.core.i18n import Message
 from nestor.modules.cognition import (
-    ConversationModel,
     Finished,
     FinishReason,
+    LanguageModel,
     ModelOutput,
     ModelRequest,
     TextDelta,
@@ -110,14 +110,14 @@ class Cache:
         path.write_text(json.dumps(raw, ensure_ascii=False, indent=1), encoding="utf-8")
 
 
-class MeasuredModel(ConversationModel):
+class MeasuredModel(LanguageModel):
     """A variant's model as the suite sees it: every call is timed, recorded, and logged on the running case.
 
     It never starts or closes the model it measures: the engine does, once per variant.
     """
 
     def __init__(
-        self, inner: ConversationModel, *, role: str, described: Mapping[str, Any], cache: Cache, replay: bool
+        self, inner: LanguageModel, *, role: str, described: Mapping[str, Any], cache: Cache, replay: bool
     ) -> None:
         self.name = inner.name
         self._inner, self._role, self._described = inner, role, described

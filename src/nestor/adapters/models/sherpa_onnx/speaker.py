@@ -22,9 +22,9 @@ import httpx
 from pydantic import Field, PositiveInt, model_validator
 
 from nestor.core import ContractError, ProviderError
-from nestor.modules.identity import Vector, VoiceEmbedder, VoiceSpace
+from nestor.modules.identity import SpeakerModel, Vector, VoiceSpace
 from nestor.modules.identity.audio import samples
-from nestor.runtime.plugins import AdapterSettings, Family, ModelType, Plugin, Services
+from nestor.runtime.plugins import AdapterSettings, Family, Plugin, Services
 
 if TYPE_CHECKING:
     import sherpa_onnx
@@ -81,11 +81,11 @@ CATALOGUE: Mapping[str, Catalogued] = {
 }
 
 
-class SherpaOnnxVoice(VoiceEmbedder):
+class SherpaOnnxSpeaker(SpeakerModel):
     """Contract: `start` fetches the model when it is not there yet and loads it; `embed` runs one stream per call
     in a worker thread, so turns may embed at once."""
 
-    name = "sherpa-onnx-voice"
+    name = "sherpa-onnx"
 
     def __init__(
         self,
@@ -205,7 +205,7 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-class SherpaOnnxVoiceSettings(AdapterSettings):
+class SherpaOnnxSpeakerSettings(AdapterSettings):
     """A voice model run by sherpa-onnx."""
 
     # a catalogue name, or an `.onnx` path; the admin shows the mark of whoever published a catalogue model
@@ -225,10 +225,10 @@ class SherpaOnnxVoiceSettings(AdapterSettings):
         return self
 
 
-def build(settings: SherpaOnnxVoiceSettings, name: str, services: Services) -> SherpaOnnxVoice:
+def build(settings: SherpaOnnxSpeakerSettings, name: str, services: Services) -> SherpaOnnxSpeaker:
     import sherpa_onnx  # noqa: F401 - the extra is checked when the configuration is built, not at the first turn
 
-    return SherpaOnnxVoice(
+    return SherpaOnnxSpeaker(
         model=settings.model,
         data_dir=services.data_dir,
         threads=settings.threads,
@@ -239,9 +239,9 @@ def build(settings: SherpaOnnxVoiceSettings, name: str, services: Services) -> S
 
 plugin = Plugin(
     Family.MODEL,
-    "sherpa-onnx-voice",
-    SherpaOnnxVoiceSettings,
+    "sherpa-onnx",
+    SherpaOnnxSpeakerSettings,
     build,
     requires="nestor-home[voice-id]",
-    model_type=ModelType.VOICE,
+    serves=SpeakerModel,
 )

@@ -36,7 +36,7 @@ async def test_the_schema_gives_every_section_and_every_installed_plugin_its_for
         assert slots["channels"]["shape"] == "list" and slots["channels"]["required"]
         assert slots["channels"]["title"] == "Canaux"
         assert (slots["models"]["shape"], slots["presence"]["shape"]) == ("named", "one")
-        assert slots["models"]["model_types"] == {"scripted": "language", "tagged-voices": "voice"}
+        assert slots["models"]["model_types"] == {"scripted-language": "language", "tagged-voices-speaker": "speaker"}
         assert slots["channels"]["model_types"] == {}
         spoken = schema["sections"]["agent"]["properties"]["spoken"]["x-nestor"]
         assert (spoken["reference"], spoken["model_type"]) == ("models", "language")
@@ -143,7 +143,7 @@ async def test_models_are_named_by_the_household_and_the_agent_refers_to_them(tm
     async with Harness(tmp_path) as admin:
         api = await admin.api()
         edited = await document(api)
-        edited["models"]["vite"] = {"kind": "scripted"}
+        edited["models"]["vite"] = {"type": "language", "provider": "scripted"}
         problems = (await api.put("/api/v1/config", {"document": edited})).json()["error"]["problems"]
         assert [(tuple(p["path"]), p["message"]) for p in problems] == [
             (

@@ -54,12 +54,6 @@ cfg-add-kind = Add: { $kind }
 cfg-choose-kind = Choose…
 cfg-pick-title = { $slot }: add
 cfg-pick-text = The plugins installed on this instance.
-cfg-model-type-language = Language models (LLM)
-cfg-model-type-language-help = To answer, aloud or in writing.
-cfg-model-type-embedding = Text embeddings
-cfg-model-type-embedding-help = To find memories and past conversations by meaning.
-cfg-model-type-voice = Speaker recognition
-cfg-model-type-voice-help = To know who is speaking to a satellite.
 cfg-required-fields = { $count ->
     [0] nothing required
     [one] 1 required setting

@@ -54,12 +54,6 @@ cfg-add-kind = Ajouter : { $kind }
 cfg-choose-kind = Choisir…
 cfg-pick-title = { $slot } : ajouter
 cfg-pick-text = Les plugins installés sur cette instance.
-cfg-model-type-language = Modèles de langage (LLM)
-cfg-model-type-language-help = Pour répondre, à l'oral comme à l'écrit.
-cfg-model-type-embedding = Embeddings de texte
-cfg-model-type-embedding-help = Pour retrouver souvenirs et conversations par le sens.
-cfg-model-type-voice = Reconnaissance des voix
-cfg-model-type-voice-help = Pour savoir qui parle à un satellite.
 cfg-required-fields = { $count ->
     [0] rien d'obligatoire
     [one] 1 réglage obligatoire

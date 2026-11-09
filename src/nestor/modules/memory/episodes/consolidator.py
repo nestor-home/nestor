@@ -14,7 +14,7 @@ from zoneinfo import ZoneInfo
 
 from nestor.core import Component, PersonId, ProviderError, utc_now
 from nestor.modules.channels import Address, Medium
-from nestor.modules.cognition.model import ConversationModel, Message, ModelRequest, Role, json_answer
+from nestor.modules.cognition.model import LanguageModel, Message, ModelRequest, Role, json_answer
 from nestor.modules.conversation.events import AssistantTurn, NotificationTurn, UserTurn
 from nestor.modules.household import Household
 from nestor.modules.journal import Journal
@@ -74,7 +74,7 @@ class Consolidator(Component):
     def __init__(
         self,
         journal: Journal,
-        model: ConversationModel,
+        model: LanguageModel,
         memories: Memories,
         episodes: Episodes,
         household: Household,

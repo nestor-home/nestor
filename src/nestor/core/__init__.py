@@ -6,7 +6,7 @@
 - `exceptions`: the error hierarchy
 """
 
-from nestor.core.contracts import Capabilities, Capability, Component, Health
+from nestor.core.contracts import Capabilities, Capability, Component, Health, Model, ModelType
 from nestor.core.events import Event, Record
 from nestor.core.exceptions import CapabilityMissing, ContractError, NestorError, ProviderError
 from nestor.core.shared import PersonId, SessionId, new_id, utc_now
@@ -19,6 +19,8 @@ __all__ = [
     "ContractError",
     "Event",
     "Health",
+    "Model",
+    "ModelType",
     "NestorError",
     "PersonId",
     "ProviderError",

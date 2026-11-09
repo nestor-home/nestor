@@ -12,14 +12,14 @@ import httpx
 import pytest
 import respx
 
-from nestor.adapters.models import OpenAICompatibleModel
-from nestor.adapters.models.openai_compatible import plugin
+from nestor.adapters.models.openai_compatible import OpenAICompatibleLanguage
+from nestor.adapters.models.openai_compatible.language import plugin
 from nestor.core import ContractError, ProviderError
 from nestor.core.i18n import Locale
 from nestor.modules.cognition import (
-    ConversationModel,
     Finished,
     FinishReason,
+    LanguageModel,
     Message,
     ModelOutput,
     ModelRequest,
@@ -31,7 +31,7 @@ from nestor.modules.cognition import (
     Usage,
 )
 from nestor.runtime.plugins import Services
-from nestor.testing.cognition import ConversationModelContract
+from nestor.testing.cognition import LanguageModelContract
 from nestor.testing.i18n import EchoLocalizer
 
 BASE_URL = "https://llm.test/api/v1"
@@ -91,8 +91,8 @@ def sent(route: respx.Route) -> dict[str, object]:
 
 def model(
     *, base_url: str = BASE_URL, api_key: str | None = KEY, provider: str = "openai-compatible"
-) -> OpenAICompatibleModel:
-    return OpenAICompatibleModel(base_url=base_url, api_key=api_key, model="vendor/model", provider=provider)
+) -> OpenAICompatibleLanguage:
+    return OpenAICompatibleLanguage(base_url=base_url, api_key=api_key, model="vendor/model", provider=provider)
 
 
 async def collect(request: ModelRequest = HELLO, *, provider: str = "openai-compatible") -> list[ModelOutput]:
@@ -106,7 +106,7 @@ def api() -> Iterator[respx.MockRouter]:
         yield router
 
 
-class TestOpenAICompatibleModel(ConversationModelContract):
+class TestOpenAICompatibleModel(LanguageModelContract):
     @pytest.fixture(autouse=True)
     def _endpoint(self, api: respx.MockRouter) -> None:
         def reply(request: httpx.Request) -> httpx.Response:
@@ -115,13 +115,13 @@ class TestOpenAICompatibleModel(ConversationModelContract):
         api.post(COMPLETIONS).mock(side_effect=reply)
         api.post("https://down.test/v1/chat/completions").respond(401, json={"error": {"message": "No auth"}})
 
-    def model(self) -> ConversationModel:
+    def model(self) -> LanguageModel:
         return model()
 
     def tool_request(self) -> ModelRequest:
         return ModelRequest(messages=(Message.user("Allume le salon."),), tools=(LIGHT,))
 
-    def unavailable_model(self) -> ConversationModel:
+    def unavailable_model(self) -> LanguageModel:
         return model(base_url="https://down.test/v1")
 
 
@@ -314,7 +314,7 @@ async def test_other_servers_get_the_instructions_as_one_text_unless_told_otherw
         "role": "system",
         "content": "Tu es Richie.\n\nLe foyer : Mathis.\n\nMaintenant : 9 h.",
     }
-    async with OpenAICompatibleModel(base_url=BASE_URL, api_key=KEY, model="m", cache_control=True) as m:
+    async with OpenAICompatibleLanguage(base_url=BASE_URL, api_key=KEY, model="m", cache_control=True) as m:
         [o async for o in m.stream(LAYERED)]
     assert len(instructions(route)["content"]) == 3
 
@@ -436,7 +436,7 @@ async def test_cancelling_the_consumer_closes_the_http_response(api: respx.MockR
     api.post(COMPLETIONS).mock(return_value=httpx.Response(200, stream=body))
     started = asyncio.Event()
 
-    async def consume(m: OpenAICompatibleModel) -> None:
+    async def consume(m: OpenAICompatibleLanguage) -> None:
         async for _ in m.stream(HELLO):
             started.set()
 
@@ -475,7 +475,7 @@ async def test_the_plugin_builds_a_model_from_its_configuration(api: respx.MockR
     async with plugin.create(
         raw, "main", Services(data_dir=tmp_path, localizer=EchoLocalizer(), locale=Locale("fr-FR"))
     ) as m:
-        assert isinstance(m, ConversationModel)
+        assert isinstance(m, LanguageModel)
         outputs = [o async for o in m.stream(HELLO)]
 
     assert outputs[-1] == Finished(FinishReason.STOP)
@@ -494,7 +494,7 @@ async def test_a_local_server_needs_no_key(api: respx.MockRouter, tmp_path: Path
     async with plugin.create(
         raw, "main", Services(data_dir=tmp_path, localizer=EchoLocalizer(), locale=Locale("en"))
     ) as m:
-        assert isinstance(m, ConversationModel)
+        assert isinstance(m, LanguageModel)
         outputs = [o async for o in m.stream(HELLO)]
     assert outputs[-1] == Finished(FinishReason.STOP)
     assert "authorization" not in route.calls.last.request.headers
@@ -523,11 +523,11 @@ WEATHER = ToolSpec(
 
 @pytest.mark.live
 @pytest.mark.skipif(not OPENROUTER_KEY, reason="OPENROUTER_API_KEY is not set")
-class TestOpenRouterLive(ConversationModelContract):
+class TestOpenRouterLive(LanguageModelContract):
     """The contract against OpenRouter, pinned to Claude Haiku on Vertex in Europe without reasoning."""
 
-    def model(self, api_key: str = OPENROUTER_KEY) -> ConversationModel:
-        return OpenAICompatibleModel(
+    def model(self, api_key: str = OPENROUTER_KEY) -> LanguageModel:
+        return OpenAICompatibleLanguage(
             base_url="https://openrouter.ai/api/v1",
             api_key=api_key,
             model="anthropic/claude-haiku-5.5",
@@ -542,7 +542,7 @@ class TestOpenRouterLive(ConversationModelContract):
         system = Message(role=Role.SYSTEM, content="Utilise toujours tes outils pour répondre.")
         return ModelRequest(messages=(system, Message.user("Quel temps fait-il à Lyon ?")), tools=(WEATHER,))
 
-    def unavailable_model(self) -> ConversationModel:
+    def unavailable_model(self) -> LanguageModel:
         return self.model(api_key="sk-or-v1-invalid")
 
 

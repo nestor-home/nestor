@@ -50,8 +50,24 @@ export interface Schemas extends Omit<ConfigSchema, "sections" | "slots"> {
   slots: Record<string, Slot>;
 }
 
-/** A slot of components, with the settings of each kind as JSON Schema. */
+/** A slot of components, with the settings of each plugin as JSON Schema, by plugin id. */
 export type Slot = Omit<ConfigSlot, "kinds"> & { kinds: Record<string, JsonSchema> };
+
+/** The id of the plugin an entry picks (its key in `slot.kinds`): its `kind`, or a model's provider and type. */
+export const pluginOf = (slot: Slot, entry: Record<string, unknown>): string =>
+  slot.picks.map((key) => String(entry[key] ?? "")).join("-");
+
+/** A new entry for a plugin: the values that pick it, as its schema fixes them. */
+export function entryOf(slot: Slot, plugin: string): Record<string, unknown> {
+  const properties = slot.kinds[plugin]?.properties ?? {};
+  return Object.fromEntries(slot.picks.map((key) => [key, properties[key]?.const]));
+}
+
+/** What people know a plugin by: its kind, or a model's provider (`elevenlabs`). */
+export const providerOf = (slot: Slot, plugin: string): string => {
+  const value = entryOf(slot, plugin)[slot.picks[0] ?? "kind"];
+  return typeof value === "string" ? value : plugin;
+};
 
 /** A secret as the configuration shows it: never its value. */
 export interface SecretShown {
@@ -195,7 +211,7 @@ export const isAdvanced = (node: JsonSchema): boolean => Boolean(node["x-nestor"
 
 /** The properties a form shows, in schema order: the plain ones, then the advanced. */
 export function fieldsOf(object: JsonSchema): { plain: [string, JsonSchema][]; advanced: [string, JsonSchema][] } {
-  const entries = Object.entries(object.properties ?? {}).filter(([name]) => name !== "kind");
+  const entries = Object.entries(object.properties ?? {}).filter(([, p]) => p.const === undefined); // what picks the plugin
   return {
     plain: entries.filter(([, p]) => !isAdvanced(p)),
     advanced: entries.filter(([, p]) => isAdvanced(p)),

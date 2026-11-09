@@ -13,12 +13,12 @@ from typing import Any
 import pytest
 
 from nestor.core import Component, ContractError
-from nestor.modules.channels import Address, Medium
+from nestor.modules.channels import Address, Medium, TranscriptionModel
 from nestor.modules.cognition import Outcome, TaskDelivered
 from nestor.modules.cognition.model import ModelRequest, ToolCall
 from nestor.modules.conversation import AssistantTurn
 from nestor.runtime import Backoff, Nestor, Registry
-from nestor.runtime.config import ConfigError, parse_config
+from nestor.runtime.config import ConfigError, ProblemCode, parse_config
 from nestor.runtime.plugins import Family, Plugin, Services
 
 from .fakes import Fakes, NoSettings
@@ -28,7 +28,7 @@ data_dir: {data_dir}
 persona: {{name: Richie, character: Tu es Richie.}}
 household:
   - {{id: mathis, name: Mathis, accounts: ["memory:user"], reach: "memory:main"}}
-models: {{main: {{kind: scripted, replies: {replies}}}}}
+models: {{main: {{type: language, provider: scripted, replies: {replies}}}}}
 executors: [{{kind: remote, name: hermes}}]
 channels: [{{kind: memory}}]
 """
@@ -75,14 +75,18 @@ async def test_a_task_started_before_a_restart_is_delivered_after_it(tmp_path: P
 def test_an_unknown_adapter_kind_lists_what_is_installed(tmp_path: Path) -> None:
     text = CONFIG.format(data_dir=tmp_path, replies=[]).replace("kind: memory", "kind: carrier-pigeon")
     with pytest.raises(
-        ContractError, match="unknown channel kind 'carrier-pigeon' \\(available: crashing, flaky, memory\\)"
+        ContractError, match="no channel plugin 'carrier-pigeon' is installed \\(available: crashing, flaky, memory\\)"
     ):
         Nestor(parse_config(text, {}), Fakes().registry())
 
 
 def with_embedder(tmp_path: Path, embedder: str, agent: str = "") -> Any:
-    models = "models: {main: {kind: scripted, replies: []}, sens: {kind: concepts}}"
-    text = CONFIG.format(data_dir=tmp_path, replies=[]).replace("models: {main: {kind: scripted, replies: []}}", models)
+    models = (
+        "models: {main: {type: language, provider: scripted, replies: []}, sens: {type: embedding, provider: concepts}}"
+    )
+    text = CONFIG.format(data_dir=tmp_path, replies=[]).replace(
+        "models: {main: {type: language, provider: scripted, replies: []}}", models
+    )
     return parse_config(f"{text}memory: {{embedder: {embedder}}}\n{agent}", {})
 
 
@@ -97,8 +101,36 @@ async def test_an_embedding_model_is_declared_with_the_others_and_finds_memories
         assert [m.text for m in await nestor.memories.recall("Du jambon ?")] == ["Mathis est végétarien."]
     with pytest.raises(ConfigError, match=r"memory\.embedder: main cannot search memories"):
         Nestor(with_embedder(tmp_path, "main"), fakes.registry())
-    with pytest.raises(ConfigError, match=r"agent\.spoken: sens embeds and cannot answer"):
+    with pytest.raises(ConfigError, match=r"agent\.spoken: sens cannot answer"):
         Nestor(with_embedder(tmp_path, "sens", "agent: {written: sens}\n"), fakes.registry())
+
+
+class HearingSettings(NoSettings):
+    hears_with: str
+
+
+@pytest.mark.parametrize(
+    ("named", "code"),
+    [("main", ProblemCode.NOT_TRANSCRIBING), ("ears", ProblemCode.UNKNOWN_MODEL)],
+    ids=["another type", "unknown"],
+)
+def test_a_model_an_adapter_names_must_exist_and_serve_what_it_needs(
+    tmp_path: Path, named: str, code: ProblemCode
+) -> None:
+    def build(settings: HearingSettings, name: str, services: Services) -> Component:
+        services.model(settings.hears_with, TranscriptionModel, ("hears_with",))
+        raise AssertionError("refused before")
+
+    fakes = Fakes()
+    hearing = Plugin(Family.CHANNEL, "hearing", HearingSettings, build)
+    registry = Registry([fakes.model_plugin(), fakes.executor_plugin(), fakes.channel_plugin(), hearing])
+    text = CONFIG.format(data_dir=tmp_path, replies=[]).replace(
+        "[{kind: memory}]", f"[{{kind: memory}}, {{kind: hearing, hears_with: {named}}}]"
+    )
+    with pytest.raises(ConfigError) as refused:
+        Nestor(parse_config(text, {}), registry)
+    error = refused.value
+    assert (error.code, error.path, error.detail) == (code, ("channels", 1, "hears_with"), named)
 
 
 def test_invalid_adapter_settings_name_the_adapter(tmp_path: Path) -> None:
@@ -123,7 +155,7 @@ def test_two_channels_need_distinct_names(tmp_path: Path) -> None:
 
 def test_a_registry_refuses_two_plugins_for_one_kind() -> None:
     plugin = Fakes().channel_plugin()
-    with pytest.raises(ContractError, match="two plugins provide the channel kind 'memory'"):
+    with pytest.raises(ContractError, match="two plugins provide the channel 'memory'"):
         Registry([plugin, plugin])
 
 
@@ -182,14 +214,15 @@ import sys
 from nestor.runtime import Family, Registry
 registry = Registry.installed()
 for family in (Family.MODEL, Family.EXECUTOR, Family.CHANNEL):
-    print(" ".join(registry.kinds(family)))
+    print(" ".join(registry.ids(family)))
 print(" ".join(sorted({m.partition(".")[0] for m in sys.modules} & {"pipecat", "aiortc", "numpy"})))
 """
 TEXT_ONLY = """
 data_dir: {data_dir}
 persona: {{name: Nestor, character: You are Nestor.}}
 household: [{{id: ada, name: Ada}}]
-models: {{local: {{kind: openai-compatible, base_url: "http://localhost:11434/v1", model: llama3.2}}}}
+models:
+  local: {{type: language, provider: openai-compatible, base_url: "http://localhost:11434/v1", model: llama3.2}}
 channels: [{channel}]
 admin: {{}}
 """
@@ -205,7 +238,8 @@ def without_voice(*args: str) -> subprocess.CompletedProcess[str]:
 def test_discovering_the_installed_adapters_imports_no_optional_dependency() -> None:
     found = subprocess.run([sys.executable, "-c", OPTIONAL], capture_output=True, text=True, timeout=60, check=True)
     models, executors, channels, imported = found.stdout.splitlines()
-    assert "openai-compatible" in models.split() and "hermes" in executors.split(), "found through entry points"
+    assert "openai-compatible-language" in models.split(), "found through entry points"
+    assert "hermes" in executors.split()
     assert "satellites" in channels.split(), "the satellites channel is listed even when the voice extra is missing"
     assert imported == ""
 
@@ -228,8 +262,11 @@ def test_satellites_in_writing_pass_the_check_without_the_voice_extra(tmp_path: 
 
 def test_a_voice_for_satellites_without_the_extra_says_what_to_install(tmp_path: Path) -> None:
     path = tmp_path / "nestor.yaml"
-    voice = "{kind: satellites, voice: {speech: {api_key: xi, voice_id: v}}}"
-    path.write_text(TEXT_ONLY.format(data_dir=tmp_path, channel=voice))
+    voice = "{kind: satellites, voice: {transcription: ears, speech: mouth}}"
+    speech = "ears: {type: transcription, provider: elevenlabs, api_key: xi}, "
+    speech += "mouth: {type: speech, provider: elevenlabs, api_key: xi, voice_id: v}"
+    text = TEXT_ONLY.format(data_dir=tmp_path, channel=voice).replace("models: {", f"models: {{{speech}, ", 1)
+    path.write_text(text)
     checked = without_voice("-c", str(path), "check")
     assert checked.returncode == 2
     assert checked.stderr.strip() == (

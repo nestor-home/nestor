@@ -7,7 +7,7 @@ import os
 import signal
 from collections.abc import AsyncGenerator, Callable, Iterable, Mapping, Sequence
 from contextlib import AsyncExitStack
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Self, cast
 
@@ -28,21 +28,21 @@ from nestor.adapters.storage.sqlite import (
     SQLiteVerifierStore,
 )
 from nestor.adapters.storage.sqlite.identity import SQLiteVoiceprintStore
-from nestor.core import Component, ContractError, ProviderError
+from nestor.core import Component, ContractError, Model, ModelType, ProviderError
 from nestor.core.i18n import Locale
 from nestor.modules.accounts import Accounts
 from nestor.modules.activity import ActivityMonitor
 from nestor.modules.channels import Channel
-from nestor.modules.cognition import ConversationModel, Executor
+from nestor.modules.cognition import Executor, LanguageModel
 from nestor.modules.cognition.delegation.assistant import Delegation
 from nestor.modules.cognition.delegation.service import TaskManager
-from nestor.modules.cognition.embedding import Embedder
+from nestor.modules.cognition.embedding import EmbeddingModel
 from nestor.modules.cognition.tools import Results, Toolbox, ToolProvider
 from nestor.modules.connectors import ConnectedInbound, Connections, Connector, ConnectorTools, TokenEndpoint
 from nestor.modules.conversation import Agent, AgentSettings, ChannelProfile, ModelChoice, Persona, Speakers
 from nestor.modules.home import PresenceSource
 from nestor.modules.household import Account, Household, Person, SharedAccount
-from nestor.modules.identity import VoiceEmbedder, Voices
+from nestor.modules.identity import Departures, SpeakerModel, Voices
 from nestor.modules.initiative import (
     Courier,
     DeliveryPolicy,
@@ -67,8 +67,8 @@ from nestor.modules.memory.assistant import MemoryTools
 from nestor.modules.memory.episodes import Consolidator, Episodes
 from nestor.modules.satellites import Pairing, SatelliteHost
 from nestor.modules.system import ReleaseFeed, RestartRequested, Updates
-from nestor.runtime.config import AdapterConfig, ComponentConfig, ConfigError, NestorConfig, ProblemCode
-from nestor.runtime.plugins import Family, ModelType, Plugged, Registry, Services
+from nestor.runtime.config import AdapterConfig, ComponentConfig, ConfigError, ModelConfig, NestorConfig, ProblemCode
+from nestor.runtime.plugins import Family, Plugged, Registry, Services
 
 log = logging.getLogger("nestor")
 
@@ -128,40 +128,51 @@ class Nestor:
             self.journal, SQLiteVerifierStore(self.database), self.household, SQLiteActivityStore(self.database)
         )
 
-        self.models = build_models(config, registry, services, self.plugged)
-        roles = config.roles([k for k, m in self.models.items() if isinstance(m, ConversationModel)])
+        self.models = models = build_models(config, registry, services, self.plugged)
+        services = replace(services, models=lambda key, wanted, path: chosen(models, key, wanted, path))
+        roles = config.roles([k for k, m in config.models.items() if m.type is ModelType.LANGUAGE])
 
-        def model(role: str, key: str) -> ConversationModel:
-            found = self.models[key]
-            if not isinstance(found, ConversationModel):
-                raise ConfigError(
-                    f"{role}: {key} embeds and cannot answer; choose a conversation model",
-                    path=tuple(role.split(".")),
-                    code=ProblemCode.NOT_ANSWERING,
-                    detail=key,
-                )
-            return found
+        def model(role: str, key: str) -> LanguageModel:
+            return chosen(models, key, LanguageModel, tuple(role.split(".")))
 
         self.executors = [
-            _build(self.plugged, registry, Family.EXECUTOR, c, c.name or c.kind, services, Executor)
-            for c in config.executors
+            _build(self.plugged, registry, Family.EXECUTOR, c, c.name or c.plugin, ("executors", i), services, Executor)
+            for i, c in enumerate(config.executors)
         ]
         self.channels = [
-            _build(self.plugged, registry, Family.CHANNEL, c, c.name or c.kind, services, Channel)
-            for c in config.channels
+            _build(self.plugged, registry, Family.CHANNEL, c, c.name or c.plugin, ("channels", i), services, Channel)
+            for i, c in enumerate(config.channels)
         ]
         if len({c.channel_id for c in self.channels}) != len(self.channels):
             raise ContractError("two channels have the same name: give each a distinct `name`")
         self.tools = [
-            _build(self.plugged, registry, Family.TOOLS, c, c.name or c.kind, services, ToolProvider)
-            for c in config.tools
+            _build(self.plugged, registry, Family.TOOLS, c, c.name or c.plugin, ("tools", i), services, ToolProvider)
+            for i, c in enumerate(config.tools)
         ]
         self.inbound = [
-            _build(self.plugged, registry, Family.INBOUND, c, c.name or c.kind, services, InboundEventSource)
-            for c in config.inbound
+            _build(
+                self.plugged,
+                registry,
+                Family.INBOUND,
+                c,
+                c.name or c.plugin,
+                ("inbound", i),
+                services,
+                InboundEventSource,
+            )
+            for i, c in enumerate(config.inbound)
         ]
         self.presence = (
-            _build(self.plugged, registry, Family.PRESENCE, config.presence, "presence", services, PresenceSource)
+            _build(
+                self.plugged,
+                registry,
+                Family.PRESENCE,
+                config.presence,
+                "presence",
+                ("presence",),
+                services,
+                PresenceSource,
+            )
             if config.presence
             else None
         )
@@ -205,22 +216,16 @@ class Nestor:
                 channel.host_satellites(self.pairing, self.journal)
         self.tasks = TaskManager(self.journal, self.executors)
         delegation = Delegation(self.tasks)
-        embedder = self.models[config.memory.embedder] if config.memory.embedder else None
-        if embedder is not None and not isinstance(embedder, Embedder):
-            raise ConfigError(
-                f"memory.embedder: {config.memory.embedder} cannot search memories; choose a text embedding model",
-                path=("memory", "embedder"),
-                code=ProblemCode.NOT_EMBEDDING,
-                detail=config.memory.embedder,
-            )
-        voice_model = self.models[config.voices.embedder] if config.voices.embedder else None
-        if voice_model is not None and not isinstance(voice_model, VoiceEmbedder):
-            raise ConfigError(
-                f"voices.embedder: {config.voices.embedder} cannot tell voices apart; choose a voice model",
-                path=("voices", "embedder"),
-                code=ProblemCode.NOT_VOICE,
-                detail=config.voices.embedder,
-            )
+        embedder = (
+            chosen(models, config.memory.embedder, EmbeddingModel, ("memory", "embedder"))
+            if config.memory.embedder
+            else None
+        )
+        voice_model = (
+            chosen(models, config.voices.embedder, SpeakerModel, ("voices", "embedder"))
+            if config.voices.embedder
+            else None
+        )
         self.voiceprints = SQLiteVoiceprintStore(self.database)
         self.voices = (
             Voices(voice_model, self.voiceprints, self.journal, settings=config.voices.settings())
@@ -366,7 +371,8 @@ class Nestor:
             *self.models.values(),
             *self._memory_parts,  # after its embedder
             self.voiceprints,
-            *voices,  # after its model and its store
+            Departures(self.voiceprints, self.journal, [p.id for p in self.household.people]),  # after its store
+            *voices,  # after its model, its store, and who left
             self.speakers,
             *self.executors,
             *self.tools,
@@ -453,37 +459,63 @@ def _connectors(
     if config.connectors is not None:
         chosen = config.connectors
     elif config.admin is not None:
-        chosen = tuple(AdapterConfig(kind=kind) for kind in registry.kinds(Family.CONNECTOR))
+        chosen = tuple(AdapterConfig(kind=kind) for kind in registry.ids(Family.CONNECTOR))
     else:
         chosen = ()
-    connectors = [_build(plugged, registry, Family.CONNECTOR, c, c.name or c.kind, services, Connector) for c in chosen]
+    connectors = [
+        _build(plugged, registry, Family.CONNECTOR, c, c.name or c.plugin, ("connectors", i), services, Connector)
+        for i, c in enumerate(chosen)
+    ]
     kinds = [c.info.kind for c in connectors]
     if len(set(kinds)) != len(kinds):
         raise ContractError("two connectors declare the same kind: configure each service once")
     return connectors
 
 
-type Model = ConversationModel | Embedder | VoiceEmbedder
-SERVED: Mapping[ModelType, type[Model]] = {  # what a model plugin builds, by the type it says it serves
-    ModelType.LANGUAGE: ConversationModel,
-    ModelType.EMBEDDING: Embedder,
-    ModelType.VOICE: VoiceEmbedder,
+# why a model of another type is refused where one of a type is wanted
+_REFUSED: Mapping[ModelType, tuple[ProblemCode, str]] = {
+    ModelType.LANGUAGE: (ProblemCode.NOT_ANSWERING, "cannot answer; choose a language model"),
+    ModelType.EMBEDDING: (ProblemCode.NOT_EMBEDDING, "cannot search memories; choose a text embedding model"),
+    ModelType.SPEAKER: (ProblemCode.NOT_SPEAKER, "cannot tell voices apart; choose a speaker recognition model"),
+    ModelType.TRANSCRIPTION: (ProblemCode.NOT_TRANSCRIBING, "cannot transcribe speech; choose a transcription model"),
+    ModelType.SPEECH: (ProblemCode.NOT_SPEAKING, "cannot speak; choose a speech model"),
 }
+
+
+def chosen[M: Model](models: Mapping[str, Model], key: str, wanted: type[M], path: tuple[str | int, ...]) -> M:
+    """The model `key` names where the configuration, at `path`, wants one of type `wanted`."""
+    where = ".".join(map(str, path))
+    found = models.get(key)
+    if found is None:
+        known = ", ".join(models) or "none"
+        raise ConfigError(
+            f"{where}: no model named {key!r} in models ({known})",
+            path=path,
+            code=ProblemCode.UNKNOWN_MODEL,
+            detail=key,
+        )
+    if not isinstance(found, wanted):
+        code, why = _REFUSED[wanted.type]
+        raise ConfigError(f"{where}: {key} {why}", path=path, code=code, detail=key)
+    return found
 
 
 def build_models(
     config: NestorConfig, registry: Registry, services: Services, plugged: list[Plugged] | None = None
 ) -> dict[str, Model]:
-    """Every model of `models`, built but not started: each answers, embeds text or voices, as its plugin says."""
+    """Every model of `models`, built but not started, of the type its configuration says."""
     built: dict[str, Model] = {}
     for key, profile in config.models.items():
         model = _build(
-            plugged if plugged is not None else [], registry, Family.MODEL, profile, key, services, Component
+            plugged if plugged is not None else [],
+            registry,
+            Family.MODEL,
+            profile,
+            key,
+            ("models", key),
+            services,
+            registry.get(Family.MODEL, profile.plugin).serves or Model,
         )
-        served = registry.get(Family.MODEL, profile.kind).model_type
-        assert served is not None  # a model plugin says what it serves
-        if not isinstance(model, SERVED[served]):
-            raise ContractError(f"plugin {profile.kind!r} built a {type(model).__name__}, not a {served} model")
         built[key] = model
     return built
 
@@ -492,15 +524,23 @@ def _build[C](
     plugged: list[Plugged],
     registry: Registry,
     family: Family,
-    config: ComponentConfig,
+    config: ComponentConfig | ModelConfig,
     name: str,
+    where: tuple[str | int, ...],
     services: Services,
     expected: type[C],
 ) -> C:
-    component = registry.get(family, config.kind).create(config.settings(), name, services)
+    """The adapter `config` describes, named `name`, at `where` in the configuration."""
+    try:
+        component = registry.get(family, config.plugin).create(config.settings(), name, services)
+    except ConfigError as error:  # what its settings name, located in the whole document
+        path = (*where, *error.path)
+        raise ConfigError(
+            f"{'.'.join(map(str, where))}.{error}", path=path, code=error.code, detail=error.detail
+        ) from None
     if not isinstance(component, expected):
-        raise ContractError(f"plugin {config.kind!r} built a {type(component).__name__}, not a {expected.__name__}")
-    plugged.append(Plugged(family, config.kind, name, component, registry.origin(family, config.kind)))
+        raise ContractError(f"plugin {config.plugin!r} built a {type(component).__name__}, not a {expected.__name__}")
+    plugged.append(Plugged(family, config.plugin, name, component, registry.origin(family, config.plugin)))
     return cast(C, component)
 
 
@@ -520,7 +560,7 @@ async def open_accounts(data_dir: Path, people: Iterable[Person]) -> AsyncGenera
 
 
 def assemble_memories(
-    journal: Journal, database: SQLiteDatabase, embedder: Embedder | None, *, query_timeout_s: float = 1.0
+    journal: Journal, database: SQLiteDatabase, embedder: EmbeddingModel | None, *, query_timeout_s: float = 1.0
 ) -> tuple[Memories, Episodes, tuple[Component, ...]]:
     """The memories and episodes as every instance keeps them, and the components they need started (the vector
     index and the search indexes when there is an embedder, after it)."""
@@ -539,7 +579,7 @@ def assemble_memories(
 
 @contextlib.asynccontextmanager
 async def open_memories(
-    data_dir: Path, embedder: Embedder | None = None, *, query_timeout_s: float = 1.0
+    data_dir: Path, embedder: EmbeddingModel | None = None, *, query_timeout_s: float = 1.0
 ) -> AsyncGenerator[tuple[Memories, Episodes]]:
     """The memories and episodes kept in `data_dir`, assembled and searched as a running instance does (the
     `embedder` is started by the caller), without the rest of Nestor: a bench measures recall on them."""

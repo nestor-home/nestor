@@ -895,27 +895,274 @@
       "shape": "named",
       "required": true,
       "title": "Models",
+      "picks": [
+        "provider",
+        "type"
+      ],
       "kinds": {
-        "openai-compatible": {
+        "elevenlabs-speech": {
           "additionalProperties": false,
-          "description": "Configuration of an OpenAI-compatible chat model.",
           "properties": {
-            "kind": {
-              "const": "openai-compatible",
+            "provider": {
+              "const": "elevenlabs",
               "type": "string",
               "x-nestor": {
-                "field": "kind",
-                "title_id": "config-model-openai-compatible-kind",
-                "help_id": "config-model-openai-compatible-kind-help",
-                "fallback_title_id": "config-field-kind",
+                "field": "provider",
+                "title_id": "config-model-elevenlabs-speech-provider",
+                "help_id": "config-model-elevenlabs-speech-provider-help",
+                "fallback_title_id": "config-field-provider",
                 "secret": false,
                 "secret_values": false,
                 "advanced": false,
-                "group": "model-openai-compatible",
+                "group": "model-elevenlabs-speech",
                 "reference": null,
                 "model_type": null,
                 "brands": null,
-                "title": "Kind",
+                "title": "Provider",
+                "help": null
+              }
+            },
+            "type": {
+              "const": "speech",
+              "type": "string",
+              "x-nestor": {
+                "field": "type",
+                "title_id": "config-model-elevenlabs-speech-type",
+                "help_id": "config-model-elevenlabs-speech-type-help",
+                "fallback_title_id": "config-field-type",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-elevenlabs-speech",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Type",
+                "help": null
+              }
+            },
+            "api_key": {
+              "format": "password",
+              "title": "Api Key",
+              "type": "string",
+              "writeOnly": true,
+              "x-nestor": {
+                "field": "api_key",
+                "title_id": "config-model-elevenlabs-speech-api_key",
+                "help_id": "config-model-elevenlabs-speech-api_key-help",
+                "fallback_title_id": "config-field-api_key",
+                "secret": true,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-elevenlabs-speech",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "API key",
+                "help": null
+              }
+            },
+            "voice_id": {
+              "minLength": 1,
+              "title": "Voice Id",
+              "type": "string",
+              "x-nestor": {
+                "field": "voice_id",
+                "title_id": "config-model-elevenlabs-speech-voice_id",
+                "help_id": "config-model-elevenlabs-speech-voice_id-help",
+                "fallback_title_id": "config-field-voice_id",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-elevenlabs-speech",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Voice ID",
+                "help": "A voice of your ElevenLabs library."
+              }
+            },
+            "model": {
+              "default": "eleven_v4_turbo",
+              "title": "Model",
+              "type": "string",
+              "x-nestor": {
+                "field": "model",
+                "title_id": "config-model-elevenlabs-speech-model",
+                "help_id": "config-model-elevenlabs-speech-model-help",
+                "fallback_title_id": "config-field-model",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-elevenlabs-speech",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Model",
+                "help": "E.g. eleven_v4_turbo."
+              }
+            }
+          },
+          "required": [
+            "provider",
+            "type",
+            "api_key",
+            "voice_id"
+          ],
+          "title": "ElevenLabsSpeechSettings",
+          "type": "object"
+        },
+        "elevenlabs-transcription": {
+          "additionalProperties": false,
+          "properties": {
+            "provider": {
+              "const": "elevenlabs",
+              "type": "string",
+              "x-nestor": {
+                "field": "provider",
+                "title_id": "config-model-elevenlabs-transcription-provider",
+                "help_id": "config-model-elevenlabs-transcription-provider-help",
+                "fallback_title_id": "config-field-provider",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-elevenlabs-transcription",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Provider",
+                "help": null
+              }
+            },
+            "type": {
+              "const": "transcription",
+              "type": "string",
+              "x-nestor": {
+                "field": "type",
+                "title_id": "config-model-elevenlabs-transcription-type",
+                "help_id": "config-model-elevenlabs-transcription-type-help",
+                "fallback_title_id": "config-field-type",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-elevenlabs-transcription",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Type",
+                "help": null
+              }
+            },
+            "api_key": {
+              "format": "password",
+              "title": "Api Key",
+              "type": "string",
+              "writeOnly": true,
+              "x-nestor": {
+                "field": "api_key",
+                "title_id": "config-model-elevenlabs-transcription-api_key",
+                "help_id": "config-model-elevenlabs-transcription-api_key-help",
+                "fallback_title_id": "config-field-api_key",
+                "secret": true,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-elevenlabs-transcription",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "API key",
+                "help": null
+              }
+            },
+            "model": {
+              "default": "scribe_v2_realtime",
+              "title": "Model",
+              "type": "string",
+              "x-nestor": {
+                "field": "model",
+                "title_id": "config-model-elevenlabs-transcription-model",
+                "help_id": "config-model-elevenlabs-transcription-model-help",
+                "fallback_title_id": "config-field-model",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-elevenlabs-transcription",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Model",
+                "help": "E.g. scribe_v2_realtime."
+              }
+            },
+            "language": {
+              "default": "en",
+              "minLength": 2,
+              "title": "Language",
+              "type": "string",
+              "x-nestor": {
+                "field": "language",
+                "title_id": "config-model-elevenlabs-transcription-language",
+                "help_id": "config-model-elevenlabs-transcription-language-help",
+                "fallback_title_id": "config-field-language",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-elevenlabs-transcription",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Language",
+                "help": "What people speak, e.g. en."
+              }
+            }
+          },
+          "required": [
+            "provider",
+            "type",
+            "api_key"
+          ],
+          "title": "ElevenLabsTranscriptionSettings",
+          "type": "object"
+        },
+        "openai-compatible-embedding": {
+          "additionalProperties": false,
+          "description": "An embedding model's profile.",
+          "properties": {
+            "provider": {
+              "const": "openai-compatible",
+              "type": "string",
+              "x-nestor": {
+                "field": "provider",
+                "title_id": "config-model-openai-compatible-embedding-provider",
+                "help_id": "config-model-openai-compatible-embedding-provider-help",
+                "fallback_title_id": "config-field-provider",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-embedding",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Provider",
+                "help": null
+              }
+            },
+            "type": {
+              "const": "embedding",
+              "type": "string",
+              "x-nestor": {
+                "field": "type",
+                "title_id": "config-model-openai-compatible-embedding-type",
+                "help_id": "config-model-openai-compatible-embedding-type-help",
+                "fallback_title_id": "config-field-type",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-embedding",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Type",
                 "help": null
               }
             },
@@ -924,13 +1171,13 @@
               "type": "string",
               "x-nestor": {
                 "field": "base_url",
-                "title_id": "config-model-openai-compatible-base_url",
-                "help_id": "config-model-openai-compatible-base_url-help",
+                "title_id": "config-model-openai-compatible-embedding-base_url",
+                "help_id": "config-model-openai-compatible-embedding-base_url-help",
                 "fallback_title_id": "config-field-base_url",
                 "secret": false,
                 "secret_values": false,
                 "advanced": false,
-                "group": "model-openai-compatible",
+                "group": "model-openai-compatible-embedding",
                 "reference": null,
                 "model_type": null,
                 "brands": {
@@ -960,13 +1207,13 @@
               "title": "Api Key",
               "x-nestor": {
                 "field": "api_key",
-                "title_id": "config-model-openai-compatible-api_key",
-                "help_id": "config-model-openai-compatible-api_key-help",
+                "title_id": "config-model-openai-compatible-embedding-api_key",
+                "help_id": "config-model-openai-compatible-embedding-api_key-help",
                 "fallback_title_id": "config-field-api_key",
                 "secret": true,
                 "secret_values": false,
                 "advanced": false,
-                "group": "model-openai-compatible",
+                "group": "model-openai-compatible-embedding",
                 "reference": null,
                 "model_type": null,
                 "brands": null,
@@ -979,17 +1226,118 @@
               "type": "string",
               "x-nestor": {
                 "field": "model",
-                "title_id": "config-model-openai-compatible-model",
-                "help_id": "config-model-openai-compatible-model-help",
+                "title_id": "config-model-openai-compatible-embedding-model",
+                "help_id": "config-model-openai-compatible-embedding-model-help",
                 "fallback_title_id": "config-field-model",
                 "secret": false,
                 "secret_values": false,
                 "advanced": false,
-                "group": "model-openai-compatible",
+                "group": "model-openai-compatible-embedding",
                 "reference": null,
                 "model_type": null,
                 "brands": null,
                 "title": "Model",
+                "help": null
+              }
+            },
+            "dimensions": {
+              "exclusiveMinimum": 0,
+              "title": "Dimensions",
+              "type": "integer",
+              "x-nestor": {
+                "field": "dimensions",
+                "title_id": "config-model-openai-compatible-embedding-dimensions",
+                "help_id": "config-model-openai-compatible-embedding-dimensions-help",
+                "fallback_title_id": "config-field-dimensions",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-embedding",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Dimensions",
+                "help": "Size of the vectors the model returns."
+              }
+            },
+            "send_dimensions": {
+              "default": false,
+              "title": "Send Dimensions",
+              "type": "boolean",
+              "x-nestor": {
+                "field": "send_dimensions",
+                "title_id": "config-model-openai-compatible-embedding-send_dimensions",
+                "help_id": "config-model-openai-compatible-embedding-send_dimensions-help",
+                "fallback_title_id": "config-field-send_dimensions",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-embedding",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Ask for these dimensions",
+                "help": "For models that shorten their vectors (Matryoshka)."
+              }
+            },
+            "query_prefix": {
+              "default": "",
+              "title": "Query Prefix",
+              "type": "string",
+              "x-nestor": {
+                "field": "query_prefix",
+                "title_id": "config-model-openai-compatible-embedding-query_prefix",
+                "help_id": "config-model-openai-compatible-embedding-query_prefix-help",
+                "fallback_title_id": "config-field-query_prefix",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-embedding",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Query prefix",
+                "help": "E.g. query: for models that expect one."
+              }
+            },
+            "document_prefix": {
+              "default": "",
+              "title": "Document Prefix",
+              "type": "string",
+              "x-nestor": {
+                "field": "document_prefix",
+                "title_id": "config-model-openai-compatible-embedding-document_prefix",
+                "help_id": "config-model-openai-compatible-embedding-document_prefix-help",
+                "fallback_title_id": "config-field-document_prefix",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-embedding",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Document prefix",
+                "help": "E.g. passage: for models that expect one."
+              }
+            },
+            "batch_size": {
+              "default": 64,
+              "exclusiveMinimum": 0,
+              "title": "Batch Size",
+              "type": "integer",
+              "x-nestor": {
+                "field": "batch_size",
+                "title_id": "config-model-openai-compatible-embedding-batch_size",
+                "help_id": "config-model-openai-compatible-embedding-batch_size-help",
+                "fallback_title_id": "config-field-batch_size",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-openai-compatible-embedding",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Texts per request",
                 "help": null
               }
             },
@@ -999,18 +1347,18 @@
               "type": "object",
               "x-nestor": {
                 "field": "extra_body",
-                "title_id": "config-model-openai-compatible-extra_body",
-                "help_id": "config-model-openai-compatible-extra_body-help",
+                "title_id": "config-model-openai-compatible-embedding-extra_body",
+                "help_id": "config-model-openai-compatible-embedding-extra_body-help",
                 "fallback_title_id": "config-field-extra_body",
                 "secret": false,
                 "secret_values": false,
-                "advanced": false,
-                "group": "model-openai-compatible",
+                "advanced": true,
+                "group": "model-openai-compatible-embedding",
                 "reference": null,
                 "model_type": null,
                 "brands": null,
                 "title": "Extra JSON fields",
-                "help": "Added to every request, e.g. OpenRouter's routing."
+                "help": null
               }
             },
             "connect_timeout_s": {
@@ -1020,13 +1368,13 @@
               "type": "number",
               "x-nestor": {
                 "field": "connect_timeout_s",
-                "title_id": "config-model-openai-compatible-connect_timeout_s",
-                "help_id": "config-model-openai-compatible-connect_timeout_s-help",
+                "title_id": "config-model-openai-compatible-embedding-connect_timeout_s",
+                "help_id": "config-model-openai-compatible-embedding-connect_timeout_s-help",
                 "fallback_title_id": "config-field-connect_timeout_s",
                 "secret": false,
                 "secret_values": false,
-                "advanced": false,
-                "group": "model-openai-compatible",
+                "advanced": true,
+                "group": "model-openai-compatible-embedding",
                 "reference": null,
                 "model_type": null,
                 "brands": null,
@@ -1041,13 +1389,202 @@
               "type": "number",
               "x-nestor": {
                 "field": "read_timeout_s",
-                "title_id": "config-model-openai-compatible-read_timeout_s",
-                "help_id": "config-model-openai-compatible-read_timeout_s-help",
+                "title_id": "config-model-openai-compatible-embedding-read_timeout_s",
+                "help_id": "config-model-openai-compatible-embedding-read_timeout_s-help",
+                "fallback_title_id": "config-field-read_timeout_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-openai-compatible-embedding",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Read timeout (seconds)",
+                "help": null
+              }
+            }
+          },
+          "required": [
+            "provider",
+            "type",
+            "base_url",
+            "model",
+            "dimensions"
+          ],
+          "title": "OpenAICompatibleEmbeddingSettings",
+          "type": "object"
+        },
+        "openai-compatible-language": {
+          "additionalProperties": false,
+          "description": "Configuration of an OpenAI-compatible chat model.",
+          "properties": {
+            "provider": {
+              "const": "openai-compatible",
+              "type": "string",
+              "x-nestor": {
+                "field": "provider",
+                "title_id": "config-model-openai-compatible-language-provider",
+                "help_id": "config-model-openai-compatible-language-provider-help",
+                "fallback_title_id": "config-field-provider",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-language",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Provider",
+                "help": null
+              }
+            },
+            "type": {
+              "const": "language",
+              "type": "string",
+              "x-nestor": {
+                "field": "type",
+                "title_id": "config-model-openai-compatible-language-type",
+                "help_id": "config-model-openai-compatible-language-type-help",
+                "fallback_title_id": "config-field-type",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-language",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Type",
+                "help": null
+              }
+            },
+            "base_url": {
+              "title": "Base Url",
+              "type": "string",
+              "x-nestor": {
+                "field": "base_url",
+                "title_id": "config-model-openai-compatible-language-base_url",
+                "help_id": "config-model-openai-compatible-language-base_url-help",
+                "fallback_title_id": "config-field-base_url",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-language",
+                "reference": null,
+                "model_type": null,
+                "brands": {
+                  "anthropic.com": "anthropic",
+                  "generativelanguage.googleapis.com": "gemini",
+                  "groq.com": "groq",
+                  "mistral.ai": "mistral",
+                  "openai.com": "openai",
+                  "openrouter.ai": "openrouter"
+                },
+                "title": "Base URL",
+                "help": null
+              }
+            },
+            "api_key": {
+              "anyOf": [
+                {
+                  "format": "password",
+                  "type": "string",
+                  "writeOnly": true
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Api Key",
+              "x-nestor": {
+                "field": "api_key",
+                "title_id": "config-model-openai-compatible-language-api_key",
+                "help_id": "config-model-openai-compatible-language-api_key-help",
+                "fallback_title_id": "config-field-api_key",
+                "secret": true,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-language",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "API key",
+                "help": null
+              }
+            },
+            "model": {
+              "title": "Model",
+              "type": "string",
+              "x-nestor": {
+                "field": "model",
+                "title_id": "config-model-openai-compatible-language-model",
+                "help_id": "config-model-openai-compatible-language-model-help",
+                "fallback_title_id": "config-field-model",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-language",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Model",
+                "help": null
+              }
+            },
+            "extra_body": {
+              "additionalProperties": true,
+              "title": "Extra Body",
+              "type": "object",
+              "x-nestor": {
+                "field": "extra_body",
+                "title_id": "config-model-openai-compatible-language-extra_body",
+                "help_id": "config-model-openai-compatible-language-extra_body-help",
+                "fallback_title_id": "config-field-extra_body",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-language",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Extra JSON fields",
+                "help": "Added to every request, e.g. OpenRouter's routing."
+              }
+            },
+            "connect_timeout_s": {
+              "default": 5.0,
+              "exclusiveMinimum": 0,
+              "title": "Connect Timeout S",
+              "type": "number",
+              "x-nestor": {
+                "field": "connect_timeout_s",
+                "title_id": "config-model-openai-compatible-language-connect_timeout_s",
+                "help_id": "config-model-openai-compatible-language-connect_timeout_s-help",
+                "fallback_title_id": "config-field-connect_timeout_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-language",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Connection timeout (seconds)",
+                "help": null
+              }
+            },
+            "read_timeout_s": {
+              "default": 30.0,
+              "exclusiveMinimum": 0,
+              "title": "Read Timeout S",
+              "type": "number",
+              "x-nestor": {
+                "field": "read_timeout_s",
+                "title_id": "config-model-openai-compatible-language-read_timeout_s",
+                "help_id": "config-model-openai-compatible-language-read_timeout_s-help",
                 "fallback_title_id": "config-field-read_timeout_s",
                 "secret": false,
                 "secret_values": false,
                 "advanced": false,
-                "group": "model-openai-compatible",
+                "group": "model-openai-compatible-language",
                 "reference": null,
                 "model_type": null,
                 "brands": null,
@@ -1068,13 +1605,13 @@
               "title": "Cache Control",
               "x-nestor": {
                 "field": "cache_control",
-                "title_id": "config-model-openai-compatible-cache_control",
-                "help_id": "config-model-openai-compatible-cache_control-help",
+                "title_id": "config-model-openai-compatible-language-cache_control",
+                "help_id": "config-model-openai-compatible-language-cache_control-help",
                 "fallback_title_id": "config-field-cache_control",
                 "secret": false,
                 "secret_values": false,
                 "advanced": true,
-                "group": "model-openai-compatible",
+                "group": "model-openai-compatible-language",
                 "reference": null,
                 "model_type": null,
                 "brands": null,
@@ -1084,303 +1621,53 @@
             }
           },
           "required": [
-            "kind",
+            "provider",
+            "type",
             "base_url",
             "model"
           ],
-          "title": "OpenAICompatibleSettings",
+          "title": "OpenAICompatibleLanguageSettings",
           "type": "object"
         },
-        "openai-compatible-embeddings": {
-          "additionalProperties": false,
-          "description": "An embedding model's profile.",
-          "properties": {
-            "kind": {
-              "const": "openai-compatible-embeddings",
-              "type": "string",
-              "x-nestor": {
-                "field": "kind",
-                "title_id": "config-model-openai-compatible-embeddings-kind",
-                "help_id": "config-model-openai-compatible-embeddings-kind-help",
-                "fallback_title_id": "config-field-kind",
-                "secret": false,
-                "secret_values": false,
-                "advanced": false,
-                "group": "model-openai-compatible-embeddings",
-                "reference": null,
-                "model_type": null,
-                "brands": null,
-                "title": "Kind",
-                "help": null
-              }
-            },
-            "base_url": {
-              "title": "Base Url",
-              "type": "string",
-              "x-nestor": {
-                "field": "base_url",
-                "title_id": "config-model-openai-compatible-embeddings-base_url",
-                "help_id": "config-model-openai-compatible-embeddings-base_url-help",
-                "fallback_title_id": "config-field-base_url",
-                "secret": false,
-                "secret_values": false,
-                "advanced": false,
-                "group": "model-openai-compatible-embeddings",
-                "reference": null,
-                "model_type": null,
-                "brands": {
-                  "anthropic.com": "anthropic",
-                  "generativelanguage.googleapis.com": "gemini",
-                  "groq.com": "groq",
-                  "mistral.ai": "mistral",
-                  "openai.com": "openai",
-                  "openrouter.ai": "openrouter"
-                },
-                "title": "Base URL",
-                "help": null
-              }
-            },
-            "api_key": {
-              "anyOf": [
-                {
-                  "format": "password",
-                  "type": "string",
-                  "writeOnly": true
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "default": null,
-              "title": "Api Key",
-              "x-nestor": {
-                "field": "api_key",
-                "title_id": "config-model-openai-compatible-embeddings-api_key",
-                "help_id": "config-model-openai-compatible-embeddings-api_key-help",
-                "fallback_title_id": "config-field-api_key",
-                "secret": true,
-                "secret_values": false,
-                "advanced": false,
-                "group": "model-openai-compatible-embeddings",
-                "reference": null,
-                "model_type": null,
-                "brands": null,
-                "title": "API key",
-                "help": null
-              }
-            },
-            "model": {
-              "title": "Model",
-              "type": "string",
-              "x-nestor": {
-                "field": "model",
-                "title_id": "config-model-openai-compatible-embeddings-model",
-                "help_id": "config-model-openai-compatible-embeddings-model-help",
-                "fallback_title_id": "config-field-model",
-                "secret": false,
-                "secret_values": false,
-                "advanced": false,
-                "group": "model-openai-compatible-embeddings",
-                "reference": null,
-                "model_type": null,
-                "brands": null,
-                "title": "Model",
-                "help": null
-              }
-            },
-            "dimensions": {
-              "exclusiveMinimum": 0,
-              "title": "Dimensions",
-              "type": "integer",
-              "x-nestor": {
-                "field": "dimensions",
-                "title_id": "config-model-openai-compatible-embeddings-dimensions",
-                "help_id": "config-model-openai-compatible-embeddings-dimensions-help",
-                "fallback_title_id": "config-field-dimensions",
-                "secret": false,
-                "secret_values": false,
-                "advanced": false,
-                "group": "model-openai-compatible-embeddings",
-                "reference": null,
-                "model_type": null,
-                "brands": null,
-                "title": "Dimensions",
-                "help": "Size of the vectors the model returns."
-              }
-            },
-            "send_dimensions": {
-              "default": false,
-              "title": "Send Dimensions",
-              "type": "boolean",
-              "x-nestor": {
-                "field": "send_dimensions",
-                "title_id": "config-model-openai-compatible-embeddings-send_dimensions",
-                "help_id": "config-model-openai-compatible-embeddings-send_dimensions-help",
-                "fallback_title_id": "config-field-send_dimensions",
-                "secret": false,
-                "secret_values": false,
-                "advanced": false,
-                "group": "model-openai-compatible-embeddings",
-                "reference": null,
-                "model_type": null,
-                "brands": null,
-                "title": "Ask for these dimensions",
-                "help": "For models that shorten their vectors (Matryoshka)."
-              }
-            },
-            "query_prefix": {
-              "default": "",
-              "title": "Query Prefix",
-              "type": "string",
-              "x-nestor": {
-                "field": "query_prefix",
-                "title_id": "config-model-openai-compatible-embeddings-query_prefix",
-                "help_id": "config-model-openai-compatible-embeddings-query_prefix-help",
-                "fallback_title_id": "config-field-query_prefix",
-                "secret": false,
-                "secret_values": false,
-                "advanced": false,
-                "group": "model-openai-compatible-embeddings",
-                "reference": null,
-                "model_type": null,
-                "brands": null,
-                "title": "Query prefix",
-                "help": "E.g. query: for models that expect one."
-              }
-            },
-            "document_prefix": {
-              "default": "",
-              "title": "Document Prefix",
-              "type": "string",
-              "x-nestor": {
-                "field": "document_prefix",
-                "title_id": "config-model-openai-compatible-embeddings-document_prefix",
-                "help_id": "config-model-openai-compatible-embeddings-document_prefix-help",
-                "fallback_title_id": "config-field-document_prefix",
-                "secret": false,
-                "secret_values": false,
-                "advanced": false,
-                "group": "model-openai-compatible-embeddings",
-                "reference": null,
-                "model_type": null,
-                "brands": null,
-                "title": "Document prefix",
-                "help": "E.g. passage: for models that expect one."
-              }
-            },
-            "batch_size": {
-              "default": 64,
-              "exclusiveMinimum": 0,
-              "title": "Batch Size",
-              "type": "integer",
-              "x-nestor": {
-                "field": "batch_size",
-                "title_id": "config-model-openai-compatible-embeddings-batch_size",
-                "help_id": "config-model-openai-compatible-embeddings-batch_size-help",
-                "fallback_title_id": "config-field-batch_size",
-                "secret": false,
-                "secret_values": false,
-                "advanced": true,
-                "group": "model-openai-compatible-embeddings",
-                "reference": null,
-                "model_type": null,
-                "brands": null,
-                "title": "Texts per request",
-                "help": null
-              }
-            },
-            "extra_body": {
-              "additionalProperties": true,
-              "title": "Extra Body",
-              "type": "object",
-              "x-nestor": {
-                "field": "extra_body",
-                "title_id": "config-model-openai-compatible-embeddings-extra_body",
-                "help_id": "config-model-openai-compatible-embeddings-extra_body-help",
-                "fallback_title_id": "config-field-extra_body",
-                "secret": false,
-                "secret_values": false,
-                "advanced": true,
-                "group": "model-openai-compatible-embeddings",
-                "reference": null,
-                "model_type": null,
-                "brands": null,
-                "title": "Extra JSON fields",
-                "help": null
-              }
-            },
-            "connect_timeout_s": {
-              "default": 5.0,
-              "exclusiveMinimum": 0,
-              "title": "Connect Timeout S",
-              "type": "number",
-              "x-nestor": {
-                "field": "connect_timeout_s",
-                "title_id": "config-model-openai-compatible-embeddings-connect_timeout_s",
-                "help_id": "config-model-openai-compatible-embeddings-connect_timeout_s-help",
-                "fallback_title_id": "config-field-connect_timeout_s",
-                "secret": false,
-                "secret_values": false,
-                "advanced": true,
-                "group": "model-openai-compatible-embeddings",
-                "reference": null,
-                "model_type": null,
-                "brands": null,
-                "title": "Connection timeout (seconds)",
-                "help": null
-              }
-            },
-            "read_timeout_s": {
-              "default": 30.0,
-              "exclusiveMinimum": 0,
-              "title": "Read Timeout S",
-              "type": "number",
-              "x-nestor": {
-                "field": "read_timeout_s",
-                "title_id": "config-model-openai-compatible-embeddings-read_timeout_s",
-                "help_id": "config-model-openai-compatible-embeddings-read_timeout_s-help",
-                "fallback_title_id": "config-field-read_timeout_s",
-                "secret": false,
-                "secret_values": false,
-                "advanced": true,
-                "group": "model-openai-compatible-embeddings",
-                "reference": null,
-                "model_type": null,
-                "brands": null,
-                "title": "Read timeout (seconds)",
-                "help": null
-              }
-            }
-          },
-          "required": [
-            "kind",
-            "base_url",
-            "model",
-            "dimensions"
-          ],
-          "title": "OpenAICompatibleEmbedderSettings",
-          "type": "object"
-        },
-        "sherpa-onnx-voice": {
+        "sherpa-onnx-speaker": {
           "additionalProperties": false,
           "description": "A voice model run by sherpa-onnx.",
           "properties": {
-            "kind": {
-              "const": "sherpa-onnx-voice",
+            "provider": {
+              "const": "sherpa-onnx",
               "type": "string",
               "x-nestor": {
-                "field": "kind",
-                "title_id": "config-model-sherpa-onnx-voice-kind",
-                "help_id": "config-model-sherpa-onnx-voice-kind-help",
-                "fallback_title_id": "config-field-kind",
+                "field": "provider",
+                "title_id": "config-model-sherpa-onnx-speaker-provider",
+                "help_id": "config-model-sherpa-onnx-speaker-provider-help",
+                "fallback_title_id": "config-field-provider",
                 "secret": false,
                 "secret_values": false,
                 "advanced": false,
-                "group": "model-sherpa-onnx-voice",
+                "group": "model-sherpa-onnx-speaker",
                 "reference": null,
                 "model_type": null,
                 "brands": null,
-                "title": "Kind",
+                "title": "Provider",
+                "help": null
+              }
+            },
+            "type": {
+              "const": "speaker",
+              "type": "string",
+              "x-nestor": {
+                "field": "type",
+                "title_id": "config-model-sherpa-onnx-speaker-type",
+                "help_id": "config-model-sherpa-onnx-speaker-type-help",
+                "fallback_title_id": "config-field-type",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-sherpa-onnx-speaker",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "title": "Type",
                 "help": null
               }
             },
@@ -1394,13 +1681,13 @@
               "type": "string",
               "x-nestor": {
                 "field": "model",
-                "title_id": "config-model-sherpa-onnx-voice-model",
-                "help_id": "config-model-sherpa-onnx-voice-model-help",
+                "title_id": "config-model-sherpa-onnx-speaker-model",
+                "help_id": "config-model-sherpa-onnx-speaker-model-help",
                 "fallback_title_id": "config-field-model",
                 "secret": false,
                 "secret_values": false,
                 "advanced": false,
-                "group": "model-sherpa-onnx-voice",
+                "group": "model-sherpa-onnx-speaker",
                 "reference": null,
                 "model_type": null,
                 "brands": {
@@ -1420,13 +1707,13 @@
               "type": "integer",
               "x-nestor": {
                 "field": "threads",
-                "title_id": "config-model-sherpa-onnx-voice-threads",
-                "help_id": "config-model-sherpa-onnx-voice-threads-help",
+                "title_id": "config-model-sherpa-onnx-speaker-threads",
+                "help_id": "config-model-sherpa-onnx-speaker-threads-help",
                 "fallback_title_id": "config-field-threads",
                 "secret": false,
                 "secret_values": false,
                 "advanced": true,
-                "group": "model-sherpa-onnx-voice",
+                "group": "model-sherpa-onnx-speaker",
                 "reference": null,
                 "model_type": null,
                 "brands": null,
@@ -1449,13 +1736,13 @@
               "title": "Threshold",
               "x-nestor": {
                 "field": "threshold",
-                "title_id": "config-model-sherpa-onnx-voice-threshold",
-                "help_id": "config-model-sherpa-onnx-voice-threshold-help",
+                "title_id": "config-model-sherpa-onnx-speaker-threshold",
+                "help_id": "config-model-sherpa-onnx-speaker-threshold-help",
                 "fallback_title_id": "config-field-threshold",
                 "secret": false,
                 "secret_values": false,
                 "advanced": true,
-                "group": "model-sherpa-onnx-voice",
+                "group": "model-sherpa-onnx-speaker",
                 "reference": null,
                 "model_type": null,
                 "brands": null,
@@ -1465,17 +1752,20 @@
             }
           },
           "required": [
-            "kind",
+            "provider",
+            "type",
             "model"
           ],
-          "title": "SherpaOnnxVoiceSettings",
+          "title": "SherpaOnnxSpeakerSettings",
           "type": "object"
         }
       },
       "model_types": {
-        "openai-compatible": "language",
-        "openai-compatible-embeddings": "embedding",
-        "sherpa-onnx-voice": "voice"
+        "elevenlabs-speech": "speech",
+        "elevenlabs-transcription": "transcription",
+        "openai-compatible-embedding": "embedding",
+        "openai-compatible-language": "language",
+        "sherpa-onnx-speaker": "speaker"
       }
     },
     "channels": {
@@ -1483,147 +1773,38 @@
       "shape": "list",
       "required": true,
       "title": "Channels",
+      "picks": [
+        "kind"
+      ],
       "kinds": {
         "satellites": {
           "$defs": {
-            "ElevenLabsSettings": {
-              "additionalProperties": false,
-              "properties": {
-                "provider": {
-                  "const": "elevenlabs",
-                  "default": "elevenlabs",
-                  "title": "Provider",
-                  "type": "string",
-                  "x-nestor": {
-                    "field": "provider",
-                    "title_id": "config-channel-satellites-elevenlabssettings-provider",
-                    "help_id": "config-channel-satellites-elevenlabssettings-provider-help",
-                    "fallback_title_id": "config-field-provider",
-                    "secret": false,
-                    "secret_values": false,
-                    "advanced": false,
-                    "group": "channel-satellites-elevenlabssettings",
-                    "reference": null,
-                    "model_type": null,
-                    "brands": null,
-                    "title": "Provider",
-                    "help": null
-                  }
-                },
-                "api_key": {
-                  "format": "password",
-                  "title": "Api Key",
-                  "type": "string",
-                  "writeOnly": true,
-                  "x-nestor": {
-                    "field": "api_key",
-                    "title_id": "config-channel-satellites-elevenlabssettings-api_key",
-                    "help_id": "config-channel-satellites-elevenlabssettings-api_key-help",
-                    "fallback_title_id": "config-field-api_key",
-                    "secret": true,
-                    "secret_values": false,
-                    "advanced": false,
-                    "group": "channel-satellites-elevenlabssettings",
-                    "reference": null,
-                    "model_type": null,
-                    "brands": null,
-                    "title": "API key",
-                    "help": null
-                  }
-                },
-                "voice_id": {
-                  "title": "Voice Id",
-                  "type": "string",
-                  "x-nestor": {
-                    "field": "voice_id",
-                    "title_id": "config-channel-satellites-elevenlabssettings-voice_id",
-                    "help_id": "config-channel-satellites-elevenlabssettings-voice_id-help",
-                    "fallback_title_id": "config-field-voice_id",
-                    "secret": false,
-                    "secret_values": false,
-                    "advanced": false,
-                    "group": "channel-satellites-elevenlabssettings",
-                    "reference": null,
-                    "model_type": null,
-                    "brands": null,
-                    "title": "Voice ID",
-                    "help": null
-                  }
-                },
-                "language": {
-                  "default": "en",
-                  "title": "Language",
-                  "type": "string",
-                  "x-nestor": {
-                    "field": "language",
-                    "title_id": "config-channel-satellites-elevenlabssettings-language",
-                    "help_id": "config-channel-satellites-elevenlabssettings-language-help",
-                    "fallback_title_id": "config-field-language",
-                    "secret": false,
-                    "secret_values": false,
-                    "advanced": false,
-                    "group": "channel-satellites-elevenlabssettings",
-                    "reference": null,
-                    "model_type": null,
-                    "brands": null,
-                    "title": "Language",
-                    "help": "For transcription, e.g. en."
-                  }
-                },
-                "stt_model": {
-                  "default": "scribe_v2_realtime",
-                  "title": "Stt Model",
-                  "type": "string",
-                  "x-nestor": {
-                    "field": "stt_model",
-                    "title_id": "config-channel-satellites-elevenlabssettings-stt_model",
-                    "help_id": "config-channel-satellites-elevenlabssettings-stt_model-help",
-                    "fallback_title_id": "config-field-stt_model",
-                    "secret": false,
-                    "secret_values": false,
-                    "advanced": false,
-                    "group": "channel-satellites-elevenlabssettings",
-                    "reference": null,
-                    "model_type": null,
-                    "brands": null,
-                    "title": "Transcription model",
-                    "help": null
-                  }
-                },
-                "tts_model": {
-                  "default": "eleven_v4_turbo",
-                  "title": "Tts Model",
-                  "type": "string",
-                  "x-nestor": {
-                    "field": "tts_model",
-                    "title_id": "config-channel-satellites-elevenlabssettings-tts_model",
-                    "help_id": "config-channel-satellites-elevenlabssettings-tts_model-help",
-                    "fallback_title_id": "config-field-tts_model",
-                    "secret": false,
-                    "secret_values": false,
-                    "advanced": false,
-                    "group": "channel-satellites-elevenlabssettings",
-                    "reference": null,
-                    "model_type": null,
-                    "brands": null,
-                    "title": "Speech synthesis model",
-                    "help": null
-                  }
-                }
-              },
-              "required": [
-                "api_key",
-                "voice_id"
-              ],
-              "title": "ElevenLabsSettings",
-              "type": "object"
-            },
             "VoiceSettings": {
               "additionalProperties": false,
               "description": "How satellites allowed audio are heard and answered aloud (needs the `voice` extra).",
               "properties": {
+                "transcription": {
+                  "title": "Transcription",
+                  "type": "string",
+                  "x-nestor": {
+                    "field": "transcription",
+                    "title_id": "config-channel-satellites-voicesettings-transcription",
+                    "help_id": "config-channel-satellites-voicesettings-transcription-help",
+                    "fallback_title_id": "config-field-transcription",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "channel-satellites-voicesettings",
+                    "reference": "models",
+                    "model_type": "transcription",
+                    "brands": null,
+                    "title": "Transcription model",
+                    "help": "Hears what people say: a transcription model of Models."
+                  }
+                },
                 "speech": {
-                  "$ref": "#/$defs/ElevenLabsSettings",
+                  "title": "Speech",
+                  "type": "string",
                   "x-nestor": {
                     "field": "speech",
                     "title_id": "config-channel-satellites-voicesettings-speech",
@@ -1633,11 +1814,11 @@
                     "secret_values": false,
                     "advanced": false,
                     "group": "channel-satellites-voicesettings",
-                    "reference": null,
-                    "model_type": null,
+                    "reference": "models",
+                    "model_type": "speech",
                     "brands": null,
-                    "title": "Speech services",
-                    "help": null
+                    "title": "Speech model",
+                    "help": "Gives the assistant its voice: a speech model of Models."
                   }
                 },
                 "style": {
@@ -1738,6 +1919,7 @@
                 }
               },
               "required": [
+                "transcription",
                 "speech"
               ],
               "title": "VoiceSettings",
@@ -2132,6 +2314,9 @@
       "shape": "list",
       "required": false,
       "title": "Executors",
+      "picks": [
+        "kind"
+      ],
       "kinds": {
         "hermes": {
           "additionalProperties": false,
@@ -2333,6 +2518,9 @@
       "shape": "list",
       "required": false,
       "title": "Tools",
+      "picks": [
+        "kind"
+      ],
       "kinds": {
         "mcp": {
           "$defs": {
@@ -2721,6 +2909,9 @@
       "shape": "list",
       "required": false,
       "title": "Inbound sources",
+      "picks": [
+        "kind"
+      ],
       "kinds": {},
       "model_types": {}
     },
@@ -2729,6 +2920,9 @@
       "shape": "one",
       "required": false,
       "title": "Presence",
+      "picks": [
+        "kind"
+      ],
       "kinds": {
         "home-assistant": {
           "additionalProperties": false,
@@ -2965,6 +3159,9 @@
       "shape": "list",
       "required": false,
       "title": "Connectors",
+      "picks": [
+        "kind"
+      ],
       "kinds": {
         "google": {
           "additionalProperties": false,

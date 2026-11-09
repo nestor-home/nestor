@@ -21,7 +21,7 @@ import nestor.modules
 from nestor.adapters.i18n import FluentLocalizer, catalogue_dirs
 from nestor.admin.api.v1.errors import ErrorCode
 from nestor.admin.presentation import EventDescriber, Kind, Phrasebook
-from nestor.core import Event, PersonId
+from nestor.core import Event, ModelType, PersonId
 from nestor.core.i18n import Locale, Message
 from nestor.modules.accounts import InvitationStatus, Role
 from nestor.modules.cognition.delegation.types import TaskStatus
@@ -163,6 +163,8 @@ SELECTS = {
     "tool-risk": Risk,
     "auth-kind": AuthKind,
     "journal-kind": Kind,
+    "model-type": ModelType,
+    "model-type-help": ModelType,
 }
 
 

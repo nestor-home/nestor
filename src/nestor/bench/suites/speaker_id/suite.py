@@ -41,7 +41,7 @@ from nestor.bench.suites.speaker_id.store import MemoryVoiceprints, Unlogged
 from nestor.bench.types import Better, Case, CaseResult, Dataset, Finding, Metric, Summary, Unit
 from nestor.core import PersonId
 from nestor.core.i18n import Message
-from nestor.modules.identity import PHRASES, Vector, VoiceEmbedder, Voices, VoiceSpace
+from nestor.modules.identity import PHRASES, SpeakerModel, Vector, Voices, VoiceSpace
 from nestor.modules.identity.audio import centroid, similarity
 from nestor.modules.journal import Journal
 
@@ -354,19 +354,19 @@ def _learning(replay: Mapping[str, Any], metric: Callable[[str, float | None, Un
     return tuple(found)
 
 
-def _voices_of(trial: Trial[Knobs]) -> VoiceEmbedder:
+def _voices_of(trial: Trial[Knobs]) -> SpeakerModel:
     if trial.voices is None:  # pragma: no cover - the engine gives it: the suite declares `voices`
         raise BenchError(Message.of("bench-variant-no-voices", path=trial.variant))
     return trial.voices
 
 
-class _Remembered(VoiceEmbedder):
+class _Remembered(SpeakerModel):
     """The variant's model, embedding the turn being replayed once for both households (with and without
     learning), one voiceprint at a time."""
 
     name = "remembered-voices"
 
-    def __init__(self, model: VoiceEmbedder, inference: asyncio.Lock) -> None:
+    def __init__(self, model: SpeakerModel, inference: asyncio.Lock) -> None:
         self.model, self.inference = model, inference
         self.sample_rate = model.sample_rate
         self._last: tuple[bytes, Vector] | None = None

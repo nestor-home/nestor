@@ -2,7 +2,8 @@
 
     models:                       # any key of nestor.yaml, validated as it would be there
       mistral-small:
-        kind: openai-compatible
+        type: language
+        provider: openai-compatible
         base_url: https://openrouter.ai/api/v1
         api_key: ${OPENROUTER_API_KEY}
         model: mistralai/mistral-small-3.2
@@ -27,10 +28,11 @@ from pydantic import ValidationError
 
 from nestor.bench.errors import BenchError
 from nestor.bench.ports import Knobs, Suite
+from nestor.core import ModelType
 from nestor.core.i18n import Locale, Localizer, Message
-from nestor.modules.cognition import ConversationModel
-from nestor.modules.cognition.embedding import Embedder
-from nestor.modules.identity import VoiceEmbedder
+from nestor.modules.cognition import LanguageModel
+from nestor.modules.cognition.embedding import EmbeddingModel
+from nestor.modules.identity import SpeakerModel
 from nestor.runtime.app import build_models
 from nestor.runtime.config import NestorConfig, environment, validate_config
 from nestor.runtime.plugins import Family, Registry, Services
@@ -48,10 +50,12 @@ class Variant[K: Knobs]:
     source: Path
     knobs: K
     config: NestorConfig
-    models: Mapping[str, ConversationModel]  # by role, built but not started
-    embedder: Embedder | None = None  # the `memory.embedder`, built but not started, when the suite uses one
-    voices: VoiceEmbedder | None = None  # the `voices.embedder`, built but not started, when the suite uses one
-    described: Mapping[str, Mapping[str, Any]]  # each role's model: its name, kind and settings, secrets masked
+    models: Mapping[str, LanguageModel]  # by role, built but not started
+    embedder: EmbeddingModel | None = None  # the `memory.embedder`, built but not started, when the suite uses one
+    voices: SpeakerModel | None = None  # the `voices.embedder`, built but not started, when the suite uses one
+    described: Mapping[
+        str, Mapping[str, Any]
+    ]  # each role's model: its name, type, provider and settings, secrets masked
 
     def record(self) -> dict[str, Any]:
         """What a run keeps of the variant: no secret, no value it did not set."""
@@ -81,21 +85,26 @@ def load_variant[K: Knobs](
     config = validate_config(merged, environ if environ is not None else environment(path), origin=str(path))
     services = Services(data_dir=config.data_dir, localizer=localizer, locale=Locale(config.persona.locale))
     built = build_models(config, registry, services)
-    answering = [k for k, m in built.items() if isinstance(m, ConversationModel)]
+    answering = [k for k, m in config.models.items() if m.type is ModelType.LANGUAGE]
     roles = config.roles(answering) if suite.models else {}  # a suite that calls no model needs none answering
     described: dict[str, Mapping[str, Any]] = {}
 
     def chosen[M](role: str, key: str, expected: type[M]) -> M:
         model, profile = built[key], config.models[key]
         if not isinstance(model, expected):
-            raise BenchError(Message.of("bench-variant-not-a-model", path=str(path), kind=profile.kind))
-        settings = registry.get(Family.MODEL, profile.kind).settings.model_validate(profile.settings())
-        described[role] = {"name": key, "kind": profile.kind, **settings.model_dump(mode="json")}
+            raise BenchError(Message.of("bench-variant-not-a-model", path=str(path), kind=profile.plugin))
+        settings = registry.get(Family.MODEL, profile.plugin).settings.model_validate(profile.settings())
+        described[role] = {
+            "name": key,
+            "type": profile.type.value,
+            "provider": profile.provider,
+            **settings.model_dump(mode="json"),
+        }
         return model
 
-    models = {role: chosen(role, roles[role], ConversationModel) for role in suite.models}
+    models = {role: chosen(role, roles[role], LanguageModel) for role in suite.models}
     key = config.memory.embedder
-    embedder = chosen("embedder", key, Embedder) if suite.embedder and key else None
+    embedder = chosen("embedder", key, EmbeddingModel) if suite.embedder and key else None
     voices = config.voices.embedder
     if suite.voices and voices is None:
         raise BenchError(Message.of("bench-variant-no-voices", path=str(path)))
@@ -107,7 +116,7 @@ def load_variant[K: Knobs](
         models=models,
         described=described,
         embedder=embedder,
-        voices=chosen("voices", voices, VoiceEmbedder) if suite.voices and voices else None,
+        voices=chosen("voices", voices, SpeakerModel) if suite.voices and voices else None,
     )
 
 

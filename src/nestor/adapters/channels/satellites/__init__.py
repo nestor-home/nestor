@@ -5,6 +5,6 @@ The channel itself needs nothing beyond Nestor; its `voice` section needs the `v
 its settings; import the channel from its modules (`nestor.adapters.channels.satellites.channel`)."""
 
 from nestor.adapters.channels.satellites.plugin import plugin
-from nestor.adapters.channels.satellites.settings import ElevenLabsSettings, SatellitesSettings, VoiceSettings
+from nestor.adapters.channels.satellites.settings import SatellitesSettings, VoiceSettings
 
-__all__ = ["ElevenLabsSettings", "SatellitesSettings", "VoiceSettings", "plugin"]
+__all__ = ["SatellitesSettings", "VoiceSettings", "plugin"]

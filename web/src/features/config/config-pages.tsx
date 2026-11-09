@@ -1,6 +1,6 @@
 import { ArrowDown, ArrowUp, CircleAlert, Pencil, Plus, Trash2 } from "lucide-react";
 import { type ReactElement, type ReactNode, useId, useState } from "react";
-import type { ModelType } from "@/api";
+import { modelTypeValues } from "@/api/schema.gen";
 import { Confirm } from "@/components/confirm";
 import { FormActions } from "@/components/form-actions";
 import { FormDialog, FormSheet } from "@/components/overlay-form";
@@ -11,10 +11,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useT } from "@/i18n";
 import { brandName, brandOf, KindMark } from "@/lib/brands";
+import { modelTypeHint, modelTypeLabel } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 import { useConfigEditor } from "./editor";
 import { ObjectFields, Problems } from "./fields";
 import {
+  entryOf,
   freeName,
   getAt,
   isRecord,
@@ -22,7 +24,9 @@ import {
   move,
   NAME,
   type Path,
+  pluginOf,
   problemsUnder,
+  providerOf,
   renamed,
   type Slot,
 } from "./schema";
@@ -211,7 +215,8 @@ function OneSlot({ slotKey, slot, main }: { slotKey: string; slot: Slot; main: b
   const t = useT();
   const { draft, set, problems } = useConfigEditor();
   const entry = getAt(draft, [slotKey]);
-  const kind = isRecord(entry) ? String(entry.kind ?? "") : "";
+  const kind = isRecord(entry) ? pluginOf(slot, entry) : "";
+  const provider = providerOf(slot, kind);
   const schema = slot.kinds[kind];
   const kinds = Object.keys(slot.kinds);
   const trouble = problemsUnder(problems, [slotKey]);
@@ -227,7 +232,7 @@ function OneSlot({ slotKey, slot, main }: { slotKey: string; slot: Slot; main: b
                 <Trash2 /> {t("cfg-remove")}
               </Button>
             }
-            title={t("cfg-remove-title", { name: kindTitle(kind) })}
+            title={t("cfg-remove-title", { name: kindTitle(provider) })}
             confirm={t("cfg-remove")}
             onConfirm={async () => set([slotKey], undefined)}
           >
@@ -239,8 +244,8 @@ function OneSlot({ slotKey, slot, main }: { slotKey: string; slot: Slot; main: b
       {isRecord(entry) ? (
         <Panel marked={main}>
           <div className="mb-5 flex items-center gap-2.5">
-            <KindMark kind={kind} className="size-5 text-ink" label={false} />
-            <p className="font-serif text-lg text-ink">{kindTitle(kind)}</p>
+            <KindMark kind={provider} className="size-5 text-ink" label={false} />
+            <p className="font-serif text-lg text-ink">{kindTitle(provider)}</p>
             <span className="text-[0.85rem] text-ink-faint">{kind}</span>
           </div>
           {schema ? (
@@ -256,7 +261,7 @@ function OneSlot({ slotKey, slot, main }: { slotKey: string; slot: Slot; main: b
           action={
             <KindPicker
               slot={slot}
-              onPick={(k) => set([slotKey], { kind: k })}
+              onPick={(k) => set([slotKey], entryOf(slot, k))}
               trigger={
                 <Button variant="outline" size="sm">
                   <Plus /> {t("cfg-choose-kind")}
@@ -283,9 +288,10 @@ function ManySlot({ slotKey, slot }: { slotKey: string; slot: Slot }) {
   const [editing, setEditing] = useState<{ index: number; adding: boolean } | null>(null);
   const kinds = Object.keys(slot.kinds);
   const write = (next: Record<string, unknown>[]) => set([slotKey], next.length || slot.required ? next : undefined);
-  const nameOf = (e: Record<string, unknown>) => String(e.name || kindTitle(String(e.kind ?? "")));
+  const nameOf = (e: Record<string, unknown>) => String(e.name || kindTitle(providerOf(slot, pluginOf(slot, e))));
   const current = editing ? entries[editing.index] : undefined;
-  const schema = current ? slot.kinds[String(current.kind)] : undefined;
+  const plugin = current ? pluginOf(slot, current) : "";
+  const schema = current ? slot.kinds[plugin] : undefined;
   const stray = problemsUnder(problems, [slotKey]).filter((p) => p.path.length === 1);
   return (
     <Section
@@ -297,7 +303,7 @@ function ManySlot({ slotKey, slot }: { slotKey: string; slot: Slot }) {
           <KindPicker
             slot={slot}
             onPick={(kind) => {
-              write([...entries, { kind }]);
+              write([...entries, entryOf(slot, kind)]);
               setEditing({ index: entries.length, adding: true });
             }}
             trigger={
@@ -312,12 +318,12 @@ function ManySlot({ slotKey, slot }: { slotKey: string; slot: Slot }) {
       {entries.length ? (
         <ul className="grid gap-2">
           {entries.map((entry, index) => {
-            const kind = String(entry.kind ?? "");
+            const kind = pluginOf(slot, entry);
             return (
               <ItemCard
                 // biome-ignore lint/suspicious/noArrayIndexKey: a component's position is its place in the file
                 key={index}
-                mark={markOf(kind, entry, slot.kinds[kind])}
+                mark={markOf(providerOf(slot, kind), entry, slot.kinds[kind])}
                 title={nameOf(entry)}
                 subtitle={kind}
                 detail={summary(entry)}
@@ -343,8 +349,8 @@ function ManySlot({ slotKey, slot }: { slotKey: string; slot: Slot }) {
       {editing && current ? (
         <ItemSheet
           key={editing.index}
-          title={editing.adding ? t("cfg-add-kind", { kind: kindTitle(String(current.kind)) }) : nameOf(current)}
-          mark={String(current.kind)}
+          title={editing.adding ? t("cfg-add-kind", { kind: kindTitle(providerOf(slot, plugin)) }) : nameOf(current)}
+          mark={providerOf(slot, plugin)}
           adding={editing.adding}
           onClose={() => setEditing(null)}
           onCancelAdd={() => {
@@ -355,7 +361,7 @@ function ManySlot({ slotKey, slot }: { slotKey: string; slot: Slot }) {
           {schema ? (
             <ObjectFields schema={schema} root={schema} path={[slotKey, editing.index]} />
           ) : (
-            <p className="text-sm text-brick">{t("cfg-kind-missing", { kind: String(current.kind) })}</p>
+            <p className="text-sm text-brick">{t("cfg-kind-missing", { kind: plugin })}</p>
           )}
         </ItemSheet>
       ) : null}
@@ -373,7 +379,8 @@ function NamedSlot({ slotKey, slot }: { slotKey: string; slot: Slot }) {
   const kinds = Object.keys(slot.kinds);
   const write = (next: Record<string, unknown>) => set([slotKey], next);
   const current = editing ? named[editing.name] : undefined;
-  const schema = current ? slot.kinds[String(current.kind)] : undefined;
+  const plugin = current ? pluginOf(slot, current) : "";
+  const schema = current ? slot.kinds[plugin] : undefined;
   const stray = problemsUnder(problems, [slotKey]).filter((p) => p.path.length === 1);
   const without = (name: string) => Object.fromEntries(Object.entries(named).filter(([k]) => k !== name));
   return (
@@ -386,8 +393,8 @@ function NamedSlot({ slotKey, slot }: { slotKey: string; slot: Slot }) {
           <KindPicker
             slot={slot}
             onPick={(kind) => {
-              const name = freeName(kind, names);
-              write({ ...named, [name]: { kind } });
+              const name = freeName(providerOf(slot, kind), names);
+              write({ ...named, [name]: entryOf(slot, kind) });
               setEditing({ name, adding: true });
             }}
             trigger={
@@ -402,16 +409,17 @@ function NamedSlot({ slotKey, slot }: { slotKey: string; slot: Slot }) {
       {names.length ? (
         <ul className="grid gap-2">
           {Object.entries(named).map(([name, entry]) => {
-            const kind = String(entry.kind ?? "");
+            const kind = pluginOf(slot, entry);
+            const provider = providerOf(slot, kind);
             return (
               <ItemCard
                 key={name}
-                mark={markOf(kind, entry, slot.kinds[kind])}
+                mark={markOf(provider, entry, slot.kinds[kind])}
                 title={name}
                 subtitle={
                   slot.model_types[kind]
-                    ? `${kindTitle(kind)} · ${t(`cfg-model-type-${slot.model_types[kind]}`)}`
-                    : kindTitle(kind)
+                    ? `${kindTitle(provider)} · ${modelTypeLabel(slot.model_types[kind])}`
+                    : kindTitle(provider)
                 }
                 detail={summary(entry)}
                 problems={problemsUnder(problems, [slotKey, name]).length}
@@ -432,8 +440,8 @@ function NamedSlot({ slotKey, slot }: { slotKey: string; slot: Slot }) {
       <Problems problems={stray} />
       {editing && current ? (
         <ItemSheet
-          title={editing.adding ? t("cfg-add-kind", { kind: kindTitle(String(current.kind)) }) : editing.name}
-          mark={String(current.kind)}
+          title={editing.adding ? t("cfg-add-kind", { kind: kindTitle(providerOf(slot, plugin)) }) : editing.name}
+          mark={providerOf(slot, plugin)}
           adding={editing.adding}
           onClose={() => setEditing(null)}
           onCancelAdd={() => {
@@ -452,7 +460,7 @@ function NamedSlot({ slotKey, slot }: { slotKey: string; slot: Slot }) {
           {schema ? (
             <ObjectFields schema={schema} root={schema} path={[slotKey, editing.name]} />
           ) : (
-            <p className="text-sm text-brick">{t("cfg-kind-missing", { kind: String(current.kind) })}</p>
+            <p className="text-sm text-brick">{t("cfg-kind-missing", { kind: plugin })}</p>
           )}
         </ItemSheet>
       ) : null}
@@ -492,7 +500,6 @@ function NameField({ name, taken, onRename }: { name: string; taken: string[]; o
 }
 
 /** The model types, in the order the picker shows them. */
-const MODEL_TYPES: readonly ModelType[] = ["language", "embedding", "voice"];
 
 /** Choosing what to add: every installed plugin of the slot, with its mark; models grouped by what they serve. */
 function KindPicker({ slot, onPick, trigger }: { slot: Slot; onPick: (kind: string) => void; trigger: ReactElement }) {
@@ -501,7 +508,10 @@ function KindPicker({ slot, onPick, trigger }: { slot: Slot; onPick: (kind: stri
     <FormDialog trigger={trigger} title={t("cfg-pick-title", { slot: slot.title })} description={t("cfg-pick-text")}>
       {(close) => {
         const kinds = Object.keys(slot.kinds);
-        const typed = MODEL_TYPES.map((type) => ({ type, kinds: kinds.filter((k) => slot.model_types[k] === type) }));
+        const typed = modelTypeValues.map((type) => ({
+          type,
+          kinds: kinds.filter((k) => slot.model_types[k] === type),
+        }));
         const groups = Object.keys(slot.model_types).length
           ? typed.filter((g) => g.kinds.length)
           : [{ type: null, kinds }];
@@ -515,11 +525,12 @@ function KindPicker({ slot, onPick, trigger }: { slot: Slot; onPick: (kind: stri
               }}
               className="flex w-full items-center gap-3 rounded-md border border-rule bg-paper-raised px-3 py-2.5 text-left hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
             >
-              <KindMark kind={kind} className="size-5 text-ink" label={false} />
+              <KindMark kind={providerOf(slot, kind)} className="size-5 text-ink" label={false} />
               <span className="min-w-0 flex-1">
-                <span className="block text-sm text-ink">{kindTitle(kind)}</span>
+                <span className="block text-sm text-ink">{kindTitle(providerOf(slot, kind))}</span>
                 <span className="block text-[0.85rem] text-ink-faint">
-                  {kind} · {t("cfg-required-fields", { count: requiredCount(slot.kinds[kind] ?? {}) })}
+                  {providerOf(slot, kind)} ·{" "}
+                  {t("cfg-required-fields", { count: requiredCount(slot.kinds[kind] ?? {}) })}
                 </span>
               </span>
             </button>
@@ -528,14 +539,11 @@ function KindPicker({ slot, onPick, trigger }: { slot: Slot; onPick: (kind: stri
         return (
           <div className="grid gap-5">
             {groups.map((group) => (
-              <section
-                key={group.type ?? "all"}
-                aria-label={group.type ? t(`cfg-model-type-${group.type}`) : undefined}
-              >
+              <section key={group.type ?? "all"} aria-label={group.type ? modelTypeLabel(group.type) : undefined}>
                 {group.type ? (
                   <header className="mb-2">
-                    <h3 className="text-[0.92rem] font-medium text-ink">{t(`cfg-model-type-${group.type}`)}</h3>
-                    <p className="text-[0.82rem] text-ink-muted">{t(`cfg-model-type-${group.type}-help`)}</p>
+                    <h3 className="text-[0.92rem] font-medium text-ink">{modelTypeLabel(group.type)}</h3>
+                    <p className="text-[0.82rem] text-ink-muted">{modelTypeHint(group.type)}</p>
                   </header>
                 ) : null}
                 <ul className="grid gap-1.5">{group.kinds.map(option)}</ul>
@@ -548,7 +556,9 @@ function KindPicker({ slot, onPick, trigger }: { slot: Slot; onPick: (kind: stri
   );
 }
 
-const requiredCount = (schema: JsonSchema) => (schema.required ?? []).filter((r) => r !== "kind").length;
+/** The fields a person must fill: what picks the plugin is set already. */
+const requiredCount = (schema: JsonSchema) =>
+  (schema.required ?? []).filter((r) => schema.properties?.[r]?.const === undefined).length;
 
 function ItemCard({
   mark,
