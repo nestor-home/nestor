@@ -4,16 +4,16 @@ when a spoken announcement gets no reaction (a closed door, the shower)."""
 import asyncio
 import contextlib
 from collections.abc import Iterable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
 
 from nestor.core import Component, PersonId, ProviderError, utc_now
 from nestor.core.i18n import Message
 from nestor.modules.channels import Address, Channel, Medium
-from nestor.modules.conversation import Agent, Notification, UserTurn
+from nestor.modules.conversation import About, Agent, Notification, UserTurn
 from nestor.modules.home import PresenceSource
 from nestor.modules.household import Person
-from nestor.modules.initiative.delivery.events import Delivered, DeliveryConsidered, DeliveryFailed
+from nestor.modules.initiative.delivery.events import Delivered, DeliveryConsidered, DeliveryFailed, DeliveryWithheld
 from nestor.modules.initiative.delivery.policy import DeliveryPolicy, Plan
 from nestor.modules.journal import Journal
 
@@ -28,7 +28,7 @@ NOTICE = (
 class FollowUp:
     """A message the courier will write at `due_at` unless someone answers what it said aloud."""
 
-    about: str  # as journaled: `task 3f2a completed`, `watch w1`
+    about: About
     person: PersonId | None
     spoken: Address  # where it was said
     written: Address  # where it will be written
@@ -37,7 +37,8 @@ class FollowUp:
 
 @dataclass(frozen=True, slots=True)
 class _Sent:
-    """A conversation took a notification: `said` whether the agent had something to tell there."""
+    """A conversation took a notification: `said` whether the agent had something to tell there, `False` when it
+    withheld it."""
 
     address: Address
     said: bool
@@ -86,7 +87,8 @@ class Courier(Component):
     ) -> Address | None:
         """Deliver now what `notification` brings to `person`; returns where, or `None` (logged as `DeliveryFailed`)
         when nothing could take it. Wherever it goes, the notification and its answer become a turn of that
-        conversation; an answer that says nothing (a check that found nothing) is sent nowhere else and leaves none.
+        conversation. A notification that may stay silent and has nothing to tell is withheld there
+        (`DeliveryWithheld`) and leaves no turn; one that must be told and gets no answer goes on to the next place.
         `to` is a place asked for (a channel someone named): it is written there, whatever the policy.
         `private`: its content is the person's (a mail): aloud, others may hear, so the room only hears that something
         waits for them and the content is written at once; aloud in full only with nowhere to write."""
@@ -115,7 +117,7 @@ class Courier(Component):
             )
         )
         if private and plan.spoken and plan.written:
-            notice = Notification(f"{notification.text}\n\n{NOTICE}", f"{notification.about} (notice)")
+            notice = replace(notification, text=f"{notification.text}\n\n{NOTICE}")
             noticed = await self._send(person, plan.spoken, Medium.SPOKEN, notice)
             if noticed and (written_to := await self._send(person, plan.written, Medium.WRITTEN, notification)):
                 return written_to.address
@@ -141,27 +143,42 @@ class Courier(Component):
         return await self.agent.conversations.current(origin, Medium.SPOKEN) is not None
 
     async def _send(
-        self, person: Person | None, address: Address, medium: Medium, notification: Notification
+        self,
+        person: Person | None,
+        address: Address,
+        medium: Medium,
+        notification: Notification,
+        *,
+        follow_up: bool = False,
     ) -> _Sent | None:
         """Compose the answer to `notification` for this conversation once it is free, send it, then record both as
-        its turn. `None`: this conversation could not take it."""
+        its turn. `None`: this conversation could not take it, the model could not write it, or it wrote nothing
+        for a notification that had to be told."""
         channel = self.channels.get(address.channel)
         if channel is None or not channel.reachable(address, medium):
             return None
         conversations = self.agent.conversations
-        async with conversations.free(address):  # drafted after the answer being written, never in its middle
-            texts = await self.agent.compose(address, person, notification, medium)
-        if not texts:  # the agent had nothing to tell: it was handled here, nothing was said
+        who = person.id if person else None
+        try:
+            async with conversations.free(address):  # drafted after the answer being written, never in its middle
+                text = await self.agent.compose(address, person, notification, medium)
+        except ProviderError:
+            return None
+        if text is None:
+            if not notification.quiet:
+                return None
+            await self.journal.publish(
+                DeliveryWithheld(source=self.name, address=address, about=notification.about, person=who)
+            )
             return _Sent(address, said=False)
         try:  # sent without holding the conversation: a voice says it once the person is answered
-            for text in texts:
-                await channel.send(address, text, medium)
+            await channel.send(address, text, medium)
         except ProviderError:
             return None
         async with conversations.free(address):  # recorded after what was said meanwhile, as it was heard
-            await self.agent.delivered(address, person, notification, medium, texts)
+            await self.agent.delivered(address, person, notification, medium, text)
         await self.journal.publish(
-            Delivered(source=self.name, address=address, about=notification.about, person=person.id if person else None)
+            Delivered(source=self.name, address=address, about=notification.about, person=who, follow_up=follow_up)
         )
         return _Sent(address, said=True)
 
@@ -177,7 +194,8 @@ class Courier(Component):
                     person,
                     written,
                     Medium.WRITTEN,
-                    Notification(f"{notification.text}\n\n{FOLLOW_UP}", f"{notification.about} (follow-up)"),
+                    replace(notification, text=f"{notification.text}\n\n{FOLLOW_UP}"),
+                    follow_up=True,
                 )
 
         task = asyncio.create_task(follow_up(), name=f"follow-up {notification.about}")

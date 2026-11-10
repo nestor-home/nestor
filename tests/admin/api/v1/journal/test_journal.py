@@ -11,7 +11,7 @@ from nestor.core import PersonId, new_id
 from nestor.core.i18n import Message
 from nestor.modules.accounts import Role
 from nestor.modules.channels import Address, Exchange, Medium
-from nestor.modules.conversation import AssistantTurn, UserTurn
+from nestor.modules.conversation import About, AssistantTurn, Source, UserTurn
 from nestor.modules.identity import Speaker
 from nestor.modules.initiative import DeliveryConsidered
 from nestor.modules.memory import MemoryRecorded
@@ -57,7 +57,7 @@ async def test_items_are_said_in_french_with_the_reason_of_a_decision(tmp_path: 
         await admin.nestor.journal.publish(
             DeliveryConsidered(
                 source="courier",
-                about="watch w1",
+                about=About(Source.WATCH, "w1"),
                 reason=Message.of("delivery-in-room", person="Mathis", room="salon"),
                 spoken=Address("voice", "salon"),
                 person=PersonId("mathis"),
@@ -279,8 +279,8 @@ async def test_the_important_events_are_told_in_the_readers_language(tmp_path: P
                 source="keeper", watch_id="w1", item_id="i", item_title="Colis livré", summary="", urgent=True
             ),
             WatchEnded(source="watch-book", watch_id="w1", reason="matched"),
-            Delivered(source="courier", address=MATHIS_CHAT, about="watch w1", person=mathis),
-            DeliveryFailed(source="courier", about="watch w2", tried=(), person=mathis),
+            Delivered(source="courier", address=MATHIS_CHAT, about=About(Source.WATCH, "w1"), person=mathis),
+            DeliveryFailed(source="courier", about=About(Source.WATCH, "w2"), tried=(), person=mathis),
             MemoryCorrected(source="memory", memory_id="m1", text="Le chat s'appelle Biscotte"),
             PresenceChanged(source="presence", person=mathis, home=True, room="salon"),
             PresenceChanged(source="presence", person=mathis, home=False),

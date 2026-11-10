@@ -5,7 +5,6 @@ from datetime import datetime
 from pydantic import BaseModel
 
 from nestor.admin.api.v1.shared import People, PersonRef
-from nestor.admin.presentation import subject
 from nestor.core import Health
 from nestor.modules.activity import Activity, AgentActivity
 from nestor.modules.initiative import DeliveryPolicy, FollowUp
@@ -34,7 +33,6 @@ class QuietHoursOut(BaseModel):
 class ScheduledDeliveryOut(BaseModel):
     """A written follow-up of something said aloud: sent at `due_at` unless someone answers first."""
 
-    about: str  # as journaled: `task 3f2a completed`, `watch w1`
     delivery: str  # the thread it belongs to, as the journal's `links.delivery` (`watch:w1`, `task:3f2a`)
     person: PersonRef | None
     spoken_on: str  # where it was said (`voice:salon`)
@@ -43,10 +41,8 @@ class ScheduledDeliveryOut(BaseModel):
 
     @classmethod
     def of(cls, follow_up: FollowUp, people: People) -> "ScheduledDeliveryOut":
-        about = subject(follow_up.about)
         return cls(
-            about=follow_up.about,
-            delivery=about["about"] if about["subject"] == "other" else f"{about['subject']}:{about['id']}",
+            delivery=follow_up.about.key,
             person=people.ref(follow_up.person),
             spoken_on=str(follow_up.spoken),
             written_on=str(follow_up.written),

@@ -7,6 +7,7 @@ from nestor.core import PersonId
 from nestor.modules.accounts import Role
 from nestor.modules.channels import Address
 from nestor.modules.cognition import TaskStatus
+from nestor.modules.conversation import About, Source
 from nestor.modules.initiative import Watch
 from nestor.testing.satellites import SOFTWARE, RecordingDevice, pair_by_code
 
@@ -138,7 +139,9 @@ async def test_resources_say_where_they_come_from_and_what_became_of_them(tmp_pa
         await nestor.tasks.cancel(other.id)
         await nestor.journal.publish(TaskDelivered(source="tasks", task_id=quick.id, address=TELEGRAM))
         await nestor.journal.publish(
-            Delivered(source="courier", address=Address("telegram", "9"), about=f"task {other.id} cancelled")
+            Delivered(
+                source="courier", address=Address("telegram", "9"), about=About(Source.TASK, other.id, "cancelled")
+            )
         )
         watch = await nestor.watch_book.create(Watch(what="le colis", owner=MATHIS, created_in=TELEGRAM))
         for item in ("i1", "i2"):

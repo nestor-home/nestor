@@ -12,10 +12,17 @@ from nestor.modules.accounts import Role
 from nestor.modules.channels import Address, Exchange, InboundMessage, Medium, Sender
 from nestor.modules.cognition import TaskEnded, TaskStarted, TaskStatus
 from nestor.modules.cognition.delegation.events import TaskDelivered
-from nestor.modules.conversation import AssistantTurn, Conversations, NotificationTurn, UserTurn
+from nestor.modules.conversation import About, AssistantTurn, Conversations, NotificationTurn, Source, UserTurn
 from nestor.modules.home import PresenceChanged
 from nestor.modules.identity import Speaker
-from nestor.modules.initiative import Delivered, DeliveryConsidered, WatchCreated, WatchTriggered
+from nestor.modules.initiative import (
+    Delivered,
+    DeliveryConsidered,
+    DeliveryWithheld,
+    ScheduleFired,
+    WatchCreated,
+    WatchTriggered,
+)
 from nestor.modules.memory import MemoryRecorded
 
 from ....harness import OWNER, PASSWORD, Api, Harness
@@ -40,26 +47,41 @@ def by_type(found: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
 
 async def test_a_watch_chains_to_its_delivery_and_its_follow_up(tmp_path: Path) -> None:
     async with Harness(tmp_path) as admin:
+        w1 = About(Source.WATCH, "w1")
         for event in (
             WatchCreated(source="watch-book", watch_id="w1", what="le colis", kinds=("mail",), once=True),
             WatchTriggered(source="watch-keeper", watch_id="w1", item_id="i1", item_title="Colis", summary=""),
-            DeliveryConsidered(source="courier", about="watch w1", reason=REASON, spoken=VOICE, person=MATHIS),
-            Delivered(source="courier", address=VOICE, about="watch w1", person=MATHIS),
-            DeliveryConsidered(source="courier", about="watch w1 (follow-up)", reason=REASON, written=TELEGRAM),
-            Delivered(source="courier", address=TELEGRAM, about="watch w1 (follow-up)", person=MATHIS),
+            DeliveryConsidered(source="courier", about=w1, reason=REASON, spoken=VOICE, written=TELEGRAM),
+            Delivered(source="courier", address=VOICE, about=w1, person=MATHIS),
+            Delivered(source="courier", address=TELEGRAM, about=w1, person=MATHIS, follow_up=True),
         ):
             await admin.nestor.journal.publish(event)
         found = by_type(await items(await admin.api(), watch="w1"))
         created, triggered = found["watch.created"][0], found["watch.triggered"][0]
-        considered, follow_up = found["initiative.considered"]
+        (considered,) = found["initiative.considered"]
         delivered, followed = found["initiative.delivered"]
         assert triggered["cause"] == created["position"]
         assert considered["cause"] == triggered["position"]
         assert delivered["cause"] == considered["position"]
-        assert follow_up["cause"] == delivered["position"], "a follow-up is caused by the first delivery"
-        assert followed["cause"] == follow_up["position"]
-        assert considered["message"]["args"]["follow_up"] == "no" and follow_up["message"]["args"]["follow_up"] == "yes"
-        assert {i["links"]["delivery"] for i in (considered, delivered, follow_up, followed)} == {"watch:w1"}
+        assert followed["cause"] == delivered["position"], "a follow-up is caused by the first delivery"
+        assert delivered["message"]["args"]["follow_up"] == "no" and followed["message"]["args"]["follow_up"] == "yes"
+        assert {i["links"]["delivery"] for i in (considered, delivered, followed)} == {"watch:w1"}
+
+
+async def test_a_check_that_found_nothing_chains_from_its_wake_up(tmp_path: Path) -> None:
+    async with Harness(tmp_path) as admin:
+        s1 = About(Source.SCHEDULE, "s1")
+        for event in (
+            ScheduleFired(source="scheduler", schedule_id="s1", due_at=utc_now()),
+            DeliveryConsidered(source="courier", about=s1, reason=REASON, written=TELEGRAM, person=MATHIS),
+            DeliveryWithheld(source="courier", address=TELEGRAM, about=s1, person=MATHIS),
+        ):
+            await admin.nestor.journal.publish(event)
+        found = by_type(await items(await admin.api()))
+        fired, considered = found["schedule.fired"][0], found["initiative.considered"][0]
+        withheld = found["initiative.withheld"][0]
+        assert considered["cause"] == fired["position"] and withheld["cause"] == considered["position"]
+        assert withheld["links"]["delivery"] == "schedule:s1"
 
 
 async def test_a_task_chains_from_its_start_to_its_result(tmp_path: Path) -> None:
@@ -67,7 +89,9 @@ async def test_a_task_chains_from_its_start_to_its_result(tmp_path: Path) -> Non
         for event in (
             TaskStarted(source="tasks", task_id="t1", objective="Analyse", executor="hermes", origin=TELEGRAM),
             TaskEnded(source="tasks", task_id="t1", status=TaskStatus.COMPLETED, result="ok", duration_s=12),
-            DeliveryConsidered(source="courier", about="task t1 completed", reason=REASON, written=TELEGRAM),
+            DeliveryConsidered(
+                source="courier", about=About(Source.TASK, "t1", "completed"), reason=REASON, written=TELEGRAM
+            ),
             TaskDelivered(source="tasks", task_id="t1", address=TELEGRAM),
         ):
             await admin.nestor.journal.publish(event)
@@ -83,13 +107,15 @@ async def test_an_unprompted_message_chains_from_its_delivery_through_its_cue(tm
     async with Harness(tmp_path) as admin:
         turn = Exchange(conversation_id="c1", turn_id="t1")
         for event in (
-            DeliveryConsidered(source="courier", about="task t1 completed", reason=REASON, written=TELEGRAM),
+            DeliveryConsidered(
+                source="courier", about=About(Source.TASK, "t1", "completed"), reason=REASON, written=TELEGRAM
+            ),
             NotificationTurn(
                 source="agent",
                 session=TELEGRAM.session,
                 address=TELEGRAM,
                 text="Result: ok",
-                about="task t1 completed",
+                about=About(Source.TASK, "t1", "completed"),
                 exchange=turn,
                 person=PersonId("mathis"),
             ),
@@ -131,7 +157,9 @@ async def test_every_filter_narrows_the_journal(tmp_path: Path) -> None:
             )
         )
         await journal.publish(PresenceChanged(source="presence", person=MATHIS, home=True, room="cuisine"))
-        await journal.publish(DeliveryConsidered(source="courier", about="watch w9", reason=REASON, person=MATHIS))
+        await journal.publish(
+            DeliveryConsidered(source="courier", about=About(Source.WATCH, "w9"), reason=REASON, person=MATHIS)
+        )
         await journal.publish(MemoryRecorded(source="memory", memory_id="m1", text="Aime le thé", about=MATHILDE))
         api = await admin.api()
 

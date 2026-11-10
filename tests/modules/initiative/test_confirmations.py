@@ -124,7 +124,7 @@ VOICE_OF_MATHIS = Speaker(MATHIS.id, Identified.VOICE, 0.9)
 
 async def test_a_sensitive_action_asked_aloud_is_confirmed_in_writing_then_runs_where_it_was_asked() -> None:
     def confirm(request: ModelRequest) -> ToolCall:
-        found = request.messages[0].text.split("[", 1)[1].split("]", 1)[0]
+        found = request.messages[0].text.split("- [", 1)[1].split("]", 1)[0]  # the confirmation waiting
         return ToolCall("a1", "answer_confirmation", {"confirmation_id": found, "approve": True})
 
     home = Home("Mathis, tu confirmes l'ouverture du garage ?", confirm, "C'est ouvert.", "Le garage s'ouvre.")

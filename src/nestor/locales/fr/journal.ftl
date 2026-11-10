@@ -10,23 +10,7 @@ journal-user-said = { $known ->
        *[other] { $person } a dit
     }
 }
-journal-notification-turn = Pour { $assistant } : { $subject ->
-    [task] tâche { $id } { $status ->
-        [completed] terminée
-        [failed] en échec
-       *[other] { $status }
-    }
-    [watch] veille { $id } déclenchée
-    [tool] résultat d'un outil{ $status ->
-        [failed] {" "}(en échec)
-       *[other] {""}
-    }
-    [message] message { $id }{ $status ->
-        [undelivered] {" "}non remis
-       *[other] {" "}à transmettre
-    }
-   *[other] { $about }
-}
+journal-notification-turn = Pour { $assistant } : { journal-subject }
 journal-assistant-answered = { $assistant } a répondu
 journal-assistant-interrupted = { $assistant } a répondu (interrompu)
 journal-fallback = Réponse de secours : { $reason ->
@@ -60,51 +44,37 @@ journal-task-ended = Tâche { $task } { $status ->
 } ({ NUMBER($seconds, maximumFractionDigits: 0) } s)
 journal-task-delivered = Résultat de la tâche { $task } transmis
 
+journal-subject = { $subject ->
+    [task] tâche { $id } { $status ->
+        [completed] terminée
+        [failed] en échec
+        [cancelled] annulée
+       *[other] { $status }
+    }
+    [watch] veille { $id }
+    [schedule] rappel { $id }
+    [tool] résultat d'un outil{ $status ->
+        [failed] {" "}(en échec)
+       *[other] {""}
+    }
+    [message] message { $id }{ $status ->
+        [undelivered] {" "}non remis
+       *[other] {""}
+    }
+   *[confirmation] confirmation { $id }{ $status ->
+        [done] {" "}exécutée
+       *[other] {""}
+    }
+}{ $follow_up ->
+    [yes] {" "}(relance)
+   *[no] {""}
+}
 journal-delivery-considered = { $known ->
     [no] Message
    *[yes] Message pour { $person }
-} : { $subject ->
-    [task] tâche { $id } { $status ->
-        [completed] terminée
-        [failed] en échec
-        [cancelled] annulée
-       *[other] { $status }
-    }
-    [watch] veille { $id }
-    [tool] résultat d'un outil{ $status ->
-        [failed] {" "}(en échec)
-       *[other] {""}
-    }
-    [message] message { $id }{ $status ->
-        [undelivered] {" "}non remis
-       *[other] {""}
-    }
-   *[other] { $about }
-}{ $follow_up ->
-    [yes] {" "}(relance)
-   *[no] {""}
-}
-journal-delivered = Message transmis : { $subject ->
-    [task] tâche { $id } { $status ->
-        [completed] terminée
-        [failed] en échec
-        [cancelled] annulée
-       *[other] { $status }
-    }
-    [watch] veille { $id }
-    [tool] résultat d'un outil{ $status ->
-        [failed] {" "}(en échec)
-       *[other] {""}
-    }
-    [message] message { $id }{ $status ->
-        [undelivered] {" "}non remis
-       *[other] {""}
-    }
-   *[other] { $about }
-}{ $follow_up ->
-    [yes] {" "}(relance)
-   *[no] {""}
-}
+} : { journal-subject }
+journal-delivered = Message transmis : { journal-subject }
+journal-delivery-withheld = Rien à dire : { journal-subject }
 journal-message-requested = { $kind ->
     [question] Question de { $by } pour { $to }
     [answer] Réponse de { $by } pour { $to }
@@ -112,27 +82,7 @@ journal-message-requested = { $kind ->
 }
 journal-message-delivered = Message { $id } remis
 journal-message-undelivered = Message { $id } non remis
-journal-delivery-failed = Message non transmis : { $subject ->
-    [task] tâche { $id } { $status ->
-        [completed] terminée
-        [failed] en échec
-        [cancelled] annulée
-       *[other] { $status }
-    }
-    [watch] veille { $id }
-    [tool] résultat d'un outil{ $status ->
-        [failed] {" "}(en échec)
-       *[other] {""}
-    }
-    [message] message { $id }{ $status ->
-        [undelivered] {" "}non remis
-       *[other] {""}
-    }
-   *[other] { $about }
-}{ $follow_up ->
-    [yes] {" "}(relance)
-   *[no] {""}
-}
+journal-delivery-failed = Message non transmis : { journal-subject }
 journal-detail-plan = Prévu : { $way ->
     [spoken] à voix haute sur { $spoken }
     [written] par écrit sur { $written }

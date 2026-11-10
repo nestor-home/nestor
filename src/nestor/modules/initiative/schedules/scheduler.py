@@ -1,5 +1,6 @@
 """Wakes the agent when a schedule is due: the instruction is a notification for whoever set it, which the courier
-delivers like a task's result. The agent does what it asks with its tools and tells them what they need to know."""
+delivers like a task's result. The agent does what it asks with its tools and tells them what they need to know, or
+nothing (a check that found nothing)."""
 
 import asyncio
 import contextlib
@@ -8,7 +9,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from nestor.core import Component
-from nestor.modules.conversation import Notification
+from nestor.modules.conversation import About, Notification, Source
 from nestor.modules.household import Household, Person
 from nestor.modules.initiative.delivery import Courier
 from nestor.modules.initiative.schedules.book import ScheduleBook
@@ -41,7 +42,9 @@ class Scheduler(Component):
         for schedule, due_at in due:
             await self.book.fired(schedule.id, due_at)  # before it runs: never twice
             owner = self.household.person(schedule.owner) if schedule.owner else None
-            notification = Notification(self._instruction(schedule, due_at, owner), f"schedule {schedule.id}")
+            notification = Notification(
+                self._instruction(schedule, due_at, owner), About(Source.SCHEDULE, schedule.id), quiet=True
+            )
             try:  # where it was set, or wherever its owner is reached; a delivery nothing took is journaled
                 await self.courier.deliver(owner, notification, origin=schedule.created_in)
             except Exception:  # one wake-up failing never stops the others
@@ -50,13 +53,8 @@ class Scheduler(Component):
 
     def _instruction(self, schedule: Schedule, due_at: datetime, owner: Person | None) -> str:
         local = due_at.astimezone(ZoneInfo(self.book.timezone))
-        whose, who = (f" {owner.name} set", owner.name) if owner else ("", "the person")
-        return (
-            f"A wake-up{whose} is due now ({local:%A %H:%M}): {schedule.instruction}\n"
-            f"Do it now, with your tools if it needs them. What you write goes to {who}: tell them, briefly and in "
-            "your own words, what they need to know, and write nothing at all if there is nothing for them (a check "
-            "that found nothing)."
-        )
+        whose = f" {owner.name} set" if owner else ""
+        return f"A wake-up{whose} is due now ({local:%A %H:%M}): {schedule.instruction}"
 
     async def _run(self) -> None:
         while True:

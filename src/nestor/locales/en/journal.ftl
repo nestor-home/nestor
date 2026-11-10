@@ -11,23 +11,7 @@ journal-user-said = { $known ->
        *[other] { $person } said
     }
 }
-journal-notification-turn = For { $assistant }: { $subject ->
-    [task] task { $id } { $status ->
-        [completed] completed
-        [failed] failed
-       *[other] { $status }
-    }
-    [watch] watch { $id } matched
-    [tool] result of a tool{ $status ->
-        [failed] {" "}(failed)
-       *[other] {""}
-    }
-    [message] message { $id }{ $status ->
-        [undelivered] {" "}not delivered
-       *[other] {" "}to pass on
-    }
-   *[other] { $about }
-}
+journal-notification-turn = For { $assistant }: { journal-subject }
 journal-assistant-answered = { $assistant } answered
 journal-assistant-interrupted = { $assistant } answered (interrupted)
 journal-fallback = Fallback answer: { $reason ->
@@ -61,51 +45,37 @@ journal-task-ended = Task { $task } { $status ->
 } ({ NUMBER($seconds, maximumFractionDigits: 0) } s)
 journal-task-delivered = Result of task { $task } passed on
 
+journal-subject = { $subject ->
+    [task] task { $id } { $status ->
+        [completed] completed
+        [failed] failed
+        [cancelled] cancelled
+       *[other] { $status }
+    }
+    [watch] watch { $id }
+    [schedule] reminder { $id }
+    [tool] result of a tool{ $status ->
+        [failed] {" "}(failed)
+       *[other] {""}
+    }
+    [message] message { $id }{ $status ->
+        [undelivered] {" "}not delivered
+       *[other] {""}
+    }
+   *[confirmation] confirmation { $id }{ $status ->
+        [done] {" "}carried out
+       *[other] {""}
+    }
+}{ $follow_up ->
+    [yes] {" "}(follow-up)
+   *[no] {""}
+}
 journal-delivery-considered = { $known ->
     [no] Message
    *[yes] Message for { $person }
-}: { $subject ->
-    [task] task { $id } { $status ->
-        [completed] completed
-        [failed] failed
-        [cancelled] cancelled
-       *[other] { $status }
-    }
-    [watch] watch { $id }
-    [tool] result of a tool{ $status ->
-        [failed] {" "}(failed)
-       *[other] {""}
-    }
-    [message] message { $id }{ $status ->
-        [undelivered] {" "}not delivered
-       *[other] {""}
-    }
-   *[other] { $about }
-}{ $follow_up ->
-    [yes] {" "}(follow-up)
-   *[no] {""}
-}
-journal-delivered = Message passed on: { $subject ->
-    [task] task { $id } { $status ->
-        [completed] completed
-        [failed] failed
-        [cancelled] cancelled
-       *[other] { $status }
-    }
-    [watch] watch { $id }
-    [tool] result of a tool{ $status ->
-        [failed] {" "}(failed)
-       *[other] {""}
-    }
-    [message] message { $id }{ $status ->
-        [undelivered] {" "}not delivered
-       *[other] {""}
-    }
-   *[other] { $about }
-}{ $follow_up ->
-    [yes] {" "}(follow-up)
-   *[no] {""}
-}
+}: { journal-subject }
+journal-delivered = Message passed on: { journal-subject }
+journal-delivery-withheld = Nothing to tell: { journal-subject }
 journal-message-requested = { $kind ->
     [question] Question from { $by } for { $to }
     [answer] Answer from { $by } for { $to }
@@ -113,27 +83,7 @@ journal-message-requested = { $kind ->
 }
 journal-message-delivered = Message { $id } delivered
 journal-message-undelivered = Message { $id } not delivered
-journal-delivery-failed = Message not passed on: { $subject ->
-    [task] task { $id } { $status ->
-        [completed] completed
-        [failed] failed
-        [cancelled] cancelled
-       *[other] { $status }
-    }
-    [watch] watch { $id }
-    [tool] result of a tool{ $status ->
-        [failed] {" "}(failed)
-       *[other] {""}
-    }
-    [message] message { $id }{ $status ->
-        [undelivered] {" "}not delivered
-       *[other] {""}
-    }
-   *[other] { $about }
-}{ $follow_up ->
-    [yes] {" "}(follow-up)
-   *[no] {""}
-}
+journal-delivery-failed = Message not passed on: { journal-subject }
 journal-detail-plan = Planned: { $way ->
     [spoken] aloud on { $spoken }
     [written] in writing on { $written }

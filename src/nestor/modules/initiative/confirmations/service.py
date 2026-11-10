@@ -18,7 +18,7 @@ from nestor.core import ContractError, NestorError, PersonId, SessionId, new_id,
 from nestor.modules.cognition.model import ToolCall, ToolSpec
 from nestor.modules.cognition.tools import InWriting, Risk, Tool, ToolContext, ToolFailed, ToolProvider
 from nestor.modules.cognition.tools.types import ToolOutput
-from nestor.modules.conversation import ContextProvider, Layer, Notification, Sections, TurnContext
+from nestor.modules.conversation import About, ContextProvider, Layer, Notification, Sections, Source, TurnContext
 from nestor.modules.household import Household
 from nestor.modules.identity import Identified, Speaker
 from nestor.modules.initiative.confirmations.events import ConfirmationAnswered, ConfirmationRequested
@@ -143,7 +143,7 @@ class Confirmations(InWriting, ToolProvider, ContextProvider):
                     f"What was asked aloud here ({found.tool}) was confirmed in writing. Its result: {result}. "
                     "Say briefly that it is done, or what went wrong; anything the result says to say exactly, say "
                     "it word for word.",
-                    f"confirmation {found.confirmation_id} done",
+                    About(Source.CONFIRMATION, found.confirmation_id, "done"),
                 ),
                 origin=found.origin,
             )
@@ -178,7 +178,7 @@ class Confirmations(InWriting, ToolProvider, ContextProvider):
                     f"{json.dumps(request.arguments, ensure_ascii=False)} ({about}). It is sensitive: ask "
                     f"{person.name} to confirm or refuse it here, saying exactly what will happen. Without an answer "
                     f"within {minutes} minutes, nothing happens. Its id is {request.confirmation_id}.",
-                    f"confirmation {request.confirmation_id}",
+                    About(Source.CONFIRMATION, request.confirmation_id),
                 ),
                 written=True,
             )

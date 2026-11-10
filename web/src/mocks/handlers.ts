@@ -987,7 +987,6 @@ export const handlers = [
       quiet_hours: hours,
       upcoming: [
         {
-          about: "watch w-2b77",
           delivery: "watch:w-2b77",
           person: refOf("mathis"),
           spoken_on: "voice:bureau",

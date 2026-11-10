@@ -3,6 +3,7 @@ import {
   BellRing,
   Check,
   CircleAlert,
+  CircleSlash,
   Inbox,
   Megaphone,
   Play,
@@ -47,16 +48,15 @@ export function stepLook(item: JournalItem): StepLook {
   if (is(item, "watchTriggered"))
     return { label: tr("step-watch-triggered"), icon: Inbox, tone: "text-kind-watch", dot: "bg-kind-watch" };
   if (is(item, "considered"))
-    return {
-      label: tr(followUp ? "step-follow-up" : "step-considered"),
-      icon: followUp ? BellRing : Megaphone,
-      tone: "text-ember",
-      dot: "bg-ember",
-    };
+    return { label: tr("step-considered"), icon: Megaphone, tone: "text-ember", dot: "bg-ember" };
+  if (is(item, "delivered") && followUp)
+    return { label: tr("step-follow-up"), icon: BellRing, tone: "text-ember", dot: "bg-ember" };
   if (is(item, "delivered"))
     return item.channels.some((c) => SPOKEN.has(c))
       ? { label: tr("step-delivered-spoken"), icon: Volume2, tone: "text-ember", dot: "bg-ember" }
       : { label: tr("step-delivered-written"), icon: Send, tone: "text-ember", dot: "bg-ember" };
+  if (is(item, "withheld"))
+    return { label: tr("step-withheld"), icon: CircleSlash, tone: "text-ink-muted", dot: "bg-ink-faint" };
   if (is(item, "deliveryFailed"))
     return { label: tr("step-delivery-failed"), icon: CircleAlert, tone: "text-brick", dot: "bg-brick" };
   return { label: say(item), icon: StepForward, tone: "text-ink-muted", dot: "bg-ink-faint" };

@@ -7,7 +7,7 @@ from zoneinfo import ZoneInfo
 
 from nestor.core.i18n import Locale, Message
 from nestor.modules.channels import Medium
-from nestor.modules.conversation.types import FallbackReason
+from nestor.modules.conversation.types import SILENT, FallbackReason
 from nestor.modules.household import Person
 from nestor.modules.identity import Identified, Speaker
 
@@ -20,6 +20,14 @@ WRITTEN = """You are writing in a chat. Be concise and natural; light formatting
 ENGLISH = Locale("en")
 
 HONESTY = """Never claim something was done without its result. If you cannot do something, say so plainly."""
+
+NOTIFICATIONS = """Some messages come from Nestor itself, marked [From Nestor itself, …]: a task's result, a watch, a \
+wake-up, a message to pass on. Answer one as a message of yours to the person it is for, unprompted: briefly, in your \
+own words, never with internal identifiers. Do what it asks with your tools first: only your last message reaches \
+them, so never announce what you are about to do."""
+
+QUIET = f"""What opens this turn may go unanswered: if there is nothing they need to know (a check that found \
+nothing), answer exactly {SILENT} and nothing else."""
 
 FALLBACKS: Mapping[FallbackReason, Message] = {
     FallbackReason.MODEL_UNAVAILABLE: Message.of("fallback-model-unavailable"),
@@ -73,6 +81,7 @@ class Persona:
                 SPOKEN if medium is Medium.SPOKEN else WRITTEN,
                 style.strip(),
                 HONESTY,
+                NOTIFICATIONS,
                 *guidance,
             ),
             household=_joined(f"The household: {names}." if names else "", *household),

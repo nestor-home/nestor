@@ -17,9 +17,11 @@ from nestor.modules.conversation.persona import Instructions, Persona
 from nestor.modules.conversation.ports import ContextProvider, Layer, Sections, TurnContext
 from nestor.modules.conversation.service import Agent, AgentSettings, ChannelProfile, LiveReplies, ModelChoice
 from nestor.modules.conversation.speakers import Speakers
-from nestor.modules.conversation.types import FallbackReason, Notification, ReplyPhase
+from nestor.modules.conversation.types import SILENT, About, FallbackReason, Notification, ReplyPhase, Source
 
 __all__ = [
+    "SILENT",
+    "About",
     "Agent",
     "AgentSettings",
     "AnswerCut",
@@ -38,6 +40,7 @@ __all__ = [
     "Persona",
     "ReplyPhase",
     "Sections",
+    "Source",
     "SpeakerDeclared",
     "Speakers",
     "TurnContext",

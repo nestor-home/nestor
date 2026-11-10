@@ -12,12 +12,14 @@ from nestor.modules.cognition import Notify, TaskDelivered, TaskEnded, TaskStart
 from nestor.modules.cognition.model import Role, ToolCall, ToolSpec
 from nestor.modules.cognition.tools import Tool, Toolbox, ToolCalled, ToolContext, ToolDeferred, ToolReturned
 from nestor.modules.conversation import (
+    About,
     Agent,
     AgentSettings,
     AssistantTurn,
     ModelChoice,
     NotificationTurn,
     Persona,
+    Source,
 )
 from nestor.modules.household import Account, Household, Person
 from nestor.modules.initiative import Courier, Delivered, DeliveryFailed, Returns, ToolResultDelivered
@@ -158,7 +160,11 @@ async def test_the_person_answering_a_result_is_answered_with_it_in_mind() -> No
     assert [m.role for m in history] == [Role.USER, Role.ASSISTANT, Role.USER]
     assert "Result: tout est vert" in history[0].content and "not said by anyone here" in history[0].content
     [internal] = await home.journal.history(NotificationTurn)
-    assert (internal.about, internal.person, internal.address) == ("task t1 completed", MATHIS.id, TELEGRAM)
+    assert (internal.about, internal.person, internal.address) == (
+        About(Source.TASK, "t1", "completed"),
+        MATHIS.id,
+        TELEGRAM,
+    )
     [said] = [t for t in await home.journal.history(AssistantTurn) if t.exchange == internal.exchange]
     assert said.text == "Ton analyse est finie : tout est vert.", "the message and what caused it share their turn"
 
@@ -277,7 +283,7 @@ async def test_a_tool_slower_than_the_turn_answers_in_the_conversation_once_done
     notification = model.requests[2].messages[-1].content
     assert "Result: 12 mails non lus" in notification and "count_mails" in notification
     [returned] = await home.journal.history(NotificationTurn)
-    assert (returned.about, returned.person) == ("tool c1 returned", MATHIS.id)
+    assert (returned.about, returned.person) == (About(Source.TOOL, "c1", "returned"), MATHIS.id)
 
 
 async def test_a_call_cut_short_by_a_restart_is_said_to_have_failed() -> None:

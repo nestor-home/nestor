@@ -29,10 +29,10 @@ from nestor.modules.cognition.tools import Toolbox, ToolContext
 from nestor.modules.conversation.conversations import Conversations, Turn
 from nestor.modules.conversation.events import AssistantTurn
 from nestor.modules.conversation.history import notification_message
-from nestor.modules.conversation.persona import Instructions, Persona
+from nestor.modules.conversation.persona import QUIET, Instructions, Persona
 from nestor.modules.conversation.ports import ContextProvider, Layer, TurnContext
 from nestor.modules.conversation.speakers import Speakers
-from nestor.modules.conversation.types import FallbackReason, Notification, ReplyPhase
+from nestor.modules.conversation.types import SILENT, FallbackReason, Notification, ReplyPhase
 from nestor.modules.household import Household, Person
 from nestor.modules.identity import Heard, Speaker
 from nestor.modules.journal import Journal
@@ -157,12 +157,15 @@ class Agent(Assistant):
 
     async def compose(
         self, address: Address, person: Person | None, notification: Notification, medium: Medium
-    ) -> tuple[str, ...]:
+    ) -> str | None:
         """The answer to a notification (a task's result, a watch, a message to pass on) for this conversation, to be
         delivered through `medium` to `person`: a draft, in the persona's voice and with the conversation's
-        history. Nothing is logged until it is delivered (`delivered`): a message that could not go out was
-        never said."""
-        return await AgentReply(self, address, medium, notification, person=person).collect()
+        history, the model's final words only (what it wrote before calling tools is left out). `None`: nothing to
+        tell (it wrote nothing, or `SILENT`). Nothing is logged until it is delivered (`delivered`): a message that
+        could not go out was never said. Raises `ProviderError` when the model cannot write it."""
+        reply = AgentReply(self, address, medium, notification, person=person)
+        await reply.collect()
+        return reply._final if reply._final not in ("", SILENT) else None
 
     async def delivered(
         self,
@@ -170,14 +173,13 @@ class Agent(Assistant):
         person: Person | None,
         notification: Notification,
         medium: Medium,
-        texts: Sequence[str],
+        text: str,
     ) -> Exchange:
         """Record a composed answer once sent: the notification opens a turn of the conversation, as a person's
         message would, and the answer follows it. Replies to it later see both."""
         turn = await self.conversations.turn(address, medium)
         await turn.notified(notification, person.id if person else None)
-        for text in texts:
-            await turn.answered(text)
+        await turn.answered(text)
         turn.end()
         return turn.exchange
 
@@ -214,7 +216,8 @@ class AgentReply(Reply):
     saw. A voice channel usually receives a message long before it is played: an interruption that comes after it was
     logged is recorded as an `AnswerCut`, so the history keeps only what the user heard.
 
-    The answer to a notification is a draft, logged with its notification by whoever delivers it (`Agent.delivered`)."""
+    The answer to a notification is a draft, logged with its notification by whoever delivers it (`Agent.delivered`):
+    no filler while the model is slow, no excuse when it fails (the delivery fails instead)."""
 
     def __init__(
         self,
@@ -229,6 +232,7 @@ class AgentReply(Reply):
         self._agent, self._address, self._person, self._medium = agent, address, person, medium
         self._speaker = Speaker.account(person.id) if person else Speaker.unknown()
         self._opening = opening
+        self._final = ""  # what the model wrote in its last round, once it asked for no more tools
         self._chunks: asyncio.Queue[str | MessageEnd | None] = asyncio.Queue()
         self._message: list[str] = []  # the message being written
         self._ended: list[tuple[str, AssistantTurn | None]] = []  # the messages written, logged if recorded
@@ -305,8 +309,11 @@ class AgentReply(Reply):
         shared = isinstance(opening, InboundMessage) and opening.sender is None
         said = self._said(history)
         instructions = await agent.instructions(self._address, self._speaker, self._medium, said, shared=shared)
+        turn = instructions.turn
+        if isinstance(opening, Notification) and opening.quiet:
+            turn = f"{turn}\n\n{QUIET}"
         messages = [
-            Message(role=Role.SYSTEM, layers=(instructions.stable, instructions.household), content=instructions.turn),
+            Message(role=Role.SYSTEM, layers=(instructions.stable, instructions.household), content=turn),
             *history,
         ]
         exchange = self._turn.exchange if self._turn else None
@@ -316,10 +323,13 @@ class AgentReply(Reply):
             try:
                 text, calls = await self._round(messages)
             except ProviderError:
+                if isinstance(opening, Notification):  # a draft fails its delivery rather than excuse itself
+                    raise
                 await self._fall_back(FallbackReason.MODEL_UNAVAILABLE)
                 return
             await self._end_message(last=not calls)
             if not calls:
+                self._final = text.strip()
                 return
             messages.append(Message(role=Role.ASSISTANT, content=text, tool_calls=calls))
             agent.replies.set(self, ReplyPhase.THINKING)
@@ -343,7 +353,8 @@ class AgentReply(Reply):
         model = agent.models.of(self._medium)
         stream = model.stream(request)
         spoken = self._medium is Medium.SPOKEN
-        filler = self._slow_filler() if spoken and not self._message and not self._ended else None
+        draft = isinstance(self._opening, Notification)  # sent once written: a filler would go out with it
+        filler = self._slow_filler() if spoken and not draft and not self._message and not self._ended else None
         try:
             async for output in stream:
                 if isinstance(output, TextDelta) and output.text:
