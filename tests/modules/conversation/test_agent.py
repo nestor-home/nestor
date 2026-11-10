@@ -384,6 +384,25 @@ async def test_a_composed_message_is_its_last_message_only(make_agent: MakeAgent
     assert await agent.compose(VOICE, MATHIS, reminder, Medium.SPOKEN) == "C'est allumé."
 
 
+class AnnouncingThenSilent(Announcing):
+    """Says a sentence, calls a tool, then finds nothing to tell."""
+
+    async def stream(self, request: ModelRequest) -> AsyncGenerator[ModelOutput]:
+        if len(self.requests) == 0:
+            async for output in super().stream(request):
+                yield output
+            return
+        self.requests.append(request)
+        yield Finished(FinishReason.STOP)
+
+
+async def test_a_check_that_announced_itself_then_found_nothing_tells_nothing(make_agent: MakeAgent) -> None:
+    agent = make_agent(model=AnnouncingThenSilent(), tools=[tool("light_on", light_on)])
+    reminder = Notification("A wake-up is due now: check the light.", About(Source.SCHEDULE, "s1"), quiet=True)
+
+    assert await agent.compose(VOICE, MATHIS, reminder, Medium.SPOKEN) is None
+
+
 async def test_a_composed_message_raises_rather_than_excuses_itself(make_agent: MakeAgent, journal: Journal) -> None:
     """A model that fails leaves the delivery to fail and be journaled: no "sorry" sent out of context."""
     agent = make_agent(model=ScriptedModel(fail=ProviderError("model", "down", transient=True)))
@@ -400,10 +419,10 @@ async def test_a_notification_says_when_it_may_stay_silent(make_agent: MakeAgent
     price = Notification("A wake-up is due now: check the price.", About(Source.SCHEDULE, "s1"), quiet=True)
     parcel = Notification("The parcel arrived.", About(Source.WATCH, "w1"))
 
-    assert await agent.compose(TELEGRAM, MATHIS, price, Medium.WRITTEN) == SILENT
-    await agent.compose(TELEGRAM, MATHIS, parcel, Medium.WRITTEN)
-    quiet, told = (request.messages[-1].content for request in model.requests)
-    assert SILENT in quiet and SILENT not in told
+    assert await agent.compose(TELEGRAM, MATHIS, price, Medium.WRITTEN) is None
+    assert await agent.compose(TELEGRAM, MATHIS, parcel, Medium.WRITTEN) == "Le colis est là."
+    quiet, told = (request.messages[0].content for request in model.requests)
+    assert SILENT in quiet and SILENT not in told, "only the turn that may go unanswered is told so"
 
 
 async def test_instructions_carry_persona_channel_person_and_context(make_agent: MakeAgent) -> None:

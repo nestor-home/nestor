@@ -11,27 +11,7 @@ journal-user-said = { $known ->
        *[other] { $person } said
     }
 }
-journal-notification-turn = For { $assistant }: { $subject ->
-    [task] task { $id } { $status ->
-        [completed] completed
-        [failed] failed
-       *[other] { $status }
-    }
-    [watch] watch { $id } matched
-    [schedule] reminder { $id } due
-    [confirmation] confirmation { $id }{ $status ->
-        [done] {" "}carried out
-       *[other] {" "}to ask
-    }
-    [tool] result of a tool{ $status ->
-        [failed] {" "}(failed)
-       *[other] {""}
-    }
-   *[message] message { $id }{ $status ->
-        [undelivered] {" "}not delivered
-       *[other] {" "}to pass on
-    }
-}
+journal-notification-turn = For { $assistant }: { journal-subject }
 journal-assistant-answered = { $assistant } answered
 journal-assistant-interrupted = { $assistant } answered (interrupted)
 journal-fallback = Fallback answer: { $reason ->

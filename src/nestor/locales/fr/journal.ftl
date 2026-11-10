@@ -10,27 +10,7 @@ journal-user-said = { $known ->
        *[other] { $person } a dit
     }
 }
-journal-notification-turn = Pour { $assistant } : { $subject ->
-    [task] tâche { $id } { $status ->
-        [completed] terminée
-        [failed] en échec
-       *[other] { $status }
-    }
-    [watch] veille { $id } déclenchée
-    [schedule] rappel { $id } arrivé
-    [confirmation] confirmation { $id }{ $status ->
-        [done] {" "}exécutée
-       *[other] {" "}à demander
-    }
-    [tool] résultat d'un outil{ $status ->
-        [failed] {" "}(en échec)
-       *[other] {""}
-    }
-   *[message] message { $id }{ $status ->
-        [undelivered] {" "}non remis
-       *[other] {" "}à transmettre
-    }
-}
+journal-notification-turn = Pour { $assistant } : { journal-subject }
 journal-assistant-answered = { $assistant } a répondu
 journal-assistant-interrupted = { $assistant } a répondu (interrompu)
 journal-fallback = Réponse de secours : { $reason ->

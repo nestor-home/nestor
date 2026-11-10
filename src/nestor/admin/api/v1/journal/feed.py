@@ -14,13 +14,13 @@ from nestor.admin.api.v1.journal.schemas import JournalItem, LinksOut, OutcomeOu
 from nestor.admin.api.v1.shared import MessageOut, People, ReasonOut
 from nestor.admin.presentation import CATEGORIES, EventDescriber, Kind, Phrasebook, Tone
 from nestor.admin.state import AdminState
-from nestor.core import SessionId
+from nestor.core import Event, SessionId
 from nestor.core.events.codec import JSON
 from nestor.modules.accounts import Principal, Scope
 from nestor.modules.cognition import TaskEnded, TaskStarted
 from nestor.modules.cognition.delegation.events import TaskDelivered
 from nestor.modules.cognition.tools import ResultStored, ToolCalled, ToolCompleted, ToolDeferred, ToolReturned
-from nestor.modules.conversation import AnswerCut, AssistantTurn, NotificationTurn, Source, UserTurn
+from nestor.modules.conversation import About, AnswerCut, AssistantTurn, NotificationTurn, Source, UserTurn
 from nestor.modules.identity import Identified
 from nestor.modules.initiative import (
     Delivered,
@@ -45,7 +45,7 @@ _DELIVERY = frozenset(
     {DeliveryConsidered.event_type, Delivered.event_type, DeliveryWithheld.event_type, DeliveryFailed.event_type}
 )
 # what brought each kind of notification, and the field of that event naming it
-_BROUGHT_BY: dict[str, tuple[type, str]] = {
+_BROUGHT_BY: dict[Source, tuple[type[Event], str]] = {
     Source.TASK: (TaskEnded, "task_id"),
     Source.TOOL: (ToolReturned, "call_id"),
     Source.WATCH: (WatchTriggered, "watch_id"),
@@ -201,8 +201,9 @@ def _cause_rule(entry: Entry) -> _Rule | None:
     payload = _payload(entry)
     kind = entry.type
 
-    def of(cause: type, key: str) -> _Rule:
-        return _Rule(frozenset({cause.event_type}), _same(key, payload.get(key)))  # ty: ignore[unresolved-attribute]
+    def of(cause: type[Event], key: str, value: JSON | None = None) -> _Rule:
+        """An earlier `cause` whose `key` is `value`, by default this entry's own `key`."""
+        return _Rule(frozenset({cause.event_type}), _same(key, payload.get(key) if value is None else value))
 
     if kind in (ToolCompleted.event_type, ToolDeferred.event_type, ResultStored.event_type):
         return of(ToolCalled, "call_id")
@@ -229,20 +230,25 @@ def _cause_rule(entry: Entry) -> _Rule | None:
         return _Rule(openers, lambda c: _exchange(c).get("turn_id") == turn)
     if kind == Delivered.event_type and payload.get("follow_up"):
         return of(Delivered, "about")  # the written follow-up of what was said aloud
-    if kind in (NotificationTurn.event_type, *_DELIVERY - {DeliveryConsidered.event_type}):
+    if kind in (
+        NotificationTurn.event_type,
+        Delivered.event_type,
+        DeliveryWithheld.event_type,
+        DeliveryFailed.event_type,
+    ):
         return of(DeliveryConsidered, "about")
-    if kind == DeliveryConsidered.event_type:
-        about = _about(entry)
-        if (brought := _BROUGHT_BY.get(about.get("source", ""))) is not None:
-            cause, key = brought
-            return _Rule(frozenset({cause.event_type}), _same(key, about.get("id")))  # ty: ignore[unresolved-attribute]
+    if kind == DeliveryConsidered.event_type and (about := _about(entry)) is not None:
+        cause, key = _BROUGHT_BY[about.source]
+        return of(cause, key, about.id)
     return None
 
 
-def _about(entry: Entry) -> dict[str, str]:
-    """The subject of a delivery or a notification, as journaled: `{"source": "task", "id": "3f2a", "status": …}`."""
+def _about(entry: Entry) -> About | None:
+    """The subject of a delivery, as journaled: `{"source": "task", "id": "3f2a", "status": "completed"}`."""
     about = _payload(entry).get("about")
-    return {k: v for k, v in about.items() if isinstance(v, str)} if isinstance(about, dict) else {}
+    if not isinstance(about, dict):
+        return None
+    return About(Source(str(about["source"])), str(about["id"]), str(about.get("status", "")))
 
 
 @dataclass(slots=True)
@@ -313,12 +319,10 @@ class Feed:
         payload = _payload(entry)
         device = payload.get("device")
         delivery = task = watch = None
-        if entry.type in _DELIVERY:
-            about = _about(entry)
-            source, ident = about.get("source"), about.get("id")
-            delivery = f"{source}:{ident}"
-            task = ident if source == Source.TASK else None
-            watch = ident if source == Source.WATCH else None
+        if entry.type in _DELIVERY and (about := _about(entry)) is not None:
+            delivery = about.key
+            task = about.id if about.source is Source.TASK else None
+            watch = about.id if about.source is Source.WATCH else None
         exchange = _exchange(entry)
         return LinksOut(
             session=_text(entry.record.get("session")),

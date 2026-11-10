@@ -46,7 +46,7 @@ export function render(lang: Lang, message: Message): string {
 const msg = (id: string, args: Message["args"] = {}): Message => ({ id, args });
 
 /** "task 3f2a completed", "schedule sc-tv": what an unprompted message is about, as the server says it. */
-const subject = (s: string, followUp: boolean): Message["args"] => {
+const subject = (s: string, followUp = false): Message["args"] => {
   const [source = "", id = "", status = ""] = s.split(" ");
   return { subject: source, id, status, follow_up: followUp ? "yes" : "no" };
 };
@@ -97,11 +97,11 @@ const TITLES: [RegExp, (m: RegExpMatchArray) => Message][] = [
   ],
   [
     /^Decided to speak to (\S+): (.+)$/,
-    (m) => msg("journal-delivery-considered", { known: "yes", person: m[1] ?? "", ...subject(m[2] ?? "", false) }),
+    (m) => msg("journal-delivery-considered", { known: "yes", person: m[1] ?? "", ...subject(m[2] ?? "") }),
   ],
   [/^Message passed on: (.+?)( \(follow-up\))?$/, (m) => msg("journal-delivered", subject(m[1] ?? "", Boolean(m[2])))],
-  [/^Message not passed on: (.+)$/, (m) => msg("journal-delivery-failed", subject(m[1] ?? "", false))],
-  [/^Nothing to tell: (.+)$/, (m) => msg("journal-delivery-withheld", subject(m[1] ?? "", false))],
+  [/^Message not passed on: (.+)$/, (m) => msg("journal-delivery-failed", subject(m[1] ?? ""))],
+  [/^Nothing to tell: (.+)$/, (m) => msg("journal-delivery-withheld", subject(m[1] ?? ""))],
   [
     /^Connection (\S+) needs to be authorised again$/,
     (m) => msg("journal-connection-changed", { connection: m[1] ?? "", status: "needs_reauth" }),

@@ -42,7 +42,7 @@ class ScheduledDeliveryOut(BaseModel):
     @classmethod
     def of(cls, follow_up: FollowUp, people: People) -> "ScheduledDeliveryOut":
         return cls(
-            delivery=f"{follow_up.about.source}:{follow_up.about.id}",
+            delivery=follow_up.about.key,
             person=people.ref(follow_up.person),
             spoken_on=str(follow_up.spoken),
             written_on=str(follow_up.written),

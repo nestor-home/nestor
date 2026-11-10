@@ -45,6 +45,11 @@ class About:
     def __str__(self) -> str:
         return " ".join(part for part in (self.source.value, self.id, self.status) if part)
 
+    @property
+    def key(self) -> str:
+        """What every notification about the same thing shares, whatever its status: `task:3f2a`."""
+        return f"{self.source.value}:{self.id}"
+
 
 SILENT = "[SILENT]"  # the whole answer to a notification that may stay silent, when there is nothing to tell
 

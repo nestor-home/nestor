@@ -4,13 +4,13 @@ when a spoken announcement gets no reaction (a closed door, the shower)."""
 import asyncio
 import contextlib
 from collections.abc import Iterable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
 
 from nestor.core import Component, PersonId, ProviderError, utc_now
 from nestor.core.i18n import Message
 from nestor.modules.channels import Address, Channel, Medium
-from nestor.modules.conversation import SILENT, About, Agent, Notification, UserTurn
+from nestor.modules.conversation import About, Agent, Notification, UserTurn
 from nestor.modules.home import PresenceSource
 from nestor.modules.household import Person
 from nestor.modules.initiative.delivery.events import Delivered, DeliveryConsidered, DeliveryFailed, DeliveryWithheld
@@ -117,7 +117,7 @@ class Courier(Component):
             )
         )
         if private and plan.spoken and plan.written:
-            notice = Notification(f"{notification.text}\n\n{NOTICE}", notification.about)
+            notice = replace(notification, text=f"{notification.text}\n\n{NOTICE}")
             noticed = await self._send(person, plan.spoken, Medium.SPOKEN, notice)
             if noticed and (written_to := await self._send(person, plan.written, Medium.WRITTEN, notification)):
                 return written_to.address
@@ -164,7 +164,7 @@ class Courier(Component):
                 text = await self.agent.compose(address, person, notification, medium)
         except ProviderError:
             return None
-        if text in ("", SILENT):
+        if text is None:
             if not notification.quiet:
                 return None
             await self.journal.publish(
@@ -194,7 +194,7 @@ class Courier(Component):
                     person,
                     written,
                     Medium.WRITTEN,
-                    Notification(f"{notification.text}\n\n{FOLLOW_UP}", notification.about),
+                    replace(notification, text=f"{notification.text}\n\n{FOLLOW_UP}"),
                     follow_up=True,
                 )
 
