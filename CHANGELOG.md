@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.11.0](https://github.com/nestor-home/nestor/compare/v0.10.0...v0.11.0) (2026-11-10)
+
+
+### ⚠ BREAKING CHANGES
+
+* one contract for what Nestor says by itself ([#112](https://github.com/nestor-home/nestor/issues/112))
+* one home for Home Assistant, and reminders, messages and confirmations in the admin ([#109](https://github.com/nestor-home/nestor/issues/109))
+* wake-ups reach whoever set them, confirmations only where asked, a starting MCP server never stops Nestor ([#106](https://github.com/nestor-home/nestor/issues/106))
+
+### Features
+
+* one contract for what Nestor says by itself ([#112](https://github.com/nestor-home/nestor/issues/112)) ([45889f2](https://github.com/nestor-home/nestor/commit/45889f29b1b567b0dffc6e87dc4c1db1cf419406))
+* one home for Home Assistant, and reminders, messages and confirmations in the admin ([#109](https://github.com/nestor-home/nestor/issues/109)) ([6ab70ee](https://github.com/nestor-home/nestor/commit/6ab70ee8db89d5677f0a14e02c22333ed7491601))
+
+
+### Bug Fixes
+
+* wake-ups reach whoever set them, confirmations only where asked, a starting MCP server never stops Nestor ([#106](https://github.com/nestor-home/nestor/issues/106)) ([3931e6c](https://github.com/nestor-home/nestor/commit/3931e6c5c35793761af63f490d446762ba685b53))
+
+
+### Documentation
+
+* a project README, with its banner, badges, quickstart and links ([#113](https://github.com/nestor-home/nestor/issues/113)) ([b9fc2e8](https://github.com/nestor-home/nestor/commit/b9fc2e82fc4d0d50f4471742bd2041360b054516))
+
 ## [0.10.0](https://github.com/nestor-home/nestor/compare/v0.9.0...v0.10.0) (2026-11-09)
 
 
