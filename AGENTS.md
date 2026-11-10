@@ -149,6 +149,50 @@ lines. A new type is a member of `ModelType`, its base class and its contract, n
   5. Tests follow the same tree (`tests/admin/api/v1/<resource>/`); what crosses resources (the OpenAPI
      document, permissions) stays at the top. Moving code keeps `web/openapi.json` byte for byte.
 
+## Admin (`web/`)
+
+React (Vite, TanStack Router and Query, Tailwind, shadcn/ui on Base UI, Project Fluent), built into
+`src/nestor/admin/static/app/` and served by Nestor. On the mocks, sign in as `mathis` (owner) or `lea`
+(admin) with the password `nestor`; satellites pair with the code `424242`.
+`NESTOR_URL=http://localhost:8470 E2E_LOGIN=… E2E_PASSWORD=… pnpm e2e:live` runs the e2e suite on a
+throwaway instance. The visual identity lives in `web/src/styles/tokens.css`, the logo slot in
+`web/src/components/wordmark.tsx`, the admin's texts in `web/src/locales/{en,fr}/*.ftl` (the server's own
+messages come from `GET /api/v1/i18n/{locale}`), and the agent's figure is the
+[`@nestor-home/character`](https://github.com/nestor-home/nestor-character) package, shown through
+`web/src/components/agent-figure.tsx`.
+
+- `pnpm lint` runs the project's Biome plugins (`web/lint/*.grit`): no native form controls or
+  hand-written ARIA widgets in features, no Base UI or cmdk imports outside `components/ui`, no presence
+  variants on cmdk attributes, no boolean `data-*` attributes that render `"false"`.
+- Copy: a text earns its place only if it tells the person something they need (a consequence, a rule,
+  the next step, how to fix an error). No description that restates its title, no "here you can…" intro,
+  and almost no em dashes (a period, a colon, parentheses or a middle dot instead):
+  `web/src/i18n/catalog.test.ts` fails on all three. The agent speaks in the first person only where it
+  speaks (its line on the home page, empty states, toasts after what it does); system texts stay neutral.
+
+## Benchmarks
+
+A variant is a fragment of `nestor.yaml` (a whole one works too), with the suite's knobs under `bench`;
+`${NAME}` resolves from the environment and the `.env` next to it. `--replay` scores a run again from the
+recorded replies, `nestor bench compare <run> <run>` sets two side by side. A run writes
+`bench-results/<suite>/<started>-<variant>/results.json` (dataset hash, variant with its secrets masked,
+the models that answered, Nestor's version and commit, every case's output and model calls with latency,
+tokens and cost) and a self-contained `report.html`; replies are cached in `.bench-cache/`, keyed by
+model, request, repetition and seed. Neither folder is committed.
+
+A suite is a plugin: a `nestor.bench.Suite` in the `nestor.benches` entry-point group, with its JSONL
+dataset next to its code (`src/nestor/bench/suites/watch_triage/` is the example). It reads the records
+into cases, runs one case with the trial's models (every call measured and replayable) and sums the
+results into metrics and findings, whose labels are Fluent messages. A suite calls the models of the roles
+it measures; with a single model in the variant, every role takes it.
+`models: {fake: {type: language, provider: watch-triage-fake}}` runs watch-triage without a network.
+
+## Docker
+
+The image starts as root only to give `/data` to its `nestor` user (uid 1000) when the folder is not
+already its own, as Docker creates a missing bind mount owned by root, then runs as that user
+(`docker-entrypoint.sh`); started with `--user`, it runs as given.
+
 ## Tests
 
 A test earns its place by catching a bug no other test catches. Before writing one, answer:
