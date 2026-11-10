@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.1](https://github.com/nestor-home/nestor/compare/v0.11.0...v0.11.1) (2026-11-10)
+
+
+### Bug Fixes
+
+* build the image on Node 26, and in CI ([#114](https://github.com/nestor-home/nestor/issues/114)) ([088e3d5](https://github.com/nestor-home/nestor/commit/088e3d59e6343f931c0d8e5c258f82947ae7a4bb))
+
 ## [0.11.0](https://github.com/nestor-home/nestor/compare/v0.10.0...v0.11.0) (2026-11-10)
 
 
