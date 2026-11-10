@@ -3,7 +3,7 @@ and the turn it belongs to (`exchange`)."""
 
 from nestor.core import Event, PersonId
 from nestor.modules.channels import Address, Exchange, Medium
-from nestor.modules.conversation.types import FallbackReason
+from nestor.modules.conversation.types import About, FallbackReason
 from nestor.modules.identity import Speaker
 
 
@@ -37,7 +37,7 @@ class NotificationTurn(Event, event_type="conversation.turn.notification"):
 
     address: Address
     text: str
-    about: str
+    about: About
     exchange: Exchange
     person: PersonId | None = None
 

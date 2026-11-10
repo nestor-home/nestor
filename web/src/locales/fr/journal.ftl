@@ -110,6 +110,7 @@ step-considered = décision
 step-follow-up = relance
 step-delivered-spoken = dit à voix haute
 step-delivered-written = écrit
+step-withheld = rien à dire
 step-delivery-failed = non transmis
 
 jr-event = Événement

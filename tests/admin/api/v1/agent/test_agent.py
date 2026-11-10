@@ -9,7 +9,7 @@ from zoneinfo import ZoneInfo
 
 from nestor.core import PersonId, utc_now
 from nestor.modules.accounts import Role
-from nestor.modules.conversation import Notification
+from nestor.modules.conversation import About, Notification, Source
 from nestor.modules.memory import MemoryRecorded
 from nestor.modules.satellites import SpeechActivityObserved
 
@@ -83,13 +83,14 @@ async def test_the_quiet_hours_and_scheduled_follow_ups_are_readable_each_to_who
     ) as admin:
         mathis = admin.nestor.household.person(PersonId("mathis"))
         before = utc_now()
-        spoken = await admin.nestor.courier.deliver(mathis, Notification("Le colis est arrivé.", "watch w1"))
+        spoken = await admin.nestor.courier.deliver(
+            mathis, Notification("Le colis est arrivé.", About(Source.WATCH, "w1"))
+        )
         assert spoken is not None and str(spoken) == "voice:salon"
         initiative = (await (await admin.api()).get("/api/v1/agent/initiative")).json()
         assert initiative["quiet_hours"] == {"start": start, "end": end, "timezone": "Europe/Paris", "active": False}
         (follow_up,) = initiative["upcoming"]
         assert {k: v for k, v in follow_up.items() if k != "due_at"} == {
-            "about": "watch w1",
             "delivery": "watch:w1",
             "person": {"id": "mathis", "name": "Mathis"},
             "spoken_on": "voice:salon",

@@ -9,7 +9,7 @@ from nestor.core import Component, Event, PersonId
 from nestor.modules.channels import Address
 from nestor.modules.cognition.delegation import Notify, TaskDelivered, TaskEnded, TaskStarted, TaskStatus
 from nestor.modules.cognition.tools import ToolDeferred, ToolReturned
-from nestor.modules.conversation import Notification
+from nestor.modules.conversation import About, Notification, Source
 from nestor.modules.household import Household, Person
 from nestor.modules.initiative.delivery.courier import Courier
 from nestor.modules.journal import Journal, Subscription
@@ -83,7 +83,8 @@ class Returns(Component):
         address = await self.courier.deliver(
             person,
             Notification(
-                _task_instruction(started, ended, person, written=written), f"task {ended.task_id} {ended.status.value}"
+                _task_instruction(started, ended, written=written),
+                About(Source.TASK, ended.task_id, ended.status.value),
             ),
             origin=started.origin,
             written=written,
@@ -102,7 +103,7 @@ class Returns(Component):
         status = "returned" if returned.ok else "failed"
         address = await self.courier.deliver(
             person,
-            Notification(_tool_instruction(deferred, returned, person), f"tool {returned.call_id} {status}"),
+            Notification(_tool_instruction(deferred, returned), About(Source.TOOL, returned.call_id, status)),
             origin=deferred.address,
         )
         if address is not None:
@@ -127,23 +128,16 @@ class Returns(Component):
                 await self.tool_returned(event)
 
 
-def _task_instruction(started: TaskStarted, ended: TaskEnded, person: Person | None, *, written: bool) -> str:
+def _task_instruction(started: TaskStarted, ended: TaskEnded, *, written: bool) -> str:
     outcome = f"Result: {ended.result}" if ended.status is TaskStatus.COMPLETED else f"Failure: {ended.error}"
-    who = person.name if person else "the person"
-    asked = " (they asked for it in writing)" if written else ""
-    return (
-        f"A task you delegated has ended ({ended.status.value}).\nObjective: {started.objective}\n{outcome}\n"
-        f"Tell {who} now, unprompted and briefly, in your own words{asked}. Do not mention internal identifiers."
-    )
+    asked = "\nThey asked for it in writing." if written else ""
+    return f"A task you delegated has ended ({ended.status.value}).\nObjective: {started.objective}\n{outcome}{asked}"
 
 
-def _tool_instruction(deferred: ToolDeferred, returned: ToolReturned, person: Person | None) -> str:
+def _tool_instruction(deferred: ToolDeferred, returned: ToolReturned) -> str:
     arguments = json.dumps(dict(deferred.arguments), ensure_ascii=False, default=str)
     outcome = f"Result: {returned.output}" if returned.ok else f"Failure: {returned.output}"
-    who = person.name if person else "the person"
     return (
         f"A tool you called earlier was still running; it has now {'answered' if returned.ok else 'failed'}.\n"
-        f"Call: {deferred.name} {arguments}\n{outcome}\n"
-        f"Tell {who} now, briefly and in your own words, what it means for what they asked. "
-        "Do not mention internal identifiers."
+        f"Call: {deferred.name} {arguments}\n{outcome}\nTell them what it means for what they asked."
     )

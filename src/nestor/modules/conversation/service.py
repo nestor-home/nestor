@@ -155,14 +155,14 @@ class Agent(Assistant):
     async def hear(self, audio: bytes) -> Heard | None:
         return await self.speakers.voices.hear(audio) if self.speakers.voices is not None else None
 
-    async def compose(
-        self, address: Address, person: Person | None, notification: Notification, medium: Medium
-    ) -> tuple[str, ...]:
+    async def compose(self, address: Address, person: Person | None, notification: Notification, medium: Medium) -> str:
         """The answer to a notification (a task's result, a watch, a message to pass on) for this conversation, to be
         delivered through `medium` to `person`: a draft, in the persona's voice and with the conversation's
-        history. Nothing is logged until it is delivered (`delivered`): a message that could not go out was
-        never said."""
-        return await AgentReply(self, address, medium, notification, person=person).collect()
+        history, its last message only (what it wrote before calling tools is left out). Empty or `SILENT`: nothing
+        to tell. Nothing is logged until it is delivered (`delivered`): a message that could not go out was never
+        said. Raises `ProviderError` when the model cannot write it."""
+        texts = await AgentReply(self, address, medium, notification, person=person).collect()
+        return texts[-1] if texts else ""
 
     async def delivered(
         self,
@@ -170,14 +170,13 @@ class Agent(Assistant):
         person: Person | None,
         notification: Notification,
         medium: Medium,
-        texts: Sequence[str],
+        text: str,
     ) -> Exchange:
         """Record a composed answer once sent: the notification opens a turn of the conversation, as a person's
         message would, and the answer follows it. Replies to it later see both."""
         turn = await self.conversations.turn(address, medium)
         await turn.notified(notification, person.id if person else None)
-        for text in texts:
-            await turn.answered(text)
+        await turn.answered(text)
         turn.end()
         return turn.exchange
 
@@ -214,7 +213,8 @@ class AgentReply(Reply):
     saw. A voice channel usually receives a message long before it is played: an interruption that comes after it was
     logged is recorded as an `AnswerCut`, so the history keeps only what the user heard.
 
-    The answer to a notification is a draft, logged with its notification by whoever delivers it (`Agent.delivered`)."""
+    The answer to a notification is a draft, logged with its notification by whoever delivers it (`Agent.delivered`):
+    no filler while the model is slow, no excuse when it fails (the delivery fails instead)."""
 
     def __init__(
         self,
@@ -229,6 +229,7 @@ class AgentReply(Reply):
         self._agent, self._address, self._person, self._medium = agent, address, person, medium
         self._speaker = Speaker.account(person.id) if person else Speaker.unknown()
         self._opening = opening
+        self._draft = isinstance(opening, Notification)
         self._chunks: asyncio.Queue[str | MessageEnd | None] = asyncio.Queue()
         self._message: list[str] = []  # the message being written
         self._ended: list[tuple[str, AssistantTurn | None]] = []  # the messages written, logged if recorded
@@ -316,6 +317,8 @@ class AgentReply(Reply):
             try:
                 text, calls = await self._round(messages)
             except ProviderError:
+                if self._draft:
+                    raise
                 await self._fall_back(FallbackReason.MODEL_UNAVAILABLE)
                 return
             await self._end_message(last=not calls)
@@ -343,7 +346,7 @@ class AgentReply(Reply):
         model = agent.models.of(self._medium)
         stream = model.stream(request)
         spoken = self._medium is Medium.SPOKEN
-        filler = self._slow_filler() if spoken and not self._message and not self._ended else None
+        filler = self._slow_filler() if spoken and not self._draft and not self._message and not self._ended else None
         try:
             async for output in stream:
                 if isinstance(output, TextDelta) and output.text:

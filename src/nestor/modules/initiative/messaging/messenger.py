@@ -5,7 +5,7 @@ import asyncio
 import contextlib
 
 from nestor.core import Component
-from nestor.modules.conversation import Notification
+from nestor.modules.conversation import About, Notification, Source
 from nestor.modules.household import Household, Person
 from nestor.modules.initiative.delivery.courier import Courier
 from nestor.modules.initiative.messaging.book import MessageBook
@@ -41,7 +41,7 @@ class Messenger(Component):
         sender = self.household.person(message.requested_by) if message.requested_by else None
         address = await self.courier.deliver(
             person,
-            Notification(self._instruction(message, person, sender), f"message {message.message_id}"),
+            Notification(self._instruction(message, person, sender), About(Source.MESSAGE, message.message_id)),
             # the conversation it was asked in is a way back only to whoever asked: never someone else's
             origin=message.origin if sender is not None and sender.id == person.id else None,
             written=message.in_writing,
@@ -56,8 +56,8 @@ class Messenger(Component):
                 sender,
                 Notification(
                     f"You could not reach {person.name} to pass this on: {message.text}\n"
-                    f"Tell {sender.name} now, briefly, that the message did not get through.",
-                    f"message {message.message_id} undelivered",
+                    "Tell them that the message did not get through.",
+                    About(Source.MESSAGE, message.message_id, "undelivered"),
                 ),
                 origin=message.origin,
             )
@@ -77,7 +77,6 @@ class Messenger(Component):
         if message.expects_reply:
             whom = sender.name if sender else "you"
             lines.append(f"It is a question: ask it, and say their answer will reach {whom}.")
-        lines.append(f"Say it to {person.name} now, unprompted and briefly, in your own words.")
         return "\n".join(lines)
 
     async def _listen(self, subscription: Subscription) -> None:

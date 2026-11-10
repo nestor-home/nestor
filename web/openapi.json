@@ -13724,10 +13724,6 @@
       },
       "ScheduledDeliveryOut": {
         "properties": {
-          "about": {
-            "type": "string",
-            "title": "About"
-          },
           "delivery": {
             "type": "string",
             "title": "Delivery"
@@ -13758,7 +13754,6 @@
         },
         "type": "object",
         "required": [
-          "about",
           "delivery",
           "person",
           "spoken_on",

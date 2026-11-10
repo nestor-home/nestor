@@ -74,7 +74,6 @@ describe("tasks and watches", () => {
     expect(articles.some((a) => a.textContent?.includes("Put it in the family calendar"))).toBe(true);
     expect(chain).toHaveTextContent("why: Léa is in the living room");
     expect(chain).toHaveTextContent("follow-up");
-    expect(chain).toHaveTextContent("why: Léa is away");
   });
 
   it("points to the catalogue when no source can feed a watch", async () => {

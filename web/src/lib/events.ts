@@ -20,6 +20,7 @@ const IDS = {
   watchTriggered: ["journal-watch-triggered"],
   considered: ["journal-delivery-considered"],
   delivered: ["journal-delivered"],
+  withheld: ["journal-delivery-withheld"],
   deliveryFailed: ["journal-delivery-failed"],
   memory: ["journal-memory-recorded"],
   presence: ["journal-presence-changed"],

@@ -417,17 +417,6 @@ export function day(now = Date.now()): JournalEvent[] {
     people: [ref("lea")],
   });
   ev({
-    ago: 199.6,
-    type: "initiative.considered",
-    title: "Decided to speak to Léa: watch 9d41 (follow-up)",
-    reason: "Léa is away",
-    detail: fr("Planned: in writing on telegram", "Prévu : par écrit sur telegram"),
-    people: [ref("lea")],
-    channels: ["telegram"],
-    tone: "decision",
-    links: { ...w, delivery: "d-2" },
-  });
-  ev({
     ago: 199.4,
     type: "initiative.delivered",
     title: "Message passed on: watch 9d41 (follow-up)",
@@ -625,12 +614,32 @@ export function day(now = Date.now()): JournalEvent[] {
     links: { ...w2, delivery: "d-3" },
   });
 
+  // the TV's price, checked: still above the threshold, so nothing to tell
+  ev({
+    ago: 85,
+    type: "initiative.considered",
+    title: "Decided to speak to Mathis: schedule sc-tv",
+    reason: "Mathis is away",
+    detail: fr("Planned: in writing on telegram", "Prévu : par écrit sur telegram"),
+    people: [ref("mathis")],
+    channels: ["telegram"],
+    tone: "decision",
+    links: { delivery: "schedule:sc-tv" },
+  });
+  ev({
+    ago: 84.8,
+    type: "initiative.withheld",
+    title: "Nothing to tell: schedule sc-tv",
+    people: [ref("mathis")],
+    channels: ["telegram"],
+    links: { delivery: "schedule:sc-tv" },
+  });
+
   // a reminder Odile never received
-  const lunch = fr("lunch reminder", "rappel du déjeuner");
   ev({
     ago: 80,
     type: "initiative.considered",
-    title: `Decided to speak to Odile: ${lunch}`,
+    title: "Decided to speak to Odile: schedule sc-lunch",
     reason: "no presence information: back to the conversation it came from",
     detail: fr("Planned: in writing on telegram", "Prévu : par écrit sur telegram"),
     people: [ref("odile")],
@@ -641,7 +650,7 @@ export function day(now = Date.now()): JournalEvent[] {
   ev({
     ago: 79.9,
     type: "initiative.undeliverable",
-    title: `Message not passed on: ${lunch}`,
+    title: "Message not passed on: schedule sc-lunch",
     detail: fr("Telegram: the recipient has blocked the bot.", "Telegram : le bot a été bloqué par la destinataire."),
     people: [ref("odile")],
     channels: ["telegram"],

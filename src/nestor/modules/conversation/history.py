@@ -8,7 +8,7 @@ from nestor.modules.channels import Exchange
 from nestor.modules.cognition.model import Message, Role, ToolCall
 from nestor.modules.cognition.tools import ToolCalled, ToolCompleted, ToolDeferred
 from nestor.modules.conversation.events import AnswerCut, AssistantTurn, NotificationTurn, UserTurn
-from nestor.modules.conversation.types import Notification
+from nestor.modules.conversation.types import SILENT, Notification
 from nestor.modules.identity import Identified, Speaker
 
 HISTORY_EVENTS = (UserTurn, NotificationTurn, AssistantTurn, AnswerCut, ToolCalled, ToolCompleted, ToolDeferred)
@@ -35,8 +35,11 @@ def heard(events: Iterable[Event]) -> dict[str, str]:
 def notification_message(notification: Notification) -> Message:
     """A notification as the model reads it, when it answers it and every time the history is replayed: a user-role
     message that says it comes from Nestor, not from anyone in the conversation (models take such messages for the
-    person's otherwise)."""
-    return Message.user(f"[From Nestor itself, not said by anyone here: {notification.about}]\n{notification.text}")
+    person's otherwise), and whether it may go unanswered."""
+    quiet = f"; answer {SILENT} if there is nothing for them" if notification.quiet else ""
+    return Message.user(
+        f"[From Nestor itself, not said by anyone here: {notification.about}{quiet}]\n{notification.text}"
+    )
 
 
 def to_messages(events: Sequence[Event], *, names: Names | None = None) -> tuple[Message, ...]:

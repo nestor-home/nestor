@@ -21,6 +21,8 @@ from nestor.modules.cognition.model import (
 )
 from nestor.modules.cognition.tools import Tool, ToolCalled, ToolCompleted, ToolContext, ToolFailed
 from nestor.modules.conversation import (
+    SILENT,
+    About,
     AgentSettings,
     AnswerCut,
     AssistantTurn,
@@ -32,6 +34,7 @@ from nestor.modules.conversation import (
     Notification,
     NotificationTurn,
     Sections,
+    Source,
     TurnContext,
     UserTurn,
 )
@@ -63,9 +66,10 @@ async def test_each_medium_answers_with_its_own_model(make_agent: MakeAgent) -> 
 
     said = await agent.respond(message("Quel temps ?", VOICE, "mic")).collect()
     typed = await agent.respond(message("Et en détail ?", VOICE, "mic", medium=Medium.WRITTEN)).collect()
-    composed = await agent.compose(TELEGRAM, MATHIS, Notification("The parcel arrived.", "watch w1"), Medium.SPOKEN)
+    parcel = Notification("The parcel arrived.", About(Source.WATCH, "w1"))
+    composed = await agent.compose(TELEGRAM, MATHIS, parcel, Medium.SPOKEN)
 
-    assert (said, typed, composed) == (("Il fait beau.",), ("Voici le détail.",), ("C'est prêt.",))
+    assert (said, typed, composed) == (("Il fait beau.",), ("Voici le détail.",), "C'est prêt.")
     assert (len(spoken.requests), len(written.requests)) == (2, 1)
 
 
@@ -318,6 +322,15 @@ async def test_a_slow_model_gets_a_filler_on_voice_only(make_agent: MakeAgent, j
     assert [e.reason for e in await journal.history(FallbackSpoken)] == [FallbackReason.MODEL_SLOW]
 
 
+async def test_a_composed_message_said_aloud_gets_no_filler(make_agent: MakeAgent, journal: Journal) -> None:
+    """A draft is sent once written: "give me a second" would go out with it, to someone who asked nothing."""
+    slow = make_agent(model=ScriptedModel("Voilà.", word_delay_s=0.05), settings=AgentSettings(slow_after_s=0.02))
+    parcel = Notification("The parcel arrived.", About(Source.WATCH, "w1"))
+
+    assert await slow.compose(VOICE, MATHIS, parcel, Medium.SPOKEN) == "Voilà."
+    assert await journal.history(FallbackSpoken) == []
+
+
 async def test_an_interruption_keeps_only_what_was_heard(make_agent: MakeAgent, journal: Journal) -> None:
     model = ScriptedModel("Il était une fois un très long conte sans fin", word_delay_s=0.01)
     reply = make_agent(model=model).respond(message("Raconte", VOICE, "mic"))
@@ -352,15 +365,45 @@ async def test_a_composed_message_uses_the_conversation_and_is_left_to_its_sende
     await make_agent("Je lance l'analyse.").respond(message("Analyse le dépôt")).collect()
     model = ScriptedModel("L'analyse est finie : trois soucis trouvés.")
 
-    notification = Notification("Task finished: 3 issues found.", "task t1 completed")
+    notification = Notification("Task finished: 3 issues found.", About(Source.TASK, "t1", "completed"))
     text = await make_agent(model=model).compose(TELEGRAM, MATHIS, notification, Medium.WRITTEN)
 
-    assert text == ("L'analyse est finie : trois soucis trouvés.",)
+    assert text == "L'analyse est finie : trois soucis trouvés."
     last = model.requests[0].messages[-1]
     assert last.role is Role.USER and last.content.endswith("Task finished: 3 issues found.")
     assert "not said by anyone here: task t1 completed" in last.content, "never taken for the person's words"
     assert await journal.history(NotificationTurn) == [], "a draft: nothing is said before it is delivered"
     assert [t.text for t in await journal.history(AssistantTurn)] == ["Je lance l'analyse."]
+
+
+async def test_a_composed_message_is_its_last_message_only(make_agent: MakeAgent) -> None:
+    """Nobody waits for it: what the model said before calling its tools ("je regarde") never goes out."""
+    agent = make_agent(model=Announcing(), tools=[tool("light_on", light_on)])
+    reminder = Notification("A wake-up is due now: turn the light on.", About(Source.SCHEDULE, "s1"), quiet=True)
+
+    assert await agent.compose(VOICE, MATHIS, reminder, Medium.SPOKEN) == "C'est allumé."
+
+
+async def test_a_composed_message_raises_rather_than_excuses_itself(make_agent: MakeAgent, journal: Journal) -> None:
+    """A model that fails leaves the delivery to fail and be journaled: no "sorry" sent out of context."""
+    agent = make_agent(model=ScriptedModel(fail=ProviderError("model", "down", transient=True)))
+    parcel = Notification("The parcel arrived.", About(Source.WATCH, "w1"))
+
+    with pytest.raises(ProviderError):
+        await agent.compose(TELEGRAM, MATHIS, parcel, Medium.WRITTEN)
+    assert await journal.history(FallbackSpoken) == []
+
+
+async def test_a_notification_says_when_it_may_stay_silent(make_agent: MakeAgent) -> None:
+    model = ScriptedModel(SILENT, "Le colis est là.")
+    agent = make_agent(model=model)
+    price = Notification("A wake-up is due now: check the price.", About(Source.SCHEDULE, "s1"), quiet=True)
+    parcel = Notification("The parcel arrived.", About(Source.WATCH, "w1"))
+
+    assert await agent.compose(TELEGRAM, MATHIS, price, Medium.WRITTEN) == SILENT
+    await agent.compose(TELEGRAM, MATHIS, parcel, Medium.WRITTEN)
+    quiet, told = (request.messages[-1].content for request in model.requests)
+    assert SILENT in quiet and SILENT not in told
 
 
 async def test_instructions_carry_persona_channel_person_and_context(make_agent: MakeAgent) -> None:

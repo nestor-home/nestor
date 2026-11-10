@@ -9,6 +9,7 @@ from nestor.admin.presentation import subject
 from nestor.core import PersonId
 from nestor.core.i18n import Message
 from nestor.modules.channels import Address, Medium
+from nestor.modules.conversation import About, Source
 from nestor.modules.home import Granularity
 from nestor.modules.household import Person
 from nestor.modules.initiative import (
@@ -66,13 +67,24 @@ def test_every_delivery_reason_of_the_policy_has_its_sentence_in_each_language(r
     assert said != reason.id and all(str(v) in said for v in reason.args.values())
 
 
-def test_a_delivery_subject_becomes_arguments_and_an_unknown_one_is_kept() -> None:
-    assert subject("task 3f2a1c completed") == {
-        "subject": "task",
-        "id": "3f2a1c",
-        "status": "completed",
-        "follow_up": "no",
-        "about": "task 3f2a1c completed",
+@pytest.mark.parametrize("locale", ["en", "fr-FR"])
+@pytest.mark.parametrize(
+    "line",
+    [
+        "journal-notification-turn",
+        "journal-delivery-considered",
+        "journal-delivered",
+        "journal-delivery-withheld",
+        "journal-delivery-failed",
+    ],
+)
+def test_every_kind_of_notification_is_named_apart_in_each_language(line: str, locale: str) -> None:
+    localizer = FluentLocalizer(catalogue_dirs(["nestor"]))
+    said = {
+        source: localizer.format(
+            Message(line, {**subject(About(source, "c0ffee")), "assistant": "Nestor", "known": "no"}), locale
+        )
+        for source in Source
     }
-    assert subject("watch 9d81 (follow-up)")["follow_up"] == "yes"
-    assert subject("anniversaire")["subject"] == "other"
+    assert len(set(said.values())) == len(Source), said
+    assert all(text != line and "{" not in text for text in said.values())

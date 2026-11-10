@@ -9,7 +9,16 @@ import pytest
 from nestor.core import PersonId, new_id
 from nestor.modules.channels import Address, Exchange, Medium
 from nestor.modules.cognition.tools import ToolContext, ToolFailed
-from nestor.modules.conversation import AnswerCut, AssistantTurn, Layer, NotificationTurn, TurnContext, UserTurn
+from nestor.modules.conversation import (
+    About,
+    AnswerCut,
+    AssistantTurn,
+    Layer,
+    NotificationTurn,
+    Source,
+    TurnContext,
+    UserTurn,
+)
 from nestor.modules.household import Account, Household, Person
 from nestor.modules.identity import Speaker
 from nestor.modules.journal import Journal
@@ -124,7 +133,7 @@ async def test_a_message_nestor_brought_is_summarized_with_what_it_was_about() -
                 session=CHAT.session,
                 address=CHAT,
                 text="Result: CI red on main",
-                about="task t1 completed",
+                about=About(Source.TASK, "t1", "completed"),
                 exchange=turn,
                 person=LEA.id,
                 at=START,

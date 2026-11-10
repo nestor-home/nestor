@@ -12,7 +12,7 @@ from datetime import datetime
 
 from nestor.admin.api.v1.journal.schemas import JournalItem, LinksOut, OutcomeOut
 from nestor.admin.api.v1.shared import MessageOut, People, ReasonOut
-from nestor.admin.presentation import CATEGORIES, EventDescriber, Kind, Phrasebook, Tone, subject
+from nestor.admin.presentation import CATEGORIES, EventDescriber, Kind, Phrasebook, Tone
 from nestor.admin.state import AdminState
 from nestor.core import SessionId
 from nestor.core.events.codec import JSON
@@ -20,24 +20,39 @@ from nestor.modules.accounts import Principal, Scope
 from nestor.modules.cognition import TaskEnded, TaskStarted
 from nestor.modules.cognition.delegation.events import TaskDelivered
 from nestor.modules.cognition.tools import ResultStored, ToolCalled, ToolCompleted, ToolDeferred, ToolReturned
-from nestor.modules.conversation import AnswerCut, AssistantTurn, NotificationTurn, UserTurn
+from nestor.modules.conversation import AnswerCut, AssistantTurn, NotificationTurn, Source, UserTurn
 from nestor.modules.identity import Identified
 from nestor.modules.initiative import (
     Delivered,
     DeliveryConsidered,
     DeliveryFailed,
+    DeliveryWithheld,
+    MessageRequested,
+    ScheduleFired,
     ToolResultDelivered,
     WatchCreated,
     WatchEnded,
     WatchTriggered,
 )
+from nestor.modules.initiative.confirmations import ConfirmationRequested
 from nestor.modules.journal import Entry, EventLog, LogQuery
 
 SCANNED = 1000  # entries read at once while filtering
 PAGE_SCAN = 5000  # at most this many entries are read for one page
 FACET_SCAN = 10_000  # facets count over at most this many of the newest entries in range
 CAUSE_SCAN = 500  # how far back a cause is looked for
-_DELIVERY = frozenset({DeliveryConsidered.event_type, Delivered.event_type, DeliveryFailed.event_type})
+_DELIVERY = frozenset(
+    {DeliveryConsidered.event_type, Delivered.event_type, DeliveryWithheld.event_type, DeliveryFailed.event_type}
+)
+# what brought each kind of notification, and the field of that event naming it
+_BROUGHT_BY: dict[str, tuple[type, str]] = {
+    Source.TASK: (TaskEnded, "task_id"),
+    Source.TOOL: (ToolReturned, "call_id"),
+    Source.WATCH: (WatchTriggered, "watch_id"),
+    Source.SCHEDULE: (ScheduleFired, "schedule_id"),
+    Source.MESSAGE: (MessageRequested, "message_id"),
+    Source.CONFIRMATION: (ConfirmationRequested, "confirmation_id"),
+}
 
 
 def _payload(entry: Entry) -> dict[str, JSON]:
@@ -212,22 +227,22 @@ def _cause_rule(entry: Entry) -> _Rule | None:
             {UserTurn.event_type, NotificationTurn.event_type}
         )  # a person's message, or Nestor's notification
         return _Rule(openers, lambda c: _exchange(c).get("turn_id") == turn)
-    if kind == NotificationTurn.event_type:
-        return of(DeliveryConsidered, "about")
-    if kind in (Delivered.event_type, DeliveryFailed.event_type):
+    if kind == Delivered.event_type and payload.get("follow_up"):
+        return of(Delivered, "about")  # the written follow-up of what was said aloud
+    if kind in (NotificationTurn.event_type, *_DELIVERY - {DeliveryConsidered.event_type}):
         return of(DeliveryConsidered, "about")
     if kind == DeliveryConsidered.event_type:
-        about = subject(str(payload.get("about", "")))
-        if about["follow_up"] == "yes":
-            first = str(payload.get("about", "")).removesuffix(" (follow-up)")
-            return _Rule(frozenset({Delivered.event_type}), _same("about", first))
-        if about["subject"] == "watch":
-            return _Rule(frozenset({WatchTriggered.event_type}), _same("watch_id", about["id"]))
-        if about["subject"] == "task":
-            return _Rule(frozenset({TaskEnded.event_type}), _same("task_id", about["id"]))
-        if about["subject"] == "tool":
-            return _Rule(frozenset({ToolReturned.event_type}), _same("call_id", about["id"]))
+        about = _about(entry)
+        if (brought := _BROUGHT_BY.get(about.get("source", ""))) is not None:
+            cause, key = brought
+            return _Rule(frozenset({cause.event_type}), _same(key, about.get("id")))  # ty: ignore[unresolved-attribute]
     return None
+
+
+def _about(entry: Entry) -> dict[str, str]:
+    """The subject of a delivery or a notification, as journaled: `{"source": "task", "id": "3f2a", "status": …}`."""
+    about = _payload(entry).get("about")
+    return {k: v for k, v in about.items() if isinstance(v, str)} if isinstance(about, dict) else {}
 
 
 @dataclass(slots=True)
@@ -299,13 +314,11 @@ class Feed:
         device = payload.get("device")
         delivery = task = watch = None
         if entry.type in _DELIVERY:
-            about = subject(str(payload.get("about", "")))
-            if about["subject"] == "other":
-                delivery = about["about"]
-            else:
-                delivery = f"{about['subject']}:{about['id']}"
-                task = about["id"] if about["subject"] == "task" else None
-                watch = about["id"] if about["subject"] == "watch" else None
+            about = _about(entry)
+            source, ident = about.get("source"), about.get("id")
+            delivery = f"{source}:{ident}"
+            task = ident if source == Source.TASK else None
+            watch = ident if source == Source.WATCH else None
         exchange = _exchange(entry)
         return LinksOut(
             session=_text(entry.record.get("session")),

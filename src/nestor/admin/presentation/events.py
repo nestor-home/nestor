@@ -40,6 +40,7 @@ from nestor.modules.cognition import (
 from nestor.modules.cognition.tools import ResultStored, ToolCalled, ToolCompleted, ToolDeferred, ToolReturned
 from nestor.modules.connectors import ConnectionChanged, ConnectionCreated, ConnectionRemoved
 from nestor.modules.conversation import (
+    About,
     AnswerCut,
     AssistantTurn,
     FallbackSpoken,
@@ -54,6 +55,7 @@ from nestor.modules.initiative import (
     Delivered,
     DeliveryConsidered,
     DeliveryFailed,
+    DeliveryWithheld,
     MessageDelivered,
     MessageRequested,
     MessageUndelivered,
@@ -93,11 +95,6 @@ from nestor.modules.system import ConfigChanged, RestartRequested, SecretChanged
 log = logging.getLogger(__name__)
 DETAIL_LIMIT = 600
 CLI = "cli"  # who did it, for an effect asked from the command line rather than by an account
-_SUBJECT = re.compile(
-    r"^(?:(?P<kind>task|tool) (?P<id>\S+) (?P<status>\w+)|watch (?P<watch>\S+)|message (?P<message>\S+)"
-    r"(?P<bounce> undelivered)?)"
-    r"(?P<follow> \(follow-up\))?$"
-)
 
 
 class Tone(StrEnum):
@@ -130,6 +127,7 @@ CATEGORIES: Mapping[Kind, tuple[type[Event], ...]] = {
     Kind.DELIVERY: (
         DeliveryConsidered,
         Delivered,
+        DeliveryWithheld,
         DeliveryFailed,
         MessageRequested,
         MessageDelivered,
@@ -206,21 +204,11 @@ def unknown_message(event_type: str, fields: Mapping[str, object] | None = None)
     return Message(f"journal-{re.sub(r'[._]', '-', event_type)}", {**args, "type": event_type})
 
 
-def subject(about: str) -> dict[str, str]:
-    """What an unprompted message was about, as arguments: `task 3f2a completed`, `tool c1 returned` (a call that
-    went on in the background), `watch 9d (follow-up)`,
-    `message 7c` (passed on), `message 7c undelivered` (telling whoever asked that it did not get through)."""
-    match = _SUBJECT.match(about)
-    if match is None:
-        return {"subject": "other", "id": "", "status": "", "follow_up": "no", "about": about}
-    kind = match["kind"] or ("watch" if match["watch"] else "message")
-    return {
-        "subject": kind,
-        "id": match["id"] or match["watch"] or match["message"],
-        "status": match["status"] or ("undelivered" if match["bounce"] else ""),
-        "follow_up": "yes" if match["follow"] else "no",
-        "about": about,
-    }
+def subject(about: About, *, follow_up: bool = False) -> dict[str, str]:
+    """What an unprompted message was about, as arguments of `journal-subject`: `task 3f2a completed`, `tool c1
+    returned` (a call that went on in the background), `schedule s1`, `message 7c undelivered` (telling whoever
+    asked that it did not get through)."""
+    return {"subject": about.source.value, "id": about.id, "status": about.status, "follow_up": _yes(follow_up)}
 
 
 def _room(event: Event) -> str | None:
@@ -340,7 +328,13 @@ class EventDescriber:
                 e, Message.of("journal-message-undelivered", id=e.message_id), tone=Tone.WARNING
             ),
             Delivered: lambda e: self._line(
-                e, Message("journal-delivered", subject(e.about)), people=[e.person], channels=[e.address]
+                e,
+                Message("journal-delivered", subject(e.about, follow_up=e.follow_up)),
+                people=[e.person],
+                channels=[e.address],
+            ),
+            DeliveryWithheld: lambda e: self._line(
+                e, Message("journal-delivery-withheld", subject(e.about)), people=[e.person], channels=[e.address]
             ),
             DeliveryFailed: lambda e: self._line(
                 e,

@@ -6,6 +6,7 @@
   "conversation.turn.cut": "conversation",
   "initiative.considered": "delivery",
   "initiative.delivered": "delivery",
+  "initiative.withheld": "delivery",
   "initiative.undeliverable": "delivery",
   "message.requested": "delivery",
   "message.delivered": "delivery",

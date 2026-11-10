@@ -45,14 +45,10 @@ export function render(lang: Lang, message: Message): string {
 
 const msg = (id: string, args: Message["args"] = {}): Message => ({ id, args });
 
-/** "task 3f2a completed", "watch 9d41": what an unprompted message is about, as the server says it. */
+/** "task 3f2a completed", "schedule sc-tv": what an unprompted message is about, as the server says it. */
 const subject = (s: string, followUp: boolean): Message["args"] => {
-  const follow_up = followUp ? "yes" : "no";
-  const task = s.match(/^task (\S+)( completed)?/);
-  if (task) return { subject: "task", id: task[1] ?? "", status: task[2] ? "completed" : "", follow_up, about: s };
-  const watch = s.match(/^watch (\S+)/);
-  if (watch) return { subject: "watch", id: watch[1] ?? "", status: "", follow_up, about: s };
-  return { subject: "other", id: "", status: "", follow_up, about: s };
+  const [source = "", id = "", status = ""] = s.split(" ");
+  return { subject: source, id, status, follow_up: followUp ? "yes" : "no" };
 };
 
 /** "0.8 s", "400 ms", "1 h 41", "9 min" in seconds. */
@@ -100,12 +96,12 @@ const TITLES: [RegExp, (m: RegExpMatchArray) => Message][] = [
     (m) => msg("journal-watch-triggered", { watch: m[1] ?? "", item: m[2] ?? "", urgent: "no" }),
   ],
   [
-    /^Decided to speak to (\S+): (.+?)( \(follow-up\))?$/,
-    (m) =>
-      msg("journal-delivery-considered", { known: "yes", person: m[1] ?? "", ...subject(m[2] ?? "", Boolean(m[3])) }),
+    /^Decided to speak to (\S+): (.+)$/,
+    (m) => msg("journal-delivery-considered", { known: "yes", person: m[1] ?? "", ...subject(m[2] ?? "", false) }),
   ],
   [/^Message passed on: (.+?)( \(follow-up\))?$/, (m) => msg("journal-delivered", subject(m[1] ?? "", Boolean(m[2])))],
   [/^Message not passed on: (.+)$/, (m) => msg("journal-delivery-failed", subject(m[1] ?? "", false))],
+  [/^Nothing to tell: (.+)$/, (m) => msg("journal-delivery-withheld", subject(m[1] ?? "", false))],
   [
     /^Connection (\S+) needs to be authorised again$/,
     (m) => msg("journal-connection-changed", { connection: m[1] ?? "", status: "needs_reauth" }),

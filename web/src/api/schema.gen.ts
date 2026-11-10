@@ -2617,8 +2617,6 @@ export interface components {
          * @description A written follow-up of something said aloud: sent at `due_at` unless someone answers first.
          */
         ScheduledDeliveryOut: {
-            /** About */
-            about: string;
             /** Delivery */
             delivery: string;
             person: components["schemas"]["PersonRef"] | null;

@@ -14,6 +14,7 @@ from nestor.modules.cognition.delegation.service import TaskManager
 from nestor.modules.cognition.model import Role, ToolCall
 from nestor.modules.cognition.tools import ToolCalled, ToolCompleted
 from nestor.modules.conversation import (
+    About,
     Agent,
     AnswerCut,
     AssistantTurn,
@@ -21,6 +22,7 @@ from nestor.modules.conversation import (
     FallbackReason,
     FallbackSpoken,
     Notification,
+    Source,
     UserTurn,
 )
 from nestor.modules.household import Household
@@ -224,7 +226,7 @@ async def test_a_composed_message_sees_only_the_open_conversation(
     await make_agent("Je lance l'analyse.", clock=clock).respond(message("Analyse")).collect()
     model = ScriptedModel("C'est fini.", "C'est fini.")
     agent = make_agent(model=model, clock=clock)
-    notification = Notification("Task finished.", "task t1 completed")
+    notification = Notification("Task finished.", About(Source.TASK, "t1", "completed"))
     await agent.compose(TELEGRAM, MATHIS, notification, Medium.WRITTEN)
     clock.now += timedelta(hours=5)
     await agent.compose(TELEGRAM, MATHIS, notification, Medium.WRITTEN)
@@ -237,11 +239,11 @@ async def test_a_composed_message_sees_only_the_open_conversation(
 
 def test_a_cue_keeps_the_beginning_and_end_of_a_long_result() -> None:
     long = "début " + "x" * 20_000 + " fin"
-    notification = Notification(long, "task t1 completed")
+    notification = Notification(long, About(Source.TASK, "t1", "completed"))
     assert (
         len(notification.text) < 8100
         and notification.text.startswith("début")
         and notification.text.endswith("fin")
         and "[… cut …]" in notification.text
     )
-    assert Notification("court", "task t1 completed").text == "court"
+    assert Notification("court", About(Source.TASK, "t1", "completed")).text == "court"
