@@ -2,7 +2,8 @@
 
 # The admin front, built into the Python package's static folder (see web/vite.config.ts).
 FROM node:26-slim AS web
-RUN corepack enable
+# Node 25 and later no longer ship corepack: install it, then it runs the pnpm that web/package.json names.
+RUN npm install --global corepack@0.36.0 && corepack enable
 WORKDIR /web
 COPY web/package.json web/pnpm-lock.yaml web/pnpm-workspace.yaml ./
 # pnpm installs the agent skills some packages ship (pnpm-workspace.yaml) into this git-ignored folder.
