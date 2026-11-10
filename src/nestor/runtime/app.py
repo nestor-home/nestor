@@ -40,7 +40,7 @@ from nestor.modules.cognition.embedding import EmbeddingModel
 from nestor.modules.cognition.tools import Results, Toolbox, ToolProvider
 from nestor.modules.connectors import ConnectedInbound, Connections, Connector, ConnectorTools, TokenEndpoint
 from nestor.modules.conversation import Agent, AgentSettings, ChannelProfile, ModelChoice, Persona, Speakers
-from nestor.modules.home import PresenceSource
+from nestor.modules.home import Home, PresenceSource
 from nestor.modules.household import Account, Household, Person, SharedAccount
 from nestor.modules.identity import Departures, SpeakerModel, Voices
 from nestor.modules.initiative import (
@@ -162,20 +162,12 @@ class Nestor:
             )
             for i, c in enumerate(config.inbound)
         ]
-        self.presence = (
-            _build(
-                self.plugged,
-                registry,
-                Family.PRESENCE,
-                config.presence,
-                "presence",
-                ("presence",),
-                services,
-                PresenceSource,
-            )
-            if config.presence
+        self.home = (
+            _build(self.plugged, registry, Family.HOME, config.home, "home", ("home",), services, Home)
+            if config.home
             else None
         )
+        self.presence: PresenceSource | None = self.home.presence if self.home else None
 
         self.connectors = _connectors(self.plugged, registry, config, services)
         self.token_endpoint: TokenEndpoint | None = None
@@ -273,6 +265,7 @@ class Nestor:
                 schedule_tools,
                 self.confirmations,
                 *self.tools,
+                *([self.home.tools] if self.home else []),
                 *connector_tools,
             ],
             in_writing=self.confirmations,
@@ -354,7 +347,7 @@ class Nestor:
     @property
     def components(self) -> Sequence[Component]:
         """In start order; they are closed in reverse."""
-        presence = [self.presence] if self.presence else []
+        home = [self.home] if self.home else []
         connections = [self.token_endpoint, self.connections] if self.token_endpoint and self.connections else []
         vault = [self.vault] if self.vault else []
         updates = [self.updates] if self.updates else []
@@ -375,8 +368,8 @@ class Nestor:
             self.speakers,
             *self.executors,
             *self.tools,
+            *home,  # its presence and its tools
             self.toolbox,  # after its tools: its calls in the background stop first
-            *presence,
             self.tasks,
             *self.channels,
             self.courier,

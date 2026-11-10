@@ -2184,6 +2184,116 @@
         }
       }
     },
+    "/api/v1/home": {
+      "get": {
+        "tags": [
+          "home"
+        ],
+        "summary": "Get Home",
+        "description": "The home as it is now; `null` when no home system is plugged in.",
+        "operationId": "getHome",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/HomeOut"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Gethome"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/agent/activity": {
       "get": {
         "tags": [
@@ -6334,6 +6444,544 @@
         }
       }
     },
+    "/api/v1/schedules": {
+      "get": {
+        "tags": [
+          "schedules"
+        ],
+        "summary": "List Schedules",
+        "description": "Soonest first.",
+        "operationId": "listSchedules",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchedulesOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/schedules/{schedule_id}/cancel": {
+      "post": {
+        "tags": [
+          "schedules"
+        ],
+        "summary": "Cancel Schedule",
+        "operationId": "cancelSchedule",
+        "parameters": [
+          {
+            "name": "schedule_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Schedule Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/messages": {
+      "get": {
+        "tags": [
+          "messages"
+        ],
+        "summary": "List Messages",
+        "description": "Each list oldest first, as the book keeps them.",
+        "operationId": "listMessages",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessagesOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/confirmations": {
+      "get": {
+        "tags": [
+          "confirmations"
+        ],
+        "summary": "List Confirmations",
+        "description": "Those waiting, soonest to expire first.",
+        "operationId": "listConfirmations",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ConfirmationOut"
+                  },
+                  "type": "array",
+                  "title": "Response Listconfirmations"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/confirmations/{confirmation_id}/answer": {
+      "post": {
+        "tags": [
+          "confirmations"
+        ],
+        "summary": "Answer Confirmation",
+        "description": "Only the person asked may answer; 404 for anyone else, or once answered or expired.",
+        "operationId": "answerConfirmation",
+        "parameters": [
+          {
+            "name": "confirmation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Confirmation Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnswerIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnsweredOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/memories": {
       "get": {
         "tags": [
@@ -9607,6 +10255,45 @@
         "title": "AgentOut",
         "description": "The assistant itself, as the front's sidebar shows it."
       },
+      "AnswerIn": {
+        "properties": {
+          "approved": {
+            "type": "boolean",
+            "title": "Approved"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "approved"
+        ],
+        "title": "AnswerIn"
+      },
+      "AnsweredOut": {
+        "properties": {
+          "approved": {
+            "type": "boolean",
+            "title": "Approved"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result"
+          }
+        },
+        "type": "object",
+        "required": [
+          "approved",
+          "result"
+        ],
+        "title": "AnsweredOut"
+      },
       "ApprovalIn": {
         "properties": {
           "code": {
@@ -9978,15 +10665,66 @@
             },
             "type": "object",
             "title": "Slots"
+          },
+          "suggestions": {
+            "items": {
+              "$ref": "#/components/schemas/Suggest"
+            },
+            "type": "array",
+            "title": "Suggestions"
           }
         },
         "type": "object",
         "required": [
           "sections",
           "section_titles",
-          "slots"
+          "slots",
+          "suggestions"
         ],
         "title": "ConfigSchemaOut"
+      },
+      "ConfirmationOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "person": {
+            "$ref": "#/components/schemas/PersonRef"
+          },
+          "tool": {
+            "type": "string",
+            "title": "Tool"
+          },
+          "arguments": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Arguments"
+          },
+          "origin": {
+            "$ref": "#/components/schemas/OriginOut"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          },
+          "yours": {
+            "type": "boolean",
+            "title": "Yours"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "person",
+          "tool",
+          "arguments",
+          "origin",
+          "expires_at",
+          "yours"
+        ],
+        "title": "ConfirmationOut"
       },
       "ConnectionDetail": {
         "properties": {
@@ -10329,6 +11067,19 @@
         ],
         "title": "CorrectionIn"
       },
+      "Day": {
+        "type": "string",
+        "enum": [
+          "mon",
+          "tue",
+          "wed",
+          "thu",
+          "fri",
+          "sat",
+          "sun"
+        ],
+        "title": "Day"
+      },
       "DeliveredOut": {
         "properties": {
           "at": {
@@ -10514,6 +11265,8 @@
               "voice_not_yours",
               "voices_off",
               "watch_unknown",
+              "schedule_unknown",
+              "confirmation_unknown",
               "weak_password",
               "wrong_password"
             ],
@@ -10609,7 +11362,7 @@
           "model",
           "executor",
           "channel",
-          "presence",
+          "home",
           "tools",
           "inbound",
           "connector"
@@ -10650,6 +11403,16 @@
           "default"
         ],
         "title": "FieldOut"
+      },
+      "Granularity": {
+        "type": "string",
+        "enum": [
+          "home",
+          "occupied_rooms",
+          "person_room"
+        ],
+        "title": "Granularity",
+        "description": "How much the presence source can tell, from coarse to fine (`at_least` compares)."
       },
       "Health": {
         "type": "string",
@@ -10784,6 +11547,94 @@
           "size"
         ],
         "title": "HistoryEntryOut"
+      },
+      "HomeOut": {
+        "properties": {
+          "component": {
+            "$ref": "#/components/schemas/ComponentOut"
+          },
+          "connected": {
+            "type": "boolean",
+            "title": "Connected"
+          },
+          "granularity": {
+            "$ref": "#/components/schemas/Granularity"
+          },
+          "rooms": {
+            "items": {
+              "$ref": "#/components/schemas/RoomOut"
+            },
+            "type": "array",
+            "title": "Rooms"
+          },
+          "residents": {
+            "items": {
+              "$ref": "#/components/schemas/ResidentOut"
+            },
+            "type": "array",
+            "title": "Residents"
+          },
+          "people": {
+            "items": {
+              "$ref": "#/components/schemas/TiedPersonOut"
+            },
+            "type": "array",
+            "title": "People"
+          },
+          "unplaced_sensors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Unplaced Sensors"
+          },
+          "tools": {
+            "items": {
+              "$ref": "#/components/schemas/HomeToolOut"
+            },
+            "type": "array",
+            "title": "Tools"
+          }
+        },
+        "type": "object",
+        "required": [
+          "component",
+          "connected",
+          "granularity",
+          "rooms",
+          "residents",
+          "people",
+          "unplaced_sensors",
+          "tools"
+        ],
+        "title": "HomeOut"
+      },
+      "HomeToolOut": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "risk": {
+            "$ref": "#/components/schemas/Risk"
+          },
+          "confirmed_when": {
+            "type": "boolean",
+            "title": "Confirmed When"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "description",
+          "risk",
+          "confirmed_when"
+        ],
+        "title": "HomeToolOut"
       },
       "InitiativeOut": {
         "properties": {
@@ -11725,6 +12576,30 @@
         "title": "MessageOut",
         "description": "A message as data: a front with its own Fluent catalogue renders `id` with `args` itself."
       },
+      "MessagesOut": {
+        "properties": {
+          "pending": {
+            "items": {
+              "$ref": "#/components/schemas/PassedMessageOut"
+            },
+            "type": "array",
+            "title": "Pending"
+          },
+          "questions": {
+            "items": {
+              "$ref": "#/components/schemas/PassedMessageOut"
+            },
+            "type": "array",
+            "title": "Questions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pending",
+          "questions"
+        ],
+        "title": "MessagesOut"
+      },
       "MethodOut": {
         "properties": {
           "id": {
@@ -11879,6 +12754,62 @@
         ],
         "title": "PairingMethod",
         "description": "How a person can pair this device; it declares those it supports, the person picks one."
+      },
+      "PassedMessageOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "to": {
+            "$ref": "#/components/schemas/PersonRef"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "requested_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PersonRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "expects_reply": {
+            "type": "boolean",
+            "title": "Expects Reply"
+          },
+          "channel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Channel"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "to",
+          "text",
+          "requested_by",
+          "expects_reply",
+          "channel",
+          "at"
+        ],
+        "title": "PassedMessageOut"
       },
       "PasswordChangeIn": {
         "properties": {
@@ -12399,6 +13330,47 @@
         ],
         "title": "ReleaseOut"
       },
+      "ResidentOut": {
+        "properties": {
+          "entity": {
+            "type": "string",
+            "title": "Entity"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "home": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Home"
+          },
+          "person": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PersonRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "entity",
+          "name",
+          "home",
+          "person"
+        ],
+        "title": "ResidentOut"
+      },
       "RestartIn": {
         "properties": {
           "confirm": {
@@ -12457,6 +13429,52 @@
           "role"
         ],
         "title": "RoleIn"
+      },
+      "RoomOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "occupied": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Occupied"
+          },
+          "people": {
+            "items": {
+              "$ref": "#/components/schemas/PersonRef"
+            },
+            "type": "array",
+            "title": "People"
+          },
+          "satellites": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Satellites"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "occupied",
+          "people",
+          "satellites"
+        ],
+        "title": "RoomOut"
       },
       "SatelliteOut": {
         "properties": {
@@ -12617,6 +13635,93 @@
         ],
         "title": "SatellitesOut"
       },
+      "ScheduleOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "instruction": {
+            "type": "string",
+            "title": "Instruction"
+          },
+          "owner": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PersonRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "origin": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OriginOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "recurring": {
+            "type": "boolean",
+            "title": "Recurring"
+          },
+          "once_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Once At"
+          },
+          "times": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Times"
+          },
+          "days": {
+            "items": {
+              "$ref": "#/components/schemas/Day"
+            },
+            "type": "array",
+            "title": "Days"
+          },
+          "next_due": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Due"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "instruction",
+          "owner",
+          "origin",
+          "recurring",
+          "once_at",
+          "times",
+          "days",
+          "next_due"
+        ],
+        "title": "ScheduleOut"
+      },
       "ScheduledDeliveryOut": {
         "properties": {
           "about": {
@@ -12663,6 +13768,27 @@
         "title": "ScheduledDeliveryOut",
         "description": "A written follow-up of something said aloud: sent at `due_at` unless someone answers first."
       },
+      "SchedulesOut": {
+        "properties": {
+          "schedules": {
+            "items": {
+              "$ref": "#/components/schemas/ScheduleOut"
+            },
+            "type": "array",
+            "title": "Schedules"
+          },
+          "timezone": {
+            "type": "string",
+            "title": "Timezone"
+          }
+        },
+        "type": "object",
+        "required": [
+          "schedules",
+          "timezone"
+        ],
+        "title": "SchedulesOut"
+      },
       "Scope": {
         "type": "string",
         "enum": [
@@ -12682,7 +13808,11 @@
           "tasks.manage",
           "tasks.manage.own",
           "watches.manage.all",
-          "watches.manage.own"
+          "watches.manage.own",
+          "schedules.manage.all",
+          "schedules.manage.own",
+          "messages.read.all",
+          "messages.read.own"
         ],
         "title": "Scope",
         "description": "What an action needs. Code checks scopes, never roles: the role table is the only place they meet."
@@ -12912,6 +14042,15 @@
         ],
         "title": "Status"
       },
+      "Suggest": {
+        "type": "string",
+        "enum": [
+          "people",
+          "residents"
+        ],
+        "title": "Suggest",
+        "description": "What a map's keys or values may be picked from in a form (`suggest_keys`, `suggest_values` of a field)."
+      },
       "SystemOut": {
         "properties": {
           "nestor": {
@@ -13086,6 +14225,46 @@
           "recent"
         ],
         "title": "TasksOut"
+      },
+      "TiedPersonOut": {
+        "properties": {
+          "person": {
+            "$ref": "#/components/schemas/PersonRef"
+          },
+          "entity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entity"
+          },
+          "tracker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tracker"
+          },
+          "presence": {
+            "$ref": "#/components/schemas/PresenceOut"
+          }
+        },
+        "type": "object",
+        "required": [
+          "person",
+          "entity",
+          "tracker",
+          "presence"
+        ],
+        "title": "TiedPersonOut"
       },
       "Tone": {
         "type": "string",

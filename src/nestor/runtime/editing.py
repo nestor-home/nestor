@@ -54,7 +54,7 @@ type Path_ = tuple[str | int, ...]
 
 
 class Shape(StrEnum):
-    ONE = "one"  # one component, or none when optional (presence)
+    ONE = "one"  # one component, or none when optional (the home)
     LIST = "list"  # components in order (channels)
     NAMED = "named"  # components under names the household chooses, that other keys refer to (models)
 
@@ -80,7 +80,7 @@ SLOTS = (
     Slot("executors", Family.EXECUTOR, Shape.LIST, required=False),
     Slot("tools", Family.TOOLS, Shape.LIST, required=False),
     Slot("inbound", Family.INBOUND, Shape.LIST, required=False),
-    Slot("presence", Family.PRESENCE, Shape.ONE, required=False),
+    Slot("home", Family.HOME, Shape.ONE, required=False),
     Slot("connectors", Family.CONNECTOR, Shape.LIST, required=False),
 )
 SECTIONS: Mapping[str, Any] = {
@@ -93,6 +93,13 @@ SECTIONS: Mapping[str, Any] = {
     "admin": AdminConfig,
     "updates": UpdatesConfig,
 }
+
+
+class Suggest(StrEnum):
+    """What a map's keys or values may be picked from in a form (`suggest_keys`, `suggest_values` of a field)."""
+
+    PEOPLE = "people"  # the household's person ids
+    RESIDENTS = "residents"  # the people the home system knows (its person entities)
 
 
 class SecretShape(StrEnum):
@@ -154,6 +161,8 @@ def annotate(schema: dict[str, Any], scope: str, advanced: Iterable[str] = ()) -
                         "reference": prop.pop("reference", None),
                         "model_type": prop.pop("model_type", None),  # the type of model a reference takes
                         "brands": prop.pop("brands", None),
+                        "suggest_keys": prop.pop("suggest_keys", None),
+                        "suggest_values": prop.pop("suggest_values", None),
                     }
             for key, child in node.items():
                 if key == "$defs" and isinstance(child, dict):
@@ -201,7 +210,7 @@ class ConfigSchema:
 
     def kind(self, slot: Slot, kind: str) -> dict[str, Any]:
         """A plugin's settings as a slot holds them: with what picks it (its `kind`, or a model's `provider` and
-        `type`), and a `name` unless its key is one."""
+        `type`), and a `name` in a list, where it tells one apart from the others."""
         plugin = self.registry.get(slot.family, kind)
         schema = plugin.settings.model_json_schema()
         schema.setdefault("properties", {})
@@ -209,7 +218,7 @@ class ConfigSchema:
         name = {"name": {"type": "string", "description": "the instance's name; the kind by default"}}
         schema["properties"] = {
             **{key: {"const": values[key], "type": "string"} for key in slot.picks},
-            **(name if slot.shape is not Shape.NAMED else {}),
+            **(name if slot.shape is Shape.LIST else {}),
             **schema["properties"],
         }
         schema["required"] = [*slot.picks, *schema.get("required", [])]
@@ -485,7 +494,7 @@ class ConfigEditor:
             except NestorError:
                 problems.append(Problem((*where, slot.picks[0]), ProblemCode.UNKNOWN_KIND, slot.plugin(entry)))
                 continue
-            own = slot.picks if slot.shape is Shape.NAMED else (*slot.picks, "name")
+            own = (*slot.picks, "name") if slot.shape is Shape.LIST else slot.picks
             settings = {k: v for k, v in entry.items() if k not in own}
             try:
                 plugin.settings.model_validate(settings)

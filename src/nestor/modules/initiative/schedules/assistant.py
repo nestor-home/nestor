@@ -9,7 +9,7 @@ from nestor.modules.cognition.model import ToolSpec
 from nestor.modules.cognition.tools import Risk, Tool, ToolContext, ToolFailed, ToolProvider
 from nestor.modules.conversation import ContextProvider, Layer, Sections, TurnContext
 from nestor.modules.initiative.schedules.book import ScheduleBook
-from nestor.modules.initiative.schedules.types import DAYS, Schedule
+from nestor.modules.initiative.schedules.types import Day, Schedule
 
 HOW_TO_SCHEDULE = (
     'When someone asks you to do something later or regularly ("every morning at 8, send me the news", '
@@ -36,7 +36,7 @@ class ScheduleTools(ToolProvider, ContextProvider):
                 "times": {"type": "array", "items": {"type": "string"}, "description": "to repeat, at these: 08:00"},
                 "days": {
                     "type": "array",
-                    "items": {"type": "string", "enum": list(DAYS)},
+                    "items": {"type": "string", "enum": list(Day)},
                     "description": "the days to repeat on; every day when left out",
                 },
             },
@@ -69,6 +69,9 @@ class ScheduleTools(ToolProvider, ContextProvider):
             times = tuple(time.fromisoformat(str(t)) for t in _listed(arguments.get("times")))
         except ValueError as error:
             raise ToolFailed(f"cannot read the time: {error}") from None
+        named = [str(d) for d in _listed(arguments.get("days"))]
+        if unknown := sorted(set(named) - set(Day)):
+            raise ToolFailed(f"unknown days {', '.join(unknown)}: use {', '.join(Day)}")
         if at is not None:
             at = at.replace(tzinfo=zone) if at.tzinfo is None else at
             if at <= self.book.clock():
@@ -80,7 +83,7 @@ class ScheduleTools(ToolProvider, ContextProvider):
                 created_in=context.address,
                 at=at,
                 times=times,
-                days=tuple(str(d) for d in _listed(arguments.get("days"))),
+                days=tuple(Day(d) for d in named),
                 exchange=context.exchange,
             )
         except ContractError as error:

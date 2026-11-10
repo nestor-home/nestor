@@ -1,1 +1,1 @@
-"""Home adapters: presence sources relaying what a home automation system knows."""
+"""Home adapters: the home systems a household plugs in once (Home Assistant), as a `Home`."""

@@ -2,7 +2,7 @@
 
 import asyncio
 import json
-from collections.abc import MutableMapping, Sequence
+from collections.abc import Mapping, MutableMapping, Sequence
 from dataclasses import replace
 from enum import StrEnum
 from pathlib import Path
@@ -18,15 +18,17 @@ from nestor.core.i18n import Message
 from nestor.modules.accounts import Account, Role
 from nestor.modules.channels import Medium
 from nestor.modules.cognition import LanguageModel
-from nestor.modules.cognition.tools import Tool, ToolProvider
+from nestor.modules.cognition.model import ToolSpec
+from nestor.modules.cognition.tools import Risk, Tool, ToolContext, ToolProvider
 from nestor.modules.connectors import AuthKind, SecretField
+from nestor.modules.home import Resident, Room
 from nestor.modules.identity import SpeakerModel
 from nestor.runtime import AdapterSettings, Family, Nestor, Plugin, Registry
 from nestor.runtime.config import parse_config
 from nestor.testing.channels import InMemoryChannel
 from nestor.testing.cognition import FakeRemote, ScriptedModel, ScriptedRemoteExecutor
 from nestor.testing.connectors import FakeProvider, ScriptedConnector
-from nestor.testing.home import StaticPresence
+from nestor.testing.home import StaticHome, StaticPresence
 from nestor.testing.identity import TaggedVoices
 from nestor.testing.system import StaticReleaseFeed
 
@@ -44,7 +46,7 @@ household:
 models: {{main: {{type: language, provider: scripted}}}}
 executors: [{{kind: remote, name: hermes}}]
 channels: [{{kind: memory, name: telegram}}]
-presence: {{kind: static}}
+home: {{kind: static}}
 admin: {admin}
 """
 
@@ -147,6 +149,7 @@ class Harness:
         quiet_hours: str | None = None,
         speaker: bool = False,
         voices: bool = False,
+        home: bool = True,
     ) -> None:
         self.confirms_stop, self.replies = confirms_stop, replies
         self.provider = FakeProvider()
@@ -166,10 +169,28 @@ class Harness:
         self.remote = FakeRemote()
         self.releases = StaticReleaseFeed()
         self.presence = StaticPresence().set("mathis", home=True, room="salon")
+        self.unlocked: list[Mapping[str, object]] = []  # what the home's sensitive tool was asked to open
+
+        async def unlock(arguments: Mapping[str, object], context: ToolContext) -> str:
+            self.unlocked.append(arguments)
+            return "unlocked"
+
+        self.home = StaticHome(
+            self.presence,
+            [
+                Tool(spec=ToolSpec("lights", "Turns lights on or off."), run=unlock, risk=Risk.WRITE),
+                Tool(spec=ToolSpec("unlock", "Unlocks a door."), run=unlock, risk=Risk.SENSITIVE),
+            ],
+            rooms=[Room("salon", "Salon", occupied=True), Room("cuisine", "Cuisine")],
+            residents=[Resident("person.mathis", "Mathis", home=True), Resident("person.mathilde", "Mathilde")],
+            people={"mathis": "person.mathis"},
+        )
         admin = {"port": 0, **({"public_url": public_url} if public_url else {})}
         text = CONFIG.format(data_dir=tmp_path, admin=admin)
         if not connectors:
             text += "connectors: []\n"
+        if not home:
+            text = text.replace("home: {kind: static}\n", "")
         if quiet_hours:
             text += f"initiative: {{quiet_hours: '{quiet_hours}'}}\n"
         if voices:
@@ -231,7 +252,7 @@ class Harness:
                         self.remote, duration_s=None, confirms_stop=self.confirms_stop
                     ),
                 ),
-                Plugin(Family.PRESENCE, "static", NoSettings, lambda s, n, x: self.presence),
+                Plugin(Family.HOME, "static", NoSettings, lambda s, n, x: self.home),
                 Plugin(Family.CONNECTOR, "mailbox", NoSettings, lambda s, n, x: self.mail),
                 Plugin(Family.CONNECTOR, "imap", NoSettings, lambda s, n, x: self.imap),
                 Plugin(Family.TOOLS, "weather", WeatherSettings, lambda s, n, x: Weather()),

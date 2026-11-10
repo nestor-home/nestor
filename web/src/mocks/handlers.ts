@@ -61,6 +61,8 @@ const MISSING = {
   invitation: "invitation_unknown",
   satellite: "satellite_unknown",
   watch: "watch_unknown",
+  schedule: "schedule_unknown",
+  confirmation: "confirmation_unknown",
 } as const;
 
 const notFound = (what: keyof typeof MISSING) => fail(404, MISSING[what]);
@@ -894,6 +896,50 @@ export const handlers = [
     db.watches = db.watches.filter((w) => w.id !== params.id);
     save();
     return noContent();
+  }),
+
+  http.get(`${API}/schedules`, ({ request }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    return json({ schedules: db.schedules, timezone: "Europe/Paris" } satisfies In<"SchedulesOut">);
+  }),
+
+  http.post(`${API}/schedules/:id/cancel`, ({ request, params }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    if (!db.schedules.some((s) => s.id === params.id)) return notFound("schedule");
+    db.schedules = db.schedules.filter((s) => s.id !== params.id);
+    save();
+    return noContent();
+  }),
+
+  http.get(`${API}/messages`, ({ request }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    return json(db.messages satisfies In<"MessagesOut">);
+  }),
+
+  http.get(`${API}/confirmations`, ({ request }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    return json(db.confirmations satisfies In<"ConfirmationOut">[]);
+  }),
+
+  http.post(`${API}/confirmations/:id/answer`, async ({ request, params }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    const found = db.confirmations.find((c) => c.id === params.id && c.yours);
+    if (!found) return notFound("confirmation");
+    const { approved } = (await request.json()) as In<"AnswerIn">;
+    db.confirmations = db.confirmations.filter((c) => c.id !== found.id);
+    save();
+    return json({ approved, result: approved ? "done" : null } satisfies In<"AnsweredOut">);
+  }),
+
+  http.get(`${API}/home`, ({ request }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    return json(db.home);
   }),
 
   http.get(`${API}/memories`, async ({ request }) => {

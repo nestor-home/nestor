@@ -3,17 +3,21 @@
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import IntEnum
+from enum import StrEnum
 
 from nestor.core import PersonId, utc_now
 
 
-class Granularity(IntEnum):
-    """How much the presence source can tell, from coarse to fine."""
+class Granularity(StrEnum):
+    """How much the presence source can tell, from coarse to fine (`at_least` compares)."""
 
-    HOME = 1  # each person is home or away (Home Assistant `person` entities)
-    OCCUPIED_ROOMS = 2  # also which rooms are occupied, not by whom (presence or motion sensors per area)
-    PERSON_ROOM = 3  # also which room each person is in (room-level tracking tied to a person)
+    HOME = "home"  # each person is home or away (Home Assistant `person` entities)
+    OCCUPIED_ROOMS = "occupied_rooms"  # also which rooms are occupied, not by whom (presence or motion sensors)
+    PERSON_ROOM = "person_room"  # also which room each person is in (room-level tracking tied to a person)
+
+    def at_least(self, other: "Granularity") -> bool:
+        order = list(Granularity)
+        return order.index(self) >= order.index(other)
 
 
 @dataclass(frozen=True, slots=True)
@@ -45,6 +49,42 @@ class Presence:
         if whereabouts.room is not None:
             return frozenset({whereabouts.room})
         alone = whereabouts.home and all(w.home is not True for p, w in self.people.items() if p != person)
-        if self.granularity >= Granularity.OCCUPIED_ROOMS and alone:
+        if self.granularity.at_least(Granularity.OCCUPIED_ROOMS) and alone:
             return self.occupied_rooms
         return None
+
+    def people_in(self, room: str) -> tuple[PersonId, ...]:
+        """Who is known to be in this room: only a PERSON_ROOM source places people."""
+        return tuple(person for person, whereabouts in self.people.items() if whereabouts.room == room)
+
+
+@dataclass(frozen=True, slots=True)
+class Room:
+    """An area of the home system. `occupied` is `None` when nothing in it tells (no occupancy sensor)."""
+
+    id: str
+    name: str
+    occupied: bool | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class Resident:
+    """Someone the home system knows (a Home Assistant `person`), to tie to a person of the household."""
+
+    entity: str
+    name: str
+    home: bool | None = None
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class HomeOverview:
+    """What the home system can show of itself: whether it answers, how finely it places people, its rooms, who it
+    knows, how the household is tied to it, and what it could not use. Served from the live view, never fetched."""
+
+    connected: bool
+    granularity: Granularity
+    rooms: tuple[Room, ...] = ()
+    residents: tuple[Resident, ...] = ()
+    people: Mapping[PersonId, str] = field(default_factory=dict)  # household person → resident entity
+    trackers: Mapping[PersonId, str] = field(default_factory=dict)  # household person → room tracker entity
+    unplaced_sensors: tuple[str, ...] = ()  # occupancy sensors it ignores: no room in the home system

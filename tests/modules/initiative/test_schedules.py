@@ -16,6 +16,7 @@ from nestor.modules.household import Household, Person
 from nestor.modules.identity import Speaker
 from nestor.modules.initiative import (
     Courier,
+    Day,
     DeliveryFailed,
     Schedule,
     ScheduleBook,
@@ -41,7 +42,9 @@ def paris(day: int, hour: int, minute: int = 0) -> datetime:
 
 
 def test_a_recurring_wake_up_is_next_due_at_its_first_time_on_one_of_its_days() -> None:
-    weekdays = Schedule(id="s", instruction="x", times=(time(8), time(18)), days=("mon", "tue", "wed", "thu", "fri"))
+    weekdays = Schedule(
+        id="s", instruction="x", times=(time(8), time(18)), days=(Day.MON, Day.TUE, Day.WED, Day.THU, Day.FRI)
+    )
     assert weekdays.next_due(paris(2, 7), "Europe/Paris") == paris(2, 8)
     assert weekdays.next_due(paris(2, 8), "Europe/Paris") == paris(2, 18), "strictly after"
     assert weekdays.next_due(paris(6, 19), "Europe/Paris") == paris(9, 8), "Friday evening, then Monday"

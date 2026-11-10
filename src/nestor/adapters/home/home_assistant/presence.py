@@ -25,7 +25,7 @@ from nestor.adapters.home.home_assistant.installation import (
 )
 from nestor.core import Health, ProviderError
 from nestor.core.i18n import Message
-from nestor.modules.home import Granularity, Presence, PresenceSource, Whereabouts
+from nestor.modules.home import Granularity, HomeOverview, Presence, PresenceSource, Whereabouts
 
 logger = logging.getLogger(__name__)
 
@@ -97,6 +97,25 @@ class HomeAssistantPresence(PresenceSource):
     def health_detail(self) -> Message | None:
         return None if self._installation is not None else Message.of("health-home-assistant-disconnected")
 
+    def overview(self) -> HomeOverview:
+        """What the live view shows of the installation; disconnected, only how the household is tied to it."""
+        installation = self._installation
+        people, trackers = dict(self._mapping.people), dict(self._mapping.rooms)
+        if installation is None:
+            return HomeOverview(connected=False, granularity=self._granularity, people=people, trackers=trackers)
+        return HomeOverview(
+            connected=True,
+            granularity=installation.granularity,
+            rooms=installation.rooms(),
+            residents=installation.residents(),
+            people=people,
+            trackers=trackers,
+            unplaced_sensors=tuple(installation.unplaced_sensors),
+        )
+
+    def room_of(self, label: str) -> str | None:
+        return self._installation.room_of(label) if self._installation is not None else None
+
     def presence(self) -> Presence:
         if self._installation is None:
             unknown = dict.fromkeys(self._mapping.people, Whereabouts())
@@ -138,7 +157,7 @@ class HomeAssistantPresence(PresenceSource):
         self._installation, self._granularity = installation, installation.granularity
         if unplaced := installation.unplaced_sensors:
             logger.warning("%s: occupancy sensors without an area, ignored: %s", self.name, ", ".join(unplaced))
-        logger.info("%s: connected, presence granularity %s", self.name, self._granularity.name)
+        logger.info("%s: connected, presence granularity %s", self.name, self._granularity)
         return _Live(session, installation)
 
     async def _sync(self, session: HomeAssistantSession) -> Installation:

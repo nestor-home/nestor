@@ -346,13 +346,14 @@ class McpToolProvider(ToolProvider):
             name = _unique(_INVALID_NAME_CHARACTERS.sub("_", remote.name)[:MAX_NAME_LENGTH] or "tool", taken)
             taken.add(name)
             spec = ToolSpec(name, remote.description or remote.title or remote.name, dict(remote.input_schema))
-            risk, rules = self._risk(remote), [r for r in self._sensitive if r.tool == remote.name]
+            risk = self._risk(remote)
+            rules = [r for r in self._sensitive if r.applies_to(remote.name, risk)]
             tools.append(
                 Tool(
                     spec=spec,
                     run=self._runner(remote.name),
                     risk=risk,
-                    assess=_assessed(remote.name, risk, rules) if rules else None,
+                    assess=_assessed(risk, rules) if rules else None,
                     timeout_s=self._timeout_s,
                 )
             )
@@ -467,8 +468,8 @@ def _reason(error: BaseException) -> str:
     return f"{type(error).__name__}: {error}" if str(error) else type(error).__name__
 
 
-def _assessed(name: str, risk: Risk, rules: Sequence[SensitiveWhen]) -> Callable[[Mapping[str, object]], Risk]:
+def _assessed(risk: Risk, rules: Sequence[SensitiveWhen]) -> Callable[[Mapping[str, object]], Risk]:
     def assess(arguments: Mapping[str, object]) -> Risk:
-        return Risk.SENSITIVE if any(rule.matches(name, arguments) for rule in rules) else risk
+        return Risk.SENSITIVE if any(rule.matches(arguments) for rule in rules) else risk
 
     return assess

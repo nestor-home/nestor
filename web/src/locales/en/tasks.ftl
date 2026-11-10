@@ -21,7 +21,6 @@ task-story-empty = No trace in the journal.
 task-error = error
 task-result = result
 task-asked-in = asked in
-task-a-conversation = a conversation
 task-conversation-older = a conversation older than the journal
 task-delivery = delivery
 task-delivered = { $spoken ->

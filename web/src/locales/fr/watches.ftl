@@ -30,4 +30,3 @@ watch-rhythm = fréquence
 watch-rhythm-once = S'arrête au premier message trouvé.
 watch-rhythm-every = Signale chaque message pertinent.
 watch-asked-in = demandée dans
-watch-a-conversation = une conversation

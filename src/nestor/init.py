@@ -85,22 +85,13 @@ TEXT_ONLY = """  - kind: satellites               # devices people type on: `nes
 """
 
 FOOTER = """
-# presence:
+# home:                             # Home Assistant: who is home, and its actions (Assist's MCP server)
 #   kind: home-assistant
 #   url: ${{HOME_ASSISTANT_URL}}
 #   token: ${{HOME_ASSISTANT_TOKEN}}
 #   people: {{{person_id}: person.{person_id}}}
-# tools:
-#   - kind: mcp
-#     name: home
-#     url: ${{HOME_ASSISTANT_MCP_URL}}
-#     token: ${{HOME_ASSISTANT_TOKEN}}
-#     sensitive:                   # confirmed by the person first: locks, the alarm, garage, gate and doors
-#       - tool: intent__HassTurnOn
-#         arguments: &doors {{domain: [lock, alarm_control_panel], device_class: [garage, gate, door],
-#                             name: [lock, alarm, garage, gate, door]}}
-#       - tool: intent__HassTurnOff
-#         arguments: *doors
+#   # confirmed by the person first, by default: locks, the alarm, garage, gate and doors
+#   # sensitive: {{domains: [lock, alarm_control_panel], device_classes: [garage, gate, door], names: [porte]}}
 
 # voices:                           # who speaks to a satellite, from their voice: pip install 'nestor-home[voice-id]'
 #   embedder: voices               # under models: {{type: speaker, provider: sherpa-onnx, model: titanet-small}}

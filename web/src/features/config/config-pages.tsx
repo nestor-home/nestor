@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useT } from "@/i18n";
-import { brandName, brandOf, KindMark } from "@/lib/brands";
+import { KindMark, kindName } from "@/lib/brands";
 import { modelTypeHint, modelTypeLabel } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 import { useConfigEditor } from "./editor";
@@ -50,12 +50,6 @@ export function markOf(kind: string, entry: Record<string, unknown>, schema: unk
     if (typeof found?.[1] === "string") return found[1];
   }
   return kind;
-}
-
-/** The title of a plugin kind: its brand's name when it has one. */
-export function kindTitle(kind: string): string {
-  const slug = brandOf(kind);
-  return slug ? brandName(slug) : kind;
 }
 
 export function ConfigPageView({ page }: { page: ConfigPage }) {
@@ -232,7 +226,7 @@ function OneSlot({ slotKey, slot, main }: { slotKey: string; slot: Slot; main: b
                 <Trash2 /> {t("cfg-remove")}
               </Button>
             }
-            title={t("cfg-remove-title", { name: kindTitle(provider) })}
+            title={t("cfg-remove-title", { name: kindName(provider) })}
             confirm={t("cfg-remove")}
             onConfirm={async () => set([slotKey], undefined)}
           >
@@ -245,7 +239,7 @@ function OneSlot({ slotKey, slot, main }: { slotKey: string; slot: Slot; main: b
         <Panel marked={main}>
           <div className="mb-5 flex items-center gap-2.5">
             <KindMark kind={provider} className="size-5 text-ink" label={false} />
-            <p className="font-serif text-lg text-ink">{kindTitle(provider)}</p>
+            <p className="font-serif text-lg text-ink">{kindName(provider)}</p>
             <span className="text-[0.85rem] text-ink-faint">{kind}</span>
           </div>
           {schema ? (
@@ -288,7 +282,7 @@ function ManySlot({ slotKey, slot }: { slotKey: string; slot: Slot }) {
   const [editing, setEditing] = useState<{ index: number; adding: boolean } | null>(null);
   const kinds = Object.keys(slot.kinds);
   const write = (next: Record<string, unknown>[]) => set([slotKey], next.length || slot.required ? next : undefined);
-  const nameOf = (e: Record<string, unknown>) => String(e.name || kindTitle(providerOf(slot, pluginOf(slot, e))));
+  const nameOf = (e: Record<string, unknown>) => String(e.name || kindName(providerOf(slot, pluginOf(slot, e))));
   const current = editing ? entries[editing.index] : undefined;
   const plugin = current ? pluginOf(slot, current) : "";
   const schema = current ? slot.kinds[plugin] : undefined;
@@ -349,7 +343,7 @@ function ManySlot({ slotKey, slot }: { slotKey: string; slot: Slot }) {
       {editing && current ? (
         <ItemSheet
           key={editing.index}
-          title={editing.adding ? t("cfg-add-kind", { kind: kindTitle(providerOf(slot, plugin)) }) : nameOf(current)}
+          title={editing.adding ? t("cfg-add-kind", { kind: kindName(providerOf(slot, plugin)) }) : nameOf(current)}
           mark={providerOf(slot, plugin)}
           adding={editing.adding}
           onClose={() => setEditing(null)}
@@ -418,8 +412,8 @@ function NamedSlot({ slotKey, slot }: { slotKey: string; slot: Slot }) {
                 title={name}
                 subtitle={
                   slot.model_types[kind]
-                    ? `${kindTitle(provider)} · ${modelTypeLabel(slot.model_types[kind])}`
-                    : kindTitle(provider)
+                    ? `${kindName(provider)} · ${modelTypeLabel(slot.model_types[kind])}`
+                    : kindName(provider)
                 }
                 detail={summary(entry)}
                 problems={problemsUnder(problems, [slotKey, name]).length}
@@ -440,7 +434,7 @@ function NamedSlot({ slotKey, slot }: { slotKey: string; slot: Slot }) {
       <Problems problems={stray} />
       {editing && current ? (
         <ItemSheet
-          title={editing.adding ? t("cfg-add-kind", { kind: kindTitle(providerOf(slot, plugin)) }) : editing.name}
+          title={editing.adding ? t("cfg-add-kind", { kind: kindName(providerOf(slot, plugin)) }) : editing.name}
           mark={providerOf(slot, plugin)}
           adding={editing.adding}
           onClose={() => setEditing(null)}
@@ -527,7 +521,7 @@ function KindPicker({ slot, onPick, trigger }: { slot: Slot; onPick: (kind: stri
             >
               <KindMark kind={providerOf(slot, kind)} className="size-5 text-ink" label={false} />
               <span className="min-w-0 flex-1">
-                <span className="block text-sm text-ink">{kindTitle(providerOf(slot, kind))}</span>
+                <span className="block text-sm text-ink">{kindName(providerOf(slot, kind))}</span>
                 <span className="block text-[0.85rem] text-ink-faint">
                   {providerOf(slot, kind)} ·{" "}
                   {t("cfg-required-fields", { count: requiredCount(slot.kinds[kind] ?? {}) })}

@@ -2,12 +2,21 @@
 
 from dataclasses import dataclass
 from datetime import datetime, time, timedelta
+from enum import StrEnum
 from zoneinfo import ZoneInfo
 
 from nestor.core import ContractError, PersonId
 from nestor.modules.channels import Address
 
-DAYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
+
+class Day(StrEnum):
+    MON = "mon"
+    TUE = "tue"
+    WED = "wed"
+    THU = "thu"
+    FRI = "fri"
+    SAT = "sat"
+    SUN = "sun"
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -20,13 +29,11 @@ class Schedule:
     created_in: Address | None = None
     at: datetime | None = None  # aware
     times: tuple[time, ...] = ()
-    days: tuple[str, ...] = ()
+    days: tuple[Day, ...] = ()  # every day when empty
 
     def __post_init__(self) -> None:
         if (self.at is None) == (not self.times):
             raise ContractError("a schedule runs either once (`at`) or at `times`, not both nor neither")
-        if unknown := set(self.days) - set(DAYS):
-            raise ContractError(f"unknown days {', '.join(sorted(unknown))}: use {', '.join(DAYS)}")
 
     @property
     def recurring(self) -> bool:
@@ -40,7 +47,7 @@ class Schedule:
         local = after.astimezone(zone)
         for offset in range(8):
             day = local.date() + timedelta(days=offset)
-            if self.days and DAYS[day.weekday()] not in self.days:
+            if self.days and list(Day)[day.weekday()] not in self.days:
                 continue
             for moment in sorted(self.times):
                 due = datetime.combine(day, moment, tzinfo=zone)

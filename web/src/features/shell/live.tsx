@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { type JournalItem, type JournalStream, keys, type LiveStatus } from "@/api";
+import { type JournalItem, type JournalStream, type Kind, keys, type LiveStatus } from "@/api";
 
 type Listener = (item: JournalItem) => void;
 
@@ -12,13 +12,16 @@ interface Live {
 const LiveContext = createContext<Live | null>(null);
 
 // what a live item makes stale elsewhere in the admin, by its kind (the journal's categories)
-const STALE: Record<string, readonly (readonly unknown[])[]> = {
+const STALE: Partial<Record<Kind, readonly (readonly unknown[])[]>> = {
   task: [keys.tasks],
   watch: [keys.watches],
   memory: [["memories"]],
   connection: [keys.connections],
-  satellite: [keys.satellites], // its list and each satellite: a connection, an update reported
-  presence: [keys.people],
+  satellite: [keys.satellites, keys.home], // its list and each satellite: a connection, an update reported
+  presence: [keys.people, keys.home],
+  schedule: [keys.schedules],
+  delivery: [keys.messages], // a message passed on, delivered or not
+  tool: [keys.confirmations], // a confirmation asked or answered
 };
 
 /** One stream for the whole admin: the shell shows its status, the journal page listens to it. */

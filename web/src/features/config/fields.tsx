@@ -3,9 +3,11 @@
  * Every control reads and writes the editor's draft at its path and shows the problems the
  * preview located there.
  */
+
+import { useQuery } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, ChevronRight, KeyRound, Plus, X } from "lucide-react";
 import { type ReactNode, useId, useState } from "react";
-import type { ConfigProblem } from "@/api";
+import { type ConfigProblem, homeQuery, type Suggest } from "@/api";
 import { Choice } from "@/components/choice";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -545,9 +547,25 @@ function ListControl({ id, node, root, path, required, label }: ControlProps) {
   );
 }
 
+/** What a map's keys or values may be picked from: the household's people in the draft, the home's residents. */
+function useSuggestions(source: Suggest | null | undefined): string[] {
+  const { draft } = useConfigEditor();
+  const home = useQuery({ ...homeQuery, enabled: source === "residents" });
+  if (source === "people") {
+    const household = getAt(draft, ["household"]);
+    return Array.isArray(household)
+      ? household.flatMap((p) => (isRecord(p) && typeof p.id === "string" ? [p.id] : []))
+      : [];
+  }
+  if (source === "residents") return (home.data?.residents ?? []).map((r) => r.entity);
+  return [];
+}
+
 /** A map of names to values (headers, risks, people to entities). */
 function MapControl({ id, node, root, path, required, label }: ControlProps) {
   const t = useT();
+  const keys = useSuggestions(node["x-nestor"]?.suggest_keys);
+  const values = useSuggestions(node["x-nestor"]?.suggest_values);
   const { schema, nullable } = resolve(node, root);
   const field = useField(path, required, nullable);
   const valueSchema = isRecord(schema.additionalProperties) ? (schema.additionalProperties as JsonSchema) : {};
@@ -571,6 +589,7 @@ function MapControl({ id, node, root, path, required, label }: ControlProps) {
                 <Input
                   id={rowId}
                   value={key}
+                  list={keys.length ? `${id}-keys` : undefined}
                   aria-label={t("cfg-map-key", { field: label, n: index + 1 })}
                   className="font-mono text-[0.82rem] sm:max-w-56"
                   onChange={(e) => write(entries.map(([k, v], i) => [i === index ? e.target.value : k, v]))}
@@ -600,6 +619,7 @@ function MapControl({ id, node, root, path, required, label }: ControlProps) {
                 ) : (
                   <Input
                     id={`${rowId}-value`}
+                    list={values.length ? `${id}-values` : undefined}
                     value={typeof value === "string" ? value : JSON.stringify(value ?? "")}
                     aria-label={t("cfg-map-value", { field: label, key: key || index + 1 })}
                     className="font-mono text-[0.82rem]"
@@ -632,7 +652,19 @@ function MapControl({ id, node, root, path, required, label }: ControlProps) {
       >
         <Plus /> {t("cfg-add-entry")}
       </Button>
+      {keys.length ? <Datalist id={`${id}-keys`} options={keys} /> : null}
+      {values.length ? <Datalist id={`${id}-values`} options={values} /> : null}
     </div>
+  );
+}
+
+function Datalist({ id, options }: { id: string; options: string[] }) {
+  return (
+    <datalist id={id}>
+      {options.map((o) => (
+        <option key={o} value={o} />
+      ))}
+    </datalist>
   );
 }
 

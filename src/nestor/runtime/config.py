@@ -297,7 +297,7 @@ class NestorConfig(Section):
     channels: tuple[AdapterConfig, ...] = Field(min_length=1)
     tools: tuple[AdapterConfig, ...] = ()  # tool providers (an MCP server: Home Assistant, Linear…)
     inbound: tuple[AdapterConfig, ...] = ()  # sources watches can watch (a mailbox…)
-    presence: AdapterConfig | None = None
+    home: ComponentConfig | None = None  # the home system (Home Assistant): presence and actions
     initiative: InitiativeConfig = InitiativeConfig()
     admin: AdminConfig | None = None
     updates: UpdatesConfig = UpdatesConfig()

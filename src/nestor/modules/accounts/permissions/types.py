@@ -30,3 +30,7 @@ class Scope(StrEnum):
     TASKS_MANAGE_OWN = "tasks.manage.own"  # tasks the person asked for
     WATCHES_MANAGE_ALL = "watches.manage.all"
     WATCHES_MANAGE_OWN = "watches.manage.own"  # watches kept for the person
+    SCHEDULES_MANAGE_ALL = "schedules.manage.all"  # every wake-up and reminder
+    SCHEDULES_MANAGE_OWN = "schedules.manage.own"  # the wake-ups set for the person
+    MESSAGES_READ_ALL = "messages.read.all"  # every message passed on, question and confirmation waiting
+    MESSAGES_READ_OWN = "messages.read.own"  # those the person sent or receives, and their own confirmations

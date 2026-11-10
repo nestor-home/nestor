@@ -8,11 +8,11 @@ from nestor.runtime import AdapterSettings, Services
 
 
 class SensitiveCalls(BaseModel):
-    """Calls of `tool` confirmed by the person first when one of these values appears in an argument: Home
-    Assistant's `HassTurnOn` and `HassTurnOff` drive lights and locks alike."""
+    """Calls confirmed by the person first when one of these values appears in an argument: a server's tools may
+    drive harmless and dangerous things alike."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
-    tool: str  # its name on the server: `intent__HassTurnOff`
+    tool: str | None = None  # its name on the server (`delete_issue`); none: every tool that acts
     arguments: dict[str, list[str]]  # `{device_class: [garage, gate], domain: [lock], name: [porte]}`
 
 

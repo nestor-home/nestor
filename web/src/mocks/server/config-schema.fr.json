@@ -18,6 +18,8 @@
             "reference": null,
             "model_type": null,
             "brands": null,
+            "suggest_keys": null,
+            "suggest_values": null,
             "title": "Nom",
             "help": null
           }
@@ -37,6 +39,8 @@
             "reference": null,
             "model_type": null,
             "brands": null,
+            "suggest_keys": null,
+            "suggest_values": null,
             "title": "Personnalité",
             "help": "Qui est l'assistant et comment il parle."
           }
@@ -57,6 +61,8 @@
             "reference": null,
             "model_type": null,
             "brands": null,
+            "suggest_keys": null,
+            "suggest_values": null,
             "title": "Langue",
             "help": "Ex. fr-FR. Langue des textes fixes et, par défaut, de l'admin."
           }
@@ -77,6 +83,8 @@
             "reference": null,
             "model_type": null,
             "brands": null,
+            "suggest_keys": null,
+            "suggest_values": null,
             "title": "Langue des réponses",
             "help": "Son nom dans le prompt, ex. français."
           }
@@ -97,6 +105,8 @@
             "reference": null,
             "model_type": null,
             "brands": null,
+            "suggest_keys": null,
+            "suggest_values": null,
             "title": "Fuseau horaire",
             "help": null
           }
@@ -127,6 +137,8 @@
             "reference": null,
             "model_type": null,
             "brands": null,
+            "suggest_keys": null,
+            "suggest_values": null,
             "title": "Identifiant",
             "help": null
           }
@@ -146,6 +158,8 @@
             "reference": null,
             "model_type": null,
             "brands": null,
+            "suggest_keys": null,
+            "suggest_values": null,
             "title": "Nom",
             "help": null
           }
@@ -169,6 +183,8 @@
             "reference": null,
             "model_type": null,
             "brands": null,
+            "suggest_keys": null,
+            "suggest_values": null,
             "title": "Comptes",
             "help": "Comment les canaux reconnaissent cette personne, ex. telegram:123456789."
           }
@@ -196,6 +212,8 @@
             "reference": null,
             "model_type": null,
             "brands": null,
+            "suggest_keys": null,
+            "suggest_values": null,
             "title": "Où lui écrire",
             "help": null
           }
@@ -221,6 +239,8 @@
             "reference": null,
             "model_type": null,
             "brands": null,
+            "suggest_keys": null,
+            "suggest_values": null,
             "title": "Peut envoyer un message à",
             "help": "Via l'assistant, à d'autres que soi : identifiants de personnes, ou * pour tout le monde. On peut toujours s'écrire à soi-même."
           }
@@ -260,6 +280,8 @@
             "reference": "models",
             "model_type": "language",
             "brands": null,
+            "suggest_keys": null,
+            "suggest_values": null,
             "title": "Modèle à l'oral",
             "help": "Pour les réponses parlées. Par défaut, le modèle à l'écrit."
           }
@@ -287,6 +309,8 @@
             "reference": "models",
             "model_type": "language",
             "brands": null,
+            "suggest_keys": null,
+            "suggest_values": null,
             "title": "Modèle à l'écrit",
             "help": "Pour les réponses écrites. Par défaut, le modèle à l'oral."
           }
@@ -309,6 +333,8 @@
             "reference": null,
             "model_type": null,
             "brands": null,
+            "suggest_keys": null,
+            "suggest_values": null,
             "title": "Attente des outils à l'oral (s)",
             "help": "Au-delà, l'outil continue en arrière-plan et son résultat revient dans la conversation."
           }
@@ -331,6 +357,8 @@
             "reference": null,
             "model_type": null,
             "brands": null,
+            "suggest_keys": null,
+            "suggest_values": null,
             "title": "Attente des outils à l'écrit (s)",
             "help": "Au-delà, l'outil continue en arrière-plan et son résultat revient dans la conversation."
           }
@@ -353,6 +381,8 @@
             "reference": null,
             "model_type": null,
             "brands": null,
+            "suggest_keys": null,
+            "suggest_values": null,
             "title": "Taille d'un résultat d'outil (caractères)",
             "help": "Un résultat plus long est mis de côté : le modèle en voit le début et la fin, et lit la suite au besoin."
           }
@@ -388,6 +418,8 @@
             "reference": "models",
             "model_type": "language",
             "brands": null,
+            "suggest_keys": null,
+            "suggest_values": null,
             "title": "Modèle de tri",
             "help": "Choisit les veilles concernées par chaque élément reçu. Par défaut, le modèle à l'écrit."
           }
@@ -426,6 +458,8 @@
             "reference": null,
             "model_type": null,
             "brands": null,
+            "suggest_keys": null,
+            "suggest_values": null,
             "title": "Choix des souvenirs",
             "help": "both : les plus récents, puis ceux que la conversation évoque ; recent : les récents seuls ; search : ceux que la conversation évoque seuls."
           }
@@ -448,6 +482,8 @@
             "reference": null,
             "model_type": null,
             "brands": null,
+            "suggest_keys": null,
+            "suggest_values": null,
             "title": "Souvenirs récents par tour",
             "help": null
           }
@@ -470,6 +506,8 @@
             "reference": null,
             "model_type": null,
             "brands": null,
+            "suggest_keys": null,
+            "suggest_values": null,
             "title": "Souvenirs trouvés par tour",
             "help": null
           }
@@ -492,6 +530,8 @@
             "reference": null,
             "model_type": null,
             "brands": null,
+            "suggest_keys": null,
+            "suggest_values": null,
             "title": "Conversations récentes par tour",
             "help": "Celles de la personne qui parle, résumées."
           }
@@ -514,6 +554,8 @@
             "reference": null,
             "model_type": null,
             "brands": null,
+            "suggest_keys": null,
+            "suggest_values": null,
             "title": "Anciennes conversations trouvées par tour",
             "help": null
           }
@@ -541,6 +583,8 @@
             "reference": "models",
             "model_type": "language",
             "brands": null,
+            "suggest_keys": null,
+            "suggest_values": null,
             "title": "Modèle de résumé",
             "help": "Résume chaque conversation terminée. Par défaut, le modèle à l'écrit."
           }
@@ -568,6 +612,8 @@
             "reference": "models",
             "model_type": "embedding",
             "brands": null,
+            "suggest_keys": null,
+            "suggest_values": null,
             "title": "Modèle d'embedding",
             "help": "Cherche les souvenirs par le sens. Sans lui, par mots-clés seulement."
           }
@@ -589,6 +635,8 @@
             "reference": null,
             "model_type": null,
             "brands": null,
+            "suggest_keys": null,
+            "suggest_values": null,
             "title": "Timeout de l'embedding (secondes)",
             "help": "Au-delà, la recherche se fait par mots-clés seulement."
           }
@@ -623,6 +671,8 @@
             "reference": null,
             "model_type": null,
             "brands": null,
+            "suggest_keys": null,
+            "suggest_values": null,
             "title": "Heures calmes",
             "help": "Ex. 22:30-07:30. Rien à voix haute, sauf urgence."
           }
@@ -650,6 +700,8 @@
             "reference": null,
             "model_type": null,
             "brands": null,
+            "suggest_keys": null,
+            "suggest_values": null,
             "title": "Pièce principale",
             "help": "Où parler quand on sait seulement que quelqu'un est à la maison."
           }
@@ -671,6 +723,8 @@
             "reference": null,
             "model_type": null,
             "brands": null,
+            "suggest_keys": null,
+            "suggest_values": null,
             "title": "Relance écrite après (secondes)",
             "help": null
           }
@@ -699,6 +753,8 @@
             "reference": null,
             "model_type": null,
             "brands": null,
+            "suggest_keys": null,
+            "suggest_values": null,
             "title": "Hôte",
             "help": null
           }
@@ -721,6 +777,8 @@
             "reference": null,
             "model_type": null,
             "brands": null,
+            "suggest_keys": null,
+            "suggest_values": null,
             "title": "Port",
             "help": null
           }
@@ -748,6 +806,8 @@
             "reference": null,
             "model_type": null,
             "brands": null,
+            "suggest_keys": null,
+            "suggest_values": null,
             "title": "URL publique",
             "help": "L'URL de l'admin, ex. https://nestor.example.org."
           }
@@ -768,6 +828,8 @@
             "reference": null,
             "model_type": null,
             "brands": null,
+            "suggest_keys": null,
+            "suggest_values": null,
             "title": "Relais OAuth",
             "help": null
           }
@@ -796,6 +858,8 @@
             "reference": null,
             "model_type": null,
             "brands": null,
+            "suggest_keys": null,
+            "suggest_values": null,
             "title": "Chercher les nouvelles versions",
             "help": "Une fois par jour, sans rien installer."
           }
@@ -816,6 +880,8 @@
             "reference": null,
             "model_type": null,
             "brands": null,
+            "suggest_keys": null,
+            "suggest_values": null,
             "title": "Flux des versions",
             "help": null
           }
@@ -844,6 +910,8 @@
             "reference": null,
             "model_type": null,
             "brands": null,
+            "suggest_keys": null,
+            "suggest_values": null,
             "title": "Dossier des données",
             "help": "Base de données, coffre et historique de la configuration."
           }
@@ -891,6 +959,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Fournisseur",
                 "help": null
               }
@@ -910,6 +980,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Type de modèle",
                 "help": null
               }
@@ -931,6 +1003,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Clé d'API",
                 "help": null
               }
@@ -951,6 +1025,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "ID de la voix",
                 "help": "Une voix de votre bibliothèque ElevenLabs."
               }
@@ -971,6 +1047,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Modèle",
                 "help": "Ex. eleven_v4_turbo."
               }
@@ -1003,6 +1081,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Fournisseur",
                 "help": null
               }
@@ -1022,6 +1102,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Type de modèle",
                 "help": null
               }
@@ -1043,6 +1125,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Clé d'API",
                 "help": null
               }
@@ -1063,6 +1147,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Modèle",
                 "help": "Ex. scribe_v2_realtime."
               }
@@ -1084,6 +1170,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Langue",
                 "help": "La langue parlée, ex. fr."
               }
@@ -1116,6 +1204,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Fournisseur",
                 "help": null
               }
@@ -1135,6 +1225,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Type de modèle",
                 "help": null
               }
@@ -1161,6 +1253,8 @@
                   "openai.com": "openai",
                   "openrouter.ai": "openrouter"
                 },
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Base URL",
                 "help": null
               }
@@ -1190,6 +1284,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Clé d'API",
                 "help": null
               }
@@ -1209,6 +1305,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Modèle",
                 "help": null
               }
@@ -1229,6 +1327,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Dimensions",
                 "help": "Taille des vecteurs renvoyés par le modèle."
               }
@@ -1249,6 +1349,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Demander ces dimensions",
                 "help": "Pour les modèles qui raccourcissent leurs vecteurs (Matryoshka)."
               }
@@ -1269,6 +1371,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Préfixe des requêtes",
                 "help": "Ex. query: pour les modèles qui l'attendent."
               }
@@ -1289,6 +1393,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Préfixe des documents",
                 "help": "Ex. passage: pour les modèles qui l'attendent."
               }
@@ -1310,6 +1416,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Textes par requête",
                 "help": null
               }
@@ -1330,6 +1438,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Champs JSON supplémentaires",
                 "help": null
               }
@@ -1351,6 +1461,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Timeout de connexion (secondes)",
                 "help": null
               }
@@ -1372,6 +1484,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Timeout de lecture (secondes)",
                 "help": null
               }
@@ -1406,6 +1520,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Fournisseur",
                 "help": null
               }
@@ -1425,6 +1541,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Type de modèle",
                 "help": null
               }
@@ -1451,6 +1569,8 @@
                   "openai.com": "openai",
                   "openrouter.ai": "openrouter"
                 },
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Base URL",
                 "help": null
               }
@@ -1480,6 +1600,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Clé d'API",
                 "help": null
               }
@@ -1499,6 +1621,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Modèle",
                 "help": null
               }
@@ -1519,6 +1643,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Champs JSON supplémentaires",
                 "help": "Ajoutés à chaque requête, ex. le routage d'OpenRouter."
               }
@@ -1540,6 +1666,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Timeout de connexion (secondes)",
                 "help": null
               }
@@ -1561,6 +1689,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Timeout de lecture (secondes)",
                 "help": null
               }
@@ -1588,6 +1718,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Prompt caching",
                 "help": "Activé par défaut pour OpenRouter et Anthropic."
               }
@@ -1621,6 +1753,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Fournisseur",
                 "help": null
               }
@@ -1640,6 +1774,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Type de modèle",
                 "help": null
               }
@@ -1668,6 +1804,8 @@
                   "3dspeaker-eres2net": "modelscope",
                   "titanet-small": "nvidia"
                 },
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Modèle de voix",
                 "help": "titanet-small, 3dspeaker-campplus-zh-en ou 3dspeaker-eres2net (téléchargé une fois), ou le chemin d'un fichier .onnx."
               }
@@ -1690,6 +1828,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Threads CPU",
                 "help": "Un seul suffit."
               }
@@ -1719,6 +1859,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Seuil de reconnaissance",
                 "help": "Par défaut, celui du catalogue. Obligatoire pour un fichier .onnx à vous."
               }
@@ -1771,6 +1913,8 @@
                     "reference": "models",
                     "model_type": "transcription",
                     "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
                     "title": "Modèle de transcription",
                     "help": "Entend ce que disent les personnes : un modèle de transcription de Modèles."
                   }
@@ -1790,6 +1934,8 @@
                     "reference": "models",
                     "model_type": "speech",
                     "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
                     "title": "Modèle de synthèse vocale",
                     "help": "Donne sa voix à l'assistant : un modèle de synthèse vocale de Modèles."
                   }
@@ -1810,6 +1956,8 @@
                     "reference": null,
                     "model_type": null,
                     "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
                     "title": "Style d'écriture",
                     "help": null
                   }
@@ -1837,6 +1985,8 @@
                     "reference": null,
                     "model_type": null,
                     "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
                     "title": "Phrase dite si la transcription échoue",
                     "help": null
                   }
@@ -1865,6 +2015,8 @@
                     "reference": null,
                     "model_type": null,
                     "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
                     "title": "Dossier des clips de secours",
                     "help": "stt.wav et tts.wav, joués si la transcription ou la synthèse tombe en panne."
                   }
@@ -1886,6 +2038,8 @@
                     "reference": null,
                     "model_type": null,
                     "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
                     "title": "Silence avant de prendre la parole (secondes)",
                     "help": null
                   }
@@ -1916,6 +2070,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Type",
                 "help": null
               }
@@ -1935,6 +2091,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Nom",
                 "help": null
               }
@@ -1963,6 +2121,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Nouvelle conversation après (secondes)",
                 "help": "Passé ce silence, l'assistant ne relit plus les échanges précédents. Par défaut, 5 min à l'oral, 4 h à l'écrit."
               }
@@ -1983,6 +2143,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Hôte",
                 "help": null
               }
@@ -2005,6 +2167,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Port",
                 "help": null
               }
@@ -2033,6 +2197,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "URL publique",
                 "help": "Celle que les satellites utilisent, ex. http://nestor.local:8471."
               }
@@ -2059,6 +2225,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Voix",
                 "help": "Sans elle, les satellites fonctionnent par écrit seulement. Nécessite l'extra voice."
               }
@@ -2080,6 +2248,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Timeout d'envoi (secondes)",
                 "help": null
               }
@@ -2109,6 +2279,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Type",
                 "help": null
               }
@@ -2128,6 +2300,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Nom",
                 "help": null
               }
@@ -2156,6 +2330,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Nouvelle conversation après (secondes)",
                 "help": "Passé ce silence, l'assistant ne relit plus les messages précédents. 4 h par défaut."
               }
@@ -2177,6 +2353,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Token",
                 "help": null
               }
@@ -2197,6 +2375,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "URL de l'API",
                 "help": null
               }
@@ -2219,6 +2399,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Timeout du long polling (secondes)",
                 "help": null
               }
@@ -2240,6 +2422,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Timeout des requêtes (secondes)",
                 "help": null
               }
@@ -2267,6 +2451,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Message en cas d'erreur",
                 "help": null
               }
@@ -2309,6 +2495,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Type",
                 "help": null
               }
@@ -2328,6 +2516,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Nom",
                 "help": null
               }
@@ -2347,6 +2537,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Base URL",
                 "help": null
               }
@@ -2368,6 +2560,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Clé d'API",
                 "help": null
               }
@@ -2387,6 +2581,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Modèle",
                 "help": null
               }
@@ -2406,6 +2602,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Ce qu'il sait faire",
                 "help": "L'assistant s'en sert pour décider quoi lui confier."
               }
@@ -2426,6 +2624,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Consignes",
                 "help": null
               }
@@ -2447,6 +2647,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Timeout (secondes)",
                 "help": null
               }
@@ -2468,6 +2670,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Timeout d'arrêt (secondes)",
                 "help": null
               }
@@ -2523,11 +2727,19 @@
             },
             "SensitiveCalls": {
               "additionalProperties": false,
-              "description": "Calls of `tool` confirmed by the person first when one of these values appears in an argument: Home\nAssistant's `HassTurnOn` and `HassTurnOff` drive lights and locks alike.",
+              "description": "Calls confirmed by the person first when one of these values appears in an argument: a server's tools may\ndrive harmless and dangerous things alike.",
               "properties": {
                 "tool": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
                   "title": "Tool",
-                  "type": "string",
                   "x-nestor": {
                     "field": "tool",
                     "title_id": "config-tools-mcp-sensitivecalls-tool",
@@ -2540,6 +2752,8 @@
                     "reference": null,
                     "model_type": null,
                     "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
                     "title": "Outil",
                     "help": "Nom sur le serveur, ex. intent__HassTurnOff."
                   }
@@ -2565,13 +2779,14 @@
                     "reference": null,
                     "model_type": null,
                     "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
                     "title": "Valeurs sensibles",
                     "help": "Par argument, ex. device_class : garage, gate ; domain : lock."
                   }
                 }
               },
               "required": [
-                "tool",
                 "arguments"
               ],
               "title": "SensitiveCalls",
@@ -2595,6 +2810,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Type",
                 "help": null
               }
@@ -2614,6 +2831,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Nom",
                 "help": null
               }
@@ -2633,6 +2852,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "URL",
                 "help": null
               }
@@ -2652,6 +2873,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Transport",
                 "help": null
               }
@@ -2681,6 +2904,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Token",
                 "help": "Envoyé en Authorization: Bearer."
               }
@@ -2705,6 +2930,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "En-têtes HTTP",
                 "help": "Valeurs stockées comme secrets."
               }
@@ -2726,6 +2953,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Timeout (secondes)",
                 "help": null
               }
@@ -2756,6 +2985,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Outils proposés",
                 "help": "Noms des outils du serveur. Vide : tous."
               }
@@ -2778,6 +3009,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Outils exclus",
                 "help": null
               }
@@ -2800,6 +3033,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Risques des outils",
                 "help": "Par nom d'outil ; remplace ce que le serveur déclare."
               }
@@ -2822,6 +3057,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Appels à confirmer",
                 "help": "Selon ce sur quoi ils agissent, ex. serrures, alarme, garage."
               }
@@ -2843,6 +3080,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Attente avant reconnexion (secondes)",
                 "help": null
               }
@@ -2862,6 +3101,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Négociation du protocole",
                 "help": "legacy saute la détection de la version 2026-07-28 du protocole."
               }
@@ -2888,16 +3129,114 @@
       "kinds": {},
       "model_types": {}
     },
-    "presence": {
-      "family": "presence",
+    "home": {
+      "family": "home",
       "shape": "one",
       "required": false,
-      "title": "Présence",
+      "title": "Maison",
       "picks": [
         "kind"
       ],
       "kinds": {
         "home-assistant": {
+          "$defs": {
+            "SensitiveTargets": {
+              "additionalProperties": false,
+              "description": "What an action of Home Assistant acts on that makes it need the person's go-ahead, whatever the tool: one of\nthese values in the call's `domain`, `device_class` or `name`, ignoring case. Lights, heating and media are not.",
+              "properties": {
+                "domains": {
+                  "default": [
+                    "lock",
+                    "alarm_control_panel"
+                  ],
+                  "items": {
+                    "type": "string"
+                  },
+                  "title": "Domains",
+                  "type": "array",
+                  "x-nestor": {
+                    "field": "domains",
+                    "title_id": "config-home-home-assistant-sensitivetargets-domains",
+                    "help_id": "config-home-home-assistant-sensitivetargets-domains-help",
+                    "fallback_title_id": "config-field-domains",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "home-home-assistant-sensitivetargets",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Domaines",
+                    "help": "Le domaine Home Assistant de ce que l'appel vise."
+                  }
+                },
+                "device_classes": {
+                  "default": [
+                    "garage",
+                    "gate",
+                    "door"
+                  ],
+                  "items": {
+                    "type": "string"
+                  },
+                  "title": "Device Classes",
+                  "type": "array",
+                  "x-nestor": {
+                    "field": "device_classes",
+                    "title_id": "config-home-home-assistant-sensitivetargets-device_classes",
+                    "help_id": "config-home-home-assistant-sensitivetargets-device_classes-help",
+                    "fallback_title_id": "config-field-device_classes",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "home-home-assistant-sensitivetargets",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Classes d'appareil",
+                    "help": "La classe d'appareil de ce que l'appel vise."
+                  }
+                },
+                "names": {
+                  "default": [
+                    "lock",
+                    "alarm",
+                    "garage",
+                    "gate",
+                    "door"
+                  ],
+                  "items": {
+                    "type": "string"
+                  },
+                  "title": "Names",
+                  "type": "array",
+                  "x-nestor": {
+                    "field": "names",
+                    "title_id": "config-home-home-assistant-sensitivetargets-names",
+                    "help_id": "config-home-home-assistant-sensitivetargets-names-help",
+                    "fallback_title_id": "config-field-names",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "home-home-assistant-sensitivetargets",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Mots dans le nom",
+                    "help": "Dans le nom de ce que l'appel vise, sans tenir compte de la casse : ajoutez les mots de votre langue."
+                  }
+                }
+              },
+              "title": "SensitiveTargets",
+              "type": "object"
+            }
+          },
           "additionalProperties": false,
           "properties": {
             "kind": {
@@ -2905,36 +3244,19 @@
               "type": "string",
               "x-nestor": {
                 "field": "kind",
-                "title_id": "config-presence-home-assistant-kind",
-                "help_id": "config-presence-home-assistant-kind-help",
+                "title_id": "config-home-home-assistant-kind",
+                "help_id": "config-home-home-assistant-kind-help",
                 "fallback_title_id": "config-field-kind",
                 "secret": false,
                 "secret_values": false,
                 "advanced": false,
-                "group": "presence-home-assistant",
+                "group": "home-home-assistant",
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Type",
-                "help": null
-              }
-            },
-            "name": {
-              "type": "string",
-              "description": "the instance's name; the kind by default",
-              "x-nestor": {
-                "field": "name",
-                "title_id": "config-presence-home-assistant-name",
-                "help_id": "config-presence-home-assistant-name-help",
-                "fallback_title_id": "config-field-name",
-                "secret": false,
-                "secret_values": false,
-                "advanced": false,
-                "group": "presence-home-assistant",
-                "reference": null,
-                "model_type": null,
-                "brands": null,
-                "title": "Nom",
                 "help": null
               }
             },
@@ -2943,18 +3265,20 @@
               "type": "string",
               "x-nestor": {
                 "field": "url",
-                "title_id": "config-presence-home-assistant-url",
-                "help_id": "config-presence-home-assistant-url-help",
+                "title_id": "config-home-home-assistant-url",
+                "help_id": "config-home-home-assistant-url-help",
                 "fallback_title_id": "config-field-url",
                 "secret": false,
                 "secret_values": false,
                 "advanced": false,
-                "group": "presence-home-assistant",
+                "group": "home-home-assistant",
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "URL",
-                "help": null
+                "help": "L'adresse de Home Assistant, ex. http://homeassistant.local:8123."
               }
             },
             "token": {
@@ -2964,18 +3288,20 @@
               "writeOnly": true,
               "x-nestor": {
                 "field": "token",
-                "title_id": "config-presence-home-assistant-token",
-                "help_id": "config-presence-home-assistant-token-help",
+                "title_id": "config-home-home-assistant-token",
+                "help_id": "config-home-home-assistant-token-help",
                 "fallback_title_id": "config-field-token",
                 "secret": true,
                 "secret_values": false,
                 "advanced": false,
-                "group": "presence-home-assistant",
+                "group": "home-home-assistant",
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Token",
-                "help": null
+                "help": "Un jeton d'accès longue durée (votre profil dans Home Assistant, Sécurité)."
               }
             },
             "people": {
@@ -2986,16 +3312,18 @@
               "type": "object",
               "x-nestor": {
                 "field": "people",
-                "title_id": "config-presence-home-assistant-people",
-                "help_id": "config-presence-home-assistant-people-help",
+                "title_id": "config-home-home-assistant-people",
+                "help_id": "config-home-home-assistant-people-help",
                 "fallback_title_id": "config-field-people",
                 "secret": false,
                 "secret_values": false,
                 "advanced": false,
-                "group": "presence-home-assistant",
+                "group": "home-home-assistant",
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": "people",
+                "suggest_values": "residents",
                 "title": "Entités personne",
                 "help": "Chaque personne du foyer et son entité, ex. alice: person.alice."
               }
@@ -3008,16 +3336,18 @@
               "type": "object",
               "x-nestor": {
                 "field": "rooms",
-                "title_id": "config-presence-home-assistant-rooms",
-                "help_id": "config-presence-home-assistant-rooms-help",
+                "title_id": "config-home-home-assistant-rooms",
+                "help_id": "config-home-home-assistant-rooms-help",
                 "fallback_title_id": "config-field-rooms",
                 "secret": false,
                 "secret_values": false,
                 "advanced": false,
-                "group": "presence-home-assistant",
+                "group": "home-home-assistant",
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": "people",
+                "suggest_values": null,
                 "title": "Suivi des pièces",
                 "help": "Le capteur qui donne la pièce de chaque personne, ex. Bermuda ou ESPresense."
               }
@@ -3038,18 +3368,58 @@
               "title": "Occupancy Sensors",
               "x-nestor": {
                 "field": "occupancy_sensors",
-                "title_id": "config-presence-home-assistant-occupancy_sensors",
-                "help_id": "config-presence-home-assistant-occupancy_sensors-help",
+                "title_id": "config-home-home-assistant-occupancy_sensors",
+                "help_id": "config-home-home-assistant-occupancy_sensors-help",
                 "fallback_title_id": "config-field-occupancy_sensors",
                 "secret": false,
                 "secret_values": false,
                 "advanced": false,
-                "group": "presence-home-assistant",
+                "group": "home-home-assistant",
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Capteurs de présence",
                 "help": "Vide : tous ceux rattachés à une pièce (présence, occupation, mouvement)."
+              }
+            },
+            "sensitive": {
+              "$ref": "#/$defs/SensitiveTargets",
+              "default": {
+                "domains": [
+                  "lock",
+                  "alarm_control_panel"
+                ],
+                "device_classes": [
+                  "garage",
+                  "gate",
+                  "door"
+                ],
+                "names": [
+                  "lock",
+                  "alarm",
+                  "garage",
+                  "gate",
+                  "door"
+                ]
+              },
+              "x-nestor": {
+                "field": "sensitive",
+                "title_id": "config-home-home-assistant-sensitive",
+                "help_id": "config-home-home-assistant-sensitive-help",
+                "fallback_title_id": "config-field-sensitive",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "home-home-assistant",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Actions à confirmer",
+                "help": "La personne confirme d'abord une action sur ce qui correspond. Lumières, chauffage et médias jamais."
               }
             },
             "sync_timeout_s": {
@@ -3059,16 +3429,18 @@
               "type": "number",
               "x-nestor": {
                 "field": "sync_timeout_s",
-                "title_id": "config-presence-home-assistant-sync_timeout_s",
-                "help_id": "config-presence-home-assistant-sync_timeout_s-help",
+                "title_id": "config-home-home-assistant-sync_timeout_s",
+                "help_id": "config-home-home-assistant-sync_timeout_s-help",
                 "fallback_title_id": "config-field-sync_timeout_s",
                 "secret": false,
                 "secret_values": false,
-                "advanced": false,
-                "group": "presence-home-assistant",
+                "advanced": true,
+                "group": "home-home-assistant",
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Timeout de synchronisation (secondes)",
                 "help": null
               }
@@ -3080,16 +3452,18 @@
               "type": "number",
               "x-nestor": {
                 "field": "reconnect_min_s",
-                "title_id": "config-presence-home-assistant-reconnect_min_s",
-                "help_id": "config-presence-home-assistant-reconnect_min_s-help",
+                "title_id": "config-home-home-assistant-reconnect_min_s",
+                "help_id": "config-home-home-assistant-reconnect_min_s-help",
                 "fallback_title_id": "config-field-reconnect_min_s",
                 "secret": false,
                 "secret_values": false,
-                "advanced": false,
-                "group": "presence-home-assistant",
+                "advanced": true,
+                "group": "home-home-assistant",
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Attente minimale avant reconnexion (secondes)",
                 "help": null
               }
@@ -3101,17 +3475,42 @@
               "type": "number",
               "x-nestor": {
                 "field": "reconnect_max_s",
-                "title_id": "config-presence-home-assistant-reconnect_max_s",
-                "help_id": "config-presence-home-assistant-reconnect_max_s-help",
+                "title_id": "config-home-home-assistant-reconnect_max_s",
+                "help_id": "config-home-home-assistant-reconnect_max_s-help",
                 "fallback_title_id": "config-field-reconnect_max_s",
                 "secret": false,
                 "secret_values": false,
-                "advanced": false,
-                "group": "presence-home-assistant",
+                "advanced": true,
+                "group": "home-home-assistant",
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Attente maximale avant reconnexion (secondes)",
+                "help": null
+              }
+            },
+            "tool_timeout_s": {
+              "default": 10.0,
+              "exclusiveMinimum": 0,
+              "title": "Tool Timeout S",
+              "type": "number",
+              "x-nestor": {
+                "field": "tool_timeout_s",
+                "title_id": "config-home-home-assistant-tool_timeout_s",
+                "help_id": "config-home-home-assistant-tool_timeout_s-help",
+                "fallback_title_id": "config-field-tool_timeout_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "home-home-assistant",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Délai d'une action (s)",
                 "help": null
               }
             }
@@ -3154,6 +3553,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Type",
                 "help": null
               }
@@ -3173,6 +3574,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Nom",
                 "help": null
               }
@@ -3194,6 +3597,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Intervalle de polling (secondes)",
                 "help": null
               }
@@ -3215,6 +3620,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Attente quand les identifiants sont refusés (secondes)",
                 "help": null
               }
@@ -3236,6 +3643,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Premier nouvel essai après (secondes)",
                 "help": null
               }
@@ -3257,6 +3666,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Attente maximale entre deux essais (secondes)",
                 "help": null
               }
@@ -3278,6 +3689,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Longueur maximale d'un message lu (caractères)",
                 "help": null
               }
@@ -3299,6 +3712,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Longueur d'un extrait (caractères)",
                 "help": null
               }
@@ -3328,6 +3743,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Type",
                 "help": null
               }
@@ -3347,6 +3764,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Nom",
                 "help": null
               }
@@ -3368,6 +3787,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Timeout (secondes)",
                 "help": null
               }
@@ -3389,6 +3810,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "IDLE renouvelé après (secondes)",
                 "help": "Moins de 1740 : les serveurs coupent IDLE après 29 min."
               }
@@ -3410,6 +3833,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Intervalle de polling sans IDLE (secondes)",
                 "help": null
               }
@@ -3431,6 +3856,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Taille maximale d'un message lu (octets)",
                 "help": null
               }
@@ -3452,6 +3879,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Attente quand les identifiants sont refusés (secondes)",
                 "help": null
               }
@@ -3473,6 +3902,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Premier nouvel essai après (secondes)",
                 "help": null
               }
@@ -3494,6 +3925,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Attente maximale entre deux essais (secondes)",
                 "help": null
               }
@@ -3515,6 +3948,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Longueur maximale d'un message lu (caractères)",
                 "help": null
               }
@@ -3536,6 +3971,8 @@
                 "reference": null,
                 "model_type": null,
                 "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
                 "title": "Longueur d'un extrait (caractères)",
                 "help": null
               }
@@ -3550,5 +3987,9 @@
       },
       "model_types": {}
     }
-  }
+  },
+  "suggestions": [
+    "people",
+    "residents"
+  ]
 }

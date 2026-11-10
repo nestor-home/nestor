@@ -121,7 +121,7 @@ def test_a_restart_stops_the_process_cleanly_then_runs_the_same_command_line(
         )
         .replace("[{kind: remote, name: hermes}]", "[]")
         .replace("[{kind: memory, name: telegram}]", "[{kind: telegram, token: '1:a'}]")
-        .replace("presence: {kind: static}\n", "")
+        .replace("home: {kind: static}\n", "")
     )
     assert main(["-c", str(config), "run"]) == 0
     assert executed == [(sys.executable, sys.orig_argv)]
@@ -223,7 +223,7 @@ def test_every_command_reads_the_dot_env_next_to_the_configuration_and_the_shell
         )
         .replace("[{kind: remote, name: hermes}]", "[]")
         .replace("[{kind: memory, name: telegram}]", "[{kind: telegram, token: '${secret:bot}'}]")
-        .replace("presence: {kind: static}\n", "")
+        .replace("home: {kind: static}\n", "")
     )
     (home / ".env").write_text(
         f"# from nestor init\nexport NESTOR_SECRET_KEY={SECRET_KEY}\nNESTOR_DATA='{tmp_path / 'state'}'\n"

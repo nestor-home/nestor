@@ -43,6 +43,8 @@ home-say-idle = Tout est calme.
 home-needs = Ce que j'attends de vous
 home-house = La maison
 home-room-nobody = personne
+home-room-someone = quelqu'un
+home-at-home = À la maison
 home-room-offline = { $count ->
     [one] appareil hors ligne
    *[other] { $count } appareils hors ligne

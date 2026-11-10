@@ -43,6 +43,8 @@ home-say-idle = All quiet.
 home-needs = What I need from you
 home-house = The house
 home-room-nobody = nobody
+home-room-someone = someone is there
+home-at-home = At home
 home-room-offline = { $count ->
     [one] device offline
    *[other] { $count } devices offline

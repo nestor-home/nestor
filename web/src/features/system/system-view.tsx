@@ -12,20 +12,20 @@ const SLOTS: Record<Component["slot"], string> = {
   model: "sys-slot-model",
   executor: "sys-slot-executor",
   channel: "sys-slot-channel",
-  presence: "sys-slot-presence",
+  home: "sys-slot-home",
   tools: "sys-slot-tools",
   inbound: "sys-slot-inbound",
   connector: "sys-slot-connector",
   satellite: "sys-slot-satellite",
 };
 
-const HEALTH: Record<Health, { tone: StatusTone; label: string }> = {
+export const HEALTH: Record<Health, { tone: StatusTone; label: string }> = {
   started: { tone: "ok", label: "sys-health-ok" },
   degraded: { tone: "attention", label: "sys-health-degraded" },
   unavailable: { tone: "error", label: "sys-health-down" },
 };
 /** A component that tells nothing about itself. */
-const UNKNOWN = { tone: "idle", label: "sys-health-unknown" } as const;
+export const UNKNOWN = { tone: "idle", label: "sys-health-unknown" } as const;
 
 export function SystemView() {
   const t = useT();

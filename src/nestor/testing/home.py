@@ -1,10 +1,11 @@
-"""Double and contract suite for the presence port."""
+"""Doubles for the home ports, and the presence port's contract suite."""
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from datetime import datetime
 
 from nestor.core import PersonId, utc_now
-from nestor.modules.home import Granularity, Presence, PresenceSource, Whereabouts
+from nestor.modules.cognition.tools import Tool, ToolProvider
+from nestor.modules.home import Granularity, Home, HomeOverview, Presence, PresenceSource, Resident, Room, Whereabouts
 
 
 class StaticPresence(PresenceSource):
@@ -33,6 +34,59 @@ class StaticPresence(PresenceSource):
         return self
 
 
+class StaticTools(ToolProvider):
+    """Tools given by the test."""
+
+    name = "static-tools"
+
+    def __init__(self, tools: Sequence[Tool] = ()) -> None:
+        self.given = tuple(tools)
+
+    def tools(self) -> Sequence[Tool]:
+        return self.given
+
+
+class StaticHome(Home):
+    """A home set by the test: its presence, its tools, its rooms and residents; `connected` says if it answers."""
+
+    name = "static-home"
+
+    def __init__(
+        self,
+        presence: StaticPresence | None = None,
+        tools: Sequence[Tool] = (),
+        *,
+        rooms: Sequence[Room] = (),
+        residents: Sequence[Resident] = (),
+        people: Mapping[str, str] | None = None,
+        connected: bool = True,
+    ) -> None:
+        self._presence, self._tools = presence or StaticPresence(), StaticTools(tools)
+        self.rooms, self.residents, self.connected = tuple(rooms), tuple(residents), connected
+        self.people = {PersonId(p): e for p, e in (people or {}).items()}
+
+    @property
+    def presence(self) -> StaticPresence:
+        return self._presence
+
+    @property
+    def tools(self) -> StaticTools:
+        return self._tools
+
+    def room_of(self, label: str) -> str | None:
+        wanted = label.strip().casefold()
+        return next((r.id for r in self.rooms if wanted in (r.id.casefold(), r.name.casefold())), None)
+
+    def overview(self) -> HomeOverview:
+        return HomeOverview(
+            connected=self.connected,
+            granularity=self._presence.granularity,
+            rooms=self.rooms if self.connected else (),
+            residents=self.residents if self.connected else (),
+            people=dict(self.people),
+        )
+
+
 class PresenceSourceContract:
     """Behaviour every `PresenceSource` must show. Implement `source()`, already started and settled
     (its live cache filled), and `expected()`: the presence the fake home behind it describes."""
@@ -48,9 +102,9 @@ class PresenceSourceContract:
         presence = source.presence()
         assert presence.granularity is source.granularity
         assert dict(presence.people) == dict(self.expected())
-        if source.granularity < Granularity.PERSON_ROOM:
+        if not source.granularity.at_least(Granularity.PERSON_ROOM):
             assert all(w.room is None for w in presence.people.values()), "rooms reported beyond the granularity"
-        if source.granularity < Granularity.OCCUPIED_ROOMS:
+        if not source.granularity.at_least(Granularity.OCCUPIED_ROOMS):
             assert not presence.occupied_rooms, "occupied rooms reported beyond the granularity"
 
     def test_since_when_is_a_moment_of_the_past(self) -> None:

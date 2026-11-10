@@ -1,18 +1,19 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { MessageSquareText, Volume2 } from "lucide-react";
+import { Volume2 } from "lucide-react";
 import { api, isMissing, keys, type Task, type TaskStatus, taskQuery, tasksQuery } from "@/api";
 import { Ago } from "@/components/ago";
 import { Confirm } from "@/components/confirm";
 import { type Crumb, Crumbs } from "@/components/crumbs";
 import { useNotify } from "@/components/notices";
+import { OriginLink } from "@/components/origin-link";
 import { PageHeader, RowArrow, RowList, Section, WithAside } from "@/components/page";
 import { Empty, Failure, Loading } from "@/components/states";
 import { Status, type StatusTone } from "@/components/status";
 import { Button } from "@/components/ui/button";
 import { SubjectStory } from "@/features/journal/subject-story";
 import { useT } from "@/i18n";
-import { BrandMark, brandOf, KindMark } from "@/lib/brands";
+import { BrandMark, brandOf } from "@/lib/brands";
 import { taskStatusLabel } from "@/lib/labels";
 import { personName } from "@/lib/people";
 import { useCan } from "@/lib/session";
@@ -169,20 +170,9 @@ export function TaskDetail({ id }: { id: string }) {
             <div>
               <p className="label-mono mb-1.5">{t("task-asked-in")}</p>
               {task.origin.session ? (
-                <Link
-                  to="/journal"
-                  search={{ session: task.origin.session }}
-                  className="inline-flex items-center gap-2 text-sm text-ink hover:text-ember"
-                >
-                  <MessageSquareText className="size-4" aria-hidden="true" />
-                  {t("task-a-conversation")}
-                  {task.origin.channel ? (
-                    <span className="inline-flex items-center gap-1 text-[0.85rem] text-ink-muted">
-                      <KindMark kind={task.origin.channel} className="size-3" label={false} />
-                      {task.origin.channel}
-                    </span>
-                  ) : null}
-                </Link>
+                <span className="text-sm">
+                  <OriginLink origin={task.origin} />
+                </span>
               ) : (
                 <p className="text-sm text-ink-muted">{t("task-conversation-older")}</p>
               )}

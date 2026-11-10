@@ -113,20 +113,25 @@ export function document(): ConfigDocument {
     tools: [
       {
         kind: "mcp",
-        name: "home",
-        url: "http://homeassistant.local:8123/mcp_server/sse",
+        name: "recipes",
+        url: "http://192.168.1.20:8808/mcp_server/sse",
         transport: "sse",
-        token: vault("tools.home.token"),
-        risks: { HassTurnOff: "write", HassLockUnlock: "sensitive" },
+        token: vault("tools.recipes.token"),
+        risks: { add_recipe: "write", delete_recipe: "sensitive" },
         headers: { "X-Household": "lambert-home-7d2f" },
       },
     ],
-    presence: {
+    home: {
       kind: "home-assistant",
       url: "http://homeassistant.local:8123",
-      token: vault("presence.token"),
-      people: { mathis: "person.mathis", lea: "person.lea" },
-      rooms: { "living room": "area.living_room", kitchen: "area.kitchen" },
+      token: vault("home.token"),
+      people: { mathis: "person.mathis", lea: "person.lea", jules: "person.jules" },
+      rooms: { mathis: "sensor.mathis_area", lea: "sensor.lea_area", jules: "sensor.jules_area" },
+      sensitive: {
+        domains: ["lock", "alarm_control_panel"],
+        device_classes: ["garage", "gate", "door"],
+        names: ["porte"],
+      },
     },
     connectors: [{ kind: "google" }, { kind: "imap" }],
     initiative: { quiet_hours: "22:30-07:30", main_room: "living room" },
@@ -153,8 +158,8 @@ export function fresh(): ConfigDb {
     vault: {
       "models.elevenlabs.api_key": { value: "sk_e1d0a8c7b6f5", at: minutes(60 * 24 * 30) },
       "executors.hermes.api_key": { value: "hermes-7c0f2b91", at: minutes(60 * 24 * 12) },
-      "tools.home.token": { value: "eyJhbGciOiJIUzI1NiJ9.home", at: minutes(60 * 24 * 12) },
-      "presence.token": { value: "eyJhbGciOiJIUzI1NiJ9.presence", at: minutes(60 * 24 * 12) },
+      "tools.recipes.token": { value: "eyJhbGciOiJIUzI1NiJ9.recipes", at: minutes(60 * 24 * 12) },
+      "home.token": { value: "eyJhbGciOiJIUzI1NiJ9.home", at: minutes(60 * 24 * 12) },
       "github.token": { value: "ghp_unused0000", at: minutes(60 * 24 * 40) },
     },
   };

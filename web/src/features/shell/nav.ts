@@ -26,7 +26,8 @@ const item = (to: SectionPath, label: string, scope: Permission, key: string): N
   icon: SECTION_ICON[to],
 });
 
-/** The information architecture: what happens, the household, and what is plugged in. */
+/** The information architecture: what happens, the household and its home, what the agent will do on its own,
+ * and what is plugged in. */
 export const NAV: NavGroup[] = [
   {
     label: null,
@@ -36,9 +37,17 @@ export const NAV: NavGroup[] = [
     label: "nav-group-household",
     items: [
       item("/people", "nav-people", "people:read", "p"),
+      item("/house", "nav-house", "home:read", "o"),
       item("/memories", "nav-memories", "memories:read", "m"),
+    ],
+  },
+  {
+    label: "nav-group-agenda",
+    items: [
+      item("/schedules", "nav-schedules", "schedules:read", "r"),
       item("/watches", "nav-watches", "watches:read", "v"),
       item("/tasks", "nav-tasks", "tasks:read", "t"),
+      item("/messages", "nav-messages", "messages:read", "e"),
     ],
   },
   {

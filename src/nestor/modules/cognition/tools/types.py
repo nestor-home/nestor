@@ -40,14 +40,19 @@ class SensitiveWhen:
     """The calls of a tool that are sensitive for what they act on: one of the `arguments`' values appears in the
     call's argument of that name, ignoring case (`garage` in `device_class`, `lock` in `domain`, `porte` in a
     `name`). A rule written by the household for its own devices: a home server's tools cover lights and locks
-    alike."""
+    alike. `tool` `None`: every tool of the server that acts (a home's rule for its doors, whichever tool opens
+    them)."""
 
-    tool: str
+    tool: str | None
     arguments: Mapping[str, tuple[str, ...]]
 
-    def matches(self, tool: str, arguments: Mapping[str, object]) -> bool:
-        if tool != self.tool:
-            return False
+    def applies_to(self, tool: str, risk: Risk) -> bool:
+        """Whether it judges this tool's calls: the tool it names, or any with `tool` `None`. A rule never makes a
+        tool that only reads sensitive."""
+        return risk is not Risk.READ and self.tool in (None, tool)
+
+    def matches(self, arguments: Mapping[str, object]) -> bool:
+        """Whether a call it applies to acts on what it names."""
         for name, values in self.arguments.items():
             given = arguments.get(name)
             found = given if isinstance(given, list | tuple) else [given] if given is not None else []

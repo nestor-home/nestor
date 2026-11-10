@@ -11,7 +11,7 @@ from nestor.admin.api.v1.shared import Input
 from nestor.admin.presentation import Phrasebook
 from nestor.core import ModelType
 from nestor.core.i18n import Message
-from nestor.runtime.editing import ConfigSchema, Diff, Shape
+from nestor.runtime.editing import ConfigSchema, Diff, Shape, Suggest
 from nestor.runtime.secrets import ConfigSecrets, preview
 
 
@@ -50,7 +50,8 @@ class SlotOut(BaseModel):
 class ConfigSchemaOut(BaseModel):
     sections: dict[str, dict[str, Any]]  # persona, household (one person), agent, watches, initiative, admin, data_dir
     section_titles: dict[str, str]
-    slots: dict[str, SlotOut]  # models, channels, executors, tools, inbound, presence, connectors
+    slots: dict[str, SlotOut]  # models, channels, executors, tools, inbound, home, connectors
+    suggestions: list[Suggest]  # what a field's `x-nestor.suggest_keys` and `suggest_values` may name
 
     @classmethod
     def of(cls, schema: ConfigSchema, words: Phrasebook) -> "ConfigSchemaOut":
@@ -68,7 +69,7 @@ class ConfigSchemaOut(BaseModel):
         }
         sections = _render(schema.sections(), words)
         titles = {name: words.text_or(Message(f"config-section-{name}"), _humanize(name)) for name in sections}
-        return cls(sections=sections, section_titles=titles, slots=slots)
+        return cls(sections=sections, section_titles=titles, slots=slots, suggestions=list(Suggest))
 
 
 class ConfigOut(BaseModel):

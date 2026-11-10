@@ -29,6 +29,10 @@ export const keys = {
   task: (id: Id) => ["tasks", id] as const,
   watches: ["watches"] as const,
   watch: (id: Id) => ["watches", id] as const,
+  schedules: ["schedules"] as const,
+  messages: ["messages"] as const,
+  confirmations: ["confirmations"] as const,
+  home: ["home"] as const,
   activity: ["agent", "activity"] as const,
   initiative: ["agent", "initiative"] as const,
   config: ["config"] as const,
@@ -129,6 +133,18 @@ export const taskQuery = (id: Id) =>
   });
 export const watchesQuery = queryOptions({ queryKey: keys.watches, queryFn: api.watches });
 export const watchQuery = (id: Id) => queryOptions({ queryKey: keys.watch(id), queryFn: () => api.watch(id) });
+export const schedulesQuery = queryOptions({
+  queryKey: keys.schedules,
+  queryFn: api.schedules,
+  refetchInterval: 60_000,
+});
+export const messagesQuery = queryOptions({ queryKey: keys.messages, queryFn: api.messages, refetchInterval: 60_000 });
+export const confirmationsQuery = queryOptions({
+  queryKey: keys.confirmations,
+  queryFn: api.confirmations,
+  refetchInterval: 60_000,
+});
+export const homeQuery = queryOptions({ queryKey: keys.home, queryFn: api.home, refetchInterval: 60_000 });
 export const memoriesQuery = (query: MemoryQuery) =>
   queryOptions({ queryKey: keys.memories(query), queryFn: () => api.memories(query) });
 

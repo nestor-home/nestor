@@ -35,7 +35,7 @@ class Family(StrEnum):
     MODEL = "model"  # builds a `Model` of the type it serves, for a provider
     EXECUTOR = "executor"
     CHANNEL = "channel"
-    PRESENCE = "presence"
+    HOME = "home"  # builds a `Home`: the home system, its presence and its actions
     TOOLS = "tools"
     INBOUND = "inbound"
     CONNECTOR = "connector"  # builds a `Connector`: a service the household plugs accounts into from the admin

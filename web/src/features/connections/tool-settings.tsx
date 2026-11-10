@@ -1,22 +1,14 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
-import { api, type ConnectionDetail, keys, type Risk } from "@/api";
+import { api, type ConnectionDetail, keys } from "@/api";
 import { useNotify } from "@/components/notices";
 import { Panel } from "@/components/page";
+import { RiskTag } from "@/components/risk-tag";
 import { Empty, FormError } from "@/components/states";
-import { Tag } from "@/components/status";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { useT } from "@/i18n";
-import { riskLabel } from "@/lib/labels";
-import { cn } from "@/lib/utils";
-
-const RISK_TONE: Record<Risk, string> = {
-  read: "",
-  write: "border-amber/50 text-amber",
-  sensitive: "border-brick/50 text-brick",
-};
 
 /** Which tools the assistant gets from this account, and whether writing asks first. */
 export function ToolSettings({ connection, editable }: { connection: ConnectionDetail; editable: boolean }) {
@@ -79,7 +71,7 @@ export function ToolSettings({ connection, editable }: { connection: ConnectionD
                   <div className="min-w-0 flex-1">
                     <label htmlFor={id} className="flex flex-wrap items-center gap-2">
                       <code className="text-[0.82rem] text-ink">{tool.name}</code>
-                      <Tag className={cn(RISK_TONE[tool.risk])}>{riskLabel(tool.risk)}</Tag>
+                      <RiskTag risk={tool.risk} />
                     </label>
                     <p id={`${id}-description`} className="mt-0.5 text-sm text-ink-muted">
                       {tool.description}

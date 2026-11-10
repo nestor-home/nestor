@@ -15,14 +15,18 @@ from nestor.admin.api.v1.accounts import routes as accounts
 from nestor.admin.api.v1.agent import routes as agent
 from nestor.admin.api.v1.config import routes as config
 from nestor.admin.api.v1.config.schemas import ConfigSchemaOut
+from nestor.admin.api.v1.confirmations import routes as confirmations
 from nestor.admin.api.v1.connections import routes as connections
 from nestor.admin.api.v1.connectors import routes as connectors
 from nestor.admin.api.v1.errors import ErrorOut
+from nestor.admin.api.v1.home import routes as home
 from nestor.admin.api.v1.household import routes as household
 from nestor.admin.api.v1.i18n import routes as i18n
 from nestor.admin.api.v1.journal import routes as journal
 from nestor.admin.api.v1.memories import routes as memories
+from nestor.admin.api.v1.messages import routes as messages
 from nestor.admin.api.v1.satellites import routes as satellites
+from nestor.admin.api.v1.schedules import routes as schedules
 from nestor.admin.api.v1.security import json_only
 from nestor.admin.api.v1.session import routes as session
 from nestor.admin.api.v1.system import routes as system
@@ -59,6 +63,7 @@ RESOURCES = (
     i18n,
     accounts,
     household,
+    home,
     agent,
     connectors,
     connections,
@@ -66,6 +71,9 @@ RESOURCES = (
     journal,
     tasks,
     watches,
+    schedules,
+    messages,
+    confirmations,
     memories,
     system,
     config,

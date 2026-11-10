@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict
 from nestor.admin.presentation import Phrasebook
 from nestor.core import PersonId
 from nestor.core.i18n import Message
+from nestor.modules.channels import Address
 from nestor.modules.household import Household
 
 
@@ -63,3 +64,7 @@ class OriginOut(BaseModel):
 
     session: str  # the conversation it was asked in
     channel: str
+
+    @classmethod
+    def of(cls, address: Address) -> "OriginOut":
+        return cls(session=str(address), channel=address.channel)

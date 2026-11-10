@@ -10,13 +10,16 @@ import { Link } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import {
+  homeQuery,
   initiativeQuery,
   type JournalItem,
   journalLatestQuery,
   memoriesQuery,
   type Person,
   peopleQuery,
+  type Schedule,
   satellitesQuery,
+  schedulesQuery,
   tasksQuery,
   type UpcomingDelivery,
   watchesQuery,
@@ -32,7 +35,7 @@ import { useLiveItems } from "@/features/shell/live";
 import { useT } from "@/i18n";
 import { activeLocale, tr } from "@/i18n/runtime";
 import { brandName, brandOf } from "@/lib/brands";
-import { hourMinute, startOfToday } from "@/lib/dates";
+import { hourMinute, moment, startOfToday } from "@/lib/dates";
 import { say } from "@/lib/messages";
 import { useCan, useMe } from "@/lib/session";
 import { cn } from "@/lib/utils";
@@ -74,6 +77,8 @@ export function HomeView() {
   const satellites = useQuery({ ...satellitesQuery, enabled: canSatellites });
   const tasks = useQuery({ ...tasksQuery, enabled: canTasks });
   const watches = useQuery({ ...watchesQuery, enabled: canWatches });
+  const schedules = useQuery({ ...schedulesQuery, enabled: useCan("schedules:read") });
+  const home = useQuery({ ...homeQuery, enabled: useCan("home:read") });
   const { items: attention } = useAttention();
   const { state, latest, quiet } = useAgentPresence();
 
@@ -88,8 +93,8 @@ export function HomeView() {
   const items = useMemo(() => merge(live, day.data?.items ?? []), [day.data, live]);
   const paired = satellites.data?.paired ?? [];
   const running = tasks.data?.running ?? [];
-  const rooms = roomsOf({ people: people.data ?? [], satellites: paired, items });
-  const { away } = elsewhere(people.data ?? []);
+  const rooms = roomsOf({ people: people.data ?? [], satellites: paired, items, home: home.data });
+  const { away, homeNoRoom } = elsewhere(people.data ?? []);
   const marks = useMemo(() => marksOf(items), [items]);
   const date = new Date(now);
   const line = lineOf(
@@ -101,7 +106,10 @@ export function HomeView() {
   const focus = latest ? nodeOf(latest, paired) : null;
   const initiative = useQuery({ ...initiativeQuery, enabled: useCan("agent:read") });
   const later = initiative.data?.upcoming ?? [];
-  const upcoming = (watches.data?.watches.length ?? 0) > 0 || Boolean(quiet) || later.length > 0;
+  const soon = (schedules.data?.schedules ?? [])
+    .flatMap((s) => (s.next_due ? [{ ...s, next_due: s.next_due }] : []))
+    .slice(0, 3);
+  const upcoming = (watches.data?.watches.length ?? 0) > 0 || Boolean(quiet) || later.length > 0 || soon.length > 0;
 
   return (
     <div className="grid gap-16 md:gap-20">
@@ -140,9 +148,11 @@ export function HomeView() {
       ) : null}
 
       <div className={cn("grid gap-14 md:gap-10", upcoming ? "md:grid-cols-3" : "md:grid-cols-2")}>
-        {canPeople ? <House rooms={rooms} away={away} focus={focus} /> : null}
+        {canPeople ? <House rooms={rooms} home={homeNoRoom} away={away} focus={focus} /> : null}
         <Now running={running} items={items} now={now} />
-        {upcoming ? <Next watches={watches.data?.watches ?? []} quiet={quiet} upcoming={later} /> : null}
+        {upcoming ? (
+          <Next watches={watches.data?.watches ?? []} quiet={quiet} upcoming={later} schedules={soon} />
+        ) : null}
       </div>
 
       <Today marks={marks} />
@@ -271,17 +281,39 @@ function Band({
 
 const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-/** Rooms with who is there; who is away. */
-function House({ rooms, away, focus }: { rooms: RoomNode[]; away: Person[]; focus: string | null }) {
+/** Who is home without a known room, the rooms with who is there (or whether someone is), who is away. */
+function House({
+  rooms,
+  home,
+  away,
+  focus,
+}: {
+  rooms: RoomNode[];
+  home: Person[];
+  away: Person[];
+  focus: string | null;
+}) {
   const t = useT();
+  // who is there; else what the sensors say; nothing when no sensor watches the room
+  const who = (r: RoomNode) =>
+    r.people.length
+      ? r.people.map((p) => p.name).join(", ")
+      : r.occupied === null
+        ? null
+        : t(r.occupied ? "home-room-someone" : "home-room-nobody");
   return (
     <Band title={t("home-house")}>
       <ul className="grid gap-4">
+        {home.length ? <Gathered label={t("home-at-home")} people={home} /> : null}
         {rooms.map((r) => {
           const offline = r.satellites.filter((s) => s.connected === false).length;
           return (
             <li key={r.key} data-focus={r.key}>
-              <Link to="/journal" search={{ room: r.room }} className="group block">
+              <Link
+                to={r.journal ? "/journal" : "/house"}
+                search={r.journal ? { room: r.journal } : undefined}
+                className="group block"
+              >
                 <span
                   className={cn(
                     "text-[1.05rem] text-ink group-hover:underline",
@@ -291,23 +323,33 @@ function House({ rooms, away, focus }: { rooms: RoomNode[]; away: Person[]; focu
                   {capital(r.room)}
                 </span>
                 <span className="mt-0.5 block text-[0.92rem] text-ink-muted">
-                  {r.people.length ? r.people.map((p) => p.name).join(", ") : t("home-room-nobody")}
-                  {offline ? <span className="text-amber"> · {t("home-room-offline", { count: offline })}</span> : null}
+                  {who(r)}
+                  {offline ? (
+                    <span className="text-amber">
+                      {who(r) ? " · " : null}
+                      {t("home-room-offline", { count: offline })}
+                    </span>
+                  ) : null}
                 </span>
               </Link>
             </li>
           );
         })}
-        {away.length ? (
-          <li>
-            <Link to="/people" className="group block">
-              <span className="text-[1.05rem] text-ink group-hover:underline">{t("home-away")}</span>
-              <span className="mt-0.5 block text-[0.92rem] text-ink-muted">{away.map((p) => p.name).join(", ")}</span>
-            </Link>
-          </li>
-        ) : null}
+        {away.length ? <Gathered label={t("home-away")} people={away} /> : null}
       </ul>
     </Band>
+  );
+}
+
+/** People together under one label (at home, out), leading to their page. */
+function Gathered({ label, people }: { label: string; people: Person[] }) {
+  return (
+    <li>
+      <Link to="/people" className="group block">
+        <span className="text-[1.05rem] text-ink group-hover:underline">{label}</span>
+        <span className="mt-0.5 block text-[0.92rem] text-ink-muted">{people.map((p) => p.name).join(", ")}</span>
+      </Link>
+    </li>
   );
 }
 
@@ -372,10 +414,12 @@ function Next({
   watches,
   quiet,
   upcoming,
+  schedules,
 }: {
   watches: { id: string; what: string; last_triggered_at: string | null }[];
   quiet: Quiet | null;
   upcoming: UpcomingDelivery[];
+  schedules: (Schedule & { next_due: string })[];
 }) {
   const t = useT();
   return (
@@ -406,6 +450,14 @@ function Next({
                     })}
               </span>
               <span className="mt-1 block text-[0.92rem] text-ink-muted">{t("home-upcoming-unless")}</span>
+            </Link>
+          </li>
+        ))}
+        {schedules.map((s) => (
+          <li key={s.id}>
+            <Link to="/schedules" className="group block">
+              <span className="text-[1.05rem] leading-snug text-ink group-hover:underline">{s.instruction}</span>
+              <span className="mt-1 block text-[0.92rem] text-ink-muted">{moment(s.next_due)}</span>
             </Link>
           </li>
         ))}

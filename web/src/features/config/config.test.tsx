@@ -15,25 +15,23 @@ describe("the configuration", () => {
   it("renders every kind of setting with its control", async () => {
     const user = userEvent.setup();
     renderApp("/config/tools");
-    await user.click(await screen.findByRole("button", { name: "Edit home" }));
-    const sheet = await screen.findByRole("dialog", { name: "home" });
-    expect(within(sheet).getByRole("textbox", { name: "URL" })).toHaveValue(
-      "http://homeassistant.local:8123/mcp_server/sse",
-    );
+    await user.click(await screen.findByRole("button", { name: "Edit recipes" }));
+    const sheet = await screen.findByRole("dialog", { name: "recipes" });
+    expect(within(sheet).getByRole("textbox", { name: "URL" })).toHaveValue("http://192.168.1.20:8808/mcp_server/sse");
     expect(within(sheet).getByRole("combobox", { name: "Transport" })).toHaveTextContent("sse");
-    expect(within(sheet).getByText(`reference \${secret:tools.home.token}`)).toBeInTheDocument();
+    expect(within(sheet).getByText(`reference \${secret:tools.recipes.token}`)).toBeInTheDocument();
     const timeout = within(sheet).getByRole("spinbutton", { name: "Timeout (seconds)" });
     expect(timeout).toHaveAttribute("placeholder", "10");
     expect(timeout).toHaveAttribute("min", "0");
-    expect(within(sheet).getByRole("textbox", { name: "Tool risks, name 1" })).toHaveValue("HassTurnOff");
+    expect(within(sheet).getByRole("textbox", { name: "Tool risks, name 1" })).toHaveValue("add_recipe");
     // the kind picks the plugin: it is never a setting
     expect(within(sheet).queryByText("Kind")).not.toBeInTheDocument();
   });
 
   it("keeps a secret unless it is replaced, and never shows its value", async () => {
     const user = userEvent.setup();
-    renderApp("/config/presence");
-    const panel = (await screen.findAllByText(`reference \${secret:presence.token}`))[0];
+    renderApp("/config/home");
+    const panel = (await screen.findAllByText(`reference \${secret:home.token}`))[0];
     expect(panel).toBeInTheDocument();
     await user.click(screen.getAllByRole("button", { name: "Replace Token" })[0] as HTMLElement);
     const field = screen.getAllByLabelText("Token")[0] as HTMLInputElement;
@@ -42,7 +40,7 @@ describe("the configuration", () => {
     await user.type(field, "eyJhbGciOiJIUzI1NiJ9.new");
     await user.click(await screen.findByRole("button", { name: "1 change" }));
     const changes = await screen.findByRole("dialog", { name: "Changes" });
-    expect(within(changes).getByText("presence.token")).toBeInTheDocument();
+    expect(within(changes).getByText("home.token")).toBeInTheDocument();
     expect(within(changes).getByText("secret changed")).toBeInTheDocument();
     expect(changes).not.toHaveTextContent("eyJhbGciOiJIUzI1NiJ9.new");
     await user.keyboard("{Escape}");
@@ -186,13 +184,13 @@ describe("the configuration", () => {
   it("explains why a secret in use is not deleted, and deletes it only when insisted", async () => {
     const user = userEvent.setup();
     renderApp("/config/secrets");
-    await user.click(await screen.findByRole("button", { name: "Delete presence.token" }));
+    await user.click(await screen.findByRole("button", { name: "Delete home.token" }));
     const dialog = await screen.findByRole("alertdialog");
     await user.click(within(dialog).getByRole("button", { name: "Delete" }));
-    expect(await within(dialog).findByText(/still used by presence\.token/)).toBeInTheDocument();
-    expect("presence.token" in db.config.vault).toBe(true);
+    expect(await within(dialog).findByText(/still used by home\.token/)).toBeInTheDocument();
+    expect("home.token" in db.config.vault).toBe(true);
     await user.click(within(dialog).getByRole("button", { name: "Delete anyway" }));
-    await waitFor(() => expect("presence.token" in db.config.vault).toBe(false));
+    await waitFor(() => expect("home.token" in db.config.vault).toBe(false));
   });
 
   it("is reserved to those who manage the configuration", async () => {
@@ -206,8 +204,8 @@ describe("the configuration", () => {
   it("keeps or replaces each secret of a map on its own (MCP headers)", async () => {
     const user = userEvent.setup();
     renderApp("/config/tools");
-    await user.click(await screen.findByRole("button", { name: "Edit home" }));
-    const sheet = await screen.findByRole("dialog", { name: "home" });
+    await user.click(await screen.findByRole("button", { name: "Edit recipes" }));
+    const sheet = await screen.findByRole("dialog", { name: "recipes" });
     expect(within(sheet).getByText(/set · lam•••2f/)).toBeInTheDocument();
     expect(sheet).not.toHaveTextContent("lambert-home-7d2f");
     await user.click(within(sheet).getByRole("button", { name: /Replace HTTP headers, value of X-Household/ }));

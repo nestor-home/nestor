@@ -18,7 +18,7 @@ from pydantic import BaseModel, ConfigDict, TypeAdapter, ValidationError
 
 from nestor.adapters.home.home_assistant.client import SessionLost
 from nestor.core import PersonId
-from nestor.modules.home import Granularity, Presence, Whereabouts
+from nestor.modules.home import Granularity, Presence, Resident, Room, Whereabouts
 
 OCCUPANCY_CLASSES = frozenset({"occupancy", "presence", "motion"})
 UNKNOWN_STATES = frozenset({"unknown", "unavailable"})
@@ -100,6 +100,7 @@ class Installation:
         self._mapping = mapping
         self._states = {state.entity_id: state for state in states}
         areas = list(areas)
+        self._area_list = tuple((area.area_id, area.name) for area in areas)
         self._areas = _AreaNames(areas)
         device_areas = {device.id: device.area_id for device in devices}
         known_areas = {area.area_id for area in areas}
@@ -129,10 +130,36 @@ class Installation:
 
     def presence(self) -> Presence:
         people = {person: self._whereabouts(person, entity) for person, entity in self._mapping.people.items()}
-        occupied = frozenset()
-        if self.granularity >= Granularity.OCCUPIED_ROOMS:
-            occupied = frozenset(area for entity, area in self._sensors.items() if self._state(entity) == "on")
-        return Presence(granularity=self.granularity, people=people, occupied_rooms=occupied)
+        return Presence(granularity=self.granularity, people=people, occupied_rooms=self._occupied())
+
+    def _occupied(self) -> frozenset[str]:
+        if not self.granularity.at_least(Granularity.OCCUPIED_ROOMS):
+            return frozenset()
+        return frozenset(area for entity, area in self._sensors.items() if self._state(entity) == "on")
+
+    def room_of(self, label: str) -> str | None:
+        """The area a label names: its id, name or alias."""
+        return self._areas.resolve(label)
+
+    def rooms(self) -> tuple[Room, ...]:
+        """Every area, occupied or not when a sensor in it tells, in Home Assistant's order."""
+        watched, occupied = set(self._sensors.values()), self._occupied()
+        return tuple(
+            Room(id=area, name=name, occupied=area in occupied if area in watched else None)
+            for area, name in self._area_list
+        )
+
+    def residents(self) -> tuple[Resident, ...]:
+        """The `person` entities, by their name in Home Assistant."""
+        return tuple(
+            Resident(
+                entity=entity,
+                name=str(state.attributes.get("friendly_name") or entity.removeprefix("person.")),
+                home=None if state.state in UNKNOWN_STATES else state.state == "home",
+            )
+            for entity, state in sorted(self._states.items())
+            if entity.startswith("person.")
+        )
 
     def _whereabouts(self, person: PersonId, entity: str) -> Whereabouts:
         state = self._state(entity)

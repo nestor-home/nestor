@@ -1,16 +1,33 @@
 import { useQuery } from "@tanstack/react-query";
 import type { LinkProps } from "@tanstack/react-router";
 import type { LucideIcon } from "lucide-react";
-import { CircleAlert, Hourglass, KeyRound, MessageSquareOff, RadioTower, ServerCrash } from "lucide-react";
-import { type Component, connectionsQuery, journalLatestQuery, satellitesQuery, systemQuery, tasksQuery } from "@/api";
+import {
+  CircleAlert,
+  Hourglass,
+  House,
+  KeyRound,
+  MessageSquareOff,
+  RadioTower,
+  ServerCrash,
+  ShieldQuestion,
+} from "lucide-react";
+import {
+  type Component,
+  confirmationsQuery,
+  connectionsQuery,
+  journalLatestQuery,
+  satellitesQuery,
+  systemQuery,
+  tasksQuery,
+} from "@/api";
 import { tr } from "@/i18n/runtime";
-import { startOfToday } from "@/lib/dates";
+import { hourMinute, startOfToday } from "@/lib/dates";
 import { is } from "@/lib/events";
 import { rendered, say } from "@/lib/messages";
 import { useCan } from "@/lib/session";
 
 /** Components that already speak for themselves: connections, tools and satellites. */
-const SPEAK_FOR_THEMSELVES = new Set<Component["slot"]>(["satellite", "tools", "connector"]);
+const SPEAK_FOR_THEMSELVES = new Set<Component["slot"]>(["satellite", "tools", "connector", "home"]);
 
 export interface Attention {
   key: string;
@@ -35,10 +52,35 @@ export function useAttention(): { items: Attention[]; ready: boolean } {
   const connections = useQuery({ ...connectionsQuery, enabled: canConnections });
   const satellites = useQuery({ ...satellitesQuery, enabled: canSatellites });
   const tasks = useQuery({ ...tasksQuery, enabled: canTasks });
-  const system = useQuery({ ...systemQuery, enabled: canSatellites });
+  const system = useQuery({ ...systemQuery, enabled: useCan("system:read") });
   const spoken = useQuery(journalLatestQuery({ kinds: ["delivery"], from: startOfToday() }, 100));
+  const confirmations = useQuery({ ...confirmationsQuery, enabled: useCan("messages:read") });
 
   const items: Attention[] = [];
+  for (const c of confirmations.data ?? []) {
+    if (!c.yours) continue;
+    items.push({
+      key: `confirmation-${c.id}`,
+      icon: ShieldQuestion,
+      tone: "attention",
+      title: tr("attention-confirmation", { tool: c.tool }),
+      detail: tr("attention-confirmation-detail", { at: hourMinute(c.expires_at) }),
+      action: tr("attention-answer"),
+      link: { to: "/messages" },
+    });
+  }
+  const home = system.data?.components.find((c) => c.slot === "home");
+  if (home?.health && home.health !== "started") {
+    items.push({
+      key: "home",
+      icon: House,
+      tone: home.health === "unavailable" ? "error" : "attention",
+      title: tr("attention-home", { health: home.health }),
+      detail: home.health_detail ?? "",
+      action: tr("action-see"),
+      link: { to: "/house" },
+    });
+  }
   for (const c of connections.data ?? []) {
     if (c.status === "connected") continue;
     items.push({

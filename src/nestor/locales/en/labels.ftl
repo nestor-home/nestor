@@ -25,6 +25,10 @@ scope-name = { $scope ->
     [tasks-manage-own] manage one's own tasks
     [watches-manage-all] manage every watch
     [watches-manage-own] manage one's own watches
+    [schedules-manage-all] manage every wake-up
+    [schedules-manage-own] manage one's own wake-ups
+    [messages-read-all] read every message and confirmation
+    [messages-read-own] read one's own messages and confirmations
    *[other] { $scope }
 }
 invitation-status = { $status ->
@@ -58,6 +62,21 @@ auth-kind = { $auth ->
     [secret] credentials
     [none] none
    *[other] { $auth }
+}
+
+schedule-day = { $day ->
+    [mon] Monday
+    [tue] Tuesday
+    [wed] Wednesday
+    [thu] Thursday
+    [fri] Friday
+    [sat] Saturday
+   *[sun] Sunday
+}
+home-granularity = { $granularity ->
+    [home] who is home
+    [occupied_rooms] which rooms are occupied
+   *[person_room] who is in which room
 }
 
 capability-text-input = keyboard

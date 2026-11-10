@@ -6,10 +6,13 @@ import type {
   Account,
   Capability,
   Component,
+  Confirmation,
   Connection,
   Connector,
+  Home,
   Invitation,
   Memory,
+  Messages,
   PairingMethod,
   PairingMethodId,
   PairingRequest,
@@ -17,6 +20,7 @@ import type {
   PersonRef,
   Role,
   Satellite,
+  Schedule,
   Scope,
   SystemInfo,
   Task,
@@ -740,6 +744,171 @@ export function watches(): Watch[] {
   ];
 }
 
+/** Wake-ups and reminders: one for tomorrow morning, two that come back. */
+export function schedules(): Schedule[] {
+  return [
+    {
+      id: "sc-bread",
+      instruction: fr("Remind Mathis to buy bread.", "Rappeler à Mathis d'acheter du pain."),
+      owner: ref("mathis"),
+      origin: { session: "telegram:@mathis_l", channel: "telegram" },
+      recurring: false,
+      once_at: ahead(60 * 60 * 9),
+      times: [],
+      days: [],
+      next_due: ahead(60 * 60 * 9),
+    },
+    {
+      id: "sc-tv",
+      instruction: fr(
+        "Check the price of the Samsung 65S92H; tell Mathis only below €1,600.",
+        "Vérifier le prix du Samsung 65S92H ; prévenir Mathis seulement sous 1 600 €.",
+      ),
+      owner: ref("mathis"),
+      origin: { session: "telegram:@mathis_l", channel: "telegram" },
+      recurring: true,
+      once_at: null,
+      times: ["10:00"],
+      days: [],
+      next_due: ahead(60 * 60 * 12),
+    },
+    {
+      id: "sc-plants",
+      instruction: fr("Remind Léa to water the plants.", "Rappeler à Léa d'arroser les plantes."),
+      owner: ref("lea"),
+      origin: null,
+      recurring: true,
+      once_at: null,
+      times: ["09:00"],
+      days: ["sat", "sun"],
+      next_due: ahead(60 * 60 * 30),
+    },
+  ];
+}
+
+/** A question to Léa waiting for her answer, and a message that has not found its way yet. */
+export function messages(): Messages {
+  return {
+    questions: [
+      {
+        id: "msg-car",
+        to: ref("lea"),
+        text: fr("Do you need the car tomorrow?", "Tu as besoin de la voiture demain ?"),
+        requested_by: ref("mathis"),
+        expects_reply: true,
+        channel: null,
+        at: minutes(40),
+      },
+    ],
+    pending: [
+      {
+        id: "msg-odile",
+        to: ref("odile"),
+        text: fr("Lunch is at noon on Sunday.", "Le déjeuner est à midi dimanche."),
+        requested_by: ref("lea"),
+        expects_reply: false,
+        channel: "telegram",
+        at: minutes(3),
+      },
+    ],
+  };
+}
+
+/** Unlocking the front door, asked aloud in the hallway, waiting for Mathis. */
+export function confirmations(): Confirmation[] {
+  return [
+    {
+      id: "cf-door",
+      person: ref("mathis"),
+      tool: "intent__HassTurnOff",
+      arguments: { name: fr("Front door", "Porte d'entrée"), domain: ["lock"] },
+      origin: { session: `voice:${HALLWAY}`, channel: "voice" },
+      expires_at: ahead(4 * 60),
+      yours: true,
+    },
+  ];
+}
+
+/** Home Assistant: who it knows, its rooms and the actions it offers. */
+export function home(): Home {
+  const tied = (id: string, entity: string | null, presence: Person["presence"]) => ({
+    person: ref(id),
+    entity,
+    tracker: entity ? `sensor.${id}_area` : null,
+    presence: presence ?? { home: null, room: null, since: null },
+  });
+  const crowd = people();
+  const of = (id: string) => crowd.find((p) => p.id === id)?.presence ?? null;
+  return {
+    component: component({
+      slot: "home",
+      name: "home",
+      adapter: "home-assistant",
+      brand: "homeassistant",
+      version: "2026.10.2",
+      health: "started",
+      health_detail: null,
+    }),
+    connected: true,
+    granularity: "person_room",
+    rooms: [
+      {
+        id: LIVING_ROOM,
+        name: fr("Living room", "Salon"),
+        occupied: true,
+        people: [ref("mathis"), ref("jules")],
+        satellites: ["reachy-living-room"],
+      },
+      { id: KITCHEN, name: fr("Kitchen", "Cuisine"), occupied: false, people: [], satellites: [] },
+      { id: OFFICE, name: fr("Office", "Bureau"), occupied: null, people: [], satellites: ["reachy-office"] },
+      { id: HALLWAY, name: fr("Hallway", "Entrée"), occupied: false, people: [], satellites: [] },
+      { id: BEDROOM, name: fr("Bedroom", "Chambre"), occupied: false, people: [], satellites: ["pi-bedroom"] },
+    ],
+    residents: [
+      { entity: "person.mathis", name: "Mathis", home: true, person: ref("mathis") },
+      { entity: "person.lea", name: "Léa", home: false, person: ref("lea") },
+      { entity: "person.jules", name: "Jules", home: true, person: ref("jules") },
+      { entity: "person.guest", name: fr("Guest", "Invité"), home: null, person: null },
+    ],
+    people: [
+      tied("mathis", "person.mathis", of("mathis")),
+      tied("lea", "person.lea", of("lea")),
+      tied("jules", "person.jules", of("jules")),
+      tied("odile", null, null),
+    ],
+    unplaced_sensors: ["binary_sensor.garage_motion"],
+    tools: [
+      {
+        name: "homeassistant__GetLiveContext",
+        description: fr("The state of every exposed device.", "L'état de chaque appareil exposé."),
+        risk: "read",
+        confirmed_when: false,
+      },
+      {
+        name: "intent__HassTurnOff",
+        description: fr("Turns off a device or entity.", "Éteint un appareil ou une entité."),
+        risk: "write",
+        confirmed_when: true,
+      },
+      {
+        name: "intent__HassTurnOn",
+        description: fr("Turns on a device or entity.", "Allume un appareil ou une entité."),
+        risk: "write",
+        confirmed_when: true,
+      },
+      {
+        name: "light__HassLightSet",
+        description: fr(
+          "Sets the brightness or colour of a light.",
+          "Règle la luminosité ou la couleur d'une lumière.",
+        ),
+        risk: "write",
+        confirmed_when: true,
+      },
+    ],
+  };
+}
+
 /** What Jules teaches Richie during the day. */
 export const HANDBALL = fr(
   "Jules has handball practice on Wednesdays at 3 pm.",
@@ -883,7 +1052,7 @@ export function updates(): Updates {
 
 export function system(): SystemInfo {
   return {
-    nestor: { version: "0.9.0" },
+    nestor: { version: "0.10.0" },
     agent: { name: ASSISTANT, status: "started" },
     restart_required: false,
     pending_changes: [],
@@ -932,7 +1101,7 @@ export function system(): SystemInfo {
       component({
         slot: "executor",
         name: "Hermes",
-        adapter: "nestor.adapters.executors.hermes",
+        adapter: "hermes",
         brand: "hermes",
         version: "0.6.1",
         health: "started",
@@ -941,7 +1110,7 @@ export function system(): SystemInfo {
       component({
         slot: "executor",
         name: "Codex",
-        adapter: "nestor.adapters.executors.codex",
+        adapter: "codex",
         brand: "codex",
         version: "0.48",
         health: "started",
@@ -950,7 +1119,7 @@ export function system(): SystemInfo {
       component({
         slot: "channel",
         name: fr("Voice (satellites)", "Voix (satellites)"),
-        adapter: "nestor.modules.channels.voice",
+        adapter: "satellites",
         brand: "voice",
         version: PROTOCOL,
         health: "started",
@@ -958,56 +1127,26 @@ export function system(): SystemInfo {
       }),
       component({
         slot: "channel",
-        name: fr("Browser voice client", "Client vocal du navigateur"),
-        adapter: "nestor.adapters.channels.webrtc",
-        brand: "webrtc",
-        version: null,
-        health: "started",
-        health_detail: fr("For development", "Pour le développement"),
-      }),
-      component({
-        slot: "channel",
         name: "Telegram",
-        adapter: "nestor.adapters.channels.telegram",
+        adapter: "telegram",
         brand: "telegram",
         version: "Bot API 9.2",
         health: "started",
         health_detail: "@richie_lambert_bot",
       }),
       component({
-        slot: "channel",
-        name: fr("Web chat", "Chat web"),
-        adapter: "nestor.modules.channels.web",
-        brand: "web",
-        version: null,
-        health: "started",
-        health_detail: fr(
-          "In the admin and on the household network",
-          "Dans l'administration et sur le réseau du foyer",
-        ),
-      }),
-      component({
-        slot: "presence",
-        name: fr("Presence from Home Assistant", "Présence par Home Assistant"),
-        adapter: "nestor.adapters.home.home_assistant",
-        brand: "home-assistant",
+        slot: "home",
+        name: "home",
+        adapter: "home-assistant",
+        brand: "homeassistant",
         version: "2026.10.2",
         health: "started",
-        health_detail: fr("4 people tracked", "4 personnes suivies"),
-      }),
-      component({
-        slot: "tools",
-        name: fr("Home (Home Assistant MCP)", "Maison (MCP de Home Assistant)"),
-        adapter: "nestor.adapters.tools.mcp",
-        brand: "home-assistant",
-        version: null,
-        health: "started",
-        health_detail: fr("5 tools", "5 outils"),
+        health_detail: fr("4 people tied, 4 actions", "4 personnes reliées, 4 actions"),
       }),
       component({
         slot: "tools",
         name: fr("Léa's recipes (MCP)", "Recettes de Léa (MCP)"),
-        adapter: "nestor.adapters.tools.mcp",
+        adapter: "mcp",
         brand: "mcp",
         version: null,
         health: "unavailable",
@@ -1016,7 +1155,7 @@ export function system(): SystemInfo {
       component({
         slot: "connector",
         name: "Gmail",
-        adapter: "nestor.adapters.connectors.google",
+        adapter: "google",
         brand: "gmail",
         version: null,
         health: "degraded",
@@ -1025,7 +1164,7 @@ export function system(): SystemInfo {
       component({
         slot: "connector",
         name: MAILBOX,
-        adapter: "nestor.adapters.connectors.imap",
+        adapter: "imap",
         brand: "imap",
         version: null,
         health: "started",

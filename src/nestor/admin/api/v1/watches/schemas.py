@@ -32,7 +32,7 @@ class WatchOut(BaseModel):
             once=watch.once,
             created_at=watch.created_at,
             until=watch.until,
-            origin=OriginOut(session=str(origin), channel=origin.channel) if origin else None,
+            origin=OriginOut.of(origin) if origin else None,
             triggered=triggers.counts[watch.id],
             last_triggered_at=triggers.last.get(watch.id),
         )
