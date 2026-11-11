@@ -8,6 +8,7 @@ import pytest
 
 from nestor.adapters.models.elevenlabs import speech, transcription
 from nestor.adapters.models.pipecat.eager import EagerSentenceFlush
+from nestor.core import ProviderError
 from nestor.core.i18n import Locale
 from nestor.modules.channels import SpeechModel, TranscriptionModel
 from nestor.runtime.plugins import Services
@@ -81,6 +82,16 @@ class TestElevenLabsTranscription(TranscriptionModelContract):
         body = self.fake.requests[-1].content
         assert b'name="model_id"\r\n\r\nscribe_v2\r\n' in body, "the realtime model cannot read files"
         assert b'name="language_code"\r\n\r\nfr\r\n' in body
+
+
+async def test_a_transcription_answer_that_is_not_json_is_a_provider_error() -> None:
+    page = httpx.MockTransport(lambda request: httpx.Response(200, text="<html>maintenance</html>"))
+    model = transcription.ElevenLabsTranscription(
+        api_key="xi-test", model="m", file_model="scribe_v2", language="fr", name="ears", transport=page
+    )
+    async with model:
+        with pytest.raises(ProviderError):
+            await model.transcribe(b"opus", "audio/ogg")
 
 
 class TestElevenLabsSpeech(SpeechModelContract):

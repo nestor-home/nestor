@@ -11,6 +11,7 @@ from nestor.modules.conversation.events import AnswerCut, AssistantTurn, Notific
 from nestor.modules.conversation.types import Attached, Notification
 from nestor.modules.identity import Identified, Speaker
 
+IMAGE_BYTES = 5_000_000  # the most providers take for one image (Anthropic): a larger one is only mentioned
 HISTORY_EVENTS = (UserTurn, NotificationTurn, AssistantTurn, AnswerCut, ToolCalled, ToolCompleted, ToolDeferred)
 
 
@@ -56,6 +57,8 @@ def _note(attached: Attached, images: Mapping[str, Image] | None) -> str:
             return f"[An image{named} you cannot see: you do not see images]"
         if attached.blob.digest in images:
             return f"[An image{named}, attached]"
+        if attached.blob.size > IMAGE_BYTES:
+            return f"[An image{named} too large for you to see]"
         return f"[An image{named} sent earlier, no longer shown to you]"
     match attached.kind:
         case AttachmentKind.VOICE if attached.transcript:

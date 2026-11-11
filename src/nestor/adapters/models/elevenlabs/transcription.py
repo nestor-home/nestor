@@ -12,6 +12,7 @@ from pydantic import Field
 
 from nestor.adapters.models.elevenlabs.api import ElevenLabsApi
 from nestor.adapters.models.pipecat import SAMPLE_RATE, PipecatTranscription
+from nestor.core import ProviderError
 from nestor.modules.channels import TranscriptionModel
 from nestor.runtime.plugins import AdapterSettings, Family, Plugin, RequiredSecret, Services
 
@@ -48,7 +49,10 @@ class ElevenLabsTranscription(PipecatTranscription):
             data={"model_id": self._file_model, "language_code": self._language, "tag_audio_events": "false"},
             files={"file": ("recording", audio, media_type)},
         )
-        text = response.json().get("text")
+        try:
+            text = response.json().get("text")
+        except ValueError:
+            raise ProviderError("elevenlabs", "speech-to-text: the answer is not JSON", transient=True) from None
         return text.strip() if isinstance(text, str) else ""
 
     def stt(self) -> "STTService":

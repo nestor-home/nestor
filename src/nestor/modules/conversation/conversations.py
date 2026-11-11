@@ -28,7 +28,7 @@ from nestor.core import Event, PersonId, SessionId, new_id, utc_now
 from nestor.modules.channels import Address, AttachmentKind, Exchange, Medium
 from nestor.modules.cognition.model import Image, Message
 from nestor.modules.conversation.events import AnswerCut, AssistantTurn, FallbackSpoken, NotificationTurn, UserTurn
-from nestor.modules.conversation.history import HISTORY_EVENTS, Names, in_conversation, to_messages
+from nestor.modules.conversation.history import HISTORY_EVENTS, IMAGE_BYTES, Names, in_conversation, to_messages
 from nestor.modules.conversation.types import Attached, FallbackReason, Notification
 from nestor.modules.identity import Speaker
 from nestor.modules.journal import Journal
@@ -197,7 +197,13 @@ class Conversations:
             *HISTORY_EVENTS, session=address.session, newest_first=True, limit=max_events
         )
         events = in_conversation(reversed(events), conversation)
-        sent = [a for e in events if isinstance(e, UserTurn) for a in e.attachments if a.kind is AttachmentKind.IMAGE]
+        sent = [
+            a
+            for e in events
+            if isinstance(e, UserTurn)
+            for a in e.attachments
+            if a.kind is AttachmentKind.IMAGE and a.blob.size <= IMAGE_BYTES
+        ]
         images = await look(sent[-IMAGES:]) if look is not None else None
         return to_messages(events, names=names, images=images)
 

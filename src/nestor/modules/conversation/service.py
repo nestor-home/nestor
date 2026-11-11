@@ -437,12 +437,12 @@ class AgentReply(Reply):
         text, self._message = "".join(self._message).strip(), []
         if not text:
             return
-        if self._voiced:  # recorded before it goes: a voice message is sent whole
-            voice = await self._agent.attachments.voice(text)
-            self._chunks.put_nowait(MessageEnd(last=last, attachments=(voice,) if voice else ()))
-        else:
+        if not self._voiced:
             self._chunks.put_nowait(MessageEnd(last=last))
         self._ended.append((text, await self._turn.answered(text) if self._turn else None))
+        if self._voiced:  # recorded once logged, then handed over: a voice message is sent whole
+            voice = await self._agent.attachments.voice(text)
+            self._chunks.put_nowait(MessageEnd(last=last, attachments=(voice,) if voice else ()))
 
     def _end_turn(self) -> None:
         """The reply is over, written or cut: the conversation's silence starts now."""

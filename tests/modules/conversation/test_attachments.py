@@ -7,6 +7,7 @@ from nestor.modules.channels import Attachment, AttachmentKind, InboundMessage, 
 from nestor.modules.cognition.model import ModelRequest, Role
 from nestor.modules.conversation import Attachments, ChannelProfile, UserTurn
 from nestor.modules.conversation.conversations import IMAGES
+from nestor.modules.conversation.history import IMAGE_BYTES
 from nestor.modules.journal import Journal
 from nestor.testing.channels import OGG, ScriptedSpeech, ScriptedTranscription
 from nestor.testing.cognition.model import ScriptedModel
@@ -78,6 +79,17 @@ async def test_only_the_last_images_of_a_conversation_are_shown_again(make_agent
     shown = [i.data for m in users for i in m.images]
     assert shown == [p.data for p in photos[-IMAGES:]]
     assert "sent earlier" in users[0].content
+
+
+async def test_an_image_too_large_for_the_providers_is_only_mentioned(make_agent: MakeAgent) -> None:
+    model = Seeing()
+    agent = make_agent(model=model, attachments=Attachments(MemoryBlobStore()))
+    poster = Attachment(kind=AttachmentKind.IMAGE, data=b"x" * (IMAGE_BYTES + 1), media_type="image/png")
+    await agent.respond(sent("", poster)).collect()
+    await agent.respond(sent("et alors ?")).collect()
+    for request in model.requests:
+        first = next(m for m in request.messages if m.role is Role.USER)
+        assert (first.images, first.content) == ((), "[An image too large for you to see]")
 
 
 async def test_a_file_the_model_cannot_open_is_named_to_it(make_agent: MakeAgent) -> None:
