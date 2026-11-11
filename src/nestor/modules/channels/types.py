@@ -75,23 +75,37 @@ class Sender:
     name: str | None = None
 
 
-@dataclass(frozen=True, slots=True)
-class Media:
-    uri: str
-    mime_type: str
+class AttachmentKind(StrEnum):
+    """What a file sent along a message is, as the person meant it."""
+
+    IMAGE = "image"
+    VOICE = "voice"  # a message recorded to be listened to, in place of typing
+    AUDIO = "audio"  # an audio file (music, a recording)
+    FILE = "file"  # anything else (a PDF, a spreadsheet)
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class Attachment:
+    """A file sent with a message, or with an answer: its bytes, as the channel received or will send them."""
+
+    kind: AttachmentKind
+    data: bytes = field(repr=False)
+    media_type: str
+    name: str | None = None
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class InboundMessage:
     """A message to the assistant. `sender` is the account the channel authenticated; `None` on a shared device (a
     satellite), which vouches for the place only: whoever is there may speak. `heard` is what their voice told,
-    when it was said and voices are recognised."""
+    when it was said and voices are recognised. `text` may be empty when `attachments` carry the message (a photo
+    without a caption, a voice message)."""
 
     address: Address
     sender: Sender | None
     text: str
     medium: Medium = Medium.WRITTEN  # typed or said: the answer takes the same way
-    media: tuple[Media, ...] = ()
+    attachments: tuple[Attachment, ...] = ()
     heard: Heard | None = None
     id: str = field(default_factory=new_id)
     at: datetime = field(default_factory=utc_now)

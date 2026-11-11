@@ -3,19 +3,23 @@ and the turn it belongs to (`exchange`)."""
 
 from nestor.core import Event, PersonId
 from nestor.modules.channels import Address, Exchange, Medium
-from nestor.modules.conversation.types import About, FallbackReason
+from nestor.modules.conversation.types import About, Attached, FallbackReason
 from nestor.modules.identity import Speaker
 
 
 class UserTurn(Event, event_type="conversation.turn.user"):
     """A message to the assistant, said or typed (`medium`), and who said it as far as anyone knows (`speaker`). Its
-    `exchange.turn_id` is the turn it opens."""
+    `exchange.turn_id` is the turn it opens.
+
+    `text` is the person's words: what they typed, then what their voice messages said. `attachments` are the files
+    that came with it, voice messages included."""
 
     address: Address
     text: str
     exchange: Exchange
     medium: Medium
     speaker: Speaker
+    attachments: tuple[Attached, ...] = ()
 
     @property
     def person(self) -> PersonId | None:

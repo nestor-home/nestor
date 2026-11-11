@@ -5,6 +5,7 @@ from nestor.modules.cognition.model.ports import LanguageModel
 from nestor.modules.cognition.model.types import (
     Finished,
     FinishReason,
+    Image,
     Message,
     ModelOutput,
     ModelRequest,
@@ -19,6 +20,7 @@ from nestor.modules.cognition.model.types import (
 __all__ = [
     "FinishReason",
     "Finished",
+    "Image",
     "LanguageModel",
     "Message",
     "ModelOutput",

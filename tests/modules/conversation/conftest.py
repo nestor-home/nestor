@@ -13,6 +13,7 @@ from nestor.modules.cognition.tools import Tool, Toolbox
 from nestor.modules.conversation import (
     Agent,
     AgentSettings,
+    Attachments,
     ChannelProfile,
     ContextProvider,
     ModelChoice,
@@ -63,6 +64,7 @@ def make_agent(journal: Journal) -> MakeAgent:
         channels: Mapping[str, ChannelProfile] | None = None,
         speakers: Speakers | None = None,
         household: Household | None = None,
+        attachments: Attachments | None = None,
     ) -> Agent:
         return Agent(
             models=models or ModelChoice.single(model or ScriptedModel(*replies)),
@@ -82,6 +84,7 @@ def make_agent(journal: Journal) -> MakeAgent:
             settings=settings,
             clock=clock,
             speakers=speakers,
+            attachments=attachments,
         )
 
     return make

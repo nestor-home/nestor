@@ -1,13 +1,16 @@
 """ElevenLabs voices as a speech model.
 
 Retained on measurements (voice proof of concept): v4 Turbo, which only the Text-to-Dialogue endpoint serves over
-WebSocket (the text-to-speech WebSocket refuses it).
+WebSocket (the text-to-speech WebSocket refuses it). Recordings (a voice message) come from the text-to-speech HTTP
+endpoint, as OGG/Opus.
 """
 
 from typing import TYPE_CHECKING
 
+import httpx
 from pydantic import Field
 
+from nestor.adapters.models.elevenlabs.api import ElevenLabsApi
 from nestor.adapters.models.pipecat import PipecatSpeech
 from nestor.modules.channels import SpeechModel
 from nestor.runtime.plugins import AdapterSettings, Family, Plugin, RequiredSecret, Services
@@ -19,9 +22,20 @@ if TYPE_CHECKING:
 class ElevenLabsSpeech(PipecatSpeech):
     brand = "elevenlabs"
 
-    def __init__(self, *, api_key: str, model: str, voice_id: str, name: str) -> None:
+    def __init__(
+        self, *, api_key: str, model: str, voice_id: str, name: str, transport: httpx.AsyncBaseTransport | None = None
+    ) -> None:
         self.name = name
         self._api_key, self._model, self._voice_id = api_key, model, voice_id
+        self._api = ElevenLabsApi(api_key, transport=transport)
+
+    async def synthesize(self, text: str) -> bytes:
+        response = await self._api.post(
+            f"/v1/text-to-speech/{self._voice_id}",
+            params={"output_format": "opus_48000_64"},
+            json={"model_id": self._model, "text": text},  # the model in the body, or it is ignored
+        )
+        return response.content
 
     def details(self) -> dict[str, str]:
         return {"model": self._model, "voice": self._voice_id}

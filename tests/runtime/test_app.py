@@ -252,6 +252,38 @@ def test_a_text_only_configuration_passes_the_check_without_the_voice_extra(tmp_
     assert checked.stdout.strip() == f"{path}: OK — 0 executor(s), channels: telegram, admin on 127.0.0.1:8470"
 
 
+def with_voice(data_dir: Path, *models: str) -> str:
+    """A Telegram bot whose agent can hear voice messages (`ears`) and answer with one (`mouth`)."""
+    text = TEXT_ONLY.format(data_dir=data_dir, channel="{kind: telegram, token: '1:a'}")
+    voice = [
+        "  ears: {type: transcription, provider: elevenlabs, api_key: xi}",
+        "  mouth: {type: speech, provider: elevenlabs, api_key: xi, voice_id: v}",
+        *models,
+    ]
+    return text.replace("models:\n", "models:\n" + "".join(f"{line}\n" for line in voice), 1)
+
+
+def test_voice_messages_need_no_voice_extra(tmp_path: Path) -> None:
+    path = tmp_path / "nestor.yaml"
+    path.write_text(with_voice(tmp_path))
+    checked = without_voice("-c", str(path), "check")
+    assert checked.returncode == 0, checked.stderr
+
+
+def test_the_agent_hears_and_voices_with_the_models_its_roles_name(tmp_path: Path) -> None:
+    text = with_voice(
+        tmp_path, "  scribe: {type: transcription, provider: elevenlabs, api_key: xi, file_model: scribe_v1}"
+    )
+    with pytest.raises(ConfigError, match=re.escape("transcription: no model named 'whisper'")):
+        parse_config(text + "agent: {transcription: whisper}\n", {})
+    nestor = Nestor(
+        parse_config(text + "agent: {transcription: scribe}\n", {}), environ={"NESTOR_SECRET_KEY": "k" * 43}
+    )
+    assert nestor.agent.attachments is not None
+    assert nestor.agent.attachments.speaks, "the only speech model voices answers without being named"
+    assert nestor.models["scribe"].details()["file_model"] == "scribe_v1"
+
+
 def test_satellites_in_writing_pass_the_check_without_the_voice_extra(tmp_path: Path) -> None:
     path = tmp_path / "nestor.yaml"
     path.write_text(TEXT_ONLY.format(data_dir=tmp_path, channel="{kind: satellites}"))

@@ -19,21 +19,22 @@ model sees it. It is also where turns wait for each other: one at a time per ses
 
 import asyncio
 import contextlib
-from collections.abc import AsyncGenerator, Callable
+from collections.abc import AsyncGenerator, Awaitable, Callable, Mapping, Sequence
 from contextvars import ContextVar
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 
 from nestor.core import Event, PersonId, SessionId, new_id, utc_now
-from nestor.modules.channels import Address, Exchange, Medium
-from nestor.modules.cognition.model import Message
+from nestor.modules.channels import Address, AttachmentKind, Exchange, Medium
+from nestor.modules.cognition.model import Image, Message
 from nestor.modules.conversation.events import AnswerCut, AssistantTurn, FallbackSpoken, NotificationTurn, UserTurn
 from nestor.modules.conversation.history import HISTORY_EVENTS, Names, in_conversation, to_messages
-from nestor.modules.conversation.types import FallbackReason, Notification
+from nestor.modules.conversation.types import Attached, FallbackReason, Notification
 from nestor.modules.identity import Speaker
 from nestor.modules.journal import Journal
 
 SOURCE = "agent"
+IMAGES = 4  # the last images of a conversation a model that sees them looks at again, every turn
 _HELD: ContextVar[frozenset[SessionId]] = ContextVar("held", default=frozenset())  # sessions this task's turn holds
 
 
@@ -45,7 +46,9 @@ class Turn:
         self._conversations, self.address, self.exchange = conversations, address, exchange
         self._journal = conversations.journal
 
-    async def said(self, text: str, medium: Medium, speaker: Speaker) -> UserTurn:
+    async def said(
+        self, text: str, medium: Medium, speaker: Speaker, attachments: tuple[Attached, ...] = ()
+    ) -> UserTurn:
         """A person opened the turn."""
         return await self._publish(
             UserTurn(
@@ -56,6 +59,7 @@ class Turn:
                 medium=medium,
                 speaker=speaker,
                 exchange=self.exchange,
+                attachments=attachments,
             )
         )
 
@@ -174,16 +178,28 @@ class Conversations:
         return Turn(self, address, Exchange(conversation_id=conversation, turn_id=new_id()))
 
     async def history(
-        self, address: Address, conversation: str | None, *, max_events: int = 60, names: Names | None = None
+        self,
+        address: Address,
+        conversation: str | None,
+        *,
+        max_events: int = 60,
+        names: Names | None = None,
+        look: Callable[[Sequence[Attached]], Awaitable[Mapping[str, Image]]] | None = None,
     ) -> tuple[Message, ...]:
         """A conversation's last turns as the model reads them, whatever process held them (restarts included);
-        nothing without one. Earlier conversations of the session are not replayed, as in Assist."""
+        nothing without one. Earlier conversations of the session are not replayed, as in Assist.
+
+        `look` gives the images a model that sees them looks at: the last `IMAGES` sent in the conversation (the
+        others are mentioned only); `None` for a model that does not see images."""
         if conversation is None:
             return ()
         events = await self.journal.history(
             *HISTORY_EVENTS, session=address.session, newest_first=True, limit=max_events
         )
-        return to_messages(in_conversation(reversed(events), conversation), names=names)
+        events = in_conversation(reversed(events), conversation)
+        sent = [a for e in events if isinstance(e, UserTurn) for a in e.attachments if a.kind is AttachmentKind.IMAGE]
+        images = await look(sent[-IMAGES:]) if look is not None else None
+        return to_messages(events, names=names, images=images)
 
     async def fell_back(self, address: Address, reason: FallbackReason) -> FallbackSpoken:
         """A provider failed while drafting outside any turn (a notification's answer)."""

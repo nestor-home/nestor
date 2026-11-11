@@ -10,7 +10,7 @@ from collections.abc import AsyncIterator
 from dataclasses import dataclass
 
 from nestor.core import Component, ContractError, Model, ModelType, PersonId
-from nestor.modules.channels.types import Address, InboundMessage, Medium, Sender
+from nestor.modules.channels.types import Address, Attachment, AttachmentKind, InboundMessage, Medium, Sender
 from nestor.modules.identity import Heard
 
 
@@ -91,6 +91,11 @@ class Assistant(ABC):
         Called as soon as the speech ends, while it is transcribed, so that the turn does not wait for it."""
         return None
 
+    async def voice(self, text: str) -> Attachment | None:
+        """`text` said in the assistant's voice, as a recorded voice message (`AttachmentKind.VOICE`) a channel can
+        send; `None` when it has no voice or could not record it (the channel then writes the text)."""
+        return None
+
 
 class Channel(Component, ABC):
     """Contract:
@@ -101,10 +106,15 @@ class Channel(Component, ABC):
     - senders the channel cannot authenticate are dropped before reaching the assistant, unless it is a shared
       device that vouches for its place only (`sender=None`);
     - `conversation_ends_after_s` is how long a conversation on it lasts without a turn: what each
-      turn's medium suggests, unless its configuration says otherwise.
+      turn's medium suggests, unless its configuration says otherwise;
+    - files sent with a message reach the assistant as `InboundMessage.attachments`, downloaded; one it cannot fetch
+      is left out, and a message left with nothing is answered with an excuse rather than dropped;
+    - `sends` are the attachments it can deliver: one that sends `VOICE` answers a voice message with one
+      (`Assistant.voice`), and writes the text when the assistant gives no voice.
     """
 
     media: frozenset[Medium] = frozenset({Medium.WRITTEN})  # how its turns can travel
+    sends: frozenset[AttachmentKind] = frozenset()  # the attachments it can deliver
     style: str = ""  # how to write for this channel (e.g. expression tags the voice understands)
 
     def __init__(self, channel_id: str, *, conversation_ends_after_s: float | None = None) -> None:
@@ -142,17 +152,32 @@ class Channel(Component, ABC):
 
 
 class TranscriptionModel(Model, ABC):
-    """Turns a person's speech into text, as they speak (speech to text).
+    """Turns a person's speech into text (speech to text): a recording, and live speech for the voice.
 
     How it streams (a realtime pipeline, its frames and timings) is the voice adapter's business: an implementation
-    also gives that adapter what it runs. The core only knows that the model hears.
+    also gives that adapter what it runs. The core transcribes recordings (a voice message) through `transcribe`.
+
+    Contract (checked by `nestor.testing.channels.TranscriptionModelContract`): `transcribe` returns what was said,
+    stripped, empty when nothing was; a provider failure raises `ProviderError`, never a vendor exception.
     """
 
     type = ModelType.TRANSCRIPTION
 
+    @abstractmethod
+    async def transcribe(self, audio: bytes, media_type: str) -> str:
+        """What is said in a recording (`media_type` such as `audio/ogg`)."""
+
 
 class SpeechModel(Model, ABC):
-    """Gives the assistant its voice: turns what it says into speech, as it is written (text to speech). Like
-    `TranscriptionModel`, it gives the voice adapter what it runs."""
+    """Gives the assistant its voice: turns what it says into speech, as it is written (text to speech), and records
+    voice messages (`synthesize`). Like `TranscriptionModel`, it gives the voice adapter what it runs.
+
+    Contract (checked by `nestor.testing.channels.SpeechModelContract`): `synthesize` returns an OGG/Opus recording,
+    what messaging apps play as a voice message; a provider failure raises `ProviderError`.
+    """
 
     type = ModelType.SPEECH
+
+    @abstractmethod
+    async def synthesize(self, text: str) -> bytes:
+        """`text` recorded in this voice, as OGG/Opus (`audio/ogg`)."""

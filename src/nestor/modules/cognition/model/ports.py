@@ -18,10 +18,12 @@ class LanguageModel(Model, ABC):
     - the stream yields any number of `TextDelta` and `ToolCallRequested`, then exactly one `Finished`,
       which carries the usage and the model that answered when the provider reports them;
     - closing the stream early (`aclose`, on barge-in) stops generation and releases the request;
-    - a provider failure raises `ProviderError`, never a vendor exception.
+    - a provider failure raises `ProviderError`, never a vendor exception;
+    - a model that does not see images (`vision` false) is never sent any.
     """
 
     type = ModelType.LANGUAGE
+    vision: bool = False  # whether it looks at the images of a message
 
     @abstractmethod
     def stream(self, request: ModelRequest) -> AsyncGenerator[ModelOutput]: ...

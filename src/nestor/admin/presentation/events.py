@@ -43,6 +43,7 @@ from nestor.modules.conversation import (
     About,
     AnswerCut,
     AssistantTurn,
+    Attached,
     FallbackSpoken,
     NotificationTurn,
     SpeakerDeclared,
@@ -196,6 +197,7 @@ class Line:
     room: str | None = None  # where it happened, when the event says
     tool: str | None = None  # the tool called
     outcome: tuple[bool, float] | None = None  # (succeeded, seconds) of a tool call or a task
+    attachments: tuple[Attached, ...] = ()  # the files a person sent with their message
 
 
 def unknown_message(event_type: str, fields: Mapping[str, object] | None = None) -> Message:
@@ -586,6 +588,7 @@ class EventDescriber:
             detail=e.text,
             people=[e.person],
             channels=[e.address],
+            attachments=e.attachments,
         )
 
     def _tool_returned(self, e: ToolReturned) -> Line:
@@ -676,6 +679,7 @@ class EventDescriber:
         room: str | None = None,
         tool: str | None = None,
         outcome: tuple[bool, float] | None = None,
+        attachments: tuple[Attached, ...] = (),
     ) -> Line:
         if len(detail) > DETAIL_LIMIT:
             detail = detail[:DETAIL_LIMIT] + "…"
@@ -692,4 +696,5 @@ class EventDescriber:
             room=room or _room(event),
             tool=tool,
             outcome=outcome,
+            attachments=attachments,
         )

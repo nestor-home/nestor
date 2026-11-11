@@ -36,6 +36,7 @@ from nestor.runtime.editing import Problem, dotted
 ErrorCode = Literal[
     "addition_over",
     "addition_unknown",
+    "attachment_unknown",
     "audio_format",
     "bad_token",
     "client_incomplete",

@@ -3,6 +3,9 @@
 from dataclasses import dataclass
 from enum import StrEnum
 
+from nestor.modules.channels import AttachmentKind
+from nestor.modules.journal import BlobRef
+
 NOTIFICATION_CHARS = (
     8000  # of what a notification brings into a conversation: a task's long result keeps its beginning and end
 )
@@ -69,3 +72,14 @@ class Notification:
         if len(self.text) > NOTIFICATION_CHARS:
             half = NOTIFICATION_CHARS // 2
             object.__setattr__(self, "text", f"{self.text[:half]}\n[… cut …]\n{self.text[-half:]}")
+
+
+@dataclass(frozen=True, slots=True)
+class Attached:
+    """A file that came with a person's message, as the journal keeps it: stored by content (`blob`), and what was
+    said in it when it is a recording that could be transcribed."""
+
+    kind: AttachmentKind
+    blob: BlobRef
+    name: str | None = None
+    transcript: str | None = None

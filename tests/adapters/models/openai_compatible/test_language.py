@@ -19,6 +19,7 @@ from nestor.core.i18n import Locale
 from nestor.modules.cognition import (
     Finished,
     FinishReason,
+    Image,
     LanguageModel,
     Message,
     ModelOutput,
@@ -317,6 +318,34 @@ async def test_other_servers_get_the_instructions_as_one_text_unless_told_otherw
     async with OpenAICompatibleLanguage(base_url=BASE_URL, api_key=KEY, model="m", cache_control=True) as m:
         [o async for o in m.stream(LAYERED)]
     assert len(instructions(route)["content"]) == 3
+
+
+async def test_images_go_with_the_text_as_data_urls_for_a_model_that_sees(
+    api: respx.MockRouter, tmp_path: Path
+) -> None:
+    route = api.post(COMPLETIONS).mock(return_value=streamed(*TEXT_REPLY))
+    services = Services(data_dir=tmp_path, localizer=EchoLocalizer(), locale=Locale("fr-FR"))
+    seeing = plugin.create({"base_url": BASE_URL, "api_key": KEY, "model": "m", "vision": True}, "eyes", services)
+    assert (
+        seeing.vision and not plugin.create({"base_url": BASE_URL, "api_key": KEY, "model": "m"}, "m", services).vision
+    )
+    photo = Image(media_type="image/png", data=b"\x89PNG")
+    async with seeing as m:
+        [
+            o
+            async for o in m.stream(
+                ModelRequest(messages=(Message.user("[An image, attached]\nC'est quoi ?", (photo,)),))
+            )
+        ]
+    assert sent(route)["messages"] == [
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "[An image, attached]\nC'est quoi ?"},
+                {"type": "image_url", "image_url": {"url": "data:image/png;base64,iVBORw=="}},
+            ],
+        }
+    ]
 
 
 async def test_the_reply_says_how_much_of_the_prompt_came_from_the_cache(api: respx.MockRouter) -> None:

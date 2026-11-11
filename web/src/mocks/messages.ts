@@ -144,6 +144,7 @@ export interface Draft {
   tone?: Tone;
   links?: Partial<EventLinks>;
   outcome?: JournalItem["outcome"];
+  attachments?: JournalItem["attachments"];
   tool?: string | null;
   brand?: string | null;
 }
@@ -188,6 +189,7 @@ export function toItem(draft: Draft, where: { position: number; id: string; at: 
     room: draft.room ?? null,
     tool: draft.tool ?? null,
     outcome: draft.outcome ?? null,
+    attachments: draft.attachments ?? [],
     brand: draft.brand ?? draft.channels?.[0] ?? null,
     links: { ...NO_LINKS, ...draft.links },
     cause: null,

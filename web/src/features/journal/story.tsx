@@ -15,6 +15,7 @@ import { say, why } from "@/lib/messages";
 import { useMe } from "@/lib/session";
 import { duration } from "@/lib/time";
 import { cn } from "@/lib/utils";
+import { Attachments } from "./attachments";
 import { stepLook } from "./steps";
 import { type Chain, cast, type Single, type Story, type Thread, type ToolCall, type Turn } from "./stories";
 
@@ -265,6 +266,7 @@ function TurnBlock({
                 {turn.user.detail_text || say(turn.user)}
               </span>
             </Entry>
+            <Attachments item={turn.user} className="mt-2" />
           </div>
         </div>
       ) : (

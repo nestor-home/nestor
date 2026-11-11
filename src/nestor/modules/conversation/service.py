@@ -13,7 +13,18 @@ from datetime import datetime
 
 from nestor.core import ContractError, PersonId, ProviderError, utc_now
 from nestor.core.i18n import Localizer
-from nestor.modules.channels import Address, Assistant, Exchange, InboundMessage, Medium, MessageEnd, Reply, Sender
+from nestor.modules.channels import (
+    Address,
+    Assistant,
+    Attachment,
+    AttachmentKind,
+    Exchange,
+    InboundMessage,
+    Medium,
+    MessageEnd,
+    Reply,
+    Sender,
+)
 from nestor.modules.cognition.model import (
     Finished,
     FinishReason,
@@ -26,10 +37,11 @@ from nestor.modules.cognition.model import (
     ToolCallRequested,
 )
 from nestor.modules.cognition.tools import Toolbox, ToolContext
+from nestor.modules.conversation.attachments import Attachments
 from nestor.modules.conversation.conversations import Conversations, Turn
 from nestor.modules.conversation.events import AssistantTurn
 from nestor.modules.conversation.history import notification_message
-from nestor.modules.conversation.persona import QUIET, Instructions, Persona
+from nestor.modules.conversation.persona import QUIET, VOICE_ANSWER, Instructions, Persona
 from nestor.modules.conversation.ports import ContextProvider, Layer, TurnContext
 from nestor.modules.conversation.speakers import Speakers
 from nestor.modules.conversation.types import SILENT, FallbackReason, Notification, ReplyPhase
@@ -44,6 +56,7 @@ class ChannelProfile:
 
     style: str = ""
     conversation_ends_after_s: float | None = None  # None: the default of each turn's medium
+    sends: frozenset[AttachmentKind] = frozenset()  # the attachments it can deliver (`Channel.sends`)
 
     def ends_conversation_after_s(self, medium: Medium) -> float:
         return self.conversation_ends_after_s or medium.conversation_ends_after_s
@@ -122,11 +135,13 @@ class Agent(Assistant):
         localizer: Localizer,
         context: Iterable[ContextProvider] = (),
         speakers: Speakers | None = None,
+        attachments: Attachments | None = None,
         settings: AgentSettings | None = None,
         clock: Callable[[], datetime] = utc_now,
     ) -> None:
         """`speakers` tells who speaks on shared devices (with recognised voices when it has them); its tools and
-        guidance belong in `toolbox` and `context`."""
+        guidance belong in `toolbox` and `context`. `attachments` keeps the files sent with messages and voices
+        answers; without it, files are not kept and the model only hears that some came."""
         self.models, self.persona, self.journal = models, persona, journal
         self.conversations = Conversations(
             journal,
@@ -138,6 +153,7 @@ class Agent(Assistant):
         self.speakers = speakers or Speakers(journal, household)
         self._channels = dict(channels or {})
         self._context = (self.speakers, *context)  # who speaks: the agent's own concern, on every turn
+        self.attachments = attachments
         self.settings = settings or AgentSettings()
         self.replies = LiveReplies()  # what it is answering right now
 
@@ -154,6 +170,9 @@ class Agent(Assistant):
 
     async def hear(self, audio: bytes) -> Heard | None:
         return await self.speakers.voices.hear(audio) if self.speakers.voices is not None else None
+
+    async def voice(self, text: str) -> Attachment | None:
+        return await self.attachments.voice(text) if self.attachments is not None else None
 
     async def compose(
         self, address: Address, person: Person | None, notification: Notification, medium: Medium
@@ -289,8 +308,11 @@ class AgentReply(Reply):
         agent = self._agent
         self._speaker = await agent.speakers.of(message, await agent.conversations.current(self._address, self._medium))
         self._person = agent.household.person(self._speaker.person) if self._speaker.person else None
+        kept = await agent.attachments.keep(message.attachments) if agent.attachments is not None else ()
+        heard = (a.transcript for a in kept if a.kind is AttachmentKind.VOICE and a.transcript)
+        words = "\n".join(part for part in (message.text.strip(), *heard) if part)
         self._turn = await agent.conversations.turn(self._address, self._medium)
-        said = await self._turn.said(message.text, self._medium, self._speaker)
+        said = await self._turn.said(words, self._medium, self._speaker, kept)
         agent.speakers.learn(message.heard, said)
         if phrase := await agent.speakers.enrolling(message):  # a phrase of a voice being recorded
             self._say(phrase)
@@ -300,8 +322,13 @@ class AgentReply(Reply):
 
     async def _answer(self, conversation: str | None) -> None:
         agent = self._agent
+        sees = agent.attachments is not None and agent.models.of(self._medium).vision
         history = await agent.conversations.history(
-            self._address, conversation, max_events=agent.settings.history_events, names=agent.speakers.name_of
+            self._address,
+            conversation,
+            max_events=agent.settings.history_events,
+            names=agent.speakers.name_of,
+            look=agent.attachments.images if sees and agent.attachments is not None else None,
         )
         opening = self._opening
         if isinstance(opening, Notification):  # not in the journal yet: read as it will be once delivered
@@ -312,6 +339,8 @@ class AgentReply(Reply):
         turn = instructions.turn
         if isinstance(opening, Notification) and opening.quiet:
             turn = f"{turn}\n\n{QUIET}"
+        if self._voiced(opening):
+            turn = f"{turn}\n\n{VOICE_ANSWER}"
         messages = [
             Message(role=Role.SYSTEM, layers=(instructions.stable, instructions.household), content=turn),
             *history,
@@ -337,6 +366,18 @@ class AgentReply(Reply):
             messages += [
                 Message(role=Role.TOOL, content=o, tool_call_id=c.id) for c, o in zip(calls, outputs, strict=True)
             ]
+
+    def _voiced(self, opening: InboundMessage | Notification) -> bool:
+        """Whether the answer goes back as a voice message: to a voice message, on a channel that sends them, with a
+        voice to record it."""
+        agent = self._agent
+        return (
+            isinstance(opening, InboundMessage)
+            and any(a.kind is AttachmentKind.VOICE for a in opening.attachments)
+            and AttachmentKind.VOICE in agent.channel(self._address).sends
+            and agent.attachments is not None
+            and agent.attachments.speaks
+        )
 
     def _said(self, history: Sequence[Message]) -> str | None:
         """What a module looks up for this turn: the last messages that opened turns of the conversation (a

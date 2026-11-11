@@ -20,6 +20,14 @@ class ToolCall:
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class Image:
+    """A picture the model looks at with a message (a photo someone sent)."""
+
+    media_type: str
+    data: bytes = field(repr=False)
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class Message:
     """A message of the dialogue. `layers` go before `content`, from the most stable: the same from
     one request to the next, so a provider that caches prompts may cache the request up to the end
@@ -30,10 +38,11 @@ class Message:
     tool_calls: tuple[ToolCall, ...] = ()
     tool_call_id: str | None = None  # set on TOOL messages: which call this result answers
     layers: tuple[str, ...] = ()
+    images: tuple[Image, ...] = ()  # on USER messages, for a model that sees images (`LanguageModel.vision`)
 
     @classmethod
-    def user(cls, content: str) -> "Message":
-        return cls(role=Role.USER, content=content)
+    def user(cls, content: str, images: tuple[Image, ...] = ()) -> "Message":
+        return cls(role=Role.USER, content=content, images=images)
 
     @property
     def text(self) -> str:

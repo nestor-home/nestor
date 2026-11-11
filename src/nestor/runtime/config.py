@@ -205,10 +205,14 @@ _AGENT = AgentSettings()
 
 class AgentConfig(Section):
     """Which model of `models` answers in each medium. One left out takes the other's; with a single
-    model, neither needs saying."""
+    model, neither needs saying. `transcription` hears the voice messages people send and `speech` records the
+    answers to them; each defaults to the only model of its type, and without one, voice messages go unheard and
+    answers stay written."""
 
     spoken: str | None = Field(default=None, json_schema_extra=LANGUAGE_MODEL)  # the voice: first words fast
     written: str | None = Field(default=None, json_schema_extra=LANGUAGE_MODEL)  # writing allows a few seconds
+    transcription: str | None = Field(default=None, json_schema_extra=TRANSCRIPTION_MODEL)
+    speech: str | None = Field(default=None, json_schema_extra=SPEECH_MODEL)
     # how long a turn waits for a tool before it goes on in the background and its result comes back by itself
     spoken_tool_wait_s: float = Field(default=_AGENT.spoken_tool_wait_s, gt=0, le=60)
     written_tool_wait_s: float = Field(default=_AGENT.written_tool_wait_s, gt=0, le=600)
@@ -315,7 +319,15 @@ class NestorConfig(Section):
     @field_validator("agent")
     @classmethod
     def _agent(cls, value: AgentConfig, info: ValidationInfo) -> AgentConfig:
-        _known(info, {"spoken": value.spoken, "written": value.written})
+        _known(
+            info,
+            {
+                "spoken": value.spoken,
+                "written": value.written,
+                "transcription": value.transcription,
+                "speech": value.speech,
+            },
+        )
         return value
 
     @field_validator("watches")

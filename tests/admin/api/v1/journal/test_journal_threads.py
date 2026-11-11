@@ -9,7 +9,7 @@ from typing import Any
 from nestor.core import PersonId, new_id, utc_now
 from nestor.core.i18n import Message
 from nestor.modules.accounts import Role
-from nestor.modules.channels import Address, Exchange, InboundMessage, Medium, Sender
+from nestor.modules.channels import Address, Attachment, AttachmentKind, Exchange, InboundMessage, Medium, Sender
 from nestor.modules.cognition import TaskEnded, TaskStarted, TaskStatus
 from nestor.modules.cognition.delegation.events import TaskDelivered
 from nestor.modules.conversation import About, AssistantTurn, Conversations, NotificationTurn, Source, UserTurn
@@ -242,6 +242,37 @@ async def test_one_entry_comes_with_its_record_and_only_to_who_may_read_it(tmp_p
             "code"
         ] == "journal_entry_unknown"
         assert (await api.get("/api/v1/journal/999999")).status_code == 404
+
+
+async def test_the_files_of_a_message_come_to_who_may_read_it_and_only_pictures_open_in_place(
+    tmp_path: Path,
+) -> None:
+    async with Harness(tmp_path) as admin:
+        await admin.account("mathilde", Role.MEMBER, "mathilde")
+        photo = Attachment(kind=AttachmentKind.IMAGE, data=b"\xff\xd8 jpeg", media_type="image/jpeg")
+        page = Attachment(
+            kind=AttachmentKind.FILE, data=b"<svg onload=alert(1)>", media_type="image/svg+xml", name="x.svg"
+        )
+        message = InboundMessage(
+            address=Address("telegram", "user"), sender=Sender("user"), text="regarde", attachments=(photo, page)
+        )
+        await admin.nestor.agent.respond(message).collect()
+        api = await admin.api()
+        (item,) = await items(api, q="regarde", type="conversation.turn.user")
+        assert [(a["kind"], a["media_type"], a["size"]) for a in item["attachments"]] == [
+            ("image", "image/jpeg", len(photo.data)),
+            ("file", "image/svg+xml", len(page.data)),
+        ]
+        shown = await api.get(f"/api/v1/journal/{item['position']}/attachments/0")
+        assert (shown.status_code, shown.content, shown.headers["content-type"]) == (200, photo.data, "image/jpeg")
+        assert shown.headers["content-disposition"].startswith("inline")
+        saved = await api.get(f"/api/v1/journal/{item['position']}/attachments/1")
+        assert saved.headers["content-type"] == "application/octet-stream", "a page sent to Nestor never runs here"
+        assert saved.headers["content-disposition"] == 'attachment; filename="x.svg"'
+        member = await admin.api("mathilde")
+        refused = await member.get(f"/api/v1/journal/{item['position']}/attachments/0")
+        assert (refused.status_code, refused.json()["error"]["code"]) == (404, "attachment_unknown")
+        assert (await api.get(f"/api/v1/journal/{item['position']}/attachments/2")).status_code == 404
 
 
 async def test_signing_in_only_works_from_the_admins_own_pages(tmp_path: Path) -> None:
