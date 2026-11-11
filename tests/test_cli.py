@@ -109,7 +109,7 @@ def test_a_restart_stops_the_process_cleanly_then_runs_the_same_command_line(
     monkeypatch.setattr("os.execv", lambda path, argv: executed.append((path, list(argv))))
 
     async def serve_then_restart(nestor: object, extras: object) -> None:
-        nestor.restart.requested = True  # ty: ignore[unresolved-attribute]
+        nestor.restart.requested = True  # ty: ignore[missing-attribute]
 
     monkeypatch.setattr("nestor.cli.run_until_stopped", serve_then_restart)
     config = tmp_path / "nestor.yaml"
