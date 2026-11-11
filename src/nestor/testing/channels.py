@@ -26,11 +26,12 @@ OGG = b"OggS"  # how an OGG recording starts
 
 
 class ScriptedReply(Reply):
-    """Streams `text` word by word, as one message; stops as soon as it is interrupted."""
+    """Streams `text` word by word, as one message, with `attachments`; stops as soon as it is interrupted."""
 
-    def __init__(self, text: str, *, word_delay_s: float = 0.0) -> None:
+    def __init__(self, text: str, *, word_delay_s: float = 0.0, attachments: tuple[Attachment, ...] = ()) -> None:
         self._words = text.split()
         self._word_delay_s = word_delay_s
+        self._attachments = attachments
         self.heard: str | None = None
 
     async def __aiter__(self) -> AsyncIterator[str | MessageEnd]:
@@ -39,7 +40,7 @@ class ScriptedReply(Reply):
                 return
             await asyncio.sleep(self._word_delay_s)
             yield word if i == 0 else f" {word}"
-        yield MessageEnd()
+        yield MessageEnd(attachments=self._attachments)
 
     async def interrupt(self, heard: str) -> None:
         self.heard = heard
@@ -61,11 +62,10 @@ class ScriptedAssistant(Assistant):
         voice: Heard | None = None,
         speaks: bool = False,
     ) -> None:
-        """`speaks`: `voice(text)` records `text` (as `OGG` followed by it)."""
+        """`speaks`: it answers a voice message with one, its text recorded as `OGG` followed by it."""
         self._answer = answer
         self._voice = voice
         self._speaks = speaks
-        self.voiced: list[str] = []
         self.heard: list[bytes] = []
         self._strangers = strangers
         self._word_delay_s = word_delay_s
@@ -83,15 +83,12 @@ class ScriptedAssistant(Assistant):
         self.heard.append(audio)
         return self._voice
 
-    async def voice(self, text: str) -> Attachment | None:
-        if not self._speaks:
-            return None
-        self.voiced.append(text)
-        return Attachment(kind=AttachmentKind.VOICE, data=OGG + text.encode(), media_type="audio/ogg")
-
     def respond(self, message: InboundMessage) -> ScriptedReply:
         self.messages.append(message)
-        reply = ScriptedReply(self._answer(message), word_delay_s=self._word_delay_s)
+        text = self._answer(message)
+        voiced = self._speaks and any(a.kind is AttachmentKind.VOICE for a in message.attachments)
+        voice = Attachment(kind=AttachmentKind.VOICE, data=OGG + text.encode(), media_type="audio/ogg")
+        reply = ScriptedReply(text, word_delay_s=self._word_delay_s, attachments=(voice,) if voiced else ())
         self.replies.append(reply)
         return reply
 
@@ -141,20 +138,17 @@ class InMemoryChannel(Channel):
 
 
 class ScriptedTranscription(TranscriptionModel):
-    """Hears in each recording what `said` returns for it (by default its bytes as text); `failing` raises
-    `ProviderError` instead."""
+    """Hears in each recording its bytes, as text; `failing` raises `ProviderError` instead."""
 
     name = "scripted"
 
-    def __init__(self, said: Callable[[bytes], str] = lambda audio: audio.decode(), *, failing: bool = False) -> None:
-        self._said, self.failing = said, failing
-        self.heard: list[tuple[bytes, str]] = []
+    def __init__(self, *, failing: bool = False) -> None:
+        self.failing = failing
 
     async def transcribe(self, audio: bytes, media_type: str) -> str:
-        self.heard.append((audio, media_type))
         if self.failing:
             raise ProviderError(self.name, "transcription unavailable", transient=True)
-        return self._said(audio).strip()
+        return audio.decode().strip()
 
 
 class ScriptedSpeech(SpeechModel):
@@ -164,10 +158,8 @@ class ScriptedSpeech(SpeechModel):
 
     def __init__(self, *, failing: bool = False) -> None:
         self.failing = failing
-        self.said: list[str] = []
 
     async def synthesize(self, text: str) -> bytes:
-        self.said.append(text)
         if self.failing:
             raise ProviderError(self.name, "speech unavailable", transient=True)
         return OGG + text.encode()

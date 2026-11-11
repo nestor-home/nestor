@@ -84,6 +84,9 @@ class AttachmentKind(StrEnum):
     FILE = "file"  # anything else (a PDF, a spreadsheet)
 
 
+IMAGE_TYPES = frozenset({"image/jpeg", "image/png", "image/webp", "image/gif"})  # what models and browsers show
+
+
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Attachment:
     """A file sent with a message, or with an answer: its bytes, as the channel received or will send them."""

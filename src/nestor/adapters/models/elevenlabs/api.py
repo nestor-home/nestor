@@ -8,19 +8,20 @@ from nestor.core import ProviderError
 
 PROVIDER = "elevenlabs"
 API = "https://api.elevenlabs.io"
+TIMEOUT_S = 60.0  # a long voice message takes a while to transcribe or record
 
 
 class ElevenLabsApi:
-    def __init__(
-        self,
-        api_key: str,
-        *,
-        base_url: str = API,
-        timeout_s: float = 60.0,
-        transport: httpx.AsyncBaseTransport | None = None,
-    ) -> None:
-        self._api_key = api_key
-        self._base_url, self._timeout_s, self._transport = base_url, timeout_s, transport
+    """One HTTP client, opened on the first call and kept until `aclose`: a recording does not pay a new connection."""
+
+    def __init__(self, api_key: str, *, transport: httpx.AsyncBaseTransport | None = None) -> None:
+        self._api_key, self._transport = api_key, transport
+        self._client: httpx.AsyncClient | None = None
+
+    async def aclose(self) -> None:
+        client, self._client = self._client, None
+        if client is not None:
+            await client.aclose()
 
     async def post(
         self,
@@ -32,11 +33,10 @@ class ElevenLabsApi:
         params: dict[str, str] | None = None,
     ) -> httpx.Response:
         headers = {"xi-api-key": self._api_key}
+        if self._client is None:
+            self._client = httpx.AsyncClient(base_url=API, timeout=TIMEOUT_S, transport=self._transport)
         try:
-            async with httpx.AsyncClient(
-                base_url=self._base_url, timeout=self._timeout_s, transport=self._transport
-            ) as client:
-                response = await client.post(path, headers=headers, json=json, data=data, files=files, params=params)
+            response = await self._client.post(path, headers=headers, json=json, data=data, files=files, params=params)
         except httpx.HTTPError as error:
             raise self._error(f"{path}: {type(error).__name__} {error}".strip(), transient=True) from None
         if response.is_error:

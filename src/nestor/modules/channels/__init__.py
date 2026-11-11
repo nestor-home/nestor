@@ -1,7 +1,8 @@
 """Channels: voice, messaging and web entry points, all leading to the same assistant."""
 
-from nestor.modules.channels.ports import Assistant, Channel, MessageEnd, Reply, SpeechModel, TranscriptionModel
+from nestor.modules.channels.ports import Answer, Assistant, Channel, MessageEnd, Reply, SpeechModel, TranscriptionModel
 from nestor.modules.channels.types import (
+    IMAGE_TYPES,
     Address,
     Attachment,
     AttachmentKind,
@@ -12,7 +13,9 @@ from nestor.modules.channels.types import (
 )
 
 __all__ = [
+    "IMAGE_TYPES",
     "Address",
+    "Answer",
     "Assistant",
     "Attachment",
     "AttachmentKind",

@@ -18,9 +18,24 @@ from nestor.modules.identity import Heard
 class MessageEnd:
     """Marks the end of a message in a `Reply`: the assistant stops writing to act (a tool call)
     and the next words start a new message. `last`: no other message follows in this turn, so a
-    screen can stop showing that the assistant is still at work."""
+    screen can stop showing that the assistant is still at work. `attachments` go with the message: its recording,
+    when the answer goes back as a voice message."""
 
     last: bool = True
+    attachments: tuple[Attachment, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class Answer:
+    """A complete message of a reply, with what goes with it."""
+
+    text: str
+    attachments: tuple[Attachment, ...] = ()
+
+    @property
+    def voice(self) -> Attachment | None:
+        """Its recording, to send as a voice message in place of the text."""
+        return next((a for a in self.attachments if a.kind is AttachmentKind.VOICE), None)
 
 
 class Reply(ABC):
@@ -40,18 +55,23 @@ class Reply(ABC):
     async def interrupt(self, heard: str) -> None:
         """Stop the answer; `heard` is the part the user received before cutting in."""
 
-    async def messages(self) -> AsyncIterator[str]:
-        """Each complete message, as soon as it ends."""
+    async def answers(self) -> AsyncIterator[Answer]:
+        """Each complete message with its attachments, as soon as it ends."""
         chunks: list[str] = []
         async for part in self:
             if isinstance(part, MessageEnd):
                 if text := "".join(chunks).strip():
-                    yield text
+                    yield Answer(text, part.attachments)
                 chunks.clear()
             else:
                 chunks.append(part)
         if text := "".join(chunks).strip():  # cut before its end
-            yield text
+            yield Answer(text)
+
+    async def messages(self) -> AsyncIterator[str]:
+        """Each complete message, as soon as it ends."""
+        async for answer in self.answers():
+            yield answer.text
 
     async def speech(self) -> AsyncIterator[str]:
         """The messages as one continuous text, a space between two of them."""
@@ -91,11 +111,6 @@ class Assistant(ABC):
         Called as soon as the speech ends, while it is transcribed, so that the turn does not wait for it."""
         return None
 
-    async def voice(self, text: str) -> Attachment | None:
-        """`text` said in the assistant's voice, as a recorded voice message (`AttachmentKind.VOICE`) a channel can
-        send; `None` when it has no voice or could not record it (the channel then writes the text)."""
-        return None
-
 
 class Channel(Component, ABC):
     """Contract:
@@ -109,8 +124,8 @@ class Channel(Component, ABC):
       turn's medium suggests, unless its configuration says otherwise;
     - files sent with a message reach the assistant as `InboundMessage.attachments`, downloaded; one it cannot fetch
       is left out, and a message left with nothing is answered with an excuse rather than dropped;
-    - `sends` are the attachments it can deliver: one that sends `VOICE` answers a voice message with one
-      (`Assistant.voice`), and writes the text when the assistant gives no voice.
+    - `sends` are the attachments it can deliver: one that sends `VOICE` sends a message's recording
+      (`Answer.voice`) as a voice message, and writes the text when there is none.
     """
 
     media: frozenset[Medium] = frozenset({Medium.WRITTEN})  # how its turns can travel

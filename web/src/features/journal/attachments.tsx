@@ -1,7 +1,8 @@
 import { FileText, Mic } from "lucide-react";
 import type { JournalItem } from "@/api";
 import { API_BASE } from "@/api/client";
-import { activeLocale, useT } from "@/i18n";
+import { useT } from "@/i18n";
+import { fileSize } from "@/lib/time";
 import { cn } from "@/lib/utils";
 
 type Attachment = JournalItem["attachments"][number];
@@ -62,14 +63,4 @@ export function Attachments({ item, className }: { item: JournalItem; className?
       })}
     </ul>
   );
-}
-
-function fileSize(bytes: number): string {
-  const [value, unit] =
-    bytes >= 1_000_000
-      ? [bytes / 1_000_000, "megabyte"]
-      : bytes >= 1_000
-        ? [bytes / 1_000, "kilobyte"]
-        : [bytes, "byte"];
-  return new Intl.NumberFormat(activeLocale(), { style: "unit", unit, maximumFractionDigits: 1 }).format(value);
 }

@@ -23,6 +23,7 @@ from nestor.admin.presentation import Kind, Tone
 from nestor.admin.state import state
 from nestor.core import PersonId
 from nestor.modules.accounts import Scope
+from nestor.modules.channels import IMAGE_TYPES
 
 router = APIRouter(tags=["journal"])
 Reader = Annotated[Caller, Depends(allowed(Scope.JOURNAL_READ_ALL, Scope.JOURNAL_READ_OWN))]
@@ -146,9 +147,6 @@ async def get_journal_entry(request: Request, caller: Reader, position: int) -> 
     return JournalEntryOut(item=item, record=dict(entry.record))
 
 
-SHOWN = frozenset({"image/jpeg", "image/png", "image/webp", "image/gif"})  # what a browser may display inline
-
-
 @router.get(
     "/journal/{position}/attachments/{index}",
     response_class=Response,
@@ -169,7 +167,7 @@ async def get_journal_attachment(request: Request, caller: Reader, position: int
     except KeyError:
         raise not_found("attachment_unknown") from None
     media_type = attached.blob.media_type
-    inline = media_type in SHOWN or media_type.startswith("audio/")
+    inline = media_type in IMAGE_TYPES or media_type.startswith("audio/")
     name = attached.name or f"{attached.kind.value}-{index}"
     headers = {
         "Cache-Control": "private, max-age=86400, immutable",  # addressed by content: it never changes

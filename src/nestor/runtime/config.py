@@ -368,6 +368,19 @@ class NestorConfig(Section):
             "consolidation": self.memory.consolidation or written,
         }
 
+    def voice_messages(self) -> tuple[str | None, str | None]:
+        """The models that hear voice messages and record the answers to them: those `agent` names, else the only
+        model of each type; `None` without one."""
+        return (
+            self.agent.transcription or _sole(self.models, ModelType.TRANSCRIPTION),
+            self.agent.speech or _sole(self.models, ModelType.SPEECH),
+        )
+
+
+def _sole(models: Mapping[str, "ModelConfig"], kind: ModelType) -> str | None:
+    of_kind = [key for key, model in models.items() if model.type is kind]
+    return of_kind[0] if len(of_kind) == 1 else None
+
 
 def _known(info: ValidationInfo, references: Mapping[str, str | None]) -> Mapping[str, ModelConfig]:
     """The models declared before, once each reference is checked to name one of them."""

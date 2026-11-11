@@ -21,7 +21,9 @@ from pydantic import BaseModel, Field, TypeAdapter, ValidationError
 from nestor.core import Component, ContractError, ProviderError
 from nestor.core.i18n import Message
 from nestor.modules.channels import (
+    IMAGE_TYPES,
     Address,
+    Answer,
     Assistant,
     Attachment,
     AttachmentKind,
@@ -89,6 +91,10 @@ class _Message(BaseModel):
     audio: _File | None = None
     document: _File | None = None
 
+    @property
+    def has_files(self) -> bool:
+        return bool(self.photo or self.voice or self.audio or self.document)
+
     def files(self) -> list[tuple[AttachmentKind, _File, str]]:
         """Its files, each with its kind and media type: the largest size of a photo, a document that is an image
         as an image."""
@@ -101,12 +107,9 @@ class _Message(BaseModel):
             found.append((AttachmentKind.AUDIO, self.audio, self.audio.mime_type or "audio/mpeg"))
         if self.document:
             media_type = self.document.mime_type or "application/octet-stream"
-            kind = AttachmentKind.IMAGE if media_type in _IMAGE_TYPES else AttachmentKind.FILE
+            kind = AttachmentKind.IMAGE if media_type in IMAGE_TYPES else AttachmentKind.FILE
             found.append((kind, self.document, media_type))
         return found
-
-
-_IMAGE_TYPES = frozenset({"image/jpeg", "image/png", "image/webp", "image/gif"})  # what models read
 
 
 class _Update(BaseModel):
@@ -158,20 +161,20 @@ class BotApi:
         path = found.get("file_path") if isinstance(found, dict) else None
         if not isinstance(path, str):
             raise TelegramError("getFile: no file path", transient=False)
-        try:
-            response = await self._client.get(f"/file/bot{self._token}/{path}")
-        except httpx.HTTPError as error:
-            raise TelegramError(f"download: {type(error).__name__}", transient=True) from None
+        response = await self._request("download", "GET", f"/file/bot{self._token}/{path}")
         if response.is_error:
             raise TelegramError(f"download: HTTP {response.status_code}", transient=_transient(response.status_code))
         return response.content
 
     async def _post(self, method: str, **request: Any) -> httpx.Response:
+        return await self._request(method, "POST", f"/bot{self._token}/{method}", **request)
+
+    async def _request(self, what: str, verb: str, path: str, **request: Any) -> httpx.Response:
         try:
-            return await self._client.post(f"/bot{self._token}/{method}", **request)
+            return await self._client.request(verb, path, **request)
         except httpx.HTTPError as error:
             detail = f"{type(error).__name__} {error}".replace(self._token, "<redacted>")
-            raise TelegramError(f"{method}: {detail.strip()}", transient=True) from None
+            raise TelegramError(f"{what}: {detail.strip()}", transient=True) from None
 
     def _result(self, method: str, response: httpx.Response) -> Any:
         try:
@@ -377,7 +380,7 @@ class TelegramChannel(Channel):
 
     def _dispatch(self, assistant: Assistant, message: _Message, chats: _ChatQueues) -> None:
         address = Address(self.channel_id, str(message.chat.id))
-        if message.sender is None or not (message.text or message.caption or message.files()):
+        if message.sender is None or not (message.text or message.caption or message.has_files):
             logger.debug("telegram: skipping a message without text, file or author in %s", address)
             return
         sender = Sender(str(message.sender.id), message.sender.first_name)
@@ -393,11 +396,12 @@ class TelegramChannel(Channel):
             if self._apology:
                 await self._send_text(chat_id, self._apology)
             return
-        voiced = any(a.kind is AttachmentKind.VOICE for a in message.attachments)
-        messages = self._messages(assistant, message)
-        while (text := await self._next(messages, chat_id, message.address)) is not None:
-            if not (voiced and await self._send_voice(assistant, chat_id, text)):
-                await self._send_text(chat_id, text)
+        answers = self._answers(assistant, message)
+        while (answer := await self._next(answers, chat_id, message.address)) is not None:
+            if answer.voice is not None:
+                await self._send_voice(chat_id, answer.text, answer.voice)
+            else:
+                await self._send_text(chat_id, answer.text)
 
     async def _inbound(self, incoming: _Incoming) -> InboundMessage | None:
         """The message with its files downloaded; `None` when none could be and it has no text."""
@@ -426,52 +430,46 @@ class TelegramChannel(Channel):
             return None
         return Attachment(kind=kind, data=data, media_type=media_type, name=file.file_name)
 
-    async def _send_voice(self, assistant: Assistant, chat_id: int, text: str) -> bool:
-        """`text` sent as a voice message, with the text as caption when it fits; `False` when there is no voice."""
-        async with self._typing(chat_id, "record_voice"):
-            voice = await assistant.voice(text)
-        if voice is None:
-            return False
+    async def _send_voice(self, chat_id: int, text: str, voice: Attachment) -> None:
+        """A voice message, with its text as caption when it fits, or written after it."""
         fits = _utf16_length(text) <= CAPTION_LIMIT
-        await self._api.upload(
-            "sendVoice", {"chat_id": str(chat_id), **({"caption": text} if fits else {})}, "voice", voice
-        )
+        fields = {"chat_id": str(chat_id), "caption": text} if fits else {"chat_id": str(chat_id)}
+        await self._api.upload("sendVoice", fields, "voice", voice)
         if not fits:
             await self._send_text(chat_id, text)
-        return True
 
-    async def _messages(self, assistant: Assistant, message: InboundMessage) -> AsyncIterator[str]:
-        async for text in assistant.respond(message).messages():  # asks on the first read: a failure is caught there
-            yield text
+    async def _answers(self, assistant: Assistant, message: InboundMessage) -> AsyncIterator[Answer]:
+        async for answer in assistant.respond(message).answers():  # asks on the first read: a failure is caught there
+            yield answer
 
-    async def _next(self, messages: AsyncIterator[str], chat_id: int, address: Address) -> str | None:
+    async def _next(self, answers: AsyncIterator[Answer], chat_id: int, address: Address) -> Answer | None:
         """The next message of an answer, with "typing…" shown meanwhile (sending one clears it);
         the apology when the assistant fails, then `None`."""
         async with self._typing(chat_id):
             try:
-                return await anext(messages, None)
+                return await anext(answers, None)
             except Exception:
                 logger.exception("telegram: the assistant failed to answer in %s", address)
-                return self._apology
+                return Answer(self._apology)
 
     async def _send_text(self, chat_id: int | str, text: str) -> None:
         for part in split_text(text):
             await self._api.call("sendMessage", {"chat_id": chat_id, "text": part})
 
     @asynccontextmanager
-    async def _typing(self, chat_id: int, action: str = "typing") -> AsyncGenerator[None]:
-        """Show "typing…" (or another `action`) in the chat while the body runs (Telegram clears it after about 5 s)."""
-        typing = asyncio.create_task(self._keep_typing(chat_id, action))
+    async def _typing(self, chat_id: int) -> AsyncGenerator[None]:
+        """Show "typing…" in the chat while the body runs (Telegram clears it after about 5 s)."""
+        typing = asyncio.create_task(self._keep_typing(chat_id))
         try:
             yield
         finally:
             typing.cancel()
             await asyncio.wait({typing})
 
-    async def _keep_typing(self, chat_id: int, action: str) -> None:
+    async def _keep_typing(self, chat_id: int) -> None:
         while True:
             try:
-                await self._api.call("sendChatAction", {"chat_id": chat_id, "action": action})
+                await self._api.call("sendChatAction", {"chat_id": chat_id, "action": "typing"})
             except TelegramError as error:
                 logger.debug("telegram: typing indicator failed in chat %s: %s", chat_id, error)
             await asyncio.sleep(self._typing_interval_s)

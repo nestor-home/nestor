@@ -37,6 +37,9 @@ class ElevenLabsSpeech(PipecatSpeech):
         )
         return response.content
 
+    async def close(self) -> None:
+        await self._api.aclose()
+
     def details(self) -> dict[str, str]:
         return {"model": self._model, "voice": self._voice_id}
 

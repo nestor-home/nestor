@@ -61,7 +61,12 @@ class TestElevenLabsTranscription(TranscriptionModelContract):
 
     def model(self, api_key: str = "xi-test") -> TranscriptionModel:
         return transcription.ElevenLabsTranscription(
-            api_key=api_key, model="scribe_v2_realtime", language="fr", name="ears", transport=self.fake.transport
+            api_key=api_key,
+            model="scribe_v2_realtime",
+            file_model="scribe_v2",
+            language="fr",
+            name="ears",
+            transport=self.fake.transport,
         )
 
     def recording(self) -> tuple[bytes, str, str]:

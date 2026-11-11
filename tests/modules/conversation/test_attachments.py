@@ -96,26 +96,24 @@ async def test_a_file_the_model_cannot_open_is_named_to_it(make_agent: MakeAgent
     [(SPEAKING, ScriptedSpeech(), True), (None, ScriptedSpeech(), False), (SPEAKING, None, False)],
     ids=["channel-and-voice", "channel-without-voice-messages", "no-voice"],
 )
-async def test_an_answer_to_a_voice_message_is_written_to_be_heard_when_it_goes_back_as_one(
+async def test_an_answer_to_a_voice_message_goes_back_recorded_and_written_to_be_heard(
     make_agent: MakeAgent, channels: dict | None, speech: ScriptedSpeech | None, voiced: bool
 ) -> None:
     model = ScriptedModel("D'accord.")
     attachments = Attachments(MemoryBlobStore(), transcription=ScriptedTranscription(), speech=speech)
     agent = make_agent(model=model, attachments=attachments, channels=channels)
-    await agent.respond(sent("", VOICE_NOTE)).collect()
+    [answer] = [a async for a in agent.respond(sent("", VOICE_NOTE)).answers()]
     system = model.requests[0].messages[0].content
     assert ("goes back as a voice message" in system) is voiced
+    recorded = answer.voice
+    assert (recorded is not None) is voiced
+    if recorded is not None:
+        assert (recorded.media_type, recorded.data) == ("audio/ogg", OGG + b"D'accord.")
 
 
-async def test_the_assistant_records_answers_in_its_voice_and_gives_up_when_it_cannot(make_agent: MakeAgent) -> None:
-    speech = ScriptedSpeech()
-    agent = make_agent(attachments=Attachments(MemoryBlobStore(), speech=speech))
-    recorded = await agent.voice("Le pain est noté.")
-    assert recorded is not None
-    assert (recorded.kind, recorded.media_type, recorded.data) == (
-        AttachmentKind.VOICE,
-        "audio/ogg",
-        OGG + "Le pain est noté.".encode(),
-    )
-    speech.failing = True
-    assert await agent.voice("Encore ?") is None, "the channel then writes the answer"
+async def test_an_answer_that_cannot_be_recorded_is_written(make_agent: MakeAgent) -> None:
+    speech = ScriptedSpeech(failing=True)
+    attachments = Attachments(MemoryBlobStore(), transcription=ScriptedTranscription(), speech=speech)
+    agent = make_agent(model=ScriptedModel("Le pain est noté."), attachments=attachments, channels=SPEAKING)
+    [answer] = [a async for a in agent.respond(sent("", VOICE_NOTE)).answers()]
+    assert (answer.text, answer.voice) == ("Le pain est noté.", None)

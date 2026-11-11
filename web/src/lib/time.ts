@@ -30,3 +30,14 @@ export function duration(seconds: number): string {
 export function number(n: number): string {
   return new Intl.NumberFormat(activeLocale()).format(n);
 }
+
+/** A file's size, in the reader's language: "182.4 kB". */
+export function fileSize(bytes: number): string {
+  const [value, unit] =
+    bytes >= 1_000_000
+      ? [bytes / 1_000_000, "megabyte"]
+      : bytes >= 1_000
+        ? [bytes / 1_000, "kilobyte"]
+        : [bytes, "byte"];
+  return new Intl.NumberFormat(activeLocale(), { style: "unit", unit, maximumFractionDigits: 1 }).format(value);
+}

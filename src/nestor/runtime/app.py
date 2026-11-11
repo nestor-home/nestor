@@ -143,13 +143,10 @@ class Nestor:
         def model(role: str, key: str) -> LanguageModel:
             return chosen(models, key, LanguageModel, tuple(role.split(".")))
 
-        def sole(key: str | None, kind: ModelType) -> str | None:
-            """`key`, or the only model of `kind` when there is one."""
-            of_kind = [k for k, m in config.models.items() if m.type is kind]
-            return key or (of_kind[0] if len(of_kind) == 1 else None)
+        hearing, voicing = config.voice_messages()
 
-        hearing = sole(config.agent.transcription, ModelType.TRANSCRIPTION)
-        voicing = sole(config.agent.speech, ModelType.SPEECH)
+        def optional[M: Model](key: str | None, wanted: type[M], role: str) -> M | None:
+            return chosen(models, key, wanted, ("agent", role)) if key else None
 
         self.executors = [
             _build(self.plugged, registry, Family.EXECUTOR, c, c.name or c.plugin, ("executors", i), services, Executor)
@@ -304,10 +301,8 @@ class Nestor:
             speakers=self.speakers,
             attachments=Attachments(
                 self.blobs,
-                transcription=chosen(models, hearing, TranscriptionModel, ("agent", "transcription"))
-                if hearing
-                else None,
-                speech=chosen(models, voicing, SpeechModel, ("agent", "speech")) if voicing else None,
+                transcription=optional(hearing, TranscriptionModel, "transcription"),
+                speech=optional(voicing, SpeechModel, "speech"),
             ),
             settings=AgentSettings(
                 spoken_tool_wait_s=config.agent.spoken_tool_wait_s, written_tool_wait_s=config.agent.written_tool_wait_s

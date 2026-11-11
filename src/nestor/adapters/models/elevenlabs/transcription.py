@@ -29,12 +29,15 @@ class ElevenLabsTranscription(PipecatTranscription):
         model: str,
         language: str,
         name: str,
-        file_model: str = "scribe_v2",
+        file_model: str,
         transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
         self.name = name
         self._api_key, self._model, self._language, self._file_model = api_key, model, language, file_model
         self._api = ElevenLabsApi(api_key, transport=transport)
+
+    async def close(self) -> None:
+        await self._api.aclose()
 
     def details(self) -> dict[str, str]:
         return {"model": self._model, "file_model": self._file_model, "language": self._language}

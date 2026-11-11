@@ -11,6 +11,7 @@ from nestor.modules.conversation import (
     About,
     Agent,
     AssistantTurn,
+    Attachments,
     ModelChoice,
     Notification,
     NotificationTurn,
@@ -34,7 +35,7 @@ from nestor.testing.channels import InMemoryChannel
 from nestor.testing.cognition import ScriptedModel
 from nestor.testing.home import StaticPresence
 from nestor.testing.i18n import EchoLocalizer
-from nestor.testing.journal import MemoryEventLog
+from nestor.testing.journal import MemoryBlobStore, MemoryEventLog
 
 TELEGRAM = Address("telegram", "42")
 SALON = Address("voice", "salon")
@@ -53,6 +54,7 @@ def courier(
 ) -> tuple[Courier, Journal, Satellite, InMemoryChannel]:
     journal = Journal(MemoryEventLog())
     agent = Agent(
+        attachments=Attachments(MemoryBlobStore()),
         models=ModelChoice.single(model or ScriptedModel(*["Ton colis est arrivé."] * 4)),
         persona=Persona(name="Richie", character="Tu es Richie."),
         journal=journal,

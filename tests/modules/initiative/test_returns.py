@@ -16,6 +16,7 @@ from nestor.modules.conversation import (
     Agent,
     AgentSettings,
     AssistantTurn,
+    Attachments,
     ModelChoice,
     NotificationTurn,
     Persona,
@@ -27,7 +28,7 @@ from nestor.modules.journal import Journal
 from nestor.testing.channels import InMemoryChannel
 from nestor.testing.cognition import ScriptedModel
 from nestor.testing.i18n import EchoLocalizer
-from nestor.testing.journal import MemoryEventLog
+from nestor.testing.journal import MemoryBlobStore, MemoryEventLog
 
 TELEGRAM = Address("telegram", "42")
 VOICE = Address("voice", "salon")
@@ -73,6 +74,7 @@ class Home:
         self.household = Household([MATHIS])
         self.model = model or ScriptedModel(*["Ton analyse est finie : tout est vert."] * 3)
         self.agent = Agent(
+            attachments=Attachments(MemoryBlobStore()),
             models=ModelChoice.single(self.model),
             persona=Persona(name="Richie", character="Tu es Richie."),
             journal=self.journal,

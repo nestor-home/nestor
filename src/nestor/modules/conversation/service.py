@@ -16,7 +16,6 @@ from nestor.core.i18n import Localizer
 from nestor.modules.channels import (
     Address,
     Assistant,
-    Attachment,
     AttachmentKind,
     Exchange,
     InboundMessage,
@@ -135,13 +134,13 @@ class Agent(Assistant):
         localizer: Localizer,
         context: Iterable[ContextProvider] = (),
         speakers: Speakers | None = None,
-        attachments: Attachments | None = None,
+        attachments: Attachments,
         settings: AgentSettings | None = None,
         clock: Callable[[], datetime] = utc_now,
     ) -> None:
         """`speakers` tells who speaks on shared devices (with recognised voices when it has them); its tools and
-        guidance belong in `toolbox` and `context`. `attachments` keeps the files sent with messages and voices
-        answers; without it, files are not kept and the model only hears that some came."""
+        guidance belong in `toolbox` and `context`. `attachments` keeps the files sent with messages and records
+        answers to voice messages."""
         self.models, self.persona, self.journal = models, persona, journal
         self.conversations = Conversations(
             journal,
@@ -170,9 +169,6 @@ class Agent(Assistant):
 
     async def hear(self, audio: bytes) -> Heard | None:
         return await self.speakers.voices.hear(audio) if self.speakers.voices is not None else None
-
-    async def voice(self, text: str) -> Attachment | None:
-        return await self.attachments.voice(text) if self.attachments is not None else None
 
     async def compose(
         self, address: Address, person: Person | None, notification: Notification, medium: Medium
@@ -252,6 +248,13 @@ class AgentReply(Reply):
         self._speaker = Speaker.account(person.id) if person else Speaker.unknown()
         self._opening = opening
         self._final = ""  # what the model wrote in its last round, once it asked for no more tools
+        # the answer goes back as voice messages: to a voice message, on a channel that sends them, with a voice
+        self._voiced = (
+            isinstance(opening, InboundMessage)
+            and any(a.kind is AttachmentKind.VOICE for a in opening.attachments)
+            and AttachmentKind.VOICE in agent.channel(address).sends
+            and agent.attachments.speaks
+        )
         self._chunks: asyncio.Queue[str | MessageEnd | None] = asyncio.Queue()
         self._message: list[str] = []  # the message being written
         self._ended: list[tuple[str, AssistantTurn | None]] = []  # the messages written, logged if recorded
@@ -308,7 +311,7 @@ class AgentReply(Reply):
         agent = self._agent
         self._speaker = await agent.speakers.of(message, await agent.conversations.current(self._address, self._medium))
         self._person = agent.household.person(self._speaker.person) if self._speaker.person else None
-        kept = await agent.attachments.keep(message.attachments) if agent.attachments is not None else ()
+        kept = await agent.attachments.keep(message.attachments)
         heard = (a.transcript for a in kept if a.kind is AttachmentKind.VOICE and a.transcript)
         words = "\n".join(part for part in (message.text.strip(), *heard) if part)
         self._turn = await agent.conversations.turn(self._address, self._medium)
@@ -322,13 +325,13 @@ class AgentReply(Reply):
 
     async def _answer(self, conversation: str | None) -> None:
         agent = self._agent
-        sees = agent.attachments is not None and agent.models.of(self._medium).vision
+        sees = agent.models.of(self._medium).vision
         history = await agent.conversations.history(
             self._address,
             conversation,
             max_events=agent.settings.history_events,
             names=agent.speakers.name_of,
-            look=agent.attachments.images if sees and agent.attachments is not None else None,
+            look=agent.attachments.images if sees else None,
         )
         opening = self._opening
         if isinstance(opening, Notification):  # not in the journal yet: read as it will be once delivered
@@ -339,7 +342,7 @@ class AgentReply(Reply):
         turn = instructions.turn
         if isinstance(opening, Notification) and opening.quiet:
             turn = f"{turn}\n\n{QUIET}"
-        if self._voiced(opening):
+        if self._voiced:
             turn = f"{turn}\n\n{VOICE_ANSWER}"
         messages = [
             Message(role=Role.SYSTEM, layers=(instructions.stable, instructions.household), content=turn),
@@ -366,18 +369,6 @@ class AgentReply(Reply):
             messages += [
                 Message(role=Role.TOOL, content=o, tool_call_id=c.id) for c, o in zip(calls, outputs, strict=True)
             ]
-
-    def _voiced(self, opening: InboundMessage | Notification) -> bool:
-        """Whether the answer goes back as a voice message: to a voice message, on a channel that sends them, with a
-        voice to record it."""
-        agent = self._agent
-        return (
-            isinstance(opening, InboundMessage)
-            and any(a.kind is AttachmentKind.VOICE for a in opening.attachments)
-            and AttachmentKind.VOICE in agent.channel(self._address).sends
-            and agent.attachments is not None
-            and agent.attachments.speaks
-        )
 
     def _said(self, history: Sequence[Message]) -> str | None:
         """What a module looks up for this turn: the last messages that opened turns of the conversation (a
@@ -446,7 +437,11 @@ class AgentReply(Reply):
         text, self._message = "".join(self._message).strip(), []
         if not text:
             return
-        self._chunks.put_nowait(MessageEnd(last=last))
+        if self._voiced:  # recorded before it goes: a voice message is sent whole
+            voice = await self._agent.attachments.voice(text)
+            self._chunks.put_nowait(MessageEnd(last=last, attachments=(voice,) if voice else ()))
+        else:
+            self._chunks.put_nowait(MessageEnd(last=last))
         self._ended.append((text, await self._turn.answered(text) if self._turn else None))
 
     def _end_turn(self) -> None:
