@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.12.0](https://github.com/nestor-home/nestor/compare/v0.11.1...v0.12.0) (2026-11-12)
+
+
+### ⚠ BREAKING CHANGES
+
+* photos and voice messages on any messaging channel, Telegram first ([#119](https://github.com/nestor-home/nestor/issues/119))
+
+### Features
+
+* nestor init asks for Telegram instead of assuming it ([#124](https://github.com/nestor-home/nestor/issues/124)) ([34b7fb6](https://github.com/nestor-home/nestor/commit/34b7fb68d03e7166620d8957e6d25ccc52d78bd0))
+* photos and voice messages on any messaging channel, Telegram first ([#119](https://github.com/nestor-home/nestor/issues/119)) ([83c41ee](https://github.com/nestor-home/nestor/commit/83c41eeed24bbfabc32d6f03fead62e54bb64ed6))
+* the admin's chat, mentions on every channel and conversation titles ([#127](https://github.com/nestor-home/nestor/issues/127)) ([7549b2a](https://github.com/nestor-home/nestor/commit/7549b2aa5d33025d7f5e941c85031db24dfe6cdc))
+
+
+### Bug Fixes
+
+* **deps:** update dependency lucide-react to v1.71.0 ([#117](https://github.com/nestor-home/nestor/issues/117)) ([5ea0059](https://github.com/nestor-home/nestor/commit/5ea00594b4616aca2cc74398224e7163bea6b275))
+* **deps:** update dependency lucide-react to v1.72.0 ([#123](https://github.com/nestor-home/nestor/issues/123)) ([8978501](https://github.com/nestor-home/nestor/commit/8978501eb070ee8e06369cf8f7cb94a21fd2f6a8))
+* **deps:** update dependency pipecat-ai to v1.16.0 ([#122](https://github.com/nestor-home/nestor/issues/122)) ([478bfde](https://github.com/nestor-home/nestor/commit/478bfdeb3a1d3e659ba9db0b72101aad4a92b927))
+* **deps:** update tiptap monorepo to v3.33.1 ([#128](https://github.com/nestor-home/nestor/issues/128)) ([2d08bc3](https://github.com/nestor-home/nestor/commit/2d08bc3cbf5c7bf693a6de6412c577608cf79b31))
+* the admin says to update the server first, then satellites it no longer speaks to on the device ([#125](https://github.com/nestor-home/nestor/issues/125)) ([105877f](https://github.com/nestor-home/nestor/commit/105877ff5e76aa313872f5115cecf5c61b7d28a4))
+
 ## [0.11.1](https://github.com/nestor-home/nestor/compare/v0.11.0...v0.11.1) (2026-11-10)
 
 
