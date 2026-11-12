@@ -13,7 +13,9 @@ export function recording(seconds = 2): Uint8Array {
   const rate = 16_000;
   const samples = Math.round(rate * seconds);
   const view = new DataView(new ArrayBuffer(44 + samples * 2));
-  const text = (at: number, value: string) => [...value].forEach((c, i) => view.setUint8(at + i, c.charCodeAt(0)));
+  const text = (at: number, value: string) => {
+    for (const [i, c] of [...value].entries()) view.setUint8(at + i, c.charCodeAt(0));
+  };
   text(0, "RIFF");
   view.setUint32(4, 36 + samples * 2, true);
   text(8, "WAVEfmt ");
