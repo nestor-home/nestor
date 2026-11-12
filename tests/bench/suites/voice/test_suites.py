@@ -32,12 +32,9 @@ class Ears(TranscriptionModel):
         return text.strip()
 
 
-PLUGINS = Registry(
-    [
-        Plugin(Family.MODEL, "ears", AdapterSettings, lambda s, n, x: Ears(), serves=TranscriptionModel),
-        Plugin(Family.MODEL, "voice", AdapterSettings, lambda s, n, x: ScriptedSpeech(), serves=SpeechModel),
-    ]
-)
+EARS_PLUGIN = Plugin(Family.MODEL, "ears", AdapterSettings, lambda s, n, x: Ears(), serves=TranscriptionModel)
+VOICE_PLUGIN = Plugin(Family.MODEL, "voice", AdapterSettings, lambda s, n, x: ScriptedSpeech(), serves=SpeechModel)
+PLUGINS = Registry([EARS_PLUGIN, VOICE_PLUGIN])
 EARS = "  ears: {type: transcription, provider: ears}\n"
 VOICE = "  voice: {type: speech, provider: voice}\n"
 
@@ -99,3 +96,25 @@ async def test_a_variant_without_the_models_a_suite_needs_is_refused(tmp_path: P
     with pytest.raises(BenchError) as refused:
         await bench(tmp_path, Speech(), EARS)
     assert refused.value.message.id == "bench-variant-no-speech"
+
+
+class InFigures(Ears):
+    """A judge that writes numbers in figures, as recognition models do."""
+
+    async def transcribe(self, audio: bytes, media_type: str) -> str:
+        return (await super().transcribe(audio, media_type)).replace("douze", "12")
+
+
+async def test_a_number_heard_back_in_figures_counts_as_said(tmp_path: Path) -> None:
+    cases = tmp_path / "sentences.jsonl"
+    header = {"dataset": "speech", "version": 1}
+    said = {"id": "s1", "text": "Il fait douze degrés.", "also": ["Il fait 12 degrés."]}
+    cases.write_text(f"{json.dumps(header)}\n{json.dumps(said)}\n")
+    figures = Plugin(Family.MODEL, "figures", AdapterSettings, lambda s, n, x: InFigures(), serves=TranscriptionModel)
+    registry = Registry([figures, VOICE_PLUGIN])
+    path = tmp_path / "variant.yaml"
+    path.write_text("models:\n  ears: {type: transcription, provider: figures}\n" + VOICE)
+    variant = load_variant(path, Speech(), registry, EchoLocalizer(), environ={})
+    dataset, info = read_dataset(Speech(), cases)
+    (run,) = await run_suite(Speech(), dataset, info, [variant], Plan(), Cache(tmp_path / "cache"))
+    assert {m.id: m.value for m in run.summary.metrics}["wer"] == 0

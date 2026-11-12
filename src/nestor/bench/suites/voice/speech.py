@@ -1,9 +1,10 @@
 """The `speech` bench: everyday sentences recorded by the variant's speech model, as an answer to a voice message is
 (`synthesize`, the whole sentence at once), then heard back by the variant's transcription model, the judge.
 
-Measured: the latency of a sentence, and how clearly it is spoken: the word error rate of
-the judge on it. Keep the same judge across variants (a local model, `sherpa-onnx` Parakeet): what it misses on a
-voice it would hear clearly elsewhere is the voice's. The satellites' live voice is not measured here."""
+Measured: the latency of a sentence, and how clearly it is spoken: the word error rate of the judge on it, a number
+heard back in figures counting as said (a case lists those ways in `also`). Keep the same judge across variants (a
+local model, `sherpa-onnx` Parakeet): what it misses on a voice it would hear clearly elsewhere is the voice's. The
+satellites' live voice is not measured here."""
 
 import time
 from collections.abc import Mapping, Sequence
@@ -43,7 +44,8 @@ class Speech(Suite[None, Knobs]):
         for record in records[1:]:
             if not isinstance(record.get("text"), str):
                 raise BenchError(Message.of("bench-speech-bad-case", case=str(record.get("id", "?"))))
-            cases.append(Case(id=str(record["id"]), data={"text": record["text"]}))
+            also = record.get("also", [])
+            cases.append(Case(id=str(record["id"]), data={"text": record["text"], "also": list(also)}))
         return Dataset(version=header["version"], cases=tuple(cases), shared=None)
 
     async def run(self, case: Case, shared: None, trial: Trial[Knobs]) -> Mapping[str, Any]:
@@ -62,7 +64,8 @@ class Speech(Suite[None, Knobs]):
             heard = await judge.transcribe(audio, RECORDING)
         except ProviderError as error:
             return out | {"unheard": str(error)}
-        return out | {"heard": heard, "errors": errors(text, heard)}
+        said = (text, *case.data["also"])  # a number heard back in figures was said all the same
+        return out | {"heard": heard, "errors": min(errors(way, heard) for way in said)}
 
     def summarise(self, dataset: Dataset[None], results: Sequence[CaseResult]) -> Summary:
         spoken = [r for r in results if "failed" not in r.output]
