@@ -68,7 +68,7 @@ class Heard(SherpaOnnxTranscription):
         super().__init__(model="parakeet-v3", data_dir=tmp_path)
         self.heard: list[int] = []
 
-    async def hear(self, samples: "list[float] | memoryview") -> str:
+    async def hear(self, samples: "numpy.ndarray") -> str:
         self.heard.append(len(samples))
         return "bonjour"
 

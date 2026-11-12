@@ -16,7 +16,7 @@ from typing import Any
 from nestor.bench.errors import BenchError
 from nestor.bench.metrics import percentile
 from nestor.bench.ports import Knobs, Suite, Trial
-from nestor.bench.suites.voice.words import errors, words
+from nestor.bench.suites.voice.words import errors, rate, words
 from nestor.bench.types import Better, Case, CaseResult, Dataset, Finding, Metric, Summary, Unit
 from nestor.core import ProviderError
 from nestor.core.i18n import Message
@@ -56,7 +56,7 @@ class Transcription(Suite[None, Knobs]):
         model = trial.transcription
         assert model is not None  # the engine gives one to a suite that asks for it
         audio = await asyncio.to_thread(Path(case.data["path"]).read_bytes)
-        started = trial.started.get(NAME)
+        started = trial.started.get("transcription")
         out: dict[str, Any] = {
             "seconds": case.data["seconds"],
             "words": len(words(case.data["text"])),
@@ -79,7 +79,6 @@ class Transcription(Suite[None, Knobs]):
         said = {c.id: c.data["text"] for c in dataset.cases}
         latencies = [r.output["latency_s"] for r in heard]
         factors = [r.output["latency_s"] / r.output["seconds"] for r in heard if r.output["seconds"]]
-        total = sum(r.output["words"] for r in heard)
         first = results[0].output if results else {}
 
         def metric(id: str, value: float | None, unit: Unit, better: Better = Better.LOWER) -> Metric:
@@ -88,7 +87,7 @@ class Transcription(Suite[None, Knobs]):
         worst = sorted(heard, key=lambda r: -r.output["errors"] / max(r.output["words"], 1))[:WORST]
         return Summary(
             metrics=(
-                metric("wer", sum(r.output["errors"] for r in heard) / total if total else None, Unit.RATIO),
+                metric("wer", rate(r.output for r in heard), Unit.RATIO),
                 metric("failed", len(results) - len(heard), Unit.COUNT),
                 metric("latency-p50", percentile(latencies, 0.5), Unit.DURATION),
                 metric("latency-p95", percentile(latencies, 0.95), Unit.DURATION),

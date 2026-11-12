@@ -60,12 +60,13 @@ class OpenAICompatibleTranscription(PipecatTranscription):
 
     def stt(self) -> "STTService":
         from pipecat.services.openai.stt import OpenAISTTService
+        from pipecat.transcriptions.language import Language
 
         return OpenAISTTService(
             api_key=self._api_key or "none",  # a local server asks for none, the SDK for one
             base_url=self._base_url,
             sample_rate=SAMPLE_RATE,
-            settings=OpenAISTTService.Settings(model=self._model, language=self._language),
+            settings=OpenAISTTService.Settings(model=self._model, language=Language(self._language)),
         )
 
 
@@ -78,7 +79,7 @@ def _file_name(media_type: str) -> str:
 
 class OpenAICompatibleTranscriptionSettings(EndpointSettings):
     model: str  # whisper-1, gpt-4o-transcribe, whisper-large-v3-turbo (Groq), voxtral-mini-latest (Mistral)…
-    language: str = Field(default="en", min_length=2)  # what people speak, ISO 639-1: fr
+    language: str | None = Field(default=None, min_length=2)  # what people speak, ISO 639-1; the household's
     timeout_s: PositiveFloat = Field(default=60.0, json_schema_extra={"advanced": True})
 
 
@@ -89,7 +90,7 @@ def build(
         base_url=settings.base_url,
         api_key=settings.api_key.get_secret_value() if settings.api_key else None,
         model=settings.model,
-        language=settings.language,
+        language=settings.language or services.locale.split("-")[0].lower(),
         timeout_s=settings.timeout_s,
         provider=name,
     )

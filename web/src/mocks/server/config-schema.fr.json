@@ -2442,10 +2442,17 @@
               }
             },
             "language": {
-              "default": "en",
-              "minLength": 2,
+              "anyOf": [
+                {
+                  "minLength": 2,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
               "title": "Language",
-              "type": "string",
               "x-nestor": {
                 "field": "language",
                 "title_id": "config-model-openai-compatible-transcription-language",

@@ -10,6 +10,8 @@ import httpx
 
 from nestor.core import ProviderError
 
+UNPACKED = ".unpacked"  # written once a release is unpacked
+
 
 async def fetch(url: str, path: Path, sha256: str, *, provider: str) -> None:
     """Download `url` to `path` once; a file that does not match `sha256` is never kept."""
@@ -41,10 +43,19 @@ async def fetch(url: str, path: Path, sha256: str, *, provider: str) -> None:
     partial.replace(path)
 
 
+async def fetch_archive(url: str, archive: Path, into: Path, sha256: str, *, provider: str) -> None:
+    """A `.tar.bz2` release downloaded, checked, unpacked into `into` and deleted, once."""
+    if (into / UNPACKED).is_file():
+        return
+    await fetch(url, archive, sha256, provider=provider)
+    await asyncio.to_thread(unpack, archive, into)
+    archive.unlink(missing_ok=True)
+
+
 def unpack(archive: Path, into: Path) -> None:
     """Unpack a `.tar.bz2` release into `into`, nothing outside it (the `data` filter refuses links and paths that
     leave it); done once, marked by a file of its own."""
-    done = into / ".unpacked"
+    done = into / UNPACKED
     if done.is_file():
         return
     with tarfile.open(archive, "r:bz2") as tar:

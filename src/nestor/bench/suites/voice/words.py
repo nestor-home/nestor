@@ -3,6 +3,8 @@ into what was said, over the words said. Case and punctuation do not count; acce
 by them); a number written in figures by one side and in letters by the other counts as an error."""
 
 import re
+from collections.abc import Iterable, Mapping
+from typing import Any
 
 _WORD = re.compile(r"\w+")
 
@@ -22,3 +24,10 @@ def errors(said: str, heard: str) -> int:
             current.append(min(previous[j] + 1, current[j - 1] + 1, previous[j - 1] + (word != other)))
         previous = current
     return previous[-1]
+
+
+def rate(results: Iterable[Mapping[str, Any]]) -> float | None:
+    """The word error rate over the outputs that were heard: their errors over their words."""
+    heard = [r for r in results if "errors" in r]
+    said = sum(r["words"] for r in heard)
+    return sum(r["errors"] for r in heard) / said if said else None

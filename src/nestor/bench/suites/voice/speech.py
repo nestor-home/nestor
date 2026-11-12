@@ -16,7 +16,7 @@ from typing import Any
 from nestor.bench.errors import BenchError
 from nestor.bench.metrics import percentile
 from nestor.bench.ports import Knobs, Suite, Trial
-from nestor.bench.suites.voice.words import errors, words
+from nestor.bench.suites.voice.words import errors, rate, words
 from nestor.bench.types import Better, Case, CaseResult, Dataset, Finding, Metric, Summary, Unit
 from nestor.core import ProviderError
 from nestor.core.i18n import Message
@@ -52,7 +52,7 @@ class Speech(Suite[None, Knobs]):
         voice, judge = trial.speech, trial.transcription
         assert voice is not None and judge is not None  # the engine gives them to a suite that asks for them
         text = case.data["text"]
-        started = trial.started.get(NAME)
+        started = trial.started.get("speech")
         out: dict[str, Any] = {"words": len(words(text)), "cold_start_s": started.seconds if started else None}
         clock = time.perf_counter()
         try:
@@ -72,7 +72,6 @@ class Speech(Suite[None, Knobs]):
         heard = [r for r in spoken if "heard" in r.output]
         said = {c.id: c.data["text"] for c in dataset.cases}
         latencies = [r.output["latency_s"] for r in spoken]
-        total = sum(r.output["words"] for r in heard)
         first = results[0].output if results else {}
 
         def metric(id: str, value: float | None, unit: Unit, better: Better = Better.LOWER) -> Metric:
@@ -80,7 +79,7 @@ class Speech(Suite[None, Knobs]):
 
         return Summary(
             metrics=(
-                metric("wer", sum(r.output["errors"] for r in heard) / total if total else None, Unit.RATIO),
+                metric("wer", rate(r.output for r in heard), Unit.RATIO),
                 metric("failed", len(results) - len(spoken), Unit.COUNT),
                 metric("unheard", len(spoken) - len(heard), Unit.COUNT),
                 metric("latency-p50", percentile(latencies, 0.5), Unit.DURATION),

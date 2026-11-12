@@ -1,10 +1,10 @@
 """The satellites' voice hearing through a sherpa-onnx model: Pipecat's segmented service, one turn at a time.
 Imports Pipecat: only the voice pipeline loads it."""
 
-from array import array
 from collections.abc import AsyncGenerator
 from typing import TYPE_CHECKING
 
+import numpy
 from pipecat.frames.frames import ErrorFrame, Frame, TranscriptionFrame
 from pipecat.services.stt_service import SegmentedSTTService
 from pipecat.utils.time import time_now_iso8601
@@ -32,10 +32,9 @@ class SherpaSegmentedSTT(SegmentedSTTService):
         return SAMPLE_RATE
 
     async def run_stt(self, audio: bytes) -> AsyncGenerator[Frame | None]:
-        pcm = array("h")
-        pcm.frombytes(audio[: len(audio) - len(audio) % 2])
+        pcm = numpy.frombuffer(audio[: len(audio) - len(audio) % 2], "<i2")
         try:
-            text = await self._model.hear([s / 32768.0 for s in pcm])
+            text = await self._model.hear(pcm.astype(numpy.float32) / 32768.0)
         except ProviderError as error:
             yield ErrorFrame(str(error))
             return

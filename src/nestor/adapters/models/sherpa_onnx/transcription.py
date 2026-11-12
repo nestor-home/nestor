@@ -18,12 +18,13 @@ from typing import TYPE_CHECKING
 from pydantic import Field, PositiveInt
 
 from nestor.adapters.models.pipecat import SAMPLE_RATE, PipecatTranscription
-from nestor.adapters.models.sherpa_onnx.common import fetch, unpack
+from nestor.adapters.models.sherpa_onnx.common import fetch_archive
 from nestor.core import ContractError, ProviderError
 from nestor.modules.channels import TranscriptionModel
 from nestor.runtime.plugins import AdapterSettings, Family, Plugin, Services
 
 if TYPE_CHECKING:
+    import numpy
     import sherpa_onnx
     from pipecat.services.stt_service import STTService
 
@@ -37,13 +38,10 @@ class Catalogued:
 
     archive: str
     sha256: str
-    size: int  # bytes of the archive
     encoder: str
     decoder: str
     joiner: str
     kind: str  # sherpa-onnx's `model_type`
-    languages: str
-    license: str
     brand: str  # who published the model: the mark the admin shows for it
 
     @property
@@ -54,14 +52,11 @@ class Catalogued:
 CATALOGUE: Mapping[str, Catalogued] = {
     "parakeet-v3": Catalogued(
         archive="sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8.tar.bz2",
-        sha256="1495e91b59d7fc53ddca91f3431758ec99f8fa253fdb0e1e851be0f72b14b0f9",
-        size=487211443,
+        sha256="1495e91b59d7fc53ddca91f3431758ec99f8fa253fdb0e1e851be0f72b14b0f9",  # 487 MB
         encoder="encoder.int8.onnx",
         decoder="decoder.int8.onnx",
         joiner="joiner.int8.onnx",
-        kind="nemo_transducer",
-        languages="25 European languages, found by itself",
-        license="CC-BY-4.0 (NVIDIA)",
+        kind="nemo_transducer",  # 25 European languages, found by itself; CC-BY-4.0 (NVIDIA)
         brand="nvidia",
     ),
 }
@@ -89,11 +84,8 @@ class SherpaOnnxTranscription(PipecatTranscription):
 
     async def start(self) -> None:
         model = self._catalogued
-        archive = self._folder / model.archive
-        if not (self._folder / model.folder / ".unpacked").is_file():
-            await fetch(self._release + model.archive, archive, model.sha256, provider=self._provider)
-            await asyncio.to_thread(unpack, archive, self._folder / model.folder)
-            archive.unlink(missing_ok=True)
+        into, archive = self._folder / model.folder, self._folder / model.archive
+        await fetch_archive(self._release + model.archive, archive, into, model.sha256, provider=self._provider)
         self._recognizer = await asyncio.to_thread(self._load)
 
     async def close(self) -> None:
@@ -120,7 +112,7 @@ class SherpaOnnxTranscription(PipecatTranscription):
         samples = await asyncio.to_thread(_decoded, audio, self._provider)
         return await self.hear(samples)
 
-    async def hear(self, samples: "list[float] | memoryview") -> str:
+    async def hear(self, samples: "numpy.ndarray") -> str:
         """What is said in mono `SAMPLE_RATE` samples between -1 and 1."""
         recognizer = self._recognizer
         if recognizer is None:
@@ -133,31 +125,30 @@ class SherpaOnnxTranscription(PipecatTranscription):
         return SherpaSegmentedSTT(self)
 
 
-def _recognized(recognizer: "sherpa_onnx.OfflineRecognizer", samples: "list[float] | memoryview") -> str:
+def _recognized(recognizer: "sherpa_onnx.OfflineRecognizer", samples: "numpy.ndarray") -> str:
     stream = recognizer.create_stream()
     stream.accept_waveform(SAMPLE_RATE, samples)
     recognizer.decode_stream(stream)
     return stream.result.text.strip()
 
 
-def _decoded(audio: bytes, provider: str) -> list[float]:
-    """A recording as mono `SAMPLE_RATE` samples, whatever its format."""
+def _decoded(audio: bytes, provider: str) -> "numpy.ndarray":
+    """A recording as mono `SAMPLE_RATE` float samples, whatever its format."""
     import io
+    import itertools
 
     import av
+    import numpy
 
     resampler = av.AudioResampler(format="flt", layout="mono", rate=SAMPLE_RATE)
-    samples: list[float] = []
+    chunks = []
     try:
         with av.open(io.BytesIO(audio), mode="r") as container:
-            for frame in container.decode(audio=0):
-                for converted in resampler.resample(frame):
-                    samples.extend(converted.to_ndarray().reshape(-1).tolist())
-            for converted in resampler.resample(None):
-                samples.extend(converted.to_ndarray().reshape(-1).tolist())
+            for frame in itertools.chain(container.decode(audio=0), [None]):  # `None` flushes the resampler
+                chunks += [converted.to_ndarray().reshape(-1) for converted in resampler.resample(frame)]
     except (av.FFmpegError, ValueError) as error:
         raise ProviderError(provider, f"cannot decode the recording: {error}", transient=False) from None
-    return samples
+    return numpy.concatenate(chunks) if chunks else numpy.zeros(0, numpy.float32)
 
 
 class SherpaOnnxTranscriptionSettings(AdapterSettings):
