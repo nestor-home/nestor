@@ -27,6 +27,7 @@ from nestor.modules.conversation import (
     AnswerCut,
     AssistantTurn,
     ContextProvider,
+    Draft,
     FallbackReason,
     FallbackSpoken,
     Layer,
@@ -69,7 +70,8 @@ async def test_each_medium_answers_with_its_own_model(make_agent: MakeAgent) -> 
     parcel = Notification("The parcel arrived.", About(Source.WATCH, "w1"))
     composed = await agent.compose(TELEGRAM, MATHIS, parcel, Medium.SPOKEN)
 
-    assert (said, typed, composed) == (("Il fait beau.",), ("Voici le détail.",), "C'est prêt.")
+    assert composed is not None
+    assert (said, typed, composed.text) == (("Il fait beau.",), ("Voici le détail.",), "C'est prêt.")
     assert (len(spoken.requests), len(written.requests)) == (2, 1)
 
 
@@ -327,7 +329,7 @@ async def test_a_composed_message_said_aloud_gets_no_filler(make_agent: MakeAgen
     slow = make_agent(model=ScriptedModel("Voilà.", word_delay_s=0.05), settings=AgentSettings(slow_after_s=0.02))
     parcel = Notification("The parcel arrived.", About(Source.WATCH, "w1"))
 
-    assert await slow.compose(VOICE, MATHIS, parcel, Medium.SPOKEN) == "Voilà."
+    assert await slow.compose(VOICE, MATHIS, parcel, Medium.SPOKEN) == Draft("Voilà.")
     assert await journal.history(FallbackSpoken) == []
 
 
@@ -366,9 +368,9 @@ async def test_a_composed_message_uses_the_conversation_and_is_left_to_its_sende
     model = ScriptedModel("L'analyse est finie : trois soucis trouvés.")
 
     notification = Notification("Task finished: 3 issues found.", About(Source.TASK, "t1", "completed"))
-    text = await make_agent(model=model).compose(TELEGRAM, MATHIS, notification, Medium.WRITTEN)
+    draft = await make_agent(model=model).compose(TELEGRAM, MATHIS, notification, Medium.WRITTEN)
 
-    assert text == "L'analyse est finie : trois soucis trouvés."
+    assert draft == Draft("L'analyse est finie : trois soucis trouvés.")
     last = model.requests[0].messages[-1]
     assert last.role is Role.USER and last.content.endswith("Task finished: 3 issues found.")
     assert "not said by anyone here: task t1 completed" in last.content, "never taken for the person's words"
@@ -381,7 +383,7 @@ async def test_a_composed_message_is_its_last_message_only(make_agent: MakeAgent
     agent = make_agent(model=Announcing(), tools=[tool("light_on", light_on)])
     reminder = Notification("A wake-up is due now: turn the light on.", About(Source.SCHEDULE, "s1"), quiet=True)
 
-    assert await agent.compose(VOICE, MATHIS, reminder, Medium.SPOKEN) == "C'est allumé."
+    assert await agent.compose(VOICE, MATHIS, reminder, Medium.SPOKEN) == Draft("C'est allumé.")
 
 
 class AnnouncingThenSilent(Announcing):
@@ -420,7 +422,7 @@ async def test_a_notification_says_when_it_may_stay_silent(make_agent: MakeAgent
     parcel = Notification("The parcel arrived.", About(Source.WATCH, "w1"))
 
     assert await agent.compose(TELEGRAM, MATHIS, price, Medium.WRITTEN) is None
-    assert await agent.compose(TELEGRAM, MATHIS, parcel, Medium.WRITTEN) == "Le colis est là."
+    assert await agent.compose(TELEGRAM, MATHIS, parcel, Medium.WRITTEN) == Draft("Le colis est là.")
     quiet, told = (request.messages[0].content for request in model.requests)
     assert SILENT in quiet and SILENT not in told, "only the turn that may go unanswered is told so"
 

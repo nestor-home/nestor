@@ -241,6 +241,7 @@ describe("models by what they serve", () => {
       "Speaker recognition",
       "Speech recognition",
       "Speech synthesis",
+      "Image generation",
     ]);
     expect(
       within(within(picker).getByRole("region", { name: "Speaker recognition" })).getByText("sherpa-onnx"),

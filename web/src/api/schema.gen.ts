@@ -2612,7 +2612,7 @@ export interface components {
          * ModelType
          * @enum {string}
          */
-        ModelType: "language" | "embedding" | "speaker" | "transcription" | "speech";
+        ModelType: "language" | "embedding" | "speaker" | "transcription" | "speech" | "image";
         /** NestorOut */
         NestorOut: {
             /** Version */
@@ -11976,7 +11976,7 @@ export const installKindValues: ReadonlyArray<FlattenedDeepRequired<components>[
 export const invitationStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["InvitationStatus"]> = ["pending", "accepted", "expired", "revoked"];
 export const kindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Kind"]> = ["conversation", "delivery", "tool", "task", "watch", "schedule", "memory", "connection", "presence", "satellite", "voice", "observation", "account", "other"];
 export const mentionKindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["MentionKind"]> = ["person", "room", "executor", "connection"];
-export const modelTypeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ModelType"]> = ["language", "embedding", "speaker", "transcription", "speech"];
+export const modelTypeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ModelType"]> = ["language", "embedding", "speaker", "transcription", "speech", "image"];
 export const pairingMethodValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PairingMethod"]> = ["device_code.display", "device_code.speech", "enrollment.input", "enrollment.provisioning", "enrollment.qr"];
 export const problemValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Problem"]> = ["too_short", "too_quiet", "too_loud", "other_voice"];
 export const problemCodeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ProblemCode"]> = ["missing", "extra", "invalid", "unknown_kind", "reference", "secret", "no_answering_model", "not_answering", "not_embedding", "not_speaker", "not_transcribing", "not_speaking", "unknown_model", "shared_account"];
