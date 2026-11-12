@@ -34,7 +34,7 @@ def pdf_text(data: bytes) -> str | None:
             return None
         pages = [page.extract_text() or "" for page in reader.pages[:MAX_PAGES]]
         left = len(reader.pages) - len(pages)
-    except Exception as error:
+    except Exception as error:  # a damaged file fails pypdf in many ways: none may fail the turn
         logger.info("could not read a PDF: %s", error)
         return None
     text = "\n\n".join(f"[page {i}]\n{p.strip()}" for i, p in enumerate(pages, 1) if p.strip())
