@@ -1,0 +1,345 @@
+/**
+ * One chat: its messages from the journal, the answer being written over them, and the composer. A new chat (no id
+ * yet) greets and centres the composer; its first message gives it an id and opens it. The chat follows its live
+ * entries (a tool called, a result coming back by itself) and, opened while an answer is written, follows it again.
+ */
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { ArrowDown, MessagesSquare, SquarePen, Upload } from "lucide-react";
+import { type DragEvent, Fragment, type ReactNode, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
+import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
+import { api, type ChatMessage, type ChatMessageIn, chatQuery, chatsQuery, keys, messageOf } from "@/api";
+import { AgentFigure } from "@/components/agent-figure";
+import { SideSheet } from "@/components/overlay-form";
+import { Failure, Loading } from "@/components/states";
+import { Button } from "@/components/ui/button";
+import { useLiveItems } from "@/features/shell/live";
+import { useT } from "@/i18n";
+import { useMe } from "@/lib/session";
+import { cn } from "@/lib/utils";
+import { ChatList, titleOf } from "./chat-layout";
+import { Composer, type ComposerHandle } from "./composer";
+import { dismiss, type LiveAnswer, rejoin, send, useLiveAnswer } from "./live";
+import { Answer, AnswerActions, ARRIVES, Fallback, Files, Note, PersonMessage, ToolCall } from "./message";
+
+export function Conversation({ chat }: { chat: string | null }) {
+  const t = useT();
+  const me = useMe();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const thread = useQuery({ ...chatQuery(chat ?? ""), enabled: chat !== null });
+  const live = useLiveAnswer(chat);
+  const composer = useRef<ComposerHandle>(null);
+  const [dragging, setDragging] = useState(false);
+  const messages = thread.data?.messages ?? [];
+
+  const settled = (id: string) => async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: keys.chat(id) }),
+      queryClient.invalidateQueries({ queryKey: keys.chats, exact: true }),
+    ]);
+  };
+
+  // opened while an answer is being written (another tab, a reload): follow it from its start
+  const answering = thread.data?.answering;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: once per answer, with the messages it found
+  useEffect(() => {
+    if (chat && answering) void rejoin(chat, baseOf(messages), settled(chat)).catch(() => undefined);
+  }, [chat, answering]);
+
+  useLiveItems((item) => {
+    if (chat && thread.data && item.links.session === thread.data.session) {
+      void queryClient.invalidateQueries({ queryKey: keys.chat(chat) });
+    }
+  });
+
+  const onSend = async (body: ChatMessageIn): Promise<boolean> => {
+    const id = chat ?? crypto.randomUUID();
+    if (live?.state === "failed") dismiss(id);
+    try {
+      const started = send(id, body, chat ? messages.length : 0, settled(id));
+      if (!chat) void navigate({ to: "/chat/$chat", params: { chat: id } });
+      await started;
+      void queryClient.invalidateQueries({ queryKey: keys.chats, exact: true });
+      return true;
+    } catch (error) {
+      toast.error(messageOf(error));
+      return false;
+    }
+  };
+
+  const onStop = () => {
+    if (chat) void api.stopChat(chat).catch((error) => toast.error(messageOf(error)));
+  };
+
+  const onDrop = (event: DragEvent) => {
+    event.preventDefault();
+    setDragging(false);
+    if (event.dataTransfer.files.length) composer.current?.add(event.dataTransfer.files);
+  };
+
+  const fresh = chat === null || (thread.isSuccess && !messages.length && !live);
+  const busy = live !== null && (live.state === "waiting" || live.state === "writing");
+
+  return (
+    <section
+      className="relative flex min-h-0 flex-1 flex-col"
+      aria-label={t("chat-title")}
+      onDragOver={(event) => {
+        if (event.dataTransfer.types.includes("Files")) {
+          event.preventDefault();
+          setDragging(true);
+        }
+      }}
+      onDragLeave={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragging(false);
+      }}
+      onDrop={onDrop}
+    >
+      <Header chat={chat} />
+      {chat !== null && thread.isPending ? (
+        <div className="mx-auto w-full max-w-3xl px-4 pt-10">
+          <Loading lines={4} />
+        </div>
+      ) : chat !== null && thread.error ? (
+        <div className="mx-auto w-full max-w-3xl px-4 pt-10">
+          <Failure error={thread.error} retry={thread.refetch} />
+        </div>
+      ) : fresh ? (
+        <div className="flex flex-1 flex-col items-center justify-center gap-8 px-4 pb-[12vh]">
+          <div className={cn("flex flex-col items-center gap-4 text-center", ARRIVES, "duration-500")}>
+            <AgentFigure state="idle" size="lg" live />
+            <h1 className="display-2 text-ink">{t("chat-greeting", { assistant: me.assistant })}</h1>
+          </div>
+          <div className="w-full max-w-3xl">
+            <Composer
+              ref={composer}
+              draftKey="new"
+              assistant={me.assistant}
+              answering={false}
+              onSend={onSend}
+              onStop={onStop}
+              autoFocus
+            />
+          </div>
+        </div>
+      ) : (
+        <>
+          <StickToBottom className="relative min-h-0 flex-1 overflow-hidden" resize="smooth" initial="instant">
+            <StickToBottom.Content className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 pt-6 pb-10">
+              <Thread messages={messages} live={live} assistant={me.assistant} />
+            </StickToBottom.Content>
+            <ScrollDown />
+          </StickToBottom>
+          <div className="mx-auto w-full max-w-3xl px-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+            <Composer
+              ref={composer}
+              draftKey={chat ?? "new"}
+              assistant={me.assistant}
+              answering={busy}
+              onSend={onSend}
+              onStop={onStop}
+              autoFocus
+            />
+          </div>
+        </>
+      )}
+      {dragging ? (
+        <div className="pointer-events-none absolute inset-2 z-20 grid animate-in place-items-center rounded-2xl border-2 border-dashed border-ember bg-paper/90 duration-150 fade-in-0 motion-reduce:animate-none">
+          <p className="flex items-center gap-2 text-ink">
+            <Upload className="size-5 text-ember" aria-hidden="true" />
+            {t("chat-drop")}
+          </p>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+/** The messages before the answer of the turn being written: everything up to its person's message (or note). */
+function baseOf(messages: ChatMessage[]): number {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const role = messages[i]?.role;
+    if (role === "person" || role === "note") return i + 1;
+  }
+  return 0;
+}
+
+function Thread({
+  messages,
+  live,
+  assistant,
+}: {
+  messages: ChatMessage[];
+  live: LiveAnswer | null;
+  assistant: string;
+}) {
+  const t = useT();
+  // what the journal has not logged yet: the message sent, then the answer's messages beyond those it logged
+  const logged = live ? messages.slice(live.base) : [];
+  const pending = live?.sent && !logged.some((m) => m.role === "person") ? live.sent : null;
+  const written = live ? live.messages.slice(logged.filter((m) => m.role === "assistant").length) : [];
+  const last = messages.at(-1);
+  // what came in while the chat was open (a tool called, Nestor coming back) arrives; what was there stays put
+  const opened = useRef(last?.position ?? 0);
+  const arrives = (message: ChatMessage) => message.position > opened.current && message.role !== "assistant";
+  const waiting = live && (live.state === "waiting" || (live.state === "writing" && !live.writing));
+
+  return (
+    <>
+      {groups(messages).map((group) =>
+        group.tools ? (
+          <div key={group.key} className="grid gap-1.5">
+            {group.tools.map((m) =>
+              m.tool ? (
+                <div key={m.id} className={cn(arrives(m) && ARRIVES)}>
+                  <ToolCall tool={m.tool} />
+                </div>
+              ) : null,
+            )}
+          </div>
+        ) : (
+          <Fragment key={group.key}>
+            {group.message ? (
+              <div className={cn("min-w-0", group.message.role === "note" && arrives(group.message) && ARRIVES)}>
+                <Message message={group.message} assistant={assistant} />
+              </div>
+            ) : null}
+          </Fragment>
+        ),
+      )}
+      {pending ? (
+        <PersonMessage
+          text={pending.text ?? ""}
+          pending
+          files={pending.files?.length ? <SentFiles count={pending.files.length} /> : null}
+        />
+      ) : null}
+      {written.map((text, i) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: the answer's messages only grow at the end
+        <AnswerBlock key={i} arrives>
+          <Answer text={text} streaming={live?.writing && i === written.length - 1} />
+        </AnswerBlock>
+      ))}
+      {waiting ? (
+        last?.role === "tool" && last.tool?.state === "running" ? (
+          <Thinking state="working" text={t("chat-working", { assistant, tool: last.tool.name })} />
+        ) : (
+          <Thinking state="thinking" text={t("chat-thinking", { assistant })} />
+        )
+      ) : null}
+      {live?.state === "failed" ? <Fallback text={live.error ?? t("chat-failed")} /> : null}
+    </>
+  );
+}
+
+interface Group {
+  key: string;
+  message?: ChatMessage;
+  tools?: ChatMessage[];
+}
+
+/** Tool calls that follow each other stack together; every other message stands alone. */
+function groups(messages: ChatMessage[]): Group[] {
+  const found: Group[] = [];
+  for (const message of messages) {
+    const previous = found.at(-1);
+    if (message.role === "tool") {
+      if (previous?.tools) previous.tools.push(message);
+      else found.push({ key: message.id, tools: [message] });
+    } else found.push({ key: message.id, message });
+  }
+  return found;
+}
+
+function Message({ message, assistant }: { message: ChatMessage; assistant: string }) {
+  switch (message.role) {
+    case "person":
+      return <PersonMessage text={message.text} files={<Files files={message.files} align="end" />} />;
+    case "assistant":
+      return (
+        <AnswerBlock>
+          <Answer text={message.text} />
+          <Files files={message.files} />
+          <AnswerActions text={message.text} interrupted={message.interrupted} />
+        </AnswerBlock>
+      );
+    case "note":
+      return <Note text={message.text} assistant={assistant} />;
+    case "fallback":
+      return <Fallback text={message.text} />;
+    default:
+      return null;
+  }
+}
+
+function AnswerBlock({ children, arrives }: { children: ReactNode; arrives?: boolean }) {
+  return <div className={cn("group/answer grid min-w-0 gap-2", arrives && ARRIVES)}>{children}</div>;
+}
+
+function SentFiles({ count }: { count: number }) {
+  const t = useT();
+  return <p className="text-[0.8rem] text-ink-muted">{t("chat-sending-files", { count })}</p>;
+}
+
+function Thinking({ state, text }: { state: "thinking" | "working"; text: string }) {
+  return (
+    <div className={cn("flex items-center gap-2.5 text-[0.9rem] text-ink-muted", ARRIVES)} role="status">
+      <AgentFigure state={state} size="sm" live />
+      <span className="chat-shimmer">{text}</span>
+    </div>
+  );
+}
+
+function ScrollDown() {
+  const t = useT();
+  const { isAtBottom, scrollToBottom } = useStickToBottomContext();
+  if (isAtBottom) return null;
+  return (
+    <Button
+      variant="outline"
+      size="icon"
+      onClick={() => void scrollToBottom()}
+      aria-label={t("chat-scroll-down")}
+      className="absolute bottom-4 left-1/2 -translate-x-1/2 animate-in rounded-full shadow-sm duration-200 fade-in-0 zoom-in-90 motion-reduce:animate-none"
+    >
+      <ArrowDown />
+    </Button>
+  );
+}
+
+/** The chat's name, and below `lg` the list of chats and a new one at hand. */
+function Header({ chat }: { chat: string | null }) {
+  const t = useT();
+  const chats = useQuery(chatsQuery);
+  const [open, setOpen] = useState(false);
+  const found = chats.data?.chats.find((c) => c.id === chat);
+  const title = found ? titleOf(found, t) : t("chat-new");
+  return (
+    <header className="flex h-12 shrink-0 items-center gap-1 border-b border-rule px-2 lg:px-4">
+      <Button
+        variant="ghost"
+        size="icon"
+        className="lg:hidden"
+        onClick={() => setOpen(true)}
+        aria-label={t("chat-list")}
+      >
+        <MessagesSquare />
+      </Button>
+      <h2 className="min-w-0 flex-1 truncate text-[0.95rem] text-ink">{title}</h2>
+      <Button variant="ghost" size="icon" className="lg:hidden" aria-label={t("chat-new")} render={<Link to="/chat" />}>
+        <SquarePen />
+      </Button>
+      <SideSheet open={open} onOpenChange={setOpen}>
+        <ChatList
+          chats={chats.data?.chats}
+          loading={chats.isPending}
+          error={chats.error}
+          retry={chats.refetch}
+          onNavigate={() => setOpen(false)}
+        />
+      </SideSheet>
+    </header>
+  );
+}

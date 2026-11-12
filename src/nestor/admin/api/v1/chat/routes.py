@@ -17,6 +17,7 @@ from nestor.admin.api.v1.chat.schemas import (
     ChatsOut,
     ChatStreamOut,
     ChatThreadOut,
+    MentionOut,
     chats,
     thread,
 )
@@ -48,7 +49,15 @@ async def list_chats(request: Request, caller: Chatter) -> ChatsOut:
     under = web.chats_of(person)
     entries = await state(request).nestor.journal.log.read(LogQuery(types=TURNS, sessions_under=under))
     answering = frozenset(str(a.session).removeprefix(under) for a in web.answering())
-    return ChatsOut(chats=chats(entries, under, answering))
+    return ChatsOut(chats=chats(entries, under, answering), sessions=under)
+
+
+@router.get("/chats/mentions")
+async def list_chat_mentions(request: Request, caller: Chatter) -> list[MentionOut]:
+    """The executors a message can name as `@name` to hand them work, in the configuration's order."""
+    _web(request)
+    executors = state(request).nestor.tasks.executors.values()
+    return [MentionOut(name=e.name, description=e.description, brand=e.brand) for e in executors]
 
 
 @router.get("/chats/{chat}")
@@ -58,7 +67,10 @@ async def get_chat(request: Request, caller: Chatter, chat: ChatId) -> ChatThrea
     address = web.chat(_person(caller), chat)
     entries = await state(request).nestor.journal.log.read(LogQuery(types=THREAD, session=address.session))
     return ChatThreadOut(
-        chat=chat, messages=thread(entries, caller.phrasebook), answering=web.following(address) is not None
+        chat=chat,
+        session=address.session,
+        messages=thread(entries, caller.phrasebook),
+        answering=web.following(address) is not None,
     )
 
 

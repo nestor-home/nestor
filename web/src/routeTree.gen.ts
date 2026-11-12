@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
+import { Route as AppChatRouteImport } from './routes/_app/chat'
 import { Route as AppConfigRouteImport } from './routes/_app/config'
 import { Route as AppHouseRouteImport } from './routes/_app/house'
 import { Route as AppJournalRouteImport } from './routes/_app/journal'
@@ -23,6 +24,8 @@ import { Route as InvitationTokenRouteImport } from './routes/invitation.$token'
 import { Route as AppAccountsIndexRouteImport } from './routes/_app/accounts/index'
 import { Route as AppAccountsAccountIdRouteImport } from './routes/_app/accounts/$accountId'
 import { Route as AppAccountsInvitationsRouteImport } from './routes/_app/accounts/invitations'
+import { Route as AppChatIndexRouteImport } from './routes/_app/chat/index'
+import { Route as AppChatChatRouteImport } from './routes/_app/chat/$chat'
 import { Route as AppConfigIndexRouteImport } from './routes/_app/config/index'
 import { Route as AppConfigSectionRouteImport } from './routes/_app/config/$section'
 import { Route as AppConfigHistoryRouteImport } from './routes/_app/config/history'
@@ -64,6 +67,11 @@ const LoginRoute = LoginRouteImport.update({
 const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppChatRoute = AppChatRouteImport.update({
+  id: '/chat',
+  path: '/chat',
   getParentRoute: () => AppRoute,
 } as any)
 const AppConfigRoute = AppConfigRouteImport.update({
@@ -120,6 +128,16 @@ const AppAccountsInvitationsRoute = AppAccountsInvitationsRouteImport.update({
   id: '/accounts/invitations',
   path: '/accounts/invitations',
   getParentRoute: () => AppRoute,
+} as any)
+const AppChatIndexRoute = AppChatIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppChatRoute,
+} as any)
+const AppChatChatRoute = AppChatChatRouteImport.update({
+  id: '/$chat',
+  path: '/$chat',
+  getParentRoute: () => AppChatRoute,
 } as any)
 const AppConfigIndexRoute = AppConfigIndexRouteImport.update({
   id: '/',
@@ -278,6 +296,7 @@ const AppSatellitesSatelliteIdCapabilitiesRoute =
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/login': typeof LoginRoute
+  '/chat': typeof AppChatRouteWithChildren
   '/config': typeof AppConfigRouteWithChildren
   '/house': typeof AppHouseRoute
   '/journal': typeof AppJournalRoute
@@ -288,6 +307,7 @@ export interface FileRoutesByFullPath {
   '/invitation/$token': typeof InvitationTokenRoute
   '/accounts/$accountId': typeof AppAccountsAccountIdRoute
   '/accounts/invitations': typeof AppAccountsInvitationsRoute
+  '/chat/$chat': typeof AppChatChatRoute
   '/config/$section': typeof AppConfigSectionRoute
   '/config/history': typeof AppConfigHistoryRoute
   '/config/secrets': typeof AppConfigSecretsRoute
@@ -299,6 +319,7 @@ export interface FileRoutesByFullPath {
   '/tasks/$taskId': typeof AppTasksTaskIdRoute
   '/watches/$watchId': typeof AppWatchesWatchIdRoute
   '/accounts/': typeof AppAccountsIndexRoute
+  '/chat/': typeof AppChatIndexRoute
   '/config/': typeof AppConfigIndexRoute
   '/connections/': typeof AppConnectionsIndexRoute
   '/people/': typeof AppPeopleIndexRoute
@@ -330,6 +351,7 @@ export interface FileRoutesByTo {
   '/': typeof AppIndexRoute
   '/accounts/$accountId': typeof AppAccountsAccountIdRoute
   '/accounts/invitations': typeof AppAccountsInvitationsRoute
+  '/chat/$chat': typeof AppChatChatRoute
   '/config/$section': typeof AppConfigSectionRoute
   '/config/history': typeof AppConfigHistoryRoute
   '/config/secrets': typeof AppConfigSecretsRoute
@@ -338,6 +360,7 @@ export interface FileRoutesByTo {
   '/tasks/$taskId': typeof AppTasksTaskIdRoute
   '/watches/$watchId': typeof AppWatchesWatchIdRoute
   '/accounts': typeof AppAccountsIndexRoute
+  '/chat': typeof AppChatIndexRoute
   '/config': typeof AppConfigIndexRoute
   '/connections': typeof AppConnectionsIndexRoute
   '/people': typeof AppPeopleIndexRoute
@@ -361,6 +384,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/_app/chat': typeof AppChatRouteWithChildren
   '/_app/config': typeof AppConfigRouteWithChildren
   '/_app/house': typeof AppHouseRoute
   '/_app/journal': typeof AppJournalRoute
@@ -372,6 +396,7 @@ export interface FileRoutesById {
   '/_app/': typeof AppIndexRoute
   '/_app/accounts/$accountId': typeof AppAccountsAccountIdRoute
   '/_app/accounts/invitations': typeof AppAccountsInvitationsRoute
+  '/_app/chat/$chat': typeof AppChatChatRoute
   '/_app/config/$section': typeof AppConfigSectionRoute
   '/_app/config/history': typeof AppConfigHistoryRoute
   '/_app/config/secrets': typeof AppConfigSecretsRoute
@@ -383,6 +408,7 @@ export interface FileRoutesById {
   '/_app/tasks/$taskId': typeof AppTasksTaskIdRoute
   '/_app/watches/$watchId': typeof AppWatchesWatchIdRoute
   '/_app/accounts/': typeof AppAccountsIndexRoute
+  '/_app/chat/': typeof AppChatIndexRoute
   '/_app/config/': typeof AppConfigIndexRoute
   '/_app/connections/': typeof AppConnectionsIndexRoute
   '/_app/people/': typeof AppPeopleIndexRoute
@@ -407,6 +433,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/chat'
     | '/config'
     | '/house'
     | '/journal'
@@ -417,6 +444,7 @@ export interface FileRouteTypes {
     | '/invitation/$token'
     | '/accounts/$accountId'
     | '/accounts/invitations'
+    | '/chat/$chat'
     | '/config/$section'
     | '/config/history'
     | '/config/secrets'
@@ -428,6 +456,7 @@ export interface FileRouteTypes {
     | '/tasks/$taskId'
     | '/watches/$watchId'
     | '/accounts/'
+    | '/chat/'
     | '/config/'
     | '/connections/'
     | '/people/'
@@ -459,6 +488,7 @@ export interface FileRouteTypes {
     | '/'
     | '/accounts/$accountId'
     | '/accounts/invitations'
+    | '/chat/$chat'
     | '/config/$section'
     | '/config/history'
     | '/config/secrets'
@@ -467,6 +497,7 @@ export interface FileRouteTypes {
     | '/tasks/$taskId'
     | '/watches/$watchId'
     | '/accounts'
+    | '/chat'
     | '/config'
     | '/connections'
     | '/people'
@@ -489,6 +520,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_app'
     | '/login'
+    | '/_app/chat'
     | '/_app/config'
     | '/_app/house'
     | '/_app/journal'
@@ -500,6 +532,7 @@ export interface FileRouteTypes {
     | '/_app/'
     | '/_app/accounts/$accountId'
     | '/_app/accounts/invitations'
+    | '/_app/chat/$chat'
     | '/_app/config/$section'
     | '/_app/config/history'
     | '/_app/config/secrets'
@@ -511,6 +544,7 @@ export interface FileRouteTypes {
     | '/_app/tasks/$taskId'
     | '/_app/watches/$watchId'
     | '/_app/accounts/'
+    | '/_app/chat/'
     | '/_app/config/'
     | '/_app/connections/'
     | '/_app/people/'
@@ -558,6 +592,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/chat': {
+      id: '/_app/chat'
+      path: '/chat'
+      fullPath: '/chat'
+      preLoaderRoute: typeof AppChatRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/config': {
@@ -636,6 +677,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/accounts/invitations'
       preLoaderRoute: typeof AppAccountsInvitationsRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/_app/chat/': {
+      id: '/_app/chat/'
+      path: '/'
+      fullPath: '/chat/'
+      preLoaderRoute: typeof AppChatIndexRouteImport
+      parentRoute: typeof AppChatRoute
+    }
+    '/_app/chat/$chat': {
+      id: '/_app/chat/$chat'
+      path: '/$chat'
+      fullPath: '/chat/$chat'
+      preLoaderRoute: typeof AppChatChatRouteImport
+      parentRoute: typeof AppChatRoute
     }
     '/_app/config/': {
       id: '/_app/config/'
@@ -836,6 +891,19 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AppChatRouteChildren {
+  AppChatChatRoute: typeof AppChatChatRoute
+  AppChatIndexRoute: typeof AppChatIndexRoute
+}
+
+const AppChatRouteChildren: AppChatRouteChildren = {
+  AppChatChatRoute: AppChatChatRoute,
+  AppChatIndexRoute: AppChatIndexRoute,
+}
+
+const AppChatRouteWithChildren =
+  AppChatRoute._addFileChildren(AppChatRouteChildren)
+
 interface AppConfigRouteChildren {
   AppConfigSectionRoute: typeof AppConfigSectionRoute
   AppConfigHistoryRoute: typeof AppConfigHistoryRoute
@@ -916,6 +984,7 @@ const AppSatellitesSatelliteIdRouteWithChildren =
   )
 
 interface AppRouteChildren {
+  AppChatRoute: typeof AppChatRouteWithChildren
   AppConfigRoute: typeof AppConfigRouteWithChildren
   AppHouseRoute: typeof AppHouseRoute
   AppJournalRoute: typeof AppJournalRoute
@@ -942,6 +1011,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppChatRoute: AppChatRouteWithChildren,
   AppConfigRoute: AppConfigRouteWithChildren,
   AppHouseRoute: AppHouseRoute,
   AppJournalRoute: AppJournalRoute,

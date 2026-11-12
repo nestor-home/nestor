@@ -19,6 +19,7 @@ import {
   KeyRound,
   Lightbulb,
   Megaphone,
+  MessageCircle,
   MessageSquareText,
   MessagesSquare,
   Mic,
@@ -105,6 +106,7 @@ export const DEVICE_KIND: [string[], LucideIcon][] = [
 export const SECTION_ICON = {
   "/": Sun,
   "/journal": ScrollText,
+  "/chat": MessageCircle,
   "/people": Users,
   "/memories": BookMarked,
   "/house": House,

@@ -82,7 +82,7 @@ async def test_a_person_reads_and_writes_only_their_own_chats(tmp_path: Path) ->
         listed = (await mathilde.get("/api/v1/chats")).json()
         nobody = await (await admin.api("robot")).get("/api/v1/chats")
 
-    assert hers["messages"] == [] and listed == {"chats": []}, "the same chat id is another chat for her"
+    assert hers["messages"] == [] and listed["chats"] == [], "the same chat id is another chat for her"
     assert (nobody.status_code, nobody.json()["error"]["code"]) == (403, "chat_needs_person")
 
 
@@ -153,3 +153,28 @@ async def test_a_message_says_something_in_a_file_the_server_can_read(tmp_path: 
         bad_id = await api.get("/api/v1/chats/a%2Fb")
     assert empty.status_code == garbled.status_code == 422
     assert bad_id.status_code in (404, 422)
+
+
+async def test_a_message_can_name_the_executors_plugged_in(tmp_path: Path) -> None:
+    async with Harness(tmp_path, chat=True) as admin:
+        mentions = (await (await admin.api()).get("/api/v1/chats/mentions")).json()
+        plugged = list(admin.nestor.tasks.executors)
+    assert [m["name"] for m in mentions] == plugged and plugged, "the names the model delegates to"
+
+
+async def test_nobody_else_reads_a_chat_through_the_journal_or_its_files(tmp_path: Path) -> None:
+    photo = {"kind": "image", "media_type": "image/png", "data": base64.b64encode(PNG).decode()}
+    async with Harness(tmp_path, chat=True, replies=("Vu.",)) as admin:
+        await admin.account("mathilde", Role.MEMBER, "mathilde")
+        mathis = await admin.api()
+        await say(mathis, "c1", "Mon secret", files=[photo])
+        (sent, _) = (await mathis.get("/api/v1/chats/c1")).json()["messages"]
+        session = (await mathis.get("/api/v1/chats/c1")).json()["session"]
+        mathilde = await admin.api("mathilde")
+        journal = (await mathilde.get("/api/v1/journal", session=session)).json()["items"]
+        file = await mathilde.get(f"/api/v1/journal/{sent['position']}/attachments/0")
+        stop = await mathilde.post("/api/v1/chats/c1/stop")
+        anonymous = await (await admin.api(None)).get("/api/v1/chats")
+    assert journal == [] and file.status_code == 404
+    assert stop.status_code == 204, "her own chat c1, which answers nothing"
+    assert anonymous.status_code == 401

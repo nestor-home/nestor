@@ -14,7 +14,8 @@ acting, searching or computing beyond your own tools. To hand over, call delegat
 objective, then say in a very short sentence that it is started. The task runs in the background: keep talking \
 meanwhile; its result will be announced when it arrives. If the person wants the result in writing (they are leaving, \
 "write me when it's done"), set notify to "message". When asked how it is going, call task_status. To abandon a task, \
-call cancel_task, and only say it stopped if the stop is confirmed."""
+call cancel_task, and only say it stopped if the stop is confirmed. A message that names an executor as @name \
+asks for that part of the work to go to it."""
 
 NO_EXECUTOR = """No executor is plugged in: you cannot carry out long tasks, search or act beyond your own tools. \
 If asked, say so simply."""

@@ -114,6 +114,18 @@ export type AgentActivity = S["AgentActivityOut"];
 export type UpcomingDelivery = S["ScheduledDeliveryOut"];
 export type Initiative = S["InitiativeOut"];
 
+// -- the admin's chat -----------------------------------------------------------------------------
+
+export type Chat = S["ChatOut"];
+export type ChatThread = S["ChatThreadOut"];
+export type ChatMessage = S["ChatMessageOut"];
+export type ChatFile = S["ChatFileOut"];
+export type ChatTool = S["ChatToolOut"];
+export type ChatFileIn = S["ChatFileIn"];
+export type ChatMessageIn = S["ChatMessageIn"];
+export type ChatStreamPart = S["ChatStreamOut"];
+export type Mention = S["MentionOut"];
+
 // -- configuration --------------------------------------------------------------------------------
 
 export type ModelType = S["ModelType"];

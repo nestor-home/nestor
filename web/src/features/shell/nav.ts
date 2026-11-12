@@ -31,7 +31,11 @@ const item = (to: SectionPath, label: string, scope: Permission, key: string): N
 export const NAV: NavGroup[] = [
   {
     label: null,
-    items: [item("/", "nav-today", "journal:read", "h"), item("/journal", "nav-journal", "journal:read", "j")],
+    items: [
+      item("/", "nav-today", "journal:read", "h"),
+      item("/chat", "nav-chat", "chat:write", "k"),
+      item("/journal", "nav-journal", "journal:read", "j"),
+    ],
   },
   {
     label: "nav-group-household",

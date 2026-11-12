@@ -20,6 +20,7 @@ import type {
   Voice,
   Watch,
 } from "@/api";
+import { chats, type MockChat } from "./chats";
 import type { ConfigDb } from "./config";
 import * as config from "./config";
 import { day } from "./day";
@@ -64,10 +65,11 @@ export interface Db {
   updates: Updates;
   config: ConfigDb;
   voices: Record<string, Omit<Voice, "manageable">>; // by person; absent: never recorded
+  chats: MockChat[]; // the signed-in person's
 }
 
 /** Bumped when the shape changes; the stress fixture keeps its own copy. */
-const KEY = () => (stressed() ? "nestor.mock.db.v15.stress" : "nestor.mock.db.v15");
+const KEY = () => (stressed() ? "nestor.mock.db.v16.stress" : "nestor.mock.db.v16");
 
 export function fresh(): Db {
   const connections = fixtures.connections();
@@ -99,6 +101,7 @@ export function fresh(): Db {
     updates: fixtures.updates(),
     config: config.fresh(),
     voices: fixtures.voices(),
+    chats: chats(),
   };
   if (stressed()) stress(state);
   return state;

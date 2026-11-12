@@ -2599,6 +2599,112 @@
         }
       }
     },
+    "/api/v1/chats/mentions": {
+      "get": {
+        "tags": [
+          "chat"
+        ],
+        "summary": "List Chat Mentions",
+        "description": "The executors a message can name as `@name` to hand them work, in the configuration's order.",
+        "operationId": "listChatMentions",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MentionOut"
+                  },
+                  "type": "array",
+                  "title": "Response Listchatmentions"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/chats/{chat}": {
       "get": {
         "tags": [
@@ -11502,6 +11608,10 @@
             "type": "string",
             "title": "Chat"
           },
+          "session": {
+            "type": "string",
+            "title": "Session"
+          },
           "messages": {
             "items": {
               "$ref": "#/components/schemas/ChatMessageOut"
@@ -11517,6 +11627,7 @@
         "type": "object",
         "required": [
           "chat",
+          "session",
           "messages",
           "answering"
         ],
@@ -11582,11 +11693,16 @@
             },
             "type": "array",
             "title": "Chats"
+          },
+          "sessions": {
+            "type": "string",
+            "title": "Sessions"
           }
         },
         "type": "object",
         "required": [
-          "chats"
+          "chats",
+          "sessions"
         ],
         "title": "ChatsOut"
       },
@@ -13671,6 +13787,37 @@
           "editable"
         ],
         "title": "MemoryOut"
+      },
+      "MentionOut": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "brand": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brand"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "description",
+          "brand"
+        ],
+        "title": "MentionOut",
+        "description": "What a message can name with `@`: an executor to hand work to."
       },
       "MessageOut": {
         "properties": {

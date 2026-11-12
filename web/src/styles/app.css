@@ -1,6 +1,9 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "./tokens.css";
+@import "streamdown/styles.css";
+
+@source "../../node_modules/streamdown/dist/*.js";
 
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
@@ -376,5 +379,59 @@
   .prose-wrap {
     overflow-wrap: anywhere;
     min-width: 0;
+  }
+
+  /* the chat's answers: Markdown at the reading size, code and tables in the admin's own materials */
+  .chat-markdown > * + * {
+    margin-top: 0.85em;
+  }
+
+  .chat-markdown :where(h1, h2, h3, h4) {
+    font-family: var(--font-display);
+    font-weight: 500;
+    line-height: 1.25;
+    color: var(--ink);
+  }
+
+  .chat-markdown :where(a) {
+    color: var(--ember);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .chat-markdown :where(:not(pre) > code) {
+    border-radius: var(--radius);
+    background: var(--paper-sunken);
+    padding: 0.1em 0.35em;
+    font-family: var(--font-data);
+    font-size: 0.86em;
+  }
+
+  .chat-markdown :where(pre, code) {
+    font-family: var(--font-data);
+  }
+
+  /* what the agent is doing, while it does it: a light moving across the words */
+  @keyframes chat-shimmer {
+    from {
+      background-position: 100% 0;
+    }
+    to {
+      background-position: -100% 0;
+    }
+  }
+
+  .chat-shimmer {
+    background: linear-gradient(90deg, var(--ink-muted) 40%, var(--ink) 50%, var(--ink-muted) 60%) 0 0 / 200% 100%;
+    background-clip: text;
+    color: transparent;
+    animation: chat-shimmer 2.2s linear infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .chat-shimmer {
+      animation: none;
+      color: var(--ink-muted);
+    }
   }
 }

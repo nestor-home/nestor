@@ -45,6 +45,15 @@ class ChatOut(BaseModel):
 
 class ChatsOut(BaseModel):
     chats: list[ChatOut]  # the latest first
+    sessions: str  # what the journal's session of each of these chats starts with, then its id
+
+
+class MentionOut(BaseModel):
+    """What a message can name with `@`: an executor to hand work to."""
+
+    name: str
+    description: str
+    brand: str | None
 
 
 class ChatRole(StrEnum):
@@ -110,6 +119,7 @@ class ChatMessageOut(BaseModel):
 
 class ChatThreadOut(BaseModel):
     chat: str
+    session: str  # the chat's session in the journal: its live entries name it
     messages: list[ChatMessageOut]  # oldest first
     answering: bool
 
