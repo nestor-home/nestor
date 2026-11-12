@@ -113,6 +113,10 @@ lines. A new type is a member of `ModelType`, its base class and its contract, n
 - **Errors** derive from `NestorError`. Adapters translate vendor exceptions into `ProviderError`
   (with `transient` set) — a vendor exception never reaches a module.
 - **Async**: explicit timeouts, cancellation honoured, resources released in `close`.
+- **Helpers**: a generic helper (encoding, HTTP, text, files) lives in a module of its own, shared by what
+  needs it (`adapters/models/common.py`, `adapters/connectors/common/text.py`, `admin/files.py`), never as a
+  private function at the bottom of a business file. Look for an existing one before writing it, and prefer
+  the standard library or a proven implementation to a hand-rolled one.
 - **Public API**: each module exposes its names in `__init__.py` (`__all__`); import from the module
   (`from nestor.modules.cognition import Executor`), not from its files, outside that module.
 - Python 3.12+ syntax (`type` aliases, `X | None`), fully typed and checked with `ty`; `ruff`,

@@ -15,14 +15,14 @@ from nestor.modules.channels import Address, InboundMessage, Medium, Sender
 from nestor.modules.cognition.delegation.service import TaskManager
 from nestor.modules.cognition.model import ToolCall, ToolSpec
 from nestor.modules.cognition.tools import Tool, Toolbox
-from nestor.modules.conversation import About, Agent, ModelChoice, Notification, Persona, Source
+from nestor.modules.conversation import About, Agent, Attachments, ModelChoice, Notification, Persona, Source
 from nestor.modules.household import Account, Household, Person
 from nestor.modules.initiative import QuietHours
 from nestor.modules.journal import Journal
 from nestor.modules.satellites import SatelliteDisconnected, SpeechActivityObserved
 from nestor.testing.cognition import ScriptedExecutor, ScriptedModel
 from nestor.testing.i18n import EchoLocalizer
-from nestor.testing.journal import MemoryEventLog
+from nestor.testing.journal import MemoryBlobStore, MemoryEventLog
 
 PARIS = ZoneInfo("Europe/Paris")
 TELEGRAM = Address("telegram", "42")
@@ -42,6 +42,7 @@ class World:
         self.journal = Journal(MemoryEventLog())
         self.tasks = TaskManager(self.journal, [ScriptedExecutor(duration_s=10)])
         self.agent = Agent(
+            attachments=Attachments(MemoryBlobStore()),
             models=ModelChoice.single(model),
             persona=Persona(name="Richie", character="Tu es Richie."),
             journal=self.journal,

@@ -3,6 +3,7 @@
 import asyncio
 import json
 import logging
+import re
 from collections import defaultdict, deque
 from collections.abc import AsyncGenerator, AsyncIterator, Callable
 from contextlib import asynccontextmanager
@@ -12,12 +13,22 @@ from typing import Any
 import httpx
 import pytest
 
-from nestor.adapters.channels.telegram import MESSAGE_LIMIT, TelegramChannel, plugin, split_text
+from nestor.adapters.channels.telegram import FILE_LIMIT, MESSAGE_LIMIT, TelegramChannel, plugin, split_text
 from nestor.core import ContractError, PersonId, ProviderError
 from nestor.core.i18n import Locale
-from nestor.modules.channels import Address, Assistant, InboundMessage, Medium, MessageEnd, Reply, Sender
+from nestor.modules.channels import (
+    Address,
+    Assistant,
+    Attachment,
+    AttachmentKind,
+    InboundMessage,
+    Medium,
+    MessageEnd,
+    Reply,
+    Sender,
+)
 from nestor.runtime import Services
-from nestor.testing.channels import ScriptedAssistant
+from nestor.testing.channels import OGG, MessagingChannelContract, Platform, ScriptedAssistant
 from nestor.testing.i18n import EchoLocalizer
 
 TOKEN = "123456:secret-token"
@@ -30,6 +41,8 @@ class FakeBotApi:
 
     def __init__(self) -> None:
         self.updates: list[dict[str, Any]] = []
+        self.files: dict[str, bytes] = {}  # by file id
+        self.voices: list[tuple[str, bytes, str | None]] = []  # chat, recording, caption
         self.sent: list[tuple[int | str, str]] = []
         self.payloads: list[dict[str, Any]] = []
         self.actions: list[tuple[int, str]] = []
@@ -38,9 +51,13 @@ class FakeBotApi:
         self._next_update = 1
         self.transport = httpx.MockTransport(self.handle)
 
-    def say(self, text: str | None, *, user: int = ADA, chat: int | None = None, name: str = "Ada") -> None:
+    def say(
+        self, text: str | None, *, user: int = ADA, chat: int | None = None, name: str = "Ada", **files: Any
+    ) -> None:
+        """`files` as the Bot API puts them in a message: `photo`, `voice`, `audio`, `document`, `caption`."""
         message: dict[str, Any] = {"message_id": self._next_update, "date": 1_760_000_000}
         message |= {"chat": {"id": chat or user, "type": "private"}, "from": {"id": user, "first_name": name}}
+        message |= files
         if text is not None:
             message["text"] = text
         self.updates.append({"update_id": self._next_update, "message": message})
@@ -56,7 +73,18 @@ class FakeBotApi:
     def texts(self, chat: int) -> list[str]:
         return [text for to, text in self.sent if to == chat]
 
+    def file(self, data: bytes, **fields: Any) -> dict[str, Any]:
+        """A file the bot may download, as a message describes it."""
+        file_id = f"file-{len(self.files)}"
+        self.files[file_id] = data
+        return {"file_id": file_id, "file_unique_id": file_id, "file_size": len(data), **fields}
+
     async def handle(self, request: httpx.Request) -> httpx.Response:
+        if request.url.path.startswith("/file/bot"):
+            token, path = request.url.path.removeprefix("/file/bot").split("/", 1)
+            if token != TOKEN or path.removeprefix("files/") not in self.files:
+                return httpx.Response(404)
+            return httpx.Response(200, content=self.files[path.removeprefix("files/")])
         token, method = request.url.path.removeprefix("/bot").split("/")
         if token != TOKEN:
             return httpx.Response(401, json={"ok": False, "error_code": 401, "description": "Unauthorized"})
@@ -65,7 +93,18 @@ class FakeBotApi:
             if isinstance(failure, Exception):
                 raise failure
             return failure
+        if method == "sendVoice":
+            fields, voice = multipart(request)
+            self.voices.append((fields["chat_id"], voice, fields.get("caption")))
+            return ok({"message_id": len(self.voices)})
         payload = json.loads(request.content)
+        if method == "getFile":
+            known = payload["file_id"] in self.files
+            return (
+                ok({"file_id": payload["file_id"], "file_path": f"files/{payload['file_id']}"})
+                if known
+                else error(400, "Bad Request: invalid file_id")
+            )
         if method == "getUpdates":
             return ok(await self.get_updates(payload))
         if method == "sendChatAction":
@@ -83,6 +122,19 @@ class FakeBotApi:
         while not self.updates and asyncio.get_running_loop().time() < deadline:
             await asyncio.sleep(0.005)
         return self.updates
+
+
+def multipart(request: httpx.Request) -> tuple[dict[str, str], bytes]:
+    """The text fields of a multipart upload, and its file."""
+    boundary = request.headers["content-type"].split("boundary=")[1].encode()
+    fields, file = {}, b""
+    for part in request.content.split(b"--" + boundary)[1:-1]:
+        head, _, body = part.strip(b"\r\n").partition(b"\r\n\r\n")
+        if b"filename=" in head:
+            file = body
+        elif named := re.search(rb'name="([^"]+)"', head):
+            fields[named[1].decode()] = body.decode()
+    return fields, file
 
 
 def ok(result: object) -> httpx.Response:
@@ -474,3 +526,99 @@ async def test_each_message_of_an_answer_is_sent_as_soon_as_it_is_written(api: F
         done.set()
         await eventually(lambda: len(api.sent) == 2)
     assert api.texts(ADA) == ["Je regarde où en sont les tests.", "Tout est vert."]
+
+
+async def test_files_reach_the_assistant_downloaded_with_their_caption(api: FakeBotApi) -> None:
+    assistant = ScriptedAssistant(lambda message: "vu")
+    small, large = api.file(b"small", width=90, height=90), api.file(b"large jpeg", width=1280, height=960)
+    async with serving(api, assistant):
+        api.say(None, photo=[small, large], caption="la facture")
+        api.say(None, voice=api.file(b"opus", mime_type="audio/ogg", duration=3))
+        api.say(None, document=api.file(b"png", mime_type="image/png", file_name="plan.png"))
+        api.say(None, document=api.file(b"%PDF", mime_type="application/pdf", file_name="devis.pdf"))
+        await eventually(lambda: len(assistant.messages) == 4)
+    photo, voice, image, pdf = assistant.messages
+    assert photo.text == "la facture"
+    assert [(a.kind, a.data, a.media_type) for a in photo.attachments] == [
+        (AttachmentKind.IMAGE, b"large jpeg", "image/jpeg")
+    ], "the largest size of a photo"
+    assert [(a.kind, a.data, a.media_type) for a in voice.attachments] == [(AttachmentKind.VOICE, b"opus", "audio/ogg")]
+    assert [(a.kind, a.name) for a in image.attachments] == [(AttachmentKind.IMAGE, "plan.png")]
+    assert [(a.kind, a.name, a.media_type) for a in pdf.attachments] == [
+        (AttachmentKind.FILE, "devis.pdf", "application/pdf")
+    ]
+
+
+async def test_a_voice_message_is_answered_with_one_captioned_with_its_text(api: FakeBotApi) -> None:
+    assistant = ScriptedAssistant(lambda message: "Le pain est noté.", speaks=True)
+    async with serving(api, assistant):
+        api.say(None, voice=api.file(b"opus", mime_type="audio/ogg"))
+        await eventually(lambda: bool(api.voices))
+        api.say("et écrit ?")
+        await eventually(lambda: bool(api.sent))
+    assert api.voices == [(str(ADA), OGG + "Le pain est noté.".encode(), "Le pain est noté.")]
+    assert api.sent == [(ADA, "Le pain est noté.")], "a typed message is answered in writing"
+
+
+async def test_a_long_voice_answer_follows_its_recording_in_writing(api: FakeBotApi) -> None:
+    long = "Une phrase. " * 120
+    assistant = ScriptedAssistant(lambda message: long, speaks=True)
+    async with serving(api, assistant):
+        api.say(None, voice=api.file(b"opus"))
+        await eventually(lambda: bool(api.sent))
+    [(_, _, caption)] = api.voices
+    assert caption is None, "over Telegram's caption limit"
+    assert api.texts(ADA) == [long.strip()]
+
+
+async def test_a_file_that_cannot_be_downloaded_is_left_out(api: FakeBotApi) -> None:
+    assistant = ScriptedAssistant(
+        lambda message: f"{len(message.attachments)} fichier",
+    )
+    too_big = api.file(b"x") | {"file_size": FILE_LIMIT + 1}
+    gone = {"file_id": "missing", "file_unique_id": "missing"}
+    async with serving(api, assistant, apology="Oups."):
+        api.say(None, document=too_big, caption="regarde")
+        api.say(None, voice=gone)
+        await eventually(lambda: len(api.sent) == 2)
+    assert [m.text for m in assistant.messages] == ["regarde"], "a message left with nothing never reaches it"
+    assert api.texts(ADA) == ["0 fichier", "Oups."]
+
+
+class TelegramPlatform(Platform):
+    """The fake Bot API as a messaging platform: Ada writes in her private chat."""
+
+    def __init__(self, api: FakeBotApi) -> None:
+        self.api = api
+
+    async def send(self, text: str, *attachments: Attachment) -> None:
+        files: dict[str, Any] = {"caption": text} if text else {}
+        for a in attachments:
+            file = self.api.file(a.data, mime_type=a.media_type)
+            match a.kind:
+                case AttachmentKind.IMAGE:
+                    files["photo"] = [file]
+                case AttachmentKind.VOICE:
+                    files["voice"] = file
+                case AttachmentKind.AUDIO:
+                    files["audio"] = file
+                case AttachmentKind.FILE:
+                    files["document"] = file
+        self.api.say(None, **files)
+
+    async def answered(self, count: int) -> None:
+        await eventually(lambda: len(self.api.sent) + len(self.api.voices) >= count)
+
+    def texts(self) -> list[str]:
+        return [text for _, text in self.api.sent]
+
+    def voices(self) -> list[bytes]:
+        return [voice for _, voice, _ in self.api.voices]
+
+
+class TestTelegramMessaging(MessagingChannelContract):
+    @asynccontextmanager
+    async def serving(self, assistant: Assistant) -> AsyncGenerator[Platform]:
+        api = FakeBotApi()
+        async with serving(api, assistant):
+            yield TelegramPlatform(api)

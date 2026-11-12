@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, Query, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 
 from nestor.admin.api.v1.errors import not_found
 from nestor.admin.api.v1.journal.feed import Feed, Filters
@@ -19,6 +19,7 @@ from nestor.admin.api.v1.journal.schemas import (
 from nestor.admin.api.v1.journal.stream import events
 from nestor.admin.api.v1.security import Caller, allowed
 from nestor.admin.api.v1.shared import People
+from nestor.admin.files import file_response
 from nestor.admin.presentation import Kind, Tone
 from nestor.admin.state import state
 from nestor.core import PersonId
@@ -144,3 +145,24 @@ async def get_journal_entry(request: Request, caller: Reader, position: int) -> 
         raise not_found("journal_entry_unknown")
     item, entry = found
     return JournalEntryOut(item=item, record=dict(entry.record))
+
+
+@router.get(
+    "/journal/{position}/attachments/{index}",
+    response_class=Response,
+    responses={200: {"content": {"application/octet-stream": {}}, "description": "The file, as it was sent"}},
+)
+async def get_journal_attachment(request: Request, caller: Reader, position: int, index: int) -> Response:
+    """A file sent with a message, to whoever reads the entry; 404 when either is out of reach."""
+    admin = state(request)
+    feed = await Feed.of(admin, caller.principal, Filters(), caller.phrasebook)
+    found = await feed.get(position)
+    attachments = feed.describer.describe(found[1]).attachments if found else ()
+    if not 0 <= index < len(attachments):
+        raise not_found("attachment_unknown")
+    attached = attachments[index]
+    try:
+        data = await admin.nestor.blobs.get(attached.blob.digest)
+    except KeyError:
+        raise not_found("attachment_unknown") from None
+    return file_response(data, attached.blob.media_type, attached.name or f"{attached.kind.value}-{index}")

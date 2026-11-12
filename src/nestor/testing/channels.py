@@ -1,19 +1,37 @@
-"""Doubles for the channels module: an in-memory channel and a scripted assistant."""
+"""Doubles for the channels module (an in-memory channel, a scripted assistant, transcription and speech models),
+and the contracts of the transcription and speech models."""
 
 import asyncio
+import contextlib
 from collections.abc import AsyncIterator, Callable
 
-from nestor.core import ContractError, PersonId
-from nestor.modules.channels import Address, Assistant, Channel, InboundMessage, Medium, MessageEnd, Reply, Sender
+from nestor.core import ContractError, PersonId, ProviderError
+from nestor.modules.channels import (
+    Address,
+    Assistant,
+    Attachment,
+    AttachmentKind,
+    Channel,
+    InboundMessage,
+    Medium,
+    MessageEnd,
+    Reply,
+    Sender,
+    SpeechModel,
+    TranscriptionModel,
+)
 from nestor.modules.identity import Heard
+
+OGG = b"OggS"  # how an OGG recording starts
 
 
 class ScriptedReply(Reply):
-    """Streams `text` word by word, as one message; stops as soon as it is interrupted."""
+    """Streams `text` word by word, as one message, with `attachments`; stops as soon as it is interrupted."""
 
-    def __init__(self, text: str, *, word_delay_s: float = 0.0) -> None:
+    def __init__(self, text: str, *, word_delay_s: float = 0.0, attachments: tuple[Attachment, ...] = ()) -> None:
         self._words = text.split()
         self._word_delay_s = word_delay_s
+        self._attachments = attachments
         self.heard: str | None = None
 
     async def __aiter__(self) -> AsyncIterator[str | MessageEnd]:
@@ -22,7 +40,7 @@ class ScriptedReply(Reply):
                 return
             await asyncio.sleep(self._word_delay_s)
             yield word if i == 0 else f" {word}"
-        yield MessageEnd()
+        yield MessageEnd(attachments=self._attachments)
 
     async def interrupt(self, heard: str) -> None:
         self.heard = heard
@@ -42,9 +60,12 @@ class ScriptedAssistant(Assistant):
         word_delay_s: float = 0.0,
         strangers: frozenset[str] = frozenset(),
         voice: Heard | None = None,
+        speaks: bool = False,
     ) -> None:
+        """`speaks`: it answers a voice message with one, its text recorded as `OGG` followed by it."""
         self._answer = answer
         self._voice = voice
+        self._speaks = speaks
         self.heard: list[bytes] = []
         self._strangers = strangers
         self._word_delay_s = word_delay_s
@@ -64,7 +85,10 @@ class ScriptedAssistant(Assistant):
 
     def respond(self, message: InboundMessage) -> ScriptedReply:
         self.messages.append(message)
-        reply = ScriptedReply(self._answer(message), word_delay_s=self._word_delay_s)
+        text = self._answer(message)
+        voiced = self._speaks and any(a.kind is AttachmentKind.VOICE for a in message.attachments)
+        voice = Attachment(kind=AttachmentKind.VOICE, data=OGG + text.encode(), media_type="audio/ogg")
+        reply = ScriptedReply(text, word_delay_s=self._word_delay_s, attachments=(voice,) if voiced else ())
         self.replies.append(reply)
         return reply
 
@@ -111,3 +135,139 @@ class InMemoryChannel(Channel):
 
     async def close(self) -> None:
         self._inbox.put_nowait(None)
+
+
+class ScriptedTranscription(TranscriptionModel):
+    """Hears in each recording its bytes, as text; `failing` raises `ProviderError` instead."""
+
+    name = "scripted"
+
+    def __init__(self, *, failing: bool = False) -> None:
+        self.failing = failing
+
+    async def transcribe(self, audio: bytes, media_type: str) -> str:
+        if self.failing:
+            raise ProviderError(self.name, "transcription unavailable", transient=True)
+        return audio.decode().strip()
+
+
+class ScriptedSpeech(SpeechModel):
+    """Records `text` as `OGG` followed by it; `failing` raises `ProviderError` instead."""
+
+    name = "scripted"
+
+    def __init__(self, *, failing: bool = False) -> None:
+        self.failing = failing
+
+    async def synthesize(self, text: str) -> bytes:
+        if self.failing:
+            raise ProviderError(self.name, "speech unavailable", transient=True)
+        return OGG + text.encode()
+
+
+class TranscriptionModelContract:
+    """Behaviour every `TranscriptionModel` adapter must show for recordings. Mix into a `Test…` class and implement
+    `model()`, `recording()` and `unavailable_model()`."""
+
+    def model(self) -> TranscriptionModel:
+        raise NotImplementedError
+
+    def recording(self) -> tuple[bytes, str, str]:
+        """A recording, its media type, and a word that is said in it."""
+        raise NotImplementedError
+
+    def unavailable_model(self) -> TranscriptionModel:
+        """The same adapter when its provider fails (bad key, unreachable endpoint…)."""
+        raise NotImplementedError
+
+    async def test_a_recording_reads_as_what_is_said_in_it(self) -> None:
+        audio, media_type, word = self.recording()
+        async with self.model() as model:
+            text = await model.transcribe(audio, media_type)
+        assert word.lower() in text.lower()
+        assert text == text.strip()
+
+    async def test_provider_failure_is_a_provider_error(self) -> None:
+        audio, media_type, _ = self.recording()
+        async with self.unavailable_model() as model:
+            try:
+                await model.transcribe(audio, media_type)
+            except ProviderError:
+                return
+        raise AssertionError("no ProviderError raised by an unavailable provider")
+
+
+class SpeechModelContract:
+    """Behaviour every `SpeechModel` adapter must show for recordings. Mix into a `Test…` class and implement
+    `model()` and `unavailable_model()`."""
+
+    def model(self) -> SpeechModel:
+        raise NotImplementedError
+
+    def unavailable_model(self) -> SpeechModel:
+        raise NotImplementedError
+
+    async def test_text_is_recorded_as_ogg(self) -> None:
+        async with self.model() as model:
+            audio = await model.synthesize("Bonjour, c'est un essai.")
+        assert audio.startswith(OGG), "not an OGG recording, which messaging apps play as a voice message"
+
+    async def test_provider_failure_is_a_provider_error(self) -> None:
+        async with self.unavailable_model() as model:
+            try:
+                await model.synthesize("Bonjour.")
+            except ProviderError:
+                return
+        raise AssertionError("no ProviderError raised by an unavailable provider")
+
+
+class MessagingChannelContract:
+    """Behaviour every messaging channel (Telegram, and those to come) must show with files. Mix into a `Test…` class
+    and implement `serving(assistant)`: an async context that serves the channel against a stand-in for its
+    platform, and yields a `Platform` driving that stand-in."""
+
+    def serving(self, assistant: Assistant) -> "contextlib.AbstractAsyncContextManager[Platform]":
+        raise NotImplementedError
+
+    async def test_a_file_reaches_the_assistant_downloaded_with_its_kind(self) -> None:
+        assistant = ScriptedAssistant(lambda message: "vu")
+        photo = Attachment(kind=AttachmentKind.IMAGE, data=b"jpeg", media_type="image/jpeg")
+        async with self.serving(assistant) as platform:
+            await platform.send("la facture", photo)
+            await platform.answered(1)
+        [message] = assistant.messages
+        assert message.text == "la facture"
+        assert [(a.kind, a.data, a.media_type) for a in message.attachments] == [
+            (photo.kind, photo.data, photo.media_type)
+        ]
+
+    async def test_a_voice_message_is_answered_with_one_when_the_assistant_has_a_voice(self) -> None:
+        note = Attachment(kind=AttachmentKind.VOICE, data=b"opus", media_type="audio/ogg")
+        for speaks in (True, False):
+            assistant = ScriptedAssistant(lambda message: "Noté.", speaks=speaks)
+            async with self.serving(assistant) as platform:
+                await platform.send("", note)
+                await platform.answered(1)
+                voices, texts = platform.voices(), platform.texts()
+            if speaks:
+                assert voices == [OGG + b"Not\xc3\xa9."], "the answer, recorded"
+            else:
+                assert (voices, texts) == ([], ["Noté."]), "without a voice, the answer is written"
+
+
+class Platform:
+    """The stand-in for a messaging platform a `MessagingChannelContract` drives: someone of the household writes,
+    and what the bot sent is read back."""
+
+    async def send(self, text: str, *attachments: Attachment) -> None:
+        raise NotImplementedError
+
+    async def answered(self, count: int) -> None:
+        """Wait until the bot sent `count` answers (texts and voice messages)."""
+        raise NotImplementedError
+
+    def texts(self) -> list[str]:
+        raise NotImplementedError
+
+    def voices(self) -> list[bytes]:
+        raise NotImplementedError

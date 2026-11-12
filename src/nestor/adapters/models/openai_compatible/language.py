@@ -13,6 +13,7 @@ Tested against OpenRouter only; other servers are expected to work but remain un
 (Ollama, LM Studio, vLLM, llama.cpp) usually need no key: without one, no `Authorization` header is sent.
 """
 
+import base64
 import json
 from collections.abc import AsyncGenerator, AsyncIterator, Callable, Iterator, Mapping
 from contextlib import aclosing
@@ -35,6 +36,7 @@ from nestor.core import ContractError, ProviderError, new_id
 from nestor.modules.cognition import (
     Finished,
     FinishReason,
+    Image,
     LanguageModel,
     Message,
     ModelOutput,
@@ -80,8 +82,10 @@ class OpenAICompatibleLanguage(LanguageModel):
         read_timeout_s: float = 30.0,
         provider: str = "openai-compatible",
         cache_control: bool | None = None,
+        vision: bool = False,
     ) -> None:
         self._base_url = base_url
+        self.vision = vision
         self._api_key = api_key or None
         self._model = model
         self._extra_body = dict(extra_body or {})
@@ -232,6 +236,9 @@ def _wire_message(message: Message, provider: str, *, cache_control: bool) -> di
             if message.tool_call_id is None:
                 raise ContractError(f"{provider}: a tool message must say which call it answers (tool_call_id)")
             return {"role": "tool", "tool_call_id": message.tool_call_id, "content": message.content}
+        case Role.USER if message.images:
+            pictures = [{"type": "image_url", "image_url": {"url": _data_url(i)}} for i in message.images]
+            return {"role": "user", "content": [{"type": "text", "text": message.text}, *pictures]}
         case _ if cache_control and message.layers:
             parts: list[dict[str, object]] = [
                 {"type": "text", "text": layer, "cache_control": {"type": "ephemeral"}}
@@ -243,6 +250,10 @@ def _wire_message(message: Message, provider: str, *, cache_control: bool) -> di
             return {"role": message.role.value, "content": parts}
         case _:
             return {"role": message.role.value, "content": message.text}
+
+
+def _data_url(image: Image) -> str:
+    return f"data:{image.media_type};base64,{base64.b64encode(image.data).decode()}"
 
 
 def _wire_call(call: ToolCall) -> dict[str, object]:
@@ -281,6 +292,7 @@ class OpenAICompatibleLanguageSettings(EndpointSettings):
     read_timeout_s: PositiveFloat = 30.0
     # mark the instructions' stable layers for the prompt cache; by default for OpenRouter and Anthropic
     cache_control: bool | None = Field(default=None, json_schema_extra={"advanced": True})
+    vision: bool = False  # it looks at images (a photo sent in a message); without, it is told it cannot see them
 
 
 def build(settings: OpenAICompatibleLanguageSettings, name: str, services: Services) -> OpenAICompatibleLanguage:
@@ -293,6 +305,7 @@ def build(settings: OpenAICompatibleLanguageSettings, name: str, services: Servi
         read_timeout_s=settings.read_timeout_s,
         provider=name,
         cache_control=settings.cache_control,
+        vision=settings.vision,
     )
 
 

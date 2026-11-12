@@ -13,7 +13,7 @@ from nestor.core import PersonId, ProviderError, utc_now
 from nestor.modules.channels import Address, InboundMessage, Medium, Sender
 from nestor.modules.cognition.model import ModelRequest, ToolCall
 from nestor.modules.cognition.tools import Toolbox, ToolContext, ToolFailed
-from nestor.modules.conversation import Agent, ModelChoice, Persona, TurnContext
+from nestor.modules.conversation import Agent, Attachments, ModelChoice, Persona, TurnContext
 from nestor.modules.household import Account, Household, Person
 from nestor.modules.identity import Speaker
 from nestor.modules.initiative import (
@@ -36,7 +36,7 @@ from nestor.testing.cognition import ScriptedModel
 from nestor.testing.home import StaticPresence
 from nestor.testing.i18n import EchoLocalizer
 from nestor.testing.initiative import InboundEventSourceContract, Inbox, QueuedSource
-from nestor.testing.journal import MemoryEventLog
+from nestor.testing.journal import MemoryBlobStore, MemoryEventLog
 
 TELEGRAM, SALON = Address("telegram", "42"), Address("voice", "salon")
 MATHIS = Person(id=PersonId("mathis"), name="Mathis", accounts=(Account.parse("telegram:42"),), reach=TELEGRAM)
@@ -82,6 +82,7 @@ class Home:
         self.voice, self.telegram = Satellite("voice"), InMemoryChannel("telegram")
         self.writer = ScriptedModel(*["Ton colis est arrivé !"] * 5)
         agent = Agent(
+            attachments=Attachments(MemoryBlobStore()),
             models=ModelChoice.single(self.writer),
             persona=Persona(name="Richie", character="Tu es Richie."),
             journal=self.journal,
@@ -254,6 +255,7 @@ async def test_the_agent_creates_lists_and_cancels_watches_through_its_tools() -
     book = WatchBook(home.journal, kinds=("mail",))
     tools = WatchTools(book)
     agent = Agent(
+        attachments=Attachments(MemoryBlobStore()),
         models=ModelChoice.single(
             ScriptedModel(
                 ToolCall("c1", "create_watch", {"what": "le colis de la poussette", "days": 30}),

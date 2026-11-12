@@ -205,10 +205,14 @@ _AGENT = AgentSettings()
 
 class AgentConfig(Section):
     """Which model of `models` answers in each medium. One left out takes the other's; with a single
-    model, neither needs saying."""
+    model, neither needs saying. `transcription` hears the voice messages people send and `speech` records the
+    answers to them; each defaults to the only model of its type, and without one, voice messages go unheard and
+    answers stay written."""
 
     spoken: str | None = Field(default=None, json_schema_extra=LANGUAGE_MODEL)  # the voice: first words fast
     written: str | None = Field(default=None, json_schema_extra=LANGUAGE_MODEL)  # writing allows a few seconds
+    transcription: str | None = Field(default=None, json_schema_extra=TRANSCRIPTION_MODEL)
+    speech: str | None = Field(default=None, json_schema_extra=SPEECH_MODEL)
     # how long a turn waits for a tool before it goes on in the background and its result comes back by itself
     spoken_tool_wait_s: float = Field(default=_AGENT.spoken_tool_wait_s, gt=0, le=60)
     written_tool_wait_s: float = Field(default=_AGENT.written_tool_wait_s, gt=0, le=600)
@@ -285,9 +289,8 @@ class NestorConfig(Section):
     data_dir: Path = Field(default=Path("data"), json_schema_extra=ADVANCED)
     persona: PersonaConfig
     household: tuple[PersonConfig, ...] = Field(min_length=1)
-    # the models it may use, under names the household chooses; the roles below refer to them by name. A
-    # model answers (`openai-compatible`), embeds text (`openai-compatible-embeddings`) or voices
-    # (`sherpa-onnx-voice`): each role checks which
+    # the models it may use, under names the household chooses; the roles below refer to them by name, and each
+    # role checks the model's type
     models: dict[str, ModelConfig] = Field(min_length=1)
     agent: AgentConfig = Field(default=AgentConfig(), validate_default=True)
     watches: WatchesConfig = WatchesConfig()
@@ -315,7 +318,15 @@ class NestorConfig(Section):
     @field_validator("agent")
     @classmethod
     def _agent(cls, value: AgentConfig, info: ValidationInfo) -> AgentConfig:
-        _known(info, {"spoken": value.spoken, "written": value.written})
+        _known(
+            info,
+            {
+                "spoken": value.spoken,
+                "written": value.written,
+                "transcription": value.transcription,
+                "speech": value.speech,
+            },
+        )
         return value
 
     @field_validator("watches")
@@ -355,6 +366,19 @@ class NestorConfig(Section):
             "watches": self.watches.model or written,
             "consolidation": self.memory.consolidation or written,
         }
+
+    def voice_messages(self) -> tuple[str | None, str | None]:
+        """The models that hear voice messages and record the answers to them: those `agent` names, else the only
+        model of each type; `None` without one."""
+        return (
+            self.agent.transcription or _sole(self.models, ModelType.TRANSCRIPTION),
+            self.agent.speech or _sole(self.models, ModelType.SPEECH),
+        )
+
+
+def _sole(models: Mapping[str, "ModelConfig"], kind: ModelType) -> str | None:
+    of_kind = [key for key, model in models.items() if model.type is kind]
+    return of_kind[0] if len(of_kind) == 1 else None
 
 
 def _known(info: ValidationInfo, references: Mapping[str, str | None]) -> Mapping[str, ModelConfig]:

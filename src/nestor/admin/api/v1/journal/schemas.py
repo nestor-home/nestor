@@ -8,6 +8,8 @@ from pydantic import BaseModel, Field
 from nestor.admin.api.v1.shared import MessageOut, PersonRef, ReasonOut
 from nestor.admin.presentation import Kind, Tone
 from nestor.core import utc_now
+from nestor.modules.channels import AttachmentKind
+from nestor.modules.conversation import Attached
 
 BUCKETS_S = (60, 300, 900, 1800, 3600, 3 * 3600, 6 * 3600, 12 * 3600, 86400, 7 * 86400, 30 * 86400)
 MAX_BUCKETS = 60
@@ -33,6 +35,29 @@ class LinksOut(BaseModel):
 class OutcomeOut(BaseModel):
     ok: bool
     duration_s: float
+
+
+class AttachmentOut(BaseModel):
+    """A file sent with a message; its bytes at `/journal/{position}/attachments/{index}`."""
+
+    index: int
+    kind: AttachmentKind
+    media_type: str
+    size: int  # in bytes
+    name: str | None
+    transcript: str | None  # what was said in a recording, when it could be transcribed
+
+    @classmethod
+    def of(cls, index: int, attached: Attached) -> "AttachmentOut":
+        blob = attached.blob
+        return cls(
+            index=index,
+            kind=attached.kind,
+            media_type=blob.media_type,
+            size=blob.size,
+            name=attached.name,
+            transcript=attached.transcript,
+        )
 
 
 class JournalItem(BaseModel):
@@ -61,6 +86,7 @@ class JournalItem(BaseModel):
     room: str | None
     tool: str | None  # the tool called
     outcome: OutcomeOut | None  # of a tool call or a task
+    attachments: list[AttachmentOut]  # the files a person sent with their message
     brand: str | None  # of the channel, connector, satellite or executor it came through
     links: LinksOut
     cause: int | None  # the position of the entry that caused this one, when known

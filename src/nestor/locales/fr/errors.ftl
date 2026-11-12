@@ -59,6 +59,7 @@ error-confirmation-unknown = Cette demande n'attend plus votre accord : déjà r
 error-memory-unknown = Souvenir introuvable.
 error-memory-shared = Seuls les administrateurs modifient les souvenirs communs.
 error-empty-memory = Un souvenir ne peut pas être vide. Pour l'effacer, oubliez-le.
+error-attachment-unknown = Ce fichier n'est pas disponible.
 error-journal-entry-unknown = Entrée du journal introuvable.
 error-cross-origin = Requête refusée : elle ne vient pas de cette admin.
 error-person-unknown = Cette personne ne fait pas partie du foyer.

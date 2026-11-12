@@ -5798,6 +5798,124 @@
         }
       }
     },
+    "/api/v1/journal/{position}/attachments/{index}": {
+      "get": {
+        "tags": [
+          "journal"
+        ],
+        "summary": "Get Journal Attachment",
+        "description": "A file sent with a message, to whoever reads the entry; 404 when either is out of reach.",
+        "operationId": "getJournalAttachment",
+        "parameters": [
+          {
+            "name": "position",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Position"
+            }
+          },
+          {
+            "name": "index",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Index"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The file, as it was sent",
+            "content": {
+              "application/octet-stream": {}
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/tasks": {
       "get": {
         "tags": [
@@ -10354,6 +10472,69 @@
         ],
         "title": "ApprovalIn"
       },
+      "AttachmentKind": {
+        "type": "string",
+        "enum": [
+          "image",
+          "voice",
+          "audio",
+          "file"
+        ],
+        "title": "AttachmentKind",
+        "description": "What a file sent along a message is, as the person meant it."
+      },
+      "AttachmentOut": {
+        "properties": {
+          "index": {
+            "type": "integer",
+            "title": "Index"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/AttachmentKind"
+          },
+          "media_type": {
+            "type": "string",
+            "title": "Media Type"
+          },
+          "size": {
+            "type": "integer",
+            "title": "Size"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "transcript": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transcript"
+          }
+        },
+        "type": "object",
+        "required": [
+          "index",
+          "kind",
+          "media_type",
+          "size",
+          "name",
+          "transcript"
+        ],
+        "title": "AttachmentOut",
+        "description": "A file sent with a message; its bytes at `/journal/{position}/attachments/{index}`."
+      },
       "AuthKind": {
         "type": "string",
         "enum": [
@@ -11200,6 +11381,7 @@
             "enum": [
               "addition_over",
               "addition_unknown",
+              "attachment_unknown",
               "audio_format",
               "bad_token",
               "client_incomplete",
@@ -12048,6 +12230,13 @@
               }
             ]
           },
+          "attachments": {
+            "items": {
+              "$ref": "#/components/schemas/AttachmentOut"
+            },
+            "type": "array",
+            "title": "Attachments"
+          },
           "brand": {
             "anyOf": [
               {
@@ -12093,6 +12282,7 @@
           "room",
           "tool",
           "outcome",
+          "attachments",
           "brand",
           "links",
           "cause"

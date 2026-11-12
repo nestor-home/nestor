@@ -15,6 +15,7 @@ import { kindStyle } from "@/lib/icons";
 import { say, why } from "@/lib/messages";
 import { duration } from "@/lib/time";
 import { cn } from "@/lib/utils";
+import { Attachments } from "./attachments";
 
 /** One event in full: what it says, what it relates to, and the raw record for debugging. */
 export function EventSheet({ position, onClose }: { position: number | undefined; onClose: () => void }) {
@@ -142,6 +143,7 @@ function Loaded({ event: { item: event, record } }: { event: JournalEvent }) {
         {event.detail_text ? (
           <p className="text-[0.95rem] leading-relaxed whitespace-pre-line">{event.detail_text}</p>
         ) : null}
+        <Attachments item={event} />
 
         {related.length ? (
           <section aria-labelledby="related">

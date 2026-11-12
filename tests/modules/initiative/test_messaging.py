@@ -10,7 +10,7 @@ from nestor.core import PersonId
 from nestor.modules.channels import Address, InboundMessage, Medium, Sender
 from nestor.modules.cognition.model import ModelRequest, ToolCall
 from nestor.modules.cognition.tools import Toolbox, ToolContext, ToolFailed
-from nestor.modules.conversation import Agent, ModelChoice, Persona
+from nestor.modules.conversation import Agent, Attachments, ModelChoice, Persona
 from nestor.modules.household import Account, Household, Person
 from nestor.modules.identity import Speaker
 from nestor.modules.initiative import (
@@ -29,7 +29,7 @@ from nestor.testing.cognition import ScriptedModel
 from nestor.testing.cognition.model import Reply
 from nestor.testing.home import StaticPresence
 from nestor.testing.i18n import EchoLocalizer
-from nestor.testing.journal import MemoryEventLog
+from nestor.testing.journal import MemoryBlobStore, MemoryEventLog
 
 MATHIS_CHAT, MATHILDE_CHAT = Address("telegram", "42"), Address("telegram", "7")
 MATHIS = Person(id=PersonId("mathis"), name="Mathis", accounts=(Account.parse("telegram:42"),), reach=MATHIS_CHAT)
@@ -63,6 +63,7 @@ class Home:
         self.book = MessageBook(self.journal)
         self.tools = MessageTools(self.book, self.household)
         self.agent = Agent(
+            attachments=Attachments(MemoryBlobStore()),
             models=ModelChoice.single(self.model),
             persona=Persona(name="Richie", character="Tu es Richie."),
             journal=self.journal,

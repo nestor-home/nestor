@@ -32,14 +32,22 @@ from nestor.core import Component, ContractError, Model, ModelType, ProviderErro
 from nestor.core.i18n import Locale
 from nestor.modules.accounts import Accounts
 from nestor.modules.activity import ActivityMonitor
-from nestor.modules.channels import Channel
+from nestor.modules.channels import Channel, SpeechModel, TranscriptionModel
 from nestor.modules.cognition import Executor, LanguageModel
 from nestor.modules.cognition.delegation.assistant import Delegation
 from nestor.modules.cognition.delegation.service import TaskManager
 from nestor.modules.cognition.embedding import EmbeddingModel
 from nestor.modules.cognition.tools import Results, Toolbox, ToolProvider
 from nestor.modules.connectors import ConnectedInbound, Connections, Connector, ConnectorTools, TokenEndpoint
-from nestor.modules.conversation import Agent, AgentSettings, ChannelProfile, ModelChoice, Persona, Speakers
+from nestor.modules.conversation import (
+    Agent,
+    AgentSettings,
+    Attachments,
+    ChannelProfile,
+    ModelChoice,
+    Persona,
+    Speakers,
+)
 from nestor.modules.home import Home, PresenceSource
 from nestor.modules.household import Account, Household, Person, SharedAccount
 from nestor.modules.identity import Departures, SpeakerModel, Voices
@@ -134,6 +142,11 @@ class Nestor:
 
         def model(role: str, key: str) -> LanguageModel:
             return chosen(models, key, LanguageModel, tuple(role.split(".")))
+
+        hearing, voicing = config.voice_messages()
+
+        def optional[M: Model](key: str | None, wanted: type[M], role: str) -> M | None:
+            return chosen(models, key, wanted, ("agent", role)) if key else None
 
         self.executors = [
             _build(self.plugged, registry, Family.EXECUTOR, c, c.name or c.plugin, ("executors", i), services, Executor)
@@ -281,9 +294,16 @@ class Nestor:
             journal=self.journal,
             household=self.household,
             toolbox=toolbox,
-            channels={c.channel_id: ChannelProfile(c.style, c.conversation_ends_after_s) for c in self.channels},
+            channels={
+                c.channel_id: ChannelProfile(c.style, c.conversation_ends_after_s, c.sends) for c in self.channels
+            },
             context=[delegation, memory, watch_tools, message_tools, schedule_tools, self.confirmations],
             speakers=self.speakers,
+            attachments=Attachments(
+                self.blobs,
+                transcription=optional(hearing, TranscriptionModel, "transcription"),
+                speech=optional(voicing, SpeechModel, "speech"),
+            ),
             settings=AgentSettings(
                 spoken_tool_wait_s=config.agent.spoken_tool_wait_s, written_tool_wait_s=config.agent.written_tool_wait_s
             ),

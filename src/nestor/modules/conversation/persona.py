@@ -29,6 +29,9 @@ them, so never announce what you are about to do."""
 QUIET = f"""What opens this turn may go unanswered: if there is nothing they need to know (a check that found \
 nothing), answer exactly {SILENT} and nothing else."""
 
+VOICE_ANSWER = """Your answer goes back as a voice message: write it to be heard, briefly, without Markdown, lists, \
+URLs or emoji."""
+
 FALLBACKS: Mapping[FallbackReason, Message] = {
     FallbackReason.MODEL_UNAVAILABLE: Message.of("fallback-model-unavailable"),
     FallbackReason.MODEL_SLOW: Message.of("fallback-model-slow"),

@@ -17,6 +17,7 @@ from nestor.modules.cognition.delegation import (
 from nestor.modules.cognition.model import (
     Finished,
     FinishReason,
+    Image,
     LanguageModel,
     Message,
     ModelOutput,
@@ -33,6 +34,7 @@ __all__ = [
     "Executor",
     "FinishReason",
     "Finished",
+    "Image",
     "LanguageModel",
     "Message",
     "ModelOutput",

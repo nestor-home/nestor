@@ -10,7 +10,7 @@ from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from datetime import datetime
 
-from nestor.admin.api.v1.journal.schemas import JournalItem, LinksOut, OutcomeOut
+from nestor.admin.api.v1.journal.schemas import AttachmentOut, JournalItem, LinksOut, OutcomeOut
 from nestor.admin.api.v1.shared import MessageOut, People, ReasonOut
 from nestor.admin.presentation import CATEGORIES, EventDescriber, Kind, Phrasebook, Tone
 from nestor.admin.state import AdminState
@@ -310,6 +310,7 @@ class Feed:
             room=room,
             tool=line.tool,
             outcome=OutcomeOut(ok=line.outcome[0], duration_s=line.outcome[1]) if line.outcome else None,
+            attachments=[AttachmentOut.of(i, a) for i, a in enumerate(line.attachments)],
             brand=self._brand(entry, sorted(line.channels)),
             links=self._links(entry),
             cause=None,

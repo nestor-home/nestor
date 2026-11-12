@@ -1,7 +1,9 @@
-"""Telegram channel: a bot reached through the Bot HTTP API with long polling (text messages only).
+"""Telegram channel: a bot reached through the Bot HTTP API with long polling.
 
-Limits: voice notes, photos and other media are ignored for now; updates are acknowledged in memory,
-so the last batch received before a stop is delivered again at the next start.
+Text, photos, voice messages, audio files and documents reach the assistant (with their caption); a voice message is
+answered with one when the assistant has a voice. Limits: the Bot API serves files up to 20 MB, larger ones are left
+out; stickers, videos and locations are ignored; updates are acknowledged in memory, so the last batch received before
+a stop is delivered again at the next start.
 """
 
 import asyncio
@@ -9,6 +11,7 @@ import logging
 import re
 from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
@@ -17,13 +20,26 @@ from pydantic import BaseModel, Field, TypeAdapter, ValidationError
 
 from nestor.core import Component, ContractError, ProviderError
 from nestor.core.i18n import Message
-from nestor.modules.channels import Address, Assistant, Channel, InboundMessage, Medium, Sender
+from nestor.modules.channels import (
+    IMAGE_TYPES,
+    Address,
+    Answer,
+    Assistant,
+    Attachment,
+    AttachmentKind,
+    Channel,
+    InboundMessage,
+    Medium,
+    Sender,
+)
 from nestor.runtime.plugins import ChannelSettings, Family, Plugin, RequiredSecret, Services
 
 logger = logging.getLogger(__name__)
 
 PROVIDER = "telegram"
 MESSAGE_LIMIT = 4096  # Telegram's limit, in UTF-16 code units
+CAPTION_LIMIT = 1024  # a file's caption
+FILE_LIMIT = 20 * 1024 * 1024  # what the Bot API lets a bot download
 _TOKEN_IN_URL = re.compile(r"/bot[^/\s]+/")
 
 
@@ -55,11 +71,45 @@ class _User(BaseModel):
     first_name: str | None = None
 
 
+class _File(BaseModel):
+    """A file of a message (a photo size, a voice message, an audio file, a document), downloaded by `file_id`."""
+
+    file_id: str
+    file_size: int | None = None
+    mime_type: str | None = None
+    file_name: str | None = None
+
+
 class _Message(BaseModel):
     chat: _Chat
     sender: _User | None = Field(default=None, alias="from")
     date: int
     text: str | None = None
+    caption: str | None = None
+    photo: list[_File] = []  # the same picture in several sizes, the largest last
+    voice: _File | None = None
+    audio: _File | None = None
+    document: _File | None = None
+
+    @property
+    def has_files(self) -> bool:
+        return bool(self.photo or self.voice or self.audio or self.document)
+
+    def files(self) -> list[tuple[AttachmentKind, _File, str]]:
+        """Its files, each with its kind and media type: the largest size of a photo, a document that is an image
+        as an image."""
+        found: list[tuple[AttachmentKind, _File, str]] = []
+        if self.photo:
+            found.append((AttachmentKind.IMAGE, self.photo[-1], "image/jpeg"))
+        if self.voice:
+            found.append((AttachmentKind.VOICE, self.voice, self.voice.mime_type or "audio/ogg"))
+        if self.audio:
+            found.append((AttachmentKind.AUDIO, self.audio, self.audio.mime_type or "audio/mpeg"))
+        if self.document:
+            media_type = self.document.mime_type or "application/octet-stream"
+            kind = AttachmentKind.IMAGE if media_type in IMAGE_TYPES else AttachmentKind.FILE
+            found.append((kind, self.document, media_type))
+        return found
 
 
 class _Update(BaseModel):
@@ -98,11 +148,35 @@ class BotApi:
 
     async def call(self, method: str, payload: dict[str, object], *, timeout_s: float | None = None) -> Any:
         timeout = httpx.USE_CLIENT_DEFAULT if timeout_s is None else timeout_s
+        return self._result(method, await self._post(method, json=payload, timeout=timeout))
+
+    async def upload(self, method: str, fields: dict[str, str], name: str, file: Attachment) -> Any:
+        """`method` with `file` sent as its `name` field, the other fields beside it."""
+        upload = {name: (file.name or name, file.data, file.media_type)}
+        return self._result(method, await self._post(method, data=fields, files=upload))
+
+    async def download(self, file_id: str) -> bytes:
+        """A file of a message, by its id."""
+        found = await self.call("getFile", {"file_id": file_id})
+        path = found.get("file_path") if isinstance(found, dict) else None
+        if not isinstance(path, str):
+            raise TelegramError("getFile: no file path", transient=False)
+        response = await self._request("download", "GET", f"/file/bot{self._token}/{path}")
+        if response.is_error:
+            raise TelegramError(f"download: HTTP {response.status_code}", transient=_transient(response.status_code))
+        return response.content
+
+    async def _post(self, method: str, **request: Any) -> httpx.Response:
+        return await self._request(method, "POST", f"/bot{self._token}/{method}", **request)
+
+    async def _request(self, what: str, verb: str, path: str, **request: Any) -> httpx.Response:
         try:
-            response = await self._client.post(f"/bot{self._token}/{method}", json=payload, timeout=timeout)
+            return await self._client.request(verb, path, **request)
         except httpx.HTTPError as error:
             detail = f"{type(error).__name__} {error}".replace(self._token, "<redacted>")
-            raise TelegramError(f"{method}: {detail.strip()}", transient=True) from None
+            raise TelegramError(f"{what}: {detail.strip()}", transient=True) from None
+
+    def _result(self, method: str, response: httpx.Response) -> Any:
         try:
             envelope = _Envelope.model_validate_json(response.content)
         except ValidationError:
@@ -166,22 +240,31 @@ def _utf16_length(text: str) -> int:
     return len(text.encode("utf-16-le")) // 2
 
 
+@dataclass(frozen=True, slots=True)
+class _Incoming:
+    """A household member's message, its files not downloaded yet."""
+
+    address: Address
+    sender: Sender
+    message: _Message
+
+
 class _ChatQueues:
     """Answers the messages of one chat in order, and different chats concurrently."""
 
-    def __init__(self, answer: Callable[[InboundMessage], Awaitable[None]]) -> None:
+    def __init__(self, answer: Callable[[_Incoming], Awaitable[None]]) -> None:
         self._answer = answer
-        self._queues: dict[Address, asyncio.Queue[InboundMessage]] = {}
+        self._queues: dict[Address, asyncio.Queue[_Incoming]] = {}
         self._workers: set[asyncio.Task[None]] = set()
 
-    def submit(self, message: InboundMessage) -> None:
+    def submit(self, message: _Incoming) -> None:
         queue = self._queues.get(message.address)
         if queue is None:
             queue = self._queues[message.address] = asyncio.Queue()
             self._workers.add(asyncio.create_task(self._work(queue)))
         queue.put_nowait(message)
 
-    async def _work(self, queue: asyncio.Queue[InboundMessage]) -> None:
+    async def _work(self, queue: asyncio.Queue[_Incoming]) -> None:
         while True:
             message = await queue.get()
             try:
@@ -204,11 +287,15 @@ class TelegramChannel(Channel):
     regarde." before the tools run, the result after), as plain text (no Markdown parsing, so a stray
     `*` cannot make Telegram reject them), split under the message limit. When the assistant fails,
     the user receives `apology` rather than a typing indicator followed by silence; an empty
-    `apology` keeps the bot silent.
+    `apology` keeps the bot silent; so does a message whose files could not be downloaded.
+
+    The files of a message are downloaded before it reaches the assistant; an answer to a voice message goes back as
+    voice messages, each with its text as caption when it fits, or written when the assistant gives no voice.
     """
 
     name = "telegram"
     brand = "telegram"
+    sends = frozenset({AttachmentKind.VOICE})
 
     def __init__(
         self,
@@ -239,7 +326,7 @@ class TelegramChannel(Channel):
     async def serve(self, assistant: Assistant) -> None:
         """Answer messages until the channel is closed; raises `ProviderError` on a fatal API error
         (bad token) — network failures and a conflicting instance polling are retried."""
-        chats = self._chats = _ChatQueues(lambda message: self._answer(assistant, message))
+        chats = self._chats = _ChatQueues(lambda incoming: self._answer(assistant, incoming))
         offset: int | None = None
         try:
             while (updates := await self._next_updates(offset)) is not None:
@@ -293,35 +380,77 @@ class TelegramChannel(Channel):
 
     def _dispatch(self, assistant: Assistant, message: _Message, chats: _ChatQueues) -> None:
         address = Address(self.channel_id, str(message.chat.id))
-        if message.sender is None or message.text is None:
-            logger.debug("telegram: skipping a message without text or author in %s", address)
+        if message.sender is None or not (message.text or message.caption or message.has_files):
+            logger.debug("telegram: skipping a message without text, file or author in %s", address)
             return
         sender = Sender(str(message.sender.id), message.sender.first_name)
         if assistant.identify(address, sender) is None:
             logger.info("telegram: ignoring a message from unknown user %s in %s", sender.id, address)
             return
-        at = datetime.fromtimestamp(message.date, tz=UTC)
-        chats.submit(InboundMessage(address=address, sender=sender, text=message.text, at=at))
+        chats.submit(_Incoming(address, sender, message))
 
-    async def _answer(self, assistant: Assistant, message: InboundMessage) -> None:
-        chat_id = int(message.address.conversation)
-        messages = self._messages(assistant, message)
-        while (text := await self._next(messages, chat_id, message.address)) is not None:
+    async def _answer(self, assistant: Assistant, incoming: _Incoming) -> None:
+        chat_id = int(incoming.address.conversation)
+        message = await self._inbound(incoming)
+        if message is None:
+            if self._apology:
+                await self._send_text(chat_id, self._apology)
+            return
+        answers = self._answers(assistant, message)
+        while (answer := await self._next(answers, chat_id, message.address)) is not None:
+            if answer.voice is not None:
+                await self._send_voice(chat_id, answer.text, answer.voice)
+            else:
+                await self._send_text(chat_id, answer.text)
+
+    async def _inbound(self, incoming: _Incoming) -> InboundMessage | None:
+        """The message with its files downloaded; `None` when none could be and it has no text."""
+        message = incoming.message
+        attachments = [a for f in message.files() if (a := await self._download(*f, incoming.address))]
+        text = message.text or message.caption or ""
+        if not (text or attachments):
+            return None
+        at = datetime.fromtimestamp(message.date, tz=UTC)
+        return InboundMessage(
+            address=incoming.address, sender=incoming.sender, text=text, attachments=tuple(attachments), at=at
+        )
+
+    async def _download(
+        self, kind: AttachmentKind, file: _File, media_type: str, address: Address
+    ) -> Attachment | None:
+        if file.file_size is not None and file.file_size > FILE_LIMIT:
+            logger.warning(
+                "telegram: a %s of %d bytes in %s is over the Bot API's limit", kind, file.file_size, address
+            )
+            return None
+        try:
+            data = await self._api.download(file.file_id)
+        except TelegramError as error:
+            logger.warning("telegram: could not download a %s in %s: %s", kind, address, error)
+            return None
+        return Attachment(kind=kind, data=data, media_type=media_type, name=file.file_name)
+
+    async def _send_voice(self, chat_id: int, text: str, voice: Attachment) -> None:
+        """A voice message, with its text as caption when it fits, or written after it."""
+        fits = _utf16_length(text) <= CAPTION_LIMIT
+        fields = {"chat_id": str(chat_id), "caption": text} if fits else {"chat_id": str(chat_id)}
+        await self._api.upload("sendVoice", fields, "voice", voice)
+        if not fits:
             await self._send_text(chat_id, text)
 
-    async def _messages(self, assistant: Assistant, message: InboundMessage) -> AsyncIterator[str]:
-        async for text in assistant.respond(message).messages():  # asks on the first read: a failure is caught there
-            yield text
+    async def _answers(self, assistant: Assistant, message: InboundMessage) -> AsyncIterator[Answer]:
+        async for answer in assistant.respond(message).answers():  # asks on the first read: a failure is caught there
+            yield answer
 
-    async def _next(self, messages: AsyncIterator[str], chat_id: int, address: Address) -> str | None:
+    async def _next(self, answers: AsyncIterator[Answer], chat_id: int, address: Address) -> Answer | None:
         """The next message of an answer, with "typing…" shown meanwhile (sending one clears it);
         the apology when the assistant fails, then `None`."""
         async with self._typing(chat_id):
             try:
-                return await anext(messages, None)
+                return await anext(answers, None)
             except Exception:
                 logger.exception("telegram: the assistant failed to answer in %s", address)
-                return self._apology
+                return Answer(self._apology)
 
     async def _send_text(self, chat_id: int | str, text: str) -> None:
         for part in split_text(text):

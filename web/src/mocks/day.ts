@@ -4,7 +4,7 @@
  * followed up; a task started → progressing → delivered). Times are minutes before "now". Written
  * in English, the French of each text beside it (`fr`).
  */
-import type { JournalEvent } from "@/api";
+import type { JournalEvent, JournalItem } from "@/api";
 import {
   BEDROOM,
   CLAIM,
@@ -31,6 +31,16 @@ interface Draft extends ItemDraft {
 }
 
 const VOICE = "voice";
+
+/** A voice message, transcribed: its words are also the turn's. */
+const voiceNote = (transcript: string): JournalItem["attachments"][number] => ({
+  index: 0,
+  kind: "voice",
+  media_type: "audio/ogg",
+  size: 21_300,
+  name: null,
+  transcript,
+});
 
 export function day(now = Date.now()): JournalEvent[] {
   let seq = 0;
@@ -86,6 +96,7 @@ export function day(now = Date.now()): JournalEvent[] {
       people: [ref("odile")],
       channels: ["telegram"],
       links: { session: "s-odile" },
+      attachments: [voiceNote(odileSaid)],
       record: { text: odileSaid },
     },
     {
@@ -258,6 +269,17 @@ export function day(now = Date.now()): JournalEvent[] {
     people: [ref("mathis")],
     channels: ["telegram"],
     links: { ...s2, turn: "u-2" },
+    attachments: [
+      { index: 0, kind: "image", media_type: "image/png", size: 668, name: null, transcript: null },
+      {
+        index: 1,
+        kind: "file",
+        media_type: "application/pdf",
+        size: 182_400,
+        name: fr("bill-october.pdf", "facture-octobre.pdf"),
+        transcript: null,
+      },
+    ],
   });
   ev({
     ago: 351.9,

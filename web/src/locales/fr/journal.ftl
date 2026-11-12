@@ -78,6 +78,11 @@ jr-more-turns = { $count ->
    *[other] Voir les { $count } autres tours
 }
 jr-cut-by = Interrompu par : « { $heard } »
+jr-attachment-image = Photo
+jr-attachment-voice = Message vocal
+jr-attachment-audio = Fichier audio
+jr-attachment-file = Fichier
+jr-attachment-unheard = transcription impossible
 jr-between-details = Ce qui s'est passé : { $what }
 jr-details = détails
 jr-fallback = réponse de secours

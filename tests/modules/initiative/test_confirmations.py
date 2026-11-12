@@ -14,7 +14,7 @@ from nestor.core import PersonId
 from nestor.modules.channels import Address, Exchange, InboundMessage, Medium, Sender
 from nestor.modules.cognition.model import ModelRequest, ToolCall, ToolSpec
 from nestor.modules.cognition.tools import Risk, SensitiveWhen, Tool, Toolbox, ToolContext
-from nestor.modules.conversation import Agent, ModelChoice, Persona
+from nestor.modules.conversation import Agent, Attachments, ModelChoice, Persona
 from nestor.modules.household import Account, Household, Person
 from nestor.modules.identity import Identified, Speaker
 from nestor.modules.initiative import Courier, MessageBook, MessageRequested
@@ -24,7 +24,7 @@ from nestor.testing.channels import InMemoryChannel
 from nestor.testing.cognition import ScriptedModel
 from nestor.testing.cognition.model import Reply
 from nestor.testing.i18n import EchoLocalizer
-from nestor.testing.journal import MemoryEventLog
+from nestor.testing.journal import MemoryBlobStore, MemoryEventLog
 
 CHAT = Address("telegram", "42")
 SALON = Address("voice", "salon")
@@ -80,6 +80,7 @@ class Home:
         )
         self.model = ScriptedModel(*replies)
         self.agent = Agent(
+            attachments=Attachments(MemoryBlobStore()),
             models=ModelChoice.single(self.model),
             persona=Persona(name="Richie", character="Tu es Richie."),
             journal=self.journal,

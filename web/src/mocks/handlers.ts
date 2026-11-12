@@ -7,6 +7,7 @@ import type { components } from "@/api/schema.gen";
 import * as config from "./config";
 import { LIVE } from "./day";
 import { db, type MockAddition, save } from "./db";
+import { picture, recording } from "./files";
 import { arriving, METHODS, type MockPending, type MockPerson, PROTOCOL, SCOPES, tools as toolsOf } from "./fixtures";
 import { inFrench } from "./french";
 import { facets, filtersOf, matching } from "./journal";
@@ -55,6 +56,7 @@ const fail = (status: number, code: In<"ErrorDetail">["code"], args: Record<stri
 const MISSING = {
   account: "not_found",
   event: "journal_entry_unknown",
+  attachment: "attachment_unknown",
   connection: "connection_unknown",
   task: "task_unknown",
   memory: "memory_unknown",
@@ -526,6 +528,21 @@ export const handlers = [
   }),
 
   http.get(`${API}/journal/stream`, () => new HttpResponse(null, { status: 204 })),
+
+  http.get(`${API}/journal/:position/attachments/:index`, ({ request, params }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    const event = db.journal.find((e) => e.item.position === Number(params.position));
+    const attachment = event?.item.attachments.find((a) => a.index === Number(params.index));
+    if (!attachment) return notFound("attachment");
+    const [body, type] =
+      attachment.kind === "image"
+        ? [picture(), "image/png"]
+        : attachment.kind === "voice" || attachment.kind === "audio"
+          ? [recording(), "audio/wav"]
+          : [new TextEncoder().encode("%PDF-1.4\n"), "application/octet-stream"];
+    return new HttpResponse(body, { headers: { "Content-Type": type } });
+  }),
 
   http.get(`${API}/journal/:position`, ({ request, params }) => {
     const refused = guard(request);

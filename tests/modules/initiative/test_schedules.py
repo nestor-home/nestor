@@ -11,7 +11,15 @@ from nestor.core import PersonId, ProviderError
 from nestor.modules.channels import Address
 from nestor.modules.cognition.model import ModelRequest, ToolCall
 from nestor.modules.cognition.tools import Toolbox, ToolContext, ToolFailed
-from nestor.modules.conversation import Agent, AssistantTurn, ModelChoice, NotificationTurn, Persona, TurnContext
+from nestor.modules.conversation import (
+    Agent,
+    AssistantTurn,
+    Attachments,
+    ModelChoice,
+    NotificationTurn,
+    Persona,
+    TurnContext,
+)
 from nestor.modules.household import Household, Person
 from nestor.modules.identity import Speaker
 from nestor.modules.initiative import (
@@ -30,7 +38,7 @@ from nestor.testing.channels import InMemoryChannel
 from nestor.testing.cognition import ScriptedModel
 from nestor.testing.cognition.model import Reply
 from nestor.testing.i18n import EchoLocalizer
-from nestor.testing.journal import MemoryEventLog
+from nestor.testing.journal import MemoryBlobStore, MemoryEventLog
 
 PARIS = ZoneInfo("Europe/Paris")
 CHAT = Address("telegram", "42")
@@ -72,6 +80,7 @@ class Home:
         self.tools = ScheduleTools(self.book)
         household = Household([MATHIS])
         self.agent = Agent(
+            attachments=Attachments(MemoryBlobStore()),
             models=ModelChoice.single(self.model),
             persona=Persona(name="Richie", character="Tu es Richie.", timezone="Europe/Paris"),
             journal=self.journal,
