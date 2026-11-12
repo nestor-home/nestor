@@ -3,7 +3,7 @@
 
 import httpx
 
-from nestor.adapters.models.common import detail, provider_error, retryable
+from nestor.adapters.common.http import detail, provider_error, retryable
 from nestor.core import ProviderError
 
 PROVIDER = "elevenlabs"

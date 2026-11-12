@@ -76,13 +76,15 @@ class Notification:
 
 @dataclass(frozen=True, slots=True)
 class Attached:
-    """A file that came with a person's message, as the journal keeps it: stored by content (`blob`), and what was
-    said in it when it is a recording that could be transcribed."""
+    """A file that came with a person's message, as the journal keeps it: stored by content (`blob`), what was
+    said in it when it is a recording that could be transcribed, and where its text is kept when it is a document
+    that could be read (`text`: a reference for `read_result`; empty when it has no text, like a scan)."""
 
     kind: AttachmentKind
     blob: BlobRef
     name: str | None = None
     transcript: str | None = None
+    text: str | None = None
 
 
 class MentionKind(StrEnum):

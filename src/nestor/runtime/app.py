@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Self, cast
 
 from nestor import __version__
+from nestor.adapters.documents import FileReader
 from nestor.adapters.i18n import FluentLocalizer, catalogue_dirs
 from nestor.adapters.oauth import HttpxTokenEndpoint
 from nestor.adapters.releases import HttpReleaseFeed, PipInstaller, probe
@@ -284,7 +285,7 @@ class Nestor:
                 *connector_tools,
             ],
             in_writing=self.confirmations,
-            results=Results(self.journal, self.blobs, budget=config.agent.tool_result_chars),
+            results=(results := Results(self.journal, self.blobs, budget=config.agent.tool_result_chars)),
         )
         self.agent = Agent(
             models=ModelChoice(
@@ -308,6 +309,8 @@ class Nestor:
                 self.blobs,
                 transcription=optional(hearing, TranscriptionModel, "transcription"),
                 speech=optional(voicing, SpeechModel, "speech"),
+                reader=FileReader(),
+                results=results,
             ),
             settings=AgentSettings(
                 spoken_tool_wait_s=config.agent.spoken_tool_wait_s, written_tool_wait_s=config.agent.written_tool_wait_s

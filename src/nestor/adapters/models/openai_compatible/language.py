@@ -23,15 +23,8 @@ from typing import Any
 import httpx
 from pydantic import Field, PositiveFloat
 
-from nestor.adapters.models.common import (
-    MAX_DETAIL,
-    EndpointSettings,
-    brand,
-    detail,
-    message_of,
-    provider_error,
-    retryable,
-)
+from nestor.adapters.common.http import MAX_DETAIL, detail, message_of, provider_error, retryable
+from nestor.adapters.models.common import EndpointSettings, brand
 from nestor.core import ContractError, ProviderError, new_id
 from nestor.modules.cognition import (
     Finished,

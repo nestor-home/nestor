@@ -14,7 +14,7 @@ from datetime import UTC, datetime
 from email.message import Message
 from typing import Any
 
-from nestor.adapters.connectors.common import decode_header_value, html_to_text, tidy
+from nestor.adapters.common.text import decode_header_value, html_to_text, tidy
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

@@ -18,7 +18,8 @@ from dataclasses import dataclass
 
 import httpx
 
-from nestor.adapters.connectors.common import Backoff, Retry, cap
+from nestor.adapters.common.text import cap
+from nestor.adapters.connectors.common import Backoff, Retry
 from nestor.adapters.connectors.google.api import GmailApi, GmailError, new_client
 from nestor.adapters.connectors.google.mime import GmailMessage
 from nestor.core import ProviderError, utc_now

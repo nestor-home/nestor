@@ -3,7 +3,8 @@
 import asyncio
 from collections.abc import Callable, Mapping, Sequence
 
-from nestor.adapters.connectors.common import UNTRUSTED, cap
+from nestor.adapters.common.text import cap
+from nestor.adapters.connectors.common import UNTRUSTED
 from nestor.adapters.connectors.google.api import GmailApi, GmailError
 from nestor.adapters.connectors.google.mime import GmailMessage
 from nestor.core import ProviderError

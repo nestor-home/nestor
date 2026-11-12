@@ -2,7 +2,8 @@
 
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 
-from nestor.adapters.connectors.common import UNTRUSTED, cap
+from nestor.adapters.common.text import cap
+from nestor.adapters.connectors.common import UNTRUSTED
 from nestor.adapters.connectors.imap.account import ClientFactory, ImapAccount, session
 from nestor.adapters.connectors.imap.message import MailMessage
 from nestor.core import ProviderError

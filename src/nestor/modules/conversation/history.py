@@ -71,6 +71,13 @@ def _note(attached: Attached, images: Mapping[str, Image] | None) -> str:
             return f"[An audio file{named}, in which is said: {attached.transcript}]"
         case AttachmentKind.AUDIO:
             return f"[An audio file{named} you cannot listen to]"
+        case AttachmentKind.FILE if attached.text:
+            return (
+                f"[A document{named}: read its text with read_result(ref={attached.text!r}), "
+                "or find a passage with search_result]"
+            )
+        case AttachmentKind.FILE if attached.text == "":
+            return f"[A document{named} with no text to read, maybe a scan]"
         case _:
             return f"[A file{named}, {attached.blob.media_type}, that you cannot open]"
 

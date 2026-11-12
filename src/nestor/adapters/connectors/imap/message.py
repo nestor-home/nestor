@@ -9,7 +9,7 @@ from email import policy
 from email.message import EmailMessage, Message
 from email.parser import BytesParser
 
-from nestor.adapters.connectors.common import decode_header_value, html_to_text, tidy
+from nestor.adapters.common.text import decode_header_value, html_to_text, tidy
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

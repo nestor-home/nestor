@@ -1,14 +1,11 @@
-"""What the OpenAI-compatible adapters share: the hosted providers they know (each requires a key), which HTTP
-errors a retry may get past, the detail of an error as the provider words it, and a key never shown in one."""
+"""What the OpenAI-compatible adapters share: the hosted providers they know, each of which requires a key."""
 
-import json
 import urllib.parse
 from typing import Any
 
 from pydantic import Field, SecretStr, ValidationInfo, field_validator
 from pydantic_core import PydanticCustomError
 
-from nestor.core import ProviderError
 from nestor.runtime.plugins import AdapterSettings
 
 BRANDS = {  # host suffix → brand; published in `base_url`'s schema (`x-nestor.brands`) so the admin shows the same
@@ -20,8 +17,6 @@ BRANDS = {  # host suffix → brand; published in `base_url`'s schema (`x-nestor
     "groq.com": "groq",
 }
 BRANDED: dict[str, Any] = {"brands": BRANDS}  # the field the brand is read from
-MAX_DETAIL = 300
-_RETRYABLE_STATUSES = frozenset({408, 409, 425, 429})
 
 
 def brand_host(base_url: str) -> str | None:
@@ -32,31 +27,6 @@ def brand_host(base_url: str) -> str | None:
 
 def brand(base_url: str) -> str | None:
     return BRANDS.get(brand_host(base_url) or "")
-
-
-def retryable(status: int) -> bool:
-    return status in _RETRYABLE_STATUSES or status >= 500
-
-
-def detail(body: bytes) -> str:
-    """An error body as the provider words it: its `error.message` when it sends one."""
-    text = body.decode(errors="replace")
-    try:
-        error = json.loads(text)["error"]
-    except (ValueError, KeyError, TypeError):
-        return text[:MAX_DETAIL]
-    return message_of(error)
-
-
-def message_of(error: object) -> str:
-    message = error.get("message", error) if isinstance(error, dict) else error
-    return str(message)[:MAX_DETAIL]
-
-
-def provider_error(provider: str, api_key: str | None, message: str, *, transient: bool) -> ProviderError:
-    """A `ProviderError` labelled with `provider`, the key redacted wherever the message quotes it."""
-    redacted = message.replace(api_key, "[redacted]") if api_key else message
-    return ProviderError(provider, redacted, transient=transient)
 
 
 class EndpointSettings(AdapterSettings):

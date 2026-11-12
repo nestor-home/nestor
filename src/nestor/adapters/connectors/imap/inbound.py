@@ -12,7 +12,8 @@ import logging
 from collections.abc import AsyncGenerator, Mapping
 from dataclasses import dataclass
 
-from nestor.adapters.connectors.common import Backoff, Retry, cap
+from nestor.adapters.common.text import cap
+from nestor.adapters.connectors.common import Backoff, Retry
 from nestor.adapters.connectors.imap.account import ClientFactory, ImapAccount, session
 from nestor.adapters.connectors.imap.client import MailboxClient, Selected
 from nestor.adapters.connectors.imap.message import MailMessage

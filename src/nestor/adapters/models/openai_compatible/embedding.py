@@ -15,7 +15,8 @@ from typing import Any
 import httpx
 from pydantic import Field, PositiveFloat, PositiveInt
 
-from nestor.adapters.models.common import MAX_DETAIL, EndpointSettings, brand, detail, provider_error, retryable
+from nestor.adapters.common.http import MAX_DETAIL, detail, provider_error, retryable
+from nestor.adapters.models.common import EndpointSettings, brand
 from nestor.core import ContractError, ProviderError
 from nestor.modules.cognition.embedding import EmbeddingModel, EmbeddingSpace, Vector
 from nestor.runtime.plugins import Family, Plugin, Services
