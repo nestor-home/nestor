@@ -17,6 +17,7 @@ from nestor.modules.connectors.types import (
     OAuthSpec,
     SecretField,
     Secrets,
+    Service,
     Status,
     Tokens,
 )
@@ -37,6 +38,7 @@ __all__ = [
     "OAuthSpec",
     "SecretField",
     "Secrets",
+    "Service",
     "Status",
     "TokenEndpoint",
     "Tokens",

@@ -89,12 +89,14 @@ export function ChatList({
   error,
   retry,
   onNavigate,
+  inSheet = false,
 }: {
   chats: Chat[] | undefined;
   loading: boolean;
   error: unknown;
   retry: () => void;
   onNavigate?: () => void;
+  inSheet?: boolean; // in a sheet, beside its close button
 }) {
   const t = useT();
   const { chat: open } = useParams({ strict: false });
@@ -113,7 +115,7 @@ export function ChatList({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex items-center justify-between gap-2 px-4 pt-5 pb-3">
+      <div className={cn("flex items-center justify-between gap-2 px-4 pt-5 pb-3", inSheet && "pt-3 pr-14")}>
         <h2 className="font-serif text-[1.35rem] leading-none text-ink">{t("chat-title")}</h2>
         <Tooltip>
           <TooltipTrigger

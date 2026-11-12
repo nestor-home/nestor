@@ -11,8 +11,8 @@ from fastapi.responses import StreamingResponse
 
 from nestor.adapters.channels.web import CHAT_ID, ChatBusy, LiveAnswer, WebChannel
 from nestor.admin.api.v1.chat.schemas import (
+    LISTED,
     THREAD,
-    TURNS,
     ChatMessageIn,
     ChatsOut,
     ChatStreamOut,
@@ -47,7 +47,7 @@ async def list_chats(request: Request, caller: Chatter) -> ChatsOut:
     """The caller's chats, the latest first."""
     web, person = _web(request), _person(caller)
     under = web.chats_of(person)
-    entries = await state(request).nestor.journal.log.read(LogQuery(types=TURNS, sessions_under=under))
+    entries = await state(request).nestor.journal.log.read(LogQuery(types=LISTED, sessions_under=under))
     answering = frozenset(str(a.session).removeprefix(under) for a in web.answering())
     return ChatsOut(chats=chats(entries, under, answering), sessions=under)
 

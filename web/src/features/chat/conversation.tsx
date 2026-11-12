@@ -362,6 +362,7 @@ function Header({ chat }: { chat: string | null }) {
           error={chats.error}
           retry={chats.refetch}
           onNavigate={() => setOpen(false)}
+          inSheet
         />
       </SideSheet>
     </header>

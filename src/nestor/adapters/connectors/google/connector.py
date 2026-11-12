@@ -7,11 +7,11 @@ import httpx
 from nestor.adapters.connectors.common import Backoff
 from nestor.adapters.connectors.google.api import GmailApi, new_client
 from nestor.adapters.connectors.google.inbound import Every, GmailInbound
-from nestor.adapters.connectors.google.tools import GmailTools
+from nestor.adapters.connectors.google.tools import READ, SEARCH, GmailTools
 from nestor.core import Component, ProviderError
 from nestor.core.i18n import Message
 from nestor.modules.cognition.tools import Tool
-from nestor.modules.connectors import Access, AuthKind, Connection, Connector, ConnectorInfo, OAuthSpec
+from nestor.modules.connectors import Access, AuthKind, Connection, Connector, ConnectorInfo, OAuthSpec, Service
 from nestor.modules.initiative import InboundEventSource
 
 SCOPES = ("openid", "email", "https://www.googleapis.com/auth/gmail.readonly")
@@ -32,6 +32,7 @@ INFO = ConnectorInfo(
     ),
     setup=Message.of("connector-google-setup"),
     inbound=("mail",),
+    services=(Service(name="gmail", brand="gmail", tools=frozenset({SEARCH.name, READ.name})),),
 )
 
 

@@ -20,6 +20,7 @@ from nestor.modules.conversation import (
     AnswerVoiced,
     AssistantTurn,
     Attached,
+    ConversationTitled,
     FallbackSpoken,
     Mentioned,
     MentionKind,
@@ -29,6 +30,7 @@ from nestor.modules.conversation import (
 from nestor.modules.journal import Entry
 
 TURNS = frozenset({UserTurn.event_type, NotificationTurn.event_type, AssistantTurn.event_type})
+LISTED = TURNS | {ConversationTitled.event_type}  # what a chat's list reads: its turns and its title
 THREAD = TURNS | {
     e.event_type for e in (AnswerVoiced, FallbackSpoken, ToolCalled, ToolCompleted, ToolDeferred, ToolReturned)
 }
@@ -38,7 +40,7 @@ FILE_LIMIT = 20 * 1024 * 1024  # what a message may carry, per file, as a messag
 
 class ChatOut(BaseModel):
     id: str
-    title: str  # the first words written in it; empty when it opened with files only
+    title: str  # its first conversation's title, else its first words; empty when it opened with files only
     files: list[AttachmentKind]  # what the first message carried, to name a chat without words
     started_at: datetime
     updated_at: datetime
@@ -142,9 +144,13 @@ class ChatThreadOut(BaseModel):
 def chats(entries: Sequence[Entry], under: str, answering: frozenset[str]) -> list[ChatOut]:
     """Every chat that has a turn, from the turns of a person's chats (`under`: what their sessions start with)."""
     found: dict[str, ChatOut] = {}
+    titled: dict[str, str] = {}
     for entry in entries:
         event = entry.event()
         chat = str(event.session).removeprefix(under)
+        if isinstance(event, ConversationTitled):
+            titled.setdefault(chat, event.title)
+            continue
         seen = found.get(chat)
         if seen is not None:
             seen.updated_at = event.at
@@ -159,6 +165,9 @@ def chats(entries: Sequence[Entry], under: str, answering: frozenset[str]) -> li
             updated_at=event.at,
             answering=chat in answering,
         )
+    for chat, title in titled.items():
+        if chat in found:
+            found[chat].title = title
     return sorted(found.values(), key=lambda c: c.updated_at, reverse=True)
 
 

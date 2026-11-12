@@ -315,6 +315,35 @@
             "help": "For written replies. The spoken model by default."
           }
         },
+        "titles": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Titles",
+          "x-nestor": {
+            "field": "titles",
+            "title_id": "config-agent-titles",
+            "help_id": "config-agent-titles-help",
+            "fallback_title_id": "config-field-titles",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "agent",
+            "reference": "models",
+            "model_type": "language",
+            "brands": null,
+            "suggest_keys": null,
+            "suggest_values": null,
+            "title": "Titles model",
+            "help": "Titles each conversation from its first exchange, as lists show it. A small model is enough; the written model by default."
+          }
+        },
         "transcription": {
           "anyOf": [
             {

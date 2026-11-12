@@ -3,9 +3,9 @@
 Writing tools (send a mail, create a ticket) are sensitive when the connection says so: the person confirms them
 first. Tools of someone's own account (their mailbox) serve that person only. The toolbox applies both.
 
-A message names an account with `@`: by its service (`@google`, when the person has one such account), or by the
-account itself (`@mathis`, the start of the address). Only the accounts the person may use are offered: theirs and the
-household's.
+A message names an account with `@`: by one of the services its connector declares (`@gmail`), or by its kind when
+it declares none; with two such accounts, by the service and the start of the address (`@gmail-mathis`). Only the
+accounts the person may use are offered: theirs and the household's.
 """
 
 from collections.abc import Iterable, Sequence
@@ -29,26 +29,35 @@ class ConnectorTools(ToolProvider, MentionSource):
 
     def mentionable(self, person: Person | None) -> Iterable[Mentioned]:
         usable = [c for c in self._connected() if c.owner is None or (person is not None and c.owner == person.id)]
-        for connection in usable:
-            info = self.connections.connectors[connection.kind].info
+        named = [(c, name, brand) for c in usable for name, brand, _ in self._services(c)]
+        for connection, name, brand in named:
             local = connection.account.partition("@")[0]
-            alone = sum(c.kind == connection.kind for c in usable) == 1
+            alone = sum(n == name for _, n, _ in named) == 1
             yield Mentioned(
                 kind=MentionKind.CONNECTION,
-                id=connection.id,
-                handle=connection.kind if alone else f"{connection.kind}-{local}",
+                id=f"{connection.id}:{name}",
+                handle=name if alone else f"{name}-{local}",
                 label=connection.account,
-                aliases=tuple(name for name in (info.brand, local, connection.account) if name),
-                brand=info.brand or connection.kind,
+                aliases=tuple(alias for alias in (connection.kind, brand, local, connection.account) if alias),
+                brand=brand,
             )
 
     def instruction(self, mentioned: Mentioned) -> str:
-        connection = self.connections.connections.get(mentioned.id)
+        connection_id, _, name = mentioned.id.partition(":")
+        connection = self.connections.connections.get(connection_id)
         if connection is None:
             return f"the account {mentioned.label}, no longer connected: say so"
+        tools = next((tools for n, _, tools in self._services(connection) if n == name), frozenset[str]())
         whose = "the household's" if connection.owner is None else "their own"
-        names = ", ".join(t.name for t in self._tools_of(connection))
-        return f"{whose} {connection.kind} account {connection.account}: use its tools for that part ({names})"
+        names = ", ".join(t.name for t in self._tools_of(connection) if t.name in tools)
+        return f"{whose} {name} on the account {connection.account}: use its tools for that part ({names})"
+
+    def _services(self, connection: Connection) -> list[tuple[str, str | None, frozenset[str]]]:
+        """What a message names of the account: each of its services, or the account by its kind."""
+        info = self.connections.connectors[connection.kind].info
+        if info.services:
+            return [(s.name, s.brand or info.brand, s.tools) for s in info.services]
+        return [(connection.kind, info.brand, frozenset(t.name for t in self._tools_of(connection)))]
 
     def _connected(self) -> Iterable[Connection]:
         for connection in self.connections.connections.values():

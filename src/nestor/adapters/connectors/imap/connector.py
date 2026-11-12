@@ -6,11 +6,19 @@ from nestor.adapters.connectors.common import Backoff
 from nestor.adapters.connectors.imap.account import ClientFactory, ImapAccount, session
 from nestor.adapters.connectors.imap.aioimap import AioImapClient
 from nestor.adapters.connectors.imap.inbound import ImapInbound, ImapTiming
-from nestor.adapters.connectors.imap.tools import ImapTools
+from nestor.adapters.connectors.imap.tools import READ, SEARCH, ImapTools
 from nestor.core import Component
 from nestor.core.i18n import Message
 from nestor.modules.cognition.tools import Tool
-from nestor.modules.connectors import Access, AuthKind, Connection, Connector, ConnectorInfo, SecretField
+from nestor.modules.connectors import (
+    Access,
+    AuthKind,
+    Connection,
+    Connector,
+    ConnectorInfo,
+    SecretField,
+    Service,
+)
 from nestor.modules.initiative import InboundEventSource
 
 INFO = ConnectorInfo(
@@ -28,6 +36,7 @@ INFO = ConnectorInfo(
     ),
     setup=Message.of("connector-imap-setup"),
     inbound=("mail",),
+    services=(Service(name="mail", brand="imap", tools=frozenset({SEARCH.name, READ.name})),),
 )
 
 

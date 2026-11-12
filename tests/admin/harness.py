@@ -148,6 +148,7 @@ class Harness:
         replies: tuple[Reply, ...] = (),
         word_delay_s: float = 0.0,
         chat: bool = False,
+        titles: tuple[str, ...] = (),
         front_dir: Path | None = None,
         heartbeat_s: float = 15.0,
         quiet_hours: str | None = None,
@@ -156,6 +157,7 @@ class Harness:
         home: bool = True,
     ) -> None:
         self.confirms_stop, self.replies, self.word_delay_s, self.chat = confirms_stop, replies, word_delay_s, chat
+        self.titles = titles  # what the model that titles conversations answers, in turn
         self.provider = FakeProvider()
         self.mail = ScriptedConnector()
         self.mail.info = replace(
@@ -203,6 +205,11 @@ class Harness:
                 "models: {main: {type: language, provider: scripted}, ears: {type: speaker, provider: tagged-voices}}"
                 "\nvoices: {embedder: ears}",
             )
+        if replies or titles:  # scripted answers: conversations are titled by a model of their own
+            text = text.replace(
+                "models: {main:",
+                "agent: {written: main, titles: titler}\nmodels: {titler: {type: language, provider: titles}, main:",
+            )
         if chat:
             text = text.replace(
                 "channels: [{kind: memory, name: telegram}", "channels: [{kind: memory, name: telegram}, {kind: web}"
@@ -241,6 +248,13 @@ class Harness:
                     "scripted",
                     NoSettings,
                     lambda s, n, x: ScriptedModel(*self.replies, word_delay_s=self.word_delay_s),
+                    serves=LanguageModel,
+                ),
+                Plugin(
+                    Family.MODEL,
+                    "titles",
+                    NoSettings,
+                    lambda s, n, x: ScriptedModel(*self.titles),
                     serves=LanguageModel,
                 ),
                 Plugin(

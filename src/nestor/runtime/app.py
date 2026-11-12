@@ -44,6 +44,7 @@ from nestor.modules.conversation import (
     AgentSettings,
     Attachments,
     ChannelProfile,
+    ConversationTitles,
     Mentions,
     ModelChoice,
     Persona,
@@ -349,6 +350,12 @@ class Nestor:
             timezone=config.persona.timezone,
             known=config.memory.recent,
         )
+        self.titles = ConversationTitles(
+            self.journal,
+            model("agent.titles", roles["titles"]),
+            assistant=config.persona.name,
+            language=config.persona.language,
+        )
         self.activity = ActivityMonitor(
             self.journal, self.agent.replies, self.tasks, quiet_hours=quiet_hours, timezone=config.persona.timezone
         )
@@ -407,6 +414,7 @@ class Nestor:
             *self.sources,
             self.watches,
             self.activity,
+            self.titles,
             self.consolidator,
             *updates,
         ]

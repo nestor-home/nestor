@@ -79,3 +79,10 @@ class AnswerVoiced(Event, event_type="conversation.turn.voiced"):
     answer: str  # id of the AssistantTurn
     voice: Attached
     exchange: Exchange | None = None
+
+
+class ConversationTitled(Event, event_type="conversation.titled"):
+    """A conversation got its title, written from its first exchange: what lists show for it."""
+
+    conversation_id: str
+    title: str

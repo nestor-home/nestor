@@ -211,6 +211,7 @@ class AgentConfig(Section):
 
     spoken: str | None = Field(default=None, json_schema_extra=LANGUAGE_MODEL)  # the voice: first words fast
     written: str | None = Field(default=None, json_schema_extra=LANGUAGE_MODEL)  # writing allows a few seconds
+    titles: str | None = Field(default=None, json_schema_extra=LANGUAGE_MODEL)  # titles conversations: a small one
     transcription: str | None = Field(default=None, json_schema_extra=TRANSCRIPTION_MODEL)
     speech: str | None = Field(default=None, json_schema_extra=SPEECH_MODEL)
     # how long a turn waits for a tool before it goes on in the background and its result comes back by itself
@@ -323,6 +324,7 @@ class NestorConfig(Section):
             {
                 "spoken": value.spoken,
                 "written": value.written,
+                "titles": value.titles,
                 "transcription": value.transcription,
                 "speech": value.speech,
             },
@@ -348,7 +350,8 @@ class NestorConfig(Section):
         return value
 
     def roles(self, answering: Collection[str]) -> dict[str, str]:
-        """The key of the model each role uses, defaults applied: `spoken`, `written`, `watches`, `consolidation`.
+        """The key of the model each role uses, defaults applied: `spoken`, `written`, `titles`, `watches`,
+        `consolidation`.
         `answering` are the models that answer (not those that embed): with a single one, every role takes it."""
         sole = next(iter(answering)) if len(answering) == 1 else None
         written = self.agent.written or self.agent.spoken or sole
@@ -363,6 +366,7 @@ class NestorConfig(Section):
         return {
             "spoken": self.agent.spoken or written,
             "written": written,
+            "titles": self.agent.titles or written,
             "watches": self.watches.model or written,
             "consolidation": self.memory.consolidation or written,
         }

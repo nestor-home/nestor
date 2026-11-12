@@ -183,3 +183,15 @@ async def test_nobody_else_reads_a_chat_through_the_journal_or_its_files(tmp_pat
     assert journal == [] and file.status_code == 404
     assert stop.status_code == 204, "her own chat c1, which answers nothing"
     assert anonymous.status_code == 401
+
+
+async def test_a_chat_is_listed_by_the_title_of_its_first_conversation(tmp_path: Path) -> None:
+    async with Harness(tmp_path, chat=True, replies=("C'est fait.",), titles=("Lumière du salon",)) as admin:
+        api = await admin.api()
+        await say(api, "c1", "Peux-tu allumer la lumière du salon, s'il te plaît ?")
+        for _ in range(100):
+            (listed,) = (await api.get("/api/v1/chats")).json()["chats"]
+            if listed["title"] != "Peux-tu allumer la lumière du salon, s'il te plaît ?":
+                break
+            await asyncio.sleep(0.01)
+    assert listed["title"] == "Lumière du salon"

@@ -53,7 +53,13 @@ TWO_MODELS = VALID.replace(
 
 def test_a_single_model_takes_every_role() -> None:
     roles = parse_config(VALID, ENV).roles(["haiku"])
-    assert set(roles.values()) == {"haiku"} and set(roles) == {"spoken", "written", "watches", "consolidation"}
+    assert set(roles.values()) == {"haiku"} and set(roles) == {
+        "spoken",
+        "written",
+        "titles",
+        "watches",
+        "consolidation",
+    }
 
 
 def test_roles_take_the_models_named_and_fall_back_on_each_other() -> None:
@@ -63,12 +69,14 @@ def test_roles_take_the_models_named_and_fall_back_on_each_other() -> None:
     assert roles("agent: {spoken: haiku, written: local}\n") == {
         "spoken": "haiku",
         "written": "local",
+        "titles": "local",
         "watches": "local",
         "consolidation": "local",
-    }, "the watches and the consolidation take the written model by default"
+    }, "the titles, the watches and the consolidation take the written model by default"
     assert roles("agent: {spoken: haiku}\nmemory: {consolidation: local}\n") == {
         "spoken": "haiku",
         "written": "haiku",
+        "titles": "haiku",
         "watches": "haiku",
         "consolidation": "local",
     }, "the written one takes the spoken one, and a role named takes its model"
