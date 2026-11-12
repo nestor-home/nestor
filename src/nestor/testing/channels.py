@@ -61,9 +61,12 @@ class ScriptedAssistant(Assistant):
         strangers: frozenset[str] = frozenset(),
         voice: Heard | None = None,
         speaks: bool = False,
+        pictures: tuple[Attachment, ...] = (),
     ) -> None:
-        """`speaks`: it answers a voice message with one, its text recorded as `OGG` followed by it."""
+        """`speaks`: it answers a voice message with one, its text recorded as `OGG` followed by it. `pictures` go
+        with every answer."""
         self._answer = answer
+        self._pictures = pictures
         self._voice = voice
         self._speaks = speaks
         self.heard: list[bytes] = []
@@ -88,7 +91,8 @@ class ScriptedAssistant(Assistant):
         text = self._answer(message)
         voiced = self._speaks and any(a.kind is AttachmentKind.VOICE for a in message.attachments)
         voice = Attachment(kind=AttachmentKind.VOICE, data=OGG + text.encode(), media_type="audio/ogg")
-        reply = ScriptedReply(text, word_delay_s=self._word_delay_s, attachments=(voice,) if voiced else ())
+        attachments = ((voice,) if voiced else ()) + self._pictures
+        reply = ScriptedReply(text, word_delay_s=self._word_delay_s, attachments=attachments)
         self.replies.append(reply)
         return reply
 
@@ -106,6 +110,7 @@ class InMemoryChannel(Channel):
             asyncio.Queue()
         )
         self.sent: list[tuple[Address, str]] = []
+        self.files: list[tuple[Attachment, ...]] = []  # what went with each of `sent`
 
     async def serve(self, assistant: Assistant) -> None:
         while (item := await self._inbox.get()) is not None:
@@ -128,10 +133,11 @@ class InMemoryChannel(Channel):
     def rooms(self) -> frozenset[str]:
         return frozenset({self.room}) if self.room else frozenset()
 
-    async def send(self, to: Address, text: str, medium: Medium) -> None:
+    async def send(self, to: Address, text: str, medium: Medium, attachments: tuple[Attachment, ...]) -> None:
         if to.channel != self.channel_id or medium not in self.media:
             raise ContractError(f"{to} is not on channel {self.channel_id!r} {medium}")
         self.sent.append((to, text))
+        self.files.append(attachments)
 
     async def close(self) -> None:
         self._inbox.put_nowait(None)

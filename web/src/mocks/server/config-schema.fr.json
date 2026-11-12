@@ -255,7 +255,7 @@
     },
     "agent": {
       "additionalProperties": false,
-      "description": "Which model of `models` answers in each medium. One left out takes the other's; with a single\nmodel, neither needs saying. `transcription` hears the voice messages people send and `speech` records the\nanswers to them; each defaults to the only model of its type, and without one, voice messages go unheard and\nanswers stay written.",
+      "description": "Which model of `models` answers in each medium. One left out takes the other's; with a single\nmodel, neither needs saying. `transcription` hears the voice messages people send and `speech` records the\nanswers to them, `images` draws the pictures asked for; each defaults to the only model of its type, and without\none, voice messages go unheard, answers stay written and no picture is drawn.",
       "properties": {
         "spoken": {
           "anyOf": [
@@ -400,6 +400,35 @@
             "suggest_values": null,
             "title": "Voix des vocaux",
             "help": "Répond à un message vocal par un autre. Par défaut, le seul modèle de synthèse vocale."
+          }
+        },
+        "images": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Images",
+          "x-nestor": {
+            "field": "images",
+            "title_id": "config-agent-images",
+            "help_id": "config-agent-images-help",
+            "fallback_title_id": "config-field-images",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "agent",
+            "reference": "models",
+            "model_type": "image",
+            "brands": null,
+            "suggest_keys": null,
+            "suggest_values": null,
+            "title": "Images",
+            "help": "Dessine les images demandées. Par défaut, le seul modèle d'images."
           }
         },
         "spoken_tool_wait_s": {
@@ -1610,6 +1639,247 @@
           "title": "OpenAICompatibleEmbeddingSettings",
           "type": "object"
         },
+        "openai-compatible-image": {
+          "$defs": {
+            "ImageEndpoint": {
+              "enum": [
+                "images",
+                "chat"
+              ],
+              "title": "ImageEndpoint",
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "description": "An image model's profile.",
+          "properties": {
+            "provider": {
+              "const": "openai-compatible",
+              "type": "string",
+              "x-nestor": {
+                "field": "provider",
+                "title_id": "config-model-openai-compatible-image-provider",
+                "help_id": "config-model-openai-compatible-image-provider-help",
+                "fallback_title_id": "config-field-provider",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-image",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Fournisseur",
+                "help": null
+              }
+            },
+            "type": {
+              "const": "image",
+              "type": "string",
+              "x-nestor": {
+                "field": "type",
+                "title_id": "config-model-openai-compatible-image-type",
+                "help_id": "config-model-openai-compatible-image-type-help",
+                "fallback_title_id": "config-field-type",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-image",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Type de modèle",
+                "help": null
+              }
+            },
+            "base_url": {
+              "title": "Base Url",
+              "type": "string",
+              "x-nestor": {
+                "field": "base_url",
+                "title_id": "config-model-openai-compatible-image-base_url",
+                "help_id": "config-model-openai-compatible-image-base_url-help",
+                "fallback_title_id": "config-field-base_url",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-image",
+                "reference": null,
+                "model_type": null,
+                "brands": {
+                  "anthropic.com": "anthropic",
+                  "generativelanguage.googleapis.com": "gemini",
+                  "groq.com": "groq",
+                  "mistral.ai": "mistral",
+                  "openai.com": "openai",
+                  "openrouter.ai": "openrouter"
+                },
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Base URL",
+                "help": null
+              }
+            },
+            "api_key": {
+              "anyOf": [
+                {
+                  "format": "password",
+                  "type": "string",
+                  "writeOnly": true
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Api Key",
+              "x-nestor": {
+                "field": "api_key",
+                "title_id": "config-model-openai-compatible-image-api_key",
+                "help_id": "config-model-openai-compatible-image-api_key-help",
+                "fallback_title_id": "config-field-api_key",
+                "secret": true,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-image",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Clé d'API",
+                "help": null
+              }
+            },
+            "model": {
+              "title": "Model",
+              "type": "string",
+              "x-nestor": {
+                "field": "model",
+                "title_id": "config-model-openai-compatible-image-model",
+                "help_id": "config-model-openai-compatible-image-model-help",
+                "fallback_title_id": "config-field-model",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-image",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Modèle",
+                "help": null
+              }
+            },
+            "endpoint": {
+              "$ref": "#/$defs/ImageEndpoint",
+              "default": "images",
+              "x-nestor": {
+                "field": "endpoint",
+                "title_id": "config-model-openai-compatible-image-endpoint",
+                "help_id": "config-model-openai-compatible-image-endpoint-help",
+                "fallback_title_id": "config-field-endpoint",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-image",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Point d'accès",
+                "help": "images : /images/generations (OpenAI, Gemini). chat : Chat Completions (OpenRouter)."
+              }
+            },
+            "size": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Size",
+              "x-nestor": {
+                "field": "size",
+                "title_id": "config-model-openai-compatible-image-size",
+                "help_id": "config-model-openai-compatible-image-size-help",
+                "fallback_title_id": "config-field-size",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-image",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Taille",
+                "help": "Comme le modèle la prend, par exemple 1024x1024. Sinon, celle du modèle."
+              }
+            },
+            "extra_body": {
+              "additionalProperties": true,
+              "title": "Extra Body",
+              "type": "object",
+              "x-nestor": {
+                "field": "extra_body",
+                "title_id": "config-model-openai-compatible-image-extra_body",
+                "help_id": "config-model-openai-compatible-image-extra_body-help",
+                "fallback_title_id": "config-field-extra_body",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-openai-compatible-image",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Champs JSON supplémentaires",
+                "help": null
+              }
+            },
+            "timeout_s": {
+              "default": 120.0,
+              "exclusiveMinimum": 0,
+              "title": "Timeout S",
+              "type": "number",
+              "x-nestor": {
+                "field": "timeout_s",
+                "title_id": "config-model-openai-compatible-image-timeout_s",
+                "help_id": "config-model-openai-compatible-image-timeout_s-help",
+                "fallback_title_id": "config-field-timeout_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-openai-compatible-image",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Timeout (secondes)",
+                "help": null
+              }
+            }
+          },
+          "required": [
+            "provider",
+            "type",
+            "base_url",
+            "model"
+          ],
+          "title": "OpenAICompatibleImageSettings",
+          "type": "object"
+        },
         "openai-compatible-language": {
           "additionalProperties": false,
           "description": "Configuration of an OpenAI-compatible chat model.",
@@ -2010,6 +2280,7 @@
         "elevenlabs-speech": "speech",
         "elevenlabs-transcription": "transcription",
         "openai-compatible-embedding": "embedding",
+        "openai-compatible-image": "image",
         "openai-compatible-language": "language",
         "sherpa-onnx-speaker": "speaker"
       }

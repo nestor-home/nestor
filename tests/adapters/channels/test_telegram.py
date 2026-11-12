@@ -43,6 +43,7 @@ class FakeBotApi:
         self.updates: list[dict[str, Any]] = []
         self.files: dict[str, bytes] = {}  # by file id
         self.voices: list[tuple[str, bytes, str | None]] = []  # chat, recording, caption
+        self.photos: list[tuple[str, bytes, str | None]] = []  # chat, picture, caption
         self.sent: list[tuple[int | str, str]] = []
         self.payloads: list[dict[str, Any]] = []
         self.actions: list[tuple[int, str]] = []
@@ -93,10 +94,11 @@ class FakeBotApi:
             if isinstance(failure, Exception):
                 raise failure
             return failure
-        if method == "sendVoice":
-            fields, voice = multipart(request)
-            self.voices.append((fields["chat_id"], voice, fields.get("caption")))
-            return ok({"message_id": len(self.voices)})
+        if method in ("sendVoice", "sendPhoto"):
+            fields, file = multipart(request)
+            sent = self.voices if method == "sendVoice" else self.photos
+            sent.append((fields["chat_id"], file, fields.get("caption")))
+            return ok({"message_id": len(sent)})
         payload = json.loads(request.content)
         if method == "getFile":
             known = payload["file_id"] in self.files
@@ -392,7 +394,7 @@ async def test_the_token_never_appears_in_logs(api: FakeBotApi, caplog: pytest.L
 
 async def test_send_delivers_an_unprompted_message(api: FakeBotApi) -> None:
     async with channel_for(api) as channel:
-        await channel.send(Address("telegram", str(ADA)), "Your task is done.", Medium.WRITTEN)
+        await channel.send(Address("telegram", str(ADA)), "Your task is done.", Medium.WRITTEN, ())
     assert api.sent == [(str(ADA), "Your task is done.")]
 
 
@@ -406,14 +408,14 @@ async def test_send_reports_failures_and_whether_retrying_may_help(
     api.fail("sendMessage", response)
     async with channel_for(api) as channel:
         with pytest.raises(ProviderError) as raised:
-            await channel.send(Address("telegram", str(ADA)), "Your task is done.", Medium.WRITTEN)
+            await channel.send(Address("telegram", str(ADA)), "Your task is done.", Medium.WRITTEN, ())
     assert raised.value.transient is transient
 
 
 async def test_send_to_another_channel_is_a_contract_error(api: FakeBotApi) -> None:
     async with channel_for(api) as channel:
         with pytest.raises(ContractError):
-            await channel.send(Address("voice", "kitchen"), "hello", Medium.WRITTEN)
+            await channel.send(Address("voice", "kitchen"), "hello", Medium.WRITTEN, ())
     assert api.sent == []
 
 
@@ -421,7 +423,7 @@ async def test_send_after_close_fails_permanently(api: FakeBotApi) -> None:
     channel = channel_for(api)
     await channel.close()
     with pytest.raises(ProviderError) as raised:
-        await channel.send(Address("telegram", str(ADA)), "hello", Medium.WRITTEN)
+        await channel.send(Address("telegram", str(ADA)), "hello", Medium.WRITTEN, ())
     assert raised.value.transient is False
 
 
@@ -571,6 +573,18 @@ async def test_a_long_voice_answer_follows_its_recording_in_writing(api: FakeBot
     assert api.texts(ADA) == [long.strip()]
 
 
+@pytest.mark.parametrize("text", ["Voilà ton dessin.", "Une phrase. " * 120], ids=["short", "over-the-caption"])
+async def test_a_picture_goes_with_its_answer_as_caption_when_it_fits(api: FakeBotApi, text: str) -> None:
+    picture = Attachment(kind=AttachmentKind.IMAGE, data=b"png bytes", media_type="image/png")
+    assistant = ScriptedAssistant(lambda message: text, pictures=(picture,))
+    async with serving(api, assistant):
+        api.say("dessine-moi Nestor")
+        await eventually(lambda: bool(api.photos))
+    fits = len(text) < 1024
+    assert api.photos == [(str(ADA), b"png bytes", text.strip() if fits else None)]
+    assert api.texts(ADA) == ([] if fits else [text.strip()]), "written first when it is too long for a caption"
+
+
 async def test_a_file_that_cannot_be_downloaded_is_left_out(api: FakeBotApi) -> None:
     assistant = ScriptedAssistant(
         lambda message: f"{len(message.attachments)} fichier",
@@ -622,3 +636,15 @@ class TestTelegramMessaging(MessagingChannelContract):
         api = FakeBotApi()
         async with serving(api, assistant):
             yield TelegramPlatform(api)
+
+
+async def test_an_answer_whose_picture_cannot_be_sent_still_says_its_words(api: FakeBotApi) -> None:
+    picture = Attachment(kind=AttachmentKind.IMAGE, data=b"png bytes", media_type="image/png")
+    assistant = ScriptedAssistant(lambda message: "Voilà ton dessin.", pictures=(picture,))
+    api.failures["sendPhoto"].append(
+        httpx.Response(400, json={"ok": False, "error_code": 400, "description": "Bad Request: file too big"})
+    )
+    async with serving(api, assistant):
+        api.say("dessine-moi Nestor")
+        await eventually(lambda: bool(api.sent))
+    assert api.texts(ADA) == ["Voilà ton dessin."]

@@ -44,6 +44,7 @@ EMBEDDING_MODEL: dict[str, Any] = {"reference": "models", "model_type": ModelTyp
 SPEAKER_MODEL: dict[str, Any] = {"reference": "models", "model_type": ModelType.SPEAKER.value}
 TRANSCRIPTION_MODEL: dict[str, Any] = {"reference": "models", "model_type": ModelType.TRANSCRIPTION.value}
 SPEECH_MODEL: dict[str, Any] = {"reference": "models", "model_type": ModelType.SPEECH.value}
+IMAGE_MODEL: dict[str, Any] = {"reference": "models", "model_type": ModelType.IMAGE.value}
 
 
 def _located[T](parse: Callable[[str], T], value: str) -> T:
@@ -206,14 +207,15 @@ _AGENT = AgentSettings()
 class AgentConfig(Section):
     """Which model of `models` answers in each medium. One left out takes the other's; with a single
     model, neither needs saying. `transcription` hears the voice messages people send and `speech` records the
-    answers to them; each defaults to the only model of its type, and without one, voice messages go unheard and
-    answers stay written."""
+    answers to them, `images` draws the pictures asked for; each defaults to the only model of its type, and without
+    one, voice messages go unheard, answers stay written and no picture is drawn."""
 
     spoken: str | None = Field(default=None, json_schema_extra=LANGUAGE_MODEL)  # the voice: first words fast
     written: str | None = Field(default=None, json_schema_extra=LANGUAGE_MODEL)  # writing allows a few seconds
     titles: str | None = Field(default=None, json_schema_extra=LANGUAGE_MODEL)  # titles conversations: a small one
     transcription: str | None = Field(default=None, json_schema_extra=TRANSCRIPTION_MODEL)
     speech: str | None = Field(default=None, json_schema_extra=SPEECH_MODEL)
+    images: str | None = Field(default=None, json_schema_extra=IMAGE_MODEL)
     # how long a turn waits for a tool before it goes on in the background and its result comes back by itself
     spoken_tool_wait_s: float = Field(default=_AGENT.spoken_tool_wait_s, gt=0, le=60)
     written_tool_wait_s: float = Field(default=_AGENT.written_tool_wait_s, gt=0, le=600)
@@ -327,6 +329,7 @@ class NestorConfig(Section):
                 "titles": value.titles,
                 "transcription": value.transcription,
                 "speech": value.speech,
+                "images": value.images,
             },
         )
         return value
@@ -378,6 +381,10 @@ class NestorConfig(Section):
             self.agent.transcription or _sole(self.models, ModelType.TRANSCRIPTION),
             self.agent.speech or _sole(self.models, ModelType.SPEECH),
         )
+
+    def images(self) -> str | None:
+        """The model that draws pictures: the one `agent` names, else the only image model; `None` without one."""
+        return self.agent.images or _sole(self.models, ModelType.IMAGE)
 
 
 def _sole(models: Mapping[str, "ModelConfig"], kind: ModelType) -> str | None:

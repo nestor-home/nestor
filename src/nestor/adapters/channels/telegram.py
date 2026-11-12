@@ -7,6 +7,7 @@ a stop is delivered again at the next start.
 """
 
 import asyncio
+import contextlib
 import logging
 import re
 from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable
@@ -295,7 +296,7 @@ class TelegramChannel(Channel):
 
     name = "telegram"
     brand = "telegram"
-    sends = frozenset({AttachmentKind.VOICE})
+    sends = frozenset({AttachmentKind.VOICE, AttachmentKind.IMAGE})
 
     def __init__(
         self,
@@ -337,12 +338,12 @@ class TelegramChannel(Channel):
         finally:
             await chats.aclose()
 
-    async def send(self, to: Address, text: str, medium: Medium) -> None:
+    async def send(self, to: Address, text: str, medium: Medium, attachments: tuple[Attachment, ...]) -> None:
         if to.channel != self.channel_id or medium not in self.media:
             raise ContractError(f"{to} is not on channel {self.channel_id!r} {medium}")
         if self._closing.is_set():
             raise ProviderError(PROVIDER, "the channel is closed", transient=False)
-        await self._send_text(to.conversation, text)
+        await self._send_answer(to.conversation, Answer(text, attachments))
 
     async def close(self) -> None:
         if self._closing.is_set():
@@ -398,10 +399,7 @@ class TelegramChannel(Channel):
             return
         answers = self._answers(assistant, message)
         while (answer := await self._next(answers, chat_id, message.address)) is not None:
-            if answer.voice is not None:
-                await self._send_voice(chat_id, answer.text, answer.voice)
-            else:
-                await self._send_text(chat_id, answer.text)
+            await self._send_answer(chat_id, answer)
 
     async def _inbound(self, incoming: _Incoming) -> InboundMessage | None:
         """The message with its files downloaded; `None` when none could be and it has no text."""
@@ -430,13 +428,40 @@ class TelegramChannel(Channel):
             return None
         return Attachment(kind=kind, data=data, media_type=media_type, name=file.file_name)
 
-    async def _send_voice(self, chat_id: int, text: str, voice: Attachment) -> None:
-        """A voice message, with its text as caption when it fits, or written after it."""
+    async def _send_answer(self, chat_id: int | str, answer: Answer) -> None:
+        """A message as a voice message when it has its recording, written otherwise, then its pictures; a single
+        picture takes the text as caption when it fits and nothing is said aloud."""
+        pictures = [a for a in answer.attachments if a.kind is AttachmentKind.IMAGE]
+        if answer.voice is not None:
+            await self._send_captioned(chat_id, answer.text, answer.voice)
+        elif len(pictures) == 1:
+            await self._send_captioned(chat_id, answer.text, pictures[0])
+            return
+        else:
+            await self._send_text(chat_id, answer.text)
+        for picture in pictures:
+            with contextlib.suppress(ProviderError):  # said by `_upload`: the words went out already
+                await self._upload(chat_id, picture)
+
+    async def _send_captioned(self, chat_id: int | str, text: str, file: Attachment) -> None:
+        """A voice message or a picture with `text` as caption when it fits, or written after it; written alone when
+        the file cannot be sent."""
         fits = _utf16_length(text) <= CAPTION_LIMIT
-        fields = {"chat_id": str(chat_id), "caption": text} if fits else {"chat_id": str(chat_id)}
-        await self._api.upload("sendVoice", fields, "voice", voice)
+        try:
+            await self._upload(chat_id, file, caption=text if fits else None)
+        except ProviderError:
+            fits = False
         if not fits:
             await self._send_text(chat_id, text)
+
+    async def _upload(self, chat_id: int | str, file: Attachment, *, caption: str | None = None) -> None:
+        method, field = ("sendVoice", "voice") if file.kind is AttachmentKind.VOICE else ("sendPhoto", "photo")
+        fields = {"chat_id": str(chat_id)} | ({"caption": caption} if caption is not None else {})
+        try:
+            await self._api.upload(method, fields, field, file)
+        except ProviderError as error:
+            logger.warning("telegram: a %s could not be sent to %s: %s", file.kind, chat_id, error)
+            raise
 
     async def _answers(self, assistant: Assistant, message: InboundMessage) -> AsyncIterator[Answer]:
         async for answer in assistant.respond(message).answers():  # asks on the first read: a failure is caught there

@@ -14,7 +14,7 @@ from dataclasses import dataclass
 
 from nestor.core import ContractError, PersonId, ProviderError
 from nestor.modules.channels.ports import Assistant, Channel, MessageEnd, Reply
-from nestor.modules.channels.types import Address, AttachmentKind, InboundMessage, Medium
+from nestor.modules.channels.types import Address, Attachment, AttachmentKind, InboundMessage, Medium
 
 logger = logging.getLogger(__name__)
 
@@ -123,7 +123,7 @@ class ChatChannel(Channel):
     it from the journal. Its conversations are listed by their title."""
 
     name = "chat"
-    sends = frozenset({AttachmentKind.VOICE})
+    sends = frozenset({AttachmentKind.VOICE, AttachmentKind.IMAGE})
     titled = True
 
     def __init__(self, channel_id: str, *, conversation_ends_after_s: float | None = None) -> None:
@@ -171,12 +171,12 @@ class ChatChannel(Channel):
         self._assistant = assistant
         await self._closing.wait()
 
-    async def send(self, to: Address, text: str, medium: Medium) -> None:
+    async def send(self, to: Address, text: str, medium: Medium, attachments: tuple[Attachment, ...]) -> None:
         if not self.reachable(to, medium):
             raise ContractError(f"{to} is not on channel {self.channel_id!r} {medium}")
         if self._closing.is_set():
             raise ProviderError(self.name, "the channel is closed", transient=False)
-        # delivered by being logged: the chat is read from the journal
+        # delivered by being logged, files included: the chat is read from the journal
 
     async def close(self) -> None:
         self._closing.set()

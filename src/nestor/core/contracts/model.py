@@ -18,6 +18,7 @@ class ModelType(StrEnum):
     SPEAKER = "speaker"  # turns speech into voiceprints, to tell voices apart
     TRANSCRIPTION = "transcription"  # turns a person's speech into text (speech to text)
     SPEECH = "speech"  # gives the assistant its voice (text to speech)
+    IMAGE = "image"  # draws a picture from a description
 
 
 class Model(Component, ABC):

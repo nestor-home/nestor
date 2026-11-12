@@ -5,6 +5,7 @@ from collections.abc import Mapping
 
 from nestor.core import Event, PersonId
 from nestor.modules.channels import Address, Exchange
+from nestor.modules.journal import BlobRef
 
 
 class ToolCalled(Event, event_type="agent.tool.called"):
@@ -18,13 +19,14 @@ class ToolCalled(Event, event_type="agent.tool.called"):
 
 class ToolCompleted(Event, event_type="agent.tool.completed"):
     """The call answered within the turn: `output` is what the model received, the result (its start and end, when
-    too long) or the reason of the failure."""
+    too long) or the reason of the failure; `files`, what it made, to go with the answer."""
 
     call_id: str
     name: str
     output: str
     ok: bool
     duration_s: float
+    files: tuple[BlobRef, ...] = ()
     exchange: Exchange | None = None
 
 
@@ -49,6 +51,7 @@ class ToolReturned(Event, event_type="agent.tool.returned"):
     output: str
     ok: bool
     duration_s: float
+    files: tuple[BlobRef, ...] = ()  # what it made, to go with the answer to its notification
     exchange: Exchange | None = None
 
 

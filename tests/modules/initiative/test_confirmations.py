@@ -91,7 +91,11 @@ class Home:
         )
         self.voice, self.telegram = Satellite("voice"), InMemoryChannel("telegram")
         self.courier = Courier(self.journal, self.agent, [self.voice, self.telegram])
-        self.confirmations.attach(self.courier, lambda call, context: self.toolbox.call(call, context, confirmed=True))
+
+        async def confirmed(call: ToolCall, context: ToolContext) -> str:
+            return (await self.toolbox.call(call, context, confirmed=True)).output
+
+        self.confirmations.attach(self.courier, confirmed)
 
     async def __aenter__(self) -> "Home":
         for part in (self.courier, self.book, self.confirmations):
@@ -108,7 +112,7 @@ class Home:
         """`live`: in a conversation someone takes part in, not a wake-up."""
         exchange = Exchange(conversation_id="c", turn_id="t") if live else None
         context = ToolContext(address=at, speaker=speaker, exchange=exchange)
-        output = await self.toolbox.call(ToolCall("c", name, dict(arguments)), context)
+        output = (await self.toolbox.call(ToolCall("c", name, dict(arguments)), context)).output
         return json.loads(output) if output.startswith("{") else output
 
     async def written(self, count: int) -> list[str]:

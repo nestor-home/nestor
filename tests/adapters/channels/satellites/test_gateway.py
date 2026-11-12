@@ -133,7 +133,7 @@ async def test_a_paired_satellite_speaks_in_its_room_and_its_body_follows_the_pl
         await _until(lambda: satellite.identified == 1)
         assert not channel.reachable(Address("satellites", "salon"), Medium.SPOKEN), "it speaks in its paired room"
 
-        await channel.send(KITCHEN, "[laughs] Ah, celle-là je ne l'avais pas vue.", Medium.SPOKEN)
+        await channel.send(KITCHEN, "[laughs] Ah, celle-là je ne l'avais pas vue.", Medium.SPOKEN, ())
         await _until(lambda: wire.BehaviorIntent(behavior=Behavior.IDLE) in satellite.intents)
 
         intents = satellite.intents
@@ -224,16 +224,16 @@ async def test_an_unprompted_message_in_writing_goes_to_the_screens_of_the_room(
         assert channel.media == {Medium.WRITTEN}, "without a voice, satellites only write"
         assert not channel.reachable(KITCHEN, Medium.WRITTEN)
         with pytest.raises(ProviderError):
-            await channel.send(KITCHEN, "Ta lessive est terminée.", Medium.WRITTEN)
+            await channel.send(KITCHEN, "Ta lessive est terminée.", Medium.WRITTEN, ())
         token = await paired(pairing, SCREEN)
         async with websockets.connect(link_url(url, SCREEN.device.id)) as link:
             await link.send(hello(SCREEN, token))
             await received(link)
             await _until(lambda: channel.reachable(KITCHEN, Medium.WRITTEN))
-            await channel.send(KITCHEN, "Ta lessive est terminée.", Medium.WRITTEN)
+            await channel.send(KITCHEN, "Ta lessive est terminée.", Medium.WRITTEN, ())
             assert await received(link) == wire.TextIntent(text="Ta lessive est terminée.")
         with pytest.raises(ContractError):
-            await channel.send(KITCHEN, "Ta lessive est terminée.", Medium.SPOKEN)
+            await channel.send(KITCHEN, "Ta lessive est terminée.", Medium.SPOKEN, ())
 
 
 async def test_without_a_voice_no_audio_is_allowed_on_the_link() -> None:
@@ -285,7 +285,7 @@ async def test_a_new_link_of_a_satellite_replaces_the_previous_one() -> None:
                 with pytest.raises(websockets.ConnectionClosed) as closed:
                     await asyncio.wait_for(old.recv(), 10)
                 assert closed.value.rcvd is not None and closed.value.rcvd.code == 4409
-                await channel.send(KITCHEN, "Toujours là.", Medium.WRITTEN)
+                await channel.send(KITCHEN, "Toujours là.", Medium.WRITTEN, ())
                 assert await received(new) == wire.TextIntent(text="Toujours là.")
 
 

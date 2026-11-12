@@ -44,10 +44,26 @@ from nestor.modules.conversation.mentions import Mentions
 from nestor.modules.conversation.persona import QUIET, VOICE_ANSWER, Instructions, Persona
 from nestor.modules.conversation.ports import ContextProvider, Layer, TurnContext
 from nestor.modules.conversation.speakers import Speakers
-from nestor.modules.conversation.types import SILENT, FallbackReason, Mentioned, Notification, ReplyPhase
+from nestor.modules.conversation.types import (
+    SILENT,
+    Attached,
+    FallbackReason,
+    Mentioned,
+    Notification,
+    Outgoing,
+    ReplyPhase,
+)
 from nestor.modules.household import Household, Person
 from nestor.modules.identity import Heard, Speaker
-from nestor.modules.journal import Journal
+from nestor.modules.journal import BlobRef, Journal
+
+
+@dataclass(frozen=True, slots=True)
+class Draft:
+    """An answer to a notification, to deliver: its words, and the files that go with it (kept)."""
+
+    text: str
+    files: tuple[BlobRef, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -176,15 +192,18 @@ class Agent(Assistant):
 
     async def compose(
         self, address: Address, person: Person | None, notification: Notification, medium: Medium
-    ) -> str | None:
+    ) -> Draft | None:
         """The answer to a notification (a task's result, a watch, a message to pass on) for this conversation, to be
         delivered through `medium` to `person`: a draft, in the persona's voice and with the conversation's
-        history, the model's final words only (what it wrote before calling tools is left out). `None`: nothing to
-        tell (it wrote nothing, or `SILENT`). Nothing is logged until it is delivered (`delivered`): a message that
-        could not go out was never said. Raises `ProviderError` when the model cannot write it."""
+        history, the model's final words only (what it wrote before calling tools is left out), with the files that
+        go with it (the notification's, and what tools made meanwhile). `None`: nothing to tell (it wrote nothing,
+        or `SILENT`). Nothing is logged until it is delivered (`delivered`): a message that could not go out was never
+        said. Raises `ProviderError` when the model cannot write it."""
         reply = AgentReply(self, address, medium, notification, person=person)
         await reply.collect()
-        return reply._final if reply._final not in ("", SILENT) else None
+        if reply._final in ("", SILENT):
+            return None
+        return Draft(reply._final, (*notification.files, *reply._made))
 
     async def delivered(
         self,
@@ -193,12 +212,15 @@ class Agent(Assistant):
         notification: Notification,
         medium: Medium,
         text: str,
+        files: tuple[Attached, ...] = (),
     ) -> Exchange:
-        """Record a composed answer once sent: the notification opens a turn of the conversation, as a person's
-        message would, and the answer follows it. Replies to it later see both."""
+        """Record a composed answer once sent, with the `files` that went with it: the notification opens a turn of
+        the conversation, as a person's message would, and the answer follows it. Replies to it later see both."""
         turn = await self.conversations.turn(address, medium)
         await turn.notified(notification, person.id if person else None)
-        await turn.answered(text)
+        answer = await turn.answered(text)
+        if files:
+            await turn.attached(answer, files)
         turn.end()
         return turn.exchange
 
@@ -271,6 +293,7 @@ class AgentReply(Reply):
         self._chunks: asyncio.Queue[str | MessageEnd | None] = asyncio.Queue()
         self._message: list[str] = []  # the message being written
         self._ended: list[tuple[str, AssistantTurn | None]] = []  # the messages written, logged if recorded
+        self._made: list[BlobRef] = []  # files the tools made, to go with the last message
         self._worker: asyncio.Task[None] | None = None
         self._interrupted = False
         self._over = False
@@ -382,9 +405,10 @@ class AgentReply(Reply):
                 return
             messages.append(Message(role=Role.ASSISTANT, content=text, tool_calls=calls))
             agent.replies.set(self, ReplyPhase.THINKING)
-            outputs = await asyncio.gather(*(agent.toolbox.call(call, context, wait_s=wait_s) for call in calls))
+            done = await asyncio.gather(*(agent.toolbox.call(call, context, wait_s=wait_s) for call in calls))
+            self._made += [file for called in done for file in called.files]
             messages += [
-                Message(role=Role.TOOL, content=o, tool_call_id=c.id) for c, o in zip(calls, outputs, strict=True)
+                Message(role=Role.TOOL, content=d.output, tool_call_id=c.id) for c, d in zip(calls, done, strict=True)
             ]
 
     def _said(self, history: Sequence[Message]) -> str | None:
@@ -454,15 +478,27 @@ class AgentReply(Reply):
         text, self._message = "".join(self._message).strip(), []
         if not text:
             return
-        if not self._voiced:
+        # a draft (no turn) takes its files along once delivered (`Agent.compose`)
+        attaching = self._voiced or (last and bool(self._made) and self._turn is not None)
+        if not attaching:
             self._chunks.put_nowait(MessageEnd(last=last))
         answer = await self._turn.answered(text) if self._turn else None
         self._ended.append((text, answer))
-        if self._voiced:  # recorded once logged, then handed over: a voice message is sent whole
-            voice = await self._agent.attachments.voice(text)
-            if voice is not None and self._turn is not None and answer is not None:
-                await self._turn.voiced(answer, voice[1])
-            self._chunks.put_nowait(MessageEnd(last=last, attachments=(voice[0],) if voice else ()))
+        if attaching:  # with its files once logged: a voice message is sent whole, a picture with its message
+            files = await self._files(text, last=last)
+            if files.kept and self._turn is not None and answer is not None:
+                await self._turn.attached(answer, files.kept)
+            self._chunks.put_nowait(MessageEnd(last=last, attachments=files.sent))
+
+    async def _files(self, text: str, *, last: bool) -> Outgoing:
+        """What goes with a message: its recording, when the answer goes back in voice, and on the last one the files
+        the tools made that the channel can send."""
+        attachments = self._agent.attachments
+        files = await attachments.voice(text) if self._voiced else Outgoing()
+        if last:
+            made, self._made = self._made, []
+            files += await attachments.sent(made, self._agent.channel(self._address).sends)
+        return files
 
     def _end_turn(self) -> None:
         """The reply is over, written or cut: the conversation's silence starts now."""

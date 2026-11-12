@@ -23,7 +23,7 @@ from nestor.modules.conversation import (
 )
 from nestor.modules.household import Account, Household, Person
 from nestor.modules.identity import Heard
-from nestor.modules.journal import Journal
+from nestor.modules.journal import BlobStore, Journal
 from nestor.testing.cognition.model import Reply, ScriptedModel
 from nestor.testing.journal import MemoryBlobStore, MemoryEventLog
 
@@ -68,6 +68,7 @@ def make_agent(journal: Journal) -> MakeAgent:
         attachments: Attachments | None = None,
         mentions: Mentions | None = None,
         results: Results | None = None,
+        blobs: BlobStore | None = None,
     ) -> Agent:
         return Agent(
             models=models or ModelChoice.single(model or ScriptedModel(*replies)),
@@ -80,7 +81,7 @@ def make_agent(journal: Journal) -> MakeAgent:
             ),
             journal=journal,
             household=household or Household([MATHIS]),
-            toolbox=Toolbox(journal, tools, [speakers] if speakers else (), results=results),
+            toolbox=Toolbox(journal, tools, [speakers] if speakers else (), results=results, blobs=blobs),
             localizer=FluentLocalizer(catalogue_dirs(["nestor"])),
             channels=channels or {"voice": ChannelProfile(style="Use [laughs] sparingly.")},
             context=context,

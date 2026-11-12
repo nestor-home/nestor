@@ -13967,7 +13967,8 @@
           "embedding",
           "speaker",
           "transcription",
-          "speech"
+          "speech",
+          "image"
         ],
         "title": "ModelType"
       },

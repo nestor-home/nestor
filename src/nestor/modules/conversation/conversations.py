@@ -28,8 +28,8 @@ from nestor.core import Event, PersonId, SessionId, new_id, utc_now
 from nestor.modules.channels import Address, AttachmentKind, Exchange, Medium
 from nestor.modules.cognition.model import Image, Message
 from nestor.modules.conversation.events import (
+    AnswerAttached,
     AnswerCut,
-    AnswerVoiced,
     AssistantTurn,
     FallbackSpoken,
     NotificationTurn,
@@ -110,11 +110,11 @@ class Turn:
             )
         )
 
-    async def voiced(self, answer: AssistantTurn, voice: Attached) -> AnswerVoiced:
-        """`answer` went out as a voice message, recorded as `voice`."""
+    async def attached(self, answer: AssistantTurn, files: tuple[Attached, ...]) -> AnswerAttached:
+        """`files` went out with `answer`: its recording, what tools made for it."""
         return await self._publish(
-            AnswerVoiced(
-                source=SOURCE, session=self.address.session, answer=answer.id, voice=voice, exchange=self.exchange
+            AnswerAttached(
+                source=SOURCE, session=self.address.session, answer=answer.id, files=files, exchange=self.exchange
             )
         )
 

@@ -7,14 +7,15 @@ from collections.abc import Iterable, Mapping
 import pytest
 
 from nestor.core import Event, PersonId, ProviderError
-from nestor.modules.channels import Address, InboundMessage, Medium, Sender
+from nestor.modules.channels import Address, Attachment, AttachmentKind, InboundMessage, Medium, Sender
 from nestor.modules.cognition import Notify, TaskDelivered, TaskEnded, TaskStarted, TaskStatus
 from nestor.modules.cognition.model import Role, ToolCall, ToolSpec
-from nestor.modules.cognition.tools import Tool, Toolbox, ToolCalled, ToolContext, ToolDeferred, ToolReturned
+from nestor.modules.cognition.tools import Made, Tool, Toolbox, ToolCalled, ToolContext, ToolDeferred, ToolReturned
 from nestor.modules.conversation import (
     About,
     Agent,
     AgentSettings,
+    AnswerAttached,
     AssistantTurn,
     Attachments,
     ModelChoice,
@@ -27,6 +28,7 @@ from nestor.modules.initiative import Courier, Delivered, DeliveryFailed, Return
 from nestor.modules.journal import Journal
 from nestor.testing.channels import InMemoryChannel
 from nestor.testing.cognition import ScriptedModel
+from nestor.testing.cognition.images import PNG
 from nestor.testing.i18n import EchoLocalizer
 from nestor.testing.journal import MemoryBlobStore, MemoryEventLog
 
@@ -53,10 +55,10 @@ class VoiceChannel(InMemoryChannel):
     def reachable(self, to: Address, medium: Medium) -> bool:
         return self.connected and super().reachable(to, medium)
 
-    async def send(self, to: Address, text: str, medium: Medium) -> None:
+    async def send(self, to: Address, text: str, medium: Medium, attachments: tuple[Attachment, ...]) -> None:
         if self.broken:
             raise ProviderError("voice", "speaker unplugged", transient=True)
-        await super().send(to, text, medium)
+        await super().send(to, text, medium, attachments)
 
 
 class Home:
@@ -73,14 +75,15 @@ class Home:
         self.journal = journal or Journal(MemoryEventLog())
         self.household = Household([MATHIS])
         self.model = model or ScriptedModel(*["Ton analyse est finie : tout est vert."] * 3)
+        self.blobs = MemoryBlobStore()
         self.agent = Agent(
-            attachments=Attachments(MemoryBlobStore()),
+            attachments=Attachments(self.blobs),
             models=ModelChoice.single(self.model),
             persona=Persona(name="Richie", character="Tu es Richie."),
             journal=self.journal,
             household=self.household,
             localizer=EchoLocalizer(),
-            toolbox=Toolbox(self.journal, tools),
+            toolbox=Toolbox(self.journal, tools, blobs=self.blobs),
             settings=AgentSettings(written_tool_wait_s=tool_wait_s),
         )
         self.voice = voice or VoiceChannel()
@@ -286,6 +289,27 @@ async def test_a_tool_slower_than_the_turn_answers_in_the_conversation_once_done
     assert "Result: 12 mails non lus" in notification and "count_mails" in notification
     [returned] = await home.journal.history(NotificationTurn)
     assert (returned.about, returned.person) == (About(Source.TOOL, "c1", "returned"), MATHIS.id)
+
+
+async def test_a_picture_drawn_after_the_turn_goes_with_the_answer_that_brings_it() -> None:
+    done = asyncio.Event()
+
+    async def draw(arguments: Mapping[str, object], context: ToolContext) -> Made:
+        await done.wait()
+        return Made("drawn", (Attachment(kind=AttachmentKind.IMAGE, data=PNG, media_type="image/png"),))
+
+    model = ScriptedModel(ToolCall("c1", "draw"), "Je dessine, je te l'envoie.", "Voilà ton dessin.")
+    home = Home(model=model, tools=[Tool(spec=ToolSpec("draw", "Draw a picture"), run=draw)])
+    home.telegram.sends = frozenset({AttachmentKind.IMAGE})
+    async with home.returns():
+        await home.agent.respond(InboundMessage(address=TELEGRAM, sender=Sender("42"), text="Dessine.")).collect()
+        done.set()
+        await until(home.journal, ToolResultDelivered)
+
+    assert home.telegram.sent == [(TELEGRAM, "Voilà ton dessin.")]
+    assert [[(a.kind, a.data) for a in files] for files in home.telegram.files] == [[(AttachmentKind.IMAGE, PNG)]]
+    [attached] = await home.journal.history(AnswerAttached)
+    assert [home.blobs.blobs[f.blob.digest] for f in attached.files] == [PNG]
 
 
 async def test_a_call_cut_short_by_a_restart_is_said_to_have_failed() -> None:

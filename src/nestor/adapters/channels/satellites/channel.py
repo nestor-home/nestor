@@ -20,7 +20,7 @@ from nestor.adapters.channels.satellites.gateway import SatelliteGateway
 from nestor.adapters.channels.satellites.link import SatelliteLink
 from nestor.adapters.channels.satellites.server import DeviceServer
 from nestor.core import Capability, ContractError, ProviderError
-from nestor.modules.channels import Address, Assistant, Channel, InboundMessage, Medium, MessageEnd
+from nestor.modules.channels import Address, Assistant, Attachment, Channel, InboundMessage, Medium, MessageEnd
 from nestor.modules.journal import Journal
 from nestor.modules.satellites import (
     AUDIO,
@@ -112,7 +112,8 @@ class SatellitesChannel(Channel, SatelliteHost):
             return self._voice is not None and self._voice.reachable(to)
         return bool(self._showing(to.conversation))
 
-    async def send(self, to: Address, text: str, medium: Medium) -> None:
+    async def send(self, to: Address, text: str, medium: Medium, attachments: tuple[Attachment, ...]) -> None:
+        """Says or shows `text`; a satellite shows no file."""
         if to.channel != self.channel_id or medium not in self.media:
             raise ContractError(f"{to} is not on channel {self.channel_id!r} {medium}")
         if medium is Medium.SPOKEN:

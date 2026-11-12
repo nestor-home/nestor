@@ -185,12 +185,14 @@ async def test_writing_tools_wait_for_the_persons_consent_and_serve_their_owner_
     assert isinstance(properties, dict) and "confirmed" in properties
 
     chatting = replace(CONTEXT, exchange=Exchange(conversation_id="c", turn_id="t"))  # in a live conversation
-    asked = await toolbox.call(ToolCall("c1", "mailbox_send", {"to": "maman"}), chatting)
+    asked = (await toolbox.call(ToolCall("c1", "mailbox_send", {"to": "maman"}), chatting)).output
     assert "ask the person to confirm" in asked and setup.mail.sent == []
     other = ToolContext(address=Address("telegram", "7"), speaker=Speaker.account(PersonId("mathilde")))
-    refused = await toolbox.call(ToolCall("c2", "mailbox_send", {"to": "maman", "confirmed": True}), other)
+    refused = (await toolbox.call(ToolCall("c2", "mailbox_send", {"to": "maman", "confirmed": True}), other)).output
     assert "only mathis may use it" in refused and setup.mail.sent == []
-    assert await toolbox.call(ToolCall("c3", "mailbox_send", {"to": "maman", "confirmed": True}), chatting) == "sent"
+    assert (
+        await toolbox.call(ToolCall("c3", "mailbox_send", {"to": "maman", "confirmed": True}), chatting)
+    ).output == "sent"
     assert setup.mail.sent == [{"to": "maman"}]
 
 

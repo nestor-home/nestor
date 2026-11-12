@@ -85,6 +85,12 @@ class AttachmentKind(StrEnum):
     AUDIO = "audio"  # an audio file (music, a recording)
     FILE = "file"  # anything else (a PDF, a spreadsheet)
 
+    @classmethod
+    def of(cls, media_type: str) -> "AttachmentKind":
+        """What a file made by Nestor is, from its type: a picture, an audio file, or another file."""
+        base = media_type.split(";")[0].strip().lower()
+        return cls.IMAGE if base in IMAGE_TYPES else cls.AUDIO if base.startswith("audio/") else cls.FILE
+
 
 IMAGE_TYPES = frozenset({"image/jpeg", "image/png", "image/webp", "image/gif"})  # what models and browsers show
 

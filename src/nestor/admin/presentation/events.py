@@ -28,7 +28,7 @@ from nestor.modules.accounts import (
     Accounts,
     InvitationRevoked,
 )
-from nestor.modules.channels import Address
+from nestor.modules.channels import Address, AttachmentKind
 from nestor.modules.cognition import (
     TaskAttached,
     TaskCancelRequested,
@@ -41,8 +41,8 @@ from nestor.modules.cognition.tools import ResultStored, ToolCalled, ToolComplet
 from nestor.modules.connectors import ConnectionChanged, ConnectionCreated, ConnectionRemoved
 from nestor.modules.conversation import (
     About,
+    AnswerAttached,
     AnswerCut,
-    AnswerVoiced,
     AssistantTurn,
     Attached,
     ConversationTitled,
@@ -72,7 +72,7 @@ from nestor.modules.initiative import (
     WatchTriggered,
 )
 from nestor.modules.initiative.confirmations import ConfirmationAnswered, ConfirmationRequested
-from nestor.modules.journal import Entry
+from nestor.modules.journal import BlobRef, Entry
 from nestor.modules.memory import MemoryCorrected, MemoryForgotten, MemoryRecorded
 from nestor.modules.memory.episodes import EpisodeSummarized
 from nestor.modules.satellites import (
@@ -130,7 +130,7 @@ CATEGORIES: Mapping[Kind, tuple[type[Event], ...]] = {
         UserTurn,
         NotificationTurn,
         AssistantTurn,
-        AnswerVoiced,
+        AnswerAttached,
         FallbackSpoken,
         AnswerCut,
         ConversationTitled,
@@ -264,8 +264,16 @@ class EventDescriber:
                 e, Message.of("journal-fallback", reason=e.reason), channels=[e.address], tone=Tone.WARNING
             ),
             ConversationTitled: lambda e: self._line(e, Message.of("journal-conversation-titled", title=e.title)),
-            AnswerVoiced: lambda e: self._line(
-                e, Message.of("journal-answer-voiced", assistant=self.assistant), attachments=(e.voice,)
+            AnswerAttached: lambda e: self._line(
+                e,
+                Message.of(
+                    "journal-answer-voiced"
+                    if any(f.kind is AttachmentKind.VOICE for f in e.files)
+                    else "journal-answer-files",
+                    assistant=self.assistant,
+                    count=len(e.files),
+                ),
+                attachments=e.files,
             ),
             AnswerCut: lambda e: self._line(
                 e, Message.of("journal-answer-cut"), detail_message=Message.of("journal-detail-heard", heard=e.heard)
@@ -609,13 +617,21 @@ class EventDescriber:
         key = "journal-tool-returned" if e.ok else "journal-tool-returned-failed"
         message = Message.of(key, tool=e.name, seconds=e.duration_s)
         tone = Tone.NORMAL if e.ok else Tone.WARNING
-        return self._line(e, message, detail=e.output, tone=tone, tool=e.name, outcome=(e.ok, e.duration_s))
+        return self._line(
+            e,
+            message,
+            detail=e.output,
+            tone=tone,
+            tool=e.name,
+            outcome=(e.ok, e.duration_s),
+            attachments=_made(e.files),
+        )
 
     def _tool_completed(self, e: ToolCompleted) -> Line:
         outcome = (e.ok, e.duration_s)
         if e.ok:
             message = Message.of("journal-tool-completed", tool=e.name, seconds=e.duration_s)
-            return self._line(e, message, detail=e.output, tool=e.name, outcome=outcome)
+            return self._line(e, message, detail=e.output, tool=e.name, outcome=outcome, attachments=_made(e.files))
         message = Message.of("journal-tool-failed", tool=e.name)
         return self._line(e, message, detail=e.output, tone=Tone.WARNING, tool=e.name, outcome=outcome)
 
@@ -712,3 +728,8 @@ class EventDescriber:
             outcome=outcome,
             attachments=attachments,
         )
+
+
+def _made(files: tuple[BlobRef, ...]) -> tuple[Attached, ...]:
+    """What a tool made, shown with its call: whether or not the conversation could receive it."""
+    return tuple(Attached(kind=AttachmentKind.of(blob.media_type), blob=blob) for blob in files)

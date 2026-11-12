@@ -7,13 +7,15 @@ import pytest
 
 from nestor.adapters.documents import FileReader
 from nestor.modules.channels import Address, Attachment, AttachmentKind, InboundMessage, Sender
+from nestor.modules.cognition.images import ImageTools
 from nestor.modules.cognition.model import ModelRequest, Role, ToolCall
 from nestor.modules.cognition.tools import Results
-from nestor.modules.conversation import Attachments, ChannelProfile, UserTurn
+from nestor.modules.conversation import AnswerAttached, Attachments, ChannelProfile, UserTurn
 from nestor.modules.conversation.conversations import IMAGES
 from nestor.modules.conversation.history import IMAGE_BYTES
 from nestor.modules.journal import Journal
 from nestor.testing.channels import OGG, ScriptedSpeech, ScriptedTranscription
+from nestor.testing.cognition.images import PNG, ScriptedImages
 from nestor.testing.cognition.model import ScriptedModel
 from nestor.testing.documents import text_pdf
 from nestor.testing.journal import MemoryBlobStore
@@ -139,6 +141,32 @@ async def test_a_document_is_read_by_the_model_where_it_was_sent_and_nowhere_els
     await other.respond(InboundMessage(address=Address("telegram", "77"), sender=Sender("77"), text="lis-le")).collect()
     [refused] = [m for m in elsewhere.requests[1].messages if m.role is Role.TOOL]
     assert "was given here" in str(refused.content), "a document is read where it was sent, or by who sent it"
+
+
+@pytest.mark.parametrize("shows_pictures", [True, False], ids=["channel-shows-pictures", "channel-shows-none"])
+async def test_a_picture_a_tool_drew_goes_with_the_last_message_where_the_channel_shows_pictures(
+    make_agent: MakeAgent, journal: Journal, shows_pictures: bool
+) -> None:
+    blobs = MemoryBlobStore()
+    drawing = ToolCall("call-1", "generate_image", {"description": "un galet en noeud papillon"})
+    model = ScriptedModel(drawing, "Voilà ton dessin.")
+    sends = frozenset({AttachmentKind.IMAGE}) if shows_pictures else frozenset()
+    agent = make_agent(
+        model=model,
+        tools=ImageTools(ScriptedImages()).tools(),
+        attachments=Attachments(blobs),
+        blobs=blobs,
+        channels={"telegram": ChannelProfile(sends=sends)},
+    )
+    [answer] = [a async for a in agent.respond(sent("dessine-moi Nestor")).answers()]
+
+    picture = PNG + b"un galet en noeud papillon"
+    assert answer.text == "Voilà ton dessin."
+    assert [(a.kind, a.data, a.media_type) for a in answer.attachments] == (
+        [(AttachmentKind.IMAGE, picture, "image/png")] if shows_pictures else []
+    )
+    attached = await journal.history(AnswerAttached)
+    assert [[blobs.blobs[f.blob.digest] for f in a.files] for a in attached] == ([[picture]] if shows_pictures else [])
 
 
 @pytest.mark.parametrize(

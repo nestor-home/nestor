@@ -7,8 +7,8 @@ Every channel — realtime voice included — reaches the same assistant through
 from nestor.modules.conversation.attachments import Attachments
 from nestor.modules.conversation.conversations import Conversations
 from nestor.modules.conversation.events import (
+    AnswerAttached,
     AnswerCut,
-    AnswerVoiced,
     AssistantTurn,
     ConversationTitled,
     FallbackSpoken,
@@ -26,7 +26,7 @@ from nestor.modules.conversation.ports import (
     Sections,
     TurnContext,
 )
-from nestor.modules.conversation.service import Agent, AgentSettings, ChannelProfile, LiveReplies, ModelChoice
+from nestor.modules.conversation.service import Agent, AgentSettings, ChannelProfile, Draft, LiveReplies, ModelChoice
 from nestor.modules.conversation.speakers import Speakers
 from nestor.modules.conversation.titles import ConversationTitles
 from nestor.modules.conversation.types import (
@@ -46,8 +46,8 @@ __all__ = [
     "About",
     "Agent",
     "AgentSettings",
+    "AnswerAttached",
     "AnswerCut",
-    "AnswerVoiced",
     "AssistantTurn",
     "Attached",
     "Attachments",
@@ -57,6 +57,7 @@ __all__ = [
     "ConversationTitles",
     "Conversations",
     "DocumentReader",
+    "Draft",
     "FallbackReason",
     "FallbackSpoken",
     "Instructions",

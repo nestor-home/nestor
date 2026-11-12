@@ -129,6 +129,7 @@ model-type = { $type ->
     [speaker] Speaker recognition
     [transcription] Speech recognition
     [speech] Speech synthesis
+    [image] Image generation
    *[other] Other models
 }
 model-type-help = { $type ->
@@ -137,5 +138,6 @@ model-type-help = { $type ->
     [speaker] To know who is speaking to a satellite.
     [transcription] To hear what people say to a satellite.
     [speech] To give the assistant its voice.
+    [image] To draw the pictures people ask for.
    *[other] { "" }
 }

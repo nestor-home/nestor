@@ -34,11 +34,12 @@ from nestor.core.i18n import Locale
 from nestor.modules.accounts import Accounts
 from nestor.modules.activity import ActivityMonitor
 from nestor.modules.channels import Channel, ChatChannel, SpeechModel, TranscriptionModel
-from nestor.modules.cognition import Executor, LanguageModel
+from nestor.modules.cognition import Executor, LanguageModel, ToolCall
 from nestor.modules.cognition.delegation.assistant import Delegation
 from nestor.modules.cognition.delegation.service import TaskManager
 from nestor.modules.cognition.embedding import EmbeddingModel
-from nestor.modules.cognition.tools import Results, Toolbox, ToolProvider
+from nestor.modules.cognition.images import ImageModel, ImageTools
+from nestor.modules.cognition.tools import Results, Toolbox, ToolContext, ToolProvider
 from nestor.modules.connectors import ConnectedInbound, Connections, Connector, ConnectorTools, TokenEndpoint
 from nestor.modules.conversation import (
     Agent,
@@ -147,6 +148,7 @@ class Nestor:
             return chosen(models, key, LanguageModel, tuple(role.split(".")))
 
         hearing, voicing = config.voice_messages()
+        drawing = config.images()
 
         def optional[M: Model](key: str | None, wanted: type[M], role: str) -> M | None:
             return chosen(models, key, wanted, ("agent", role)) if key else None
@@ -283,9 +285,11 @@ class Nestor:
                 *self.tools,
                 *([self.home.tools] if self.home else []),
                 *connector_tools,
+                *([ImageTools(images)] if (images := optional(drawing, ImageModel, "images")) else []),
             ],
             in_writing=self.confirmations,
             results=(results := Results(self.journal, self.blobs, budget=config.agent.tool_result_chars)),
+            blobs=self.blobs,
         )
         self.agent = Agent(
             models=ModelChoice(
@@ -329,7 +333,11 @@ class Nestor:
             presence=self.presence,
             follow_up_after_s=initiative.follow_up_after_s,
         )
-        self.confirmations.attach(self.courier, lambda call, context: toolbox.call(call, context, confirmed=True))
+
+        async def confirmed(call: ToolCall, context: ToolContext) -> str:
+            return (await toolbox.call(call, context, confirmed=True)).output
+
+        self.confirmations.attach(self.courier, confirmed)
         self.returns = Returns(self.journal, self.household, self.courier)
         self.messenger = Messenger(self.message_book, self.household, self.courier)
         self.scheduler = Scheduler(self.schedule_book, self.household, self.courier)
