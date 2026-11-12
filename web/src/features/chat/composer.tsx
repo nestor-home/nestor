@@ -166,6 +166,7 @@ export function Composer({
               type="file"
               multiple
               className="hidden"
+              aria-label={t("chat-attach")}
               onChange={(event) => {
                 if (event.target.files) void add(event.target.files);
                 event.target.value = "";

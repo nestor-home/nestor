@@ -21,6 +21,11 @@ Object.defineProperty(window.navigator, "language", { value: "en-US", configurab
 // jsdom has no scrolling; the router restores scroll positions
 window.scrollTo = () => undefined;
 Element.prototype.scrollIntoView = () => undefined;
+// nor layout: the chat's editor (ProseMirror) measures where the caret is
+const noRects = () =>
+  ({ length: 0, item: () => null, [Symbol.iterator]: [][Symbol.iterator] }) as unknown as DOMRectList;
+Range.prototype.getClientRects ??= noRects;
+Range.prototype.getBoundingClientRect ??= () => new DOMRect();
 // cmdk measures its list; jsdom has no layout, so observing is a no-op
 globalThis.ResizeObserver ??= class {
   observe() {}

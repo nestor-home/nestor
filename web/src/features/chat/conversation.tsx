@@ -119,7 +119,7 @@ export function Conversation({ chat }: { chat: string | null }) {
           {fresh ? (
             <div className={cn("flex flex-col items-center gap-4 px-4 text-center", ARRIVES, "duration-500")}>
               <AgentFigure state="idle" size="lg" live />
-              <h1 className="display-2 text-ink">{t("chat-greeting", { assistant: me.assistant })}</h1>
+              <p className="display-2 text-ink">{t("chat-greeting", { assistant: me.assistant })}</p>
             </div>
           ) : (
             <StickToBottom className="relative min-h-0 flex-1 overflow-hidden" resize="smooth" initial="instant">
@@ -339,7 +339,7 @@ function Header({ chat }: { chat: string | null }) {
       >
         <MessagesSquare />
       </Button>
-      <h2 className="min-w-0 flex-1 truncate text-[0.95rem] text-ink">{title}</h2>
+      <h1 className="min-w-0 flex-1 truncate text-[0.95rem] text-ink">{title}</h1>
       <Button
         variant="ghost"
         size="icon"
