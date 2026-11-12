@@ -1,7 +1,7 @@
 """`nestor init`: a first configuration, its secrets and its owner account, never overwriting what exists.
 
-Satellites are always there, in writing; their voice needs the `voice` extra. A messaging channel (Telegram) is
-written only when the person asks for it.
+The admin's chat and satellites are always there, in writing; the satellites' voice needs the `voice` extra. A
+messaging channel (Telegram) is written only when the person asks for it.
 """
 
 import asyncio
@@ -77,6 +77,9 @@ TEXT_ONLY = """  - kind: satellites               # devices people type on: `nes
     # Their voice needs `pip install '{requirement}'`, a transcription and a speech model under models
     # (e.g. ElevenLabs: {{type: transcription, provider: elevenlabs}}, {{type: speech, provider: elevenlabs}}), then:
     # voice: {{transcription: ears, speech: voice}}
+"""
+
+WEB = """  - kind: web                      # the admin's chat: write to the assistant from the admin
 """
 
 TELEGRAM = """  - kind: telegram
@@ -158,7 +161,7 @@ def slug(text: str) -> str:
 def configuration(setup: Setup, data_dir: Path) -> str:
     """The YAML of a first configuration."""
     person_id = slug(setup.person)
-    channels = (VOICE if setup.voice else TEXT_ONLY) + (TELEGRAM if setup.telegram else "")
+    channels = WEB + (VOICE if setup.voice else TEXT_ONLY) + (TELEGRAM if setup.telegram else "")
     text = HEADER + channels + FOOTER
     speech = SPEECH_MODELS.format(locale=setup.locale) if setup.voice else ""
     return text.format(

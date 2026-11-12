@@ -28,6 +28,7 @@ const PERMISSIONS = {
   "schedules.manage.own": ["schedules:read", "schedules:write"],
   "config.manage": ["config:manage"],
   "agent.read": ["agent:read"],
+  "agent.chat": ["chat:write"],
 } as const satisfies Record<Scope, readonly string[]>;
 
 export type Permission = (typeof PERMISSIONS)[Scope][number];

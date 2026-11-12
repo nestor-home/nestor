@@ -8,6 +8,7 @@ from nestor.modules.conversation.attachments import Attachments
 from nestor.modules.conversation.conversations import Conversations
 from nestor.modules.conversation.events import (
     AnswerCut,
+    AnswerVoiced,
     AssistantTurn,
     FallbackSpoken,
     NotificationTurn,
@@ -26,6 +27,7 @@ __all__ = [
     "Agent",
     "AgentSettings",
     "AnswerCut",
+    "AnswerVoiced",
     "AssistantTurn",
     "Attached",
     "Attachments",

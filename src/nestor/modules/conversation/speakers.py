@@ -65,7 +65,7 @@ class Speakers(ContextProvider, ToolProvider):
         """Who said `message`: its account; on a shared device their voice, then what they said in the open
         `conversation`, then nobody in particular."""
         if message.sender is not None:
-            person = self.household.identify(message.address.channel, message.sender.id)
+            person = self.household.identify(message.address.channel, message.sender)
             return Speaker.account(person.id) if person else Speaker.unknown()
         heard = message.heard
         if heard is not None and heard.person is not None and self._known(heard.person):

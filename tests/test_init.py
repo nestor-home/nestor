@@ -68,14 +68,14 @@ def test_telegram_is_written_only_when_asked_for(tmp_path: Path) -> None:
     initialise(alone, Setup(), login="me", password=PASSWORD)
     secrets = env_of(alone.parent / ".env")
     assert set(secrets) == {"NESTOR_SECRET_KEY", "MODEL_API_KEY"}
-    assert [c.kind for c in load_config(alone, secrets).channels] == ["satellites"]
-    assert "kind: telegram" not in alone.read_text(), "no channel is assumed"
+    assert [c.kind for c in load_config(alone, secrets).channels] == ["web", "satellites"], "the admin's chat"
+    assert "kind: telegram" not in alone.read_text(), "no messaging app is assumed"
 
     bot = tmp_path / "bot" / "nestor.yaml"
     initialise(bot, Setup(telegram=True), login="me", password=PASSWORD)
     secrets = env_of(bot.parent / ".env")
     assert set(secrets) == {"NESTOR_SECRET_KEY", "MODEL_API_KEY", "TELEGRAM_BOT_TOKEN"}
-    assert [c.kind for c in load_config(bot, secrets).channels] == ["satellites", "telegram"]
+    assert [c.kind for c in load_config(bot, secrets).channels] == ["web", "satellites", "telegram"]
 
 
 def test_with_voice_satellites_speak_and_the_configuration_asks_for_its_key(tmp_path: Path) -> None:
@@ -84,7 +84,7 @@ def test_with_voice_satellites_speak_and_the_configuration_asks_for_its_key(tmp_
     secrets = env_of(tmp_path / ".env")
     assert set(secrets) == {"NESTOR_SECRET_KEY", "MODEL_API_KEY", "ELEVENLABS_API_KEY"}
     loaded = load_config(config, secrets)
-    assert [c.kind for c in loaded.channels] == ["satellites"]
+    assert [c.kind for c in loaded.channels] == ["web", "satellites"]
     assert loaded.household[0].accounts == ()  # a satellite is a room: whoever is there may speak
 
 
@@ -94,7 +94,7 @@ def test_a_local_model_passes_the_check_with_its_key_left_empty(
     config = tmp_path / "nestor.yaml"
     initialise(config, Setup(base_url="http://localhost:11434/v1", model="llama3.2"), login="me", password=PASSWORD)
     assert main(["-c", str(config), "check"]) == 0
-    assert "channels: satellites, admin on 0.0.0.0:8470" in capsys.readouterr().out
+    assert "channels: web, satellites, admin on 0.0.0.0:8470" in capsys.readouterr().out
 
 
 def test_a_hosted_model_with_its_key_left_empty_fails_the_check_naming_the_variable(
@@ -172,7 +172,7 @@ def test_the_command_asks_then_writes(
         "en",
         "https://openrouter.ai/api/v1",
     )
-    assert [c.kind for c in loaded.channels] == ["satellites", "telegram"]
+    assert [c.kind for c in loaded.channels] == ["web", "satellites", "telegram"]
 
 
 def test_voice_is_written_when_installed_and_wanted(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -183,7 +183,7 @@ def test_voice_is_written_when_installed_and_wanted(tmp_path: Path, monkeypatch:
     config = tmp_path / "nestor.yaml"
     assert main(["-c", str(config), "init"]) == 0
     loaded = load_config(config, env_of(tmp_path / ".env"))
-    assert [c.kind for c in loaded.channels] == ["satellites"]
+    assert [c.kind for c in loaded.channels] == ["web", "satellites"]
     assert loaded.models["main"].settings()["model"] == "qwen3"
 
 

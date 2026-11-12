@@ -21,6 +21,7 @@ journal-fallback = Réponse de secours : { $reason ->
    *[other] { $reason }
 }
 journal-answer-cut = Réponse interrompue
+journal-answer-voiced = { $assistant } a répondu par un message vocal
 journal-detail-heard = Entendu : { $heard }
 
 journal-tool-called = Outil { $tool } appelé

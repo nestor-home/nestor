@@ -12,6 +12,7 @@ from typing import Any, Self
 import httpx
 from pydantic import Field, SecretStr
 
+from nestor.adapters.channels import web
 from nestor.admin import AdminSettings, create_app
 from nestor.core import PersonId
 from nestor.core.i18n import Message
@@ -27,6 +28,7 @@ from nestor.runtime import AdapterSettings, Family, Nestor, Plugin, Registry
 from nestor.runtime.config import parse_config
 from nestor.testing.channels import InMemoryChannel
 from nestor.testing.cognition import FakeRemote, ScriptedModel, ScriptedRemoteExecutor
+from nestor.testing.cognition.model import Reply
 from nestor.testing.connectors import FakeProvider, ScriptedConnector
 from nestor.testing.home import StaticHome, StaticPresence
 from nestor.testing.identity import TaggedVoices
@@ -143,7 +145,9 @@ class Harness:
         public_url: str | None = None,
         connectors: bool = True,
         confirms_stop: bool = True,
-        replies: tuple[str, ...] = (),
+        replies: tuple[Reply, ...] = (),
+        word_delay_s: float = 0.0,
+        chat: bool = False,
         front_dir: Path | None = None,
         heartbeat_s: float = 15.0,
         quiet_hours: str | None = None,
@@ -151,7 +155,7 @@ class Harness:
         voices: bool = False,
         home: bool = True,
     ) -> None:
-        self.confirms_stop, self.replies = confirms_stop, replies
+        self.confirms_stop, self.replies, self.word_delay_s, self.chat = confirms_stop, replies, word_delay_s, chat
         self.provider = FakeProvider()
         self.mail = ScriptedConnector()
         self.mail.info = replace(
@@ -199,6 +203,10 @@ class Harness:
                 "models: {main: {type: language, provider: scripted}, ears: {type: speaker, provider: tagged-voices}}"
                 "\nvoices: {embedder: ears}",
             )
+        if chat:
+            text = text.replace(
+                "channels: [{kind: memory, name: telegram}", "channels: [{kind: memory, name: telegram}, {kind: web}"
+            )
         if speaker:
             text = text.replace(
                 "channels: [{kind: memory, name: telegram}]",
@@ -232,7 +240,7 @@ class Harness:
                     Family.MODEL,
                     "scripted",
                     NoSettings,
-                    lambda s, n, x: ScriptedModel(*self.replies),
+                    lambda s, n, x: ScriptedModel(*self.replies, word_delay_s=self.word_delay_s),
                     serves=LanguageModel,
                 ),
                 Plugin(
@@ -244,6 +252,7 @@ class Harness:
                 ),
                 Plugin(Family.CHANNEL, "memory", NoSettings, lambda s, name, x: InMemoryChannel(name)),
                 Plugin(Family.CHANNEL, "speaker", NoSettings, lambda s, name, x: Speaker(name)),
+                web.plugin,
                 Plugin(
                     Family.EXECUTOR,
                     "remote",
@@ -261,6 +270,8 @@ class Harness:
 
     async def __aenter__(self) -> Self:
         await self.nestor.__aenter__()
+        # the channels, for the admin's chat to answer
+        self.serving = asyncio.create_task(self.nestor.serve()) if self.chat else None
         self.owner = await self.account(OWNER, Role.OWNER, "mathis")
         return self
 
@@ -270,6 +281,9 @@ class Harness:
         for api in self._apis:
             await api.client.aclose()
         await self.browser.aclose()
+        if self.serving is not None:
+            self.serving.cancel()
+            await asyncio.wait({self.serving})
         await self.nestor.__aexit__(exc_type, exc, tb)
 
     # -- accounts ---------------------------------------------------------------------------------------

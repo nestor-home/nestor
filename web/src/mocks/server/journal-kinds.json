@@ -2,6 +2,7 @@
   "conversation.turn.user": "conversation",
   "conversation.turn.notification": "conversation",
   "conversation.turn.assistant": "conversation",
+  "conversation.turn.voiced": "conversation",
   "conversation.fallback": "conversation",
   "conversation.turn.cut": "conversation",
   "initiative.considered": "delivery",

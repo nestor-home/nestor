@@ -68,6 +68,9 @@ class SQLiteEventLog(EventLog):
         if query.session is not None:
             where.append("session = ?")
             params.append(query.session)
+        if query.sessions_under is not None:  # a range on the index, where LIKE would scan
+            where.append("session >= ? AND session < ?")
+            params.extend((query.sessions_under, query.sessions_under + "\U0010ffff"))
         if query.since is not None:
             where.append("at >= ?")
             params.append(time_key(query.since))

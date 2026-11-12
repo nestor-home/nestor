@@ -42,6 +42,7 @@ from nestor.modules.connectors import ConnectionChanged, ConnectionCreated, Conn
 from nestor.modules.conversation import (
     About,
     AnswerCut,
+    AnswerVoiced,
     AssistantTurn,
     Attached,
     FallbackSpoken,
@@ -124,7 +125,7 @@ class Kind(StrEnum):
 
 
 CATEGORIES: Mapping[Kind, tuple[type[Event], ...]] = {
-    Kind.CONVERSATION: (UserTurn, NotificationTurn, AssistantTurn, FallbackSpoken, AnswerCut),
+    Kind.CONVERSATION: (UserTurn, NotificationTurn, AssistantTurn, AnswerVoiced, FallbackSpoken, AnswerCut),
     Kind.DELIVERY: (
         DeliveryConsidered,
         Delivered,
@@ -252,6 +253,9 @@ class EventDescriber:
             ),
             FallbackSpoken: lambda e: self._line(
                 e, Message.of("journal-fallback", reason=e.reason), channels=[e.address], tone=Tone.WARNING
+            ),
+            AnswerVoiced: lambda e: self._line(
+                e, Message.of("journal-answer-voiced", assistant=self.assistant), attachments=(e.voice,)
             ),
             AnswerCut: lambda e: self._line(
                 e, Message.of("journal-answer-cut"), detail_message=Message.of("journal-detail-heard", heard=e.heard)

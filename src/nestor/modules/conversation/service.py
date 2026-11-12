@@ -157,7 +157,7 @@ class Agent(Assistant):
         self.replies = LiveReplies()  # what it is answering right now
 
     def identify(self, address: Address, sender: Sender) -> PersonId | None:
-        person = self.household.identify(address.channel, sender.id)
+        person = self.household.identify(address.channel, sender)
         return person.id if person else None
 
     def respond(self, message: InboundMessage) -> Reply:
@@ -439,10 +439,13 @@ class AgentReply(Reply):
             return
         if not self._voiced:
             self._chunks.put_nowait(MessageEnd(last=last))
-        self._ended.append((text, await self._turn.answered(text) if self._turn else None))
+        answer = await self._turn.answered(text) if self._turn else None
+        self._ended.append((text, answer))
         if self._voiced:  # recorded once logged, then handed over: a voice message is sent whole
             voice = await self._agent.attachments.voice(text)
-            self._chunks.put_nowait(MessageEnd(last=last, attachments=(voice,) if voice else ()))
+            if voice is not None and self._turn is not None and answer is not None:
+                await self._turn.voiced(answer, voice[1])
+            self._chunks.put_nowait(MessageEnd(last=last, attachments=(voice[0],) if voice else ()))
 
     def _end_turn(self) -> None:
         """The reply is over, written or cut: the conversation's silence starts now."""

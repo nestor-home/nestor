@@ -39,8 +39,9 @@ class Attachments:
         kept without its transcript."""
         return tuple(await asyncio.gather(*(self._keep(a) for a in attachments)))
 
-    async def voice(self, text: str) -> Attachment | None:
-        """`text` recorded as a voice message; `None` without a voice, or when it could not be recorded."""
+    async def voice(self, text: str) -> tuple[Attachment, Attached] | None:
+        """`text` recorded as a voice message, to send and as kept; `None` without a voice, or when it could not be
+        recorded."""
         if self._speech is None or not text.strip():
             return None
         try:
@@ -48,7 +49,9 @@ class Attachments:
         except ProviderError as error:
             logger.warning("could not record an answer in the assistant's voice: %s", error)
             return None
-        return Attachment(kind=AttachmentKind.VOICE, data=audio, media_type=VOICE_TYPE)
+        blob = await self._blobs.put(audio, VOICE_TYPE)
+        voice = Attachment(kind=AttachmentKind.VOICE, data=audio, media_type=VOICE_TYPE)
+        return voice, Attached(kind=AttachmentKind.VOICE, blob=blob, transcript=text)
 
     async def images(self, attached: Sequence[Attached]) -> Mapping[str, Image]:
         """The pictures among `attached`, by digest, as the model looks at them; one no longer stored is left out."""

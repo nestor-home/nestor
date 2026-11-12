@@ -2,6 +2,7 @@
   "owner": [
     "accounts.manage",
     "accounts.owners.manage",
+    "agent.chat",
     "agent.read",
     "config.manage",
     "household.connections.manage",
@@ -24,6 +25,7 @@
   ],
   "admin": [
     "accounts.manage",
+    "agent.chat",
     "agent.read",
     "config.manage",
     "household.connections.manage",
@@ -45,6 +47,7 @@
     "watches.manage.own"
   ],
   "member": [
+    "agent.chat",
     "agent.read",
     "household.read",
     "journal.read.own",
@@ -56,6 +59,7 @@
     "watches.manage.own"
   ],
   "guest": [
+    "agent.chat",
     "journal.read.own",
     "memory.manage.own",
     "messages.read.own"
