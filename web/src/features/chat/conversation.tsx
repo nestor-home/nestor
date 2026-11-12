@@ -9,7 +9,16 @@ import { ArrowDown, MessagesSquare, SquarePen, Upload } from "lucide-react";
 import { type DragEvent, Fragment, type ReactNode, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
-import { api, type ChatMessage, type ChatMessageIn, chatQuery, chatsQuery, keys, messageOf } from "@/api";
+import {
+  api,
+  type ChatMessage,
+  type ChatMessageIn,
+  chatQuery,
+  chatsQuery,
+  keys,
+  mentionsQuery,
+  messageOf,
+} from "@/api";
 import { AgentFigure } from "@/components/agent-figure";
 import { SideSheet } from "@/components/overlay-form";
 import { Failure, Loading } from "@/components/states";
@@ -176,6 +185,7 @@ function Thread({
   assistant: string;
 }) {
   const t = useT();
+  const { data: mentions = [] } = useQuery(mentionsQuery); // what the message sent can name, before it is logged
   // what the journal has not logged yet: the message sent, then the answer's messages beyond those it logged
   const logged = live ? messages.slice(live.base) : [];
   const pending = live?.sent && !logged.some((m) => m.role === "person") ? live.sent : null;
@@ -212,6 +222,7 @@ function Thread({
       {pending ? (
         <PersonMessage
           text={pending.text ?? ""}
+          mentions={mentions}
           pending
           files={pending.files?.length ? <SentFiles count={pending.files.length} /> : null}
         />
@@ -256,7 +267,13 @@ function groups(messages: ChatMessage[]): Group[] {
 function Message({ message, assistant }: { message: ChatMessage; assistant: string }) {
   switch (message.role) {
     case "person":
-      return <PersonMessage text={message.text} files={<Files files={message.files} align="end" />} />;
+      return (
+        <PersonMessage
+          text={message.text}
+          mentions={message.mentions}
+          files={<Files files={message.files} align="end" />}
+        />
+      );
     case "assistant":
       return (
         <AnswerBlock>

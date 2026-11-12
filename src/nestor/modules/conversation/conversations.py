@@ -36,7 +36,7 @@ from nestor.modules.conversation.events import (
     UserTurn,
 )
 from nestor.modules.conversation.history import HISTORY_EVENTS, IMAGE_BYTES, Names, in_conversation, to_messages
-from nestor.modules.conversation.types import Attached, FallbackReason, Notification
+from nestor.modules.conversation.types import Attached, FallbackReason, Mentioned, Notification
 from nestor.modules.identity import Speaker
 from nestor.modules.journal import Journal
 
@@ -54,7 +54,12 @@ class Turn:
         self._journal = conversations.journal
 
     async def said(
-        self, text: str, medium: Medium, speaker: Speaker, attachments: tuple[Attached, ...] = ()
+        self,
+        text: str,
+        medium: Medium,
+        speaker: Speaker,
+        attachments: tuple[Attached, ...] = (),
+        mentions: tuple[Mentioned, ...] = (),
     ) -> UserTurn:
         """A person opened the turn."""
         return await self._publish(
@@ -67,6 +72,7 @@ class Turn:
                 speaker=speaker,
                 exchange=self.exchange,
                 attachments=attachments,
+                mentions=mentions,
             )
         )
 

@@ -4,7 +4,7 @@
  */
 import { HttpResponse, http, type JsonBodyType, delay as latency, sse } from "msw";
 import type { components } from "@/api/schema.gen";
-import { answerTo, chatMessage, MENTIONS, type MockChat } from "./chats";
+import { answerTo, chatMessage, MENTIONS, type MockChat, mentionedIn } from "./chats";
 import * as config from "./config";
 import { LIVE } from "./day";
 import { db, type MockAddition, save } from "./db";
@@ -434,7 +434,8 @@ const chatHandlers = [
       transcript: f.kind === "voice" ? (lang === "fr" ? "Allume le salon." : "Turn on the living room.") : null,
     }));
     const said = [body.text ?? "", ...files.map((f) => f.transcript ?? "")].join(" ");
-    chat.messages.push(chatMessage("person", body.text ?? "", `t-${Date.now()}`, { files }));
+    const mentions = mentionedIn(body.text ?? "");
+    chat.messages.push(chatMessage("person", body.text ?? "", `t-${Date.now()}`, { files, mentions }));
     chat.updated_at = new Date().toISOString();
     save();
     return new HttpResponse(answer(chat, said, files.length), { headers: { "Content-Type": "application/x-ndjson" } });

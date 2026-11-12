@@ -1,27 +1,35 @@
 """What the central agent sees of delegation: three tools and a section of its instructions."""
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 
 from nestor.core import ContractError
 from nestor.modules.cognition.delegation.service import TaskManager
 from nestor.modules.cognition.delegation.types import Notify, TaskStatus
 from nestor.modules.cognition.model import ToolSpec
 from nestor.modules.cognition.tools import Risk, Tool, ToolContext, ToolFailed, ToolProvider
-from nestor.modules.conversation import ContextProvider, Layer, Sections, TurnContext
+from nestor.modules.conversation import (
+    ContextProvider,
+    Layer,
+    Mentioned,
+    MentionKind,
+    MentionSource,
+    Sections,
+    TurnContext,
+)
+from nestor.modules.household import Person
 
 HOW_TO_DELEGATE = """You never do long work yourself: you talk, and you hand over to an executor anything that needs \
 acting, searching or computing beyond your own tools. To hand over, call delegate_task with a precise, verifiable \
 objective, then say in a very short sentence that it is started. The task runs in the background: keep talking \
 meanwhile; its result will be announced when it arrives. If the person wants the result in writing (they are leaving, \
 "write me when it's done"), set notify to "message". When asked how it is going, call task_status. To abandon a task, \
-call cancel_task, and only say it stopped if the stop is confirmed. A message that names an executor as @name \
-asks for that part of the work to go to it."""
+call cancel_task, and only say it stopped if the stop is confirmed."""
 
 NO_EXECUTOR = """No executor is plugged in: you cannot carry out long tasks, search or act beyond your own tools. \
 If asked, say so simply."""
 
 
-class Delegation(ToolProvider, ContextProvider):
+class Delegation(ToolProvider, ContextProvider, MentionSource):
     name = "delegation"
 
     def __init__(self, tasks: TaskManager) -> None:
@@ -73,6 +81,21 @@ class Delegation(ToolProvider, ContextProvider):
             f"{HOW_TO_DELEGATE}\n\nYour executors and what they can really do:\n{executors}\n"
             "Nothing else: for any other request, say right away that you cannot, without starting a task."
         )
+
+    def mentionable(self, person: Person | None) -> Iterable[Mentioned]:
+        for executor in self.tasks.executors.values():
+            yield Mentioned(
+                kind=MentionKind.EXECUTOR,
+                id=executor.name,
+                handle=executor.name,
+                label=executor.name,
+                detail=executor.description,
+                brand=executor.brand,
+            )
+
+    def instruction(self, mentioned: Mentioned) -> str:
+        which = f" (executor: {mentioned.id})" if len(self.tasks.executors) > 1 else ""
+        return f"the executor {mentioned.id}: hand that part of the work to it with delegate_task{which}"
 
     async def context(self, turn: TurnContext) -> Sections:
         if not (running := self.tasks.running()):

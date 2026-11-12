@@ -21,6 +21,8 @@ from nestor.modules.conversation import (
     AssistantTurn,
     Attached,
     FallbackSpoken,
+    Mentioned,
+    MentionKind,
     NotificationTurn,
     UserTurn,
 )
@@ -49,11 +51,23 @@ class ChatsOut(BaseModel):
 
 
 class MentionOut(BaseModel):
-    """What a message can name with `@`: an executor to hand work to."""
+    """What a message can name with `@handle`: someone of the household, a room, an executor, a connected account."""
 
-    name: str
-    description: str
+    kind: MentionKind
+    handle: str  # written after `@`; any channel reads it
+    label: str
+    detail: str
     brand: str | None
+
+    @classmethod
+    def of(cls, mentioned: Mentioned) -> "MentionOut":
+        return cls(
+            kind=mentioned.kind,
+            handle=mentioned.handle,
+            label=mentioned.label,
+            detail=mentioned.detail,
+            brand=mentioned.brand,
+        )
 
 
 class ChatRole(StrEnum):
@@ -113,6 +127,7 @@ class ChatMessageOut(BaseModel):
     turn: str | None
     text: str  # a note: what it is about, in the reader's language
     files: list[ChatFileOut]
+    mentions: list[MentionOut]  # what a person's message names with `@`, as it was when written
     interrupted: bool  # stopped before its end
     tool: ChatToolOut | None  # a `tool` message only
 
@@ -159,7 +174,8 @@ def thread(entries: Sequence[Entry], words: Phrasebook) -> list[ChatMessageOut]:
                 said = [a.transcript for a in event.attachments if a.kind is AttachmentKind.VOICE and a.transcript]
                 text = event.text.removesuffix("\n".join(said)).strip() if said else event.text
                 files = [ChatFileOut.of(entry.position, i, a) for i, a in enumerate(event.attachments)]
-                messages.append(_message(entry, event, ChatRole.PERSON, text, files=files))
+                mentions = [MentionOut.of(m) for m in event.mentions]
+                messages.append(_message(entry, event, ChatRole.PERSON, text, files=files, mentions=mentions))
             case NotificationTurn():
                 note = words.text(Message("journal-subject", subject(event.about)))
                 messages.append(_message(entry, event, ChatRole.NOTE, note))
@@ -201,6 +217,7 @@ def _message(
     text: str,
     *,
     files: list[ChatFileOut] | None = None,
+    mentions: list[MentionOut] | None = None,
     interrupted: bool = False,
     tool: ChatToolOut | None = None,
 ) -> ChatMessageOut:
@@ -213,6 +230,7 @@ def _message(
         turn=exchange.turn_id if exchange else None,
         text=text,
         files=files or [],
+        mentions=mentions or [],
         interrupted=interrupted,
         tool=tool,
     )

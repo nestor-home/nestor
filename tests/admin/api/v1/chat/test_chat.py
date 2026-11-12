@@ -155,11 +155,16 @@ async def test_a_message_says_something_in_a_file_the_server_can_read(tmp_path: 
     assert bad_id.status_code in (404, 422)
 
 
-async def test_a_message_can_name_the_executors_plugged_in(tmp_path: Path) -> None:
-    async with Harness(tmp_path, chat=True) as admin:
-        mentions = (await (await admin.api()).get("/api/v1/chats/mentions")).json()
-        plugged = list(admin.nestor.tasks.executors)
-    assert [m["name"] for m in mentions] == plugged and plugged, "the names the model delegates to"
+async def test_a_message_names_people_rooms_executors_and_its_writers_accounts(tmp_path: Path) -> None:
+    async with Harness(tmp_path, chat=True, replies=("C'est parti.",)) as admin:
+        api = await admin.api()
+        offered = {(m["kind"], m["handle"]) for m in (await api.get("/api/v1/chats/mentions")).json()}
+        await say(api, "c1", f"Avec @{next(iter(admin.nestor.tasks.executors))}, éteins le @Salon")
+        (sent, _) = (await api.get("/api/v1/chats/c1")).json()["messages"]
+
+    assert {("person", "mathis"), ("person", "mathilde"), ("room", "salon"), ("room", "cuisine")} <= offered
+    assert ("executor", next(iter(admin.nestor.tasks.executors))) in offered
+    assert [(m["kind"], m["label"]) for m in sent["mentions"]][1] == ("room", "Salon"), "as written, loosely"
 
 
 async def test_nobody_else_reads_a_chat_through_the_journal_or_its_files(tmp_path: Path) -> None:

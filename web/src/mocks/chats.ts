@@ -2,7 +2,7 @@
  * The mock household's chats with its assistant, and how the mock answers a new message: word by word, a tool call
  * first when it is asked to act in the house, Markdown when it lists or compares.
  */
-import type { ChatFile, ChatMessage, ChatTool } from "@/api";
+import type { ChatFile, ChatMessage, ChatTool, Mention } from "@/api";
 import { fr } from "./french";
 
 export interface MockChat {
@@ -35,6 +35,7 @@ function message(
     interrupted: false,
     tool: null,
     ...extra,
+    mentions: extra.mentions ?? [],
     files: (extra.files ?? []).map((f, index) => ({ ...f, position: entry, index })), // served with their entry
   };
 }
@@ -192,33 +193,61 @@ export function chats(): MockChat[] {
 }
 
 /** The executors a message can name with `@`. */
-export const MENTIONS = [
+export const MENTIONS: Mention[] = [
+  { kind: "person", handle: "mathis", label: "Mathis", detail: "", brand: null },
+  { kind: "person", handle: "mathilde", label: "Mathilde", detail: "", brand: null },
+  { kind: "person", handle: "lea", label: "Léa", detail: "", brand: null },
+  { kind: "room", handle: "salon", label: fr("Living room", "Salon"), detail: "", brand: null },
+  { kind: "room", handle: "cuisine", label: fr("Kitchen", "Cuisine"), detail: "", brand: null },
+  { kind: "room", handle: "chambre-lea", label: fr("Léa's bedroom", "Chambre de Léa"), detail: "", brand: null },
   {
-    name: "hermes",
-    description: fr(
+    kind: "executor",
+    handle: "hermes",
+    label: "hermes",
+    detail: fr(
       "Long tasks: searching the web, reading documents, following up on projects.",
       "Tâches longues : chercher sur le web, lire des documents, suivre des projets.",
     ),
     brand: "hermes",
   },
   {
-    name: "codex",
-    description: fr(
+    kind: "executor",
+    handle: "codex",
+    label: "codex",
+    detail: fr(
       "Code: reads a repository, changes it, runs its tests, opens a pull request.",
       "Code : lit un dépôt, le modifie, lance ses tests, ouvre une pull request.",
     ),
     brand: "openai",
   },
+  { kind: "connection", handle: "google", label: "mathis@gmail.com", detail: "", brand: "google" },
+  { kind: "connection", handle: "imap", label: "famille@free.fr", detail: "", brand: "imap" },
 ];
+
+/** What a text names, as the server reads it: the handles it holds, loosely. */
+export function mentionedIn(text: string): Mention[] {
+  const written = [...text.matchAll(/(?<![\w@])@([\p{L}\p{N}_-]*[\p{L}\p{N}_])/gu)].map((m) => key(m[1] ?? ""));
+  return MENTIONS.filter((m) => written.includes(key(m.handle)) || written.includes(key(m.label)));
+}
+
+const key = (name: string) =>
+  (
+    name
+      .toLowerCase()
+      .normalize("NFKD")
+      .replace(/\p{M}/gu, "")
+      .replace(/_/g, "-")
+      .match(/[a-z0-9]+/g) ?? []
+  ).join("-");
 
 /** The mock's answer to `text`: a tool call first when it is asked to act, then words. */
 export function answerTo(text: string, files: number): { tool: ChatTool | null; answer: string } {
   const words = text.toLocaleLowerCase();
-  const named = MENTIONS.find((m) => words.includes(`@${m.name}`));
+  const named = mentionedIn(text).find((m) => m.kind === "executor");
   if (named) {
     return {
       tool: {
-        ...tool("delegate_task", { executor: named.name, objective: text }, "Task 7c1e started.", 0.6),
+        ...tool("delegate_task", { executor: named.handle, objective: text }, "Task 7c1e started.", 0.6),
         state: "background",
       },
       answer: fr("It's in hand; I'll come back here when it's done.", "C'est lancé ; je reviens ici quand c'est fini."),

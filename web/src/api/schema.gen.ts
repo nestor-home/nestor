@@ -432,7 +432,8 @@ export interface paths {
         };
         /**
          * List Chat Mentions
-         * @description The executors a message can name as `@name` to hand them work, in the configuration's order.
+         * @description What the caller's messages can name with `@handle`: the household's people, the home's rooms, the executors,
+         *     the connected accounts they may use. Any channel reads the same handles in a message's text.
          */
         get: operations["listChatMentions"];
         put?: never;
@@ -1816,6 +1817,8 @@ export interface components {
             text: string;
             /** Files */
             files: components["schemas"]["ChatFileOut"][];
+            /** Mentions */
+            mentions: components["schemas"]["MentionOut"][];
             /** Interrupted */
             interrupted: boolean;
             tool: components["schemas"]["ChatToolOut"] | null;
@@ -2542,14 +2545,23 @@ export interface components {
             editable: boolean;
         };
         /**
+         * MentionKind
+         * @description What a message can name with `@`.
+         * @enum {string}
+         */
+        MentionKind: "person" | "room" | "executor" | "connection";
+        /**
          * MentionOut
-         * @description What a message can name with `@`: an executor to hand work to.
+         * @description What a message can name with `@handle`: someone of the household, a room, an executor, a connected account.
          */
         MentionOut: {
-            /** Name */
-            name: string;
-            /** Description */
-            description: string;
+            kind: components["schemas"]["MentionKind"];
+            /** Handle */
+            handle: string;
+            /** Label */
+            label: string;
+            /** Detail */
+            detail: string;
             /** Brand */
             brand: string | null;
         };
@@ -11957,6 +11969,7 @@ export const healthValues: ReadonlyArray<FlattenedDeepRequired<components>["sche
 export const installKindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["InstallKind"]> = ["container", "editable", "uv-tool", "pip"];
 export const invitationStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["InvitationStatus"]> = ["pending", "accepted", "expired", "revoked"];
 export const kindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Kind"]> = ["conversation", "delivery", "tool", "task", "watch", "schedule", "memory", "connection", "presence", "satellite", "voice", "observation", "account", "other"];
+export const mentionKindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["MentionKind"]> = ["person", "room", "executor", "connection"];
 export const modelTypeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ModelType"]> = ["language", "embedding", "speaker", "transcription", "speech"];
 export const pairingMethodValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PairingMethod"]> = ["device_code.display", "device_code.speech", "enrollment.input", "enrollment.provisioning", "enrollment.qr"];
 export const problemValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Problem"]> = ["too_short", "too_quiet", "too_loud", "other_voice"];

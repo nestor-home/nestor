@@ -54,10 +54,12 @@ async def list_chats(request: Request, caller: Chatter) -> ChatsOut:
 
 @router.get("/chats/mentions")
 async def list_chat_mentions(request: Request, caller: Chatter) -> list[MentionOut]:
-    """The executors a message can name as `@name` to hand them work, in the configuration's order."""
+    """What the caller's messages can name with `@handle`: the household's people, the home's rooms, the executors,
+    the connected accounts they may use. Any channel reads the same handles in a message's text."""
     _web(request)
-    executors = state(request).nestor.tasks.executors.values()
-    return [MentionOut(name=e.name, description=e.description, brand=e.brand) for e in executors]
+    nestor = state(request).nestor
+    person = nestor.household.person(_person(caller))
+    return [MentionOut.of(m) for m in nestor.agent.mentions.available(person)]
 
 
 @router.get("/chats/{chat}")

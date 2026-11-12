@@ -44,11 +44,12 @@ from nestor.modules.conversation import (
     AgentSettings,
     Attachments,
     ChannelProfile,
+    Mentions,
     ModelChoice,
     Persona,
     Speakers,
 )
-from nestor.modules.home import Home, PresenceSource
+from nestor.modules.home import Home, PresenceSource, RoomMentions
 from nestor.modules.household import Account, Household, Person, SharedAccount
 from nestor.modules.identity import Departures, SpeakerModel, Voices
 from nestor.modules.initiative import (
@@ -299,6 +300,9 @@ class Nestor:
             },
             context=[delegation, memory, watch_tools, message_tools, schedule_tools, self.confirmations],
             speakers=self.speakers,
+            mentions=Mentions(
+                [message_tools, *([RoomMentions(self.home)] if self.home else []), delegation, *connector_tools]
+            ),
             attachments=Attachments(
                 self.blobs,
                 transcription=optional(hearing, TranscriptionModel, "transcription"),

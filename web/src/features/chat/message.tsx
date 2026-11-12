@@ -6,7 +6,7 @@
 import { AlertCircle, Check, ChevronRight, Copy, FileText, LoaderCircle, Wrench } from "lucide-react";
 import { memo, type ReactNode, useMemo, useState } from "react";
 import { Streamdown, type StreamdownTranslations } from "streamdown";
-import type { ChatFile, ChatTool } from "@/api";
+import type { ChatFile, ChatTool, Mention } from "@/api";
 import { API_BASE } from "@/api/client";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -22,7 +22,17 @@ export const fileUrl = (file: ChatFile) => `${API_BASE}/journal/${file.position}
 /** How what has just been written comes in: rising a little, fading in; still under reduced motion. */
 export const ARRIVES = "animate-in fade-in-0 slide-in-from-bottom-2 duration-300 ease-out motion-reduce:animate-none";
 
-export function PersonMessage({ text, files, pending }: { text: string; files: ReactNode; pending?: boolean }) {
+export function PersonMessage({
+  text,
+  files,
+  mentions,
+  pending,
+}: {
+  text: string;
+  files: ReactNode;
+  mentions: Mention[];
+  pending?: boolean;
+}) {
   return (
     <div
       className={cn(
@@ -33,7 +43,7 @@ export function PersonMessage({ text, files, pending }: { text: string; files: R
       {files}
       {text ? (
         <div className="rounded-2xl rounded-br-md bg-paper-sunken px-4 py-2.5 text-[0.95rem] leading-relaxed whitespace-pre-wrap text-ink [overflow-wrap:anywhere]">
-          <MentionText text={text} />
+          <MentionText text={text} mentions={mentions} />
         </div>
       ) : null}
     </div>

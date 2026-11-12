@@ -2605,7 +2605,7 @@
           "chat"
         ],
         "summary": "List Chat Mentions",
-        "description": "The executors a message can name as `@name` to hand them work, in the configuration's order.",
+        "description": "What the caller's messages can name with `@handle`: the household's people, the home's rooms, the executors,\nthe connected accounts they may use. Any channel reads the same handles in a message's text.",
         "operationId": "listChatMentions",
         "responses": {
           "200": {
@@ -11477,6 +11477,13 @@
             "type": "array",
             "title": "Files"
           },
+          "mentions": {
+            "items": {
+              "$ref": "#/components/schemas/MentionOut"
+            },
+            "type": "array",
+            "title": "Mentions"
+          },
           "interrupted": {
             "type": "boolean",
             "title": "Interrupted"
@@ -11501,6 +11508,7 @@
           "turn",
           "text",
           "files",
+          "mentions",
           "interrupted",
           "tool"
         ],
@@ -13788,15 +13796,33 @@
         ],
         "title": "MemoryOut"
       },
+      "MentionKind": {
+        "type": "string",
+        "enum": [
+          "person",
+          "room",
+          "executor",
+          "connection"
+        ],
+        "title": "MentionKind",
+        "description": "What a message can name with `@`."
+      },
       "MentionOut": {
         "properties": {
-          "name": {
-            "type": "string",
-            "title": "Name"
+          "kind": {
+            "$ref": "#/components/schemas/MentionKind"
           },
-          "description": {
+          "handle": {
             "type": "string",
-            "title": "Description"
+            "title": "Handle"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail"
           },
           "brand": {
             "anyOf": [
@@ -13812,12 +13838,14 @@
         },
         "type": "object",
         "required": [
-          "name",
-          "description",
+          "kind",
+          "handle",
+          "label",
+          "detail",
           "brand"
         ],
         "title": "MentionOut",
-        "description": "What a message can name with `@`: an executor to hand work to."
+        "description": "What a message can name with `@handle`: someone of the household, a room, an executor, a connected account."
       },
       "MessageOut": {
         "properties": {
