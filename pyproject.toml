@@ -80,6 +80,8 @@ imap = "nestor.adapters.connectors.imap:plugin"
 watch-triage = "nestor.bench.suites.watch_triage:suite"
 memory-recall = "nestor.bench.suites.memory_recall:suite"
 speaker-id = "nestor.bench.suites.speaker_id:suite"
+transcription = "nestor.bench.suites.voice:transcription"
+speech = "nestor.bench.suites.voice:speech"
 
 [project.urls]
 Homepage = "https://nestorhome.dev"

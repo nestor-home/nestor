@@ -10,7 +10,7 @@ one and how to score the lot.
 
 from abc import ABC, abstractmethod
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from importlib.resources.abc import Traversable
 from pathlib import Path
 from typing import Any
@@ -19,6 +19,7 @@ from pydantic import BaseModel, ConfigDict
 
 from nestor.bench.types import Case, CaseResult, Dataset, Startup, Summary
 from nestor.core import ContractError
+from nestor.modules.channels import SpeechModel, TranscriptionModel
 from nestor.modules.cognition import LanguageModel
 from nestor.modules.cognition.embedding import EmbeddingModel
 from nestor.modules.identity import SpeakerModel
@@ -45,7 +46,10 @@ class Trial[K: Knobs]:
     seed: int
     embedder: EmbeddingModel | None = None  # the variant's `memory.embedder`, started, when the suite asks for it
     voices: SpeakerModel | None = None  # the variant's `voices.embedder`, started, when the suite asks for it
-    voices_started: Startup | None = None  # how starting it went: a voice model is measured, never replayed
+    transcription: TranscriptionModel | None = None  # the variant's `agent.transcription`, when the suite asks
+    speech: SpeechModel | None = None  # the variant's `agent.speech`, when the suite asks for it
+    # how starting each went ("voices", "transcription", "speech"): such a model is measured, never replayed
+    started: Mapping[str, Startup] = field(default_factory=dict)
 
     def model(self, role: str) -> LanguageModel:
         try:
@@ -71,6 +75,8 @@ class Suite[S, K: Knobs](ABC):
     models: tuple[str, ...] = ("written",)  # the roles whose models it calls (`NestorConfig.roles`)
     embedder: bool = False  # it searches by meaning with the variant's `memory.embedder`, when there is one
     voices: bool = False  # it tells voices apart with the variant's `voices.embedder`
+    transcription: bool = False  # it hears recordings with the variant's `agent.transcription`
+    speech: bool = False  # it records answers with the variant's `agent.speech`
     plugins: tuple[Plugin[Any], ...] = ()  # extra model kinds for variants (a deterministic fake for CI)
 
     @abstractmethod

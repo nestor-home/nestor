@@ -2135,6 +2135,368 @@
           "title": "OpenAICompatibleLanguageSettings",
           "type": "object"
         },
+        "openai-compatible-speech": {
+          "additionalProperties": false,
+          "properties": {
+            "provider": {
+              "const": "openai-compatible",
+              "type": "string",
+              "x-nestor": {
+                "field": "provider",
+                "title_id": "config-model-openai-compatible-speech-provider",
+                "help_id": "config-model-openai-compatible-speech-provider-help",
+                "fallback_title_id": "config-field-provider",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-speech",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Fournisseur",
+                "help": null
+              }
+            },
+            "type": {
+              "const": "speech",
+              "type": "string",
+              "x-nestor": {
+                "field": "type",
+                "title_id": "config-model-openai-compatible-speech-type",
+                "help_id": "config-model-openai-compatible-speech-type-help",
+                "fallback_title_id": "config-field-type",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-speech",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Type de modèle",
+                "help": null
+              }
+            },
+            "base_url": {
+              "title": "Base Url",
+              "type": "string",
+              "x-nestor": {
+                "field": "base_url",
+                "title_id": "config-model-openai-compatible-speech-base_url",
+                "help_id": "config-model-openai-compatible-speech-base_url-help",
+                "fallback_title_id": "config-field-base_url",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-speech",
+                "reference": null,
+                "model_type": null,
+                "brands": {
+                  "anthropic.com": "anthropic",
+                  "generativelanguage.googleapis.com": "gemini",
+                  "groq.com": "groq",
+                  "mistral.ai": "mistral",
+                  "openai.com": "openai",
+                  "openrouter.ai": "openrouter"
+                },
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Base URL",
+                "help": null
+              }
+            },
+            "api_key": {
+              "anyOf": [
+                {
+                  "format": "password",
+                  "type": "string",
+                  "writeOnly": true
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Api Key",
+              "x-nestor": {
+                "field": "api_key",
+                "title_id": "config-model-openai-compatible-speech-api_key",
+                "help_id": "config-model-openai-compatible-speech-api_key-help",
+                "fallback_title_id": "config-field-api_key",
+                "secret": true,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-speech",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Clé d'API",
+                "help": null
+              }
+            },
+            "model": {
+              "title": "Model",
+              "type": "string",
+              "x-nestor": {
+                "field": "model",
+                "title_id": "config-model-openai-compatible-speech-model",
+                "help_id": "config-model-openai-compatible-speech-model-help",
+                "fallback_title_id": "config-field-model",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-speech",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Modèle",
+                "help": null
+              }
+            },
+            "voice": {
+              "minLength": 1,
+              "title": "Voice",
+              "type": "string",
+              "x-nestor": {
+                "field": "voice",
+                "title_id": "config-model-openai-compatible-speech-voice",
+                "help_id": "config-model-openai-compatible-speech-voice-help",
+                "fallback_title_id": "config-field-voice",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-speech",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Voix",
+                "help": "Comme le serveur la nomme : alloy, nova (OpenAI), ff_siwis (Kokoro, français)."
+              }
+            },
+            "timeout_s": {
+              "default": 60.0,
+              "exclusiveMinimum": 0,
+              "title": "Timeout S",
+              "type": "number",
+              "x-nestor": {
+                "field": "timeout_s",
+                "title_id": "config-model-openai-compatible-speech-timeout_s",
+                "help_id": "config-model-openai-compatible-speech-timeout_s-help",
+                "fallback_title_id": "config-field-timeout_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-openai-compatible-speech",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Timeout (secondes)",
+                "help": null
+              }
+            }
+          },
+          "required": [
+            "provider",
+            "type",
+            "base_url",
+            "model",
+            "voice"
+          ],
+          "title": "OpenAICompatibleSpeechSettings",
+          "type": "object"
+        },
+        "openai-compatible-transcription": {
+          "additionalProperties": false,
+          "properties": {
+            "provider": {
+              "const": "openai-compatible",
+              "type": "string",
+              "x-nestor": {
+                "field": "provider",
+                "title_id": "config-model-openai-compatible-transcription-provider",
+                "help_id": "config-model-openai-compatible-transcription-provider-help",
+                "fallback_title_id": "config-field-provider",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-transcription",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Fournisseur",
+                "help": null
+              }
+            },
+            "type": {
+              "const": "transcription",
+              "type": "string",
+              "x-nestor": {
+                "field": "type",
+                "title_id": "config-model-openai-compatible-transcription-type",
+                "help_id": "config-model-openai-compatible-transcription-type-help",
+                "fallback_title_id": "config-field-type",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-transcription",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Type de modèle",
+                "help": null
+              }
+            },
+            "base_url": {
+              "title": "Base Url",
+              "type": "string",
+              "x-nestor": {
+                "field": "base_url",
+                "title_id": "config-model-openai-compatible-transcription-base_url",
+                "help_id": "config-model-openai-compatible-transcription-base_url-help",
+                "fallback_title_id": "config-field-base_url",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-transcription",
+                "reference": null,
+                "model_type": null,
+                "brands": {
+                  "anthropic.com": "anthropic",
+                  "generativelanguage.googleapis.com": "gemini",
+                  "groq.com": "groq",
+                  "mistral.ai": "mistral",
+                  "openai.com": "openai",
+                  "openrouter.ai": "openrouter"
+                },
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Base URL",
+                "help": null
+              }
+            },
+            "api_key": {
+              "anyOf": [
+                {
+                  "format": "password",
+                  "type": "string",
+                  "writeOnly": true
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Api Key",
+              "x-nestor": {
+                "field": "api_key",
+                "title_id": "config-model-openai-compatible-transcription-api_key",
+                "help_id": "config-model-openai-compatible-transcription-api_key-help",
+                "fallback_title_id": "config-field-api_key",
+                "secret": true,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-transcription",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Clé d'API",
+                "help": null
+              }
+            },
+            "model": {
+              "title": "Model",
+              "type": "string",
+              "x-nestor": {
+                "field": "model",
+                "title_id": "config-model-openai-compatible-transcription-model",
+                "help_id": "config-model-openai-compatible-transcription-model-help",
+                "fallback_title_id": "config-field-model",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-transcription",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Modèle",
+                "help": null
+              }
+            },
+            "language": {
+              "default": "en",
+              "minLength": 2,
+              "title": "Language",
+              "type": "string",
+              "x-nestor": {
+                "field": "language",
+                "title_id": "config-model-openai-compatible-transcription-language",
+                "help_id": "config-model-openai-compatible-transcription-language-help",
+                "fallback_title_id": "config-field-language",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-transcription",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Langue",
+                "help": null
+              }
+            },
+            "timeout_s": {
+              "default": 60.0,
+              "exclusiveMinimum": 0,
+              "title": "Timeout S",
+              "type": "number",
+              "x-nestor": {
+                "field": "timeout_s",
+                "title_id": "config-model-openai-compatible-transcription-timeout_s",
+                "help_id": "config-model-openai-compatible-transcription-timeout_s-help",
+                "fallback_title_id": "config-field-timeout_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-openai-compatible-transcription",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Timeout (secondes)",
+                "help": null
+              }
+            }
+          },
+          "required": [
+            "provider",
+            "type",
+            "base_url",
+            "model"
+          ],
+          "title": "OpenAICompatibleTranscriptionSettings",
+          "type": "object"
+        },
         "sherpa-onnx-speaker": {
           "additionalProperties": false,
           "description": "A voice model run by sherpa-onnx.",
@@ -2274,6 +2636,111 @@
           ],
           "title": "SherpaOnnxSpeakerSettings",
           "type": "object"
+        },
+        "sherpa-onnx-transcription": {
+          "additionalProperties": false,
+          "description": "A speech recognition model run by sherpa-onnx on this machine.",
+          "properties": {
+            "provider": {
+              "const": "sherpa-onnx",
+              "type": "string",
+              "x-nestor": {
+                "field": "provider",
+                "title_id": "config-model-sherpa-onnx-transcription-provider",
+                "help_id": "config-model-sherpa-onnx-transcription-provider-help",
+                "fallback_title_id": "config-field-provider",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-sherpa-onnx-transcription",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Fournisseur",
+                "help": null
+              }
+            },
+            "type": {
+              "const": "transcription",
+              "type": "string",
+              "x-nestor": {
+                "field": "type",
+                "title_id": "config-model-sherpa-onnx-transcription-type",
+                "help_id": "config-model-sherpa-onnx-transcription-type-help",
+                "fallback_title_id": "config-field-type",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-sherpa-onnx-transcription",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Type de modèle",
+                "help": null
+              }
+            },
+            "model": {
+              "default": "parakeet-v3",
+              "examples": [
+                "parakeet-v3"
+              ],
+              "title": "Model",
+              "type": "string",
+              "x-nestor": {
+                "field": "model",
+                "title_id": "config-model-sherpa-onnx-transcription-model",
+                "help_id": "config-model-sherpa-onnx-transcription-model-help",
+                "fallback_title_id": "config-field-model",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-sherpa-onnx-transcription",
+                "reference": null,
+                "model_type": null,
+                "brands": {
+                  "parakeet-v3": "nvidia"
+                },
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Modèle",
+                "help": null
+              }
+            },
+            "threads": {
+              "default": 2,
+              "exclusiveMinimum": 0,
+              "maximum": 16,
+              "title": "Threads",
+              "type": "integer",
+              "x-nestor": {
+                "field": "threads",
+                "title_id": "config-model-sherpa-onnx-transcription-threads",
+                "help_id": "config-model-sherpa-onnx-transcription-threads-help",
+                "fallback_title_id": "config-field-threads",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-sherpa-onnx-transcription",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Threads CPU",
+                "help": null
+              }
+            }
+          },
+          "title": "SherpaOnnxTranscriptionSettings",
+          "type": "object",
+          "required": [
+            "provider",
+            "type"
+          ]
         }
       },
       "model_types": {
@@ -2282,7 +2749,10 @@
         "openai-compatible-embedding": "embedding",
         "openai-compatible-image": "image",
         "openai-compatible-language": "language",
-        "sherpa-onnx-speaker": "speaker"
+        "openai-compatible-speech": "speech",
+        "openai-compatible-transcription": "transcription",
+        "sherpa-onnx-speaker": "speaker",
+        "sherpa-onnx-transcription": "transcription"
       }
     },
     "channels": {

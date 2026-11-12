@@ -1,0 +1,21 @@
+{"dataset": "speech", "version": 1, "language": "fr", "source": "written for this bench: what a household assistant says"}
+{"id": "s01", "text": "C'est noté, je te le rappelle demain à huit heures."}
+{"id": "s02", "text": "La lumière du salon est éteinte."}
+{"id": "s03", "text": "Il fait douze degrés dehors, avec de la pluie en fin d'après-midi."}
+{"id": "s04", "text": "Ton colis est arrivé, il t'attend devant la porte."}
+{"id": "s05", "text": "Léa rentre vers dix-huit heures trente, d'après son message."}
+{"id": "s06", "text": "Je n'ai trouvé aucun mail du plombier depuis lundi."}
+{"id": "s07", "text": "Le chauffage de la chambre est réglé sur dix-neuf degrés."}
+{"id": "s08", "text": "Tu as trois rendez-vous demain, le premier à neuf heures."}
+{"id": "s09", "text": "Je préviens Mathilde que le dîner sera prêt dans vingt minutes."}
+{"id": "s10", "text": "La porte du garage est ouverte, veux-tu que je la ferme ?"}
+{"id": "s11", "text": "J'ai ajouté du pain, des œufs et du beurre à la liste de courses."}
+{"id": "s12", "text": "Le trajet jusqu'à la gare prend dix-sept minutes à vélo."}
+{"id": "s13", "text": "Bonne nuit, je baisse les volets et j'éteins tout."}
+{"id": "s14", "text": "Hermes a fini l'analyse du devis : il manque la pose du carrelage."}
+{"id": "s15", "text": "Attends, je regarde ça et je te dis."}
+{"id": "s16", "text": "Désolé, je n'ai pas compris. Tu peux répéter ?"}
+{"id": "s17", "text": "La machine à laver a terminé son cycle."}
+{"id": "s18", "text": "Demain matin, prévois un parapluie et une veste chaude."}
+{"id": "s19", "text": "J'ai réservé une table pour quatre personnes samedi soir."}
+{"id": "s20", "text": "Ta grand-mère a bien reçu ton message, elle te remercie."}

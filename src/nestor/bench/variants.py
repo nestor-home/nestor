@@ -30,6 +30,7 @@ from nestor.bench.errors import BenchError
 from nestor.bench.ports import Knobs, Suite
 from nestor.core import ModelType
 from nestor.core.i18n import Locale, Localizer, Message
+from nestor.modules.channels import SpeechModel, TranscriptionModel
 from nestor.modules.cognition import LanguageModel
 from nestor.modules.cognition.embedding import EmbeddingModel
 from nestor.modules.identity import SpeakerModel
@@ -53,6 +54,8 @@ class Variant[K: Knobs]:
     models: Mapping[str, LanguageModel]  # by role, built but not started
     embedder: EmbeddingModel | None = None  # the `memory.embedder`, built but not started, when the suite uses one
     voices: SpeakerModel | None = None  # the `voices.embedder`, built but not started, when the suite uses one
+    transcription: TranscriptionModel | None = None  # the `agent.transcription`, when the suite uses one
+    speech: SpeechModel | None = None  # the `agent.speech`, when the suite uses one
     described: Mapping[
         str, Mapping[str, Any]
     ]  # each role's model: its name, type, provider and settings, secrets masked
@@ -108,6 +111,11 @@ def load_variant[K: Knobs](
     voices = config.voices.embedder
     if suite.voices and voices is None:
         raise BenchError(Message.of("bench-variant-no-voices", path=str(path)))
+    hearing, voicing = config.voice_messages()
+    if suite.transcription and hearing is None:
+        raise BenchError(Message.of("bench-variant-no-transcription", path=str(path)))
+    if suite.speech and voicing is None:
+        raise BenchError(Message.of("bench-variant-no-speech", path=str(path)))
     return Variant(
         name=knobs.name or path.stem,
         source=path,
@@ -117,6 +125,8 @@ def load_variant[K: Knobs](
         described=described,
         embedder=embedder,
         voices=chosen("voices", voices, SpeakerModel) if suite.voices and voices else None,
+        transcription=chosen("transcription", hearing, TranscriptionModel) if suite.transcription and hearing else None,
+        speech=chosen("speech", voicing, SpeechModel) if suite.speech and voicing else None,
     )
 
 

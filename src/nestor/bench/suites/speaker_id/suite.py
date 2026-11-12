@@ -246,7 +246,7 @@ class SpeakerId(Suite[Household, Knobs]):
             heard = await heard_by[True].hear(audio)
             learned += await heard_by[True].learn(heard, turn=f"t{n}", room=ROOMS[n % len(ROOMS)])
             turns.append([turn.speaker, turn.speaker in shared.impostors, without.person, heard.person])
-        started = trial.voices_started
+        started = trial.started.get("voices")
         details = embedder.details()
         model_file = Path(details["file"]) if "file" in details else None
         return {
