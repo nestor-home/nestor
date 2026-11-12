@@ -79,3 +79,6 @@ error-update-not-installable = Cette version ne peut pas être installée d'ici.
 error-voices-off = La reconnaissance des voix est désactivée : choisissez un modèle sous voices dans la configuration.
 error-voice-not-yours = Chacun enregistre sa propre voix. Un propriétaire peut le faire pour quelqu'un sans compte.
 error-audio-format = L'enregistrement doit être un WAV mono 16 bits à 16 kHz.
+error-chat-busy = Nestor répond encore dans cette discussion.
+error-chat-needs-person = Ce compte n'est lié à personne du foyer : demandez à un administrateur de le relier à une personne.
+error-chat-off = Le chat est désactivé : ajoutez un canal de type web sous channels dans la configuration.

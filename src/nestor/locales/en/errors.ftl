@@ -79,3 +79,6 @@ error-update-not-installable = This release cannot be installed from here.
 error-voices-off = Voice recognition is off: choose a model under voices in the configuration.
 error-voice-not-yours = Everyone records their own voice. An owner can do it for someone without an account.
 error-audio-format = The recording must be a 16-bit mono WAV at 16 kHz.
+error-chat-busy = Nestor is still answering in this chat.
+error-chat-needs-person = This account is not linked to anyone in the household: ask an administrator to link it to a person.
+error-chat-off = The chat is off: add a channel of kind web under channels in the configuration.

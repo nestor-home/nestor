@@ -14,6 +14,8 @@ const WATCH = `w-${"fedcba9876543210".repeat(2)}`;
 const ROUTES = [
   "/",
   "/journal",
+  "/chat",
+  "/chat/c-dinner",
   "/journal?density=compact",
   "/journal?session=s-stress",
   "/people",

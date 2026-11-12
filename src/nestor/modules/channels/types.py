@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
 
-from nestor.core import ContractError, SessionId, new_id, utc_now
+from nestor.core import ContractError, PersonId, SessionId, new_id, utc_now
 from nestor.modules.identity import Heard
 
 
@@ -69,10 +69,12 @@ class Exchange:
 
 @dataclass(frozen=True, slots=True)
 class Sender:
-    """The author as the channel knows them; the runtime maps `id` to a person of the household."""
+    """The author as the channel knows them; the runtime maps `id` to a person of the household through their accounts,
+    unless the channel signed the person in itself and names them (`person`: the admin's chat)."""
 
     id: str
     name: str | None = None
+    person: PersonId | None = None
 
 
 class AttachmentKind(StrEnum):

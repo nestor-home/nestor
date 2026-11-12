@@ -315,6 +315,35 @@
             "help": "Pour les réponses écrites. Par défaut, le modèle à l'oral."
           }
         },
+        "titles": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Titles",
+          "x-nestor": {
+            "field": "titles",
+            "title_id": "config-agent-titles",
+            "help_id": "config-agent-titles-help",
+            "fallback_title_id": "config-field-titles",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "agent",
+            "reference": "models",
+            "model_type": "language",
+            "brands": null,
+            "suggest_keys": null,
+            "suggest_values": null,
+            "title": "Modèle des titres",
+            "help": "Titre chaque conversation à partir de son premier échange, pour les listes. Un petit modèle suffit ; par défaut, le modèle à l'écrit."
+          }
+        },
         "transcription": {
           "anyOf": [
             {
@@ -2566,6 +2595,88 @@
           ],
           "title": "TelegramSettings",
           "type": "object"
+        },
+        "web": {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "web",
+              "type": "string",
+              "x-nestor": {
+                "field": "kind",
+                "title_id": "config-channel-web-kind",
+                "help_id": "config-channel-web-kind-help",
+                "fallback_title_id": "config-field-kind",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-web",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Type",
+                "help": null
+              }
+            },
+            "name": {
+              "type": "string",
+              "description": "the instance's name; the kind by default",
+              "x-nestor": {
+                "field": "name",
+                "title_id": "config-channel-web-name",
+                "help_id": "config-channel-web-name-help",
+                "fallback_title_id": "config-field-name",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-web",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Nom",
+                "help": null
+              }
+            },
+            "conversation_ends_after_s": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Conversation Ends After S",
+              "x-nestor": {
+                "field": "conversation_ends_after_s",
+                "title_id": "config-channel-web-conversation_ends_after_s",
+                "help_id": "config-channel-web-conversation_ends_after_s-help",
+                "fallback_title_id": "config-field-conversation_ends_after_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "channel-web",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Nouvelle conversation après (secondes)",
+                "help": null
+              }
+            }
+          },
+          "title": "WebSettings",
+          "type": "object",
+          "required": [
+            "kind"
+          ]
         }
       },
       "model_types": {}

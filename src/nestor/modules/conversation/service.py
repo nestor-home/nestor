@@ -40,10 +40,11 @@ from nestor.modules.conversation.attachments import Attachments
 from nestor.modules.conversation.conversations import Conversations, Turn
 from nestor.modules.conversation.events import AssistantTurn
 from nestor.modules.conversation.history import notification_message
+from nestor.modules.conversation.mentions import Mentions
 from nestor.modules.conversation.persona import QUIET, VOICE_ANSWER, Instructions, Persona
 from nestor.modules.conversation.ports import ContextProvider, Layer, TurnContext
 from nestor.modules.conversation.speakers import Speakers
-from nestor.modules.conversation.types import SILENT, FallbackReason, Notification, ReplyPhase
+from nestor.modules.conversation.types import SILENT, FallbackReason, Mentioned, Notification, ReplyPhase
 from nestor.modules.household import Household, Person
 from nestor.modules.identity import Heard, Speaker
 from nestor.modules.journal import Journal
@@ -134,13 +135,14 @@ class Agent(Assistant):
         localizer: Localizer,
         context: Iterable[ContextProvider] = (),
         speakers: Speakers | None = None,
+        mentions: Mentions | None = None,
         attachments: Attachments,
         settings: AgentSettings | None = None,
         clock: Callable[[], datetime] = utc_now,
     ) -> None:
         """`speakers` tells who speaks on shared devices (with recognised voices when it has them); its tools and
-        guidance belong in `toolbox` and `context`. `attachments` keeps the files sent with messages and records
-        answers to voice messages."""
+        guidance belong in `toolbox` and `context`. `mentions` finds what a message names with `@`. `attachments` keeps
+        the files sent with messages and records answers to voice messages."""
         self.models, self.persona, self.journal = models, persona, journal
         self.conversations = Conversations(
             journal,
@@ -151,13 +153,15 @@ class Agent(Assistant):
         self.household, self.toolbox = household, toolbox
         self.speakers = speakers or Speakers(journal, household)
         self._channels = dict(channels or {})
-        self._context = (self.speakers, *context)  # who speaks: the agent's own concern, on every turn
+        self.mentions = mentions or Mentions()
+        # who speaks and what they name: the agent's own concerns, on every turn
+        self._context = (self.speakers, self.mentions, *context)
         self.attachments = attachments
         self.settings = settings or AgentSettings()
         self.replies = LiveReplies()  # what it is answering right now
 
     def identify(self, address: Address, sender: Sender) -> PersonId | None:
-        person = self.household.identify(address.channel, sender.id)
+        person = self.household.identify(address.channel, sender)
         return person.id if person else None
 
     def respond(self, message: InboundMessage) -> Reply:
@@ -202,11 +206,19 @@ class Agent(Assistant):
         return self._channels.get(address.channel, ChannelProfile())
 
     async def instructions(
-        self, address: Address, speaker: Speaker, medium: Medium, said: str | None, *, shared: bool = False
+        self,
+        address: Address,
+        speaker: Speaker,
+        medium: Medium,
+        said: str | None,
+        *,
+        shared: bool = False,
+        mentions: tuple[Mentioned, ...] = (),
     ) -> Instructions:
-        """`shared`: the turn comes from a device anyone at home may use (`address.conversation` is its room)."""
+        """`shared`: the turn comes from a device anyone at home may use (`address.conversation` is its room);
+        `mentions`: what the person's message names."""
         person = self.household.person(speaker.person) if speaker.person else None
-        turn = TurnContext(person=person, speaker=speaker, address=address, said=said)
+        turn = TurnContext(person=person, speaker=speaker, address=address, said=said, mentions=mentions)
         sections = await asyncio.gather(*(p.context(turn) for p in self._context))
         return self.persona.instructions(
             medium=medium,
@@ -248,6 +260,7 @@ class AgentReply(Reply):
         self._speaker = Speaker.account(person.id) if person else Speaker.unknown()
         self._opening = opening
         self._final = ""  # what the model wrote in its last round, once it asked for no more tools
+        self._mentions: tuple[Mentioned, ...] = ()  # what the person's message names, once it is read
         # the answer goes back as voice messages: to a voice message, on a channel that sends them, with a voice
         self._voiced = (
             isinstance(opening, InboundMessage)
@@ -314,8 +327,9 @@ class AgentReply(Reply):
         kept = await agent.attachments.keep(message.attachments)
         heard = (a.transcript for a in kept if a.kind is AttachmentKind.VOICE and a.transcript)
         words = "\n".join(part for part in (message.text.strip(), *heard) if part)
+        self._mentions = agent.mentions.named(words, self._person)
         self._turn = await agent.conversations.turn(self._address, self._medium)
-        said = await self._turn.said(words, self._medium, self._speaker, kept)
+        said = await self._turn.said(words, self._medium, self._speaker, kept, self._mentions)
         agent.speakers.learn(message.heard, said)
         if phrase := await agent.speakers.enrolling(message):  # a phrase of a voice being recorded
             self._say(phrase)
@@ -338,7 +352,9 @@ class AgentReply(Reply):
             history = (*history, notification_message(opening))
         shared = isinstance(opening, InboundMessage) and opening.sender is None
         said = self._said(history)
-        instructions = await agent.instructions(self._address, self._speaker, self._medium, said, shared=shared)
+        instructions = await agent.instructions(
+            self._address, self._speaker, self._medium, said, shared=shared, mentions=self._mentions
+        )
         turn = instructions.turn
         if isinstance(opening, Notification) and opening.quiet:
             turn = f"{turn}\n\n{QUIET}"
@@ -439,10 +455,13 @@ class AgentReply(Reply):
             return
         if not self._voiced:
             self._chunks.put_nowait(MessageEnd(last=last))
-        self._ended.append((text, await self._turn.answered(text) if self._turn else None))
+        answer = await self._turn.answered(text) if self._turn else None
+        self._ended.append((text, answer))
         if self._voiced:  # recorded once logged, then handed over: a voice message is sent whole
             voice = await self._agent.attachments.voice(text)
-            self._chunks.put_nowait(MessageEnd(last=last, attachments=(voice,) if voice else ()))
+            if voice is not None and self._turn is not None and answer is not None:
+                await self._turn.voiced(answer, voice[1])
+            self._chunks.put_nowait(MessageEnd(last=last, attachments=(voice[0],) if voice else ()))
 
     def _end_turn(self) -> None:
         """The reply is over, written or cut: the conversation's silence starts now."""

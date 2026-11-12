@@ -1,11 +1,12 @@
 """Connectors and connections: what a service offers, and an account plugged into it for a person."""
 
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 from datetime import datetime
 from enum import StrEnum
 
-from nestor.core import PersonId, new_id, utc_now
+from nestor.core import ContractError, PersonId, new_id, utc_now
 from nestor.core.i18n import Message
 
 
@@ -33,6 +34,26 @@ class SecretField:
     default: str | None = None  # an optional field: this value when left empty
 
 
+SERVICE_NAME = re.compile(r"[a-z0-9]+(-[a-z0-9]+)*")
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class Service:
+    """What an account of the connector gives access to, as people name it with `@` in a message (`@gmail` for the
+    mail of a Google account): `name` is what they write, `brand` its mark, `tools` the names of the connector's
+    tools that serve it."""
+
+    name: str
+    tools: frozenset[str]
+    brand: str | None = None
+
+    def __post_init__(self) -> None:
+        if not SERVICE_NAME.fullmatch(self.name):
+            raise ContractError(f"a service is named in lowercase words joined by hyphens, not {self.name!r}")
+        if not self.tools:
+            raise ContractError(f"service {self.name!r} serves no tool")
+
+
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ConnectorInfo:
     """What the admin catalogue shows, and what the connector needs to be connected."""
@@ -46,6 +67,12 @@ class ConnectorInfo:
     setup: Message | None = None  # step-by-step guide shown before connecting (create an OAuth client…)
     inbound: tuple[str, ...] = ()  # kinds of items it can feed watches with ("mail")
     brand: str | None = None  # the vendor, as a slug people recognise ("google")
+    services: tuple[Service, ...] = ()  # what a message names with `@`; none: the account as a whole, by its kind
+
+    def __post_init__(self) -> None:
+        names = [s.name for s in self.services]
+        if len(set(names)) != len(names):
+            raise ContractError(f"connector {self.kind!r} names two services alike")
 
 
 class Status(StrEnum):

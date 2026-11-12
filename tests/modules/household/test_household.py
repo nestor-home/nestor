@@ -3,6 +3,7 @@
 import pytest
 
 from nestor.core import ContractError, PersonId
+from nestor.modules.channels import Sender
 from nestor.modules.household import Account, Household, Person
 
 MATHIS = Person(id=PersonId("mathis"), name="Mathis", accounts=(Account.parse("telegram:42"),))
@@ -11,9 +12,16 @@ MATHILDE = Person(id=PersonId("mathilde"), name="Mathilde", accounts=(Account.pa
 
 def test_a_sender_is_recognised_on_their_channel_only() -> None:
     household = Household([MATHIS, MATHILDE])
-    assert household.identify("telegram", "7") == MATHILDE
-    assert household.identify("telegram", "999") is None
-    assert household.identify("discord", "7") is None
+    assert household.identify("telegram", Sender("7")) == MATHILDE
+    assert household.identify("telegram", Sender("999")) is None
+    assert household.identify("discord", Sender("7")) is None
+
+
+def test_a_channel_that_signs_people_in_names_them_without_an_account() -> None:
+    """The admin's chat: its session vouches for the person, who needs no account on it."""
+    household = Household([MATHIS, MATHILDE])
+    assert household.identify("web", Sender("session", person=PersonId("mathilde"))) == MATHILDE
+    assert household.identify("web", Sender("session", person=PersonId("gone"))) is None
 
 
 def test_an_account_stands_for_one_person_not_anyone() -> None:

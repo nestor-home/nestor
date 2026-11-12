@@ -1,11 +1,12 @@
 """What other modules contribute to the conversation."""
 
 from abc import ABC, abstractmethod
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from enum import StrEnum
 
 from nestor.modules.channels import Address
+from nestor.modules.conversation.types import Mentioned
 from nestor.modules.household import Person
 from nestor.modules.identity import Speaker
 
@@ -29,6 +30,7 @@ class TurnContext:
     speaker: Speaker  # how it is known: give what belongs to them only when `speaker.private`
     address: Address
     said: str | None  # the person's last messages, or what the agent is asked to convey: what to look up
+    mentions: tuple[Mentioned, ...] = ()  # what the person's message names with `@`
 
 
 class ContextProvider(ABC):
@@ -42,3 +44,16 @@ class ContextProvider(ABC):
 
     @abstractmethod
     async def context(self, turn: TurnContext) -> Sections: ...
+
+
+class MentionSource(ABC):
+    """A module whose things a message can name with `@` (its people, rooms, executors, accounts), and what naming
+    one asks of the agent. Contract: `mentionable` is cheap and never raises (it runs as people type); each handle it
+    proposes is `[a-z0-9_-]+`; it offers only what `person` may use (`None`: someone at home, unknown)."""
+
+    @abstractmethod
+    def mentionable(self, person: Person | None) -> Iterable[Mentioned]: ...
+
+    @abstractmethod
+    def instruction(self, mentioned: Mentioned) -> str:
+        """For the model, in English: what it is and what naming it asks for."""

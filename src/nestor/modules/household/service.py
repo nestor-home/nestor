@@ -3,6 +3,7 @@
 from collections.abc import Iterable
 
 from nestor.core import ContractError, PersonId
+from nestor.modules.channels import Sender
 from nestor.modules.household.types import Account, Person
 
 
@@ -40,6 +41,9 @@ class Household:
         found = self._people.get(person_id) if person_id is not None else None
         return found.name if found else default
 
-    def identify(self, channel: str, sender: str) -> Person | None:
-        """The person behind an account, or `None` for a stranger."""
-        return self._accounts.get((channel, sender))
+    def identify(self, channel: str, sender: Sender) -> Person | None:
+        """The person behind a sender: the one the channel signed in and names, else the owner of the account;
+        `None` for a stranger."""
+        if sender.person is not None:
+            return self._people.get(sender.person)
+        return self._accounts.get((channel, sender.id))

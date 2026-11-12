@@ -22,8 +22,10 @@ from nestor.modules.connectors import (
     ConnectionRemoved,
     Connections,
     ConnectorTools,
+    Service,
     Status,
 )
+from nestor.modules.household import Person
 from nestor.modules.identity import Speaker
 from nestor.modules.initiative import Incoming
 from nestor.modules.journal import Journal, LogQuery
@@ -272,3 +274,47 @@ async def test_inbound_items_flow_from_connections_plugged_in_while_running() ->
     with contextlib.suppress(asyncio.CancelledError):
         await later
     await feed.aclose()
+
+
+async def test_a_message_names_only_the_accounts_its_writer_may_use_by_their_service_or_address() -> None:
+    setup = Setup()
+    await setup.connect()  # Mathis's mailbox
+    theirs = await setup.connections.connect("imap", PersonId("mathilde"), {"password": "app-password"})
+    shared = await setup.connections.connect("imap", None, {"password": "household"})
+    source = ConnectorTools(setup.connections)
+    mathis, mathilde = Person(id=MATHIS, name="Mathis"), Person(id=PersonId("mathilde"), name="Mathilde")
+
+    his = {m.id.partition(":")[0]: m for m in source.mentionable(mathis)}  # the account, before its service
+    hers = {m.id.partition(":")[0]: m for m in source.mentionable(mathilde)}
+
+    assert theirs.id not in his and shared.id in his, "not her mailbox; the household's, yes"
+    assert {m.handle for m in hers.values()} == {"imap-mathilde"}, "two accounts of one service: told apart"
+    assert "mathilde@free.fr" in (*hers[shared.id].aliases, hers[shared.id].label)
+    mailbox = next(m for account, m in his.items() if account != shared.id)
+    assert "use its tools" in source.instruction(mailbox) and "their own" in source.instruction(mailbox)
+
+
+async def test_an_account_is_named_by_the_services_its_connector_declares_each_with_its_own_tools() -> None:
+    setup = Setup()
+    setup.mail.info = replace(
+        setup.mail.info,
+        services=(
+            Service(name="inbox", brand="gmail", tools=frozenset({"mailbox_search"})),
+            Service(name="outbox", tools=frozenset({"mailbox_send"})),
+        ),
+    )
+    await setup.connect()
+    source = ConnectorTools(setup.connections)
+
+    named = {m.handle: m for m in source.mentionable(Person(id=MATHIS, name="Mathis"))}
+
+    assert set(named) == {"inbox", "outbox"}
+    assert named["inbox"].brand == "gmail" and named["outbox"].brand == setup.mail.info.brand
+    assert "(mailbox_search)" in source.instruction(named["inbox"]), "the service's tools, not the account's"
+
+
+def test_a_service_is_named_as_people_write_it_and_serves_tools() -> None:
+    with pytest.raises(ContractError, match="lowercase words"):
+        Service(name="Google Mail", tools=frozenset({"x"}))
+    with pytest.raises(ContractError, match="serves no tool"):
+        Service(name="mail", tools=frozenset())

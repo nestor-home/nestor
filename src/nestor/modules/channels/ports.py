@@ -131,6 +131,7 @@ class Channel(Component, ABC):
     media: frozenset[Medium] = frozenset({Medium.WRITTEN})  # how its turns can travel
     sends: frozenset[AttachmentKind] = frozenset()  # the attachments it can deliver
     style: str = ""  # how to write for this channel (e.g. expression tags the voice understands)
+    titled: bool = False  # its conversations are listed by their title (a chat's history): they get one
 
     def __init__(self, channel_id: str, *, conversation_ends_after_s: float | None = None) -> None:
         if conversation_ends_after_s is not None and conversation_ends_after_s <= 0:

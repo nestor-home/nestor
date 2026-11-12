@@ -4,6 +4,7 @@
  */
 import { HttpResponse, http, type JsonBodyType, delay as latency, sse } from "msw";
 import type { components } from "@/api/schema.gen";
+import { answerTo, chatMessage, MENTIONS, type MockChat, mentionedIn } from "./chats";
 import * as config from "./config";
 import { LIVE } from "./day";
 import { db, type MockAddition, save } from "./db";
@@ -332,8 +333,132 @@ const voiceHandlers = [
   }),
 ];
 
+// -- the admin's chat ------------------------------------------------------------------------------
+
+const answering = new Map<string, { stopped: boolean }>(); // the chats whose answer is being written
+const SESSIONS = "web:mathis/";
+
+const chatOut = (chat: MockChat): In<"ChatOut"> => {
+  const first = chat.messages.find((m) => m.role === "person");
+  const title = first?.text.replace(/\s+/g, " ").trim() ?? "";
+  return {
+    id: chat.id,
+    title: title.length > 80 ? `${title.slice(0, 79).trimEnd()}…` : title,
+    files: first?.files.map((f) => f.kind) ?? [],
+    started_at: chat.started_at,
+    updated_at: chat.updated_at,
+    answering: answering.has(chat.id),
+  };
+};
+
+/** An answer as the server streams it: one `ChatStreamOut` per line, word by word, `done` last. */
+function answer(chat: MockChat, text: string, files: number): ReadableStream<Uint8Array> {
+  const encoder = new TextEncoder();
+  const line = (part: In<"ChatStreamOut">) => encoder.encode(`${JSON.stringify(part)}\n`);
+  const turn = `t-${Date.now()}`;
+  const reply = answerTo(text, files);
+  const said = lang === "fr" ? inFrench(reply.answer) : reply.answer;
+  const live = { stopped: false };
+  answering.set(chat.id, live);
+  return new ReadableStream({
+    async start(controller) {
+      await delay(700);
+      if (reply.tool) {
+        chat.messages.push(chatMessage("tool", "", turn, { tool: reply.tool }));
+        save();
+        await delay(600);
+      }
+      const words = said.split(/(?<= )/);
+      let written = "";
+      for (const word of words) {
+        if (live.stopped) break;
+        written += word;
+        controller.enqueue(line({ type: "text", text: word }));
+        await delay(35);
+      }
+      controller.enqueue(line({ type: "end", last: true }));
+      chat.messages.push(chatMessage("assistant", written.trim(), turn, { interrupted: live.stopped }));
+      chat.updated_at = new Date().toISOString();
+      answering.delete(chat.id);
+      save();
+      controller.enqueue(line({ type: "done" }));
+      controller.close();
+    },
+  });
+}
+
+const chatHandlers = [
+  http.get(`${API}/chats`, ({ request }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    const chats = [...db.chats].sort((a, b) => b.updated_at.localeCompare(a.updated_at)).map(chatOut);
+    return json({ chats, sessions: SESSIONS } satisfies In<"ChatsOut">);
+  }),
+
+  http.get(`${API}/chats/mentions`, ({ request }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    return json(MENTIONS satisfies In<"MentionOut">[]);
+  }),
+
+  http.get(`${API}/chats/:chat`, ({ request, params }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    const chat = db.chats.find((c) => c.id === params.chat);
+    return json({
+      chat: String(params.chat),
+      session: `${SESSIONS}${params.chat}`,
+      messages: chat?.messages ?? [],
+      answering: answering.has(String(params.chat)),
+    } satisfies In<"ChatThreadOut">);
+  }),
+
+  http.post(`${API}/chats/:chat/messages`, async ({ request, params }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    const id = String(params.chat);
+    if (answering.has(id)) return fail(409, "chat_busy");
+    const body = (await request.json()) as In<"ChatMessageIn">;
+    let chat = db.chats.find((c) => c.id === id);
+    if (!chat) {
+      chat = { id, started_at: new Date().toISOString(), updated_at: new Date().toISOString(), messages: [] };
+      db.chats.push(chat);
+    }
+    const files = (body.files ?? []).map((f, index) => ({
+      position: 0,
+      index,
+      kind: f.kind,
+      media_type: f.media_type,
+      size: Math.round((f.data.length * 3) / 4),
+      name: f.name ?? null,
+      transcript: f.kind === "voice" ? (lang === "fr" ? "Allume le salon." : "Turn on the living room.") : null,
+    }));
+    const said = [body.text ?? "", ...files.map((f) => f.transcript ?? "")].join(" ");
+    const mentions = mentionedIn(body.text ?? "");
+    chat.messages.push(chatMessage("person", body.text ?? "", `t-${Date.now()}`, { files, mentions }));
+    chat.updated_at = new Date().toISOString();
+    save();
+    return new HttpResponse(answer(chat, said, files.length), { headers: { "Content-Type": "application/x-ndjson" } });
+  }),
+
+  http.get(`${API}/chats/:chat/answer`, ({ request }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    return noContent(); // the mock's answers are only followed by the page that asked
+  }),
+
+  http.post(`${API}/chats/:chat/stop`, ({ request, params }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    const live = answering.get(String(params.chat));
+    if (live) live.stopped = true;
+    return noContent();
+  }),
+];
+
 export const handlers = [
   ...voiceHandlers,
+  ...chatHandlers,
   // -- session ----------------------------------------------------------------------------------
   http.get(`${API}/me`, async ({ request }) => {
     listen(request);
@@ -533,7 +658,10 @@ export const handlers = [
     const refused = guard(request);
     if (refused) return refused;
     const event = db.journal.find((e) => e.item.position === Number(params.position));
-    const attachment = event?.item.attachments.find((a) => a.index === Number(params.index));
+    const sent = db.chats.flatMap((c) => c.messages).flatMap((m) => m.files);
+    const attachment =
+      event?.item.attachments.find((a) => a.index === Number(params.index)) ??
+      sent.find((f) => f.position === Number(params.position) && f.index === Number(params.index));
     if (!attachment) return notFound("attachment");
     const [body, type] =
       attachment.kind === "image"

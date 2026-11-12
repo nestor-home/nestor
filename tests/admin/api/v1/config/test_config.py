@@ -36,7 +36,11 @@ async def test_the_schema_gives_every_section_and_every_installed_plugin_its_for
         assert slots["channels"]["shape"] == "list" and slots["channels"]["required"]
         assert slots["channels"]["title"] == "Canaux"
         assert (slots["models"]["shape"], slots["home"]["shape"]) == ("named", "one")
-        assert slots["models"]["model_types"] == {"scripted-language": "language", "tagged-voices-speaker": "speaker"}
+        assert slots["models"]["model_types"] == {
+            "scripted-language": "language",
+            "titles-language": "language",
+            "tagged-voices-speaker": "speaker",
+        }
         assert slots["channels"]["model_types"] == {}
         spoken = schema["sections"]["agent"]["properties"]["spoken"]["x-nestor"]
         assert (spoken["reference"], spoken["model_type"]) == ("models", "language")

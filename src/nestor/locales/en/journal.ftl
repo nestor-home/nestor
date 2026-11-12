@@ -22,6 +22,8 @@ journal-fallback = Fallback answer: { $reason ->
    *[other] { $reason }
 }
 journal-answer-cut = Answer interrupted
+journal-conversation-titled = Conversation titled “{ $title }”
+journal-answer-voiced = { $assistant } answered with a voice message
 journal-detail-heard = Heard: { $heard }
 
 journal-tool-called = Tool { $tool } called

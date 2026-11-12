@@ -6,6 +6,7 @@ locks) as tools, the household deciding which need a person's go-ahead, and show
 """
 
 from nestor.modules.home.events import PresenceChanged
+from nestor.modules.home.mentions import RoomMentions
 from nestor.modules.home.ports import Home, PresenceSource
 from nestor.modules.home.types import Granularity, HomeOverview, Presence, Resident, Room, Whereabouts
 
@@ -18,5 +19,6 @@ __all__ = [
     "PresenceSource",
     "Resident",
     "Room",
+    "RoomMentions",
     "Whereabouts",
 ]

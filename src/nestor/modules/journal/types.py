@@ -27,6 +27,7 @@ class LogQuery:
 
     types: frozenset[str] | None = None
     session: SessionId | None = None
+    sessions_under: str | None = None  # the sessions whose id starts with it (one person's chats)
     since: datetime | None = None
     until: datetime | None = None
     after: int = 0  # position cursor: entries strictly after it

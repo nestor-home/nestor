@@ -41,6 +41,9 @@ export const keys = {
   configVersion: (id: Id) => ["config", "history", id] as const,
   secrets: ["config", "secrets"] as const,
   memories: (query: MemoryQuery) => ["memories", query] as const,
+  chats: ["chats"] as const,
+  chat: (id: Id) => ["chats", id] as const,
+  mentions: ["chats", "mentions"] as const,
 };
 
 export const meQuery = queryOptions({
@@ -138,6 +141,10 @@ export const schedulesQuery = queryOptions({
   queryFn: api.schedules,
   refetchInterval: 60_000,
 });
+export const chatsQuery = queryOptions({ queryKey: keys.chats, queryFn: api.chats, retry: false });
+export const mentionsQuery = queryOptions({ queryKey: keys.mentions, queryFn: api.mentions, staleTime: 300_000 });
+export const chatQuery = (id: Id) => queryOptions({ queryKey: keys.chat(id), queryFn: () => api.chat(id) });
+
 export const messagesQuery = queryOptions({ queryKey: keys.messages, queryFn: api.messages, refetchInterval: 60_000 });
 export const confirmationsQuery = queryOptions({
   queryKey: keys.confirmations,

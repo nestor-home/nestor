@@ -1,6 +1,6 @@
 """The central agent's language model: messages, tools, streamed output and the model port."""
 
-from nestor.modules.cognition.model.answers import json_answer
+from nestor.modules.cognition.model.answers import json_answer, text_answer
 from nestor.modules.cognition.model.ports import LanguageModel
 from nestor.modules.cognition.model.types import (
     Finished,
@@ -32,4 +32,5 @@ __all__ = [
     "ToolSpec",
     "Usage",
     "json_answer",
+    "text_answer",
 ]

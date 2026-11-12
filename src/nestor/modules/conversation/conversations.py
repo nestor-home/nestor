@@ -27,9 +27,16 @@ from datetime import datetime, timedelta
 from nestor.core import Event, PersonId, SessionId, new_id, utc_now
 from nestor.modules.channels import Address, AttachmentKind, Exchange, Medium
 from nestor.modules.cognition.model import Image, Message
-from nestor.modules.conversation.events import AnswerCut, AssistantTurn, FallbackSpoken, NotificationTurn, UserTurn
+from nestor.modules.conversation.events import (
+    AnswerCut,
+    AnswerVoiced,
+    AssistantTurn,
+    FallbackSpoken,
+    NotificationTurn,
+    UserTurn,
+)
 from nestor.modules.conversation.history import HISTORY_EVENTS, IMAGE_BYTES, Names, in_conversation, to_messages
-from nestor.modules.conversation.types import Attached, FallbackReason, Notification
+from nestor.modules.conversation.types import Attached, FallbackReason, Mentioned, Notification
 from nestor.modules.identity import Speaker
 from nestor.modules.journal import Journal
 
@@ -47,7 +54,12 @@ class Turn:
         self._journal = conversations.journal
 
     async def said(
-        self, text: str, medium: Medium, speaker: Speaker, attachments: tuple[Attached, ...] = ()
+        self,
+        text: str,
+        medium: Medium,
+        speaker: Speaker,
+        attachments: tuple[Attached, ...] = (),
+        mentions: tuple[Mentioned, ...] = (),
     ) -> UserTurn:
         """A person opened the turn."""
         return await self._publish(
@@ -60,6 +72,7 @@ class Turn:
                 speaker=speaker,
                 exchange=self.exchange,
                 attachments=attachments,
+                mentions=mentions,
             )
         )
 
@@ -94,6 +107,14 @@ class Turn:
         return await self._publish(
             AnswerCut(
                 source=SOURCE, session=self.address.session, answer=answer.id, heard=heard, exchange=self.exchange
+            )
+        )
+
+    async def voiced(self, answer: AssistantTurn, voice: Attached) -> AnswerVoiced:
+        """`answer` went out as a voice message, recorded as `voice`."""
+        return await self._publish(
+            AnswerVoiced(
+                source=SOURCE, session=self.address.session, answer=answer.id, voice=voice, exchange=self.exchange
             )
         )
 

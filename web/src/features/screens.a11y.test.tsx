@@ -12,6 +12,8 @@ beforeEach(() => microphone.reset());
 const SCREENS: [string, string | RegExp][] = [
   ["/", /Hello|Good evening|Good night|Good morning/],
   ["/journal", "Journal"],
+  ["/chat", "New chat"],
+  ["/chat/c-dinner", /Turn on the kitchen lights/],
   ["/journal?conversation=conv-s-elec", "Journal"],
   ["/people", "People"],
   ["/people/lea", "Léa"],

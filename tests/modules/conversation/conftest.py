@@ -16,6 +16,7 @@ from nestor.modules.conversation import (
     Attachments,
     ChannelProfile,
     ContextProvider,
+    Mentions,
     ModelChoice,
     Persona,
     Speakers,
@@ -65,6 +66,7 @@ def make_agent(journal: Journal) -> MakeAgent:
         speakers: Speakers | None = None,
         household: Household | None = None,
         attachments: Attachments | None = None,
+        mentions: Mentions | None = None,
     ) -> Agent:
         return Agent(
             models=models or ModelChoice.single(model or ScriptedModel(*replies)),
@@ -84,6 +86,7 @@ def make_agent(journal: Journal) -> MakeAgent:
             settings=settings,
             clock=clock,
             speakers=speakers,
+            mentions=mentions,
             attachments=attachments or Attachments(MemoryBlobStore()),
         )
 

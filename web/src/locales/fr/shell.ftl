@@ -2,6 +2,7 @@
 
 nav-today = Aujourd'hui
 nav-journal = Journal
+nav-chat = Discussion
 nav-group-household = Foyer
 nav-people = Personnes
 nav-memories = Souvenirs

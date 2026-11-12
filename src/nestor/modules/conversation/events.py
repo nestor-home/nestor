@@ -3,7 +3,7 @@ and the turn it belongs to (`exchange`)."""
 
 from nestor.core import Event, PersonId
 from nestor.modules.channels import Address, Exchange, Medium
-from nestor.modules.conversation.types import About, Attached, FallbackReason
+from nestor.modules.conversation.types import About, Attached, FallbackReason, Mentioned
 from nestor.modules.identity import Speaker
 
 
@@ -12,7 +12,7 @@ class UserTurn(Event, event_type="conversation.turn.user"):
     `exchange.turn_id` is the turn it opens.
 
     `text` is the person's words: what they typed, then what their voice messages said. `attachments` are the files
-    that came with it, voice messages included."""
+    that came with it, voice messages included; `mentions` what the words name with `@`."""
 
     address: Address
     text: str
@@ -20,6 +20,7 @@ class UserTurn(Event, event_type="conversation.turn.user"):
     medium: Medium
     speaker: Speaker
     attachments: tuple[Attached, ...] = ()
+    mentions: tuple[Mentioned, ...] = ()
 
     @property
     def person(self) -> PersonId | None:
@@ -70,3 +71,18 @@ class AnswerCut(Event, event_type="conversation.turn.cut"):
     answer: str  # id of the AssistantTurn
     heard: str
     exchange: Exchange | None = None  # the turn of the answer it cuts
+
+
+class AnswerVoiced(Event, event_type="conversation.turn.voiced"):
+    """An answer went out as a voice message: its recording, kept like the files people send."""
+
+    answer: str  # id of the AssistantTurn
+    voice: Attached
+    exchange: Exchange | None = None
+
+
+class ConversationTitled(Event, event_type="conversation.titled"):
+    """A conversation got its title, written from its first exchange: what lists show for it."""
+
+    conversation_id: str
+    title: str

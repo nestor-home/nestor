@@ -1,11 +1,19 @@
 """What the central agent sees of messaging: a tool to write or speak to someone of the household, and the
 questions still waiting for an answer, on both sides."""
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 
 from nestor.modules.cognition.model import ToolSpec
 from nestor.modules.cognition.tools import Risk, Tool, ToolContext, ToolFailed, ToolProvider
-from nestor.modules.conversation import ContextProvider, Layer, Sections, TurnContext
+from nestor.modules.conversation import (
+    ContextProvider,
+    Layer,
+    Mentioned,
+    MentionKind,
+    MentionSource,
+    Sections,
+    TurnContext,
+)
 from nestor.modules.household import Household, Person
 from nestor.modules.initiative.messaging.book import MessageBook
 
@@ -18,7 +26,7 @@ HOW_TO_MESSAGE = (
 )
 
 
-class MessageTools(ToolProvider, ContextProvider):
+class MessageTools(ToolProvider, ContextProvider, MentionSource):
     name = "message-tools"
 
     def __init__(self, book: MessageBook, household: Household) -> None:
@@ -98,3 +106,14 @@ class MessageTools(ToolProvider, ContextProvider):
         if found is None:
             raise ToolFailed(f"no one called {wanted} in the household")
         return found
+
+    def mentionable(self, person: Person | None) -> Iterable[Mentioned]:
+        for someone in self.household.people:
+            yield Mentioned(
+                kind=MentionKind.PERSON, id=someone.id, handle=someone.id, label=someone.name, aliases=(someone.name,)
+            )
+
+    def instruction(self, mentioned: Mentioned) -> str:
+        return (
+            f"{mentioned.label} (person {mentioned.id}), of the household; what is for them goes through message_person"
+        )

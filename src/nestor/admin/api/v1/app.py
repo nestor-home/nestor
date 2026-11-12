@@ -13,6 +13,7 @@ from fastapi.routing import APIRoute
 
 from nestor.admin.api.v1.accounts import routes as accounts
 from nestor.admin.api.v1.agent import routes as agent
+from nestor.admin.api.v1.chat import routes as chat
 from nestor.admin.api.v1.config import routes as config
 from nestor.admin.api.v1.config.schemas import ConfigSchemaOut
 from nestor.admin.api.v1.confirmations import routes as confirmations
@@ -65,6 +66,7 @@ RESOURCES = (
     household,
     home,
     agent,
+    chat,
     connectors,
     connections,
     satellites,

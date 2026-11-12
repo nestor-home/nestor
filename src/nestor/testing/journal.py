@@ -40,6 +40,7 @@ def _matches(entry: Entry, query: LogQuery) -> bool:
         and (query.before is None or entry.position < query.before)
         and (query.types is None or entry.type in query.types)
         and (query.session is None or record["session"] == query.session)
+        and (query.sessions_under is None or str(record["session"] or "").startswith(query.sessions_under))
         and (query.since is None or at >= query.since)
         and (query.until is None or at < query.until)
     )
@@ -107,6 +108,14 @@ class EventLogContract:
                 LogQuery(types=frozenset({"testing.probe"}), session=SessionId("a"), since=now - timedelta(hours=1))
             )
         assert labels(found) == ["kept"]
+
+    async def test_sessions_are_read_by_the_start_of_their_id(self) -> None:
+        async with self.event_log() as log:
+            for session in ("web:lea/1", "web:lea/2", "web:leo/1", "web:lea"):
+                await log.append(Probe(source="test", label=session, session=SessionId(session)))
+            await log.append(Probe(source="test", label="none"))
+            found = await log.read(LogQuery(sessions_under="web:lea/"))
+        assert labels(found) == ["web:lea/1", "web:lea/2"]
 
     async def test_reading_pages_through_the_log(self) -> None:
         async with self.event_log() as log:

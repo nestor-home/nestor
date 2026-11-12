@@ -82,7 +82,8 @@ export async function unwrap<T>(call: Promise<{ data?: T; error?: ErrorBody; res
   throw toError(result.response.status, result.error);
 }
 
-function toError(status: number, body: ErrorBody | undefined): ApiError {
+/** The API's refusal as an ApiError, whatever answered: the API's own error, else the status in words. */
+export function toError(status: number, body: ErrorBody | undefined): ApiError {
   const error = body?.error; // undefined when no API answered (a proxy, a server going down)
   if (error?.message) {
     return new ApiError(status, error.code, error.message, error.message_id, error.args, error.problems ?? []);

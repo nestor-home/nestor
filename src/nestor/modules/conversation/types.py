@@ -83,3 +83,28 @@ class Attached:
     blob: BlobRef
     name: str | None = None
     transcript: str | None = None
+
+
+class MentionKind(StrEnum):
+    """What a message can name with `@`."""
+
+    PERSON = "person"  # someone of the household
+    ROOM = "room"  # a room of the home
+    EXECUTOR = "executor"  # an executor, to hand work to
+    CONNECTION = "connection"  # a connected account (a mailbox, a calendar), to use
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class Mentioned:
+    """Something a message names as `@handle`, whatever the channel: names people type, never an id. `handle` is the
+    one offered, unique for whoever writes; `aliases` are other names it answers to (a person's name, a room's, an
+    account's). `label` is how it reads ("Mathilde", "Salon", "mathis@gmail.com"), `detail` what tells it apart (what
+    an executor does), `brand` the vendor behind it, when there is one."""
+
+    kind: MentionKind
+    id: str  # the person, room, executor or connection it is
+    handle: str
+    label: str
+    aliases: tuple[str, ...] = ()
+    detail: str = ""
+    brand: str | None = None

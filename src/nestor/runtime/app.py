@@ -32,7 +32,7 @@ from nestor.core import Component, ContractError, Model, ModelType, ProviderErro
 from nestor.core.i18n import Locale
 from nestor.modules.accounts import Accounts
 from nestor.modules.activity import ActivityMonitor
-from nestor.modules.channels import Channel, SpeechModel, TranscriptionModel
+from nestor.modules.channels import Channel, ChatChannel, SpeechModel, TranscriptionModel
 from nestor.modules.cognition import Executor, LanguageModel
 from nestor.modules.cognition.delegation.assistant import Delegation
 from nestor.modules.cognition.delegation.service import TaskManager
@@ -44,11 +44,13 @@ from nestor.modules.conversation import (
     AgentSettings,
     Attachments,
     ChannelProfile,
+    ConversationTitles,
+    Mentions,
     ModelChoice,
     Persona,
     Speakers,
 )
-from nestor.modules.home import Home, PresenceSource
+from nestor.modules.home import Home, PresenceSource, RoomMentions
 from nestor.modules.household import Account, Household, Person, SharedAccount
 from nestor.modules.identity import Departures, SpeakerModel, Voices
 from nestor.modules.initiative import (
@@ -299,6 +301,9 @@ class Nestor:
             },
             context=[delegation, memory, watch_tools, message_tools, schedule_tools, self.confirmations],
             speakers=self.speakers,
+            mentions=Mentions(
+                [message_tools, *([RoomMentions(self.home)] if self.home else []), delegation, *connector_tools]
+            ),
             attachments=Attachments(
                 self.blobs,
                 transcription=optional(hearing, TranscriptionModel, "transcription"),
@@ -345,6 +350,13 @@ class Nestor:
             timezone=config.persona.timezone,
             known=config.memory.recent,
         )
+        self.titles = ConversationTitles(
+            self.journal,
+            model("agent.titles", roles["titles"]),
+            [c.channel_id for c in self.channels if c.titled],
+            assistant=config.persona.name,
+            language=config.persona.language,
+        )
         self.activity = ActivityMonitor(
             self.journal, self.agent.replies, self.tasks, quiet_hours=quiet_hours, timezone=config.persona.timezone
         )
@@ -354,6 +366,11 @@ class Nestor:
         """Where devices reach the first host that serves satellites (for pairing URIs), if any."""
         hosts = (c for c in self.channels if isinstance(c, SatelliteHost))
         return next((url for host in hosts if (url := host.satellite_url(seen_as))), None)
+
+    @property
+    def chat(self) -> ChatChannel | None:
+        """The chat a page serves (the admin's), when one is configured."""
+        return next((c for c in self.channels if isinstance(c, ChatChannel)), None)
 
     def spoken_channels(self) -> frozenset[str]:
         """The ids of the channels people speak through: their conversations are rooms."""
@@ -403,6 +420,7 @@ class Nestor:
             *self.sources,
             self.watches,
             self.activity,
+            self.titles,
             self.consolidator,
             *updates,
         ]
