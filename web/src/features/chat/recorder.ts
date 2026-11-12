@@ -23,6 +23,8 @@ interface Session {
 export function useRecorder() {
   const [status, setStatus] = useState<RecorderState>({ state: "idle" });
   const session = useRef<Session | null>(null);
+  const asking = useRef(false); // the browser is asking for the microphone
+  const mounted = useRef(true);
 
   const release = useCallback(() => {
     const current = session.current;
@@ -33,15 +35,28 @@ export function useRecorder() {
     void current.context.close();
   }, []);
 
-  useEffect(() => release, [release]);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      release();
+    };
+  }, [release]);
 
   const start = useCallback(async () => {
-    if (session.current) return;
+    if (session.current || asking.current) return;
+    asking.current = true;
     let stream: MediaStream;
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
     } catch {
       setStatus({ state: "refused" });
+      return;
+    } finally {
+      asking.current = false;
+    }
+    if (!mounted.current) {
+      for (const track of stream.getTracks()) track.stop(); // left during the browser's question
       return;
     }
     const mimeType = TYPES.find((type) => MediaRecorder.isTypeSupported(type));

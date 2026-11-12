@@ -26,7 +26,7 @@ import { Button } from "@/components/ui/button";
 import { useLiveItems } from "@/features/shell/live";
 import { useT } from "@/i18n";
 import { useMe } from "@/lib/session";
-import { cn } from "@/lib/utils";
+import { cn, randomId } from "@/lib/utils";
 import { ChatList, titleOf } from "./chat-layout";
 import { Composer, type ComposerHandle } from "./composer";
 import { dismiss, type LiveAnswer, rejoin, send, useLiveAnswer } from "./live";
@@ -54,7 +54,7 @@ export function Conversation({ chat }: { chat: string | null }) {
   const answering = thread.data?.answering;
   // biome-ignore lint/correctness/useExhaustiveDependencies: once per answer, with the messages it found
   useEffect(() => {
-    if (chat && answering) void rejoin(chat, baseOf(messages), settled(chat)).catch(() => undefined);
+    if (chat && answering) void rejoin(chat, openedAt(messages), settled(chat)).catch(() => undefined);
   }, [chat, answering]);
 
   useLiveItems((item) => {
@@ -64,10 +64,10 @@ export function Conversation({ chat }: { chat: string | null }) {
   });
 
   const onSend = async (body: ChatMessageIn): Promise<boolean> => {
-    const id = chat ?? crypto.randomUUID();
+    const id = chat ?? randomId();
     if (live?.state === "failed") dismiss(id);
     try {
-      const started = send(id, body, chat ? messages.length : 0, settled(id));
+      const started = send(id, body, messages.at(-1)?.position ?? 0, settled(id));
       if (!chat) void navigate({ to: "/chat/$chat", params: { chat: id } });
       await started;
       return true;
@@ -153,13 +153,10 @@ export function Conversation({ chat }: { chat: string | null }) {
   );
 }
 
-/** The messages before the answer of the turn being written: everything up to its person's message (or note). */
-function baseOf(messages: ChatMessage[]): number {
-  for (let i = messages.length - 1; i >= 0; i--) {
-    const role = messages[i]?.role;
-    if (role === "person" || role === "note") return i + 1;
-  }
-  return 0;
+/** Where the turn being answered opened: its person's message or Nestor's note, the last one logged. */
+function openedAt(messages: ChatMessage[]): number {
+  const opening = messages.findLast((m) => m.role === "person" || m.role === "note");
+  return opening?.position ?? 0;
 }
 
 function Thread({
@@ -173,10 +170,13 @@ function Thread({
 }) {
   const t = useT();
   const { data: mentions = [] } = useQuery(mentionsQuery); // what the message sent can name, before it is logged
-  // what the journal has not logged yet: the message sent, then the answer's messages beyond those it logged
-  const logged = live ? messages.slice(live.base) : [];
-  const pending = live?.sent && !logged.some((m) => m.role === "person") ? live.sent : null;
-  const written = live ? live.messages.slice(logged.filter((m) => m.role === "assistant").length) : [];
+  // what the journal has not logged yet: the message sent, then the answer's messages beyond those it logged; what
+  // came in meanwhile (Nestor coming back with a task's result) comes before the message sent, never in the answer
+  const since = live ? messages.filter((m) => m.position > live.after) : [];
+  const own = live?.sent ? since.findIndex((m) => m.role === "person") : -1;
+  const pending = live?.sent && own < 0 ? live.sent : null;
+  const answered = live?.sent ? (own < 0 ? [] : since.slice(own + 1)) : since;
+  const written = live ? live.messages.slice(answered.filter((m) => m.role === "assistant").length) : [];
   const last = messages.at(-1);
   // what came in while the chat was open (a tool called, Nestor coming back) arrives; what was there stays put
   const opened = useRef(last?.position ?? 0);

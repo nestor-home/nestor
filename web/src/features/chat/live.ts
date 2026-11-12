@@ -11,8 +11,8 @@ import { tr } from "@/i18n/runtime";
 export interface LiveAnswer {
   /** what was sent, shown until the chat has it; none when following an answer started elsewhere */
   sent: ChatMessageIn | null;
-  /** the chat's messages before this turn's answer: the answer's messages already logged come after */
-  base: number;
+  /** the journal position this turn's entries come after: the message sent (or followed), then its answer */
+  after: number;
   /** its messages, the last one still being written while `writing` */
   messages: string[];
   writing: boolean;
@@ -59,22 +59,22 @@ export function useLiveAnswer(chat: Id | null): LiveAnswer | null {
  * Write in `chat` and follow the answer; resolves once the message is taken, throws the API's refusal (a chat still
  * answering). `settled` runs once the answer is over, before it is dropped: the chat then reads its messages.
  */
-export async function send(chat: Id, body: ChatMessageIn, base: number, settled: () => Promise<void>): Promise<void> {
+export async function send(chat: Id, body: ChatMessageIn, after: number, settled: () => Promise<void>): Promise<void> {
   const call = client.POST("/api/v1/chats/{chat}/messages", { params: { path: { chat } }, body, parseAs: "stream" });
-  await follow(chat, { sent: body, base }, call, settled);
+  await follow(chat, { sent: body, after }, call, settled);
 }
 
 /** Follow the answer being written in `chat`, from its start, if there is one. */
-export async function rejoin(chat: Id, base: number, settled: () => Promise<void>): Promise<void> {
+export async function rejoin(chat: Id, after: number, settled: () => Promise<void>): Promise<void> {
   if (answers.has(chat)) return;
   const call = client.GET("/api/v1/chats/{chat}/answer", { params: { path: { chat } }, parseAs: "stream" });
-  await follow(chat, { sent: null, base }, call, settled);
+  await follow(chat, { sent: null, after }, call, settled);
 }
 
 /** Starts following: resolves once the server took the message (or has no answer to follow), then reads on. */
 async function follow(
   chat: Id,
-  start: Pick<LiveAnswer, "sent" | "base">,
+  start: Pick<LiveAnswer, "sent" | "after">,
   call: Promise<{ response: Response }>,
   settled: () => Promise<void>,
 ): Promise<void> {

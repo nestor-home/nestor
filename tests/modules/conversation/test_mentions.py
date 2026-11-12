@@ -87,3 +87,11 @@ async def test_a_message_naming_nothing_adds_nothing(make_agent: MakeAgent, jour
     await agent.respond(message("écris à mathis@codex.fr")).collect()
     (turn,) = await journal.history(UserTurn)
     assert turn.mentions == () and "names, with @" not in str(model.requests[0].messages[0].content)
+
+
+def test_a_name_two_things_answer_to_names_neither() -> None:
+    family = thing(MentionKind.CONNECTION, "gmail-famille", "famille@gmail.com", "gmail", "famille")
+    own = thing(MentionKind.CONNECTION, "gmail-mathis", "mathis@gmail.com", "gmail", "mathis")
+    mentions = Mentions([Board(family, own)])
+    assert mentions.named("cherche dans @gmail", MATHIS) == (), "which mailbox? none, rather than the wrong one"
+    assert [m.handle for m in mentions.named("cherche dans @gmail-mathis", MATHIS)] == ["gmail-mathis"]

@@ -14,21 +14,21 @@ from nestor.testing.journal import MemoryEventLog
 TELEGRAM = Address("telegram", "42")
 
 
-async def exchange(journal: Journal, conversation: str, said: str, answered: str) -> None:
+async def exchange(journal: Journal, conversation: str, said: str, answered: str, address: Address = TELEGRAM) -> None:
     turn = Exchange(conversation_id=conversation, turn_id=f"{conversation}-{said}")
-    session = TELEGRAM.session
+    session = address.session
     await journal.publish(
         UserTurn(
             source="test",
             session=session,
-            address=TELEGRAM,
+            address=address,
             text=said,
             exchange=turn,
             medium=Medium.WRITTEN,
             speaker=Speaker.unknown(),
         )
     )
-    await journal.publish(AssistantTurn(source="test", session=session, address=TELEGRAM, text=answered, exchange=turn))
+    await journal.publish(AssistantTurn(source="test", session=session, address=address, text=answered, exchange=turn))
 
 
 async def titles_of(journal: Journal, count: int) -> list[ConversationTitled]:
@@ -39,17 +39,18 @@ async def titles_of(journal: Journal, count: int) -> list[ConversationTitled]:
     return await journal.history(ConversationTitled)
 
 
-async def test_a_conversation_is_titled_once_from_its_first_exchange() -> None:
+async def test_a_session_is_titled_once_from_its_first_exchange() -> None:
     journal = Journal(MemoryEventLog())
     model = ScriptedModel('"Allumer le salon."', "Autre chose")
     titles = ConversationTitles(journal, model, ["telegram"], assistant="Richie", language="French")
     async with titles:
         await exchange(journal, "c1", "Allume le salon", "C'est fait.")
         await exchange(journal, "c1", "Et la cuisine ?", "Aussi.")
+        await exchange(journal, "c2", "Le lendemain", "Bonjour.")  # a later conversation of the same chat
         (titled,) = await titles_of(journal, 1)
         await asyncio.sleep(0.05)
     assert (titled.conversation_id, titled.title, titled.session) == ("c1", "Allumer le salon", TELEGRAM.session)
-    assert len(model.requests) == 1, "the next answers of the conversation are not titled again"
+    assert len(model.requests) == 1, "the next answers and conversations of the session are not titled again"
     assert "Allume le salon" in str(model.requests[0].messages[1].content)
     assert await journal.history(ConversationTitled) == [titled]
 
@@ -63,7 +64,7 @@ async def test_a_model_that_fails_leaves_the_conversation_untitled_and_the_next_
         await exchange(journal, "c1", "Bonjour", "Bonjour !")
         await asyncio.sleep(0.05)
         assert await journal.history(ConversationTitled) == []
-        await exchange(journal, "c2", "Il fera beau ?", "Oui.")
+        await exchange(journal, "c2", "Il fera beau ?", "Oui.", Address("telegram", "43"))
         (titled,) = await titles_of(journal, 1)
     assert titled.conversation_id == "c2"
 

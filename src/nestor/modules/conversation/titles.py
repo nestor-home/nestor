@@ -1,6 +1,5 @@
-"""Titles: each conversation of a channel whose conversations are listed (a chat's history: `Channel.titled`) is titled
-once from its first exchange, as ChatGPT titles a chat. A conversation whose title fails keeps none: lists fall back to
-its first words."""
+"""Titles: each session of a channel whose sessions are listed (a chat's: `Channel.titled`) is titled once, from its
+first exchange, as ChatGPT titles a chat. A session whose title fails keeps none: lists fall back to its first words."""
 
 import asyncio
 import contextlib
@@ -24,7 +23,7 @@ quotes, no final period, no emoji, no name of the assistant. Answer with the tit
 
 
 class ConversationTitles(Component):
-    """Titles each conversation after its first answer, in the background; one at a time, each once."""
+    """Titles each listed session after its first answer, in the background; one at a time, each once."""
 
     name = "conversation-titles"
 
@@ -37,16 +36,16 @@ class ConversationTitles(Component):
         assistant: str,
         language: str = "English",
     ) -> None:
-        """`titled`: the channels whose conversations are listed by title."""
+        """`titled`: the channels whose sessions are listed by title."""
         self.journal, self.model, self._channels = journal, model, frozenset(titled)
         self.assistant, self.language = assistant, language
-        self._seen: set[str] = set()  # titled, or being titled
+        self._seen: set[str] = set()  # sessions titled, or being titled
         self._worker: asyncio.Task[None] | None = None
 
     async def start(self) -> None:
         if not self._channels:
             return
-        self._seen = {e.conversation_id for e in await self.journal.history(ConversationTitled)}
+        self._seen = {str(e.session) for e in await self.journal.history(ConversationTitled)}
         subscription = self.journal.subscribe(AssistantTurn)
         self._worker = asyncio.create_task(self._run(subscription), name=self.name)
 
@@ -61,15 +60,18 @@ class ConversationTitles(Component):
         try:
             async for answer in subscription:
                 if isinstance(answer, AssistantTurn) and answer.exchange and answer.address.channel in self._channels:
-                    await self._title(answer, answer.exchange)
+                    try:
+                        await self._title(answer, answer.exchange)
+                    except Exception:  # one title that breaks never stops the next ones
+                        log.exception("session %s not titled", answer.session)
         finally:
             subscription.close()
 
     async def _title(self, answer: AssistantTurn, exchange: Exchange) -> None:
-        conversation = exchange.conversation_id
-        if conversation in self._seen:
+        session = str(answer.session)
+        if session in self._seen:
             return
-        self._seen.add(conversation)
+        self._seen.add(session)
         # what this first answer answers: logged just before it, in the same turn
         recent = await self.journal.history(
             UserTurn, NotificationTurn, session=answer.session, newest_first=True, limit=10
@@ -80,11 +82,13 @@ class ConversationTitles(Component):
         try:
             title = await self._write(opening.text, answer.text)
         except ProviderError as error:
-            log.warning("conversation %s not titled: %s", conversation, error)
+            log.warning("session %s not titled: %s", session, error)
             return
         if title:
             await self.journal.publish(
-                ConversationTitled(source=self.name, session=answer.session, conversation_id=conversation, title=title)
+                ConversationTitled(
+                    source=self.name, session=answer.session, conversation_id=exchange.conversation_id, title=title
+                )
             )
 
     async def _write(self, said: str, answered: str) -> str:

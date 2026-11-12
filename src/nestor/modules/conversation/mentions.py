@@ -34,10 +34,12 @@ class Mentions(ContextProvider):
         if "@" not in text:
             return ()
         offered = self.available(person)
-        names: dict[str, Mentioned] = {}
-        for mentioned in reversed(offered):  # an alias never takes another's handle
-            for name in mentioned.aliases:
-                names[_key(name)] = mentioned
+        aliases: dict[str, list[Mentioned]] = {}
+        for mentioned in offered:
+            for name in {_key(n) for n in mentioned.aliases}:
+                aliases.setdefault(name, []).append(mentioned)
+        # an alias two things share names neither; a handle always wins over an alias
+        names = {name: found[0] for name, found in aliases.items() if len(found) == 1}
         names.update({_key(m.handle): m for m in offered})
         found: dict[str, Mentioned] = {}
         for name in HANDLE.findall(text):

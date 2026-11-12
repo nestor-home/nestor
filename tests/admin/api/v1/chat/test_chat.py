@@ -7,6 +7,10 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pytest
+from pydantic import ValidationError
+
+from nestor.admin.api.v1.chat.schemas import FILE_LIMIT, ChatFileIn
 from nestor.modules.accounts import Role
 from nestor.modules.cognition.model import ToolCall
 
@@ -195,3 +199,13 @@ async def test_a_chat_is_listed_by_the_title_of_its_first_conversation(tmp_path:
                 break
             await asyncio.sleep(0.01)
     assert listed["title"] == "Lumière du salon"
+
+
+def test_a_file_is_measured_as_sent_not_as_its_base64() -> None:
+    def sent(size: int) -> ChatFileIn:
+        data = base64.b64encode(b"x" * size).decode()
+        return ChatFileIn.model_validate({"kind": "file", "media_type": "text/plain", "data": data})
+
+    assert len(sent(FILE_LIMIT).data) == FILE_LIMIT, "20 MB of file, 27 MB of base64"
+    with pytest.raises(ValidationError):
+        sent(FILE_LIMIT + 1)

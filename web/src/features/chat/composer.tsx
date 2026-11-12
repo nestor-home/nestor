@@ -92,8 +92,10 @@ export function Composer({
     const all = voice ? [...files, voice] : files;
     if (answering || sending || !(words || all.length)) return;
     setSending(true);
+    keepDraft(draftKey, ""); // a new chat's page closes as it is sent: its draft goes with the message
     const sent = await onSend({ text: words, files: all.map((f) => f.file) });
     setSending(false);
+    if (!sent) keepDraft(draftKey, text);
     if (sent) {
       input.current?.clear();
       setText("");

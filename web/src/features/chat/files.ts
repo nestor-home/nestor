@@ -1,5 +1,6 @@
 /** Files picked, dropped or pasted in the composer, as a message carries them. */
 import type { ChatFileIn } from "@/api";
+import { randomId } from "@/lib/utils";
 
 export const FILE_LIMIT = 20_000_000; // what the server takes, per file (20 MB)
 export const FILES_PER_MESSAGE = 10;
@@ -23,7 +24,7 @@ export async function pending(blob: Blob, kind: ChatFileIn["kind"], name: string
   const url = await dataUrl(blob);
   const type = blob.type.split(";")[0] || "application/octet-stream";
   return {
-    id: crypto.randomUUID(),
+    id: randomId(),
     file: { kind, media_type: type, name, data: url.slice(url.indexOf(",") + 1) },
     size: blob.size,
     preview: kind === "image" ? url : null,

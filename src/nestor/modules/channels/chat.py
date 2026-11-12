@@ -70,14 +70,25 @@ class LiveAnswer:
             await changed.wait()
 
     async def stop(self) -> None:
-        """Stop writing: what was written so far reached the page, and stays as it is."""
+        """Stop writing (asked, or the channel closing): what was written so far reached the page, and stays as it
+        is; the assistant stops working on it."""
         if not self._over:
-            await self._reply.interrupt("".join(p.text for p in self._parts if isinstance(p, Written)))
-        await self.close()
-
-    async def close(self) -> None:
+            await self._reply.interrupt(self._shown())
         self._task.cancel()
         await asyncio.wait({self._task})
+
+    def _shown(self) -> str:
+        """What the page received, as a voice would have said it: its messages one after the other, a space
+        between two (`Reply.speech`), so that each logged message is counted whole."""
+        shown, ended = "", False
+        for part in self._parts:
+            if isinstance(part, Ended):
+                ended = bool(shown)
+            elif isinstance(part, Written):
+                if ended and not shown[-1:].isspace() and not part.text[:1].isspace():
+                    shown += " "
+                shown, ended = shown + part.text, False
+        return shown
 
     async def _run(self) -> None:
         try:
@@ -170,4 +181,4 @@ class ChatChannel(Channel):
     async def close(self) -> None:
         self._closing.set()
         live, self._live = self._live, {}
-        await asyncio.gather(*(answer.close() for answer in live.values()))
+        await asyncio.gather(*(answer.stop() for answer in live.values()))

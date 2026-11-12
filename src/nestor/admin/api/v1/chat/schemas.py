@@ -6,7 +6,7 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Any, Literal
 
-from pydantic import Base64Bytes, BaseModel, Field, model_validator
+from pydantic import Base64Bytes, BaseModel, Field, field_validator, model_validator
 
 from nestor.admin.api.v1.journal.schemas import AttachmentOut
 from nestor.admin.presentation import Phrasebook, subject
@@ -230,7 +230,14 @@ class ChatFileIn(BaseModel):
     kind: AttachmentKind  # `voice` for a message recorded in the page; the others as the file is
     media_type: str = Field(max_length=255)
     name: str | None = Field(default=None, max_length=255)
-    data: Base64Bytes = Field(min_length=1, max_length=FILE_LIMIT)  # sent in base64, decoded once
+    data: Base64Bytes  # sent in base64, decoded once
+
+    @field_validator("data")
+    @classmethod
+    def _fits(cls, data: bytes) -> bytes:
+        if not 0 < len(data) <= FILE_LIMIT:
+            raise ValueError(f"a file holds between 1 byte and {FILE_LIMIT // 1_000_000} MB")
+        return data
 
 
 class ChatMessageIn(BaseModel):
