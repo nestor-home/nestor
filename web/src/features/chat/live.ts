@@ -5,7 +5,7 @@
  */
 import { useSyncExternalStore } from "react";
 import { type ChatMessageIn, type ChatStreamPart, type Id, messageOf } from "@/api";
-import { ApiError, client } from "@/api/client";
+import { ApiError, client, toError } from "@/api/client";
 import { tr } from "@/i18n/runtime";
 
 export interface LiveAnswer {
@@ -34,8 +34,15 @@ function drop(chat: Id): void {
   if (answers.delete(chat)) notify();
 }
 
+let frame = 0;
+
+/** Tell the pages, once per frame however many words came: a fast stream does not render each one. */
 function notify(): void {
-  for (const listener of listeners) listener();
+  if (frame) return;
+  frame = requestAnimationFrame(() => {
+    frame = 0;
+    for (const listener of listeners) listener();
+  });
 }
 
 export function useLiveAnswer(chat: Id | null): LiveAnswer | null {
@@ -83,7 +90,7 @@ async function follow(
   if (response.status === 204) return drop(chat);
   if (!response.ok || !response.body) {
     drop(chat);
-    throw await refusal(response);
+    throw toError(response.status, await response.json().catch(() => undefined));
   }
   void read(chat, response.body, settled);
 }
@@ -134,14 +141,5 @@ async function* parts(body: ReadableStream<Uint8Array>): AsyncGenerator<ChatStre
       if (line) yield JSON.parse(line) as ChatStreamPart;
       end = buffer.indexOf("\n");
     }
-  }
-}
-
-async function refusal(response: Response): Promise<ApiError> {
-  try {
-    const { error } = await response.json();
-    return new ApiError(response.status, error.code, error.message, error.message_id, error.args);
-  } catch {
-    return new ApiError(response.status, "error", tr("error-status", { status: response.status }), "error-status");
   }
 }

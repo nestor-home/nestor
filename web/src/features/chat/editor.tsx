@@ -63,6 +63,7 @@ function Tag({ node }: NodeViewProps) {
     kind: "person",
     handle: id,
     label: id,
+    aliases: [],
     detail: "",
     brand: null,
   };
@@ -80,7 +81,6 @@ export function ChatEditor({
   onChange,
   onSubmit,
   onFiles,
-  autoFocus,
 }: {
   ref?: Ref<EditorHandle>;
   initial: string;
@@ -88,7 +88,6 @@ export function ChatEditor({
   onChange: (text: string) => void;
   onSubmit: () => void;
   onFiles: (files: File[]) => void;
-  autoFocus?: boolean;
 }) {
   const { data: mentions = [] } = useQuery(mentionsQuery);
   const known = useRef(mentions);
@@ -99,6 +98,11 @@ export function ChatEditor({
   const [active, setActive] = useState(0);
   const picking = useRef<{ offer: Offer | null; active: number }>({ offer: null, active: 0 });
   picking.current = { offer, active };
+
+  const offerOf = (props: SuggestionProps<Mention>) => {
+    setActive(0);
+    setOffer({ items: props.items, command: props.command });
+  };
 
   const editor = useEditor({
     extensions: [
@@ -113,14 +117,8 @@ export function ChatEditor({
         suggestion: {
           items: ({ query }) => matching(known.current, query),
           render: () => ({
-            onStart: (props: SuggestionProps<Mention>) => {
-              setActive(0);
-              setOffer({ items: props.items, command: props.command });
-            },
-            onUpdate: (props: SuggestionProps<Mention>) => {
-              setActive(0);
-              setOffer({ items: props.items, command: props.command });
-            },
+            onStart: offerOf,
+            onUpdate: offerOf,
             onKeyDown: ({ event }: SuggestionKeyDownProps) => choose(event),
             onExit: () => setOffer(null),
           }),
@@ -141,7 +139,7 @@ export function ChatEditor({
       }),
     ],
     content: documentOf(initial, mentions),
-    autofocus: autoFocus ? "end" : false,
+    autofocus: "end",
     editorProps: {
       attributes: {
         "aria-label": placeholder,

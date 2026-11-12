@@ -1,7 +1,7 @@
 /** Files picked, dropped or pasted in the composer, as a message carries them. */
 import type { ChatFileIn } from "@/api";
 
-export const FILE_LIMIT = 20 * 1024 * 1024; // what the server takes, per file
+export const FILE_LIMIT = 20_000_000; // what the server takes, per file (20 MB)
 export const FILES_PER_MESSAGE = 10;
 const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]); // what the model can look at
 

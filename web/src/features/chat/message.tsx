@@ -4,20 +4,18 @@
  * its arguments and result, a note when Nestor comes back by itself, and the files of a message.
  */
 import { AlertCircle, Check, ChevronRight, Copy, FileText, LoaderCircle, Wrench } from "lucide-react";
-import { memo, type ReactNode, useMemo, useState } from "react";
+import { memo, type ReactNode, useMemo } from "react";
 import { Streamdown, type StreamdownTranslations } from "streamdown";
 import type { ChatFile, ChatTool, Mention } from "@/api";
-import { API_BASE } from "@/api/client";
+import { useCopy } from "@/components/copy-field";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { attachmentUrl } from "@/features/journal/attachments";
 import { useT } from "@/i18n";
 import { duration, fileSize } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import { MentionText } from "./mentions";
-
-/** Where the server serves a file of a message, to whoever reads the chat. */
-export const fileUrl = (file: ChatFile) => `${API_BASE}/journal/${file.position}/attachments/${file.index}`;
 
 /** How what has just been written comes in: rising a little, fading in; still under reduced motion. */
 export const ARRIVES = "animate-in fade-in-0 slide-in-from-bottom-2 duration-300 ease-out motion-reduce:animate-none";
@@ -72,7 +70,7 @@ function useTranslations(): Partial<StreamdownTranslations> {
   return useMemo(
     () => ({
       close: t("chat-md-close"),
-      copied: t("chat-copied"),
+      copied: t("action-copied"),
       copyCode: t("chat-md-copy-code"),
       copyLink: t("chat-md-copy-link"),
       copyTable: t("chat-md-copy-table"),
@@ -96,13 +94,7 @@ function useTranslations(): Partial<StreamdownTranslations> {
 /** Copy, and when the answer was stopped, say so; shown under a finished answer. */
 export function AnswerActions({ text, interrupted }: { text: string; interrupted: boolean }) {
   const t = useT();
-  const [copied, setCopied] = useState(false);
-  const copy = () => {
-    void navigator.clipboard.writeText(text).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    });
-  };
+  const { copied, copy } = useCopy(text);
   return (
     <div className="flex items-center gap-1 text-ink-faint opacity-100 transition-opacity md:opacity-0 md:group-hover/answer:opacity-100 md:group-focus-within/answer:opacity-100">
       <Tooltip>
@@ -111,14 +103,14 @@ export function AnswerActions({ text, interrupted }: { text: string; interrupted
             <Button
               variant="ghost"
               size="icon-sm"
-              onClick={copy}
-              aria-label={t(copied ? "chat-copied" : "chat-copy")}
+              onClick={() => void copy()}
+              aria-label={t(copied ? "action-copied" : "action-copy")}
             />
           }
         >
           {copied ? <Check /> : <Copy />}
         </TooltipTrigger>
-        <TooltipContent>{t(copied ? "chat-copied" : "chat-copy")}</TooltipContent>
+        <TooltipContent>{t(copied ? "action-copied" : "action-copy")}</TooltipContent>
       </Tooltip>
       {interrupted ? <span className="text-[0.8rem] text-ink-muted">{t("chat-stopped")}</span> : null}
     </div>
@@ -213,7 +205,7 @@ export function Files({ files, align = "start" }: { files: ChatFile[]; align?: "
   return (
     <ul className={cn("flex max-w-full flex-wrap gap-2", align === "end" && "justify-end")}>
       {files.map((file) => {
-        const url = fileUrl(file);
+        const url = attachmentUrl(file.position, file.index);
         const name = file.name ?? t(`chat-file-${file.kind}`);
         return (
           <li key={`${file.position}-${file.index}`} className="min-w-0 max-w-full">

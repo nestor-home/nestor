@@ -66,21 +66,24 @@ export function AppShell() {
         <SidebarInset className={cn("min-w-0 bg-paper", bleed && "h-svh overflow-hidden")}>
           <MobileBar onSearch={() => palette.setOpen(() => true)} />
           {bleed ? null : <Ticker onSearch={() => palette.setOpen(() => true)} />}
-          {bleed ? (
-            <div id="content" className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <div
+            id="content"
+            className={cn(
+              "min-w-0",
+              bleed
+                ? "flex min-h-0 flex-1 flex-col"
+                : "px-4 pt-8 pb-[calc(4rem+env(safe-area-inset-bottom))] sm:px-6 md:px-10 md:pt-10 lg:px-14",
+            )}
+          >
+            {bleed ? (
               <Outlet />
-            </div>
-          ) : (
-            <div
-              id="content"
-              className="min-w-0 px-4 pt-8 pb-[calc(4rem+env(safe-area-inset-bottom))] sm:px-6 md:px-10 md:pt-10 lg:px-14"
-            >
+            ) : (
               <div className="mx-auto max-w-6xl">
                 <RestartBanner />
                 <Outlet />
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </SidebarInset>
         <CommandPalette open={palette.open} onOpenChange={(open) => palette.setOpen(() => open)} />
       </AgentPresenceProvider>

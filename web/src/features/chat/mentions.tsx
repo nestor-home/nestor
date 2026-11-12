@@ -14,27 +14,30 @@ export const NAMED = /(?<![\w@])(@[\p{L}\p{N}_-]*[\p{L}\p{N}_])/gu;
 const ORDER: Mention["kind"][] = ["person", "room", "executor", "connection"];
 
 /** A name as the server compares it: no case, no accents, words joined by hyphens (`Salle à manger` → `salle-a-manger`). */
-export function nameKey(name: string): string {
+function nameKey(name: string): string {
   const plain = name.toLowerCase().normalize("NFKD").replace(/\p{M}/gu, "").replace(/_/g, "-");
   return (plain.match(/[a-z0-9]+/g) ?? []).join("-");
 }
 
-/** What `@query` may name: a handle, or a word of the label, that starts with it. */
+/** What `@query` may name: its handle, or a word of one of its names, starts with it. */
 export function matching(mentions: Mention[], query: string): Mention[] {
   const typed = nameKey(query);
-  return mentions.filter(
-    (m) =>
-      nameKey(m.handle).startsWith(typed) ||
-      nameKey(m.label)
-        .split("-")
-        .some((w) => w.startsWith(typed)),
+  const names = (m: Mention) => [m.label, ...m.aliases].flatMap((name) => nameKey(name).split("-"));
+  return mentions.filter((m) => nameKey(m.handle).startsWith(typed) || names(m).some((w) => w.startsWith(typed)));
+}
+
+/** The mention a written `@name` stands for, as the server reads it: a handle first, then any other name. */
+export function find(mentions: Mention[], written: string): Mention | undefined {
+  const key = nameKey(written);
+  return (
+    mentions.find((m) => nameKey(m.handle) === key) ??
+    mentions.find((m) => [m.label, ...m.aliases].some((name) => nameKey(name) === key))
   );
 }
 
-/** The mention a written `@name` stands for, among `mentions`. */
-export function find(mentions: Mention[], written: string): Mention | undefined {
-  const key = nameKey(written);
-  return mentions.find((m) => nameKey(m.handle) === key) ?? mentions.find((m) => nameKey(m.label) === key);
+/** The vendor behind an executor or an account, when there is one. */
+function vendorOf(mention: Mention) {
+  return mention.kind === "executor" || mention.kind === "connection" ? brandOf(mention.brand ?? mention.handle) : null;
 }
 
 /** What matches, by kind, above the composer. The editor keeps the focus and its arrows move the choice. */
@@ -103,8 +106,7 @@ export function MentionList({
 
 /** The sign of a mention: a vendor's mark, a room's house, a person's initial. */
 function MentionMark({ mention }: { mention: Mention }) {
-  const vendor = mention.kind === "executor" || mention.kind === "connection";
-  const brand = vendor ? brandOf(mention.brand ?? mention.handle) : null;
+  const brand = vendorOf(mention);
   if (brand) return <BrandMark brand={brand} className="size-3.5" label={false} />;
   if (mention.kind === "room") return <House className="size-3.5 text-ink-muted" aria-hidden="true" />;
   return (
@@ -126,7 +128,7 @@ export function MentionText({ text, mentions }: { text: string; mentions: Mentio
 
 /** A mention as a tag: its sign and its name, tinted with its vendor's colour (the ember otherwise). */
 export function MentionTag({ mention }: { mention: Mention }) {
-  const brand = brandOf(mention.brand ?? "");
+  const brand = vendorOf(mention);
   const colour = (brand && brandColour(brand)) ?? "var(--ember)";
   return (
     <span

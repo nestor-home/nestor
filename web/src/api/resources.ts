@@ -214,7 +214,7 @@ export const api = {
     done(client.POST("/api/v1/schedules/{schedule_id}/cancel", { params: { path: { schedule_id: id } } })),
   messages: () => unwrap(client.GET("/api/v1/messages")),
 
-  // the admin's chat (the answer's stream is read in `features/chat/stream.ts`)
+  // the admin's chat (the answer's stream is read in `features/chat/live.ts`)
   chats: () => unwrap(client.GET("/api/v1/chats")),
   mentions: () => unwrap(client.GET("/api/v1/chats/mentions")),
   chat: (chat: Id) => unwrap(client.GET("/api/v1/chats/{chat}", { params: { path: { chat } } })),

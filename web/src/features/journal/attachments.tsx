@@ -5,11 +5,9 @@ import { useT } from "@/i18n";
 import { fileSize } from "@/lib/time";
 import { cn } from "@/lib/utils";
 
-type Attachment = JournalItem["attachments"][number];
-
-/** Where the server serves a file sent with a message, to whoever reads its entry. */
-export const attachmentUrl = (item: JournalItem, attachment: Attachment) =>
-  `${API_BASE}/journal/${item.position}/attachments/${attachment.index}`;
+/** Where the server serves a file of the journal's entry at `position`, to whoever reads the entry. */
+export const attachmentUrl = (position: number, index: number) =>
+  `${API_BASE}/journal/${position}/attachments/${index}`;
 
 /** The files a person sent with a message: pictures shown, recordings playable, other files to download. */
 export function Attachments({ item, className }: { item: JournalItem; className?: string }) {
@@ -18,7 +16,7 @@ export function Attachments({ item, className }: { item: JournalItem; className?
   return (
     <ul className={cn("grid max-w-full gap-2", className)}>
       {item.attachments.map((attachment) => {
-        const url = attachmentUrl(item, attachment);
+        const url = attachmentUrl(item.position, attachment.index);
         const name = attachment.name ?? t(`jr-attachment-${attachment.kind}`);
         return (
           <li key={attachment.index} className="min-w-0">

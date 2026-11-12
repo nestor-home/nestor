@@ -3,6 +3,8 @@
  * first when it is asked to act in the house, Markdown when it lists or compares.
  */
 import type { ChatFile, ChatMessage, ChatTool, Mention } from "@/api";
+import { find, NAMED } from "@/features/chat/mentions";
+import { minutes } from "./fixtures";
 import { fr } from "./french";
 
 export interface MockChat {
@@ -14,8 +16,6 @@ export interface MockChat {
 
 let position = 90_000; // the chats' entries, past the day's journal: their files are served by position
 const next = () => ++position;
-
-const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString();
 
 function message(
   role: ChatMessage["role"],
@@ -58,10 +58,10 @@ function tool(name: string, args: Record<string, unknown>, output: string, secon
 }
 
 export function chats(): MockChat[] {
-  const dinner = minutesAgo(18);
-  const plant = minutesAgo(26 * 60);
-  const voice = minutesAgo(3 * 24 * 60);
-  const insurance = minutesAgo(9 * 24 * 60);
+  const dinner = minutes(18);
+  const plant = minutes(26 * 60);
+  const voice = minutes(3 * 24 * 60);
+  const insurance = minutes(9 * 24 * 60);
   return [
     {
       id: "c-dinner",
@@ -151,7 +151,7 @@ export function chats(): MockChat[] {
     {
       id: "c-insurance",
       started_at: insurance,
-      updated_at: minutesAgo(9 * 24 * 60 - 40),
+      updated_at: minutes(9 * 24 * 60 - 40),
       messages: [
         message(
           "person",
@@ -177,14 +177,14 @@ export function chats(): MockChat[] {
           insurance,
           "t4",
         ),
-        message("note", fr("task 3f2a completed", "tâche 3f2a terminée"), minutesAgo(9 * 24 * 60 - 40), "t5"),
+        message("note", fr("task 3f2a completed", "tâche 3f2a terminée"), minutes(9 * 24 * 60 - 40), "t5"),
         message(
           "assistant",
           fr(
             "Water damage is covered up to **€15,000**, with a €150 deductible. Leaks from appliances are included; a slow leak you could have seen is not.",
             "Le dégât des eaux est couvert jusqu'à **15 000 €**, avec une franchise de 150 €. Les fuites d'appareils sont incluses ; une fuite lente qu'on aurait pu voir ne l'est pas.",
           ),
-          minutesAgo(9 * 24 * 60 - 40),
+          minutes(9 * 24 * 60 - 40),
           "t5",
         ),
       ],
@@ -193,52 +193,45 @@ export function chats(): MockChat[] {
 }
 
 /** The executors a message can name with `@`. */
+const mention = (
+  kind: Mention["kind"],
+  handle: string,
+  label: string,
+  extra: Partial<Pick<Mention, "aliases" | "detail" | "brand">> = {},
+): Mention => ({ kind, handle, label, aliases: [label], detail: "", brand: null, ...extra });
+
 export const MENTIONS: Mention[] = [
-  { kind: "person", handle: "mathis", label: "Mathis", detail: "", brand: null },
-  { kind: "person", handle: "mathilde", label: "Mathilde", detail: "", brand: null },
-  { kind: "person", handle: "lea", label: "Léa", detail: "", brand: null },
-  { kind: "room", handle: "salon", label: fr("Living room", "Salon"), detail: "", brand: null },
-  { kind: "room", handle: "cuisine", label: fr("Kitchen", "Cuisine"), detail: "", brand: null },
-  { kind: "room", handle: "chambre-lea", label: fr("Léa's bedroom", "Chambre de Léa"), detail: "", brand: null },
-  {
-    kind: "executor",
-    handle: "hermes",
-    label: "hermes",
+  mention("person", "mathis", "Mathis"),
+  mention("person", "mathilde", "Mathilde"),
+  mention("person", "lea", "Léa"),
+  mention("room", "salon", fr("Living room", "Salon")),
+  mention("room", "cuisine", fr("Kitchen", "Cuisine")),
+  mention("room", "chambre-lea", fr("Léa's bedroom", "Chambre de Léa")),
+  mention("executor", "hermes", "hermes", {
+    aliases: [],
+    brand: "hermes",
     detail: fr(
       "Long tasks: searching the web, reading documents, following up on projects.",
       "Tâches longues : chercher sur le web, lire des documents, suivre des projets.",
     ),
-    brand: "hermes",
-  },
-  {
-    kind: "executor",
-    handle: "codex",
-    label: "codex",
+  }),
+  mention("executor", "codex", "codex", {
+    aliases: [],
+    brand: "openai",
     detail: fr(
       "Code: reads a repository, changes it, runs its tests, opens a pull request.",
       "Code : lit un dépôt, le modifie, lance ses tests, ouvre une pull request.",
     ),
-    brand: "openai",
-  },
-  { kind: "connection", handle: "google", label: "mathis@gmail.com", detail: "", brand: "google" },
-  { kind: "connection", handle: "imap", label: "famille@free.fr", detail: "", brand: "imap" },
+  }),
+  mention("connection", "gmail", "mathis@gmail.com", { aliases: ["google", "mathis"], brand: "gmail" }),
+  mention("connection", "mail", "famille@free.fr", { aliases: ["imap", "famille"], brand: "imap" }),
 ];
 
-/** What a text names, as the server reads it: the handles it holds, loosely. */
+/** What a text names, as the server reads it. */
 export function mentionedIn(text: string): Mention[] {
-  const written = [...text.matchAll(/(?<![\w@])@([\p{L}\p{N}_-]*[\p{L}\p{N}_])/gu)].map((m) => key(m[1] ?? ""));
-  return MENTIONS.filter((m) => written.includes(key(m.handle)) || written.includes(key(m.label)));
+  const found = [...text.matchAll(NAMED)].map((m) => find(MENTIONS, (m[1] ?? "").slice(1)));
+  return MENTIONS.filter((m) => found.includes(m));
 }
-
-const key = (name: string) =>
-  (
-    name
-      .toLowerCase()
-      .normalize("NFKD")
-      .replace(/\p{M}/gu, "")
-      .replace(/_/g, "-")
-      .match(/[a-z0-9]+/g) ?? []
-  ).join("-");
 
 /** The mock's answer to `text`: a tool call first when it is asked to act, then words. */
 export function answerTo(text: string, files: number): { tool: ChatTool | null; answer: string } {

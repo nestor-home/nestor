@@ -1764,16 +1764,18 @@ export interface components {
             media_type: string;
             /** Name */
             name?: string | null;
-            /** Data */
+            /**
+             * Data
+             * Format: base64
+             */
             data: string;
         };
         /**
          * ChatFileOut
-         * @description A file of a message; its bytes at `/journal/{position}/attachments/{index}`.
+         * @description A file of a message, as the journal shows it, with the entry that serves it: its bytes at
+         *     `/journal/{position}/attachments/{index}`.
          */
         ChatFileOut: {
-            /** Position */
-            position: number;
             /** Index */
             index: number;
             kind: components["schemas"]["AttachmentKind"];
@@ -1785,6 +1787,8 @@ export interface components {
             name: string | null;
             /** Transcript */
             transcript: string | null;
+            /** Position */
+            position: number;
         };
         /** ChatMessageIn */
         ChatMessageIn: {
@@ -2560,6 +2564,8 @@ export interface components {
             handle: string;
             /** Label */
             label: string;
+            /** Aliases */
+            aliases: string[];
             /** Detail */
             detail: string;
             /** Brand */

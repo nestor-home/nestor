@@ -53,6 +53,12 @@ export function remaining(end: string | number, now: Date = new Date()): string 
   return tr("remaining", { minutes: Math.floor(seconds / 60), seconds: String(seconds % 60).padStart(2, "0") });
 }
 
+/** How many calendar days `iso` is before `now`, in local time: 0 today, 1 yesterday (a DST day counts as one). */
+export function daysBefore(iso: string, now: Date = new Date()): number {
+  const day = (d: Date) => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+  return Math.round((day(now) - day(new Date(iso))) / 86_400_000);
+}
+
 function yesterdayOf(now: Date): Date {
   const d = new Date(now);
   d.setDate(now.getDate() - 1);

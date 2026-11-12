@@ -6,7 +6,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { ArrowDown, MessagesSquare, SquarePen, Upload } from "lucide-react";
-import { type DragEvent, Fragment, type ReactNode, useEffect, useRef, useState } from "react";
+import { type DragEvent, memo, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
 import {
@@ -70,7 +70,6 @@ export function Conversation({ chat }: { chat: string | null }) {
       const started = send(id, body, chat ? messages.length : 0, settled(id));
       if (!chat) void navigate({ to: "/chat/$chat", params: { chat: id } });
       await started;
-      void queryClient.invalidateQueries({ queryKey: keys.chats, exact: true });
       return true;
     } catch (error) {
       toast.error(messageOf(error));
@@ -115,32 +114,21 @@ export function Conversation({ chat }: { chat: string | null }) {
         <div className="mx-auto w-full max-w-3xl px-4 pt-10">
           <Failure error={thread.error} retry={thread.refetch} />
         </div>
-      ) : fresh ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-8 px-4 pb-[12vh]">
-          <div className={cn("flex flex-col items-center gap-4 text-center", ARRIVES, "duration-500")}>
-            <AgentFigure state="idle" size="lg" live />
-            <h1 className="display-2 text-ink">{t("chat-greeting", { assistant: me.assistant })}</h1>
-          </div>
-          <div className="w-full max-w-3xl">
-            <Composer
-              ref={composer}
-              draftKey="new"
-              assistant={me.assistant}
-              answering={false}
-              onSend={onSend}
-              onStop={onStop}
-              autoFocus
-            />
-          </div>
-        </div>
       ) : (
-        <>
-          <StickToBottom className="relative min-h-0 flex-1 overflow-hidden" resize="smooth" initial="instant">
-            <StickToBottom.Content className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 pt-6 pb-10">
-              <Thread messages={messages} live={live} assistant={me.assistant} />
-            </StickToBottom.Content>
-            <ScrollDown />
-          </StickToBottom>
+        <div className={cn("flex min-h-0 flex-1 flex-col", fresh && "justify-center gap-8 pb-[12vh]")}>
+          {fresh ? (
+            <div className={cn("flex flex-col items-center gap-4 px-4 text-center", ARRIVES, "duration-500")}>
+              <AgentFigure state="idle" size="lg" live />
+              <h1 className="display-2 text-ink">{t("chat-greeting", { assistant: me.assistant })}</h1>
+            </div>
+          ) : (
+            <StickToBottom className="relative min-h-0 flex-1 overflow-hidden" resize="smooth" initial="instant">
+              <StickToBottom.Content className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 pt-6 pb-10">
+                <Thread messages={messages} live={live} assistant={me.assistant} />
+              </StickToBottom.Content>
+              <ScrollDown />
+            </StickToBottom>
+          )}
           <div className="mx-auto w-full max-w-3xl px-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
             <Composer
               ref={composer}
@@ -149,10 +137,9 @@ export function Conversation({ chat }: { chat: string | null }) {
               answering={busy}
               onSend={onSend}
               onStop={onStop}
-              autoFocus
             />
           </div>
-        </>
+        </div>
       )}
       {dragging ? (
         <div className="pointer-events-none absolute inset-2 z-20 grid animate-in place-items-center rounded-2xl border-2 border-dashed border-ember bg-paper/90 duration-150 fade-in-0 motion-reduce:animate-none">
@@ -193,32 +180,15 @@ function Thread({
   const last = messages.at(-1);
   // what came in while the chat was open (a tool called, Nestor coming back) arrives; what was there stays put
   const opened = useRef(last?.position ?? 0);
-  const arrives = (message: ChatMessage) => message.position > opened.current && message.role !== "assistant";
+  const arrives = useCallback(
+    (message: ChatMessage) => message.position > opened.current && message.role !== "assistant",
+    [],
+  );
   const waiting = live && (live.state === "waiting" || (live.state === "writing" && !live.writing));
 
   return (
     <>
-      {groups(messages).map((group) =>
-        group.tools ? (
-          <div key={group.key} className="grid gap-1.5">
-            {group.tools.map((m) =>
-              m.tool ? (
-                <div key={m.id} className={cn(arrives(m) && ARRIVES)}>
-                  <ToolCall tool={m.tool} />
-                </div>
-              ) : null,
-            )}
-          </div>
-        ) : (
-          <Fragment key={group.key}>
-            {group.message ? (
-              <div className={cn("min-w-0", group.message.role === "note" && arrives(group.message) && ARRIVES)}>
-                <Message message={group.message} assistant={assistant} />
-              </div>
-            ) : null}
-          </Fragment>
-        ),
-      )}
+      <History messages={messages} assistant={assistant} arrives={arrives} />
       {pending ? (
         <PersonMessage
           text={pending.text ?? ""}
@@ -245,24 +215,49 @@ function Thread({
   );
 }
 
-interface Group {
-  key: string;
-  message?: ChatMessage;
-  tools?: ChatMessage[];
-}
+type Group = { kind: "tools"; key: string; calls: ChatMessage[] } | { kind: "one"; key: string; message: ChatMessage };
 
 /** Tool calls that follow each other stack together; every other message stands alone. */
 function groups(messages: ChatMessage[]): Group[] {
   const found: Group[] = [];
   for (const message of messages) {
     const previous = found.at(-1);
-    if (message.role === "tool") {
-      if (previous?.tools) previous.tools.push(message);
-      else found.push({ key: message.id, tools: [message] });
-    } else found.push({ key: message.id, message });
+    if (message.role !== "tool") found.push({ kind: "one", key: message.id, message });
+    else if (previous?.kind === "tools") previous.calls.push(message);
+    else found.push({ kind: "tools", key: message.id, calls: [message] });
   }
   return found;
 }
+
+/** What the journal holds of the chat; it renders again only when the journal does, not at each streamed word. */
+const History = memo(function History({
+  messages,
+  assistant,
+  arrives,
+}: {
+  messages: ChatMessage[];
+  assistant: string;
+  arrives: (message: ChatMessage) => boolean;
+}) {
+  return groups(messages).map((group) =>
+    group.kind === "tools" ? (
+      <div key={group.key} className="grid gap-1.5">
+        {group.calls.map((m) => (
+          <div key={m.id} className={cn(arrives(m) && ARRIVES)}>
+            {m.tool ? <ToolCall tool={m.tool} /> : null}
+          </div>
+        ))}
+      </div>
+    ) : (
+      <div
+        key={group.key}
+        className={cn("min-w-0", group.message.role === "note" && arrives(group.message) && ARRIVES)}
+      >
+        <Message message={group.message} assistant={assistant} />
+      </div>
+    ),
+  );
+});
 
 function Message({ message, assistant }: { message: ChatMessage; assistant: string }) {
   switch (message.role) {
@@ -356,14 +351,7 @@ function Header({ chat }: { chat: string | null }) {
         <SquarePen />
       </Button>
       <SideSheet open={open} onOpenChange={setOpen}>
-        <ChatList
-          chats={chats.data?.chats}
-          loading={chats.isPending}
-          error={chats.error}
-          retry={chats.refetch}
-          onNavigate={() => setOpen(false)}
-          inSheet
-        />
+        <ChatList onNavigate={() => setOpen(false)} inSheet />
       </SideSheet>
     </header>
   );

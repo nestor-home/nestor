@@ -47,7 +47,6 @@ export function Composer({
   onSend,
   onStop,
   ref,
-  autoFocus,
 }: {
   draftKey: string;
   assistant: string;
@@ -55,17 +54,16 @@ export function Composer({
   onSend: (message: ChatMessageIn) => Promise<boolean>; // false: refused, keep what was written
   onStop: () => void;
   ref?: Ref<ComposerHandle>;
-  autoFocus?: boolean;
 }) {
   const t = useT();
   const [text, setText] = useState(() => readDraft(draftKey));
   const [files, setFiles] = useState<PendingFile[]>([]);
   const [sending, setSending] = useState(false);
   const input = useRef<EditorHandle>(null);
-  const { data: executors = [] } = useQuery(mentionsQuery);
+  const { data: mentions = [] } = useQuery(mentionsQuery);
   const picker = useRef<HTMLInputElement>(null);
   const recorder = useRecorder();
-  const recording = recorder.status.state === "recording";
+  const recording = recorder.status.state === "recording" ? recorder.status : null;
 
   useEffect(() => keepDraft(draftKey, text), [draftKey, text]);
   useEffect(() => {
@@ -75,7 +73,8 @@ export function Composer({
   const add = async (picked: Iterable<File>) => {
     const chosen = [...picked];
     const tooLarge = chosen.filter((file) => file.size > FILE_LIMIT);
-    if (tooLarge.length) toast.error(t("chat-file-too-large", { name: tooLarge[0]?.name ?? "", limit: "20 MB" }));
+    if (tooLarge.length)
+      toast.error(t("chat-file-too-large", { name: tooLarge[0]?.name ?? "", limit: fileSize(FILE_LIMIT) }));
     const kept = chosen.filter((file) => file.size > 0 && file.size <= FILE_LIMIT);
     const read = await Promise.all(kept.map((file) => pending(file, kindOf(file.type), file.name)));
     setFiles((current) => {
@@ -89,7 +88,7 @@ export function Composer({
   useImperativeHandle(ref, () => ({ add: (picked) => void add(picked) }));
 
   const submit = async (voice?: PendingFile) => {
-    const words = (input.current?.text() ?? text).trim();
+    const words = input.current?.text().trim() ?? "";
     const all = voice ? [...files, voice] : files;
     if (answering || sending || !(words || all.length)) return;
     setSending(true);
@@ -146,8 +145,8 @@ export function Composer({
 
       {recording ? (
         <Recording
-          seconds={recorder.status.state === "recording" ? recorder.status.seconds : 0}
-          level={recorder.status.state === "recording" ? recorder.status.level : 0}
+          seconds={recording.seconds}
+          level={recording.level}
           onCancel={recorder.cancel}
           onSend={() => void finishRecording()}
         />
@@ -160,7 +159,6 @@ export function Composer({
             onChange={setText}
             onSubmit={() => void submit()}
             onFiles={(picked) => void add(picked)}
-            autoFocus={autoFocus}
           />
           <div className="flex items-center gap-1 px-2 pb-2">
             <input
@@ -178,7 +176,7 @@ export function Composer({
                 <Paperclip />
               </Button>
             </Hint>
-            {executors.length ? (
+            {mentions.length ? (
               <Hint label={t("chat-mention")}>
                 <Button
                   variant="ghost"

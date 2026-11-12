@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useLiveItems } from "@/features/shell/live";
 import { useT } from "@/i18n";
-import { hourMinute } from "@/lib/dates";
+import { daysBefore, hourMinute } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 
 const WEB_CHANNEL = "channels:\n  - kind: web"; // what turns the chat on, in the configuration
@@ -60,7 +60,7 @@ export function ChatLayout() {
   return (
     <div className="flex h-full min-h-0">
       <aside className="hidden w-72 shrink-0 flex-col border-r border-rule lg:flex" aria-label={t("chat-list")}>
-        <ChatList chats={chats.data?.chats} loading={chats.isPending} error={chats.error} retry={chats.refetch} />
+        <ChatList />
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
         <Outlet />
@@ -69,36 +69,20 @@ export function ChatLayout() {
   );
 }
 
-const DAY = 86_400_000;
-
 /** Today, yesterday, this week, this month, before: the groups of the list, by the chat's last message. */
 function groupOf(iso: string, now: Date): string {
-  const midnight = new Date(now);
-  midnight.setHours(0, 0, 0, 0);
-  const at = new Date(iso).getTime();
-  if (at >= midnight.getTime()) return "today";
-  if (at >= midnight.getTime() - DAY) return "yesterday";
-  if (at >= midnight.getTime() - 6 * DAY) return "week";
-  if (at >= midnight.getTime() - 29 * DAY) return "month";
+  const days = daysBefore(iso, now);
+  if (days === 0) return "today";
+  if (days === 1) return "yesterday";
+  if (days < 7) return "week";
+  if (days < 30) return "month";
   return "older";
 }
 
-export function ChatList({
-  chats,
-  loading,
-  error,
-  retry,
-  onNavigate,
-  inSheet = false,
-}: {
-  chats: Chat[] | undefined;
-  loading: boolean;
-  error: unknown;
-  retry: () => void;
-  onNavigate?: () => void;
-  inSheet?: boolean; // in a sheet, beside its close button
-}) {
+export function ChatList({ onNavigate, inSheet = false }: { onNavigate?: () => void; inSheet?: boolean }) {
   const t = useT();
+  const { data, isPending: loading, error, refetch: retry } = useQuery(chatsQuery);
+  const chats = data?.chats;
   const { chat: open } = useParams({ strict: false });
   const [query, setQuery] = useState("");
   const groups = useMemo(() => {
@@ -203,5 +187,5 @@ export function ChatList({
 export function titleOf(chat: Chat, t: (id: string, args?: Record<string, string | number>) => string): string {
   if (chat.title) return chat.title;
   const kind = chat.files[0];
-  return kind ? t(`chat-file-${kind}`) : t("chat-untitled");
+  return kind ? t(`chat-file-${kind}`) : t("chat-new");
 }
