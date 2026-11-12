@@ -53,10 +53,10 @@ class ToolReturned(Event, event_type="agent.tool.returned"):
 
 
 class ResultStored(Event, event_type="agent.tool.result-stored"):
-    """A result too large for the turn went to the blob store: who may read it back."""
+    """A text too large for the turn went to the blob store, a tool's result or a document's: who may read it back."""
 
     ref: str  # the blob's digest
     size: int  # characters
-    call_id: str
+    call_id: str | None = None  # the call whose result it is; none for a document someone sent
     address: Address
     person: PersonId | None = None

@@ -18,7 +18,14 @@ from nestor.modules.conversation.events import (
 )
 from nestor.modules.conversation.mentions import Mentions
 from nestor.modules.conversation.persona import Instructions, Persona
-from nestor.modules.conversation.ports import ContextProvider, Layer, MentionSource, Sections, TurnContext
+from nestor.modules.conversation.ports import (
+    ContextProvider,
+    DocumentReader,
+    Layer,
+    MentionSource,
+    Sections,
+    TurnContext,
+)
 from nestor.modules.conversation.service import Agent, AgentSettings, ChannelProfile, LiveReplies, ModelChoice
 from nestor.modules.conversation.speakers import Speakers
 from nestor.modules.conversation.titles import ConversationTitles
@@ -49,6 +56,7 @@ __all__ = [
     "ConversationTitled",
     "ConversationTitles",
     "Conversations",
+    "DocumentReader",
     "FallbackReason",
     "FallbackSpoken",
     "Instructions",

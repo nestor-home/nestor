@@ -61,6 +61,16 @@ class SensitiveWhen:
         return False
 
 
+def bounded(value: object, *, default: int, maximum: int) -> int:
+    """A count a model gave as an argument, between 1 and `maximum`; `default` when it gave none or no number."""
+    if isinstance(value, bool) or not isinstance(value, int | float | str):
+        return default
+    try:
+        return max(1, min(int(value), maximum))
+    except ValueError:
+        return default
+
+
 class ToolFailed(NestorError):
     """A tool could not do what was asked; the message is shown to the model, so it says why."""
 

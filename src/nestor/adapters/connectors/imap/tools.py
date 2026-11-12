@@ -2,12 +2,13 @@
 
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 
-from nestor.adapters.connectors.common import UNTRUSTED, cap
+from nestor.adapters.common.text import cap
+from nestor.adapters.connectors.common import UNTRUSTED
 from nestor.adapters.connectors.imap.account import ClientFactory, ImapAccount, session
 from nestor.adapters.connectors.imap.message import MailMessage
 from nestor.core import ProviderError
 from nestor.modules.cognition.model import ToolSpec
-from nestor.modules.cognition.tools import Risk, Tool, ToolContext, ToolFailed
+from nestor.modules.cognition.tools import Risk, Tool, ToolContext, ToolFailed, bounded
 from nestor.modules.connectors import Connection
 
 MAX_RESULTS = 30
@@ -59,7 +60,7 @@ class ImapTools:
 
     async def search(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
         text = " ".join(str(arguments.get("text") or "").split())
-        limit = _bounded(arguments.get("limit"), default=10, maximum=MAX_RESULTS)
+        limit = bounded(arguments.get("limit"), default=10, maximum=MAX_RESULTS)
         criteria = ("OR", "SUBJECT", _quoted(text), "FROM", _quoted(text)) if text else ("ALL",)
         try:
             async with session(await self._account(), self._factory, self._timeout_s) as (client, _):
@@ -101,12 +102,3 @@ class ImapTools:
 def _quoted(text: str) -> str:
     """An IMAP quoted string (RFC 3501); non-ASCII is sent as UTF-8 with `CHARSET UTF-8`."""
     return '"' + text.replace("\\", "\\\\").replace('"', '\\"') + '"'
-
-
-def _bounded(value: object, *, default: int, maximum: int) -> int:
-    if isinstance(value, bool) or not isinstance(value, int | float | str):
-        return default
-    try:
-        return max(1, min(int(value), maximum))
-    except ValueError:
-        return default

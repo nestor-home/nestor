@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 import httpx
 from pydantic import Field
 
-from nestor.adapters.models.elevenlabs.api import ElevenLabsApi
+from nestor.adapters.models.elevenlabs.api import elevenlabs_api
 from nestor.adapters.models.pipecat import SAMPLE_RATE, PipecatTranscription
 from nestor.core import ProviderError
 from nestor.modules.channels import TranscriptionModel
@@ -35,7 +35,7 @@ class ElevenLabsTranscription(PipecatTranscription):
     ) -> None:
         self.name = name
         self._api_key, self._model, self._language, self._file_model = api_key, model, language, file_model
-        self._api = ElevenLabsApi(api_key, transport=transport)
+        self._api = elevenlabs_api(api_key, transport=transport)
 
     async def close(self) -> None:
         await self._api.aclose()
@@ -44,7 +44,8 @@ class ElevenLabsTranscription(PipecatTranscription):
         return {"model": self._model, "file_model": self._file_model, "language": self._language}
 
     async def transcribe(self, audio: bytes, media_type: str) -> str:
-        response = await self._api.post(
+        response = await self._api.request(
+            "POST",
             "/v1/speech-to-text",
             data={"model_id": self._file_model, "language_code": self._language, "tag_audio_events": "false"},
             files={"file": ("recording", audio, media_type)},

@@ -25,12 +25,14 @@ import nvidiaSvg from "@lobehub/icons-static-svg/icons/nvidia.svg?raw";
 import ollamaSvg from "@lobehub/icons-static-svg/icons/ollama.svg?raw";
 import openaiSvg from "@lobehub/icons-static-svg/icons/openai.svg?raw";
 import openrouterSvg from "@lobehub/icons-static-svg/icons/openrouter.svg?raw";
+import tavilySvg from "@lobehub/icons-static-svg/icons/tavily.svg?raw";
 import vllmSvg from "@lobehub/icons-static-svg/icons/vllm.svg?raw";
 import type { LucideIcon } from "lucide-react";
 import { Cpu, Globe, KeyRound, Mail, Mic, Plug, RadioTower } from "lucide-react";
 import {
   type SimpleIcon,
   siAnthropic,
+  siBrave,
   siCplusplus,
   siDeepgram,
   siDocker,
@@ -49,10 +51,12 @@ import {
   siNotion,
   siNvidia,
   siOpenrouter,
+  siOpenstreetmap,
   siPipecat,
   siPython,
   siRaspberrypi,
   siRust,
+  siSearxng,
   siSqlite,
   siTelegram,
   siTypescript,
@@ -130,6 +134,12 @@ const BRANDS = {
   linear: simple("Linear", siLinear),
   github: simple("GitHub", siGithub),
   notion: simple("Notion", siNotion),
+  // the web, the weather, maps
+  brave: simple("Brave Search", siBrave),
+  searxng: simple("SearXNG", siSearxng),
+  tavily: lobe("Tavily", tavilySvg),
+  "open-meteo": monogram("Open-Meteo", "OM"),
+  openstreetmap: simple("OpenStreetMap", siOpenstreetmap),
   imap: glyph("IMAP", Mail),
   oauth: glyph("OAuth", KeyRound),
   webrtc: simple("WebRTC", siWebrtc),
@@ -191,6 +201,7 @@ const ALIASES: Record<string, BrandSlug> = {
   "elevenlabs-speech": "elevenlabs",
   lmstudio: "lm-studio",
   "llama.cpp": "llama-cpp",
+  "web-pages": "web",
   "nestor-satellite-python": "python",
   "nestor-satellite-typescript": "typescript",
   "nestor-satellite-rust": "rust",

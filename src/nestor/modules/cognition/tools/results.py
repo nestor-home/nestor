@@ -66,24 +66,13 @@ class Results(ToolProvider):
         already bounds), otherwise its start and end with a reference to the whole, which is stored."""
         if len(output) <= self.budget or call.name in READERS:
             return output
-        ref = await self.blobs.put(output.encode(), MEDIA_TYPE)
-        await self.journal.publish(
-            ResultStored(
-                source="toolbox",
-                session=context.address.session,
-                ref=ref.digest,
-                size=len(output),
-                call_id=call.id,
-                address=context.address,
-                person=context.person,
-            )
-        )
+        ref = await self.store(output, context, call_id=call.id)
         head = self.budget * 3 // 4
         tail = self.budget - head
         # what says how to read on comes first: whatever trims this text later keeps its start
         return json.dumps(
             {
-                "ref": ref.digest,
+                "ref": ref,
                 "size": len(output),
                 "shown": f"characters 0-{head} and {len(output) - tail}-{len(output)}",
                 "more": "read_result(ref, start, length) reads any part; search_result(ref, pattern) finds where",
@@ -92,6 +81,23 @@ class Results(ToolProvider):
             },
             ensure_ascii=False,
         )
+
+    async def store(self, text: str, context: ToolContext, *, call_id: str | None = None) -> str:
+        """Keep `text` for `read_result` and `search_result`, readable where `context` is and by its person; returns
+        its reference. `call_id`: the call whose result it is; none for a text that came otherwise (a document)."""
+        ref = await self.blobs.put(text.encode(), MEDIA_TYPE)
+        await self.journal.publish(
+            ResultStored(
+                source="toolbox",
+                session=context.address.session,
+                ref=ref.digest,
+                size=len(text),
+                call_id=call_id,
+                address=context.address,
+                person=context.person,
+            )
+        )
+        return ref.digest
 
     async def _read(self, arguments: Mapping[str, object], context: ToolContext) -> ToolOutput:
         text = await self._text(arguments, context)

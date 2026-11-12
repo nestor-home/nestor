@@ -57,3 +57,16 @@ class MentionSource(ABC):
     @abstractmethod
     def instruction(self, mentioned: Mentioned) -> str:
         """For the model, in English: what it is and what naming it asks for."""
+
+
+class DocumentReader(ABC):
+    """The text of a document someone sent (a PDF, a text file), for the model to read.
+
+    Contract: `reads` says which media types it knows; `read` returns the text, empty when the document has none (a
+    scanned page), and `None` when it cannot be read (damaged, encrypted). It never raises for a document's content."""
+
+    @abstractmethod
+    def reads(self, media_type: str) -> bool: ...
+
+    @abstractmethod
+    async def read(self, data: bytes, media_type: str) -> str | None: ...

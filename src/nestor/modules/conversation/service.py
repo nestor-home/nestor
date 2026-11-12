@@ -324,7 +324,8 @@ class AgentReply(Reply):
         agent = self._agent
         self._speaker = await agent.speakers.of(message, await agent.conversations.current(self._address, self._medium))
         self._person = agent.household.person(self._speaker.person) if self._speaker.person else None
-        kept = await agent.attachments.keep(message.attachments)
+        context = ToolContext(address=self._address, speaker=self._speaker)
+        kept = await agent.attachments.keep(message.attachments, context)
         heard = (a.transcript for a in kept if a.kind is AttachmentKind.VOICE and a.transcript)
         words = "\n".join(part for part in (message.text.strip(), *heard) if part)
         self._mentions = agent.mentions.named(words, self._person)

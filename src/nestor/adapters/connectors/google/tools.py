@@ -3,12 +3,13 @@
 import asyncio
 from collections.abc import Callable, Mapping, Sequence
 
-from nestor.adapters.connectors.common import UNTRUSTED, cap
+from nestor.adapters.common.text import cap
+from nestor.adapters.connectors.common import UNTRUSTED
 from nestor.adapters.connectors.google.api import GmailApi, GmailError
 from nestor.adapters.connectors.google.mime import GmailMessage
 from nestor.core import ProviderError
 from nestor.modules.cognition.model import ToolSpec
-from nestor.modules.cognition.tools import Risk, Tool, ToolContext, ToolFailed
+from nestor.modules.cognition.tools import Risk, Tool, ToolContext, ToolFailed, bounded
 from nestor.modules.connectors import Connection
 
 MAX_RESULTS = 20
@@ -52,7 +53,7 @@ class GmailTools:
 
     async def search(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
         query = str(arguments.get("query", "")).strip()
-        limit = _bounded(arguments.get("max_results"), default=10, maximum=MAX_RESULTS)
+        limit = bounded(arguments.get("max_results"), default=10, maximum=MAX_RESULTS)
         api = self._api()
         try:
             ids = await api.search(query, limit)
@@ -95,12 +96,3 @@ class GmailTools:
             "attachments": message.attachments(),
             "note": UNTRUSTED,
         }
-
-
-def _bounded(value: object, *, default: int, maximum: int) -> int:
-    if isinstance(value, bool) or not isinstance(value, int | float | str):
-        return default
-    try:
-        return max(1, min(int(value), maximum))
-    except ValueError:
-        return default

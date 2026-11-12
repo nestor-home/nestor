@@ -4,7 +4,8 @@ import asyncio
 
 import pytest
 
-from nestor.adapters.connectors.common import Backoff, Retry, cap, decode_header_value, html_to_text, tidy
+from nestor.adapters.common.text import cap, decode_header_value, html_to_text, tidy
+from nestor.adapters.connectors.common import Backoff, Retry
 from nestor.core import ProviderError
 
 
