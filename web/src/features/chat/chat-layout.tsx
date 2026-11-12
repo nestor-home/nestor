@@ -121,6 +121,7 @@ export function ChatList({
               <Button
                 variant="ghost"
                 size="icon"
+                nativeButton={false}
                 aria-label={t("chat-new")}
                 aria-keyshortcuts="Meta+Shift+O"
                 render={<Link to="/chat" onClick={onNavigate} />}

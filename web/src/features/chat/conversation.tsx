@@ -328,7 +328,14 @@ function Header({ chat }: { chat: string | null }) {
         <MessagesSquare />
       </Button>
       <h2 className="min-w-0 flex-1 truncate text-[0.95rem] text-ink">{title}</h2>
-      <Button variant="ghost" size="icon" className="lg:hidden" aria-label={t("chat-new")} render={<Link to="/chat" />}>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="lg:hidden"
+        aria-label={t("chat-new")}
+        nativeButton={false}
+        render={<Link to="/chat" />}
+      >
         <SquarePen />
       </Button>
       <SideSheet open={open} onOpenChange={setOpen}>

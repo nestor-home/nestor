@@ -1,67 +1,15 @@
 /**
- * `@name` in a message: an executor to hand part of the work to ("ask @hermes where my project stands"). Typing `@`
- * offers the executors plugged in, filtered as the name is typed; the arrows choose, Enter or Tab writes it, Escape
- * closes. Sent, the names stand out in the message.
+ * `@name` in a message: an executor to hand part of the work to ("ask @hermes where my project stands"), shown as a
+ * tag with its mark and name, in the composer (`editor.tsx`) as in the messages sent.
  */
 import { useQuery } from "@tanstack/react-query";
-import { type KeyboardEvent, type ReactNode, useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import { type Mention, mentionsQuery } from "@/api";
 import { useT } from "@/i18n";
 import { BrandMark, brandColour, brandOf } from "@/lib/brands";
 import { cn } from "@/lib/utils";
 
-const TYPED = /(^|\s)@([\w-]*)$/;
-const NAMED = /(@[\w-]+)/g;
-
-interface Typing {
-  start: number; // where its `@` is
-  query: string;
-}
-
-/** The mention being typed just before the caret, if any. */
-function typingAt(text: string, caret: number): Typing | null {
-  const found = TYPED.exec(text.slice(0, caret));
-  return found ? { start: caret - (found[2] ?? "").length - 1, query: found[2] ?? "" } : null;
-}
-
-export function useMentionPicker(text: string, caret: number, write: (text: string, caret: number) => void) {
-  const { data: mentions = [] } = useQuery(mentionsQuery);
-  const typing = typingAt(text, caret);
-  const [active, setActive] = useState(0);
-  const [closedAt, setClosedAt] = useState<number | null>(null);
-  const query = typing?.query.toLocaleLowerCase();
-  const options = useMemo(
-    () => (query === undefined ? [] : mentions.filter((m) => m.name.toLocaleLowerCase().startsWith(query))),
-    [mentions, query],
-  );
-  const open = typing !== null && options.length > 0 && closedAt !== typing.start;
-  const current = Math.min(active, Math.max(0, options.length - 1));
-
-  const choose = (mention: Mention) => {
-    if (!typing) return;
-    const inserted = `@${mention.name} `;
-    write(text.slice(0, typing.start) + inserted + text.slice(caret), typing.start + inserted.length);
-    setActive(0);
-  };
-
-  /** Handles the keys the list owns while it is open; true when the key was its. */
-  const onKeyDown = (event: KeyboardEvent): boolean => {
-    if (!open) return false;
-    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-      const step = event.key === "ArrowDown" ? 1 : -1;
-      setActive((current + step + options.length) % options.length);
-    } else if ((event.key === "Enter" || event.key === "Tab") && !event.shiftKey) {
-      const chosen = options[current];
-      if (chosen) choose(chosen);
-    } else if (event.key === "Escape") {
-      setClosedAt(typing.start);
-    } else return false;
-    event.preventDefault();
-    return true;
-  };
-
-  return { open, options, active: current, choose, onKeyDown, offered: mentions.length > 0 };
-}
+export const NAMED = /(@[\w-]+)/g;
 
 /**
  * The executors that match, above the composer. The textarea keeps the focus and its arrows move the choice; the
@@ -134,7 +82,7 @@ export function MentionText({ text }: { text: string }): ReactNode {
   });
 }
 
-function MentionTag({ mention }: { mention: Mention }) {
+export function MentionTag({ mention }: { mention: Mention }) {
   const brand = brandOf(mention.brand ?? mention.name);
   const colour = (brand && brandColour(brand)) ?? "var(--ember)";
   return (

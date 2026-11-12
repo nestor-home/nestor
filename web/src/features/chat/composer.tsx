@@ -3,25 +3,18 @@
  * recorded in place. Enter sends, Shift+Enter goes to the line; while the answer is written, the send button stops
  * it. The draft of each chat is kept in the browser until it is sent.
  */
+
+import { useQuery } from "@tanstack/react-query";
 import { ArrowUp, AtSign, FileText, Mic, Paperclip, Square, Trash2, X } from "lucide-react";
-import {
-  type ClipboardEvent,
-  type KeyboardEvent,
-  type ReactElement,
-  type Ref,
-  useEffect,
-  useImperativeHandle,
-  useRef,
-  useState,
-} from "react";
+import { type ReactElement, type Ref, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { toast } from "sonner";
-import type { ChatMessageIn } from "@/api";
+import { type ChatMessageIn, mentionsQuery } from "@/api";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useT } from "@/i18n";
 import { fileSize } from "@/lib/time";
+import { ChatEditor, type EditorHandle } from "./editor";
 import { FILE_LIMIT, FILES_PER_MESSAGE, kindOf, type PendingFile, pending } from "./files";
-import { MentionList, useMentionPicker } from "./mentions";
 import { useRecorder } from "./recorder";
 
 const DRAFTS = "nestor.chat.draft.";
@@ -68,25 +61,13 @@ export function Composer({
   const [text, setText] = useState(() => readDraft(draftKey));
   const [files, setFiles] = useState<PendingFile[]>([]);
   const [sending, setSending] = useState(false);
-  const [caret, setCaret] = useState(0);
-  const input = useRef<HTMLTextAreaElement>(null);
-  const write = (next: string, at: number) => {
-    setText(next);
-    setCaret(at);
-    requestAnimationFrame(() => {
-      input.current?.focus();
-      input.current?.setSelectionRange(at, at);
-    });
-  };
-  const mentions = useMentionPicker(text, caret, write);
+  const input = useRef<EditorHandle>(null);
+  const { data: executors = [] } = useQuery(mentionsQuery);
   const picker = useRef<HTMLInputElement>(null);
   const recorder = useRecorder();
   const recording = recorder.status.state === "recording";
 
   useEffect(() => keepDraft(draftKey, text), [draftKey, text]);
-  useEffect(() => {
-    if (autoFocus) input.current?.focus();
-  }, [autoFocus]);
   useEffect(() => {
     if (recorder.status.state === "refused") toast.error(t("chat-mic-refused"));
   }, [recorder.status.state, t]);
@@ -108,13 +89,14 @@ export function Composer({
   useImperativeHandle(ref, () => ({ add: (picked) => void add(picked) }));
 
   const submit = async (voice?: PendingFile) => {
-    const words = text.trim();
+    const words = (input.current?.text() ?? text).trim();
     const all = voice ? [...files, voice] : files;
     if (answering || sending || !(words || all.length)) return;
     setSending(true);
     const sent = await onSend({ text: words, files: all.map((f) => f.file) });
     setSending(false);
     if (sent) {
+      input.current?.clear();
       setText("");
       setFiles([]);
     }
@@ -126,29 +108,10 @@ export function Composer({
     if (blob) await submit(await pending(blob, "voice", null));
   };
 
-  const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (mentions.onKeyDown(event)) return;
-    if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
-      event.preventDefault();
-      void submit();
-    }
-  };
-
-  const onPaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
-    const pasted = [...event.clipboardData.files];
-    if (pasted.length) {
-      event.preventDefault();
-      void add(pasted);
-    }
-  };
-
   const empty = !(text.trim() || files.length);
 
   return (
     <div className="relative rounded-2xl border border-rule-strong bg-paper-raised shadow-[0_1px_0_var(--rule)] transition-[border-color,box-shadow] duration-200 focus-within:border-ink focus-within:shadow-[0_6px_24px_-12px_var(--rule-strong)]">
-      {mentions.open && !recording ? (
-        <MentionList options={mentions.options} active={mentions.active} onChoose={mentions.choose} />
-      ) : null}
       {files.length ? (
         <ul className="flex flex-wrap gap-2 px-3 pt-3" aria-label={t("chat-attached")}>
           {files.map((file) => (
@@ -190,23 +153,14 @@ export function Composer({
         />
       ) : (
         <>
-          <label htmlFor="chat-input" className="sr-only">
-            {t("chat-placeholder", { assistant })}
-          </label>
-          <textarea
-            id="chat-input"
+          <ChatEditor
             ref={input}
-            value={text}
-            onChange={(event) => {
-              setText(event.target.value);
-              setCaret(event.target.selectionStart);
-            }}
-            onSelect={(event) => setCaret(event.currentTarget.selectionStart)}
-            onKeyDown={onKeyDown}
-            onPaste={onPaste}
-            rows={1}
+            initial={text}
             placeholder={t("chat-placeholder", { assistant })}
-            className="block field-sizing-content max-h-60 min-h-12 w-full resize-none bg-transparent px-4 pt-3.5 pb-1 text-[0.95rem] leading-relaxed text-ink outline-none placeholder:text-ink-faint"
+            onChange={setText}
+            onSubmit={() => void submit()}
+            onFiles={(picked) => void add(picked)}
+            autoFocus={autoFocus}
           />
           <div className="flex items-center gap-1 px-2 pb-2">
             <input
@@ -224,17 +178,13 @@ export function Composer({
                 <Paperclip />
               </Button>
             </Hint>
-            {mentions.offered ? (
+            {executors.length ? (
               <Hint label={t("chat-mention")}>
                 <Button
                   variant="ghost"
                   size="icon"
                   aria-label={t("chat-mention")}
-                  onClick={() => {
-                    const before = text.slice(0, caret);
-                    const at = before && !/\s$/.test(before) ? " @" : "@";
-                    write(before + at + text.slice(caret), caret + at.length);
-                  }}
+                  onClick={() => input.current?.mention()}
                 >
                   <AtSign />
                 </Button>
