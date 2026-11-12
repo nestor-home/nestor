@@ -394,7 +394,7 @@ async def test_the_token_never_appears_in_logs(api: FakeBotApi, caplog: pytest.L
 
 async def test_send_delivers_an_unprompted_message(api: FakeBotApi) -> None:
     async with channel_for(api) as channel:
-        await channel.send(Address("telegram", str(ADA)), "Your task is done.", Medium.WRITTEN)
+        await channel.send(Address("telegram", str(ADA)), "Your task is done.", Medium.WRITTEN, ())
     assert api.sent == [(str(ADA), "Your task is done.")]
 
 
@@ -408,14 +408,14 @@ async def test_send_reports_failures_and_whether_retrying_may_help(
     api.fail("sendMessage", response)
     async with channel_for(api) as channel:
         with pytest.raises(ProviderError) as raised:
-            await channel.send(Address("telegram", str(ADA)), "Your task is done.", Medium.WRITTEN)
+            await channel.send(Address("telegram", str(ADA)), "Your task is done.", Medium.WRITTEN, ())
     assert raised.value.transient is transient
 
 
 async def test_send_to_another_channel_is_a_contract_error(api: FakeBotApi) -> None:
     async with channel_for(api) as channel:
         with pytest.raises(ContractError):
-            await channel.send(Address("voice", "kitchen"), "hello", Medium.WRITTEN)
+            await channel.send(Address("voice", "kitchen"), "hello", Medium.WRITTEN, ())
     assert api.sent == []
 
 
@@ -423,7 +423,7 @@ async def test_send_after_close_fails_permanently(api: FakeBotApi) -> None:
     channel = channel_for(api)
     await channel.close()
     with pytest.raises(ProviderError) as raised:
-        await channel.send(Address("telegram", str(ADA)), "hello", Medium.WRITTEN)
+        await channel.send(Address("telegram", str(ADA)), "hello", Medium.WRITTEN, ())
     assert raised.value.transient is False
 
 

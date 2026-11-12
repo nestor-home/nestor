@@ -112,7 +112,7 @@ class SatellitesChannel(Channel, SatelliteHost):
             return self._voice is not None and self._voice.reachable(to)
         return bool(self._showing(to.conversation))
 
-    async def send(self, to: Address, text: str, medium: Medium, attachments: tuple[Attachment, ...] = ()) -> None:
+    async def send(self, to: Address, text: str, medium: Medium, attachments: tuple[Attachment, ...]) -> None:
         """Says or shows `text`; a satellite shows no file."""
         if to.channel != self.channel_id or medium not in self.media:
             raise ContractError(f"{to} is not on channel {self.channel_id!r} {medium}")

@@ -556,7 +556,7 @@ async def test_a_call_through_the_toolbox_is_logged(home: McpToolProvider) -> No
     journal = Journal(MemoryEventLog())
     toolbox = Toolbox(journal, providers=[home])
 
-    output = await toolbox.call(ToolCall("c1", "turn_on", {"name": "kitchen light"}), CONTEXT)
+    output = (await toolbox.call(ToolCall("c1", "turn_on", {"name": "kitchen light"}), CONTEXT)).output
 
     assert output == "kitchen light is on"
     assert "turn_on" in {spec.name for spec in toolbox.specs()}
@@ -571,9 +571,9 @@ async def test_a_long_result_reaches_the_model_whole_through_the_results(home: M
     journal = Journal(MemoryEventLog())
     toolbox = Toolbox(journal, providers=[home], results=Results(journal, MemoryBlobStore(), budget=2000))
 
-    shown = json.loads(await toolbox.call(ToolCall("c1", "dump", {"size": 40_000}), CONTEXT))
+    shown = json.loads((await toolbox.call(ToolCall("c1", "dump", {"size": 40_000}), CONTEXT)).output)
     tail = ToolCall("c2", "read_result", {"ref": shown["ref"], "start": 39_990, "length": 100})
-    read = json.loads(await toolbox.call(tail, CONTEXT))
+    read = json.loads((await toolbox.call(tail, CONTEXT)).output)
 
     assert shown["size"] == 40_000
     assert (read["start"], read["end"], read["text"]) == (39_990, 40_000, "x" * 10)

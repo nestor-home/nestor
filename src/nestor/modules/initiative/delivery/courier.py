@@ -173,12 +173,11 @@ class Courier(Component):
             return _Sent(address, said=False)
         files = await self.agent.attachments.sent(draft.files, channel.sends)
         try:  # sent without holding the conversation: a voice says it once the person is answered
-            await channel.send(address, draft.text, medium, tuple(sent for sent, _ in files))
+            await channel.send(address, draft.text, medium, files.sent)
         except ProviderError:
             return None
         async with conversations.free(address):  # recorded after what was said meanwhile, as it was heard
-            kept = tuple(kept for _, kept in files)
-            await self.agent.delivered(address, person, notification, medium, draft.text, kept)
+            await self.agent.delivered(address, person, notification, medium, draft.text, files.kept)
         await self.journal.publish(
             Delivered(source=self.name, address=address, about=notification.about, person=who, follow_up=follow_up)
         )

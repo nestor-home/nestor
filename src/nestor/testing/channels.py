@@ -133,7 +133,7 @@ class InMemoryChannel(Channel):
     def rooms(self) -> frozenset[str]:
         return frozenset({self.room}) if self.room else frozenset()
 
-    async def send(self, to: Address, text: str, medium: Medium, attachments: tuple[Attachment, ...] = ()) -> None:
+    async def send(self, to: Address, text: str, medium: Medium, attachments: tuple[Attachment, ...]) -> None:
         if to.channel != self.channel_id or medium not in self.media:
             raise ContractError(f"{to} is not on channel {self.channel_id!r} {medium}")
         self.sent.append((to, text))

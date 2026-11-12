@@ -8,6 +8,8 @@ from nestor.modules.cognition.images.ports import ImageModel
 from nestor.modules.cognition.model import ToolSpec
 from nestor.modules.cognition.tools import Made, Risk, Tool, ToolContext, ToolFailed, ToolProvider
 
+TIMEOUT_S = 300.0  # past any model's own: a picture takes from seconds to a minute or two
+
 GENERATE = ToolSpec(
     "generate_image",
     "Draw a picture from a description and send it with your answer, where the conversation shows pictures (a "
@@ -24,11 +26,11 @@ GENERATE = ToolSpec(
 class ImageTools(ToolProvider):
     name = "images"
 
-    def __init__(self, model: ImageModel, *, timeout_s: float = 180.0) -> None:
-        self._model, self._timeout_s = model, timeout_s
+    def __init__(self, model: ImageModel) -> None:
+        self._model = model
 
-    def tools(self) -> Sequence[Tool]:
-        return (Tool(spec=GENERATE, run=self.generate, risk=Risk.READ, timeout_s=self._timeout_s),)
+    def tools(self) -> Sequence[Tool]:  # bounded by the model's own timeout
+        return (Tool(spec=GENERATE, run=self.generate, risk=Risk.READ, timeout_s=TIMEOUT_S),)
 
     async def generate(self, arguments: Mapping[str, object], context: ToolContext) -> Made:
         description = str(arguments.get("description", "")).strip()

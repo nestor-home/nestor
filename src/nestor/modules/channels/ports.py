@@ -154,7 +154,7 @@ class Channel(Component, ABC):
     async def serve(self, assistant: Assistant) -> None: ...
 
     @abstractmethod
-    async def send(self, to: Address, text: str, medium: Medium, attachments: tuple[Attachment, ...] = ()) -> None:
+    async def send(self, to: Address, text: str, medium: Medium, attachments: tuple[Attachment, ...]) -> None:
         """Send `text` by itself (a notification, a message to pass on) with `attachments` of the kinds it `sends`."""
 
     @property

@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from enum import StrEnum
 
-from nestor.modules.channels import AttachmentKind
+from nestor.modules.channels import Attachment, AttachmentKind
 from nestor.modules.journal import BlobRef
 
 NOTIFICATION_CHARS = (
@@ -73,6 +73,17 @@ class Notification:
         if len(self.text) > NOTIFICATION_CHARS:
             half = NOTIFICATION_CHARS // 2
             object.__setattr__(self, "text", f"{self.text[:half]}\n[… cut …]\n{self.text[-half:]}")
+
+
+@dataclass(frozen=True, slots=True)
+class Outgoing:
+    """Files that go with a message: to send, and as the journal keeps them (`AnswerAttached`)."""
+
+    sent: tuple[Attachment, ...] = ()
+    kept: tuple["Attached", ...] = ()
+
+    def __add__(self, other: "Outgoing") -> "Outgoing":
+        return Outgoing(self.sent + other.sent, self.kept + other.kept)
 
 
 @dataclass(frozen=True, slots=True)

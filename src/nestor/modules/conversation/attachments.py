@@ -3,14 +3,14 @@ transcribed, documents read, answers recorded in the assistant's voice. Channels
 
 import asyncio
 import logging
-from collections.abc import Collection, Iterable, Mapping, Sequence
+from collections.abc import AsyncIterator, Collection, Iterable, Mapping, Sequence
 
 from nestor.core import ProviderError
 from nestor.modules.channels import Attachment, AttachmentKind, SpeechModel, TranscriptionModel
 from nestor.modules.cognition.model import Image
 from nestor.modules.cognition.tools import Results, ToolContext
 from nestor.modules.conversation.ports import DocumentReader
-from nestor.modules.conversation.types import Attached, Read
+from nestor.modules.conversation.types import Attached, Outgoing, Read
 from nestor.modules.journal import BlobRef, BlobStore
 
 logger = logging.getLogger(__name__)
@@ -45,48 +45,44 @@ class Attachments:
         `context` is, and by its person."""
         return tuple(await asyncio.gather(*(self._keep(a, context) for a in attachments)))
 
-    async def voice(self, text: str) -> tuple[Attachment, Attached] | None:
-        """`text` recorded as a voice message, to send and as kept; `None` without a voice, or when it could not be
+    async def voice(self, text: str) -> Outgoing:
+        """`text` recorded as a voice message, to send and as kept; nothing without a voice, or when it could not be
         recorded."""
         if self._speech is None or not text.strip():
-            return None
+            return Outgoing()
         try:
             audio = await self._speech.synthesize(text)
         except ProviderError as error:
             logger.warning("could not record an answer in the assistant's voice: %s", error)
-            return None
+            return Outgoing()
         blob = await self._blobs.put(audio, VOICE_TYPE)
         voice = Attachment(kind=AttachmentKind.VOICE, data=audio, media_type=VOICE_TYPE)
-        return voice, Attached(kind=AttachmentKind.VOICE, blob=blob, transcript=text)
+        return Outgoing((voice,), (Attached(kind=AttachmentKind.VOICE, blob=blob, transcript=text),))
 
-    async def sent(
-        self, made: Sequence[BlobRef], sends: Collection[AttachmentKind]
-    ) -> list[tuple[Attachment, Attached]]:
-        """The files tools `made` that a channel which `sends` these kinds can send, to send and as kept; one no
-        longer stored is left out."""
-        found: list[tuple[Attachment, Attached]] = []
-        for blob in made:
-            kind = AttachmentKind.of(blob.media_type)
-            if kind not in sends:
-                continue
-            try:
-                data = await self._blobs.get(blob.digest)
-            except KeyError:
-                continue
-            found.append((Attachment(kind=kind, data=data, media_type=blob.media_type), Attached(kind=kind, blob=blob)))
-        return found
+    async def sent(self, made: Sequence[BlobRef], sends: Collection[AttachmentKind]) -> Outgoing:
+        """The files tools `made` that a channel which `sends` these kinds can send, to send and as kept."""
+        sendable = [blob for blob in made if AttachmentKind.of(blob.media_type) in sends]
+        found = [(AttachmentKind.of(blob.media_type), blob, data) async for blob, data in self._stored(sendable)]
+        return Outgoing(
+            tuple(Attachment(kind=kind, data=data, media_type=blob.media_type) for kind, blob, data in found),
+            tuple(Attached(kind=kind, blob=blob) for kind, blob, _ in found),
+        )
 
     async def images(self, attached: Sequence[Attached]) -> Mapping[str, Image]:
-        """The pictures among `attached`, by digest, as the model looks at them; one no longer stored is left out."""
-        found: dict[str, Image] = {}
-        for item in attached:
-            if item.kind is AttachmentKind.IMAGE and item.blob.digest not in found:
-                try:
-                    data = await self._blobs.get(item.blob.digest)
-                except KeyError:
-                    continue
-                found[item.blob.digest] = Image(media_type=item.blob.media_type, data=data)
-        return found
+        """The pictures among `attached`, by digest, as the model looks at them."""
+        pictures = {a.blob.digest: a.blob for a in attached if a.kind is AttachmentKind.IMAGE}
+        return {
+            blob.digest: Image(media_type=blob.media_type, data=data)
+            async for blob, data in self._stored(pictures.values())
+        }
+
+    async def _stored(self, blobs: Iterable[BlobRef]) -> AsyncIterator[tuple[BlobRef, bytes]]:
+        """Each of `blobs` with its content; one no longer stored is left out."""
+        for blob in blobs:
+            try:
+                yield blob, await self._blobs.get(blob.digest)
+            except KeyError:
+                continue
 
     async def _keep(self, attachment: Attachment, context: ToolContext) -> Attached:
         blob = await self._blobs.put(attachment.data, attachment.media_type)

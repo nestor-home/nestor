@@ -171,7 +171,7 @@ class ChatChannel(Channel):
         self._assistant = assistant
         await self._closing.wait()
 
-    async def send(self, to: Address, text: str, medium: Medium, attachments: tuple[Attachment, ...] = ()) -> None:
+    async def send(self, to: Address, text: str, medium: Medium, attachments: tuple[Attachment, ...]) -> None:
         if not self.reachable(to, medium):
             raise ContractError(f"{to} is not on channel {self.channel_id!r} {medium}")
         if self._closing.is_set():

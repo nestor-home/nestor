@@ -16,7 +16,7 @@ from pydantic import Field, PositiveFloat
 
 from nestor.adapters.common.http import JsonApi
 from nestor.adapters.models.common import EndpointSettings, brand
-from nestor.modules.channels import IMAGE_TYPES
+from nestor.modules.channels import AttachmentKind
 from nestor.modules.cognition.images import ImageModel
 from nestor.modules.cognition.model import Image
 from nestor.runtime.plugins import Family, Plugin, Services
@@ -58,21 +58,32 @@ class OpenAICompatibleImage(ImageModel):
 
     async def generate(self, prompt: str) -> Image:
         if self._endpoint is ImageEndpoint.CHAT:
-            body: dict[str, Any] = {
-                "model": self._model,
-                "messages": [{"role": "user", "content": prompt}],
-                "modalities": ["image", "text"],
-            }
-            answer = await self._api.post("/chat/completions", body | self._extra_body)
-            return await self._picture(_chat_image(answer), "/chat/completions")
+            return await self._picture(await self._from_chat(prompt), "/chat/completions")
+        return await self._picture(await self._from_images(prompt), "/images/generations")
+
+    async def _from_images(self, prompt: str) -> object:
+        """What `/images/generations` gives for `prompt`: base64 or an address."""
         body = {"model": self._model, "prompt": prompt, "n": 1} | ({"size": self._size} if self._size else {})
         answer = await self._api.post("/images/generations", body | self._extra_body)
         try:
             found = answer["data"][0]
+            return found.get("b64_json") or found.get("url")
+        except (KeyError, IndexError, TypeError, AttributeError):
+            return None
+
+    async def _from_chat(self, prompt: str) -> object:
+        """What Chat Completions gives for `prompt`: the first picture of its answer (`message.images`, as OpenRouter
+        returns them), a data URL."""
+        body = {
+            "model": self._model,
+            "messages": [{"role": "user", "content": prompt}],
+            "modalities": ["image", "text"],
+        }
+        answer = await self._api.post("/chat/completions", body | self._extra_body)
+        try:
+            return answer["choices"][0]["message"]["images"][0]["image_url"]["url"]
         except (KeyError, IndexError, TypeError):
-            raise self._api.error(f"/images/generations: no picture in {str(answer)[:200]}", transient=False) from None
-        given = found.get("b64_json") or found.get("url")
-        return await self._picture(given, "/images/generations")
+            return None
 
     async def _picture(self, given: object, path: str) -> Image:
         """A picture from what the provider gave: base64, a data URL, or an address to fetch it from."""
@@ -92,22 +103,14 @@ class OpenAICompatibleImage(ImageModel):
         return _image(data, media_type, self._api.error)
 
 
-def _chat_image(answer: Any) -> object:
-    """The first picture of a Chat Completions answer (`message.images[].image_url.url`, as OpenRouter returns)."""
-    try:
-        return answer["choices"][0]["message"]["images"][0]["image_url"]["url"]
-    except (KeyError, IndexError, TypeError):
-        return None
-
-
 def _image(data: bytes, given: str | None, error: Any) -> Image:
     """`data` as a picture of a type people can see: its declared type, else the one its first bytes show."""
     media_type = (given or "").split(";")[0].strip().lower()
-    if media_type not in IMAGE_TYPES:
+    if AttachmentKind.of(media_type) is not AttachmentKind.IMAGE:
         media_type = next((t for sig, t in SIGNATURES.items() if data.startswith(sig)), "")
         if not media_type and data[:4] == b"RIFF" and data[8:12] == b"WEBP":
             media_type = "image/webp"
-    if media_type not in IMAGE_TYPES:
+    if not media_type:
         raise error("the picture is of a type that cannot be shown", transient=False)
     return Image(media_type=media_type, data=data)
 

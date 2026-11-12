@@ -16,7 +16,6 @@ from nestor.core.i18n import Localizer
 from nestor.modules.channels import (
     Address,
     Assistant,
-    Attachment,
     AttachmentKind,
     Exchange,
     InboundMessage,
@@ -45,7 +44,15 @@ from nestor.modules.conversation.mentions import Mentions
 from nestor.modules.conversation.persona import QUIET, VOICE_ANSWER, Instructions, Persona
 from nestor.modules.conversation.ports import ContextProvider, Layer, TurnContext
 from nestor.modules.conversation.speakers import Speakers
-from nestor.modules.conversation.types import SILENT, Attached, FallbackReason, Mentioned, Notification, ReplyPhase
+from nestor.modules.conversation.types import (
+    SILENT,
+    Attached,
+    FallbackReason,
+    Mentioned,
+    Notification,
+    Outgoing,
+    ReplyPhase,
+)
 from nestor.modules.household import Household, Person
 from nestor.modules.identity import Heard, Speaker
 from nestor.modules.journal import BlobRef, Journal
@@ -398,7 +405,7 @@ class AgentReply(Reply):
                 return
             messages.append(Message(role=Role.ASSISTANT, content=text, tool_calls=calls))
             agent.replies.set(self, ReplyPhase.THINKING)
-            done = await asyncio.gather(*(agent.toolbox.perform(call, context, wait_s=wait_s) for call in calls))
+            done = await asyncio.gather(*(agent.toolbox.call(call, context, wait_s=wait_s) for call in calls))
             self._made += [file for called in done for file in called.files]
             messages += [
                 Message(role=Role.TOOL, content=d.output, tool_call_id=c.id) for c, d in zip(calls, done, strict=True)
@@ -471,26 +478,27 @@ class AgentReply(Reply):
         text, self._message = "".join(self._message).strip(), []
         if not text:
             return
-        draft = isinstance(self._opening, Notification)  # its files go with it once delivered (`Agent.compose`)
-        attaching = self._voiced or (last and bool(self._made) and not draft)
+        # a draft (no turn) takes its files along once delivered (`Agent.compose`)
+        attaching = self._voiced or (last and bool(self._made) and self._turn is not None)
         if not attaching:
             self._chunks.put_nowait(MessageEnd(last=last))
         answer = await self._turn.answered(text) if self._turn else None
         self._ended.append((text, answer))
         if attaching:  # with its files once logged: a voice message is sent whole, a picture with its message
             files = await self._files(text, last=last)
-            if files and self._turn is not None and answer is not None:
-                await self._turn.attached(answer, tuple(kept for _, kept in files))
-            self._chunks.put_nowait(MessageEnd(last=last, attachments=tuple(sent for sent, _ in files)))
+            if files.kept and self._turn is not None and answer is not None:
+                await self._turn.attached(answer, files.kept)
+            self._chunks.put_nowait(MessageEnd(last=last, attachments=files.sent))
 
-    async def _files(self, text: str, *, last: bool) -> list[tuple[Attachment, Attached]]:
+    async def _files(self, text: str, *, last: bool) -> Outgoing:
         """What goes with a message: its recording, when the answer goes back in voice, and on the last one the files
         the tools made that the channel can send."""
         attachments = self._agent.attachments
-        voice = await attachments.voice(text) if self._voiced else None
-        made, self._made = (self._made, []) if last else ([], self._made)
-        sends = self._agent.channel(self._address).sends
-        return [*((voice,) if voice else ()), *await attachments.sent(made, sends)]
+        files = await attachments.voice(text) if self._voiced else Outgoing()
+        if last:
+            made, self._made = self._made, []
+            files += await attachments.sent(made, self._agent.channel(self._address).sends)
+        return files
 
     def _end_turn(self) -> None:
         """The reply is over, written or cut: the conversation's silence starts now."""
