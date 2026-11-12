@@ -5,8 +5,7 @@ from collections.abc import Mapping, Sequence
 
 from nestor.core import ProviderError
 from nestor.modules.cognition.model import ToolSpec
-from nestor.modules.cognition.tools import Risk, Tool, ToolContext, ToolFailed, ToolProvider
-from nestor.modules.cognition.tools.types import ToolOutput
+from nestor.modules.cognition.tools import Risk, Tool, ToolContext, ToolFailed, ToolOutput, ToolProvider, bounded
 from nestor.modules.web.types import UNTRUSTED, Found
 
 MAX_RESULTS = 10
@@ -27,15 +26,12 @@ SEARCH = ToolSpec(
 
 
 class WebSearch(ToolProvider, ABC):
-    """Contract: `search` returns at most `limit` pages, the most relevant first, none for a query nothing matches;
-    a provider that cannot answer raises `ProviderError`. `language` is the household's (BCP 47), a hint the engine
-    may ignore. One engine per household: the tool's name is unique."""
-
-    def __init__(self, *, language: str | None = None) -> None:
-        self._language = language
+    """Contract: `search` returns pages, the most relevant first, none for a query nothing matches (the tool keeps the
+    first `limit`, which the engine may also ask for); a provider that cannot answer raises `ProviderError`. One
+    engine per household: the tool's name is unique."""
 
     @abstractmethod
-    async def search(self, query: str, *, limit: int, language: str | None) -> Sequence[Found]: ...
+    async def search(self, query: str, *, limit: int) -> Sequence[Found]: ...
 
     def tools(self) -> Sequence[Tool]:
         return (Tool(spec=SEARCH, run=self._run, risk=Risk.READ, timeout_s=20.0),)
@@ -44,10 +40,9 @@ class WebSearch(ToolProvider, ABC):
         query = str(arguments.get("query", "")).strip()
         if not query:
             raise ToolFailed("give what to search for")
-        limit = arguments.get("max_results")
-        limit = limit if isinstance(limit, int) and not isinstance(limit, bool) and 0 < limit <= MAX_RESULTS else 5
+        limit = bounded(arguments.get("max_results"), default=5, maximum=MAX_RESULTS)
         try:
-            found = await self.search(query, limit=limit, language=self._language)
+            found = await self.search(query, limit=limit)
         except ProviderError as error:
             raise ToolFailed(f"the web search failed: {error}") from None
         pages = [

@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 import httpx
 from pydantic import Field
 
-from nestor.adapters.models.elevenlabs.api import ElevenLabsApi
+from nestor.adapters.models.elevenlabs.api import elevenlabs_api
 from nestor.adapters.models.pipecat import PipecatSpeech
 from nestor.modules.channels import SpeechModel
 from nestor.runtime.plugins import AdapterSettings, Family, Plugin, RequiredSecret, Services
@@ -27,10 +27,11 @@ class ElevenLabsSpeech(PipecatSpeech):
     ) -> None:
         self.name = name
         self._api_key, self._model, self._voice_id = api_key, model, voice_id
-        self._api = ElevenLabsApi(api_key, transport=transport)
+        self._api = elevenlabs_api(api_key, transport=transport)
 
     async def synthesize(self, text: str) -> bytes:
-        response = await self._api.post(
+        response = await self._api.request(
+            "POST",
             f"/v1/text-to-speech/{self._voice_id}",
             params={"output_format": "opus_48000_64"},
             json={"model_id": self._model, "text": text},  # the model in the body, or it is ignored

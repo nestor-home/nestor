@@ -13,11 +13,10 @@ API = "https://api.tavily.com"
 class TavilySearch(WebSearch):
     brand = "tavily"
 
-    def __init__(self, api_key: str, *, language: str | None = None) -> None:
-        super().__init__(language=language)
+    def __init__(self, api_key: str) -> None:
         self._api = JsonApi("tavily", API, headers={"Authorization": f"Bearer {api_key}"}, secret=api_key)
 
-    async def search(self, query: str, *, limit: int, language: str | None) -> Sequence[Found]:
+    async def search(self, query: str, *, limit: int) -> Sequence[Found]:
         answer = await self._api.post("/search", {"query": query, "max_results": limit})
         return [
             Found(
@@ -26,7 +25,7 @@ class TavilySearch(WebSearch):
                 snippet=r.get("content") or "",
                 published=r.get("published_date"),
             )
-            for r in answer.get("results", [])[:limit]
+            for r in answer.get("results", [])
             if r.get("url")
         ]
 
@@ -39,7 +38,7 @@ class TavilySettings(AdapterSettings):
 
 
 def build(settings: TavilySettings, name: str, services: Services) -> TavilySearch:
-    search = TavilySearch(settings.api_key.get_secret_value(), language=services.locale)
+    search = TavilySearch(settings.api_key.get_secret_value())
     search.name = name
     return search
 

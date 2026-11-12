@@ -14,7 +14,9 @@ from nestor.modules.conversation import DocumentReader
 logger = logging.getLogger(__name__)
 
 PDF = "application/pdf"
-TEXT_TYPES = frozenset({"application/json", "application/xml", "application/x-yaml", "application/yaml"})
+TEXT_TYPES = frozenset(
+    {"application/json", "application/xml", "application/xhtml+xml", "application/x-yaml", "application/yaml"}
+)
 MAX_PAGES = 500  # past a book, the rest is left out: the model is told
 
 

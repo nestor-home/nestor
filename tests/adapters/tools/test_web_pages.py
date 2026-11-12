@@ -8,6 +8,7 @@ from collections.abc import Iterator
 import pytest
 import respx
 
+from nestor.adapters.documents import FileReader
 from nestor.adapters.tools.web_pages import WebPages
 from nestor.modules.channels import Address
 from nestor.modules.cognition.tools import ToolContext, ToolFailed
@@ -44,7 +45,7 @@ def web() -> Iterator[respx.MockRouter]:
 
 
 async def read(url: str, **settings: int) -> dict:
-    async with WebPages(**settings) as pages:
+    async with WebPages(FileReader(), **settings) as pages:
         [tool] = pages.tools()
         output = await tool.run({"url": url}, CONTEXT)
     assert isinstance(output, dict)

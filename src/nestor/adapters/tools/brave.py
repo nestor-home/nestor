@@ -15,13 +15,13 @@ class BraveSearch(WebSearch):
     brand = "brave"
 
     def __init__(self, api_key: str, *, language: str | None = None) -> None:
-        super().__init__(language=language)
+        self._language = language
         self._api = JsonApi("brave", API, headers={"X-Subscription-Token": api_key}, secret=api_key)
 
-    async def search(self, query: str, *, limit: int, language: str | None) -> Sequence[Found]:
+    async def search(self, query: str, *, limit: int) -> Sequence[Found]:
         params: dict[str, str | int | float] = {"q": query, "count": limit}
-        if language:
-            params["search_lang"] = language.split("-")[0].lower()
+        if self._language:
+            params["search_lang"] = self._language.split("-")[0].lower()
         answer = await self._api.get("/web/search", params)
         return [
             Found(

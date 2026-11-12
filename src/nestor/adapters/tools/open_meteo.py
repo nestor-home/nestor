@@ -7,8 +7,7 @@ from typing import Any
 from nestor.adapters.common.http import JsonApi
 from nestor.core import ProviderError
 from nestor.modules.cognition.model import ToolSpec
-from nestor.modules.cognition.tools import Risk, Tool, ToolContext, ToolFailed, ToolProvider
-from nestor.modules.cognition.tools.types import ToolOutput
+from nestor.modules.cognition.tools import Risk, Tool, ToolContext, ToolFailed, ToolOutput, ToolProvider, bounded
 from nestor.runtime import Family, Plugin, Services
 from nestor.runtime.plugins import AdapterSettings
 
@@ -17,6 +16,7 @@ GEOCODING = "https://geocoding-api.open-meteo.com/v1"
 MAX_DAYS = 16
 HOURS = 24  # how far `next_hours` looks
 HOURS_STEP = 3
+PLACES_KEPT = 256  # places found, kept for the next forecasts
 
 CURRENT = "temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,weather_code,wind_speed_10m"
 HOURLY = "temperature_2m,precipitation_probability,precipitation,weather_code"
@@ -89,8 +89,7 @@ class OpenMeteo(ToolProvider):
         name = str(arguments.get("place") or "").strip() or self._home
         if not name:
             raise ToolFailed("no place given, and the home's place is not set: ask where")
-        days = arguments.get("days")
-        days = days if isinstance(days, int) and not isinstance(days, bool) and 0 < days <= MAX_DAYS else 3
+        days = bounded(arguments.get("days"), default=3, maximum=MAX_DAYS)
         try:
             place = await self._place(name)
             forecast = await self._forecast.get(
@@ -117,6 +116,8 @@ class OpenMeteo(ToolProvider):
             )
             if not found.get("results"):
                 raise ToolFailed(f"no place called {name!r} was found: try a town's name")
+            if len(self._places) >= PLACES_KEPT:
+                del self._places[next(iter(self._places))]  # the oldest
             self._places[key] = found["results"][0]
         return self._places[key]
 

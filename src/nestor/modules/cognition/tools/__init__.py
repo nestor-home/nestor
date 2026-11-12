@@ -8,7 +8,7 @@ from nestor.modules.cognition.tools.events import ResultStored, ToolCalled, Tool
 from nestor.modules.cognition.tools.ports import InWriting, ToolProvider
 from nestor.modules.cognition.tools.results import Results
 from nestor.modules.cognition.tools.service import Toolbox
-from nestor.modules.cognition.tools.types import Risk, SensitiveWhen, Tool, ToolContext, ToolFailed
+from nestor.modules.cognition.tools.types import Risk, SensitiveWhen, Tool, ToolContext, ToolFailed, ToolOutput, bounded
 
 __all__ = [
     "InWriting",
@@ -22,7 +22,9 @@ __all__ = [
     "ToolContext",
     "ToolDeferred",
     "ToolFailed",
+    "ToolOutput",
     "ToolProvider",
     "ToolReturned",
     "Toolbox",
+    "bounded",
 ]

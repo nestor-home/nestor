@@ -15,14 +15,14 @@ class SearxngSearch(WebSearch):
     brand = "searxng"
 
     def __init__(self, url: str, *, token: str | None = None, language: str | None = None) -> None:
-        super().__init__(language=language)
+        self._language = language
         headers = {"Authorization": f"Bearer {token}"} if token else None
         self._api = JsonApi("searxng", url.rstrip("/"), headers=headers, secret=token)
 
-    async def search(self, query: str, *, limit: int, language: str | None) -> Sequence[Found]:
+    async def search(self, query: str, *, limit: int) -> Sequence[Found]:
         params: dict[str, str | int | float] = {"q": query, "format": "json"}
-        if language:
-            params["language"] = language
+        if self._language:
+            params["language"] = self._language
         answer = await self._api.get("/search", params)
         return [
             Found(
@@ -31,7 +31,7 @@ class SearxngSearch(WebSearch):
                 snippet=r.get("content") or "",
                 published=r.get("publishedDate"),
             )
-            for r in answer.get("results", [])[:limit]
+            for r in answer.get("results", [])
             if r.get("url")
         ]
 

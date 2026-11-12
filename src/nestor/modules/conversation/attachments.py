@@ -10,7 +10,7 @@ from nestor.modules.channels import Attachment, AttachmentKind, SpeechModel, Tra
 from nestor.modules.cognition.model import Image
 from nestor.modules.cognition.tools import Results, ToolContext
 from nestor.modules.conversation.ports import DocumentReader
-from nestor.modules.conversation.types import Attached
+from nestor.modules.conversation.types import Attached, Read
 from nestor.modules.journal import BlobStore
 
 logger = logging.getLogger(__name__)
@@ -20,9 +20,9 @@ VOICE_TYPE = "audio/ogg"  # what `SpeechModel.synthesize` records
 
 
 class Attachments:
-    """`transcription` hears recordings, `speech` records answers, `reader` reads documents into `results`, where the
-    model reads them like a long tool result; without one, a recording stays unheard, answers stay written and
-    documents unopened."""
+    """`transcription` hears recordings, `speech` records answers, `documents` reads documents into results the model
+    reads like a long tool result's; without one, a recording stays unheard, answers stay written and documents
+    unopened."""
 
     def __init__(
         self,
@@ -30,12 +30,10 @@ class Attachments:
         *,
         transcription: TranscriptionModel | None = None,
         speech: SpeechModel | None = None,
-        reader: DocumentReader | None = None,
-        results: Results | None = None,
+        documents: tuple[DocumentReader, Results] | None = None,
     ) -> None:
         self._blobs, self._transcription, self._speech = blobs, transcription, speech
-        self._reader = reader if results is not None else None
-        self._results = results
+        self._documents = documents
 
     @property
     def speaks(self) -> bool:
@@ -76,16 +74,19 @@ class Attachments:
     async def _keep(self, attachment: Attachment, context: ToolContext) -> Attached:
         blob = await self._blobs.put(attachment.data, attachment.media_type)
         transcript = await self._transcribe(attachment) if attachment.kind in HEARD else None
-        text = await self._read(attachment, context) if attachment.kind is AttachmentKind.FILE else None
-        return Attached(kind=attachment.kind, blob=blob, name=attachment.name, transcript=transcript, text=text)
+        read = await self._read(attachment, context) if attachment.kind is AttachmentKind.FILE else None
+        return Attached(kind=attachment.kind, blob=blob, name=attachment.name, transcript=transcript, read=read)
 
-    async def _read(self, attachment: Attachment, context: ToolContext) -> str | None:
-        if self._reader is None or self._results is None or not self._reader.reads(attachment.media_type):
+    async def _read(self, attachment: Attachment, context: ToolContext) -> Read | None:
+        if self._documents is None:
             return None
-        text = await self._reader.read(attachment.data, attachment.media_type)
-        if text is None or not text.strip():
-            return text if text is None else ""
-        return await self._results.store(text, context)
+        reader, results = self._documents
+        if not reader.reads(attachment.media_type):
+            return None
+        text = await reader.read(attachment.data, attachment.media_type)
+        if text is None:
+            return None
+        return Read(await results.store(text, context) if text.strip() else None)
 
     async def _transcribe(self, attachment: Attachment) -> str | None:
         if self._transcription is None:

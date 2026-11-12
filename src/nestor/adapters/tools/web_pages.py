@@ -14,10 +14,10 @@ from pydantic import Field, PositiveFloat, PositiveInt
 
 from nestor.adapters.common.http import USER_AGENT
 from nestor.adapters.common.text import page_text
-from nestor.adapters.documents.reader import PDF, is_text, pdf_text
+from nestor.adapters.documents import FileReader
 from nestor.modules.cognition.model import ToolSpec
-from nestor.modules.cognition.tools import Risk, Tool, ToolContext, ToolFailed, ToolProvider
-from nestor.modules.cognition.tools.types import ToolOutput
+from nestor.modules.cognition.tools import Risk, Tool, ToolContext, ToolFailed, ToolOutput, ToolProvider
+from nestor.modules.conversation import DocumentReader
 from nestor.modules.web import UNTRUSTED
 from nestor.runtime import Family, Plugin, Services
 from nestor.runtime.plugins import AdapterSettings
@@ -38,8 +38,8 @@ READ = ToolSpec(
 
 
 class WebPages(ToolProvider):
-    def __init__(self, *, timeout_s: float = 15.0, max_bytes: int = 5_000_000) -> None:
-        self._timeout_s, self._max_bytes = timeout_s, max_bytes
+    def __init__(self, reader: DocumentReader, *, timeout_s: float = 15.0, max_bytes: int = 5_000_000) -> None:
+        self._reader, self._timeout_s, self._max_bytes = reader, timeout_s, max_bytes
         self._client: httpx.AsyncClient | None = None
 
     def tools(self) -> Sequence[Tool]:
@@ -69,41 +69,38 @@ class WebPages(ToolProvider):
                     if response.is_error:
                         raise ToolFailed(f"{url} answered HTTP {response.status_code}")
                     body = await self._body(response)
-                    charset = response.charset_encoding or "utf-8"
-                    content_type = response.headers.get("content-type", "")
-                return await _content(url, content_type.split(";")[0].strip().lower(), body, charset)
+                    content_type = response.headers.get("content-type") or (
+                        "text/html" if body[:1024].lstrip()[:1] == b"<" else ""
+                    )
+                return await self._content(url, content_type, body)
             except httpx.HTTPError as error:
                 raise ToolFailed(f"{url} could not be read: {type(error).__name__}") from None
         raise ToolFailed(f"{url} redirects too many times")
 
-    async def _body(self, response: httpx.Response) -> bytes:
-        body = bytearray()
-        async for chunk in response.aiter_bytes():
-            body += chunk
-            if len(body) > self._max_bytes:
-                raise ToolFailed(f"{response.url} is larger than {self._max_bytes // 1_000_000} MB")
-        return bytes(body)
-
-
-async def _content(url: str, media_type: str, body: bytes, charset: str) -> ToolOutput:
-    if media_type == PDF:
-        text = await asyncio.to_thread(pdf_text, body)
+    async def _content(self, url: str, content_type: str, body: bytes) -> ToolOutput:
+        if not self._reader.reads(content_type):
+            raise ToolFailed(f"{url} is {content_type or 'of an unknown type'}, not a page or a document to read")
+        text = await self._reader.read(body, content_type)
         if not text:
-            raise ToolFailed(f"{url} is a PDF with no text to read")
+            raise ToolFailed(f"{url} has no text to read")
+        if content_type.split(";")[0].strip().lower() in HTML:
+            page = await asyncio.to_thread(page_text, text)
+            return {"url": url, "title": page.title, "text": page.text, "note": UNTRUSTED}
         return {"url": url, "text": text, "note": UNTRUSTED}
-    if media_type in HTML or (not media_type and body.lstrip()[:1] == b"<"):
-        page = page_text(_decode(body, charset))
-        return {"url": url, "title": page.title, "text": page.text, "note": UNTRUSTED}
-    if is_text(media_type):
-        return {"url": url, "text": _decode(body, charset), "note": UNTRUSTED}
-    raise ToolFailed(f"{url} is {media_type or 'of an unknown type'}, not a page or a document that can be read")
+
+    async def _body(self, response: httpx.Response) -> bytes:
+        chunks, size = [], 0
+        async for chunk in response.aiter_bytes():
+            chunks.append(chunk)
+            size += len(chunk)
+            if size > self._max_bytes:
+                raise ToolFailed(f"{response.url} is larger than {self._max_bytes // 1_000_000} MB")
+        return b"".join(chunks)
 
 
-def _decode(body: bytes, charset: str) -> str:
-    try:
-        return body.decode(charset, errors="replace")
-    except LookupError:  # a charset Python does not know
-        return body.decode("utf-8", errors="replace")
+def _sniffed(body: bytes) -> str:
+    """The type of a body its server did not name: HTML when it starts like markup."""
+    return "text/html" if body[:1024].lstrip()[:1] == b"<" else ""
 
 
 async def _public(url: str) -> None:
@@ -127,7 +124,7 @@ class WebPagesSettings(AdapterSettings):
 
 
 def build(settings: WebPagesSettings, name: str, services: Services) -> WebPages:
-    pages = WebPages(timeout_s=settings.timeout_s, max_bytes=settings.max_bytes)
+    pages = WebPages(FileReader(), timeout_s=settings.timeout_s, max_bytes=settings.max_bytes)
     pages.name = name
     return pages
 

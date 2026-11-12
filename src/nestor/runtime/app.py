@@ -309,8 +309,7 @@ class Nestor:
                 self.blobs,
                 transcription=optional(hearing, TranscriptionModel, "transcription"),
                 speech=optional(voicing, SpeechModel, "speech"),
-                reader=FileReader(),
-                results=results,
+                documents=(FileReader(), results),
             ),
             settings=AgentSettings(
                 spoken_tool_wait_s=config.agent.spoken_tool_wait_s, written_tool_wait_s=config.agent.written_tool_wait_s

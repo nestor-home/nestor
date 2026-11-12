@@ -119,7 +119,7 @@ async def test_a_document_is_read_by_the_model_where_it_was_sent_and_nowhere_els
         return ToolCall("call-1", "read_result", {"ref": ref.group(1) if ref else ""})
 
     model = ScriptedModel(read_it, "Le total est de 1200 euros.")
-    attachments = Attachments(blobs, reader=FileReader(), results=results)
+    attachments = Attachments(blobs, documents=(FileReader(), results))
     agent = make_agent(model=model, attachments=attachments, results=results)
     devis = Attachment(
         kind=AttachmentKind.FILE,

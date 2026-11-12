@@ -75,16 +75,22 @@ class Notification:
 
 
 @dataclass(frozen=True, slots=True)
+class Read:
+    """What was read of a document: `ref` reads its text with `read_result`; `None` when it has no text (a scan)."""
+
+    ref: str | None
+
+
+@dataclass(frozen=True, slots=True)
 class Attached:
     """A file that came with a person's message, as the journal keeps it: stored by content (`blob`), what was
-    said in it when it is a recording that could be transcribed, and where its text is kept when it is a document
-    that could be read (`text`: a reference for `read_result`; empty when it has no text, like a scan)."""
+    said in it when it is a recording that could be transcribed, and what was read of it when it is a document."""
 
     kind: AttachmentKind
     blob: BlobRef
     name: str | None = None
     transcript: str | None = None
-    text: str | None = None
+    read: Read | None = None
 
 
 class MentionKind(StrEnum):

@@ -12,8 +12,7 @@ from typing import Any
 from nestor.adapters.common.http import JsonApi
 from nestor.core import ProviderError
 from nestor.modules.cognition.model import ToolSpec
-from nestor.modules.cognition.tools import Risk, Tool, ToolContext, ToolFailed, ToolProvider
-from nestor.modules.cognition.tools.types import ToolOutput
+from nestor.modules.cognition.tools import Risk, Tool, ToolContext, ToolFailed, ToolOutput, ToolProvider, bounded
 from nestor.runtime import Family, Plugin, Services
 from nestor.runtime.plugins import AdapterSettings
 
@@ -21,6 +20,7 @@ NOMINATIM = "https://nominatim.openstreetmap.org"
 ROUTING = "https://routing.openstreetmap.de"  # the routing behind openstreetmap.org: one server per profile
 SEARCH_INTERVAL_S = 1.0  # Nominatim's usage policy
 MAX_PLACES = 10
+PLACES_KEPT = 256
 SNAP_M = 5_000  # past this, OSRM moved a place to a road far away: it lies outside the server's map
 
 
@@ -74,7 +74,7 @@ class OpenStreetMap(ToolProvider):
         self._routing = JsonApi("osrm", routing_url.rstrip("/"))
         self._paced = asyncio.Lock()
         self._last_search = 0.0
-        self._home_place: Mapping[str, Any] | None = None
+        self._places: dict[str, Mapping[str, Any]] = {}  # journeys' ends found, as Nominatim asks to cache
 
     def tools(self) -> Sequence[Tool]:
         return (
@@ -90,8 +90,7 @@ class OpenStreetMap(ToolProvider):
         query = str(arguments.get("query", "")).strip()
         if not query:
             raise ToolFailed("give what to look for")
-        limit = arguments.get("max_results")
-        limit = limit if isinstance(limit, int) and not isinstance(limit, bool) and 0 < limit <= MAX_PLACES else 5
+        limit = bounded(arguments.get("max_results"), default=5, maximum=MAX_PLACES)
         try:
             found = await self._search(query, limit)
         except ProviderError as error:
@@ -110,7 +109,7 @@ class OpenStreetMap(ToolProvider):
         except ValueError:
             raise ToolFailed(f"mode is one of {', '.join(Mode)}") from None
         try:
-            start = await self._one(origin) if origin else await self._home_found()
+            start = await self._one(origin or str(self._home))
             end = await self._one(destination)
             answer = await self._routing.get(
                 f"/routed-{mode}/route/v1/driving/{start['lon']},{start['lat']};{end['lon']},{end['lat']}",
@@ -136,16 +135,16 @@ class OpenStreetMap(ToolProvider):
             **({"via": via} if via else {}),
         }
 
-    async def _home_found(self) -> Mapping[str, Any]:
-        if self._home_place is None:
-            self._home_place = await self._one(str(self._home))
-        return self._home_place
-
     async def _one(self, query: str) -> Mapping[str, Any]:
-        found = await self._search(query, 1)
-        if not found:
-            raise ToolFailed(f"no place matches {query!r}: try a fuller address")
-        return found[0]
+        key = query.casefold()
+        if key not in self._places:
+            found = await self._search(query, 1)
+            if not found:
+                raise ToolFailed(f"no place matches {query!r}: try a fuller address")
+            if len(self._places) >= PLACES_KEPT:
+                del self._places[next(iter(self._places))]  # the oldest
+            self._places[key] = found[0]
+        return self._places[key]
 
     async def _search(self, query: str, limit: int) -> list[Mapping[str, Any]]:
         async with self._paced:

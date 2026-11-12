@@ -42,9 +42,10 @@ def provider_error(provider: str, api_key: str | None, message: str, *, transien
 USER_AGENT = "nestor (+https://nestorhome.dev)"
 
 
-class JsonApi:
-    """A JSON API over HTTP: one client, opened on the first call and kept until `aclose`. Every failure, the network
-    or the provider's, becomes a `ProviderError` labelled `provider`, with `secret` redacted."""
+class HttpApi:
+    """An HTTP API: one client, opened on the first call and kept until `aclose`, so that a call does not pay a new
+    connection. Every failure, the network's or the provider's, becomes a `ProviderError` labelled `provider`, with
+    `secret` redacted."""
 
     def __init__(
         self,
@@ -54,10 +55,11 @@ class JsonApi:
         headers: Mapping[str, str] | None = None,
         secret: str | None = None,
         timeout_s: float = 15.0,
+        transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
         self._provider, self._base_url, self._secret = provider, base_url, secret
-        self._headers = {"User-Agent": USER_AGENT, "Accept": "application/json", **(headers or {})}
-        self._timeout_s = timeout_s
+        self._headers = {"User-Agent": USER_AGENT, **(headers or {})}
+        self._timeout_s, self._transport = timeout_s, transport
         self._client: httpx.AsyncClient | None = None
 
     async def aclose(self) -> None:
@@ -65,31 +67,40 @@ class JsonApi:
         if client is not None:
             await client.aclose()
 
-    async def get(
-        self, path: str, params: Mapping[str, str | int | float] | None = None, *, answers: Collection[int] = ()
-    ) -> Any:
-        """`answers`: error statuses whose JSON body is an answer, not a failure (a route that does not exist)."""
-        return await self._call("GET", path, answers, params=params)
-
-    async def post(self, path: str, body: object) -> Any:
-        return await self._call("POST", path, (), json=body)
-
-    async def _call(self, method: str, path: str, answers: Collection[int], **kwargs: Any) -> Any:
+    async def request(self, method: str, path: str, *, answers: Collection[int] = (), **kwargs: Any) -> httpx.Response:
+        """`answers`: error statuses whose body is an answer, not a failure (a route that does not exist)."""
         if self._client is None:
-            self._client = httpx.AsyncClient(base_url=self._base_url, headers=self._headers, timeout=self._timeout_s)
+            self._client = httpx.AsyncClient(
+                base_url=self._base_url, headers=self._headers, timeout=self._timeout_s, transport=self._transport
+            )
         try:
             response = await self._client.request(method, path, **kwargs)
         except httpx.HTTPError as error:
-            raise self._error(f"{path}: {type(error).__name__} {error}".strip(), transient=True) from None
+            raise self.error(f"{path}: {type(error).__name__} {error}".strip(), transient=True) from None
         if response.is_error and response.status_code not in answers:
-            raise self._error(
+            raise self.error(
                 f"{path}: HTTP {response.status_code} {detail(response.content)}",
                 transient=retryable(response.status_code),
             )
+        return response
+
+    def error(self, message: str, *, transient: bool) -> ProviderError:
+        return provider_error(self._provider, self._secret, message, transient=transient)
+
+
+class JsonApi(HttpApi):
+    """An `HttpApi` that speaks JSON both ways; an answer that is not JSON is a `ProviderError` too."""
+
+    async def get(
+        self, path: str, params: Mapping[str, str | int | float] | None = None, *, answers: Collection[int] = ()
+    ) -> Any:
+        return self._json(path, await self.request("GET", path, answers=answers, params=params))
+
+    async def post(self, path: str, body: object) -> Any:
+        return self._json(path, await self.request("POST", path, json=body))
+
+    def _json(self, path: str, response: httpx.Response) -> Any:
         try:
             return response.json()
         except ValueError:
-            raise self._error(f"{path}: not JSON: {response.text[:MAX_DETAIL]}", transient=False) from None
-
-    def _error(self, message: str, *, transient: bool) -> ProviderError:
-        return provider_error(self._provider, self._secret, message, transient=transient)
+            raise self.error(f"{path}: not JSON: {response.text[:MAX_DETAIL]}", transient=False) from None
