@@ -43,6 +43,7 @@ class FakeBotApi:
         self.updates: list[dict[str, Any]] = []
         self.files: dict[str, bytes] = {}  # by file id
         self.voices: list[tuple[str, bytes, str | None]] = []  # chat, recording, caption
+        self.photos: list[tuple[str, bytes, str | None]] = []  # chat, picture, caption
         self.sent: list[tuple[int | str, str]] = []
         self.payloads: list[dict[str, Any]] = []
         self.actions: list[tuple[int, str]] = []
@@ -93,10 +94,11 @@ class FakeBotApi:
             if isinstance(failure, Exception):
                 raise failure
             return failure
-        if method == "sendVoice":
-            fields, voice = multipart(request)
-            self.voices.append((fields["chat_id"], voice, fields.get("caption")))
-            return ok({"message_id": len(self.voices)})
+        if method in ("sendVoice", "sendPhoto"):
+            fields, file = multipart(request)
+            sent = self.voices if method == "sendVoice" else self.photos
+            sent.append((fields["chat_id"], file, fields.get("caption")))
+            return ok({"message_id": len(sent)})
         payload = json.loads(request.content)
         if method == "getFile":
             known = payload["file_id"] in self.files
@@ -569,6 +571,18 @@ async def test_a_long_voice_answer_follows_its_recording_in_writing(api: FakeBot
     [(_, _, caption)] = api.voices
     assert caption is None, "over Telegram's caption limit"
     assert api.texts(ADA) == [long.strip()]
+
+
+@pytest.mark.parametrize("text", ["Voilà ton dessin.", "Une phrase. " * 120], ids=["short", "over-the-caption"])
+async def test_a_picture_goes_with_its_answer_as_caption_when_it_fits(api: FakeBotApi, text: str) -> None:
+    picture = Attachment(kind=AttachmentKind.IMAGE, data=b"png bytes", media_type="image/png")
+    assistant = ScriptedAssistant(lambda message: text, pictures=(picture,))
+    async with serving(api, assistant):
+        api.say("dessine-moi Nestor")
+        await eventually(lambda: bool(api.photos))
+    fits = len(text) < 1024
+    assert api.photos == [(str(ADA), b"png bytes", text.strip() if fits else None)]
+    assert api.texts(ADA) == ([] if fits else [text.strip()]), "written first when it is too long for a caption"
 
 
 async def test_a_file_that_cannot_be_downloaded_is_left_out(api: FakeBotApi) -> None:

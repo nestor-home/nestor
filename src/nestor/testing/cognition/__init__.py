@@ -8,6 +8,7 @@ from nestor.testing.cognition.delegation import (
     ScriptedRemoteExecutor,
 )
 from nestor.testing.cognition.embedding import ConceptEmbedder, EmbeddingModelContract, VectorIndexContract
+from nestor.testing.cognition.images import ImageModelContract, ScriptedImages
 from nestor.testing.cognition.model import LanguageModelContract, ScriptedModel
 
 __all__ = [
@@ -15,9 +16,11 @@ __all__ = [
     "EmbeddingModelContract",
     "ExecutorContract",
     "FakeRemote",
+    "ImageModelContract",
     "LanguageModelContract",
     "RemoteExecutorContract",
     "ScriptedExecutor",
+    "ScriptedImages",
     "ScriptedModel",
     "ScriptedRemoteExecutor",
     "VectorIndexContract",
