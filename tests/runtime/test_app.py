@@ -284,6 +284,18 @@ def test_the_agent_hears_and_voices_with_the_models_its_roles_name(tmp_path: Pat
     assert nestor.models["scribe"].details()["file_model"] == "scribe_v1"
 
 
+def test_the_agent_draws_only_with_an_image_model(tmp_path: Path) -> None:
+    text = TEXT_ONLY.format(data_dir=tmp_path, channel="{kind: telegram, token: '1:a'}")
+    painter = "  painter: {type: image, provider: openai-compatible, base_url: http://img.test/v1, model: m}\n"
+    drawing = text.replace("models:\n", "models:\n" + painter, 1)
+    environ = {"NESTOR_SECRET_KEY": "k" * 43}
+    offered = [
+        {spec.name for spec in Nestor(parse_config(config, {}), environ=environ).toolbox.specs()}
+        for config in (drawing, text)
+    ]
+    assert ("generate_image" in offered[0], "generate_image" in offered[1]) == (True, False)
+
+
 def test_satellites_in_writing_pass_the_check_without_the_voice_extra(tmp_path: Path) -> None:
     path = tmp_path / "nestor.yaml"
     path.write_text(TEXT_ONLY.format(data_dir=tmp_path, channel="{kind: satellites}"))
