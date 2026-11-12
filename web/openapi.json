@@ -11348,6 +11348,10 @@
           },
           "data": {
             "type": "string",
+            "maxLength": 20000000,
+            "minLength": 1,
+            "format": "base64",
+            "contentMediaType": "application/octet-stream",
             "title": "Data"
           }
         },
@@ -11361,10 +11365,6 @@
       },
       "ChatFileOut": {
         "properties": {
-          "position": {
-            "type": "integer",
-            "title": "Position"
-          },
           "index": {
             "type": "integer",
             "title": "Index"
@@ -11401,20 +11401,24 @@
               }
             ],
             "title": "Transcript"
+          },
+          "position": {
+            "type": "integer",
+            "title": "Position"
           }
         },
         "type": "object",
         "required": [
-          "position",
           "index",
           "kind",
           "media_type",
           "size",
           "name",
-          "transcript"
+          "transcript",
+          "position"
         ],
         "title": "ChatFileOut",
-        "description": "A file of a message; its bytes at `/journal/{position}/attachments/{index}`."
+        "description": "A file of a message, as the journal shows it, with the entry that serves it: its bytes at\n`/journal/{position}/attachments/{index}`."
       },
       "ChatMessageIn": {
         "properties": {
@@ -13820,6 +13824,13 @@
             "type": "string",
             "title": "Label"
           },
+          "aliases": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Aliases"
+          },
           "detail": {
             "type": "string",
             "title": "Detail"
@@ -13841,6 +13852,7 @@
           "kind",
           "handle",
           "label",
+          "aliases",
           "detail",
           "brand"
         ],

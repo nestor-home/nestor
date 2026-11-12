@@ -13,7 +13,7 @@ from dataclasses import replace
 
 from nestor.modules.cognition.tools import Risk, Tool, ToolProvider
 from nestor.modules.connectors.service import Connections
-from nestor.modules.connectors.types import Connection, Status
+from nestor.modules.connectors.types import Connection, Service, Status
 from nestor.modules.conversation import Mentioned, MentionKind, MentionSource
 from nestor.modules.household import Person
 
@@ -29,35 +29,36 @@ class ConnectorTools(ToolProvider, MentionSource):
 
     def mentionable(self, person: Person | None) -> Iterable[Mentioned]:
         usable = [c for c in self._connected() if c.owner is None or (person is not None and c.owner == person.id)]
-        named = [(c, name, brand) for c in usable for name, brand, _ in self._services(c)]
-        for connection, name, brand in named:
+        named = [(c, service) for c in usable for service in self._services(c)]
+        for connection, service in named:
             local = connection.account.partition("@")[0]
-            alone = sum(n == name for _, n, _ in named) == 1
+            alone = sum(s.name == service.name for _, s in named) == 1
             yield Mentioned(
                 kind=MentionKind.CONNECTION,
-                id=f"{connection.id}:{name}",
-                handle=name if alone else f"{name}-{local}",
+                id=f"{connection.id}:{service.name}",
+                handle=service.name if alone else f"{service.name}-{local}",
                 label=connection.account,
-                aliases=tuple(alias for alias in (connection.kind, brand, local, connection.account) if alias),
-                brand=brand,
+                aliases=tuple(alias for alias in (connection.kind, service.brand, local, connection.account) if alias),
+                brand=service.brand,
             )
 
     def instruction(self, mentioned: Mentioned) -> str:
         connection_id, _, name = mentioned.id.partition(":")
         connection = self.connections.connections.get(connection_id)
-        if connection is None:
+        service = next((s for s in self._services(connection) if s.name == name), None) if connection else None
+        if connection is None or service is None:
             return f"the account {mentioned.label}, no longer connected: say so"
-        tools = next((tools for n, _, tools in self._services(connection) if n == name), frozenset[str]())
         whose = "the household's" if connection.owner is None else "their own"
-        names = ", ".join(t.name for t in self._tools_of(connection) if t.name in tools)
+        names = ", ".join(t.name for t in self._tools_of(connection) if t.name in service.tools)
         return f"{whose} {name} on the account {connection.account}: use its tools for that part ({names})"
 
-    def _services(self, connection: Connection) -> list[tuple[str, str | None, frozenset[str]]]:
-        """What a message names of the account: each of its services, or the account by its kind."""
+    def _services(self, connection: Connection) -> list[Service]:
+        """What a message names of the account: each service its connector declares, or the account by its kind."""
         info = self.connections.connectors[connection.kind].info
         if info.services:
-            return [(s.name, s.brand or info.brand, s.tools) for s in info.services]
-        return [(connection.kind, info.brand, frozenset(t.name for t in self._tools_of(connection)))]
+            return [replace(s, brand=s.brand or info.brand) for s in info.services]
+        tools = frozenset(t.name for t in self._tools_of(connection))
+        return [Service(name=connection.kind, tools=tools, brand=info.brand)] if tools else []
 
     def _connected(self) -> Iterable[Connection]:
         for connection in self.connections.connections.values():

@@ -32,7 +32,7 @@ from nestor.core import Component, ContractError, Model, ModelType, ProviderErro
 from nestor.core.i18n import Locale
 from nestor.modules.accounts import Accounts
 from nestor.modules.activity import ActivityMonitor
-from nestor.modules.channels import Channel, SpeechModel, TranscriptionModel
+from nestor.modules.channels import Channel, ChatChannel, SpeechModel, TranscriptionModel
 from nestor.modules.cognition import Executor, LanguageModel
 from nestor.modules.cognition.delegation.assistant import Delegation
 from nestor.modules.cognition.delegation.service import TaskManager
@@ -353,6 +353,7 @@ class Nestor:
         self.titles = ConversationTitles(
             self.journal,
             model("agent.titles", roles["titles"]),
+            [c.channel_id for c in self.channels if c.titled],
             assistant=config.persona.name,
             language=config.persona.language,
         )
@@ -365,6 +366,11 @@ class Nestor:
         """Where devices reach the first host that serves satellites (for pairing URIs), if any."""
         hosts = (c for c in self.channels if isinstance(c, SatelliteHost))
         return next((url for host in hosts if (url := host.satellite_url(seen_as))), None)
+
+    @property
+    def chat(self) -> ChatChannel | None:
+        """The chat a page serves (the admin's), when one is configured."""
+        return next((c for c in self.channels if isinstance(c, ChatChannel)), None)
 
     def spoken_channels(self) -> frozenset[str]:
         """The ids of the channels people speak through: their conversations are rooms."""

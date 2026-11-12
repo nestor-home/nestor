@@ -1,5 +1,5 @@
-"""Each conversation is titled once, from its first exchange, whatever its channel; a model that fails leaves it
-untitled, and lists fall back to its first words."""
+"""Each conversation of a channel whose conversations are listed is titled once, from its first exchange; a model
+that fails leaves it untitled, and lists fall back to its first words."""
 
 import asyncio
 
@@ -42,7 +42,7 @@ async def titles_of(journal: Journal, count: int) -> list[ConversationTitled]:
 async def test_a_conversation_is_titled_once_from_its_first_exchange() -> None:
     journal = Journal(MemoryEventLog())
     model = ScriptedModel('"Allumer le salon."', "Autre chose")
-    titles = ConversationTitles(journal, model, assistant="Richie", language="French")
+    titles = ConversationTitles(journal, model, ["telegram"], assistant="Richie", language="French")
     async with titles:
         await exchange(journal, "c1", "Allume le salon", "C'est fait.")
         await exchange(journal, "c1", "Et la cuisine ?", "Aussi.")
@@ -59,10 +59,19 @@ async def test_a_model_that_fails_leaves_the_conversation_untitled_and_the_next_
         raise ProviderError("scripted", "down", transient=True)
 
     journal = Journal(MemoryEventLog())
-    async with ConversationTitles(journal, ScriptedModel(down, "Météo de demain"), assistant="Richie"):
+    async with ConversationTitles(journal, ScriptedModel(down, "Météo de demain"), ["telegram"], assistant="Richie"):
         await exchange(journal, "c1", "Bonjour", "Bonjour !")
         await asyncio.sleep(0.05)
         assert await journal.history(ConversationTitled) == []
         await exchange(journal, "c2", "Il fera beau ?", "Oui.")
         (titled,) = await titles_of(journal, 1)
     assert titled.conversation_id == "c2"
+
+
+async def test_the_conversations_of_a_channel_nobody_lists_cost_no_title() -> None:
+    journal = Journal(MemoryEventLog())
+    model = ScriptedModel("Allumer le salon")
+    async with ConversationTitles(journal, model, ["web"], assistant="Richie"):
+        await exchange(journal, "c1", "Allume le salon", "C'est fait.")
+        await asyncio.sleep(0.05)
+    assert model.requests == [] and await journal.history(ConversationTitled) == []

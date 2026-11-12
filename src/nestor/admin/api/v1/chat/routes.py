@@ -2,14 +2,12 @@
 and reads each answer as it is written. Needs a `web` channel in the configuration and an account linked to a person
 of the household. Each chat is read from the journal; its files at `/journal/{position}/attachments/{index}`."""
 
-import base64
 from collections.abc import AsyncIterator
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Path, Request, Response
 from fastapi.responses import StreamingResponse
 
-from nestor.adapters.channels.web import CHAT_ID, ChatBusy, LiveAnswer, WebChannel
 from nestor.admin.api.v1.chat.schemas import (
     LISTED,
     THREAD,
@@ -26,7 +24,7 @@ from nestor.admin.api.v1.security import Caller, allowed
 from nestor.admin.state import state
 from nestor.core import PersonId
 from nestor.modules.accounts import Scope
-from nestor.modules.channels import Attachment, InboundMessage, Sender
+from nestor.modules.channels import CHAT_ID, Attachment, ChatBusy, ChatChannel, InboundMessage, LiveAnswer, Sender
 from nestor.modules.journal import LogQuery
 
 router = APIRouter(tags=["chat"])
@@ -86,8 +84,7 @@ async def post_chat_message(request: Request, caller: Chatter, chat: ChatId, bod
         sender=Sender(caller.account_id or str(person), state(request).nestor.household.name_of(person, ""), person),
         text=body.text.strip(),
         attachments=tuple(
-            Attachment(kind=f.kind, data=base64.b64decode(f.data), media_type=f.media_type, name=f.name)
-            for f in body.files
+            Attachment(kind=f.kind, data=f.data, media_type=f.media_type, name=f.name) for f in body.files
         ),
     )
     try:
@@ -123,8 +120,8 @@ def _stream(live: LiveAnswer) -> StreamingResponse:
     return StreamingResponse(lines(), media_type=STREAM, headers={"X-Accel-Buffering": "no"})
 
 
-def _web(request: Request) -> WebChannel:
-    channel = next((c for c in state(request).nestor.channels if isinstance(c, WebChannel)), None)
+def _web(request: Request) -> ChatChannel:
+    channel = state(request).nestor.chat
     if channel is None:
         raise ApiError(404, "chat_off")
     return channel

@@ -1,20 +1,18 @@
 """The admin's chats as the front reads them: each chat, its messages and the tools called on the way, built from the
 journal; what is sent, and the answer as it is written."""
 
-import base64
-import binascii
 from collections.abc import Sequence
 from datetime import datetime
 from enum import StrEnum
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import Base64Bytes, BaseModel, Field, model_validator
 
-from nestor.adapters.channels.web import Ended, Failed, Part, Written
+from nestor.admin.api.v1.journal.schemas import AttachmentOut
 from nestor.admin.presentation import Phrasebook, subject
-from nestor.core import Event
+from nestor.core import Event, shorten
 from nestor.core.i18n import Message
-from nestor.modules.channels import AttachmentKind
+from nestor.modules.channels import AttachmentKind, Ended, Failed, Part, Written
 from nestor.modules.cognition.tools import ToolCalled, ToolCompleted, ToolDeferred, ToolReturned
 from nestor.modules.conversation import (
     AnswerVoiced,
@@ -30,12 +28,13 @@ from nestor.modules.conversation import (
 from nestor.modules.journal import Entry
 
 TURNS = frozenset({UserTurn.event_type, NotificationTurn.event_type, AssistantTurn.event_type})
-LISTED = TURNS | {ConversationTitled.event_type}  # what a chat's list reads: its turns and its title
+# what a chat's list reads: the turns that open an exchange (a message, or Nestor coming back) and the title
+LISTED = frozenset({UserTurn.event_type, NotificationTurn.event_type, ConversationTitled.event_type})
 THREAD = TURNS | {
     e.event_type for e in (AnswerVoiced, FallbackSpoken, ToolCalled, ToolCompleted, ToolDeferred, ToolReturned)
 }
-TITLE_LENGTH = 80
-FILE_LIMIT = 20 * 1024 * 1024  # what a message may carry, per file, as a messaging app takes it
+TITLE_LENGTH = 60  # as conversations' titles
+FILE_LIMIT = 20_000_000  # what a message may carry, per file (20 MB), as a messaging app takes it
 
 
 class ChatOut(BaseModel):
@@ -58,18 +57,13 @@ class MentionOut(BaseModel):
     kind: MentionKind
     handle: str  # written after `@`; any channel reads it
     label: str
+    aliases: list[str]  # other names it answers to, as written
     detail: str
     brand: str | None
 
     @classmethod
     def of(cls, mentioned: Mentioned) -> "MentionOut":
-        return cls(
-            kind=mentioned.kind,
-            handle=mentioned.handle,
-            label=mentioned.label,
-            detail=mentioned.detail,
-            brand=mentioned.brand,
-        )
+        return cls.model_validate(mentioned, from_attributes=True)
 
 
 class ChatRole(StrEnum):
@@ -87,29 +81,15 @@ class ToolState(StrEnum):
     BACKGROUND = "background"  # goes on after the turn; its result comes back in the chat
 
 
-class ChatFileOut(BaseModel):
-    """A file of a message; its bytes at `/journal/{position}/attachments/{index}`."""
+class ChatFileOut(AttachmentOut):
+    """A file of a message, as the journal shows it, with the entry that serves it: its bytes at
+    `/journal/{position}/attachments/{index}`."""
 
     position: int
-    index: int
-    kind: AttachmentKind
-    media_type: str
-    size: int
-    name: str | None
-    transcript: str | None
 
     @classmethod
-    def of(cls, position: int, index: int, attached: Attached) -> "ChatFileOut":
-        blob = attached.blob
-        return cls(
-            position=position,
-            index=index,
-            kind=attached.kind,
-            media_type=blob.media_type,
-            size=blob.size,
-            name=attached.name,
-            transcript=attached.transcript,
-        )
+    def at(cls, position: int, index: int, attached: Attached) -> "ChatFileOut":
+        return cls(position=position, **AttachmentOut.of(index, attached).model_dump())
 
 
 class ChatToolOut(BaseModel):
@@ -142,7 +122,8 @@ class ChatThreadOut(BaseModel):
 
 
 def chats(entries: Sequence[Entry], under: str, answering: frozenset[str]) -> list[ChatOut]:
-    """Every chat that has a turn, from the turns of a person's chats (`under`: what their sessions start with)."""
+    """Every chat that has a turn, from the opening turns and titles of a person's chats (`under`: what their sessions
+    start with)."""
     found: dict[str, ChatOut] = {}
     titled: dict[str, str] = {}
     for entry in entries:
@@ -159,7 +140,7 @@ def chats(entries: Sequence[Entry], under: str, answering: frozenset[str]) -> li
         files = [a.kind for a in event.attachments] if isinstance(event, UserTurn) else []
         found[chat] = ChatOut(
             id=chat,
-            title=_title(words),
+            title=shorten(words, TITLE_LENGTH),
             files=files,
             started_at=event.at,
             updated_at=event.at,
@@ -182,7 +163,7 @@ def thread(entries: Sequence[Entry], words: Phrasebook) -> list[ChatMessageOut]:
             case UserTurn():
                 said = [a.transcript for a in event.attachments if a.kind is AttachmentKind.VOICE and a.transcript]
                 text = event.text.removesuffix("\n".join(said)).strip() if said else event.text
-                files = [ChatFileOut.of(entry.position, i, a) for i, a in enumerate(event.attachments)]
+                files = [ChatFileOut.at(entry.position, i, a) for i, a in enumerate(event.attachments)]
                 mentions = [MentionOut.of(m) for m in event.mentions]
                 messages.append(_message(entry, event, ChatRole.PERSON, text, files=files, mentions=mentions))
             case NotificationTurn():
@@ -194,7 +175,7 @@ def thread(entries: Sequence[Entry], words: Phrasebook) -> list[ChatMessageOut]:
                 messages.append(answer)
             case AnswerVoiced():
                 if (answer := answers.get(event.answer)) is not None:
-                    answer.files.append(ChatFileOut.of(entry.position, 0, event.voice))
+                    answer.files.append(ChatFileOut.at(entry.position, 0, event.voice))
             case FallbackSpoken():
                 said = words.text(Message.of("journal-fallback", reason=event.reason))
                 messages.append(_message(entry, event, ChatRole.FALLBACK, said))
@@ -245,27 +226,11 @@ def _message(
     )
 
 
-def _title(words: str) -> str:
-    line = " ".join(words.split())
-    return line if len(line) <= TITLE_LENGTH else line[: TITLE_LENGTH - 1].rstrip() + "…"
-
-
 class ChatFileIn(BaseModel):
     kind: AttachmentKind  # `voice` for a message recorded in the page; the others as the file is
     media_type: str = Field(max_length=255)
     name: str | None = Field(default=None, max_length=255)
-    data: str  # base64
-
-    @field_validator("data")
-    @classmethod
-    def _decodes(cls, data: str) -> str:
-        try:
-            size = len(base64.b64decode(data, validate=True))
-        except binascii.Error:
-            raise ValueError("data must be base64") from None
-        if size == 0 or size > FILE_LIMIT:
-            raise ValueError(f"a file holds between 1 byte and {FILE_LIMIT // (1024 * 1024)} MB")
-        return data
+    data: Base64Bytes = Field(min_length=1, max_length=FILE_LIMIT)  # sent in base64, decoded once
 
 
 class ChatMessageIn(BaseModel):

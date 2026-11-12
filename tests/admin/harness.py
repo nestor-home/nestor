@@ -205,7 +205,7 @@ class Harness:
                 "models: {main: {type: language, provider: scripted}, ears: {type: speaker, provider: tagged-voices}}"
                 "\nvoices: {embedder: ears}",
             )
-        if replies or titles:  # scripted answers: conversations are titled by a model of their own
+        if chat:  # its conversations are titled, by a model of their own: never the replies scripted
             text = text.replace(
                 "models: {main:",
                 "agent: {written: main, titles: titler}\nmodels: {titler: {type: language, provider: titles}, main:",

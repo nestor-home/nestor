@@ -28,10 +28,7 @@ data_dir: {data_dir}
 persona: {{name: Richie, character: Tu es Richie.}}
 household:
   - {{id: mathis, name: Mathis, accounts: ["memory:user"], reach: "memory:main"}}
-models:
-  main: {{type: language, provider: scripted, replies: {replies}}}
-  titler: {{type: language, provider: scripted, replies: []}}  # conversations' titles: never the replies scripted here
-agent: {{written: main, titles: titler}}
+models: {{main: {{type: language, provider: scripted, replies: {replies}}}}}
 executors: [{{kind: remote, name: hermes}}]
 channels: [{{kind: memory}}]
 """
@@ -84,8 +81,11 @@ def test_an_unknown_adapter_kind_lists_what_is_installed(tmp_path: Path) -> None
 
 
 def with_embedder(tmp_path: Path, embedder: str, agent: str = "") -> Any:
+    models = (
+        "models: {main: {type: language, provider: scripted, replies: []}, sens: {type: embedding, provider: concepts}}"
+    )
     text = CONFIG.format(data_dir=tmp_path, replies=[]).replace(
-        "models:\n", "models:\n  sens: {type: embedding, provider: concepts}\n", 1
+        "models: {main: {type: language, provider: scripted, replies: []}}", models
     )
     return parse_config(f"{text}memory: {{embedder: {embedder}}}\n{agent}", {})
 
