@@ -48,7 +48,7 @@ jobs:
       - run: pnpm e2e
 
   # `pip install nestor-home` without any extra: `nestor init` writes a text-only configuration (a local
-  # model, no key; Telegram), `check` accepts it and `run` serves the admin, with no Pipecat installed.
+  # model, no key; Telegram asked for), `check` accepts it and `run` serves the admin, with no Pipecat installed.
   text-only:
     runs-on: ubuntu-latest
     steps:
@@ -60,9 +60,9 @@ jobs:
       - run: uv venv bare && uv pip install --python bare dist/*.whl
       - run: "! bare/bin/python -c 'import pipecat'"
       - name: init, without the voice extra
-        # name, first name, language, time zone, model server, model, login, password twice
+        # name, first name, language, time zone, model server, model, Telegram, login, password twice
         run: >-
-          printf '%s\n' Nestor Ada en UTC http://localhost:11434/v1 llama3.2 ada long-enough-password
+          printf '%s\n' Nestor Ada en UTC http://localhost:11434/v1 llama3.2 y ada long-enough-password
           long-enough-password | bare/bin/nestor -c data/nestor.yaml init
       - run: sed -i 's/^TELEGRAM_BOT_TOKEN=$/TELEGRAM_BOT_TOKEN=123:ci/' data/.env
       - run: bare/bin/nestor -c data/nestor.yaml check
@@ -91,11 +91,11 @@ jobs:
           cache-to: type=gha,mode=max
       - run: sudo mkdir data && sudo chown root:root data
       - name: init, then check, in the container
-        # name, first name, language, time zone, model server, model, no voice (the image has it), login, password twice
+        # name, first name, language, time zone, model server, model, no voice (the image has it), no Telegram,
+        # login, password twice
         run: |
-          printf '%s\n' Nestor Ada en UTC http://localhost:11434/v1 llama3.2 n ada long-enough-password \
+          printf '%s\n' Nestor Ada en UTC http://localhost:11434/v1 llama3.2 n n ada long-enough-password \
             long-enough-password | docker run -i --rm -v "$PWD/data:/data" nestor:ci init
-          sudo sed -i 's/^TELEGRAM_BOT_TOKEN=$/TELEGRAM_BOT_TOKEN=123:ci/' data/.env  # nestor's file now
           docker run --rm -v "$PWD/data:/data" nestor:ci check
       - run: test "$(stat -c %u data)" = 1000 && test "$(stat -c %u data/nestor.yaml)" = 1000
 

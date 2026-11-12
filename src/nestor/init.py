@@ -1,8 +1,7 @@
 """`nestor init`: a first configuration, its secrets and its owner account, never overwriting what exists.
 
-Satellites are always there, in writing; their voice needs the `voice` extra. Without it (missing, or
-declined), the configuration also talks on Telegram, so a household can write to it before it has a
-device.
+Satellites are always there, in writing; their voice needs the `voice` extra. A messaging channel (Telegram) is
+written only when the person asks for it.
 """
 
 import asyncio
@@ -71,8 +70,6 @@ SPEECH_MODELS = """  ears:                            # hears people speak to a 
 VOICE = """  - kind: satellites               # devices people type on or talk to: `nestor satellites add`
     host: 0.0.0.0
     voice: {{transcription: ears, speech: voice}}
-  # - kind: telegram
-  #   token: ${{TELEGRAM_BOT_TOKEN}}
 """
 
 TEXT_ONLY = """  - kind: satellites               # devices people type on: `nestor satellites add`
@@ -80,7 +77,9 @@ TEXT_ONLY = """  - kind: satellites               # devices people type on: `nes
     # Their voice needs `pip install '{requirement}'`, a transcription and a speech model under models
     # (e.g. ElevenLabs: {{type: transcription, provider: elevenlabs}}, {{type: speech, provider: elevenlabs}}), then:
     # voice: {{transcription: ears, speech: voice}}
-  - kind: telegram
+"""
+
+TELEGRAM = """  - kind: telegram
     token: ${{TELEGRAM_BOT_TOKEN}}   # from @BotFather
 """
 
@@ -118,7 +117,8 @@ class Setup:
     timezone: str = "UTC"
     base_url: str = OPENROUTER
     model: str = DEFAULT_MODEL
-    voice: bool = False  # the satellites' voice, which needs the `voice` extra; else Telegram too
+    voice: bool = False  # the satellites' voice, which needs the `voice` extra
+    telegram: bool = False  # a Telegram bot, whose token goes in `.env`
 
     def __post_init__(self) -> None:
         if self.locale not in LANGUAGES:
@@ -158,7 +158,7 @@ def slug(text: str) -> str:
 def configuration(setup: Setup, data_dir: Path) -> str:
     """The YAML of a first configuration."""
     person_id = slug(setup.person)
-    channels = VOICE if setup.voice else TEXT_ONLY
+    channels = (VOICE if setup.voice else TEXT_ONLY) + (TELEGRAM if setup.telegram else "")
     text = HEADER + channels + FOOTER
     speech = SPEECH_MODELS.format(locale=setup.locale) if setup.voice else ""
     return text.format(
@@ -170,7 +170,7 @@ def configuration(setup: Setup, data_dir: Path) -> str:
         timezone=setup.timezone,
         person=setup.person,
         person_id=person_id,
-        accounts='[]                   # add "telegram:<your chat id>": satellites are rooms, not accounts',
+        accounts='[]                   # add "telegram:<your user id>"' if setup.telegram else "[]",
         base_url=setup.base_url,
         model=setup.model,
         requirement=VOICE_REQUIREMENT,
@@ -180,7 +180,9 @@ def configuration(setup: Setup, data_dir: Path) -> str:
 
 def environment_file(setup: Setup) -> str:
     """The `.env` of a first configuration: the instance key, and an empty line for each key to fill."""
-    keys = ["ELEVENLABS_API_KEY="] if setup.voice else ["TELEGRAM_BOT_TOKEN="]
+    keys = [
+        key for key, wanted in (("ELEVENLABS_API_KEY=", setup.voice), ("TELEGRAM_BOT_TOKEN=", setup.telegram)) if wanted
+    ]
     return ENV.format(secret_key=secrets.token_urlsafe(48)) + "".join(f"{key}\n" for key in keys)
 
 

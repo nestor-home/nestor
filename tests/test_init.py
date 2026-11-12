@@ -63,12 +63,19 @@ def test_a_first_configuration_is_in_english_unless_another_language_is_chosen(t
     assert french.models["ears"].settings()["language"] == "fr", "the transcription follows the household"
 
 
-def test_without_voice_satellites_write_and_telegram_asks_for_its_bot_token(tmp_path: Path) -> None:
-    config = tmp_path / "nestor.yaml"
-    initialise(config, Setup(voice=False), login="me", password=PASSWORD)
-    secrets = env_of(tmp_path / ".env")
+def test_telegram_is_written_only_when_asked_for(tmp_path: Path) -> None:
+    alone = tmp_path / "alone" / "nestor.yaml"
+    initialise(alone, Setup(), login="me", password=PASSWORD)
+    secrets = env_of(alone.parent / ".env")
+    assert set(secrets) == {"NESTOR_SECRET_KEY", "MODEL_API_KEY"}
+    assert [c.kind for c in load_config(alone, secrets).channels] == ["satellites"]
+    assert "kind: telegram" not in alone.read_text(), "no channel is assumed"
+
+    bot = tmp_path / "bot" / "nestor.yaml"
+    initialise(bot, Setup(telegram=True), login="me", password=PASSWORD)
+    secrets = env_of(bot.parent / ".env")
     assert set(secrets) == {"NESTOR_SECRET_KEY", "MODEL_API_KEY", "TELEGRAM_BOT_TOKEN"}
-    assert [c.kind for c in load_config(config, secrets).channels] == ["satellites", "telegram"]
+    assert [c.kind for c in load_config(bot, secrets).channels] == ["satellites", "telegram"]
 
 
 def test_with_voice_satellites_speak_and_the_configuration_asks_for_its_key(tmp_path: Path) -> None:
@@ -86,17 +93,15 @@ def test_a_local_model_passes_the_check_with_its_key_left_empty(
 ) -> None:
     config = tmp_path / "nestor.yaml"
     initialise(config, Setup(base_url="http://localhost:11434/v1", model="llama3.2"), login="me", password=PASSWORD)
-    env = tmp_path / ".env"
-    env.write_text(env.read_text().replace("TELEGRAM_BOT_TOKEN=\n", "TELEGRAM_BOT_TOKEN=123:abc\n"))
     assert main(["-c", str(config), "check"]) == 0
-    assert "channels: satellites, telegram, admin on 0.0.0.0:8470" in capsys.readouterr().out
+    assert "channels: satellites, admin on 0.0.0.0:8470" in capsys.readouterr().out
 
 
 def test_a_hosted_model_with_its_key_left_empty_fails_the_check_naming_the_variable(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     config = tmp_path / "nestor.yaml"
-    initialise(config, Setup(), login="me", password=PASSWORD)  # OpenRouter, Telegram: both keys empty
+    initialise(config, Setup(telegram=True), login="me", password=PASSWORD)  # OpenRouter, Telegram: both keys empty
     assert main(["-c", str(config), "check"]) == 2
     err = capsys.readouterr().err
     assert "model 'main' (openai-compatible-language): api_key: openrouter.ai requires an API key" in err
@@ -146,8 +151,8 @@ def test_nothing_existing_is_ever_overwritten(tmp_path: Path) -> None:
 def test_the_command_asks_then_writes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], installed: bool
 ) -> None:
-    # name, first name, language, time zone, model server, model, [voice,] login
-    answers = iter(["Richie", "Mathis", "", "UTC", "", "", *(["n"] if installed else []), ""])
+    # name, first name, language, time zone, model server, model, [voice,] Telegram, login
+    answers = iter(["Richie", "Mathis", "", "UTC", "", "", *(["n"] if installed else []), "y", ""])
     monkeypatch.setattr("builtins.input", lambda prompt: next(answers))
     monkeypatch.setattr("getpass.getpass", lambda prompt: PASSWORD)
     monkeypatch.setattr("nestor.cli.voice_installed", lambda: installed)
@@ -171,7 +176,7 @@ def test_the_command_asks_then_writes(
 
 
 def test_voice_is_written_when_installed_and_wanted(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    answers = iter(["", "Ada", "", "", "http://localhost:1234/v1", "qwen3", "", ""])
+    answers = iter(["", "Ada", "", "", "http://localhost:1234/v1", "qwen3", "", "", ""])
     monkeypatch.setattr("builtins.input", lambda prompt: next(answers))
     monkeypatch.setattr("getpass.getpass", lambda prompt: PASSWORD)
     monkeypatch.setattr("nestor.cli.voice_installed", lambda: True)

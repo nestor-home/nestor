@@ -187,9 +187,17 @@ def _init(config: Path) -> int:
         voice = _ask("Talk to it by voice (an ElevenLabs key is needed)? y/n", "y").casefold().startswith("y")
     else:
         voice = False
-        print(f"Voice is not installed (pip install '{VOICE_REQUIREMENT}'): a text-only configuration, on Telegram.")
+        print(f"Voice is not installed (pip install '{VOICE_REQUIREMENT}'): satellites will type and read.")
+    telegram = _ask("Talk to it on Telegram (a bot token from @BotFather)? y/n", "n").casefold().startswith("y")
     setup = Setup(
-        name=name, person=person, locale=locale, timezone=timezone, base_url=base_url, model=model, voice=voice
+        name=name,
+        person=person,
+        locale=locale,
+        timezone=timezone,
+        base_url=base_url,
+        model=model,
+        voice=voice,
+        telegram=telegram,
     )
     login = _ask("Your login for the admin, an email or a username", slug(person))
     password = _new_password()
