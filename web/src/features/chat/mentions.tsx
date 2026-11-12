@@ -7,7 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { type KeyboardEvent, type ReactNode, useMemo, useState } from "react";
 import { type Mention, mentionsQuery } from "@/api";
 import { useT } from "@/i18n";
-import { BrandMark, brandOf } from "@/lib/brands";
+import { BrandMark, brandColour, brandOf } from "@/lib/brands";
 import { cn } from "@/lib/utils";
 
 const TYPED = /(^|\s)@([\w-]*)$/;
@@ -122,19 +122,31 @@ export function MentionList({
   );
 }
 
-/** A message's words, the executors it names standing out. */
+/** A message's words, each executor it names as a small tag: its mark and its name, tinted with its colour. */
 export function MentionText({ text }: { text: string }): ReactNode {
   const { data: mentions = [] } = useQuery(mentionsQuery);
   if (!mentions.length || !text.includes("@")) return text;
-  const known = new Set(mentions.map((m) => `@${m.name}`));
-  return text.split(NAMED).map((part, i) =>
-    known.has(part) ? (
-      // biome-ignore lint/suspicious/noArrayIndexKey: the parts of one fixed text
-      <span key={i} className="rounded-sm bg-ember-soft px-1 font-medium text-ember">
-        {part}
-      </span>
-    ) : (
-      part
-    ),
+  const known = new Map(mentions.map((m) => [`@${m.name}`, m]));
+  return text.split(NAMED).map((part, i) => {
+    const mention = known.get(part);
+    // biome-ignore lint/suspicious/noArrayIndexKey: the parts of one fixed text
+    return mention ? <MentionTag key={i} mention={mention} /> : part;
+  });
+}
+
+function MentionTag({ mention }: { mention: Mention }) {
+  const brand = brandOf(mention.brand ?? mention.name);
+  const colour = (brand && brandColour(brand)) ?? "var(--ember)";
+  return (
+    <span
+      className="mx-0.5 inline-flex translate-y-[-1px] items-center gap-1 rounded-md border px-1.5 py-px align-middle text-[0.85em] font-medium text-ink"
+      style={{
+        backgroundColor: `color-mix(in oklab, ${colour} 14%, transparent)`,
+        borderColor: `color-mix(in oklab, ${colour} 32%, transparent)`,
+      }}
+    >
+      {brand ? <BrandMark brand={brand} className="size-3.5" label={false} /> : null}
+      {mention.name}
+    </span>
   );
 }

@@ -214,6 +214,12 @@ export function brandName(slug: BrandSlug): string {
   return "name" in brand ? brand.name : tr(brand.message, brand.args);
 }
 
+/** The brand's own colour, when it has one. */
+export function brandColour(slug: BrandSlug): string | null {
+  const brand: Brand = BRANDS[slug];
+  return brand.hex ?? null;
+}
+
 /** What people call a plugin kind or a channel: its brand's name when it has one (`telegram` → Telegram). */
 export function kindName(kind: string): string {
   const slug = brandOf(kind);
