@@ -636,3 +636,15 @@ class TestTelegramMessaging(MessagingChannelContract):
         api = FakeBotApi()
         async with serving(api, assistant):
             yield TelegramPlatform(api)
+
+
+async def test_an_answer_whose_picture_cannot_be_sent_still_says_its_words(api: FakeBotApi) -> None:
+    picture = Attachment(kind=AttachmentKind.IMAGE, data=b"png bytes", media_type="image/png")
+    assistant = ScriptedAssistant(lambda message: "Voilà ton dessin.", pictures=(picture,))
+    api.failures["sendPhoto"].append(
+        httpx.Response(400, json={"ok": False, "error_code": 400, "description": "Bad Request: file too big"})
+    )
+    async with serving(api, assistant):
+        api.say("dessine-moi Nestor")
+        await eventually(lambda: bool(api.sent))
+    assert api.texts(ADA) == ["Voilà ton dessin."]

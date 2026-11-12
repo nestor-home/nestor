@@ -14,7 +14,7 @@ from typing import Any
 
 from pydantic import Field, PositiveFloat
 
-from nestor.adapters.common.http import JsonApi
+from nestor.adapters.common.http import HttpApi, JsonApi
 from nestor.adapters.models.common import EndpointSettings, brand
 from nestor.modules.channels import AttachmentKind
 from nestor.modules.cognition.images import ImageModel
@@ -48,6 +48,7 @@ class OpenAICompatibleImage(ImageModel):
         self._extra_body = dict(extra_body or {})
         headers = {"Authorization": f"Bearer {api_key}"} if api_key else None
         self._api = JsonApi(provider, base_url.rstrip("/"), headers=headers, secret=api_key, timeout_s=timeout_s)
+        self._files = HttpApi(provider, "", timeout_s=timeout_s)  # where a picture is given by address: no key
         self.brand = brand(base_url)
 
     def details(self) -> Mapping[str, str]:
@@ -55,6 +56,7 @@ class OpenAICompatibleImage(ImageModel):
 
     async def close(self) -> None:
         await self._api.aclose()
+        await self._files.aclose()
 
     async def generate(self, prompt: str) -> Image:
         if self._endpoint is ImageEndpoint.CHAT:
@@ -90,7 +92,7 @@ class OpenAICompatibleImage(ImageModel):
         if not isinstance(given, str) or not given:
             raise self._api.error(f"{path}: the answer holds no picture", transient=False)
         if given.startswith(("http://", "https://")):
-            response = await self._api.request("GET", given)
+            response = await self._files.request("GET", given)
             return _image(response.content, response.headers.get("content-type"), self._api.error)
         media_type = None
         if given.startswith("data:"):

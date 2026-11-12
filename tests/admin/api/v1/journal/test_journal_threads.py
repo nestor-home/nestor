@@ -12,6 +12,7 @@ from nestor.modules.accounts import Role
 from nestor.modules.channels import Address, Attachment, AttachmentKind, Exchange, InboundMessage, Medium, Sender
 from nestor.modules.cognition import TaskEnded, TaskStarted, TaskStatus
 from nestor.modules.cognition.delegation.events import TaskDelivered
+from nestor.modules.cognition.tools import ToolCompleted
 from nestor.modules.conversation import About, AssistantTurn, Conversations, NotificationTurn, Source, UserTurn
 from nestor.modules.home import PresenceChanged
 from nestor.modules.identity import Speaker
@@ -273,6 +274,28 @@ async def test_the_files_of_a_message_come_to_who_may_read_it_and_only_pictures_
         refused = await member.get(f"/api/v1/journal/{item['position']}/attachments/0")
         assert (refused.status_code, refused.json()["error"]["code"]) == (404, "attachment_unknown")
         assert (await api.get(f"/api/v1/journal/{item['position']}/attachments/2")).status_code == 404
+
+
+async def test_a_picture_a_tool_made_shows_with_its_call(tmp_path: Path) -> None:
+    """Even where the conversation could not receive it (a voice in a room)."""
+    async with Harness(tmp_path) as admin:
+        picture = await admin.nestor.blobs.put(b"\x89PNG drawn", "image/png")
+        await admin.nestor.journal.publish(
+            ToolCompleted(
+                source="toolbox",
+                call_id="c1",
+                name="generate_image",
+                output="{}",
+                ok=True,
+                duration_s=4.0,
+                files=(picture,),
+            )
+        )
+        api = await admin.api()
+        [item] = [i for i in await items(api, type="agent.tool.completed") if i["attachments"]]
+        assert [(a["kind"], a["media_type"]) for a in item["attachments"]] == [("image", "image/png")]
+        shown = await api.get(f"/api/v1/journal/{item['position']}/attachments/0")
+        assert (shown.status_code, shown.content) == (200, b"\x89PNG drawn")
 
 
 async def test_signing_in_only_works_from_the_admins_own_pages(tmp_path: Path) -> None:

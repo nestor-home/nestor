@@ -67,12 +67,13 @@ class TestChatEndpoint(ImageModelContract):
         return model(ImageEndpoint.CHAT, base_url="https://down.test/v1")
 
 
-async def test_a_picture_given_by_its_address_is_fetched(api: respx.MockRouter) -> None:
+async def test_a_picture_given_by_its_address_is_fetched_without_the_key(api: respx.MockRouter) -> None:
     api.post(f"{BASE_URL}/images/generations").respond(200, json={"data": [{"url": "https://cdn.test/p/1"}]})
-    api.get("https://cdn.test/p/1").respond(200, content=JPEG, headers={"Content-Type": "image/jpeg"})
+    fetched = api.get("https://cdn.test/p/1").respond(200, content=JPEG, headers={"Content-Type": "image/jpeg"})
     async with model() as images:
         picture = await images.generate("un chat")
     assert (picture.media_type, picture.data) == ("image/jpeg", JPEG)
+    assert "authorization" not in fetched.calls.last.request.headers, "the key is the provider's, not the host's"
 
 
 @pytest.mark.parametrize(

@@ -7,6 +7,7 @@ a stop is delivered again at the next start.
 """
 
 import asyncio
+import contextlib
 import logging
 import re
 from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable
@@ -439,19 +440,28 @@ class TelegramChannel(Channel):
         else:
             await self._send_text(chat_id, answer.text)
         for picture in pictures:
-            await self._upload(chat_id, picture)
+            with contextlib.suppress(ProviderError):  # said by `_upload`: the words went out already
+                await self._upload(chat_id, picture)
 
     async def _send_captioned(self, chat_id: int | str, text: str, file: Attachment) -> None:
-        """A voice message or a picture with `text` as caption when it fits, or written after it."""
+        """A voice message or a picture with `text` as caption when it fits, or written after it; written alone when
+        the file cannot be sent."""
         fits = _utf16_length(text) <= CAPTION_LIMIT
-        await self._upload(chat_id, file, caption=text if fits else None)
+        try:
+            await self._upload(chat_id, file, caption=text if fits else None)
+        except ProviderError:
+            fits = False
         if not fits:
             await self._send_text(chat_id, text)
 
     async def _upload(self, chat_id: int | str, file: Attachment, *, caption: str | None = None) -> None:
         method, field = ("sendVoice", "voice") if file.kind is AttachmentKind.VOICE else ("sendPhoto", "photo")
         fields = {"chat_id": str(chat_id)} | ({"caption": caption} if caption is not None else {})
-        await self._api.upload(method, fields, field, file)
+        try:
+            await self._api.upload(method, fields, field, file)
+        except ProviderError as error:
+            logger.warning("telegram: a %s could not be sent to %s: %s", file.kind, chat_id, error)
+            raise
 
     async def _answers(self, assistant: Assistant, message: InboundMessage) -> AsyncIterator[Answer]:
         async for answer in assistant.respond(message).answers():  # asks on the first read: a failure is caught there
