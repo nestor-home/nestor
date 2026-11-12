@@ -39,8 +39,8 @@ upd-installing = Installing { $version }…
 upd-failed = { $version } did not install. Nestor stays on { $running }.
 upd-breaking = This release changes the data or the configuration: read the notes before updating.
 upd-outdated = { $count ->
-    [one] This satellite will no longer connect: update it first.
-   *[other] These { $count } satellites will no longer connect: update them first.
+    [one] This satellite will no longer connect: update it on the device, after the server.
+   *[other] These { $count } satellites will no longer connect: update them on each device, after the server.
 }
 upd-release = Release { $version }
 upd-notes = Release notes
