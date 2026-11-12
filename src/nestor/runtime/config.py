@@ -289,9 +289,8 @@ class NestorConfig(Section):
     data_dir: Path = Field(default=Path("data"), json_schema_extra=ADVANCED)
     persona: PersonaConfig
     household: tuple[PersonConfig, ...] = Field(min_length=1)
-    # the models it may use, under names the household chooses; the roles below refer to them by name. A
-    # model answers (`openai-compatible`), embeds text (`openai-compatible-embeddings`) or voices
-    # (`sherpa-onnx-voice`): each role checks which
+    # the models it may use, under names the household chooses; the roles below refer to them by name, and each
+    # role checks the model's type
     models: dict[str, ModelConfig] = Field(min_length=1)
     agent: AgentConfig = Field(default=AgentConfig(), validate_default=True)
     watches: WatchesConfig = WatchesConfig()

@@ -38,7 +38,7 @@ class OpenAICompatibleEmbedding(EmbeddingModel):
         extra_body: Mapping[str, object] | None = None,
         connect_timeout_s: float = 5.0,
         read_timeout_s: float = 30.0,
-        provider: str = "openai-compatible-embeddings",
+        provider: str = "openai-compatible-embedding",
     ) -> None:
         self._base_url, self._api_key = base_url, api_key or None
         self._send_dimensions, self._batch_size = send_dimensions, batch_size

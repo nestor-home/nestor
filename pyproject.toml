@@ -43,7 +43,7 @@ classifiers = [
 # The voice of satellites (Pipecat cascade, WebRTC, ElevenLabs). Version pinned: it relies on Pipecat
 # internals covered by its tests.
 voice = ["pipecat-ai[elevenlabs,webrtc]==1.15.0"]
-# Who speaks, from their voice (`sherpa-onnx-voice`): runs a voiceprint model on the CPU, no server. Version pinned:
+# Who speaks, from their voice (`sherpa-onnx-speaker`): runs a voiceprint model on the CPU, no server. Version pinned:
 # the bench calibrated each model's threshold with it.
 voice-id = ["sherpa-onnx==2.0.1"]
 

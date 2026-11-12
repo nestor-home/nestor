@@ -95,7 +95,7 @@ class SherpaOnnxSpeaker(SpeakerModel):
         threads: int = 1,
         threshold: float | None = None,
         release: str = RELEASE,
-        provider: str = "sherpa-onnx-voice",
+        provider: str = "sherpa-onnx-speaker",
     ) -> None:
         self._model, self._threads, self._release, self._provider = model, threads, release, provider
         self._catalogued = CATALOGUE.get(model)
