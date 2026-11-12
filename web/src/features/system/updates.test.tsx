@@ -110,7 +110,11 @@ describe("a newer Nestor", () => {
     renderApp("/");
     await user.click(await screen.findByRole("button", { name: /New release/ }));
     const dialog = await screen.findByRole("dialog");
-    expect(await within(dialog).findByText("This satellite will no longer connect: update it first.")).toBeVisible();
+    expect(
+      await within(dialog).findByText(
+        "This satellite will no longer connect: update it on the device, after the server.",
+      ),
+    ).toBeVisible();
     expect(within(dialog).getByText("reachy-office")).toBeVisible();
     expect(within(dialog).getByText("docker compose pull")).toBeVisible();
     expect(within(dialog).queryByRole("button", { name: "Restart now" })).toBeNull();
