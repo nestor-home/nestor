@@ -37,6 +37,8 @@ class TestBrave(WebSearchContract):
         def answer(request: httpx.Request) -> httpx.Response:
             if request.headers["X-Subscription-Token"] != KEY:
                 return refusing(request)
+            if request.headers.get("Accept") != "application/json":  # required by Brave's API
+                return httpx.Response(406, json={"error": {"message": "Accept must be application/json"}})
             found = [] if request.url.params["q"] == NOTHING else PAGES[: int(request.url.params["count"])]
             results = [
                 # Brave marks the words found

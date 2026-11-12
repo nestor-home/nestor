@@ -91,6 +91,9 @@ class HttpApi:
 class JsonApi(HttpApi):
     """An `HttpApi` that speaks JSON both ways; an answer that is not JSON is a `ProviderError` too."""
 
+    def __init__(self, provider: str, base_url: str, *, headers: Mapping[str, str] | None = None, **kwargs: Any):
+        super().__init__(provider, base_url, headers={"Accept": "application/json", **(headers or {})}, **kwargs)
+
     async def get(
         self, path: str, params: Mapping[str, str | int | float] | None = None, *, answers: Collection[int] = ()
     ) -> Any:

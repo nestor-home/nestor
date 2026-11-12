@@ -28,3 +28,8 @@ async def test_a_text_file_reads_in_its_charset_and_other_files_are_not_read() -
     )
     assert not reader.reads("image/png")
     assert reader.reads("application/pdf") and reader.reads("text/csv")
+
+
+async def test_a_page_reads_in_the_charset_its_head_declares_when_its_server_names_none() -> None:
+    page = '<html><head><meta charset="iso-8859-1"><title>Café</title></head><body>Crème brûlée</body></html>'
+    assert "Crème brûlée" in str(await FileReader().read(page.encode("latin-1"), "text/html"))

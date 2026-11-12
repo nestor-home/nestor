@@ -15,6 +15,7 @@ from pydantic import Field, PositiveFloat, PositiveInt
 from nestor.adapters.common.http import USER_AGENT
 from nestor.adapters.common.text import page_text
 from nestor.adapters.documents import FileReader
+from nestor.adapters.documents.reader import HTML
 from nestor.modules.cognition.model import ToolSpec
 from nestor.modules.cognition.tools import Risk, Tool, ToolContext, ToolFailed, ToolOutput, ToolProvider
 from nestor.modules.conversation import DocumentReader
@@ -23,7 +24,6 @@ from nestor.runtime import Family, Plugin, Services
 from nestor.runtime.plugins import AdapterSettings
 
 REDIRECTS = 5
-HTML = frozenset({"text/html", "application/xhtml+xml"})
 
 READ = ToolSpec(
     "read_page",

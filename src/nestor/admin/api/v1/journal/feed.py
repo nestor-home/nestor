@@ -206,7 +206,7 @@ def _cause_rule(entry: Entry) -> _Rule | None:
         return _Rule(frozenset({cause.event_type}), _same(key, payload.get(key) if value is None else value))
 
     if kind in (ToolCompleted.event_type, ToolDeferred.event_type, ResultStored.event_type):
-        return of(ToolCalled, "call_id")
+        return of(ToolCalled, "call_id") if payload.get("call_id") else None  # a document's text has no call
     if kind == ToolReturned.event_type:
         return of(ToolDeferred, "call_id")
     if kind == ToolResultDelivered.event_type:
