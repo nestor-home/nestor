@@ -811,8 +811,7 @@ export interface paths {
         };
         /**
          * Get Journal Attachment
-         * @description A file sent with a message, to whoever reads the entry; 404 when either is out of reach. Pictures and
-         *     recordings open in place; anything else is downloaded, so that a file sent to Nestor never runs in the admin.
+         * @description A file sent with a message, to whoever reads the entry; 404 when either is out of reach.
          */
         get: operations["getJournalAttachment"];
         put?: never;
