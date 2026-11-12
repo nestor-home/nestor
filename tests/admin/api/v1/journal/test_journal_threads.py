@@ -249,7 +249,7 @@ async def test_the_files_of_a_message_come_to_who_may_read_it_and_only_pictures_
 ) -> None:
     async with Harness(tmp_path) as admin:
         await admin.account("mathilde", Role.MEMBER, "mathilde")
-        photo = Attachment(kind=AttachmentKind.IMAGE, data=b"\xff\xd8 jpeg", media_type="image/jpeg")
+        photo = Attachment(kind=AttachmentKind.IMAGE, data=b"\xff\xd8 jpeg", media_type="image/jpeg", name="été.jpg")
         page = Attachment(
             kind=AttachmentKind.FILE, data=b"<svg onload=alert(1)>", media_type="image/svg+xml", name="x.svg"
         )
@@ -265,7 +265,7 @@ async def test_the_files_of_a_message_come_to_who_may_read_it_and_only_pictures_
         ]
         shown = await api.get(f"/api/v1/journal/{item['position']}/attachments/0")
         assert (shown.status_code, shown.content, shown.headers["content-type"]) == (200, photo.data, "image/jpeg")
-        assert shown.headers["content-disposition"].startswith("inline")
+        assert shown.headers["content-disposition"] == "inline; filename*=utf-8''%C3%A9t%C3%A9.jpg", "named as sent"
         saved = await api.get(f"/api/v1/journal/{item['position']}/attachments/1")
         assert saved.headers["content-type"] == "application/octet-stream", "a page sent to Nestor never runs here"
         assert saved.headers["content-disposition"] == 'attachment; filename="x.svg"'

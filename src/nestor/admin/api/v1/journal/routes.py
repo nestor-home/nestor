@@ -19,11 +19,11 @@ from nestor.admin.api.v1.journal.schemas import (
 from nestor.admin.api.v1.journal.stream import events
 from nestor.admin.api.v1.security import Caller, allowed
 from nestor.admin.api.v1.shared import People
+from nestor.admin.files import file_response
 from nestor.admin.presentation import Kind, Tone
 from nestor.admin.state import state
 from nestor.core import PersonId
 from nestor.modules.accounts import Scope
-from nestor.modules.channels import IMAGE_TYPES
 
 router = APIRouter(tags=["journal"])
 Reader = Annotated[Caller, Depends(allowed(Scope.JOURNAL_READ_ALL, Scope.JOURNAL_READ_OWN))]
@@ -153,8 +153,7 @@ async def get_journal_entry(request: Request, caller: Reader, position: int) -> 
     responses={200: {"content": {"application/octet-stream": {}}, "description": "The file, as it was sent"}},
 )
 async def get_journal_attachment(request: Request, caller: Reader, position: int, index: int) -> Response:
-    """A file sent with a message, to whoever reads the entry; 404 when either is out of reach. Pictures and
-    recordings open in place; anything else is downloaded, so that a file sent to Nestor never runs in the admin."""
+    """A file sent with a message, to whoever reads the entry; 404 when either is out of reach."""
     admin = state(request)
     feed = await Feed.of(admin, caller.principal, Filters(), caller.phrasebook)
     found = await feed.get(position)
@@ -166,18 +165,4 @@ async def get_journal_attachment(request: Request, caller: Reader, position: int
         data = await admin.nestor.blobs.get(attached.blob.digest)
     except KeyError:
         raise not_found("attachment_unknown") from None
-    media_type = attached.blob.media_type
-    inline = media_type in IMAGE_TYPES or media_type.startswith("audio/")
-    name = attached.name or f"{attached.kind.value}-{index}"
-    headers = {
-        "Cache-Control": "private, max-age=86400, immutable",  # addressed by content: it never changes
-        "Content-Disposition": f'{"inline" if inline else "attachment"}; filename="{_ascii(name)}"',
-        "Content-Security-Policy": "sandbox",
-        "X-Content-Type-Options": "nosniff",
-    }
-    return Response(data, media_type=media_type if inline else "application/octet-stream", headers=headers)
-
-
-def _ascii(name: str) -> str:
-    """A file name safe in a header."""
-    return "".join(c if c.isascii() and c.isprintable() and c not in '"\\' else "_" for c in name)
+    return file_response(data, attached.blob.media_type, attached.name or f"{attached.kind.value}-{index}")
