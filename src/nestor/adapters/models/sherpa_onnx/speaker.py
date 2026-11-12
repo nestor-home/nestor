@@ -12,15 +12,14 @@ voices apart (equal error rate 0.12 to 0.46 on the bench).
 """
 
 import asyncio
-import hashlib
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Self
 
-import httpx
 from pydantic import Field, PositiveInt, model_validator
 
+from nestor.adapters.models.sherpa_onnx.common import fetch
 from nestor.core import ContractError, ProviderError
 from nestor.modules.identity import SpeakerModel, Vector, VoiceSpace
 from nestor.modules.identity.audio import samples
@@ -130,7 +129,9 @@ class SherpaOnnxSpeaker(SpeakerModel):
 
     async def start(self) -> None:
         if self._catalogued is not None:
-            await self._fetch(self._catalogued)
+            await fetch(
+                self._release + self._catalogued.file, self._path, self._catalogued.sha256, provider=self._provider
+            )
         elif not self._path.is_file():
             raise ProviderError(self._provider, f"no model file at {self._path}", transient=False)
         self._extractor = await asyncio.to_thread(self._load)
@@ -150,35 +151,6 @@ class SherpaOnnxSpeaker(SpeakerModel):
             raise ProviderError(self._provider, f"{self._path.name} gives {extractor.dim} dimensions", transient=False)
         return extractor
 
-    async def _fetch(self, model: Catalogued) -> None:
-        """Download the model once; a file that does not match its sha256 is never kept."""
-        if self._path.is_file() and await asyncio.to_thread(_sha256, self._path) == model.sha256:
-            return
-        partial = self._path.with_name(f"{self._path.name}.part")
-        partial.parent.mkdir(parents=True, exist_ok=True)
-        digest = hashlib.sha256()
-        try:
-            async with (
-                httpx.AsyncClient(follow_redirects=True, timeout=httpx.Timeout(60, connect=10)) as client,
-                client.stream("GET", self._release + model.file) as response,
-            ):
-                if response.is_error:
-                    raise ProviderError(self._provider, f"HTTP {response.status_code} for {model.file}", transient=True)
-                with partial.open("wb") as out:
-                    async for chunk in response.aiter_bytes():
-                        digest.update(chunk)
-                        out.write(chunk)
-        except httpx.HTTPError as error:
-            partial.unlink(missing_ok=True)
-            raise ProviderError(self._provider, f"cannot download {model.file} ({error})", transient=True) from None
-        except ProviderError:
-            partial.unlink(missing_ok=True)
-            raise
-        if digest.hexdigest() != model.sha256:
-            partial.unlink(missing_ok=True)
-            raise ProviderError(self._provider, f"{model.file} does not match its sha256", transient=False)
-        partial.replace(self._path)
-
     async def embed(self, audio: bytes) -> Vector:
         extractor = self._extractor
         if extractor is None:
@@ -195,14 +167,6 @@ class SherpaOnnxSpeaker(SpeakerModel):
             return tuple(extractor.compute(stream))
         except RuntimeError as error:
             raise ProviderError(self._provider, f"cannot compute a voiceprint: {error}", transient=False) from None
-
-
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as source:
-        while chunk := source.read(1 << 20):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 class SherpaOnnxSpeakerSettings(AdapterSettings):
