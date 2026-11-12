@@ -1,16 +1,21 @@
 """Files sent with a message, whatever the channel: kept by content, recordings transcribed, images shown to a model
 that sees them, and what the model cannot open said to it rather than dropped."""
 
+import re
+
 import pytest
 
-from nestor.modules.channels import Attachment, AttachmentKind, InboundMessage, Sender
-from nestor.modules.cognition.model import ModelRequest, Role
+from nestor.adapters.documents import FileReader
+from nestor.modules.channels import Address, Attachment, AttachmentKind, InboundMessage, Sender
+from nestor.modules.cognition.model import ModelRequest, Role, ToolCall
+from nestor.modules.cognition.tools import Results
 from nestor.modules.conversation import Attachments, ChannelProfile, UserTurn
 from nestor.modules.conversation.conversations import IMAGES
 from nestor.modules.conversation.history import IMAGE_BYTES
 from nestor.modules.journal import Journal
 from nestor.testing.channels import OGG, ScriptedSpeech, ScriptedTranscription
 from nestor.testing.cognition.model import ScriptedModel
+from nestor.testing.documents import text_pdf
 from nestor.testing.journal import MemoryBlobStore
 
 from .conftest import TELEGRAM, MakeAgent
@@ -101,6 +106,39 @@ async def test_a_file_the_model_cannot_open_is_named_to_it(make_agent: MakeAgent
         last_user(model.requests[0]).content
         == "[A file (devis.pdf), application/pdf, that you cannot open]\ntu peux lire ?"
     )
+
+
+async def test_a_document_is_read_by_the_model_where_it_was_sent_and_nowhere_else(
+    make_agent: MakeAgent, journal: Journal
+) -> None:
+    blobs = MemoryBlobStore()
+    results = Results(journal, blobs)
+
+    def read_it(request: ModelRequest) -> ToolCall:
+        ref = re.search(r"ref='(\w+)'", last_user(request).content)
+        return ToolCall("call-1", "read_result", {"ref": ref.group(1) if ref else ""})
+
+    model = ScriptedModel(read_it, "Le total est de 1200 euros.")
+    attachments = Attachments(blobs, reader=FileReader(), results=results)
+    agent = make_agent(model=model, attachments=attachments, results=results)
+    devis = Attachment(
+        kind=AttachmentKind.FILE,
+        data=text_pdf("Devis 42\nTotal 1200 EUR"),
+        media_type="application/pdf",
+        name="devis.pdf",
+    )
+    assert await agent.respond(sent("c'est combien ?", devis)).collect() == ("Le total est de 1200 euros.",)
+    assert last_user(model.requests[0]).content.startswith("[A document (devis.pdf): read its text with read_result")
+    [read] = [m for m in model.requests[1].messages if m.role is Role.TOOL]
+    assert "Total 1200 EUR" in str(read.content)
+
+    ref = re.search(r"ref='(\w+)'", last_user(model.requests[0]).content)
+    assert ref is not None
+    elsewhere = ScriptedModel(ToolCall("call-2", "read_result", {"ref": ref.group(1)}), "Je ne peux pas.")
+    other = make_agent(model=elsewhere, attachments=attachments, results=results)
+    await other.respond(InboundMessage(address=Address("telegram", "77"), sender=Sender("77"), text="lis-le")).collect()
+    [refused] = [m for m in elsewhere.requests[1].messages if m.role is Role.TOOL]
+    assert "was given here" in str(refused.content), "a document is read where it was sent, or by who sent it"
 
 
 @pytest.mark.parametrize(

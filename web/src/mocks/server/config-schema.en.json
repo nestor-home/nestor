@@ -2912,6 +2912,82 @@
         "kind"
       ],
       "kinds": {
+        "brave": {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "brave",
+              "type": "string",
+              "x-nestor": {
+                "field": "kind",
+                "title_id": "config-tools-brave-kind",
+                "help_id": "config-tools-brave-kind-help",
+                "fallback_title_id": "config-field-kind",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-brave",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Kind",
+                "help": null
+              }
+            },
+            "name": {
+              "type": "string",
+              "description": "the instance's name; the kind by default",
+              "x-nestor": {
+                "field": "name",
+                "title_id": "config-tools-brave-name",
+                "help_id": "config-tools-brave-name-help",
+                "fallback_title_id": "config-field-name",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-brave",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Name",
+                "help": null
+              }
+            },
+            "api_key": {
+              "format": "password",
+              "title": "Api Key",
+              "type": "string",
+              "writeOnly": true,
+              "x-nestor": {
+                "field": "api_key",
+                "title_id": "config-tools-brave-api_key",
+                "help_id": "config-tools-brave-api_key-help",
+                "fallback_title_id": "config-field-api_key",
+                "secret": true,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-brave",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "API key",
+                "help": null
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "api_key"
+          ],
+          "title": "BraveSettings",
+          "type": "object"
+        },
         "mcp": {
           "$defs": {
             "McpTransport": {
@@ -3327,6 +3403,491 @@
           ],
           "title": "McpSettings",
           "type": "object"
+        },
+        "open-meteo": {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "open-meteo",
+              "type": "string",
+              "x-nestor": {
+                "field": "kind",
+                "title_id": "config-tools-open-meteo-kind",
+                "help_id": "config-tools-open-meteo-kind-help",
+                "fallback_title_id": "config-field-kind",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-open-meteo",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Kind",
+                "help": null
+              }
+            },
+            "name": {
+              "type": "string",
+              "description": "the instance's name; the kind by default",
+              "x-nestor": {
+                "field": "name",
+                "title_id": "config-tools-open-meteo-name",
+                "help_id": "config-tools-open-meteo-name-help",
+                "fallback_title_id": "config-field-name",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-open-meteo",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Name",
+                "help": null
+              }
+            },
+            "home": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Home",
+              "x-nestor": {
+                "field": "home",
+                "title_id": "config-tools-open-meteo-home",
+                "help_id": "config-tools-open-meteo-home-help",
+                "fallback_title_id": "config-field-home",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-open-meteo",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Home town",
+                "help": "For the weather when no place is asked, e.g. Lyon."
+              }
+            }
+          },
+          "title": "OpenMeteoSettings",
+          "type": "object",
+          "required": [
+            "kind"
+          ]
+        },
+        "openstreetmap": {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "openstreetmap",
+              "type": "string",
+              "x-nestor": {
+                "field": "kind",
+                "title_id": "config-tools-openstreetmap-kind",
+                "help_id": "config-tools-openstreetmap-kind-help",
+                "fallback_title_id": "config-field-kind",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-openstreetmap",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Kind",
+                "help": null
+              }
+            },
+            "name": {
+              "type": "string",
+              "description": "the instance's name; the kind by default",
+              "x-nestor": {
+                "field": "name",
+                "title_id": "config-tools-openstreetmap-name",
+                "help_id": "config-tools-openstreetmap-name-help",
+                "fallback_title_id": "config-field-name",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-openstreetmap",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Name",
+                "help": null
+              }
+            },
+            "home": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Home",
+              "x-nestor": {
+                "field": "home",
+                "title_id": "config-tools-openstreetmap-home",
+                "help_id": "config-tools-openstreetmap-home-help",
+                "fallback_title_id": "config-field-home",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-openstreetmap",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Home address",
+                "help": "Where journeys start when no start is asked."
+              }
+            },
+            "nominatim_url": {
+              "default": "https://nominatim.openstreetmap.org",
+              "title": "Nominatim Url",
+              "type": "string",
+              "x-nestor": {
+                "field": "nominatim_url",
+                "title_id": "config-tools-openstreetmap-nominatim_url",
+                "help_id": "config-tools-openstreetmap-nominatim_url-help",
+                "fallback_title_id": "config-field-nominatim_url",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-openstreetmap",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Place search server (Nominatim)",
+                "help": "OpenStreetMap's public server by default."
+              }
+            },
+            "routing_url": {
+              "default": "https://routing.openstreetmap.de",
+              "title": "Routing Url",
+              "type": "string",
+              "x-nestor": {
+                "field": "routing_url",
+                "title_id": "config-tools-openstreetmap-routing_url",
+                "help_id": "config-tools-openstreetmap-routing_url-help",
+                "fallback_title_id": "config-field-routing_url",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-openstreetmap",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Routing server (OSRM)",
+                "help": "Serves /routed-car, /routed-bike and /routed-foot."
+              }
+            }
+          },
+          "title": "OpenStreetMapSettings",
+          "type": "object",
+          "required": [
+            "kind"
+          ]
+        },
+        "searxng": {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "searxng",
+              "type": "string",
+              "x-nestor": {
+                "field": "kind",
+                "title_id": "config-tools-searxng-kind",
+                "help_id": "config-tools-searxng-kind-help",
+                "fallback_title_id": "config-field-kind",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-searxng",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Kind",
+                "help": null
+              }
+            },
+            "name": {
+              "type": "string",
+              "description": "the instance's name; the kind by default",
+              "x-nestor": {
+                "field": "name",
+                "title_id": "config-tools-searxng-name",
+                "help_id": "config-tools-searxng-name-help",
+                "fallback_title_id": "config-field-name",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-searxng",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Name",
+                "help": null
+              }
+            },
+            "url": {
+              "title": "Url",
+              "type": "string",
+              "x-nestor": {
+                "field": "url",
+                "title_id": "config-tools-searxng-url",
+                "help_id": "config-tools-searxng-url-help",
+                "fallback_title_id": "config-field-url",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-searxng",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "URL",
+                "help": "The instance, e.g. http://searxng:8080. Its settings must allow the JSON format."
+              }
+            },
+            "token": {
+              "anyOf": [
+                {
+                  "format": "password",
+                  "type": "string",
+                  "writeOnly": true
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Token",
+              "x-nestor": {
+                "field": "token",
+                "title_id": "config-tools-searxng-token",
+                "help_id": "config-tools-searxng-token-help",
+                "fallback_title_id": "config-field-token",
+                "secret": true,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-searxng",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Token",
+                "help": "Only for an instance behind a proxy that asks for one."
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "url"
+          ],
+          "title": "SearxngSettings",
+          "type": "object"
+        },
+        "tavily": {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "tavily",
+              "type": "string",
+              "x-nestor": {
+                "field": "kind",
+                "title_id": "config-tools-tavily-kind",
+                "help_id": "config-tools-tavily-kind-help",
+                "fallback_title_id": "config-field-kind",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-tavily",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Kind",
+                "help": null
+              }
+            },
+            "name": {
+              "type": "string",
+              "description": "the instance's name; the kind by default",
+              "x-nestor": {
+                "field": "name",
+                "title_id": "config-tools-tavily-name",
+                "help_id": "config-tools-tavily-name-help",
+                "fallback_title_id": "config-field-name",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-tavily",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Name",
+                "help": null
+              }
+            },
+            "api_key": {
+              "format": "password",
+              "title": "Api Key",
+              "type": "string",
+              "writeOnly": true,
+              "x-nestor": {
+                "field": "api_key",
+                "title_id": "config-tools-tavily-api_key",
+                "help_id": "config-tools-tavily-api_key-help",
+                "fallback_title_id": "config-field-api_key",
+                "secret": true,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-tavily",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "API key",
+                "help": null
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "api_key"
+          ],
+          "title": "TavilySettings",
+          "type": "object"
+        },
+        "web-pages": {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "web-pages",
+              "type": "string",
+              "x-nestor": {
+                "field": "kind",
+                "title_id": "config-tools-web-pages-kind",
+                "help_id": "config-tools-web-pages-kind-help",
+                "fallback_title_id": "config-field-kind",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-web-pages",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Kind",
+                "help": null
+              }
+            },
+            "name": {
+              "type": "string",
+              "description": "the instance's name; the kind by default",
+              "x-nestor": {
+                "field": "name",
+                "title_id": "config-tools-web-pages-name",
+                "help_id": "config-tools-web-pages-name-help",
+                "fallback_title_id": "config-field-name",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-web-pages",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Name",
+                "help": null
+              }
+            },
+            "timeout_s": {
+              "default": 15.0,
+              "exclusiveMinimum": 0,
+              "title": "Timeout S",
+              "type": "number",
+              "x-nestor": {
+                "field": "timeout_s",
+                "title_id": "config-tools-web-pages-timeout_s",
+                "help_id": "config-tools-web-pages-timeout_s-help",
+                "fallback_title_id": "config-field-timeout_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-web-pages",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Timeout (seconds)",
+                "help": null
+              }
+            },
+            "max_bytes": {
+              "default": 5000000,
+              "exclusiveMinimum": 0,
+              "title": "Max Bytes",
+              "type": "integer",
+              "x-nestor": {
+                "field": "max_bytes",
+                "title_id": "config-tools-web-pages-max_bytes",
+                "help_id": "config-tools-web-pages-max_bytes-help",
+                "fallback_title_id": "config-field-max_bytes",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "tools-web-pages",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Largest page read (bytes)",
+                "help": null
+              }
+            }
+          },
+          "title": "WebPagesSettings",
+          "type": "object",
+          "required": [
+            "kind"
+          ]
         }
       },
       "model_types": {}

@@ -9,7 +9,7 @@ from nestor.adapters.i18n import FluentLocalizer, catalogue_dirs
 from nestor.core import PersonId, utc_now
 from nestor.core.i18n import Locale
 from nestor.modules.channels import Address, InboundMessage, Medium, Sender
-from nestor.modules.cognition.tools import Tool, Toolbox
+from nestor.modules.cognition.tools import Results, Tool, Toolbox
 from nestor.modules.conversation import (
     Agent,
     AgentSettings,
@@ -67,6 +67,7 @@ def make_agent(journal: Journal) -> MakeAgent:
         household: Household | None = None,
         attachments: Attachments | None = None,
         mentions: Mentions | None = None,
+        results: Results | None = None,
     ) -> Agent:
         return Agent(
             models=models or ModelChoice.single(model or ScriptedModel(*replies)),
@@ -79,7 +80,7 @@ def make_agent(journal: Journal) -> MakeAgent:
             ),
             journal=journal,
             household=household or Household([MATHIS]),
-            toolbox=Toolbox(journal, tools, [speakers] if speakers else ()),
+            toolbox=Toolbox(journal, tools, [speakers] if speakers else (), results=results),
             localizer=FluentLocalizer(catalogue_dirs(["nestor"])),
             channels=channels or {"voice": ChannelProfile(style="Use [laughs] sparingly.")},
             context=context,

@@ -2,7 +2,7 @@
 provider words it, a key never shown in one, and a client for JSON APIs."""
 
 import json
-from collections.abc import Mapping
+from collections.abc import Collection, Mapping
 from typing import Any
 
 import httpx
@@ -65,20 +65,23 @@ class JsonApi:
         if client is not None:
             await client.aclose()
 
-    async def get(self, path: str, params: Mapping[str, str | int | float] | None = None) -> Any:
-        return await self._call("GET", path, params=params)
+    async def get(
+        self, path: str, params: Mapping[str, str | int | float] | None = None, *, answers: Collection[int] = ()
+    ) -> Any:
+        """`answers`: error statuses whose JSON body is an answer, not a failure (a route that does not exist)."""
+        return await self._call("GET", path, answers, params=params)
 
     async def post(self, path: str, body: object) -> Any:
-        return await self._call("POST", path, json=body)
+        return await self._call("POST", path, (), json=body)
 
-    async def _call(self, method: str, path: str, **kwargs: Any) -> Any:
+    async def _call(self, method: str, path: str, answers: Collection[int], **kwargs: Any) -> Any:
         if self._client is None:
             self._client = httpx.AsyncClient(base_url=self._base_url, headers=self._headers, timeout=self._timeout_s)
         try:
             response = await self._client.request(method, path, **kwargs)
         except httpx.HTTPError as error:
             raise self._error(f"{path}: {type(error).__name__} {error}".strip(), transient=True) from None
-        if response.is_error:
+        if response.is_error and response.status_code not in answers:
             raise self._error(
                 f"{path}: HTTP {response.status_code} {detail(response.content)}",
                 transient=retryable(response.status_code),

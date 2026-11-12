@@ -21,6 +21,7 @@ NOMINATIM = "https://nominatim.openstreetmap.org"
 ROUTING = "https://routing.openstreetmap.de"  # the routing behind openstreetmap.org: one server per profile
 SEARCH_INTERVAL_S = 1.0  # Nominatim's usage policy
 MAX_PLACES = 10
+SNAP_M = 5_000  # past this, OSRM moved a place to a road far away: it lies outside the server's map
 
 
 class Mode(StrEnum):
@@ -114,12 +115,16 @@ class OpenStreetMap(ToolProvider):
             answer = await self._routing.get(
                 f"/routed-{mode}/route/v1/driving/{start['lon']},{start['lat']};{end['lon']},{end['lat']}",
                 {"overview": "false", "alternatives": "false", "steps": "false"},
+                answers={400},  # OSRM's no route (`NoRoute`, `NoSegment`)
             )
         except ProviderError as error:
             raise ToolFailed(f"the route could not be computed: {error}") from None
         routes = answer.get("routes") or []
         if answer.get("code") != "Ok" or not routes:
             raise ToolFailed(f"no {mode} route was found between these places")
+        for place, waypoint in zip((start, end), answer.get("waypoints") or [], strict=False):
+            if waypoint.get("distance", 0) > SNAP_M:
+                raise ToolFailed(f"no road near {place.get('display_name')} on this routing server's map")
         best = routes[0]
         via = ", ".join(leg["summary"] for leg in best.get("legs", []) if leg.get("summary"))
         return {
