@@ -3,19 +3,33 @@
 import asyncio
 import contextlib
 import json
+import logging
 import time
 from collections.abc import Iterable, Sequence
+from dataclasses import dataclass
 
 from nestor.core import Component, ContractError
+from nestor.modules.channels import Attachment
 from nestor.modules.cognition.model import ToolCall, ToolSpec
 from nestor.modules.cognition.tools.events import ToolCalled, ToolCompleted, ToolDeferred, ToolReturned
 from nestor.modules.cognition.tools.ports import InWriting, ToolProvider
 from nestor.modules.cognition.tools.results import Results
-from nestor.modules.cognition.tools.types import Risk, Tool, ToolContext, ToolFailed, ToolOutput
+from nestor.modules.cognition.tools.types import Made, Risk, Tool, ToolContext, ToolFailed, ToolOutput
 from nestor.modules.identity import Identified
-from nestor.modules.journal import Journal
+from nestor.modules.journal import BlobRef, BlobStore, Journal
+
+logger = logging.getLogger(__name__)
+type _Ran = tuple[str, bool, tuple[BlobRef, ...]]  # what the model receives, whether it worked, the files kept
 
 CONFIRMED = {"type": "boolean", "description": "true only once the person explicitly agreed to this exact action"}
+
+
+@dataclass(frozen=True, slots=True)
+class Called:
+    """What a call gave the turn: `output` for the model, and the files it made, kept."""
+
+    output: str
+    files: tuple[BlobRef, ...] = ()
 
 
 class Toolbox(Component):
@@ -24,7 +38,8 @@ class Toolbox(Component):
 
     A turn waits for a call a while at most (`wait_s`): past that, the call goes on in the background, the model is told
     its result will come back, and the turn ends; the agent stays available. The result comes back as `ToolReturned`,
-    which the conversation receives as a notification. A result too long for a turn goes to `results`.
+    which the conversation receives as a notification. A result too long for a turn goes to `results`; the files a
+    tool makes (`Made`) go to `blobs`, and with the answer.
 
     It is also where who asked matters, the same for every tool:
     - a sensitive call is confirmed by the person who asks: in the conversation on their own account (the model
@@ -43,8 +58,9 @@ class Toolbox(Component):
         providers: Iterable[ToolProvider] = (),
         in_writing: InWriting | None = None,
         results: Results | None = None,
+        blobs: BlobStore | None = None,
     ) -> None:
-        self._journal = journal
+        self._journal, self._blobs = journal, blobs
         self._fixed = tuple(tools)
         self._providers = (*providers, *((results,) if results else ()))
         self.in_writing = in_writing  # set once built: it runs confirmed calls through this toolbox
@@ -65,8 +81,16 @@ class Toolbox(Component):
     async def call(
         self, call: ToolCall, context: ToolContext, *, confirmed: bool = False, wait_s: float | None = None
     ) -> str:
-        """Run `call` for `context`; `confirmed`: the person agreed to it in writing already. `wait_s`: how long the
-        turn waits for it before it goes on in the background; `None`, until it ends."""
+        """Run `call` for `context` and return what the model receives; `confirmed`: the person agreed to it in
+        writing already. `wait_s`: how long the turn waits for it before it goes on in the background; `None`, until
+        it ends."""
+        return (await self.perform(call, context, confirmed=confirmed, wait_s=wait_s)).output
+
+    async def perform(
+        self, call: ToolCall, context: ToolContext, *, confirmed: bool = False, wait_s: float | None = None
+    ) -> Called:
+        """`call`, with the files it made within the turn (none when it went on in the background: they come back
+        with its result)."""
         await self._journal.publish(
             ToolCalled(
                 source="toolbox",
@@ -87,8 +111,8 @@ class Toolbox(Component):
             running.cancel()
             raise
         if not running.done():
-            return await self._defer(call, context, running, started)
-        output, ok = running.result()
+            return Called(await self._defer(call, context, running, started))
+        output, ok, files = running.result()
         await self._journal.publish(
             ToolCompleted(
                 source="toolbox",
@@ -98,14 +122,13 @@ class Toolbox(Component):
                 output=output,
                 ok=ok,
                 duration_s=_since(started),
+                files=files,
                 exchange=context.exchange,
             )
         )
-        return output
+        return Called(output, files)
 
-    async def _defer(
-        self, call: ToolCall, context: ToolContext, running: asyncio.Task[tuple[str, bool]], started: float
-    ) -> str:
+    async def _defer(self, call: ToolCall, context: ToolContext, running: asyncio.Task[_Ran], started: float) -> str:
         output = json.dumps(
             {
                 "pending": f"{call.name} is still running. Its result will come back in this conversation by itself: "
@@ -127,7 +150,7 @@ class Toolbox(Component):
         )
 
         async def returned() -> None:
-            result, ok = await running
+            result, ok, files = await running
             await self._journal.publish(
                 ToolReturned(
                     source="toolbox",
@@ -137,6 +160,7 @@ class Toolbox(Component):
                     output=result,
                     ok=ok,
                     duration_s=_since(started),
+                    files=files,
                     exchange=context.exchange,
                 )
             )
@@ -146,19 +170,25 @@ class Toolbox(Component):
         late.add_done_callback(self._late.discard)
         return output
 
-    async def _result(self, call: ToolCall, context: ToolContext, *, confirmed: bool) -> tuple[str, bool]:
-        output, ok = await self._run(call, context, confirmed=confirmed)
+    async def _result(self, call: ToolCall, context: ToolContext, *, confirmed: bool) -> _Ran:
+        output, ok, made = await self._run(call, context, confirmed=confirmed)
         if ok and self._results is not None:
             output = await self._results.fit(call, output, context)
-        return output, ok
+        if made and self._blobs is None:
+            logger.warning("%s made files, but there is nowhere to keep them: they are left out", call.name)
+        blobs = self._blobs
+        files = tuple([await blobs.put(f.data, f.media_type) for f in made]) if blobs is not None else ()
+        return output, ok, files
 
-    async def _run(self, call: ToolCall, context: ToolContext, *, confirmed: bool) -> tuple[str, bool]:
+    async def _run(
+        self, call: ToolCall, context: ToolContext, *, confirmed: bool
+    ) -> tuple[str, bool, tuple[Attachment, ...]]:
         tool = self._tools().get(call.name)
         if tool is None:
-            return _error(f"unknown tool {call.name!r}"), False
+            return _error(f"unknown tool {call.name!r}"), False, ()
         missing = [name for name in _required(tool) if name not in call.arguments]
         if missing:
-            return _error(f"missing arguments: {', '.join(missing)}"), False
+            return _error(f"missing arguments: {', '.join(missing)}"), False, ()
         arguments = {k: v for k, v in call.arguments.items() if k != "confirmed"}
         try:
             if tool.owner is not None and context.person != tool.owner:
@@ -168,23 +198,25 @@ class Toolbox(Component):
                 # in place only in a live conversation on their account: aloud on a satellite, or in a turn nobody
                 # takes part in (a wake-up), the person confirms in writing
                 if context.speaker.by is not Identified.ACCOUNT or context.exchange is None:
-                    return _text(await self._confirm_in_writing(call, tool, context)), True
+                    return _text(await self._confirm_in_writing(call, tool, context)), True, ()
                 if call.arguments.get("confirmed") is not True:
                     raise ToolFailed(
                         f"{tool.name} is sensitive: describe exactly what you will do, ask the person to confirm, "
                         "then call it again with confirmed=true"
                     )
             async with asyncio.timeout(tool.timeout_s):
-                output = _text(await tool.run(arguments, context))
+                ran = await tool.run(arguments, context)
+            made = ran.files if isinstance(ran, Made) else ()
+            output = _text(ran.output if isinstance(ran, Made) else ran)
             if tool.owner is not None and not context.speaker.private and self.in_writing is not None:
-                return _text(await self.in_writing.send(call, output, context)), True
+                return _text(await self.in_writing.send(call, output, context)), True, ()
         except TimeoutError:
-            return _error(f"{tool.name} did not answer within {tool.timeout_s:g} s"), False
+            return _error(f"{tool.name} did not answer within {tool.timeout_s:g} s"), False, ()
         except ToolFailed as failure:
-            return _error(str(failure)), False
+            return _error(str(failure)), False, ()
         except Exception as error:  # a broken tool must not break the conversation
-            return _error(f"{tool.name} failed ({type(error).__name__})"), False
-        return output, True
+            return _error(f"{tool.name} failed ({type(error).__name__})"), False, ()
+        return output, True, made
 
     async def _confirm_in_writing(self, call: ToolCall, tool: Tool, context: ToolContext) -> ToolOutput:
         if context.person is None:

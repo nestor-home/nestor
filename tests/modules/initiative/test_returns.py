@@ -53,7 +53,7 @@ class VoiceChannel(InMemoryChannel):
     def reachable(self, to: Address, medium: Medium) -> bool:
         return self.connected and super().reachable(to, medium)
 
-    async def send(self, to: Address, text: str, medium: Medium) -> None:
+    async def send(self, to: Address, text: str, medium: Medium, attachments: tuple = ()) -> None:
         if self.broken:
             raise ProviderError("voice", "speaker unplugged", transient=True)
         await super().send(to, text, medium)

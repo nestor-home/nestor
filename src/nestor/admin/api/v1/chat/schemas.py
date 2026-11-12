@@ -15,7 +15,7 @@ from nestor.core.i18n import Message
 from nestor.modules.channels import AttachmentKind, Ended, Failed, Part, Written
 from nestor.modules.cognition.tools import ToolCalled, ToolCompleted, ToolDeferred, ToolReturned
 from nestor.modules.conversation import (
-    AnswerVoiced,
+    AnswerAttached,
     AssistantTurn,
     Attached,
     ConversationTitled,
@@ -31,7 +31,7 @@ TURNS = frozenset({UserTurn.event_type, NotificationTurn.event_type, AssistantTu
 # what a chat's list reads: the turns that open an exchange (a message, or Nestor coming back) and the title
 LISTED = frozenset({UserTurn.event_type, NotificationTurn.event_type, ConversationTitled.event_type})
 THREAD = TURNS | {
-    e.event_type for e in (AnswerVoiced, FallbackSpoken, ToolCalled, ToolCompleted, ToolDeferred, ToolReturned)
+    e.event_type for e in (AnswerAttached, FallbackSpoken, ToolCalled, ToolCompleted, ToolDeferred, ToolReturned)
 }
 TITLE_LENGTH = 60  # as conversations' titles
 FILE_LIMIT = 20_000_000  # what a message may carry, per file (20 MB), as a messaging app takes it
@@ -173,9 +173,9 @@ def thread(entries: Sequence[Entry], words: Phrasebook) -> list[ChatMessageOut]:
                 answer = _message(entry, event, ChatRole.ASSISTANT, event.text, interrupted=event.interrupted)
                 answers[event.id] = answer
                 messages.append(answer)
-            case AnswerVoiced():
+            case AnswerAttached():
                 if (answer := answers.get(event.answer)) is not None:
-                    answer.files.append(ChatFileOut.at(entry.position, 0, event.voice))
+                    answer.files += [ChatFileOut.at(entry.position, i, a) for i, a in enumerate(event.files)]
             case FallbackSpoken():
                 said = words.text(Message.of("journal-fallback", reason=event.reason))
                 messages.append(_message(entry, event, ChatRole.FALLBACK, said))

@@ -7,11 +7,22 @@ back to the conversation. Long work belongs to an executor.
 from nestor.modules.cognition.tools.events import ResultStored, ToolCalled, ToolCompleted, ToolDeferred, ToolReturned
 from nestor.modules.cognition.tools.ports import InWriting, ToolProvider
 from nestor.modules.cognition.tools.results import Results
-from nestor.modules.cognition.tools.service import Toolbox
-from nestor.modules.cognition.tools.types import Risk, SensitiveWhen, Tool, ToolContext, ToolFailed, ToolOutput, bounded
+from nestor.modules.cognition.tools.service import Called, Toolbox
+from nestor.modules.cognition.tools.types import (
+    Made,
+    Risk,
+    SensitiveWhen,
+    Tool,
+    ToolContext,
+    ToolFailed,
+    ToolOutput,
+    bounded,
+)
 
 __all__ = [
+    "Called",
     "InWriting",
+    "Made",
     "ResultStored",
     "Results",
     "Risk",

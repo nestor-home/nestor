@@ -103,7 +103,11 @@ class Returns(Component):
         status = "returned" if returned.ok else "failed"
         address = await self.courier.deliver(
             person,
-            Notification(_tool_instruction(deferred, returned), About(Source.TOOL, returned.call_id, status)),
+            Notification(
+                _tool_instruction(deferred, returned),
+                About(Source.TOOL, returned.call_id, status),
+                files=returned.files,
+            ),
             origin=deferred.address,
         )
         if address is not None:

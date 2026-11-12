@@ -73,11 +73,12 @@ class AnswerCut(Event, event_type="conversation.turn.cut"):
     exchange: Exchange | None = None  # the turn of the answer it cuts
 
 
-class AnswerVoiced(Event, event_type="conversation.turn.voiced"):
-    """An answer went out as a voice message: its recording, kept like the files people send."""
+class AnswerAttached(Event, event_type="conversation.turn.attached"):
+    """Files went out with an answer, kept like the files people send: its recording when it went out as a voice
+    message, what tools made for it (a picture)."""
 
     answer: str  # id of the AssistantTurn
-    voice: Attached
+    files: tuple[Attached, ...]
     exchange: Exchange | None = None
 
 

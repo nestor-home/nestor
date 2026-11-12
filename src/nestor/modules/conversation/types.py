@@ -67,6 +67,7 @@ class Notification:
     text: str
     about: About
     quiet: bool = False
+    files: tuple[BlobRef, ...] = ()  # what a tool made, to go with the answer
 
     def __post_init__(self) -> None:
         if len(self.text) > NOTIFICATION_CHARS:

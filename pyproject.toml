@@ -54,6 +54,7 @@ nestor = "nestor.cli:main"
 [project.entry-points."nestor.adapters"]
 openai-compatible-language = "nestor.adapters.models.openai_compatible.language:plugin"
 openai-compatible-embedding = "nestor.adapters.models.openai_compatible.embedding:plugin"
+openai-compatible-image = "nestor.adapters.models.openai_compatible.image:plugin"
 elevenlabs-transcription = "nestor.adapters.models.elevenlabs.transcription:plugin"
 elevenlabs-speech = "nestor.adapters.models.elevenlabs.speech:plugin"
 sherpa-onnx-speaker = "nestor.adapters.models.sherpa_onnx.speaker:plugin"

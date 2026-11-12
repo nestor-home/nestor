@@ -5,11 +5,20 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 from nestor.core import NestorError, PersonId
-from nestor.modules.channels import Address, Exchange
+from nestor.modules.channels import Address, Attachment, Exchange
 from nestor.modules.cognition.model import ToolSpec
 from nestor.modules.identity import Speaker
 
 type ToolOutput = str | Mapping[str, object] | list[object]
+
+
+@dataclass(frozen=True, slots=True)
+class Made:
+    """What a tool returns when it made files (a picture): `output` goes to the model, `files` go with the answer,
+    where the channel can send them."""
+
+    output: ToolOutput
+    files: tuple[Attachment, ...]
 
 
 class Risk(StrEnum):
@@ -82,7 +91,7 @@ class Tool:
     mailbox): it serves them only."""
 
     spec: ToolSpec
-    run: Callable[[Mapping[str, object], ToolContext], Awaitable[ToolOutput]]
+    run: Callable[[Mapping[str, object], ToolContext], Awaitable[ToolOutput | Made]]
     risk: Risk = Risk.READ
     assess: Callable[[Mapping[str, object]], Risk] | None = None
     owner: PersonId | None = None

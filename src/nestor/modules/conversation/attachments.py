@@ -3,7 +3,7 @@ transcribed, documents read, answers recorded in the assistant's voice. Channels
 
 import asyncio
 import logging
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Collection, Iterable, Mapping, Sequence
 
 from nestor.core import ProviderError
 from nestor.modules.channels import Attachment, AttachmentKind, SpeechModel, TranscriptionModel
@@ -11,7 +11,7 @@ from nestor.modules.cognition.model import Image
 from nestor.modules.cognition.tools import Results, ToolContext
 from nestor.modules.conversation.ports import DocumentReader
 from nestor.modules.conversation.types import Attached, Read
-from nestor.modules.journal import BlobStore
+from nestor.modules.journal import BlobRef, BlobStore
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +58,23 @@ class Attachments:
         blob = await self._blobs.put(audio, VOICE_TYPE)
         voice = Attachment(kind=AttachmentKind.VOICE, data=audio, media_type=VOICE_TYPE)
         return voice, Attached(kind=AttachmentKind.VOICE, blob=blob, transcript=text)
+
+    async def sent(
+        self, made: Sequence[BlobRef], sends: Collection[AttachmentKind]
+    ) -> list[tuple[Attachment, Attached]]:
+        """The files tools `made` that a channel which `sends` these kinds can send, to send and as kept; one no
+        longer stored is left out."""
+        found: list[tuple[Attachment, Attached]] = []
+        for blob in made:
+            kind = AttachmentKind.of(blob.media_type)
+            if kind not in sends:
+                continue
+            try:
+                data = await self._blobs.get(blob.digest)
+            except KeyError:
+                continue
+            found.append((Attachment(kind=kind, data=data, media_type=blob.media_type), Attached(kind=kind, blob=blob)))
+        return found
 
     async def images(self, attached: Sequence[Attached]) -> Mapping[str, Image]:
         """The pictures among `attached`, by digest, as the model looks at them; one no longer stored is left out."""

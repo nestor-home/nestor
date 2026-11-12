@@ -106,6 +106,7 @@ class InMemoryChannel(Channel):
             asyncio.Queue()
         )
         self.sent: list[tuple[Address, str]] = []
+        self.files: list[tuple[Attachment, ...]] = []  # what went with each of `sent`
 
     async def serve(self, assistant: Assistant) -> None:
         while (item := await self._inbox.get()) is not None:
@@ -128,10 +129,11 @@ class InMemoryChannel(Channel):
     def rooms(self) -> frozenset[str]:
         return frozenset({self.room}) if self.room else frozenset()
 
-    async def send(self, to: Address, text: str, medium: Medium) -> None:
+    async def send(self, to: Address, text: str, medium: Medium, attachments: tuple[Attachment, ...] = ()) -> None:
         if to.channel != self.channel_id or medium not in self.media:
             raise ContractError(f"{to} is not on channel {self.channel_id!r} {medium}")
         self.sent.append((to, text))
+        self.files.append(attachments)
 
     async def close(self) -> None:
         self._inbox.put_nowait(None)

@@ -28,7 +28,7 @@ from nestor.modules.accounts import (
     Accounts,
     InvitationRevoked,
 )
-from nestor.modules.channels import Address
+from nestor.modules.channels import Address, AttachmentKind
 from nestor.modules.cognition import (
     TaskAttached,
     TaskCancelRequested,
@@ -41,8 +41,8 @@ from nestor.modules.cognition.tools import ResultStored, ToolCalled, ToolComplet
 from nestor.modules.connectors import ConnectionChanged, ConnectionCreated, ConnectionRemoved
 from nestor.modules.conversation import (
     About,
+    AnswerAttached,
     AnswerCut,
-    AnswerVoiced,
     AssistantTurn,
     Attached,
     ConversationTitled,
@@ -130,7 +130,7 @@ CATEGORIES: Mapping[Kind, tuple[type[Event], ...]] = {
         UserTurn,
         NotificationTurn,
         AssistantTurn,
-        AnswerVoiced,
+        AnswerAttached,
         FallbackSpoken,
         AnswerCut,
         ConversationTitled,
@@ -264,8 +264,16 @@ class EventDescriber:
                 e, Message.of("journal-fallback", reason=e.reason), channels=[e.address], tone=Tone.WARNING
             ),
             ConversationTitled: lambda e: self._line(e, Message.of("journal-conversation-titled", title=e.title)),
-            AnswerVoiced: lambda e: self._line(
-                e, Message.of("journal-answer-voiced", assistant=self.assistant), attachments=(e.voice,)
+            AnswerAttached: lambda e: self._line(
+                e,
+                Message.of(
+                    "journal-answer-voiced"
+                    if any(f.kind is AttachmentKind.VOICE for f in e.files)
+                    else "journal-answer-files",
+                    assistant=self.assistant,
+                    count=len(e.files),
+                ),
+                attachments=e.files,
             ),
             AnswerCut: lambda e: self._line(
                 e, Message.of("journal-answer-cut"), detail_message=Message.of("journal-detail-heard", heard=e.heard)

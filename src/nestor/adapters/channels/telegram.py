@@ -295,7 +295,7 @@ class TelegramChannel(Channel):
 
     name = "telegram"
     brand = "telegram"
-    sends = frozenset({AttachmentKind.VOICE})
+    sends = frozenset({AttachmentKind.VOICE, AttachmentKind.IMAGE})
 
     def __init__(
         self,
@@ -337,12 +337,12 @@ class TelegramChannel(Channel):
         finally:
             await chats.aclose()
 
-    async def send(self, to: Address, text: str, medium: Medium) -> None:
+    async def send(self, to: Address, text: str, medium: Medium, attachments: tuple[Attachment, ...] = ()) -> None:
         if to.channel != self.channel_id or medium not in self.media:
             raise ContractError(f"{to} is not on channel {self.channel_id!r} {medium}")
         if self._closing.is_set():
             raise ProviderError(PROVIDER, "the channel is closed", transient=False)
-        await self._send_text(to.conversation, text)
+        await self._send_answer(to.conversation, Answer(text, attachments))
 
     async def close(self) -> None:
         if self._closing.is_set():
@@ -398,10 +398,7 @@ class TelegramChannel(Channel):
             return
         answers = self._answers(assistant, message)
         while (answer := await self._next(answers, chat_id, message.address)) is not None:
-            if answer.voice is not None:
-                await self._send_voice(chat_id, answer.text, answer.voice)
-            else:
-                await self._send_text(chat_id, answer.text)
+            await self._send_answer(chat_id, answer)
 
     async def _inbound(self, incoming: _Incoming) -> InboundMessage | None:
         """The message with its files downloaded; `None` when none could be and it has no text."""
@@ -430,7 +427,21 @@ class TelegramChannel(Channel):
             return None
         return Attachment(kind=kind, data=data, media_type=media_type, name=file.file_name)
 
-    async def _send_voice(self, chat_id: int, text: str, voice: Attachment) -> None:
+    async def _send_answer(self, chat_id: int | str, answer: Answer) -> None:
+        """A message as a voice message when it has its recording, written otherwise, then its pictures; a single
+        picture takes the text as caption when it fits and nothing is said aloud."""
+        pictures = [a for a in answer.attachments if a.kind is AttachmentKind.IMAGE]
+        if answer.voice is not None:
+            await self._send_voice(chat_id, answer.text, answer.voice)
+        elif len(pictures) == 1 and _utf16_length(answer.text) <= CAPTION_LIMIT:
+            await self._api.upload("sendPhoto", {"chat_id": str(chat_id), "caption": answer.text}, "photo", pictures[0])
+            return
+        else:
+            await self._send_text(chat_id, answer.text)
+        for picture in pictures:
+            await self._api.upload("sendPhoto", {"chat_id": str(chat_id)}, "photo", picture)
+
+    async def _send_voice(self, chat_id: int | str, text: str, voice: Attachment) -> None:
         """A voice message, with its text as caption when it fits, or written after it."""
         fits = _utf16_length(text) <= CAPTION_LIMIT
         fields = {"chat_id": str(chat_id), "caption": text} if fits else {"chat_id": str(chat_id)}
