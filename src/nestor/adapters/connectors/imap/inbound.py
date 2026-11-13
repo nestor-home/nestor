@@ -82,7 +82,7 @@ class ImapInbound(InboundEventSource):
                     cursor = await self._cursor(client, selected)
                     self._retry.succeeded()
                     while True:
-                        for uid in await self._new(client, cursor):
+                        for uid in await newer(client, cursor):
                             message = await self._fetch(client, uid)
                             try:
                                 if message is not None:  # None: expunged before it was fetched
@@ -102,9 +102,8 @@ class ImapInbound(InboundEventSource):
         cursor = UidCursor.of(await self._access.load_state())
         if cursor is not None and cursor.uidvalidity == selected.uidvalidity:
             return cursor
-        known_end = selected.uidnext - 1 if selected.uidnext is not None else None
-        last = known_end if known_end is not None else max(await client.search("ALL"), default=0)
-        fresh = UidCursor(selected.uidvalidity, last)
+        fresh = await folder_end(client, selected)
+        last = fresh.last_uid
         await self._access.save_state(fresh.state())
         if cursor is None:
             log.info("%s starts after UID %s: earlier mail is not yielded", self.name, last)
@@ -118,11 +117,6 @@ class ImapInbound(InboundEventSource):
                 last,
             )
         return fresh
-
-    @staticmethod
-    async def _new(client: MailboxClient, cursor: UidCursor) -> list[int]:
-        """UIDs after the cursor, oldest first."""
-        return sorted(u for u in await client.search("UID", f"{cursor.last_uid + 1}:*") if u > cursor.last_uid)
 
     async def _fetch(self, client: MailboxClient, uid: int) -> MailMessage | None:
         fetched = await client.fetch([uid], f"BODY.PEEK[]<0.{self._timing.fetch_bytes}>")
@@ -139,3 +133,15 @@ class ImapInbound(InboundEventSource):
             data={"uid": uid, "folder": folder},
             at=utc_now(),
         )
+
+
+async def folder_end(client: MailboxClient, selected: Selected) -> UidCursor:
+    """A cursor after the last message of the folder: what follows it is new."""
+    known_end = selected.uidnext - 1 if selected.uidnext is not None else None
+    last = known_end if known_end is not None else max(await client.search("ALL"), default=0)
+    return UidCursor(selected.uidvalidity, last)
+
+
+async def newer(client: MailboxClient, cursor: UidCursor) -> list[int]:
+    """UIDs after the cursor, oldest first."""
+    return sorted(u for u in await client.search("UID", f"{cursor.last_uid + 1}:*") if u > cursor.last_uid)

@@ -1,6 +1,8 @@
 """What adapters calling an HTTP API share: which errors a retry may get past, the detail of an error as the
 provider words it, a key never shown in one, and a client for JSON APIs."""
 
+import hashlib
+import hmac
 import json
 from collections.abc import Collection, Mapping
 from typing import Any
@@ -36,6 +38,11 @@ def provider_error(provider: str, api_key: str | None, message: str, *, transien
     """A `ProviderError` labelled with `provider`, the key redacted wherever the message quotes it."""
     redacted = message.replace(api_key, "[redacted]") if api_key else message
     return ProviderError(provider, redacted, transient=transient)
+
+
+def signature(secret: str, body: bytes) -> str:
+    """`sha256=<hex HMAC-SHA256 of body>`, how GitHub, Meta and Nestor's webhook sign a body."""
+    return "sha256=" + hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
 
 
 # public services ask clients to name themselves (Nominatim requires it)
