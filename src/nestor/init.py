@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from nestor.adapters.channels.satellites.plugin import VOICE_REQUIREMENT
+from nestor.adapters.channels.satellites.settings import VOICE_REQUIREMENT
 from nestor.core import ContractError, PersonId
 from nestor.modules.accounts import MIN_LENGTH, Role, normalise_login
 from nestor.modules.household import Person

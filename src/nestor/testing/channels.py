@@ -255,15 +255,17 @@ class MessagingChannelContract:
                 await platform.send("", note)
                 await platform.answered(1)
                 voices, texts = platform.voices(), platform.texts()
-            if speaks:
+            if speaks and AttachmentKind.VOICE in platform.channel.sends:
                 assert voices == [OGG + b"Not\xc3\xa9."], "the answer, recorded"
             else:
-                assert (voices, texts) == ([], ["Noté."]), "without a voice, the answer is written"
+                assert (voices, texts) == ([], ["Noté."]), "without a voice to send, the answer is written"
 
 
 class Platform:
     """The stand-in for a messaging platform a `MessagingChannelContract` drives: someone of the household writes,
-    and what the bot sent is read back."""
+    and what the bot sent is read back. `channel` is the channel it serves."""
+
+    channel: Channel
 
     async def send(self, text: str, *attachments: Attachment) -> None:
         raise NotImplementedError

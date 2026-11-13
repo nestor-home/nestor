@@ -6,7 +6,7 @@ from pathlib import Path
 
 import yaml
 
-from nestor.adapters.channels.satellites import SatellitesSettings
+from nestor.adapters.channels.satellites.settings import SatellitesSettings
 from nestor.runtime.config import AdminConfig
 
 ROOT = Path(__file__).parents[1]

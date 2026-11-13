@@ -1,8 +1,8 @@
-"""The admin's chat as a channel: `kind: web`. The chat itself is the domain's (`ChatChannel`); the admin serves it."""
+"""Configuration of the admin's chat channel, and how it is built."""
 
 from nestor.core import Component
 from nestor.modules.channels import ChatChannel
-from nestor.runtime.plugins import ChannelSettings, Family, Plugin, Services
+from nestor.runtime.plugins import ChannelSettings, Services
 
 
 class WebSettings(ChannelSettings):
@@ -11,6 +11,3 @@ class WebSettings(ChannelSettings):
 
 def build(settings: WebSettings, name: str, services: Services) -> Component:
     return ChatChannel(name, conversation_ends_after_s=settings.conversation_ends_after_s)
-
-
-plugin = Plugin(Family.CHANNEL, "web", WebSettings, build)
