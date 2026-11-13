@@ -317,6 +317,7 @@ class EventDescriber:
                 detail=e.error or e.result or "",
                 tone=Tone.WARNING if e.status == "failed" else Tone.NORMAL,
                 outcome=(e.status == "completed", e.duration_s),
+                attachments=_made(e.files),
             ),
             TaskDelivered: lambda e: self._line(
                 e, Message.of("journal-task-delivered", task=e.task_id), channels=[e.address]

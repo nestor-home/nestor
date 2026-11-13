@@ -128,7 +128,8 @@ One plugin per provider, `plugin = Plugin(...)` in `<provider>/__init__.py`, dec
 `<kind> = "nestor.adapters.<family>.<provider>:plugin"`; models declare one per type (see "Models"). Tests mirror the
 packages (`tests/adapters/<family>/<provider>/`), tests of shared code sit at the family's root. A private helper used
 by another module of the package becomes a public name of the module that owns it; a helper two providers need goes
-to the family's shared module (for channels, `adapters/channels/messaging.py`, the base of every messaging channel).
+to the family's shared module (for channels, `adapters/channels/messaging.py`, the base of every messaging channel;
+for executors, `adapters/executors/common.py`, `process.py` and `jsonrpc.py`).
 
 ## Code conventions
 

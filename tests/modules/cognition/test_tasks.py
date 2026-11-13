@@ -6,7 +6,7 @@ from typing import Any
 import pytest
 
 from nestor.core import ContractError, PersonId
-from nestor.modules.channels import Address
+from nestor.modules.channels import Address, Attachment, AttachmentKind
 from nestor.modules.cognition import (
     Executor,
     Notify,
@@ -24,14 +24,14 @@ from nestor.modules.cognition.delegation.service import INTERRUPTED, TaskManager
 from nestor.modules.cognition.tools import ToolContext
 from nestor.modules.conversation import TurnContext
 from nestor.modules.identity import Speaker
-from nestor.modules.journal import Journal
+from nestor.modules.journal import BlobRef, Journal
 from nestor.testing.cognition import (
     FakeRemote,
     RemoteExecutorContract,
     ScriptedExecutor,
     ScriptedRemoteExecutor,
 )
-from nestor.testing.journal import MemoryEventLog
+from nestor.testing.journal import MemoryBlobStore, MemoryEventLog
 
 VOICE = Address("voice", "salon")
 MATHIS = PersonId("mathis")
@@ -78,6 +78,34 @@ async def test_a_delegated_task_runs_in_the_background_and_is_logged(journal: Jo
     logged = await journal.history(TaskStarted, TaskProgressed, TaskEnded)
     assert [e.event_type for e in logged] == ["task.started", "task.progress", "task.ended"], "progress before the end"
     assert [p.step for p in logged if isinstance(p, TaskProgressed)] == ["started"]
+
+
+async def test_the_files_a_task_made_are_kept_and_one_that_cannot_be_is_said_not_lost(journal: Journal) -> None:
+    class FullDisk(MemoryBlobStore):
+        async def put(self, data: bytes, media_type: str) -> BlobRef:
+            if data == b"too much":
+                raise OSError(28, "No space left on device")
+            return await super().put(data, media_type)
+
+    class Writer(Executor):
+        name = "writer"
+
+        async def run(self, objective: str, progress: Progress) -> Outcome:
+            made = [Attachment(kind=AttachmentKind.FILE, data=d, media_type="text/plain", name=n) for n, d in FILES]
+            return Outcome.completed("Écrits.", tuple(made))
+
+    FILES = [("a.txt", b"kept"), ("b.txt", b"too much")]
+    blobs = FullDisk()
+    async with TaskManager(journal, [Writer()], blobs=blobs) as tasks:
+        task = await tasks.delegate("Écris-les", origin=VOICE, requested_by=MATHIS)
+        outcome = await tasks.wait(task.id)
+    [ended] = await journal.history(TaskEnded)
+    assert [blobs.blobs[f.digest] for f in ended.files] == [b"kept"]
+    assert ended.result == outcome.result == "Écrits.\nFiles not kept: b.txt (OSError)"
+    assert outcome.files == (), "the bytes live in the blob store, not in the task"
+    async with TaskManager(Journal(MemoryEventLog()), [Writer()]) as nowhere:
+        lost = await nowhere.wait((await nowhere.delegate("Écris-les", origin=VOICE)).id)
+    assert lost.result == "Écrits.\nFiles not kept: a.txt (nowhere to keep it); b.txt (nowhere to keep it)"
 
 
 async def test_remote_work_survives_a_restart_and_is_not_started_twice(journal: Journal) -> None:

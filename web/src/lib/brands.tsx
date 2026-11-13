@@ -13,6 +13,7 @@
  */
 import anthropicSvg from "@lobehub/icons-static-svg/icons/anthropic.svg?raw";
 import claudeSvg from "@lobehub/icons-static-svg/icons/claude.svg?raw";
+import claudecodeSvg from "@lobehub/icons-static-svg/icons/claudecode.svg?raw";
 import codexSvg from "@lobehub/icons-static-svg/icons/codex.svg?raw";
 import elevenlabsSvg from "@lobehub/icons-static-svg/icons/elevenlabs.svg?raw";
 import geminiSvg from "@lobehub/icons-static-svg/icons/gemini.svg?raw";
@@ -184,6 +185,7 @@ const BRANDS = {
   // executors
   hermes: lobe("Hermes (Nous Research)", hermesagentSvg),
   codex: lobe("Codex", codexSvg),
+  "claude-code": lobe("Claude Code", claudecodeSvg),
   // model providers
   "openai-compatible": concept("brand-openai-compatible", Cpu),
   openrouter: lobe("OpenRouter", openrouterSvg, siOpenrouter),

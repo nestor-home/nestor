@@ -8,7 +8,17 @@ import pytest
 
 from nestor.core import Event, PersonId, ProviderError
 from nestor.modules.channels import Address, Attachment, AttachmentKind, InboundMessage, Medium, Sender
-from nestor.modules.cognition import Notify, TaskDelivered, TaskEnded, TaskStarted, TaskStatus
+from nestor.modules.cognition import (
+    Executor,
+    Notify,
+    Outcome,
+    Progress,
+    TaskDelivered,
+    TaskEnded,
+    TaskStarted,
+    TaskStatus,
+)
+from nestor.modules.cognition.delegation.service import TaskManager
 from nestor.modules.cognition.model import Role, ToolCall, ToolSpec
 from nestor.modules.cognition.tools import Made, Tool, Toolbox, ToolCalled, ToolContext, ToolDeferred, ToolReturned
 from nestor.modules.conversation import (
@@ -310,6 +320,30 @@ async def test_a_picture_drawn_after_the_turn_goes_with_the_answer_that_brings_i
     assert [[(a.kind, a.data) for a in files] for files in home.telegram.files] == [[(AttachmentKind.IMAGE, PNG)]]
     [attached] = await home.journal.history(AnswerAttached)
     assert [home.blobs.blobs[f.blob.digest] for f in attached.files] == [PNG]
+
+
+async def test_a_file_a_delegated_task_made_goes_with_the_answer_that_brings_its_result() -> None:
+    pdf = b"%PDF-1.7 rapport"
+
+    class Writer(Executor):
+        name = "writer"
+
+        async def run(self, objective: str, progress: Progress) -> Outcome:
+            return Outcome.completed(
+                "rapport écrit",
+                (Attachment(kind=AttachmentKind.FILE, data=pdf, media_type="application/pdf", name="rapport.pdf"),),
+            )
+
+    home = Home(model=ScriptedModel("Voici ton rapport."))
+    home.telegram.sends = frozenset({AttachmentKind.FILE})
+    async with home.returns(), TaskManager(home.journal, [Writer()], blobs=home.blobs) as tasks:
+        await tasks.delegate("Écris le rapport", origin=TELEGRAM, requested_by=MATHIS.id)
+        await until(home.journal, TaskDelivered)
+
+    assert home.telegram.sent == [(TELEGRAM, "Voici ton rapport.")]
+    assert [[(a.kind, a.data) for a in files] for files in home.telegram.files] == [[(AttachmentKind.FILE, pdf)]]
+    [ended] = await home.journal.history(TaskEnded)
+    assert [home.blobs.blobs[f.digest] for f in ended.files] == [pdf]
 
 
 async def test_a_call_cut_short_by_a_restart_is_said_to_have_failed() -> None:

@@ -85,6 +85,7 @@ class Returns(Component):
             Notification(
                 _task_instruction(started, ended, written=written),
                 About(Source.TASK, ended.task_id, ended.status.value),
+                files=ended.files,
             ),
             origin=started.origin,
             written=written,

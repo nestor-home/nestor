@@ -9,12 +9,13 @@ work is stopped.
 
 import asyncio
 import contextlib
+import logging
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
 
 from nestor.core import Component, ContractError, Event, PersonId, new_id, utc_now
-from nestor.modules.channels import Address, Exchange
+from nestor.modules.channels import Address, Attachment, Exchange
 from nestor.modules.cognition.delegation.events import (
     TaskAttached,
     TaskCancelRequested,
@@ -24,7 +25,9 @@ from nestor.modules.cognition.delegation.events import (
 )
 from nestor.modules.cognition.delegation.ports import Executor, RemoteExecutor
 from nestor.modules.cognition.delegation.types import Notify, Outcome, Progress, TaskStatus
-from nestor.modules.journal import Journal
+from nestor.modules.journal import BlobRef, BlobStore, Journal
+
+logger = logging.getLogger(__name__)
 
 INTERRUPTED = "interrupted: Nestor stopped while the task was running and this executor cannot resume it"
 
@@ -65,8 +68,16 @@ class Task:
 class TaskManager(Component):
     name = "task-manager"
 
-    def __init__(self, journal: Journal, executors: Iterable[Executor], *, cancel_timeout_s: float = 20.0) -> None:
-        self.journal = journal
+    def __init__(
+        self,
+        journal: Journal,
+        executors: Iterable[Executor],
+        *,
+        blobs: BlobStore | None = None,
+        cancel_timeout_s: float = 20.0,
+    ) -> None:
+        """`blobs` keeps the files executors make; without it they are left out."""
+        self.journal, self._blobs = journal, blobs
         self.executors: Mapping[str, Executor] = {e.name: e for e in executors}
         self.tasks: dict[str, Task] = {}
         self._cancel_timeout_s = cancel_timeout_s
@@ -217,18 +228,37 @@ class TaskManager(Component):
 
     async def _end(self, task: Task, outcome: Outcome) -> None:
         await self._writes.join()  # progress first: the journal keeps the order things happened in
-        task.outcome = outcome
+        files, lost = await self._keep(task, outcome.files)
+        result = f"{outcome.result}\nFiles not kept: {'; '.join(lost)}" if lost and outcome.result else outcome.result
+        task.outcome = Outcome(outcome.status, result, outcome.error)  # the files' bytes stay in the blob store
         await self.journal.publish(
             TaskEnded(
                 source=self.name,
                 session=task.origin.session,
                 task_id=task.id,
                 status=outcome.status,
-                result=outcome.result,
+                result=result,
                 error=outcome.error,
                 duration_s=round((utc_now() - task.started_at).total_seconds(), 1),
+                files=files,
             )
         )
+
+    async def _keep(self, task: Task, made: tuple[Attachment, ...]) -> tuple[tuple[BlobRef, ...], list[str]]:
+        """The files kept in the blob store, and those that could not be, with why: the task ends either way."""
+        kept: list[BlobRef] = []
+        lost: list[str] = []
+        for file in made:
+            name = file.name or file.media_type
+            if self._blobs is None:
+                lost.append(f"{name} (nowhere to keep it)")
+                continue
+            try:
+                kept.append(await self._blobs.put(file.data, file.media_type))
+            except Exception as error:  # a full disk must not lose the task's end
+                logger.warning("task %s: a file could not be kept (%s)", task.id, error)
+                lost.append(f"{name} ({type(error).__name__})")
+        return tuple(kept), lost
 
     async def _write(self) -> None:
         while True:

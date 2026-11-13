@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 from nestor.core import Capability
+from nestor.modules.channels import Attachment
 
 RESUME = Capability("delegation.resume")
 
@@ -25,13 +26,17 @@ class Notify(StrEnum):
 
 @dataclass(frozen=True, slots=True)
 class Outcome:
+    """How a task ended: its report, or why it failed. `files` are what the executor made for the requester (a
+    document, a picture): they go with the answer that brings the result, where the channel can send them."""
+
     status: TaskStatus
     result: str | None = None
     error: str | None = None
+    files: tuple[Attachment, ...] = ()
 
     @classmethod
-    def completed(cls, result: str) -> "Outcome":
-        return cls(TaskStatus.COMPLETED, result=result)
+    def completed(cls, result: str, files: tuple[Attachment, ...] = ()) -> "Outcome":
+        return cls(TaskStatus.COMPLETED, result=result, files=files)
 
     @classmethod
     def failed(cls, error: str) -> "Outcome":
