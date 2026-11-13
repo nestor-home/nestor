@@ -12,8 +12,8 @@ import httpx
 import pytest
 import respx
 
-from nestor.adapters.models.openai_compatible import OpenAICompatibleLanguage
-from nestor.adapters.models.openai_compatible.language import plugin
+from nestor.adapters.models.openai_compatible import language
+from nestor.adapters.models.openai_compatible.language import OpenAICompatibleLanguage
 from nestor.core import ContractError, ProviderError
 from nestor.core.i18n import Locale
 from nestor.modules.cognition import (
@@ -325,9 +325,10 @@ async def test_images_go_with_the_text_as_data_urls_for_a_model_that_sees(
 ) -> None:
     route = api.post(COMPLETIONS).mock(return_value=streamed(*TEXT_REPLY))
     services = Services(data_dir=tmp_path, localizer=EchoLocalizer(), locale=Locale("fr-FR"))
-    seeing = plugin.create({"base_url": BASE_URL, "api_key": KEY, "model": "m", "vision": True}, "eyes", services)
+    seeing = language.create({"base_url": BASE_URL, "api_key": KEY, "model": "m", "vision": True}, "eyes", services)
     assert (
-        seeing.vision and not plugin.create({"base_url": BASE_URL, "api_key": KEY, "model": "m"}, "m", services).vision
+        seeing.vision
+        and not language.create({"base_url": BASE_URL, "api_key": KEY, "model": "m"}, "m", services).vision
     )
     photo = Image(media_type="image/png", data=b"\x89PNG")
     async with seeing as m:
@@ -501,7 +502,7 @@ async def test_the_plugin_builds_a_model_from_its_configuration(api: respx.MockR
     }
     raw = {"base_url": BASE_URL, "api_key": KEY, "model": "vendor/model", "extra_body": {"temperature": 0.2, **pinned}}
 
-    async with plugin.create(
+    async with language.create(
         raw, "main", Services(data_dir=tmp_path, localizer=EchoLocalizer(), locale=Locale("fr-FR"))
     ) as m:
         assert isinstance(m, LanguageModel)
@@ -520,7 +521,7 @@ LOCAL = "http://localhost:11434/v1"  # Ollama
 async def test_a_local_server_needs_no_key(api: respx.MockRouter, tmp_path: Path, key: dict[str, str]) -> None:
     route = api.post(f"{LOCAL}/chat/completions").mock(return_value=streamed(*TEXT_REPLY))
     raw = {"base_url": LOCAL, "model": "llama3.2", **key}
-    async with plugin.create(
+    async with language.create(
         raw, "main", Services(data_dir=tmp_path, localizer=EchoLocalizer(), locale=Locale("en"))
     ) as m:
         assert isinstance(m, LanguageModel)
@@ -539,7 +540,7 @@ def test_a_known_provider_refuses_a_configuration_without_a_key(
 ) -> None:
     raw = {"base_url": base_url, "model": "m", **key}
     with pytest.raises(ContractError, match=f"api_key: {host} requires an API key"):
-        plugin.create(raw, "main", Services(data_dir=tmp_path, localizer=EchoLocalizer(), locale=Locale("en")))
+        language.create(raw, "main", Services(data_dir=tmp_path, localizer=EchoLocalizer(), locale=Locale("en")))
 
 
 OPENROUTER_KEY = os.environ.get("OPENROUTER_API_KEY", "")

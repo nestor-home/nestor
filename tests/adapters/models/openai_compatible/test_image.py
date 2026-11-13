@@ -9,8 +9,8 @@ import httpx
 import pytest
 import respx
 
-from nestor.adapters.models.openai_compatible import OpenAICompatibleImage
-from nestor.adapters.models.openai_compatible.image import ImageEndpoint
+from nestor.adapters.models.openai_compatible.image import OpenAICompatibleImage
+from nestor.adapters.models.openai_compatible.wire import ImageEndpoint
 from nestor.core import ProviderError
 from nestor.testing.cognition import ImageModelContract
 from nestor.testing.cognition.images import PNG

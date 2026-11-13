@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from nestor.adapters.models.sherpa_onnx.common import unpack
+from nestor.adapters.models.sherpa_onnx.releases import unpack
 from nestor.adapters.models.sherpa_onnx.transcription import SherpaOnnxTranscription
 from nestor.core import ContractError
 

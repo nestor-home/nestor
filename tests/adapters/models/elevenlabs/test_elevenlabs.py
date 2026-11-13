@@ -7,6 +7,9 @@ import httpx
 import pytest
 
 from nestor.adapters.models.elevenlabs import speech, transcription
+from nestor.adapters.models.elevenlabs.settings import ElevenLabsSpeechSettings, ElevenLabsTranscriptionSettings
+from nestor.adapters.models.elevenlabs.speech import ElevenLabsSpeech
+from nestor.adapters.models.elevenlabs.transcription import ElevenLabsTranscription
 from nestor.adapters.models.pipecat.eager import EagerSentenceFlush
 from nestor.core import ProviderError
 from nestor.core.i18n import Locale
@@ -19,14 +22,14 @@ SPEECH = {"api_key": "xi-test", "voice_id": "GPAQQPp9dazaB2bl4zg9"}
 
 
 def test_the_api_key_is_never_shown() -> None:
-    assert "xi-test" not in repr(speech.ElevenLabsSpeechSettings.model_validate(SPEECH))
-    assert "xi-test" not in repr(transcription.ElevenLabsTranscriptionSettings.model_validate({"api_key": "xi-test"}))
+    assert "xi-test" not in repr(ElevenLabsSpeechSettings.model_validate(SPEECH))
+    assert "xi-test" not in repr(ElevenLabsTranscriptionSettings.model_validate({"api_key": "xi-test"}))
 
 
 def test_each_session_gets_its_own_services_and_speech_does_not_wait_for_more_text(tmp_path: Path) -> None:
     services = Services(tmp_path, localizer=EchoLocalizer(), locale=Locale("fr-FR"))
-    ears = transcription.plugin.create({"api_key": "xi-test", "language": "fr"}, "ears", services)
-    mouth = speech.plugin.create(SPEECH, "mouth", services)
+    ears = transcription.create({"api_key": "xi-test", "language": "fr"}, "ears", services)
+    mouth = speech.create(SPEECH, "mouth", services)
     assert isinstance(ears, TranscriptionModel) and isinstance(mouth, SpeechModel)
     assert ears.stt() is not ears.stt()
     assert isinstance(mouth.tts(), EagerSentenceFlush), "a complete sentence is spoken without waiting for more"
@@ -61,7 +64,7 @@ class TestElevenLabsTranscription(TranscriptionModelContract):
     fake = FakeElevenLabs()
 
     def model(self, api_key: str = "xi-test") -> TranscriptionModel:
-        return transcription.ElevenLabsTranscription(
+        return ElevenLabsTranscription(
             api_key=api_key,
             model="scribe_v2_realtime",
             file_model="scribe_v2",
@@ -86,7 +89,7 @@ class TestElevenLabsTranscription(TranscriptionModelContract):
 
 async def test_a_transcription_answer_that_is_not_json_is_a_provider_error() -> None:
     page = httpx.MockTransport(lambda request: httpx.Response(200, text="<html>maintenance</html>"))
-    model = transcription.ElevenLabsTranscription(
+    model = ElevenLabsTranscription(
         api_key="xi-test", model="m", file_model="scribe_v2", language="fr", name="ears", transport=page
     )
     async with model:
@@ -98,7 +101,7 @@ class TestElevenLabsSpeech(SpeechModelContract):
     fake = FakeElevenLabs()
 
     def model(self, api_key: str = "xi-test") -> SpeechModel:
-        return speech.ElevenLabsSpeech(
+        return ElevenLabsSpeech(
             api_key=api_key, model="eleven_v4_turbo", voice_id="victor", name="mouth", transport=self.fake.transport
         )
 
@@ -122,9 +125,7 @@ class TestElevenLabsSpeechLive(SpeechModelContract):
     """The contract against ElevenLabs, with a French voice of the library."""
 
     def model(self, api_key: str = ELEVENLABS_KEY) -> SpeechModel:
-        return speech.ElevenLabsSpeech(
-            api_key=api_key, model="eleven_v4_turbo", voice_id="GPAQQPp9dazaB2bl4zg9", name="live"
-        )
+        return ElevenLabsSpeech(api_key=api_key, model="eleven_v4_turbo", voice_id="GPAQQPp9dazaB2bl4zg9", name="live")
 
     def unavailable_model(self) -> SpeechModel:
         return self.model(api_key="xi-invalid")

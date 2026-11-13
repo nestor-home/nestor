@@ -5,13 +5,9 @@ through Pipecat's OpenAI service against the same endpoint."""
 
 from typing import TYPE_CHECKING
 
-from pydantic import Field, PositiveFloat
-
 from nestor.adapters.common.http import HttpApi
-from nestor.adapters.models.common import EndpointSettings, brand
+from nestor.adapters.models.common import brand
 from nestor.adapters.models.pipecat import PipecatSpeech
-from nestor.modules.channels import SpeechModel
-from nestor.runtime.plugins import Family, Plugin, Services
 
 if TYPE_CHECKING:
     from pipecat.services.tts_service import TTSService
@@ -58,30 +54,3 @@ class OpenAICompatibleSpeech(PipecatSpeech):
             base_url=self._base_url,
             settings=OpenAITTSService.Settings(model=self._model, voice=self._voice),
         )
-
-
-class OpenAICompatibleSpeechSettings(EndpointSettings):
-    model: str  # gpt-4o-mini-tts, tts-1, kokoro…
-    voice: str = Field(min_length=1)  # alloy, nova (OpenAI), ff_siwis (Kokoro, French)…
-    timeout_s: PositiveFloat = Field(default=60.0, json_schema_extra={"advanced": True})
-
-
-def build(settings: OpenAICompatibleSpeechSettings, name: str, services: Services) -> OpenAICompatibleSpeech:
-    return OpenAICompatibleSpeech(
-        base_url=settings.base_url,
-        api_key=settings.api_key.get_secret_value() if settings.api_key else None,
-        model=settings.model,
-        voice=settings.voice,
-        timeout_s=settings.timeout_s,
-        provider=name,
-    )
-
-
-plugin = Plugin(
-    Family.MODEL,
-    "openai-compatible",
-    OpenAICompatibleSpeechSettings,
-    build,
-    requires="nestor-home[voice]",
-    serves=SpeechModel,
-)

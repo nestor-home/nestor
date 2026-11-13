@@ -1,6 +1,8 @@
-"""Models of `models`, one folder per provider and one file per type it serves (`elevenlabs/speech.py`).
+"""Models of `models`, one package per provider (`elevenlabs/`), split by concern.
 
-Each file holds the model, a class deriving from its type's base (`LanguageModel`, `EmbeddingModel`,
-`TranscriptionModel`, `SpeechModel`, `SpeakerModel`), its settings, `build` and the `plugin` that serves that type for
-the provider. `common` is what the HTTP providers share, `pipecat` what the voice pipeline runs.
+A provider's `__init__.py` documents it and holds one plugin per type it serves, named after the type
+(`transcription`); `settings.py` holds each type's settings and `build_<type>`; one module per type holds its model, a
+class deriving from the type's base (`LanguageModel`, `EmbeddingModel`, `ImageModel`, `TranscriptionModel`,
+`SpeechModel`, `SpeakerModel`); the wire format it speaks has modules of its own. `common` is what the
+OpenAI-compatible endpoints share, `pipecat` what the voice pipeline runs.
 """

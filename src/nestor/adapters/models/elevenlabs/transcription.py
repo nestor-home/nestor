@@ -8,13 +8,10 @@ endpoint, whose models are not the realtime ones (`file_model`).
 from typing import TYPE_CHECKING
 
 import httpx
-from pydantic import Field
 
 from nestor.adapters.models.elevenlabs.api import elevenlabs_api
 from nestor.adapters.models.pipecat import SAMPLE_RATE, PipecatTranscription
 from nestor.core import ProviderError
-from nestor.modules.channels import TranscriptionModel
-from nestor.runtime.plugins import AdapterSettings, Family, Plugin, RequiredSecret, Services
 
 if TYPE_CHECKING:
     from pipecat.services.stt_service import STTService
@@ -66,30 +63,3 @@ class ElevenLabsTranscription(PipecatTranscription):
             commit_strategy=CommitStrategy.MANUAL,
             settings=ElevenLabsRealtimeSTTService.Settings(model=self._model, language=Language(self._language)),
         )
-
-
-class ElevenLabsTranscriptionSettings(AdapterSettings):
-    api_key: RequiredSecret
-    model: str = "scribe_v2_realtime"  # the voice's, live
-    file_model: str = "scribe_v2"  # recordings' (a voice message)
-    language: str = Field(default="en", min_length=2)  # what people speak, e.g. fr
-
-
-def build(settings: ElevenLabsTranscriptionSettings, name: str, services: Services) -> ElevenLabsTranscription:
-    return ElevenLabsTranscription(
-        api_key=settings.api_key.get_secret_value(),
-        model=settings.model,
-        file_model=settings.file_model,
-        language=settings.language,
-        name=name,
-    )
-
-
-plugin = Plugin(
-    Family.MODEL,
-    "elevenlabs",
-    ElevenLabsTranscriptionSettings,
-    build,
-    requires="nestor-home[voice]",
-    serves=TranscriptionModel,
-)

@@ -13,13 +13,11 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 import httpx
-from pydantic import Field, PositiveFloat, PositiveInt
 
 from nestor.adapters.common.http import MAX_DETAIL, detail, provider_error, retryable
-from nestor.adapters.models.common import EndpointSettings, brand
+from nestor.adapters.models.common import brand
 from nestor.core import ContractError, ProviderError
 from nestor.modules.cognition.embedding import EmbeddingModel, EmbeddingSpace, Vector
-from nestor.runtime.plugins import Family, Plugin, Services
 
 
 class OpenAICompatibleEmbedding(EmbeddingModel):
@@ -117,43 +115,3 @@ class OpenAICompatibleEmbedding(EmbeddingModel):
 
     def _error(self, message: str, *, transient: bool) -> ProviderError:
         return provider_error(self._provider, self._api_key, message, transient=transient)
-
-
-class OpenAICompatibleEmbeddingSettings(EndpointSettings):
-    """An embedding model's profile."""
-
-    model: str
-    dimensions: PositiveInt  # of the vectors it returns, or asks for with `send_dimensions`
-    send_dimensions: bool = False  # ask the model for `dimensions` (Matryoshka models shorten their vectors)
-    query_prefix: str = ""  # put before a question, when the model expects it ("query: ")
-    document_prefix: str = ""  # put before a document ("passage: ")
-    batch_size: PositiveInt = Field(default=64, json_schema_extra={"advanced": True})
-    extra_body: dict[str, Any] = Field(default_factory=dict, json_schema_extra={"advanced": True})
-    connect_timeout_s: PositiveFloat = Field(default=5.0, json_schema_extra={"advanced": True})
-    read_timeout_s: PositiveFloat = Field(default=30.0, json_schema_extra={"advanced": True})
-
-
-def build(settings: OpenAICompatibleEmbeddingSettings, name: str, services: Services) -> OpenAICompatibleEmbedding:
-    return OpenAICompatibleEmbedding(
-        base_url=settings.base_url,
-        api_key=settings.api_key.get_secret_value() if settings.api_key else None,
-        model=settings.model,
-        dimensions=settings.dimensions,
-        send_dimensions=settings.send_dimensions,
-        query_prefix=settings.query_prefix,
-        document_prefix=settings.document_prefix,
-        batch_size=settings.batch_size,
-        extra_body=settings.extra_body,
-        connect_timeout_s=settings.connect_timeout_s,
-        read_timeout_s=settings.read_timeout_s,
-        provider=name,
-    )
-
-
-plugin = Plugin(
-    Family.MODEL,
-    "openai-compatible",
-    OpenAICompatibleEmbeddingSettings,
-    build,
-    serves=EmbeddingModel,
-)

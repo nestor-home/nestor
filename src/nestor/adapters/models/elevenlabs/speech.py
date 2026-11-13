@@ -8,12 +8,9 @@ endpoint, as OGG/Opus.
 from typing import TYPE_CHECKING
 
 import httpx
-from pydantic import Field
 
 from nestor.adapters.models.elevenlabs.api import elevenlabs_api
 from nestor.adapters.models.pipecat import PipecatSpeech
-from nestor.modules.channels import SpeechModel
-from nestor.runtime.plugins import AdapterSettings, Family, Plugin, RequiredSecret, Services
 
 if TYPE_CHECKING:
     from pipecat.services.tts_service import TTSService
@@ -56,20 +53,3 @@ class ElevenLabsSpeech(PipecatSpeech):
             api_key=self._api_key,
             settings=ElevenLabsDialogueTTSService.Settings(voice=self._voice_id, model=self._model),
         )
-
-
-class ElevenLabsSpeechSettings(AdapterSettings):
-    api_key: RequiredSecret
-    voice_id: str = Field(min_length=1)  # a voice of the account's library
-    model: str = "eleven_v4_turbo"
-
-
-def build(settings: ElevenLabsSpeechSettings, name: str, services: Services) -> ElevenLabsSpeech:
-    return ElevenLabsSpeech(
-        api_key=settings.api_key.get_secret_value(), model=settings.model, voice_id=settings.voice_id, name=name
-    )
-
-
-plugin = Plugin(
-    Family.MODEL, "elevenlabs", ElevenLabsSpeechSettings, build, requires="nestor-home[voice]", serves=SpeechModel
-)

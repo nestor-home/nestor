@@ -1,4 +1,4 @@
-"""What the sherpa-onnx adapters share: a model downloaded once from its release and checked against its pinned
+"""sherpa-onnx releases: a model downloaded once from its release and checked against its pinned
 sha256, an archive unpacked where the model is read from."""
 
 import asyncio

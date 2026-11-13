@@ -73,8 +73,8 @@ class TestSpeech(SpeechModelContract):
 def test_each_session_gets_its_own_services_and_speech_does_not_wait_for_more_text(tmp_path: Path) -> None:
     services = Services(tmp_path, localizer=EchoLocalizer(), locale=Locale("fr-FR"))
     endpoint = {"base_url": "http://localhost:8880/v1"}  # a local server asks for no key
-    ears = transcription.plugin.create(endpoint | {"model": "whisper-1", "language": "fr"}, "ears", services)
-    mouth = speech.plugin.create(endpoint | {"model": "kokoro", "voice": "ff_siwis"}, "mouth", services)
+    ears = transcription.create(endpoint | {"model": "whisper-1", "language": "fr"}, "ears", services)
+    mouth = speech.create(endpoint | {"model": "kokoro", "voice": "ff_siwis"}, "mouth", services)
     assert isinstance(ears, TranscriptionModel) and isinstance(mouth, SpeechModel)
     assert ears.stt() is not ears.stt()
     assert isinstance(mouth.tts(), EagerSentenceFlush), "a complete sentence is spoken without waiting for more"
@@ -83,6 +83,6 @@ def test_each_session_gets_its_own_services_and_speech_does_not_wait_for_more_te
 async def test_without_a_language_the_household_s_is_heard(tmp_path: Path) -> None:
     services = Services(tmp_path, localizer=EchoLocalizer(), locale=Locale("fr-FR"))
     settings = {"base_url": BASE_URL, "api_key": KEY, "model": "whisper-1"}
-    async with transcription.plugin.create(settings, "ears", services) as ears:
+    async with transcription.create(settings, "ears", services) as ears:
         assert isinstance(ears, TranscriptionModel)
         assert await ears.transcribe(b"bonjour", "audio/ogg") == "bonjour"  # `heard` checks that fr was sent

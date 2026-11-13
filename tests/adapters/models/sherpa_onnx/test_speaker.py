@@ -11,7 +11,9 @@ import httpx
 import pytest
 import respx
 
-from nestor.adapters.models.sherpa_onnx.speaker import CATALOGUE, FOLDER, RELEASE, Catalogued, SherpaOnnxSpeaker, plugin
+from nestor.adapters.models.sherpa_onnx import speaker
+from nestor.adapters.models.sherpa_onnx.catalogue import SPEAKER_FOLDER, SPEAKER_RELEASE, SPEAKERS, CataloguedSpeaker
+from nestor.adapters.models.sherpa_onnx.speaker import SherpaOnnxSpeaker
 from nestor.core import ContractError, ProviderError
 from nestor.core.i18n import Locale
 from nestor.modules.identity import SpeakerModel
@@ -20,7 +22,7 @@ from nestor.testing.i18n import EchoLocalizer
 from nestor.testing.identity import SpeakerModelContract
 
 NOT_A_MODEL = b"not an onnx model"
-TINY = Catalogued(
+TINY = CataloguedSpeaker(
     file="tiny.onnx",
     sha256=hashlib.sha256(NOT_A_MODEL).hexdigest(),
     size=len(NOT_A_MODEL),
@@ -37,8 +39,8 @@ def services(folder: Path) -> Services:
 
 
 @pytest.fixture
-def tiny(monkeypatch: pytest.MonkeyPatch) -> Catalogued:
-    monkeypatch.setitem(CATALOGUE, "tiny", TINY)  # type: ignore[arg-type]
+def tiny(monkeypatch: pytest.MonkeyPatch) -> CataloguedSpeaker:
+    monkeypatch.setitem(SPEAKERS, "tiny", TINY)  # type: ignore[arg-type]
     return TINY
 
 
@@ -49,23 +51,23 @@ def releases() -> Iterator[respx.MockRouter]:
 
 
 def test_a_catalogued_model_brings_its_space_and_calibrated_threshold(tmp_path: Path) -> None:
-    voices = plugin.create({"model": "titanet-small"}, "voice", services(tmp_path))
+    voices = speaker.create({"model": "titanet-small"}, "voice", services(tmp_path))
     assert isinstance(voices, SherpaOnnxSpeaker)
-    model = CATALOGUE["titanet-small"]
+    model = SPEAKERS["titanet-small"]
     assert voices.space.dimensions == model.dimensions and voices.space.model == "titanet-small"
     assert voices.threshold == model.threshold
-    assert voices.path == tmp_path / FOLDER / model.file
+    assert voices.path == tmp_path / SPEAKER_FOLDER / model.file
     assert voices.details()["model"] == "titanet-small" and voices.details()["threads"] == "1"
-    assert plugin.create({"model": "titanet-small", "threshold": 0.6}, "v", services(tmp_path)).threshold == 0.6
+    assert speaker.create({"model": "titanet-small", "threshold": 0.6}, "v", services(tmp_path)).threshold == 0.6
 
 
 def test_a_model_file_of_ones_own_needs_its_threshold(tmp_path: Path) -> None:
     with pytest.raises(ContractError, match="threshold"):
-        plugin.create({"model": str(tmp_path / "mine.onnx")}, "voice", services(tmp_path))
+        speaker.create({"model": str(tmp_path / "mine.onnx")}, "voice", services(tmp_path))
     with pytest.raises(ContractError, match="threshold"):
         SherpaOnnxSpeaker(model="mine.onnx", data_dir=tmp_path)
     with pytest.raises(ContractError, match="threads"):
-        plugin.create({"model": "titanet-small", "threads": 0}, "voice", services(tmp_path))
+        speaker.create({"model": "titanet-small", "threads": 0}, "voice", services(tmp_path))
 
 
 async def test_a_model_file_that_is_missing_or_not_a_model_fails_to_start(tmp_path: Path) -> None:
@@ -86,26 +88,26 @@ async def test_a_voiceprint_before_start_is_a_mistake(tmp_path: Path) -> None:
 
 
 async def test_a_catalogued_model_is_downloaded_once_and_checked(
-    tmp_path: Path, tiny: Catalogued, releases: respx.MockRouter
+    tmp_path: Path, tiny: CataloguedSpeaker, releases: respx.MockRouter
 ) -> None:
-    route = releases.get(RELEASE + tiny.file).respond(200, content=NOT_A_MODEL)
+    route = releases.get(SPEAKER_RELEASE + tiny.file).respond(200, content=NOT_A_MODEL)
     voices = SherpaOnnxSpeaker(model="tiny", data_dir=tmp_path)
     with pytest.raises(ProviderError, match=r"cannot load tiny\.onnx"):  # the right file, but no real model
         await voices.start()
-    assert (tmp_path / FOLDER / tiny.file).read_bytes() == NOT_A_MODEL
+    assert (tmp_path / SPEAKER_FOLDER / tiny.file).read_bytes() == NOT_A_MODEL
     with pytest.raises(ProviderError, match="cannot load"):
         await voices.start()
     assert route.call_count == 1  # kept: the second start did not download it again
 
 
 async def test_a_download_that_does_not_match_its_sha256_is_never_kept(
-    tmp_path: Path, tiny: Catalogued, releases: respx.MockRouter
+    tmp_path: Path, tiny: CataloguedSpeaker, releases: respx.MockRouter
 ) -> None:
-    releases.get(RELEASE + tiny.file).respond(200, content=b"tampered")
+    releases.get(SPEAKER_RELEASE + tiny.file).respond(200, content=b"tampered")
     with pytest.raises(ProviderError, match="sha256") as raised:
         await SherpaOnnxSpeaker(model="tiny", data_dir=tmp_path).start()
     assert not raised.value.transient
-    assert list((tmp_path / FOLDER).iterdir()) == []
+    assert list((tmp_path / SPEAKER_FOLDER).iterdir()) == []
 
 
 @pytest.mark.parametrize(
@@ -114,9 +116,9 @@ async def test_a_download_that_does_not_match_its_sha256_is_never_kept(
     ids=["not found", "offline"],
 )
 async def test_a_failed_download_is_a_transient_provider_error(
-    tmp_path: Path, tiny: Catalogued, releases: respx.MockRouter, answer: httpx.Response | Exception
+    tmp_path: Path, tiny: CataloguedSpeaker, releases: respx.MockRouter, answer: httpx.Response | Exception
 ) -> None:
-    route = releases.get(RELEASE + tiny.file)
+    route = releases.get(SPEAKER_RELEASE + tiny.file)
     if isinstance(answer, Exception):
         route.mock(side_effect=answer)
     else:
@@ -124,7 +126,7 @@ async def test_a_failed_download_is_a_transient_provider_error(
     with pytest.raises(ProviderError) as raised:
         await SherpaOnnxSpeaker(model="tiny", data_dir=tmp_path).start()
     assert raised.value.transient
-    assert list((tmp_path / FOLDER).iterdir()) == []
+    assert list((tmp_path / SPEAKER_FOLDER).iterdir()) == []
 
 
 # --- live: a real model, real voices ------------------------------------------------------------------------
@@ -138,7 +140,9 @@ def _recording(name: str) -> bytes:
     path = CACHE / name
     if not path.exists():
         CACHE.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(httpx.get(RELEASE + name, follow_redirects=True, timeout=60).raise_for_status().content)
+        path.write_bytes(
+            httpx.get(SPEAKER_RELEASE + name, follow_redirects=True, timeout=60).raise_for_status().content
+        )
     with wave.open(io.BytesIO(path.read_bytes())) as source:
         assert (source.getframerate(), source.getnchannels(), source.getsampwidth()) == (16000, 1, 2)
         return source.readframes(source.getnframes())
