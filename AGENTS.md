@@ -143,7 +143,7 @@ by another module of the package becomes a public name of the module that owns i
   (with `transient` set) — a vendor exception never reaches a module.
 - **Async**: explicit timeouts, cancellation honoured, resources released in `close`.
 - **Helpers**: a generic helper (encoding, HTTP, text, files) lives in a module of its own, shared by what
-  needs it (`adapters/models/common.py`, `adapters/connectors/common/text.py`, `admin/files.py`), never as a
+  needs it (`adapters/models/common.py`, `adapters/common/text.py`, `admin/files.py`), never as a
   private function at the bottom of a business file. Look for an existing one before writing it, and prefer
   the standard library or a proven implementation to a hand-rolled one.
 - **Public API**: each module exposes its names in `__init__.py` (`__all__`); import from the module
