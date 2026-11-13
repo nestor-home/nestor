@@ -4,7 +4,7 @@ Built-in and third-party adapters declare themselves the same way, in their pack
 
     [project.entry-points."nestor.adapters"]
     telegram = "nestor.adapters.channels.telegram:plugin"
-    elevenlabs-transcription = "nestor.adapters.models.elevenlabs.transcription:plugin"
+    elevenlabs-transcription = "nestor.adapters.models.elevenlabs:transcription"
 
 A model plugin serves one type of model for a provider: its kind is the provider, `serves` the type's base class
 (`TranscriptionModel`), and the configuration names it by both (`type: transcription`, `provider: elevenlabs`).

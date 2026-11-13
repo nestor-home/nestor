@@ -11,8 +11,8 @@ import httpx
 import pytest
 import respx
 
-from nestor.adapters.models.openai_compatible import OpenAICompatibleEmbedding
-from nestor.adapters.models.openai_compatible.embedding import plugin
+from nestor.adapters.models.openai_compatible import embedding
+from nestor.adapters.models.openai_compatible.embedding import OpenAICompatibleEmbedding
 from nestor.core import ContractError, ProviderError
 from nestor.core.i18n import Locale
 from nestor.runtime.plugins import Services
@@ -118,7 +118,7 @@ async def test_the_space_is_the_model_served_its_dimension_and_prefixes_not_the_
 
 def test_the_plugin_builds_an_embedder_from_its_profile(tmp_path: Path) -> None:
     raw = {"base_url": BASE_URL, "model": "vendor/embed", "dimensions": 768, "query_prefix": "query: "}
-    built = plugin.create(raw, "te3", Services(data_dir=tmp_path, localizer=EchoLocalizer(), locale=Locale("en")))
+    built = embedding.create(raw, "te3", Services(data_dir=tmp_path, localizer=EchoLocalizer(), locale=Locale("en")))
     assert isinstance(built, OpenAICompatibleEmbedding)
     assert (built.space.dimensions, built.space.query_prefix) == (768, "query: ")
 

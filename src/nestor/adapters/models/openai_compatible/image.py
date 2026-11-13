@@ -9,24 +9,12 @@ The picture comes back as base64, a data URL, or an address it is fetched from. 
 import base64
 import binascii
 from collections.abc import Mapping
-from enum import StrEnum
-from typing import Any
-
-from pydantic import Field, PositiveFloat
 
 from nestor.adapters.common.http import HttpApi, JsonApi
-from nestor.adapters.models.common import EndpointSettings, brand
-from nestor.modules.channels import AttachmentKind
+from nestor.adapters.models.common import brand
+from nestor.adapters.models.openai_compatible.wire import ImageEndpoint, image
 from nestor.modules.cognition.images import ImageModel
 from nestor.modules.cognition.model import Image
-from nestor.runtime.plugins import Family, Plugin, Services
-
-SIGNATURES = {b"\x89PNG": "image/png", b"\xff\xd8\xff": "image/jpeg", b"GIF8": "image/gif"}
-
-
-class ImageEndpoint(StrEnum):
-    IMAGES = "images"  # POST /images/generations
-    CHAT = "chat"  # POST /chat/completions with `modalities`
 
 
 class OpenAICompatibleImage(ImageModel):
@@ -93,7 +81,7 @@ class OpenAICompatibleImage(ImageModel):
             raise self._api.error(f"{path}: the answer holds no picture", transient=False)
         if given.startswith(("http://", "https://")):
             response = await self._files.request("GET", given)
-            return _image(response.content, response.headers.get("content-type"), self._api.error)
+            return image(response.content, response.headers.get("content-type"), self._api.error)
         media_type = None
         if given.startswith("data:"):
             header, _, given = given.partition(",")
@@ -102,42 +90,4 @@ class OpenAICompatibleImage(ImageModel):
             data = base64.b64decode(given, validate=True)
         except (binascii.Error, ValueError):
             raise self._api.error(f"{path}: the picture is not valid base64", transient=False) from None
-        return _image(data, media_type, self._api.error)
-
-
-def _image(data: bytes, given: str | None, error: Any) -> Image:
-    """`data` as a picture of a type people can see: its declared type, else the one its first bytes show."""
-    media_type = (given or "").split(";")[0].strip().lower()
-    if AttachmentKind.of(media_type) is not AttachmentKind.IMAGE:
-        media_type = next((t for sig, t in SIGNATURES.items() if data.startswith(sig)), "")
-        if not media_type and data[:4] == b"RIFF" and data[8:12] == b"WEBP":
-            media_type = "image/webp"
-    if not media_type:
-        raise error("the picture is of a type that cannot be shown", transient=False)
-    return Image(media_type=media_type, data=data)
-
-
-class OpenAICompatibleImageSettings(EndpointSettings):
-    """An image model's profile."""
-
-    model: str
-    endpoint: ImageEndpoint = ImageEndpoint.IMAGES  # `chat` for OpenRouter's image models
-    size: str | None = None  # `1024x1024`, `1536x1024`…, as the model takes it; its own default otherwise
-    extra_body: dict[str, Any] = Field(default_factory=dict, json_schema_extra={"advanced": True})
-    timeout_s: PositiveFloat = Field(default=120.0, json_schema_extra={"advanced": True})
-
-
-def build(settings: OpenAICompatibleImageSettings, name: str, services: Services) -> OpenAICompatibleImage:
-    return OpenAICompatibleImage(
-        base_url=settings.base_url,
-        api_key=settings.api_key.get_secret_value() if settings.api_key else None,
-        model=settings.model,
-        endpoint=settings.endpoint,
-        size=settings.size,
-        extra_body=settings.extra_body,
-        timeout_s=settings.timeout_s,
-        provider=name,
-    )
-
-
-plugin = Plugin(Family.MODEL, "openai-compatible", OpenAICompatibleImageSettings, build, serves=ImageModel)
+        return image(data, media_type, self._api.error)

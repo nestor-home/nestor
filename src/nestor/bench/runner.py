@@ -82,7 +82,7 @@ async def run_suite[S](
     started = utc_now()
     results: dict[str, list[CaseResult]] = {v.name: [] for v in variants}
     gate = asyncio.Semaphore(plan.concurrency)
-    startups: dict[str, Startup] = {}
+    startups: dict[str, dict[str, Startup]] = {v.name: {} for v in variants}
     total = len(dataset.cases) * len(variants) * plan.repeat
     async with contextlib.AsyncExitStack() as stack:
         for variant in variants:
@@ -90,8 +90,13 @@ async def run_suite[S](
                 await stack.enter_async_context(model)
             if variant.embedder is not None:
                 await stack.enter_async_context(variant.embedder)
-            if variant.voices is not None:
-                startups[variant.name] = await _started(stack, variant.voices)
+            for role, component in (
+                ("voices", variant.voices),
+                ("transcription", variant.transcription),
+                ("speech", variant.speech),
+            ):
+                if component is not None:
+                    startups[variant.name][role] = await _started(stack, component)
         measured = {v.name: _measured(v, cache, plan.replay) for v in variants}
 
         async def one(case: Case, variant: Variant[Any], repetition: int) -> None:
@@ -104,7 +109,9 @@ async def run_suite[S](
                 seed=plan.seed,
                 embedder=variant.embedder,
                 voices=variant.voices,
-                voices_started=startups.get(variant.name),
+                transcription=variant.transcription,
+                speech=variant.speech,
+                started=startups[variant.name],
             )
             async with gate:
                 log = CaseLog(case=case.id, repetition=repetition, seed=plan.seed)

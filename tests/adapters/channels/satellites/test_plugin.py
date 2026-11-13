@@ -18,8 +18,8 @@ VOICE = {"transcription": "ears", "speech": "mouth"}
 def services(tmp_path: Path) -> Services:
     bare = Services(tmp_path, localizer=EchoLocalizer(), locale=Locale("fr-FR"))
     models = {
-        "ears": transcription.plugin.create({"api_key": "xi-test", "language": "fr"}, "ears", bare),
-        "mouth": speech.plugin.create(SPEECH, "mouth", bare),
+        "ears": transcription.create({"api_key": "xi-test", "language": "fr"}, "ears", bare),
+        "mouth": speech.create(SPEECH, "mouth", bare),
     }
 
     def model(key: str, wanted: type[Model], path: tuple[str | int, ...]) -> Model:

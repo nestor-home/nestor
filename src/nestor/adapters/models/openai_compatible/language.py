@@ -13,43 +13,21 @@ Tested against OpenRouter only; other servers are expected to work but remain un
 (Ollama, LM Studio, vLLM, llama.cpp) usually need no key: without one, no `Authorization` header is sent.
 """
 
-import base64
-import json
-from collections.abc import AsyncGenerator, AsyncIterator, Callable, Iterator, Mapping
+from collections.abc import AsyncGenerator, Mapping
 from contextlib import aclosing
-from dataclasses import dataclass, field
-from typing import Any
 
 import httpx
-from pydantic import Field, PositiveFloat
 
-from nestor.adapters.common.http import MAX_DETAIL, detail, message_of, provider_error, retryable
-from nestor.adapters.models.common import EndpointSettings, brand
-from nestor.core import ContractError, ProviderError, new_id
+from nestor.adapters.common.http import detail, provider_error, retryable
+from nestor.adapters.models.common import brand
+from nestor.adapters.models.openai_compatible.stream import ChunkDecoder
+from nestor.adapters.models.openai_compatible.wire import wire_message, wire_tool
+from nestor.core import ContractError, ProviderError
 from nestor.modules.cognition import (
-    Finished,
-    FinishReason,
-    Image,
     LanguageModel,
-    Message,
     ModelOutput,
     ModelRequest,
-    Role,
-    TextDelta,
-    ToolCall,
-    ToolCallRequested,
-    ToolSpec,
-    Usage,
 )
-from nestor.runtime.plugins import Family, Plugin, Services
-
-_FINISH_REASONS = {
-    "stop": FinishReason.STOP,
-    "tool_calls": FinishReason.TOOL_CALLS,
-    "function_call": FinishReason.TOOL_CALLS,
-    "length": FinishReason.LENGTH,
-}
-
 
 _CACHE_CONTROL = frozenset({"openrouter", "anthropic"})  # the brands that read `cache_control` breakpoints
 
@@ -110,7 +88,7 @@ class OpenAICompatibleLanguage(LanguageModel):
                 if response.is_error:
                     said = detail(await response.aread())
                     raise self._error(f"HTTP {response.status_code}: {said}", transient=retryable(response.status_code))
-                async with aclosing(_ChunkDecoder(self._error).outputs(response.aiter_lines())) as outputs:
+                async with aclosing(ChunkDecoder(self._error).outputs(response.aiter_lines())) as outputs:
                     async for output in outputs:
                         yield output
         except httpx.TimeoutException as error:
@@ -121,185 +99,12 @@ class OpenAICompatibleLanguage(LanguageModel):
     def _body(self, request: ModelRequest) -> dict[str, object]:
         body: dict[str, object] = {
             "model": self._model,
-            "messages": [_wire_message(m, self._provider, cache_control=self._cache_control) for m in request.messages],
+            "messages": [wire_message(m, self._provider, cache_control=self._cache_control) for m in request.messages],
             "stream": True,
         }
         if request.tools:  # some servers reject an empty tool list
-            body["tools"] = [_wire_tool(t) for t in request.tools]
+            body["tools"] = [wire_tool(t) for t in request.tools]
         return body | self._extra_body
 
     def _error(self, message: str, *, transient: bool) -> ProviderError:
         return provider_error(self._provider, self._api_key, message, transient=transient)
-
-
-@dataclass(slots=True)
-class _PartialCall:
-    """A tool call whose fields arrive in fragments across stream chunks."""
-
-    id: str = ""
-    name: str = ""
-    arguments: list[str] = field(default_factory=list)
-
-
-class _ChunkDecoder:
-    """Turns the chunks of one streamed reply into model outputs."""
-
-    def __init__(self, error: Callable[..., ProviderError]) -> None:
-        self._error = error
-        self._calls: dict[int, _PartialCall] = {}
-        self._finish: str | None = None
-        self._usage: Usage | None = None
-        self._model: str | None = None
-
-    async def outputs(self, lines: AsyncIterator[str]) -> AsyncGenerator[ModelOutput]:
-        async for line in lines:
-            if not line.startswith("data:"):
-                continue  # blank separators, `: keep-alive` comments, other SSE fields
-            data = line.removeprefix("data:").strip()
-            if data == "[DONE]":
-                break
-            for text in self._read(self._parse(data)):
-                yield TextDelta(text)
-        else:
-            if self._finish is None:
-                raise self._error("stream ended before the reply was finished", transient=True)
-        for call in self._completed_calls():
-            yield ToolCallRequested(call)
-        yield Finished(_FINISH_REASONS.get(self._finish or "stop", FinishReason.STOP), self._usage, self._model)
-
-    def _parse(self, data: str) -> dict[str, Any]:
-        try:
-            chunk = json.loads(data)
-        except json.JSONDecodeError:
-            chunk = None
-        if not isinstance(chunk, dict):
-            raise self._error(f"malformed stream chunk: {data[:MAX_DETAIL]}", transient=True)
-        return chunk
-
-    def _read(self, chunk: dict[str, Any]) -> Iterator[str]:
-        if (error := chunk.get("error")) is not None:
-            code = error.get("code") if isinstance(error, dict) else None
-            transient = not isinstance(code, int) or retryable(code)
-            raise self._error(f"error in stream: {message_of(error)}", transient=transient)
-        if isinstance(model := chunk.get("model"), str) and model:
-            self._model = model
-        if isinstance(usage := chunk.get("usage"), dict):
-            self._usage = _usage(usage) or self._usage
-        for choice in chunk.get("choices") or ():
-            delta = choice.get("delta") or {}
-            if text := delta.get("content"):
-                yield text
-            for position, fragment in enumerate(delta.get("tool_calls") or ()):
-                self._add_fragment(fragment, position)
-            if reason := choice.get("finish_reason"):
-                self._finish = reason
-
-    def _add_fragment(self, fragment: dict[str, Any], position: int) -> None:
-        partial = self._calls.setdefault(fragment.get("index", position), _PartialCall())
-        function = fragment.get("function") or {}
-        partial.id = partial.id or fragment.get("id") or ""
-        partial.name = partial.name or function.get("name") or ""
-        partial.arguments.append(function.get("arguments") or "")
-
-    def _completed_calls(self) -> Iterator[ToolCall]:
-        for index in sorted(self._calls):
-            partial = self._calls[index]
-            if not partial.name:
-                raise self._error(f"tool call #{index} has no name", transient=True)
-            raw = "".join(partial.arguments) or "{}"
-            try:
-                arguments = json.loads(raw)
-            except json.JSONDecodeError:
-                arguments = None
-            if not isinstance(arguments, dict):
-                message = f"tool call {partial.name!r} has invalid JSON arguments: {raw[:MAX_DETAIL]}"
-                raise self._error(message, transient=True)
-            yield ToolCall(partial.id or new_id(), partial.name, arguments)
-
-
-def _wire_message(message: Message, provider: str, *, cache_control: bool) -> dict[str, object]:
-    match message.role:
-        case Role.ASSISTANT if message.tool_calls:
-            return {
-                "role": "assistant",
-                "content": message.content or None,
-                "tool_calls": [_wire_call(c) for c in message.tool_calls],
-            }
-        case Role.TOOL:
-            if message.tool_call_id is None:
-                raise ContractError(f"{provider}: a tool message must say which call it answers (tool_call_id)")
-            return {"role": "tool", "tool_call_id": message.tool_call_id, "content": message.content}
-        case Role.USER if message.images:
-            pictures = [{"type": "image_url", "image_url": {"url": _data_url(i)}} for i in message.images]
-            return {"role": "user", "content": [{"type": "text", "text": message.text}, *pictures]}
-        case _ if cache_control and message.layers:
-            parts: list[dict[str, object]] = [
-                {"type": "text", "text": layer, "cache_control": {"type": "ephemeral"}}
-                for layer in message.layers
-                if layer
-            ]
-            if message.content:
-                parts.append({"type": "text", "text": message.content})
-            return {"role": message.role.value, "content": parts}
-        case _:
-            return {"role": message.role.value, "content": message.text}
-
-
-def _data_url(image: Image) -> str:
-    return f"data:{image.media_type};base64,{base64.b64encode(image.data).decode()}"
-
-
-def _wire_call(call: ToolCall) -> dict[str, object]:
-    arguments = json.dumps(dict(call.arguments), ensure_ascii=False)
-    return {"id": call.id, "type": "function", "function": {"name": call.name, "arguments": arguments}}
-
-
-def _wire_tool(tool: ToolSpec) -> dict[str, object]:
-    function = {"name": tool.name, "description": tool.description, "parameters": dict(tool.parameters)}
-    return {"type": "function", "function": function}
-
-
-def _usage(usage: dict[str, Any]) -> Usage | None:
-    """The usage of a chunk (OpenRouter sends it on the last one, others with `stream_options.include_usage`),
-    with OpenRouter's `cost`."""
-    tokens = usage.get("prompt_tokens"), usage.get("completion_tokens")
-    if not all(isinstance(t, int) for t in tokens):
-        return None
-    cost = usage.get("cost")
-    details = usage.get("prompt_tokens_details")
-    cached = details.get("cached_tokens") if isinstance(details, dict) else None
-    return Usage(
-        input_tokens=int(tokens[0] or 0),
-        output_tokens=int(tokens[1] or 0),
-        cost=float(cost) if isinstance(cost, int | float) else None,
-        cached_input_tokens=cached if isinstance(cached, int) else None,
-    )
-
-
-class OpenAICompatibleLanguageSettings(EndpointSettings):
-    """Configuration of an OpenAI-compatible chat model."""
-
-    model: str
-    extra_body: dict[str, Any] = Field(default_factory=dict)
-    connect_timeout_s: PositiveFloat = 5.0
-    read_timeout_s: PositiveFloat = 30.0
-    # mark the instructions' stable layers for the prompt cache; by default for OpenRouter and Anthropic
-    cache_control: bool | None = Field(default=None, json_schema_extra={"advanced": True})
-    vision: bool = False  # it looks at images (a photo sent in a message); without, it is told it cannot see them
-
-
-def build(settings: OpenAICompatibleLanguageSettings, name: str, services: Services) -> OpenAICompatibleLanguage:
-    return OpenAICompatibleLanguage(
-        base_url=settings.base_url,
-        api_key=settings.api_key.get_secret_value() if settings.api_key else None,
-        model=settings.model,
-        extra_body=settings.extra_body,
-        connect_timeout_s=settings.connect_timeout_s,
-        read_timeout_s=settings.read_timeout_s,
-        provider=name,
-        cache_control=settings.cache_control,
-        vision=settings.vision,
-    )
-
-
-plugin = Plugin(Family.MODEL, "openai-compatible", OpenAICompatibleLanguageSettings, build, serves=LanguageModel)
