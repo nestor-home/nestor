@@ -5,7 +5,7 @@ from typing import Protocol
 
 from nestor.core import Event
 from nestor.modules.channels import AttachmentKind, Exchange
-from nestor.modules.cognition.model import Image, Message, Role, ToolCall
+from nestor.modules.cognition.model import Document, Image, Message, Role, ToolCall
 from nestor.modules.cognition.tools import ToolCalled, ToolCompleted, ToolDeferred
 from nestor.modules.conversation.events import AnswerCut, AssistantTurn, NotificationTurn, UserTurn
 from nestor.modules.conversation.types import Attached, Notification
@@ -40,23 +40,36 @@ def notification_message(notification: Notification) -> Message:
     return Message.user(f"[From Nestor itself, not said by anyone here: {notification.about}]\n{notification.text}")
 
 
-def user_message(turn: UserTurn, *, name: str | None = None, images: Mapping[str, Image] | None = None) -> Message:
+type Shown = Mapping[str, Image | Document]
+"""The files the model looks at itself, by digest: pictures it sees, documents it reads whole."""
+
+
+def user_message(turn: UserTurn, *, name: str | None = None, shown: Shown | None = None, sees: bool = False) -> Message:
     """A person's message as the model reads it: their words, labelled with `name` on a shared device, and a note for
-    each file that came with it. `images` are the pictures the model looks at, by digest; `None` for a model that
-    does not see images. What it cannot see or hear is said, so that it tells the person rather than ignore it."""
-    seen = tuple(images[a.blob.digest] for a in turn.attachments if images and a.blob.digest in images)
-    notes = [_note(a, images) for a in turn.attachments]
+    each file that came with it. `shown` are the files the model looks at itself, by digest; `sees` tells whether it
+    sees images at all. What it cannot see or hear is said, so that it tells the person rather than ignore it."""
+    shown = shown or {}
+    files = [shown[a.blob.digest] for a in turn.attachments if a.blob.digest in shown]
+    notes = [_note(a, shown, sees) for a in turn.attachments]
     words = f"[{name}] {turn.text}" if name and turn.text else turn.text
-    return Message.user("\n".join(part for part in (*notes, words) if part), images=seen)
+    return Message.user(
+        "\n".join(part for part in (*notes, words) if part),
+        images=tuple(f for f in files if isinstance(f, Image)),
+        documents=tuple(f for f in files if isinstance(f, Document)),
+    )
 
 
-def _note(attached: Attached, images: Mapping[str, Image] | None) -> str:
+def _note(attached: Attached, shown: Shown, sees: bool) -> str:
     named = f" ({attached.name})" if attached.name else ""
+    if attached.blob.digest in shown and attached.kind is AttachmentKind.IMAGE:
+        return f"[An image{named}, attached]"
+    if attached.blob.digest in shown:  # its text still readable, by a model that ends up answering without the file
+        ref = attached.read.ref if attached.read else None
+        also = f"; its text also with read_result(ref={ref!r})" if ref else ""
+        return f"[A document{named}, attached{also}]"
     if attached.kind is AttachmentKind.IMAGE:
-        if images is None:
+        if not sees:
             return f"[An image{named} you cannot see: you do not see images]"
-        if attached.blob.digest in images:
-            return f"[An image{named}, attached]"
         if attached.blob.size > IMAGE_BYTES:
             return f"[An image{named} too large for you to see]"
         return f"[An image{named} sent earlier, no longer shown to you]"
@@ -83,22 +96,22 @@ def _note(attached: Attached, images: Mapping[str, Image] | None) -> str:
 
 
 def to_messages(
-    events: Sequence[Event], *, names: Names | None = None, images: Mapping[str, Image] | None = None
+    events: Sequence[Event], *, names: Names | None = None, shown: Shown | None = None, sees: bool = False
 ) -> tuple[Message, ...]:
     """Turn log events into model messages. A tool call without its result (crash midway, or cut by
     the window) is dropped, since models refuse unanswered calls. A message written just before a
     tool call goes back with it, as the model wrote them. An unprompted message comes after the notification that
     caused it, so an answer to it knows what it was about. A call that went on in the background keeps what the model
     received then; its result comes back later as a notification. On a shared device, where several people may
-    speak in one conversation, `names` labels each message with who said it, when anyone knows. `images` are the
-    pictures the model looks at (`user_message`)."""
+    speak in one conversation, `names` labels each message with who said it, when anyone knows. `shown` and `sees`
+    say what the model looks at itself (`user_message`)."""
     results = {e.call_id: e for e in events if isinstance(e, ToolCompleted | ToolDeferred)}
     cut = heard(events)
     messages: list[Message] = []
     for event in events:
         if isinstance(event, UserTurn):
             name = names(event.speaker) if names and event.speaker.by is not Identified.ACCOUNT else None
-            messages.append(user_message(event, name=name, images=images))
+            messages.append(user_message(event, name=name, shown=shown, sees=sees))
         elif isinstance(event, NotificationTurn):
             messages.append(notification_message(Notification(event.text, event.about)))
         elif isinstance(event, AssistantTurn) and (text := cut.get(event.id, event.text)):

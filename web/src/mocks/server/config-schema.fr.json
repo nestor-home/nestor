@@ -1057,6 +1057,282 @@
         "type"
       ],
       "kinds": {
+        "anthropic-language": {
+          "$defs": {
+            "Effort": {
+              "description": "How much Claude thinks before answering (`output_config.effort`): less is faster and cheaper.",
+              "enum": [
+                "low",
+                "medium",
+                "high",
+                "xhigh",
+                "max"
+              ],
+              "title": "Effort",
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "description": "Configuration of a Claude model over Anthropic's API.",
+          "properties": {
+            "provider": {
+              "const": "anthropic",
+              "type": "string",
+              "x-nestor": {
+                "field": "provider",
+                "title_id": "config-model-anthropic-language-provider",
+                "help_id": "config-model-anthropic-language-provider-help",
+                "fallback_title_id": "config-field-provider",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-anthropic-language",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Fournisseur",
+                "help": null
+              }
+            },
+            "type": {
+              "const": "language",
+              "type": "string",
+              "x-nestor": {
+                "field": "type",
+                "title_id": "config-model-anthropic-language-type",
+                "help_id": "config-model-anthropic-language-type-help",
+                "fallback_title_id": "config-field-type",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-anthropic-language",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Type de modèle",
+                "help": null
+              }
+            },
+            "api_key": {
+              "format": "password",
+              "title": "Api Key",
+              "type": "string",
+              "writeOnly": true,
+              "x-nestor": {
+                "field": "api_key",
+                "title_id": "config-model-anthropic-language-api_key",
+                "help_id": "config-model-anthropic-language-api_key-help",
+                "fallback_title_id": "config-field-api_key",
+                "secret": true,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-anthropic-language",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Clé d'API",
+                "help": null
+              }
+            },
+            "model": {
+              "minLength": 1,
+              "title": "Model",
+              "type": "string",
+              "x-nestor": {
+                "field": "model",
+                "title_id": "config-model-anthropic-language-model",
+                "help_id": "config-model-anthropic-language-model-help",
+                "fallback_title_id": "config-field-model",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-anthropic-language",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Modèle",
+                "help": null
+              }
+            },
+            "max_tokens": {
+              "default": 64000,
+              "exclusiveMinimum": 0,
+              "title": "Max Tokens",
+              "type": "integer",
+              "x-nestor": {
+                "field": "max_tokens",
+                "title_id": "config-model-anthropic-language-max_tokens",
+                "help_id": "config-model-anthropic-language-max_tokens-help",
+                "fallback_title_id": "config-field-max_tokens",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-anthropic-language",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Réponse la plus longue (tokens)",
+                "help": null
+              }
+            },
+            "effort": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Effort"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "x-nestor": {
+                "field": "effort",
+                "title_id": "config-model-anthropic-language-effort",
+                "help_id": "config-model-anthropic-language-effort-help",
+                "fallback_title_id": "config-field-effort",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-anthropic-language",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Effort de réflexion",
+                "help": "Combien Claude réfléchit avant de répondre : low est plus rapide et moins cher. Sinon, le défaut du modèle."
+              }
+            },
+            "extra_body": {
+              "additionalProperties": true,
+              "title": "Extra Body",
+              "type": "object",
+              "x-nestor": {
+                "field": "extra_body",
+                "title_id": "config-model-anthropic-language-extra_body",
+                "help_id": "config-model-anthropic-language-extra_body-help",
+                "fallback_title_id": "config-field-extra_body",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-anthropic-language",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Champs JSON supplémentaires",
+                "help": "Ajoutés à chaque requête."
+              }
+            },
+            "base_url": {
+              "default": "https://api.anthropic.com/v1",
+              "title": "Base Url",
+              "type": "string",
+              "x-nestor": {
+                "field": "base_url",
+                "title_id": "config-model-anthropic-language-base_url",
+                "help_id": "config-model-anthropic-language-base_url-help",
+                "fallback_title_id": "config-field-base_url",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-anthropic-language",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Base URL",
+                "help": null
+              }
+            },
+            "connect_timeout_s": {
+              "default": 5.0,
+              "exclusiveMinimum": 0,
+              "title": "Connect Timeout S",
+              "type": "number",
+              "x-nestor": {
+                "field": "connect_timeout_s",
+                "title_id": "config-model-anthropic-language-connect_timeout_s",
+                "help_id": "config-model-anthropic-language-connect_timeout_s-help",
+                "fallback_title_id": "config-field-connect_timeout_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-anthropic-language",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Timeout de connexion (secondes)",
+                "help": null
+              }
+            },
+            "read_timeout_s": {
+              "default": 60.0,
+              "exclusiveMinimum": 0,
+              "title": "Read Timeout S",
+              "type": "number",
+              "x-nestor": {
+                "field": "read_timeout_s",
+                "title_id": "config-model-anthropic-language-read_timeout_s",
+                "help_id": "config-model-anthropic-language-read_timeout_s-help",
+                "fallback_title_id": "config-field-read_timeout_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-anthropic-language",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Timeout de lecture (secondes)",
+                "help": null
+              }
+            },
+            "fallback": {
+              "type": "string",
+              "x-nestor": {
+                "field": "fallback",
+                "title_id": "config-model-anthropic-language-fallback",
+                "help_id": "config-model-anthropic-language-fallback-help",
+                "fallback_title_id": "config-field-fallback",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-anthropic-language",
+                "reference": "models",
+                "model_type": "language",
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Modèle de secours",
+                "help": "Répond à sa place quand ce modèle échoue, dans tous ses rôles."
+              }
+            }
+          },
+          "required": [
+            "provider",
+            "type",
+            "api_key",
+            "model"
+          ],
+          "title": "AnthropicLanguageSettings",
+          "type": "object"
+        },
         "elevenlabs-speech": {
           "additionalProperties": false,
           "properties": {
@@ -1321,6 +1597,217 @@
             "api_key"
           ],
           "title": "ElevenLabsTranscriptionSettings",
+          "type": "object"
+        },
+        "gemini-language": {
+          "additionalProperties": false,
+          "description": "Configuration of a Gemini model over Google's Gemini API (Google AI Studio's keys).",
+          "properties": {
+            "provider": {
+              "const": "gemini",
+              "type": "string",
+              "x-nestor": {
+                "field": "provider",
+                "title_id": "config-model-gemini-language-provider",
+                "help_id": "config-model-gemini-language-provider-help",
+                "fallback_title_id": "config-field-provider",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-gemini-language",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Fournisseur",
+                "help": null
+              }
+            },
+            "type": {
+              "const": "language",
+              "type": "string",
+              "x-nestor": {
+                "field": "type",
+                "title_id": "config-model-gemini-language-type",
+                "help_id": "config-model-gemini-language-type-help",
+                "fallback_title_id": "config-field-type",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-gemini-language",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Type de modèle",
+                "help": null
+              }
+            },
+            "api_key": {
+              "format": "password",
+              "title": "Api Key",
+              "type": "string",
+              "writeOnly": true,
+              "x-nestor": {
+                "field": "api_key",
+                "title_id": "config-model-gemini-language-api_key",
+                "help_id": "config-model-gemini-language-api_key-help",
+                "fallback_title_id": "config-field-api_key",
+                "secret": true,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-gemini-language",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Clé d'API",
+                "help": null
+              }
+            },
+            "model": {
+              "minLength": 1,
+              "title": "Model",
+              "type": "string",
+              "x-nestor": {
+                "field": "model",
+                "title_id": "config-model-gemini-language-model",
+                "help_id": "config-model-gemini-language-model-help",
+                "fallback_title_id": "config-field-model",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-gemini-language",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Modèle",
+                "help": null
+              }
+            },
+            "extra_body": {
+              "additionalProperties": true,
+              "title": "Extra Body",
+              "type": "object",
+              "x-nestor": {
+                "field": "extra_body",
+                "title_id": "config-model-gemini-language-extra_body",
+                "help_id": "config-model-gemini-language-extra_body-help",
+                "fallback_title_id": "config-field-extra_body",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-gemini-language",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Champs JSON supplémentaires",
+                "help": "Ajoutés à chaque requête, par exemple generationConfig."
+              }
+            },
+            "base_url": {
+              "default": "https://generativelanguage.googleapis.com/v1beta",
+              "title": "Base Url",
+              "type": "string",
+              "x-nestor": {
+                "field": "base_url",
+                "title_id": "config-model-gemini-language-base_url",
+                "help_id": "config-model-gemini-language-base_url-help",
+                "fallback_title_id": "config-field-base_url",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-gemini-language",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Base URL",
+                "help": null
+              }
+            },
+            "connect_timeout_s": {
+              "default": 5.0,
+              "exclusiveMinimum": 0,
+              "title": "Connect Timeout S",
+              "type": "number",
+              "x-nestor": {
+                "field": "connect_timeout_s",
+                "title_id": "config-model-gemini-language-connect_timeout_s",
+                "help_id": "config-model-gemini-language-connect_timeout_s-help",
+                "fallback_title_id": "config-field-connect_timeout_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-gemini-language",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Timeout de connexion (secondes)",
+                "help": null
+              }
+            },
+            "read_timeout_s": {
+              "default": 60.0,
+              "exclusiveMinimum": 0,
+              "title": "Read Timeout S",
+              "type": "number",
+              "x-nestor": {
+                "field": "read_timeout_s",
+                "title_id": "config-model-gemini-language-read_timeout_s",
+                "help_id": "config-model-gemini-language-read_timeout_s-help",
+                "fallback_title_id": "config-field-read_timeout_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-gemini-language",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Timeout de lecture (secondes)",
+                "help": null
+              }
+            },
+            "fallback": {
+              "type": "string",
+              "x-nestor": {
+                "field": "fallback",
+                "title_id": "config-model-gemini-language-fallback",
+                "help_id": "config-model-gemini-language-fallback-help",
+                "fallback_title_id": "config-field-fallback",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-gemini-language",
+                "reference": "models",
+                "model_type": "language",
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Modèle de secours",
+                "help": "Répond à sa place quand ce modèle échoue, dans tous ses rôles."
+              }
+            }
+          },
+          "required": [
+            "provider",
+            "type",
+            "api_key",
+            "model"
+          ],
+          "title": "GeminiLanguageSettings",
           "type": "object"
         },
         "openai-compatible-embedding": {
@@ -2124,6 +2611,26 @@
                 "title": "Voit les images",
                 "help": "À activer pour un modèle qui lit les images : il voit alors les photos envoyées. Sinon, il dit qu'il ne les voit pas."
               }
+            },
+            "fallback": {
+              "type": "string",
+              "x-nestor": {
+                "field": "fallback",
+                "title_id": "config-model-openai-compatible-language-fallback",
+                "help_id": "config-model-openai-compatible-language-fallback-help",
+                "fallback_title_id": "config-field-fallback",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "model-openai-compatible-language",
+                "reference": "models",
+                "model_type": "language",
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Modèle de secours",
+                "help": "Répond à sa place quand ce modèle échoue, dans tous ses rôles."
+              }
             }
           },
           "required": [
@@ -2751,8 +3258,10 @@
         }
       },
       "model_types": {
+        "anthropic-language": "language",
         "elevenlabs-speech": "speech",
         "elevenlabs-transcription": "transcription",
+        "gemini-language": "language",
         "openai-compatible-embedding": "embedding",
         "openai-compatible-image": "image",
         "openai-compatible-language": "language",

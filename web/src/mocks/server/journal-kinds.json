@@ -6,6 +6,7 @@
   "conversation.fallback": "conversation",
   "conversation.turn.cut": "conversation",
   "conversation.titled": "conversation",
+  "model.fell-back": "conversation",
   "initiative.considered": "delivery",
   "initiative.delivered": "delivery",
   "initiative.withheld": "delivery",

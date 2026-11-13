@@ -363,13 +363,15 @@ class AgentReply(Reply):
 
     async def _answer(self, conversation: str | None) -> None:
         agent = self._agent
-        sees = agent.models.of(self._medium).vision
+        model = agent.models.of(self._medium)
         history = await agent.conversations.history(
             self._address,
             conversation,
             max_events=agent.settings.history_events,
             names=agent.speakers.name_of,
-            look=agent.attachments.images if sees else None,
+            look=agent.attachments.shown,
+            sees=model.vision,
+            reads=model.reads,
         )
         opening = self._opening
         if isinstance(opening, Notification):  # not in the journal yet: read as it will be once delivered

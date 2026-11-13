@@ -11,7 +11,7 @@ from nestor.modules.cognition.images import ImageTools
 from nestor.modules.cognition.model import ModelRequest, Role, ToolCall
 from nestor.modules.cognition.tools import Results
 from nestor.modules.conversation import AnswerAttached, Attachments, ChannelProfile, UserTurn
-from nestor.modules.conversation.conversations import IMAGES
+from nestor.modules.conversation.conversations import DOCUMENTS, IMAGES
 from nestor.modules.conversation.history import IMAGE_BYTES
 from nestor.modules.journal import Journal
 from nestor.testing.channels import OGG, ScriptedSpeech, ScriptedTranscription
@@ -37,6 +37,10 @@ def last_user(request: ModelRequest):
 
 class Seeing(ScriptedModel):
     vision = True
+
+
+class ReadingPdfs(ScriptedModel):
+    reads = frozenset({"application/pdf"})
 
 
 async def test_a_voice_message_is_kept_heard_and_logged_as_the_person_s_words(
@@ -195,3 +199,48 @@ async def test_an_answer_that_cannot_be_recorded_is_written(make_agent: MakeAgen
     agent = make_agent(model=ScriptedModel("Le pain est noté."), attachments=attachments, channels=SPEAKING)
     [answer] = [a async for a in agent.respond(sent("", VOICE_NOTE)).answers()]
     assert (answer.text, answer.voice) == ("Le pain est noté.", None)
+
+
+async def test_a_model_that_reads_pdfs_gets_the_last_ones_whole_and_the_others_as_text(
+    make_agent: MakeAgent, journal: Journal
+) -> None:
+    model, blobs = ReadingPdfs(), CountedBlobStore()
+    agent = make_agent(model=model, attachments=Attachments(blobs, documents=(FileReader(), Results(journal, blobs))))
+    pdfs = [
+        Attachment(kind=AttachmentKind.FILE, data=text_pdf(f"Devis {i}"), media_type="application/pdf", name=f"{i}.pdf")
+        for i in range(3)
+    ]
+    for pdf in pdfs:
+        await agent.respond(sent("", pdf)).collect()
+
+    users = [m for m in model.requests[-1].messages if m.role is Role.USER]
+    assert [(d.name, d.data) for m in users for d in m.documents] == [(p.name, p.data) for p in pdfs[-DOCUMENTS:]]
+    assert re.fullmatch(
+        r"\[A document \(2\.pdf\), attached; its text also with read_result\(ref='\w+'\)\]", users[-1].content
+    ), "a fallback that does not read it whole can still read its text"
+    assert users[0].content.startswith("[A document (0.pdf): read its text with read_result"), "an older one is read"
+    assert set(blobs.reads.values()) == {1}, "a file shown again next turn is not read again"
+
+
+class CountedBlobStore(MemoryBlobStore):
+    def __init__(self) -> None:
+        super().__init__()
+        self.reads: dict[str, int] = {}
+
+    async def get(self, digest: str) -> bytes:
+        self.reads[digest] = self.reads.get(digest, 0) + 1
+        return await super().get(digest)
+
+
+async def test_the_files_of_one_request_stay_within_what_providers_take(make_agent: MakeAgent) -> None:
+    model = ReadingPdfs()
+    agent = make_agent(model=model, attachments=Attachments(MemoryBlobStore()))
+    heavy = [
+        Attachment(kind=AttachmentKind.FILE, data=bytes([i]) * 9_000_000, media_type="application/pdf", name=f"{i}.pdf")
+        for i in range(2)
+    ]
+    for pdf in heavy:
+        await agent.respond(sent("", pdf)).collect()
+
+    users = [m for m in model.requests[-1].messages if m.role is Role.USER]
+    assert [d.name for m in users for d in m.documents] == ["1.pdf"], "two would weigh more than a request may"

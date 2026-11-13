@@ -14,7 +14,7 @@ import pytest
 
 from nestor.core import Component, ContractError
 from nestor.modules.channels import Address, Medium, TranscriptionModel
-from nestor.modules.cognition import Outcome, TaskDelivered
+from nestor.modules.cognition import FallingBack, Outcome, TaskDelivered
 from nestor.modules.cognition.model import ModelRequest, ToolCall
 from nestor.modules.conversation import AssistantTurn
 from nestor.runtime import Backoff, Nestor, Registry
@@ -103,6 +103,18 @@ async def test_an_embedding_model_is_declared_with_the_others_and_finds_memories
         Nestor(with_embedder(tmp_path, "main"), fakes.registry())
     with pytest.raises(ConfigError, match=r"agent\.spoken: sens cannot answer"):
         Nestor(with_embedder(tmp_path, "sens", "agent: {written: sens}\n"), fakes.registry())
+
+
+def test_every_role_of_a_model_falls_back_on_the_same_chain(tmp_path: Path) -> None:
+    text = CONFIG.format(data_dir=tmp_path, replies=[]).replace(
+        "models: {main: {type: language, provider: scripted, replies: []}}",
+        "models: {main: {type: language, provider: scripted, fallback: spare},"
+        " spare: {type: language, provider: scripted}}\nagent: {written: main}",
+    )
+    nestor = Nestor(parse_config(text, {}), Fakes().registry())
+    written = nestor.agent.models.written
+    assert isinstance(written, FallingBack)
+    assert nestor.agent.models.spoken is written, "one chain per model, whatever its roles"
 
 
 class HearingSettings(NoSettings):

@@ -27,10 +27,11 @@ from pydantic import BaseModel, SecretStr, ValidationError
 from ruamel.yaml import YAML
 from ruamel.yaml.comments import CommentedMap, CommentedSeq
 
-from nestor.core import NestorError, utc_now
+from nestor.core import ModelType, NestorError, utc_now
 from nestor.modules.journal import Journal
 from nestor.modules.system import ConfigChanged
 from nestor.runtime.config import (
+    LANGUAGE_MODEL,
     AdminConfig,
     AgentConfig,
     ConfigError,
@@ -68,6 +69,7 @@ class Slot:
     shape: Shape
     required: bool
     picks: tuple[str, ...] = ("kind",)  # the keys of an entry that pick its plugin, whose values make its id
+    holds: tuple[str, ...] = ()  # the other keys of an entry the configuration reads, not its plugin's settings
 
     def plugin(self, entry: Mapping[str, Any]) -> str:
         """The id of the plugin an entry picks (`Plugin.id`): `telegram`, `elevenlabs-speech`."""
@@ -75,7 +77,7 @@ class Slot:
 
 
 SLOTS = (
-    Slot("models", Family.MODEL, Shape.NAMED, required=True, picks=("provider", "type")),
+    Slot("models", Family.MODEL, Shape.NAMED, required=True, picks=("provider", "type"), holds=("fallback",)),
     Slot("channels", Family.CHANNEL, Shape.LIST, required=True),
     Slot("executors", Family.EXECUTOR, Shape.LIST, required=False),
     Slot("tools", Family.TOOLS, Shape.LIST, required=False),
@@ -210,16 +212,18 @@ class ConfigSchema:
 
     def kind(self, slot: Slot, kind: str) -> dict[str, Any]:
         """A plugin's settings as a slot holds them: with what picks it (its `kind`, or a model's `provider` and
-        `type`), and a `name` in a list, where it tells one apart from the others."""
+        `type`), a `name` in a list, where it tells one apart from the others, and a language model's `fallback`."""
         plugin = self.registry.get(slot.family, kind)
         schema = plugin.settings.model_json_schema()
         schema.setdefault("properties", {})
         values = {"kind": plugin.kind, "provider": plugin.kind, "type": plugin.model_type}
         name = {"name": {"type": "string", "description": "the instance's name; the kind by default"}}
+        fallback = {"fallback": {"type": "string", **LANGUAGE_MODEL}}  # answers when it fails
         schema["properties"] = {
             **{key: {"const": values[key], "type": "string"} for key in slot.picks},
             **(name if slot.shape is Shape.LIST else {}),
             **schema["properties"],
+            **(fallback if plugin.model_type is ModelType.LANGUAGE else {}),
         }
         schema["required"] = [*slot.picks, *schema.get("required", [])]
         return annotate(schema, f"{slot.family.value}-{kind}")
@@ -494,7 +498,7 @@ class ConfigEditor:
             except NestorError:
                 problems.append(Problem((*where, slot.picks[0]), ProblemCode.UNKNOWN_KIND, slot.plugin(entry)))
                 continue
-            own = (*slot.picks, "name") if slot.shape is Shape.LIST else slot.picks
+            own = (*slot.picks, *slot.holds, *(("name",) if slot.shape is Shape.LIST else ()))
             settings = {k: v for k, v in entry.items() if k not in own}
             try:
                 plugin.settings.model_validate(settings)

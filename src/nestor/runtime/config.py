@@ -180,11 +180,14 @@ class ComponentConfig(BaseModel):
 
 
 class ModelConfig(BaseModel):
-    """A model of `models`: its `type` and its `provider` pick the plugin; the other keys are its settings."""
+    """A model of `models`: its `type` and its `provider` pick the plugin; `fallback` names the language model of
+    `models` that answers when this one fails before answering, for every role it holds; the other keys are its
+    settings."""
 
     model_config = ConfigDict(extra="allow", frozen=True)
     type: ModelType
     provider: str
+    fallback: str | None = None
 
     @property
     def plugin(self) -> str:
@@ -313,9 +316,18 @@ class NestorConfig(Section):
     @field_validator("models")
     @classmethod
     def _model_keys(cls, value: dict[str, ModelConfig]) -> dict[str, ModelConfig]:
-        for key in value:
+        for key, model in value.items():
             if not _MODEL_KEY.fullmatch(key):
                 raise ValueError(f"{key!r} cannot name a model: letters, digits, `_`, `.` and `-`, starting with one")
+            if model.fallback is None:
+                continue
+            fallback = value.get(model.fallback)
+            if fallback is None:
+                raise ValueError(f"{key}.fallback: no model named {model.fallback!r} in models ({', '.join(value)})")
+            if model.type is not ModelType.LANGUAGE or fallback.type is not ModelType.LANGUAGE:
+                raise ValueError(f"{key}.fallback: only a language model falls back, on another language model")
+        for key in value:
+            _chain(value, key)  # no model falls back on itself, through others or not
         return value
 
     @field_validator("agent")
@@ -355,8 +367,11 @@ class NestorConfig(Section):
     def roles(self, answering: Collection[str]) -> dict[str, str]:
         """The key of the model each role uses, defaults applied: `spoken`, `written`, `titles`, `watches`,
         `consolidation`.
-        `answering` are the models that answer (not those that embed): with a single one, every role takes it."""
-        sole = next(iter(answering)) if len(answering) == 1 else None
+        `answering` are the models that answer (not those that embed): with a single one, every role takes it. A model
+        that is only some model's fallback does not count: it answers when that one fails."""
+        fallbacks = {m.fallback for m in self.models.values()}
+        answering = [key for key in answering if key not in fallbacks]
+        sole = answering[0] if len(answering) == 1 else None
         written = self.agent.written or self.agent.spoken or sole
         if written is None:
             among = ", ".join(answering) or "-"
@@ -374,6 +389,10 @@ class NestorConfig(Section):
             "consolidation": self.memory.consolidation or written,
         }
 
+    def chain(self, key: str) -> tuple[str, ...]:
+        """The model `key` and those that answer in turn when the previous one fails (`fallback`)."""
+        return _chain(self.models, key)
+
     def voice_messages(self) -> tuple[str | None, str | None]:
         """The models that hear voice messages and record the answers to them: those `agent` names, else the only
         model of each type; `None` without one."""
@@ -385,6 +404,15 @@ class NestorConfig(Section):
     def images(self) -> str | None:
         """The model that draws pictures: the one `agent` names, else the only image model; `None` without one."""
         return self.agent.images or _sole(self.models, ModelType.IMAGE)
+
+
+def _chain(models: Mapping[str, "ModelConfig"], key: str) -> tuple[str, ...]:
+    chain = [key]
+    while (fallback := models[chain[-1]].fallback) is not None:
+        if fallback in chain:
+            raise ValueError(f"{key}.fallback: {' → '.join([*chain, fallback])} falls back in a circle")
+        chain.append(fallback)
+    return tuple(chain)
 
 
 def _sole(models: Mapping[str, "ModelConfig"], kind: ModelType) -> str | None:

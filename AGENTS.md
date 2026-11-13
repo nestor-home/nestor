@@ -103,9 +103,9 @@ own (`wire.py` for what it encodes, `stream.py` for a streamed answer it decodes
 declared as the entry point `<provider>-<type> = "nestor.adapters.models.<provider>:<type>"`. The configuration
 names a model by `type` and `provider`; the runtime builds it and checks it is of that type. Transcription and speech
 models run in the voice pipeline: they derive from `adapters/models/pipecat` (shared by the family, not a provider)
-and wrap their Pipecat service, so a new provider is a few lines; `adapters/models/common.py` is what the
-OpenAI-compatible endpoints share. A new type is a member of `ModelType`, its base class and its contract, nothing
-else.
+and wrap their Pipecat service, so a new provider is a few lines; `adapters/models/common.py` is what the providers
+share (the OpenAI-compatible endpoints' settings, tool calls streamed in fragments, files in base64, the dialogue as
+the turns of a native API). A new type is a member of `ModelType`, its base class and its contract, nothing else.
 
 ## Adapters by provider
 

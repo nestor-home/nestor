@@ -30,6 +30,7 @@ from nestor.modules.accounts import (
 )
 from nestor.modules.channels import Address, AttachmentKind
 from nestor.modules.cognition import (
+    ModelFellBack,
     TaskAttached,
     TaskCancelRequested,
     TaskDelivered,
@@ -134,6 +135,7 @@ CATEGORIES: Mapping[Kind, tuple[type[Event], ...]] = {
         FallbackSpoken,
         AnswerCut,
         ConversationTitled,
+        ModelFellBack,
     ),
     Kind.DELIVERY: (
         DeliveryConsidered,
@@ -264,6 +266,12 @@ class EventDescriber:
                 e, Message.of("journal-fallback", reason=e.reason), channels=[e.address], tone=Tone.WARNING
             ),
             ConversationTitled: lambda e: self._line(e, Message.of("journal-conversation-titled", title=e.title)),
+            ModelFellBack: lambda e: self._line(
+                e,
+                Message.of("journal-model-fell-back", model=e.model, fallback=e.fallback),
+                detail=e.error,
+                tone=Tone.WARNING,
+            ),
             AnswerAttached: lambda e: self._line(
                 e,
                 Message.of(

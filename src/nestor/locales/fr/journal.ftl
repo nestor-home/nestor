@@ -21,6 +21,7 @@ journal-fallback = Réponse de secours : { $reason ->
    *[other] { $reason }
 }
 journal-answer-cut = Réponse interrompue
+journal-model-fell-back = { $model } a échoué : { $fallback } prend le relais
 journal-conversation-titled = Conversation intitulée « { $title } »
 journal-answer-voiced = { $assistant } a répondu par un message vocal
 journal-answer-files = { $count ->

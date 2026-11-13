@@ -21,13 +21,14 @@ def _humanize(name: str) -> str:
 
 def _render(node: Any, words: Phrasebook) -> Any:
     """Fills `x-nestor.title` and `help` in the reader's language: the field's own message, else the
-    generic one for that field name, else its name."""
+    generic one for that field name, else its name (no help)."""
     if isinstance(node, dict):
         meta = node.get("x-nestor")
         if isinstance(meta, dict):
             generic = words.text_or(Message(meta["fallback_title_id"]), _humanize(meta["field"]))
             meta["title"] = words.text_or(Message(meta["title_id"]), generic)
-            help_text = words.text_or(Message(meta["help_id"]), "")
+            generic_help = words.text_or(Message(f"{meta['fallback_title_id']}-help"), "")
+            help_text = words.text_or(Message(meta["help_id"]), generic_help)
             meta["help"] = help_text or None
         for child in node.values():
             _render(child, words)

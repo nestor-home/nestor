@@ -1,10 +1,10 @@
 """What adapters calling an HTTP API share: which errors a retry may get past, the detail of an error as the
-provider words it, a key never shown in one, and a client for JSON APIs."""
+provider words it, a key never shown in one, a client for JSON APIs, and streamed answers (Server-Sent Events)."""
 
 import hashlib
 import hmac
 import json
-from collections.abc import Collection, Mapping
+from collections.abc import AsyncGenerator, AsyncIterator, Callable, Collection, Mapping
 from typing import Any
 
 import httpx
@@ -38,6 +38,44 @@ def provider_error(provider: str, api_key: str | None, message: str, *, transien
     """A `ProviderError` labelled with `provider`, the key redacted wherever the message quotes it."""
     redacted = message.replace(api_key, "[redacted]") if api_key else message
     return ProviderError(provider, redacted, transient=transient)
+
+
+type Failure = Callable[..., ProviderError]
+"""Makes the `ProviderError` of an adapter from a message and `transient`."""
+
+
+async def streamed_lines(
+    client: httpx.AsyncClient, path: str, body: object, error: Failure, **kwargs: Any
+) -> AsyncGenerator[str]:
+    """The lines of the answer to a streamed POST of `body`. An error status, a timeout or a transport failure is
+    `error`'s `ProviderError`, transient when a retry may get past it."""
+    try:
+        async with client.stream("POST", path, json=body, **kwargs) as response:
+            if response.is_error:
+                said = detail(await response.aread())
+                raise error(f"HTTP {response.status_code}: {said}", transient=retryable(response.status_code))
+            async for line in response.aiter_lines():
+                yield line
+    except httpx.TimeoutException as failure:
+        raise error(f"timed out ({type(failure).__name__})", transient=True) from failure
+    except httpx.HTTPError as failure:
+        raise error(f"transport failure ({type(failure).__name__}: {failure})", transient=True) from failure
+
+
+async def sse_payloads(lines: AsyncIterator[str], error: Failure) -> AsyncGenerator[dict[str, Any]]:
+    """The JSON object of each `data:` field of a Server-Sent Events stream, as Anthropic and Gemini send them (one
+    line each); other fields and comments are skipped. One that is not a JSON object is a transient failure."""
+    async for line in lines:
+        if not line.startswith("data:"):
+            continue
+        data = line.removeprefix("data:").strip()
+        try:
+            payload = json.loads(data)
+        except json.JSONDecodeError:
+            payload = None
+        if not isinstance(payload, dict):
+            raise error(f"malformed stream event: {data[:MAX_DETAIL]}", transient=True)
+        yield payload
 
 
 def signature(secret: str, body: bytes) -> str:

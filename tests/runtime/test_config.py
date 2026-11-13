@@ -94,6 +94,50 @@ def test_a_role_must_name_a_declared_model(extra: str, error: str) -> None:
         parse_config(TWO_MODELS + extra, ENV)
 
 
+def with_fallbacks(**fallbacks: str) -> str:
+    """Three language models and an embedding one, each falling back as said."""
+    models = {
+        "haiku": "type: language, provider: openai-compatible, base_url: https://openrouter.ai/api/v1, api_key: k",
+        "local": "type: language, provider: openai-compatible, base_url: http://localhost:11434/v1",
+        "spare": "type: language, provider: openai-compatible, base_url: http://pi:8080/v1",
+        "vectors": "type: embedding, provider: openai-compatible, base_url: http://pi:8081/v1",
+    }
+    lines = [
+        f"  {key}: {{{settings}, model: m{', fallback: ' + fallbacks[key] if key in fallbacks else ''}}}"
+        for key, settings in models.items()
+    ]
+    return VALID.replace(
+        VALID[VALID.index("models:") : VALID.index("channels:")], "models:\n" + "\n".join(lines) + "\n"
+    )
+
+
+def test_a_model_falls_back_on_others_in_turn() -> None:
+    config = parse_config(with_fallbacks(local="haiku", haiku="spare"), ENV)
+    assert config.chain("local") == ("local", "haiku", "spare")
+    assert config.chain("spare") == ("spare",)
+    assert "fallback" not in config.models["local"].settings(), "the configuration reads it, not the model's plugin"
+
+
+def test_a_single_model_with_a_fallback_still_takes_every_role() -> None:
+    config = parse_config(with_fallbacks(local="haiku", haiku="spare"), ENV)
+    assert set(config.roles(["haiku", "local", "spare"]).values()) == {"local"}
+
+
+@pytest.mark.parametrize(
+    ("fallbacks", "error"),
+    [
+        ({"local": "sonnet"}, "local.fallback: no model named 'sonnet' in models (haiku, local, spare, vectors)"),
+        ({"local": "local"}, "local.fallback: local → local falls back in a circle"),
+        ({"local": "haiku", "haiku": "local"}, "haiku.fallback: haiku → local → haiku falls back in a circle"),
+        ({"local": "vectors"}, "local.fallback: only a language model falls back, on another language model"),
+        ({"vectors": "local"}, "vectors.fallback: only a language model falls back, on another language model"),
+    ],
+)
+def test_a_fallback_is_another_language_model_without_a_circle(fallbacks: dict[str, str], error: str) -> None:
+    with pytest.raises(ConfigError, match=re.escape(error)):
+        parse_config(with_fallbacks(**fallbacks), ENV)
+
+
 def test_with_several_models_that_answer_the_agent_says_which() -> None:
     config = parse_config(TWO_MODELS, ENV)
     with pytest.raises(ConfigError, match=re.escape("agent: several models can answer (haiku, local)")):

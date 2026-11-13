@@ -19,14 +19,14 @@ model sees it. It is also where turns wait for each other: one at a time per ses
 
 import asyncio
 import contextlib
-from collections.abc import AsyncGenerator, Awaitable, Callable, Mapping, Sequence
+from collections.abc import AsyncGenerator, Awaitable, Callable, Sequence
 from contextvars import ContextVar
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 
 from nestor.core import Event, PersonId, SessionId, new_id, utc_now
 from nestor.modules.channels import Address, AttachmentKind, Exchange, Medium
-from nestor.modules.cognition.model import Image, Message
+from nestor.modules.cognition.model import Message
 from nestor.modules.conversation.events import (
     AnswerAttached,
     AnswerCut,
@@ -35,13 +35,24 @@ from nestor.modules.conversation.events import (
     NotificationTurn,
     UserTurn,
 )
-from nestor.modules.conversation.history import HISTORY_EVENTS, IMAGE_BYTES, Names, in_conversation, to_messages
+from nestor.modules.conversation.history import (
+    HISTORY_EVENTS,
+    IMAGE_BYTES,
+    Names,
+    Shown,
+    in_conversation,
+    to_messages,
+)
 from nestor.modules.conversation.types import Attached, FallbackReason, Mentioned, Notification
 from nestor.modules.identity import Speaker
 from nestor.modules.journal import Journal
 
 SOURCE = "agent"
 IMAGES = 4  # the last images of a conversation a model that sees them looks at again, every turn
+DOCUMENT_BYTES = 10_000_000  # a document larger than this is read as text, never sent whole
+DOCUMENTS = 2  # the last documents of a conversation a model that reads them whole reads again, every turn
+# what the files of one request may weigh: 20 MB once in base64, Gemini's limit for a request (Anthropic's is 32 MB)
+SHOWN_BYTES = 15_000_000
 _HELD: ContextVar[frozenset[SessionId]] = ContextVar("held", default=frozenset())  # sessions this task's turn holds
 
 
@@ -205,28 +216,25 @@ class Conversations:
         *,
         max_events: int = 60,
         names: Names | None = None,
-        look: Callable[[Sequence[Attached]], Awaitable[Mapping[str, Image]]] | None = None,
+        look: Callable[[Sequence[Attached]], Awaitable[Shown]] | None = None,
+        sees: bool = False,
+        reads: frozenset[str] = frozenset(),
     ) -> tuple[Message, ...]:
         """A conversation's last turns as the model reads them, whatever process held them (restarts included);
         nothing without one. Earlier conversations of the session are not replayed, as in Assist.
 
-        `look` gives the images a model that sees them looks at: the last `IMAGES` sent in the conversation (the
-        others are mentioned only); `None` for a model that does not see images."""
+        `look` gives the files a model looks at itself (`_shown`): the others are mentioned only, a document read as
+        text then."""
         if conversation is None:
             return ()
         events = await self.journal.history(
             *HISTORY_EVENTS, session=address.session, newest_first=True, limit=max_events
         )
         events = in_conversation(reversed(events), conversation)
-        sent = [
-            a
-            for e in events
-            if isinstance(e, UserTurn)
-            for a in e.attachments
-            if a.kind is AttachmentKind.IMAGE and a.blob.size <= IMAGE_BYTES
-        ]
-        images = await look(sent[-IMAGES:]) if look is not None else None
-        return to_messages(events, names=names, images=images)
+        sent = [a for e in events if isinstance(e, UserTurn) for a in e.attachments]
+        wanted = _shown(sent, sees, reads)
+        shown = await look(wanted) if look is not None and wanted else {}
+        return to_messages(events, names=names, shown=shown, sees=sees)
 
     async def fell_back(self, address: Address, reason: FallbackReason) -> FallbackSpoken:
         """A provider failed while drafting outside any turn (a notification's answer)."""
@@ -266,3 +274,21 @@ class Conversations:
         self._loaded.add(session)
         if latest and (exchange := latest[0].exchange) is not None:
             self._open.setdefault(session, _Open(exchange.conversation_id, latest[0].at))
+
+
+def _shown(sent: Sequence[Attached], sees: bool, reads: frozenset[str]) -> list[Attached]:
+    """The files of a conversation a model looks at itself, the latest first: up to `IMAGES` images when it `sees`, up
+    to `DOCUMENTS` documents of the types it `reads` whole, each small enough for providers (`IMAGE_BYTES`,
+    `DOCUMENT_BYTES`), and together no more than `SHOWN_BYTES`, so that no request grows past what they take."""
+    left = {AttachmentKind.IMAGE: IMAGES if sees else 0, AttachmentKind.FILE: DOCUMENTS}
+    largest = {AttachmentKind.IMAGE: IMAGE_BYTES, AttachmentKind.FILE: DOCUMENT_BYTES}
+    budget, wanted = SHOWN_BYTES, []
+    for attached in reversed(sent):
+        kind, size = attached.kind, attached.blob.size
+        if kind is AttachmentKind.FILE and attached.blob.media_type not in reads:
+            continue
+        if left.get(kind, 0) and size <= min(largest[kind], budget):
+            left[kind] -= 1
+            budget -= size
+            wanted.append(attached)
+    return wanted

@@ -17,6 +17,9 @@ class ToolCall:
     id: str
     name: str
     arguments: Mapping[str, object] = field(default_factory=dict)
+    # opaque to Nestor: what the provider that asked for the call wants back with it within the turn (Gemini's
+    # thought signature, Claude's reasoning before it); not journaled, as a provider asks for it only in that turn
+    replay: str | None = field(default=None, repr=False)
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -25,6 +28,16 @@ class Image:
 
     media_type: str
     data: bytes = field(repr=False)
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class Document:
+    """A document the model reads whole, as its provider renders it (a PDF someone sent: its pages, pictures
+    included), rather than its extracted text."""
+
+    media_type: str
+    data: bytes = field(repr=False)
+    name: str | None = None
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -39,10 +52,11 @@ class Message:
     tool_call_id: str | None = None  # set on TOOL messages: which call this result answers
     layers: tuple[str, ...] = ()
     images: tuple[Image, ...] = ()  # on USER messages, for a model that sees images (`LanguageModel.vision`)
+    documents: tuple[Document, ...] = ()  # on USER messages, of the types the model reads (`LanguageModel.reads`)
 
     @classmethod
-    def user(cls, content: str, images: tuple[Image, ...] = ()) -> "Message":
-        return cls(role=Role.USER, content=content, images=images)
+    def user(cls, content: str, images: tuple[Image, ...] = (), documents: tuple[Document, ...] = ()) -> "Message":
+        return cls(role=Role.USER, content=content, images=images, documents=documents)
 
     @property
     def text(self) -> str:

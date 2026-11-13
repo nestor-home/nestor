@@ -7,7 +7,7 @@ from collections.abc import AsyncIterator, Collection, Iterable, Mapping, Sequen
 
 from nestor.core import ProviderError
 from nestor.modules.channels import Attachment, AttachmentKind, SpeechModel, TranscriptionModel
-from nestor.modules.cognition.model import Image
+from nestor.modules.cognition.model import Document, Image
 from nestor.modules.cognition.tools import Results, ToolContext
 from nestor.modules.conversation.ports import DocumentReader
 from nestor.modules.conversation.types import Attached, Outgoing, Read
@@ -16,6 +16,7 @@ from nestor.modules.journal import BlobRef, BlobStore
 logger = logging.getLogger(__name__)
 
 HEARD = frozenset({AttachmentKind.VOICE, AttachmentKind.AUDIO})  # recordings, transcribed when kept
+KEPT_SHOWN = 12  # files kept in memory once shown to a model, to show again next turn (a few conversations' worth)
 VOICE_TYPE = "audio/ogg"  # what `SpeechModel.synthesize` records
 
 
@@ -34,6 +35,7 @@ class Attachments:
     ) -> None:
         self._blobs, self._transcription, self._speech = blobs, transcription, speech
         self._documents = documents
+        self._shown: dict[str, Image | Document] = {}  # the files last shown to a model, by digest
 
     @property
     def speaks(self) -> bool:
@@ -68,13 +70,23 @@ class Attachments:
             tuple(Attached(kind=kind, blob=blob) for kind, blob, _ in found),
         )
 
-    async def images(self, attached: Sequence[Attached]) -> Mapping[str, Image]:
-        """The pictures among `attached`, by digest, as the model looks at them."""
-        pictures = {a.blob.digest: a.blob for a in attached if a.kind is AttachmentKind.IMAGE}
-        return {
-            blob.digest: Image(media_type=blob.media_type, data=data)
-            async for blob, data in self._stored(pictures.values())
-        }
+    async def shown(self, attached: Sequence[Attached]) -> Mapping[str, Image | Document]:
+        """`attached` as the model looks at them, by digest: pictures, and other files as documents. The same files
+        come back turn after turn: the last ones are kept rather than read again."""
+        named = {a.blob.digest: a for a in attached}
+        missing = [a.blob for a in named.values() if a.blob.digest not in self._shown]
+        async for blob, data in self._stored(missing):
+            a = named[blob.digest]
+            self._shown[blob.digest] = (
+                Image(media_type=blob.media_type, data=data)
+                if a.kind is AttachmentKind.IMAGE
+                else Document(media_type=blob.media_type, data=data, name=a.name)
+            )
+        shown = {digest: self._shown.pop(digest) for digest in named if digest in self._shown}
+        self._shown |= shown  # the latest last
+        while len(self._shown) > KEPT_SHOWN:
+            del self._shown[next(iter(self._shown))]
+        return shown
 
     async def _stored(self, blobs: Iterable[BlobRef]) -> AsyncIterator[tuple[BlobRef, bytes]]:
         """Each of `blobs` with its content; one no longer stored is left out."""

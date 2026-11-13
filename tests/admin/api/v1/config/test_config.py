@@ -165,6 +165,27 @@ async def test_models_are_named_by_the_household_and_the_agent_refers_to_them(tm
         assert "spoken: vite" in admin.config_path.read_text()
 
 
+async def test_a_language_model_names_its_fallback_in_its_own_form(tmp_path: Path) -> None:
+    async with Harness(tmp_path) as admin:
+        api = await admin.api()
+        schema = (await api.get("/api/v1/config/schema")).json()
+        kinds = schema["slots"]["models"]["kinds"]
+        fallback = kinds["scripted-language"]["properties"]["fallback"]["x-nestor"]
+        assert (fallback["reference"], fallback["model_type"], fallback["title"]) == (
+            "models",
+            "language",
+            "Modèle de secours",
+        )
+        assert "fallback" not in kinds["tagged-voices-speaker"]["properties"], "only a language model falls back"
+        edited = await document(api)
+        edited["models"]["vite"] = {"type": "language", "provider": "scripted"}
+        edited["models"]["main"]["fallback"] = "vite"
+        edited["agent"] = {"written": "main"}
+        written = await api.put("/api/v1/config", {"document": edited})
+        assert written.status_code == 200, written.text
+        assert "fallback: vite" in admin.config_path.read_text()
+
+
 async def test_an_account_two_people_claim_is_located_at_the_second(tmp_path: Path) -> None:
     async with Harness(tmp_path) as admin:
         api = await admin.api()
