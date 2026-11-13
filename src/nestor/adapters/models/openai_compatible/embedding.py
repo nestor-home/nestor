@@ -14,7 +14,7 @@ from typing import Any
 
 import httpx
 
-from nestor.adapters.common.http import MAX_DETAIL, detail, provider_error, retryable
+from nestor.adapters.common.http import MAX_DETAIL, detail, identity, provider_error, retryable
 from nestor.adapters.models.common import brand
 from nestor.core import ContractError, ProviderError
 from nestor.modules.cognition.embedding import EmbeddingModel, EmbeddingSpace, Vector
@@ -58,7 +58,9 @@ class OpenAICompatibleEmbedding(EmbeddingModel):
         return {"model": self._space.model, "dimensions": str(self._space.dimensions)}
 
     async def start(self) -> None:
-        headers = {"Authorization": f"Bearer {self._api_key}"} if self._api_key else {}
+        headers = identity(self._base_url)
+        if self._api_key:
+            headers["Authorization"] = f"Bearer {self._api_key}"
         self._client = httpx.AsyncClient(base_url=self._base_url, headers=headers, timeout=self._timeout)
 
     async def close(self) -> None:

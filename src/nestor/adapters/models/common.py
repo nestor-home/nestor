@@ -3,7 +3,6 @@ calls streamed in fragments, files encoded once, and the dialogue as the turns o
 
 import base64
 import json
-import urllib.parse
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from functools import lru_cache
@@ -12,7 +11,7 @@ from typing import Any
 from pydantic import Field, SecretStr, ValidationInfo, field_validator
 from pydantic_core import PydanticCustomError
 
-from nestor.adapters.common.http import MAX_DETAIL, Failure
+from nestor.adapters.common.http import MAX_DETAIL, Failure, host_among
 from nestor.core import new_id
 from nestor.modules.cognition import Message, Role, ToolCall
 from nestor.runtime.plugins import AdapterSettings
@@ -30,8 +29,7 @@ BRANDED: dict[str, Any] = {"brands": BRANDS}  # the field the brand is read from
 
 def brand_host(base_url: str) -> str | None:
     """The known provider `base_url` belongs to (`openrouter.ai`), if any: each requires an API key."""
-    host = urllib.parse.urlsplit(base_url).hostname or ""
-    return next((suffix for suffix in BRANDS if host == suffix or host.endswith(f".{suffix}")), None)
+    return host_among(base_url, BRANDS)
 
 
 def brand(base_url: str) -> str | None:
