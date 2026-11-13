@@ -2,12 +2,11 @@
 `data: [DONE]`."""
 
 import json
-from collections.abc import AsyncGenerator, AsyncIterator, Callable, Iterator
-from dataclasses import dataclass, field
+from collections.abc import AsyncGenerator, AsyncIterator, Iterator
 from typing import Any
 
-from nestor.adapters.common.http import MAX_DETAIL, message_of, retryable
-from nestor.core import ProviderError, new_id
+from nestor.adapters.common.http import MAX_DETAIL, Failure, message_of, retryable
+from nestor.adapters.models.common import PartialCall
 from nestor.modules.cognition import (
     Finished,
     FinishReason,
@@ -26,21 +25,12 @@ _FINISH_REASONS = {
 }
 
 
-@dataclass(slots=True)
-class _PartialCall:
-    """A tool call whose fields arrive in fragments across stream chunks."""
-
-    id: str = ""
-    name: str = ""
-    arguments: list[str] = field(default_factory=list)
-
-
 class ChunkDecoder:
     """Turns the chunks of one streamed reply into model outputs."""
 
-    def __init__(self, error: Callable[..., ProviderError]) -> None:
+    def __init__(self, error: Failure) -> None:
         self._error = error
-        self._calls: dict[int, _PartialCall] = {}
+        self._calls: dict[int, PartialCall] = {}
         self._finish: str | None = None
         self._usage: Usage | None = None
         self._model: str | None = None
@@ -89,7 +79,7 @@ class ChunkDecoder:
                 self._finish = reason
 
     def _add_fragment(self, fragment: dict[str, Any], position: int) -> None:
-        partial = self._calls.setdefault(fragment.get("index", position), _PartialCall())
+        partial = self._calls.setdefault(fragment.get("index", position), PartialCall())
         function = fragment.get("function") or {}
         partial.id = partial.id or fragment.get("id") or ""
         partial.name = partial.name or function.get("name") or ""
@@ -97,18 +87,7 @@ class ChunkDecoder:
 
     def _completed_calls(self) -> Iterator[ToolCall]:
         for index in sorted(self._calls):
-            partial = self._calls[index]
-            if not partial.name:
-                raise self._error(f"tool call #{index} has no name", transient=True)
-            raw = "".join(partial.arguments) or "{}"
-            try:
-                arguments = json.loads(raw)
-            except json.JSONDecodeError:
-                arguments = None
-            if not isinstance(arguments, dict):
-                message = f"tool call {partial.name!r} has invalid JSON arguments: {raw[:MAX_DETAIL]}"
-                raise self._error(message, transient=True)
-            yield ToolCall(partial.id or new_id(), partial.name, arguments)
+            yield self._calls[index].call(self._error)
 
 
 def _usage(usage: dict[str, Any]) -> Usage | None:

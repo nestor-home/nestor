@@ -1,11 +1,11 @@
 """The OpenAI API's wire format: Chat Completions messages and tools encoded, the pictures and recordings it takes or
 gives. Its streamed answers are decoded in `stream`."""
 
-import base64
 import json
 from enum import StrEnum
 from typing import Any
 
+from nestor.adapters.models.common import base64_of
 from nestor.core import ContractError
 from nestor.modules.channels import AttachmentKind
 from nestor.modules.cognition import (
@@ -53,7 +53,7 @@ def wire_message(message: Message, provider: str, *, cache_control: bool) -> dic
 
 
 def _data_url(image: Image) -> str:
-    return f"data:{image.media_type};base64,{base64.b64encode(image.data).decode()}"
+    return f"data:{image.media_type};base64,{base64_of(image.data)}"
 
 
 def _wire_call(call: ToolCall) -> dict[str, object]:

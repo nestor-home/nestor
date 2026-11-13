@@ -18,7 +18,7 @@ from contextlib import aclosing
 
 import httpx
 
-from nestor.adapters.common.http import detail, provider_error, retryable
+from nestor.adapters.common.http import provider_error, streamed_lines
 from nestor.adapters.models.common import brand
 from nestor.adapters.models.openai_compatible.stream import ChunkDecoder
 from nestor.adapters.models.openai_compatible.wire import wire_message, wire_tool
@@ -83,18 +83,10 @@ class OpenAICompatibleLanguage(LanguageModel):
     async def stream(self, request: ModelRequest) -> AsyncGenerator[ModelOutput]:
         if self._client is None:
             raise ContractError(f"{self._provider}: stream() called before start()")
-        try:
-            async with self._client.stream("POST", "chat/completions", json=self._body(request)) as response:
-                if response.is_error:
-                    said = detail(await response.aread())
-                    raise self._error(f"HTTP {response.status_code}: {said}", transient=retryable(response.status_code))
-                async with aclosing(ChunkDecoder(self._error).outputs(response.aiter_lines())) as outputs:
-                    async for output in outputs:
-                        yield output
-        except httpx.TimeoutException as error:
-            raise self._error(f"timed out ({type(error).__name__})", transient=True) from error
-        except httpx.HTTPError as error:
-            raise self._error(f"transport failure ({type(error).__name__}: {error})", transient=True) from error
+        lines = streamed_lines(self._client, "chat/completions", self._body(request), self._error)
+        async with aclosing(lines), aclosing(ChunkDecoder(self._error).outputs(lines)) as outputs:
+            async for output in outputs:
+                yield output
 
     def _body(self, request: ModelRequest) -> dict[str, object]:
         body: dict[str, object] = {

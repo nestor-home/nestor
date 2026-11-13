@@ -34,7 +34,7 @@ from nestor.core.i18n import Locale
 from nestor.modules.accounts import Accounts
 from nestor.modules.activity import ActivityMonitor
 from nestor.modules.channels import Channel, ChatChannel, SpeechModel, TranscriptionModel
-from nestor.modules.cognition import Executor, LanguageModel, ToolCall
+from nestor.modules.cognition import Executor, FallingBack, LanguageModel, ToolCall
 from nestor.modules.cognition.delegation.assistant import Delegation
 from nestor.modules.cognition.delegation.service import TaskManager
 from nestor.modules.cognition.embedding import EmbeddingModel
@@ -144,8 +144,15 @@ class Nestor:
         services = replace(services, models=lambda key, wanted, path: chosen(models, key, wanted, path))
         roles = config.roles([k for k, m in config.models.items() if m.type is ModelType.LANGUAGE])
 
+        answering: dict[str, LanguageModel] = {}
+
         def model(role: str, key: str) -> LanguageModel:
-            return chosen(models, key, LanguageModel, tuple(role.split(".")))
+            """The model of a role, with those that answer when it fails (one per key, whatever its roles)."""
+            first = chosen(models, key, LanguageModel, tuple(role.split(".")))
+            if key not in answering:
+                fallbacks = [(k, chosen(models, k, LanguageModel, ("models", k))) for k in config.chain(key)[1:]]
+                answering[key] = FallingBack([(key, first), *fallbacks], self.journal) if fallbacks else first
+            return answering[key]
 
         hearing, voicing = config.voice_messages()
         drawing = config.images()

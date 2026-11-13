@@ -15,11 +15,14 @@ from nestor.modules.cognition.delegation import (
     TaskStatus,
 )
 from nestor.modules.cognition.model import (
+    Document,
+    FallingBack,
     Finished,
     FinishReason,
     Image,
     LanguageModel,
     Message,
+    ModelFellBack,
     ModelOutput,
     ModelRequest,
     Role,
@@ -31,12 +34,15 @@ from nestor.modules.cognition.model import (
 )
 
 __all__ = [
+    "Document",
     "Executor",
+    "FallingBack",
     "FinishReason",
     "Finished",
     "Image",
     "LanguageModel",
     "Message",
+    "ModelFellBack",
     "ModelOutput",
     "ModelRequest",
     "Notify",

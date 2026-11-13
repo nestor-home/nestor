@@ -22,6 +22,7 @@ journal-fallback = Fallback answer: { $reason ->
    *[other] { $reason }
 }
 journal-answer-cut = Answer interrupted
+journal-model-fell-back = { $model } failed: { $fallback } takes over
 journal-conversation-titled = Conversation titled “{ $title }”
 journal-answer-voiced = { $assistant } answered with a voice message
 journal-answer-files = { $count ->
