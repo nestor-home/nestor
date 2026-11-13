@@ -9,7 +9,11 @@ import {
   BEDROOM,
   CLAIM,
   CLAIM_STEPS,
+  DEPENDENCIES,
+  DEPENDENCIES_FILES,
+  DEPENDENCIES_RESULT,
   ENERGY,
+  ENERGY_FILES,
   ENERGY_RESULT,
   ENERGY_STEPS,
   GYM_ERROR,
@@ -41,6 +45,10 @@ const voiceNote = (transcript: string): JournalItem["attachments"][number] => ({
   name: null,
   transcript,
 });
+
+/** What a task handed back, as its `task.ended` line carries it. */
+const made = (files: typeof ENERGY_FILES): JournalItem["attachments"] =>
+  files.map((f) => ({ ...f, name: null, transcript: null }));
 
 export function day(now = Date.now()): JournalEvent[] {
   let seq = 0;
@@ -223,24 +231,24 @@ export function day(now = Date.now()): JournalEvent[] {
   ev({
     ago: 397.9,
     type: "agent.tool.called",
-    title: "Tool calendar_list called",
+    title: "Tool google_calendar_events called",
     detail: '{"day": "today", "calendar": "lea"}',
-    tool: "calendar_list",
-    brand: "google-calendar",
+    tool: "google_calendar_events",
+    brand: "google",
     people: [ref("lea")],
     channels: [VOICE],
-    links: { ...s1, turn: "u-1", call: "k-1" },
+    links: { ...s1, turn: "u-1", call: "k-1", connection: "c-google-lea" },
     cause: u1,
   });
   ev({
     ago: 397.8,
     type: "agent.tool.completed",
-    title: "Tool calendar_list finished in 0.7 s",
+    title: "Tool google_calendar_events finished in 0.7 s",
     detail: fr("2 events: “Team meeting” 10:00, “Yoga” 19:00", "2 événements : « Point équipe » 10:00, « Yoga » 19:00"),
-    tool: "calendar_list",
-    brand: "google-calendar",
+    tool: "google_calendar_events",
+    brand: "google",
     outcome: { ok: true, duration_s: 0.7 },
-    links: { ...s1, turn: "u-1", call: "k-1" },
+    links: { ...s1, turn: "u-1", call: "k-1", connection: "c-google-lea" },
   });
   ev({
     ago: 397.7,
@@ -284,10 +292,10 @@ export function day(now = Date.now()): JournalEvent[] {
   ev({
     ago: 351.9,
     type: "agent.tool.called",
-    title: "Tool mail_search called",
+    title: "Tool google_mail_search called",
     detail: '{"query": "electricity bill", "limit": 2}',
-    tool: "mail_search",
-    brand: "gmail",
+    tool: "google_mail_search",
+    brand: "google",
     people: [ref("mathis")],
     channels: ["telegram"],
     links: { ...s2, turn: "u-2", call: "k-2", connection: "c-gmail-mathis" },
@@ -296,13 +304,13 @@ export function day(now = Date.now()): JournalEvent[] {
   ev({
     ago: 351.8,
     type: "agent.tool.completed",
-    title: "Tool mail_search finished in 0.8 s",
+    title: "Tool google_mail_search finished in 0.8 s",
     detail: fr(
       "2 emails: “Your September bill”, “Your August bill”.",
       "2 courriels : « Votre facture de septembre », « Votre facture d'août ».",
     ),
-    tool: "mail_search",
-    brand: "gmail",
+    tool: "google_mail_search",
+    brand: "google",
     outcome: { ok: true, duration_s: 0.8 },
     links: { ...s2, turn: "u-2", call: "k-2", connection: "c-gmail-mathis" },
   });
@@ -360,6 +368,7 @@ export function day(now = Date.now()): JournalEvent[] {
     detail: ENERGY_RESULT,
     brand: "hermes",
     outcome: { ok: true, duration_s: 6060 },
+    attachments: made(ENERGY_FILES),
     links: { task: "t-3f2a1c" },
   });
   ev({
@@ -473,20 +482,20 @@ export function day(now = Date.now()): JournalEvent[] {
   ev({
     ago: 171,
     type: "agent.tool.called",
-    title: "Tool mail_search called",
+    title: "Tool google_mail_search called",
     detail: '{"query": "glasses invoice", "limit": 5}',
-    tool: "mail_search",
-    brand: "gmail",
+    tool: "google_mail_search",
+    brand: "google",
     people: [ref("mathis")],
     links: { call: "k-3", connection: "c-gmail-mathis", task: "t-4410aa" },
   });
   const failed = ev({
     ago: 170.9,
     type: "agent.tool.completed",
-    title: "Tool mail_search failed",
+    title: "Tool google_mail_search failed",
     detail: fr("Google refused the access token (invalid_grant).", "Google a refusé le jeton d'accès (invalid_grant)."),
-    tool: "mail_search",
-    brand: "gmail",
+    tool: "google_mail_search",
+    brand: "google",
     tone: "warning",
     outcome: { ok: false, duration_s: 1.2 },
     links: { call: "k-3", connection: "c-gmail-mathis", task: "t-4410aa" },
@@ -500,7 +509,7 @@ export function day(now = Date.now()): JournalEvent[] {
       "Google a refusé le renouvellement du jeton : reconnectez le compte.",
     ),
     people: [ref("mathis")],
-    brand: "gmail",
+    brand: "google",
     tone: "warning",
     links: { connection: "c-gmail-mathis" },
     cause: failed,
@@ -590,7 +599,7 @@ export function day(now = Date.now()): JournalEvent[] {
       "Jean-Moulin school asks for a signed permission slip before Thursday.",
       "L'école Jean-Moulin demande une autorisation signée avant jeudi.",
     ),
-    brand: "gmail",
+    brand: "google",
     links: { ...w2, connection: "c-gmail-mathis" },
   });
   ev({
@@ -843,6 +852,385 @@ export function day(now = Date.now()): JournalEvent[] {
     title: `Jules is in the ${LIVING_ROOM}`,
     people: [ref("jules")],
     room: LIVING_ROOM,
+  });
+
+  // -- early this morning, the household on its other channels ------------------------------------
+
+  // on Slack, Mathis hands a chore to Claude Code; the report comes back with its files
+  const slack = { session: "s-slack" };
+  const askedClaude = ev({
+    ago: 540,
+    type: "conversation.turn.user",
+    title: "Mathis said",
+    detail: fr(
+      "@claude-code update the home dashboard's dependencies and tell me what changed.",
+      "@claude-code mets à jour les dépendances du tableau de bord de la maison et dis-moi ce qui a changé.",
+    ),
+    people: [ref("mathis")],
+    channels: ["slack"],
+    links: { ...slack, turn: "u-s1" },
+  });
+  ev({
+    ago: 539.6,
+    type: "task.started",
+    title: "Task c1a9de handed to claude-code",
+    detail: DEPENDENCIES,
+    people: [ref("mathis")],
+    channels: ["slack"],
+    brand: "claude-code",
+    links: { ...slack, turn: "u-s1", task: "t-c1a9de" },
+    cause: askedClaude,
+  });
+  ev({
+    ago: 539.5,
+    type: "conversation.turn.assistant",
+    title: "Richie answered",
+    detail: fr(
+      "It's with Claude Code: I'll post the report here.",
+      "C'est parti chez Claude Code : je poste le rapport ici.",
+    ),
+    channels: ["slack"],
+    links: { ...slack, turn: "u-s1" },
+  });
+  ev({
+    ago: 525,
+    type: "task.progress",
+    title: "Task c1a9de: new step",
+    detail: fr("Tests pass on the new versions.", "Les tests passent avec les nouvelles versions."),
+    brand: "claude-code",
+    links: { task: "t-c1a9de" },
+  });
+  const updated = ev({
+    ago: 521,
+    type: "task.ended",
+    title: "Task c1a9de completed (18 min)",
+    detail: DEPENDENCIES_RESULT,
+    brand: "claude-code",
+    outcome: { ok: true, duration_s: 1110 },
+    attachments: made(DEPENDENCIES_FILES),
+    links: { task: "t-c1a9de" },
+  });
+  ev({
+    ago: 520.8,
+    type: "initiative.delivered",
+    title: "Message passed on: task c1a9de",
+    detail: fr(
+      "“Done: 12 dependencies updated, tests green. Report attached.”",
+      "« C'est fait : 12 dépendances à jour, tests au vert. Rapport joint. »",
+    ),
+    people: [ref("mathis")],
+    channels: ["slack"],
+    links: { task: "t-c1a9de", delivery: "d-slack" },
+    cause: updated,
+  });
+
+  // on Discord, Jules asks about tomorrow: the family calendar on iCloud
+  const discord = { session: "s-discord" };
+  const homework = fr("Richie, what do I have tomorrow?", "Richie, j'ai quoi demain ?");
+  const askedJules = ev({
+    ago: 510,
+    type: "conversation.turn.user",
+    title: "Jules said",
+    detail: homework,
+    people: [ref("jules")],
+    channels: ["discord"],
+    links: { ...discord, turn: "u-d1" },
+  });
+  ev({
+    ago: 509.9,
+    type: "agent.tool.called",
+    title: "Tool dav_calendar_events called",
+    detail: '{"start": "tomorrow 00:00", "end": "tomorrow 23:59"}',
+    tool: "dav_calendar_events",
+    brand: "dav",
+    people: [ref("jules")],
+    channels: ["discord"],
+    links: { ...discord, turn: "u-d1", call: "k-d1", connection: "c-dav-family" },
+    cause: askedJules,
+  });
+  ev({
+    ago: 509.85,
+    type: "agent.tool.completed",
+    title: "Tool dav_calendar_events finished in 0.6 s",
+    detail: fr("1 event: “Dentist, Jules” 17:30", "1 événement : « Dentiste, Jules » 17:30"),
+    tool: "dav_calendar_events",
+    brand: "dav",
+    outcome: { ok: true, duration_s: 0.6 },
+    links: { ...discord, turn: "u-d1", call: "k-d1", connection: "c-dav-family" },
+  });
+  ev({
+    ago: 509.8,
+    type: "conversation.turn.assistant",
+    title: "Richie answered",
+    detail: fr("The dentist at 5:30 pm. That's all.", "Le dentiste à 17 h 30. C'est tout."),
+    channels: ["discord"],
+    links: { ...discord, turn: "u-d1" },
+  });
+
+  // on Matrix, Mathis asks about the weather
+  const matrix = { session: "s-matrix" };
+  const askedWeather = ev({
+    ago: 500,
+    type: "conversation.turn.user",
+    title: "Mathis said",
+    detail: fr("Will it rain tomorrow morning?", "Il va pleuvoir demain matin ?"),
+    people: [ref("mathis")],
+    channels: ["matrix"],
+    links: { ...matrix, turn: "u-m1" },
+  });
+  ev({
+    ago: 499.95,
+    type: "agent.tool.called",
+    title: "Tool weather called",
+    detail: '{"place": "home", "days": 2}',
+    tool: "weather",
+    brand: "open-meteo",
+    people: [ref("mathis")],
+    channels: ["matrix"],
+    links: { ...matrix, turn: "u-m1", call: "k-m1" },
+    cause: askedWeather,
+  });
+  ev({
+    ago: 499.9,
+    type: "agent.tool.completed",
+    title: "Tool weather finished in 0.4 s",
+    detail: fr("Tomorrow 7-10 am: light rain, 11 °C", "Demain 7-10 h : pluie faible, 11 °C"),
+    tool: "weather",
+    brand: "open-meteo",
+    outcome: { ok: true, duration_s: 0.4 },
+    links: { ...matrix, turn: "u-m1", call: "k-m1" },
+  });
+  ev({
+    ago: 499.85,
+    type: "conversation.turn.assistant",
+    title: "Richie answered",
+    detail: fr("A little, until about 10. Take a jacket.", "Un peu, jusque vers 10 h. Prends une veste."),
+    channels: ["matrix"],
+    links: { ...matrix, turn: "u-m1" },
+  });
+
+  // on Signal, Léa names her studio's account: its tools are numbered beside her own Gmail's
+  const signal = { session: "s-signal" };
+  const askedStudio = ev({
+    ago: 490,
+    type: "conversation.turn.user",
+    title: "Léa said",
+    detail: fr(
+      "What did the accountant send to @gmail-lea this week?",
+      "Qu'est-ce que le comptable a envoyé sur @gmail-lea cette semaine ?",
+    ),
+    people: [ref("lea")],
+    channels: ["signal"],
+    links: { ...signal, turn: "u-g1" },
+  });
+  ev({
+    ago: 489.9,
+    type: "agent.tool.called",
+    title: "Tool google_mail_search_2 called",
+    detail: '{"query": "from:compta@cabinet-roux.fr newer_than:7d"}',
+    tool: "google_mail_search_2",
+    brand: "google",
+    people: [ref("lea")],
+    channels: ["signal"],
+    links: { ...signal, turn: "u-g1", call: "k-g1", connection: "c-google-lea-studio" },
+    cause: askedStudio,
+  });
+  ev({
+    ago: 489.85,
+    type: "agent.tool.completed",
+    title: "Tool google_mail_search_2 finished in 0.9 s",
+    detail: fr("1 email: “Q3 VAT return to sign”", "1 courriel : « Déclaration de TVA T3 à signer »"),
+    tool: "google_mail_search_2",
+    brand: "google",
+    outcome: { ok: true, duration_s: 0.9 },
+    links: { ...signal, turn: "u-g1", call: "k-g1", connection: "c-google-lea-studio" },
+  });
+  ev({
+    ago: 489.8,
+    type: "conversation.turn.assistant",
+    title: "Richie answered",
+    detail: fr(
+      "One email, on Tuesday: the Q3 VAT return, to sign before the 20th.",
+      "Un courriel, mardi : la déclaration de TVA du T3, à signer avant le 20.",
+    ),
+    channels: ["signal"],
+    links: { ...signal, turn: "u-g1" },
+  });
+
+  // on WhatsApp, Odile sends a voice message
+  const whatsapp = { session: "s-whatsapp" };
+  const odileAsked = fr("Is Jules's handball still on Wednesday?", "Le hand de Jules, c'est toujours mercredi ?");
+  ev({
+    ago: 470,
+    type: "conversation.turn.user",
+    title: "Odile said",
+    detail: odileAsked,
+    people: [ref("odile")],
+    channels: ["whatsapp"],
+    links: { ...whatsapp, turn: "u-w1" },
+    attachments: [voiceNote(odileAsked)],
+  });
+  ev({
+    ago: 469.9,
+    type: "conversation.turn.assistant",
+    title: "Richie answered",
+    detail: fr("Yes, Wednesday, at 3 pm now.", "Oui, mercredi, à 15 h maintenant."),
+    channels: ["whatsapp"],
+    links: { ...whatsapp, turn: "u-w1" },
+  });
+
+  // a feed and a page, sorted against the watches; a feed entry matches
+  ev({
+    ago: 465,
+    type: "watch.sorted",
+    title: `“${fr("Town hall: summer timetable", "Mairie : horaires d'été")}” checked against 1 watch: none match`,
+    brand: "web-page",
+  });
+  const beta = fr("Python 3.15 beta 1 released", "Sortie de Python 3.15 bêta 1");
+  ev({
+    ago: 458.2,
+    type: "watch.sorted",
+    title: `“${beta}” checked against 1 watch: 1 matched`,
+    brand: "rss",
+  });
+  const lwn = ev({
+    ago: 458,
+    type: "watch.triggered",
+    title: `Watch f31a triggered by “${beta}”`,
+    detail: fr("LWN covers the first beta of Python 3.15.", "LWN présente la première bêta de Python 3.15."),
+    brand: "rss",
+    links: { watch: "w-f31a" },
+  });
+  ev({
+    ago: 457.8,
+    type: "initiative.delivered",
+    title: "Message passed on: watch f31a",
+    detail: fr("“LWN has a piece on Python 3.15 beta 1.”", "« LWN a un article sur Python 3.15 bêta 1. »"),
+    people: [ref("mathis")],
+    channels: ["slack"],
+    links: { watch: "w-f31a", delivery: "d-lwn" },
+    cause: lwn,
+  });
+
+  // an invoice by email: the main model fails, its fallback answers, the due date goes to Outlook
+  const email = { session: "s-email" };
+  const mailed = ev({
+    ago: 444,
+    type: "conversation.turn.user",
+    title: "Mathis said",
+    detail: fr(
+      "Can you add this invoice's due date to my calendar?",
+      "Tu peux mettre l'échéance de cette facture dans mon agenda ?",
+    ),
+    people: [ref("mathis")],
+    channels: ["email"],
+    links: { ...email, turn: "u-e1" },
+    attachments: [
+      {
+        index: 0,
+        kind: "file",
+        media_type: "application/pdf",
+        size: 96_300,
+        name: fr("invoice-plumber.pdf", "facture-plombier.pdf"),
+        transcript: null,
+      },
+    ],
+  });
+  ev({
+    ago: 443.9,
+    type: "model.fell-back",
+    title: "sonnet failed: haiku takes over",
+    detail: "OpenRouter: 503 Service Unavailable",
+    channels: ["email"],
+    tone: "warning",
+    links: { ...email, turn: "u-e1" },
+    cause: mailed,
+  });
+  ev({
+    ago: 443.8,
+    type: "agent.tool.called",
+    title: "Tool outlook_calendar_create called",
+    detail: '{"title": "Pay the plumber", "start": "2026-11-28"}',
+    tool: "outlook_calendar_create",
+    brand: "microsoft",
+    people: [ref("mathis")],
+    channels: ["email"],
+    links: { ...email, turn: "u-e1", call: "k-e1", connection: "c-microsoft-mathis" },
+  });
+  ev({
+    ago: 443.7,
+    type: "agent.tool.completed",
+    title: "Tool outlook_calendar_create finished in 0.8 s",
+    detail: fr("Event added on 28 November.", "Événement ajouté le 28 novembre."),
+    tool: "outlook_calendar_create",
+    brand: "microsoft",
+    outcome: { ok: true, duration_s: 0.8 },
+    links: { ...email, turn: "u-e1", call: "k-e1", connection: "c-microsoft-mathis" },
+  });
+  ev({
+    ago: 443.6,
+    type: "conversation.turn.assistant",
+    title: "Richie answered",
+    detail: fr(
+      "Added to your Outlook calendar: pay the plumber, 28 November (€184).",
+      "Ajouté à ton agenda Outlook : payer le plombier, le 28 novembre (184 €).",
+    ),
+    channels: ["email"],
+    links: { ...email, turn: "u-e1" },
+  });
+
+  // from Open WebUI, through the OpenAI-compatible API
+  const api = { session: "s-openai-api" };
+  ev({
+    ago: 436,
+    type: "conversation.turn.user",
+    title: "Mathis said",
+    detail: fr("Sum up what the house did today.", "Résume ce que la maison a fait aujourd'hui."),
+    people: [ref("mathis")],
+    channels: ["openai-api"],
+    links: { ...api, turn: "u-a1" },
+  });
+  ev({
+    ago: 435.9,
+    type: "conversation.turn.assistant",
+    title: "Richie answered",
+    detail: fr(
+      "Two tasks done, the school confirmed Friday's trip, and the washing machine ran twice.",
+      "Deux tâches terminées, l'école a confirmé la sortie de vendredi, et la machine a tourné deux fois.",
+    ),
+    channels: ["openai-api"],
+    links: { ...api, turn: "u-a1" },
+  });
+
+  // a reminder pushed to Jules's phone by ntfy
+  ev({
+    ago: 433,
+    type: "initiative.delivered",
+    title: "Message passed on: schedule sc-bins",
+    detail: fr("“Bins out tonight.”", "« Les poubelles ce soir. »"),
+    people: [ref("jules")],
+    channels: ["ntfy"],
+    links: { delivery: "schedule:sc-bins" },
+  });
+
+  // the washing machine's webhook, and the message posted to Home Assistant's automation
+  const cycle = fr("washing-machine · cycle finished", "washing-machine · cycle terminé");
+  const machine = ev({
+    ago: 427,
+    type: "watch.triggered",
+    title: `Watch h5e0 triggered by “${cycle}”`,
+    detail: fr("The 40 °C cycle is done.", "Le cycle à 40 °C est fini."),
+    brand: "webhook",
+    links: { watch: "w-h5e0" },
+  });
+  ev({
+    ago: 426.9,
+    type: "initiative.delivered",
+    title: "Message passed on: watch h5e0",
+    detail: fr("“The washing machine is done.”", "« La machine est finie. »"),
+    channels: ["webhook"],
+    links: { watch: "w-h5e0", delivery: "d-machine" },
+    cause: machine,
   });
 
   // positions, as the journal numbers its entries: oldest first, causes pointing at positions

@@ -100,6 +100,57 @@ export function chats(): MockChat[] {
       ],
     },
     {
+      id: "c-dependencies",
+      started_at: minutes(550),
+      updated_at: minutes(520),
+      messages: [
+        message(
+          "person",
+          fr(
+            "Ask @claude-code to update the dashboard's dependencies, then add a reminder to check it on @todo.",
+            "Demande à @claude-code de mettre à jour les dépendances du tableau de bord, puis ajoute un rappel pour vérifier sur @todo.",
+          ),
+          minutes(550),
+          "t6",
+          { mentions: MENTIONS.filter((m) => m.handle === "claude-code" || m.handle === "todo") },
+        ),
+        message("tool", "", minutes(550), "t6", {
+          tool: {
+            ...tool(
+              "delegate_task",
+              { executor: "claude-code", objective: "Update the dependencies" },
+              "Task c1a9 started.",
+              0.6,
+            ),
+            state: "background",
+          },
+        }),
+        message("tool", "", minutes(550), "t6", {
+          tool: tool("todo_add", { title: "Check the dashboard" }, '{"id": "AAMk…"}', 0.7),
+        }),
+        message(
+          "assistant",
+          fr(
+            "Claude Code is on it, and the reminder is in your To Do. I'll post the report here.",
+            "Claude Code s'en occupe, et le rappel est dans ton To Do. Je poste le rapport ici.",
+          ),
+          minutes(550),
+          "t6",
+        ),
+        message("note", fr("task c1a9 completed", "tâche c1a9 terminée"), minutes(520), "t7"),
+        message(
+          "assistant",
+          fr(
+            "Done: **12 dependencies** updated and the tests are green. Here is the report and a capture of the dashboard.",
+            "C'est fait : **12 dépendances** à jour et les tests sont au vert. Voici le rapport et une capture du tableau de bord.",
+          ),
+          minutes(520),
+          "t7",
+          { files: [file("file", { name: "report.md", media_type: "text/markdown", size: 3_412 }), file("image")] },
+        ),
+      ],
+    },
+    {
       id: "c-plant",
       started_at: plant,
       updated_at: plant,
@@ -200,6 +251,14 @@ const mention = (
   extra: Partial<Pick<Mention, "aliases" | "detail" | "brand">> = {},
 ): Mention => ({ kind, handle, label, aliases: [label], detail: "", brand: null, ...extra });
 
+/** An account's services by the handle a message names them with, and the aliases the server gives. */
+function connected(account: string, brand: string, handles: string[], kind = brand): Mention[] {
+  const local = account.split("@")[0] ?? account;
+  return handles.map((handle) =>
+    mention("connection", handle, account, { aliases: [kind, brand, local, account], brand }),
+  );
+}
+
 export const MENTIONS: Mention[] = [
   mention("person", "mathis", "Mathis"),
   mention("person", "mathilde", "Mathilde"),
@@ -217,14 +276,26 @@ export const MENTIONS: Mention[] = [
   }),
   mention("executor", "codex", "codex", {
     aliases: [],
-    brand: "openai",
+    brand: "codex",
     detail: fr(
       "Code: reads a repository, changes it, runs its tests, opens a pull request.",
       "Code : lit un dépôt, le modifie, lance ses tests, ouvre une pull request.",
     ),
   }),
-  mention("connection", "gmail", "mathis@gmail.com", { aliases: ["google", "mathis"], brand: "gmail" }),
-  mention("connection", "mail", "famille@free.fr", { aliases: ["imap", "famille"], brand: "imap" }),
+  mention("executor", "claude-code", "claude-code", {
+    aliases: [],
+    brand: "claude-code",
+    detail: fr(
+      "Code and files on this machine: updates a project, writes a report, hands back what it made.",
+      "Code et fichiers sur cette machine : met à jour un projet, écrit un rapport, rend ce qu'il a produit.",
+    ),
+  }),
+  // the accounts Mathis may use, as the server names them: a service alone, or with the start of the address when
+  // another of his accounts has it too (his Outlook calendar and the family's iCloud one)
+  ...connected("mathis.lambert@outlook.com", "microsoft", ["outlook", "calendar-mathis.lambert", "onedrive", "todo"]),
+  ...connected("famille.lambert@icloud.com", "dav", ["calendar-famille.lambert", "contacts"]),
+  ...connected("mathis@mcp.linear.app", "linear", ["linear"], "mcp"),
+  ...connected("household@homeassistant.local:8123", "mcp", ["homeassistant"]),
 ];
 
 /** What a text names, as the server reads it. */

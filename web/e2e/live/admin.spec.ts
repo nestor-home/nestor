@@ -43,10 +43,10 @@ test("the journal loads and filters by kind", async ({ page }) => {
   await expect(page.getByRole("button", { name: new RegExp(label) }).first()).toBeVisible();
 });
 
-test("connecting Gmail goes as far as the provider's consent page", async ({ page }) => {
+test("connecting Google goes as far as the provider's consent page", async ({ page }) => {
   await signIn(page);
   await page.goto("/connections/catalogue?connect=google");
-  const sheet = page.getByRole("dialog", { name: "Gmail" });
+  const sheet = page.getByRole("dialog", { name: "Google" });
   await expect(sheet).toBeVisible();
   const register = sheet.getByRole("button", {
     name: /Enregistrer le client|Register the client|Remplacer le client|Replace the client/,

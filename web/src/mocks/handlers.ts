@@ -1051,7 +1051,7 @@ export const handlers = [
   http.get(`${API}/watches`, ({ request }) => {
     const refused = guard(request);
     if (refused) return refused;
-    const kinds = [...new Set(db.connectors.flatMap((c) => c.inbound))];
+    const kinds = [...new Set([...db.connectors.flatMap((c) => c.inbound), ...db.inbound])];
     return json({ watches: db.watches, kinds } satisfies In<"WatchesOut">);
   }),
 
@@ -1297,7 +1297,10 @@ export const handlers = [
   }),
 ];
 
-/** A new connection (replacing a broken one when asked), journaled as the server does. */
+/** The service's own refusal, worded by the connector in the reader's language: `service_refused`. */
+const refusedBy = (id: string, args: Record<string, string>) =>
+  fail(502, "service_refused", { reason: render(lang, { id, args }) });
+
 /**
  * A server found by its address, as the mock imagines it: one on the local network needs nothing and connects at
  * once; GitHub and Asana register no client, so they need one typed; the others send the browser to consent.
@@ -1309,8 +1312,10 @@ function discovered(connector: In<"ConnectorOut">, body: In<"AuthorizationIn">) 
   try {
     host = new URL(values.url).host;
   } catch {
-    return fail(502, "provider_refused", { detail: `'${values.url}' is not the address of a server` });
+    return refusedBy("connector-mcp-not-an-address", { url: values.url });
   }
+  // a server that turns the credentials down, as the connector words it (`ProviderError.reason`)
+  if (host.includes("invalid")) return refusedBy("mcp-refused", { server: host });
   const preset = connector.presets.find((p) => new URL(p.values.url ?? "").host === host);
   const local = /^(localhost|127\.|192\.168\.|10\.)/.test(host) || preset?.name === "Hugging Face";
   const ownClient = preset?.name === "GitHub" || preset?.name === "Asana";
@@ -1328,6 +1333,7 @@ function discovered(connector: In<"ConnectorOut">, body: In<"AuthorizationIn">) 
   } satisfies In<"AuthorizationOut">);
 }
 
+/** A new connection (replacing a broken one when asked), journaled as the server does. */
 function plug(
   kind: string,
   person: string | null,
@@ -1344,7 +1350,9 @@ function plug(
       values.account ||
       values.username ||
       values.name ||
-      (connector?.auth === "oauth2" ? `${person ?? "household"}@gmail.com` : (connector?.title ?? kind)),
+      (connector?.auth === "oauth2"
+        ? `${person ?? "household"}@${kind === "microsoft" ? "outlook.com" : "gmail.com"}`
+        : (connector?.title ?? kind)),
     owner: person ? refOf(person) : null,
     status: "connected",
     status_reason: null,
@@ -1358,7 +1366,7 @@ function plug(
   };
   db.connections.push(connection);
   db.tools[connection.id] = replaced ? (db.tools[replaced.id] ?? []) : toolsOf(kind);
-  db.services[connection.id] = servicesOf(connection);
+  for (const c of db.connections) db.services[c.id] = servicesOf(c, db.connections);
   if (replaced) db.connections = db.connections.filter((c) => c.id !== replaced.id);
   journalize({
     type: "connection.created",

@@ -12,7 +12,7 @@ describe("a connection's pages", () => {
     await user.click(screen.getByRole("link", { name: "Reconnect…" }));
     await waitFor(() => expect(router.state.location.pathname).toBe("/connections/catalogue"));
     expect(router.state.location.search).toEqual({ connect: "google", replaces: "c-gmail-mathis" });
-    const sheet = await screen.findByRole("dialog", { name: "Gmail" });
+    const sheet = await screen.findByRole("dialog", { name: "Google" });
     expect(within(sheet).getByText(/The old access stays active until the new one works/)).toBeInTheDocument();
   });
 

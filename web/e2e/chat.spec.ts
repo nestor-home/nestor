@@ -14,15 +14,15 @@ test.describe("the chat", () => {
     await page.keyboard.type("ask @cod");
     await expect(page.getByRole("button", { name: /codex/ })).toBeVisible();
     await page.keyboard.press("Enter");
-    await page.keyboard.type("to update the SDK, then check @gma");
+    await page.keyboard.type("to update the SDK, then check @outl");
     await page.keyboard.press("Tab");
-    await expect(editor.getByText("mathis@gmail.com")).toBeVisible();
+    await expect(editor.getByText("mathis.lambert@outlook.com")).toBeVisible();
     await page.keyboard.press("Enter");
 
     await expect(page).toHaveURL(/\/chat\/[\w-]+$/);
     const sent = page.locator(".rounded-br-md").last();
     await expect(sent).toContainText("codex");
-    await expect(sent).toContainText("mathis@gmail.com");
+    await expect(sent).toContainText("mathis.lambert@outlook.com");
     await expect(page.getByText("It's in hand; I'll come back here when it's done.")).toBeVisible();
     await expect(page.getByRole("navigation", { name: "Chats" }).getByRole("link").first()).toContainText("ask @codex");
   });

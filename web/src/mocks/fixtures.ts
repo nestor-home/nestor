@@ -33,6 +33,7 @@ import type {
 import { scopeValues } from "@/api/schema.gen";
 import { oneOf } from "@/lib/enums";
 import { fr } from "./french";
+import { render } from "./messages";
 import grants from "./server/role-scopes.json";
 
 export const ASSISTANT = "Richie";
@@ -154,20 +155,9 @@ export function invitations(): Invitation[] {
   ];
 }
 
-/** The guide shown before connecting a Google service. */
-const googleSetup = (api: string) =>
-  fr(
-    `1. Open the Google Cloud console and create a project for the household.
-2. Enable the ${api} API (APIs & Services › Library).
-3. Under “OAuth consent screen”, choose “External” and add your addresses as test users.
-4. Create “OAuth client ID” credentials, type “Web application”.
-5. Declare the redirect URI below, then copy the client ID and secret.`,
-    `1. Ouvrez la console Google Cloud et créez un projet pour le foyer.
-2. Activez l'API ${api} (API et services › Bibliothèque).
-3. Dans « Écran de consentement OAuth », choisissez « Externe » et ajoutez vos adresses comme utilisateurs test.
-4. Créez des identifiants « ID client OAuth », type « Application Web ».
-5. Déclarez l'URI de redirection ci-dessous, puis copiez l'identifiant et le secret.`,
-  );
+/** A text of Nestor's own catalogue, as the server sends it: in English, its French beside it. */
+const nestor = (id: string, args: Record<string, string | number> = {}) =>
+  fr(render("en", { id, args }), render("fr", { id, args }));
 const MAILBOX = fr("Mailbox (IMAP)", "Boîte mail (IMAP)");
 const MCP_SERVER = fr("MCP server", "Serveur MCP");
 /** The well-known servers the connector offers: the same as the server's catalogue. */
@@ -190,15 +180,12 @@ export function connectors(): Connector[] {
   return [
     {
       kind: "google",
-      brand: "gmail",
-      title: "Gmail",
-      description: fr(
-        "Read, search and draft emails; watch what arrives in the inbox.",
-        "Lire, chercher et rédiger des courriels ; surveiller ce qui arrive dans la boîte.",
-      ),
+      brand: "google",
+      title: nestor("connector-google-title"),
+      description: nestor("connector-google-description"),
       auth: "oauth2",
       inbound: ["mail"],
-      setup: googleSetup("Gmail"),
+      setup: nestor("connector-google-setup"),
       fields: [],
       presets: [],
       oauth: {
@@ -207,6 +194,40 @@ export function connectors(): Connector[] {
         redirect_uri: "https://relay.nestor.dev/oauth/callback",
         relayed: true,
       },
+    },
+    {
+      kind: "microsoft",
+      brand: "microsoft",
+      title: nestor("connector-microsoft-title"),
+      description: nestor("connector-microsoft-description"),
+      auth: "oauth2",
+      inbound: ["mail"],
+      setup: nestor("connector-microsoft-setup"),
+      fields: [],
+      presets: [],
+      oauth: {
+        registered: false,
+        client_id: null,
+        redirect_uri: "https://relay.nestor.dev/oauth/callback",
+        relayed: true,
+      },
+    },
+    {
+      kind: "dav",
+      brand: "dav",
+      title: nestor("connector-dav-title"),
+      description: nestor("connector-dav-description"),
+      auth: "secret",
+      inbound: [],
+      setup: nestor("connector-dav-setup"),
+      fields: [
+        { name: "server", label: nestor("connector-dav-field-server"), secret: false, default: null },
+        { name: "contacts_server", label: nestor("connector-dav-field-contacts_server"), secret: false, default: "" },
+        { name: "username", label: nestor("connector-dav-field-username"), secret: false, default: null },
+        { name: "password", label: nestor("connector-dav-field-password"), secret: true, default: null },
+      ],
+      presets: [],
+      oauth: null,
     },
     {
       kind: "imap",
@@ -280,39 +301,33 @@ Donnez un client OAuth seulement si le serveur n'en enregistre aucun pour Nestor
         relayed: true,
       },
     },
-    {
-      kind: "google-calendar",
-      brand: "google-calendar",
-      title: "Google Calendar",
-      description: fr(
-        "Read the household's calendars and add events.",
-        "Consulter les agendas du foyer et y ajouter des événements.",
-      ),
-      auth: "oauth2",
-      inbound: [],
-      setup: googleSetup("Google Calendar"),
-      fields: [],
-      presets: [],
-      oauth: {
-        registered: false,
-        client_id: null,
-        redirect_uri: "https://relay.nestor.dev/oauth/callback",
-        relayed: true,
-      },
-    },
   ];
 }
 
 /** Why a connection needs a look, as the server words it: a message and its text. */
 const reason = (text: string) => ({ message: { id: "connection-status-reason", args: {} }, text });
 
+const GOOGLE = nestor("connector-google-title");
+const MICROSOFT = nestor("connector-microsoft-title");
+
+/** A connected account, unused today unless said. */
+const quiet = (
+  c: Omit<Connection, "status" | "status_reason" | "disabled_tools" | "calls_today"> & { calls_today?: number },
+): Connection => ({
+  status: "connected",
+  status_reason: null,
+  disabled_tools: [],
+  calls_today: 0,
+  ...c,
+});
+
 export function connections(): Connection[] {
   return [
     {
       id: "c-gmail-mathis",
       kind: "google",
-      brand: "gmail",
-      title: "Gmail",
+      brand: "google",
+      title: GOOGLE,
       account: "mathis.lambert27@gmail.com",
       owner: ref("mathis"),
       status: "needs_reauth",
@@ -382,31 +397,179 @@ export function connections(): Connection[] {
       calls_today: 1,
       watches: 0,
     },
+    // Léa's two Google accounts: tools of the second are numbered, and a message names each by its address
+    quiet({
+      id: "c-google-lea",
+      kind: "google",
+      brand: "google",
+      title: GOOGLE,
+      account: "lea.lambert@gmail.com",
+      owner: ref("lea"),
+      confirm_writes: true,
+      created_at: minutes(60 * 24 * 12),
+      last_used_at: minutes(398),
+      watches: 0,
+    }),
+    quiet({
+      id: "c-google-lea-studio",
+      kind: "google",
+      brand: "google",
+      title: GOOGLE,
+      account: "lea@studio-lambert.fr",
+      owner: ref("lea"),
+      confirm_writes: true,
+      created_at: minutes(60 * 24 * 5),
+      last_used_at: minutes(489),
+      calls_today: 2,
+      watches: 0,
+    }),
+    quiet({
+      id: "c-microsoft-mathis",
+      kind: "microsoft",
+      brand: "microsoft",
+      title: MICROSOFT,
+      account: "mathis.lambert@outlook.com",
+      owner: ref("mathis"),
+      confirm_writes: true,
+      created_at: minutes(60 * 24 * 8),
+      last_used_at: minutes(443),
+      calls_today: 1,
+      watches: 0,
+    }),
+    quiet({
+      id: "c-dav-family",
+      kind: "dav",
+      brand: "dav",
+      title: nestor("connector-dav-title"),
+      account: "famille.lambert@icloud.com",
+      owner: null,
+      confirm_writes: true,
+      created_at: minutes(60 * 24 * 40),
+      last_used_at: minutes(60 * 20),
+      watches: 0,
+    }),
+    quiet({
+      id: "c-mcp-linear",
+      kind: "mcp",
+      brand: "linear",
+      title: MCP_SERVER,
+      account: "mathis@mcp.linear.app",
+      owner: ref("mathis"),
+      confirm_writes: true,
+      created_at: minutes(60 * 24 * 2),
+      last_used_at: minutes(60 * 22),
+      watches: 0,
+    }),
   ];
 }
 
-/** What each account gives access to, as a message names it (`handle` null while it is not connected). */
-export function services(connection: Connection): Service[] {
-  const named = (name: string, brand: string | null): Service => ({
-    name,
-    brand,
-    handle: connection.status === "connected" ? name : null,
+/** What each kind of account gives access to, as its connector declares it: a name and its mark. */
+const SERVICES: Record<string, [string, string | null][]> = {
+  google: [
+    ["gmail", "gmail"],
+    ["calendar", "google-calendar"],
+    ["drive", "google-drive"],
+    ["contacts", null],
+    ["tasks", "google-tasks"],
+  ],
+  microsoft: [
+    ["outlook", null],
+    ["calendar", null],
+    ["onedrive", null],
+    ["todo", null],
+  ],
+  dav: [
+    ["calendar", null],
+    ["contacts", null],
+  ],
+  imap: [["mail", "imap"]],
+};
+
+/** How a message names each remote MCP server: its service's name when well known, else its host's. */
+const MCP_SERVICES: Record<string, string> = {
+  "c-mcp-ha": "homeassistant",
+  "c-mcp-linear": "linear",
+  "c-mcp-recipes": "recipes",
+};
+
+/**
+ * What an account gives access to, as a message names it, the way the server names it: the service alone, or with
+ * the start of the address when its person can use another account with that service; none while not connected.
+ */
+export function services(connection: Connection, all: readonly Connection[]): Service[] {
+  const declared = (c: Connection): [string, string | null][] =>
+    SERVICES[c.kind] ?? [[MCP_SERVICES[c.id] ?? "mcp", null]];
+  const usable = all.filter(
+    (c) => c.status === "connected" && (c.owner === null || c.owner?.id === connection.owner?.id),
+  );
+  return declared(connection).map(([name, brand]) => {
+    const alone = usable.filter((c) => declared(c).some(([other]) => other === name)).length === 1;
+    const local = connection.account.split("@")[0] ?? "";
+    return {
+      name,
+      brand: brand ?? connection.brand,
+      handle: connection.status !== "connected" ? null : alone ? name : `${name}-${local}`,
+    };
   });
-  if (connection.kind === "google") {
-    return [
-      named("gmail", "gmail"),
-      named("calendar", "google-calendar"),
-      named("drive", "google-drive"),
-      named("contacts", "google"),
-      named("tasks", "google-tasks"),
-    ];
-  }
-  if (connection.kind === "imap") return [named("mail", "imap")];
-  return [named(connection.id === "c-mcp-ha" ? "homeassistant" : "recipes", connection.brand)];
 }
 
-export function tools(kind: string): Tool[] {
-  if (kind === "google" || kind === "imap") {
+/** A connector's tool as the server lists it: its description is the model's, in English. */
+const tool = (name: string, description: string, risk: Tool["risk"] = "read"): Tool => ({
+  name,
+  description,
+  risk,
+  enabled: true,
+});
+
+export function tools(kind: string, brand: string | null = null): Tool[] {
+  if (brand === "linear") {
+    return [
+      tool("linear_list_issues", "List issues in the user's Linear workspace."),
+      tool("linear_get_issue", "Retrieve a Linear issue by its id."),
+      tool("linear_create_issue", "Create a new Linear issue.", "write"),
+    ];
+  }
+  if (kind === "google") {
+    return [
+      tool(
+        "google_mail_search",
+        "Search the person's Gmail with Gmail query syntax (from:, subject:, newer_than:7d…).",
+      ),
+      tool("google_mail_read", "Read one Gmail message by id (from google_mail_search): headers and plain-text body."),
+      tool("google_calendar_events", "List the events of the person's Google Calendar between two moments."),
+      tool("google_calendar_create", "Add an event to the person's Google Calendar.", "write"),
+      tool("google_drive_search", "Search the person's Google Drive for files whose name or content contains words."),
+      tool("google_drive_read", "Read the text of one Google Drive file by id (from google_drive_search)."),
+      tool("google_contacts_search", "Find people in the person's Google Contacts by name, email, phone or company."),
+      tool("google_tasks_list", "List the open tasks of the person's Google Tasks."),
+      tool("google_tasks_add", "Add a task to the person's Google Tasks.", "write"),
+      { ...tool("google_tasks_complete", "Tick off one of the person's Google Tasks by id.", "write"), enabled: false },
+    ];
+  }
+  if (kind === "microsoft") {
+    return [
+      tool(
+        "outlook_mail_search",
+        "Search the person's Outlook mail with words (from:, subject: and received: work too).",
+      ),
+      tool("outlook_mail_read", "Read one Outlook message by id (from outlook_mail_search)."),
+      tool("outlook_calendar_events", "List the events of the person's Outlook calendar between two moments."),
+      tool("outlook_calendar_create", "Add an event to the person's Outlook calendar.", "write"),
+      tool("onedrive_search", "Search the person's OneDrive for files whose name or content contains words."),
+      tool("onedrive_read", "Read the text of one OneDrive file by id (from onedrive_search)."),
+      tool("todo_list", "List the open tasks of the person's Microsoft To Do."),
+      tool("todo_add", "Add a task to the person's Microsoft To Do.", "write"),
+      tool("todo_complete", "Tick off one of the person's Microsoft To Do tasks by id.", "write"),
+    ];
+  }
+  if (kind === "dav") {
+    return [
+      tool("dav_calendar_events", "List the events of the person's calendars (CalDAV) between two moments."),
+      tool("dav_calendar_create", "Add an event to one of the person's calendars (CalDAV).", "write"),
+      tool("dav_contacts_search", "Find people in the person's contacts (CardDAV) by name, email, phone or company."),
+    ];
+  }
+  if (kind === "imap") {
     return [
       {
         name: "mail_search",
@@ -678,6 +841,21 @@ export const GYM_ERROR = fr(
   "Le site demande une connexion par SMS : impossible sans Léa.",
 );
 
+export const DEPENDENCIES = fr(
+  "Update the home dashboard's dependencies and say what changed.",
+  "Mettre à jour les dépendances du tableau de bord de la maison et dire ce qui a changé.",
+);
+export const DEPENDENCIES_RESULT = fr(
+  "12 dependencies updated, tests green. The report and a capture of the dashboard are attached.",
+  "12 dépendances mises à jour, tests au vert. Le rapport et une capture du tableau de bord sont joints.",
+);
+/** What the tasks handed back, as the task API lists them (the journal's `task.ended` carries the same). */
+export const ENERGY_FILES: Task["files"] = [{ index: 0, kind: "file", media_type: "application/pdf", size: 48_200 }];
+export const DEPENDENCIES_FILES: Task["files"] = [
+  { index: 0, kind: "file", media_type: "text/markdown", size: 3_412 },
+  { index: 1, kind: "image", media_type: "image/png", size: 182_400 },
+];
+
 export function tasks(): Task[] {
   return [
     {
@@ -723,7 +901,7 @@ export function tasks(): Task[] {
       error: null,
       origin: { session: "s-elec", channel: "telegram" },
       delivered: { at: minutes(250.4), channel: "voice", room: OFFICE },
-      files: [],
+      files: ENERGY_FILES,
     },
     {
       id: "t-a04f12",
@@ -754,6 +932,21 @@ export function tasks(): Task[] {
       origin: { session: "voice:pi-bedroom", channel: "voice" },
       delivered: null,
       files: [],
+    },
+    {
+      id: "t-c1a9de",
+      objective: DEPENDENCIES,
+      executor: "claude-code",
+      status: "completed",
+      requested_by: ref("mathis"),
+      started_at: minutes(539.5),
+      ended_at: minutes(521),
+      steps: [fr("Tests pass on the new versions.", "Les tests passent avec les nouvelles versions.")],
+      result: DEPENDENCIES_RESULT,
+      error: null,
+      origin: { session: "s-slack", channel: "slack" },
+      delivered: { at: minutes(520.8), channel: "slack", room: null },
+      files: DEPENDENCIES_FILES,
     },
   ];
 }
@@ -788,6 +981,48 @@ export function watches(): Watch[] {
       origin: null,
       triggered: 7,
       last_triggered_at: minutes(96),
+    },
+    {
+      id: "w-f31a",
+      what: fr("Tell me when LWN writes about Python 3.15.", "Préviens-moi quand LWN parle de Python 3.15."),
+      owner: ref("mathis"),
+      kinds: ["feed"],
+      once: false,
+      created_at: minutes(60 * 24 * 3),
+      until: null,
+      origin: { session: "s-slack", channel: "slack" },
+      triggered: 1,
+      last_triggered_at: minutes(458),
+    },
+    {
+      id: "w-p8c2",
+      what: fr(
+        "Tell me when the town hall opens the summer camp sign-ups.",
+        "Préviens-moi quand la mairie ouvre les inscriptions au centre aéré.",
+      ),
+      owner: ref("lea"),
+      kinds: ["page"],
+      once: true,
+      created_at: minutes(60 * 24 * 6),
+      until: ahead(60 * 60 * 24 * 30),
+      origin: { session: "s-signal", channel: "signal" },
+      triggered: 0,
+      last_triggered_at: null,
+    },
+    {
+      id: "w-h5e0",
+      what: fr(
+        "Tell whoever is home when the washing machine is done.",
+        "Dire à qui est là quand la machine est finie.",
+      ),
+      owner: null,
+      kinds: ["washing-machine"],
+      once: false,
+      created_at: minutes(60 * 24 * 20),
+      until: null,
+      origin: null,
+      triggered: 23,
+      last_triggered_at: minutes(427),
     },
   ];
 }
@@ -1111,6 +1346,7 @@ export function system(): SystemInfo {
         name: "sonnet",
         adapter: "openai-compatible-language",
         model_type: "language",
+        fallback: "haiku",
         brand: "openrouter",
         version: "anthropic/claude-sonnet-4.6",
         health: "started",
@@ -1166,6 +1402,15 @@ export function system(): SystemInfo {
         health_detail: ONE_TASK,
       }),
       component({
+        slot: "executor",
+        name: "claude-code",
+        adapter: "claude-code",
+        brand: "claude-code",
+        version: "2.1.4",
+        health: "started",
+        health_detail: null,
+      }),
+      component({
         slot: "channel",
         name: fr("Voice (satellites)", "Voix (satellites)"),
         adapter: "satellites",
@@ -1183,6 +1428,38 @@ export function system(): SystemInfo {
         health: "started",
         health_detail: "@richie_lambert_bot",
       }),
+      ...(
+        [
+          ["discord", "discord", "Richie#4012"],
+          ["slack", "slack", "lambert-family.slack.com"],
+          ["matrix", "matrix", "@richie:matrix.lambert.family"],
+          ["signal", "signal", "+33 6 •• •• 42 17"],
+          ["whatsapp", "whatsapp", "+33 6 •• •• 42 18"],
+          ["email", "email", "richie@lambert.family"],
+          ["ntfy", "ntfy", "ntfy.sh"],
+          ["webhook", "webhook", "homeassistant.local:8123"],
+          ["openai-api", "openai", "/v1/chat/completions"],
+        ] as const
+      ).map(([name, brand, detail]) =>
+        component({
+          slot: "channel",
+          name,
+          adapter: name,
+          brand,
+          version: null,
+          health: "started",
+          health_detail: detail,
+        }),
+      ),
+      ...(
+        [
+          ["feeds", "rss", "rss", fr("2 feeds followed", "2 flux suivis")],
+          ["pages", "web-page", "web-page", fr("1 page followed", "1 page suivie")],
+          ["webhooks", "webhook-inbound", "webhook", "1 webhook"],
+        ] as const
+      ).map(([name, adapter, brand, detail]) =>
+        component({ slot: "inbound", name, adapter, brand, version: null, health: "started", health_detail: detail }),
+      ),
       component({
         slot: "home",
         name: "home",
@@ -1203,9 +1480,9 @@ export function system(): SystemInfo {
       }),
       component({
         slot: "connector",
-        name: "Gmail",
+        name: "google",
         adapter: "google",
-        brand: "gmail",
+        brand: "google",
         version: null,
         health: "degraded",
         health_detail: fr("1 account to authorise again", "1 compte à réautoriser"),
@@ -1219,6 +1496,23 @@ export function system(): SystemInfo {
         health: "started",
         health_detail: null,
       }),
+      ...(
+        [
+          ["microsoft", "microsoft"],
+          ["dav", "dav"],
+          ["mcp", "mcp"],
+        ] as const
+      ).map(([name, brand]) =>
+        component({
+          slot: "connector",
+          name,
+          adapter: name === "mcp" ? "mcp-connector" : name,
+          brand,
+          version: null,
+          health: "started",
+          health_detail: null,
+        }),
+      ),
       component({
         slot: "satellite",
         name: "reachy-living-room",
