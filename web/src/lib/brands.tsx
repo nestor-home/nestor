@@ -85,6 +85,7 @@ import cartesiaSvg from "@/assets/brands/cartesia.svg?raw";
 import gradiumSvg from "@/assets/brands/gradium.svg?raw";
 import llamaCppSvg from "@/assets/brands/llama-cpp.svg?raw";
 import piperSvg from "@/assets/brands/piper.svg?raw";
+import slackSvg from "@/assets/brands/slack.svg?raw";
 import { type Args, tr } from "@/i18n/runtime";
 import { cn } from "@/lib/utils";
 
@@ -149,7 +150,7 @@ const BRANDS = {
   telegram: simple("Telegram", siTelegram),
   whatsapp: simple("WhatsApp", siWhatsapp),
   discord: simple("Discord", siDiscord),
-  slack: monogram("Slack", "S"), // in neither icon set
+  slack: official("Slack", slackSvg), // in neither icon set
   signal: simple("Signal", siSignal),
   matrix: simple("Matrix", siMatrix),
   ntfy: simple("ntfy", siNtfy),
@@ -191,6 +192,7 @@ const BRANDS = {
   "claude-code": lobe("Claude Code", claudecodeSvg),
   // model providers
   "openai-compatible": concept("brand-openai-compatible", Cpu),
+  "openai-api": { message: "brand-openai-compatible", mark: lobe("OpenAI", openaiSvg).mark }, // the channel
   openrouter: lobe("OpenRouter", openrouterSvg, siOpenrouter),
   openai: lobe("OpenAI", openaiSvg),
   anthropic: lobe("Anthropic", anthropicSvg, siAnthropic),

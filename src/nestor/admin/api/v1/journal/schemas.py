@@ -86,7 +86,7 @@ class JournalItem(BaseModel):
     room: str | None
     tool: str | None  # the tool called
     outcome: OutcomeOut | None  # of a tool call or a task
-    attachments: list[AttachmentOut]  # the files a person sent with their message
+    attachments: list[AttachmentOut]  # the files a person sent, or a tool, a task or an answer made
     brand: str | None  # of the channel, connector, satellite or executor it came through
     links: LinksOut
     cause: int | None  # the position of the entry that caused this one, when known

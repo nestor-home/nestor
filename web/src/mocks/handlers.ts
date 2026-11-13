@@ -9,7 +9,16 @@ import * as config from "./config";
 import { LIVE } from "./day";
 import { db, type MockAddition, save } from "./db";
 import { picture, recording } from "./files";
-import { arriving, METHODS, type MockPending, type MockPerson, PROTOCOL, SCOPES, tools as toolsOf } from "./fixtures";
+import {
+  arriving,
+  METHODS,
+  type MockPending,
+  type MockPerson,
+  PROTOCOL,
+  SCOPES,
+  services as servicesOf,
+  tools as toolsOf,
+} from "./fixtures";
 import { inFrench } from "./french";
 import { facets, filtersOf, matching } from "./journal";
 import { catalogueOf, type Draft, errorText, type Lang, localize, render, toItem } from "./messages";
@@ -69,6 +78,17 @@ const MISSING = {
 } as const;
 
 const notFound = (what: keyof typeof MISSING) => fail(404, MISSING[what]);
+
+/** A file served as the server serves one of its kind: a picture, a recording, or a document to download. */
+function file(kind: In<"AttachmentKind">): Response {
+  const [body, type] =
+    kind === "image"
+      ? [picture(), "image/png"]
+      : kind === "voice" || kind === "audio"
+        ? [recording(), "audio/wav"]
+        : [new TextEncoder().encode("%PDF-1.4\n"), "application/octet-stream"];
+  return new HttpResponse(body, { headers: { "Content-Type": type } });
+}
 
 const signedIn = () => db.accounts.find((a) => a.id === db.signedIn) ?? null;
 
@@ -149,6 +169,7 @@ const personOut = ({ account, ...person }: MockPerson): In<"PersonOut"> => ({
 const connectionDetail = (connection: In<"ConnectionOut">): In<"ConnectionDetail"> => ({
   ...connection,
   tools: db.tools[connection.id] ?? [],
+  services: db.services[connection.id] ?? [],
 });
 
 const pendingOut = ({ expires_at, ...pending }: MockPending): In<"PendingOut"> => ({
@@ -662,14 +683,7 @@ export const handlers = [
     const attachment =
       event?.item.attachments.find((a) => a.index === Number(params.index)) ??
       sent.find((f) => f.position === Number(params.position) && f.index === Number(params.index));
-    if (!attachment) return notFound("attachment");
-    const [body, type] =
-      attachment.kind === "image"
-        ? [picture(), "image/png"]
-        : attachment.kind === "voice" || attachment.kind === "audio"
-          ? [recording(), "audio/wav"]
-          : [new TextEncoder().encode("%PDF-1.4\n"), "application/octet-stream"];
-    return new HttpResponse(body, { headers: { "Content-Type": type } });
+    return attachment ? file(attachment.kind) : notFound("attachment");
   }),
 
   http.get(`${API}/journal/:position`, ({ request, params }) => {
@@ -1013,6 +1027,15 @@ export const handlers = [
     return task ? json(task) : notFound("task");
   }),
 
+  http.get(`${API}/tasks/:id/files/:index`, ({ request, params }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    const task = db.tasks.find((t) => t.id === params.id);
+    if (!task) return notFound("task");
+    const made = task.files.find((f) => f.index === Number(params.index));
+    return made ? file(made.kind) : notFound("attachment");
+  }),
+
   http.post(`${API}/tasks/:id/cancel`, async ({ request, params }) => {
     const refused = guard(request);
     if (refused) return refused;
@@ -1335,6 +1358,7 @@ function plug(
   };
   db.connections.push(connection);
   db.tools[connection.id] = replaced ? (db.tools[replaced.id] ?? []) : toolsOf(kind);
+  db.services[connection.id] = servicesOf(connection);
   if (replaced) db.connections = db.connections.filter((c) => c.id !== replaced.id);
   journalize({
     type: "connection.created",

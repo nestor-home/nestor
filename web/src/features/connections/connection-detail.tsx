@@ -12,7 +12,7 @@ import { TabNav } from "@/components/tab-nav";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { ActivityList } from "@/features/journal/activity-list";
 import { useT } from "@/i18n";
-import { KindMark } from "@/lib/brands";
+import { KindMark, kindName } from "@/lib/brands";
 import { moment } from "@/lib/dates";
 import { rendered } from "@/lib/messages";
 import { personName } from "@/lib/people";
@@ -120,6 +120,26 @@ export function ConnectionOverview({ connection: c }: { connection: ConnectionDe
         </Panel>
       ) : null}
       <Lead>{summary.filter(Boolean).join(" ")}</Lead>
+      {c.services.length ? (
+        <Section title={t("conn-services")}>
+          <ul className="grid gap-2 sm:grid-cols-2">
+            {c.services.map((s) => (
+              <li key={s.name} className="flex min-w-0 items-center gap-2.5 rounded-md border border-rule px-3 py-2">
+                <KindMark kind={s.brand ?? c.brand ?? c.kind} className="size-4" label={false} />
+                <span className="min-w-0 flex-1 truncate text-ink">
+                  {s.brand && s.brand !== c.brand ? kindName(s.brand) : s.name}
+                </span>
+                {s.handle ? (
+                  <code className="shrink-0 font-mono text-[0.85rem] text-ink-muted">@{s.handle}</code>
+                ) : (
+                  <span className="shrink-0 text-[0.85rem] text-ink-faint">{t("conn-service-unnamed")}</span>
+                )}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-[0.85rem] text-ink-muted">{t("conn-services-hint", { assistant: me.assistant })}</p>
+        </Section>
+      ) : null}
       <Section title={t("conn-latest-uses")}>
         <ActivityList
           filters={{ connection: c.id }}

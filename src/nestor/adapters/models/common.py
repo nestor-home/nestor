@@ -23,6 +23,7 @@ BRANDS = {  # host suffix → brand; published in `base_url`'s schema (`x-nestor
     "anthropic.com": "anthropic",
     "generativelanguage.googleapis.com": "gemini",
     "groq.com": "groq",
+    "ai-gateway.vercel.sh": "vercel",
 }
 BRANDED: dict[str, Any] = {"brands": BRANDS}  # the field the brand is read from
 

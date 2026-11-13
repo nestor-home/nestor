@@ -79,7 +79,7 @@ async def oauth_callback(
     error: str = "",
 ) -> RedirectResponse:
     """Back from the provider (directly or through the relay): complete, then show the connection in the
-    front — `/connections/<id>?connected=1` — or the catalogue with `?oauth_error=<code>`."""
+    front (`/connections/<id>?connected=1`) or why it failed (`/connections/failed?error=<code>&kind=<kind>`)."""
     admin = state(request)
     issued = state_.split(".", 1)[0]
     connecting, flow = admin.connecting, admin.flows.take(issued)
@@ -87,16 +87,16 @@ async def oauth_callback(
         return failed("unknown_flow")
     account = admin.accounts.accounts.get(flow.account_id or "")
     if account is None or not reaches_connections_of(account.principal(), flow.owner):
-        return failed("forbidden")
+        return failed("forbidden", flow.kind)
     if error == "access_denied":
-        return failed("access_denied")
+        return failed("access_denied", flow.kind)
     if error or not code:
-        return failed("provider_error")
+        return failed("provider_error", flow.kind)
     try:
         connection = await connecting.connections.complete(issued, code)
     except ContractError:
-        return failed("expired")
+        return failed("expired", flow.kind)
     except ProviderError:
-        return failed("exchange_failed")
+        return failed("exchange_failed", flow.kind)
     connection = await connecting.settled(connection, flow.replaces)
     return connected(connection.id)

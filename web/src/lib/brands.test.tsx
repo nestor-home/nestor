@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { BrandMark, brandOf, KindMark } from "@/lib/brands";
+import { BrandMark, brandOf, hasLogo, KindMark, kindName } from "@/lib/brands";
 
 describe("vendor marks", () => {
   it("knows the brands the API sends, whatever their spelling", () => {
@@ -10,6 +10,7 @@ describe("vendor marks", () => {
     expect(brandOf("mistral")).toBe("mistral");
     expect(brandOf("reachy-mini")).toBe("reachy");
     expect(brandOf("telegram:42")).toBe("telegram");
+    expect(kindName("openai-api")).toBe("OpenAI-compatible API");
     expect(brandOf("someone-else")).toBeNull();
   });
 
@@ -26,6 +27,7 @@ describe("vendor marks", () => {
       expect(screen.getByRole("img", { name })).toBeInTheDocument();
     }
     expect(screen.queryByRole("img", { name: "ElevenLabs" })).toBeNull();
+    expect(hasLogo("slack") && !hasLogo("kokoro")).toBe(true); // a monogram only where no mark is published
   });
 
   it("shows a neutral plug, named by its kind, for an unknown plugin", () => {

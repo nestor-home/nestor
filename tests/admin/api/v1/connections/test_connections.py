@@ -10,8 +10,12 @@ import pytest
 from nestor.core import PersonId, ProviderError
 from nestor.core.i18n import Message
 from nestor.modules.accounts import Role
+from nestor.modules.channels import Address
+from nestor.modules.cognition.model import ToolCall
+from nestor.modules.cognition.tools import ToolContext
 from nestor.modules.connectors import ConnectorTools, Discovery, Status
 from nestor.modules.connectors import service as connections_service
+from nestor.modules.identity import Speaker
 from nestor.testing.connectors import DISCOVERED_OAUTH
 
 from ....harness import CLIENT_SECRET, Api, Harness
@@ -112,10 +116,10 @@ async def test_a_failed_return_connects_nothing_and_says_why(tmp_path: Path, ret
         await register(api)
         state = query(await begin(api))["state"]
         response = await admin.come_back(state=state, **returned)
-        assert response.headers["location"] == f"/connections?oauth_error={code}"
+        assert response.headers["location"] == f"/connections/failed?error={code}&kind=mailbox"
         assert admin.nestor.connections and admin.nestor.connections.connections == {}
         late = await admin.come_back(state=state, code="late")
-        assert late.headers["location"] == "/connections?oauth_error=unknown_flow", "a state is used once"
+        assert late.headers["location"] == "/connections/failed?error=unknown_flow", "a state is used once"
 
 
 async def test_an_expired_authorisation_request_says_so(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -124,7 +128,7 @@ async def test_an_expired_authorisation_request_says_so(tmp_path: Path, monkeypa
         await register(api)
         back = admin.consent(await begin(api))
         monkeypatch.setattr(connections_service, "PENDING_TTL_S", -1.0)
-        assert (await admin.come_back(**back)).headers["location"] == "/connections?oauth_error=expired"
+        assert (await admin.come_back(**back)).headers["location"] == "/connections/failed?error=expired&kind=mailbox"
 
 
 async def test_a_flow_started_by_an_account_disabled_since_completes_nothing(tmp_path: Path) -> None:
@@ -135,7 +139,7 @@ async def test_a_flow_started_by_an_account_disabled_since_completes_nothing(tmp
         back = admin.consent(await begin(api))
         assert admin.owner
         await admin.nestor.accounts.disable(lucie.id, by=admin.owner.principal())
-        assert (await admin.come_back(**back)).headers["location"] == "/connections?oauth_error=forbidden"
+        assert (await admin.come_back(**back)).headers["location"] == "/connections/failed?error=forbidden&kind=mailbox"
         assert admin.nestor.connections and admin.nestor.connections.connections == {}
 
 
@@ -229,6 +233,37 @@ async def test_a_secret_based_service_connects_with_its_fields_typed_once(tmp_pa
         assert [c["id"] for c in (await api.get("/api/v1/connections")).json()] == [replaced.json()["id"]]
 
 
+async def test_each_account_of_one_service_counts_its_own_calls(tmp_path: Path) -> None:
+    async with Harness(tmp_path) as admin:
+        api = await admin.api()
+        values = {"values": {"server": "s", "password": "p"}}
+        first = (await api.post("/api/v1/connectors/imap/connections", values)).json()["id"]
+        second = (await api.post("/api/v1/connectors/imap/connections", values)).json()["id"]
+        context = ToolContext(address=Address("telegram", "42"), speaker=Speaker.account(PersonId("mathis")))
+        for call_id, name in (("c1", "imap_search_2"), ("c2", "imap_search_2"), ("c3", "imap_search")):
+            await admin.nestor.toolbox.call(ToolCall(id=call_id, name=name, arguments={}), context)
+        used = {c["id"]: c["calls_today"] for c in (await api.get("/api/v1/connections")).json()}
+        assert used == {first: 1, second: 2}
+
+
+async def test_a_connection_says_how_people_name_each_service_it_gives(tmp_path: Path) -> None:
+    async with Harness(tmp_path) as admin:
+        accounts = iter(["mathis@free.fr", "famille@free.fr"])
+
+        async def identify(connection: object, access: object) -> str:
+            return next(accounts)
+
+        admin.imap.identify = identify
+        api = await admin.api()
+        values = {"values": {"server": "s", "password": "p"}}
+        first = (await api.post("/api/v1/connectors/imap/connections", values)).json()["id"]
+        alone = (await api.get(f"/api/v1/connections/{first}")).json()["services"]
+        assert alone == [{"name": "imap", "brand": None, "handle": "imap"}]
+        second = (await api.post("/api/v1/connectors/imap/connections", values)).json()["id"]
+        handles = [(await api.get(f"/api/v1/connections/{c}")).json()["services"][0]["handle"] for c in (first, second)]
+        assert handles == ["imap-mathis", "imap-famille"], "beside another, each by the start of its address"
+
+
 async def test_credentials_the_service_refuses_are_reported(tmp_path: Path) -> None:
     async with Harness(tmp_path) as admin:
 
@@ -272,7 +307,7 @@ async def test_without_connectors_the_catalogue_says_so(tmp_path: Path) -> None:
             assert response.status_code == 404 and response.json()["error"]["code"] == "no_connectors"
         assert (await admin.come_back(state="s", code="c")).headers[
             "location"
-        ] == "/connections?oauth_error=unknown_flow"
+        ] == "/connections/failed?error=unknown_flow"
 
 
 async def test_no_secret_is_ever_returned(tmp_path: Path) -> None:
@@ -370,6 +405,20 @@ async def test_a_server_that_needs_no_consent_is_connected_at_once(tmp_path: Pat
         assert answer["authorize_url"] is None
         assert answer["connection"]["account"] == "tickets.example" and answer["connection"]["owner"] is None
         assert [c["id"] for c in (await api.get("/api/v1/connections")).json()] == [answer["connection"]["id"]]
+
+
+async def test_a_servers_calls_carry_the_mark_of_the_service_it_reached(tmp_path: Path) -> None:
+    async with Harness(tmp_path) as admin:
+        admin.servers.found = Discovery()
+        admin.servers.brand_of = lambda connection: "linear"  # a server the catalogue knows
+        api = await admin.api()
+        connection = (await found(api, values={"server": "https://tickets.example/mcp"}))["connection"]
+        assert connection["brand"] == "linear"
+        context = ToolContext(address=Address("telegram", "42"), speaker=Speaker.account(PersonId("mathis")))
+        await admin.nestor.toolbox.call(ToolCall(id="c1", name="servers_search", arguments={}), context)
+        journal = (await api.get("/api/v1/journal")).json()["items"]
+        (called,) = [i for i in journal if i["type"] == "agent.tool.called"]
+        assert (called["brand"], called["links"]["connection"]) == ("linear", connection["id"])
 
 
 async def test_a_server_that_registers_no_client_asks_for_one(tmp_path: Path) -> None:

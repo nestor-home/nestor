@@ -22,6 +22,7 @@ import type {
   Satellite,
   Schedule,
   Scope,
+  Service,
   SystemInfo,
   Task,
   Tool,
@@ -384,6 +385,26 @@ export function connections(): Connection[] {
   ];
 }
 
+/** What each account gives access to, as a message names it (`handle` null while it is not connected). */
+export function services(connection: Connection): Service[] {
+  const named = (name: string, brand: string | null): Service => ({
+    name,
+    brand,
+    handle: connection.status === "connected" ? name : null,
+  });
+  if (connection.kind === "google") {
+    return [
+      named("gmail", "gmail"),
+      named("calendar", "google-calendar"),
+      named("drive", "google-drive"),
+      named("contacts", "google"),
+      named("tasks", "google-tasks"),
+    ];
+  }
+  if (connection.kind === "imap") return [named("mail", "imap")];
+  return [named(connection.id === "c-mcp-ha" ? "homeassistant" : "recipes", connection.brand)];
+}
+
 export function tools(kind: string): Tool[] {
   if (kind === "google" || kind === "imap") {
     return [
@@ -672,6 +693,7 @@ export function tasks(): Task[] {
       error: null,
       origin: { session: "s-mutuelle", channel: "telegram" },
       delivered: null,
+      files: [],
     },
     {
       id: "t-88b07e",
@@ -686,6 +708,7 @@ export function tasks(): Task[] {
       error: null,
       origin: { session: "s-courses", channel: "web" },
       delivered: null,
+      files: [],
     },
     {
       id: "t-3f2a1c",
@@ -700,6 +723,7 @@ export function tasks(): Task[] {
       error: null,
       origin: { session: "s-elec", channel: "telegram" },
       delivered: { at: minutes(250.4), channel: "voice", room: OFFICE },
+      files: [],
     },
     {
       id: "t-a04f12",
@@ -714,6 +738,7 @@ export function tasks(): Task[] {
       error: GYM_ERROR,
       origin: { session: "telegram:@lea_lambert", channel: "telegram" },
       delivered: null,
+      files: [],
     },
     {
       id: "t-5e6b70",
@@ -728,6 +753,7 @@ export function tasks(): Task[] {
       error: null,
       origin: { session: "voice:pi-bedroom", channel: "voice" },
       delivered: null,
+      files: [],
     },
   ];
 }
@@ -1025,13 +1051,14 @@ export function memories(): Memory[] {
 }
 
 const component = (
-  c: Omit<Component, "capabilities" | "distribution" | "details" | "model_type"> &
-    Partial<Pick<Component, "capabilities" | "model_type">>,
+  c: Omit<Component, "capabilities" | "distribution" | "details" | "model_type" | "fallback"> &
+    Partial<Pick<Component, "capabilities" | "model_type" | "fallback">>,
 ): Component => ({
   capabilities: [],
   distribution: null,
   details: {},
   model_type: null,
+  fallback: null,
   ...c,
 });
 

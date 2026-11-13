@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 from nestor.admin.api.v1.shared import OriginOut, People, PersonRef
 from nestor.admin.api.v1.tasks.afterwards import Afterwards, Delivery
+from nestor.modules.channels import AttachmentKind
 from nestor.modules.cognition import TaskStatus
 from nestor.modules.cognition.delegation.service import Task
 
@@ -22,6 +23,15 @@ class DeliveredOut(BaseModel):
         return cls(at=delivery.at, channel=delivery.channel, room=delivery.room)
 
 
+class TaskFileOut(BaseModel):
+    """A file the task handed back; its bytes at `/tasks/{id}/files/{index}`."""
+
+    index: int
+    kind: AttachmentKind
+    media_type: str
+    size: int  # in bytes
+
+
 class TaskOut(BaseModel):
     id: str
     objective: str
@@ -35,6 +45,7 @@ class TaskOut(BaseModel):
     steps: list[str]  # the latest progress reports
     result: str | None
     error: str | None
+    files: list[TaskFileOut]  # what it handed back with its result
 
     @classmethod
     def of(cls, task: Task, people: People, afterwards: Afterwards) -> "TaskOut":
@@ -53,6 +64,10 @@ class TaskOut(BaseModel):
             steps=task.steps[-STEPS:],
             result=outcome.result if outcome else None,
             error=outcome.error if outcome else None,
+            files=[
+                TaskFileOut(index=i, kind=AttachmentKind.of(f.media_type), media_type=f.media_type, size=f.size)
+                for i, f in enumerate(afterwards.files.get(task.id, ()))
+            ],
         )
 
 

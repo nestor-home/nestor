@@ -146,13 +146,27 @@ async def test_resources_say_where_they_come_from_and_what_became_of_them(tmp_pa
         watch = await nestor.watch_book.create(Watch(what="le colis", owner=MATHIS, created_in=TELEGRAM))
         for item in ("i1", "i2"):
             await nestor.journal.publish(
-                WatchTriggered(source="keeper", watch_id=watch.id, item_id=item, item_title="Colis", summary="")
+                WatchTriggered(
+                    source="keeper",
+                    watch_id=watch.id,
+                    item_id=item,
+                    item_title="Colis",
+                    item_source="c1",
+                    summary="",
+                )
             )
         memory = await nestor.memories.remember("Mathis aime le thé", about=MATHIS, source=TELEGRAM)
         assert nestor.connections
         connection = await nestor.connections.connect("imap", MATHIS, {"server": "s", "password": "p"})
         await nestor.journal.publish(
-            ToolCalled(source="toolbox", address=TELEGRAM, call_id="c1", name="imap_search", arguments={})
+            ToolCalled(
+                source="toolbox",
+                address=TELEGRAM,
+                call_id="c1",
+                name="imap_search",
+                arguments={},
+                connection_id=connection.id,
+            )
         )
         mic = Manifest(Device("mic", "esp32", "bureau"), software=SOFTWARE)
         await pair_by_code(nestor.pairing, mic)

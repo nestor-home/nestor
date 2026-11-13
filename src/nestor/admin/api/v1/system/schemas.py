@@ -23,6 +23,7 @@ class ComponentOut(BaseModel):
     name: str  # the configured instance (`telegram`, `triage-model`), or a satellite's device id
     adapter: str  # the plugin's id (`telegram`, `openai-compatible-language`), or a satellite's model
     model_type: ModelType | None  # what a model serves (None for any other component)
+    fallback: str | None  # the model of `models` that answers when this one fails, when it has one
     brand: str | None  # the vendor or protocol, as a slug ("openrouter", "homeassistant")
     version: str | None  # the plugin's package version, or the version of the software a satellite runs
     distribution: str | None  # the package it comes from (`nestor-home` for built-ins), or a satellite's software
@@ -32,8 +33,9 @@ class ComponentOut(BaseModel):
     details: dict[str, str]  # what else it says about itself: its model, its speech service, its room
 
     @classmethod
-    def of(cls, plugged: Plugged, words: Phrasebook) -> "ComponentOut":
+    def of(cls, plugged: Plugged, nestor: Nestor, words: Phrasebook) -> "ComponentOut":
         built = plugged.component
+        model = nestor.config.models.get(plugged.name) if plugged.family is Family.MODEL else None
         component = built if isinstance(built, Component) else None
         brand = built.info.brand if isinstance(built, Connector) else None
         detail = component.health_detail() if component else None
@@ -42,6 +44,7 @@ class ComponentOut(BaseModel):
             name=plugged.name,
             adapter=plugged.id,
             model_type=built.type if isinstance(built, Model) else None,
+            fallback=model.fallback if model else None,
             brand=brand or (component.brand if component else None),
             version=plugged.origin.version if plugged.origin else None,
             distribution=plugged.origin.name if plugged.origin else None,
@@ -60,6 +63,7 @@ class ComponentOut(BaseModel):
             name=satellite.id,
             adapter=satellite.model,
             model_type=None,
+            fallback=None,
             brand=satellite.brand,
             version=satellite.software.version,
             distribution=satellite.software.name,

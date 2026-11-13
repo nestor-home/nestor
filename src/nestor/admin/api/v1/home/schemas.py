@@ -1,8 +1,6 @@
 """The home system as the admin shows it: whether it answers, how finely it places people, its rooms, who it knows
 and how the household is tied to it, and the actions it offers the agent."""
 
-from collections.abc import Sequence
-
 from pydantic import BaseModel
 
 from nestor.admin.api.v1.household.schemas import PresenceOut
@@ -11,9 +9,7 @@ from nestor.admin.api.v1.system.schemas import ComponentOut
 from nestor.admin.presentation import Phrasebook
 from nestor.modules.cognition.tools import Risk, Tool
 from nestor.modules.home import Granularity, Home
-from nestor.modules.household import Household
-from nestor.modules.satellites import Satellite
-from nestor.runtime import Plugged
+from nestor.runtime import Nestor, Plugged
 
 
 class RoomOut(BaseModel):
@@ -65,13 +61,12 @@ class HomeOut(BaseModel):
     tools: list[HomeToolOut]
 
     @classmethod
-    def of(
-        cls, plugged: Plugged, home: Home, household: Household, satellites: Sequence[Satellite], words: Phrasebook
-    ) -> "HomeOut":
+    def of(cls, plugged: Plugged, home: Home, nestor: Nestor, words: Phrasebook) -> "HomeOut":
+        household, satellites = nestor.household, nestor.pairing.satellites()
         overview, presence, people = home.overview(), home.presence.presence(), People(household)
         tied = {entity: person for person, entity in overview.people.items()}
         return cls(
-            component=ComponentOut.of(plugged, words),
+            component=ComponentOut.of(plugged, nestor, words),
             connected=overview.connected,
             granularity=overview.granularity,
             rooms=[

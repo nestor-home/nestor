@@ -36,7 +36,7 @@ async def get_system(request: Request, caller: Reader) -> SystemOut:
         agent=AgentOut.of(nestor),
         restart_required=bool(admin.pending_changes),
         pending_changes=admin.pending_changes,
-        components=[ComponentOut.of(p, words) for p in nestor.plugged]
+        components=[ComponentOut.of(p, nestor, words) for p in nestor.plugged]
         + [ComponentOut.satellite(s, heard, words) for s in nestor.pairing.satellites()],
     )
 

@@ -65,6 +65,10 @@ jr-thread-open = Ouvrir la conversation
 jr-thread-link = fil
 jr-thread-earlier = … la conversation commence plus tôt
 jr-entry-label = { $text } : { $detail }
+jr-file-count = { $count ->
+    [one] 1 fichier
+   *[other] { $count } fichiers
+}
 jr-tool-count = { $count ->
     [one] 1 outil
    *[other] { $count } outils

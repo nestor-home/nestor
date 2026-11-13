@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Volume2 } from "lucide-react";
 import { api, isMissing, keys, type Task, type TaskStatus, taskQuery, tasksQuery } from "@/api";
+import { API_BASE } from "@/api/client";
 import { Ago } from "@/components/ago";
 import { Confirm } from "@/components/confirm";
 import { type Crumb, Crumbs } from "@/components/crumbs";
@@ -11,6 +12,7 @@ import { PageHeader, RowArrow, RowList, Section, WithAside } from "@/components/
 import { Empty, Failure, Loading } from "@/components/states";
 import { Status, type StatusTone } from "@/components/status";
 import { Button } from "@/components/ui/button";
+import { Files } from "@/features/journal/attachments";
 import { SubjectStory } from "@/features/journal/subject-story";
 import { useT } from "@/i18n";
 import { BrandMark, brandOf } from "@/lib/brands";
@@ -164,6 +166,12 @@ export function TaskDetail({ id }: { id: string }) {
               <p className={task.error ? "text-sm text-brick" : "font-serif text-[1.05rem] leading-relaxed"}>
                 {task.error ?? task.result}
               </p>
+            </div>
+          ) : null}
+          {task.files.length ? (
+            <div>
+              <p className="label-mono mb-1.5">{t("task-files", { count: task.files.length })}</p>
+              <Files files={task.files} url={(index) => `${API_BASE}/tasks/${task.id}/files/${index}`} />
             </div>
           ) : null}
           {task.origin ? (

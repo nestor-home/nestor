@@ -21,19 +21,24 @@ class WatchCreated(Event, event_type="watch.created"):
 
 class WatchSorted(Event, event_type="watch.sorted"):
     """An item read against the watches it may concern: those it matched, or none when it stayed unsorted
-    (the triage model could not be reached or read: nothing is announced)."""
+    (the triage model could not be reached or read: nothing is announced). `item_source` is what brought the
+    item: a connection's id, or a source's name."""
 
     item_id: str
     item_title: str
+    item_source: str
     asked: tuple[str, ...]
     matched: tuple[str, ...] = ()
     unsorted: bool = False
 
 
 class WatchTriggered(Event, event_type="watch.triggered"):
+    """`item_source` as in `WatchSorted`."""
+
     watch_id: str
     item_id: str
     item_title: str
+    item_source: str
     summary: str
     urgent: bool = False
 

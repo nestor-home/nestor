@@ -2,12 +2,19 @@
 
 watch-title = Veilles
 watch-no-source = Aucune source disponible.
-watch-no-source-hint = { $assistant } ne peut rien surveiller sans source : une boîte mail suffit.
-watch-connect-mailbox = connectez une boîte mail
+watch-no-source-hint = { $assistant } ne peut rien surveiller sans source : connectez un compte qui reçoit des mails, ou ajoutez des flux, des pages ou des webhooks aux sources entrantes.
+watch-connect-account = connecter un compte
+watch-add-source = ajouter une source
 watch-active = Actives
 watch-active-empty = Aucune veille active.
 watch-active-empty-hint = Demandez-moi : « préviens-moi quand le colis arrive ».
 watch-for = pour { $name }
+watch-kind = { $kind ->
+    [mail] mails
+    [feed] flux
+    [page] pages web
+   *[other] { $kind }
+}
 watch-once = une seule fois
 watch-every-time = à chaque fois
 watch-triggered-count = { $count ->

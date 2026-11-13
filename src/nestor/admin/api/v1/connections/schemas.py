@@ -26,8 +26,7 @@ USAGE_SCAN = 5000  # tool calls read, newest first, to say when each tool was la
 
 @dataclass(frozen=True, slots=True)
 class Usage:
-    """Tool calls by tool name: the last one, and how many today. Tools are named per connector
-    (`<kind>_<action>`), so two accounts of one service share their counts."""
+    """The tool calls of each connection, by its id: the last one, and how many today."""
 
     last: dict[str, datetime]
     today: Counter[str]
@@ -41,9 +40,11 @@ class Usage:
         last: dict[str, datetime] = {}
         today: Counter[str] = Counter()
         for call in calls:
-            last.setdefault(call.name, call.at)
+            if call.connection_id is None:
+                continue
+            last.setdefault(call.connection_id, call.at)
             if call.at >= midnight:
-                today[call.name] += 1
+                today[call.connection_id] += 1
         return cls(last, today)
 
 
@@ -74,7 +75,6 @@ class ConnectionOut(BaseModel):
     def of(cls, admin: AdminState, connection: Connection, words: Phrasebook, usage: Usage) -> "ConnectionOut":
         connections = connections_of(admin)
         connector = connections.connectors.get(connection.kind)
-        names = {t.name for t in connector.tools(connection, connections.access(connection))} if connector else set()
         inbound = set(connector.info.inbound) if connector else set()
         reason = connection.status_reason
         return cls(
@@ -89,8 +89,8 @@ class ConnectionOut(BaseModel):
             confirm_writes=connection.confirm_writes,
             disabled_tools=sorted(connection.disabled_tools),
             created_at=connection.created_at,
-            last_used_at=max((usage.last[n] for n in names if n in usage.last), default=None),
-            calls_today=sum(usage.today[n] for n in names),
+            last_used_at=usage.last.get(connection.id),
+            calls_today=usage.today[connection.id],
             watches=sum(
                 1
                 for w in admin.nestor.watch_book.watches.values()
@@ -99,14 +99,25 @@ class ConnectionOut(BaseModel):
         )
 
 
+class ServiceOut(BaseModel):
+    name: str
+    brand: str | None
+    handle: str | None  # what its person writes after `@` to name it ("gmail-mathis" beside another Gmail);
+    # None while the account is not connected
+
+
 class ConnectionDetail(ConnectionOut):
     tools: list[ToolOut]
+    services: list[ServiceOut]  # what the account gives access to, as people name it in a message
 
     @classmethod
     def of(cls, admin: AdminState, connection: Connection, words: Phrasebook, usage: Usage) -> "ConnectionDetail":
         connections = connections_of(admin)
         connector = connections.connectors.get(connection.kind)
         tools = connector.tools(connection, connections.access(connection)) if connector else ()
+        named = next(iter(admin.nestor.connector_tools), None)
+        owner = next((p for p in admin.nestor.household.people if p.id == connection.owner), None)
+        handles = {m.id: m.handle for m in named.mentionable(owner)} if named else {}
         return cls(
             **ConnectionOut.of(admin, connection, words, usage).model_dump(),
             tools=[
@@ -117,5 +128,9 @@ class ConnectionDetail(ConnectionOut):
                     enabled=t.name not in connection.disabled_tools,
                 )
                 for t in tools
+            ],
+            services=[
+                ServiceOut(name=s.name, brand=s.brand, handle=handles.get(f"{connection.id}:{s.name}"))
+                for s in (named.services(connection) if named and connector else ())
             ],
         )

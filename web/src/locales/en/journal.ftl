@@ -65,6 +65,10 @@ jr-thread-open = Open the conversation
 jr-thread-link = thread
 jr-thread-earlier = … the conversation started earlier
 jr-entry-label = { $text }: { $detail }
+jr-file-count = { $count ->
+    [one] 1 file
+   *[other] { $count } files
+}
 jr-tool-count = { $count ->
     [one] 1 tool
    *[other] { $count } tools

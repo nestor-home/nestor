@@ -73,6 +73,7 @@ class WatchKeeper(Component):
                 source=self.name,
                 item_id=item.id,
                 item_title=item.title,
+                item_source=item.source,
                 asked=tuple(w.id for w in concerned),
                 matched=tuple(verdicts or ()),
                 unsorted=verdicts is None,
@@ -90,6 +91,7 @@ class WatchKeeper(Component):
                 watch_id=watch.id,
                 item_id=item.id,
                 item_title=item.title,
+                item_source=item.source,
                 summary=verdict.summary,
                 urgent=verdict.urgent,
             )

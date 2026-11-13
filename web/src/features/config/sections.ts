@@ -5,9 +5,11 @@
 import type { LucideIcon } from "lucide-react";
 import {
   AudioLines,
+  BookMarked,
   Bot,
   Brain,
   Cable,
+  CircleArrowUp,
   Download,
   History,
   House,
@@ -44,6 +46,7 @@ export const PAGES: ConfigPage[] = [
   { slug: "conversation", kind: "section", keys: ["conversation"], icon: MessageCircle, group: "agent" },
   { slug: "initiative", kind: "section", keys: ["initiative"], icon: Sparkles, group: "agent" },
   { slug: "voices", kind: "section", keys: ["voices"], icon: AudioLines, group: "agent" },
+  { slug: "memory", kind: "section", keys: ["memory"], icon: BookMarked, group: "agent" },
   { slug: "models", kind: "slots", keys: ["models", "agent", "watches"], icon: Brain, group: "parts" },
   { slug: "channels", kind: "slots", keys: ["channels"], icon: MessagesSquare, group: "parts" },
   { slug: "executors", kind: "slots", keys: ["executors"], icon: Workflow, group: "parts" },
@@ -52,6 +55,7 @@ export const PAGES: ConfigPage[] = [
   { slug: "home", kind: "slots", keys: ["home"], icon: House, group: "parts" },
   { slug: "connectors", kind: "slots", keys: ["connectors"], icon: Plug, group: "parts" },
   { slug: "admin", kind: "section", keys: ["admin", "data_dir"], icon: Server, group: "instance" },
+  { slug: "updates", kind: "section", keys: ["updates"], icon: CircleArrowUp, group: "instance" },
   { slug: "secrets", kind: "secrets", keys: [], icon: KeyRound, group: "vault", label: "cfg-secrets" },
   { slug: "history", kind: "history", keys: [], icon: History, group: "vault", label: "cfg-history" },
 ];

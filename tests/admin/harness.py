@@ -155,6 +155,7 @@ class Harness:
         speaker: bool = False,
         voices: bool = False,
         home: bool = True,
+        fallback: bool = False,
     ) -> None:
         self.confirms_stop, self.replies, self.word_delay_s, self.chat = confirms_stop, replies, word_delay_s, chat
         self.titles = titles  # what the model that titles conversations answers, in turn
@@ -205,6 +206,12 @@ class Harness:
             text = text.replace("home: {kind: static}\n", "")
         if quiet_hours:
             text += f"initiative: {{quiet_hours: '{quiet_hours}'}}\n"
+        if fallback:  # the main model falls back on a spare one
+            text = text.replace(
+                "main: {type: language, provider: scripted}",
+                "main: {type: language, provider: scripted, fallback: spare}, "
+                "spare: {type: language, provider: scripted}",
+            )
         if voices:
             text = text.replace(
                 "models: {main: {type: language, provider: scripted}}",
