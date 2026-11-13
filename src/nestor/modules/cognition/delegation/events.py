@@ -3,6 +3,7 @@
 from nestor.core import Event, PersonId
 from nestor.modules.channels import Address, Exchange
 from nestor.modules.cognition.delegation.types import Notify, TaskStatus
+from nestor.modules.journal import BlobRef
 
 
 class TaskStarted(Event, event_type="task.started"):
@@ -41,6 +42,7 @@ class TaskEnded(Event, event_type="task.ended"):
     result: str | None = None
     error: str | None = None
     duration_s: float
+    files: tuple[BlobRef, ...] = ()  # what the executor made, to go with the answer that brings the result
 
 
 class TaskDelivered(Event, event_type="task.delivered"):

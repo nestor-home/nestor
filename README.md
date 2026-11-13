@@ -45,8 +45,9 @@ the right place. Every word it says is in a journal you can read.
   are out, respects quiet hours, and stays silent when a check finds nothing.
 - **Memory you can read.** Dated, sourced facts and summaries of past conversations, found by words and
   by meaning, all visible and editable in the admin.
-- **Long work, elsewhere.** Long tasks go to executors such as [Hermes](https://github.com/NousResearch/hermes-agent);
-  a slow tool keeps running in the background and its result comes back into the conversation.
+- **Long work, elsewhere.** Long tasks go to executors: [Hermes](https://github.com/NousResearch/hermes-agent),
+  OpenAI Codex, Claude Code, with the files they make; a slow tool keeps running in the background and its
+  result comes back into the conversation.
 - **Any model.** Any OpenAI-compatible server, hosted or local (Ollama, LM Studio, vLLM, llama.cpp),
   one for speaking and another for writing if you like.
 - **Who is speaking.** Optional voice recognition, run on your server and opt-in per person. It
@@ -124,7 +125,7 @@ the person is. [How it works](https://nestorhome.dev/docs/agent/) goes further.
 | **Home** | Home Assistant, and everything it controls (Hue, IKEA, Sonos, tado°…) |
 | **Channels** | Satellites (`nestor.satellite/1`), Telegram |
 | **Mail** | Gmail, IMAP |
-| **Tools and work** | Any MCP server, Hermes |
+| **Tools and work** | Any MCP server, Hermes, Codex, Claude Code |
 
 Each one is a plugin: another provider is another adapter, with no change to the core.
 

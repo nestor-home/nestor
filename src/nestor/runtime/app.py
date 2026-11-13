@@ -224,7 +224,8 @@ class Nestor:
         for channel in self.channels:
             if isinstance(channel, SatelliteHost):
                 channel.host_satellites(self.pairing, self.journal)
-        self.tasks = TaskManager(self.journal, self.executors)
+        self.blobs = FileBlobStore(config.data_dir / BLOBS)
+        self.tasks = TaskManager(self.journal, self.executors, blobs=self.blobs)
         delegation = Delegation(self.tasks)
         embedder = (
             chosen(models, config.memory.embedder, EmbeddingModel, ("memory", "embedder"))
@@ -271,7 +272,6 @@ class Nestor:
         schedule_tools = ScheduleTools(self.schedule_book)
         self.connector_tools = connector_tools = [ConnectorTools(self.connections)] if self.connections else []
         self.confirmations = Confirmations(self.journal, self.household, self.message_book)
-        self.blobs = FileBlobStore(config.data_dir / BLOBS)
         self.toolbox = toolbox = Toolbox(
             self.journal,
             providers=[

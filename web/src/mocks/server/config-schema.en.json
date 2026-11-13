@@ -5281,6 +5281,663 @@
         "kind"
       ],
       "kinds": {
+        "claude-code": {
+          "$defs": {
+            "PermissionMode": {
+              "enum": [
+                "dontAsk",
+                "acceptEdits",
+                "plan",
+                "auto",
+                "bypassPermissions"
+              ],
+              "title": "PermissionMode",
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "claude-code",
+              "type": "string",
+              "x-nestor": {
+                "field": "kind",
+                "title_id": "config-executor-claude-code-kind",
+                "help_id": "config-executor-claude-code-kind-help",
+                "fallback_title_id": "config-field-kind",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "executor-claude-code",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Kind",
+                "help": null
+              }
+            },
+            "name": {
+              "type": "string",
+              "description": "the instance's name; the kind by default",
+              "x-nestor": {
+                "field": "name",
+                "title_id": "config-executor-claude-code-name",
+                "help_id": "config-executor-claude-code-name-help",
+                "fallback_title_id": "config-field-name",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "executor-claude-code",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Name",
+                "help": null
+              }
+            },
+            "command": {
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "title": "Command",
+              "type": "array",
+              "x-nestor": {
+                "field": "command",
+                "title_id": "config-executor-claude-code-command",
+                "help_id": "config-executor-claude-code-command-help",
+                "fallback_title_id": "config-field-command",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "executor-claude-code",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Command",
+                "help": "The claude command."
+              }
+            },
+            "working_directory": {
+              "format": "path",
+              "title": "Working Directory",
+              "type": "string",
+              "x-nestor": {
+                "field": "working_directory",
+                "title_id": "config-executor-claude-code-working_directory",
+                "help_id": "config-executor-claude-code-working_directory-help",
+                "fallback_title_id": "config-field-working_directory",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "executor-claude-code",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Working directory",
+                "help": "Files are handed back from there only."
+              }
+            },
+            "description": {
+              "title": "Description",
+              "type": "string",
+              "x-nestor": {
+                "field": "description",
+                "title_id": "config-executor-claude-code-description",
+                "help_id": "config-executor-claude-code-description-help",
+                "fallback_title_id": "config-field-description",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "executor-claude-code",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "What it can do",
+                "help": "The assistant uses it to decide what to hand over."
+              }
+            },
+            "instructions": {
+              "default": "You carry out a task handed over by a home voice assistant. Use your tools and check the result, then write a short, factual report in the language of the task: what was done or found, and what could not be. No Markdown: the assistant will say it aloud. Never claim an action you did not perform.",
+              "title": "Instructions",
+              "type": "string",
+              "x-nestor": {
+                "field": "instructions",
+                "title_id": "config-executor-claude-code-instructions",
+                "help_id": "config-executor-claude-code-instructions-help",
+                "fallback_title_id": "config-field-instructions",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "executor-claude-code",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Instructions",
+                "help": null
+              }
+            },
+            "model": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Model",
+              "x-nestor": {
+                "field": "model",
+                "title_id": "config-executor-claude-code-model",
+                "help_id": "config-executor-claude-code-model-help",
+                "fallback_title_id": "config-field-model",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "executor-claude-code",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Model",
+                "help": null
+              }
+            },
+            "permission_mode": {
+              "$ref": "#/$defs/PermissionMode",
+              "default": "dontAsk",
+              "x-nestor": {
+                "field": "permission_mode",
+                "title_id": "config-executor-claude-code-permission_mode",
+                "help_id": "config-executor-claude-code-permission_mode-help",
+                "fallback_title_id": "config-field-permission_mode",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "executor-claude-code",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Permission mode",
+                "help": "Nobody answers a prompt: dontAsk runs only the allowed tools."
+              }
+            },
+            "allowed_tools": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Allowed Tools",
+              "type": "array",
+              "x-nestor": {
+                "field": "allowed_tools",
+                "title_id": "config-executor-claude-code-allowed_tools",
+                "help_id": "config-executor-claude-code-allowed_tools-help",
+                "fallback_title_id": "config-field-allowed_tools",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "executor-claude-code",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Allowed tools",
+                "help": "E.g. Bash(git *). By default its folder and the web, no shell."
+              }
+            },
+            "disallowed_tools": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Disallowed Tools",
+              "type": "array",
+              "x-nestor": {
+                "field": "disallowed_tools",
+                "title_id": "config-executor-claude-code-disallowed_tools",
+                "help_id": "config-executor-claude-code-disallowed_tools-help",
+                "fallback_title_id": "config-field-disallowed_tools",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "executor-claude-code",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Denied tools",
+                "help": null
+              }
+            },
+            "max_budget_usd": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Max Budget Usd",
+              "x-nestor": {
+                "field": "max_budget_usd",
+                "title_id": "config-executor-claude-code-max_budget_usd",
+                "help_id": "config-executor-claude-code-max_budget_usd-help",
+                "fallback_title_id": "config-field-max_budget_usd",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "executor-claude-code",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Budget per task (USD)",
+                "help": null
+              }
+            },
+            "api_key": {
+              "anyOf": [
+                {
+                  "format": "password",
+                  "type": "string",
+                  "writeOnly": true
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Api Key",
+              "x-nestor": {
+                "field": "api_key",
+                "title_id": "config-executor-claude-code-api_key",
+                "help_id": "config-executor-claude-code-api_key-help",
+                "fallback_title_id": "config-field-api_key",
+                "secret": true,
+                "secret_values": false,
+                "advanced": false,
+                "group": "executor-claude-code",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "API key",
+                "help": "Without it, the account Claude Code is signed in with."
+              }
+            },
+            "stop_timeout_s": {
+              "default": 10.0,
+              "exclusiveMinimum": 0,
+              "title": "Stop Timeout S",
+              "type": "number",
+              "x-nestor": {
+                "field": "stop_timeout_s",
+                "title_id": "config-executor-claude-code-stop_timeout_s",
+                "help_id": "config-executor-claude-code-stop_timeout_s-help",
+                "fallback_title_id": "config-field-stop_timeout_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "executor-claude-code",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Stop timeout (seconds)",
+                "help": null
+              }
+            },
+            "max_file_bytes": {
+              "default": 20000000,
+              "exclusiveMinimum": 0,
+              "title": "Max File Bytes",
+              "type": "integer",
+              "x-nestor": {
+                "field": "max_file_bytes",
+                "title_id": "config-executor-claude-code-max_file_bytes",
+                "help_id": "config-executor-claude-code-max_file_bytes-help",
+                "fallback_title_id": "config-field-max_file_bytes",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "executor-claude-code",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Largest file handed back (bytes)",
+                "help": null
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "working_directory",
+            "description"
+          ],
+          "title": "ClaudeCodeSettings",
+          "type": "object"
+        },
+        "codex": {
+          "$defs": {
+            "Sandbox": {
+              "enum": [
+                "read-only",
+                "workspace-write",
+                "danger-full-access"
+              ],
+              "title": "Sandbox",
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "codex",
+              "type": "string",
+              "x-nestor": {
+                "field": "kind",
+                "title_id": "config-executor-codex-kind",
+                "help_id": "config-executor-codex-kind-help",
+                "fallback_title_id": "config-field-kind",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "executor-codex",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Kind",
+                "help": null
+              }
+            },
+            "name": {
+              "type": "string",
+              "description": "the instance's name; the kind by default",
+              "x-nestor": {
+                "field": "name",
+                "title_id": "config-executor-codex-name",
+                "help_id": "config-executor-codex-name-help",
+                "fallback_title_id": "config-field-name",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "executor-codex",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Name",
+                "help": null
+              }
+            },
+            "command": {
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "title": "Command",
+              "type": "array",
+              "x-nestor": {
+                "field": "command",
+                "title_id": "config-executor-codex-command",
+                "help_id": "config-executor-codex-command-help",
+                "fallback_title_id": "config-field-command",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "executor-codex",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Command",
+                "help": "codex app-server, or a relay to a Codex server: ssh codex@host codex app-server proxy."
+              }
+            },
+            "working_directory": {
+              "title": "Working Directory",
+              "type": "string",
+              "x-nestor": {
+                "field": "working_directory",
+                "title_id": "config-executor-codex-working_directory",
+                "help_id": "config-executor-codex-working_directory-help",
+                "fallback_title_id": "config-field-working_directory",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "executor-codex",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Working directory",
+                "help": "On the machine Codex runs on. Files are handed back from there only."
+              }
+            },
+            "description": {
+              "title": "Description",
+              "type": "string",
+              "x-nestor": {
+                "field": "description",
+                "title_id": "config-executor-codex-description",
+                "help_id": "config-executor-codex-description-help",
+                "fallback_title_id": "config-field-description",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "executor-codex",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "What it can do",
+                "help": "The assistant uses it to decide what to hand over."
+              }
+            },
+            "instructions": {
+              "default": "You carry out a task handed over by a home voice assistant. Use your tools and check the result, then write a short, factual report in the language of the task: what was done or found, and what could not be. No Markdown: the assistant will say it aloud. Never claim an action you did not perform.",
+              "title": "Instructions",
+              "type": "string",
+              "x-nestor": {
+                "field": "instructions",
+                "title_id": "config-executor-codex-instructions",
+                "help_id": "config-executor-codex-instructions-help",
+                "fallback_title_id": "config-field-instructions",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "executor-codex",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Instructions",
+                "help": null
+              }
+            },
+            "model": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Model",
+              "x-nestor": {
+                "field": "model",
+                "title_id": "config-executor-codex-model",
+                "help_id": "config-executor-codex-model-help",
+                "fallback_title_id": "config-field-model",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "executor-codex",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Model",
+                "help": null
+              }
+            },
+            "sandbox": {
+              "$ref": "#/$defs/Sandbox",
+              "default": "workspace-write",
+              "x-nestor": {
+                "field": "sandbox",
+                "title_id": "config-executor-codex-sandbox",
+                "help_id": "config-executor-codex-sandbox-help",
+                "fallback_title_id": "config-field-sandbox",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "executor-codex",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Sandbox",
+                "help": "What Codex may change. It never waits for an approval."
+              }
+            },
+            "config": {
+              "additionalProperties": true,
+              "title": "Config",
+              "type": "object",
+              "x-nestor": {
+                "field": "config",
+                "title_id": "config-executor-codex-config",
+                "help_id": "config-executor-codex-config-help",
+                "fallback_title_id": "config-field-config",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "executor-codex",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Codex settings",
+                "help": "Applied to each task, as in Codex's config.toml: MCP servers, network access."
+              }
+            },
+            "timeout_s": {
+              "default": 30.0,
+              "exclusiveMinimum": 0,
+              "title": "Timeout S",
+              "type": "number",
+              "x-nestor": {
+                "field": "timeout_s",
+                "title_id": "config-executor-codex-timeout_s",
+                "help_id": "config-executor-codex-timeout_s-help",
+                "fallback_title_id": "config-field-timeout_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "executor-codex",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Timeout (seconds)",
+                "help": null
+              }
+            },
+            "stop_timeout_s": {
+              "default": 10.0,
+              "exclusiveMinimum": 0,
+              "title": "Stop Timeout S",
+              "type": "number",
+              "x-nestor": {
+                "field": "stop_timeout_s",
+                "title_id": "config-executor-codex-stop_timeout_s",
+                "help_id": "config-executor-codex-stop_timeout_s-help",
+                "fallback_title_id": "config-field-stop_timeout_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "executor-codex",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Stop timeout (seconds)",
+                "help": null
+              }
+            },
+            "max_file_bytes": {
+              "default": 20000000,
+              "exclusiveMinimum": 0,
+              "title": "Max File Bytes",
+              "type": "integer",
+              "x-nestor": {
+                "field": "max_file_bytes",
+                "title_id": "config-executor-codex-max_file_bytes",
+                "help_id": "config-executor-codex-max_file_bytes-help",
+                "fallback_title_id": "config-field-max_file_bytes",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "executor-codex",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Largest file handed back (bytes)",
+                "help": null
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "working_directory",
+            "description"
+          ],
+          "title": "CodexSettings",
+          "type": "object"
+        },
         "hermes": {
           "additionalProperties": false,
           "properties": {

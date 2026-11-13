@@ -6,6 +6,8 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from nestor.core import PersonId, new_id, utc_now
 from nestor.core.i18n import Message
 from nestor.modules.accounts import Role
@@ -276,10 +278,16 @@ async def test_the_files_of_a_message_come_to_who_may_read_it_and_only_pictures_
         assert (await api.get(f"/api/v1/journal/{item['position']}/attachments/2")).status_code == 404
 
 
-async def test_a_picture_a_tool_made_shows_with_its_call(tmp_path: Path) -> None:
+@pytest.mark.parametrize("made_by", ["agent.tool.completed", "task.ended"])
+async def test_a_file_a_tool_or_a_task_made_shows_with_its_line(made_by: str, tmp_path: Path) -> None:
     """Even where the conversation could not receive it (a voice in a room)."""
     async with Harness(tmp_path) as admin:
         picture = await admin.nestor.blobs.put(b"\x89PNG drawn", "image/png")
+        if made_by == "task.ended":
+            origin = Address("telegram", "42")
+            await admin.nestor.journal.publish(
+                TaskStarted(source="tasks", task_id="t1", objective="Draw", executor="codex", origin=origin)
+            )
         await admin.nestor.journal.publish(
             ToolCompleted(
                 source="toolbox",
@@ -290,9 +298,18 @@ async def test_a_picture_a_tool_made_shows_with_its_call(tmp_path: Path) -> None
                 duration_s=4.0,
                 files=(picture,),
             )
+            if made_by == "agent.tool.completed"
+            else TaskEnded(
+                source="tasks",
+                task_id="t1",
+                status=TaskStatus.COMPLETED,
+                result="drawn",
+                duration_s=9.0,
+                files=(picture,),
+            )
         )
         api = await admin.api()
-        [item] = [i for i in await items(api, type="agent.tool.completed") if i["attachments"]]
+        [item] = [i for i in await items(api, type=made_by) if i["attachments"]]
         assert [(a["kind"], a["media_type"]) for a in item["attachments"]] == [("image", "image/png")]
         shown = await api.get(f"/api/v1/journal/{item['position']}/attachments/0")
         assert (shown.status_code, shown.content) == (200, b"\x89PNG drawn")
