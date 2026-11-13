@@ -28,7 +28,7 @@ import openrouterSvg from "@lobehub/icons-static-svg/icons/openrouter.svg?raw";
 import tavilySvg from "@lobehub/icons-static-svg/icons/tavily.svg?raw";
 import vllmSvg from "@lobehub/icons-static-svg/icons/vllm.svg?raw";
 import type { LucideIcon } from "lucide-react";
-import { Cpu, Globe, KeyRound, Mail, Mic, Plug, RadioTower } from "lucide-react";
+import { Cpu, Globe, KeyRound, Mail, Mic, Plug, RadioTower, Webhook } from "lucide-react";
 import {
   type SimpleIcon,
   siAnthropic,
@@ -51,6 +51,7 @@ import {
   siMistralai,
   siModelcontextprotocol,
   siNotion,
+  siNtfy,
   siNvidia,
   siOpenrouter,
   siOpenstreetmap,
@@ -135,6 +136,8 @@ const BRANDS = {
   slack: monogram("Slack", "S"), // in neither icon set
   signal: simple("Signal", siSignal),
   matrix: simple("Matrix", siMatrix),
+  ntfy: simple("ntfy", siNtfy),
+  webhook: glyph("Webhook", Webhook),
   "home-assistant": simple("Home Assistant", siHomeassistant),
   matter: monogram("Matter", "M"),
   mcp: simple("Model Context Protocol", siModelcontextprotocol),

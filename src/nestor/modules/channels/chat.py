@@ -172,8 +172,7 @@ class ChatChannel(Channel):
         await self._closing.wait()
 
     async def send(self, to: Address, text: str, medium: Medium, attachments: tuple[Attachment, ...]) -> None:
-        if not self.reachable(to, medium):
-            raise ContractError(f"{to} is not on channel {self.channel_id!r} {medium}")
+        self.check_serves(to, medium)
         if self._closing.is_set():
             raise ProviderError(self.name, "the channel is closed", transient=False)
         # delivered by being logged, files included: the chat is read from the journal

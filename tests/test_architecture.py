@@ -30,7 +30,9 @@ ALLOWED_INTERNAL = {
 # Third-party packages allowed outside adapters, per layer. Each addition is a design decision.
 THIRD_PARTY_ALLOWED: dict[str, set[str]] = {
     # the configuration (validated, edited round-trip) and the .env next to it; never in modules
-    "runtime": {"pydantic", "pydantic_core", "yaml", "ruamel", "dotenv"},
+    # and the HTTP servers run inside Nestor's event loop (the admin's, a channel's): one uvicorn server, signals left
+    # to Nestor
+    "runtime": {"pydantic", "pydantic_core", "yaml", "ruamel", "dotenv", "uvicorn"},
     "admin": {"fastapi", "starlette", "pydantic", "uvicorn"},  # the JSON API served next to Nestor
     "bench": {"pydantic", "yaml"},  # a suite's knobs are settings like an adapter's; variants are YAML fragments
 }

@@ -165,7 +165,16 @@ class Channel(Component, ABC):
     def reachable(self, to: Address, medium: Medium) -> bool:
         """Whether `send` can deliver through `medium` now (aloud needs someone connected). Cheap;
         `send` may still fail."""
+        return self.serves(to, medium)
+
+    def serves(self, to: Address, medium: Medium) -> bool:
+        """Whether `to` is on this channel, through one of its `media`."""
         return to.channel == self.channel_id and medium in self.media
+
+    def check_serves(self, to: Address, medium: Medium) -> None:
+        """What `send` checks first: a `ContractError` for an address it does not serve."""
+        if not self.serves(to, medium):
+            raise ContractError(f"{to} is not on channel {self.channel_id!r} {medium}")
 
 
 class TranscriptionModel(Model, ABC):

@@ -107,6 +107,14 @@ config-updates-feed = Flux des versions
 # Plugins' settings: a generic title per field name, a specific one where the name says too little.
 config-field-api_base = URL de l'API
 config-field-apology = Message en cas d'erreur
+config-channel-openai-api-keys = Clés d'API
+config-channel-openai-api-keys-help = Par nom de compte : un client qui présente la clé parle en tant que openai-api:<nom>. Gardées comme secrets.
+config-channel-openai-api-host-help = 0.0.0.0 pour des clients sur d'autres machines.
+config-channel-webhook-secret = Secret de signature
+config-channel-webhook-secret-help = Signe chaque corps (X-Nestor-Signature: sha256=…).
+config-channel-webhook-url-help = Où chaque message est envoyé en JSON.
+config-channel-ntfy-url-help = ntfy.sh, ou votre propre serveur.
+config-channel-ntfy-token-help = Un jeton d'accès, pour un serveur à accès contrôlé.
 config-field-retry_delay_s = Première attente avant de se reconnecter (secondes)
 config-field-homeserver = Serveur d'accueil
 config-channel-matrix-homeserver-help = Le serveur du compte du bot, par exemple https://matrix.org.
