@@ -35,7 +35,7 @@ from nestor.testing.initiative import InboundEventSourceContract
 from ...mailboxes import PASSWORD, FakeMailbox, ScriptedClient
 
 MATHILDE = PersonId("mathilde")
-CONNECTION = Connection(kind="imap", owner=MATHILDE, account="mathilde@free.fr", id="imap-mathi")
+CONNECTION = Connection(kind="imap", owner=MATHILDE, account="mathilde@free.fr", auth=AuthKind.SECRET, id="imap-mathi")
 CONTEXT = ToolContext(address=Address("telegram", "42"), speaker=Speaker.account(MATHILDE))
 FAST = ImapTiming(timeout_s=2.0, idle_s=0.3, poll_s=0.02)
 
@@ -196,7 +196,10 @@ class FakeAccess(Access):
         self.typed.setdefault("password", PASSWORD)
         self.state: dict[str, str] = {}
 
-    async def token(self) -> str:
+    async def revoked(self) -> None:
+        raise AssertionError("not reached: no service refuses a fresh token here")
+
+    async def token(self, *, refused: str | None = None) -> str:
         raise AssertionError("IMAP connections have no OAuth token")
 
     async def secrets(self) -> Secrets:
@@ -506,7 +509,7 @@ async def test_over_the_wire_search_and_read_quote_what_imap_needs() -> None:
         assert [m["subject"] for m in recent["messages"]] == ['Le "Petit" journal', "Réunion à l'école"]
         with pytest.raises(ToolFailed, match="no message with uid 99"):
             await found["imap_mail_read"].run({"uid": 99}, CONTEXT)
-        assert await connector.identify(access) == "mathilde@free.fr"
+        assert await connector.identify(CONNECTION, access) == "mathilde@free.fr"
     assert 'SELECT "Bo&AO4-te \\"Archives\\""' in server.commands  # modified UTF-7, quoted
     assert any("CHARSET UTF-8 OR SUBJECT" in c for c in server.commands)
     assert all("STORE" not in c for c in server.commands)  # read only: nothing is flagged
@@ -517,14 +520,14 @@ async def test_over_the_wire_a_refused_login_is_permanent_and_a_missing_folder_t
     mailbox = FakeMailbox()
     async with FakeImapServer(mailbox) as server:
         with pytest.raises(LoginRefused, match="AUTHENTICATIONFAILED") as refused:
-            await ImapConnector(timing=FAST).identify(FakeAccess(server.secrets(password="wrong")))
+            await ImapConnector(timing=FAST).identify(CONNECTION, FakeAccess(server.secrets(password="wrong")))
         assert not refused.value.transient, "only the person can fix it"
     async with FakeImapServer(mailbox, select_refused=True) as server:
         with pytest.raises(MailboxUnavailable, match="refused SELECT"):
-            await ImapConnector(timing=FAST).identify(FakeAccess(server.secrets()))
+            await ImapConnector(timing=FAST).identify(CONNECTION, FakeAccess(server.secrets()))
     async with FakeImapServer(mailbox, uidvalidity=False) as server:
         with pytest.raises(MailboxUnavailable, match="UIDVALIDITY"):
-            await ImapConnector(timing=FAST).identify(FakeAccess(server.secrets()))
+            await ImapConnector(timing=FAST).identify(CONNECTION, FakeAccess(server.secrets()))
     assert mailbox.connected == 0
 
 

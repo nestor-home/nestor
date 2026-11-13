@@ -7,11 +7,10 @@ import json
 import logging
 import os
 import socket
-from collections.abc import AsyncIterator, Awaitable, Callable
+from collections.abc import AsyncIterator
 from typing import Any, ClassVar
 
 import pytest
-import uvicorn
 from mcp import MCPError
 from mcp.server import Server
 from mcp.server.mcpserver import Context, MCPServer
@@ -53,13 +52,13 @@ from nestor.runtime import Family, Services
 from nestor.testing.i18n import EchoLocalizer
 from nestor.testing.journal import MemoryBlobStore, MemoryEventLog
 
+from ..served import Asgi, Served, bearer, eventually
+
 type LogCapture = pytest.LogCaptureFixture
 
 TOKEN = "long-lived-token"
 CONTEXT = ToolContext(address=Address("voice", "living-room"))
 ERAS = pytest.mark.parametrize("negotiation", ["auto", "legacy"])
-
-type Asgi = Callable[[dict[str, Any], Any, Any], Awaitable[None]]
 
 
 def home_server() -> MCPServer:
@@ -142,7 +141,7 @@ class ToughServer:
         self.listings = 0  # complete listings started, one per session and per change
 
     def app(self) -> Asgi:
-        return bearer(Server("paged", on_list_tools=self._list, on_call_tool=self._call).streamable_http_app())
+        return bearer(Server("paged", on_list_tools=self._list, on_call_tool=self._call).streamable_http_app(), TOKEN)
 
     async def _list(self, ctx: Any, params: Any) -> ListToolsResult:
         index = int(params.cursor) if params is not None and params.cursor else 0
@@ -170,19 +169,6 @@ async def tough() -> AsyncIterator[tuple[ToughServer, McpToolProvider]]:
     await served.stop()
 
 
-def bearer(app: Asgi, token: str = TOKEN) -> Asgi:
-    """Refuses requests without the token, like Home Assistant's HTTP layer."""
-
-    async def guarded(scope: dict[str, Any], receive: Any, send: Any) -> None:
-        if scope["type"] == "http" and dict(scope["headers"]).get(b"authorization") != f"Bearer {token}".encode():
-            await send({"type": "http.response.start", "status": 401, "headers": [(b"content-type", b"text/plain")]})
-            await send({"type": "http.response.body", "body": b"401: Unauthorized"})
-            return
-        await app(scope, receive, send)
-
-    return guarded
-
-
 def failing(status: int) -> Asgi:
     async def app(scope: dict[str, Any], receive: Any, send: Any) -> None:
         if scope["type"] == "http":
@@ -192,39 +178,9 @@ def failing(status: int) -> Asgi:
     return app
 
 
-class Served:
-    """An ASGI app served over real HTTP on 127.0.0.1; stopping and starting again keeps the port.
-    `app` builds a fresh application each time: an MCP session manager only runs once."""
-
-    def __init__(self, app: Callable[[], Asgi]) -> None:
-        self._app = app
-        self.port = 0
-        self._server: uvicorn.Server | None = None
-        self._task: asyncio.Task[None] | None = None
-
-    def url(self, path: str = "/mcp") -> str:
-        return f"http://127.0.0.1:{self.port}{path}"
-
-    async def start(self) -> None:
-        config = uvicorn.Config(
-            self._app(), host="127.0.0.1", port=self.port, log_level="warning", timeout_graceful_shutdown=1
-        )
-        self._server = uvicorn.Server(config)
-        self._task = asyncio.create_task(self._server.serve())
-        while not self._server.started:
-            await asyncio.sleep(0.01)
-        self.port = self._server.servers[0].sockets[0].getsockname()[1]
-
-    async def stop(self) -> None:
-        if self._server is not None and self._task is not None:
-            self._server.should_exit = True
-            await self._task
-            self._server = self._task = None
-
-
 @pytest.fixture
 async def served_home() -> AsyncIterator[Served]:
-    served = Served(lambda: bearer(home_server().streamable_http_app()))
+    served = Served(lambda: bearer(home_server().streamable_http_app(), TOKEN))
     await served.start()
     yield served
     await served.stop()
@@ -250,12 +206,6 @@ async def call(provider: McpToolProvider, tool_name: str, /, **arguments: object
     output = await tool(provider, tool_name).run(arguments, CONTEXT)
     assert isinstance(output, str)
     return output
-
-
-async def eventually(condition: Callable[[], bool], timeout_s: float = 5.0) -> None:
-    async with asyncio.timeout(timeout_s):
-        while not condition():
-            await asyncio.sleep(0.02)
 
 
 # --- discovery -------------------------------------------------------------------------------
@@ -386,7 +336,7 @@ async def test_a_cancelled_call_leaves_the_session_usable(home: McpToolProvider)
 
 
 async def test_a_server_without_tools_offers_none() -> None:
-    served = Served(lambda: bearer(Server("prompts-only").streamable_http_app()))
+    served = Served(lambda: bearer(Server("prompts-only").streamable_http_app(), TOKEN))
     await served.start()
     try:
         async with provider_for(served) as provider:
@@ -403,7 +353,7 @@ async def test_other_server_notifications_leave_the_session_as_it_is(home: McpTo
 
 
 async def test_the_sse_transport_of_older_servers_works_too() -> None:
-    served = Served(lambda: bearer(home_server().sse_app()))
+    served = Served(lambda: bearer(home_server().sse_app(), TOKEN))
     await served.start()
     try:
         provider = McpToolProvider(
@@ -510,7 +460,7 @@ async def test_a_call_reconnects_once_the_server_is_back(served_home: Served) ->
 
 
 async def test_the_tools_come_back_on_their_own_once_the_server_is_back() -> None:
-    served = Served(lambda: bearer(home_server().streamable_http_app()))
+    served = Served(lambda: bearer(home_server().streamable_http_app(), TOKEN))
     served.port = free_port()
     provider = provider_for(served, retry_after_s=0.05)
     await provider.start()
@@ -525,7 +475,7 @@ async def test_the_tools_come_back_on_their_own_once_the_server_is_back() -> Non
 
 
 async def test_a_lost_sse_stream_ends_the_session() -> None:
-    served = Served(lambda: bearer(home_server().sse_app()))
+    served = Served(lambda: bearer(home_server().sse_app(), TOKEN))
     await served.start()
     provider = McpToolProvider(
         served.url("/sse"), name="home", transport=McpTransport.SSE, auth=BearerToken(TOKEN), retry_after_s=60

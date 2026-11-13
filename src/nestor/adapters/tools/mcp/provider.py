@@ -91,22 +91,22 @@ class BearerToken(httpx2.Auth):
 
 
 class _Unreachable(Exception):
-    """The session could not be opened; `transient` says whether trying again may help."""
+    """The session could not be opened; `transient` says whether trying again may help, `reason` what people read."""
 
-    def __init__(self, message: str, *, transient: bool) -> None:
+    def __init__(self, message: str, *, transient: bool, reason: Message) -> None:
         super().__init__(message)
-        self.transient = transient
+        self.transient, self.reason = transient, reason
 
 
 class _HttpErrors:
-    """Remembers the last HTTP error status: the SDK reports a 401 as a bare internal error."""
+    """The status of the last HTTP response when it was an error: the SDK reports a 401 as a bare internal error. A
+    response that succeeds after it (a token renewed) clears it."""
 
     def __init__(self) -> None:
         self.status: int | None = None
 
     async def __call__(self, response: httpx2.Response) -> None:
-        if response.is_error:
-            self.status = response.status_code
+        self.status = response.status_code if response.is_error else None
 
 
 class _Session:
@@ -147,7 +147,8 @@ class _Session:
 class McpToolProvider(ToolProvider):
     """Offers the tools of one MCP server; tool names are the server's, made valid and unique.
 
-    `include` and `exclude` select tools by their name on the server. A tool's annotations only tell reading from
+    `include` and `exclude` select tools by their name on the server; `prefix` starts every name offered, to tell two
+    servers' tools apart. A tool's annotations only tell reading from
     writing: MCP holds any tool that writes destructive unless it says otherwise, and Home Assistant marks turning on
     a light so, so the hint cannot tell what needs a person's go-ahead. What does is the household's to say: `risks`
     sets a tool's risk by its name, `sensitive` makes some calls of a tool sensitive by what they act on (a lock, the
@@ -159,6 +160,7 @@ class McpToolProvider(ToolProvider):
         url: str,
         *,
         name: str = "mcp",
+        prefix: str = "",
         transport: McpTransport = McpTransport.STREAMABLE_HTTP,
         auth: httpx2.Auth | None = None,
         headers: Mapping[str, str] | None = None,
@@ -170,7 +172,7 @@ class McpToolProvider(ToolProvider):
         retry_after_s: float = 30.0,
         negotiation: Negotiation = "auto",
     ) -> None:
-        self.name = name
+        self.name, self.prefix = name, prefix
         self._url, self._transport, self._auth = url, transport, auth
         self._headers = dict(headers or {})
         self._timeout_s, self._retry_after_s = timeout_s, retry_after_s
@@ -188,15 +190,30 @@ class McpToolProvider(ToolProvider):
     async def start(self) -> None:
         """Opens the session now. Refused credentials fail loudly: only a person can fix them. A server that is down,
         failing or still starting only leaves its tools missing (the home may reboot with Nestor) until it answers."""
+        try:
+            await self.connect()
+        except ProviderError as error:
+            if not error.transient:
+                raise
+            logger.warning("%s: MCP server unavailable, its tools are missing until it answers (%s)", self.name, error)
+
+    async def connect(self) -> None:
+        """Opens the session now, or says why not (`ProviderError`, transient when trying again may help)."""
         self._closed = False
         try:
             await self._open()
         except _Unreachable as error:
-            if not error.transient:
-                raise ProviderError(self.name, str(error), transient=False) from None
-            logger.warning("%s: MCP server unavailable, its tools are missing until it answers (%s)", self.name, error)
+            raise ProviderError(self.name, str(error), transient=error.transient, reason=error.reason) from None
+
+    async def endpoint(self) -> tuple[str, httpx2.Auth | None]:
+        """Where the server is and how requests to it are authorised, read each time a session opens (`ProviderError`
+        when that cannot be told)."""
+        return self._url, self._auth
 
     brand = "mcp"
+
+    def _unreachable(self) -> Message:
+        return Message.of("mcp-unreachable", server=self.name)
 
     def health(self) -> Health:
         """Unavailable while the server does not answer: its tools are missing."""
@@ -228,7 +245,7 @@ class McpToolProvider(ToolProvider):
         """The live session, opening a new one if there is none."""
         async with self._lock:
             if self._closed:
-                raise _Unreachable("the provider is closed", transient=False)
+                raise _Unreachable("the provider is closed", transient=False, reason=self._unreachable())
             session = self._session
             if session is not None and session.alive:
                 return session
@@ -240,10 +257,15 @@ class McpToolProvider(ToolProvider):
 
     async def _connect(self) -> _Session:
         errors = _HttpErrors()
+        try:
+            url, auth = await self.endpoint()
+        except ProviderError as error:
+            reason = error.reason or Message.of("mcp-unreachable", server=self.name)
+            raise _Unreachable(str(error), transient=error.transient, reason=reason) from None
         ready: asyncio.Future[None] = asyncio.get_running_loop().create_future()
         session = _Session(
             lambda handler: Client(
-                self._transport_streams(errors),
+                self._transport_streams(url, auth, errors),
                 mode=self._negotiation,
                 message_handler=handler,
                 read_timeout_seconds=self._timeout_s,
@@ -258,10 +280,12 @@ class McpToolProvider(ToolProvider):
                 await ready
         except TimeoutError:
             await session.abort()
-            raise _Unreachable(f"no answer within {self._timeout_s:g} s", transient=True) from None
+            raise _Unreachable(
+                f"no answer within {self._timeout_s:g} s", transient=True, reason=self._unreachable()
+            ) from None
         except Exception as error:
             await session.close()
-            raise _refusal(error, errors.status) from None
+            raise _refusal(error, errors.status, self.name) from None
         return session
 
     async def _hold(self, session: _Session, ready: asyncio.Future[None]) -> None:
@@ -312,7 +336,7 @@ class McpToolProvider(ToolProvider):
         except _Unreachable as error:
             logger.info("%s: still unavailable (%s)", self.name, error)
 
-    def _transport_streams(self, errors: _HttpErrors) -> Any:
+    def _transport_streams(self, url: str, auth: httpx2.Auth | None, errors: _HttpErrors) -> Any:
         hooks: dict[str, list[Callable[..., Any]]] = {"response": [errors]}
         timeout = httpx2.Timeout(self._timeout_s, read=SSE_READ_TIMEOUT_S)
         if self._transport is McpTransport.SSE:
@@ -325,15 +349,15 @@ class McpToolProvider(ToolProvider):
                 return httpx2.AsyncClient(headers=headers, timeout=timeout, auth=auth, event_hooks=hooks)
 
             return sse_client(
-                self._url,
+                url,
                 headers=dict(self._headers),
                 timeout=self._timeout_s,
                 sse_read_timeout=SSE_READ_TIMEOUT_S,
-                auth=self._auth,
+                auth=auth,
                 httpx_client_factory=factory,
             )
-        http = httpx2.AsyncClient(headers=self._headers, auth=self._auth, timeout=timeout, event_hooks=hooks)
-        return _streamable_http(self._url, http)
+        http = httpx2.AsyncClient(headers=self._headers, auth=auth, timeout=timeout, event_hooks=hooks)
+        return _streamable_http(url, http)
 
     # --- tools ----------------------------------------------------------------------------------
 
@@ -343,7 +367,8 @@ class McpToolProvider(ToolProvider):
         for remote in listed:
             if (self._include is not None and remote.name not in self._include) or remote.name in self._exclude:
                 continue
-            name = _unique(_INVALID_NAME_CHARACTERS.sub("_", remote.name)[:MAX_NAME_LENGTH] or "tool", taken)
+            valid = _INVALID_NAME_CHARACTERS.sub("_", self.prefix + remote.name)[:MAX_NAME_LENGTH]
+            name = _unique(valid or "tool", taken)
             taken.add(name)
             spec = ToolSpec(name, remote.description or remote.title or remote.name, dict(remote.input_schema))
             risk = self._risk(remote)
@@ -453,12 +478,15 @@ def _describe(block: ContentBlock) -> str:
     return f"[resource: {block.resource.uri}]"
 
 
-def _refusal(error: Exception, status: int | None) -> _Unreachable:
+def _refusal(error: Exception, status: int | None, server: str) -> _Unreachable:
     if status in (401, 403):
-        return _Unreachable(f"the server refused the credentials (HTTP {status})", transient=False)
+        refused = Message.of("mcp-refused", server=server)
+        return _Unreachable(f"the server refused the credentials (HTTP {status})", transient=False, reason=refused)
     if status is not None:  # a server still starting answers 404 (Home Assistant before its MCP is loaded)
-        return _Unreachable(f"the server answered HTTP {status}", transient=True)
-    return _Unreachable(f"unreachable ({_reason(error)})", transient=True)
+        answered = Message.of("mcp-answered", server=server, status=status)
+        return _Unreachable(f"the server answered HTTP {status}", transient=True, reason=answered)
+    unreachable = Message.of("mcp-unreachable", server=server)
+    return _Unreachable(f"unreachable ({_reason(error)})", transient=True, reason=unreachable)
 
 
 def _reason(error: BaseException) -> str:

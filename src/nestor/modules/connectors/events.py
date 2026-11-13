@@ -2,13 +2,14 @@
 
 from nestor.core import Event, PersonId
 from nestor.core.i18n import Message
-from nestor.modules.connectors.types import Status
+from nestor.modules.connectors.types import AuthKind, Status
 
 
 class ConnectionCreated(Event, event_type="connection.created"):
     connection_id: str
     kind: str
     account: str
+    auth: AuthKind
     owner: PersonId | None = None
 
 

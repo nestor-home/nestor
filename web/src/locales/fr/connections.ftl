@@ -36,6 +36,10 @@ conn-client-first = Enregistrez d'abord le client OAuth.
 conn-status-redirecting = [ redirection… ]
 conn-status-pending = [ en cours ]
 conn-reconnect-note = L'ancien accès reste actif jusqu'à ce que le nouveau fonctionne. Les réglages sont conservés.
+conn-presets = Serveurs connus
+conn-credentials = Jeton ou client OAuth
+conn-redirect-uri-service = Adresse de redirection à déclarer sur le service
+conn-field-kept = Laissé vide : repris du compte reconnecté.
 
 conn-client-title = Client OAuth
 conn-client-registered = enregistré

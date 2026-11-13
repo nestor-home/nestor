@@ -3512,6 +3512,7 @@
           "connectors"
         ],
         "summary": "Begin Authorization",
+        "description": "Where the browser goes to consent. A discovered service (a remote MCP server) is first asked how, from the\nfields given: one that needs no consent is connected at once, and the connection is answered instead.",
         "operationId": "beginAuthorization",
         "parameters": [
           {
@@ -11209,7 +11210,8 @@
         "enum": [
           "oauth2",
           "secret",
-          "none"
+          "none",
+          "discovered"
         ],
         "title": "AuthKind"
       },
@@ -11236,6 +11238,13 @@
               }
             ],
             "title": "Replaces"
+          },
+          "values": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Values"
           }
         },
         "additionalProperties": false,
@@ -11245,15 +11254,34 @@
       "AuthorizationOut": {
         "properties": {
           "authorize_url": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Authorize Url"
+          },
+          "connection": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConnectionDetail"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
         "required": [
-          "authorize_url"
+          "authorize_url",
+          "connection"
         ],
-        "title": "AuthorizationOut"
+        "title": "AuthorizationOut",
+        "description": "Either where the browser goes, or, for a discovered service that needs no consent, the connection made."
       },
       "CancelOut": {
         "properties": {
@@ -12270,6 +12298,13 @@
             "type": "array",
             "title": "Inbound"
           },
+          "presets": {
+            "items": {
+              "$ref": "#/components/schemas/PresetOut"
+            },
+            "type": "array",
+            "title": "Presets"
+          },
           "oauth": {
             "anyOf": [
               {
@@ -12291,6 +12326,7 @@
           "setup",
           "fields",
           "inbound",
+          "presets",
           "oauth"
         ],
         "title": "ConnectorOut"
@@ -12450,6 +12486,7 @@
               "chat_off",
               "client_incomplete",
               "client_missing",
+              "client_required",
               "config_history_unknown",
               "config_invalid",
               "config_unavailable",
@@ -12512,6 +12549,7 @@
               "voices_off",
               "watch_unknown",
               "schedule_unknown",
+              "service_refused",
               "confirmation_unknown",
               "weak_password",
               "wrong_password"
@@ -14373,6 +14411,39 @@
           "since"
         ],
         "title": "PresenceOut"
+      },
+      "PresetOut": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "brand": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brand"
+          },
+          "values": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Values"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "brand",
+          "values"
+        ],
+        "title": "PresetOut"
       },
       "PreviewOut": {
         "properties": {

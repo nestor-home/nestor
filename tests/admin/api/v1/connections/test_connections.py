@@ -10,8 +10,9 @@ import pytest
 from nestor.core import PersonId, ProviderError
 from nestor.core.i18n import Message
 from nestor.modules.accounts import Role
-from nestor.modules.connectors import ConnectorTools, Status
+from nestor.modules.connectors import ConnectorTools, Discovery, Status
 from nestor.modules.connectors import service as connections_service
+from nestor.testing.connectors import DISCOVERED_OAUTH
 
 from ....harness import CLIENT_SECRET, Api, Harness
 
@@ -231,7 +232,7 @@ async def test_a_secret_based_service_connects_with_its_fields_typed_once(tmp_pa
 async def test_credentials_the_service_refuses_are_reported(tmp_path: Path) -> None:
     async with Harness(tmp_path) as admin:
 
-        async def refuse(access: object) -> str:
+        async def refuse(connection: object, access: object) -> str:
             raise ProviderError("imap", "authentication failed", transient=False)
 
         admin.imap.identify = refuse
@@ -320,3 +321,102 @@ async def test_the_relay_page_is_served_as_a_standalone_page(tmp_path: Path) -> 
         page = await admin.browser.get("/static/relay/oauth.html")
         assert page.status_code == 200 and "relay.js" in page.text
         assert (await admin.browser.get("/static/admin.css")).status_code != 200
+
+
+# -- servers found by their address (remote MCP) -------------------------------------------------------------------
+
+
+async def found(api: Api, **body: object) -> dict:
+    response = await api.post("/api/v1/connectors/servers/authorizations", body)
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
+async def test_a_server_found_by_its_address_is_offered_with_presets_and_consented_to_through_the_relay(
+    tmp_path: Path,
+) -> None:
+    async with Harness(tmp_path) as admin:
+        api = await admin.api()
+        servers = (await api.get("/api/v1/connectors/servers")).json()
+        assert servers["auth"] == "discovered" and servers["oauth"]["redirect_uri"] == RELAY
+        assert servers["presets"] == [
+            {"name": "Tickets", "brand": "linear", "values": {"server": "https://tickets.example/mcp"}}
+        ]
+        missing = await api.post("/api/v1/connectors/servers/authorizations", {"values": {}})
+        assert missing.json()["error"]["code"] == "fields_missing"
+        own = await api.put("/api/v1/connectors/servers/client", {"client_id": "a", "client_secret": "b"})
+        assert own.json()["error"]["code"] == "not_oauth", "each server has its own client"
+
+        answer = await found(api, person="mathis", values={"server": "https://tickets.example/mcp"})
+        assert answer["connection"] is None
+        sent = query(answer["authorize_url"])
+        assert (sent["client_id"], sent["redirect_uri"], sent["resource"]) == (
+            "registered-for-nestor",
+            RELAY,
+            DISCOVERED_OAUTH.resource,
+        )
+        assert admin.servers.discovered[-1][1] == RELAY, "the client was registered to come back through the relay"
+        response = await admin.come_back(**admin.consent(answer["authorize_url"]))
+        connection_id = urllib.parse.urlsplit(response.headers["location"]).path.rsplit("/", 1)[1]
+        detail = (await api.get(f"/api/v1/connections/{connection_id}")).json()
+        assert (detail["account"], detail["kind"], detail["status"]) == ("tickets.example", "servers", "connected")
+
+
+async def test_a_server_that_needs_no_consent_is_connected_at_once(tmp_path: Path) -> None:
+    async with Harness(tmp_path) as admin:
+        admin.servers.found = Discovery()
+        api = await admin.api()
+        answer = await found(api, values={"server": "http://192.168.1.20:8000/mcp"})
+        assert answer["authorize_url"] is None
+        assert answer["connection"]["account"] == "tickets.example" and answer["connection"]["owner"] is None
+        assert [c["id"] for c in (await api.get("/api/v1/connections")).json()] == [answer["connection"]["id"]]
+
+
+async def test_a_server_that_registers_no_client_asks_for_one(tmp_path: Path) -> None:
+    async with Harness(tmp_path) as admin:
+        admin.servers.found = Discovery(oauth=DISCOVERED_OAUTH)
+        api = await admin.api()
+        asked = await api.post("/api/v1/connectors/servers/authorizations", {"values": {"server": "https://t.example"}})
+        assert asked.status_code == 400 and asked.json()["error"]["code"] == "client_required"
+        typed = {"server": "https://t.example", "client_id": "my-app", "client_secret": "app-secret"}
+        assert query((await found(api, values=typed))["authorize_url"])["client_id"] == "my-app"
+        assert not any("app-secret" in seen for seen in admin.seen)
+
+
+async def test_a_server_reconnected_keeps_what_was_typed_for_it_and_nothing_for_another(tmp_path: Path) -> None:
+    async with Harness(tmp_path) as admin:
+        admin.servers.found = Discovery()
+        api = await admin.api()
+        connections = admin.nestor.connections
+        assert connections
+        typed = {"server": "https://tickets.example/mcp", "client_id": "my-app", "client_secret": "s1"}
+        current = (await found(api, values=typed))["connection"]["id"]
+
+        async def reconnect(values: dict[str, str]) -> dict:
+            nonlocal current
+            broken = connections.connections[current]
+            await connections._mark(broken, Status.NEEDS_REAUTH, Message.of("connection-refresh-refused"))
+            current = (await found(api, replaces=current, values=values))["connection"]["id"]
+            return dict(admin.servers.discovered[-1][0])
+
+        assert await reconnect({"server": ""}) == typed, "nothing typed: everything kept"
+        assert await reconnect({"client_secret": ""}) == {**typed, "client_secret": ""}, "emptied: cleared"
+        moved = await reconnect({"server": "https://elsewhere.example/mcp"})
+        assert moved == {"server": "https://elsewhere.example/mcp", "client_id": "", "client_secret": ""}, (
+            "credentials typed for one server never go to another"
+        )
+        assert list(connections.connections) == [current]
+
+
+async def test_a_server_that_cannot_be_reached_is_reported(tmp_path: Path) -> None:
+    async with Harness(tmp_path) as admin:
+
+        async def unreachable(settings: object, redirect_uri: str) -> Discovery:
+            reason = Message.of("mcp-unreachable", server="x.test")
+            raise ProviderError("mcp", "unreachable (ConnectError)", transient=True, reason=reason)
+
+        admin.servers.discover = unreachable
+        api = await admin.api()
+        response = await api.post("/api/v1/connectors/servers/authorizations", {"values": {"server": "https://x.test"}})
+        assert response.status_code == 502
+        assert response.json()["error"]["message"] == "x.test ne répond pas."

@@ -13,11 +13,11 @@ import pytest
 from nestor.adapters.connectors.dav.connector import INFO, DavConnector
 from nestor.core import ProviderError
 from nestor.modules.cognition.tools import Risk, ToolFailed
-from nestor.modules.connectors import Access, Connection, Secrets
+from nestor.modules.connectors import Access, AuthKind, Connection, Secrets
 
 from ..accounts import CONTEXT, MATHIS
 
-CONNECTION = Connection(kind="dav", owner=MATHIS, account="mathis", id="dav-math")
+CONNECTION = Connection(kind="dav", owner=MATHIS, account="mathis", auth=AuthKind.SECRET, id="dav-math")
 HOST = "https://cloud.example"
 DAV = f"{HOST}/remote.php/dav"
 PRINCIPAL = "/remote.php/dav/principals/users/mathis/"
@@ -30,7 +30,10 @@ class DavAccess(Access):
     def __init__(self, **secrets: str) -> None:
         self.values = {"server": DAV, "username": "mathis", "password": "app-pass", **secrets}
 
-    async def token(self) -> str:
+    async def revoked(self) -> None:
+        raise AssertionError("not reached: no service refuses a fresh token here")
+
+    async def token(self, *, refused: str | None = None) -> str:
         raise AssertionError("a DAV account has no token")
 
     async def secrets(self) -> Secrets:
@@ -255,12 +258,12 @@ async def test_a_server_address_without_dav_is_found_through_its_well_known_addr
 async def test_connecting_checks_the_login_and_refuses_a_password_in_clear() -> None:
     dav = FakeDav()
     async with DavConnector(transport=dav.transport) as connector:
-        assert await connector.identify(DavAccess()) == "mathis"
+        assert await connector.identify(CONNECTION, DavAccess()) == "mathis"
         with pytest.raises(ProviderError, match="refused the login") as refused:
-            await connector.identify(DavAccess(password="wrong"))
+            await connector.identify(CONNECTION, DavAccess(password="wrong"))
         assert not refused.value.transient
         with pytest.raises(ProviderError, match="must use https"):
-            await connector.identify(DavAccess(server="http://cloud.example/remote.php/dav"))
+            await connector.identify(CONNECTION, DavAccess(server="http://cloud.example/remote.php/dav"))
 
 
 async def test_calendars_on_another_host_are_reached_there() -> None:

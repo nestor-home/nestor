@@ -86,6 +86,7 @@ dav = "nestor.adapters.connectors.dav:plugin"
 google = "nestor.adapters.connectors.google:plugin"
 imap = "nestor.adapters.connectors.imap:plugin"
 microsoft = "nestor.adapters.connectors.microsoft:plugin"
+mcp-connector = "nestor.adapters.connectors.mcp:plugin"
 
 [project.entry-points."nestor.benches"]
 watch-triage = "nestor.bench.suites.watch_triage:suite"

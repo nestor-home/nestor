@@ -14,6 +14,7 @@ class AuthKind(StrEnum):
     OAUTH2 = "oauth2"  # authorization code + PKCE, tokens refreshed by the broker
     SECRET = "secret"  # fields typed by the person (API key, app password…)
     NONE = "none"
+    DISCOVERED = "discovered"  # the service says how, once its address is typed (a remote MCP server): OAuth or fields
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -24,6 +25,21 @@ class OAuthSpec:
     revoke_url: str | None = None
     extra_authorize: Mapping[str, str] = field(default_factory=dict)  # e.g. access_type=offline, prompt=consent
     client_credentials: bool = True  # the person registers their own OAuth client (Home Assistant's model)
+    resource: str | None = None  # RFC 8707: the protected resource the tokens are for, sent with every request
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class Discovery:
+    """How a service found at the address typed is authorised (a remote MCP server: RFC 9728, RFC 8414).
+
+    `oauth` is `None` when it takes the typed fields alone (a token, or nothing). `client` is the OAuth client
+    registered for Nestor on the spot (RFC 7591: `client_id`, `client_secret` when one was issued,
+    `token_endpoint_auth_method`), or the one the person typed; `None` when the service registers none and none
+    was typed.
+    """
+
+    oauth: OAuthSpec | None = None
+    client: Mapping[str, str] | None = None
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -32,6 +48,16 @@ class SecretField:
     label: Message  # `connector-<kind>-field-<name>`, from the connector's catalogue
     secret: bool = True  # never shown back once saved
     default: str | None = None  # an optional field: this value when left empty
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class Preset:
+    """A well-known service of a connector, offered in the catalogue: `values` fills its fields (a server's address).
+    `name` is the service's own name, not translated."""
+
+    name: str
+    values: Mapping[str, str]
+    brand: str | None = None
 
 
 SERVICE_NAME = re.compile(r"[a-z0-9]+(-[a-z0-9]+)*")
@@ -68,6 +94,7 @@ class ConnectorInfo:
     inbound: tuple[str, ...] = ()  # kinds of items it can feed watches with ("mail")
     brand: str | None = None  # the vendor, as a slug people recognise ("google")
     services: tuple[Service, ...] = ()  # what a message names with `@`; none: the account as a whole, by its kind
+    presets: tuple[Preset, ...] = ()  # well-known services, offered in the catalogue
 
     def __post_init__(self) -> None:
         names = [s.name for s in self.services]
@@ -86,6 +113,7 @@ class Connection:
     kind: str
     owner: PersonId | None  # whose account it is; None for a household-wide service
     account: str  # what the person recognises: "mathis@gmail.com"
+    auth: AuthKind  # how it was authorised: its connector's way, or what its service asked (`DISCOVERED`)
     status: Status = Status.CONNECTED
     disabled_tools: frozenset[str] = frozenset()
     confirm_writes: bool = True  # tools that write or send ask the person first

@@ -1,5 +1,10 @@
 """Errors shared by every part of Nestor."""
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:  # i18n's types raise these errors
+    from nestor.core.i18n.types import Message
+
 
 class NestorError(Exception):
     """Base class of every error raised by Nestor."""
@@ -9,13 +14,15 @@ class ProviderError(NestorError):
     """An external provider (model, speech service, executor…) failed.
 
     `transient` tells callers whether retrying may succeed (timeout, rate limit) or not
-    (bad credentials, unsupported model).
+    (bad credentials, unsupported model). `reason`, when given, is what people read of it; the message is for
+    developers and logs.
     """
 
-    def __init__(self, provider: str, message: str, *, transient: bool) -> None:
+    def __init__(self, provider: str, message: str, *, transient: bool, reason: "Message | None" = None) -> None:
         super().__init__(f"{provider}: {message}")
         self.provider = provider
         self.transient = transient
+        self.reason = reason
 
 
 class CapabilityMissing(NestorError):

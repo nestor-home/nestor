@@ -24,6 +24,11 @@ class ConnectorTools(ToolProvider, MentionSource):
     def __init__(self, connections: Connections) -> None:
         self.connections = connections
 
+    async def start(self) -> None:
+        """Asks every account for its tools once, so that what a connector opens for them (a remote MCP server's
+        session) is ready before the first turn."""
+        self.tools()
+
     def tools(self) -> Sequence[Tool]:
         return [tool for tools in self._offered().values() for _, tool in tools]
 
@@ -55,11 +60,12 @@ class ConnectorTools(ToolProvider, MentionSource):
 
     def _services(self, connection: Connection) -> list[Service]:
         """What a message names of the account: each service its connector declares, or the account by its kind."""
-        info = self.connections.connectors[connection.kind].info
-        if info.services:
-            return [replace(s, brand=s.brand or info.brand) for s in info.services]
+        connector = self.connections.connectors[connection.kind]
+        brand = connector.brand_of(connection)
+        if declared := connector.services(connection):
+            return [replace(s, brand=s.brand or brand) for s in declared]
         tools = frozenset(t.name for t in self._tools_of(connection))
-        return [Service(name=connection.kind, tools=tools, brand=info.brand)] if tools else []
+        return [Service(name=connection.kind, tools=tools, brand=brand)] if tools else []
 
     def _connected(self) -> Iterable[Connection]:
         for connection in self.connections.connections.values():

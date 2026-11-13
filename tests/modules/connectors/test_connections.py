@@ -16,12 +16,14 @@ from nestor.modules.cognition.model import ToolCall
 from nestor.modules.cognition.tools import Toolbox, ToolContext
 from nestor.modules.connectors import (
     AuthKind,
+    ClientRequired,
     ConnectedInbound,
     ConnectionChanged,
     ConnectionCreated,
     ConnectionRemoved,
     Connections,
     ConnectorTools,
+    Discovery,
     Service,
     Status,
 )
@@ -29,7 +31,7 @@ from nestor.modules.household import Person
 from nestor.modules.identity import Speaker
 from nestor.modules.initiative import Incoming
 from nestor.modules.journal import Journal, LogQuery
-from nestor.testing.connectors import FakeProvider, MemoryVault, ScriptedConnector
+from nestor.testing.connectors import DISCOVERED_OAUTH, FakeProvider, MemoryVault, ScriptedConnector
 from nestor.testing.journal import MemoryEventLog
 
 MATHIS = PersonId("mathis")
@@ -44,7 +46,8 @@ class Setup:
         self.provider = FakeProvider(lifetime_s=lifetime_s)
         self.mail = ScriptedConnector()
         self.imap = ScriptedConnector("imap", auth=AuthKind.SECRET, account="mathilde@free.fr")
-        self.connections = Connections(self.journal, self.vault, self.provider, [self.mail, self.imap])
+        self.remote = ScriptedConnector("remote", auth=AuthKind.DISCOVERED, account="tickets.example")
+        self.connections = Connections(self.journal, self.vault, self.provider, [self.mail, self.imap, self.remote])
         self.url = ""  # the authorisation URL of the last flow completed by connect()
 
     async def connect(self) -> str:
@@ -228,7 +231,7 @@ async def test_a_secret_based_service_connects_with_its_fields() -> None:
     setup = Setup()
     with pytest.raises(ContractError, match="missing: password"):
         await setup.connections.connect("imap", PersonId("mathilde"), {})
-    with pytest.raises(ContractError, match="connects through OAuth"):
+    with pytest.raises(ContractError, match="connected through begin"):
         await setup.connections.connect("mailbox", MATHIS, {"password": "x"})
     connection = await setup.connections.connect("imap", PersonId("mathilde"), {"password": "app-password"})
     assert connection.account == "mathilde@free.fr"
@@ -320,6 +323,105 @@ def test_a_service_is_named_as_people_write_it_and_serves_tools() -> None:
         Service(name="Google Mail", tools=frozenset({"x"}))
     with pytest.raises(ContractError, match="serves no tool"):
         Service(name="mail", tools=frozenset())
+
+
+# -- services authorised by discovery (remote MCP servers) ---------------------------------------------------------
+
+
+async def consent_to(setup: Setup, begun: object) -> str:
+    assert isinstance(begun, str), "the service asked for consent"
+    back = setup.provider.consent(begun)
+    return (await setup.connections.complete(back["state"], back["code"])).id
+
+
+async def test_a_discovered_service_is_authorised_at_its_own_server_with_the_client_it_registered() -> None:
+    setup = Setup(lifetime_s=0)
+    begun = await setup.connections.discover("remote", MATHIS, REDIRECT, {"server": "https://server.example/mcp"})
+    sent = dict(urllib.parse.parse_qsl(urllib.parse.urlsplit(str(begun)).query))
+    assert str(begun).startswith("https://auth.server.example/authorize?")
+    assert (sent["client_id"], sent["resource"], sent["scope"]) == (
+        "registered-for-nestor",
+        "https://server.example/mcp",
+        "tickets",
+    )
+    assert setup.remote.discovered == [
+        ({"server": "https://server.example/mcp", "client_id": "", "client_secret": ""}, REDIRECT)
+    ]
+    connection_id = await consent_to(setup, begun)
+
+    restarted = Connections(setup.journal, setup.vault, setup.provider, [setup.remote])
+    await restarted.start()
+    connection = restarted.connections[connection_id]
+    assert (connection.account, connection.auth) == ("tickets.example", AuthKind.OAUTH2)
+    await restarted.access(connection).token()  # expired at once: refreshed where it was issued
+    assert setup.provider.used[-1] == ("https://auth.server.example/token", "registered-for-nestor")
+    assert (await restarted.access(connection).secrets())["server"] == "https://server.example/mcp"
+
+
+async def test_a_discovered_service_that_needs_no_consent_is_connected_at_once() -> None:
+    setup = Setup()
+    setup.remote.found = Discovery()
+    connection = await setup.connections.discover("remote", None, REDIRECT, {"server": "http://localhost:8000/mcp"})
+    assert not isinstance(connection, str)
+    assert (connection.account, connection.owner, connection.auth) == ("tickets.example", None, AuthKind.SECRET)
+    assert setup.provider.used == []
+    with pytest.raises(ContractError, match="missing: server"):
+        await setup.connections.discover("remote", None, REDIRECT, {})
+    with pytest.raises(ContractError, match="not authorised by discovery"):
+        await setup.connections.discover("mailbox", None, REDIRECT, {})
+
+
+async def test_without_a_client_registered_on_the_spot_the_one_typed_is_used() -> None:
+    setup = Setup()
+    setup.remote.found = Discovery(oauth=DISCOVERED_OAUTH)
+    with pytest.raises(ClientRequired):
+        await setup.connections.discover("remote", MATHIS, REDIRECT, {"server": "https://server.example/mcp"})
+    typed = {"server": "https://server.example/mcp", "client_id": "my-app", "client_secret": "s3cret"}
+    await consent_to(setup, await setup.connections.discover("remote", MATHIS, REDIRECT, typed))
+    assert setup.provider.used == [("https://auth.server.example/token", "my-app")]
+
+
+async def test_a_token_refused_before_it_expires_is_renewed_and_without_a_way_to_renew_reconnection_is_asked() -> None:
+    setup = Setup()
+    connection_id = await setup.connect()
+    access = setup.connections.access(setup.connections.connections[connection_id])
+    first = await access.token()
+    assert await access.token() == first, "a valid token is reused"
+    renewed = await access.token(refused=first)
+    assert renewed != first and setup.provider.refreshes == 1
+    assert await access.token(refused=first) == renewed, "renewed already: not refreshed again"
+    assert setup.provider.refreshes == 1
+
+    await setup.vault.put(connection_id, "tokens", {"access_token": "at", "refresh_token": "", "expires_at": ""})
+    with pytest.raises(ProviderError):
+        await access.token(refused="at")
+    assert setup.connections.connections[connection_id].status is Status.NEEDS_REAUTH
+
+
+@pytest.mark.parametrize("refused", [False, True])
+async def test_calls_needing_a_fresh_token_at_once_refresh_it_once(refused: bool) -> None:
+    setup = Setup()
+    setup.provider = FakeProvider(rotating=True)  # a refresh token serves once
+    setup.connections = Connections(setup.journal, setup.vault, setup.provider, [setup.mail])
+    connection_id = await setup.connect()
+    access = setup.connections.access(setup.connections.connections[connection_id])
+    old = await access.token()
+    if not refused:  # expired, for every call at once
+        stored = await setup.vault.get(connection_id, "tokens") or {}
+        await setup.vault.put(connection_id, "tokens", {**stored, "expires_at": "2000-01-01T00:00:00+00:00"})
+    tokens = await asyncio.gather(*(access.token(refused=old if refused else None) for _ in range(3)))
+    assert len(set(tokens)) == 1 and old not in tokens
+    assert setup.provider.refreshes == 1
+    assert setup.connections.connections[connection_id].status is Status.CONNECTED
+
+
+async def test_unplugging_tells_the_connector_to_let_go() -> None:
+    setup = Setup()
+    setup.remote.found = Discovery()
+    connection = await setup.connections.discover("remote", None, REDIRECT, {"server": "http://localhost:8000/mcp"})
+    assert not isinstance(connection, str)
+    await setup.connections.disconnect(connection.id)
+    assert setup.remote.released == [connection.id]
 
 
 async def test_two_accounts_of_one_service_offer_their_tools_under_names_of_their_own() -> None:

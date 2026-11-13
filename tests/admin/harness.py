@@ -21,7 +21,7 @@ from nestor.modules.channels import Medium
 from nestor.modules.cognition import LanguageModel
 from nestor.modules.cognition.model import ToolSpec
 from nestor.modules.cognition.tools import Risk, Tool, ToolContext, ToolProvider
-from nestor.modules.connectors import AuthKind, SecretField
+from nestor.modules.connectors import AuthKind, Preset, SecretField
 from nestor.modules.home import Resident, Room
 from nestor.modules.identity import SpeakerModel
 from nestor.runtime import AdapterSettings, Family, Nestor, Plugin, Registry
@@ -172,6 +172,12 @@ class Harness:
                 *self.imap.info.fields,
             ),
         )
+        self.servers = ScriptedConnector("servers", auth=AuthKind.DISCOVERED, account="tickets.example")
+        self.servers.info = replace(
+            self.servers.info,
+            title=Message.of("harness-remote-title"),
+            presets=(Preset(name="Tickets", brand="linear", values={"server": "https://tickets.example/mcp"}),),
+        )
         self.remote = FakeRemote()
         self.releases = StaticReleaseFeed()
         self.presence = StaticPresence().set("mathis", home=True, room="salon")
@@ -278,6 +284,7 @@ class Harness:
                 Plugin(Family.HOME, "static", NoSettings, lambda s, n, x: self.home),
                 Plugin(Family.CONNECTOR, "mailbox", NoSettings, lambda s, n, x: self.mail),
                 Plugin(Family.CONNECTOR, "imap", NoSettings, lambda s, n, x: self.imap),
+                Plugin(Family.CONNECTOR, "servers", NoSettings, lambda s, n, x: self.servers),
                 Plugin(Family.TOOLS, "weather", WeatherSettings, lambda s, n, x: Weather()),
             ]
         )

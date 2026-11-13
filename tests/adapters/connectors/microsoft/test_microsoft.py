@@ -15,14 +15,14 @@ from nestor.adapters.connectors.microsoft.connector import INFO, MicrosoftConnec
 from nestor.adapters.connectors.microsoft.inbound import OutlookInbound
 from nestor.core import ProviderError
 from nestor.modules.cognition.tools import Risk, ToolFailed
-from nestor.modules.connectors import Connection
+from nestor.modules.connectors import AuthKind, Connection
 from nestor.modules.initiative import Incoming
 from nestor.testing.documents import text_pdf
 from nestor.testing.initiative import InboundEventSourceContract
 
 from ..accounts import CONTEXT, MATHIS, TOKEN, FakeAccess
 
-CONNECTION = Connection(kind="microsoft", owner=MATHIS, account="mathis@outlook.fr", id="ms-math")
+CONNECTION = Connection(kind="microsoft", owner=MATHIS, account="mathis@outlook.fr", auth=AuthKind.OAUTH2, id="ms-math")
 ZONE = "Romance Standard Time"
 
 
@@ -161,7 +161,7 @@ def test_the_connector_asks_for_a_refresh_token_and_writes_only_events_and_tasks
 
 async def test_connecting_names_the_account_by_its_address() -> None:
     async with MicrosoftConnector(transport=FakeGraph().transport) as connector:
-        assert await connector.identify(FakeAccess()) == "mathis@outlook.fr"
+        assert await connector.identify(CONNECTION, FakeAccess()) == "mathis@outlook.fr"
 
 
 # -- Outlook mail --------------------------------------------------------------------------------------
@@ -360,7 +360,7 @@ async def test_throttling_is_transient_and_reaches_the_model_with_graph_s_words(
         await run(graph, "todo_list")
     async with MicrosoftConnector(transport=graph.transport) as connector:
         with pytest.raises(ProviderError) as raised:
-            await connector.identify(FakeAccess())
+            await connector.identify(CONNECTION, FakeAccess())
     assert raised.value.transient
 
 

@@ -115,17 +115,25 @@ export const api = {
   connector: (kind: string) => unwrap(client.GET("/api/v1/connectors/{kind}", { params: { path: { kind } } })),
   setClient: (kind: string, body: OAuthClient) =>
     unwrap(client.PUT("/api/v1/connectors/{kind}/client", { params: { path: { kind } }, body })),
-  /** OAuth answers with the provider's consent page; other connectors connect at once. */
+  /**
+   * OAuth answers with the provider's consent page; a service found by its address (a remote MCP server) is asked
+   * how first, and may connect at once; other connectors connect at once.
+   */
   connect: async (kind: string, request: ConnectRequest, auth: Connector["auth"]): Promise<ConnectResult> => {
     const path = { params: { path: { kind } } };
-    if (auth === "oauth2") {
+    if (auth === "oauth2" || auth === "discovered") {
       const begun = await unwrap(
         client.POST("/api/v1/connectors/{kind}/authorizations", {
           ...path,
-          body: { person: request.person, replaces: request.replaces },
+          body: {
+            person: request.person,
+            replaces: request.replaces,
+            values: auth === "discovered" ? request.values : {},
+          },
         }),
       );
-      return { kind: "redirect", url: begun.authorize_url };
+      if (begun.connection) return { kind: "connected", connection: begun.connection };
+      return { kind: "redirect", url: begun.authorize_url ?? "" };
     }
     const made = await unwrap(client.POST("/api/v1/connectors/{kind}/connections", { ...path, body: request }));
     return { kind: "connected", connection: made };

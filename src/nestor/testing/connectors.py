@@ -1,5 +1,6 @@
 """Doubles and contract suites for connectors: an in-memory vault, a fake OAuth provider, a scripted connector."""
 
+import asyncio
 import base64
 import hashlib
 import urllib.parse
@@ -17,6 +18,7 @@ from nestor.modules.connectors import (
     Connector,
     ConnectorInfo,
     CredentialVault,
+    Discovery,
     OAuthSpec,
     SecretField,
     Secrets,
@@ -50,10 +52,12 @@ class FakeProvider(TokenEndpoint):
 
     name = "fake-oauth"
 
-    def __init__(self, *, lifetime_s: float = 3600.0) -> None:
+    def __init__(self, *, lifetime_s: float = 3600.0, rotating: bool = False) -> None:
         self.lifetime_s = lifetime_s
+        self.rotating = rotating  # each refresh token serves once, and a new one comes with each refresh
         self.codes: dict[str, tuple[str, str, str]] = {}  # code → (client_id, redirect_uri, S256 challenge)
         self.revoked: list[str] = []
+        self.used: list[tuple[str, str]] = []  # the token endpoint and the client of every exchange and refresh
         self.refreshes = 0
         self.refusing = False
         self.unreachable = False
@@ -69,17 +73,23 @@ class FakeProvider(TokenEndpoint):
         return {"state": query["state"], "code": code}
 
     async def exchange(self, spec: OAuthSpec, client: Secrets, code: str, verifier: str, redirect_uri: str) -> Tokens:
+        self.used.append((spec.token_url, client["client_id"]))
         challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b"=").decode()
         if self.codes.pop(code, None) != (client["client_id"], redirect_uri, challenge):
             raise ProviderError(self.name, "invalid_grant", transient=False)
         return self._issue(refresh=new_id())
 
     async def refresh(self, spec: OAuthSpec, client: Secrets, refresh_token: str) -> Tokens:
+        self.used.append((spec.token_url, client["client_id"]))
+        await asyncio.sleep(0)  # a request over the network: other calls run meanwhile
         if self.unreachable:
             raise ProviderError(self.name, "timeout", transient=True)
         if self.refusing or refresh_token in self.revoked:
             raise ProviderError(self.name, "invalid_grant", transient=False)
         self.refreshes += 1
+        if self.rotating:
+            self.revoked.append(refresh_token)
+            return self._issue(refresh=new_id())
         return self._issue(refresh=None)
 
     async def revoke(self, spec: OAuthSpec, client: Secrets, token: str) -> None:
@@ -102,36 +112,69 @@ OAUTH = OAuthSpec(
 )
 
 
+DISCOVERED_OAUTH = OAuthSpec(
+    authorize_url="https://auth.server.example/authorize",
+    token_url="https://auth.server.example/token",
+    scopes=("tickets",),
+    resource="https://server.example/mcp",
+)
+
+
 class ScriptedConnector(Connector):
-    """A mail-like service: a read tool, a send tool, and an inbox feeding watches."""
+    """A mail-like service: a read tool, a send tool, and an inbox feeding watches.
+
+    Authorised by discovery, it is reached at the `server` typed; what it answers is `found`, which registers an
+    OAuth client by default. With `found` registering none, the client typed (`client_id`, `client_secret`) is used.
+    """
 
     def __init__(self, kind: str = "mailbox", *, auth: AuthKind = AuthKind.OAUTH2, account: str = "mathis@example.com"):
+        fields = {
+            AuthKind.SECRET: (SecretField(name="password", label=Message.of("connector-scripted-field-password")),),
+            AuthKind.DISCOVERED: (
+                SecretField(name="server", label=Message.of("connector-scripted-field-server"), secret=False),
+                SecretField(name="client_id", label=Message.of("connector-scripted-field-client"), default=""),
+                SecretField(name="client_secret", label=Message.of("connector-scripted-field-secret"), default=""),
+            ),
+        }
         self.info = ConnectorInfo(
             kind=kind,
             title=Message.of("connector-scripted-title"),
             description=Message.of("connector-scripted-description"),
             auth=auth,
             oauth=OAUTH if auth is AuthKind.OAUTH2 else None,
-            fields=(SecretField(name="password", label=Message.of("connector-scripted-field-password")),)
-            if auth is AuthKind.SECRET
-            else (),
+            fields=fields.get(auth, ()),
             inbound=("mail",),
         )
         self.account = account
+        self.found = Discovery(oauth=DISCOVERED_OAUTH, client={"client_id": "registered-for-nestor"})
+        self.discovered: list[tuple[Secrets, str]] = []  # what `discover` was asked: the fields, the redirect
+        self.released: list[str] = []  # the connections it was told were gone
         self.inbox = Inbox()
         self.sent: list[Mapping[str, object]] = []
         self.tokens_seen: list[str] = []
 
-    async def identify(self, access: Access) -> str:
-        if self.info.auth is AuthKind.OAUTH2:
+    async def discover(self, settings: Secrets, redirect_uri: str) -> Discovery:
+        if self.info.auth is not AuthKind.DISCOVERED:
+            return await super().discover(settings, redirect_uri)
+        self.discovered.append((dict(settings), redirect_uri))
+        typed = {k: settings[k] for k in ("client_id", "client_secret") if settings.get(k)}
+        if self.found.oauth is not None and self.found.client is None and typed:
+            return Discovery(oauth=self.found.oauth, client=typed)
+        return self.found
+
+    async def identify(self, connection: Connection, access: Access) -> str:
+        if connection.auth is AuthKind.OAUTH2:
             self.tokens_seen.append(await access.token())
         else:
             await access.secrets()
         return self.account
 
+    async def disconnected(self, connection: Connection) -> None:
+        self.released.append(connection.id)
+
     def tools(self, connection: Connection, access: Access) -> Sequence[Tool]:
         async def search(arguments: Mapping[str, object], context: ToolContext) -> str:
-            if self.info.auth is AuthKind.OAUTH2:
+            if connection.auth is AuthKind.OAUTH2:
                 self.tokens_seen.append(await access.token())
             return f"2 mails about {arguments.get('query')}"
 
