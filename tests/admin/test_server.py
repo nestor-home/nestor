@@ -85,7 +85,7 @@ async def test_a_mail_arriving_in_a_connected_mailbox_triggers_a_watch(tmp_path:
     verdict = '{"matches": [{"watch": "w1", "summary": "Colis livré."}]}'
     async with Harness(tmp_path, replies=(verdict, "Ton colis est arrivé.")) as admin:
         assert admin.nestor.connections
-        assert admin.nestor.watch_book.kinds == {"mail"}, "watches may watch what connectors bring"
+        assert admin.nestor.watch_book.kinds.keys() == {"mail"}, "watches may watch what connectors bring"
         await admin.nestor.connections.connect("imap", None, {"server": "s", "password": "p"})
         await admin.nestor.watch_book.create(Watch(id="w1", what="le colis"))
         triggered = admin.nestor.journal.subscribe(WatchTriggered)

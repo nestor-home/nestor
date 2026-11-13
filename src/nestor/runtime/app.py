@@ -271,7 +271,7 @@ class Nestor:
             timezone=config.persona.timezone,
             recall=recall,
         )
-        self.watch_book = WatchBook(self.journal, kinds=(k for source in self.sources for k in source.kinds))
+        self.watch_book = WatchBook(self.journal, self.sources)
         watch_tools = WatchTools(self.watch_book)
         self.message_book = MessageBook(self.journal)
         message_tools = MessageTools(self.message_book, self.household)

@@ -1,8 +1,6 @@
 """`read_page`: a public page read as its content's text, a PDF by its text, and never an address of the household's
 own network, even through a redirection. Names resolve through a fake DNS; pages through mocked HTTP."""
 
-import ipaddress
-import socket
 from collections.abc import Iterator
 
 import pytest
@@ -13,6 +11,8 @@ from nestor.adapters.tools.web_pages import WebPages
 from nestor.modules.channels import Address
 from nestor.modules.cognition.tools import ToolContext, ToolFailed
 from nestor.testing.documents import text_pdf
+
+from ..dns import resolve
 
 CONTEXT = ToolContext(address=Address("web", "chat"))
 DNS = {"news.example": "93.184.215.14", "files.example": "93.184.215.15", "nas.home": "192.168.1.20"}
@@ -25,17 +25,7 @@ ARTICLE = """<html><head><title>La météo du week-end</title><script>track()</s
 
 @pytest.fixture(autouse=True)
 def dns(monkeypatch: pytest.MonkeyPatch) -> None:
-    def resolve(host: str, port: int | None, *args: object, **kwargs: object) -> list:
-        try:
-            address = str(ipaddress.ip_address(host.strip("[]")))
-        except ValueError:
-            if host not in DNS:
-                raise socket.gaierror(socket.EAI_NONAME, "not found") from None
-            address = DNS[host]
-        family = socket.AF_INET6 if ":" in address else socket.AF_INET
-        return [(family, socket.SOCK_STREAM, 6, "", (address, port or 80))]
-
-    monkeypatch.setattr(socket, "getaddrinfo", resolve)
+    resolve(monkeypatch, DNS)
 
 
 @pytest.fixture
@@ -75,6 +65,7 @@ async def test_a_pdf_reads_as_its_text(web: respx.MockRouter) -> None:
         "http://127.0.0.1:8470/api",
         "http://[::1]/",
         "file:///etc/passwd",
+        "http://news.example:99999/",
     ],
 )
 async def test_an_address_off_the_public_internet_is_never_fetched(web: respx.MockRouter, url: str) -> None:

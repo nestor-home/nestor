@@ -91,6 +91,9 @@ google = "nestor.adapters.connectors.google:plugin"
 imap = "nestor.adapters.connectors.imap:plugin"
 microsoft = "nestor.adapters.connectors.microsoft:plugin"
 mcp-connector = "nestor.adapters.connectors.mcp:plugin"
+rss = "nestor.adapters.inbound.rss:plugin"
+web-page = "nestor.adapters.inbound.web_page:plugin"
+webhook-inbound = "nestor.adapters.inbound.webhook:plugin"
 
 [project.entry-points."nestor.benches"]
 watch-triage = "nestor.bench.suites.watch_triage:suite"

@@ -70,6 +70,46 @@ class TestQueuedSource(InboundEventSourceContract):
         self.inbox.deliver(parcel(title))
 
 
+class Greedy(QueuedSource):
+    """Takes everything waiting at once: what it had not yielded before closing is lost."""
+
+    async def items(self) -> AsyncGenerator[Incoming]:
+        while True:
+            batch, self.inbox.cursor = self.inbox.items[self.inbox.cursor :], len(self.inbox.items)
+            for item in batch:
+                yield item
+            self.inbox.arrived.clear()
+            await self.inbox.arrived.wait()
+
+
+class Forgetful(QueuedSource):
+    """Starts from the beginning after a restart."""
+
+    def __init__(self, inbox: Inbox) -> None:
+        super().__init__(inbox)
+        inbox.cursor = 0
+
+
+@pytest.mark.parametrize(
+    ("double", "test"),
+    [
+        (Greedy, "test_an_item_not_taken_before_a_restart_comes_after_it"),
+        (Forgetful, "test_items_come_once_in_order_and_resume_after_a_restart"),
+    ],
+)
+async def test_the_contract_rejects_a_source_that_loses_or_repeats_items(double: type[QueuedSource], test: str) -> None:
+    class Broken(TestQueuedSource):
+        timeout_s = 0.1
+
+        def source(self) -> QueuedSource:
+            return double(self.inbox)
+
+    suite = Broken()
+    suite.setup_method()
+    with pytest.raises((AssertionError, TimeoutError)):  # a lost item never comes
+        await getattr(suite, test)()
+
+
 class Satellite(InMemoryChannel):
     media = frozenset({Medium.SPOKEN})
     room = "salon"
@@ -106,8 +146,8 @@ class Home:
         self, keeper_class: type[WatchKeeper] = WatchKeeper, **kwargs: float
     ) -> AsyncGenerator[WatchKeeper]:
         """A fresh book and keeper over the same journal: a new instance plays a restart."""
-        book = WatchBook(self.journal, kinds=("mail",))
         sources = [QueuedSource(self.inbox)]
+        book = WatchBook(self.journal, sources)
         keeper = keeper_class(book, self.household, self.courier, Triage(self.triage_model), sources, **kwargs)
         async with book, keeper:
             yield keeper
@@ -252,7 +292,7 @@ async def test_a_broken_item_does_not_stop_the_feed() -> None:
 
 async def test_the_agent_creates_lists_and_cancels_watches_through_its_tools() -> None:
     home = Home()
-    book = WatchBook(home.journal, kinds=("mail",))
+    book = WatchBook(home.journal, [QueuedSource(home.inbox)])
     tools = WatchTools(book)
     agent = Agent(
         attachments=Attachments(MemoryBlobStore()),
