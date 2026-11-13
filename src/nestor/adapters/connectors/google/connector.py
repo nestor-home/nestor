@@ -1,20 +1,29 @@
-"""The Google connector: Gmail first, read only (sending comes later, behind the person's confirmation)."""
+"""The Google connector: Gmail (read only, and new mail for watches), Calendar, Drive (read only), Contacts (read
+only) and Tasks of each connected account."""
 
 from collections.abc import Sequence
+from typing import Any
 
-import httpx
-
-from nestor.adapters.connectors.common import Backoff
+from nestor.adapters.connectors.common.accounts import AccountConnector
+from nestor.adapters.connectors.common.tools import service
+from nestor.adapters.connectors.google import calendar, contacts, drive, gmail, tasks
 from nestor.adapters.connectors.google.api import GmailApi, new_client
-from nestor.adapters.connectors.google.inbound import Every, GmailInbound
-from nestor.adapters.connectors.google.tools import READ, SEARCH, GmailTools
-from nestor.core import Component, ProviderError
+from nestor.adapters.connectors.google.inbound import GmailInbound
+from nestor.core import ProviderError
 from nestor.core.i18n import Message
 from nestor.modules.cognition.tools import Tool
-from nestor.modules.connectors import Access, AuthKind, Connection, Connector, ConnectorInfo, OAuthSpec, Service
-from nestor.modules.initiative import InboundEventSource
+from nestor.modules.connectors import Access, AuthKind, Connection, ConnectorInfo, OAuthSpec
 
-SCOPES = ("openid", "email", "https://www.googleapis.com/auth/gmail.readonly")
+SCOPES = (
+    "openid",
+    "email",
+    "https://www.googleapis.com/auth/gmail.readonly",
+    "https://www.googleapis.com/auth/calendar.events",
+    "https://www.googleapis.com/auth/drive.readonly",
+    "https://www.googleapis.com/auth/contacts.readonly",
+    "https://www.googleapis.com/auth/tasks",
+)
+
 
 INFO = ConnectorInfo(
     kind="google",
@@ -32,38 +41,25 @@ INFO = ConnectorInfo(
     ),
     setup=Message.of("connector-google-setup"),
     inbound=("mail",),
-    services=(Service(name="gmail", brand="gmail", tools=frozenset({SEARCH.name, READ.name})),),
+    services=(
+        service("gmail", gmail.SEARCH, gmail.READ, brand="gmail"),
+        service("calendar", calendar.EVENTS, calendar.CREATE, brand="google-calendar"),
+        service("drive", drive.SEARCH, drive.READ, brand="google-drive"),
+        service("contacts", contacts.SEARCH),
+        service("tasks", tasks.LIST, tasks.ADD, tasks.COMPLETE, brand="google-tasks"),
+    ),
 )
 
 
-class GoogleConnector(Connector, Component):
-    """Tools and `identify` share one HTTP client, opened on first use; each inbound feed has its own."""
-
+class GoogleConnector(AccountConnector):
     name = "google"
     brand = "google"
     info = INFO
+    feed = GmailInbound
+    new_client = staticmethod(new_client)
 
-    def __init__(
-        self,
-        *,
-        poll_interval_s: float = 30.0,
-        blocked_s: float = 600.0,
-        retry_initial_s: float = 1.0,
-        retry_max_s: float = 300.0,
-        body_chars: int = 20_000,
-        excerpt_chars: int = 2_000,
-        transport: httpx.AsyncBaseTransport | None = None,
-    ) -> None:
-        self.poll_interval_s, self.blocked_s = poll_interval_s, blocked_s
-        self.retry_initial_s, self.retry_max_s = retry_initial_s, retry_max_s
-        self.body_chars, self.excerpt_chars = body_chars, excerpt_chars
-        self._transport = transport
-        self._client: httpx.AsyncClient | None = None
-
-    async def close(self) -> None:
-        if self._client is not None:
-            client, self._client = self._client, None
-            await client.aclose()
+    def __init__(self, *, poll_interval_s: float = 30.0, **settings: Any) -> None:
+        super().__init__(poll_interval_s=poll_interval_s, **settings)
 
     async def identify(self, access: Access) -> str:
         email = (await self._api(access).profile()).email
@@ -72,20 +68,14 @@ class GoogleConnector(Connector, Component):
         return email
 
     def tools(self, connection: Connection, access: Access) -> Sequence[Tool]:
-        return GmailTools(connection, lambda: self._api(access), body_chars=self.body_chars).tools()
-
-    def inbound(self, connection: Connection, access: Access) -> InboundEventSource | None:
-        return GmailInbound(
-            connection,
-            access,
-            wakeup=Every(self.poll_interval_s),
-            backoff=Backoff(self.retry_initial_s, self.retry_max_s),
-            blocked_s=self.blocked_s,
-            excerpt_chars=self.excerpt_chars,
-            transport=self._transport,
+        account, api = connection.account, lambda: self._api(access)
+        return (
+            *gmail.GmailTools(account, api, body_chars=self.body_chars).tools(),
+            *calendar.CalendarTools(account, api).tools(),
+            *drive.DriveTools(account, api, self.reader, body_chars=self.body_chars, max_bytes=self.file_bytes).tools(),
+            *contacts.ContactTools(account, api, self.known(connection)).tools(),
+            *tasks.TaskTools(account, api).tools(),
         )
 
     def _api(self, access: Access) -> GmailApi:
-        if self._client is None:
-            self._client = new_client(self._transport)
-        return GmailApi(access, self._client)
+        return GmailApi(access, self.client)

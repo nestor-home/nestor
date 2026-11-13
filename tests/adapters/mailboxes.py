@@ -8,14 +8,8 @@ from collections.abc import Sequence
 from email import policy
 from email.parser import BytesParser
 
-from nestor.adapters.connectors.imap import (
-    Fetched,
-    ImapAccount,
-    LoginRefused,
-    MailboxClient,
-    MailboxUnavailable,
-    Selected,
-)
+from nestor.adapters.connectors.imap.account import ImapAccount
+from nestor.adapters.connectors.imap.client import Fetched, LoginRefused, MailboxClient, MailboxUnavailable, Selected
 
 PASSWORD = 'abcd "efgh" \\ijkl'  # an app password with characters IMAP must quote
 

@@ -6900,6 +6900,58 @@
         "kind"
       ],
       "kinds": {
+        "dav": {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "dav",
+              "type": "string",
+              "x-nestor": {
+                "field": "kind",
+                "title_id": "config-connector-dav-kind",
+                "help_id": "config-connector-dav-kind-help",
+                "fallback_title_id": "config-field-kind",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "connector-dav",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Kind",
+                "help": null
+              }
+            },
+            "name": {
+              "type": "string",
+              "description": "the instance's name; the kind by default",
+              "x-nestor": {
+                "field": "name",
+                "title_id": "config-connector-dav-name",
+                "help_id": "config-connector-dav-name-help",
+                "fallback_title_id": "config-field-name",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "connector-dav",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Name",
+                "help": null
+              }
+            }
+          },
+          "title": "DavSettings",
+          "type": "object",
+          "required": [
+            "kind"
+          ]
+        },
         "google": {
           "additionalProperties": false,
           "properties": {
@@ -7056,7 +7108,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
-                "title": "Longest message body read (characters)",
+                "title": "Longest message or file read (characters)",
                 "help": null
               }
             },
@@ -7080,6 +7132,29 @@
                 "suggest_keys": null,
                 "suggest_values": null,
                 "title": "Excerpt length (characters)",
+                "help": null
+              }
+            },
+            "file_bytes": {
+              "default": 20000000,
+              "exclusiveMinimum": 0,
+              "title": "File Bytes",
+              "type": "integer",
+              "x-nestor": {
+                "field": "file_bytes",
+                "title_id": "config-connector-google-file_bytes",
+                "help_id": "config-connector-google-file_bytes-help",
+                "fallback_title_id": "config-field-file_bytes",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "connector-google",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Largest file read (bytes)",
                 "help": null
               }
             }
@@ -7315,7 +7390,7 @@
                 "brands": null,
                 "suggest_keys": null,
                 "suggest_values": null,
-                "title": "Longest message body read (characters)",
+                "title": "Longest message or file read (characters)",
                 "help": null
               }
             },
@@ -7344,6 +7419,219 @@
             }
           },
           "title": "ImapSettings",
+          "type": "object",
+          "required": [
+            "kind"
+          ]
+        },
+        "microsoft": {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "microsoft",
+              "type": "string",
+              "x-nestor": {
+                "field": "kind",
+                "title_id": "config-connector-microsoft-kind",
+                "help_id": "config-connector-microsoft-kind-help",
+                "fallback_title_id": "config-field-kind",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "connector-microsoft",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Kind",
+                "help": null
+              }
+            },
+            "name": {
+              "type": "string",
+              "description": "the instance's name; the kind by default",
+              "x-nestor": {
+                "field": "name",
+                "title_id": "config-connector-microsoft-name",
+                "help_id": "config-connector-microsoft-name-help",
+                "fallback_title_id": "config-field-name",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "connector-microsoft",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Name",
+                "help": null
+              }
+            },
+            "poll_interval_s": {
+              "default": 60.0,
+              "exclusiveMinimum": 0,
+              "title": "Poll Interval S",
+              "type": "number",
+              "x-nestor": {
+                "field": "poll_interval_s",
+                "title_id": "config-connector-microsoft-poll_interval_s",
+                "help_id": "config-connector-microsoft-poll_interval_s-help",
+                "fallback_title_id": "config-field-poll_interval_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "connector-microsoft",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Polling interval (seconds)",
+                "help": null
+              }
+            },
+            "blocked_s": {
+              "default": 600.0,
+              "exclusiveMinimum": 0,
+              "title": "Blocked S",
+              "type": "number",
+              "x-nestor": {
+                "field": "blocked_s",
+                "title_id": "config-connector-microsoft-blocked_s",
+                "help_id": "config-connector-microsoft-blocked_s-help",
+                "fallback_title_id": "config-field-blocked_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "connector-microsoft",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Wait while credentials are refused (seconds)",
+                "help": null
+              }
+            },
+            "retry_initial_s": {
+              "default": 1.0,
+              "exclusiveMinimum": 0,
+              "title": "Retry Initial S",
+              "type": "number",
+              "x-nestor": {
+                "field": "retry_initial_s",
+                "title_id": "config-connector-microsoft-retry_initial_s",
+                "help_id": "config-connector-microsoft-retry_initial_s-help",
+                "fallback_title_id": "config-field-retry_initial_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "connector-microsoft",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "First retry after (seconds)",
+                "help": null
+              }
+            },
+            "retry_max_s": {
+              "default": 300.0,
+              "exclusiveMinimum": 0,
+              "title": "Retry Max S",
+              "type": "number",
+              "x-nestor": {
+                "field": "retry_max_s",
+                "title_id": "config-connector-microsoft-retry_max_s",
+                "help_id": "config-connector-microsoft-retry_max_s-help",
+                "fallback_title_id": "config-field-retry_max_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "connector-microsoft",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Longest wait between retries (seconds)",
+                "help": null
+              }
+            },
+            "body_chars": {
+              "default": 20000,
+              "exclusiveMinimum": 0,
+              "title": "Body Chars",
+              "type": "integer",
+              "x-nestor": {
+                "field": "body_chars",
+                "title_id": "config-connector-microsoft-body_chars",
+                "help_id": "config-connector-microsoft-body_chars-help",
+                "fallback_title_id": "config-field-body_chars",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "connector-microsoft",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Longest message or file read (characters)",
+                "help": null
+              }
+            },
+            "excerpt_chars": {
+              "default": 2000,
+              "exclusiveMinimum": 0,
+              "title": "Excerpt Chars",
+              "type": "integer",
+              "x-nestor": {
+                "field": "excerpt_chars",
+                "title_id": "config-connector-microsoft-excerpt_chars",
+                "help_id": "config-connector-microsoft-excerpt_chars-help",
+                "fallback_title_id": "config-field-excerpt_chars",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "connector-microsoft",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Excerpt length (characters)",
+                "help": null
+              }
+            },
+            "file_bytes": {
+              "default": 20000000,
+              "exclusiveMinimum": 0,
+              "title": "File Bytes",
+              "type": "integer",
+              "x-nestor": {
+                "field": "file_bytes",
+                "title_id": "config-connector-microsoft-file_bytes",
+                "help_id": "config-connector-microsoft-file_bytes-help",
+                "fallback_title_id": "config-field-file_bytes",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "connector-microsoft",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Largest file read (bytes)",
+                "help": null
+              }
+            }
+          },
+          "title": "MicrosoftSettings",
           "type": "object",
           "required": [
             "kind"

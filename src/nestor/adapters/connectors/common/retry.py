@@ -1,11 +1,28 @@
-"""Pacing an inbound feed through provider trouble: back off on outages, wait long when the person must act."""
+"""Pacing an inbound feed: when to look again, and how to get through provider trouble (back off on outages, wait
+long when the person must act)."""
 
 import asyncio
 import logging
+from abc import ABC, abstractmethod
 
 from nestor.core import ProviderError
 
 log = logging.getLogger(__name__)
+
+
+class Wakeup(ABC):
+    """When to look for new mail again."""
+
+    @abstractmethod
+    async def wait(self) -> None: ...
+
+
+class Every(Wakeup):
+    def __init__(self, interval_s: float) -> None:
+        self.interval_s = interval_s
+
+    async def wait(self) -> None:
+        await asyncio.sleep(self.interval_s)
 
 
 class Backoff:

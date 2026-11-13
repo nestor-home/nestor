@@ -82,8 +82,10 @@ tavily = "nestor.adapters.tools.tavily:plugin"
 web-pages = "nestor.adapters.tools.web_pages:plugin"
 open-meteo = "nestor.adapters.tools.open_meteo:plugin"
 openstreetmap = "nestor.adapters.tools.openstreetmap:plugin"
+dav = "nestor.adapters.connectors.dav:plugin"
 google = "nestor.adapters.connectors.google:plugin"
 imap = "nestor.adapters.connectors.imap:plugin"
+microsoft = "nestor.adapters.connectors.microsoft:plugin"
 
 [project.entry-points."nestor.benches"]
 watch-triage = "nestor.bench.suites.watch_triage:suite"

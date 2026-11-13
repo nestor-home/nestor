@@ -1,16 +1,15 @@
-"""Gmail tools for the central agent: search and read, nothing that changes the mailbox."""
+"""Gmail tools: search and read, nothing that changes the mailbox."""
 
 import asyncio
 from collections.abc import Callable, Mapping, Sequence
 
 from nestor.adapters.common.text import cap
 from nestor.adapters.connectors.common import UNTRUSTED
-from nestor.adapters.connectors.google.api import GmailApi, GmailError
+from nestor.adapters.connectors.common.tools import ask
+from nestor.adapters.connectors.google.api import GmailApi
 from nestor.adapters.connectors.google.mime import GmailMessage
-from nestor.core import ProviderError
 from nestor.modules.cognition.model import ToolSpec
 from nestor.modules.cognition.tools import Risk, Tool, ToolContext, ToolFailed, bounded
-from nestor.modules.connectors import Connection
 
 MAX_RESULTS = 20
 SUMMARY_HEADERS = ("From", "Subject", "Date")
@@ -42,8 +41,8 @@ READ = ToolSpec(
 class GmailTools:
     """The tools of one connected Gmail account."""
 
-    def __init__(self, connection: Connection, api: Callable[[], GmailApi], *, body_chars: int) -> None:
-        self._connection, self._api, self._body_chars = connection, api, body_chars
+    def __init__(self, account: str, api: Callable[[], GmailApi], *, body_chars: int) -> None:
+        self._account, self._api, self._body_chars = account, api, body_chars
 
     def tools(self) -> Sequence[Tool]:
         return (
@@ -55,11 +54,8 @@ class GmailTools:
         query = str(arguments.get("query", "")).strip()
         limit = bounded(arguments.get("max_results"), default=10, maximum=MAX_RESULTS)
         api = self._api()
-        try:
-            ids = await api.search(query, limit)
-            found = await asyncio.gather(*(api.message(i, metadata=SUMMARY_HEADERS) for i in ids))
-        except ProviderError as error:
-            raise ToolFailed(f"Gmail search failed for {self._connection.account}: {error}") from None
+        ids = await ask("Gmail search", api.search(query, limit))
+        found = await ask("Gmail search", asyncio.gather(*(api.message(i, metadata=SUMMARY_HEADERS) for i in ids)))
         messages = [
             {
                 "id": m.id,
@@ -70,20 +66,13 @@ class GmailTools:
             }
             for m in map(GmailMessage.of, found)
         ]
-        return {"account": self._connection.account, "query": query, "messages": messages, "note": UNTRUSTED}
+        return {"account": self._account, "query": query, "messages": messages, "note": UNTRUSTED}
 
     async def read(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
         message_id = str(arguments.get("id", "")).strip()
         if not message_id:
             raise ToolFailed("give the id of a message found with google_mail_search")
-        try:
-            message = GmailMessage.of(await self._api().message(message_id))
-        except GmailError as error:
-            if error.status in (400, 404):
-                raise ToolFailed(f"no message {message_id!r} in {self._connection.account}") from None
-            raise ToolFailed(f"Gmail could not be read: {error}") from None
-        except ProviderError as error:
-            raise ToolFailed(f"Gmail could not be read: {error}") from None
+        message = GmailMessage.of(await ask("Reading Gmail", self._api().message(message_id)))
         return {
             "id": message.id,
             "thread_id": message.thread_id,

@@ -25,7 +25,7 @@ class ConnectorTools(ToolProvider, MentionSource):
         self.connections = connections
 
     def tools(self) -> Sequence[Tool]:
-        return [tool for connection in self._connected() for tool in self._tools_of(connection)]
+        return [tool for tools in self._offered().values() for _, tool in tools]
 
     def mentionable(self, person: Person | None) -> Iterable[Mentioned]:
         usable = [c for c in self._connected() if c.owner is None or (person is not None and c.owner == person.id)]
@@ -49,7 +49,8 @@ class ConnectorTools(ToolProvider, MentionSource):
         if connection is None or service is None:
             return f"the account {mentioned.label}, no longer connected: say so"
         whose = "the household's" if connection.owner is None else "their own"
-        names = ", ".join(t.name for t in self._tools_of(connection) if t.name in service.tools)
+        offered = self._offered().get(connection.id, [])
+        names = ", ".join(tool.name for declared, tool in offered if declared in service.tools)
         return f"{whose} {name} on the account {connection.account}: use its tools for that part ({names})"
 
     def _services(self, connection: Connection) -> list[Service]:
@@ -65,6 +66,21 @@ class ConnectorTools(ToolProvider, MentionSource):
             if connection.kind in self.connections.connectors and connection.status is Status.CONNECTED:
                 yield connection
 
+    def _offered(self) -> dict[str, list[tuple[str, Tool]]]:
+        """Each account's tools as the model sees them, with the name its connector gives each. A second account of a
+        service (two people's mailboxes, or two of one person's) gets its tools numbered and its address in their
+        description: one name stands for one tool."""
+        taken: set[str] = set()
+        offered: dict[str, list[tuple[str, Tool]]] = {}
+        for connection in self._connected():
+            tools = self._tools_of(connection)
+            n = 1
+            while any(_numbered(t.name, n) in taken for t in tools):
+                n += 1
+            offered[connection.id] = [(t.name, t if n == 1 else _apart(t, n, connection)) for t in tools]
+            taken.update(_numbered(t.name, n) for t in tools)
+        return offered
+
     def _tools_of(self, connection: Connection) -> list[Tool]:
         connector = self.connections.connectors[connection.kind]
         return [
@@ -72,6 +88,17 @@ class ConnectorTools(ToolProvider, MentionSource):
             for tool in connector.tools(connection, self.connections.access(connection))
             if tool.name not in connection.disabled_tools
         ]
+
+
+def _numbered(name: str, n: int) -> str:
+    return name if n == 1 else f"{name}_{n}"
+
+
+def _apart(tool: Tool, n: int, connection: Connection) -> Tool:
+    spec = replace(
+        tool.spec, name=_numbered(tool.name, n), description=f"[{connection.account}] {tool.spec.description}"
+    )
+    return replace(tool, spec=spec)
 
 
 def _as_used(tool: Tool, connection: Connection) -> Tool:
