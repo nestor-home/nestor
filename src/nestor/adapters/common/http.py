@@ -4,11 +4,13 @@ provider words it, a key never shown in one, a client for JSON APIs, and streame
 import hashlib
 import hmac
 import json
-from collections.abc import AsyncGenerator, AsyncIterator, Callable, Collection, Mapping
+import urllib.parse
+from collections.abc import AsyncGenerator, AsyncIterator, Callable, Collection, Iterable, Mapping
 from typing import Any
 
 import httpx
 
+from nestor import __version__
 from nestor.core import ProviderError
 
 MAX_DETAIL = 300
@@ -83,8 +85,29 @@ def signature(secret: str, body: bytes) -> str:
     return "sha256=" + hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
 
 
+HOME = "https://nestorhome.dev"
 # public services ask clients to name themselves (Nominatim requires it)
-USER_AGENT = "nestor (+https://nestorhome.dev)"
+USER_AGENT = f"nestor/{__version__} (+{HOME})"
+ATTRIBUTION = {  # host → the headers it ranks and names the apps calling it by
+    "openrouter.ai": {
+        "HTTP-Referer": HOME,
+        "X-OpenRouter-Title": "Nestor",
+        "X-OpenRouter-Categories": "personal-agent",
+    },
+    "ai-gateway.vercel.sh": {"HTTP-Referer": HOME, "X-Title": "Nestor"},
+}
+
+
+def host_among(url: str, hosts: Iterable[str]) -> str | None:
+    """Which of `hosts` `url` is on, itself or a subdomain of it."""
+    host = urllib.parse.urlsplit(url).hostname or ""
+    return next((known for known in hosts if host == known or host.endswith(f".{known}")), None)
+
+
+def identity(base_url: str) -> dict[str, str]:
+    """How Nestor names itself to the service at `base_url`: its versioned `User-Agent`, plus the attribution
+    headers of the hosts that ask for them."""
+    return {"User-Agent": USER_AGENT, **ATTRIBUTION.get(host_among(base_url, ATTRIBUTION) or "", {})}
 
 
 class HttpApi:
@@ -103,7 +126,7 @@ class HttpApi:
         transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
         self._provider, self._base_url, self._secret = provider, base_url, secret
-        self._headers = {"User-Agent": USER_AGENT, **(headers or {})}
+        self._headers = {**identity(base_url), **(headers or {})}
         self._timeout_s, self._transport = timeout_s, transport
         self._client: httpx.AsyncClient | None = None
 

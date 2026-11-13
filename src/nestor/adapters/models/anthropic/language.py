@@ -5,7 +5,7 @@ from contextlib import aclosing
 
 import httpx
 
-from nestor.adapters.common.http import provider_error, sse_payloads, streamed_lines
+from nestor.adapters.common.http import identity, provider_error, sse_payloads, streamed_lines
 from nestor.adapters.models.anthropic.stream import Decoder
 from nestor.adapters.models.anthropic.wire import EPHEMERAL, Effort, wire_messages, wire_system, wire_tool
 from nestor.core import ContractError, ProviderError
@@ -54,7 +54,8 @@ class AnthropicLanguage(LanguageModel):
         return {"model": self._model}
 
     async def start(self) -> None:
-        headers = {"x-api-key": self._api_key, "anthropic-version": API_VERSION, "Accept": "text/event-stream"}
+        headers = {**identity(self._base_url), "x-api-key": self._api_key, "anthropic-version": API_VERSION}
+        headers["Accept"] = "text/event-stream"
         self._client = httpx.AsyncClient(base_url=self._base_url, headers=headers, timeout=self._timeout)
 
     async def close(self) -> None:

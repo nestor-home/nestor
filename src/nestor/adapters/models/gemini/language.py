@@ -5,7 +5,7 @@ from contextlib import aclosing
 
 import httpx
 
-from nestor.adapters.common.http import provider_error, sse_payloads, streamed_lines
+from nestor.adapters.common.http import identity, provider_error, sse_payloads, streamed_lines
 from nestor.adapters.models.gemini.stream import Decoder
 from nestor.adapters.models.gemini.wire import wire_contents, wire_tool
 from nestor.core import ContractError, ProviderError
@@ -49,7 +49,7 @@ class GeminiLanguage(LanguageModel):
         return {"model": self._model}
 
     async def start(self) -> None:
-        headers = {"x-goog-api-key": self._api_key, "Accept": "text/event-stream"}
+        headers = {**identity(self._base_url), "x-goog-api-key": self._api_key, "Accept": "text/event-stream"}
         self._client = httpx.AsyncClient(base_url=self._base_url, headers=headers, timeout=self._timeout)
 
     async def close(self) -> None:

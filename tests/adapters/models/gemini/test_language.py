@@ -10,6 +10,7 @@ import httpx
 import pytest
 import respx
 
+from nestor import __version__
 from nestor.adapters.models.gemini.language import GeminiLanguage
 from nestor.adapters.models.gemini.wire import UNSIGNED
 from nestor.core import ContractError, ProviderError
@@ -111,11 +112,12 @@ async def test_a_tool_call_comes_with_its_thought_signature_and_the_thoughts_sta
     assert isinstance(outputs[-1], Finished) and outputs[-1].reason is FinishReason.TOOL_CALLS
 
 
-async def test_the_request_is_authenticated_and_streamed_as_server_sent_events(api: respx.MockRouter) -> None:
+async def test_the_request_is_authenticated_named_and_streamed_as_server_sent_events(api: respx.MockRouter) -> None:
     route = api.post(STREAM).mock(return_value=streamed(*TEXT_REPLY))
     await collect()
     request = route.calls.last.request
     assert (request.headers["x-goog-api-key"], request.url.params["alt"]) == (KEY, "sse")
+    assert request.headers["user-agent"] == f"nestor/{__version__} (+https://nestorhome.dev)"
     assert sent(route) == {"contents": [{"role": "user", "parts": [{"text": "Bonjour"}]}]}
 
 

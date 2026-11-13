@@ -18,7 +18,7 @@ from contextlib import aclosing
 
 import httpx
 
-from nestor.adapters.common.http import provider_error, streamed_lines
+from nestor.adapters.common.http import identity, provider_error, streamed_lines
 from nestor.adapters.models.common import brand
 from nestor.adapters.models.openai_compatible.stream import ChunkDecoder
 from nestor.adapters.models.openai_compatible.wire import wire_message, wire_tool
@@ -70,7 +70,7 @@ class OpenAICompatibleLanguage(LanguageModel):
         return {"model": self._model}
 
     async def start(self) -> None:
-        headers = {"Accept": "text/event-stream"}
+        headers = {**identity(self._base_url), "Accept": "text/event-stream"}
         if self._api_key:
             headers["Authorization"] = f"Bearer {self._api_key}"
         self._client = httpx.AsyncClient(base_url=self._base_url, headers=headers, timeout=self._timeout)

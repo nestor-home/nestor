@@ -11,6 +11,7 @@ import httpx
 import pytest
 import respx
 
+from nestor import __version__
 from nestor.adapters.models.anthropic.language import AnthropicLanguage
 from nestor.adapters.models.anthropic.wire import Effort
 from nestor.core import ProviderError
@@ -147,13 +148,14 @@ async def test_text_streams_and_tool_calls_are_reassembled_in_order(api: respx.M
     assert isinstance(finished, Finished) and finished.reason is FinishReason.TOOL_CALLS
 
 
-async def test_the_request_is_authenticated_versioned_and_streamed(api: respx.MockRouter) -> None:
+async def test_the_request_is_authenticated_versioned_named_and_streamed(api: respx.MockRouter) -> None:
     route = api.post(MESSAGES).mock(return_value=streamed(*TEXT_REPLY))
     async with model(effort=Effort.LOW) as m:
         [o async for o in m.stream(HELLO)]
     request = route.calls.last.request
     assert request.headers["x-api-key"] == KEY
     assert request.headers["anthropic-version"] == "2023-06-01"
+    assert request.headers["user-agent"] == f"nestor/{__version__} (+https://nestorhome.dev)"
     body = sent(route)
     assert (body["model"], body["stream"], body["output_config"]) == ("claude-haiku-5-5", True, {"effort": "low"})
     assert "tools" not in body and "system" not in body
