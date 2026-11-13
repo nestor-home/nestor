@@ -19,6 +19,7 @@ import geminiSvg from "@lobehub/icons-static-svg/icons/gemini.svg?raw";
 import groqSvg from "@lobehub/icons-static-svg/icons/groq.svg?raw";
 import hermesagentSvg from "@lobehub/icons-static-svg/icons/hermesagent.svg?raw";
 import lmstudioSvg from "@lobehub/icons-static-svg/icons/lmstudio.svg?raw";
+import microsoftSvg from "@lobehub/icons-static-svg/icons/microsoft.svg?raw";
 import mistralSvg from "@lobehub/icons-static-svg/icons/mistral.svg?raw";
 import modelscopeSvg from "@lobehub/icons-static-svg/icons/modelscope.svg?raw";
 import nvidiaSvg from "@lobehub/icons-static-svg/icons/nvidia.svg?raw";
@@ -28,7 +29,7 @@ import openrouterSvg from "@lobehub/icons-static-svg/icons/openrouter.svg?raw";
 import tavilySvg from "@lobehub/icons-static-svg/icons/tavily.svg?raw";
 import vllmSvg from "@lobehub/icons-static-svg/icons/vllm.svg?raw";
 import type { LucideIcon } from "lucide-react";
-import { Cpu, Globe, KeyRound, Mail, Mic, Plug, RadioTower, Webhook } from "lucide-react";
+import { CalendarDays, Cpu, Globe, KeyRound, Mail, Mic, Plug, RadioTower, Webhook } from "lucide-react";
 import {
   type SimpleIcon,
   siAnthropic,
@@ -43,7 +44,9 @@ import {
   siGmail,
   siGoogle,
   siGooglecalendar,
+  siGoogledrive,
   siGooglegemini,
+  siGoogletasks,
   siHomeassistant,
   siLinear,
   siLmstudio,
@@ -130,6 +133,9 @@ const BRANDS = {
   gmail: simple("Gmail", siGmail),
   google: simple("Google", siGoogle),
   "google-calendar": simple("Google Calendar", siGooglecalendar),
+  "google-drive": simple("Google Drive", siGoogledrive),
+  "google-tasks": simple("Google Tasks", siGoogletasks),
+  microsoft: lobe("Microsoft", microsoftSvg),
   telegram: simple("Telegram", siTelegram),
   whatsapp: simple("WhatsApp", siWhatsapp),
   discord: simple("Discord", siDiscord),
@@ -151,6 +157,7 @@ const BRANDS = {
   "open-meteo": monogram("Open-Meteo", "OM"),
   openstreetmap: simple("OpenStreetMap", siOpenstreetmap),
   imap: glyph("IMAP", Mail),
+  dav: glyph("CalDAV", CalendarDays),
   email: glyph("Email", Mail),
   oauth: glyph("OAuth", KeyRound),
   webrtc: simple("WebRTC", siWebrtc),

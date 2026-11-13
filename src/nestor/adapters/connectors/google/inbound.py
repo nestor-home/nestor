@@ -10,17 +10,15 @@ What makes the feed look again is a `Wakeup`: a fixed interval for now; a Pub/Su
 without touching the rest.
 """
 
-import asyncio
 import logging
-from abc import ABC, abstractmethod
 from collections.abc import AsyncGenerator, Mapping
 from dataclasses import dataclass
 
 import httpx
 
 from nestor.adapters.common.text import cap
-from nestor.adapters.connectors.common import Backoff, Retry
-from nestor.adapters.connectors.google.api import GmailApi, GmailError, new_client
+from nestor.adapters.connectors.common import Backoff, Retry, Wakeup
+from nestor.adapters.connectors.google.api import GmailApi, GoogleError, new_client
 from nestor.adapters.connectors.google.mime import GmailMessage
 from nestor.core import ProviderError, utc_now
 from nestor.modules.connectors import Access, Connection
@@ -29,21 +27,6 @@ from nestor.modules.initiative import InboundEventSource, Incoming
 log = logging.getLogger(__name__)
 
 KEPT_IDS = 200
-
-
-class Wakeup(ABC):
-    """When to look for new mail again."""
-
-    @abstractmethod
-    async def wait(self) -> None: ...
-
-
-class Every(Wakeup):
-    def __init__(self, interval_s: float) -> None:
-        self.interval_s = interval_s
-
-    async def wait(self) -> None:
-        await asyncio.sleep(self.interval_s)
 
 
 @dataclass(frozen=True, slots=True)
@@ -108,7 +91,7 @@ class GmailInbound(InboundEventSource):
                 cursor = await self._cursor()
                 try:
                     added, latest = await self._added(cursor)
-                except GmailError as error:
+                except GoogleError as error:
                     if error.status != 404:
                         raise
                     await self._resync(cursor)
@@ -156,7 +139,7 @@ class GmailInbound(InboundEventSource):
     async def _message(self, message_id: str) -> GmailMessage | None:
         try:
             return GmailMessage.of(await self._api.message(message_id))
-        except GmailError as error:
+        except GoogleError as error:
             if error.status != 404:
                 raise
             return None  # deleted before we read it

@@ -320,3 +320,18 @@ def test_a_service_is_named_as_people_write_it_and_serves_tools() -> None:
         Service(name="Google Mail", tools=frozenset({"x"}))
     with pytest.raises(ContractError, match="serves no tool"):
         Service(name="mail", tools=frozenset())
+
+
+async def test_two_accounts_of_one_service_offer_their_tools_under_names_of_their_own() -> None:
+    setup = Setup()
+    mine = await setup.connections.connect("imap", MATHIS, {"password": "a"})
+    hers = await setup.connections.connect("imap", PersonId("mathilde"), {"password": "b"})
+    source = ConnectorTools(setup.connections)
+    toolbox = Toolbox(setup.journal, providers=[source])  # one name, one tool: the toolbox refuses two alike
+
+    names = [s.name for s in toolbox.specs()]
+    assert len(names) == len(set(names)) and "imap_search" in names and "imap_search_2" in names
+    second = next(t for t in source.tools() if t.name == "imap_search_2")
+    assert second.owner == "mathilde" and second.spec.description.startswith(f"[{hers.account}]")
+    hers_named = next(m for m in source.mentionable(Person(id=PersonId("mathilde"), name="Mathilde")))
+    assert "imap_search_2" in source.instruction(hers_named) and mine.id != hers.id

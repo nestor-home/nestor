@@ -7,8 +7,7 @@ from pydantic import Field, model_validator
 from nestor.adapters.channels.email.channel import EmailChannel
 from nestor.adapters.channels.email.smtp import Security
 from nestor.adapters.channels.messaging import MessagingSettings
-from nestor.adapters.connectors.imap import ImapAccount
-from nestor.adapters.connectors.imap.account import LOOPBACK
+from nestor.adapters.connectors.imap.account import LOOPBACK, ImapAccount
 from nestor.core import Component
 from nestor.runtime.plugins import RequiredSecret, Services
 

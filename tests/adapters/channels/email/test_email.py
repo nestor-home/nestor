@@ -16,7 +16,7 @@ from pydantic import ValidationError
 from nestor.adapters.channels.email.channel import EmailChannel
 from nestor.adapters.channels.email.settings import EmailSettings
 from nestor.adapters.channels.email.smtp import Security
-from nestor.adapters.connectors.imap import ImapAccount
+from nestor.adapters.connectors.imap.account import ImapAccount
 from nestor.adapters.connectors.imap.inbound import ImapTiming
 from nestor.modules.channels import Assistant, Attachment
 from nestor.testing.channels import MessagingChannelContract, Platform, ScriptedAssistant

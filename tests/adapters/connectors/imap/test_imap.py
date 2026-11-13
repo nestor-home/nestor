@@ -14,19 +14,13 @@ from typing import Any
 import pytest
 
 from nestor.adapters.connectors.common import Backoff
-from nestor.adapters.connectors.imap import (
-    INFO,
-    AioImapClient,
-    ImapAccount,
-    ImapConnector,
-    ImapInbound,
-    ImapSettings,
-    ImapTiming,
-    LoginRefused,
-    MailboxClient,
-    MailboxUnavailable,
-    plugin,
-)
+from nestor.adapters.connectors.imap import plugin
+from nestor.adapters.connectors.imap.account import ImapAccount
+from nestor.adapters.connectors.imap.aioimap import AioImapClient
+from nestor.adapters.connectors.imap.client import LoginRefused, MailboxClient, MailboxUnavailable
+from nestor.adapters.connectors.imap.connector import INFO, ImapConnector
+from nestor.adapters.connectors.imap.inbound import ImapInbound, ImapTiming
+from nestor.adapters.connectors.imap.settings import ImapSettings
 from nestor.core import PersonId, ProviderError
 from nestor.core.i18n import Locale
 from nestor.modules.channels import Address

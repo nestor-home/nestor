@@ -12,8 +12,9 @@ from typing import Any
 from nestor.adapters.channels.email.authentication import authenticated, automatic
 from nestor.adapters.channels.email.smtp import Security, send
 from nestor.adapters.channels.messaging import Incoming, MessagingChannel, Pending
-from nestor.adapters.connectors.imap import AioImapClient, ImapAccount, MailboxClient
-from nestor.adapters.connectors.imap.account import session
+from nestor.adapters.connectors.imap.account import ImapAccount, session
+from nestor.adapters.connectors.imap.aioimap import AioImapClient
+from nestor.adapters.connectors.imap.client import MailboxClient
 from nestor.adapters.connectors.imap.inbound import ImapTiming, UidCursor, folder_end, newer
 from nestor.adapters.connectors.imap.message import MailMessage
 from nestor.core import ProviderError

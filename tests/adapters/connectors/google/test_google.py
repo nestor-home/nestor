@@ -5,20 +5,21 @@ import asyncio
 import base64
 import logging
 import urllib.parse
-from collections.abc import Callable, Mapping
+from collections.abc import Callable
 from typing import Any
 
 import httpx
 import pytest
 
-from nestor.adapters.connectors.common import Backoff
-from nestor.adapters.connectors.google import INFO, Every, GmailInbound, GoogleConnector, GoogleSettings, plugin
-from nestor.core import PersonId, ProviderError
+from nestor.adapters.connectors.common import Backoff, Every
+from nestor.adapters.connectors.google import plugin
+from nestor.adapters.connectors.google.connector import INFO, GoogleConnector
+from nestor.adapters.connectors.google.inbound import GmailInbound
+from nestor.adapters.connectors.google.settings import GoogleSettings
+from nestor.core import ProviderError
 from nestor.core.i18n import Locale
-from nestor.modules.channels import Address
-from nestor.modules.cognition.tools import Risk, ToolContext, ToolFailed
-from nestor.modules.connectors import Access, AuthKind, Connection, Connections, ConnectorTools, Secrets
-from nestor.modules.identity import Speaker
+from nestor.modules.cognition.tools import Risk, ToolFailed
+from nestor.modules.connectors import Access, AuthKind, Connection, Connections, ConnectorTools
 from nestor.modules.initiative import Incoming
 from nestor.modules.journal import Journal
 from nestor.runtime import Services
@@ -27,10 +28,10 @@ from nestor.testing.i18n import EchoLocalizer
 from nestor.testing.initiative import InboundEventSourceContract
 from nestor.testing.journal import MemoryEventLog
 
-MATHIS = PersonId("mathis")
+from ..accounts import CONTEXT, MATHIS, TOKEN, FakeAccess
+from .fakes import error
+
 CONNECTION = Connection(kind="google", owner=MATHIS, account="mathis@gmail.com", id="gmail-math")
-CONTEXT = ToolContext(address=Address("telegram", "42"), speaker=Speaker.account(MATHIS))
-TOKEN = "ya29.a0AfB_sentinel-access-token"
 REDIRECT = "https://nestor.example/connections/callback"
 
 
@@ -167,36 +168,6 @@ class FakeGmail:
 
     def history_calls(self) -> int:
         return sum(r.url.path.endswith("/history") for r in self.requests)
-
-
-def error(status: int, reason: str, message: str) -> httpx.Response:
-    body = {"error": {"code": status, "message": message, "errors": [{"domain": "global", "reason": reason}]}}
-    return httpx.Response(status, json=body)
-
-
-class FakeAccess(Access):
-    """The connection's access as Connections lends it: a token (or a refusal), durable state."""
-
-    def __init__(self) -> None:
-        self.state: dict[str, str] = {}
-        self.refusals = 0  # next token() calls that fail as a revoked authorisation does
-        self.token_calls = 0
-
-    async def token(self) -> str:
-        self.token_calls += 1
-        if self.refusals:
-            self.refusals -= 1
-            raise ProviderError("google", "authorisation expired: connect again", transient=False)
-        return TOKEN
-
-    async def secrets(self) -> Secrets:
-        return {}
-
-    async def load_state(self) -> Mapping[str, str]:
-        return dict(self.state)
-
-    async def save_state(self, state: Mapping[str, str]) -> None:
-        self.state = dict(state)
 
 
 def inbound(gmail: FakeGmail, access: FakeAccess, **options: Any) -> GmailInbound:
@@ -425,14 +396,17 @@ def tools(gmail: FakeGmail, access: Access | None = None, **options: Any) -> dic
     return {t.name: t for t in connector.tools(CONNECTION, access or FakeAccess())}
 
 
-def test_the_connector_declares_gmail_read_only_oauth_and_mail_for_watches() -> None:
+def test_the_connector_declares_its_oauth_scopes_services_and_mail_for_watches() -> None:
     assert INFO.auth is AuthKind.OAUTH2 and INFO.oauth is not None
     assert "https://www.googleapis.com/auth/gmail.readonly" in INFO.oauth.scopes
-    assert not any("gmail.send" in s or "gmail.modify" in s for s in INFO.oauth.scopes)
+    assert not any("gmail.send" in s or "gmail.modify" in s or s.endswith("/drive") for s in INFO.oauth.scopes)
     assert INFO.oauth.extra_authorize["access_type"] == "offline"  # without it, no refresh token
     assert INFO.inbound == ("mail",)
     found = tools(FakeGmail())
-    assert all(name.startswith("google_") and tool.risk is Risk.READ for name, tool in found.items())
+    writing = {name for name, tool in found.items() if tool.risk is not Risk.READ}
+    assert writing == {"google_calendar_create", "google_tasks_add", "google_tasks_complete"}
+    served = [name for service in INFO.services for name in service.tools]
+    assert sorted(served) == sorted(found)  # each tool belongs to one service people can name
 
 
 async def test_a_search_returns_sender_subject_date_snippet_and_id() -> None:
@@ -532,7 +506,7 @@ async def test_a_huge_body_is_capped_and_says_so() -> None:
 
 async def test_reading_an_unknown_or_missing_id_tells_the_model_why() -> None:
     read = tools(FakeGmail())["google_mail_read"]
-    with pytest.raises(ToolFailed, match="no message 'nope'"):
+    with pytest.raises(ToolFailed, match="not found, check the id"):
         await read.run({"id": "nope"}, CONTEXT)
     with pytest.raises(ToolFailed, match="give the id"):
         await read.run({}, CONTEXT)
@@ -591,13 +565,12 @@ async def test_connecting_through_oauth_names_the_account_by_its_gmail_address()
         await connections.set_client("google", "1234.apps.googleusercontent.com", "GOCSPX-secret")
         url = await connections.begin("google", MATHIS, REDIRECT)
         query = dict(urllib.parse.parse_qsl(urllib.parse.urlsplit(url).query))
-        assert query["scope"] == "openid email https://www.googleapis.com/auth/gmail.readonly"
+        assert "https://www.googleapis.com/auth/gmail.readonly" in query["scope"].split()
         assert query["prompt"] == "consent" and query["include_granted_scopes"] == "true"
         back = provider.consent(url)
         connection = await connections.complete(back["state"], back["code"])
         assert connection.account == "mathis@gmail.com"
-        search, read = ConnectorTools(connections).tools()
-        assert (search.name, read.name) == ("google_mail_search", "google_mail_read")
+        search = next(t for t in ConnectorTools(connections).tools() if t.name == "google_mail_search")
         gmail.deliver("Bienvenue", found_by=("bienvenue",))
         found: Any = await search.run({"query": "bienvenue"}, CONTEXT)
         assert [m["subject"] for m in found["messages"]] == ["Bienvenue"]
