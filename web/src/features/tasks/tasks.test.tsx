@@ -99,6 +99,7 @@ describe("tasks and watches", () => {
   it("points to the catalogue when no source can feed a watch", async () => {
     db.watches = [];
     db.connectors = db.connectors.map((c) => ({ ...c, inbound: [] }));
+    db.inbound = [];
     renderApp("/watches");
     expect(await screen.findByText("No active watch.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "connect an account" })).toHaveAttribute("href", "/connections/catalogue");

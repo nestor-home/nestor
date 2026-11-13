@@ -58,6 +58,7 @@ export interface Db {
   satellites: Satellite[];
   tasks: Task[];
   watches: Watch[];
+  inbound: string[]; // what the configured inbound sources bring (feeds, pages, webhooks), beside the accounts'
   schedules: Schedule[];
   messages: Messages;
   confirmations: Confirmation[];
@@ -71,7 +72,7 @@ export interface Db {
 }
 
 /** Bumped when the shape changes; the stress fixture keeps its own copy. */
-const KEY = () => (stressed() ? "nestor.mock.db.v18.stress" : "nestor.mock.db.v18");
+const KEY = () => (stressed() ? "nestor.mock.db.v19.stress" : "nestor.mock.db.v19");
 
 export function fresh(): Db {
   const connections = fixtures.connections();
@@ -88,13 +89,14 @@ export function fresh(): Db {
     journal,
     connectors: fixtures.connectors(),
     connections,
-    tools: Object.fromEntries(connections.map((c) => [c.id, fixtures.tools(c.kind)])),
-    services: Object.fromEntries(connections.map((c) => [c.id, fixtures.services(c)])),
+    tools: Object.fromEntries(connections.map((c) => [c.id, fixtures.tools(c.kind, c.brand)])),
+    services: Object.fromEntries(connections.map((c) => [c.id, fixtures.services(c, connections)])),
     pairing: fixtures.pairing(),
     additions: [],
     satellites: fixtures.satellites(),
     tasks: fixtures.tasks(),
     watches: fixtures.watches(),
+    inbound: ["feed", "page", "washing-machine"],
     schedules: fixtures.schedules(),
     messages: fixtures.messages(),
     confirmations: fixtures.confirmations(),

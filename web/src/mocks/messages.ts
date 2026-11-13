@@ -78,6 +78,10 @@ const TITLES: [RegExp, (m: RegExpMatchArray) => Message][] = [
   [/^(\S+) answered$/, (m) => msg("journal-assistant-answered", { assistant: m[1] ?? "" })],
   [/^Answer cut off/, () => msg("journal-answer-cut")],
   [/^Fallback answer: model too slow$/, () => msg("journal-fallback", { reason: "model_slow" })],
+  [
+    /^(\S+) failed: (\S+) takes over$/,
+    (m) => msg("journal-model-fell-back", { model: m[1] ?? "", fallback: m[2] ?? "" }),
+  ],
   [/^Tool (\S+) called$/, (m) => msg("journal-tool-called", { tool: m[1] ?? "" })],
   [
     /^Tool (\S+) finished in (.+)$/,
@@ -91,6 +95,16 @@ const TITLES: [RegExp, (m: RegExpMatchArray) => Message][] = [
     (m) => msg("journal-task-ended", { task: m[1] ?? "", status: m[2] ?? "", seconds: seconds(m[3] ?? "") }),
   ],
   [/^Watch created: (.+)$/, (m) => msg("journal-watch-created", { what: m[1] ?? "" })],
+  [
+    /^“(.+)” checked against (\d+) watch(?:es)?: (none match|(\d+) matched)$/,
+    (m) =>
+      msg("journal-watch-sorted", {
+        item: m[1] ?? "",
+        asked: Number(m[2]),
+        matched: Number(m[4] ?? "0"),
+        unsorted: "no",
+      }),
+  ],
   [
     /^Watch (\S+) triggered by “(.+)”$/,
     (m) => msg("journal-watch-triggered", { watch: m[1] ?? "", item: m[2] ?? "", urgent: "no" }),

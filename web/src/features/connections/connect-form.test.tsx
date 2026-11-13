@@ -27,7 +27,7 @@ describe("connecting an account", () => {
     });
     const user = userEvent.setup();
     renderApp("/connections/catalogue?connect=google");
-    const sheet = await screen.findByRole("dialog", { name: "Gmail" });
+    const sheet = await screen.findByRole("dialog", { name: "Google" });
     const owner = within(sheet).getByRole("combobox", { name: "Account of" });
     await user.click(owner);
     await user.clear(owner);
@@ -58,9 +58,7 @@ describe("connecting an account", () => {
   });
 
   it("cannot start OAuth before the household's client exists", async () => {
-    await renderWithProviders(
-      <ConnectForm connector={connector("google-calendar")} replaces={null} onConnected={vi.fn()} />,
-    );
+    await renderWithProviders(<ConnectForm connector={connector("microsoft")} replaces={null} onConnected={vi.fn()} />);
     expect(screen.getByRole("button", { name: "Connect" })).toBeDisabled();
     expect(screen.getByText("Register the OAuth client first.")).toBeInTheDocument();
   });
@@ -106,6 +104,14 @@ describe("connecting an account", () => {
     await user.click(screen.getByRole("button", { name: "Connect" }));
     await waitFor(() => expect(assign).toHaveBeenCalledTimes(1));
     expect(sent).toEqual([expect.objectContaining({ values: { url: "https://mcp.linear.app/mcp" } })]);
+  });
+
+  it("says why a server turned the connection down, in the service's own words", async () => {
+    const user = userEvent.setup();
+    await renderWithProviders(<ConnectForm connector={connector("mcp")} replaces={null} onConnected={vi.fn()} />);
+    await user.type(screen.getByLabelText("Server address"), "https://mcp.invalid.example/mcp");
+    await user.click(screen.getByRole("button", { name: "Connect" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("mcp.invalid.example refused the credentials given.");
   });
 
   it("connects at once a server that needs no consent", async () => {
