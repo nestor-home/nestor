@@ -1,14 +1,12 @@
 """The webhook channel: each message posted as JSON to one address, signed when a secret is set."""
 
 import base64
-import hashlib
-import hmac
 import json
 
 import httpx
 
 from nestor.adapters.channels.push import PushChannel
-from nestor.adapters.common.http import HttpApi
+from nestor.adapters.common.http import HttpApi, signature
 from nestor.modules.channels import Attachment, AttachmentKind
 
 SIGNATURE = "X-Nestor-Signature"
@@ -44,8 +42,7 @@ class WebhookChannel(PushChannel):
         body = json.dumps({"to": conversation, "text": text, "attachments": files}, ensure_ascii=False).encode()
         headers = {"Content-Type": "application/json"}
         if self._secret:
-            digest = hmac.new(self._secret.encode(), body, hashlib.sha256).hexdigest()
-            headers[SIGNATURE] = f"sha256={digest}"
+            headers[SIGNATURE] = signature(self._secret, body)
         await self._api.request("POST", self._url, content=body, headers=headers)
 
     async def close(self) -> None:

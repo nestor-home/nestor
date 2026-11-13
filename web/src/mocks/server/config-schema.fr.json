@@ -2929,6 +2929,378 @@
           "title": "DiscordSettings",
           "type": "object"
         },
+        "email": {
+          "$defs": {
+            "Security": {
+              "enum": [
+                "tls",
+                "starttls",
+                "none"
+              ],
+              "title": "Security",
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "email",
+              "type": "string",
+              "x-nestor": {
+                "field": "kind",
+                "title_id": "config-channel-email-kind",
+                "help_id": "config-channel-email-kind-help",
+                "fallback_title_id": "config-field-kind",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-email",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Type",
+                "help": null
+              }
+            },
+            "name": {
+              "type": "string",
+              "description": "the instance's name; the kind by default",
+              "x-nestor": {
+                "field": "name",
+                "title_id": "config-channel-email-name",
+                "help_id": "config-channel-email-name-help",
+                "fallback_title_id": "config-field-name",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-email",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Nom",
+                "help": null
+              }
+            },
+            "conversation_ends_after_s": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Conversation Ends After S",
+              "x-nestor": {
+                "field": "conversation_ends_after_s",
+                "title_id": "config-channel-email-conversation_ends_after_s",
+                "help_id": "config-channel-email-conversation_ends_after_s-help",
+                "fallback_title_id": "config-field-conversation_ends_after_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "channel-email",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Nouvelle conversation après (secondes)",
+                "help": null
+              }
+            },
+            "apology": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Apology",
+              "x-nestor": {
+                "field": "apology",
+                "title_id": "config-channel-email-apology",
+                "help_id": "config-channel-email-apology-help",
+                "fallback_title_id": "config-field-apology",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-email",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Message en cas d'erreur",
+                "help": null
+              }
+            },
+            "retry_delay_s": {
+              "default": 1.0,
+              "exclusiveMinimum": 0,
+              "title": "Retry Delay S",
+              "type": "number",
+              "x-nestor": {
+                "field": "retry_delay_s",
+                "title_id": "config-channel-email-retry_delay_s",
+                "help_id": "config-channel-email-retry_delay_s-help",
+                "fallback_title_id": "config-field-retry_delay_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "channel-email",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Première attente avant de se reconnecter (secondes)",
+                "help": null
+              }
+            },
+            "address": {
+              "minLength": 3,
+              "title": "Address",
+              "type": "string",
+              "x-nestor": {
+                "field": "address",
+                "title_id": "config-channel-email-address",
+                "help_id": "config-channel-email-address-help",
+                "fallback_title_id": "config-field-address",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-email",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Adresse de Nestor",
+                "help": "Là où les membres écrivent ; les réponses en partent."
+              }
+            },
+            "username": {
+              "minLength": 1,
+              "title": "Username",
+              "type": "string",
+              "x-nestor": {
+                "field": "username",
+                "title_id": "config-channel-email-username",
+                "help_id": "config-channel-email-username-help",
+                "fallback_title_id": "config-field-username",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-email",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Identifiant",
+                "help": null
+              }
+            },
+            "password": {
+              "format": "password",
+              "title": "Password",
+              "type": "string",
+              "writeOnly": true,
+              "x-nestor": {
+                "field": "password",
+                "title_id": "config-channel-email-password",
+                "help_id": "config-channel-email-password-help",
+                "fallback_title_id": "config-field-password",
+                "secret": true,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-email",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Mot de passe d'application",
+                "help": null
+              }
+            },
+            "imap_host": {
+              "title": "Imap Host",
+              "type": "string",
+              "x-nestor": {
+                "field": "imap_host",
+                "title_id": "config-channel-email-imap_host",
+                "help_id": "config-channel-email-imap_host-help",
+                "fallback_title_id": "config-field-imap_host",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-email",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Serveur IMAP",
+                "help": null
+              }
+            },
+            "imap_port": {
+              "default": 993,
+              "maximum": 65535,
+              "minimum": 1,
+              "title": "Imap Port",
+              "type": "integer",
+              "x-nestor": {
+                "field": "imap_port",
+                "title_id": "config-channel-email-imap_port",
+                "help_id": "config-channel-email-imap_port-help",
+                "fallback_title_id": "config-field-imap_port",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-email",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Port IMAP",
+                "help": null
+              }
+            },
+            "smtp_host": {
+              "title": "Smtp Host",
+              "type": "string",
+              "x-nestor": {
+                "field": "smtp_host",
+                "title_id": "config-channel-email-smtp_host",
+                "help_id": "config-channel-email-smtp_host-help",
+                "fallback_title_id": "config-field-smtp_host",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-email",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Serveur SMTP",
+                "help": null
+              }
+            },
+            "smtp_port": {
+              "default": 465,
+              "maximum": 65535,
+              "minimum": 1,
+              "title": "Smtp Port",
+              "type": "integer",
+              "x-nestor": {
+                "field": "smtp_port",
+                "title_id": "config-channel-email-smtp_port",
+                "help_id": "config-channel-email-smtp_port-help",
+                "fallback_title_id": "config-field-smtp_port",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-email",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Port SMTP",
+                "help": null
+              }
+            },
+            "smtp_security": {
+              "$ref": "#/$defs/Security",
+              "default": "tls",
+              "x-nestor": {
+                "field": "smtp_security",
+                "title_id": "config-channel-email-smtp_security",
+                "help_id": "config-channel-email-smtp_security-help",
+                "fallback_title_id": "config-field-smtp_security",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-email",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Sécurité SMTP",
+                "help": "tls sur le port 465, starttls sur le 587 ; none seulement pour un serveur sur cette machine."
+              }
+            },
+            "folder": {
+              "default": "INBOX",
+              "title": "Folder",
+              "type": "string",
+              "x-nestor": {
+                "field": "folder",
+                "title_id": "config-channel-email-folder",
+                "help_id": "config-channel-email-folder-help",
+                "fallback_title_id": "config-field-folder",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-email",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Dossier",
+                "help": null
+              }
+            },
+            "require_authenticated": {
+              "default": true,
+              "title": "Require Authenticated",
+              "type": "boolean",
+              "x-nestor": {
+                "field": "require_authenticated",
+                "title_id": "config-channel-email-require_authenticated",
+                "help_id": "config-channel-email-require_authenticated-help",
+                "fallback_title_id": "config-field-require_authenticated",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-email",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Seulement le courrier authentifié",
+                "help": "Ne répond qu'au courrier que votre serveur a authentifié (DMARC, ou DKIM et SPF) : n'importe qui peut écrire un en-tête From."
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "address",
+            "username",
+            "password",
+            "imap_host",
+            "smtp_host"
+          ],
+          "title": "EmailSettings",
+          "type": "object"
+        },
         "matrix": {
           "additionalProperties": false,
           "properties": {
@@ -4620,6 +4992,281 @@
             "url"
           ],
           "title": "WebhookSettings",
+          "type": "object"
+        },
+        "whatsapp": {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "whatsapp",
+              "type": "string",
+              "x-nestor": {
+                "field": "kind",
+                "title_id": "config-channel-whatsapp-kind",
+                "help_id": "config-channel-whatsapp-kind-help",
+                "fallback_title_id": "config-field-kind",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-whatsapp",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Type",
+                "help": null
+              }
+            },
+            "name": {
+              "type": "string",
+              "description": "the instance's name; the kind by default",
+              "x-nestor": {
+                "field": "name",
+                "title_id": "config-channel-whatsapp-name",
+                "help_id": "config-channel-whatsapp-name-help",
+                "fallback_title_id": "config-field-name",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-whatsapp",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Nom",
+                "help": null
+              }
+            },
+            "conversation_ends_after_s": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Conversation Ends After S",
+              "x-nestor": {
+                "field": "conversation_ends_after_s",
+                "title_id": "config-channel-whatsapp-conversation_ends_after_s",
+                "help_id": "config-channel-whatsapp-conversation_ends_after_s-help",
+                "fallback_title_id": "config-field-conversation_ends_after_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "channel-whatsapp",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Nouvelle conversation après (secondes)",
+                "help": null
+              }
+            },
+            "apology": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Apology",
+              "x-nestor": {
+                "field": "apology",
+                "title_id": "config-channel-whatsapp-apology",
+                "help_id": "config-channel-whatsapp-apology-help",
+                "fallback_title_id": "config-field-apology",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-whatsapp",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Message en cas d'erreur",
+                "help": null
+              }
+            },
+            "retry_delay_s": {
+              "default": 1.0,
+              "exclusiveMinimum": 0,
+              "title": "Retry Delay S",
+              "type": "number",
+              "x-nestor": {
+                "field": "retry_delay_s",
+                "title_id": "config-channel-whatsapp-retry_delay_s",
+                "help_id": "config-channel-whatsapp-retry_delay_s-help",
+                "fallback_title_id": "config-field-retry_delay_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "channel-whatsapp",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Première attente avant de se reconnecter (secondes)",
+                "help": null
+              }
+            },
+            "phone_number_id": {
+              "minLength": 1,
+              "title": "Phone Number Id",
+              "type": "string",
+              "x-nestor": {
+                "field": "phone_number_id",
+                "title_id": "config-channel-whatsapp-phone_number_id",
+                "help_id": "config-channel-whatsapp-phone_number_id-help",
+                "fallback_title_id": "config-field-phone_number_id",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-whatsapp",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Identifiant du numéro",
+                "help": "Dans le tableau de bord de l'app Meta, sous WhatsApp, configuration de l'API (pas le numéro lui-même)."
+              }
+            },
+            "token": {
+              "format": "password",
+              "title": "Token",
+              "type": "string",
+              "writeOnly": true,
+              "x-nestor": {
+                "field": "token",
+                "title_id": "config-channel-whatsapp-token",
+                "help_id": "config-channel-whatsapp-token-help",
+                "fallback_title_id": "config-field-token",
+                "secret": true,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-whatsapp",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Token",
+                "help": "Un jeton d'accès permanent d'un utilisateur système."
+              }
+            },
+            "verify_token": {
+              "format": "password",
+              "title": "Verify Token",
+              "type": "string",
+              "writeOnly": true,
+              "x-nestor": {
+                "field": "verify_token",
+                "title_id": "config-channel-whatsapp-verify_token",
+                "help_id": "config-channel-whatsapp-verify_token-help",
+                "fallback_title_id": "config-field-verify_token",
+                "secret": true,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-whatsapp",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Jeton de vérification",
+                "help": "Choisi par vous, donné à Meta à la configuration du webhook."
+              }
+            },
+            "app_secret": {
+              "format": "password",
+              "title": "App Secret",
+              "type": "string",
+              "writeOnly": true,
+              "x-nestor": {
+                "field": "app_secret",
+                "title_id": "config-channel-whatsapp-app_secret",
+                "help_id": "config-channel-whatsapp-app_secret-help",
+                "fallback_title_id": "config-field-app_secret",
+                "secret": true,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-whatsapp",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Secret de l'app",
+                "help": "Vérifie que chaque message vient bien de Meta."
+              }
+            },
+            "host": {
+              "default": "127.0.0.1",
+              "title": "Host",
+              "type": "string",
+              "x-nestor": {
+                "field": "host",
+                "title_id": "config-channel-whatsapp-host",
+                "help_id": "config-channel-whatsapp-host-help",
+                "fallback_title_id": "config-field-host",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-whatsapp",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Hôte",
+                "help": "Votre reverse proxy transmet ici https://<votre hôte>/whatsapp."
+              }
+            },
+            "port": {
+              "default": 8473,
+              "maximum": 65535,
+              "minimum": 1,
+              "title": "Port",
+              "type": "integer",
+              "x-nestor": {
+                "field": "port",
+                "title_id": "config-channel-whatsapp-port",
+                "help_id": "config-channel-whatsapp-port-help",
+                "fallback_title_id": "config-field-port",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-whatsapp",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Port",
+                "help": null
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "phone_number_id",
+            "token",
+            "verify_token",
+            "app_secret"
+          ],
+          "title": "WhatsAppSettings",
           "type": "object"
         }
       },

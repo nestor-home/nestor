@@ -49,6 +49,15 @@ class Pending:
     name: str | None = None
     size: int | None = None
 
+    @classmethod
+    def ready(cls, data: bytes, media_type: str, *, name: str | None = None) -> "Pending":
+        """A file the message carries already (an email's attachment): nothing to download."""
+
+        async def given() -> bytes:
+            return data
+
+        return cls(kind=kind_of(media_type), media_type=media_type, fetch=given, name=name, size=len(data))
+
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Incoming:

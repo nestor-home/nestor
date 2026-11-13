@@ -23,7 +23,11 @@ class MailMessage:
 
     @classmethod
     def parse(cls, raw: bytes) -> "MailMessage":
-        message = BytesParser(policy=policy.default).parsebytes(raw)
+        return cls.of(BytesParser(policy=policy.default).parsebytes(raw))
+
+    @classmethod
+    def of(cls, message: EmailMessage) -> "MailMessage":
+        """A message parsed already (with `policy.default`)."""
         return cls(
             subject=_header(message, "subject") or "(no subject)",
             sender=_header(message, "from"),

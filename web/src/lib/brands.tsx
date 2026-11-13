@@ -151,6 +151,7 @@ const BRANDS = {
   "open-meteo": monogram("Open-Meteo", "OM"),
   openstreetmap: simple("OpenStreetMap", siOpenstreetmap),
   imap: glyph("IMAP", Mail),
+  email: glyph("Email", Mail),
   oauth: glyph("OAuth", KeyRound),
   webrtc: simple("WebRTC", siWebrtc),
   web: glyph("Web", Globe),
