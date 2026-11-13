@@ -13,7 +13,8 @@ from typing import Any
 import httpx
 import pytest
 
-from nestor.adapters.channels.telegram import FILE_LIMIT, MESSAGE_LIMIT, TelegramChannel, plugin, split_text
+from nestor.adapters.channels.telegram import plugin
+from nestor.adapters.channels.telegram.channel import FILE_LIMIT, MESSAGE_LIMIT, TelegramChannel
 from nestor.core import ContractError, PersonId, ProviderError
 from nestor.core.i18n import Locale
 from nestor.modules.channels import (
@@ -165,8 +166,10 @@ def api() -> FakeBotApi:
 
 
 def channel_for(api: FakeBotApi, *, token: str = TOKEN, **options: Any) -> TelegramChannel:
-    options = {"poll_timeout_s": 1, "retry_delay_s": 0.01, "typing_interval_s": 0.02} | options
-    return TelegramChannel("telegram", token=token, transport=api.transport, **options)
+    options = {"poll_timeout_s": 1, "retry_delay_s": 0.01} | options
+    channel = TelegramChannel("telegram", token=token, transport=api.transport, **options)
+    channel.typing_every_s = 0.02  # said again quickly, so that a test sees it repeated
+    return channel
 
 
 @asynccontextmanager
@@ -395,7 +398,7 @@ async def test_the_token_never_appears_in_logs(api: FakeBotApi, caplog: pytest.L
 async def test_send_delivers_an_unprompted_message(api: FakeBotApi) -> None:
     async with channel_for(api) as channel:
         await channel.send(Address("telegram", str(ADA)), "Your task is done.", Medium.WRITTEN, ())
-    assert api.sent == [(str(ADA), "Your task is done.")]
+    assert api.sent == [(ADA, "Your task is done.")]
 
 
 @pytest.mark.parametrize(
@@ -443,32 +446,8 @@ async def test_the_plugin_names_the_channel_after_its_configured_instance(tmp_pa
     await channel.close()
 
 
-def test_split_text_keeps_short_texts_whole() -> None:
-    assert split_text("  Hello.  ") == ["Hello."]
-    assert split_text("") == []
-
-
-def test_split_text_prefers_a_paragraph_break_to_a_sentence_end() -> None:
-    text = "One. Two.\n\nThree. Four."
-    assert split_text(text, limit=20) == ["One. Two.", "Three. Four."]
-
-
-def test_split_text_cuts_after_a_sentence_when_a_paragraph_is_too_long() -> None:
-    text = "First sentence here. Second sentence there. Third one."
-    assert split_text(text, limit=30) == ["First sentence here.", "Second sentence there.", "Third one."]
-
-
-def test_split_text_cuts_a_word_longer_than_the_limit() -> None:
-    assert split_text("abcdefghij", limit=4) == ["abcd", "efgh", "ij"]
-
-
-def test_split_text_counts_characters_as_telegram_does() -> None:
-    parts = split_text("🙂" * 5, limit=4)  # an emoji is two UTF-16 units
-    assert parts == ["🙂🙂", "🙂🙂", "🙂"]
-
-
 @pytest.mark.parametrize(
-    ("configured", "said"), [({}, "telegram-apology"), ({"apology": ""}, ""), ({"apology": "Oups."}, "Oups.")]
+    ("configured", "said"), [({}, "channel-apology"), ({"apology": ""}, ""), ({"apology": "Oups."}, "Oups.")]
 )
 async def test_the_apology_is_the_households_language_unless_configured(
     tmp_path: Path, configured: dict[str, str], said: str
@@ -602,7 +581,8 @@ async def test_a_file_that_cannot_be_downloaded_is_left_out(api: FakeBotApi) -> 
 class TelegramPlatform(Platform):
     """The fake Bot API as a messaging platform: Ada writes in her private chat."""
 
-    def __init__(self, api: FakeBotApi) -> None:
+    def __init__(self, api: FakeBotApi, channel: TelegramChannel) -> None:
+        self.channel = channel
         self.api = api
 
     async def send(self, text: str, *attachments: Attachment) -> None:
@@ -634,8 +614,8 @@ class TestTelegramMessaging(MessagingChannelContract):
     @asynccontextmanager
     async def serving(self, assistant: Assistant) -> AsyncGenerator[Platform]:
         api = FakeBotApi()
-        async with serving(api, assistant):
-            yield TelegramPlatform(api)
+        async with serving(api, assistant) as (channel, _):
+            yield TelegramPlatform(api, channel)
 
 
 async def test_an_answer_whose_picture_cannot_be_sent_still_says_its_words(api: FakeBotApi) -> None:

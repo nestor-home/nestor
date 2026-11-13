@@ -49,7 +49,7 @@ src/nestor/
 ├── bench/                `nestor bench`: the engine (cases, variants, runs, replay cache, reports); its
 │   └── suites/           suites, one folder each with its dataset (`nestor.benches` entry points)
 ├── cli.py                the `nestor` command, above runtime and admin
-├── adapters/             adapters/<family>/<vendor>/ — the only place for third-party SDKs
+├── adapters/             adapters/<family>/<provider>/ — the only place for third-party SDKs (see "Adapters by provider")
 │   └── models/           <provider>/: the types of model a provider serves (see "Models" below)
 │   └── storage/          SQLite (one WAL database, migrations in schema.py), blobs on disk
 └── testing/              doubles and contract suites, mirroring modules/ (shipped with the package)
@@ -113,7 +113,7 @@ Every provider is a package of its own, split by concern; nothing monolithic. Wh
 share lives at the family's root (`adapters/<family>/<shared>.py` or a `common/` package), never inside one
 provider's package.
 
-```
+```text
 adapters/<family>/<provider>/
   __init__.py    the provider's documentation (what it is, how it is configured, its limits), its plugin(s) and
                  `__all__`: no class, no function
@@ -127,7 +127,8 @@ adapters/<family>/<provider>/
 One plugin per provider, `plugin = Plugin(...)` in `<provider>/__init__.py`, declared as
 `<kind> = "nestor.adapters.<family>.<provider>:plugin"`; models declare one per type (see "Models"). Tests mirror the
 packages (`tests/adapters/<family>/<provider>/`), tests of shared code sit at the family's root. A private helper used
-by another module of the package becomes a public name of the module that owns it.
+by another module of the package becomes a public name of the module that owns it; a helper two providers need goes
+to the family's shared module (for channels, `adapters/channels/messaging.py`, the base of every messaging channel).
 
 ## Code conventions
 

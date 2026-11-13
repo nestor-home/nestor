@@ -1,4 +1,4 @@
 # What channels say themselves, outside the assistant's answers.
 
-telegram-apology = Sorry, something went wrong. Can you try again?
+channel-apology = Sorry, something went wrong. Can you try again?
 voice-stt-down = I can't hear you very well, my connection is playing up.

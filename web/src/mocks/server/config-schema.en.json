@@ -2771,6 +2771,368 @@
         "kind"
       ],
       "kinds": {
+        "discord": {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "discord",
+              "type": "string",
+              "x-nestor": {
+                "field": "kind",
+                "title_id": "config-channel-discord-kind",
+                "help_id": "config-channel-discord-kind-help",
+                "fallback_title_id": "config-field-kind",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-discord",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Kind",
+                "help": null
+              }
+            },
+            "name": {
+              "type": "string",
+              "description": "the instance's name; the kind by default",
+              "x-nestor": {
+                "field": "name",
+                "title_id": "config-channel-discord-name",
+                "help_id": "config-channel-discord-name-help",
+                "fallback_title_id": "config-field-name",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-discord",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Name",
+                "help": null
+              }
+            },
+            "conversation_ends_after_s": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Conversation Ends After S",
+              "x-nestor": {
+                "field": "conversation_ends_after_s",
+                "title_id": "config-channel-discord-conversation_ends_after_s",
+                "help_id": "config-channel-discord-conversation_ends_after_s-help",
+                "fallback_title_id": "config-field-conversation_ends_after_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "channel-discord",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "New conversation after (seconds)",
+                "help": null
+              }
+            },
+            "apology": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Apology",
+              "x-nestor": {
+                "field": "apology",
+                "title_id": "config-channel-discord-apology",
+                "help_id": "config-channel-discord-apology-help",
+                "fallback_title_id": "config-field-apology",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-discord",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Message on error",
+                "help": null
+              }
+            },
+            "retry_delay_s": {
+              "default": 1.0,
+              "exclusiveMinimum": 0,
+              "title": "Retry Delay S",
+              "type": "number",
+              "x-nestor": {
+                "field": "retry_delay_s",
+                "title_id": "config-channel-discord-retry_delay_s",
+                "help_id": "config-channel-discord-retry_delay_s-help",
+                "fallback_title_id": "config-field-retry_delay_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "channel-discord",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "First wait before reconnecting (seconds)",
+                "help": null
+              }
+            },
+            "token": {
+              "format": "password",
+              "title": "Token",
+              "type": "string",
+              "writeOnly": true,
+              "x-nestor": {
+                "field": "token",
+                "title_id": "config-channel-discord-token",
+                "help_id": "config-channel-discord-token-help",
+                "fallback_title_id": "config-field-token",
+                "secret": true,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-discord",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Token",
+                "help": "The bot's token, from the Developer Portal. The bot needs the Message Content intent."
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "token"
+          ],
+          "title": "DiscordSettings",
+          "type": "object"
+        },
+        "matrix": {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "matrix",
+              "type": "string",
+              "x-nestor": {
+                "field": "kind",
+                "title_id": "config-channel-matrix-kind",
+                "help_id": "config-channel-matrix-kind-help",
+                "fallback_title_id": "config-field-kind",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-matrix",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Kind",
+                "help": null
+              }
+            },
+            "name": {
+              "type": "string",
+              "description": "the instance's name; the kind by default",
+              "x-nestor": {
+                "field": "name",
+                "title_id": "config-channel-matrix-name",
+                "help_id": "config-channel-matrix-name-help",
+                "fallback_title_id": "config-field-name",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-matrix",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Name",
+                "help": null
+              }
+            },
+            "conversation_ends_after_s": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Conversation Ends After S",
+              "x-nestor": {
+                "field": "conversation_ends_after_s",
+                "title_id": "config-channel-matrix-conversation_ends_after_s",
+                "help_id": "config-channel-matrix-conversation_ends_after_s-help",
+                "fallback_title_id": "config-field-conversation_ends_after_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "channel-matrix",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "New conversation after (seconds)",
+                "help": null
+              }
+            },
+            "apology": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Apology",
+              "x-nestor": {
+                "field": "apology",
+                "title_id": "config-channel-matrix-apology",
+                "help_id": "config-channel-matrix-apology-help",
+                "fallback_title_id": "config-field-apology",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-matrix",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Message on error",
+                "help": null
+              }
+            },
+            "retry_delay_s": {
+              "default": 1.0,
+              "exclusiveMinimum": 0,
+              "title": "Retry Delay S",
+              "type": "number",
+              "x-nestor": {
+                "field": "retry_delay_s",
+                "title_id": "config-channel-matrix-retry_delay_s",
+                "help_id": "config-channel-matrix-retry_delay_s-help",
+                "fallback_title_id": "config-field-retry_delay_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "channel-matrix",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "First wait before reconnecting (seconds)",
+                "help": null
+              }
+            },
+            "homeserver": {
+              "title": "Homeserver",
+              "type": "string",
+              "x-nestor": {
+                "field": "homeserver",
+                "title_id": "config-channel-matrix-homeserver",
+                "help_id": "config-channel-matrix-homeserver-help",
+                "fallback_title_id": "config-field-homeserver",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-matrix",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Homeserver",
+                "help": "The bot account's server, e.g. https://matrix.org."
+              }
+            },
+            "token": {
+              "format": "password",
+              "title": "Token",
+              "type": "string",
+              "writeOnly": true,
+              "x-nestor": {
+                "field": "token",
+                "title_id": "config-channel-matrix-token",
+                "help_id": "config-channel-matrix-token-help",
+                "fallback_title_id": "config-field-token",
+                "secret": true,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-matrix",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Token",
+                "help": "The bot account's access token. Encrypted rooms are not read."
+              }
+            },
+            "poll_timeout_s": {
+              "default": 30,
+              "maximum": 120,
+              "minimum": 1,
+              "title": "Poll Timeout S",
+              "type": "integer",
+              "x-nestor": {
+                "field": "poll_timeout_s",
+                "title_id": "config-channel-matrix-poll_timeout_s",
+                "help_id": "config-channel-matrix-poll_timeout_s-help",
+                "fallback_title_id": "config-field-poll_timeout_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-matrix",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Long polling timeout (seconds)",
+                "help": null
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "homeserver",
+            "token"
+          ],
+          "title": "MatrixSettings",
+          "type": "object"
+        },
         "satellites": {
           "$defs": {
             "VoiceSettings": {
@@ -3140,6 +3502,391 @@
             "kind"
           ]
         },
+        "signal": {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "signal",
+              "type": "string",
+              "x-nestor": {
+                "field": "kind",
+                "title_id": "config-channel-signal-kind",
+                "help_id": "config-channel-signal-kind-help",
+                "fallback_title_id": "config-field-kind",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-signal",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Kind",
+                "help": null
+              }
+            },
+            "name": {
+              "type": "string",
+              "description": "the instance's name; the kind by default",
+              "x-nestor": {
+                "field": "name",
+                "title_id": "config-channel-signal-name",
+                "help_id": "config-channel-signal-name-help",
+                "fallback_title_id": "config-field-name",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-signal",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Name",
+                "help": null
+              }
+            },
+            "conversation_ends_after_s": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Conversation Ends After S",
+              "x-nestor": {
+                "field": "conversation_ends_after_s",
+                "title_id": "config-channel-signal-conversation_ends_after_s",
+                "help_id": "config-channel-signal-conversation_ends_after_s-help",
+                "fallback_title_id": "config-field-conversation_ends_after_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "channel-signal",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "New conversation after (seconds)",
+                "help": null
+              }
+            },
+            "apology": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Apology",
+              "x-nestor": {
+                "field": "apology",
+                "title_id": "config-channel-signal-apology",
+                "help_id": "config-channel-signal-apology-help",
+                "fallback_title_id": "config-field-apology",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-signal",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Message on error",
+                "help": null
+              }
+            },
+            "retry_delay_s": {
+              "default": 1.0,
+              "exclusiveMinimum": 0,
+              "title": "Retry Delay S",
+              "type": "number",
+              "x-nestor": {
+                "field": "retry_delay_s",
+                "title_id": "config-channel-signal-retry_delay_s",
+                "help_id": "config-channel-signal-retry_delay_s-help",
+                "fallback_title_id": "config-field-retry_delay_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "channel-signal",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "First wait before reconnecting (seconds)",
+                "help": null
+              }
+            },
+            "url": {
+              "title": "Url",
+              "type": "string",
+              "x-nestor": {
+                "field": "url",
+                "title_id": "config-channel-signal-url",
+                "help_id": "config-channel-signal-url-help",
+                "fallback_title_id": "config-field-url",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-signal",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "URL",
+                "help": "signal-cli-rest-api in normal or native mode, e.g. http://signal:8080."
+              }
+            },
+            "number": {
+              "minLength": 2,
+              "title": "Number",
+              "type": "string",
+              "x-nestor": {
+                "field": "number",
+                "title_id": "config-channel-signal-number",
+                "help_id": "config-channel-signal-number-help",
+                "fallback_title_id": "config-field-number",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-signal",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Number",
+                "help": "The bot's number as registered with signal-cli, e.g. +33612345678."
+              }
+            },
+            "wait_s": {
+              "default": 30,
+              "maximum": 120,
+              "minimum": 1,
+              "title": "Wait S",
+              "type": "integer",
+              "x-nestor": {
+                "field": "wait_s",
+                "title_id": "config-channel-signal-wait_s",
+                "help_id": "config-channel-signal-wait_s-help",
+                "fallback_title_id": "config-field-wait_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "channel-signal",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Wait for messages (seconds)",
+                "help": "How long each poll of signal-cli-rest-api waits for messages to come."
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "url",
+            "number"
+          ],
+          "title": "SignalSettings",
+          "type": "object"
+        },
+        "slack": {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "slack",
+              "type": "string",
+              "x-nestor": {
+                "field": "kind",
+                "title_id": "config-channel-slack-kind",
+                "help_id": "config-channel-slack-kind-help",
+                "fallback_title_id": "config-field-kind",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-slack",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Kind",
+                "help": null
+              }
+            },
+            "name": {
+              "type": "string",
+              "description": "the instance's name; the kind by default",
+              "x-nestor": {
+                "field": "name",
+                "title_id": "config-channel-slack-name",
+                "help_id": "config-channel-slack-name-help",
+                "fallback_title_id": "config-field-name",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-slack",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Name",
+                "help": null
+              }
+            },
+            "conversation_ends_after_s": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Conversation Ends After S",
+              "x-nestor": {
+                "field": "conversation_ends_after_s",
+                "title_id": "config-channel-slack-conversation_ends_after_s",
+                "help_id": "config-channel-slack-conversation_ends_after_s-help",
+                "fallback_title_id": "config-field-conversation_ends_after_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "channel-slack",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "New conversation after (seconds)",
+                "help": null
+              }
+            },
+            "apology": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Apology",
+              "x-nestor": {
+                "field": "apology",
+                "title_id": "config-channel-slack-apology",
+                "help_id": "config-channel-slack-apology-help",
+                "fallback_title_id": "config-field-apology",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-slack",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Message on error",
+                "help": null
+              }
+            },
+            "retry_delay_s": {
+              "default": 1.0,
+              "exclusiveMinimum": 0,
+              "title": "Retry Delay S",
+              "type": "number",
+              "x-nestor": {
+                "field": "retry_delay_s",
+                "title_id": "config-channel-slack-retry_delay_s",
+                "help_id": "config-channel-slack-retry_delay_s-help",
+                "fallback_title_id": "config-field-retry_delay_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "channel-slack",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "First wait before reconnecting (seconds)",
+                "help": null
+              }
+            },
+            "app_token": {
+              "format": "password",
+              "title": "App Token",
+              "type": "string",
+              "writeOnly": true,
+              "x-nestor": {
+                "field": "app_token",
+                "title_id": "config-channel-slack-app_token",
+                "help_id": "config-channel-slack-app_token-help",
+                "fallback_title_id": "config-field-app_token",
+                "secret": true,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-slack",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "App-level token",
+                "help": "xapp-…, with connections:write, for Socket Mode."
+              }
+            },
+            "bot_token": {
+              "format": "password",
+              "title": "Bot Token",
+              "type": "string",
+              "writeOnly": true,
+              "x-nestor": {
+                "field": "bot_token",
+                "title_id": "config-channel-slack-bot_token",
+                "help_id": "config-channel-slack-bot_token-help",
+                "fallback_title_id": "config-field-bot_token",
+                "secret": true,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-slack",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Bot token",
+                "help": "xoxb-…"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "app_token",
+            "bot_token"
+          ],
+          "title": "SlackSettings",
+          "type": "object"
+        },
         "telegram": {
           "additionalProperties": false,
           "properties": {
@@ -3213,6 +3960,58 @@
                 "suggest_values": null,
                 "title": "New conversation after (seconds)",
                 "help": "Past this silence, the assistant no longer rereads earlier messages. 4 h by default."
+              }
+            },
+            "apology": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Apology",
+              "x-nestor": {
+                "field": "apology",
+                "title_id": "config-channel-telegram-apology",
+                "help_id": "config-channel-telegram-apology-help",
+                "fallback_title_id": "config-field-apology",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-telegram",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Message on error",
+                "help": null
+              }
+            },
+            "retry_delay_s": {
+              "default": 1.0,
+              "exclusiveMinimum": 0,
+              "title": "Retry Delay S",
+              "type": "number",
+              "x-nestor": {
+                "field": "retry_delay_s",
+                "title_id": "config-channel-telegram-retry_delay_s",
+                "help_id": "config-channel-telegram-retry_delay_s-help",
+                "fallback_title_id": "config-field-retry_delay_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "channel-telegram",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "First wait before reconnecting (seconds)",
+                "help": null
               }
             },
             "token": {
@@ -3304,35 +4103,6 @@
                 "suggest_keys": null,
                 "suggest_values": null,
                 "title": "Request timeout (seconds)",
-                "help": null
-              }
-            },
-            "apology": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "default": null,
-              "title": "Apology",
-              "x-nestor": {
-                "field": "apology",
-                "title_id": "config-channel-telegram-apology",
-                "help_id": "config-channel-telegram-apology-help",
-                "fallback_title_id": "config-field-apology",
-                "secret": false,
-                "secret_values": false,
-                "advanced": false,
-                "group": "channel-telegram",
-                "reference": null,
-                "model_type": null,
-                "brands": null,
-                "suggest_keys": null,
-                "suggest_values": null,
-                "title": "Message on error",
                 "help": null
               }
             }
