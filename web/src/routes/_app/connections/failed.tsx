@@ -15,6 +15,8 @@ const KNOWN: Record<string, { title: string; text: string }> = {
   expired: { title: "conn-failed-expired", text: "conn-failed-expired-text" },
   unknown_flow: { title: "conn-failed-unknown", text: "conn-failed-unknown-text" },
   exchange_failed: { title: "conn-failed-exchange", text: "conn-failed-exchange-text" },
+  forbidden: { title: "conn-failed-forbidden", text: "conn-failed-forbidden-text" },
+  provider_error: { title: "conn-failed-provider", text: "conn-failed-provider-text" },
 };
 
 /** Where the OAuth callback sends the browser when connecting did not work. */

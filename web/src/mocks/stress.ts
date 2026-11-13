@@ -133,6 +133,7 @@ export function stress(db: Db, now = Date.now()): void {
     error: PROVIDER_ERROR,
     origin: { session: "s-stress", channel: "web" },
     delivered: null,
+    files: [],
   });
   db.watches.unshift({
     id: `w-${"fedcba9876543210".repeat(2)}`,

@@ -583,6 +583,7 @@ class TestOpenRouterLive(LanguageModelContract):
         ("https://api.openai.com/v1", "openai"),
         ("https://generativelanguage.googleapis.com/v1beta/openai", "gemini"),
         ("https://api.groq.com/openai/v1", "groq"),
+        ("https://ai-gateway.vercel.sh/v1", "vercel"),
         ("http://localhost:8000", None),
     ],
 )

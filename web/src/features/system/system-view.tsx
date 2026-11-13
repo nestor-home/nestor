@@ -75,6 +75,9 @@ function ComponentRow({ component: c }: { component: Component }) {
           ) : null}
         </p>
         <p className="truncate font-mono text-[0.7rem] text-ink-faint">{c.adapter}</p>
+        {c.fallback ? (
+          <p className="mt-0.5 text-xs text-ink-muted">{t("sys-fallback", { model: c.fallback })}</p>
+        ) : null}
         {c.health_detail ? (
           <p className={c.health === "started" ? "mt-0.5 text-xs text-ink-muted" : "mt-0.5 text-xs text-amber"}>
             {c.health_detail}

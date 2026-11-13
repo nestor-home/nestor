@@ -56,3 +56,4 @@ upd-how-editable = Nestor tourne depuis un checkout : mettez-le à jour avec git
 upd-then-restart = Puis redémarrez Nestor.
 upd-then-ask = Puis demandez à un administrateur de redémarrer Nestor.
 upd-command = la commande
+sys-fallback = secours : { $model }

@@ -1871,6 +1871,7 @@
                 "reference": null,
                 "model_type": null,
                 "brands": {
+                  "ai-gateway.vercel.sh": "vercel",
                   "anthropic.com": "anthropic",
                   "generativelanguage.googleapis.com": "gemini",
                   "groq.com": "groq",
@@ -2197,6 +2198,7 @@
                 "reference": null,
                 "model_type": null,
                 "brands": {
+                  "ai-gateway.vercel.sh": "vercel",
                   "anthropic.com": "anthropic",
                   "generativelanguage.googleapis.com": "gemini",
                   "groq.com": "groq",
@@ -2428,6 +2430,7 @@
                 "reference": null,
                 "model_type": null,
                 "brands": {
+                  "ai-gateway.vercel.sh": "vercel",
                   "anthropic.com": "anthropic",
                   "generativelanguage.googleapis.com": "gemini",
                   "groq.com": "groq",
@@ -2702,6 +2705,7 @@
                 "reference": null,
                 "model_type": null,
                 "brands": {
+                  "ai-gateway.vercel.sh": "vercel",
                   "anthropic.com": "anthropic",
                   "generativelanguage.googleapis.com": "gemini",
                   "groq.com": "groq",
@@ -2883,6 +2887,7 @@
                 "reference": null,
                 "model_type": null,
                 "brands": {
+                  "ai-gateway.vercel.sh": "vercel",
                   "anthropic.com": "anthropic",
                   "generativelanguage.googleapis.com": "gemini",
                   "groq.com": "groq",

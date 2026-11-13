@@ -272,6 +272,7 @@ class Feed:
         self._spoken = nestor.spoken_channels()
         self._channel_brands = {c.channel_id: c.brand for c in nestor.channels}
         self._executor_brands = {e.name: e.brand for e in nestor.executors}
+        self._source_brands = {s.name: s.brand for s in nestor.sources}
 
     @classmethod
     async def of(cls, admin: AdminState, principal: Principal, filters: Filters, words: Phrasebook) -> "Feed":
@@ -342,17 +343,20 @@ class Feed:
     def _brand(self, entry: Entry, channels: list[str]) -> str | None:
         payload = _payload(entry)
         nestor = self.admin.nestor
+        connections = nestor.connections
+        # what it is about: an account (its tool called, its connection changed), or what brought a watched item
+        connection_id = payload.get("connection_id") or payload.get("item_source")
+        if connections is not None and connection_id:
+            connection = connections.connections.get(str(connection_id))
+            connector = connections.connectors.get(str(connection.kind if connection else payload.get("kind")))
+            if connector is not None:  # a removed connection: its service's brand
+                return connector.brand_of(connection) if connection else connector.info.brand
+        if (source := payload.get("item_source")) in self._source_brands:
+            return self._source_brands[str(source)]
         if channels:
             return self._channel_brands.get(channels[0])
         if (executor := payload.get("executor")) in self._executor_brands:
             return self._executor_brands[str(executor)]
-        connections = nestor.connections
-        if connections is not None:
-            kind = payload.get("kind")
-            connection = connections.connections.get(str(payload.get("connection_id", "")))
-            connector = connections.connectors.get(str(connection.kind if connection else kind))
-            if connector is not None and ("connection_id" in payload):
-                return connector.info.brand
         device = payload.get("device")
         device_id = payload.get("device_id") or (device.get("id") if isinstance(device, dict) else None)
         if isinstance(device, dict) and isinstance(device.get("brand"), str):

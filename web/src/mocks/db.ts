@@ -13,6 +13,7 @@ import type {
   PairingMethodId,
   Satellite,
   Schedule,
+  Service,
   SystemInfo,
   Task,
   Tool,
@@ -51,6 +52,7 @@ export interface Db {
   connectors: Connector[];
   connections: Connection[];
   tools: Record<string, Tool[]>; // by connection id
+  services: Record<string, Service[]>; // by connection id
   pairing: MockPending[];
   additions: MockAddition[];
   satellites: Satellite[];
@@ -69,7 +71,7 @@ export interface Db {
 }
 
 /** Bumped when the shape changes; the stress fixture keeps its own copy. */
-const KEY = () => (stressed() ? "nestor.mock.db.v17.stress" : "nestor.mock.db.v17");
+const KEY = () => (stressed() ? "nestor.mock.db.v18.stress" : "nestor.mock.db.v18");
 
 export function fresh(): Db {
   const connections = fixtures.connections();
@@ -87,6 +89,7 @@ export function fresh(): Db {
     connectors: fixtures.connectors(),
     connections,
     tools: Object.fromEntries(connections.map((c) => [c.id, fixtures.tools(c.kind)])),
+    services: Object.fromEntries(connections.map((c) => [c.id, fixtures.services(c)])),
     pairing: fixtures.pairing(),
     additions: [],
     satellites: fixtures.satellites(),

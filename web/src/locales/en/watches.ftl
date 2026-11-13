@@ -2,12 +2,19 @@
 
 watch-title = Watches
 watch-no-source = No source available.
-watch-no-source-hint = { $assistant } cannot watch anything without a source: a mailbox is enough.
-watch-connect-mailbox = connect a mailbox
+watch-no-source-hint = { $assistant } cannot watch anything without a source: connect an account that receives mail, or add feeds, pages or webhooks to the inbound sources.
+watch-connect-account = connect an account
+watch-add-source = add a source
 watch-active = Active
 watch-active-empty = No active watch.
 watch-active-empty-hint = Just ask me: “tell me when the parcel arrives”.
 watch-for = for { $name }
+watch-kind = { $kind ->
+    [mail] mail
+    [feed] feeds
+    [page] web pages
+   *[other] { $kind }
+}
 watch-once = once
 watch-every-time = every time
 watch-triggered-count = { $count ->

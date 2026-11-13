@@ -17,6 +17,7 @@ const IDS = {
   taskEnded: ["journal-task-ended"],
   taskDelivered: ["journal-task-delivered"],
   watchCreated: ["journal-watch-created"],
+  watchSorted: ["journal-watch-sorted"],
   watchTriggered: ["journal-watch-triggered"],
   considered: ["journal-delivery-considered"],
   delivered: ["journal-delivered"],

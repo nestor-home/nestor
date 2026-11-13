@@ -19,6 +19,10 @@ task-cancel-notice = Arrêt de la tâche { $id }…
 task-story = Déroulé
 task-story-empty = Aucune trace dans le journal.
 task-error = erreur
+task-files = { $count ->
+    [one] fichier
+   *[other] fichiers
+}
 task-result = résultat
 task-asked-in = demandée dans
 task-conversation-older = une conversation plus ancienne que le journal

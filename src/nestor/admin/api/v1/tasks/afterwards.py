@@ -1,4 +1,5 @@
-"""What the journal says happened to tasks: when each ended, and where its result was passed on."""
+"""What the journal says happened to tasks: when each ended, the files it handed back, and where its result was
+passed on."""
 
 from dataclasses import dataclass
 from datetime import datetime
@@ -8,6 +9,7 @@ from nestor.modules.channels import Address
 from nestor.modules.cognition.delegation.events import TaskDelivered, TaskEnded
 from nestor.modules.conversation import Source
 from nestor.modules.initiative import Delivered
+from nestor.modules.journal import BlobRef
 
 
 @dataclass(frozen=True, slots=True)
@@ -20,6 +22,7 @@ class Delivery:
 @dataclass(frozen=True, slots=True)
 class Afterwards:
     ended: dict[str, datetime]
+    files: dict[str, tuple[BlobRef, ...]]  # what each task handed back, kept in the blob store
     delivered: dict[str, Delivery]  # in the conversation, or by the courier; the latest wins
 
     @classmethod
@@ -36,4 +39,5 @@ class Afterwards:
                 delivered[event.task_id] = delivery(event.at, event.address)
             elif event.about.source is Source.TASK:
                 delivered[event.about.id] = delivery(event.at, event.address)
-        return cls({e.task_id: e.at for e in await nestor.journal.history(TaskEnded)}, delivered)
+        ended = await nestor.journal.history(TaskEnded)
+        return cls({e.task_id: e.at for e in ended}, {e.task_id: e.files for e in ended if e.files}, delivered)

@@ -985,6 +985,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tasks/{task_id}/files/{index}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Task File
+         * @description A file the task handed back; 404 when the task is out of reach or has no such file.
+         */
+        get: operations["getTaskFile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tasks/{task_id}/cancel": {
         parameters: {
             query?: never;
@@ -1931,6 +1951,8 @@ export interface components {
             /** Adapter */
             adapter: string;
             model_type: components["schemas"]["ModelType"] | null;
+            /** Fallback */
+            fallback: string | null;
             /** Brand */
             brand: string | null;
             /** Version */
@@ -2031,6 +2053,8 @@ export interface components {
             watches: number;
             /** Tools */
             tools: components["schemas"]["ToolOut"][];
+            /** Services */
+            services: components["schemas"]["ServiceOut"][];
         };
         /** ConnectionOut */
         ConnectionOut: {
@@ -3031,6 +3055,15 @@ export interface components {
                 [key: string]: string;
             };
         };
+        /** ServiceOut */
+        ServiceOut: {
+            /** Name */
+            name: string;
+            /** Brand */
+            brand: string | null;
+            /** Handle */
+            handle: string | null;
+        };
         /**
          * Shape
          * @enum {string}
@@ -3101,6 +3134,19 @@ export interface components {
             /** Components */
             components: components["schemas"]["ComponentOut"][];
         };
+        /**
+         * TaskFileOut
+         * @description A file the task handed back; its bytes at `/tasks/{id}/files/{index}`.
+         */
+        TaskFileOut: {
+            /** Index */
+            index: number;
+            kind: components["schemas"]["AttachmentKind"];
+            /** Media Type */
+            media_type: string;
+            /** Size */
+            size: number;
+        };
         /** TaskOut */
         TaskOut: {
             /** Id */
@@ -3126,6 +3172,8 @@ export interface components {
             result: string | null;
             /** Error */
             error: string | null;
+            /** Files */
+            files: components["schemas"]["TaskFileOut"][];
         };
         /**
          * TaskStatus
@@ -8600,6 +8648,101 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TaskOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    getTaskFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+                index: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The file, as the task made it */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": unknown;
                 };
             };
             /** @description Bad Request */

@@ -7,7 +7,7 @@ import { AgentFigure } from "@/components/agent-figure";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useT } from "@/i18n";
 import { tr } from "@/i18n/runtime";
-import { KindMark } from "@/lib/brands";
+import { KindMark, kindName } from "@/lib/brands";
 import { dayLabel, hourMinute } from "@/lib/dates";
 import { is } from "@/lib/events";
 import { kindStyle } from "@/lib/icons";
@@ -320,8 +320,10 @@ function Between({ turn, open, unfolded }: { turn: Turn; open: (position: number
   const failed = calls.some((c) => c.ended?.outcome?.ok === false) || others.some((i) => i.tone === "warning");
   const fallback = others.some((i) => is(i, "fallback"));
   const memory = others.some((i) => is(i, "memory"));
+  const files = [...calls.map((c) => c.ended), ...others].reduce((n, i) => n + (i?.attachments.length ?? 0), 0);
   const parts = [
     calls.length ? `${t("jr-tool-count", { count: calls.length })}${seconds ? ` · ${duration(seconds)}` : ""}` : null,
+    files ? t("jr-file-count", { count: files }) : null,
     fallback ? t("jr-fallback") : null,
     memory ? t("jr-memory-kept") : null,
   ].filter(Boolean);
@@ -381,6 +383,7 @@ function Between({ turn, open, unfolded }: { turn: Turn; open: (position: number
                       {item.detail_text ? <span className="text-ink-faint"> · {item.detail_text}</span> : null}
                     </span>
                   </button>
+                  <Attachments item={item} className="mt-1.5 pl-3.5" />
                 </li>
               ))}
             </ul>
@@ -404,7 +407,7 @@ function CallDetail({ call, open }: { call: ToolCall; open: (position: number) =
   const t = useT();
   const ok = call.ended?.outcome?.ok;
   const seconds = call.ended?.outcome?.duration_s;
-  const brand = (call.ended ?? call.started)?.brand;
+  const brand = call.started?.brand ?? call.ended?.brand;
   return (
     <li className="min-w-0">
       <p className="flex flex-wrap items-center gap-x-2 text-[0.88rem]">
@@ -429,6 +432,7 @@ function CallDetail({ call, open }: { call: ToolCall; open: (position: number) =
       </p>
       {call.started?.detail_text ? <Code label={t("jr-call-arguments")}>{call.started.detail_text}</Code> : null}
       {call.ended?.detail_text ? <Code label={t("jr-call-result")}>{call.ended.detail_text}</Code> : null}
+      {call.ended ? <Attachments item={call.ended} className="mt-1.5" /> : null}
     </li>
   );
 }
@@ -574,34 +578,49 @@ function ChainStep({
       {day ? <span className="col-span-3 pb-1 text-[0.85rem] text-ink-faint first-letter:uppercase">{day}</span> : null}
       <Clock iso={item.at} className="pt-1" />
       <span aria-hidden="true" className={cn("mt-2.5 size-1.5 justify-self-center rounded-full", look.dot)} />
-      <Entry item={item} open={open} label={t("jr-entry-label", { text: look.label, detail: say(item) })}>
-        <span className="flex flex-wrap items-baseline gap-x-2 text-[0.92rem]">
-          <span className="text-ink">{look.label}</span>
-          {delivered || is(item, "deliveryFailed") ? (
-            <span className="inline-flex flex-wrap items-center gap-x-1.5 text-ink-muted">
-              {item.channels.map((c) => (
-                <span key={c} className="inline-flex items-center gap-1">
-                  <KindMark kind={c} className="size-3" label={false} />
-                  {c === "voice" ? t("jr-channel-voice") : c}
-                </span>
-              ))}
-              {item.room ? <span>· {item.room}</span> : null}
+      <div className="min-w-0">
+        <Entry item={item} open={open} label={t("jr-entry-label", { text: look.label, detail: say(item) })}>
+          <span className="flex flex-wrap items-baseline gap-x-2 text-[0.92rem]">
+            <span className="text-ink">{look.label}</span>
+            <Source item={item} />
+            {delivered || is(item, "deliveryFailed") ? (
+              <span className="inline-flex flex-wrap items-center gap-x-1.5 text-ink-muted">
+                {item.channels.map((c) => (
+                  <span key={c} className="inline-flex items-center gap-1">
+                    <KindMark kind={c} className="size-3" label={false} />
+                    {c === "voice" ? t("jr-channel-voice") : c}
+                  </span>
+                ))}
+                {item.room ? <span>· {item.room}</span> : null}
+              </span>
+            ) : null}
+          </span>
+          {item.reason ? (
+            <span className="mt-1 block text-[0.92rem] text-ink [overflow-wrap:anywhere]">
+              <span className="text-ink-muted">{t("jr-why-label")} </span>
+              {why(item)}
             </span>
           ) : null}
-        </span>
-        {item.reason ? (
-          <span className="mt-1 block text-[0.92rem] text-ink [overflow-wrap:anywhere]">
-            <span className="text-ink-muted">{t("jr-why-label")} </span>
-            {why(item)}
-          </span>
-        ) : null}
-        {item.detail_text ? (
-          <span className="mt-0.5 block text-[0.92rem] text-ink-muted [overflow-wrap:anywhere]">
-            {item.detail_text}
-          </span>
-        ) : null}
-      </Entry>
+          {item.detail_text ? (
+            <span className="mt-0.5 block text-[0.92rem] text-ink-muted [overflow-wrap:anywhere]">
+              {item.detail_text}
+            </span>
+          ) : null}
+        </Entry>
+        <Attachments item={item} className="mt-1.5" />
+      </div>
     </li>
+  );
+}
+
+/** What brought an item a watch looked at: the account it came to, the feed, the page or the webhook. */
+function Source({ item, className }: { item: JournalItem; className?: string }) {
+  if (!item.brand || !(is(item, "watchTriggered") || is(item, "watchSorted"))) return null;
+  return (
+    <span className={cn("inline-flex items-center gap-1 text-ink-muted", className)}>
+      <KindMark kind={item.brand} className="size-3" label={false} />
+      {kindName(item.brand)}
+    </span>
   );
 }
 
@@ -622,6 +641,7 @@ function SingleRow({ single, open, isNew }: Props & { single: Single }) {
               <span aria-hidden="true" className="mr-1.5 inline-block size-1.5 -translate-y-px rounded-full bg-brick" />
             ) : null}
             {say(item)}
+            <Source item={item} className="ml-2" />
             {item.people[0] && !say(item).includes(item.people[0].name) ? (
               <span className="ml-2 text-ink">{item.people.map((p) => p.name).join(", ")}</span>
             ) : null}
@@ -629,6 +649,7 @@ function SingleRow({ single, open, isNew }: Props & { single: Single }) {
           </span>
         </span>
       </Entry>
+      <Attachments item={item} className="mt-1.5 pl-20" />
     </div>
   );
 }

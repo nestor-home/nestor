@@ -21,6 +21,26 @@ describe("tasks and watches", () => {
     expect(screen.getByRole("link", { name: /a conversation/ })).toHaveAttribute("href", "/journal?session=s-elec");
   });
 
+  it("hands over the files a task made, on its page and in its story", async () => {
+    const pdf = { index: 0, kind: "file", media_type: "application/pdf", size: 2048 } as const;
+    const task = db.tasks.find((t) => t.id === "t-3f2a1c");
+    const ended = db.journal.find((e) => e.record.type === "task.ended" && e.item.links.task === "t-3f2a1c");
+    if (!task || !ended) throw new Error("the energy task is in the mocks");
+    task.files = [pdf];
+    ended.item.attachments = [{ ...pdf, name: null, transcript: null }];
+    renderApp("/tasks/t-3f2a1c");
+    const chain = await screen.findByRole("article");
+    expect(within(chain).getByRole("link", { name: /File/ })).toHaveAttribute(
+      "href",
+      `/api/v1/journal/${ended.item.position}/attachments/0`,
+    );
+    const aside = screen.getByText("file").closest("div");
+    expect(within(aside as HTMLElement).getByRole("link", { name: /File/ })).toHaveAttribute(
+      "href",
+      "/api/v1/tasks/t-3f2a1c/files/0",
+    );
+  });
+
   it("stops a running task once confirmed", async () => {
     const user = userEvent.setup();
     renderApp("/tasks/t-4410aa");
@@ -81,6 +101,19 @@ describe("tasks and watches", () => {
     db.connectors = db.connectors.map((c) => ({ ...c, inbound: [] }));
     renderApp("/watches");
     expect(await screen.findByText("No active watch.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "connect a mailbox" })).toHaveAttribute("href", "/connections/catalogue");
+    expect(screen.getByRole("link", { name: "connect an account" })).toHaveAttribute("href", "/connections/catalogue");
+    expect(screen.getByRole("link", { name: "add a source" })).toHaveAttribute("href", "/config/inbound");
+  });
+
+  it("says what each watch watches, and where each item it found came from", async () => {
+    const watch = db.watches.find((w) => w.id === "w-9d41");
+    const triggered = db.journal.find((e) => e.record.type === "watch.triggered" && e.item.links.watch === "w-9d41");
+    if (!watch || !triggered) throw new Error("the school watch is in the mocks");
+    watch.kinds = ["mail", "feed", "github"];
+    triggered.item.brand = "google";
+    renderApp("/watches/w-9d41");
+    const chain = (await screen.findAllByRole("article")).find((a) => a.textContent?.includes("triggered"));
+    expect(chain).toHaveTextContent("Google");
+    for (const kind of ["mail", "feeds", "github"]) expect(screen.getByText(kind)).toBeInTheDocument();
   });
 });

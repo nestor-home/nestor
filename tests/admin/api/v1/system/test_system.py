@@ -74,6 +74,13 @@ class Down(InMemoryChannel):
         return Health.UNAVAILABLE
 
 
+async def test_a_model_names_the_one_that_answers_when_it_fails(tmp_path: Path) -> None:
+    async with Harness(tmp_path, fallback=True) as admin:
+        api = await admin.api()
+        models = {c["name"]: c for c in (await api.get("/api/v1/system")).json()["components"] if c["slot"] == "model"}
+        assert (models["main"]["fallback"], models["spare"]["fallback"]) == ("spare", None)
+
+
 async def test_the_agent_is_online_until_its_model_or_a_channel_cannot_serve(tmp_path: Path) -> None:
     async with Harness(tmp_path) as admin:
         api = await admin.api()

@@ -51,9 +51,19 @@ def by_type(found: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
 async def test_a_watch_chains_to_its_delivery_and_its_follow_up(tmp_path: Path) -> None:
     async with Harness(tmp_path) as admin:
         w1 = About(Source.WATCH, "w1")
+        assert admin.nestor.connections
+        admin.imap.info = replace(admin.imap.info, brand="gmail")
+        mailbox = await admin.nestor.connections.connect("imap", MATHIS, {"server": "s", "password": "p"})
         for event in (
             WatchCreated(source="watch-book", watch_id="w1", what="le colis", kinds=("mail",), once=True),
-            WatchTriggered(source="watch-keeper", watch_id="w1", item_id="i1", item_title="Colis", summary=""),
+            WatchTriggered(
+                source="watch-keeper",
+                watch_id="w1",
+                item_id="i1",
+                item_title="Colis",
+                item_source=mailbox.id,
+                summary="",
+            ),
             DeliveryConsidered(source="courier", about=w1, reason=REASON, spoken=VOICE, written=TELEGRAM),
             Delivered(source="courier", address=VOICE, about=w1, person=MATHIS),
             Delivered(source="courier", address=TELEGRAM, about=w1, person=MATHIS, follow_up=True),
@@ -64,6 +74,7 @@ async def test_a_watch_chains_to_its_delivery_and_its_follow_up(tmp_path: Path) 
         (considered,) = found["initiative.considered"]
         delivered, followed = found["initiative.delivered"]
         assert triggered["cause"] == created["position"]
+        assert triggered["brand"] == "gmail", "the item shows the mailbox it came to"
         assert considered["cause"] == triggered["position"]
         assert delivered["cause"] == considered["position"]
         assert followed["cause"] == delivered["position"], "a follow-up is caused by the first delivery"

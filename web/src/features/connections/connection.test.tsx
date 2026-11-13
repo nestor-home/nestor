@@ -16,6 +16,12 @@ describe("a connection's pages", () => {
     expect(within(sheet).getByText(/The old access stays active until the new one works/)).toBeInTheDocument();
   });
 
+  it("says how a message names each service of the account", async () => {
+    renderApp("/connections/c-imap-lea");
+    const named = await screen.findByRole("region", { name: "In a message" });
+    expect(within(named).getByText("@mail")).toBeInTheDocument();
+  });
+
   it("moves between its tabs with the URL", async () => {
     const user = userEvent.setup();
     const { router } = renderApp("/connections/c-mcp-ha");
@@ -69,6 +75,15 @@ describe("a connection's pages", () => {
       "href",
       "/connections/catalogue?connect=google",
     );
+  });
+
+  it.each([
+    ["forbidden", "Connection no longer allowed"],
+    ["provider_error", "The service did not authorise it"],
+    ["expired", "Authorisation request expired"],
+  ])("explains why connecting failed (%s)", async (error, title) => {
+    renderApp(`/connections/failed?kind=google&error=${error}`);
+    expect(await screen.findByRole("heading", { name: title })).toBeInTheDocument();
   });
 
   it("says so when the connection is gone", async () => {

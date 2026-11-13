@@ -12,13 +12,29 @@ import { Tag } from "@/components/status";
 import { Button } from "@/components/ui/button";
 import { SubjectStory } from "@/features/journal/subject-story";
 import { useT } from "@/i18n";
+import { BrandMark, type BrandSlug, brandOf } from "@/lib/brands";
 import { moment } from "@/lib/dates";
 import { personName } from "@/lib/people";
 import { useCan, useMe } from "@/lib/session";
 
+/** The mark of what a watch watches: the kinds Nestor's sources bring, else a brand (a webhook named `github`). */
+const KIND_MARKS: Record<string, BrandSlug> = { mail: "email", feed: "rss", page: "web-page" };
+
+/** What a watch watches ("mail", "feed", a webhook's kind), with its mark. */
+export function WatchKind({ kind }: { kind: string }) {
+  const t = useT();
+  return (
+    <span className="inline-flex items-center gap-1">
+      <BrandMark brand={KIND_MARKS[kind] ?? brandOf(kind) ?? "webhook"} className="size-3.5" label={false} />
+      {t("watch-kind", { kind })}
+    </span>
+  );
+}
+
 export function WatchesList() {
   const t = useT();
   const me = useMe();
+  const canConfigure = useCan("config:manage");
   const watches = useQuery(watchesQuery);
   if (watches.isPending) return <Loading lines={2} />;
   if (watches.isError) return <Failure error={watches.error} retry={() => void watches.refetch()} />;
@@ -30,9 +46,20 @@ export function WatchesList() {
           className="mb-8"
           hint={t("watch-no-source-hint", { assistant: me.assistant })}
           action={
-            <Link to="/connections/catalogue" className="text-[0.85rem] text-ember hover:underline">
-              {t("watch-connect-mailbox")}
-            </Link>
+            <span className="flex flex-wrap gap-x-4 gap-y-1">
+              <Link to="/connections/catalogue" className="text-[0.85rem] text-ember hover:underline">
+                {t("watch-connect-account")}
+              </Link>
+              {canConfigure ? (
+                <Link
+                  to="/config/$section"
+                  params={{ section: "inbound" }}
+                  className="text-[0.85rem] text-ember hover:underline"
+                >
+                  {t("watch-add-source")}
+                </Link>
+              ) : null}
+            </span>
           }
         >
           {t("watch-no-source")}
@@ -54,7 +81,9 @@ export function WatchesList() {
                     <span className="block text-ink">{w.what}</span>
                     <span className="mt-0.5 flex flex-wrap gap-x-3 text-[0.85rem] text-ink-muted">
                       <span>{t("watch-for", { name: personName(w.owner) })}</span>
-                      <span>{w.kinds.join(", ")}</span>
+                      {w.kinds.map((k) => (
+                        <WatchKind key={k} kind={k} />
+                      ))}
                       <span>{w.once ? t("watch-once") : t("watch-every-time")}</span>
                     </span>
                   </span>
@@ -143,7 +172,9 @@ function Loaded({ watch: w, trail }: { watch: Watch; trail: Crumb[] }) {
             <p className="label-mono mb-1.5">{t("watch-watches")}</p>
             <p className="flex flex-wrap gap-1">
               {w.kinds.map((k) => (
-                <Tag key={k}>{k}</Tag>
+                <Tag key={k}>
+                  <WatchKind kind={k} />
+                </Tag>
               ))}
             </p>
           </div>

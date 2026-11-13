@@ -6800,6 +6800,124 @@
         }
       }
     },
+    "/api/v1/tasks/{task_id}/files/{index}": {
+      "get": {
+        "tags": [
+          "tasks"
+        ],
+        "summary": "Get Task File",
+        "description": "A file the task handed back; 404 when the task is out of reach or has no such file.",
+        "operationId": "getTaskFile",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Task Id"
+            }
+          },
+          {
+            "name": "index",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Index"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The file, as the task made it",
+            "content": {
+              "application/octet-stream": {}
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/tasks/{task_id}/cancel": {
       "post": {
         "tags": [
@@ -11795,6 +11913,17 @@
               }
             ]
           },
+          "fallback": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fallback"
+          },
           "brand": {
             "anyOf": [
               {
@@ -11870,6 +11999,7 @@
           "name",
           "adapter",
           "model_type",
+          "fallback",
           "brand",
           "version",
           "distribution",
@@ -12090,6 +12220,13 @@
             },
             "type": "array",
             "title": "Tools"
+          },
+          "services": {
+            "items": {
+              "$ref": "#/components/schemas/ServiceOut"
+            },
+            "type": "array",
+            "title": "Services"
           }
         },
         "type": "object",
@@ -12108,7 +12245,8 @@
           "last_used_at",
           "calls_today",
           "watches",
-          "tools"
+          "tools",
+          "services"
         ],
         "title": "ConnectionDetail"
       },
@@ -15287,6 +15425,43 @@
         "type": "object",
         "title": "SecretsIn"
       },
+      "ServiceOut": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "brand": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brand"
+          },
+          "handle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Handle"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "brand",
+          "handle"
+        ],
+        "title": "ServiceOut"
+      },
       "Shape": {
         "type": "string",
         "enum": [
@@ -15469,6 +15644,34 @@
         ],
         "title": "SystemOut"
       },
+      "TaskFileOut": {
+        "properties": {
+          "index": {
+            "type": "integer",
+            "title": "Index"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/AttachmentKind"
+          },
+          "media_type": {
+            "type": "string",
+            "title": "Media Type"
+          },
+          "size": {
+            "type": "integer",
+            "title": "Size"
+          }
+        },
+        "type": "object",
+        "required": [
+          "index",
+          "kind",
+          "media_type",
+          "size"
+        ],
+        "title": "TaskFileOut",
+        "description": "A file the task handed back; its bytes at `/tasks/{id}/files/{index}`."
+      },
       "TaskOut": {
         "properties": {
           "id": {
@@ -15554,6 +15757,13 @@
               }
             ],
             "title": "Error"
+          },
+          "files": {
+            "items": {
+              "$ref": "#/components/schemas/TaskFileOut"
+            },
+            "type": "array",
+            "title": "Files"
           }
         },
         "type": "object",
@@ -15569,7 +15779,8 @@
           "ended_at",
           "steps",
           "result",
-          "error"
+          "error",
+          "files"
         ],
         "title": "TaskOut"
       },

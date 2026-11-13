@@ -21,4 +21,4 @@ async def get_home(request: Request, caller: Reader) -> HomeOut | None:
     if nestor.home is None:
         return None
     plugged = next(p for p in nestor.plugged if p.component is nestor.home)
-    return HomeOut.of(plugged, nestor.home, nestor.household, nestor.pairing.satellites(), caller.phrasebook)
+    return HomeOut.of(plugged, nestor.home, nestor, caller.phrasebook)

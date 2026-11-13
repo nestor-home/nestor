@@ -84,6 +84,7 @@ class Toolbox(Component):
         """Run `call` for `context`; `confirmed`: the person agreed to it in writing already. `wait_s`: how long the
         turn waits for it before it goes on in the background; `None`, until it ends. Files it made come with it,
         or with its result when it went on in the background."""
+        tool = self._tools().get(call.name)
         await self._journal.publish(
             ToolCalled(
                 source="toolbox",
@@ -94,10 +95,11 @@ class Toolbox(Component):
                 arguments=dict(call.arguments),
                 person=context.person,
                 exchange=context.exchange,
+                connection_id=tool.connection if tool else None,
             )
         )
         started = time.monotonic()
-        running = asyncio.create_task(self._result(call, context, confirmed=confirmed), name=f"tool {call.name}")
+        running = asyncio.create_task(self._result(call, tool, context, confirmed=confirmed), name=f"tool {call.name}")
         try:
             await asyncio.wait({running}, timeout=wait_s)
         except asyncio.CancelledError:  # the turn was cut: so is what it waited for
@@ -163,9 +165,9 @@ class Toolbox(Component):
         late.add_done_callback(self._late.discard)
         return output
 
-    async def _result(self, call: ToolCall, context: ToolContext, *, confirmed: bool) -> Called:
+    async def _result(self, call: ToolCall, tool: Tool | None, context: ToolContext, *, confirmed: bool) -> Called:
         try:
-            output, made = await self._run(call, context, confirmed=confirmed)
+            output, made = await self._run(call, tool, context, confirmed=confirmed)
         except ToolFailed as failure:
             return Called(_error(str(failure)), ok=False)
         except Exception as error:  # a broken tool must not break the conversation
@@ -180,11 +182,10 @@ class Toolbox(Component):
         return Called(output, files=tuple([await blobs.put(f.data, f.media_type) for f in made]))
 
     async def _run(
-        self, call: ToolCall, context: ToolContext, *, confirmed: bool
+        self, call: ToolCall, tool: Tool | None, context: ToolContext, *, confirmed: bool
     ) -> tuple[str, tuple[Attachment, ...]]:
         """What the model receives and the files the tool made; `ToolFailed` says why it did not run, any other error
         that the tool broke."""
-        tool = self._tools().get(call.name)
         if tool is None:
             raise ToolFailed(f"unknown tool {call.name!r}")
         missing = [name for name in _required(tool) if name not in call.arguments]

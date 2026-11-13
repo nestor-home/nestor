@@ -9,12 +9,15 @@ from nestor.modules.journal import BlobRef
 
 
 class ToolCalled(Event, event_type="agent.tool.called"):
+    """`connection_id`: the connected account the tool acts on, when it is one of an account's."""
+
     address: Address
     call_id: str
     name: str
     arguments: Mapping[str, object]
     person: PersonId | None = None
     exchange: Exchange | None = None
+    connection_id: str | None = None
 
 
 class ToolCompleted(Event, event_type="agent.tool.completed"):

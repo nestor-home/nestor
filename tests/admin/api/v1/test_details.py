@@ -8,7 +8,8 @@ from pathlib import Path
 from nestor.core import PersonId, utc_now
 from nestor.core.i18n import Message
 from nestor.modules.accounts import Role
-from nestor.modules.channels import Address
+from nestor.modules.channels import Address, Attachment, AttachmentKind
+from nestor.modules.cognition import Outcome, TaskEnded
 from nestor.modules.connectors import Status
 from nestor.modules.initiative import Watch
 from nestor.modules.satellites import Device, Manifest
@@ -33,6 +34,31 @@ async def test_a_broken_connection_says_why_in_the_readers_language(tmp_path: Pa
         assert reason["text"].startswith("Accès révoqué ou expiré")
         await connections.configure(connection.id, confirm_writes=False)
         assert connections.connections[connection.id].status_reason, "changing a setting keeps the reason"
+
+
+async def test_the_files_a_task_handed_back_download_from_it_for_who_reaches_it(tmp_path: Path) -> None:
+    async with Harness(tmp_path) as admin:
+        nestor = admin.nestor
+        await admin.account("mathilde", Role.MEMBER, "mathilde")
+        task = await nestor.tasks.delegate("Le devis en PDF", origin=TELEGRAM, requested_by=MATHIS)
+        while not admin.remote.runs:
+            await asyncio.sleep(0.01)
+        made = Attachment(kind=AttachmentKind.FILE, data=b"%PDF-1.7 devis", media_type="application/pdf")
+        admin.remote.finish(next(iter(admin.remote.runs)), Outcome.completed("Le devis est prêt.", files=(made,)))
+        while not await nestor.journal.history(TaskEnded):
+            await asyncio.sleep(0.01)
+        owner, guest = await admin.api(), await admin.api("mathilde")
+
+        listed = (await owner.get(f"/api/v1/tasks/{task.id}")).json()["files"]
+        assert listed == [{"index": 0, "kind": "file", "media_type": "application/pdf", "size": 14}]
+        got = await owner.get(f"/api/v1/tasks/{task.id}/files/0")
+        assert (got.status_code, got.content, got.headers["content-type"]) == (
+            200,
+            b"%PDF-1.7 devis",
+            "application/octet-stream",
+        ), "downloaded, never shown in place"
+        assert (await owner.get(f"/api/v1/tasks/{task.id}/files/1")).status_code == 404
+        assert (await guest.get(f"/api/v1/tasks/{task.id}/files/0")).json()["error"]["code"] == "task_unknown"
 
 
 async def test_people_say_since_when_they_are_where_they_are(tmp_path: Path) -> None:

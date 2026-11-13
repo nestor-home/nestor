@@ -34,7 +34,7 @@ class ConnectorTools(ToolProvider, MentionSource):
 
     def mentionable(self, person: Person | None) -> Iterable[Mentioned]:
         usable = [c for c in self._connected() if c.owner is None or (person is not None and c.owner == person.id)]
-        named = [(c, service) for c in usable for service in self._services(c)]
+        named = [(c, service) for c in usable for service in self.services(c)]
         for connection, service in named:
             local = connection.account.partition("@")[0]
             alone = sum(s.name == service.name for _, s in named) == 1
@@ -50,7 +50,7 @@ class ConnectorTools(ToolProvider, MentionSource):
     def instruction(self, mentioned: Mentioned) -> str:
         connection_id, _, name = mentioned.id.partition(":")
         connection = self.connections.connections.get(connection_id)
-        service = next((s for s in self._services(connection) if s.name == name), None) if connection else None
+        service = next((s for s in self.services(connection) if s.name == name), None) if connection else None
         if connection is None or service is None:
             return f"the account {mentioned.label}, no longer connected: say so"
         whose = "the household's" if connection.owner is None else "their own"
@@ -58,7 +58,7 @@ class ConnectorTools(ToolProvider, MentionSource):
         names = ", ".join(tool.name for declared, tool in offered if declared in service.tools)
         return f"{whose} {name} on the account {connection.account}: use its tools for that part ({names})"
 
-    def _services(self, connection: Connection) -> list[Service]:
+    def services(self, connection: Connection) -> list[Service]:
         """What a message names of the account: each service its connector declares, or the account by its kind."""
         connector = self.connections.connectors[connection.kind]
         brand = connector.brand_of(connection)
@@ -109,4 +109,6 @@ def _apart(tool: Tool, n: int, connection: Connection) -> Tool:
 
 def _as_used(tool: Tool, connection: Connection) -> Tool:
     confirmed = tool.risk is Risk.WRITE and connection.confirm_writes
-    return replace(tool, risk=Risk.SENSITIVE if confirmed else tool.risk, owner=connection.owner)
+    return replace(
+        tool, risk=Risk.SENSITIVE if confirmed else tool.risk, owner=connection.owner, connection=connection.id
+    )
