@@ -11,11 +11,14 @@ from nestor.modules.initiative.watches.book import WatchBook
 from nestor.modules.initiative.watches.types import Watch
 
 HOW_TO_WATCH = (
-    "When someone asks to be told when something arrives or happens (a parcel, an email from someone, an answer), "
-    "call create_watch with what to watch for, in their words, precise enough to recognise it (sender, carrier, "
-    "tracking number…). Confirm briefly. When it matches you will be asked to announce it. Watches can see: {kinds}."
+    "When someone asks to be told when something arrives or happens (a parcel, an email from someone, an answer, a "
+    "release in a news feed, a price on a web page), call create_watch with what to watch for, in their words, precise "
+    "enough to recognise it (sender, carrier, tracking number, the feed or page by its name, the threshold…), and the "
+    "kinds it can come as. Confirm briefly. When it matches you will be asked to announce it. "
+    "Watches can see:\n{kinds}\n"
+    "Only these: a feed or a page that is not listed is added to the configuration by the household, not by you."
 )
-NO_SOURCE = "No inbound source is connected (no mailbox): you cannot watch for anything. Say so if asked."
+NO_SOURCE = "No inbound source is connected (no mailbox, feed or page): you cannot watch for anything. Say so if asked."
 
 
 class WatchTools(ToolProvider, ContextProvider):
@@ -52,7 +55,11 @@ class WatchTools(ToolProvider, ContextProvider):
     def guidance(self) -> str:
         if not self.book.kinds:
             return NO_SOURCE
-        return HOW_TO_WATCH.format(kinds=", ".join(sorted(self.book.kinds)))
+        kinds = (
+            f"- {kind}: {', '.join(followed)}" if followed else f"- {kind}"
+            for kind, followed in sorted(self.book.kinds.items())
+        )
+        return HOW_TO_WATCH.format(kinds="\n".join(kinds))
 
     async def context(self, turn: TurnContext) -> Sections:
         if not self.book.watches:
@@ -64,7 +71,7 @@ class WatchTools(ToolProvider, ContextProvider):
         kinds = arguments.get("kinds") or sorted(self.book.kinds)
         if not isinstance(kinds, list):
             raise ToolFailed("kinds must be a list")
-        unknown = set(map(str, kinds)) - self.book.kinds
+        unknown = set(map(str, kinds)) - self.book.kinds.keys()
         if unknown:
             raise ToolFailed(f"cannot watch {', '.join(sorted(unknown))}: no such source connected")
         days = arguments.get("days")

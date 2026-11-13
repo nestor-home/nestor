@@ -30,7 +30,7 @@ import openrouterSvg from "@lobehub/icons-static-svg/icons/openrouter.svg?raw";
 import tavilySvg from "@lobehub/icons-static-svg/icons/tavily.svg?raw";
 import vllmSvg from "@lobehub/icons-static-svg/icons/vllm.svg?raw";
 import type { LucideIcon } from "lucide-react";
-import { CalendarDays, Cpu, Globe, KeyRound, Mail, Mic, Plug, RadioTower, Webhook } from "lucide-react";
+import { CalendarDays, Cpu, FileDiff, Globe, KeyRound, Mail, Mic, Plug, RadioTower, Webhook } from "lucide-react";
 import {
   type SimpleIcon,
   siAnthropic,
@@ -66,6 +66,7 @@ import {
   siPipecat,
   siPython,
   siRaspberrypi,
+  siRss,
   siRust,
   siSearxng,
   siSentry,
@@ -153,6 +154,8 @@ const BRANDS = {
   matrix: simple("Matrix", siMatrix),
   ntfy: simple("ntfy", siNtfy),
   webhook: glyph("Webhook", Webhook),
+  rss: simple("RSS", siRss),
+  "web-page": concept("brand-web-page", FileDiff),
   "home-assistant": simple("Home Assistant", siHomeassistant),
   matter: monogram("Matter", "M"),
   mcp: simple("Model Context Protocol", siModelcontextprotocol),

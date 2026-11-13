@@ -7657,7 +7657,644 @@
       "picks": [
         "kind"
       ],
-      "kinds": {},
+      "kinds": {
+        "rss": {
+          "$defs": {
+            "Address": {
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "minLength": 1,
+                  "title": "Name",
+                  "type": "string",
+                  "x-nestor": {
+                    "field": "name",
+                    "title_id": "config-inbound-rss-address-name",
+                    "help_id": "config-inbound-rss-address-name-help",
+                    "fallback_title_id": "config-field-name",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "inbound-rss-address",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Nom",
+                    "help": null
+                  }
+                },
+                "url": {
+                  "minLength": 1,
+                  "title": "Url",
+                  "type": "string",
+                  "x-nestor": {
+                    "field": "url",
+                    "title_id": "config-inbound-rss-address-url",
+                    "help_id": "config-inbound-rss-address-url-help",
+                    "fallback_title_id": "config-field-url",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "inbound-rss-address",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "URL",
+                    "help": null
+                  }
+                }
+              },
+              "required": [
+                "name",
+                "url"
+              ],
+              "title": "Address",
+              "type": "object"
+            }
+          },
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "rss",
+              "type": "string",
+              "x-nestor": {
+                "field": "kind",
+                "title_id": "config-inbound-rss-kind",
+                "help_id": "config-inbound-rss-kind-help",
+                "fallback_title_id": "config-field-kind",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "inbound-rss",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Type",
+                "help": null
+              }
+            },
+            "name": {
+              "type": "string",
+              "description": "the instance's name; the kind by default",
+              "x-nestor": {
+                "field": "name",
+                "title_id": "config-inbound-rss-name",
+                "help_id": "config-inbound-rss-name-help",
+                "fallback_title_id": "config-field-name",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "inbound-rss",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Nom",
+                "help": null
+              }
+            },
+            "timeout_s": {
+              "default": 20.0,
+              "exclusiveMinimum": 0,
+              "title": "Timeout S",
+              "type": "number",
+              "x-nestor": {
+                "field": "timeout_s",
+                "title_id": "config-inbound-rss-timeout_s",
+                "help_id": "config-inbound-rss-timeout_s-help",
+                "fallback_title_id": "config-field-timeout_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "inbound-rss",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Timeout (secondes)",
+                "help": null
+              }
+            },
+            "max_bytes": {
+              "default": 5000000,
+              "exclusiveMinimum": 0,
+              "title": "Max Bytes",
+              "type": "integer",
+              "x-nestor": {
+                "field": "max_bytes",
+                "title_id": "config-inbound-rss-max_bytes",
+                "help_id": "config-inbound-rss-max_bytes-help",
+                "fallback_title_id": "config-field-max_bytes",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "inbound-rss",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Plus gros flux lu (octets)",
+                "help": null
+              }
+            },
+            "feeds": {
+              "items": {
+                "$ref": "#/$defs/Address"
+              },
+              "minItems": 1,
+              "title": "Feeds",
+              "type": "array",
+              "x-nestor": {
+                "field": "feeds",
+                "title_id": "config-inbound-rss-feeds",
+                "help_id": "config-inbound-rss-feeds-help",
+                "fallback_title_id": "config-field-feeds",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "inbound-rss",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Flux",
+                "help": "Chacun avec le nom qu'on lui donne, ex. LWN."
+              }
+            },
+            "every_s": {
+              "default": 900.0,
+              "minimum": 60.0,
+              "title": "Every S",
+              "type": "number",
+              "x-nestor": {
+                "field": "every_s",
+                "title_id": "config-inbound-rss-every_s",
+                "help_id": "config-inbound-rss-every_s-help",
+                "fallback_title_id": "config-field-every_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "inbound-rss",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Vérifier toutes les (secondes)",
+                "help": null
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "feeds"
+          ],
+          "title": "RssSettings",
+          "type": "object"
+        },
+        "web-page": {
+          "$defs": {
+            "Address": {
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "minLength": 1,
+                  "title": "Name",
+                  "type": "string",
+                  "x-nestor": {
+                    "field": "name",
+                    "title_id": "config-inbound-web-page-address-name",
+                    "help_id": "config-inbound-web-page-address-name-help",
+                    "fallback_title_id": "config-field-name",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "inbound-web-page-address",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Nom",
+                    "help": null
+                  }
+                },
+                "url": {
+                  "minLength": 1,
+                  "title": "Url",
+                  "type": "string",
+                  "x-nestor": {
+                    "field": "url",
+                    "title_id": "config-inbound-web-page-address-url",
+                    "help_id": "config-inbound-web-page-address-url-help",
+                    "fallback_title_id": "config-field-url",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "inbound-web-page-address",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "URL",
+                    "help": null
+                  }
+                }
+              },
+              "required": [
+                "name",
+                "url"
+              ],
+              "title": "Address",
+              "type": "object"
+            }
+          },
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "web-page",
+              "type": "string",
+              "x-nestor": {
+                "field": "kind",
+                "title_id": "config-inbound-web-page-kind",
+                "help_id": "config-inbound-web-page-kind-help",
+                "fallback_title_id": "config-field-kind",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "inbound-web-page",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Type",
+                "help": null
+              }
+            },
+            "name": {
+              "type": "string",
+              "description": "the instance's name; the kind by default",
+              "x-nestor": {
+                "field": "name",
+                "title_id": "config-inbound-web-page-name",
+                "help_id": "config-inbound-web-page-name-help",
+                "fallback_title_id": "config-field-name",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "inbound-web-page",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Nom",
+                "help": null
+              }
+            },
+            "timeout_s": {
+              "default": 20.0,
+              "exclusiveMinimum": 0,
+              "title": "Timeout S",
+              "type": "number",
+              "x-nestor": {
+                "field": "timeout_s",
+                "title_id": "config-inbound-web-page-timeout_s",
+                "help_id": "config-inbound-web-page-timeout_s-help",
+                "fallback_title_id": "config-field-timeout_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "inbound-web-page",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Timeout (secondes)",
+                "help": null
+              }
+            },
+            "max_bytes": {
+              "default": 5000000,
+              "exclusiveMinimum": 0,
+              "title": "Max Bytes",
+              "type": "integer",
+              "x-nestor": {
+                "field": "max_bytes",
+                "title_id": "config-inbound-web-page-max_bytes",
+                "help_id": "config-inbound-web-page-max_bytes-help",
+                "fallback_title_id": "config-field-max_bytes",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "inbound-web-page",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Plus grosse page lue (octets)",
+                "help": null
+              }
+            },
+            "pages": {
+              "items": {
+                "$ref": "#/$defs/Address"
+              },
+              "minItems": 1,
+              "title": "Pages",
+              "type": "array",
+              "x-nestor": {
+                "field": "pages",
+                "title_id": "config-inbound-web-page-pages",
+                "help_id": "config-inbound-web-page-pages-help",
+                "fallback_title_id": "config-field-pages",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "inbound-web-page",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Pages",
+                "help": "Chacune avec le nom qu'on lui donne, ex. la lampe Ikea. Adresses publiques seulement."
+              }
+            },
+            "every_s": {
+              "default": 3600.0,
+              "minimum": 300.0,
+              "title": "Every S",
+              "type": "number",
+              "x-nestor": {
+                "field": "every_s",
+                "title_id": "config-inbound-web-page-every_s",
+                "help_id": "config-inbound-web-page-every_s-help",
+                "fallback_title_id": "config-field-every_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "inbound-web-page",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Lire toutes les (secondes)",
+                "help": null
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "pages"
+          ],
+          "title": "WebPageSettings",
+          "type": "object"
+        },
+        "webhook": {
+          "$defs": {
+            "Hook": {
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "pattern": "^[A-Za-z0-9_-]+$",
+                  "title": "Name",
+                  "type": "string",
+                  "x-nestor": {
+                    "field": "name",
+                    "title_id": "config-inbound-webhook-hook-name",
+                    "help_id": "config-inbound-webhook-hook-name-help",
+                    "fallback_title_id": "config-field-name",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "inbound-webhook-hook",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Nom",
+                    "help": "Son adresse : /hooks/<nom>."
+                  }
+                },
+                "kind": {
+                  "pattern": "^[a-z][a-z0-9_.-]*$",
+                  "title": "Kind",
+                  "type": "string",
+                  "x-nestor": {
+                    "field": "kind",
+                    "title_id": "config-inbound-webhook-hook-kind",
+                    "help_id": "config-inbound-webhook-hook-kind-help",
+                    "fallback_title_id": "config-field-kind",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "inbound-webhook-hook",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Type",
+                    "help": "Ce que sont ses envois, pour les veilles, ex. github."
+                  }
+                },
+                "secret": {
+                  "format": "password",
+                  "title": "Secret",
+                  "type": "string",
+                  "writeOnly": true,
+                  "x-nestor": {
+                    "field": "secret",
+                    "title_id": "config-inbound-webhook-hook-secret",
+                    "help_id": "config-inbound-webhook-hook-secret-help",
+                    "fallback_title_id": "config-field-secret",
+                    "secret": true,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "inbound-webhook-hook",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Secret",
+                    "help": null
+                  }
+                }
+              },
+              "required": [
+                "name",
+                "kind",
+                "secret"
+              ],
+              "title": "Hook",
+              "type": "object"
+            }
+          },
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "webhook",
+              "type": "string",
+              "x-nestor": {
+                "field": "kind",
+                "title_id": "config-inbound-webhook-kind",
+                "help_id": "config-inbound-webhook-kind-help",
+                "fallback_title_id": "config-field-kind",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "inbound-webhook",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Type",
+                "help": null
+              }
+            },
+            "name": {
+              "type": "string",
+              "description": "the instance's name; the kind by default",
+              "x-nestor": {
+                "field": "name",
+                "title_id": "config-inbound-webhook-name",
+                "help_id": "config-inbound-webhook-name-help",
+                "fallback_title_id": "config-field-name",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "inbound-webhook",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Nom",
+                "help": null
+              }
+            },
+            "hooks": {
+              "items": {
+                "$ref": "#/$defs/Hook"
+              },
+              "minItems": 1,
+              "title": "Hooks",
+              "type": "array",
+              "x-nestor": {
+                "field": "hooks",
+                "title_id": "config-inbound-webhook-hooks",
+                "help_id": "config-inbound-webhook-hooks-help",
+                "fallback_title_id": "config-field-hooks",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "inbound-webhook",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Webhooks",
+                "help": "Chacun reçoit sur /hooks/<nom>, signé avec son secret (X-Hub-Signature-256) ou le portant (Authorization: Bearer)."
+              }
+            },
+            "host": {
+              "default": "127.0.0.1",
+              "title": "Host",
+              "type": "string",
+              "x-nestor": {
+                "field": "host",
+                "title_id": "config-inbound-webhook-host",
+                "help_id": "config-inbound-webhook-host-help",
+                "fallback_title_id": "config-field-host",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "inbound-webhook",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Hôte",
+                "help": "Votre reverse proxy renvoie https://<votre hôte>/hooks/ ici."
+              }
+            },
+            "port": {
+              "default": 8474,
+              "maximum": 65535,
+              "minimum": 1,
+              "title": "Port",
+              "type": "integer",
+              "x-nestor": {
+                "field": "port",
+                "title_id": "config-inbound-webhook-port",
+                "help_id": "config-inbound-webhook-port-help",
+                "fallback_title_id": "config-field-port",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "inbound-webhook",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Port",
+                "help": null
+              }
+            },
+            "max_bytes": {
+              "default": 65536,
+              "exclusiveMinimum": 0,
+              "title": "Max Bytes",
+              "type": "integer",
+              "x-nestor": {
+                "field": "max_bytes",
+                "title_id": "config-inbound-webhook-max_bytes",
+                "help_id": "config-inbound-webhook-max_bytes-help",
+                "fallback_title_id": "config-field-max_bytes",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "inbound-webhook",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Plus gros envoi (octets)",
+                "help": null
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "hooks"
+          ],
+          "title": "WebhookSettings",
+          "type": "object"
+        }
+      },
       "model_types": {}
     },
     "home": {

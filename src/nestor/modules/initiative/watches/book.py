@@ -5,6 +5,7 @@ from collections.abc import Iterable
 from nestor.core import Component, utc_now
 from nestor.modules.channels import Exchange
 from nestor.modules.initiative.watches.events import WatchCreated, WatchEnded
+from nestor.modules.initiative.watches.ports import InboundEventSource
 from nestor.modules.initiative.watches.types import Watch
 from nestor.modules.journal import Journal
 
@@ -12,9 +13,13 @@ from nestor.modules.journal import Journal
 class WatchBook(Component):
     name = "watch-book"
 
-    def __init__(self, journal: Journal, kinds: Iterable[str] = ()) -> None:
+    def __init__(self, journal: Journal, sources: Iterable[InboundEventSource] = ()) -> None:
         self.journal = journal
-        self.kinds = frozenset(kinds)  # what the connected sources can bring
+        # what the connected sources can bring, each kind with what they follow under it by name
+        self.kinds: dict[str, tuple[str, ...]] = {}
+        for source in sources:
+            for kind in source.kinds:
+                self.kinds[kind] = (*self.kinds.get(kind, ()), *source.follows.get(kind, ()))
         self.watches: dict[str, Watch] = {}
 
     async def start(self) -> None:

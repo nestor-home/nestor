@@ -1,6 +1,5 @@
 """The admin served by uvicorn inside Nestor's event loop, started and stopped with the assistant."""
 
-import asyncio
 import logging
 
 import uvicorn
@@ -23,7 +22,6 @@ class AdminServer(Component):
         self.app = create_app(nestor, settings)
         self.token_file = token_path(nestor.config.data_dir)
         self._server: EmbeddedServer | None = None
-        self._serving: asyncio.Task[None] | None = None
 
     @classmethod
     def from_config(cls, nestor: Nestor) -> "AdminServer":
@@ -42,7 +40,7 @@ class AdminServer(Component):
         return listening[0].sockets[0].getsockname()[1]
 
     async def start(self) -> None:
-        if self._serving is not None:
+        if self._server is not None:
             return
         admin = self.app.state.admin
         admin.closing.clear()
@@ -57,30 +55,18 @@ class AdminServer(Component):
             log_level="warning",
             timeout_graceful_shutdown=None,
         )
-        self._serving = serving = asyncio.create_task(self._serve(server), name="admin server")
-        while not server.started:
-            if serving.done():
-                await self.close()
-                raise ProviderError(
-                    self.name, f"cannot listen on {self.settings.host}:{self.settings.port}", transient=False
-                )
-            await asyncio.sleep(0.01)
+        try:
+            await server.listen(self.name)
+        except ProviderError:
+            await self.close()
+            raise
         log.info("admin listening on http://%s:%s", self.settings.host, self.port)
 
     async def close(self) -> None:
-        server, serving = self._server, self._serving
-        self._server = self._serving = None
-        if server is None or serving is None:
+        server, self._server = self._server, None
+        if server is None:
             return
         self.app.state.admin.closing.set()  # live streams end, so that the server can stop
-        server.should_exit = True
-        await asyncio.gather(serving, return_exceptions=True)
+        await server.stop()
         self.app.state.admin.api_token = None
         self.token_file.unlink(missing_ok=True)
-
-    @staticmethod
-    async def _serve(server: uvicorn.Server) -> None:
-        try:
-            await server.serve()
-        except SystemExit:  # uvicorn exits when it cannot bind; start() reports it
-            log.error("admin server could not start")
