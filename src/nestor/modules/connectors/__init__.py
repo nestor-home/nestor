@@ -1,4 +1,4 @@
-"""Connectors: third-party services plugged in from the admin — Gmail, IMAP mailboxes, MCP servers.
+"""Connectors: third-party services plugged in from the admin: Gmail, IMAP mailboxes, remote MCP servers.
 
 A connector declares how it is authorised and what it brings (tools, inbound items for watches); a
 connection is one account plugged into it, owned by a person. Tokens live in an encrypted vault and
@@ -9,12 +9,14 @@ from nestor.modules.connectors.assistant import ConnectorTools
 from nestor.modules.connectors.events import ConnectionChanged, ConnectionCreated, ConnectionRemoved
 from nestor.modules.connectors.inbound import ConnectedInbound
 from nestor.modules.connectors.ports import Access, Connector, CredentialVault, TokenEndpoint
-from nestor.modules.connectors.service import Connections
+from nestor.modules.connectors.service import ClientRequired, Connections, FieldsMissing
 from nestor.modules.connectors.types import (
     AuthKind,
     Connection,
     ConnectorInfo,
+    Discovery,
     OAuthSpec,
+    Preset,
     SecretField,
     Secrets,
     Service,
@@ -25,6 +27,7 @@ from nestor.modules.connectors.types import (
 __all__ = [
     "Access",
     "AuthKind",
+    "ClientRequired",
     "ConnectedInbound",
     "Connection",
     "ConnectionChanged",
@@ -35,7 +38,10 @@ __all__ = [
     "ConnectorInfo",
     "ConnectorTools",
     "CredentialVault",
+    "Discovery",
+    "FieldsMissing",
     "OAuthSpec",
+    "Preset",
     "SecretField",
     "Secrets",
     "Service",

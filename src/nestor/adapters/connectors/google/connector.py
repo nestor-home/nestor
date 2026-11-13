@@ -61,7 +61,7 @@ class GoogleConnector(AccountConnector):
     def __init__(self, *, poll_interval_s: float = 30.0, **settings: Any) -> None:
         super().__init__(poll_interval_s=poll_interval_s, **settings)
 
-    async def identify(self, access: Access) -> str:
+    async def identify(self, connection: Connection, access: Access) -> str:
         email = (await self._api(access).profile()).email
         if not email:
             raise ProviderError("gmail", "the profile has no email address", transient=False)

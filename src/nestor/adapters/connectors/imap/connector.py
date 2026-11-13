@@ -63,7 +63,7 @@ class ImapConnector(Connector, Component):
         self.body_chars, self.excerpt_chars = body_chars, excerpt_chars
         self._factory = factory
 
-    async def identify(self, access: Access) -> str:
+    async def identify(self, connection: Connection, access: Access) -> str:
         """The username, once the server accepted it (`ProviderError(transient=False)` when refused)."""
         account = ImapAccount.of(await access.secrets())
         async with session(account, self._factory, self.timing.timeout_s):

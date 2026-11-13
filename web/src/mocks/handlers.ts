@@ -770,11 +770,15 @@ export const handlers = [
     await delay(400);
     const connector = db.connectors.find((c) => c.kind === params.kind);
     if (!connector) return fail(404, "connector_unknown", { kind: String(params.kind) });
-    if (!connector.oauth?.registered) return fail(400, "client_missing");
     const body = (await request.json()) as In<"AuthorizationIn">;
+    if (connector.auth === "discovered") return discovered(connector, body);
+    if (!connector.oauth?.registered) return fail(400, "client_missing");
     // the provider's consent page would come first; the mock connects and sends the browser back
     const connection = plug(connector.kind, body.person ?? null, body.replaces ?? null, {});
-    return json({ authorize_url: `/connections/${connection.id}?connected=1` } satisfies In<"AuthorizationOut">);
+    return json({
+      authorize_url: `/connections/${connection.id}?connected=1`,
+      connection: null,
+    } satisfies In<"AuthorizationOut">);
   }),
 
   http.post(`${API}/connectors/:kind/connections`, async ({ request, params }) => {
@@ -1271,6 +1275,36 @@ export const handlers = [
 ];
 
 /** A new connection (replacing a broken one when asked), journaled as the server does. */
+/**
+ * A server found by its address, as the mock imagines it: one on the local network needs nothing and connects at
+ * once; GitHub and Asana register no client, so they need one typed; the others send the browser to consent.
+ */
+function discovered(connector: In<"ConnectorOut">, body: In<"AuthorizationIn">) {
+  const values = Object.fromEntries(Object.entries(body.values ?? {}).map(([k, v]) => [k, v.trim()]));
+  if (!values.url) return fail(400, "fields_missing", { fields: connector.fields[0]?.label ?? "url" });
+  let host: string;
+  try {
+    host = new URL(values.url).host;
+  } catch {
+    return fail(502, "provider_refused", { detail: `'${values.url}' is not the address of a server` });
+  }
+  const preset = connector.presets.find((p) => new URL(p.values.url ?? "").host === host);
+  const local = /^(localhost|127\.|192\.168\.|10\.)/.test(host) || preset?.name === "Hugging Face";
+  const ownClient = preset?.name === "GitHub" || preset?.name === "Asana";
+  if (!local && !values.token && ownClient && !values.client_id) return fail(400, "client_required");
+  const who = body.person ?? "household";
+  const connection = plug(connector.kind, body.person ?? null, body.replaces ?? null, { account: `${who}@${host}` });
+  connection.brand = preset?.brand ?? connector.brand;
+  save();
+  if (local || values.token) {
+    return json({ authorize_url: null, connection: connectionDetail(connection) } satisfies In<"AuthorizationOut">);
+  }
+  return json({
+    authorize_url: `/connections/${connection.id}?connected=1`,
+    connection: null,
+  } satisfies In<"AuthorizationOut">);
+}
+
 function plug(
   kind: string,
   person: string | null,
@@ -1284,6 +1318,7 @@ function plug(
     kind,
     title: connector?.title ?? kind,
     account:
+      values.account ||
       values.username ||
       values.name ||
       (connector?.auth === "oauth2" ? `${person ?? "household"}@gmail.com` : (connector?.title ?? kind)),

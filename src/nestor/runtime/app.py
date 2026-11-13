@@ -269,7 +269,7 @@ class Nestor:
         message_tools = MessageTools(self.message_book, self.household)
         self.schedule_book = ScheduleBook(self.journal, timezone=config.persona.timezone)
         schedule_tools = ScheduleTools(self.schedule_book)
-        connector_tools = [ConnectorTools(self.connections)] if self.connections else []
+        self.connector_tools = connector_tools = [ConnectorTools(self.connections)] if self.connections else []
         self.confirmations = Confirmations(self.journal, self.household, self.message_book)
         self.blobs = FileBlobStore(config.data_dir / BLOBS)
         self.toolbox = toolbox = Toolbox(
@@ -395,7 +395,16 @@ class Nestor:
     def components(self) -> Sequence[Component]:
         """In start order; they are closed in reverse."""
         home = [self.home] if self.home else []
-        connections = [self.token_endpoint, self.connections] if self.token_endpoint and self.connections else []
+        connections = (
+            [
+                *(c for c in self.connectors if isinstance(c, Component)),  # their sessions close after their accounts
+                self.token_endpoint,
+                self.connections,
+                *self.connector_tools,  # once the accounts are known
+            ]
+            if self.token_endpoint and self.connections
+            else []
+        )
         vault = [self.vault] if self.vault else []
         updates = [self.updates] if self.updates else []
         voices = [self.voices] if self.voices else []

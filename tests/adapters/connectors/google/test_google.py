@@ -31,7 +31,7 @@ from nestor.testing.journal import MemoryEventLog
 from ..accounts import CONTEXT, MATHIS, TOKEN, FakeAccess
 from .fakes import error
 
-CONNECTION = Connection(kind="google", owner=MATHIS, account="mathis@gmail.com", id="gmail-math")
+CONNECTION = Connection(kind="google", owner=MATHIS, account="mathis@gmail.com", auth=AuthKind.OAUTH2, id="gmail-math")
 REDIRECT = "https://nestor.example/connections/callback"
 
 
@@ -549,7 +549,7 @@ async def test_an_unreachable_gmail_is_a_transient_provider_error() -> None:
 
     connector = GoogleConnector(transport=httpx.MockTransport(refuse))
     with pytest.raises(ProviderError) as raised:
-        await connector.identify(FakeAccess())
+        await connector.identify(CONNECTION, FakeAccess())
     assert raised.value.transient
 
 
@@ -580,7 +580,7 @@ async def test_a_profile_without_an_address_cannot_be_connected() -> None:
     gmail = FakeGmail()
     gmail.transport = httpx.MockTransport(lambda r: httpx.Response(200, json={"historyId": "1"}))
     with pytest.raises(ProviderError, match="no email address"):
-        await GoogleConnector(transport=gmail.transport).identify(FakeAccess())
+        await GoogleConnector(transport=gmail.transport).identify(CONNECTION, FakeAccess())
 
 
 def _with_token(request: httpx.Request) -> httpx.Request:

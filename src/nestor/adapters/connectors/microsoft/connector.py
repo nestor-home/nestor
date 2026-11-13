@@ -57,7 +57,7 @@ class MicrosoftConnector(AccountConnector):
     feed = OutlookInbound
     new_client = staticmethod(new_client)
 
-    async def identify(self, access: Access) -> str:
+    async def identify(self, connection: Connection, access: Access) -> str:
         me = await self._api(access).get("/me", [("$select", "mail,userPrincipalName")])
         account = str(me.get("mail") or me.get("userPrincipalName") or "")
         if not account:

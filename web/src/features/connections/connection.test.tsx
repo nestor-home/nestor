@@ -58,7 +58,7 @@ describe("a connection's pages", () => {
 
   it("greets the account the provider brought back", async () => {
     const { router } = renderApp("/connections/c-mcp-ha?connected=1");
-    expect(await screen.findByText("Account Home Assistant · home connected.")).toBeInTheDocument();
+    expect(await screen.findByText("Account household@homeassistant.local:8123 connected.")).toBeInTheDocument();
     await waitFor(() => expect(router.state.location.search).toEqual({}));
   });
 

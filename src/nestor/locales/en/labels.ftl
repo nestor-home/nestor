@@ -61,6 +61,7 @@ auth-kind = { $auth ->
     [oauth2] OAuth
     [secret] credentials
     [none] none
+    [discovered] as its server says
    *[other] { $auth }
 }
 
@@ -105,6 +106,7 @@ pairing-method-enrollment-provisioning-hint = Give the pairing URI to the device
 # Why a connection needs authorising again, or is in error.
 connection-refresh-refused = Access revoked or expired. Reconnect the account.
 connection-no-refresh-token = Access expired and cannot be renewed. Reconnect the account.
+connection-token-refused = The service refused a fresh access. Reconnect the account.
 
 journal-kind = { $kind ->
     [conversation] Conversations

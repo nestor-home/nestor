@@ -21,7 +21,10 @@ class FakeAccess(Access):
         self.refusals = 0  # next token() calls that fail as a revoked authorisation does
         self.token_calls = 0
 
-    async def token(self) -> str:
+    async def revoked(self) -> None:
+        raise AssertionError("not reached: no service refuses a fresh token here")
+
+    async def token(self, *, refused: str | None = None) -> str:
         self.token_calls += 1
         if self.refusals:
             self.refusals -= 1

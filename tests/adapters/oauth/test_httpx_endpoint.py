@@ -1,7 +1,9 @@
 """The HTTP token endpoint against a mocked provider: what it sends, what it understands, how it fails."""
 
+import base64
 import logging
 import urllib.parse
+from dataclasses import replace
 
 import httpx
 import pytest
@@ -59,6 +61,21 @@ async def test_a_refresh_without_new_refresh_token_or_expiry_is_understood() -> 
         "client_id": "public-client",
     }
     assert (tokens.refresh_token, tokens.expires_at, tokens.scopes) == (None, None, ())
+
+
+@respx.mock
+async def test_a_client_registered_for_basic_authentication_sends_its_secret_in_the_header_for_its_resource() -> None:
+    route = respx.post(SPEC.token_url).respond(200, json={"access_token": "at-3"})
+    spec = replace(SPEC, resource="https://mcp.server.test/mcp")
+    client = {"client_id": "dyn:client", "client_secret": "s/cret", "token_endpoint_auth_method": "client_secret_basic"}
+    async with HttpxTokenEndpoint() as endpoint:
+        await endpoint.exchange(spec, client, "the-code", "the-verifier", "https://relay.test/oauth")
+        await endpoint.refresh(spec, client, "rt-1")
+
+    for call in route.calls:
+        assert call.request.headers["Authorization"] == "Basic " + base64.b64encode(b"dyn%3Aclient:s%2Fcret").decode()
+        assert "client_secret" not in form(call.request)
+        assert form(call.request)["resource"] == "https://mcp.server.test/mcp"
 
 
 @pytest.mark.parametrize("error", ["invalid_grant", "invalid_client", "unauthorized_client"])

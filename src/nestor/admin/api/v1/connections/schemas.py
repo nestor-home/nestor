@@ -80,7 +80,7 @@ class ConnectionOut(BaseModel):
         return cls(
             id=connection.id,
             kind=connection.kind,
-            brand=connector.info.brand if connector else None,
+            brand=connector.brand_of(connection) if connector else None,
             title=words.text(connector.info.title) if connector else connection.kind,
             account=connection.account,
             owner=People(admin.nestor.household).ref(connection.owner),

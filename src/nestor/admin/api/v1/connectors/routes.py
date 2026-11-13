@@ -11,7 +11,9 @@ from fastapi import APIRouter, Depends, Request
 
 from nestor.admin.api.v1.access import connecting_of, connection_owner, connections_of, replaced_connection
 from nestor.admin.api.v1.connections.schemas import ConnectionDetail, Usage
+from nestor.admin.api.v1.connectors.refusals import refusals
 from nestor.admin.api.v1.connectors.schemas import (
+    OAUTH,
     AuthorizationIn,
     AuthorizationOut,
     ClientIn,
@@ -23,7 +25,6 @@ from nestor.admin.api.v1.language import reader_locale
 from nestor.admin.api.v1.security import Caller, allowed
 from nestor.admin.presentation import Phrasebook
 from nestor.admin.state import state
-from nestor.core import ProviderError
 from nestor.modules.accounts import Scope
 from nestor.modules.connectors import AuthKind, Connector
 
@@ -44,8 +45,8 @@ Plugged = Annotated[Connector, Depends(connector_of)]
 
 
 def oauth_connector(request: Request, connector: Plugged) -> Connector:
-    """The connector, when it is authorised through OAuth; else 400."""
-    if connector.info.auth is not AuthKind.OAUTH2:
+    """The connector, when it may be authorised through OAuth (its own, or what its service says); else 400."""
+    if connector.info.auth not in OAUTH:
         title = Phrasebook(state(request).nestor.localizer, reader_locale(request)).text(connector.info.title)
         raise ApiError(400, "not_oauth", connector=title)
     return connector
@@ -72,6 +73,8 @@ async def register_connector_client(
 ) -> ConnectorOut:
     """The household's own OAuth client at the provider (its secret is kept encrypted, never shown again)."""
     admin = state(request)
+    if connector.info.auth is not AuthKind.OAUTH2:  # each server of a discovered one has its own client
+        raise ApiError(400, "not_oauth", connector=caller.phrasebook.text(connector.info.title))
     if not body.client_id.strip() or not body.client_secret.strip():
         raise ApiError(400, "client_incomplete")
     await connections_of(admin).set_client(connector.info.kind, body.client_id.strip(), body.client_secret.strip())
@@ -82,16 +85,27 @@ async def register_connector_client(
 async def begin_authorization(
     request: Request, caller: Plugging, connector: OAuthPlugged, body: AuthorizationIn
 ) -> AuthorizationOut:
+    """Where the browser goes to consent. A discovered service (a remote MCP server) is first asked how, from the
+    fields given: one that needs no consent is connected at once, and the connection is answered instead."""
     admin = state(request)
     kind = connector.info.kind
     owner = connection_owner(admin, caller, body.person)
     replaced = replaced_connection(admin, caller, kind, body.replaces)
-    if not await connections_of(admin).has_client(kind):
-        raise ApiError(400, "client_missing")
-    url = await connecting_of(admin).begin(
-        kind, owner, base_url=admin.base_url(request), account_id=caller.account_id, replaces=replaced
-    )
-    return AuthorizationOut(authorize_url=url)
+    connecting, base_url = connecting_of(admin), admin.base_url(request)
+    if connector.info.auth is AuthKind.OAUTH2:
+        if not await connections_of(admin).has_client(kind):
+            raise ApiError(400, "client_missing")
+        url = await connecting.begin(kind, owner, base_url=base_url, account_id=caller.account_id, replaces=replaced)
+        return AuthorizationOut(authorize_url=url, connection=None)
+    values = await connecting.typed(connector, body.values, replaced)
+    with refusals(caller.phrasebook):
+        found = await connecting.discover(
+            kind, owner, values, base_url=base_url, account_id=caller.account_id, replaces=replaced
+        )
+    if isinstance(found, str):
+        return AuthorizationOut(authorize_url=found, connection=None)
+    detail = ConnectionDetail.of(admin, found, caller.phrasebook, await Usage.of(admin))
+    return AuthorizationOut(authorize_url=None, connection=detail)
 
 
 @router.post("/connectors/{kind}/connections", status_code=201)
@@ -101,16 +115,11 @@ async def connect_with_secrets(
     """Connect a service authorised by typed fields (an app password, a server…)."""
     admin = state(request)
     info = connector.info
-    if info.auth is AuthKind.OAUTH2:
+    if info.auth in OAUTH:
         raise ApiError(400, "oauth", connector=caller.phrasebook.text(info.title))
     owner = connection_owner(admin, caller, body.person)
     replaced = replaced_connection(admin, caller, info.kind, body.replaces)
-    values = {f.name: body.values.get(f.name, "").strip() for f in info.fields}
-    if missing := [f.label for f in info.fields if not values[f.name] and f.default is None]:
-        raise ApiError(400, "fields_missing", fields=", ".join(caller.phrasebook.text(m) for m in missing))
-    try:
-        connection = await connections_of(admin).connect(info.kind, owner, values)
-    except ProviderError as failure:
-        raise ApiError(502, "provider_refused", detail=str(failure)) from None
+    with refusals(caller.phrasebook):
+        connection = await connections_of(admin).connect(info.kind, owner, body.values)
     connection = await connecting_of(admin).settled(connection, replaced.id if replaced else None)
     return ConnectionDetail.of(admin, connection, caller.phrasebook, await Usage.of(admin))

@@ -60,6 +60,7 @@ auth-kind = { $auth ->
     [oauth2] OAuth
     [secret] identifiants
     [none] aucune
+    [discovered] selon son serveur
    *[other] { $auth }
 }
 
@@ -104,6 +105,7 @@ pairing-method-enrollment-provisioning-hint = Donnez l'URI d'appairage à l'appa
 # Pourquoi une connexion doit être réautorisée, ou est en erreur.
 connection-refresh-refused = Accès révoqué ou expiré. Reconnectez le compte.
 connection-no-refresh-token = Accès expiré, sans renouvellement possible. Reconnectez le compte.
+connection-token-refused = Le service a refusé un accès tout juste renouvelé. Reconnectez le compte.
 
 journal-kind = { $kind ->
     [conversation] Conversations

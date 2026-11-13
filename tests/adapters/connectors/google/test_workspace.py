@@ -10,12 +10,14 @@ import pytest
 from nestor.adapters.connectors.google.connector import GoogleConnector
 from nestor.core import PersonId
 from nestor.modules.cognition.tools import ToolFailed
-from nestor.modules.connectors import Connection
+from nestor.modules.connectors import AuthKind, Connection
 
 from ..accounts import CONTEXT, TOKEN, FakeAccess
 from .fakes import error
 
-CONNECTION = Connection(kind="google", owner=PersonId("mathis"), account="mathis@gmail.com", id="google-math")
+CONNECTION = Connection(
+    kind="google", owner=PersonId("mathis"), account="mathis@gmail.com", auth=AuthKind.OAUTH2, id="google-math"
+)
 DOC = "application/vnd.google-apps.document"
 
 

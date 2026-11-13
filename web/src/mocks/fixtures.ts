@@ -169,6 +169,21 @@ const googleSetup = (api: string) =>
   );
 const MAILBOX = fr("Mailbox (IMAP)", "Boîte mail (IMAP)");
 const MCP_SERVER = fr("MCP server", "Serveur MCP");
+/** The well-known servers the connector offers: the same as the server's catalogue. */
+export const MCP_PRESETS = [
+  { name: "GitHub", brand: "github", values: { url: "https://api.githubcopilot.com/mcp/" } },
+  { name: "Linear", brand: "linear", values: { url: "https://mcp.linear.app/mcp" } },
+  { name: "Notion", brand: "notion", values: { url: "https://mcp.notion.com/mcp" } },
+  { name: "Todoist", brand: "todoist", values: { url: "https://ai.todoist.net/mcp" } },
+  { name: "Atlassian", brand: "atlassian", values: { url: "https://mcp.atlassian.com/v1/mcp" } },
+  { name: "Asana", brand: "asana", values: { url: "https://mcp.asana.com/v2/mcp" } },
+  { name: "Sentry", brand: "sentry", values: { url: "https://mcp.sentry.dev/mcp" } },
+  { name: "Cloudflare", brand: "cloudflare", values: { url: "https://bindings.mcp.cloudflare.com/mcp" } },
+  { name: "Stripe", brand: "stripe", values: { url: "https://mcp.stripe.com" } },
+  { name: "Vercel", brand: "vercel", values: { url: "https://mcp.vercel.com" } },
+  { name: "Canva", brand: "canva", values: { url: "https://mcp.canva.com/mcp" } },
+  { name: "Hugging Face", brand: "huggingface", values: { url: "https://huggingface.co/mcp" } },
+];
 
 export function connectors(): Connector[] {
   return [
@@ -184,6 +199,7 @@ export function connectors(): Connector[] {
       inbound: ["mail"],
       setup: googleSetup("Gmail"),
       fields: [],
+      presets: [],
       oauth: {
         registered: true,
         client_id: "418230-9kq3hc.apps.googleusercontent.com",
@@ -223,6 +239,7 @@ export function connectors(): Connector[] {
           default: null,
         },
       ],
+      presets: [],
       oauth: null,
     },
     {
@@ -230,31 +247,37 @@ export function connectors(): Connector[] {
       brand: "mcp",
       title: MCP_SERVER,
       description: fr(
-        "The tools of a Model Context Protocol server, local or remote: Home Assistant, your scripts…",
-        "Les outils d'un serveur Model Context Protocol, local ou distant : Home Assistant, vos scripts…",
+        "Any service that publishes a remote MCP server (GitHub, Linear, Notion…): its tools, for the account you connect.",
+        "Tout service qui publie un serveur MCP distant (GitHub, Linear, Notion…) : ses outils, pour le compte que vous connectez.",
       ),
-      auth: "secret",
+      auth: "discovered",
       inbound: [],
       setup: fr(
-        "Give the server's HTTP address (“streamable HTTP” transport). The token is optional.",
-        "Indiquez l'adresse HTTP du serveur (transport « streamable HTTP »). Le jeton est facultatif.",
+        `Nestor asks the server how to authorise it: most send you to the service to approve access, then back here.
+Give an access token only when the service issues one for this (a GitHub personal access token).
+Give an OAuth client only when the server registers none for Nestor: create one at the service, with the redirect address shown.`,
+        `Nestor demande au serveur comment l'autoriser : la plupart vous envoient sur le service pour approuver l'accès, puis vous ramènent ici.
+Donnez un jeton d'accès seulement si le service en délivre un pour cela (un jeton d'accès personnel GitHub).
+Donnez un client OAuth seulement si le serveur n'en enregistre aucun pour Nestor : créez-en un sur le service, avec l'adresse de redirection affichée.`,
       ),
       fields: [
+        { name: "url", label: fr("Server address", "Adresse du serveur"), secret: false, default: null },
+        { name: "token", label: fr("Access token", "Jeton d'accès"), secret: true, default: "" },
+        { name: "client_id", label: fr("OAuth client ID", "Identifiant du client OAuth"), secret: false, default: "" },
         {
-          name: "name",
-          label: fr("Display name", "Nom affiché"),
-          secret: false,
-          default: null,
+          name: "client_secret",
+          label: fr("OAuth client secret", "Secret du client OAuth"),
+          secret: true,
+          default: "",
         },
-        {
-          name: "url",
-          label: fr("Server address", "Adresse du serveur"),
-          secret: false,
-          default: null,
-        },
-        { name: "token", label: fr("Access token", "Jeton d'accès"), secret: true, default: null },
       ],
-      oauth: null,
+      presets: MCP_PRESETS,
+      oauth: {
+        registered: false,
+        client_id: null,
+        redirect_uri: "https://relay.nestor.dev/oauth/callback",
+        relayed: true,
+      },
     },
     {
       kind: "google-calendar",
@@ -268,6 +291,7 @@ export function connectors(): Connector[] {
       inbound: [],
       setup: googleSetup("Google Calendar"),
       fields: [],
+      presets: [],
       oauth: {
         registered: false,
         client_id: null,
@@ -280,8 +304,6 @@ export function connectors(): Connector[] {
 
 /** Why a connection needs a look, as the server words it: a message and its text. */
 const reason = (text: string) => ({ message: { id: "connection-status-reason", args: {} }, text });
-/** Léa's MCP server of recipes. */
-export const LEA_RECIPES = fr("Léa's recipes", "Recettes de Léa");
 
 export function connections(): Connection[] {
   return [
@@ -325,9 +347,9 @@ export function connections(): Connection[] {
     {
       id: "c-mcp-ha",
       kind: "mcp",
-      brand: "home-assistant",
+      brand: "mcp",
       title: MCP_SERVER,
-      account: fr("Home Assistant · home", "Home Assistant · maison"),
+      account: "household@homeassistant.local:8123",
       owner: null,
       status: "connected",
       status_reason: null,
@@ -343,7 +365,7 @@ export function connections(): Connection[] {
       kind: "mcp",
       brand: "mcp",
       title: MCP_SERVER,
-      account: LEA_RECIPES,
+      account: "lea@192.168.1.20:8808",
       owner: ref("lea"),
       status: "error",
       status_reason: reason(

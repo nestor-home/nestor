@@ -56,7 +56,7 @@ class DavConnector(Connector, Component):
             client, self._client = self._client, None
             await client.aclose()
 
-    async def identify(self, access: Access) -> str:
+    async def identify(self, connection: Connection, access: Access) -> str:
         """The login, once the server let it find its calendars or its contacts (a server may hold only one)."""
         account = DavAccount.of(await access.secrets())
         dav = self._dav_of(account)

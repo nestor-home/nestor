@@ -7424,6 +7424,104 @@
             "kind"
           ]
         },
+        "mcp": {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "mcp",
+              "type": "string",
+              "x-nestor": {
+                "field": "kind",
+                "title_id": "config-connector-mcp-kind",
+                "help_id": "config-connector-mcp-kind-help",
+                "fallback_title_id": "config-field-kind",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "connector-mcp",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Kind",
+                "help": null
+              }
+            },
+            "name": {
+              "type": "string",
+              "description": "the instance's name; the kind by default",
+              "x-nestor": {
+                "field": "name",
+                "title_id": "config-connector-mcp-name",
+                "help_id": "config-connector-mcp-name-help",
+                "fallback_title_id": "config-field-name",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "connector-mcp",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Name",
+                "help": null
+              }
+            },
+            "timeout_s": {
+              "default": 10.0,
+              "exclusiveMinimum": 0,
+              "title": "Timeout S",
+              "type": "number",
+              "x-nestor": {
+                "field": "timeout_s",
+                "title_id": "config-connector-mcp-timeout_s",
+                "help_id": "config-connector-mcp-timeout_s-help",
+                "fallback_title_id": "config-field-timeout_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "connector-mcp",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Timeout (seconds)",
+                "help": null
+              }
+            },
+            "retry_after_s": {
+              "default": 30.0,
+              "exclusiveMinimum": 0,
+              "title": "Retry After S",
+              "type": "number",
+              "x-nestor": {
+                "field": "retry_after_s",
+                "title_id": "config-connector-mcp-retry_after_s",
+                "help_id": "config-connector-mcp-retry_after_s-help",
+                "fallback_title_id": "config-field-retry_after_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "connector-mcp",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Wait before reconnecting (seconds)",
+                "help": null
+              }
+            }
+          },
+          "title": "McpConnectorSettings",
+          "type": "object",
+          "required": [
+            "kind"
+          ]
+        },
         "microsoft": {
           "additionalProperties": false,
           "properties": {

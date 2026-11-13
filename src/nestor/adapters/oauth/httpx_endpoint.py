@@ -1,9 +1,12 @@
 """OAuth 2 token requests over HTTP: authorization code with PKCE, refresh (RFC 6749), revocation (RFC 7009).
 
 The client authenticates with `client_secret_post` (credentials in the form body), which every
-mainstream provider accepts. Nothing sent or received is logged: only the host and the status code.
+mainstream provider accepts, unless it was registered for `client_secret_basic` (RFC 7591's
+`token_endpoint_auth_method`, kept with a client registered on the spot). A spec naming its `resource`
+(RFC 8707) asks tokens for it. Nothing sent or received is logged: only the host and the status code.
 """
 
+import base64
 import logging
 import urllib.parse
 from datetime import timedelta
@@ -52,11 +55,12 @@ class HttpxTokenEndpoint(TokenEndpoint):
             "code": code,
             "redirect_uri": redirect_uri,
             "code_verifier": verifier,
+            **_resource(spec),
         }
         return _tokens(await self._post(spec.token_url, form, client), spec.token_url)
 
     async def refresh(self, spec: OAuthSpec, client: Secrets, refresh_token: str) -> Tokens:
-        form = {"grant_type": "refresh_token", "refresh_token": refresh_token}
+        form = {"grant_type": "refresh_token", "refresh_token": refresh_token, **_resource(spec)}
         return _tokens(await self._post(spec.token_url, form, client), spec.token_url)
 
     async def revoke(self, spec: OAuthSpec, client: Secrets, token: str) -> None:
@@ -70,16 +74,18 @@ class HttpxTokenEndpoint(TokenEndpoint):
 
     async def _post(self, url: str, form: dict[str, str], client: Secrets) -> dict[str, object]:
         provider = _host(url)
-        body = {**form, "client_id": client["client_id"]}
-        if client.get("client_secret"):
-            body["client_secret"] = client["client_secret"]
+        body, headers = {**form, "client_id": client["client_id"]}, {"Accept": "application/json"}
+        if secret := client.get("client_secret"):
+            if client.get("token_endpoint_auth_method") == "client_secret_basic":  # RFC 6749 §2.3.1
+                pair = f"{urllib.parse.quote(client['client_id'], safe='')}:{urllib.parse.quote(secret, safe='')}"
+                headers["Authorization"] = f"Basic {base64.b64encode(pair.encode()).decode()}"
+            else:
+                body["client_secret"] = secret
         if self._client is None:
             await self.start()
         assert self._client is not None
         try:
-            response = await self._client.post(
-                url, data=body, headers={"Accept": "application/json"}, timeout=self._timeout_s
-            )
+            response = await self._client.post(url, data=body, headers=headers, timeout=self._timeout_s)
         except httpx.TimeoutException:
             raise ProviderError(provider, "token endpoint timed out", transient=True) from None
         except httpx.HTTPError as error:
@@ -95,6 +101,10 @@ class HttpxTokenEndpoint(TokenEndpoint):
             code = str(error or f"HTTP {response.status_code}")
             raise ProviderError(provider, code, transient=code not in PERMANENT and response.status_code < 400)
         return payload
+
+
+def _resource(spec: OAuthSpec) -> dict[str, str]:
+    return {"resource": spec.resource} if spec.resource else {}
 
 
 def _tokens(payload: dict[str, object], url: str) -> Tokens:
