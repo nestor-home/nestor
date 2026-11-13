@@ -5,7 +5,7 @@ import asyncio
 import contextlib
 from collections.abc import AsyncIterator, Callable
 
-from nestor.core import ContractError, PersonId, ProviderError
+from nestor.core import PersonId, ProviderError
 from nestor.modules.channels import (
     Address,
     Assistant,
@@ -134,8 +134,7 @@ class InMemoryChannel(Channel):
         return frozenset({self.room}) if self.room else frozenset()
 
     async def send(self, to: Address, text: str, medium: Medium, attachments: tuple[Attachment, ...]) -> None:
-        if to.channel != self.channel_id or medium not in self.media:
-            raise ContractError(f"{to} is not on channel {self.channel_id!r} {medium}")
+        self.check_serves(to, medium)
         self.sent.append((to, text))
         self.files.append(attachments)
 

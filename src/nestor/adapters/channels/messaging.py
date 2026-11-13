@@ -19,7 +19,7 @@ from typing import Any
 
 from pydantic import Field
 
-from nestor.core import ContractError, ProviderError, utc_now
+from nestor.core import ProviderError, utc_now
 from nestor.core.i18n import Message
 from nestor.modules.channels import (
     IMAGE_TYPES,
@@ -152,8 +152,7 @@ class MessagingChannel(Channel, ABC):
             await conversations.aclose()
 
     async def send(self, to: Address, text: str, medium: Medium, attachments: tuple[Attachment, ...]) -> None:
-        if to.channel != self.channel_id or medium not in self.media:
-            raise ContractError(f"{to} is not on channel {self.channel_id!r} {medium}")
+        self.check_serves(to, medium)
         if self.closed:
             raise ProviderError(self.brand or self.name, "the channel is closed", transient=False)
         await self.deliver(to.conversation, Answer(text, attachments))

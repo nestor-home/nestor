@@ -1,9 +1,7 @@
 """The admin served by uvicorn inside Nestor's event loop, started and stopped with the assistant."""
 
 import asyncio
-import contextlib
 import logging
-from collections.abc import Generator
 
 import uvicorn
 
@@ -12,14 +10,9 @@ from nestor.admin.auth.api_token import issue_token, token_path
 from nestor.admin.settings import AdminSettings
 from nestor.core import Component, ContractError, ProviderError
 from nestor.runtime import Nestor
+from nestor.runtime.server import EmbeddedServer
 
 log = logging.getLogger(__name__)
-
-
-class _Server(uvicorn.Server):
-    @contextlib.contextmanager
-    def capture_signals(self) -> Generator[None]:
-        yield  # the runtime owns SIGINT/SIGTERM and closes the admin itself
 
 
 class AdminServer(Component):
@@ -29,7 +22,7 @@ class AdminServer(Component):
         self.settings = settings
         self.app = create_app(nestor, settings)
         self.token_file = token_path(nestor.config.data_dir)
-        self._server: _Server | None = None
+        self._server: EmbeddedServer | None = None
         self._serving: asyncio.Task[None] | None = None
 
     @classmethod
@@ -51,15 +44,19 @@ class AdminServer(Component):
     async def start(self) -> None:
         if self._serving is not None:
             return
-        config = uvicorn.Config(
-            self.app, host=self.settings.host, port=self.settings.port, lifespan="off", log_level="warning"
-        )
         admin = self.app.state.admin
         admin.closing.clear()
         admin.api_token = issue_token(self.token_file)
         if not admin.accounts.owners():
             log.warning("no account can sign in to the admin yet: run `nestor accounts create-owner`")
-        self._server = server = _Server(config)
+        self._server = server = EmbeddedServer(
+            self.app,
+            host=self.settings.host,
+            port=self.settings.port,
+            log_config=uvicorn.config.LOGGING_CONFIG,
+            log_level="warning",
+            timeout_graceful_shutdown=None,
+        )
         self._serving = serving = asyncio.create_task(self._serve(server), name="admin server")
         while not server.started:
             if serving.done():

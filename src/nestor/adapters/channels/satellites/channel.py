@@ -114,8 +114,7 @@ class SatellitesChannel(Channel, SatelliteHost):
 
     async def send(self, to: Address, text: str, medium: Medium, attachments: tuple[Attachment, ...]) -> None:
         """Says or shows `text`; a satellite shows no file."""
-        if to.channel != self.channel_id or medium not in self.media:
-            raise ContractError(f"{to} is not on channel {self.channel_id!r} {medium}")
+        self.check_serves(to, medium)
         if medium is Medium.SPOKEN:
             assert self._voice is not None
             await self._voice.say(to, text, self._send_timeout_s)

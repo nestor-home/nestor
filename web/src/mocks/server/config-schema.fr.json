@@ -3133,6 +3133,297 @@
           "title": "MatrixSettings",
           "type": "object"
         },
+        "ntfy": {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "ntfy",
+              "type": "string",
+              "x-nestor": {
+                "field": "kind",
+                "title_id": "config-channel-ntfy-kind",
+                "help_id": "config-channel-ntfy-kind-help",
+                "fallback_title_id": "config-field-kind",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-ntfy",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Type",
+                "help": null
+              }
+            },
+            "name": {
+              "type": "string",
+              "description": "the instance's name; the kind by default",
+              "x-nestor": {
+                "field": "name",
+                "title_id": "config-channel-ntfy-name",
+                "help_id": "config-channel-ntfy-name-help",
+                "fallback_title_id": "config-field-name",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-ntfy",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Nom",
+                "help": null
+              }
+            },
+            "conversation_ends_after_s": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Conversation Ends After S",
+              "x-nestor": {
+                "field": "conversation_ends_after_s",
+                "title_id": "config-channel-ntfy-conversation_ends_after_s",
+                "help_id": "config-channel-ntfy-conversation_ends_after_s-help",
+                "fallback_title_id": "config-field-conversation_ends_after_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "channel-ntfy",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Nouvelle conversation après (secondes)",
+                "help": null
+              }
+            },
+            "url": {
+              "default": "https://ntfy.sh",
+              "title": "Url",
+              "type": "string",
+              "x-nestor": {
+                "field": "url",
+                "title_id": "config-channel-ntfy-url",
+                "help_id": "config-channel-ntfy-url-help",
+                "fallback_title_id": "config-field-url",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-ntfy",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "URL",
+                "help": "ntfy.sh, ou votre propre serveur."
+              }
+            },
+            "token": {
+              "anyOf": [
+                {
+                  "format": "password",
+                  "type": "string",
+                  "writeOnly": true
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Token",
+              "x-nestor": {
+                "field": "token",
+                "title_id": "config-channel-ntfy-token",
+                "help_id": "config-channel-ntfy-token-help",
+                "fallback_title_id": "config-field-token",
+                "secret": true,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-ntfy",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Token",
+                "help": "Un jeton d'accès, pour un serveur à accès contrôlé."
+              }
+            }
+          },
+          "title": "NtfySettings",
+          "type": "object",
+          "required": [
+            "kind"
+          ]
+        },
+        "openai-api": {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "openai-api",
+              "type": "string",
+              "x-nestor": {
+                "field": "kind",
+                "title_id": "config-channel-openai-api-kind",
+                "help_id": "config-channel-openai-api-kind-help",
+                "fallback_title_id": "config-field-kind",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-openai-api",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Type",
+                "help": null
+              }
+            },
+            "name": {
+              "type": "string",
+              "description": "the instance's name; the kind by default",
+              "x-nestor": {
+                "field": "name",
+                "title_id": "config-channel-openai-api-name",
+                "help_id": "config-channel-openai-api-name-help",
+                "fallback_title_id": "config-field-name",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-openai-api",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Nom",
+                "help": null
+              }
+            },
+            "conversation_ends_after_s": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Conversation Ends After S",
+              "x-nestor": {
+                "field": "conversation_ends_after_s",
+                "title_id": "config-channel-openai-api-conversation_ends_after_s",
+                "help_id": "config-channel-openai-api-conversation_ends_after_s-help",
+                "fallback_title_id": "config-field-conversation_ends_after_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "channel-openai-api",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Nouvelle conversation après (secondes)",
+                "help": null
+              }
+            },
+            "keys": {
+              "additionalProperties": {
+                "format": "password",
+                "type": "string",
+                "writeOnly": true
+              },
+              "minProperties": 1,
+              "title": "Keys",
+              "type": "object",
+              "x-nestor": {
+                "field": "keys",
+                "title_id": "config-channel-openai-api-keys",
+                "help_id": "config-channel-openai-api-keys-help",
+                "fallback_title_id": "config-field-keys",
+                "secret": false,
+                "secret_values": true,
+                "advanced": false,
+                "group": "channel-openai-api",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Clés d'API",
+                "help": "Par nom de compte : un client qui présente la clé parle en tant que openai-api:<nom>. Gardées comme secrets."
+              }
+            },
+            "host": {
+              "default": "127.0.0.1",
+              "title": "Host",
+              "type": "string",
+              "x-nestor": {
+                "field": "host",
+                "title_id": "config-channel-openai-api-host",
+                "help_id": "config-channel-openai-api-host-help",
+                "fallback_title_id": "config-field-host",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-openai-api",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Hôte",
+                "help": "0.0.0.0 pour des clients sur d'autres machines."
+              }
+            },
+            "port": {
+              "default": 8472,
+              "maximum": 65535,
+              "minimum": 1,
+              "title": "Port",
+              "type": "integer",
+              "x-nestor": {
+                "field": "port",
+                "title_id": "config-channel-openai-api-port",
+                "help_id": "config-channel-openai-api-port-help",
+                "fallback_title_id": "config-field-port",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-openai-api",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Port",
+                "help": null
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "keys"
+          ],
+          "title": "OpenAIApiSettings",
+          "type": "object"
+        },
         "satellites": {
           "$defs": {
             "VoiceSettings": {
@@ -4195,6 +4486,141 @@
           "required": [
             "kind"
           ]
+        },
+        "webhook": {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "webhook",
+              "type": "string",
+              "x-nestor": {
+                "field": "kind",
+                "title_id": "config-channel-webhook-kind",
+                "help_id": "config-channel-webhook-kind-help",
+                "fallback_title_id": "config-field-kind",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-webhook",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Type",
+                "help": null
+              }
+            },
+            "name": {
+              "type": "string",
+              "description": "the instance's name; the kind by default",
+              "x-nestor": {
+                "field": "name",
+                "title_id": "config-channel-webhook-name",
+                "help_id": "config-channel-webhook-name-help",
+                "fallback_title_id": "config-field-name",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-webhook",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Nom",
+                "help": null
+              }
+            },
+            "conversation_ends_after_s": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Conversation Ends After S",
+              "x-nestor": {
+                "field": "conversation_ends_after_s",
+                "title_id": "config-channel-webhook-conversation_ends_after_s",
+                "help_id": "config-channel-webhook-conversation_ends_after_s-help",
+                "fallback_title_id": "config-field-conversation_ends_after_s",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "channel-webhook",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Nouvelle conversation après (secondes)",
+                "help": null
+              }
+            },
+            "url": {
+              "title": "Url",
+              "type": "string",
+              "x-nestor": {
+                "field": "url",
+                "title_id": "config-channel-webhook-url",
+                "help_id": "config-channel-webhook-url-help",
+                "fallback_title_id": "config-field-url",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-webhook",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "URL",
+                "help": "Où chaque message est envoyé en JSON."
+              }
+            },
+            "secret": {
+              "anyOf": [
+                {
+                  "format": "password",
+                  "type": "string",
+                  "writeOnly": true
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Secret",
+              "x-nestor": {
+                "field": "secret",
+                "title_id": "config-channel-webhook-secret",
+                "help_id": "config-channel-webhook-secret-help",
+                "fallback_title_id": "config-field-secret",
+                "secret": true,
+                "secret_values": false,
+                "advanced": false,
+                "group": "channel-webhook",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Secret de signature",
+                "help": "Signe chaque corps (X-Nestor-Signature: sha256=…)."
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "url"
+          ],
+          "title": "WebhookSettings",
+          "type": "object"
         }
       },
       "model_types": {}
