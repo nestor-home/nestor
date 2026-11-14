@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.13.0](https://github.com/nestor-home/nestor/compare/v0.12.0...v0.13.0) (2026-11-14)
+
+
+### Features
+
+* an OpenAI-compatible API, and ntfy and webhook channels ([#139](https://github.com/nestor-home/nestor/issues/139)) ([8aab694](https://github.com/nestor-home/nestor/commit/8aab6942f593229405f3ebf9944ca58709fca7ac))
+* channels for WhatsApp and email ([#140](https://github.com/nestor-home/nestor/issues/140)) ([0e8dd4e](https://github.com/nestor-home/nestor/commit/0e8dd4ef3e27d82a8aab260433ed4468d48ba954))
+* connected accounts: Google Calendar, Drive, Contacts and Tasks, Microsoft 365, CalDAV and CardDAV ([#142](https://github.com/nestor-home/nestor/issues/142)) ([b1e0f96](https://github.com/nestor-home/nestor/commit/b1e0f96996394e8164a71f01bc791c021202f64f))
+* executors for Codex and Claude Code, tasks that hand back files ([#144](https://github.com/nestor-home/nestor/issues/144)) ([12ca7e2](https://github.com/nestor-home/nestor/commit/12ca7e26cdc0142a6467cfb6caa59eb3e2932c96))
+* feeds, web pages and webhooks as sources for the watches ([#146](https://github.com/nestor-home/nestor/issues/146)) ([3f9c435](https://github.com/nestor-home/nestor/commit/3f9c4358ccff0f3eeb5fa44193b446e4c87fc25e))
+* messaging channels for Discord, Slack, Matrix and Signal, on a shared base ([#138](https://github.com/nestor-home/nestor/issues/138)) ([74a9ef5](https://github.com/nestor-home/nestor/commit/74a9ef51b2910d9b7ecd8be64bf26140584674ac))
+* native Anthropic and Gemini models, and a fallback per model ([#145](https://github.com/nestor-home/nestor/issues/145)) ([1b387a1](https://github.com/nestor-home/nestor/commit/1b387a151447b55108b718b25e9a4ae758bbcd27))
+* pictures drawn by the agent, files made by tools ([#132](https://github.com/nestor-home/nestor/issues/132)) ([48bef3f](https://github.com/nestor-home/nestor/commit/48bef3f120d676c18625cf34f9c935fae0d46d52))
+* remote MCP servers connected from the admin, with OAuth ([#143](https://github.com/nestor-home/nestor/issues/143)) ([2e449ce](https://github.com/nestor-home/nestor/commit/2e449ce26636e6fafd1d9ab695f6c30facbc69ec))
+* voice from any OpenAI-compatible API, speech recognized locally, voice benches ([#137](https://github.com/nestor-home/nestor/issues/137)) ([0d79f09](https://github.com/nestor-home/nestor/commit/0d79f09548dcd47c1200f979aa1ff79a4f4cd25b))
+* web search, web pages, weather, places and routes, documents read ([#129](https://github.com/nestor-home/nestor/issues/129)) ([2f5ab71](https://github.com/nestor-home/nestor/commit/2f5ab71faefe5802146d2dda3210f4a8d08196a5))
+
+
+### Bug Fixes
+
+* **deps:** update tiptap monorepo to v3.34.0 ([#155](https://github.com/nestor-home/nestor/issues/155)) ([09a57e7](https://github.com/nestor-home/nestor/commit/09a57e7100216eff79d27c4d436b8ef1b8890a5c))
+* name Nestor to model providers, with OpenRouter attribution ([#149](https://github.com/nestor-home/nestor/issues/149)) ([571872d](https://github.com/nestor-home/nestor/commit/571872d30d53c94cff3ba9ce7d03051f879723d7))
+* the admin shows what the new integrations do ([#150](https://github.com/nestor-home/nestor/issues/150)) ([571b174](https://github.com/nestor-home/nestor/commit/571b174a4882d8341eabb9aa894f3d0eb5ca2ae5))
+
 ## [0.12.0](https://github.com/nestor-home/nestor/compare/v0.11.1...v0.12.0) (2026-11-12)
 
 
