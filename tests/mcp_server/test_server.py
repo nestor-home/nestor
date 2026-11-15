@@ -16,8 +16,7 @@ from starlette.routing import Route
 
 from nestor.adapters.tools.mcp.provider import BearerToken, McpToolProvider
 from nestor.core import PersonId
-from nestor.mcp_server import ExecutorServer
-from nestor.mcp_server import server as served_module
+from nestor.mcp_server import ExecutorServer, guard
 from nestor.modules.channels import Address, AttachmentKind, Medium
 from nestor.modules.cognition.delegation import (
     Assignment,
@@ -230,7 +229,7 @@ async def test_a_request_without_a_known_key_is_refused_before_any_tool(world: W
 async def test_a_key_calling_too_often_is_held_back(world: World, monkeypatch: pytest.MonkeyPatch) -> None:
     _, given = await delegated(world, "Corrige le devis")
     assert given.access is not None
-    monkeypatch.setattr(served_module, "CALLS_PER_MINUTE", 3)
+    monkeypatch.setattr(guard, "CALLS_PER_MINUTE", 3)
     headers = {"Authorization": f"Bearer {given.access.key}", "Accept": "application/json, text/event-stream"}
     initialize = {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}
     async with httpx.AsyncClient() as http:
