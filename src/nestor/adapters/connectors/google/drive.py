@@ -95,7 +95,7 @@ class DriveTools:
             raise ToolFailed(f"{name} is {media_type}, not a document to read")
         else:
             params = [("alt", "media")]
-        data = await ask("Google Drive", api.download(url, params, max_bytes=self._max_bytes))
+        data = await ask("Google Drive", api.fetch(url, params, max_bytes=self._max_bytes))
         text = await self._reader.read(data, media_type)
         if not text:
             raise ToolFailed(f"{name} has no text to read")

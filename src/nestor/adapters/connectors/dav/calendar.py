@@ -6,12 +6,13 @@ from collections.abc import Awaitable, Callable, Mapping, Sequence
 from datetime import UTC, date, datetime
 from xml.sax.saxutils import quoteattr
 
+from nestor.adapters.common.http import StatusError
 from nestor.adapters.common.text import cap
 from nestor.adapters.connectors.common import SHARED
 from nestor.adapters.connectors.common.moments import INSTANT, MOMENT, instant, span
 from nestor.adapters.connectors.common.tools import ask, failed
 from nestor.adapters.connectors.dav import cards
-from nestor.adapters.connectors.dav.dav import Collection, Dav, DavError
+from nestor.adapters.connectors.dav.dav import Collection, Dav
 from nestor.core import ProviderError, utc_now
 from nestor.modules.cognition.model import ToolSpec
 from nestor.modules.cognition.tools import Risk, Tool, ToolContext, ToolFailed, bounded
@@ -71,7 +72,7 @@ class CalendarTools:
         query = _query(_stamp(since), _stamp(until))
         answers = await asyncio.gather(*(dav.report(c.url, query) for c in calendars), return_exceptions=True)
         read = [(c, a) for c, a in zip(calendars, answers, strict=True) if not isinstance(a, BaseException)]
-        unread = [c.name for c, a in zip(calendars, answers, strict=True) if isinstance(a, DavError)]
+        unread = [c.name for c, a in zip(calendars, answers, strict=True) if isinstance(a, StatusError)]
         if not read and calendars:  # none could be read: say why, as for any failed call
             error = next(a for a in answers if isinstance(a, BaseException))
             raise failed("Reading the calendars", error) if isinstance(error, ProviderError) else error
@@ -125,7 +126,7 @@ class CalendarTools:
         for i, calendar in enumerate(candidates):
             try:
                 await dav.put(f"{calendar.url.rstrip('/')}/{uid}.ics", body, "text/calendar; charset=utf-8")
-            except DavError as error:
+            except StatusError as error:
                 if error.status == 403 and i < len(candidates) - 1:
                     continue
                 raise failed("Adding to the calendar", error) from None

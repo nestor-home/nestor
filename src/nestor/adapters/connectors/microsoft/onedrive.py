@@ -91,7 +91,7 @@ class DriveTools:
             params = []
         else:
             raise ToolFailed(f"{name} is {media_type}, not a document to read")
-        data = await ask("OneDrive", api.download(f"{path}/content", params, max_bytes=self._max_bytes))
+        data = await ask("OneDrive", api.fetch(f"{path}/content", params, max_bytes=self._max_bytes))
         text = await self._reader.read(data, media_type)
         if not text:
             raise ToolFailed(f"{name} has no text to read")

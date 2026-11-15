@@ -3,7 +3,7 @@ model."""
 
 from collections.abc import Awaitable
 
-from nestor.adapters.connectors.common.api import StatusError
+from nestor.adapters.common.http import StatusError
 from nestor.core import ProviderError
 from nestor.modules.cognition.model import ToolSpec
 from nestor.modules.cognition.tools import ToolFailed

@@ -1,6 +1,7 @@
 """What adapters calling an HTTP API share: which errors a retry may get past, the detail of an error as the
 provider words it, a key never shown in one, a client for JSON APIs, and streamed answers (Server-Sent Events)."""
 
+import contextlib
 import hashlib
 import hmac
 import json
@@ -110,50 +111,110 @@ def identity(base_url: str) -> dict[str, str]:
     return {"User-Agent": USER_AGENT, **ATTRIBUTION.get(host_among(base_url, ATTRIBUTION) or "", {})}
 
 
+class StatusError(ProviderError):
+    """An API answered with an error: `status` is the HTTP status, `reason` the API's own code when it gives one. It
+    is worth retrying when `retryable` says so, or when the API says more (`transient`: a refused token it will
+    refresh)."""
+
+    def __init__(self, provider: str, status: int, reason: str, message: str, *, transient: bool = False) -> None:
+        super().__init__(
+            provider, f"HTTP {status} {reason}".rstrip() + f": {message}", transient=transient or retryable(status)
+        )
+        self.status, self.reason = status, reason
+
+
+def json_object(provider: str, response: httpx.Response) -> dict[str, Any]:
+    """The JSON object an API answered: `{}` for a call that answers nothing (204), a `ProviderError` for anything
+    else than an object."""
+    if not response.content:
+        return {}
+    try:
+        found = response.json()
+    except ValueError:
+        raise ProviderError(provider, "answered with something other than JSON", transient=True) from None
+    if not isinstance(found, dict):
+        raise ProviderError(provider, "answered with an unexpected JSON document", transient=True)
+    return found
+
+
 class HttpApi:
-    """An HTTP API: one client, opened on the first call and kept until `aclose`, so that a call does not pay a new
-    connection. Every failure, the network's or the provider's, becomes a `ProviderError` labelled `provider`, with
-    `secret` redacted."""
+    """An HTTP API: one client, opened on the first call and kept until `aclose` (or one the caller owns, shared by
+    several accounts), so that a call does not pay a new connection. Every failure, the network's or the provider's,
+    becomes a `ProviderError` labelled `provider`, with `secret` redacted; an error answer is a `StatusError` (see
+    `failed`). A subclass adds what each call needs (`authorise`: an account's token)."""
 
     def __init__(
         self,
         provider: str,
-        base_url: str,
+        base_url: str = "",
         *,
         headers: Mapping[str, str] | None = None,
         secret: str | None = None,
         timeout_s: float = 15.0,
         transport: httpx.AsyncBaseTransport | None = None,
+        client: httpx.AsyncClient | None = None,
     ) -> None:
         self._provider, self._base_url, self._secret = provider, base_url, secret
         self._headers = {**identity(base_url), **(headers or {})}
         self._timeout_s, self._transport = timeout_s, transport
-        self._client: httpx.AsyncClient | None = None
+        self._client, self._owned = client, client is None
 
     async def aclose(self) -> None:
         client, self._client = self._client, None
-        if client is not None:
+        if client is not None and self._owned:
             await client.aclose()
+
+    async def authorise(self) -> Mapping[str, str]:
+        """Headers each call carries, worked out when it is made (an access token refreshed meanwhile)."""
+        return {}
 
     async def request(self, method: str, path: str, *, answers: Collection[int] = (), **kwargs: Any) -> httpx.Response:
         """`answers`: error statuses whose body is an answer, not a failure (a route that does not exist)."""
+        async with self.stream(method, path, answers=answers, **kwargs) as response:
+            await response.aread()
+            return response
+
+    async def download(self, path: str, *, max_bytes: int, **kwargs: Any) -> bytes:
+        """A file, read until `max_bytes`: a larger one is refused (`ProviderError`, not transient)."""
+        async with self.stream("GET", path, **kwargs) as response:
+            chunks, size = [], 0
+            async for chunk in response.aiter_bytes():
+                size += len(chunk)
+                if size > max_bytes:
+                    raise self.error(f"{path}: larger than {max_bytes // 1_000_000} MB", transient=False)
+                chunks.append(chunk)
+            return b"".join(chunks)
+
+    @contextlib.asynccontextmanager
+    async def stream(
+        self, method: str, path: str, *, answers: Collection[int] = (), **kwargs: Any
+    ) -> AsyncGenerator[httpx.Response]:
+        """The answer, its body still to read; an error answer (not among `answers`) raises `failed`'s error."""
+        headers = {**(await self.authorise()), **(kwargs.pop("headers", None) or {})}
+        try:
+            async with self._opened().stream(method, path, headers=headers, **kwargs) as response:
+                if response.is_error and response.status_code not in answers:
+                    await response.aread()
+                    raise self.failed(path, response)
+                yield response
+        except httpx.HTTPError as error:
+            raise self.error(f"{path}: {type(error).__name__} {error}".strip(), transient=True) from None
+
+    def failed(self, path: str, response: httpx.Response) -> ProviderError:
+        """The error an error answer is: by default its status and the provider's own words."""
+        message = f"{path}: {detail(response.content)}"
+        redacted = message.replace(self._secret, "[redacted]") if self._secret else message
+        return StatusError(self._provider, response.status_code, "", redacted)
+
+    def error(self, message: str, *, transient: bool) -> ProviderError:
+        return provider_error(self._provider, self._secret, message, transient=transient)
+
+    def _opened(self) -> httpx.AsyncClient:
         if self._client is None:
             self._client = httpx.AsyncClient(
                 base_url=self._base_url, headers=self._headers, timeout=self._timeout_s, transport=self._transport
             )
-        try:
-            response = await self._client.request(method, path, **kwargs)
-        except httpx.HTTPError as error:
-            raise self.error(f"{path}: {type(error).__name__} {error}".strip(), transient=True) from None
-        if response.is_error and response.status_code not in answers:
-            raise self.error(
-                f"{path}: HTTP {response.status_code} {detail(response.content)}",
-                transient=retryable(response.status_code),
-            )
-        return response
-
-    def error(self, message: str, *, transient: bool) -> ProviderError:
-        return provider_error(self._provider, self._secret, message, transient=transient)
+        return self._client
 
 
 class JsonApi(HttpApi):
