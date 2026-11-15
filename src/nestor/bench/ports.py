@@ -19,6 +19,7 @@ from pydantic import BaseModel, ConfigDict
 
 from nestor.bench.types import Case, CaseResult, Dataset, Startup, Summary
 from nestor.core import ContractError
+from nestor.core.i18n import Localizer
 from nestor.modules.channels import SpeechModel, TranscriptionModel
 from nestor.modules.cognition import LanguageModel
 from nestor.modules.cognition.embedding import EmbeddingModel
@@ -50,6 +51,7 @@ class Trial[K: Knobs]:
     speech: SpeechModel | None = None  # the variant's `agent.speech`, when the suite asks for it
     # how starting each went ("voices", "transcription", "speech"): such a model is measured, never replayed
     started: Mapping[str, Startup] = field(default_factory=dict)
+    localizer: Localizer | None = None  # the engine's, for a suite that runs the agent itself
 
     def model(self, role: str) -> LanguageModel:
         try:

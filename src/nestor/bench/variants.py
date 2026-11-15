@@ -56,6 +56,7 @@ class Variant[K: Knobs]:
     voices: SpeakerModel | None = None  # the `voices.embedder`, built but not started, when the suite uses one
     transcription: TranscriptionModel | None = None  # the `agent.transcription`, when the suite uses one
     speech: SpeechModel | None = None  # the `agent.speech`, when the suite uses one
+    localizer: Localizer | None = None  # what the variant was loaded with
     described: Mapping[
         str, Mapping[str, Any]
     ]  # each role's model: its name, type, provider and settings, secrets masked
@@ -127,6 +128,7 @@ def load_variant[K: Knobs](
         voices=chosen("voices", voices, SpeakerModel) if suite.voices and voices else None,
         transcription=chosen("transcription", hearing, TranscriptionModel) if suite.transcription and hearing else None,
         speech=chosen("speech", voicing, SpeechModel) if suite.speech and voicing else None,
+        localizer=localizer,
     )
 
 

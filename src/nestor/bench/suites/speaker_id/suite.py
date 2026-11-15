@@ -35,9 +35,10 @@ from pathlib import Path
 from typing import Any
 
 from nestor.bench.errors import BenchError
+from nestor.bench.journal import Unlogged
 from nestor.bench.metrics import percentile
 from nestor.bench.ports import Knobs, Suite, Trial
-from nestor.bench.suites.speaker_id.store import MemoryVoiceprints, Unlogged
+from nestor.bench.suites.speaker_id.store import MemoryVoiceprints
 from nestor.bench.types import Better, Case, CaseResult, Dataset, Finding, Metric, Summary, Unit
 from nestor.core import PersonId
 from nestor.core.i18n import Message

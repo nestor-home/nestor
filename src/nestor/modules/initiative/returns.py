@@ -86,7 +86,7 @@ class Returns(Component):
         address = await self.courier.deliver(
             person,
             Notification(
-                _task_instruction(started, ended, written=written),
+                task_instruction(started.objective, ended, written=written),
                 about,
                 must_tell=ended.status is not TaskStatus.COMPLETED,  # a failure is always told
                 files=ended.files,
@@ -144,10 +144,11 @@ class Returns(Component):
                 await self.tool_returned(event)
 
 
-def _task_instruction(started: TaskStarted, ended: TaskEnded, *, written: bool) -> str:
+def task_instruction(objective: str, ended: TaskEnded, *, written: bool) -> str:
+    """What the agent reads when a task it delegated ends."""
     outcome = f"Result: {ended.result}" if ended.status is TaskStatus.COMPLETED else f"Failure: {ended.error}"
-    asked = "\nThey asked for it in writing." if written else ""
-    return f"A task you delegated has ended ({ended.status.value}).\nObjective: {started.objective}\n{outcome}{asked}"
+    asked = "\nWrite it to them: they asked to get it as a message." if written else ""
+    return f"A task you delegated has ended ({ended.status.value}).\nObjective: {objective}\n{outcome}{asked}"
 
 
 def _tool_instruction(deferred: ToolDeferred, returned: ToolReturned) -> str:

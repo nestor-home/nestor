@@ -1,29 +1,12 @@
 """Voiceprints kept in memory, for a bench run: a voice is enrolled, learned and scored as in the house, without a
-database to set up; and a journal that keeps nothing, since a run's enrollments are thrown away."""
+database to set up."""
 
 from collections.abc import Collection, Mapping, Sequence
 from dataclasses import replace
 from datetime import datetime
 
-from nestor.core import Event, PersonId
+from nestor.core import PersonId
 from nestor.modules.identity import Learned, Profile, Vector, VoiceprintStore, VoiceSpace
-from nestor.modules.journal import Entry, EventLog, LogQuery
-
-
-class Unlogged(EventLog):
-    """Takes every event and keeps none."""
-
-    name = "unlogged"
-
-    def __init__(self) -> None:
-        self.appended = 0
-
-    async def append(self, event: Event) -> int:
-        self.appended += 1
-        return self.appended
-
-    async def read(self, query: LogQuery) -> list[Entry]:
-        return []
 
 
 class MemoryVoiceprints(VoiceprintStore):

@@ -191,7 +191,7 @@ async def test_a_result_asked_in_writing_goes_where_the_person_reads() -> None:
     async with home.returns():
         pass
     assert home.telegram.sent == [(TELEGRAM, "Ton analyse est finie : tout est vert.")]
-    assert "in writing" in home.model.requests[0].messages[-1].content
+    assert "as a message" in home.model.requests[0].messages[-1].content
 
 
 async def test_nobody_listening_on_voice_means_a_message() -> None:
