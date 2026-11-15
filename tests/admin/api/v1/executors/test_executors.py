@@ -19,6 +19,7 @@ async def test_a_key_is_shown_once_works_until_renewed_or_revoked(tmp_path: Path
 
         first = (await api.post(f"/api/v1/executors/{name}/key")).json()
         assert first["key"].startswith("nstx_") and first["url"] == "https://nestor.example/mcp"
+        assert first["setup"] is None, "Nestor launches this one: nothing to paste"
         assert keys.caller(first["key"]) == name
         [executor] = (await api.get("/api/v1/executors")).json()["executors"]
         assert executor["key"]["issued_at"] and executor["key"]["last_used_at"] is None

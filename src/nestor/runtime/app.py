@@ -225,16 +225,11 @@ class Nestor:
         self.blobs = FileBlobStore(config.data_dir / BLOBS)
         # executors reach Nestor's MCP server where the admin is: its public address, and keys kept in the vault
         public_url = config.admin.public_url if config.admin else None
-        self.executor_keys = (
-            ExecutorKeys(
-                self.journal, self.vault, f"{public_url.rstrip('/')}{MCP_PATH}", [e.name for e in self.executors]
-            )
-            if public_url and self.vault is not None
-            else None
-        )
-        if self.executor_keys is None and (
-            wanting := [e.name for e in self.executors if e.nestor_tools is not NestorTools.NONE]
-        ):
+        self.executor_keys: ExecutorKeys | None = None
+        if public_url and self.vault is not None:
+            url = f"{public_url.rstrip('/')}{MCP_PATH}"
+            self.executor_keys = ExecutorKeys(self.journal, self.vault, url, [e.name for e in self.executors])
+        elif wanting := [e.name for e in self.executors if e.nestor_tools is not NestorTools.NONE]:
             log.warning(
                 "%s would use Nestor's tools, which need the admin's public_url and NESTOR_SECRET_KEY: they work "
                 "without them",

@@ -59,7 +59,7 @@ def create_app(nestor: Nestor, settings: AdminSettings) -> FastAPI:
 
     app.state.executors = None
     if nestor.executor_keys is not None:  # its own key authenticates each call, not an admin session
-        app.state.executors = executors = ExecutorServer(nestor)
+        app.state.executors = executors = ExecutorServer(nestor, nestor.executor_keys)
         app.router.routes.append(Route(MCP_PATH, endpoint=executors.endpoint, methods=["GET", "POST", "DELETE"]))
 
     app.include_router(front.router)  # last: it answers every GET left

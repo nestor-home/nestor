@@ -17,12 +17,14 @@ class ScriptedExecutor(Executor):
         self, result: str = "done", *, duration_s: float = 0.0, error: str | None = None, confirms_stop: bool = True
     ):
         self._result, self._duration_s, self._error, self._confirms_stop = result, duration_s, error, confirms_stop
-        self.objectives: list[str] = []
         self.assignments: list[Assignment] = []  # what it was given, capability and access included
         self.cancelled = 0
 
+    @property
+    def objectives(self) -> list[str]:
+        return [a.objective for a in self.assignments]
+
     async def run(self, assignment: Assignment, progress: Progress) -> Outcome:
-        self.objectives.append(assignment.objective)
         self.assignments.append(assignment)
         progress("started")
         try:
@@ -80,8 +82,7 @@ class ExecutorContract:
 
 @dataclass(slots=True)
 class RemoteRun:
-    objective: str
-    assignment: Assignment | None = None  # what it was given, capability and access included
+    assignment: Assignment  # what it was given, capability and access included
     done: asyncio.Event = field(default_factory=asyncio.Event)
     outcome: Outcome | None = None
     follows: int = 0
@@ -125,7 +126,7 @@ class ScriptedRemoteExecutor(RemoteExecutor):
         if self._refuses:
             raise ProviderError(self.name, "objective refused", transient=False)
         ref = new_id()[:8]
-        self.remote.runs[ref] = RemoteRun(assignment.objective, assignment)
+        self.remote.runs[ref] = RemoteRun(assignment)
         if self._duration_s is not None:
             timer = asyncio.create_task(self._complete(ref, self._duration_s))
             self._timers.add(timer)

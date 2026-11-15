@@ -24,6 +24,7 @@ if TYPE_CHECKING:  # connectors import the agent's tools, which import delegatio
 KEY = "nstx_"  # an executor's key
 TASK = "nstt_"  # a task's capability
 VAULT = "executor:{}"  # the vault's owner of an executor's key
+USED_SEEN = 1_000  # the latest calls read back at start, for when each key was last used
 
 
 def digest(secret: str) -> str:
@@ -45,11 +46,18 @@ class ExecutorKeys(Component):
         self._vault = vault
         self._executors = tuple(executors)
         self._keys: dict[str, str] = {}  # by executor, decrypted once at start
+        self._used: dict[str, datetime] = {}  # when each last called the server
 
     async def start(self) -> None:
         for executor in self._executors:
             if found := await self._vault.get(VAULT.format(executor), "key"):
                 self._keys[executor] = found["key"]
+        for call in await self.journal.history(ExecutorCalled, newest_first=True, limit=USED_SEEN):
+            self._used.setdefault(call.executor, call.at)
+
+    def used(self, executor: str, at: datetime) -> None:
+        """`executor` called the server: what `status` says of its key."""
+        self._used[executor] = at
 
     async def issue(self, executor: str, *, by: str | None = None) -> str:
         """A new key for `executor`, replacing its last; shown once to whoever asked."""
@@ -83,16 +91,14 @@ class ExecutorKeys(Component):
         return NestorAccess(url=self.url, key=key)
 
     async def status(self) -> Mapping[str, tuple[datetime, datetime | None]]:
-        """By executor with a key: when it was made, and when it was last used."""
-        events = await self.journal.history(ExecutorKeyIssued, ExecutorKeyRevoked)
+        """By executor with a key: when it was made, and when it was last used since."""
         issued: dict[str, datetime] = {}
-        for event in events:
+        for event in await self.journal.history(ExecutorKeyIssued, ExecutorKeyRevoked):
             if isinstance(event, ExecutorKeyIssued):
                 issued[event.executor] = event.at
             else:
                 issued.pop(event.executor, None)
-        used: dict[str, datetime] = {}
-        for call in await self.journal.history(ExecutorCalled, since=min(issued.values(), default=None)):
-            if call.executor in issued and call.at >= issued[call.executor]:
-                used[call.executor] = call.at
-        return {executor: (at, used.get(executor)) for executor, at in issued.items()}
+        return {
+            executor: (at, used if (used := self._used.get(executor)) and used >= at else None)
+            for executor, at in issued.items()
+        }

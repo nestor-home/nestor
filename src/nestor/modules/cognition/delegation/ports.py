@@ -4,7 +4,7 @@ import asyncio
 from abc import ABC, abstractmethod
 
 from nestor.core import Capabilities, Component, ProviderError
-from nestor.modules.cognition.delegation.types import RESUME, Assignment, NestorTools, Outcome, Progress
+from nestor.modules.cognition.delegation.types import RESUME, Assignment, NestorAccess, NestorTools, Outcome, Progress
 
 
 class Executor(Component, ABC):
@@ -22,6 +22,11 @@ class Executor(Component, ABC):
 
     description: str = ""
     nestor_tools: NestorTools = NestorTools.NONE  # how it reaches Nestor's MCP server while it works
+
+    def setup(self, access: NestorAccess) -> str | None:
+        """What to add to its own configuration to reach Nestor's MCP server with this key, for an executor that
+        declares the server itself (`NestorTools.CONFIGURED`); `None` when there is nothing to add."""
+        return None
 
     @abstractmethod
     async def run(self, assignment: Assignment, progress: Progress) -> Outcome:

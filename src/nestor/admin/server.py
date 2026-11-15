@@ -23,7 +23,7 @@ class AdminServer(Component):
         self.app = create_app(nestor, settings)
         self.token_file = token_path(nestor.config.data_dir)
         self._server: EmbeddedServer | None = None
-        self._executors = contextlib.AsyncExitStack()  # the MCP server's sessions, while it serves
+        self._executors: contextlib.AsyncExitStack | None = None  # the MCP server, while it serves
 
     @classmethod
     def from_config(cls, nestor: Nestor) -> "AdminServer":
@@ -48,8 +48,8 @@ class AdminServer(Component):
         admin.closing.clear()
         admin.api_token = issue_token(self.token_file)
         if (executors := self.app.state.executors) is not None:
-            self._executors = contextlib.AsyncExitStack()  # the SDK's session manager runs once per stack
-            await self._executors.enter_async_context(executors.sessions.run())
+            self._executors = contextlib.AsyncExitStack()
+            await self._executors.enter_async_context(executors.running())
         if not admin.accounts.owners():
             log.warning("no account can sign in to the admin yet: run `nestor accounts create-owner`")
         self._server = server = EmbeddedServer(
@@ -73,6 +73,7 @@ class AdminServer(Component):
             return
         self.app.state.admin.closing.set()  # live streams end, so that the server can stop
         await server.stop()
-        await self._executors.aclose()
+        if self._executors is not None:
+            await self._executors.aclose()
         self.app.state.admin.api_token = None
         self.token_file.unlink(missing_ok=True)

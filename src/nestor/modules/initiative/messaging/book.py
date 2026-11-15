@@ -1,6 +1,8 @@
 """The messages the agent was asked to pass on, rebuilt from the journal: which wait to be delivered,
 which questions are still open."""
 
+from enum import StrEnum
+
 from nestor.core import Component, PersonId, new_id
 from nestor.modules.channels import Address, Exchange
 from nestor.modules.initiative.messaging.events import (
@@ -10,6 +12,12 @@ from nestor.modules.initiative.messaging.events import (
     QuestionAnswered,
 )
 from nestor.modules.journal import Journal
+
+
+class QuestionState(StrEnum):
+    WAITING = "waiting"  # on its way, or asked and not answered yet
+    ANSWERED = "answered"
+    UNDELIVERED = "undelivered"  # closed without an answer: it could not reach them
 
 
 class MessageBook(Component):
@@ -68,6 +76,12 @@ class MessageBook(Component):
 
     def answer_to(self, message_id: str) -> str | None:
         return self._answers.get(message_id)
+
+    def state(self, message_id: str) -> QuestionState:
+        """Where a question stands: answered (`answer_to`), closed without an answer, or waiting."""
+        if message_id in self._answers:
+            return QuestionState.ANSWERED
+        return QuestionState.UNDELIVERED if message_id in self._answered else QuestionState.WAITING
 
     async def delivered(self, message_id: str, address: Address) -> None:
         await self._publish(

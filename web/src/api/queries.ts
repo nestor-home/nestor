@@ -93,8 +93,8 @@ export const journalEventQuery = (position: number) =>
 
 export const systemQuery = queryOptions({ queryKey: keys.system, queryFn: api.system, refetchInterval: 15_000 });
 
-/** The feed is read by Nestor once a day: asking hourly is plenty. */
 export const executorsQuery = queryOptions({ queryKey: keys.executors, queryFn: api.executors });
+/** The feed is read by Nestor once a day: asking hourly is plenty. */
 export const updatesQuery = queryOptions({
   queryKey: keys.updates,
   queryFn: api.updates,

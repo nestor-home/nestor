@@ -8,7 +8,14 @@ import httpx
 from nestor.adapters.executors.common import INSTRUCTIONS, described
 from nestor.adapters.executors.hermes.runs import UnexpectedReply, decode, payload, run_outcome, run_path, run_step
 from nestor.core import ContractError, ProviderError
-from nestor.modules.cognition.delegation import Assignment, NestorTools, Outcome, Progress, RemoteExecutor
+from nestor.modules.cognition.delegation import Assignment, NestorAccess, NestorTools, Outcome, Progress, RemoteExecutor
+
+PROFILE = """mcp_servers:
+  nestor:
+    url: "{url}"
+    headers:
+      Authorization: "Bearer {key}"
+"""
 
 
 class HermesExecutor(RemoteExecutor):
@@ -57,6 +64,10 @@ class HermesExecutor(RemoteExecutor):
         client, self._client = self._client, None
         if client is not None:
             await client.aclose()
+
+    def setup(self, access: NestorAccess) -> str:
+        """The `mcp_servers` entry of the Hermes profile's `config.yaml`."""
+        return PROFILE.format(url=access.url, key=access.key)
 
     async def submit(self, assignment: Assignment) -> str:
         body = {"model": self._model, "input": assignment.brief(), "instructions": self._instructions}

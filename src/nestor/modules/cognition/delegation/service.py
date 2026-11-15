@@ -9,7 +9,6 @@ work is stopped.
 
 import asyncio
 import contextlib
-import hmac
 import logging
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
@@ -18,6 +17,7 @@ from datetime import datetime
 from nestor.core import Component, ContractError, Event, PersonId, new_id, utc_now
 from nestor.modules.channels import Address, Attachment, Exchange
 from nestor.modules.cognition.delegation.events import (
+    ExecutorCalled,
     TaskAttached,
     TaskCancelRequested,
     TaskEnded,
@@ -85,9 +85,10 @@ class TaskManager(Component):
     ) -> None:
         """`blobs` keeps the files executors make; without it they are left out. `keys`: executors reach Nestor's
         MCP server for their tasks; without them, none does."""
-        self.journal, self._blobs, self.keys = journal, blobs, keys
+        self.journal, self._blobs, self._keys = journal, blobs, keys
         self.executors: Mapping[str, Executor] = {e.name: e for e in executors}
         self.tasks: dict[str, Task] = {}
+        self._capable: dict[str, Task] = {}  # by the digest of their capability
         self._cancel_timeout_s = cancel_timeout_s
         self._writes: asyncio.Queue[Event] = asyncio.Queue()
         self._writer: asyncio.Task[None] | None = None
@@ -107,6 +108,8 @@ class TaskManager(Component):
         for event in await self.journal.history(TaskStarted):
             task = self.tasks[event.task_id] = _task(event, attached.get(event.task_id))
             task.files = added.get(task.id, [])
+            if task.capability:
+                self._capable[task.capability] = task
             if done := ended.get(task.id):
                 task.outcome = Outcome(done.status, done.result, done.error)
                 continue
@@ -162,17 +165,27 @@ class TaskManager(Component):
         )
         await self.journal.publish(event)
         task = self.tasks[event.task_id] = _task(event, None)
+        if task.capability:
+            self._capable[task.capability] = task
         task.job = asyncio.create_task(self._run(task, chosen, assignment), name=f"task {task.id}")
         return task
 
-    def assigned(self, executor: str, task: str) -> Task | None:
-        """The running task of `executor` whose capability `task` is; every running task is compared, in constant
-        time."""
-        wanted, found = digest(task), None
-        for candidate in self.running():
-            known = candidate.capability or ""
-            if hmac.compare_digest(known.encode(), wanted.encode()) and candidate.executor == executor:
-                found = candidate
+    async def admit(self, executor: str, capability: str, tool: str) -> Task | None:
+        """The running task of `executor` that `capability` is for, `None` for anything else, whatever is wrong;
+        journaled as a call of `tool` either way (`ExecutorCalled`)."""
+        task = self._capable.get(digest(capability))
+        found = task if task and task.executor == executor and task.status is TaskStatus.RUNNING else None
+        call = ExecutorCalled(
+            source=self.name,
+            session=found.origin.session if found else None,
+            executor=executor,
+            task_id=found.id if found else None,
+            tool=tool,
+            ok=found is not None,
+        )
+        await self.journal.publish(call)
+        if self._keys is not None:
+            self._keys.used(executor, call.at)
         return found
 
     def report(self, task: Task, step: str) -> None:
@@ -193,10 +206,10 @@ class TaskManager(Component):
 
     async def _assignment(self, objective: str, executor: Executor) -> Assignment:
         """What `executor` is given: with Nestor's MCP server when it reaches it, a capability for the task."""
-        if self.keys is None or executor.nestor_tools is NestorTools.NONE:
+        if self._keys is None or executor.nestor_tools is NestorTools.NONE:
             return Assignment(objective)
         passed = executor.nestor_tools is NestorTools.PASSED
-        return Assignment(objective, capability(), await self.keys.access(executor.name) if passed else None)
+        return Assignment(objective, capability(), await self._keys.access(executor.name) if passed else None)
 
     async def cancel(self, task_id: str) -> Outcome:
         """Ask the executor to stop; the outcome says whether the stop was confirmed."""

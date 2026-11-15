@@ -90,3 +90,4 @@ sys-executor-key-once = Montrée seulement maintenant : Nestor la garde chiffr
 sys-executor-key-label = la clé
 sys-executor-passed = Nestor la passe à { $name } à chaque tâche : rien à coller.
 sys-executor-profile = Ajoutez ceci à la configuration de { $name } (le config.yaml d'un profil Hermes), puis mettez nestor_mcp: true sur cet exécutant dans la configuration de Nestor.
+sys-executor-setup-label = ce qu'il faut ajouter

@@ -90,3 +90,4 @@ sys-executor-key-once = Shown only now: Nestor keeps it encrypted and never show
 sys-executor-key-label = the key
 sys-executor-passed = Nestor hands it to { $name } with each task: nothing to paste.
 sys-executor-profile = Add this to the configuration of { $name } (a Hermes profile's config.yaml), then set nestor_mcp: true on this executor in Nestor's configuration.
+sys-executor-setup-label = what to add

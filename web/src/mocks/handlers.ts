@@ -738,7 +738,11 @@ export const handlers = [
     executor.key = { issued_at: new Date().toISOString(), last_used_at: null };
     save();
     const key = `nstx_${crypto.randomUUID().replaceAll("-", "")}`;
-    return json({ key, url: db.executors.url } satisfies In<"IssuedKeyOut">);
+    const setup =
+      executor.nestor_tools === "configured"
+        ? `mcp_servers:\n  nestor:\n    url: "${db.executors.url}"\n    headers:\n      Authorization: "Bearer ${key}"\n`
+        : null;
+    return json({ key, url: db.executors.url, setup } satisfies In<"IssuedKeyOut">);
   }),
 
   http.delete(`${API}/executors/:name/key`, ({ request, params }) => {

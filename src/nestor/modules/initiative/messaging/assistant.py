@@ -15,7 +15,7 @@ from nestor.modules.conversation import (
     TurnContext,
 )
 from nestor.modules.household import Household, Person
-from nestor.modules.initiative.messaging.book import MessageBook
+from nestor.modules.initiative.messaging.book import MessageBook, QuestionState
 
 HOW_TO_MESSAGE = (
     'To tell someone of the household something, now or for someone else ("ask her what she wants for '
@@ -118,8 +118,11 @@ class MessageTools(ToolProvider, ContextProvider, MentionSource):
     async def _pass_answer(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
         """Only the person a task asked answers it."""
         question = self.book.get(str(arguments["question"]))
-        open_ = question is not None and any(q.message_id == question.message_id for q in self.book.open_questions())
-        if question is None or question.task is None or not open_:
+        if (
+            question is None
+            or question.task is None
+            or self.book.state(question.message_id) is not QuestionState.WAITING
+        ):
             raise ToolFailed(f"no open question {arguments['question']} from a task")
         if context.person != question.to:
             raise ToolFailed("only the person it was asked to answers it")

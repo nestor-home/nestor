@@ -2,7 +2,6 @@
 
 import asyncio
 import json
-import os
 import shutil
 import tempfile
 import uuid
@@ -27,7 +26,6 @@ from nestor.modules.cognition.delegation import Assignment, Executor, NestorAcce
 
 
 class ClaudeCodeExecutor(Executor):
-    nestor_tools = NestorTools.PASSED
     """Delegates objectives to Claude Code in its working directory.
 
     `description` states what this Claude Code can really do with the tools it is allowed: the assistant promises
@@ -36,6 +34,7 @@ class ClaudeCodeExecutor(Executor):
 
     name = "claude-code"
     brand = "claude-code"
+    nestor_tools = NestorTools.PASSED
 
     def __init__(
         self,
@@ -102,7 +101,7 @@ class ClaudeCodeExecutor(Executor):
         report = Report.of(result.get("structured_output") or result.get("result") or "")
         return await report.outcome(str(self._cwd), self._read)
 
-    def _arguments(self, session: str, servers: Path | None = None) -> list[str]:
+    def _arguments(self, session: str, servers: Path | None) -> list[str]:
         arguments = [
             "-p",
             "--output-format",
@@ -119,9 +118,10 @@ class ClaudeCodeExecutor(Executor):
         ]
         if self._model:
             arguments += ["--model", self._model]
-        allowed = (*self._allowed, *((NESTOR_TOOLS,) if servers else ()))
+        allowed = list(self._allowed)
         if servers:
             arguments += ["--mcp-config", str(servers)]
+            allowed.append(NESTOR_TOOLS)
         if allowed:
             arguments += ["--allowedTools", ",".join(allowed)]
         if self._disallowed:
@@ -164,9 +164,8 @@ NESTOR_TOOLS = "mcp__nestor"  # every tool of the `nestor` server
 
 def _mcp_config(access: NestorAccess, folder: Path) -> Path:
     """Nestor's MCP server for one session, in a file only this user reads: its key stays off the command line."""
-    path = folder / "mcp.json"
+    path = folder / "mcp.json"  # the folder is the session's own, readable by this user only
     server = {"type": "http", "url": access.url, "headers": {"Authorization": f"Bearer {access.key}"}}
-    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-    with os.fdopen(descriptor, "w") as file:
-        json.dump({"mcpServers": {"nestor": server}}, file)
+    path.write_text(json.dumps({"mcpServers": {"nestor": server}}))
+    path.chmod(0o600)
     return path

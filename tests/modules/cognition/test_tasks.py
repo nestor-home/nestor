@@ -309,19 +309,19 @@ async def test_a_task_for_an_executor_that_reaches_nestor_gets_a_capability_good
         task = await tasks.delegate("Corrige le test", origin=VOICE, executor="codex")
         other = await tasks.delegate("Cherche un vol", origin=VOICE, executor="hermes")
         await asyncio.sleep(0.01)
-        [given] = [r.assignment for r in remote.runs.values() if r.assignment]
+        [given] = [r.assignment for r in remote.runs.values()]
         assert given.task and given.task.startswith("nstt_") and given.access is not None
         assert given.access.url == "https://nestor.example/mcp" and keys.caller(given.access.key) == "codex"
         assert given.task in given.brief() and "task_brief" in given.brief()
-        assert [r.assignment.task for r in plain.remote.runs.values() if r.assignment] == [None], "it cannot reach"
-        assert tasks.assigned("codex", given.task) is task
-        assert tasks.assigned("hermes", given.task) is None, "another executor's task"
-        assert tasks.assigned("codex", "nstt_guessed") is None
+        assert [r.assignment.task for r in plain.remote.runs.values()] == [None], "it cannot reach"
+        assert await tasks.admit("codex", given.task, "task_brief") is task
+        assert await tasks.admit("hermes", given.task, "task_brief") is None, "another executor's task"
+        assert await tasks.admit("codex", "nstt_guessed", "task_brief") is None
         [started] = [e for e in await journal.history(TaskStarted) if e.task_id == task.id]
         assert started.capability and given.task not in str(started.to_record()), "only its digest is journaled"
         remote.finish(next(iter(remote.runs)), Outcome.completed("ok"))
         await tasks.wait(task.id)
-        assert tasks.assigned("codex", given.task) is None, "it ended"
+        assert await tasks.admit("codex", given.task, "task_brief") is None, "it ended"
         await tasks.cancel(other.id)
 
 
@@ -333,11 +333,11 @@ async def test_a_capability_still_works_for_a_remote_task_followed_again_after_a
         task = await tasks.delegate("Corrige le test", origin=VOICE)
         await asyncio.sleep(0.01)
     [run] = remote.runs.values()
-    assert run.assignment and run.assignment.task
+    assert run.assignment.task
     again = Reaching(remote, duration_s=None)
     again.name = "codex"
     async with TaskManager(journal, [again], keys=await keys_for(journal, "codex")) as restarted:
-        found = restarted.assigned("codex", run.assignment.task)
+        found = await restarted.admit("codex", run.assignment.task, "task_brief")
         assert found is not None and found.id == task.id
         remote.finish(next(iter(remote.runs)), Outcome.completed("ok"))
         await restarted.wait(task.id)

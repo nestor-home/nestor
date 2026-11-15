@@ -12,7 +12,7 @@ from nestor.admin.api.v1.executors.schemas import ExecutorOut, ExecutorsOut, Iss
 from nestor.admin.api.v1.security import Caller, allowed
 from nestor.admin.state import state
 from nestor.modules.accounts import Scope
-from nestor.modules.cognition.delegation import ExecutorKeys
+from nestor.modules.cognition.delegation import ExecutorKeys, NestorAccess
 
 router = APIRouter(tags=["executors"])
 Reader = Annotated[Caller, Depends(allowed(Scope.SYSTEM_READ))]
@@ -31,7 +31,9 @@ async def list_executors(request: Request, caller: Reader) -> ExecutorsOut:
 async def issue_executor_key(request: Request, caller: Manager, name: str) -> IssuedKeyOut:
     """A new key for the executor, replacing its last: shown only in this answer."""
     keys = _keys(request, name)
-    return IssuedKeyOut(key=await keys.issue(name, by=caller.account_id), url=keys.url)
+    key = await keys.issue(name, by=caller.account_id)
+    executor = next(e for e in state(request).nestor.executors if e.name == name)
+    return IssuedKeyOut(key=key, url=keys.url, setup=executor.setup(NestorAccess(url=keys.url, key=key)))
 
 
 @router.delete("/executors/{name}/key", status_code=204)

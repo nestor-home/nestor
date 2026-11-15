@@ -2447,6 +2447,8 @@ export interface components {
             key: string;
             /** Url */
             url: string;
+            /** Setup */
+            setup: string | null;
         };
         /** JournalEntryOut */
         JournalEntryOut: {

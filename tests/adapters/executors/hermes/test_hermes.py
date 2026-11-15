@@ -14,7 +14,7 @@ import pytest
 from nestor.adapters.executors.hermes import HermesExecutor, HermesSettings, plugin
 from nestor.core import ContractError, ProviderError
 from nestor.core.i18n import Locale
-from nestor.modules.cognition.delegation import Assignment, NestorTools, Progress, TaskStatus
+from nestor.modules.cognition.delegation import Assignment, NestorAccess, NestorTools, Progress, TaskStatus
 from nestor.runtime import Services
 from nestor.testing.cognition import RemoteExecutorContract
 from nestor.testing.i18n import EchoLocalizer
@@ -179,6 +179,8 @@ async def test_a_profile_with_nestor_s_tools_gets_the_task_s_capability_in_its_o
         assert (reaching.nestor_tools, plain.nestor_tools) == (NestorTools.CONFIGURED, NestorTools.NONE)
         ref = await reaching.submit(Assignment("Cherche un vol.", "nstt_task"))
     assert server.runs[ref].objective.startswith("Cherche un vol.") and 'task="nstt_task"' in server.runs[ref].objective
+    entry = reaching.setup(NestorAccess(url="https://nestor.example/mcp", key="nstx_k"))
+    assert 'url: "https://nestor.example/mcp"' in entry and 'Authorization: "Bearer nstx_k"' in entry
 
 
 @pytest.mark.parametrize(("status", "transient"), [(400, False), (401, False), (429, True), (503, True)])

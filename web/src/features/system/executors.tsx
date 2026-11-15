@@ -3,7 +3,7 @@ import { useState } from "react";
 import { api, type ExecutorInfo, executorsQuery, type IssuedKey, keys } from "@/api";
 import { Ago } from "@/components/ago";
 import { Confirm } from "@/components/confirm";
-import { CopyField, useCopy } from "@/components/copy-field";
+import { CopyButton, CopyField } from "@/components/copy-field";
 import { FormDialog } from "@/components/overlay-form";
 import { RowList, Section } from "@/components/page";
 import { Button } from "@/components/ui/button";
@@ -36,6 +36,10 @@ export function ExecutorsSection() {
   );
 }
 
+/** Making a first key, or renewing it: the same action, said otherwise. */
+const MAKE = { label: "sys-executor-key-make", title: "sys-executor-make-title", body: "sys-executor-make-body" };
+const RENEW = { label: "sys-executor-key-renew", title: "sys-executor-renew-title", body: "sys-executor-renew-body" };
+
 function ExecutorRow({ executor, manage }: { executor: ExecutorInfo; manage: boolean }) {
   const t = useT();
   const queryClient = useQueryClient();
@@ -51,6 +55,7 @@ function ExecutorRow({ executor, manage }: { executor: ExecutorInfo; manage: boo
   const revoke = useMutation({ mutationFn: () => api.revokeExecutorKey(executor.name), onSuccess: refresh });
   const brand = brandOf(executor.name);
   const { key } = executor;
+  const making = key ? RENEW : MAKE;
   return (
     <li className="grid grid-cols-[1.5rem_minmax(0,1fr)] items-start gap-x-4 gap-y-2 px-5 py-3 sm:grid-cols-[1.5rem_minmax(0,1fr)_auto]">
       {brand ? <BrandMark brand={brand} className="mt-0.5 size-4.5 text-ink" /> : <span />}
@@ -80,18 +85,15 @@ function ExecutorRow({ executor, manage }: { executor: ExecutorInfo; manage: boo
           <Confirm
             trigger={
               <Button size="sm" variant={key ? "secondary" : "accent"}>
-                {t(key ? "sys-executor-key-renew" : "sys-executor-key-make")}
+                {t(making.label)}
               </Button>
             }
-            title={t(key ? "sys-executor-renew-title" : "sys-executor-make-title", { name: executor.name })}
-            confirm={t(key ? "sys-executor-key-renew" : "sys-executor-key-make")}
+            title={t(making.title, { name: executor.name })}
+            confirm={t(making.label)}
             tone={key ? "destructive" : "accent"}
             onConfirm={() => issue.mutateAsync()}
           >
-            {t(key ? "sys-executor-renew-body" : "sys-executor-make-body", {
-              name: executor.name,
-              tools: executor.nestor_tools,
-            })}
+            {t(making.body, { name: executor.name, tools: executor.nestor_tools })}
           </Confirm>
           {key ? (
             <Confirm
@@ -122,26 +124,26 @@ function ExecutorRow({ executor, manage }: { executor: ExecutorInfo; manage: boo
   );
 }
 
-/** The key just made, once; for an executor configured by hand, what to paste in its configuration. */
+/** The key just made, once; for an executor configured by hand, what to add to its configuration. */
 function IssuedKeyView({ executor, issued, close }: { executor: ExecutorInfo; issued: IssuedKey; close: () => void }) {
   const t = useT();
-  const snippet = `mcp_servers:\n  nestor:\n    url: "${issued.url}"\n    headers:\n      Authorization: "Bearer ${issued.key}"`;
-  const { copied, copy } = useCopy(snippet);
   return (
     <div className="grid gap-4">
       <CopyField value={issued.key} label={t("sys-executor-key-label")} />
-      {executor.nestor_tools === "passed" ? (
-        <p className="text-[0.85rem] text-ink-muted">{t("sys-executor-passed", { name: executor.name })}</p>
-      ) : (
+      {issued.setup ? (
         <div className="grid gap-2">
           <p className="text-[0.85rem] text-ink-muted">{t("sys-executor-profile", { name: executor.name })}</p>
-          <pre className="overflow-x-auto rounded-md border border-rule-strong bg-paper-sunken px-3 py-2 font-mono text-[0.75rem] text-ink">
-            {snippet}
-          </pre>
-          <Button variant="secondary" size="sm" className="justify-self-start" onClick={copy}>
-            {copied ? t("action-copied") : t("action-copy")}
-          </Button>
+          <div className="relative">
+            <pre className="overflow-x-auto rounded-md border border-rule-strong bg-paper-sunken px-3 py-2 pr-20 font-mono text-[0.75rem] text-ink">
+              {issued.setup}
+            </pre>
+            <div className="absolute top-1.5 right-1.5">
+              <CopyButton value={issued.setup} label={t("sys-executor-setup-label")} />
+            </div>
+          </div>
         </div>
+      ) : (
+        <p className="text-[0.85rem] text-ink-muted">{t("sys-executor-passed", { name: executor.name })}</p>
       )}
       <Button className="justify-self-end" onClick={close}>
         {t("action-close")}

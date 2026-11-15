@@ -340,7 +340,7 @@ class EventDescriber:
             ),
             ExecutorCalled: lambda e: self._line(
                 e,
-                Message.of("journal-executor-called", executor=e.executor or "?", tool=e.tool, ok=_yes(e.ok)),
+                Message.of("journal-executor-called", executor=e.executor, tool=e.tool, ok=_yes(e.ok)),
                 detail=e.task_id or "",
                 tone=Tone.NORMAL if e.ok else Tone.WARNING,
             ),

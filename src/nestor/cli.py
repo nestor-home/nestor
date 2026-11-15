@@ -329,22 +329,15 @@ def _satellites(args: argparse.Namespace, environ: dict[str, str]) -> int:
     return 0
 
 
-HERMES_PROFILE = """For a Hermes profile, add to its config.yaml:
-mcp_servers:
-  nestor:
-    url: "{url}"
-    headers:
-      Authorization: "Bearer {key}"
-then set `nestor_mcp: true` on this executor in Nestor's configuration."""
-
-
 def _executors(args: argparse.Namespace, environ: dict[str, str]) -> int:
     config = load_config(args.config, environ)
     if args.action == "key":
         issued = _call(config, "POST", f"/api/v1/executors/{args.name}/key")
         print(f"key for {args.name} (shown once, keep it secret): {issued['key']}")
         print(f"Nestor's MCP server: {issued['url']}")
-        print(HERMES_PROFILE.format(url=issued["url"], key=issued["key"]))
+        if issued.get("setup"):
+            print(f"Add to {args.name}'s own configuration, then set `nestor_mcp: true` on it in Nestor's:")
+            print(issued["setup"])
     else:
         _call(config, "DELETE", f"/api/v1/executors/{args.name}/key")
         print(f"revoked the key of {args.name}")

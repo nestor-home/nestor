@@ -39,3 +39,4 @@ class IssuedKeyOut(BaseModel):
 
     key: str
     url: str
+    setup: str | None  # what to add to the executor's own configuration, when it declares the server itself

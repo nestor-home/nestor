@@ -80,7 +80,7 @@ class ExecutorCalled(Event, event_type="executor.called"):
     """An executor called a tool of Nestor's MCP server for one of its tasks; what the tool did is journaled by its
     module."""
 
-    executor: str  # empty when the key matched none
+    executor: str
     task_id: str | None  # None when the call matched no running task of that executor
     tool: str
     ok: bool

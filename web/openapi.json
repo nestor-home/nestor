@@ -13671,12 +13671,24 @@
           "url": {
             "type": "string",
             "title": "Url"
+          },
+          "setup": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Setup"
           }
         },
         "type": "object",
         "required": [
           "key",
-          "url"
+          "url",
+          "setup"
         ],
         "title": "IssuedKeyOut",
         "description": "Shown once: Nestor keeps it only encrypted, to hand to the executors it launches."

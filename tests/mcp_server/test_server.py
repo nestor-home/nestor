@@ -66,9 +66,9 @@ class World:
     remote: FakeRemote
 
     def given(self, task_id: str) -> Assignment:
-        run = next(r for r in self.remote.runs.values() if r.assignment and r.objective == self.objective(task_id))
-        assert run.assignment is not None
-        return run.assignment
+        return next(
+            r.assignment for r in self.remote.runs.values() if r.assignment.objective == self.objective(task_id)
+        )
 
     def objective(self, task_id: str) -> str:
         return self.nestor.tasks.tasks[task_id].objective
@@ -93,11 +93,12 @@ async def world(tmp_path: Path) -> AsyncIterator[World]:
     environ = {"NESTOR_SECRET_KEY": "k" * 43}
     nestor = Nestor(parse_config(CONFIG.format(data_dir=tmp_path), environ), registry, environ=environ)
     async with nestor:
-        server = ExecutorServer(nestor)
+        assert nestor.executor_keys is not None
+        server = ExecutorServer(nestor, nestor.executor_keys)
 
         @asynccontextmanager
         async def lifespan(app: Starlette) -> AsyncGenerator[None]:
-            async with server.sessions.run():
+            async with server.running():
                 yield
 
         served = Served(lambda: Starlette(routes=[Route("/mcp", endpoint=server.endpoint)], lifespan=lifespan))
