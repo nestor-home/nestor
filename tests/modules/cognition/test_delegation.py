@@ -4,7 +4,7 @@ import asyncio
 
 import pytest
 
-from nestor.modules.cognition import Executor, Outcome, Progress
+from nestor.modules.cognition.delegation import Assignment, Executor, Outcome, Progress
 from nestor.testing.cognition import ExecutorContract, ScriptedExecutor
 
 
@@ -22,7 +22,7 @@ class TestScriptedExecutor(ExecutorContract):
 class StubbornExecutor(Executor):
     """Ignores the stop request and finishes its work anyway."""
 
-    async def run(self, objective: str, progress: Progress) -> Outcome:
+    async def run(self, assignment: Assignment, progress: Progress) -> Outcome:
         try:
             await asyncio.sleep(10)
         except asyncio.CancelledError:
@@ -33,13 +33,13 @@ class StubbornExecutor(Executor):
 class LocalExecutor(Executor):
     """Works locally: letting the cancellation propagate is a valid way to stop."""
 
-    async def run(self, objective: str, progress: Progress) -> Outcome:
+    async def run(self, assignment: Assignment, progress: Progress) -> Outcome:
         await asyncio.sleep(10)
         return Outcome.completed("done")
 
 
 class RaisingExecutor(Executor):
-    async def run(self, objective: str, progress: Progress) -> Outcome:
+    async def run(self, assignment: Assignment, progress: Progress) -> Outcome:
         raise RuntimeError("remote agent crashed")
 
 

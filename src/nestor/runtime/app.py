@@ -35,6 +35,7 @@ from nestor.modules.accounts import Accounts
 from nestor.modules.activity import ActivityMonitor
 from nestor.modules.channels import Channel, ChatChannel, SpeechModel, TranscriptionModel
 from nestor.modules.cognition import Executor, FallingBack, LanguageModel, ToolCall
+from nestor.modules.cognition.delegation import ExecutorKeys, NestorTools
 from nestor.modules.cognition.delegation.assistant import Delegation
 from nestor.modules.cognition.delegation.service import TaskManager
 from nestor.modules.cognition.embedding import EmbeddingModel
@@ -87,6 +88,7 @@ from nestor.runtime.plugins import Family, Plugged, Registry, Services
 log = logging.getLogger("nestor")
 
 SECRET_KEY = "NESTOR_SECRET_KEY"
+MCP_PATH = "/mcp"  # Nestor's MCP server, on the admin's address
 DATABASE = "nestor.db"
 BLOBS = "blobs"  # what is too heavy for the journal, by content
 
@@ -221,7 +223,19 @@ class Nestor:
             if isinstance(channel, SatelliteHost):
                 channel.host_satellites(self.pairing, self.journal)
         self.blobs = FileBlobStore(config.data_dir / BLOBS)
-        self.tasks = TaskManager(self.journal, self.executors, blobs=self.blobs)
+        # executors reach Nestor's MCP server where the admin is: its public address, and keys kept in the vault
+        public_url = config.admin.public_url if config.admin else None
+        self.executor_keys: ExecutorKeys | None = None
+        if public_url and self.vault is not None:
+            url = f"{public_url.rstrip('/')}{MCP_PATH}"
+            self.executor_keys = ExecutorKeys(self.journal, self.vault, url, [e.name for e in self.executors])
+        elif wanting := [e.name for e in self.executors if e.nestor_tools is not NestorTools.NONE]:
+            log.warning(
+                "%s would use Nestor's tools, which need the admin's public_url and NESTOR_SECRET_KEY: they work "
+                "without them",
+                ", ".join(wanting),
+            )
+        self.tasks = TaskManager(self.journal, self.executors, blobs=self.blobs, keys=self.executor_keys)
         delegation = Delegation(self.tasks)
         embedder = (
             chosen(models, config.memory.embedder, EmbeddingModel, ("memory", "embedder"))
@@ -251,7 +265,7 @@ class Nestor:
             self.journal, self.database, embedder, query_timeout_s=config.memory.query_timeout_s
         )
         recall = config.memory.recall()
-        memory = MemoryTools(
+        self.memory_tools = memory = MemoryTools(
             self.memories,
             self.episodes,
             self.household,
@@ -431,6 +445,7 @@ class Nestor:
             *voices,  # after its model, its store, and who left
             self.speakers,
             *self.executors,
+            *([self.executor_keys] if self.executor_keys else []),  # after the vault
             *self.tools,
             *home,  # its presence and its tools
             self.toolbox,  # after its tools: its calls in the background stop first

@@ -5,6 +5,7 @@ import type {
   Confirmation,
   Connection,
   Connector,
+  Executors,
   Home,
   Invitation,
   JournalEvent,
@@ -65,6 +66,7 @@ export interface Db {
   home: Home | null;
   memories: Memory[];
   system: SystemInfo;
+  executors: Executors;
   updates: Updates;
   config: ConfigDb;
   voices: Record<string, Omit<Voice, "manageable">>; // by person; absent: never recorded
@@ -72,7 +74,7 @@ export interface Db {
 }
 
 /** Bumped when the shape changes; the stress fixture keeps its own copy. */
-const KEY = () => (stressed() ? "nestor.mock.db.v19.stress" : "nestor.mock.db.v19");
+const KEY = () => (stressed() ? "nestor.mock.db.v20.stress" : "nestor.mock.db.v20");
 
 export function fresh(): Db {
   const connections = fixtures.connections();
@@ -103,6 +105,7 @@ export function fresh(): Db {
     home: fixtures.home(),
     memories,
     system: fixtures.system(),
+    executors: fixtures.executors(),
     updates: fixtures.updates(),
     config: config.fresh(),
     voices: fixtures.voices(),

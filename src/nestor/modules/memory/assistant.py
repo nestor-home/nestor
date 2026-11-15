@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from nestor.core import ContractError, PersonId
+from nestor.modules.channels import Address, Exchange
 from nestor.modules.cognition.model import ToolSpec
 from nestor.modules.cognition.tools import Risk, Tool, ToolContext, ToolFailed, ToolProvider
 from nestor.modules.conversation import ContextProvider, Layer, Sections, TurnContext
@@ -146,19 +147,47 @@ class MemoryTools(ToolProvider, ContextProvider):
         return "\n".join(f"- [{e.id}] {e.describe(zone)}: {e.summary}" for e in episodes)
 
     async def _remember(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
-        memory = await self.memories.remember(
+        return await self.keep(
             str(arguments["text"]),
             about=self._about(arguments),
             source=context.address,
             told_by=context.person,
             exchange=context.exchange,
         )
+
+    async def keep(
+        self,
+        text: str,
+        *,
+        about: PersonId | None,
+        source: Address | None,
+        told_by: PersonId | None = None,
+        exchange: Exchange | None = None,
+    ) -> Mapping[str, object]:
+        """Keep a lasting fact `about` someone (or the household), as the `remember` tool does."""
+        memory = await self.memories.remember(text, about=about, source=source, told_by=told_by, exchange=exchange)
         return {"memory_id": memory.id, "remembered": memory.text}
 
     async def _recall(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
-        query = str(arguments.get("query") or "").strip()
-        since, until = self._bound(arguments.get("since"), end=False), self._bound(arguments.get("until"), end=True)
-        about, person = self._about(arguments), context.person
+        return await self.search(
+            str(arguments.get("query") or "").strip(),
+            person=context.person,
+            about=self._about(arguments),
+            since=self.bound(arguments.get("since"), end=False),
+            until=self.bound(arguments.get("until"), end=True),
+        )
+
+    async def search(
+        self,
+        query: str,
+        *,
+        person: PersonId | None,
+        about: PersonId | None,
+        since: datetime | None = None,
+        until: datetime | None = None,
+    ) -> Mapping[str, object]:
+        """The memories matching `query` (`about` someone, any when `None`) and `person`'s past conversations, as the
+        `recall` tool gives them; an empty query gives their latest conversations."""
         memories: list[Memory] = []
         conversations: list[Episode] = []
         if not query:
@@ -221,7 +250,7 @@ class MemoryTools(ToolProvider, ContextProvider):
         except ContractError:
             raise ToolFailed(f"{about!r} is not a member of the household") from None
 
-    def _bound(self, value: object, *, end: bool) -> datetime | None:
+    def bound(self, value: object, *, end: bool) -> datetime | None:
         """A date or a date and time in the household's clock; a date alone `until` takes the whole day."""
         if not value:
             return None

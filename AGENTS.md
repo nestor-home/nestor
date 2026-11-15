@@ -46,6 +46,9 @@ src/nestor/
 ├── runtime/              composition: configuration, adapter registry, lifecycle
 ├── admin/                the admin over the assembled Nestor: accounts sign in to a JSON API (`api/v1`) that
 │                         the web front of `web/` is built on; it also serves that front once built
+├── mcp_server/           Nestor's MCP server for executors, served by the admin at `/mcp`: an executor's key
+│                         (`Authorization`) and its task's capability (`task`) on every call, tools scoped to the task
+│   └── tools/            a module per subject, each a `register(mcp, access)`, listed in `tools/__init__.py`
 ├── bench/                `nestor bench`: the engine (cases, variants, runs, replay cache, reports); its
 │   └── suites/           suites, one folder each with its dataset (`nestor.benches` entry points)
 ├── cli.py                the `nestor` command, above runtime and admin

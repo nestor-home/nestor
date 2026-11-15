@@ -51,6 +51,14 @@ journal-task-ended = Task { $task } { $status ->
    *[other] { $status }
 } ({ NUMBER($seconds, maximumFractionDigits: 0) } s)
 journal-task-delivered = Result of task { $task } passed on
+journal-task-file-added = Task { $task }: a file handed back
+journal-executor-called = { $ok ->
+    [yes] { $executor } used { $tool }
+   *[no] { $executor } was refused { $tool }
+}
+journal-executor-key-issued = New key for { $executor }
+journal-executor-key-revoked = Key of { $executor } revoked
+journal-question-answered = { $by } answered a task's question
 
 journal-subject = { $subject ->
     [task] task { $id } { $status ->

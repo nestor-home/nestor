@@ -4,7 +4,7 @@ import asyncio
 from dataclasses import dataclass, field
 
 from nestor.core import ProviderError, new_id
-from nestor.modules.cognition import Executor, Outcome, Progress, RemoteExecutor, TaskStatus
+from nestor.modules.cognition.delegation import Assignment, Executor, Outcome, Progress, RemoteExecutor, TaskStatus
 
 
 class ScriptedExecutor(Executor):
@@ -17,11 +17,15 @@ class ScriptedExecutor(Executor):
         self, result: str = "done", *, duration_s: float = 0.0, error: str | None = None, confirms_stop: bool = True
     ):
         self._result, self._duration_s, self._error, self._confirms_stop = result, duration_s, error, confirms_stop
-        self.objectives: list[str] = []
+        self.assignments: list[Assignment] = []  # what it was given, capability and access included
         self.cancelled = 0
 
-    async def run(self, objective: str, progress: Progress) -> Outcome:
-        self.objectives.append(objective)
+    @property
+    def objectives(self) -> list[str]:
+        return [a.objective for a in self.assignments]
+
+    async def run(self, assignment: Assignment, progress: Progress) -> Outcome:
+        self.assignments.append(assignment)
         progress("started")
         try:
             await asyncio.sleep(self._duration_s)
@@ -53,18 +57,18 @@ class ExecutorContract:
 
     async def test_completes_with_a_result(self) -> None:
         async with self.executor() as executor:
-            outcome = await executor.run(self.objective(), Progress())
+            outcome = await executor.run(Assignment(self.objective()), Progress())
         assert outcome.status is TaskStatus.COMPLETED, outcome
         assert outcome.result
 
     async def test_failure_is_returned_not_raised(self) -> None:
         async with self.failing_executor() as executor:
-            outcome = await executor.run(self.objective(), Progress())
+            outcome = await executor.run(Assignment(self.objective()), Progress())
         assert outcome.status is TaskStatus.FAILED and outcome.error, outcome
 
     async def test_cancellation_ends_without_hanging(self) -> None:
         async with self.slow_executor() as executor:
-            job = asyncio.create_task(executor.run(self.objective(), Progress()))
+            job = asyncio.create_task(executor.run(Assignment(self.objective()), Progress()))
             await asyncio.sleep(0.05)
             job.cancel()
             # `wait`, not `wait_for`: a stubborn executor must fail the suite, not hang it.
@@ -78,7 +82,7 @@ class ExecutorContract:
 
 @dataclass(slots=True)
 class RemoteRun:
-    objective: str
+    assignment: Assignment  # what it was given, capability and access included
     done: asyncio.Event = field(default_factory=asyncio.Event)
     outcome: Outcome | None = None
     follows: int = 0
@@ -118,11 +122,11 @@ class ScriptedRemoteExecutor(RemoteExecutor):
         self._refuses, self._confirms_stop = refuses, confirms_stop
         self._timers: set[asyncio.Task[None]] = set()
 
-    async def submit(self, objective: str) -> str:
+    async def submit(self, assignment: Assignment) -> str:
         if self._refuses:
             raise ProviderError(self.name, "objective refused", transient=False)
         ref = new_id()[:8]
-        self.remote.runs[ref] = RemoteRun(objective)
+        self.remote.runs[ref] = RemoteRun(assignment)
         if self._duration_s is not None:
             timer = asyncio.create_task(self._complete(ref, self._duration_s))
             self._timers.add(timer)
@@ -155,7 +159,7 @@ class RemoteExecutorContract(ExecutorContract):
 
     async def test_a_run_can_be_followed_again_without_starting_twice(self) -> None:
         async with self.executor() as executor:
-            ref = await executor.submit(self.objective())
+            ref = await executor.submit(Assignment(self.objective()))
             first = await executor.follow(ref, Progress())
         async with self.executor() as restarted:
             again = await restarted.follow(ref, Progress())

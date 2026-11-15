@@ -9,6 +9,7 @@ import type {
   Confirmation,
   Connection,
   Connector,
+  Executors,
   Home,
   Invitation,
   Memory,
@@ -1540,6 +1541,43 @@ export function system(): SystemInfo {
         health: "started",
         health_detail: BEDROOM,
       }),
+    ],
+  };
+}
+
+/** The executors and their keys for Nestor's MCP server: Hermes declares it in its profile, Nestor hands it to the
+ * others; Claude Code has had no task yet, so no key. */
+export function executors(): Executors {
+  return {
+    url: "https://nestor.example.org/mcp",
+    executors: [
+      {
+        name: "hermes",
+        description: fr(
+          "search the web and browse sites, run code in its own container",
+          "chercher sur le web et naviguer sur des sites, exécuter du code dans son conteneur",
+        ),
+        nestor_tools: "configured",
+        key: { issued_at: minutes(60 * 24 * 3), last_used_at: minutes(42) },
+      },
+      {
+        name: "codex",
+        description: fr(
+          "run the home server: deploy the sites, read the logs",
+          "s'occuper du serveur : déployer les sites, lire les journaux",
+        ),
+        nestor_tools: "passed",
+        key: { issued_at: minutes(60 * 24 * 6), last_used_at: minutes(60 * 5) },
+      },
+      {
+        name: "claude-code",
+        description: fr(
+          "read, change and test the code of the household's projects",
+          "lire, modifier et tester le code des projets du foyer",
+        ),
+        nestor_tools: "passed",
+        key: null,
+      },
     ],
   };
 }

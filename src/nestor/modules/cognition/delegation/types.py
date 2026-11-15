@@ -1,7 +1,7 @@
 """Values of delegated tasks: status, outcome, progress reporting and how to deliver the result."""
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
 
 from nestor.core import Capability
@@ -15,6 +15,44 @@ class TaskStatus(StrEnum):
     COMPLETED = "completed"
     FAILED = "failed"
     CANCELLED = "cancelled"
+
+
+class NestorTools(StrEnum):
+    """How an executor reaches Nestor's MCP server while it works: its brief, its memory of the requester, questions
+    to them, its progress and its files."""
+
+    NONE = "none"  # it does not
+    PASSED = "passed"  # Nestor passes the server's address and the executor's key with each task (Codex, Claude Code)
+    CONFIGURED = "configured"  # its own configuration holds them, set once (Hermes's profile)
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class NestorAccess:
+    """Where Nestor's MCP server is, and the executor's key for it (`Authorization: Bearer`)."""
+
+    url: str
+    key: str = field(repr=False)
+
+
+BRIEF = """Nestor, the household assistant that handed you this task, gives you tools for it through its MCP server \
+`nestor`. Call each with task="{task}": task_brief first (who asked, the conversation it came from, files they sent); \
+recall and remember for what you need to know of them; report_progress at each step; ask_requester when you need \
+them rather than guessing or giving up, then check_answer later; attach_file for each file you make for them. Never \
+write the task value anywhere else."""
+
+
+@dataclass(frozen=True, slots=True)
+class Assignment:
+    """What an executor is given: the objective, and when it reaches Nestor's tools, the task's capability (`task`,
+    `nstt_…`) its tools take, valid while the task runs, and `access` when Nestor passes the server itself."""
+
+    objective: str
+    task: str | None = field(default=None, repr=False)
+    access: NestorAccess | None = None
+
+    def brief(self) -> str:
+        """The objective, and how to reach Nestor's tools when the executor can."""
+        return self.objective if self.task is None else f"{self.objective}\n\n{BRIEF.format(task=self.task)}"
 
 
 class Notify(StrEnum):

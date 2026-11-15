@@ -57,3 +57,37 @@ upd-then-restart = Puis redémarrez Nestor.
 upd-then-ask = Puis demandez à un administrateur de redémarrer Nestor.
 upd-command = la commande
 sys-fallback = secours : { $model }
+
+sys-executors = Les outils de Nestor pour les exécutants
+sys-executors-intro = Pendant une tâche, les exécutants joignent Nestor à { $url } : leur brief, ce que la personne a déjà dit, leurs questions, leurs fichiers. Chacun appelle avec sa propre clé.
+sys-executors-off = Les exécutants ne peuvent pas joindre Nestor : donnez une public_url à l'admin et définissez NESTOR_SECRET_KEY, puis redémarrez.
+sys-executor-tools = { $tools ->
+    [passed] Nestor lui passe ses outils à chaque tâche
+    [configured] Sa propre configuration déclare les outils de Nestor
+   *[none] Travaille sans les outils de Nestor
+}
+sys-executor-key-made = Clé créée
+sys-executor-key-used = dernier usage
+sys-executor-key-unused = pas encore utilisée
+sys-executor-no-key = Aucune clé
+sys-executor-key-make = Créer une clé
+sys-executor-key-renew = Renouveler
+sys-executor-key-revoke = Révoquer
+sys-executor-make-title = Créer une clé pour { $name } ?
+sys-executor-make-body = { $tools ->
+    [passed] Nestor la passe à { $name } à chaque tâche.
+   *[other] Elle n'est montrée qu'une fois, pour la coller dans la configuration de { $name }.
+}
+sys-executor-renew-title = Renouveler la clé de { $name } ?
+sys-executor-renew-body = La clé actuelle cesse aussitôt de fonctionner. { $tools ->
+    [passed] Nestor passe la nouvelle à { $name } à sa prochaine tâche.
+   *[other] Collez la nouvelle dans la configuration de { $name }.
+}
+sys-executor-revoke-title = Révoquer la clé de { $name } ?
+sys-executor-revoke-body = { $name } ne joint plus les outils de Nestor, ni les tâches qu'il a en cours.
+sys-executor-key-title = La clé de { $name }
+sys-executor-key-once = Montrée seulement maintenant : Nestor la garde chiffrée et ne la montre plus jamais.
+sys-executor-key-label = la clé
+sys-executor-passed = Nestor la passe à { $name } à chaque tâche : rien à coller.
+sys-executor-profile = Ajoutez ceci à la configuration de { $name } (le config.yaml d'un profil Hermes), puis mettez nestor_mcp: true sur cet exécutant dans la configuration de Nestor.
+sys-executor-setup-label = ce qu'il faut ajouter

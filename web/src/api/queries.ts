@@ -17,6 +17,7 @@ export const keys = {
   journalEvent: (position: number) => ["journal", "event", position] as const,
   system: ["system"] as const,
   updates: ["system", "updates"] as const,
+  executors: ["executors"] as const,
   connectors: ["connectors"] as const,
   connector: (kind: string) => ["connectors", kind] as const,
   connections: ["connections"] as const,
@@ -92,6 +93,7 @@ export const journalEventQuery = (position: number) =>
 
 export const systemQuery = queryOptions({ queryKey: keys.system, queryFn: api.system, refetchInterval: 15_000 });
 
+export const executorsQuery = queryOptions({ queryKey: keys.executors, queryFn: api.executors });
 /** The feed is read by Nestor once a day: asking hourly is plenty. */
 export const updatesQuery = queryOptions({
   queryKey: keys.updates,

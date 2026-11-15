@@ -110,6 +110,10 @@ export type Release = S["ReleaseOut"];
 export type Installation = S["InstallKind"];
 export type Updates = S["UpdatesOut"];
 export type SystemInfo = S["SystemOut"];
+export type Executors = S["ExecutorsOut"];
+export type ExecutorInfo = S["ExecutorOut"];
+export type NestorTools = S["NestorTools"];
+export type IssuedKey = S["IssuedKeyOut"];
 
 // -- the agent ------------------------------------------------------------------------------------
 

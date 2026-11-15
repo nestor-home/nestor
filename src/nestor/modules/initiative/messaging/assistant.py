@@ -15,14 +15,15 @@ from nestor.modules.conversation import (
     TurnContext,
 )
 from nestor.modules.household import Household, Person
-from nestor.modules.initiative.messaging.book import MessageBook
+from nestor.modules.initiative.messaging.book import MessageBook, QuestionState
 
 HOW_TO_MESSAGE = (
     'To tell someone of the household something, now or for someone else ("ask her what she wants for '
     'dinner", "send me the news on Telegram"), call message_person: it reaches them where they are (aloud in '
     "their room, or in writing), unless a channel or writing is asked for. Set expects_reply for a question: their "
     "answer comes back to you, and you pass it on with message_person to whoever asked, with answers set to the "
-    "question's id. Confirm briefly once it is sent; you will hear if it could not get through."
+    "question's id. Confirm briefly once it is sent; you will hear if it could not get through. A task you handed "
+    "over may ask its requester a question the same way: pass their answer back to it with pass_answer."
 )
 
 
@@ -46,10 +47,23 @@ class MessageTools(ToolProvider, ContextProvider, MentionSource):
             },
             "required": ["person", "text"],
         }
+        answer = {
+            "type": "object",
+            "properties": {
+                "question": {"type": "string", "description": "the id of the question a task asked"},
+                "answer": {"type": "string", "description": "the person's answer, in their words"},
+            },
+            "required": ["question", "answer"],
+        }
         return (
             Tool(
                 spec=ToolSpec("message_person", "Tell someone of the household something, now.", send),
                 run=self._send,
+                risk=Risk.WRITE,
+            ),
+            Tool(
+                spec=ToolSpec("pass_answer", "Pass a person's answer back to the task that asked them.", answer),
+                run=self._pass_answer,
                 risk=Risk.WRITE,
             ),
         )
@@ -65,7 +79,9 @@ class MessageTools(ToolProvider, ContextProvider, MentionSource):
         lines = []
         for q in self.book.open_questions():
             asker = self.household.person(q.requested_by).name if q.requested_by else "you"
-            if q.to == person.id:
+            if q.task and q.to == person.id:
+                lines.append(f"- [{q.message_id}] a task you handed over asked {person.name}: {q.text} (pass_answer)")
+            elif q.to == person.id:
                 lines.append(f"- [{q.message_id}] {asker} asked {person.name}: {q.text}")
             elif q.requested_by == person.id:
                 lines.append(f"- [{q.message_id}] asked {self.household.person(q.to).name}: {q.text} (no answer yet)")
@@ -98,6 +114,20 @@ class MessageTools(ToolProvider, ContextProvider, MentionSource):
             exchange=context.exchange,
         )
         return {"message_id": message.message_id, "status": "sending"}
+
+    async def _pass_answer(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
+        """Only the person a task asked answers it."""
+        question = self.book.get(str(arguments["question"]))
+        if (
+            question is None
+            or question.task is None
+            or self.book.state(question.message_id) is not QuestionState.WAITING
+        ):
+            raise ToolFailed(f"no open question {arguments['question']} from a task")
+        if context.person != question.to:
+            raise ToolFailed("only the person it was asked to answers it")
+        await self.book.answer(question.message_id, str(arguments["answer"]), by=context.person)
+        return {"status": "passed"}
 
     def _person(self, wanted: str) -> Person:
         found = next(

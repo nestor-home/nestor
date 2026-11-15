@@ -26,6 +26,8 @@ from nestor.modules.initiative.messaging import (
     MessageTools,
     MessageUndelivered,
     Messenger,
+    QuestionAnswered,
+    QuestionState,
 )
 from nestor.modules.initiative.returns import Returns, ToolResultDelivered
 from nestor.modules.initiative.schedules import (
@@ -70,6 +72,8 @@ __all__ = [
     "MessageUndelivered",
     "Messenger",
     "Plan",
+    "QuestionAnswered",
+    "QuestionState",
     "QuietHours",
     "Returns",
     "Schedule",

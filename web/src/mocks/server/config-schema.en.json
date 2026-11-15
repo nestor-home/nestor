@@ -6650,6 +6650,28 @@
                 "title": "Stop timeout (seconds)",
                 "help": null
               }
+            },
+            "nestor_mcp": {
+              "default": false,
+              "title": "Nestor Mcp",
+              "type": "boolean",
+              "x-nestor": {
+                "field": "nestor_mcp",
+                "title_id": "config-executor-hermes-nestor_mcp",
+                "help_id": "config-executor-hermes-nestor_mcp-help",
+                "fallback_title_id": "config-field-nestor_mcp",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "executor-hermes",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Its profile has Nestor's tools",
+                "help": "Nestor's MCP server, declared as nestor in the Hermes profile with this executor's key (System, Executors)."
+              }
             }
           },
           "required": [

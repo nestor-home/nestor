@@ -7,7 +7,8 @@ from nestor.modules.channels import Address, Exchange
 
 class MessageRequested(Event, event_type="message.requested"):
     """Someone (`requested_by`, `None` for the agent's own initiative) has the agent tell `to` something.
-    `in_writing` and `channel` constrain how; `answers` is the question it brings the answer to."""
+    `in_writing` and `channel` constrain how; `answers` is the question it brings the answer to; `task`, the delegated
+    task that asks it, whose answer goes back to it (`QuestionAnswered`)."""
 
     message_id: str
     to: PersonId
@@ -19,6 +20,7 @@ class MessageRequested(Event, event_type="message.requested"):
     expects_reply: bool = False
     answers: str | None = None
     exchange: Exchange | None = None
+    task: str | None = None
 
 
 class MessageDelivered(Event, event_type="message.delivered"):
@@ -30,3 +32,11 @@ class MessageUndelivered(Event, event_type="message.undelivered"):
     """No channel could take it; whoever asked is told."""
 
     message_id: str
+
+
+class QuestionAnswered(Event, event_type="message.answered"):
+    """The answer to a question a task asked (`MessageRequested.task`), passed back by the agent for its executor."""
+
+    message_id: str
+    answer: str
+    by: PersonId | None = None

@@ -18,6 +18,7 @@ from nestor.modules.cognition import (
     TaskStarted,
     TaskStatus,
 )
+from nestor.modules.cognition.delegation import Assignment
 from nestor.modules.cognition.delegation.service import TaskManager
 from nestor.modules.cognition.model import Role, ToolCall, ToolSpec
 from nestor.modules.cognition.tools import Made, Tool, Toolbox, ToolCalled, ToolContext, ToolDeferred, ToolReturned
@@ -370,7 +371,7 @@ async def test_a_file_a_delegated_task_made_goes_with_the_answer_that_brings_its
     class Writer(Executor):
         name = "writer"
 
-        async def run(self, objective: str, progress: Progress) -> Outcome:
+        async def run(self, assignment: Assignment, progress: Progress) -> Outcome:
             return Outcome.completed(
                 "rapport écrit",
                 (Attachment(kind=AttachmentKind.FILE, data=pdf, media_type="application/pdf", name="rapport.pdf"),),

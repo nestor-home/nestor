@@ -38,6 +38,7 @@ from nestor.modules.cognition import (
     TaskProgressed,
     TaskStarted,
 )
+from nestor.modules.cognition.delegation import ExecutorCalled, ExecutorKeyIssued, ExecutorKeyRevoked, TaskFileAdded
 from nestor.modules.cognition.tools import ResultStored, ToolCalled, ToolCompleted, ToolDeferred, ToolReturned
 from nestor.modules.connectors import ConnectionChanged, ConnectionCreated, ConnectionRemoved
 from nestor.modules.conversation import (
@@ -63,6 +64,7 @@ from nestor.modules.initiative import (
     MessageDelivered,
     MessageRequested,
     MessageUndelivered,
+    QuestionAnswered,
     ScheduleCancelled,
     ScheduleCreated,
     ScheduleFired,
@@ -145,6 +147,7 @@ CATEGORIES: Mapping[Kind, tuple[type[Event], ...]] = {
         MessageRequested,
         MessageDelivered,
         MessageUndelivered,
+        QuestionAnswered,
     ),
     Kind.TOOL: (
         ToolCalled,
@@ -156,7 +159,18 @@ CATEGORIES: Mapping[Kind, tuple[type[Event], ...]] = {
         ConfirmationRequested,
         ConfirmationAnswered,
     ),
-    Kind.TASK: (TaskStarted, TaskAttached, TaskProgressed, TaskCancelRequested, TaskEnded, TaskDelivered),
+    Kind.TASK: (
+        TaskStarted,
+        TaskAttached,
+        TaskProgressed,
+        TaskFileAdded,
+        TaskCancelRequested,
+        TaskEnded,
+        TaskDelivered,
+        ExecutorCalled,
+        ExecutorKeyIssued,
+        ExecutorKeyRevoked,
+    ),
     Kind.WATCH: (WatchCreated, WatchSorted, WatchTriggered, WatchEnded),
     Kind.SCHEDULE: (ScheduleCreated, ScheduleFired, ScheduleCancelled),
     Kind.MEMORY: (MemoryRecorded, MemoryCorrected, MemoryForgotten, EpisodeSummarized),
@@ -318,6 +332,22 @@ class EventDescriber:
             TaskProgressed: lambda e: self._line(
                 e, Message.of("journal-task-progressed", task=e.task_id), detail=e.step
             ),
+            TaskFileAdded: lambda e: self._line(
+                e,
+                Message.of("journal-task-file-added", task=e.task_id),
+                detail=e.name,
+                attachments=_made((e.file,)),
+            ),
+            ExecutorCalled: lambda e: self._line(
+                e,
+                Message.of("journal-executor-called", executor=e.executor, tool=e.tool, ok=_yes(e.ok)),
+                detail=e.task_id or "",
+                tone=Tone.NORMAL if e.ok else Tone.WARNING,
+            ),
+            ExecutorKeyIssued: lambda e: self._line(e, Message.of("journal-executor-key-issued", executor=e.executor)),
+            ExecutorKeyRevoked: lambda e: self._line(
+                e, Message.of("journal-executor-key-revoked", executor=e.executor)
+            ),
             TaskCancelRequested: lambda e: self._line(e, Message.of("journal-task-cancel-requested", task=e.task_id)),
             TaskEnded: lambda e: self._line(
                 e,
@@ -331,6 +361,12 @@ class EventDescriber:
                 e, Message.of("journal-task-delivered", task=e.task_id), channels=[e.address]
             ),
             DeliveryConsidered: self._considered,
+            QuestionAnswered: lambda e: self._line(
+                e,
+                Message.of("journal-question-answered", by=self.name(e.by) or self.assistant),
+                detail=e.answer,
+                people=[e.by],
+            ),
             MessageRequested: lambda e: self._line(
                 e,
                 Message.of(

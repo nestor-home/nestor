@@ -92,6 +92,12 @@ def main(argv: list[str] | None = None) -> int:
                              help=words("conformance-deadline-help", seconds=CONFORMANCE_DEADLINE_S))  # fmt: skip
     conformance.add_argument("satellite", nargs=argparse.REMAINDER, metavar="-- COMMAND",
                              help=words("conformance-command-help"))  # fmt: skip
+    executors = commands.add_parser("executors", help="the executors' keys for Nestor's MCP server")
+    keys = executors.add_subparsers(dest="action", required=True)
+    keys.add_parser(
+        "key", help="make a new key for an executor: shown once, the one before stops working"
+    ).add_argument("name")
+    keys.add_parser("revoke", help="revoke an executor's key").add_argument("name")
     add_bench_commands(commands.add_parser("bench", help=words("bench-help"), description=words("bench-help")), words)
     commands.add_parser("restart", help="restart the running instance (applies the configuration written since)")
     secrets = commands.add_parser("secrets", help="the configuration's secrets, kept in the encrypted vault")
@@ -128,6 +134,8 @@ def main(argv: list[str] | None = None) -> int:
             return bench(args, suites, words.render, words.localizer, words.locale)
         if args.command == "satellites":
             return _satellites(args, environ)
+        if args.command == "executors":
+            return _executors(args, environ, words)
         if args.command == "secrets":
             return _secrets(args, environ)
         if args.command == "restart":
@@ -318,6 +326,20 @@ def _satellites(args: argparse.Namespace, environ: dict[str, str]) -> int:
     else:
         _call(config, "DELETE", f"/api/v1/satellites/{args.device_id}")
         print(f"revoked {args.device_id}")
+    return 0
+
+
+def _executors(args: argparse.Namespace, environ: dict[str, str], words: "_Words") -> int:
+    config = load_config(args.config, environ)
+    if args.action == "key":
+        issued = _call(config, "POST", f"/api/v1/executors/{args.name}/key")
+        print(words("executors-key", executor=args.name, key=issued["key"], url=issued["url"]))
+        if issued.get("setup"):
+            print(words("executors-key-setup", executor=args.name))
+            print(issued["setup"])
+    else:
+        _call(config, "DELETE", f"/api/v1/executors/{args.name}/key")
+        print(words("executors-key-revoked", executor=args.name))
     return 0
 
 
