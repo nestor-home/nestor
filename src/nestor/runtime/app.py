@@ -80,6 +80,7 @@ from nestor.modules.memory.assistant import MemoryTools
 from nestor.modules.memory.episodes import Consolidator, Episodes
 from nestor.modules.satellites import Pairing, SatelliteHost
 from nestor.modules.system import ReleaseFeed, RestartRequested, Updates
+from nestor.modules.web import WebSearch, WebSearchTools
 from nestor.runtime.config import AdapterConfig, ComponentConfig, ConfigError, ModelConfig, NestorConfig, ProblemCode
 from nestor.runtime.plugins import Family, Plugged, Registry, Services
 
@@ -169,7 +170,9 @@ class Nestor:
         )
         if len({c.channel_id for c in self.channels}) != len(self.channels):
             raise ContractError("two channels have the same name: give each a distinct `name`")
-        self.tools = build_each(config.tools, "tools", Family.TOOLS, ToolProvider, registry, services, self.plugged)
+        # tool providers and search engines, in the configuration's order
+        self.tools = build_each(config.tools, "tools", Family.TOOLS, Component, registry, services, self.plugged)
+        offered = offered_tools(self.tools)
         self.inbound = build_each(
             config.inbound, "inbound", Family.INBOUND, InboundEventSource, registry, services, self.plugged
         )
@@ -275,7 +278,7 @@ class Nestor:
                 message_tools,
                 schedule_tools,
                 self.confirmations,
-                *self.tools,
+                *offered,
                 *([self.home.tools] if self.home else []),
                 *connector_tools,
                 *([ImageTools(images)] if (images := optional(drawing, ImageModel, "images")) else []),
@@ -304,7 +307,11 @@ class Nestor:
                 message_tools,
                 schedule_tools,
                 self.confirmations,
-                RunningNotes(lambda: (p.component for p in self.plugged if isinstance(p.component, Component))),
+                RunningNotes(
+                    lambda: dict.fromkeys(
+                        [*(p.component for p in self.plugged if isinstance(p.component, Component)), *offered]
+                    )
+                ),
             ],
             speakers=self.speakers,
             mentions=Mentions(
@@ -568,6 +575,18 @@ def build_models(
         )
         built[key] = model
     return built
+
+
+def offered_tools(tools: Iterable[Component]) -> list[ToolProvider]:
+    """What the agent gets of the `tools` section: each tool provider, and one `web_search` over every search engine."""
+    engines = [t for t in tools if isinstance(t, WebSearch)]
+    for tool in tools:
+        if not isinstance(tool, ToolProvider | WebSearch):
+            raise ContractError(
+                f"{tool.name} is under tools but is {type(tool).__name__}, not a ToolProvider or a WebSearch"
+            )
+    providers: list[ToolProvider] = [t for t in tools if isinstance(t, ToolProvider)]
+    return [*providers, WebSearchTools(engines)] if engines else providers
 
 
 def build_each[C](

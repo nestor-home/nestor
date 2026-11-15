@@ -28,13 +28,12 @@ from pydantic import ValidationError
 
 from nestor.bench.errors import BenchError
 from nestor.bench.ports import Knobs, Suite
-from nestor.core import ModelType
+from nestor.core import Component, ModelType
 from nestor.core.i18n import Locale, Localizer, Message
 from nestor.modules.channels import SpeechModel, TranscriptionModel
 from nestor.modules.cognition import LanguageModel
 from nestor.modules.cognition.delegation import Executor
 from nestor.modules.cognition.embedding import EmbeddingModel
-from nestor.modules.cognition.tools import ToolProvider
 from nestor.modules.identity import SpeakerModel
 from nestor.runtime.app import build_each, build_models
 from nestor.runtime.config import NestorConfig, environment, validate_config
@@ -60,7 +59,7 @@ class Variant[K: Knobs]:
     speech: SpeechModel | None = None  # the `agent.speech`, when the suite uses one
     localizer: Localizer | None = None  # what the variant was loaded with
     executors: tuple[Executor, ...] = ()  # its `executors`, built but not started, when the suite uses them
-    tools: tuple[ToolProvider, ...] = ()  # its `tools`, likewise
+    tools: tuple[Component, ...] = ()  # its `tools` (providers and search engines), likewise
     described: Mapping[
         str, Mapping[str, Any]
     ]  # each role's model: its name, type, provider and settings, secrets masked
@@ -122,10 +121,10 @@ def load_variant[K: Knobs](
     if suite.speech and voicing is None:
         raise BenchError(Message.of("bench-variant-no-speech", path=str(path)))
     executors: tuple[Executor, ...] = ()
-    tools: tuple[ToolProvider, ...] = ()
+    tools: tuple[Component, ...] = ()
     if suite.components:
         executors = tuple(build_each(config.executors, "executors", Family.EXECUTOR, Executor, registry, services))
-        tools = tuple(build_each(config.tools, "tools", Family.TOOLS, ToolProvider, registry, services))
+        tools = tuple(build_each(config.tools, "tools", Family.TOOLS, Component, registry, services))
     return Variant(
         name=knobs.name or path.stem,
         source=path,

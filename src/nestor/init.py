@@ -88,7 +88,10 @@ TELEGRAM = """  - kind: telegram
 
 FOOTER = """
 tools:                             # no key needed
-  - kind: free-web-search          # web search on free tiers; brave or tavily, with a key, make it reliable
+  - kind: exa                      # web search engines, on their free tiers; an api_key for one makes it reliable
+  - kind: parallel
+  - kind: firecrawl
+  - kind: keenable
   - kind: web-pages                # reads a page found
 
 # home:                             # Home Assistant: who is home, and its actions (Assist's MCP server)

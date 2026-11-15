@@ -46,7 +46,7 @@ def test_a_new_home_gets_a_valid_configuration_and_private_secrets(tmp_path: Pat
     assert loaded.persona.name == "Richie"
     assert loaded.household[0].id == "mathis-lambert"
     assert loaded.admin is not None
-    assert [t.plugin for t in loaded.tools] == ["free-web-search", "web-pages"], "it searches the web with no key"
+    assert [t.plugin for t in loaded.tools] == ["exa", "parallel", "firecrawl", "keenable", "web-pages"], "no key"
     owner = sign_in(loaded, "Mathis@Example.org")
     assert owner is not None and (owner.role, owner.person) == (Role.OWNER, "mathis-lambert")
     assert PASSWORD not in config.read_text()

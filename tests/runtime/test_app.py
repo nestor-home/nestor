@@ -19,6 +19,7 @@ from nestor.modules.cognition import FallingBack, Outcome, TaskDelivered
 from nestor.modules.cognition.model import ModelRequest, ToolCall
 from nestor.modules.cognition.tools import Tool, ToolProvider
 from nestor.modules.conversation import AssistantTurn
+from nestor.modules.web import Found, WebSearch
 from nestor.runtime import Backoff, Nestor, Registry
 from nestor.runtime.config import ConfigError, ProblemCode, parse_config
 from nestor.runtime.plugins import Family, Plugin, Services
@@ -454,3 +455,23 @@ async def test_what_a_plugged_part_says_of_how_it_runs_reaches_the_agent(tmp_pat
         await fakes.channels[0].ask("Salut")
         serving.cancel()
     assert "- Your web search goes through free tiers." in fakes.models[0].requests[0].messages[0].text
+
+
+def test_the_search_engines_under_tools_give_the_agent_one_web_search(tmp_path: Path) -> None:
+    class Engine(WebSearch):
+        free_tier = True
+
+        async def search(self, query: str, *, limit: int) -> Sequence[Found]:
+            return []
+
+    fakes = Fakes()
+    registry = fakes.registry()
+    registry.register(Plugin(Family.TOOLS, "engine", NoSettings, lambda s, n, x: Engine()))
+    registry.register(Plugin(Family.TOOLS, "lamp", NoSettings, lambda s, n, x: Component()))
+    text = CONFIG.format(data_dir=tmp_path, replies=[])
+    nestor = Nestor(
+        parse_config(text + "tools: [{kind: engine, name: exa}, {kind: engine, name: keenable}]\n", {}), registry
+    )
+    assert [s.name for s in nestor.toolbox.specs()].count("web_search") == 1
+    with pytest.raises(ContractError, match="not a ToolProvider or a WebSearch"):
+        Nestor(parse_config(text + "tools: [{kind: lamp}]\n", {}), registry)

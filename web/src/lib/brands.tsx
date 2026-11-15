@@ -16,6 +16,8 @@ import claudeSvg from "@lobehub/icons-static-svg/icons/claude.svg?raw";
 import claudecodeSvg from "@lobehub/icons-static-svg/icons/claudecode.svg?raw";
 import codexSvg from "@lobehub/icons-static-svg/icons/codex.svg?raw";
 import elevenlabsSvg from "@lobehub/icons-static-svg/icons/elevenlabs.svg?raw";
+import exaSvg from "@lobehub/icons-static-svg/icons/exa.svg?raw";
+import firecrawlSvg from "@lobehub/icons-static-svg/icons/firecrawl.svg?raw";
 import geminiSvg from "@lobehub/icons-static-svg/icons/gemini.svg?raw";
 import groqSvg from "@lobehub/icons-static-svg/icons/groq.svg?raw";
 import hermesagentSvg from "@lobehub/icons-static-svg/icons/hermesagent.svg?raw";
@@ -30,19 +32,7 @@ import openrouterSvg from "@lobehub/icons-static-svg/icons/openrouter.svg?raw";
 import tavilySvg from "@lobehub/icons-static-svg/icons/tavily.svg?raw";
 import vllmSvg from "@lobehub/icons-static-svg/icons/vllm.svg?raw";
 import type { LucideIcon } from "lucide-react";
-import {
-  CalendarDays,
-  Cpu,
-  FileDiff,
-  Globe,
-  KeyRound,
-  Mail,
-  Mic,
-  Plug,
-  RadioTower,
-  Search,
-  Webhook,
-} from "lucide-react";
+import { CalendarDays, Cpu, FileDiff, Globe, KeyRound, Mail, Mic, Plug, RadioTower, Webhook } from "lucide-react";
 import {
   type SimpleIcon,
   siAnthropic,
@@ -186,7 +176,10 @@ const BRANDS = {
   huggingface: simple("Hugging Face", siHuggingface),
   // the web, the weather, maps
   brave: simple("Brave Search", siBrave),
-  "free-web-search": concept("brand-free-web-search", Search),
+  exa: lobe("Exa", exaSvg),
+  parallel: monogram("Parallel", "P"), // in neither icon set
+  firecrawl: lobe("Firecrawl", firecrawlSvg),
+  keenable: monogram("Keenable", "K"), // in neither icon set
   searxng: simple("SearXNG", siSearxng),
   tavily: lobe("Tavily", tavilySvg),
   "open-meteo": monogram("Open-Meteo", "OM"),
