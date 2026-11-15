@@ -6,6 +6,7 @@ import { Status, type StatusTone } from "@/components/status";
 import { useT } from "@/i18n";
 import { BrandMark, brandOf } from "@/lib/brands";
 import { modelTypeLabel } from "@/lib/labels";
+import { ExecutorsSection } from "./executors";
 
 /** The slots the page groups components by (`ComponentOut.slot`), in this order. */
 const SLOTS: Record<Component["slot"], string> = {
@@ -56,6 +57,7 @@ export function SystemView() {
           </Section>
         );
       })}
+      <ExecutorsSection />
     </>
   );
 }

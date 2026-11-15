@@ -57,3 +57,36 @@ upd-then-restart = Then restart Nestor.
 upd-then-ask = Then ask an administrator to restart Nestor.
 upd-command = the command
 sys-fallback = fallback: { $model }
+
+sys-executors = Nestor's tools for executors
+sys-executors-intro = While they work on a task, executors reach Nestor at { $url }: their brief, what the requester said before, questions to them, their files. Each one calls with its own key.
+sys-executors-off = Executors cannot reach Nestor: give the admin a public_url and set NESTOR_SECRET_KEY, then restart.
+sys-executor-tools = { $tools ->
+    [passed] Nestor hands it its tools with each task
+    [configured] Its own configuration declares Nestor's tools
+   *[none] Works without Nestor's tools
+}
+sys-executor-key-made = Key made
+sys-executor-key-used = last used
+sys-executor-key-unused = not used yet
+sys-executor-no-key = No key
+sys-executor-key-make = Make a key
+sys-executor-key-renew = Renew
+sys-executor-key-revoke = Revoke
+sys-executor-make-title = Make a key for { $name }?
+sys-executor-make-body = { $tools ->
+    [passed] Nestor hands it to { $name } with each task.
+   *[other] It is shown once, to paste in the configuration of { $name }.
+}
+sys-executor-renew-title = Renew the key of { $name }?
+sys-executor-renew-body = The current key stops working at once. { $tools ->
+    [passed] Nestor hands the new one to { $name } with its next task.
+   *[other] Paste the new one in the configuration of { $name }.
+}
+sys-executor-revoke-title = Revoke the key of { $name }?
+sys-executor-revoke-body = { $name } no longer reaches Nestor's tools, nor do the tasks it is working on.
+sys-executor-key-title = The key of { $name }
+sys-executor-key-once = Shown only now: Nestor keeps it encrypted and never shows it again.
+sys-executor-key-label = the key
+sys-executor-passed = Nestor hands it to { $name } with each task: nothing to paste.
+sys-executor-profile = Add this to the configuration of { $name } (a Hermes profile's config.yaml), then set nestor_mcp: true on this executor in Nestor's configuration.

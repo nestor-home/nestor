@@ -50,6 +50,14 @@ journal-task-ended = Tâche { $task } { $status ->
    *[other] { $status }
 } ({ NUMBER($seconds, maximumFractionDigits: 0) } s)
 journal-task-delivered = Résultat de la tâche { $task } transmis
+journal-task-file-added = Tâche { $task } : un fichier rendu
+journal-executor-called = { $ok ->
+    [yes] { $executor } a utilisé { $tool }
+   *[no] { $executor } s'est vu refuser { $tool }
+}
+journal-executor-key-issued = Nouvelle clé pour { $executor }
+journal-executor-key-revoked = Clé de { $executor } révoquée
+journal-question-answered = { $by } a répondu à la question d'une tâche
 
 journal-subject = { $subject ->
     [task] tâche { $id } { $status ->

@@ -727,6 +727,30 @@ export const handlers = [
       } satisfies In<"SystemOut">),
   ),
 
+  http.get(`${API}/executors`, ({ request }) => guard(request) ?? json(db.executors satisfies In<"ExecutorsOut">)),
+
+  http.post(`${API}/executors/:name/key`, ({ request, params }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    const executor = db.executors.executors.find((e) => e.name === params.name);
+    if (!executor) return fail(404, "executor_unknown");
+    if (!db.executors.url) return fail(409, "executors_unreachable");
+    executor.key = { issued_at: new Date().toISOString(), last_used_at: null };
+    save();
+    const key = `nstx_${crypto.randomUUID().replaceAll("-", "")}`;
+    return json({ key, url: db.executors.url } satisfies In<"IssuedKeyOut">);
+  }),
+
+  http.delete(`${API}/executors/:name/key`, ({ request, params }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    const executor = db.executors.executors.find((e) => e.name === params.name);
+    if (!executor) return fail(404, "executor_unknown");
+    executor.key = null;
+    save();
+    return new HttpResponse(null, { status: 204 });
+  }),
+
   http.get(`${API}/system/updates`, ({ request }) => guard(request) ?? json(db.updates satisfies In<"UpdatesOut">)),
 
   http.post(`${API}/system/updates/install`, async ({ request }) => {

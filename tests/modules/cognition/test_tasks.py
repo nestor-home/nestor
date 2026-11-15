@@ -19,6 +19,7 @@ from nestor.modules.cognition import (
     TaskStarted,
     TaskStatus,
 )
+from nestor.modules.cognition.delegation import Assignment, ExecutorKeys, NestorTools
 from nestor.modules.cognition.delegation.assistant import Delegation
 from nestor.modules.cognition.delegation.service import INTERRUPTED, TaskManager
 from nestor.modules.cognition.tools import ToolContext
@@ -31,6 +32,7 @@ from nestor.testing.cognition import (
     ScriptedExecutor,
     ScriptedRemoteExecutor,
 )
+from nestor.testing.connectors import MemoryVault
 from nestor.testing.journal import MemoryBlobStore, MemoryEventLog
 
 VOICE = Address("voice", "salon")
@@ -90,7 +92,7 @@ async def test_the_files_a_task_made_are_kept_and_one_that_cannot_be_is_said_not
     class Writer(Executor):
         name = "writer"
 
-        async def run(self, objective: str, progress: Progress) -> Outcome:
+        async def run(self, assignment: Assignment, progress: Progress) -> Outcome:
             made = [Attachment(kind=AttachmentKind.FILE, data=d, media_type="text/plain", name=n) for n, d in FILES]
             return Outcome.completed("Écrits.", tuple(made))
 
@@ -158,7 +160,7 @@ async def test_an_executor_that_hangs_on_cancel_is_reported(journal: Journal) ->
 
         name = "slow-to-stop"
 
-        async def run(self, objective: str, progress: Progress) -> Outcome:
+        async def run(self, assignment: Assignment, progress: Progress) -> Outcome:
             try:
                 await asyncio.sleep(10)
             except asyncio.CancelledError:
@@ -178,14 +180,14 @@ async def test_work_stopped_before_it_reached_the_executor_ends_cancelled(journa
 
         name = "local"
 
-        async def run(self, objective: str, progress: Progress) -> Outcome:
+        async def run(self, assignment: Assignment, progress: Progress) -> Outcome:
             await asyncio.sleep(10)
             return Outcome.completed("never")
 
     class SlowSubmit(ScriptedRemoteExecutor):
         name = "slow-submit"
 
-        async def submit(self, objective: str) -> str:
+        async def submit(self, assignment: Assignment) -> str:
             await asyncio.sleep(10)
             return "never"
 
@@ -200,7 +202,7 @@ async def test_failures_end_the_task_without_breaking_the_assistant(journal: Jou
     class Crashing(Executor):
         name = "crashing"
 
-        async def run(self, objective: str, progress: Progress) -> Outcome:
+        async def run(self, assignment: Assignment, progress: Progress) -> Outcome:
             raise RuntimeError("remote agent crashed")
 
     class Lost(ScriptedRemoteExecutor):
@@ -284,3 +286,74 @@ async def test_the_instructions_say_what_executors_can_do_and_what_runs(journal:
         )
     assert "scripted-remote: carry out scripted remote tasks" in guidance and "Réserver" not in guidance
     assert "Réserver un resto" in running
+
+
+class Reaching(ScriptedRemoteExecutor):
+    """A remote executor that reaches Nestor's MCP server with what Nestor passes it."""
+
+    nestor_tools = NestorTools.PASSED
+
+
+async def keys_for(journal: Journal, *executors: str) -> ExecutorKeys:
+    keys = ExecutorKeys(journal, MemoryVault(), "https://nestor.example/mcp", executors)
+    await keys.start()
+    return keys
+
+
+async def test_a_task_for_an_executor_that_reaches_nestor_gets_a_capability_good_for_it_while_it_runs() -> None:
+    journal, remote = Journal(MemoryEventLog()), FakeRemote()
+    reaching, plain = Reaching(remote, duration_s=None), ScriptedRemoteExecutor(FakeRemote(), duration_s=None)
+    reaching.name, plain.name = "codex", "hermes"
+    keys = await keys_for(journal, "codex", "hermes")
+    async with TaskManager(journal, [reaching, plain], keys=keys) as tasks:
+        task = await tasks.delegate("Corrige le test", origin=VOICE, executor="codex")
+        other = await tasks.delegate("Cherche un vol", origin=VOICE, executor="hermes")
+        await asyncio.sleep(0.01)
+        [given] = [r.assignment for r in remote.runs.values() if r.assignment]
+        assert given.task and given.task.startswith("nstt_") and given.access is not None
+        assert given.access.url == "https://nestor.example/mcp" and keys.caller(given.access.key) == "codex"
+        assert given.task in given.brief() and "task_brief" in given.brief()
+        assert [r.assignment.task for r in plain.remote.runs.values() if r.assignment] == [None], "it cannot reach"
+        assert tasks.assigned("codex", given.task) is task
+        assert tasks.assigned("hermes", given.task) is None, "another executor's task"
+        assert tasks.assigned("codex", "nstt_guessed") is None
+        [started] = [e for e in await journal.history(TaskStarted) if e.task_id == task.id]
+        assert started.capability and given.task not in str(started.to_record()), "only its digest is journaled"
+        remote.finish(next(iter(remote.runs)), Outcome.completed("ok"))
+        await tasks.wait(task.id)
+        assert tasks.assigned("codex", given.task) is None, "it ended"
+        await tasks.cancel(other.id)
+
+
+async def test_a_capability_still_works_for_a_remote_task_followed_again_after_a_restart() -> None:
+    journal, remote = Journal(MemoryEventLog()), FakeRemote()
+    executor = Reaching(remote, duration_s=None)
+    executor.name = "codex"
+    async with TaskManager(journal, [executor], keys=await keys_for(journal, "codex")) as tasks:
+        task = await tasks.delegate("Corrige le test", origin=VOICE)
+        await asyncio.sleep(0.01)
+    [run] = remote.runs.values()
+    assert run.assignment and run.assignment.task
+    again = Reaching(remote, duration_s=None)
+    again.name = "codex"
+    async with TaskManager(journal, [again], keys=await keys_for(journal, "codex")) as restarted:
+        found = restarted.assigned("codex", run.assignment.task)
+        assert found is not None and found.id == task.id
+        remote.finish(next(iter(remote.runs)), Outcome.completed("ok"))
+        await restarted.wait(task.id)
+
+
+async def test_a_file_an_executor_hands_back_while_it_works_goes_with_the_result() -> None:
+    journal, blobs, remote = Journal(MemoryEventLog()), MemoryBlobStore(), FakeRemote()
+    executor = Reaching(remote, duration_s=None)
+    async with TaskManager(journal, [executor], blobs=blobs) as tasks:
+        task = await tasks.delegate("Écris le devis", origin=VOICE)
+        await asyncio.sleep(0.01)
+        pdf = Attachment(
+            kind=AttachmentKind.FILE, data=b"%PDF-1.7 devis", media_type="application/pdf", name="devis.pdf"
+        )
+        kept = await tasks.add_file(task, pdf)
+        remote.finish(next(iter(remote.runs)), Outcome.completed("Devis prêt."))
+        await tasks.wait(task.id)
+    [ended] = await journal.history(TaskEnded)
+    assert ended.files == (kept,) and blobs.blobs[kept.digest] == b"%PDF-1.7 devis"

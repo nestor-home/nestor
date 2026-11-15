@@ -16,6 +16,7 @@ class HermesSettings(AdapterSettings):
     instructions: str = INSTRUCTIONS
     timeout_s: PositiveFloat = 15.0
     stop_timeout_s: PositiveFloat = 10.0
+    nestor_mcp: bool = False  # its profile declares Nestor's MCP server as `nestor`, with this executor's key
 
 
 def build(settings: HermesSettings, name: str, services: Services) -> HermesExecutor:
@@ -27,6 +28,7 @@ def build(settings: HermesSettings, name: str, services: Services) -> HermesExec
         instructions=settings.instructions,
         timeout_s=settings.timeout_s,
         stop_timeout_s=settings.stop_timeout_s,
+        nestor_mcp=settings.nestor_mcp,
     )
     executor.name = name  # two Hermes profiles are two executors
     return executor

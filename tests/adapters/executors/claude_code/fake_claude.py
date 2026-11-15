@@ -1,6 +1,7 @@
 """A fake `claude -p --output-format stream-json`, as observed on Claude Code 2.1.311: an init message, the assistant's
 tool calls, then one `result` message carrying the structured output. `--behave` picks what the task does,
-`--record` keeps the arguments, the objective read on standard input and the folder it ran in."""
+`--record` keeps the arguments, the objective read on standard input, the folder it ran in and the MCP servers it was
+given (`--mcp-config`), with that file's permissions."""
 
 import argparse
 import json
@@ -14,6 +15,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--behave", default="complete")
 parser.add_argument("--record")
 parser.add_argument("--session-id")
+parser.add_argument("--mcp-config")
 known, rest = parser.parse_known_args()
 objective = sys.stdin.read()
 if known.record:
@@ -24,6 +26,8 @@ if known.record:
                 "objective": objective,
                 "cwd": os.getcwd(),
                 "api_key": os.environ.get("ANTHROPIC_API_KEY"),
+                "mcp": json.loads(Path(known.mcp_config).read_text()) if known.mcp_config else None,
+                "mcp_mode": Path(known.mcp_config).stat().st_mode & 0o777 if known.mcp_config else None,
             }
         )
     )

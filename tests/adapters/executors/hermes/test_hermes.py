@@ -14,7 +14,7 @@ import pytest
 from nestor.adapters.executors.hermes import HermesExecutor, HermesSettings, plugin
 from nestor.core import ContractError, ProviderError
 from nestor.core.i18n import Locale
-from nestor.modules.cognition import Progress, TaskStatus
+from nestor.modules.cognition.delegation import Assignment, NestorTools, Progress, TaskStatus
 from nestor.runtime import Services
 from nestor.testing.cognition import RemoteExecutorContract
 from nestor.testing.i18n import EchoLocalizer
@@ -132,7 +132,7 @@ class TestHermesExecutor(RemoteExecutorContract):
 async def test_a_new_executor_follows_a_run_still_going_to_its_end() -> None:
     server = FakeHermes(holds=True)
     async with server.executor() as executor:
-        ref = await executor.submit("Résume les actualités.")
+        ref = await executor.submit(Assignment("Résume les actualités."))
     async with server.executor() as restarted:
         following = asyncio.create_task(restarted.follow(ref, Progress()))
         await asyncio.sleep(0.01)
@@ -145,7 +145,7 @@ async def test_tool_calls_are_reported_as_progress_steps() -> None:
     server = FakeHermes(holds=True)
     steps: list[str] = []
     async with server.executor() as executor:
-        ref = await executor.submit("Quel temps fait-il ?")
+        ref = await executor.submit(Assignment("Quel temps fait-il ?"))
         following = asyncio.create_task(executor.follow(ref, Progress(steps.append)))
         await asyncio.sleep(0.01)
         server.emit(ref, "tool.started", tool="web_search", preview="météo Paris")
@@ -169,15 +169,23 @@ async def test_the_run_is_started_with_the_configured_profile_and_instructions()
     async with HermesExecutor(
         BASE_URL, API_KEY, "Richie", description="", instructions="Be brief.", transport=transport
     ) as executor:
-        await executor.submit("Allume la lampe.")
+        await executor.submit(Assignment("Allume la lampe."))
     assert bodies == [{"model": "Richie", "input": "Allume la lampe.", "instructions": "Be brief."}]
+
+
+async def test_a_profile_with_nestor_s_tools_gets_the_task_s_capability_in_its_objective() -> None:
+    server = FakeHermes()
+    async with server.executor(nestor_mcp=True) as reaching, server.executor() as plain:
+        assert (reaching.nestor_tools, plain.nestor_tools) == (NestorTools.CONFIGURED, NestorTools.NONE)
+        ref = await reaching.submit(Assignment("Cherche un vol.", "nstt_task"))
+    assert server.runs[ref].objective.startswith("Cherche un vol.") and 'task="nstt_task"' in server.runs[ref].objective
 
 
 @pytest.mark.parametrize(("status", "transient"), [(400, False), (401, False), (429, True), (503, True)])
 async def test_a_refused_submission_raises_a_provider_error(status: int, transient: bool) -> None:
     async with FakeHermes(refuses=status).executor() as executor:
         with pytest.raises(ProviderError) as raised:
-            await executor.submit("Fais quelque chose.")
+            await executor.submit(Assignment("Fais quelque chose."))
     assert raised.value.transient is transient
 
 
@@ -188,7 +196,7 @@ async def test_an_unreachable_server_is_a_transient_provider_error() -> None:
     executor = HermesExecutor(BASE_URL, API_KEY, "Richie", description="", transport=httpx.MockTransport(unreachable))
     async with executor:
         with pytest.raises(ProviderError) as raised:
-            await executor.submit("Fais quelque chose.")
+            await executor.submit(Assignment("Fais quelque chose."))
     assert raised.value.transient
 
 
@@ -197,14 +205,14 @@ async def test_a_submission_reply_without_a_run_id_is_a_provider_error(reply: by
     transport = httpx.MockTransport(lambda _: httpx.Response(202, content=reply))
     async with HermesExecutor(BASE_URL, API_KEY, "Richie", description="", transport=transport) as executor:
         with pytest.raises(ProviderError):
-            await executor.submit("Fais quelque chose.")
+            await executor.submit(Assignment("Fais quelque chose."))
 
 
 @pytest.mark.parametrize("error", ["quota exceeded", {"message": "quota exceeded"}])
 async def test_a_failed_run_returns_its_error(error: Any) -> None:
     server = FakeHermes(holds=True)
     async with server.executor() as executor:
-        ref = await executor.submit("Commande des pizzas.")
+        ref = await executor.submit(Assignment("Commande des pizzas."))
         following = asyncio.create_task(executor.follow(ref, Progress()))
         await asyncio.sleep(0.01)
         server.emit(ref, "run.failed", error=error)
@@ -215,7 +223,7 @@ async def test_a_failed_run_returns_its_error(error: Any) -> None:
 async def test_a_run_that_already_failed_is_reported_failed_after_a_restart() -> None:
     server = FakeHermes(holds=True)
     async with server.executor() as executor:
-        ref = await executor.submit("Commande des pizzas.")
+        ref = await executor.submit(Assignment("Commande des pizzas."))
         server.emit(ref, "run.failed")
     async with server.executor() as restarted:
         outcome = await restarted.follow(ref, Progress())
@@ -225,7 +233,7 @@ async def test_a_run_that_already_failed_is_reported_failed_after_a_restart() ->
 async def test_a_run_cancelled_elsewhere_is_reported_cancelled() -> None:
     server = FakeHermes(holds=True)
     async with server.executor() as executor:
-        ref = await executor.submit("Cherche un vol.")
+        ref = await executor.submit(Assignment("Cherche un vol."))
         following = asyncio.create_task(executor.follow(ref, Progress()))
         await asyncio.sleep(0.01)
         server.emit(ref, "run.cancelled")
@@ -237,7 +245,7 @@ async def test_a_dropped_stream_is_a_failure_while_the_run_goes_on() -> None:
     server = FakeHermes(holds=True)
     server.drops_stream = True
     async with server.executor() as executor:
-        outcome = await executor.follow(await executor.submit("Cherche un vol."), Progress())
+        outcome = await executor.follow(await executor.submit(Assignment("Cherche un vol.")), Progress())
     assert outcome.status is TaskStatus.FAILED and "stream ended" in (outcome.error or "")
 
 
@@ -245,7 +253,7 @@ async def test_a_run_that_finished_as_the_stream_dropped_returns_its_result() ->
     server = FakeHermes(holds=True)
     server.drops_stream, server.finishes_on_drop = True, "vol trouvé"
     async with server.executor() as executor:
-        outcome = await executor.follow(await executor.submit("Cherche un vol."), Progress())
+        outcome = await executor.follow(await executor.submit(Assignment("Cherche un vol.")), Progress())
     assert outcome.status is TaskStatus.COMPLETED and outcome.result == "vol trouvé"
 
 
@@ -253,7 +261,7 @@ async def test_a_garbled_event_is_a_failure_not_an_exception() -> None:
     server = FakeHermes(holds=True)
     server.broken_line = "data: {not json\n\n"
     async with server.executor() as executor:
-        outcome = await executor.follow(await executor.submit("Cherche un vol."), Progress())
+        outcome = await executor.follow(await executor.submit(Assignment("Cherche un vol.")), Progress())
     assert outcome.status is TaskStatus.FAILED and "unexpected reply" in (outcome.error or "")
 
 
@@ -274,7 +282,7 @@ async def test_an_events_endpoint_error_is_a_failure() -> None:
     async with HermesExecutor(
         BASE_URL, API_KEY, "Richie", description="", transport=httpx.MockTransport(no_events)
     ) as e:
-        outcome = await e.follow(await e.submit("Cherche un vol."), Progress())
+        outcome = await e.follow(await e.submit(Assignment("Cherche un vol.")), Progress())
     assert outcome.status is TaskStatus.FAILED and "502" in (outcome.error or "")
 
 
@@ -287,14 +295,14 @@ async def test_losing_the_server_while_following_is_a_failure() -> None:
         return await server.handle(request)
 
     async with HermesExecutor(BASE_URL, API_KEY, "Richie", description="", transport=httpx.MockTransport(gone)) as e:
-        outcome = await e.follow(await e.submit("Cherche un vol."), Progress())
+        outcome = await e.follow(await e.submit(Assignment("Cherche un vol.")), Progress())
     assert outcome.status is TaskStatus.FAILED and "lost contact" in (outcome.error or "")
 
 
 async def test_a_confirmed_stop_returns_true() -> None:
     server = FakeHermes(holds=True)
     async with server.executor() as executor:
-        ref = await executor.submit("Cherche un vol.")
+        ref = await executor.submit(Assignment("Cherche un vol."))
         assert await executor.stop(ref)
     assert server.runs[ref].status == "cancelled"
 
@@ -302,12 +310,12 @@ async def test_a_confirmed_stop_returns_true() -> None:
 async def test_an_unconfirmed_stop_returns_false_after_the_timeout() -> None:
     server = FakeHermes(holds=True, confirms_stop=False)
     async with server.executor(stop_timeout_s=0.05) as executor:
-        assert not await asyncio.wait_for(executor.stop(await executor.submit("Cherche un vol.")), 1)
+        assert not await asyncio.wait_for(executor.stop(await executor.submit(Assignment("Cherche un vol."))), 1)
 
 
 async def test_stopping_a_run_that_already_finished_returns_false() -> None:
     async with FakeHermes().executor() as executor:
-        assert not await executor.stop(await executor.submit("Dis bonjour."))
+        assert not await executor.stop(await executor.submit(Assignment("Dis bonjour.")))
 
 
 async def test_stopping_an_unknown_run_returns_false() -> None:
@@ -318,14 +326,14 @@ async def test_stopping_an_unknown_run_returns_false() -> None:
 async def test_a_stop_whose_state_cannot_be_read_returns_false() -> None:
     server = FakeHermes(holds=True, confirms_stop=False)
     async with server.executor() as executor:
-        ref = await executor.submit("Cherche un vol.")
+        ref = await executor.submit(Assignment("Cherche un vol."))
         server.state_error = 500
         assert not await executor.stop(ref)
 
 
 async def test_using_the_executor_before_start_fails_clearly() -> None:
     with pytest.raises(ContractError, match="before start"):
-        await FakeHermes().executor().submit("Dis bonjour.")
+        await FakeHermes().executor().submit(Assignment("Dis bonjour."))
 
 
 async def test_close_can_be_called_twice() -> None:
@@ -335,7 +343,7 @@ async def test_close_can_be_called_twice() -> None:
     await executor.close()
     await executor.close()
     with pytest.raises(ContractError):
-        await executor.submit("Dis bonjour.")
+        await executor.submit(Assignment("Dis bonjour."))
 
 
 async def test_the_plugin_builds_an_executor_described_by_its_configuration(tmp_path: Any) -> None:
@@ -354,7 +362,7 @@ async def test_live_a_run_completes_and_can_be_followed_again() -> None:
         pytest.skip("Hermes is not configured (HERMES_BASE_URL, HERMES_API_KEY, HERMES_MODEL)")
     base_url, api_key, model = (os.environ[n] for n in names)
     async with HermesExecutor(base_url, api_key, model, description="") as executor:
-        ref = await executor.submit("Réponds juste OK, sans utiliser d'outil.")
+        ref = await executor.submit(Assignment("Réponds juste OK, sans utiliser d'outil."))
         outcome = await asyncio.wait_for(executor.follow(ref, Progress()), 120)
     async with HermesExecutor(base_url, api_key, model, description="") as restarted:
         again = await asyncio.wait_for(restarted.follow(ref, Progress()), 30)

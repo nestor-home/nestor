@@ -22,7 +22,7 @@ from nestor.adapters.executors.common import (
 from nestor.adapters.executors.jsonrpc import Closed, Message, RpcError, StdioRpc
 from nestor.core import ContractError, Health, ProviderError
 from nestor.core.i18n import Message as Said
-from nestor.modules.cognition import Outcome, Progress, RemoteExecutor
+from nestor.modules.cognition.delegation import Assignment, NestorAccess, NestorTools, Outcome, Progress, RemoteExecutor
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +30,7 @@ RECONNECT_S = (1.0, 5.0, 30.0)  # waits before following again a turn whose sess
 
 
 class CodexExecutor(RemoteExecutor):
+    nestor_tools = NestorTools.PASSED
     """Delegates objectives to Codex; its turns are followed again after a restart.
 
     `description` states what this Codex can really do (its sandbox, its tools, its MCP servers): the assistant
@@ -83,10 +84,12 @@ class CodexExecutor(RemoteExecutor):
         if rpc is not None:
             await rpc.close()
 
-    async def submit(self, objective: str) -> str:
+    async def submit(self, assignment: Assignment) -> str:
+        objective = assignment.brief()
         try:
             rpc = await self._session()
-            thread = str((await self._call(rpc, "thread/start", self._thread_settings()))["thread"]["id"])
+            settings = self._thread_settings(assignment.access)
+            thread = str((await self._call(rpc, "thread/start", settings))["thread"]["id"])
             self._join(rpc, thread)
             turn = await self._call(
                 rpc,
@@ -232,7 +235,8 @@ class CodexExecutor(RemoteExecutor):
         rpc.listen(thread)  # from now on: nothing it says about the thread is missed
         self._joined.add(thread)
 
-    def _thread_settings(self) -> Message:
+    def _thread_settings(self, access: NestorAccess | None = None) -> Message:
+        """The thread's settings; with `access`, Nestor's MCP server among its MCP servers, for this thread only."""
         settings: Message = {
             "cwd": self._cwd,
             "sandbox": self._sandbox.value,
@@ -241,8 +245,13 @@ class CodexExecutor(RemoteExecutor):
         }
         if self._model:
             settings["model"] = self._model
-        if self._config:
-            settings["config"] = dict(self._config)
+        config = dict(self._config or {})
+        if access is not None:
+            servers = dict(config.get("mcp_servers") or {})
+            servers["nestor"] = {"url": access.url, "http_headers": {"Authorization": f"Bearer {access.key}"}}
+            config["mcp_servers"] = servers
+        if config:
+            settings["config"] = config
         return settings
 
     async def _answer(self, method: str, params: Message) -> Message:

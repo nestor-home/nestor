@@ -8,7 +8,8 @@ from nestor.modules.journal import BlobRef
 
 class TaskStarted(Event, event_type="task.started"):
     """`exchange` is the conversation and turn that delegated it, when one did; `thread`, what its result continues
-    (a recurring wake-up that delegated it: `Notification.thread`)."""
+    (a recurring wake-up that delegated it: `Notification.thread`); `capability`, the digest of the value its executor
+    calls Nestor's MCP server with for it (never the value), when it reaches it."""
 
     task_id: str
     objective: str
@@ -18,6 +19,7 @@ class TaskStarted(Event, event_type="task.started"):
     notify: Notify = Notify.AUTO
     exchange: Exchange | None = None
     thread: str | None = None
+    capability: str | None = None
 
 
 class TaskAttached(Event, event_type="task.attached"):
@@ -52,3 +54,33 @@ class TaskDelivered(Event, event_type="task.delivered"):
 
     task_id: str
     address: Address
+
+
+class TaskFileAdded(Event, event_type="task.file.added"):
+    """A file the executor handed back while it worked (`attach_file`): it goes with the result."""
+
+    task_id: str
+    file: BlobRef
+    name: str
+
+
+class ExecutorKeyIssued(Event, event_type="executor.key.issued"):
+    """A new key for an executor to call Nestor's MCP server with; the one before no longer works. Never the key."""
+
+    executor: str
+    by: str | None = None  # the account that asked, or None when Nestor issued it to an executor it launches
+
+
+class ExecutorKeyRevoked(Event, event_type="executor.key.revoked"):
+    executor: str
+    by: str | None = None
+
+
+class ExecutorCalled(Event, event_type="executor.called"):
+    """An executor called a tool of Nestor's MCP server for one of its tasks; what the tool did is journaled by its
+    module."""
+
+    executor: str  # empty when the key matched none
+    task_id: str | None  # None when the call matched no running task of that executor
+    tool: str
+    ok: bool

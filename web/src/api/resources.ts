@@ -74,6 +74,12 @@ export const api = {
 
   // system
   system: () => unwrap(client.GET("/api/v1/system")),
+  executors: () => unwrap(client.GET("/api/v1/executors")),
+  /** A new key for the executor, replacing its last: this answer is the only place it is shown. */
+  issueExecutorKey: (name: string) =>
+    unwrap(client.POST("/api/v1/executors/{name}/key", { params: { path: { name } } })),
+  revokeExecutorKey: (name: string) =>
+    done(client.DELETE("/api/v1/executors/{name}/key", { params: { path: { name } } })),
   updates: () => unwrap(client.GET("/api/v1/system/updates")),
   /** Installs the newest release where Nestor runs, then restarts on it: a person's confirmed action. */
   installUpdate: (version: string) =>

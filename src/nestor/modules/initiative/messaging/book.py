@@ -3,7 +3,12 @@ which questions are still open."""
 
 from nestor.core import Component, PersonId, new_id
 from nestor.modules.channels import Address, Exchange
-from nestor.modules.initiative.messaging.events import MessageDelivered, MessageRequested, MessageUndelivered
+from nestor.modules.initiative.messaging.events import (
+    MessageDelivered,
+    MessageRequested,
+    MessageUndelivered,
+    QuestionAnswered,
+)
 from nestor.modules.journal import Journal
 
 
@@ -17,9 +22,12 @@ class MessageBook(Component):
         self._messages: dict[str, MessageRequested] = {}
         self._settled: set[str] = set()  # delivered, or given up on
         self._answered: set[str] = set()
+        self._answers: dict[str, str] = {}  # of the questions tasks asked
 
     async def start(self) -> None:
-        for event in await self.journal.history(MessageRequested, MessageDelivered, MessageUndelivered):
+        for event in await self.journal.history(
+            MessageRequested, MessageDelivered, MessageUndelivered, QuestionAnswered
+        ):
             self._take(event)
 
     async def request(
@@ -34,6 +42,7 @@ class MessageBook(Component):
         expects_reply: bool = False,
         answers: str | None = None,
         exchange: Exchange | None = None,
+        task: str | None = None,
     ) -> MessageRequested:
         event = MessageRequested(
             source=self.name,
@@ -48,9 +57,17 @@ class MessageBook(Component):
             expects_reply=expects_reply,
             answers=answers,
             exchange=exchange,
+            task=task,
         )
         await self._publish(event)
         return event
+
+    async def answer(self, message_id: str, answer: str, *, by: PersonId | None) -> None:
+        """The answer to a question a task asked, for its executor to read (`answer_to`)."""
+        await self._publish(QuestionAnswered(source=self.name, message_id=message_id, answer=answer, by=by))
+
+    def answer_to(self, message_id: str) -> str | None:
+        return self._answers.get(message_id)
 
     async def delivered(self, message_id: str, address: Address) -> None:
         await self._publish(
@@ -75,7 +92,9 @@ class MessageBook(Component):
             if m.expects_reply and m.message_id in self._settled and m.message_id not in self._answered
         )
 
-    async def _publish(self, event: MessageRequested | MessageDelivered | MessageUndelivered) -> None:
+    async def _publish(
+        self, event: MessageRequested | MessageDelivered | MessageUndelivered | QuestionAnswered
+    ) -> None:
         await self.journal.publish(event)
         self._take(event)
 
@@ -89,3 +108,6 @@ class MessageBook(Component):
         elif isinstance(event, MessageUndelivered):
             self._settled.add(event.message_id)
             self._answered.add(event.message_id)  # a question that never left cannot be answered
+        elif isinstance(event, QuestionAnswered):
+            self._answered.add(event.message_id)
+            self._answers[event.message_id] = event.answer

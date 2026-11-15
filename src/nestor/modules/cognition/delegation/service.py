@@ -9,6 +9,7 @@ work is stopped.
 
 import asyncio
 import contextlib
+import hmac
 import logging
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
@@ -20,11 +21,13 @@ from nestor.modules.cognition.delegation.events import (
     TaskAttached,
     TaskCancelRequested,
     TaskEnded,
+    TaskFileAdded,
     TaskProgressed,
     TaskStarted,
 )
+from nestor.modules.cognition.delegation.keys import ExecutorKeys, capability, digest
 from nestor.modules.cognition.delegation.ports import Executor, RemoteExecutor
-from nestor.modules.cognition.delegation.types import Notify, Outcome, Progress, TaskStatus
+from nestor.modules.cognition.delegation.types import Assignment, NestorTools, Notify, Outcome, Progress, TaskStatus
 from nestor.modules.journal import BlobRef, BlobStore, Journal
 
 logger = logging.getLogger(__name__)
@@ -41,7 +44,10 @@ class Task:
     requested_by: PersonId | None
     notify: Notify
     started_at: datetime
+    exchange: Exchange | None = None
+    capability: str | None = None  # the digest of what its executor calls Nestor's MCP server with for it
     ref: str | None = None
+    files: list[BlobRef] = field(default_factory=list)  # handed back while it ran (`attach_file`)
     steps: list[str] = field(default_factory=list)
     outcome: Outcome | None = None
     job: asyncio.Task[None] | None = field(default=None, repr=False)
@@ -74,10 +80,12 @@ class TaskManager(Component):
         executors: Iterable[Executor],
         *,
         blobs: BlobStore | None = None,
+        keys: ExecutorKeys | None = None,
         cancel_timeout_s: float = 20.0,
     ) -> None:
-        """`blobs` keeps the files executors make; without it they are left out."""
-        self.journal, self._blobs = journal, blobs
+        """`blobs` keeps the files executors make; without it they are left out. `keys`: executors reach Nestor's
+        MCP server for their tasks; without them, none does."""
+        self.journal, self._blobs, self.keys = journal, blobs, keys
         self.executors: Mapping[str, Executor] = {e.name: e for e in executors}
         self.tasks: dict[str, Task] = {}
         self._cancel_timeout_s = cancel_timeout_s
@@ -92,9 +100,13 @@ class TaskManager(Component):
         """Rebuild the tasks from the journal and pick up the ones that were running."""
         self._writer = asyncio.create_task(self._write(), name="task-manager writer")
         attached = {e.task_id: e.ref for e in await self.journal.history(TaskAttached)}
+        added: dict[str, list[BlobRef]] = {}
+        for event in await self.journal.history(TaskFileAdded):
+            added.setdefault(event.task_id, []).append(event.file)
         ended = {e.task_id: e for e in await self.journal.history(TaskEnded)}
         for event in await self.journal.history(TaskStarted):
             task = self.tasks[event.task_id] = _task(event, attached.get(event.task_id))
+            task.files = added.get(task.id, [])
             if done := ended.get(task.id):
                 task.outcome = Outcome(done.status, done.result, done.error)
                 continue
@@ -134,6 +146,7 @@ class TaskManager(Component):
         chosen = self.executors.get(executor) if executor else self.default_executor
         if chosen is None:
             raise ContractError(f"no executor named {executor!r}" if executor else "no executor is plugged in")
+        assignment = await self._assignment(objective, chosen)
         event = TaskStarted(
             source=self.name,
             session=origin.session,
@@ -145,11 +158,45 @@ class TaskManager(Component):
             notify=notify,
             exchange=exchange,
             thread=thread,
+            capability=digest(assignment.task) if assignment.task else None,
         )
         await self.journal.publish(event)
         task = self.tasks[event.task_id] = _task(event, None)
-        task.job = asyncio.create_task(self._run(task, chosen), name=f"task {task.id}")
+        task.job = asyncio.create_task(self._run(task, chosen, assignment), name=f"task {task.id}")
         return task
+
+    def assigned(self, executor: str, task: str) -> Task | None:
+        """The running task of `executor` whose capability `task` is; every running task is compared, in constant
+        time."""
+        wanted, found = digest(task), None
+        for candidate in self.running():
+            known = candidate.capability or ""
+            if hmac.compare_digest(known.encode(), wanted.encode()) and candidate.executor == executor:
+                found = candidate
+        return found
+
+    def report(self, task: Task, step: str) -> None:
+        """A step of `task`, said by its executor through Nestor's MCP server."""
+        self._progress(task)(step)
+
+    async def add_file(self, task: Task, file: Attachment) -> BlobRef:
+        """A file `task`'s executor hands back while it works: kept, journaled, and sent with the result."""
+        if self._blobs is None:
+            raise ContractError("files cannot be kept here")
+        kept = await self._blobs.put(file.data, file.media_type)
+        task.files.append(kept)
+        name = file.name or file.media_type
+        await self.journal.publish(
+            TaskFileAdded(source=self.name, session=task.origin.session, task_id=task.id, file=kept, name=name)
+        )
+        return kept
+
+    async def _assignment(self, objective: str, executor: Executor) -> Assignment:
+        """What `executor` is given: with Nestor's MCP server when it reaches it, a capability for the task."""
+        if self.keys is None or executor.nestor_tools is NestorTools.NONE:
+            return Assignment(objective)
+        passed = executor.nestor_tools is NestorTools.PASSED
+        return Assignment(objective, capability(), await self.keys.access(executor.name) if passed else None)
 
     async def cancel(self, task_id: str) -> Outcome:
         """Ask the executor to stop; the outcome says whether the stop was confirmed."""
@@ -182,10 +229,10 @@ class TaskManager(Component):
     def recent(self, count: int = 3) -> list[Task]:
         return [t for t in self.tasks.values() if t.status is not TaskStatus.RUNNING][-count:]
 
-    async def _run(self, task: Task, executor: Executor) -> None:
+    async def _run(self, task: Task, executor: Executor, assignment: Assignment) -> None:
         if not isinstance(executor, RemoteExecutor):
             try:
-                outcome = await executor.run(task.objective, self._progress(task))
+                outcome = await executor.run(assignment, self._progress(task))
             except asyncio.CancelledError:
                 outcome = Outcome.cancelled()  # the cancellation went through: nothing remote ran
             except Exception as error:  # a broken executor must not take the assistant down
@@ -193,7 +240,7 @@ class TaskManager(Component):
             await self._end(task, outcome)
             return
         try:
-            ref = await executor.submit(task.objective)
+            ref = await executor.submit(assignment)
         except asyncio.CancelledError:
             await self._end(task, Outcome.cancelled())
             return
@@ -230,7 +277,8 @@ class TaskManager(Component):
 
     async def _end(self, task: Task, outcome: Outcome) -> None:
         await self._writes.join()  # progress first: the journal keeps the order things happened in
-        files, lost = await self._keep(task, outcome.files)
+        made, lost = await self._keep(task, outcome.files)
+        files = (*task.files, *made)
         result = f"{outcome.result}\nFiles not kept: {'; '.join(lost)}" if lost and outcome.result else outcome.result
         task.outcome = Outcome(outcome.status, result, outcome.error)  # the files' bytes stay in the blob store
         await self.journal.publish(
@@ -280,5 +328,7 @@ def _task(event: TaskStarted, ref: str | None) -> Task:
         requested_by=event.requested_by,
         notify=event.notify,
         started_at=event.at,
+        exchange=event.exchange,
+        capability=event.capability,
         ref=ref,
     )

@@ -54,6 +54,8 @@ ErrorCode = Literal[
     "cross_origin",
     "csrf_failed",
     "empty_memory",
+    "executor_unknown",
+    "executors_unreachable",
     "fields_missing",
     "forbidden",
     "http_error",

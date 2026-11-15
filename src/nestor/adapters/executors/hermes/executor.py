@@ -8,7 +8,7 @@ import httpx
 from nestor.adapters.executors.common import INSTRUCTIONS, described
 from nestor.adapters.executors.hermes.runs import UnexpectedReply, decode, payload, run_outcome, run_path, run_step
 from nestor.core import ContractError, ProviderError
-from nestor.modules.cognition import Outcome, Progress, RemoteExecutor
+from nestor.modules.cognition.delegation import Assignment, NestorTools, Outcome, Progress, RemoteExecutor
 
 
 class HermesExecutor(RemoteExecutor):
@@ -33,9 +33,12 @@ class HermesExecutor(RemoteExecutor):
         timeout_s: float = 15.0,
         stop_timeout_s: float = 10.0,
         poll_interval_s: float = 0.5,
+        nestor_mcp: bool = False,
         transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
+        """`nestor_mcp`: its profile declares Nestor's MCP server, as `nestor`, with this executor's key."""
         self.description = description
+        self.nestor_tools = NestorTools.CONFIGURED if nestor_mcp else NestorTools.NONE
         self._base_url, self._api_key, self._model, self._instructions = base_url, api_key, model, instructions
         self._timeout_s, self._stop_timeout_s, self._poll_interval_s = timeout_s, stop_timeout_s, poll_interval_s
         self._transport = transport
@@ -55,8 +58,8 @@ class HermesExecutor(RemoteExecutor):
         if client is not None:
             await client.aclose()
 
-    async def submit(self, objective: str) -> str:
-        body = {"model": self._model, "input": objective, "instructions": self._instructions}
+    async def submit(self, assignment: Assignment) -> str:
+        body = {"model": self._model, "input": assignment.brief(), "instructions": self._instructions}
         try:
             reply = payload(await self._http.post("runs", json=body))
         except httpx.HTTPError as error:

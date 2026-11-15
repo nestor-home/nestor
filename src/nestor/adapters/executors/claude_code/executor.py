@@ -2,7 +2,9 @@
 
 import asyncio
 import json
+import os
 import shutil
+import tempfile
 import uuid
 from collections.abc import Sequence
 from pathlib import Path
@@ -21,10 +23,11 @@ from nestor.adapters.executors.common import (
 from nestor.adapters.executors.process import Child
 from nestor.core import Health
 from nestor.core.i18n import Message
-from nestor.modules.cognition import Executor, Outcome, Progress
+from nestor.modules.cognition.delegation import Assignment, Executor, NestorAccess, NestorTools, Outcome, Progress
 
 
 class ClaudeCodeExecutor(Executor):
+    nestor_tools = NestorTools.PASSED
     """Delegates objectives to Claude Code in its working directory.
 
     `description` states what this Claude Code can really do with the tools it is allowed: the assistant promises
@@ -68,10 +71,17 @@ class ClaudeCodeExecutor(Executor):
     def details(self) -> dict[str, str]:
         return {"permission_mode": self._mode.value} | ({"model": self._model} if self._model else {})
 
-    async def run(self, objective: str, progress: Progress) -> Outcome:
+    async def run(self, assignment: Assignment, progress: Progress) -> Outcome:
+        with tempfile.TemporaryDirectory(prefix="nestor-claude-") as private:  # its key never on a command line
+            servers = _mcp_config(assignment.access, Path(private)) if assignment.access else None
+            return await self._run(assignment.brief(), progress, servers)
+
+    async def _run(self, objective: str, progress: Progress, servers: Path | None) -> Outcome:
         session = str(uuid.uuid4())
         try:
-            child = await Child.start([*self._command, *self._arguments(session)], cwd=self._cwd, env=self._env)
+            child = await Child.start(
+                [*self._command, *self._arguments(session, servers)], cwd=self._cwd, env=self._env
+            )
         except OSError as error:
             return Outcome.failed(f"Claude Code could not start: {error.strerror or error}")
         progress(f"session {session}")
@@ -92,7 +102,7 @@ class ClaudeCodeExecutor(Executor):
         report = Report.of(result.get("structured_output") or result.get("result") or "")
         return await report.outcome(str(self._cwd), self._read)
 
-    def _arguments(self, session: str) -> list[str]:
+    def _arguments(self, session: str, servers: Path | None = None) -> list[str]:
         arguments = [
             "-p",
             "--output-format",
@@ -109,8 +119,11 @@ class ClaudeCodeExecutor(Executor):
         ]
         if self._model:
             arguments += ["--model", self._model]
-        if self._allowed:
-            arguments += ["--allowedTools", ",".join(self._allowed)]
+        allowed = (*self._allowed, *((NESTOR_TOOLS,) if servers else ()))
+        if servers:
+            arguments += ["--mcp-config", str(servers)]
+        if allowed:
+            arguments += ["--allowedTools", ",".join(allowed)]
         if self._disallowed:
             arguments += ["--disallowedTools", ",".join(self._disallowed)]
         if self._budget is not None:
@@ -144,3 +157,16 @@ class ClaudeCodeExecutor(Executor):
         if resolved.stat().st_size > self._max_file_bytes:
             raise Unreadable(f"larger than {self._max_file_bytes} bytes")
         return await asyncio.to_thread(resolved.read_bytes)
+
+
+NESTOR_TOOLS = "mcp__nestor"  # every tool of the `nestor` server
+
+
+def _mcp_config(access: NestorAccess, folder: Path) -> Path:
+    """Nestor's MCP server for one session, in a file only this user reads: its key stays off the command line."""
+    path = folder / "mcp.json"
+    server = {"type": "http", "url": access.url, "headers": {"Authorization": f"Bearer {access.key}"}}
+    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(descriptor, "w") as file:
+        json.dump({"mcpServers": {"nestor": server}}, file)
+    return path

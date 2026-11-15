@@ -20,6 +20,7 @@ from nestor.admin.api.v1.confirmations import routes as confirmations
 from nestor.admin.api.v1.connections import routes as connections
 from nestor.admin.api.v1.connectors import routes as connectors
 from nestor.admin.api.v1.errors import ErrorOut
+from nestor.admin.api.v1.executors import routes as executors
 from nestor.admin.api.v1.home import routes as home
 from nestor.admin.api.v1.household import routes as household
 from nestor.admin.api.v1.i18n import routes as i18n
@@ -72,6 +73,7 @@ RESOURCES = (
     satellites,
     journal,
     tasks,
+    executors,
     watches,
     schedules,
     messages,

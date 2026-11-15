@@ -14,7 +14,7 @@ from nestor.adapters.executors.claude_code import ClaudeCodeExecutor, ClaudeCode
 from nestor.core import Health
 from nestor.core.i18n import Locale, Message
 from nestor.modules.channels import AttachmentKind
-from nestor.modules.cognition import Progress, TaskStatus
+from nestor.modules.cognition.delegation import Assignment, NestorAccess, Progress, TaskStatus
 from nestor.runtime import Services
 from nestor.testing.cognition import ExecutorContract
 from nestor.testing.i18n import EchoLocalizer
@@ -58,7 +58,7 @@ async def test_the_session_runs_where_and_how_the_configuration_says(tmp_path: P
         instructions="Sois bref.",
     )
     async with executor:
-        await executor.run("--help me: corrige le test", Progress(steps.append))
+        await executor.run(Assignment("--help me: corrige le test"), Progress(steps.append))
     seen = json.loads(record.read_text())
     arguments: list[str] = seen["arguments"]
 
@@ -82,7 +82,7 @@ async def test_the_session_runs_where_and_how_the_configuration_says(tmp_path: P
 async def test_the_report_comes_back_with_its_files_and_the_tool_calls_are_progress(tmp_path: Path) -> None:
     steps: list[str] = []
     async with claude(tmp_path) as executor:
-        outcome = await executor.run("Écris le rapport.", Progress(steps.append))
+        outcome = await executor.run(Assignment("Écris le rapport."), Progress(steps.append))
     assert outcome.result == "Rapport écrit."
     assert [(f.name, f.kind, f.media_type, f.data) for f in outcome.files] == [
         ("rapport.md", AttachmentKind.FILE, "text/markdown", b"# Rapport")
@@ -93,7 +93,7 @@ async def test_the_report_comes_back_with_its_files_and_the_tool_calls_are_progr
 @pytest.mark.parametrize(("behave", "report"), [("text", "Fini."), ("odd", '{"summary": "Fini."}'), ("huge", "Fini.")])
 async def test_a_result_without_a_structured_report_is_the_report(tmp_path: Path, behave: str, report: str) -> None:
     async with claude(tmp_path, behave) as executor:
-        outcome = await asyncio.wait_for(executor.run("Lance les tests.", Progress()), 20)
+        outcome = await asyncio.wait_for(executor.run(Assignment("Lance les tests."), Progress()), 20)
     assert (outcome.status, outcome.result, outcome.files) == (TaskStatus.COMPLETED, report, ())
 
 
@@ -106,7 +106,7 @@ async def test_a_result_without_a_structured_report_is_the_report(tmp_path: Path
 )
 async def test_a_failed_or_crashed_run_is_a_failure_with_its_reason(tmp_path: Path, behave: str, error: str) -> None:
     async with claude(tmp_path, behave) as executor:
-        outcome = await executor.run("Corrige le test.", Progress())
+        outcome = await executor.run(Assignment("Corrige le test."), Progress())
     assert (outcome.status, outcome.error) == (TaskStatus.FAILED, error)
 
 
@@ -115,7 +115,7 @@ async def test_only_files_within_the_working_directory_come_back(tmp_path: Path)
     folder.mkdir()
     (tmp_path / "secret.txt").write_text("secret")
     async with claude(folder, "files", max_file_bytes=1_000) as executor:
-        outcome = await executor.run("Fais les fichiers.", Progress())
+        outcome = await executor.run(Assignment("Fais les fichiers."), Progress())
     assert [(f.name, f.data) for f in outcome.files] == [("ok.txt", b"ok")]
     assert outcome.result is not None and outcome.result.startswith("Fichiers faits.\nFiles left out: ")
     for name, why in [
@@ -129,7 +129,7 @@ async def test_only_files_within_the_working_directory_come_back(tmp_path: Path)
 
 async def test_a_stop_ends_even_a_process_that_ignores_it(tmp_path: Path) -> None:
     async with claude(tmp_path, "stubborn", stop_timeout_s=0.3) as executor:
-        job = asyncio.create_task(executor.run("Corrige le test.", Progress()))
+        job = asyncio.create_task(executor.run(Assignment("Corrige le test."), Progress()))
         await asyncio.sleep(1.0)
         job.cancel()
         outcome = await asyncio.wait_for(job, 10)
@@ -139,7 +139,7 @@ async def test_a_stop_ends_even_a_process_that_ignores_it(tmp_path: Path) -> Non
 async def test_a_claude_that_is_not_installed_fails_the_task_and_is_unavailable(tmp_path: Path) -> None:
     executor = ClaudeCodeExecutor(["claude-that-is-not-installed"], working_directory=tmp_path, description="code")
     async with executor:
-        outcome = await executor.run("Corrige le test.", Progress())
+        outcome = await executor.run(Assignment("Corrige le test."), Progress())
     assert outcome.status is TaskStatus.FAILED and "could not start" in (outcome.error or "")
     assert (executor.health(), executor.health_detail()) == (
         Health.UNAVAILABLE,
@@ -164,6 +164,33 @@ async def test_live_claude_code_writes_a_file_and_hands_it_back(tmp_path: Path) 
         working_directory=tmp_path, description="write files", model="haiku", max_budget_usd=0.2
     )
     async with executor:
-        outcome = await executor.run("Write a file hello.txt containing the word bonjour, then report.", Progress())
+        outcome = await executor.run(
+            Assignment("Write a file hello.txt containing the word bonjour, then report."), Progress()
+        )
     assert outcome.status is TaskStatus.COMPLETED, outcome
     assert [(f.name, f.data.strip()) for f in outcome.files] == [("hello.txt", b"bonjour")]
+
+
+async def test_nestor_s_mcp_server_is_given_in_a_private_file_never_on_the_command_line(tmp_path: Path) -> None:
+    record = tmp_path / "record.json"
+    executor = claude(tmp_path, record=("--record", str(record)), allowed_tools=["Read"])
+    access = NestorAccess(url="https://nestor.example/mcp", key="nstx_secret-key")
+    async with executor:
+        await executor.run(Assignment("Corrige le test.", "nstt_task", access), Progress())
+    seen = json.loads(record.read_text())
+    arguments: list[str] = seen["arguments"]
+    server = {"type": "http", "url": access.url, "headers": {"Authorization": "Bearer nstx_secret-key"}}
+    assert seen["mcp"] == {"mcpServers": {"nestor": server}} and seen["mcp_mode"] == 0o600
+    assert not any("nstx_secret-key" in a for a in arguments), "the key stays off the command line"
+    assert not Path(arguments[arguments.index("--mcp-config") + 1]).exists(), "removed once the session ends"
+    assert arguments[arguments.index("--allowedTools") + 1] == "Read,mcp__nestor"
+    assert seen["objective"].startswith("Corrige le test.") and 'task="nstt_task"' in seen["objective"]
+
+
+async def test_without_nestor_s_server_the_session_gets_neither_it_nor_its_tools(tmp_path: Path) -> None:
+    record = tmp_path / "record.json"
+    async with claude(tmp_path, record=("--record", str(record))) as executor:
+        await executor.run(Assignment("Corrige le test."), Progress())
+    seen = json.loads(record.read_text())
+    assert seen["mcp"] is None and "--mcp-config" not in seen["arguments"]
+    assert seen["objective"] == "Corrige le test."

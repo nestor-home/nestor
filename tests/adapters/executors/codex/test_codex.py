@@ -17,7 +17,7 @@ from nestor.adapters.executors.common import MAX_FILES
 from nestor.core import ContractError, Health, ProviderError
 from nestor.core.i18n import Locale, Message
 from nestor.modules.channels import AttachmentKind
-from nestor.modules.cognition import Progress, TaskStatus
+from nestor.modules.cognition.delegation import Assignment, NestorAccess, Progress, TaskStatus
 from nestor.runtime import Services
 from nestor.testing.cognition import RemoteExecutorContract
 from nestor.testing.i18n import EchoLocalizer
@@ -44,7 +44,7 @@ class TestCodexExecutor(RemoteExecutorContract):
 async def submitted(codex: FakeCodex, **options: Any) -> tuple[Any, str]:
     executor = codex.executor(**options)
     await executor.start()
-    return executor, await executor.submit("Corrige le test.")
+    return executor, await executor.submit(Assignment("Corrige le test."))
 
 
 async def test_the_task_runs_where_and_how_the_configuration_says() -> None:
@@ -56,7 +56,7 @@ async def test_the_task_runs_where_and_how_the_configuration_says() -> None:
             "instructions": "Sois bref.",
         }
         async with codex.executor(**options) as executor:
-            await executor.run("Corrige le test.", Progress())
+            await executor.run(Assignment("Corrige le test."), Progress())
     [started] = [params for method, params in codex.requests if method == "thread/start"]
     assert {k: started[k] for k in ("cwd", "sandbox", "approvalPolicy", "model", "config")} == {
         "cwd": CWD,
@@ -71,10 +71,27 @@ async def test_the_task_runs_where_and_how_the_configuration_says() -> None:
     assert turn["outputSchema"]["required"] == ["report", "files"]
 
 
+async def test_nestor_s_mcp_server_joins_the_thread_s_own_servers_for_that_thread_only() -> None:
+    access = NestorAccess(url="https://nestor.example/mcp", key="nstx_secret-key")
+    configured = {"mcp_servers": {"docs": {"url": "https://docs.example/mcp"}}, "model_reasoning_effort": "low"}
+    async with FakeCodex() as codex, codex.executor(config=configured) as executor:
+        await executor.run(Assignment("Corrige le test.", "nstt_task", access), Progress())
+        await executor.run(Assignment("Et celui-là."), Progress())
+    first, second = [params for method, params in codex.requests if method == "thread/start"]
+    nestor = {"url": access.url, "http_headers": {"Authorization": "Bearer nstx_secret-key"}}
+    assert first["config"] == {
+        "mcp_servers": {"docs": {"url": "https://docs.example/mcp"}, "nestor": nestor},
+        "model_reasoning_effort": "low",
+    }
+    assert second["config"] == configured, "the configured servers are left as they are"
+    turn = next(params for method, params in codex.requests if method == "turn/start")
+    assert 'task="nstt_task"' in turn["input"][0]["text"]
+
+
 async def test_the_report_is_the_final_answer_and_the_turns_items_are_progress() -> None:
     steps: list[str] = []
     async with FakeCodex() as codex, codex.executor() as executor:
-        outcome = await executor.run("Corrige le test.", Progress(steps.append))
+        outcome = await executor.run(Assignment("Corrige le test."), Progress(steps.append))
     assert outcome.result == "C'est fait." and outcome.files == ()
     assert steps == [
         "command: /bin/bash -lc 'ls'",
@@ -87,7 +104,7 @@ async def test_the_report_is_the_final_answer_and_the_turns_items_are_progress()
 
 async def test_a_final_answer_that_is_not_a_structured_report_is_the_report() -> None:
     async with FakeCodex(report="Tout est vert.") as codex, codex.executor() as executor:
-        outcome = await executor.run("Lance les tests.", Progress())
+        outcome = await executor.run(Assignment("Lance les tests."), Progress())
     assert outcome.status is TaskStatus.COMPLETED and outcome.result == "Tout est vert."
 
 
@@ -109,7 +126,7 @@ async def test_the_files_the_report_lists_come_back_from_the_working_directory_o
     listed += ["auth.json", "home/auth.json", "locked.txt"]
     codex = FakeCodex(files=files, links=links, report={"report": "Devis écrit.", "files": listed})
     async with codex, codex.executor(max_file_bytes=1_000) as executor:
-        outcome = await executor.run("Écris le devis.", Progress())
+        outcome = await executor.run(Assignment("Écris le devis."), Progress())
     [devis] = outcome.files
     assert (devis.name, devis.kind, devis.media_type, devis.data) == (
         "devis.pdf",
@@ -136,7 +153,7 @@ async def test_no_more_files_than_the_limit_come_back() -> None:
     files = {f"{CWD}/{n}.txt": b"x" for n in range(MAX_FILES + 2)}
     codex = FakeCodex(files=files, report={"report": "Faits.", "files": list(files)})
     async with codex, codex.executor() as executor:
-        outcome = await executor.run("Écris-les.", Progress())
+        outcome = await executor.run(Assignment("Écris-les."), Progress())
     assert len(outcome.files) == MAX_FILES and f"(more than {MAX_FILES} files)" in (outcome.result or "")
 
 
@@ -202,7 +219,7 @@ async def test_a_codex_gone_for_good_while_following_is_a_failure() -> None:
 
 async def test_the_end_of_a_turn_is_what_its_notification_says_while_the_history_lags() -> None:
     async with FakeCodex(lags=True) as codex, codex.executor() as executor:
-        outcome = await asyncio.wait_for(executor.run("Corrige le test.", Progress()), 5)
+        outcome = await asyncio.wait_for(executor.run(Assignment("Corrige le test."), Progress()), 5)
     assert outcome.result == "C'est fait."
 
 
@@ -219,10 +236,10 @@ async def test_a_session_that_never_answers_is_closed_with_its_process(tmp_path:
 
     async with FakeCodex() as codex, codex.executor(command=silent("timed-out"), timeout_s=0.5) as executor:
         with pytest.raises(ProviderError):
-            await executor.submit("Corrige le test.")
+            await executor.submit(Assignment("Corrige le test."))
         assert executor.health() is Health.UNAVAILABLE
     async with FakeCodex() as codex, codex.executor(command=silent("cancelled"), timeout_s=30) as executor:
-        submission = asyncio.create_task(executor.submit("Corrige le test."))
+        submission = asyncio.create_task(executor.submit(Assignment("Corrige le test.")))
         await asyncio.sleep(0.5)
         submission.cancel()
         with pytest.raises(asyncio.CancelledError):
@@ -245,7 +262,7 @@ async def test_a_session_that_never_answers_is_closed_with_its_process(tmp_path:
 )
 async def test_a_request_for_approval_or_input_is_declined(asks: str, answer: dict[str, Any]) -> None:
     async with FakeCodex(asks=asks) as codex, codex.executor() as executor:
-        outcome = await executor.run("Nettoie le disque.", Progress())
+        outcome = await executor.run(Assignment("Nettoie le disque."), Progress())
     assert outcome.status is TaskStatus.COMPLETED
     [given] = codex.answers
     key = next(iter(answer))
@@ -290,8 +307,8 @@ async def test_a_codex_that_cannot_be_reached_is_unavailable() -> None:
         codex.executor(command=["codex-that-is-not-installed", "app-server"], reconnect_s=()) as missing,
     ):
         with pytest.raises(ProviderError) as refused:
-            await missing.submit("Corrige le test.")
-        outcome = await missing.run("Corrige le test.", Progress())
+            await missing.submit(Assignment("Corrige le test."))
+        outcome = await missing.run(Assignment("Corrige le test."), Progress())
         followed = await missing.follow("thread-1:turn-2", Progress())
         health = (missing.health(), missing.health_detail())
     assert refused.value.transient and outcome.status is TaskStatus.FAILED and followed.status is TaskStatus.FAILED
@@ -301,11 +318,11 @@ async def test_a_codex_that_cannot_be_reached_is_unavailable() -> None:
 async def test_a_reply_outside_the_protocol_or_a_session_that_hangs_up_is_a_provider_error() -> None:
     async with FakeCodex(garbled=True) as codex, codex.executor() as executor:
         with pytest.raises(ProviderError) as garbled:
-            await executor.submit("Corrige le test.")
+            await executor.submit(Assignment("Corrige le test."))
         followed = await executor.follow("thread-1:turn-2", Progress())
     async with FakeCodex(hangs_up=True) as codex, codex.executor() as executor:
         with pytest.raises(ProviderError) as hung_up:
-            await executor.submit("Corrige le test.")
+            await executor.submit(Assignment("Corrige le test."))
     assert not garbled.value.transient and hung_up.value.transient
     assert followed.status is TaskStatus.FAILED and "unexpected reply" in (followed.error or "")
 
@@ -313,14 +330,14 @@ async def test_a_reply_outside_the_protocol_or_a_session_that_hangs_up_is_a_prov
 async def test_a_refused_thread_is_a_provider_error_from_a_codex_that_answers() -> None:
     async with FakeCodex(refuses=True) as codex, codex.executor() as executor:
         with pytest.raises(ProviderError) as refused:
-            await executor.submit("Corrige le test.")
+            await executor.submit(Assignment("Corrige le test."))
         assert not refused.value.transient and executor.health() is Health.STARTED
 
 
 async def test_using_the_executor_before_start_fails_clearly() -> None:
     async with FakeCodex() as codex:
         with pytest.raises(ContractError):
-            await codex.executor().submit("Corrige le test.")
+            await codex.executor().submit(Assignment("Corrige le test."))
 
 
 async def test_the_plugin_builds_an_executor_described_by_its_configuration(tmp_path: Path) -> None:
@@ -343,7 +360,7 @@ async def test_live_codex_writes_a_file_and_hands_it_back(tmp_path: Path) -> Non
         "codex",
         Services(data_dir=tmp_path, localizer=EchoLocalizer(), locale=Locale("en")),
     ) as executor:
-        ref = await executor.submit("Write a file hello.txt containing the word bonjour, then report.")
+        ref = await executor.submit(Assignment("Write a file hello.txt containing the word bonjour, then report."))
         first = await executor.follow(ref, Progress())
     assert first.status is TaskStatus.COMPLETED, first
     assert [(f.name, f.data.strip()) for f in first.files] == [("hello.txt", b"bonjour")], json.dumps(first.result)
