@@ -38,17 +38,18 @@ def feed_source(folder: Path, url: str = URL) -> FeedSource:
     return FeedSource("rss", [Watched("Kernel", url)], PublicWeb(accept=FEEDS), folder, every_s=0.01)
 
 
-async def taken(source: FeedSource, wait_s: float = 0.1) -> list[Incoming]:
-    """What the source yields within `wait_s`."""
+async def taken(source: FeedSource, quiet_s: float = 0.1) -> list[Incoming]:
+    """What the source yields until it stays quiet for `quiet_s`: each item gives the next one that long again, so a
+    slow runner never cuts a batch in two."""
     found: list[Incoming] = []
-
-    async def take() -> None:
-        async for item in source.items():
-            found.append(item)
-
-    with pytest.raises(TimeoutError):
-        await asyncio.wait_for(take(), wait_s)
-    return found
+    items = source.items()
+    try:
+        while True:
+            found.append(await asyncio.wait_for(anext(items), quiet_s))
+    except TimeoutError:
+        return found
+    finally:
+        await items.aclose()
 
 
 class TestFeedSource(InboundEventSourceContract):

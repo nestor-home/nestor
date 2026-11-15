@@ -9,6 +9,8 @@ import pytest
 
 from nestor.core import PersonId, ProviderError
 from nestor.modules.channels import Address
+from nestor.modules.cognition.delegation.assistant import Delegation
+from nestor.modules.cognition.delegation.service import TaskManager
 from nestor.modules.cognition.model import ModelRequest, ToolCall
 from nestor.modules.cognition.tools import Toolbox, ToolContext, ToolFailed
 from nestor.modules.conversation import (
@@ -19,6 +21,7 @@ from nestor.modules.conversation import (
     ModelChoice,
     NotificationTurn,
     Persona,
+    Source,
     TurnContext,
 )
 from nestor.modules.household import Household, Person
@@ -26,7 +29,10 @@ from nestor.modules.identity import Speaker
 from nestor.modules.initiative import (
     Courier,
     Day,
+    Delivered,
     DeliveryFailed,
+    DeliveryWithheld,
+    Returns,
     Schedule,
     ScheduleBook,
     ScheduleCancelled,
@@ -36,7 +42,7 @@ from nestor.modules.initiative import (
 )
 from nestor.modules.journal import Journal
 from nestor.testing.channels import InMemoryChannel
-from nestor.testing.cognition import ScriptedModel
+from nestor.testing.cognition import ScriptedExecutor, ScriptedModel
 from nestor.testing.cognition.model import Reply
 from nestor.testing.i18n import EchoLocalizer
 from nestor.testing.journal import MemoryBlobStore, MemoryEventLog
@@ -216,3 +222,59 @@ async def test_the_wake_ups_set_are_in_the_instructions_with_when_they_are_next_
             )
         )
     assert "sat, sun at 08:00 (next: Saturday 07 November 08:00): Arrose les plantes" in section
+
+
+async def test_a_recurring_wake_up_reads_what_it_and_its_tasks_told_before_and_tells_only_what_is_new() -> None:
+    """As in production: a daily price check handed to an executor found the same offer two mornings in a row; the
+    second result is answered knowing what the first one told, a day and a conversation later."""
+    hermes = ScriptedExecutor(result="LG OLED65C6 à 1 599 € chez Boulanger.")
+    hermes.name = "hermes"
+    check = ToolCall("c", "delegate_task", {"objective": "Vérifie le prix des télés", "notify": "message"})
+    model = ScriptedModel(
+        check,
+        f"{SILENT} lancé",
+        "Le LG OLED65C6 est à 1 599 € chez Boulanger.",  # Monday
+        check,
+        f"{SILENT} lancé",
+        f"{SILENT} déjà dit hier",  # Tuesday
+    )
+    journal = Journal(MemoryEventLog())
+    clock = Clock(paris(2, 7))
+    book = ScheduleBook(journal, timezone="Europe/Paris", clock=clock)
+    household = Household([MATHIS])
+    tasks = TaskManager(journal, [hermes])
+    delegation, schedules = Delegation(tasks), ScheduleTools(book)
+    agent = Agent(
+        attachments=Attachments(MemoryBlobStore()),
+        models=ModelChoice.single(model),
+        persona=Persona(name="Richie", character="Tu es Richie.", timezone="Europe/Paris"),
+        journal=journal,
+        household=household,
+        localizer=EchoLocalizer(),
+        toolbox=Toolbox(journal, providers=[delegation, schedules]),
+        context=[delegation, schedules],
+    )
+    telegram = InMemoryChannel("telegram")
+    courier = Courier(journal, agent, [telegram])
+    scheduler = Scheduler(book, household, courier)
+    answered = journal.subscribe(Delivered, DeliveryWithheld)
+
+    async def result_answered() -> None:
+        while True:
+            event = await answered.next(timeout_s=2)
+            if isinstance(event, Delivered | DeliveryWithheld) and event.about.source is Source.TASK:
+                return
+
+    async with book, tasks, Returns(journal, household, courier):
+        tool = next(t for t in schedules.tools() if t.spec.name == "schedule")
+        context = ToolContext(address=CHAT, speaker=Speaker.account(MATHIS.id))
+        await tool.run({"instruction": "Vérifie le prix des télés", "times": ["09:00"]}, context)
+        for day in (2, 3):
+            clock.now = paris(day, 9, 1)
+            assert await scheduler.wake_due() == 1
+            await result_answered()
+
+    monday, tuesday = (r.messages[0].content for r in model.requests[2::3])
+    assert "You already wrote to them" not in monday
+    assert "You already wrote to them" in tuesday and "1 599 € chez Boulanger" in tuesday, "the first answer, read back"
+    assert telegram.sent == [(CHAT, "Le LG OLED65C6 est à 1 599 € chez Boulanger.")], "told once"

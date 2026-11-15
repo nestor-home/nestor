@@ -44,6 +44,7 @@ class ToolDeferred(Event, event_type="agent.tool.deferred"):
     output: str
     person: PersonId | None = None
     exchange: Exchange | None = None
+    thread: str | None = None  # what its result continues (`Notification.thread`)
 
 
 class ToolReturned(Event, event_type="agent.tool.returned"):

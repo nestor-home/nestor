@@ -63,12 +63,16 @@ class Notification:
     watch matched, a message to pass on. It opens a turn as a person's message does, the answer follows, and both
     stay in the conversation's history. `text` gives the facts and what to do; how to answer is the persona's. It may
     go unanswered when there is nothing to tell (a check that found nothing), unless `must_tell`: a message someone
-    asked to pass on, a confirmation to ask for, where saying nothing is a failure."""
+    asked to pass on, a confirmation to ask for, where saying nothing is a failure.
+
+    `thread` is what it continues: a recurring wake-up and the tasks started from its turns share one, so that what was
+    told in it is read back before the next one is answered, and only what is new is told."""
 
     text: str
     about: About
     must_tell: bool = False
     files: tuple[BlobRef, ...] = ()  # what a tool made, to go with the answer
+    thread: str | None = None
 
     def __post_init__(self) -> None:
         if len(self.text) > NOTIFICATION_CHARS:

@@ -33,11 +33,13 @@ _NOBODY = Speaker.unknown()
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ToolContext:
     """Who asked, and in which conversation: `exchange` is the turn the call belongs to, for the events
-    the tool writes. `speaker` says how sure anyone is of who asked."""
+    the tool writes. `speaker` says how sure anyone is of who asked; `thread`, what a notification that opened the turn
+    continues, for what the tool starts that comes back later."""
 
     address: Address
     speaker: Speaker = _NOBODY
     exchange: Exchange | None = None
+    thread: str | None = None  # what the turn continues, when a notification opened it (`Notification.thread`)
 
     @property
     def person(self) -> PersonId | None:

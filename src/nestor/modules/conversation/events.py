@@ -45,6 +45,7 @@ class NotificationTurn(Event, event_type="conversation.turn.notification"):
     about: About
     exchange: Exchange
     person: PersonId | None = None
+    thread: str | None = None  # what it continues (`Notification.thread`)
 
 
 class AssistantTurn(Event, event_type="conversation.turn.assistant"):
