@@ -10,12 +10,11 @@ from nestor.adapters.common.http import HttpApi, StatusError
 from nestor.core import utc_now
 
 
-@pytest.mark.parametrize(
-    ("waited", "seconds"),
-    [("120", 120.0), (email.utils.format_datetime(utc_now() + timedelta(minutes=10), usegmt=True), 600.0)],
-    ids=["seconds", "date"],
-)
-async def test_a_refusal_keeps_its_status_and_the_wait_it_asks_for(waited: str, seconds: float) -> None:
+@pytest.mark.parametrize("as_date", [False, True], ids=["seconds", "date"])
+async def test_a_refusal_keeps_its_status_and_the_wait_it_asks_for(as_date: bool) -> None:
+    seconds = 600.0
+    in_ten_minutes = email.utils.format_datetime(utc_now() + timedelta(seconds=seconds), usegmt=True)
+    waited = in_ten_minutes if as_date else str(int(seconds))
     answer = httpx.Response(429, json={"error": {"message": "slow down"}}, headers={"Retry-After": waited})
     api = HttpApi("api", "https://api.example", transport=httpx.MockTransport(lambda request: answer))
     with pytest.raises(StatusError) as refused:
