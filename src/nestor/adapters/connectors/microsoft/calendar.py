@@ -5,9 +5,9 @@ from datetime import UTC, date, datetime
 from typing import Any
 
 from nestor.adapters.connectors.common import SHARED
-from nestor.adapters.connectors.common.calendar import MAX_EVENTS, Event, calendar_specs, matching, title
+from nestor.adapters.connectors.common.calendar import MAX_EVENTS, NO_TITLE, Event, calendar_specs, matching
 from nestor.adapters.connectors.common.moments import instant, span
-from nestor.adapters.connectors.common.tools import ask
+from nestor.adapters.connectors.common.tools import ask, required
 from nestor.adapters.connectors.microsoft.graph import GraphApi, Json, in_zone, mailbox_zone
 from nestor.modules.cognition.tools import Risk, Tool, ToolContext, bounded
 
@@ -30,7 +30,7 @@ class CalendarTools:
     async def events(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
         since, until = instant(arguments.get("since")), instant(arguments.get("until"))
         limit = bounded(arguments.get("max_results"), default=20, maximum=MAX_EVENTS)
-        words = str(arguments.get("query") or "").strip().lower()
+        words = str(arguments.get("query") or "").strip()
         params = [
             ("startDateTime", since.isoformat()),
             ("endDateTime", until.isoformat()),  # each occurrence of a recurring event comes on its own
@@ -42,7 +42,9 @@ class CalendarTools:
         api = self._api()
         zone = await mailbox_zone(api, self._known)
         found = await ask("Outlook calendar", api.get("/me/calendarView", params, in_zone(zone)))
-        events = matching((_event(item) for item in found.get("value", []) if isinstance(item, dict)), words)
+        events = matching(
+            (_event(item) for item in found.get("value", []) if isinstance(item, dict)), arguments.get("query")
+        )
         shown = [e.shown() for e in events[:limit]]
         return {"account": self._account, "time_zone": zone, "events": shown, "note": SHARED}
 
@@ -51,7 +53,7 @@ class CalendarTools:
         api = self._api()
         zone = await mailbox_zone(api, self._known)
         body: Json = {
-            "subject": title(arguments),
+            "subject": required(arguments, "title", NO_TITLE),
             "start": _graph(start, zone),
             "end": _graph(end, zone),
             "isAllDay": not isinstance(start, datetime),

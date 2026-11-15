@@ -34,7 +34,7 @@ class BearerApi(HttpApi):
     async def get(
         self, url: str, params: Sequence[tuple[str, str]] = (), headers: Mapping[str, str] | None = None
     ) -> dict[str, Any]:
-        response = await self.request("GET", url, params=list(params) or None, headers=headers)
+        response = await self.request("GET", url, params=list(params), headers=headers)
         return json_object(self.provider, response)
 
     async def send(
@@ -42,7 +42,3 @@ class BearerApi(HttpApi):
     ) -> dict[str, Any]:
         """A `POST` or a `PATCH` of `body`, and what the API answers."""
         return json_object(self.provider, await self.request(method, url, json=body, headers=headers))
-
-    async def fetch(self, url: str, params: Sequence[tuple[str, str]] = (), *, max_bytes: int) -> bytes:
-        """A file, read until `max_bytes`."""
-        return await self.download(url, max_bytes=max_bytes, params=list(params) or None)

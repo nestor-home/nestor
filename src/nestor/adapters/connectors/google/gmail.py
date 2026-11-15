@@ -5,11 +5,11 @@ from collections.abc import Callable, Mapping, Sequence
 
 from nestor.adapters.common.text import cap
 from nestor.adapters.connectors.common import UNTRUSTED
-from nestor.adapters.connectors.common.tools import ask
+from nestor.adapters.connectors.common.tools import ask, required
 from nestor.adapters.connectors.google.api import GmailApi
 from nestor.adapters.connectors.google.mime import GmailMessage
 from nestor.modules.cognition.model import ToolSpec
-from nestor.modules.cognition.tools import Risk, Tool, ToolContext, ToolFailed, bounded
+from nestor.modules.cognition.tools import Risk, Tool, ToolContext, bounded
 
 MAX_RESULTS = 20
 SUMMARY_HEADERS = ("From", "Subject", "Date")
@@ -69,9 +69,7 @@ class GmailTools:
         return {"account": self._account, "query": query, "messages": messages, "note": UNTRUSTED}
 
     async def read(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
-        message_id = str(arguments.get("id", "")).strip()
-        if not message_id:
-            raise ToolFailed("give the id of a message found with google_mail_search")
+        message_id = required(arguments, "id", "give the id of a message found with google_mail_search")
         message = GmailMessage.of(await ask("Reading Gmail", self._api().message(message_id)))
         return {
             "id": message.id,

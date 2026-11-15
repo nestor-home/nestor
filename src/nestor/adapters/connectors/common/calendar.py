@@ -1,12 +1,13 @@
 """What every calendar connector shares: its two tools as the model sees them, and an event as it reads one."""
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable
 from dataclasses import dataclass
 
 from nestor.adapters.common.text import cap
 from nestor.adapters.connectors.common.moments import INSTANT, MOMENT
 from nestor.modules.cognition.model import ToolSpec
-from nestor.modules.cognition.tools import ToolFailed
+
+NO_TITLE = "give the event a title"
 
 MAX_EVENTS = 50
 DESCRIPTION_CHARS = 1_000
@@ -86,10 +87,3 @@ def matching(events: Iterable[Event], words: object) -> list[Event]:
     """The events whose title, place or description holds `words` (all of them when there are none)."""
     wanted = str(words or "").strip().lower()
     return [e for e in events if wanted in f"{e.title} {e.location} {e.description}".lower()]
-
-
-def title(arguments: Mapping[str, object]) -> str:
-    found = str(arguments.get("title") or "").strip()
-    if not found:
-        raise ToolFailed("give the event a title")
-    return found

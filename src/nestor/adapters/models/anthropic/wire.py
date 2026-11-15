@@ -1,12 +1,9 @@
 """What Anthropic's Messages API takes: the system blocks, the dialogue, the tools, the effort."""
 
-import io
 import json
 from collections.abc import Sequence
 from enum import StrEnum
 from typing import Any
-
-from pypdf import PdfReader
 
 from nestor.adapters.models.common import base64_of, turns
 from nestor.core import ContractError
@@ -19,8 +16,6 @@ from nestor.modules.cognition import (
 
 type Block = dict[str, Any]
 
-PDF = "application/pdf"
-MAX_PDF_PAGES = 100  # Anthropic refuses a request with a longer PDF
 CACHED_LAYERS = 3  # of the 4 cache breakpoints a request may set: the last one caches the conversation
 EPHEMERAL = {"type": "ephemeral"}
 
@@ -86,20 +81,8 @@ def _blocks(message: Message, provider: str) -> list[Block]:
 
 
 def _document(document: Document) -> Block:
-    """A document Claude reads whole; a PDF longer than Anthropic takes is only named, its text read otherwise."""
-    if document.media_type == PDF and (pages := _pages(document.data)) > MAX_PDF_PAGES:
-        named = f" {document.name}" if document.name else ""
-        return {"type": "text", "text": f"[The document{named} has {pages} pages, too many to read whole here]"}
     title = {"title": document.name} if document.name else {}
     return {"type": "document", "source": _base64(document.media_type, document.data), **title}
-
-
-def _pages(pdf: bytes) -> int:
-    """How many pages a PDF has; 0 when it cannot tell (Anthropic then says what is wrong with it)."""
-    try:
-        return len(PdfReader(io.BytesIO(pdf)).pages)
-    except Exception:  # a damaged file fails pypdf in many ways
-        return 0
 
 
 def _base64(media_type: str, data: bytes) -> dict[str, str]:

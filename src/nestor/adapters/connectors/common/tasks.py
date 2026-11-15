@@ -1,13 +1,12 @@
 """What every task-list connector shares: its three tools as the model sees them, and a task as it reads one."""
 
-from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 
 from nestor.adapters.connectors.common.moments import DAY
 from nestor.modules.cognition.model import ToolSpec
-from nestor.modules.cognition.tools import ToolFailed
 
 MAX_TASKS = 100
+NO_TITLE = "give the task a title"
 
 
 def task_specs(prefix: str, tasks: str, shared: str) -> tuple[ToolSpec, ToolSpec, ToolSpec]:
@@ -55,17 +54,3 @@ class Task:
 
     def shown(self) -> dict[str, object]:
         return asdict(self)
-
-
-def title(arguments: Mapping[str, object]) -> str:
-    found = str(arguments.get("title") or "").strip()
-    if not found:
-        raise ToolFailed("give the task a title")
-    return found
-
-
-def task_id_of(arguments: Mapping[str, object], prefix: str) -> str:
-    found = str(arguments.get("id") or "").strip()
-    if not found:
-        raise ToolFailed(f"give the id of a task listed with {prefix}_list")
-    return found

@@ -29,6 +29,7 @@ class AnthropicLanguage(LanguageModel):
     brand = "anthropic"
     vision = True
     reads = frozenset({"application/pdf"})
+    document_pages = 100  # Anthropic refuses a request with a longer PDF
 
     def __init__(
         self,

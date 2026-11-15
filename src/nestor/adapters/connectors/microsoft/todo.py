@@ -6,8 +6,8 @@ from typing import Any
 from nestor.adapters.connectors.common import SHARED
 from nestor.adapters.connectors.common.api import segment
 from nestor.adapters.connectors.common.moments import day
-from nestor.adapters.connectors.common.tasks import MAX_TASKS, Task, task_id_of, task_specs, title
-from nestor.adapters.connectors.common.tools import ask
+from nestor.adapters.connectors.common.tasks import MAX_TASKS, NO_TITLE, Task, task_specs
+from nestor.adapters.connectors.common.tools import ask, required
 from nestor.adapters.connectors.microsoft.graph import GraphApi, Json, in_zone, mailbox_zone
 from nestor.modules.cognition.tools import Risk, Tool, ToolContext, ToolFailed, bounded
 
@@ -46,7 +46,7 @@ class TodoTools:
         return {"account": self._account, "tasks": tasks, "note": SHARED}
 
     async def add(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
-        body: Json = {"title": title(arguments)}
+        body: Json = {"title": required(arguments, "title", NO_TITLE)}
         if notes := str(arguments.get("notes") or "").strip():
             body["body"] = {"contentType": "text", "content": notes}
         api = self._api()
@@ -57,7 +57,7 @@ class TodoTools:
         return {"account": self._account, "task": _task(made).shown()}
 
     async def complete(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
-        task_id = task_id_of(arguments, "todo")
+        task_id = required(arguments, "id", "give the id of a task listed with todo_list")
         api = self._api()
         zone = await mailbox_zone(api, self._known)
         done = await ask(

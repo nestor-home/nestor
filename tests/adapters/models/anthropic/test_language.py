@@ -32,7 +32,6 @@ from nestor.modules.cognition import (
     Usage,
 )
 from nestor.testing.cognition import LanguageModelContract
-from nestor.testing.documents import text_pdf
 
 BASE_URL = "https://claude.test/v1"
 MESSAGES = f"{BASE_URL}/messages"
@@ -224,18 +223,6 @@ async def test_a_pdf_is_a_document_block_and_a_photo_an_image_before_the_words(a
         },
         {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": "anBlZyBieXRlcw=="}},
         {"type": "text", "text": "C'est combien ?"},
-    ]
-
-
-async def test_a_pdf_longer_than_anthropic_takes_is_named_rather_than_sent(api: respx.MockRouter) -> None:
-    """Anthropic refuses the whole request past 100 pages: the turn goes on, its text read otherwise."""
-    route = api.post(MESSAGES).mock(return_value=streamed(*TEXT_REPLY))
-    book = Document(media_type="application/pdf", data=text_pdf(*["page"] * 101), name="notice.pdf")
-    await collect(ModelRequest(messages=(Message.user("Résume-la", documents=(book,)),)))
-    [message] = sent(route)["messages"]
-    assert message["content"] == [
-        {"type": "text", "text": "[The document notice.pdf has 101 pages, too many to read whole here]"},
-        {"type": "text", "text": "Résume-la"},
     ]
 
 

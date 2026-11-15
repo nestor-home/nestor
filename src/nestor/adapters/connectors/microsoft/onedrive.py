@@ -5,7 +5,7 @@ from collections.abc import Callable, Mapping, Sequence
 from nestor.adapters.common.text import cap
 from nestor.adapters.connectors.common import SHARED
 from nestor.adapters.connectors.common.api import segment
-from nestor.adapters.connectors.common.tools import ask
+from nestor.adapters.connectors.common.tools import ask, required
 from nestor.adapters.connectors.microsoft.graph import GraphApi
 from nestor.modules.cognition.model import ToolSpec
 from nestor.modules.cognition.tools import Risk, Tool, ToolContext, ToolFailed, bounded
@@ -54,9 +54,7 @@ class DriveTools:
         )
 
     async def search(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
-        words = str(arguments.get("query") or "").strip()
-        if not words:
-            raise ToolFailed("give words to search for")
+        words = required(arguments, "query", "give words to search for")
         quoted = words.replace("'", "''")  # OData quotes a quote by doubling it
         params = [
             ("$top", str(bounded(arguments.get("max_results"), default=10, maximum=MAX_RESULTS))),
@@ -77,9 +75,7 @@ class DriveTools:
         return {"account": self._account, "query": words, "files": files, "note": SHARED}
 
     async def read(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
-        file_id = str(arguments.get("id") or "").strip()
-        if not file_id:
-            raise ToolFailed("give the id of a file found with onedrive_search")
+        file_id = required(arguments, "id", "give the id of a file found with onedrive_search")
         api, path = self._api(), f"/me/drive/items/{segment(file_id)}"
         item = await ask("OneDrive", api.get(path, [("$select", "id,name,file")]))
         name, media_type = str(item.get("name", "")), str((item.get("file") or {}).get("mimeType") or "")
@@ -91,7 +87,7 @@ class DriveTools:
             params = []
         else:
             raise ToolFailed(f"{name} is {media_type}, not a document to read")
-        data = await ask("OneDrive", api.fetch(f"{path}/content", params, max_bytes=self._max_bytes))
+        data = await ask("OneDrive", api.download(f"{path}/content", params=params, max_bytes=self._max_bytes))
         text = await self._reader.read(data, media_type)
         if not text:
             raise ToolFailed(f"{name} has no text to read")

@@ -5,7 +5,6 @@ streams. A name that resolves to a public address when checked and a private one
 caught."""
 
 import asyncio
-import email.utils
 import ipaddress
 import socket
 import urllib.parse
@@ -14,10 +13,10 @@ from dataclasses import dataclass
 
 import httpx
 
-from nestor.adapters.common.http import USER_AGENT, retryable
+from nestor.adapters.common.http import USER_AGENT, retry_after, retryable
 from nestor.adapters.common.text import Page, page_text
 from nestor.adapters.documents.reader import HTML
-from nestor.core import ProviderError, utc_now
+from nestor.core import ProviderError
 from nestor.modules.conversation import DocumentReader
 
 REDIRECTS = 5
@@ -30,8 +29,8 @@ class WebError(ProviderError):
     when the site said how long to wait (`Retry-After`)."""
 
     def __init__(self, reason: str, *, transient: bool, retry_after_s: float | None = None) -> None:
-        super().__init__("web", reason, transient=transient)
-        self.reason, self.retry_after_s = reason, retry_after_s
+        super().__init__("web", reason, transient=transient, retry_after_s=retry_after_s)
+        self.reason = reason
 
 
 @dataclass(frozen=True, slots=True)
@@ -131,15 +130,3 @@ async def public(url: str) -> None:
         raise WebError(
             f"{parts.hostname} is not a public address: only pages on the internet can be read", transient=False
         )
-
-
-def retry_after(value: str | None) -> float | None:
-    """A `Retry-After` header in seconds (it gives seconds or a date); `None` without one or one unreadable."""
-    if not value:
-        return None
-    if value.strip().isdigit():
-        return float(value)
-    try:
-        return max(0.0, (email.utils.parsedate_to_datetime(value) - utc_now()).total_seconds())
-    except (TypeError, ValueError):
-        return None

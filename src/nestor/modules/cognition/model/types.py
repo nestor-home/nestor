@@ -38,6 +38,7 @@ class Document:
     media_type: str
     data: bytes = field(repr=False)
     name: str | None = None
+    pages: int | None = None  # when it was counted (a PDF)
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

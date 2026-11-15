@@ -5,8 +5,8 @@ from collections.abc import Awaitable, Callable, Mapping, Sequence
 from xml.sax.saxutils import escape
 
 from nestor.adapters.connectors.common import SHARED
-from nestor.adapters.connectors.common.contacts import MAX_CONTACTS, Contact, contacts_spec, query
-from nestor.adapters.connectors.common.tools import ask
+from nestor.adapters.connectors.common.contacts import MAX_CONTACTS, NO_QUERY, Contact, contacts_spec
+from nestor.adapters.connectors.common.tools import ask, required
 from nestor.adapters.connectors.dav import cards
 from nestor.adapters.connectors.dav.dav import Dav
 from nestor.modules.cognition.tools import Risk, Tool, ToolContext, bounded
@@ -24,7 +24,7 @@ class ContactTools:
         return (Tool(spec=SEARCH, run=self.search, risk=Risk.READ, timeout_s=30.0),)
 
     async def search(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
-        words = query(arguments)
+        words = required(arguments, "query", NO_QUERY)
         limit = bounded(arguments.get("max_results"), default=10, maximum=MAX_CONTACTS)
         dav = await ask("the contacts server", self._dav())
         books = await ask("Listing the address books", dav.address_books())

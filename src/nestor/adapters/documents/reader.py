@@ -41,6 +41,14 @@ def pdf_text(data: bytes) -> str | None:
     return f"{text}\n\n[{left} more pages not read]" if text and left > 0 else text
 
 
+def pdf_pages(data: bytes) -> int | None:
+    """How many pages a PDF has; `None` when it cannot be read."""
+    try:
+        return len(PdfReader(io.BytesIO(data)).pages)
+    except Exception:  # a damaged file fails pypdf in many ways
+        return None
+
+
 class FileReader(DocumentReader):
     def reads(self, media_type: str) -> bool:
         return _base(media_type) == PDF or is_text(_base(media_type))
@@ -49,6 +57,9 @@ class FileReader(DocumentReader):
         if _base(media_type) == PDF:
             return await asyncio.to_thread(pdf_text, data)
         return data.decode(_charset(media_type, data), errors="replace") if self.reads(media_type) else None
+
+    async def pages(self, data: bytes, media_type: str) -> int | None:
+        return await asyncio.to_thread(pdf_pages, data) if _base(media_type) == PDF else None
 
 
 def _base(media_type: str) -> str:

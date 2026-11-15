@@ -1,10 +1,10 @@
 """What every contacts connector shares: its search tool as the model sees it, and a contact as it reads one."""
 
-from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 
 from nestor.modules.cognition.model import ToolSpec
-from nestor.modules.cognition.tools import ToolFailed
+
+NO_QUERY = "give a name, an address or a number to look for"
 
 MAX_CONTACTS = 30
 
@@ -37,10 +37,3 @@ class Contact:
 
     def shown(self) -> dict[str, object]:
         return {k: list(v) if isinstance(v, tuple) else v for k, v in asdict(self).items()}
-
-
-def query(arguments: Mapping[str, object]) -> str:
-    found = str(arguments.get("query") or "").strip()
-    if not found:
-        raise ToolFailed("give a name, an address or a number to look for")
-    return found

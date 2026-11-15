@@ -26,6 +26,7 @@ class GeminiLanguage(LanguageModel):
     brand = "gemini"
     vision = True
     reads = frozenset({"application/pdf"})
+    document_pages = 1000  # what Gemini reads of one PDF
 
     def __init__(
         self,

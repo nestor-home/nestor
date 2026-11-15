@@ -9,7 +9,7 @@ from dataclasses import dataclass
 
 import httpx
 
-from nestor.adapters.common.http import HttpApi, StatusError, identity
+from nestor.adapters.common.http import HttpApi, StatusError, open_client
 from nestor.core import ProviderError
 from nestor.modules.connectors import Secrets
 
@@ -54,28 +54,19 @@ class Collection:
     name: str
 
 
-class DavApi(HttpApi):
-    """The server, with the account's login and app password on every call."""
+class Dav(HttpApi):
+    """The account's server, with its login and app password on every call; its collections, found once and kept
+    while the connector runs."""
 
     def __init__(self, account: DavAccount, client: httpx.AsyncClient) -> None:
         super().__init__(PROVIDER, client=client)
-        self._auth = httpx.BasicAuth(account.username, account.password)
-
-    async def call(self, method: str, url: str, body: str, headers: Mapping[str, str]) -> httpx.Response:
-        return await self.request(method, url, content=body.encode(), headers=headers, auth=self._auth)
+        self.account, self._auth = account, httpx.BasicAuth(account.username, account.password)
+        self._found: dict[str, list[Collection]] = {}
 
     def failed(self, path: str, response: httpx.Response) -> ProviderError:
         if response.status_code == 401:
             return ProviderError(PROVIDER, "the server refused the login and app password", transient=False)
         return StatusError(PROVIDER, response.status_code, "", response.reason_phrase)
-
-
-class Dav:
-    """The account's collections, found once and kept while the connector runs."""
-
-    def __init__(self, account: DavAccount, client: httpx.AsyncClient) -> None:
-        self.account, self._api = account, DavApi(account, client)
-        self._found: dict[str, list[Collection]] = {}
 
     async def calendars(self) -> list[Collection]:
         """The calendars that hold events (not only tasks)."""
@@ -98,7 +89,7 @@ class Dav:
 
     async def put(self, url: str, body: str, media_type: str) -> None:
         """A new item; never one that exists (`If-None-Match: *`)."""
-        await self._api.call("PUT", url, body, {"Content-Type": media_type, "If-None-Match": "*"})
+        await self._send("PUT", url, body, {"Content-Type": media_type, "If-None-Match": "*"})
 
     async def _collections(self, ns: str, server: str, home_set: str, kind: str, service: str) -> list[Collection]:
         if kind in self._found:
@@ -143,7 +134,7 @@ class Dav:
         raise ProviderError(PROVIDER, f"{server} does not answer as a CalDAV or CardDAV server", transient=False)
 
     async def _xml(self, method: str, url: str, body: str, *, depth: str) -> ET.Element:
-        response = await self._api.call(method, url, body, {**XML, "Depth": depth})
+        response = await self._send(method, url, body, {**XML, "Depth": depth})
         try:
             return ET.fromstring(response.content)
         except ET.ParseError:  # a web page, say: not the address of a DAV server
@@ -151,6 +142,9 @@ class Dav:
                 PROVIDER, response.status_code, "", f"{url} answered with something other than XML"
             ) from None
 
+    async def _send(self, method: str, url: str, body: str, headers: Mapping[str, str]) -> httpx.Response:
+        return await self.request(method, url, content=body.encode(), headers=headers, auth=self._auth)
+
 
 def new_client(transport: httpx.AsyncBaseTransport | None = None) -> httpx.AsyncClient:
-    return httpx.AsyncClient(headers=identity(""), timeout=TIMEOUT, transport=transport, follow_redirects=True)
+    return open_client(timeout=TIMEOUT, transport=transport, follow_redirects=True)

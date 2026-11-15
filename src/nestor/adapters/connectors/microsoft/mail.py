@@ -6,7 +6,7 @@ from typing import Any
 from nestor.adapters.common.text import cap
 from nestor.adapters.connectors.common import UNTRUSTED
 from nestor.adapters.connectors.common.api import segment
-from nestor.adapters.connectors.common.tools import ask
+from nestor.adapters.connectors.common.tools import ask, required
 from nestor.adapters.connectors.microsoft.graph import GraphApi
 from nestor.modules.cognition.model import ToolSpec
 from nestor.modules.cognition.tools import Risk, Tool, ToolContext, ToolFailed, bounded
@@ -72,9 +72,7 @@ class MailTools:
         return {"account": self._account, "query": query, "messages": messages, "note": UNTRUSTED}
 
     async def read(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
-        message_id = str(arguments.get("id") or "").strip()
-        if not message_id:
-            raise ToolFailed("give the id of a message found with outlook_mail_search")
+        message_id = required(arguments, "id", "give the id of a message found with outlook_mail_search")
         api, path = self._api(), f"/me/messages/{segment(message_id)}"
         params = [
             ("$select", "id,conversationId,from,toRecipients,ccRecipients,receivedDateTime,subject,body"),

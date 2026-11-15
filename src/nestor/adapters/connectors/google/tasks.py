@@ -6,8 +6,8 @@ from typing import Any
 from nestor.adapters.connectors.common import SHARED
 from nestor.adapters.connectors.common.api import segment
 from nestor.adapters.connectors.common.moments import day
-from nestor.adapters.connectors.common.tasks import MAX_TASKS, Task, task_id_of, task_specs, title
-from nestor.adapters.connectors.common.tools import ask
+from nestor.adapters.connectors.common.tasks import MAX_TASKS, NO_TITLE, Task, task_specs
+from nestor.adapters.connectors.common.tools import ask, required
 from nestor.adapters.connectors.google.api import GoogleApi, Json
 from nestor.modules.cognition.tools import Risk, Tool, ToolContext, bounded
 
@@ -35,7 +35,7 @@ class TaskTools:
         return {"account": self._account, "tasks": tasks, "note": SHARED}
 
     async def add(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
-        body: Json = {"title": title(arguments)}
+        body: Json = {"title": required(arguments, "title", NO_TITLE)}
         if notes := str(arguments.get("notes") or "").strip():
             body["notes"] = notes
         if due := str(arguments.get("due") or "").strip():
@@ -44,7 +44,7 @@ class TaskTools:
         return {"account": self._account, "task": _task(made).shown()}
 
     async def complete(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
-        task_id = task_id_of(arguments, "google_tasks")
+        task_id = required(arguments, "id", "give the id of a task listed with google_tasks_list")
         done = await ask(
             "Ticking off a Google task",
             self._api().send("PATCH", f"{TASKS_URL}/{segment(task_id)}", {"status": "completed"}),

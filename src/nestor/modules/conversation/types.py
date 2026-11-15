@@ -89,9 +89,11 @@ class Outgoing:
 
 @dataclass(frozen=True, slots=True)
 class Read:
-    """What was read of a document: `ref` reads its text with `read_result`; `None` when it has no text (a scan)."""
+    """What was read of a document: `ref` reads its text with `read_result`; `None` when it has no text (a scan).
+    `pages` when the reader counted them (a PDF)."""
 
     ref: str | None
+    pages: int | None = None
 
 
 @dataclass(frozen=True, slots=True)

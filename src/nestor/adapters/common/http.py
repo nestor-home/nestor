@@ -2,6 +2,7 @@
 provider words it, a key never shown in one, a client for JSON APIs, and streamed answers (Server-Sent Events)."""
 
 import contextlib
+import email.utils
 import hashlib
 import hmac
 import json
@@ -12,7 +13,7 @@ from typing import Any
 import httpx
 
 from nestor import __version__
-from nestor.core import ProviderError
+from nestor.core import ProviderError, utc_now
 
 MAX_DETAIL = 300
 _RETRYABLE_STATUSES = frozenset({408, 409, 425, 429})
@@ -20,6 +21,18 @@ _RETRYABLE_STATUSES = frozenset({408, 409, 425, 429})
 
 def retryable(status: int) -> bool:
     return status in _RETRYABLE_STATUSES or status >= 500
+
+
+def retry_after(value: str | None) -> float | None:
+    """A `Retry-After` header in seconds (it gives seconds or a date); `None` without one or one unreadable."""
+    if not value:
+        return None
+    if value.strip().isdigit():
+        return float(value)
+    try:
+        return max(0.0, (email.utils.parsedate_to_datetime(value) - utc_now()).total_seconds())
+    except (TypeError, ValueError):
+        return None
 
 
 def detail(body: bytes) -> str:
@@ -116,9 +129,21 @@ class StatusError(ProviderError):
     is worth retrying when `retryable` says so, or when the API says more (`transient`: a refused token it will
     refresh)."""
 
-    def __init__(self, provider: str, status: int, reason: str, message: str, *, transient: bool = False) -> None:
+    def __init__(
+        self,
+        provider: str,
+        status: int,
+        reason: str,
+        message: str,
+        *,
+        transient: bool = False,
+        retry_after_s: float | None = None,
+    ) -> None:
         super().__init__(
-            provider, f"HTTP {status} {reason}".rstrip() + f": {message}", transient=transient or retryable(status)
+            provider,
+            f"HTTP {status} {reason}".rstrip() + f": {message}",
+            transient=transient or retryable(status),
+            retry_after_s=retry_after_s,
         )
         self.status, self.reason = status, reason
 
@@ -155,8 +180,7 @@ class HttpApi:
         client: httpx.AsyncClient | None = None,
     ) -> None:
         self._provider, self._base_url, self._secret = provider, base_url, secret
-        self._headers = {**identity(base_url), **(headers or {})}
-        self._timeout_s, self._transport = timeout_s, transport
+        self._headers, self._timeout_s, self._transport = headers or {}, timeout_s, transport
         self._client, self._owned = client, client is None
 
     async def aclose(self) -> None:
@@ -191,6 +215,8 @@ class HttpApi:
     ) -> AsyncGenerator[httpx.Response]:
         """The answer, its body still to read; an error answer (not among `answers`) raises `failed`'s error."""
         headers = {**(await self.authorise()), **(kwargs.pop("headers", None) or {})}
+        if not kwargs.get("params"):  # none given: a URL's own query (a next page's link) stays as it is
+            kwargs.pop("params", None)
         try:
             async with self._opened().stream(method, path, headers=headers, **kwargs) as response:
                 if response.is_error and response.status_code not in answers:
@@ -202,19 +228,41 @@ class HttpApi:
 
     def failed(self, path: str, response: httpx.Response) -> ProviderError:
         """The error an error answer is: by default its status and the provider's own words."""
-        message = f"{path}: {detail(response.content)}"
-        redacted = message.replace(self._secret, "[redacted]") if self._secret else message
-        return StatusError(self._provider, response.status_code, "", redacted)
+        message = self._redacted(f"{path}: {detail(response.content)}")
+        waited = retry_after(response.headers.get("retry-after"))
+        return StatusError(self._provider, response.status_code, "", message, retry_after_s=waited)
 
     def error(self, message: str, *, transient: bool) -> ProviderError:
-        return provider_error(self._provider, self._secret, message, transient=transient)
+        return ProviderError(self._provider, self._redacted(message), transient=transient)
+
+    def _redacted(self, message: str) -> str:
+        return message.replace(self._secret, "[redacted]") if self._secret else message
 
     def _opened(self) -> httpx.AsyncClient:
         if self._client is None:
-            self._client = httpx.AsyncClient(
-                base_url=self._base_url, headers=self._headers, timeout=self._timeout_s, transport=self._transport
+            self._client = open_client(
+                self._base_url, headers=self._headers, timeout=self._timeout_s, transport=self._transport
             )
         return self._client
+
+
+def open_client(
+    base_url: str = "",
+    *,
+    headers: Mapping[str, str] | None = None,
+    timeout: float | httpx.Timeout = 15.0,
+    transport: httpx.AsyncBaseTransport | None = None,
+    follow_redirects: bool = False,
+) -> httpx.AsyncClient:
+    """A client that names Nestor to the service at `base_url` (`identity`), for an `HttpApi` or for several (a
+    connector's accounts)."""
+    return httpx.AsyncClient(
+        base_url=base_url,
+        headers={**identity(base_url), **(headers or {})},
+        timeout=timeout,
+        transport=transport,
+        follow_redirects=follow_redirects,
+    )
 
 
 class JsonApi(HttpApi):

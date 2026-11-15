@@ -8,9 +8,9 @@ from xml.sax.saxutils import quoteattr
 
 from nestor.adapters.common.http import StatusError
 from nestor.adapters.connectors.common import SHARED
-from nestor.adapters.connectors.common.calendar import MAX_EVENTS, Event, calendar_specs, matching, title
+from nestor.adapters.connectors.common.calendar import MAX_EVENTS, NO_TITLE, Event, calendar_specs, matching
 from nestor.adapters.connectors.common.moments import instant, span
-from nestor.adapters.connectors.common.tools import ask, failed
+from nestor.adapters.connectors.common.tools import ask, failed, required
 from nestor.adapters.connectors.dav import cards
 from nestor.adapters.connectors.dav.dav import Collection, Dav
 from nestor.core import ProviderError, utc_now
@@ -57,7 +57,7 @@ class CalendarTools:
         return found
 
     async def create(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
-        named_title = title(arguments)
+        named_title = required(arguments, "title", NO_TITLE)
         start, end = span(arguments.get("start"), arguments.get("end"))
         dav = await ask("the calendar server", self._dav())
         calendars = await ask("Listing the calendars", dav.calendars())

@@ -101,6 +101,19 @@ async def test_a_fallback_gets_only_the_files_it_can_take(journal: Journal) -> N
     assert (sent.content, sent.images, sent.documents) == ("regarde", (), ())
 
 
+class ReadingShort(ScriptedModel):
+    reads = frozenset({"application/pdf"})
+    document_pages = 100
+
+
+async def test_a_fallback_never_gets_a_document_longer_than_it_reads(journal: Journal) -> None:
+    short = ReadingShort("Résumé.")
+    falling = FallingBack([("gemini", Reading(fail=OVERLOADED)), ("claude", short)], journal)
+    book = Document(media_type="application/pdf", data=b"%PDF", pages=300)
+    [o async for o in falling.stream(ModelRequest(messages=(Message.user("résume", documents=(book,)),)))]
+    assert short.requests[0].messages[0].documents == ()
+
+
 def light(request: ModelRequest) -> str | ToolCall:
     return ToolCall("c1", "set_light", {"room": "salon"}) if request.tools else "Ça va."
 

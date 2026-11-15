@@ -8,7 +8,7 @@ from typing import Any
 import httpx
 from pydantic import BaseModel, ValidationError
 
-from nestor.adapters.common.http import HttpApi
+from nestor.adapters.common.http import HttpApi, retryable
 from nestor.core import ProviderError
 from nestor.modules.channels import Attachment
 
@@ -33,8 +33,7 @@ class TelegramError(ProviderError):
     """A failed Bot API call; `retry_after_s` is set when Telegram asks to slow down."""
 
     def __init__(self, message: str, *, transient: bool, retry_after_s: float | None = None) -> None:
-        super().__init__(PROVIDER, message, transient=transient)
-        self.retry_after_s = retry_after_s
+        super().__init__(PROVIDER, message, transient=transient, retry_after_s=retry_after_s)
 
 
 class _ResponseParameters(BaseModel):
@@ -91,21 +90,15 @@ class BotApi:
             envelope = _Envelope.model_validate_json(response.content)
         except ValidationError:
             raise TelegramError(
-                f"{method}: HTTP {response.status_code}", transient=_transient(response.status_code)
+                f"{method}: HTTP {response.status_code}", transient=retryable(response.status_code)
             ) from None
         if envelope.ok:
             return envelope.result
         code = envelope.error_code or response.status_code
         retry_after = envelope.parameters.retry_after if envelope.parameters else None
         raise TelegramError(
-            f"{method}: {code} {envelope.description}".strip(), transient=_transient(code), retry_after_s=retry_after
+            f"{method}: {code} {envelope.description}".strip(), transient=retryable(code), retry_after_s=retry_after
         )
 
     async def aclose(self) -> None:
         await self._api.aclose()
-
-
-def _transient(status: int) -> bool:
-    """Rate limits, server errors and a conflict (another instance polling with the same token, which
-    ends with it) may pass; a bad token (401), a blocked bot (403) or a bad request won't."""
-    return status in (409, 429) or status >= 500

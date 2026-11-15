@@ -15,14 +15,23 @@ class ProviderError(NestorError):
 
     `transient` tells callers whether retrying may succeed (timeout, rate limit) or not
     (bad credentials, unsupported model). `reason`, when given, is what people read of it; the message is for
-    developers and logs.
+    developers and logs. `retry_after_s`: how long the provider asked to wait (`Retry-After`), when it said.
     """
 
-    def __init__(self, provider: str, message: str, *, transient: bool, reason: "Message | None" = None) -> None:
+    def __init__(
+        self,
+        provider: str,
+        message: str,
+        *,
+        transient: bool,
+        reason: "Message | None" = None,
+        retry_after_s: float | None = None,
+    ) -> None:
         super().__init__(f"{provider}: {message}")
         self.provider = provider
         self.transient = transient
         self.reason = reason
+        self.retry_after_s = retry_after_s
 
 
 class CapabilityMissing(NestorError):

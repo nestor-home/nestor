@@ -385,6 +385,7 @@ class AgentReply(Reply):
             look=agent.attachments.shown,
             sees=model.vision,
             reads=model.reads,
+            document_pages=model.document_pages,
         )
         opening = self._opening
         if isinstance(opening, Notification):  # not in the journal yet: read as it will be once delivered

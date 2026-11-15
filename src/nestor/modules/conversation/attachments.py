@@ -80,7 +80,9 @@ class Attachments:
             self._shown[blob.digest] = (
                 Image(media_type=blob.media_type, data=data)
                 if a.kind is AttachmentKind.IMAGE
-                else Document(media_type=blob.media_type, data=data, name=a.name)
+                else Document(
+                    media_type=blob.media_type, data=data, name=a.name, pages=a.read.pages if a.read else None
+                )
             )
         shown = {digest: self._shown.pop(digest) for digest in named if digest in self._shown}
         self._shown |= shown  # the latest last
@@ -111,7 +113,8 @@ class Attachments:
         text = await reader.read(attachment.data, attachment.media_type)
         if text is None:
             return None
-        return Read(await results.store(text, context) if text.strip() else None)
+        pages = await reader.pages(attachment.data, attachment.media_type)
+        return Read(await results.store(text, context) if text.strip() else None, pages)
 
     async def _transcribe(self, attachment: Attachment) -> str | None:
         if self._transcription is None:

@@ -4,8 +4,8 @@ from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
 from nestor.adapters.connectors.common import SHARED
-from nestor.adapters.connectors.common.contacts import MAX_CONTACTS, Contact, contacts_spec, query
-from nestor.adapters.connectors.common.tools import ask
+from nestor.adapters.connectors.common.contacts import MAX_CONTACTS, NO_QUERY, Contact, contacts_spec
+from nestor.adapters.connectors.common.tools import ask, required
 from nestor.adapters.connectors.google.api import GoogleApi
 from nestor.modules.cognition.tools import Risk, Tool, ToolContext, bounded
 
@@ -24,7 +24,7 @@ class ContactTools:
         return (Tool(spec=SEARCH, run=self.search, risk=Risk.READ, timeout_s=20.0),)
 
     async def search(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
-        words = query(arguments)
+        words = required(arguments, "query", NO_QUERY)
         api = self._api()
         if "contacts_warmed" not in self._known:  # Google asks for an empty search once, to fill the cache it reads
             await ask("Google Contacts", api.get(SEARCH_URL, [("query", ""), ("readMask", "names")]))

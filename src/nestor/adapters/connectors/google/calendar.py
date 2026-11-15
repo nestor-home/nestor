@@ -5,9 +5,9 @@ from datetime import date, datetime
 from typing import Any
 
 from nestor.adapters.connectors.common import SHARED
-from nestor.adapters.connectors.common.calendar import MAX_EVENTS, Event, calendar_specs, title
+from nestor.adapters.connectors.common.calendar import MAX_EVENTS, NO_TITLE, Event, calendar_specs
 from nestor.adapters.connectors.common.moments import instant, span
-from nestor.adapters.connectors.common.tools import ask
+from nestor.adapters.connectors.common.tools import ask, required
 from nestor.adapters.connectors.google.api import GoogleApi, Json
 from nestor.modules.cognition.tools import Risk, Tool, ToolContext, bounded
 
@@ -43,7 +43,7 @@ class CalendarTools:
 
     async def create(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
         start, end = span(arguments.get("start"), arguments.get("end"))
-        body: Json = {"summary": title(arguments), "start": _google(start), "end": _google(end)}
+        body: Json = {"summary": required(arguments, "title", NO_TITLE), "start": _google(start), "end": _google(end)}
         for key in ("location", "description"):
             if value := str(arguments.get(key) or "").strip():
                 body[key] = value

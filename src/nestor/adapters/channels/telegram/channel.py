@@ -89,9 +89,8 @@ class TelegramChannel(MessagingChannel):
             poll = self._api.call("getUpdates", payload, timeout_s=self._poll_timeout_s + self._request_timeout_s)
             try:
                 result = await self.unless_closed(poll)
-            except ProviderError as error:  # Telegram's refusal says how long to wait; the network's does not
-                after_s = error.retry_after_s if isinstance(error, TelegramError) else None
-                await self.retry_later(error, failures, after_s=after_s)
+            except ProviderError as error:
+                await self.retry_later(error, failures, after_s=error.retry_after_s)
                 failures += 1
                 continue
             if self.closed:

@@ -6,7 +6,7 @@ from dataclasses import replace
 
 from nestor.core import ContractError, ProviderError
 from nestor.modules.cognition.model.events import ModelFellBack
-from nestor.modules.cognition.model.ports import LanguageModel
+from nestor.modules.cognition.model.ports import LanguageModel, reads_whole
 from nestor.modules.cognition.model.types import Message, ModelOutput, ModelRequest
 from nestor.modules.journal import Journal
 
@@ -26,6 +26,7 @@ class FallingBack(LanguageModel):
         self._chain, self._journal = tuple(chain), journal
         first = chain[0][1]
         self.name, self.brand, self.vision, self.reads = first.name, first.brand, first.vision, first.reads
+        self.document_pages = first.document_pages
 
     async def stream(self, request: ModelRequest) -> AsyncGenerator[ModelOutput]:
         for position, (key, model) in enumerate(self._chain):
@@ -54,7 +55,9 @@ def _for(model: LanguageModel, request: ModelRequest) -> ModelRequest:
 
 def _message_for(model: LanguageModel, message: Message) -> Message:
     images = message.images if model.vision else ()
-    documents = tuple(d for d in message.documents if d.media_type in model.reads)
+    documents = tuple(
+        d for d in message.documents if reads_whole(model.reads, model.document_pages, d.media_type, d.pages)
+    )
     if images == message.images and documents == message.documents:
         return message
     return replace(message, images=images, documents=documents)
