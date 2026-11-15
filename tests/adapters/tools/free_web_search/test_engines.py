@@ -8,7 +8,6 @@ import httpx
 import pytest
 import respx
 
-from nestor.adapters.tools.free_web_search.engine import Engine
 from nestor.adapters.tools.free_web_search.exa import Exa
 from nestor.adapters.tools.free_web_search.firecrawl import Firecrawl
 from nestor.adapters.tools.free_web_search.keenable import Keenable
@@ -18,6 +17,7 @@ from nestor.modules.web import Found, WebSearch
 from nestor.testing.web import NOTHING, PAGES, WebSearchContract
 
 type Answer = Callable[[httpx.Request], httpx.Response]
+type Tier = type[Exa] | type[Parallel] | type[Firecrawl] | type[Keenable]
 
 
 @pytest.fixture(autouse=True)
@@ -75,7 +75,7 @@ def keenable(request: httpx.Request) -> httpx.Response:
 
 
 # each tier: where it is reached (what its class takes), the address it is called at, and how it answers
-TIERS: dict[type[Engine], tuple[str, str, Answer]] = {
+TIERS: dict[Tier, tuple[str, str, Answer]] = {
     Exa: ("https://mcp.exa.ai/mcp", "", exa),
     Parallel: ("https://search.parallel.ai/mcp", "", parallel),
     Firecrawl: ("https://api.firecrawl.dev", "/v2/search", firecrawl),
@@ -88,7 +88,7 @@ def down(url: str) -> str:
 
 
 class FreeTier(WebSearchContract):
-    tier: type[Engine]
+    tier: Tier
 
     @pytest.fixture(autouse=True)
     def _engine(self, api: respx.MockRouter) -> None:
