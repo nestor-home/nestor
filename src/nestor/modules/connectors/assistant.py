@@ -37,11 +37,11 @@ class ConnectorTools(ToolProvider, MentionSource):
         named = [(c, service) for c in usable for service in self.services(c)]
         for connection, service in named:
             local = connection.account.partition("@")[0]
-            alone = sum(s.name == service.name for _, s in named) == 1
+            siblings = [c.account for c, s in named if s.name == service.name]
             yield Mentioned(
                 kind=MentionKind.CONNECTION,
                 id=f"{connection.id}:{service.name}",
-                handle=service.name if alone else f"{service.name}-{local}",
+                handle="-".join((service.name, *_telling(connection.account, siblings))),
                 label=connection.account,
                 aliases=tuple(alias for alias in (connection.kind, service.brand, local, connection.account) if alias),
                 brand=service.brand,
@@ -112,3 +112,21 @@ def _as_used(tool: Tool, connection: Connection) -> Tool:
     return replace(
         tool, risk=Risk.SENSITIVE if confirmed else tool.risk, owner=connection.owner, connection=connection.id
     )
+
+
+def _telling(account: str, accounts: Sequence[str]) -> tuple[str, ...]:
+    """The least of `account` that tells it from the others of its service: nothing when it is alone, else its
+    address's name, then with its domain's first word, then the whole address (`lea@free.fr`, `mathis@free.fr`,
+    `mathis@gmail.com` → `lea`, `mathis-free`, `mathis-gmail`). The same address twice (the household's and someone's
+    own) keeps its name: the mentions number them."""
+    if len(accounts) == 1:
+        return ()
+
+    def told(address: str, depth: int) -> str:
+        local, _, domain = address.partition("@")
+        return (local, f"{local}-{domain.split('.')[0]}", address)[depth].casefold()
+
+    others = list(accounts)
+    others.remove(account)
+    depth = next((d for d in range(3) if all(told(account, d) != told(o, d) for o in others)), 0)
+    return (told(account, depth),)
