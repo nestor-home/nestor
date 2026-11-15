@@ -6,6 +6,7 @@ import { Confirm } from "@/components/confirm";
 import { CopyButton, CopyField } from "@/components/copy-field";
 import { FormDialog } from "@/components/overlay-form";
 import { RowList, Section } from "@/components/page";
+import { Failure } from "@/components/states";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/i18n";
 import { BrandMark, brandOf } from "@/lib/brands";
@@ -20,6 +21,13 @@ export function ExecutorsSection() {
   const t = useT();
   const executors = useQuery(executorsQuery);
   const canManage = useCan("config:manage");
+  if (executors.isError) {
+    return (
+      <Section title={t("sys-executors")}>
+        <Failure error={executors.error} retry={() => void executors.refetch()} />
+      </Section>
+    );
+  }
   if (!executors.data?.executors.length) return null;
   const { url } = executors.data;
   return (

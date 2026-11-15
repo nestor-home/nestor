@@ -1,7 +1,9 @@
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
 import { db } from "@/mocks/db";
+import { server } from "@/mocks/server";
 import { renderApp } from "@/test/render";
 
 async function executorRow(name: string): Promise<HTMLElement> {
@@ -62,5 +64,14 @@ describe("the executors' keys for Nestor's MCP server", () => {
     renderApp("/system");
     expect(await screen.findByText(/give the admin a public_url/)).toBeVisible();
     expect(within(await executorRow("hermes")).queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("says when the executors could not be read, and tries again", async () => {
+    server.use(http.get("/api/v1/executors", () => HttpResponse.json({}, { status: 500 }), { once: true }));
+    const user = userEvent.setup();
+    renderApp("/system");
+    const section = await screen.findByRole("region", { name: /Nestor's tools for executors/ });
+    await user.click(await within(section).findByRole("button", { name: /Try again/ }));
+    expect(await executorRow("hermes")).toBeVisible();
   });
 });

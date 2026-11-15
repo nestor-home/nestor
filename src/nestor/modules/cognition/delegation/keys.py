@@ -47,11 +47,17 @@ class ExecutorKeys(Component):
         self._executors = tuple(executors)
         self._keys: dict[str, str] = {}  # by executor, decrypted once at start
         self._used: dict[str, datetime] = {}  # when each last called the server
+        self._revoked: set[str] = set()  # left without a key by a person: never made again for them
 
     async def start(self) -> None:
         for executor in self._executors:
             if found := await self._vault.get(VAULT.format(executor), "key"):
                 self._keys[executor] = found["key"]
+        for event in await self.journal.history(ExecutorKeyIssued, ExecutorKeyRevoked):
+            if isinstance(event, ExecutorKeyRevoked):
+                self._revoked.add(event.executor)
+            else:
+                self._revoked.discard(event.executor)
         for call in await self.journal.history(ExecutorCalled, newest_first=True, limit=USED_SEEN):
             self._used.setdefault(call.executor, call.at)
 
@@ -66,6 +72,7 @@ class ExecutorKeys(Component):
         key = KEY + secrets.token_urlsafe(32)
         await self._vault.put(VAULT.format(executor), "key", {"key": key})
         self._keys[executor] = key
+        self._revoked.discard(executor)
         await self.journal.publish(ExecutorKeyIssued(source=self.name, executor=executor, by=by))
         return key
 
@@ -74,6 +81,7 @@ class ExecutorKeys(Component):
             raise ContractError(f"no executor named {executor!r}")
         await self._vault.forget(VAULT.format(executor))
         self._keys.pop(executor, None)
+        self._revoked.add(executor)
         await self.journal.publish(ExecutorKeyRevoked(source=self.name, executor=executor, by=by))
 
     def caller(self, key: str) -> str | None:
@@ -84,9 +92,11 @@ class ExecutorKeys(Component):
                 found = executor
         return found
 
-    async def access(self, executor: str) -> NestorAccess:
-        """Where and how `executor` reaches the server, for Nestor to pass it with a task; a key is made the first
-        time."""
+    async def access(self, executor: str) -> NestorAccess | None:
+        """Where and how `executor` reaches the server, for Nestor to pass it with a task: a key is made the first
+        time; `None` once a person revoked its key, until one is made again."""
+        if executor in self._revoked:
+            return None
         key = self._keys.get(executor) or await self.issue(executor)
         return NestorAccess(url=self.url, key=key)
 

@@ -357,3 +357,18 @@ async def test_a_file_an_executor_hands_back_while_it_works_goes_with_the_result
         await tasks.wait(task.id)
     [ended] = await journal.history(TaskEnded)
     assert ended.files == (kept,) and blobs.blobs[kept.digest] == b"%PDF-1.7 devis"
+
+
+async def test_a_revoked_key_stays_revoked_and_the_executor_works_without_nestor_s_tools() -> None:
+    journal, remote = Journal(MemoryEventLog()), FakeRemote()
+    executor = Reaching(remote, duration_s=0.0)
+    executor.name = "codex"
+    keys = await keys_for(journal, "codex")
+    async with TaskManager(journal, [executor], keys=keys) as tasks:
+        await keys.revoke("codex")
+        await tasks.wait((await tasks.delegate("Corrige le test", origin=VOICE)).id)
+        await keys.issue("codex")
+        await tasks.wait((await tasks.delegate("Et celui-là", origin=VOICE)).id)
+    first, second = (r.assignment for r in remote.runs.values())
+    assert (first.task, first.access) == (None, None), "no key made behind the person's back"
+    assert second.task and second.access, "a key made again works again"

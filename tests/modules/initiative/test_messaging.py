@@ -130,6 +130,10 @@ async def test_a_question_a_task_asks_is_answered_back_to_it_by_the_person_asked
         await home.say(MATHIS, "Autre chose ?")
 
     assert f"[{asked.message_id}] a task you handed over asked Mathis" in waiting and "pass_answer" in waiting
+    delivered = home.model.requests[0].messages[-1].content
+    assert (
+        "A task you handed over asks Mathis" in delivered and f"pass_answer (question {asked.message_id})" in delivered
+    )
     assert home.book.answer_to(asked.message_id) == "Oui, direct"
     assert "Questions waiting" not in home.model.requests[-1].messages[0].text, "answered, it is closed"
 

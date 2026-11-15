@@ -208,8 +208,10 @@ class TaskManager(Component):
         """What `executor` is given: with Nestor's MCP server when it reaches it, a capability for the task."""
         if self._keys is None or executor.nestor_tools is NestorTools.NONE:
             return Assignment(objective)
-        passed = executor.nestor_tools is NestorTools.PASSED
-        return Assignment(objective, capability(), await self._keys.access(executor.name) if passed else None)
+        if executor.nestor_tools is NestorTools.CONFIGURED:  # its own configuration holds the server and its key
+            return Assignment(objective, capability())
+        access = await self._keys.access(executor.name)
+        return Assignment(objective, capability(), access) if access else Assignment(objective)
 
     async def cancel(self, task_id: str) -> Outcome:
         """Ask the executor to stop; the outcome says whether the stop was confirmed."""

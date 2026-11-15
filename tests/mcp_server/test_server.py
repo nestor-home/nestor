@@ -172,7 +172,8 @@ async def test_an_executor_works_on_its_task_through_nestor_s_tools(world: World
         answered = await call(nestor, "check_answer", task=task, question=asked["question"])
         assert answered == {"status": "answered", "answer": "Oui, 20 %"}
 
-        made = base64.b64encode(b"%PDF-1.7 corrige").decode()
+        corrected = b"%PDF-1.7 corrige" + bytes(5_000_000)  # bigger than an MCP request's usual cap
+        made = base64.b64encode(corrected).decode()
         await call(
             nestor, "attach_file", task=task, name="devis-corrige.pdf", media_type="application/pdf", content=made
         )
@@ -181,7 +182,7 @@ async def test_an_executor_works_on_its_task_through_nestor_s_tools(world: World
     outcome = await world.nestor.tasks.wait(task_id)
     [ended] = [e for e in await world.nestor.journal.history(TaskEnded) if e.task_id == task_id]
     assert outcome.status.value == "completed" and len(ended.files) == 1
-    assert await world.nestor.blobs.get(ended.files[0].digest) == b"%PDF-1.7 corrige"
+    assert await world.nestor.blobs.get(ended.files[0].digest) == corrected
     calls = [c for c in await world.nestor.journal.history(ExecutorCalled) if c.task_id == task_id]
     assert {c.tool for c in calls} >= {"task_brief", "attach_file"} and all(
         c.ok and c.executor == "codex" for c in calls
@@ -223,6 +224,7 @@ async def test_a_request_without_a_known_key_is_refused_before_any_tool(world: W
     async with httpx.AsyncClient() as http:
         answer = await http.post(world.served.url(), json=initialize, headers=headers)
     assert answer.status_code == 401 and answer.text == "unauthorized"
+    assert answer.headers["www-authenticate"].startswith("Bearer"), "the scheme it expects"
 
 
 async def test_a_key_calling_too_often_is_held_back(world: World, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -235,4 +237,23 @@ async def test_a_key_calling_too_often_is_held_back(world: World, monkeypatch: p
         statuses = [
             (await http.post(world.served.url(), json=initialize, headers=headers)).status_code for _ in range(4)
         ]
-    assert statuses[-1] == 401 and 401 not in statuses[:3]
+    assert statuses[-1] == 429 and 429 not in statuses[:3]
+
+
+async def test_it_answers_at_the_admin_s_public_address_not_only_on_this_machine(world: World) -> None:
+    _, given = await delegated(world, "Corrige le devis")
+    assert given.access is not None
+    initialize = {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "initialize",
+        "params": {"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "t", "version": "1"}},
+    }
+    headers = {
+        "Authorization": f"Bearer {given.access.key}",
+        "Accept": "application/json, text/event-stream",
+        "Host": "nestor.example",  # as through the public URL, a VPN or Tailscale
+    }
+    async with httpx.AsyncClient() as http:
+        answer = await http.post(world.served.url(), json=initialize, headers=headers)
+    assert answer.status_code == 200, answer.text

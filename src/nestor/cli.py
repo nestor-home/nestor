@@ -135,7 +135,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "satellites":
             return _satellites(args, environ)
         if args.command == "executors":
-            return _executors(args, environ)
+            return _executors(args, environ, words)
         if args.command == "secrets":
             return _secrets(args, environ)
         if args.command == "restart":
@@ -329,18 +329,17 @@ def _satellites(args: argparse.Namespace, environ: dict[str, str]) -> int:
     return 0
 
 
-def _executors(args: argparse.Namespace, environ: dict[str, str]) -> int:
+def _executors(args: argparse.Namespace, environ: dict[str, str], words: "_Words") -> int:
     config = load_config(args.config, environ)
     if args.action == "key":
         issued = _call(config, "POST", f"/api/v1/executors/{args.name}/key")
-        print(f"key for {args.name} (shown once, keep it secret): {issued['key']}")
-        print(f"Nestor's MCP server: {issued['url']}")
+        print(words("executors-key", executor=args.name, key=issued["key"], url=issued["url"]))
         if issued.get("setup"):
-            print(f"Add to {args.name}'s own configuration, then set `nestor_mcp: true` on it in Nestor's:")
+            print(words("executors-key-setup", executor=args.name))
             print(issued["setup"])
     else:
         _call(config, "DELETE", f"/api/v1/executors/{args.name}/key")
-        print(f"revoked the key of {args.name}")
+        print(words("executors-key-revoked", executor=args.name))
     return 0
 
 
