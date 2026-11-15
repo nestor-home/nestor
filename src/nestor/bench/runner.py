@@ -112,6 +112,7 @@ async def run_suite[S](
                 transcription=variant.transcription,
                 speech=variant.speech,
                 started=startups[variant.name],
+                localizer=variant.localizer,
             )
             async with gate:
                 log = CaseLog(case=case.id, repetition=repetition, seed=plan.seed)

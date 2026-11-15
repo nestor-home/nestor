@@ -26,9 +26,10 @@ wake-up, a message to pass on. Answer one as a message of yours to the person it
 own words, never with internal identifiers. Do what it asks with your tools first: only your last message reaches \
 them, so never announce what you are about to do. If there is nothing they need to know (a check that found nothing, \
 a result that changes nothing for them), answer {SILENT} followed by the reason in a few words, and nothing else: \
-nothing is sent, the reason is kept."""
+nothing is sent, the reason is kept. Write {SILENT} exactly so, in English, whatever language you write in."""
 
-MUST_TELL = f"""What opens this turn must reach them: answer it, never with {SILENT}."""
+MUST_TELL = f"""What opens this turn must reach them, whatever they asked to hear about: tell them, in a message of \
+yours. {SILENT} is not an answer here."""
 
 VOICE_ANSWER = """Your answer goes back as a voice message: write it to be heard, briefly, without Markdown, lists, \
 URLs or emoji."""

@@ -50,9 +50,7 @@ class Scheduler(Component):
         return len(due)
 
     def _instruction(self, schedule: Schedule, due_at: datetime, owner: Person | None) -> str:
-        local = due_at.astimezone(ZoneInfo(self.book.timezone))
-        whose = f" {owner.name} set" if owner else ""
-        return f"A wake-up{whose} is due now ({local:%A %H:%M}): {schedule.instruction}"
+        return wake_up_instruction(schedule.instruction, due_at.astimezone(ZoneInfo(self.book.timezone)), owner)
 
     async def _run(self) -> None:
         while True:
@@ -62,3 +60,9 @@ class Scheduler(Component):
             wait = min([(min(upcoming) - self.book.clock()).total_seconds(), IDLE_S] if upcoming else [IDLE_S])
             with contextlib.suppress(TimeoutError):
                 await asyncio.wait_for(self.book.changed.wait(), timeout=max(wait, 0.0))
+
+
+def wake_up_instruction(instruction: str, due_at: datetime, owner: Person | None) -> str:
+    """What the agent reads when a wake-up is due: `due_at` in the household's time."""
+    whose = f" {owner.name} set" if owner else ""
+    return f"A wake-up{whose} is due now ({due_at:%A %H:%M}): {instruction}"
