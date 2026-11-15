@@ -23,15 +23,35 @@ PLACES = {
         "type": "station",
         "display_name": "Gare de Lyon Part-Dieu, Lyon",
     },
+    "déchèterie Villeurbanne": {
+        "lat": "45.7741",
+        "lon": "4.8981",
+        "name": "Déchèterie de Villeurbanne",
+        "type": "recycling",
+        "display_name": "Déchèterie de Villeurbanne, Rue Alfred Brinon, Villeurbanne",
+        "extratags": {
+            "operator": "Grand Lyon",
+            "opening_hours": "Mo-Fr 09:00-12:00,14:00-17:00; Sa 09:00-17:00",
+            "contact:website": "https://www.grandlyon.com/decheteries",
+            "contact:phone": "+33 4 78 54 78 59",
+        },
+    },
 }
+
+
+def nominatim(request: httpx.Request) -> httpx.Response:
+    """Nominatim's search: the extra tags of a place only when asked for."""
+    place = PLACES.get(request.url.params["q"])
+    if place is None:
+        return httpx.Response(200, json=[])
+    asked = request.url.params.get("extratags") == "1"
+    return httpx.Response(200, json=[{k: v for k, v in place.items() if k != "extratags" or asked}])
 
 
 @pytest.fixture(autouse=True)
 def api() -> Iterator[respx.MockRouter]:
     with respx.mock(assert_all_called=False) as router:
-        router.get(f"{NOMINATIM}/search").mock(
-            side_effect=lambda r: httpx.Response(200, json=[PLACES[q]] if (q := r.url.params["q"]) in PLACES else [])
-        )
+        router.get(f"{NOMINATIM}/search").mock(side_effect=nominatim)
         router.get(url__regex=rf"{ROUTING}/routed-bike/route/v1/driving/4\.8330,45\.7620;4\.8594,45\.7606").respond(
             200,
             json={
@@ -102,7 +122,7 @@ async def test_a_journey_that_cannot_be_computed_fails_the_tool(home: str | None
         await call("route", home, **arguments)
 
 
-async def test_places_are_found_with_their_address_and_coordinates() -> None:
+async def test_places_are_found_with_their_address_coordinates_and_what_is_known_of_them() -> None:
     found = await call("find_place", query="Gare Part-Dieu")
     assert found["places"] == [
         {
@@ -111,5 +131,18 @@ async def test_places_are_found_with_their_address_and_coordinates() -> None:
             "kind": "station",
             "latitude": 45.7606,
             "longitude": 4.8594,
+        }
+    ]
+    found = await call("find_place", query="déchèterie Villeurbanne")
+    assert found["places"] == [
+        {
+            "name": "Déchèterie de Villeurbanne",
+            "address": "Déchèterie de Villeurbanne, Rue Alfred Brinon, Villeurbanne",
+            "kind": "recycling",
+            "latitude": 45.7741,
+            "longitude": 4.8981,
+            "opening_hours": "Mo-Fr 09:00-12:00,14:00-17:00; Sa 09:00-17:00",
+            "website": "https://www.grandlyon.com/decheteries",
+            "phone": "+33 4 78 54 78 59",
         }
     ]
