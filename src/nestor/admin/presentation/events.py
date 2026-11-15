@@ -367,7 +367,11 @@ class EventDescriber:
                 channels=[e.address],
             ),
             DeliveryWithheld: lambda e: self._line(
-                e, Message("journal-delivery-withheld", subject(e.about)), people=[e.person], channels=[e.address]
+                e,
+                Message("journal-delivery-withheld", subject(e.about)),
+                detail=e.reason,
+                people=[e.person],
+                channels=[e.address],
             ),
             DeliveryFailed: lambda e: self._line(
                 e,

@@ -16,15 +16,16 @@ class Delivered(Event, event_type="initiative.delivered"):
 
 class DeliveryWithheld(Event, event_type="initiative.withheld"):
     """The agent did what the notification asked and had nothing to tell (a check that found nothing): nothing was
-    sent, and the notification was allowed to end so."""
+    sent, `reason` says why in its words. The notification is done: it is never brought back."""
 
     address: Address  # where it would have gone
     about: About
     person: PersonId | None = None
+    reason: str = ""
 
 
 class DeliveryFailed(Event, event_type="initiative.undeliverable"):
-    """Nowhere took it: no channel could, the model could not write it, or it wrote nothing where it had to."""
+    """Nowhere took it: no channel could, the model could not write it, or it wrote nothing where it had to tell."""
 
     about: About
     tried: tuple[Address, ...]

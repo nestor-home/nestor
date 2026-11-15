@@ -144,6 +144,7 @@ class Confirmations(InWriting, ToolProvider, ContextProvider):
                     "Say briefly that it is done, or what went wrong; anything the result says to say exactly, say "
                     "it word for word.",
                     About(Source.CONFIRMATION, found.confirmation_id, "done"),
+                    must_tell=True,
                 ),
                 origin=found.origin,
             )
@@ -179,6 +180,7 @@ class Confirmations(InWriting, ToolProvider, ContextProvider):
                     f"{person.name} to confirm or refuse it here, saying exactly what will happen. Without an answer "
                     f"within {minutes} minutes, nothing happens. Its id is {request.confirmation_id}.",
                     About(Source.CONFIRMATION, request.confirmation_id),
+                    must_tell=True,
                 ),
                 written=True,
             )

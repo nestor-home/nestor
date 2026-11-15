@@ -54,19 +54,20 @@ class About:
         return f"{self.source.value}:{self.id}"
 
 
-SILENT = "[SILENT]"  # the whole answer to a notification that may stay silent, when there is nothing to tell
+SILENT = "[SILENT]"  # opens the answer to a notification with nothing to tell; what follows it is the reason
 
 
 @dataclass(frozen=True, slots=True)
 class Notification:
     """What Nestor brings into a conversation by itself, as a tool's result comes back to a model: a task ended, a
     watch matched, a message to pass on. It opens a turn as a person's message does, the answer follows, and both
-    stay in the conversation's history. `text` gives the facts and what to do; how to answer is the persona's.
-    `quiet`: the answer may be nothing (a check that found nothing); otherwise saying nothing is a failure."""
+    stay in the conversation's history. `text` gives the facts and what to do; how to answer is the persona's. It may
+    go unanswered when there is nothing to tell (a check that found nothing), unless `must_tell`: a message someone
+    asked to pass on, a confirmation to ask for, where saying nothing is a failure."""
 
     text: str
     about: About
-    quiet: bool = False
+    must_tell: bool = False
     files: tuple[BlobRef, ...] = ()  # what a tool made, to go with the answer
 
     def __post_init__(self) -> None:

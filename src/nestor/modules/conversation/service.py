@@ -41,7 +41,7 @@ from nestor.modules.conversation.conversations import Conversations, Turn
 from nestor.modules.conversation.events import AssistantTurn
 from nestor.modules.conversation.history import notification_message
 from nestor.modules.conversation.mentions import Mentions
-from nestor.modules.conversation.persona import QUIET, VOICE_ANSWER, Instructions, Persona
+from nestor.modules.conversation.persona import MUST_TELL, VOICE_ANSWER, Instructions, Persona
 from nestor.modules.conversation.ports import ContextProvider, Layer, TurnContext
 from nestor.modules.conversation.speakers import Speakers
 from nestor.modules.conversation.types import (
@@ -64,6 +64,13 @@ class Draft:
 
     text: str
     files: tuple[BlobRef, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class Silence:
+    """The answer to a notification with nothing to tell (`SILENT`): nothing to send, and why."""
+
+    reason: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -192,18 +199,24 @@ class Agent(Assistant):
 
     async def compose(
         self, address: Address, person: Person | None, notification: Notification, medium: Medium
-    ) -> Draft | None:
+    ) -> Draft | Silence:
         """The answer to a notification (a task's result, a watch, a message to pass on) for this conversation, to be
         delivered through `medium` to `person`: a draft, in the persona's voice and with the conversation's
         history, the model's final words only (what it wrote before calling tools is left out), with the files that
-        go with it (the notification's, and what tools made meanwhile). `None`: nothing to tell (it wrote nothing,
-        or `SILENT`). Nothing is logged until it is delivered (`delivered`): a message that could not go out was never
-        said. Raises `ProviderError` when the model cannot write it."""
+        go with it (the notification's, and what tools made meanwhile). `Silence`: it chose to tell nothing, opening
+        its answer with `SILENT` and the reason (a closing `SILENT` after real words is dropped from them).
+        Nothing is logged until it is delivered (`delivered`): a message that could not go out was never said.
+        Raises `ProviderError` when the model cannot write it, or wrote nothing: only a choice is silence."""
         reply = AgentReply(self, address, medium, notification, person=person)
         await reply.collect()
-        if reply._final in ("", SILENT):
-            return None
-        return Draft(reply._final, (*notification.files, *reply._made))
+        final = reply._final.strip()
+        if final[: len(SILENT)].upper() == SILENT:
+            return Silence(final[len(SILENT) :].strip())
+        if final[-len(SILENT) :].upper() == SILENT:  # words, then the marker: the words go
+            final = final[: -len(SILENT)].strip()
+        if not final:
+            raise ProviderError("model", "wrote nothing for a notification", transient=True)
+        return Draft(final, (*notification.files, *reply._made))
 
     async def delivered(
         self,
@@ -382,8 +395,8 @@ class AgentReply(Reply):
             self._address, self._speaker, self._medium, said, shared=shared, mentions=self._mentions
         )
         turn = instructions.turn
-        if isinstance(opening, Notification) and opening.quiet:
-            turn = f"{turn}\n\n{QUIET}"
+        if isinstance(opening, Notification) and opening.must_tell:
+            turn = f"{turn}\n\n{MUST_TELL}"
         if self._voiced:
             turn = f"{turn}\n\n{VOICE_ANSWER}"
         messages = [

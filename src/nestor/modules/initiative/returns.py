@@ -12,6 +12,7 @@ from nestor.modules.cognition.tools import ToolDeferred, ToolReturned
 from nestor.modules.conversation import About, Notification, Source
 from nestor.modules.household import Household, Person
 from nestor.modules.initiative.delivery.courier import Courier
+from nestor.modules.initiative.delivery.events import DeliveryWithheld
 from nestor.modules.journal import Journal, Subscription
 
 INTERRUPTED = json.dumps({"error": "Nestor restarted before it answered: it did not finish"})
@@ -39,14 +40,15 @@ class Returns(Component):
 
     async def start(self) -> None:
         self._subscription = self.journal.subscribe(TaskEnded, ToolReturned)
+        withheld = {e.about.key for e in await self.journal.history(DeliveryWithheld)}  # nothing to tell: done too
         delivered = {e.task_id for e in await self.journal.history(TaskDelivered)}
         for ended in await self.journal.history(TaskEnded):
-            if ended.task_id not in delivered:
+            if ended.task_id not in delivered and About(Source.TASK, ended.task_id).key not in withheld:
                 await self.task_ended(ended)
         returned = {e.call_id: e for e in await self.journal.history(ToolReturned)}
         told = {e.call_id for e in await self.journal.history(ToolResultDelivered)}
         for deferred in await self.journal.history(ToolDeferred):
-            if deferred.call_id in told:
+            if deferred.call_id in told or About(Source.TOOL, deferred.call_id).key in withheld:
                 continue
             if (result := returned.get(deferred.call_id)) is not None:
                 await self.tool_returned(result)
@@ -80,17 +82,19 @@ class Returns(Component):
         started = next(e for e in await self.journal.history(TaskStarted) if e.task_id == ended.task_id)
         person = self._person(started.requested_by)
         written = started.notify is Notify.MESSAGE
+        about = About(Source.TASK, ended.task_id, ended.status.value)
         address = await self.courier.deliver(
             person,
             Notification(
                 _task_instruction(started, ended, written=written),
-                About(Source.TASK, ended.task_id, ended.status.value),
+                about,
+                must_tell=ended.status is not TaskStatus.COMPLETED,  # a failure is always told
                 files=ended.files,
             ),
             origin=started.origin,
             written=written,
         )
-        if address is not None:
+        if address is not None and not await self._withheld(about, address):
             await self.journal.publish(
                 TaskDelivered(source=self.name, session=address.session, task_id=ended.task_id, address=address)
             )
@@ -101,17 +105,18 @@ class Returns(Component):
         if deferred is None:
             return  # a call that answered in its turn
         person = self._person(deferred.person)
-        status = "returned" if returned.ok else "failed"
+        about = About(Source.TOOL, returned.call_id, "returned" if returned.ok else "failed")
         address = await self.courier.deliver(
             person,
             Notification(
                 _tool_instruction(deferred, returned),
-                About(Source.TOOL, returned.call_id, status),
+                about,
+                must_tell=not returned.ok,
                 files=returned.files,
             ),
             origin=deferred.address,
         )
-        if address is not None:
+        if address is not None and not await self._withheld(about, address):
             await self.journal.publish(
                 ToolResultDelivered(
                     source=self.name,
@@ -121,6 +126,12 @@ class Returns(Component):
                     address=address,
                 )
             )
+
+    async def _withheld(self, about: About, address: Address) -> bool:
+        """Whether there was nothing to tell about it: then nothing was passed on, and it is done all the same."""
+        return any(
+            e.about.key == about.key and e.address == address for e in await self.journal.history(DeliveryWithheld)
+        )
 
     def _person(self, person: PersonId | None) -> Person | None:
         return self.household.person(person) if person else None

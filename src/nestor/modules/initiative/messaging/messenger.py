@@ -41,7 +41,9 @@ class Messenger(Component):
         sender = self.household.person(message.requested_by) if message.requested_by else None
         address = await self.courier.deliver(
             person,
-            Notification(self._instruction(message, person, sender), About(Source.MESSAGE, message.message_id)),
+            Notification(
+                self._instruction(message, person, sender), About(Source.MESSAGE, message.message_id), must_tell=True
+            ),
             # the conversation it was asked in is a way back only to whoever asked: never someone else's
             origin=message.origin if sender is not None and sender.id == person.id else None,
             written=message.in_writing,
@@ -58,6 +60,7 @@ class Messenger(Component):
                     f"You could not reach {person.name} to pass this on: {message.text}\n"
                     "Tell them that the message did not get through.",
                     About(Source.MESSAGE, message.message_id, "undelivered"),
+                    must_tell=True,
                 ),
                 origin=message.origin,
             )

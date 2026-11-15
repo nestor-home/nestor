@@ -22,6 +22,7 @@ from nestor.modules.cognition.delegation.service import TaskManager
 from nestor.modules.cognition.model import Role, ToolCall, ToolSpec
 from nestor.modules.cognition.tools import Made, Tool, Toolbox, ToolCalled, ToolContext, ToolDeferred, ToolReturned
 from nestor.modules.conversation import (
+    SILENT,
     About,
     Agent,
     AgentSettings,
@@ -34,7 +35,7 @@ from nestor.modules.conversation import (
     Source,
 )
 from nestor.modules.household import Account, Household, Person
-from nestor.modules.initiative import Courier, Delivered, DeliveryFailed, Returns, ToolResultDelivered
+from nestor.modules.initiative import Courier, Delivered, DeliveryFailed, DeliveryWithheld, Returns, ToolResultDelivered
 from nestor.modules.journal import Journal
 from nestor.testing.channels import InMemoryChannel
 from nestor.testing.cognition import ScriptedModel
@@ -245,6 +246,32 @@ async def test_an_undeliverable_result_is_logged_and_retried_later() -> None:
     assert len(home.telegram.sent) == 1
 
 
+async def test_a_result_with_nothing_to_tell_is_withheld_once_and_never_brought_back() -> None:
+    """A search that found nothing: nothing sent, the reason kept, and a restart does not ask again."""
+    home = Home(model=ScriptedModel(f"{SILENT} aucune offre sous 500 €", "Rien à signaler."))
+    await home.task("t1", notify=Notify.MESSAGE, still_talking=False)
+    async with home.returns():
+        pass
+    (withheld,) = await home.journal.history(DeliveryWithheld)
+    assert withheld.reason == "aucune offre sous 500 €"
+
+    async with Home(model=home.model, journal=home.journal).returns():  # Nestor restarted
+        pass
+    assert home.telegram.sent == home.voice.sent == []
+    assert len(home.model.requests) == 1, "a withheld result is done: it is not written again"
+    assert await home.journal.history(TaskDelivered) == [], "nothing was passed on: the journal does not say so"
+
+
+async def test_a_failed_task_may_not_be_left_untold() -> None:
+    """Silence on a failure is not "nothing to tell": the delivery fails, and it is tried again after a restart."""
+    home = Home(model=ScriptedModel(f"{SILENT} rien de neuf"))
+    await home.task("t1", status=TaskStatus.FAILED, still_talking=False)
+    async with home.returns():
+        pass
+    assert await home.journal.history(DeliveryWithheld) == await home.journal.history(TaskDelivered) == []
+    assert len(await home.journal.history(DeliveryFailed)) == 1
+
+
 @pytest.mark.parametrize("known", [True, False])
 async def test_a_task_from_an_unknown_person_stays_in_its_conversation(known: bool) -> None:
     home = Home()
@@ -363,6 +390,18 @@ async def test_a_call_cut_short_by_a_restart_is_said_to_have_failed() -> None:
     [returned] = await home.journal.history(ToolReturned)
     assert not returned.ok and "restarted" in returned.output
     assert "Failure:" in model.requests[2].messages[-1].content
+
+
+async def test_a_call_that_failed_may_not_be_left_untold() -> None:
+    model = ScriptedModel(ToolCall("c1", "count_mails"), "Je regarde.", f"{SILENT} rien à dire")
+    home = Home(model=model, tools=[slow_tool(asyncio.Event())])
+    await home.agent.respond(InboundMessage(address=TELEGRAM, sender=Sender("42"), text="Combien ?")).collect()
+    await home.agent.toolbox.close()  # the process stops while the call runs: it failed
+
+    restarted = Home(model=model, journal=home.journal)
+    async with restarted.returns():
+        await until(restarted.journal, DeliveryFailed)
+    assert await home.journal.history(DeliveryWithheld, ToolResultDelivered) == []
 
 
 async def test_a_result_that_came_back_while_nobody_listened_is_delivered_once_at_the_next_start() -> None:

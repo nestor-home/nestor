@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 from nestor.core import Component, PersonId, ProviderError, utc_now
 from nestor.core.i18n import Message
 from nestor.modules.channels import Address, Channel, Medium
-from nestor.modules.conversation import About, Agent, Notification, UserTurn
+from nestor.modules.conversation import About, Agent, Notification, Silence, UserTurn
 from nestor.modules.home import PresenceSource
 from nestor.modules.household import Person
 from nestor.modules.initiative.delivery.events import Delivered, DeliveryConsidered, DeliveryFailed, DeliveryWithheld
@@ -20,7 +20,7 @@ from nestor.modules.journal import Journal
 FOLLOW_UP = "You said this aloud a moment ago but nobody reacted; write it now, briefly, as a message."
 NOTICE = (
     "This is said aloud in a room where others may hear, and its content is theirs: say only, in one short "
-    "sentence, that something came for them and that you are writing it to them, nothing of what it says."
+    "sentence, that something came for them and that you wrote it to them, nothing of what it says."
 )
 
 
@@ -87,11 +87,11 @@ class Courier(Component):
     ) -> Address | None:
         """Deliver now what `notification` brings to `person`; returns where, or `None` (logged as `DeliveryFailed`)
         when nothing could take it. Wherever it goes, the notification and its answer become a turn of that
-        conversation. A notification that may stay silent and has nothing to tell is withheld there
-        (`DeliveryWithheld`) and leaves no turn; one that must be told and gets no answer goes on to the next place.
+        conversation. A notification with nothing to tell is withheld there (`DeliveryWithheld`) and leaves no turn,
+        unless it `must_tell`: then it goes on to the next place.
         `to` is a place asked for (a channel someone named): it is written there, whatever the policy.
         `private`: its content is the person's (a mail): aloud, others may hear, so the room only hears that something
-        waits for them and the content is written at once; aloud in full only with nowhere to write."""
+        waits for them once the content is written; aloud in full only with nowhere to write."""
         plan = (
             Plan(spoken=None, written=to, reason=Message.of("delivery-place-asked", channel=to.channel))
             if to
@@ -117,16 +117,19 @@ class Courier(Component):
             )
         )
         if private and plan.spoken and plan.written:
-            notice = replace(notification, text=f"{notification.text}\n\n{NOTICE}")
-            noticed = await self._send(person, plan.spoken, Medium.SPOKEN, notice)
-            if noticed and (written_to := await self._send(person, plan.written, Medium.WRITTEN, notification)):
+            # its content decides, written; the room only hears that something waits once it is
+            if written_to := await self._send(person, plan.written, Medium.WRITTEN, notification):
+                if written_to.said:
+                    notice = replace(notification, text=f"{notification.text}\n\n{NOTICE}")
+                    await self._send(person, plan.spoken, Medium.SPOKEN, notice)
                 return written_to.address
-        elif plan.spoken and (spoken := await self._send(person, plan.spoken, Medium.SPOKEN, notification)):
-            if plan.follow_up and spoken.said:
-                self._watch_reaction(person, plan, notification)
-            return spoken.address
-        if plan.written and (written_to := await self._send(person, plan.written, Medium.WRITTEN, notification)):
-            return written_to.address
+        else:
+            if plan.spoken and (spoken := await self._send(person, plan.spoken, Medium.SPOKEN, notification)):
+                if plan.follow_up and spoken.said:
+                    self._watch_reaction(person, plan, notification)
+                return spoken.address
+            if plan.written and (written_to := await self._send(person, plan.written, Medium.WRITTEN, notification)):
+                return written_to.address
         tried = tuple(a for a in (plan.spoken, plan.written) if a)
         await self.journal.publish(
             DeliveryFailed(
@@ -164,11 +167,13 @@ class Courier(Component):
                 draft = await self.agent.compose(address, person, notification, medium)
         except ProviderError:
             return None
-        if draft is None:
-            if not notification.quiet:
+        if isinstance(draft, Silence):
+            if notification.must_tell:
                 return None
             await self.journal.publish(
-                DeliveryWithheld(source=self.name, address=address, about=notification.about, person=who)
+                DeliveryWithheld(
+                    source=self.name, address=address, about=notification.about, person=who, reason=draft.reason
+                )
             )
             return _Sent(address, said=False)
         files = await self.agent.attachments.sent(draft.files, channel.sends)

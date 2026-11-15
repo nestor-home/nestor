@@ -12,6 +12,7 @@ from nestor.modules.channels import Address
 from nestor.modules.cognition.model import ModelRequest, ToolCall
 from nestor.modules.cognition.tools import Toolbox, ToolContext, ToolFailed
 from nestor.modules.conversation import (
+    SILENT,
     Agent,
     AssistantTurn,
     Attachments,
@@ -124,7 +125,7 @@ async def test_a_wake_up_runs_once_each_time_it_is_due_with_its_tools_and_tells_
 
 
 async def test_a_wake_up_with_nothing_to_tell_sends_nothing_and_leaves_no_turn() -> None:
-    home = Home(ToolCall("c1", "list_schedules", {}), "", now=paris(2, 7))
+    home = Home(ToolCall("c1", "list_schedules", {}), f"{SILENT} toujours au-dessus", now=paris(2, 7))
     async with home.book:
         await home.schedule(instruction="Si le prix passe sous 1 600 €, dis-le à Mathis", times=["10:00"])
         home.clock.now = paris(2, 10, 1)
