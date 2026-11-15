@@ -85,7 +85,9 @@ import {
 } from "simple-icons";
 import cartesiaSvg from "@/assets/brands/cartesia.svg?raw";
 import gradiumSvg from "@/assets/brands/gradium.svg?raw";
+import keenableSvg from "@/assets/brands/keenable.svg?raw";
 import llamaCppSvg from "@/assets/brands/llama-cpp.svg?raw";
+import parallelSvg from "@/assets/brands/parallel.svg?raw";
 import piperSvg from "@/assets/brands/piper.svg?raw";
 import slackSvg from "@/assets/brands/slack.svg?raw";
 import { type Args, tr } from "@/i18n/runtime";
@@ -177,9 +179,9 @@ const BRANDS = {
   // the web, the weather, maps
   brave: simple("Brave Search", siBrave),
   exa: lobe("Exa", exaSvg),
-  parallel: monogram("Parallel", "P"), // in neither icon set
+  parallel: official("Parallel", parallelSvg), // in neither icon set
   firecrawl: lobe("Firecrawl", firecrawlSvg),
-  keenable: monogram("Keenable", "K"), // in neither icon set
+  keenable: official("Keenable", keenableSvg), // in neither icon set
   searxng: simple("SearXNG", siSearxng),
   tavily: lobe("Tavily", tavilySvg),
   "open-meteo": monogram("Open-Meteo", "OM"),
