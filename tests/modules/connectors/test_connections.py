@@ -358,6 +358,34 @@ async def test_a_discovered_service_is_authorised_at_its_own_server_with_the_cli
     assert (await restarted.access(connection).secrets())["server"] == "https://server.example/mcp"
 
 
+@pytest.mark.parametrize(
+    ("names_itself", "iss", "accepted"),
+    [
+        (True, "https://auth.server.example/", True),
+        (True, None, False),  # it said it names itself: an answer without its name is not its own
+        (True, "https://evil.example", False),
+        (False, None, True),
+        (False, "https://evil.example", False),  # named by another server: never its code
+    ],
+)
+async def test_only_the_server_the_person_was_sent_to_may_send_them_back(
+    names_itself: bool, iss: str | None, accepted: bool
+) -> None:
+    """RFC 9207: the code of another authorization server is never exchanged here."""
+    setup = Setup()
+    spec = replace(DISCOVERED_OAUTH, issuer="https://auth.server.example", names_itself=names_itself)
+    setup.remote.found = Discovery(oauth=spec, client={"client_id": "registered-for-nestor"})
+    begun = await setup.connections.discover("remote", MATHIS, REDIRECT, {"server": "https://server.example/mcp"})
+    back = setup.provider.consent(str(begun))
+    if accepted:
+        await setup.connections.complete(back["state"], back["code"], iss)
+        assert setup.provider.used, "the code was exchanged"
+    else:
+        with pytest.raises(ContractError, match="start again"):
+            await setup.connections.complete(back["state"], back["code"], iss)
+        assert setup.provider.used == [] and setup.connections.connections == {}
+
+
 async def test_a_discovered_service_that_needs_no_consent_is_connected_at_once() -> None:
     setup = Setup()
     setup.remote.found = Discovery()

@@ -1,9 +1,9 @@
 """What the tools of a connected account share: the services people name, and how a call that fails reaches the
 model."""
 
-from collections.abc import Awaitable
+from collections.abc import Awaitable, Mapping
 
-from nestor.adapters.connectors.common.api import StatusError
+from nestor.adapters.common.http import StatusError
 from nestor.core import ProviderError
 from nestor.modules.cognition.model import ToolSpec
 from nestor.modules.cognition.tools import ToolFailed
@@ -30,3 +30,11 @@ def failed(what: str, error: ProviderError) -> ToolFailed:
     if isinstance(error, StatusError) and error.status == 400:
         return ToolFailed(f"{what}: the service refused the request, check the arguments ({error})")
     return ToolFailed(f"{what} failed: {error}")
+
+
+def required(arguments: Mapping[str, object], key: str, missing: str) -> str:
+    """The argument `key` the model gave, stripped; `missing` tells it what to give when it gave nothing."""
+    found = str(arguments.get(key) or "").strip()
+    if not found:
+        raise ToolFailed(missing)
+    return found

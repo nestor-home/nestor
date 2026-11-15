@@ -5,7 +5,7 @@ from collections.abc import Callable, Mapping, Sequence
 from nestor.adapters.common.text import cap
 from nestor.adapters.connectors.common import SHARED
 from nestor.adapters.connectors.common.api import segment
-from nestor.adapters.connectors.common.tools import ask
+from nestor.adapters.connectors.common.tools import ask, required
 from nestor.adapters.connectors.google.api import GoogleApi
 from nestor.modules.cognition.model import ToolSpec
 from nestor.modules.cognition.tools import Risk, Tool, ToolContext, ToolFailed, bounded
@@ -59,9 +59,7 @@ class DriveTools:
         )
 
     async def search(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
-        words = str(arguments.get("query") or "").strip()
-        if not words:
-            raise ToolFailed("give words to search for")
+        words = required(arguments, "query", "give words to search for")
         quoted = words.replace("\\", "\\\\").replace("'", "\\'")
         params = [
             ("q", f"fullText contains '{quoted}' and trashed = false"),
@@ -83,9 +81,7 @@ class DriveTools:
         return {"account": self._account, "query": words, "files": files, "note": SHARED}
 
     async def read(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
-        file_id = str(arguments.get("id") or "").strip()
-        if not file_id:
-            raise ToolFailed("give the id of a file found with google_drive_search")
+        file_id = required(arguments, "id", "give the id of a file found with google_drive_search")
         api, url = self._api(), f"{FILES_URL}/{segment(file_id)}"
         meta = await ask("Google Drive", api.get(url, [("fields", "id,name,mimeType")]))
         name, media_type = str(meta.get("name", "")), str(meta.get("mimeType", ""))
@@ -95,7 +91,7 @@ class DriveTools:
             raise ToolFailed(f"{name} is {media_type}, not a document to read")
         else:
             params = [("alt", "media")]
-        data = await ask("Google Drive", api.download(url, params, max_bytes=self._max_bytes))
+        data = await ask("Google Drive", api.download(url, params=params, max_bytes=self._max_bytes))
         text = await self._reader.read(data, media_type)
         if not text:
             raise ToolFailed(f"{name} has no text to read")

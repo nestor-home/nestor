@@ -8,6 +8,7 @@ from typing import Any
 from nestor.adapters.models.common import base64_of, turns
 from nestor.core import ContractError
 from nestor.modules.cognition import (
+    Document,
     Message,
     Role,
     ToolSpec,
@@ -73,13 +74,15 @@ def _blocks(message: Message, provider: str) -> list[Block]:
             ]
             return [*reasoning, *text, *calls]
         case _:
-            documents = [
-                {"type": "document", "source": _base64(d.media_type, d.data), **({"title": d.name} if d.name else {})}
-                for d in message.documents
-            ]
+            documents = [_document(d) for d in message.documents]
             images = [{"type": "image", "source": _base64(i.media_type, i.data)} for i in message.images]
             text = [{"type": "text", "text": message.content}] if message.content.strip() else []
             return [*documents, *images, *text]
+
+
+def _document(document: Document) -> Block:
+    title = {"title": document.name} if document.name else {}
+    return {"type": "document", "source": _base64(document.media_type, document.data), **title}
 
 
 def _base64(media_type: str, data: bytes) -> dict[str, str]:

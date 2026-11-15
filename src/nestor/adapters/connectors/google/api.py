@@ -12,7 +12,8 @@ from typing import Any
 
 import httpx
 
-from nestor.adapters.connectors.common.api import BearerApi, StatusError, segment
+from nestor.adapters.common.http import StatusError, open_client
+from nestor.adapters.connectors.common.api import BearerApi, segment
 
 GMAIL = "https://gmail.googleapis.com/gmail/v1/users/me"
 PROVIDER = "google"
@@ -53,13 +54,13 @@ class HistoryPage:
 
 
 def new_client(transport: httpx.AsyncBaseTransport | None = None) -> httpx.AsyncClient:
-    return httpx.AsyncClient(timeout=TIMEOUT, transport=transport)
+    return open_client(GMAIL, timeout=TIMEOUT, transport=transport)
 
 
 class GoogleApi(BearerApi):
     provider = PROVIDER
 
-    def error(self, response: httpx.Response) -> GoogleError:
+    def failed(self, path: str, response: httpx.Response) -> GoogleError:
         return GoogleError.of(response)
 
 

@@ -54,7 +54,7 @@ class Retry:
 
     async def after(self, error: ProviderError) -> None:
         if error.transient:
-            delay = self.backoff.next()
+            delay = error.retry_after_s or self.backoff.next()  # the wait the provider asked for, when it said
             log.warning("%s: %s; retrying in %.1f s", self.source, error, delay)
         else:
             delay = self.blocked_s

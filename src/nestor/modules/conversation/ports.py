@@ -70,3 +70,7 @@ class DocumentReader(ABC):
 
     @abstractmethod
     async def read(self, data: bytes, media_type: str) -> str | None: ...
+
+    async def pages(self, data: bytes, media_type: str) -> int | None:
+        """How many pages it has, for a reader that can tell (a PDF); `None` otherwise."""
+        return None

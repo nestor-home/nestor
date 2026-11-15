@@ -28,7 +28,7 @@ from mcp.types import ToolAnnotations
 from nestor.adapters.connectors.mcp.catalogue import account, known, service_name
 from nestor.adapters.connectors.mcp.connector import McpConnector
 from nestor.adapters.oauth import HttpxTokenEndpoint
-from nestor.core import PersonId, ProviderError
+from nestor.core import ContractError, PersonId, ProviderError
 from nestor.core.i18n import Message
 from nestor.modules.channels import Address
 from nestor.modules.cognition.tools import Risk, Tool, Toolbox, ToolContext, ToolFailed
@@ -554,6 +554,27 @@ async def test_metadata_that_cannot_be_trusted_or_used_is_refused(
             await setup.connections.discover("mcp", MATHIS, REDIRECT, {"url": served.url()})
         assert refused.value.reason is not None
         assert (refused.value.reason.id, refused.value.transient) == (refusal, transient)
+    finally:
+        await served.stop()
+
+
+async def test_a_server_that_names_itself_on_the_way_back_must_be_the_one_that_sends_the_person_back(
+    setup: Setup,
+) -> None:
+    """RFC 9207: its metadata says it sends `iss` with the code; an answer without it, or from another, is refused."""
+    port = free_port()
+    base = f"http://127.0.0.1:{port}"
+    found = authorization_server(base, authorization_response_iss_parameter_supported=True)
+    served = Served(lambda: metadata({"/.well-known/oauth-authorization-server": (200, found)}))
+    served.port = port
+    await served.start()
+    try:
+        typed = {"url": served.url(), "client_id": "typed", "client_secret": ""}
+        for iss in (None, "https://impostor.example"):
+            begun = await setup.connections.discover("mcp", MATHIS, REDIRECT, typed)
+            state = dict(urllib.parse.parse_qsl(urllib.parse.urlsplit(str(begun)).query))["state"]
+            with pytest.raises(ContractError, match="start again"):
+                await setup.connections.complete(state, "a-code", iss)
     finally:
         await served.stop()
 

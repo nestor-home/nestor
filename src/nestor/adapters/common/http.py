@@ -1,6 +1,8 @@
 """What adapters calling an HTTP API share: which errors a retry may get past, the detail of an error as the
 provider words it, a key never shown in one, a client for JSON APIs, and streamed answers (Server-Sent Events)."""
 
+import contextlib
+import email.utils
 import hashlib
 import hmac
 import json
@@ -11,7 +13,7 @@ from typing import Any
 import httpx
 
 from nestor import __version__
-from nestor.core import ProviderError
+from nestor.core import ProviderError, utc_now
 
 MAX_DETAIL = 300
 _RETRYABLE_STATUSES = frozenset({408, 409, 425, 429})
@@ -19,6 +21,18 @@ _RETRYABLE_STATUSES = frozenset({408, 409, 425, 429})
 
 def retryable(status: int) -> bool:
     return status in _RETRYABLE_STATUSES or status >= 500
+
+
+def retry_after(value: str | None) -> float | None:
+    """A `Retry-After` header in seconds (it gives seconds or a date); `None` without one or one unreadable."""
+    if not value:
+        return None
+    if value.strip().isdigit():
+        return float(value)
+    try:
+        return max(0.0, (email.utils.parsedate_to_datetime(value) - utc_now()).total_seconds())
+    except (TypeError, ValueError):
+        return None
 
 
 def detail(body: bytes) -> str:
@@ -110,50 +124,145 @@ def identity(base_url: str) -> dict[str, str]:
     return {"User-Agent": USER_AGENT, **ATTRIBUTION.get(host_among(base_url, ATTRIBUTION) or "", {})}
 
 
-class HttpApi:
-    """An HTTP API: one client, opened on the first call and kept until `aclose`, so that a call does not pay a new
-    connection. Every failure, the network's or the provider's, becomes a `ProviderError` labelled `provider`, with
-    `secret` redacted."""
+class StatusError(ProviderError):
+    """An API answered with an error: `status` is the HTTP status, `reason` the API's own code when it gives one. It
+    is worth retrying when `retryable` says so, or when the API says more (`transient`: a refused token it will
+    refresh)."""
 
     def __init__(
         self,
         provider: str,
-        base_url: str,
+        status: int,
+        reason: str,
+        message: str,
+        *,
+        transient: bool = False,
+        retry_after_s: float | None = None,
+    ) -> None:
+        super().__init__(
+            provider,
+            f"HTTP {status} {reason}".rstrip() + f": {message}",
+            transient=transient or retryable(status),
+            retry_after_s=retry_after_s,
+        )
+        self.status, self.reason = status, reason
+
+
+def json_object(provider: str, response: httpx.Response) -> dict[str, Any]:
+    """The JSON object an API answered: `{}` for a call that answers nothing (204), a `ProviderError` for anything
+    else than an object."""
+    if not response.content:
+        return {}
+    try:
+        found = response.json()
+    except ValueError:
+        raise ProviderError(provider, "answered with something other than JSON", transient=True) from None
+    if not isinstance(found, dict):
+        raise ProviderError(provider, "answered with an unexpected JSON document", transient=True)
+    return found
+
+
+class HttpApi:
+    """An HTTP API: one client, opened on the first call and kept until `aclose` (or one the caller owns, shared by
+    several accounts), so that a call does not pay a new connection. Every failure, the network's or the provider's,
+    becomes a `ProviderError` labelled `provider`, with `secret` redacted; an error answer is a `StatusError` (see
+    `failed`). A subclass adds what each call needs (`authorise`: an account's token)."""
+
+    def __init__(
+        self,
+        provider: str,
+        base_url: str = "",
         *,
         headers: Mapping[str, str] | None = None,
         secret: str | None = None,
         timeout_s: float = 15.0,
         transport: httpx.AsyncBaseTransport | None = None,
+        client: httpx.AsyncClient | None = None,
     ) -> None:
         self._provider, self._base_url, self._secret = provider, base_url, secret
-        self._headers = {**identity(base_url), **(headers or {})}
-        self._timeout_s, self._transport = timeout_s, transport
-        self._client: httpx.AsyncClient | None = None
+        self._headers, self._timeout_s, self._transport = headers or {}, timeout_s, transport
+        self._client, self._owned = client, client is None
 
     async def aclose(self) -> None:
         client, self._client = self._client, None
-        if client is not None:
+        if client is not None and self._owned:
             await client.aclose()
+
+    async def authorise(self) -> Mapping[str, str]:
+        """Headers each call carries, worked out when it is made (an access token refreshed meanwhile)."""
+        return {}
 
     async def request(self, method: str, path: str, *, answers: Collection[int] = (), **kwargs: Any) -> httpx.Response:
         """`answers`: error statuses whose body is an answer, not a failure (a route that does not exist)."""
-        if self._client is None:
-            self._client = httpx.AsyncClient(
-                base_url=self._base_url, headers=self._headers, timeout=self._timeout_s, transport=self._transport
-            )
+        async with self.stream(method, path, answers=answers, **kwargs) as response:
+            await response.aread()
+            return response
+
+    async def download(self, path: str, *, max_bytes: int, **kwargs: Any) -> bytes:
+        """A file, read until `max_bytes`: a larger one is refused (`ProviderError`, not transient)."""
+        async with self.stream("GET", path, **kwargs) as response:
+            chunks, size = [], 0
+            async for chunk in response.aiter_bytes():
+                size += len(chunk)
+                if size > max_bytes:
+                    raise self.error(f"{path}: larger than {max_bytes // 1_000_000} MB", transient=False)
+                chunks.append(chunk)
+            return b"".join(chunks)
+
+    @contextlib.asynccontextmanager
+    async def stream(
+        self, method: str, path: str, *, answers: Collection[int] = (), **kwargs: Any
+    ) -> AsyncGenerator[httpx.Response]:
+        """The answer, its body still to read; an error answer (not among `answers`) raises `failed`'s error."""
+        headers = {**(await self.authorise()), **(kwargs.pop("headers", None) or {})}
+        if not kwargs.get("params"):  # none given: a URL's own query (a next page's link) stays as it is
+            kwargs.pop("params", None)
         try:
-            response = await self._client.request(method, path, **kwargs)
+            async with self._opened().stream(method, path, headers=headers, **kwargs) as response:
+                if response.is_error and response.status_code not in answers:
+                    await response.aread()
+                    raise self.failed(path, response)
+                yield response
         except httpx.HTTPError as error:
             raise self.error(f"{path}: {type(error).__name__} {error}".strip(), transient=True) from None
-        if response.is_error and response.status_code not in answers:
-            raise self.error(
-                f"{path}: HTTP {response.status_code} {detail(response.content)}",
-                transient=retryable(response.status_code),
-            )
-        return response
+
+    def failed(self, path: str, response: httpx.Response) -> ProviderError:
+        """The error an error answer is: by default its status and the provider's own words."""
+        message = self._redacted(f"{path}: {detail(response.content)}")
+        waited = retry_after(response.headers.get("retry-after"))
+        return StatusError(self._provider, response.status_code, "", message, retry_after_s=waited)
 
     def error(self, message: str, *, transient: bool) -> ProviderError:
-        return provider_error(self._provider, self._secret, message, transient=transient)
+        return ProviderError(self._provider, self._redacted(message), transient=transient)
+
+    def _redacted(self, message: str) -> str:
+        return message.replace(self._secret, "[redacted]") if self._secret else message
+
+    def _opened(self) -> httpx.AsyncClient:
+        if self._client is None:
+            self._client = open_client(
+                self._base_url, headers=self._headers, timeout=self._timeout_s, transport=self._transport
+            )
+        return self._client
+
+
+def open_client(
+    base_url: str = "",
+    *,
+    headers: Mapping[str, str] | None = None,
+    timeout: float | httpx.Timeout = 15.0,
+    transport: httpx.AsyncBaseTransport | None = None,
+    follow_redirects: bool = False,
+) -> httpx.AsyncClient:
+    """A client that names Nestor to the service at `base_url` (`identity`), for an `HttpApi` or for several (a
+    connector's accounts)."""
+    return httpx.AsyncClient(
+        base_url=base_url,
+        headers={**identity(base_url), **(headers or {})},
+        timeout=timeout,
+        transport=transport,
+        follow_redirects=follow_redirects,
+    )
 
 
 class JsonApi(HttpApi):

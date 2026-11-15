@@ -27,6 +27,9 @@ VOICE_NOTE = Attachment(kind=AttachmentKind.VOICE, data=b"rappelle-moi le pain",
 SPEAKING = {"telegram": ChannelProfile(sends=frozenset({AttachmentKind.VOICE}))}
 
 
+PDF = "application/pdf"
+
+
 def sent(text: str = "", *attachments: Attachment) -> InboundMessage:
     return InboundMessage(address=TELEGRAM, sender=Sender("42"), text=text, attachments=attachments)
 
@@ -220,6 +223,23 @@ async def test_a_model_that_reads_pdfs_gets_the_last_ones_whole_and_the_others_a
     ), "a fallback that does not read it whole can still read its text"
     assert users[0].content.startswith("[A document (0.pdf): read its text with read_result"), "an older one is read"
     assert set(blobs.reads.values()) == {1}, "a file shown again next turn is not read again"
+
+
+class ReadingShortPdfs(ReadingPdfs):
+    document_pages = 2
+
+
+async def test_a_pdf_longer_than_the_model_reads_whole_is_read_as_text(make_agent: MakeAgent, journal: Journal) -> None:
+    """Anthropic refuses a whole request past its page limit: such a PDF is never sent to it whole."""
+    model, blobs = ReadingShortPdfs(), MemoryBlobStore()
+    agent = make_agent(model=model, attachments=Attachments(blobs, documents=(FileReader(), Results(journal, blobs))))
+    for pages in (("a", "b"), ("a", "b", "c")):
+        pdf = Attachment(kind=AttachmentKind.FILE, data=text_pdf(*pages), media_type=PDF, name=f"{len(pages)}.pdf")
+        await agent.respond(sent("", pdf)).collect()
+
+    users = [m for m in model.requests[-1].messages if m.role is Role.USER]
+    assert [d.name for m in users for d in m.documents] == ["2.pdf"]
+    assert users[-1].content.startswith("[A document (3.pdf): read its text with read_result")
 
 
 class CountedBlobStore(MemoryBlobStore):

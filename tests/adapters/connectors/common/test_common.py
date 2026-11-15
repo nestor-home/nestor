@@ -41,6 +41,18 @@ async def test_retry_waits_the_backoff_for_outages_and_the_long_pause_when_the_p
     assert caplog.text.count("paused until the account is reconnected") == 1
 
 
+async def test_retry_waits_as_long_as_the_provider_asked(monkeypatch: pytest.MonkeyPatch) -> None:
+    slept: list[float] = []
+
+    async def sleep(delay: float) -> None:
+        slept.append(delay)
+
+    monkeypatch.setattr(asyncio, "sleep", sleep)
+    retry = Retry("mailbox", Backoff(1.0, 8.0))
+    await retry.after(ProviderError("graph", "429", transient=True, retry_after_s=30.0))
+    assert slept == [30.0]
+
+
 def test_html_becomes_its_visible_text_one_block_per_line() -> None:
     html = '<div>Bonjour&nbsp;<b>Mathis</b><img src="x.png"/><hr/>Suivi&#160;: <a href="#">ici</a></div>'
     assert html_to_text(html) == "Bonjour Mathis\nSuivi : ici"

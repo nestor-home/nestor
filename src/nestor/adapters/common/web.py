@@ -13,7 +13,7 @@ from dataclasses import dataclass
 
 import httpx
 
-from nestor.adapters.common.http import USER_AGENT, retryable
+from nestor.adapters.common.http import USER_AGENT, retry_after, retryable
 from nestor.adapters.common.text import Page, page_text
 from nestor.adapters.documents.reader import HTML
 from nestor.core import ProviderError
@@ -25,10 +25,11 @@ FEEDS = "application/rss+xml, application/atom+xml, application/rdf+xml;q=0.9, a
 
 
 class WebError(ProviderError):
-    """What kept an address from being read, worded for whoever asked (the model, a log): `reason`."""
+    """What kept an address from being read, worded for whoever asked (the model, a log): `reason`; `retry_after_s`
+    when the site said how long to wait (`Retry-After`)."""
 
-    def __init__(self, reason: str, *, transient: bool) -> None:
-        super().__init__("web", reason, transient=transient)
+    def __init__(self, reason: str, *, transient: bool, retry_after_s: float | None = None) -> None:
+        super().__init__("web", reason, transient=transient, retry_after_s=retry_after_s)
         self.reason = reason
 
 
@@ -73,7 +74,11 @@ class PublicWeb:
                         continue
                     if response.is_error:
                         status = response.status_code
-                        raise WebError(f"{url} answered HTTP {status}", transient=retryable(status))
+                        raise WebError(
+                            f"{url} answered HTTP {status}",
+                            transient=retryable(status),
+                            retry_after_s=retry_after(response.headers.get("retry-after")),
+                        )
                     return Fetched(url, response.status_code, response.headers, await self._body(response))
             except (httpx.HTTPError, httpx.InvalidURL) as error:
                 raise WebError(f"{url} could not be read: {type(error).__name__}", transient=True) from None

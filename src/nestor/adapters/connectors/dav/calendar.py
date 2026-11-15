@@ -6,51 +6,18 @@ from collections.abc import Awaitable, Callable, Mapping, Sequence
 from datetime import UTC, date, datetime
 from xml.sax.saxutils import quoteattr
 
-from nestor.adapters.common.text import cap
+from nestor.adapters.common.http import StatusError
 from nestor.adapters.connectors.common import SHARED
-from nestor.adapters.connectors.common.moments import INSTANT, MOMENT, instant, span
-from nestor.adapters.connectors.common.tools import ask, failed
+from nestor.adapters.connectors.common.calendar import MAX_EVENTS, NO_TITLE, Event, calendar_specs, matching
+from nestor.adapters.connectors.common.moments import instant, span
+from nestor.adapters.connectors.common.tools import ask, failed, required
 from nestor.adapters.connectors.dav import cards
-from nestor.adapters.connectors.dav.dav import Collection, Dav, DavError
+from nestor.adapters.connectors.dav.dav import Collection, Dav
 from nestor.core import ProviderError, utc_now
-from nestor.modules.cognition.model import ToolSpec
 from nestor.modules.cognition.tools import Risk, Tool, ToolContext, ToolFailed, bounded
 
-MAX_RESULTS = 50
-DESCRIPTION_CHARS = 1_000
-
-EVENTS = ToolSpec(
-    "dav_calendar_events",
-    "List the events of the person's calendars (CalDAV: iCloud, Fastmail, Nextcloud…) between two moments, "
-    "optionally only those matching words. Returns calendar, title, start, end, location, description and "
-    f"attendees of each. {SHARED}",
-    {
-        "type": "object",
-        "properties": {
-            "since": {"type": "string", "description": INSTANT},
-            "until": {"type": "string", "description": INSTANT},
-            "query": {"type": "string", "description": "words the events must contain"},
-            "max_results": {"type": "integer", "minimum": 1, "maximum": MAX_RESULTS, "default": 20},
-        },
-        "required": ["since", "until"],
-    },
-)
-CREATE = ToolSpec(
-    "dav_calendar_create",
-    "Add an event to one of the person's calendars (CalDAV). A timed event has a start and an end with their "
-    "offset; a whole-day event has dates, its end being the day after the last one.",
-    {
-        "type": "object",
-        "properties": {
-            "title": {"type": "string"},
-            "start": {"type": "string", "description": MOMENT},
-            "end": {"type": "string", "description": MOMENT},
-            "location": {"type": "string"},
-            "description": {"type": "string"},
-            "calendar": {"type": "string", "description": "the calendar's name; the first one when not given"},
-        },
-        "required": ["title", "start", "end"],
-    },
+EVENTS, CREATE = calendar_specs(
+    "dav_calendar", "the person's calendars (CalDAV: iCloud, Fastmail, Nextcloud…)", SHARED, several=True
 )
 
 
@@ -71,7 +38,7 @@ class CalendarTools:
         query = _query(_stamp(since), _stamp(until))
         answers = await asyncio.gather(*(dav.report(c.url, query) for c in calendars), return_exceptions=True)
         read = [(c, a) for c, a in zip(calendars, answers, strict=True) if not isinstance(a, BaseException)]
-        unread = [c.name for c, a in zip(calendars, answers, strict=True) if isinstance(a, DavError)]
+        unread = [c.name for c, a in zip(calendars, answers, strict=True) if isinstance(a, StatusError)]
         if not read and calendars:  # none could be read: say why, as for any failed call
             error = next(a for a in answers if isinstance(a, BaseException))
             raise failed("Reading the calendars", error) if isinstance(error, ProviderError) else error
@@ -81,19 +48,16 @@ class CalendarTools:
             for _, data in answer
             for event in cards.parse(data).find("VEVENT")
         ]
-        if words := str(arguments.get("query") or "").strip().lower():
-            events = [e for e in events if words in f"{e['title']} {e['location']} {e['description']}".lower()]
-        events.sort(key=lambda e: str(e["start"]))
-        limit = bounded(arguments.get("max_results"), default=20, maximum=MAX_RESULTS)
-        found: dict[str, object] = {"account": self._account, "events": events[:limit], "note": SHARED}
+        events = sorted(matching(events, arguments.get("query")), key=lambda e: e.start)
+        limit = bounded(arguments.get("max_results"), default=20, maximum=MAX_EVENTS)
+        shown = [e.shown() for e in events[:limit]]
+        found: dict[str, object] = {"account": self._account, "events": shown, "note": SHARED}
         if unread:
             found["unreadable_calendars"] = unread  # shared or forbidden ones: the others are read
         return found
 
     async def create(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
-        title = str(arguments.get("title") or "").strip()
-        if not title:
-            raise ToolFailed("give the event a title")
+        named_title = required(arguments, "title", NO_TITLE)
         start, end = span(arguments.get("start"), arguments.get("end"))
         dav = await ask("the calendar server", self._dav())
         calendars = await ask("Listing the calendars", dav.calendars())
@@ -108,7 +72,7 @@ class CalendarTools:
             f"DTSTAMP:{_stamp(utc_now())}",
             _line("DTSTART", start),
             _line("DTEND", end),
-            f"SUMMARY:{cards.escape(title)}",
+            f"SUMMARY:{cards.escape(named_title)}",
             *(
                 f"{name}:{cards.escape(value)}"
                 for name, key in (("LOCATION", "location"), ("DESCRIPTION", "description"))
@@ -125,11 +89,12 @@ class CalendarTools:
         for i, calendar in enumerate(candidates):
             try:
                 await dav.put(f"{calendar.url.rstrip('/')}/{uid}.ics", body, "text/calendar; charset=utf-8")
-            except DavError as error:
+            except StatusError as error:
                 if error.status == 403 and i < len(candidates) - 1:
                     continue
                 raise failed("Adding to the calendar", error) from None
-            return {"account": self._account, "event": _event(cards.parse(body).find("VEVENT")[0], calendar)}
+            made = _event(cards.parse(body).find("VEVENT")[0], calendar)
+            return {"account": self._account, "event": made.shown()}
         raise ToolFailed("no calendar of this account takes new events")
 
 
@@ -161,16 +126,15 @@ def _line(name: str, moment: date) -> str:
     return f"{name};VALUE=DATE:{moment.strftime('%Y%m%d')}"
 
 
-def _event(event: cards.Block, calendar: Collection) -> dict[str, object]:
+def _event(event: cards.Block, calendar: Collection) -> Event:
     start, end = cards.moment(event.first("DTSTART")), cards.moment(event.first("DTEND"))
-    attendees = [a.value.removeprefix("mailto:").removeprefix("MAILTO:") for a in event.all("ATTENDEE")]
-    return {
-        "calendar": calendar.name,
-        "title": event.text("SUMMARY"),
-        "start": start.isoformat() if start else "",
-        "end": end.isoformat() if end else "",
-        "all_day": start is not None and not isinstance(start, datetime),
-        "location": event.text("LOCATION"),
-        "description": cap(event.text("DESCRIPTION"), DESCRIPTION_CHARS),
-        "attendees": attendees,
-    }
+    return Event(
+        calendar=calendar.name,
+        title=event.text("SUMMARY"),
+        start=start.isoformat() if start else "",
+        end=end.isoformat() if end else "",
+        all_day=start is not None and not isinstance(start, datetime),
+        location=event.text("LOCATION"),
+        description=event.text("DESCRIPTION"),
+        attendees=tuple(a.value.removeprefix("mailto:").removeprefix("MAILTO:") for a in event.all("ATTENDEE")),
+    )

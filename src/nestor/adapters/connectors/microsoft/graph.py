@@ -8,7 +8,8 @@ from typing import Any
 
 import httpx
 
-from nestor.adapters.connectors.common.api import BearerApi, StatusError
+from nestor.adapters.common.http import StatusError, open_client
+from nestor.adapters.connectors.common.api import BearerApi
 from nestor.adapters.connectors.common.tools import ask
 
 GRAPH = "https://graph.microsoft.com/v1.0"
@@ -33,13 +34,13 @@ class GraphError(StatusError):
 
 def new_client(transport: httpx.AsyncBaseTransport | None = None) -> httpx.AsyncClient:
     # a file's content redirects to a pre-signed address, which httpx reaches without the token
-    return httpx.AsyncClient(base_url=GRAPH, timeout=TIMEOUT, transport=transport, follow_redirects=True)
+    return open_client(GRAPH, timeout=TIMEOUT, transport=transport, follow_redirects=True)
 
 
 class GraphApi(BearerApi):
     provider = PROVIDER
 
-    def error(self, response: httpx.Response) -> GraphError:
+    def failed(self, path: str, response: httpx.Response) -> GraphError:
         return GraphError.of(response)
 
 

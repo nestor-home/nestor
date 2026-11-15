@@ -96,6 +96,8 @@ async def _discover(url: str, redirect_uri: str, typed: Mapping[str, str], http:
         # OpenID Connect issues a refresh token for offline access only after an explicit consent
         extra_authorize={"prompt": "consent"} if "offline_access" in scopes else {},
         resource=resource,
+        issuer=str(metadata.issuer),
+        names_itself=bool(metadata.authorization_response_iss_parameter_supported),
     )
     if typed.get("client_id"):
         return Discovery(oauth=spec, client=dict(typed))

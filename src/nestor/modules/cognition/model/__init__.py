@@ -3,7 +3,7 @@
 from nestor.modules.cognition.model.answers import json_answer, text_answer
 from nestor.modules.cognition.model.events import ModelFellBack
 from nestor.modules.cognition.model.fallback import FallingBack
-from nestor.modules.cognition.model.ports import LanguageModel
+from nestor.modules.cognition.model.ports import LanguageModel, reads_whole
 from nestor.modules.cognition.model.types import (
     Document,
     Finished,
@@ -38,5 +38,6 @@ __all__ = [
     "ToolSpec",
     "Usage",
     "json_answer",
+    "reads_whole",
     "text_answer",
 ]

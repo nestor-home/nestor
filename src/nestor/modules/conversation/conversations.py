@@ -26,7 +26,7 @@ from datetime import datetime, timedelta
 
 from nestor.core import Event, PersonId, SessionId, new_id, utc_now
 from nestor.modules.channels import Address, AttachmentKind, Exchange, Medium
-from nestor.modules.cognition.model import Message
+from nestor.modules.cognition.model import Message, reads_whole
 from nestor.modules.conversation.events import (
     AnswerAttached,
     AnswerCut,
@@ -219,6 +219,7 @@ class Conversations:
         look: Callable[[Sequence[Attached]], Awaitable[Shown]] | None = None,
         sees: bool = False,
         reads: frozenset[str] = frozenset(),
+        document_pages: int | None = None,
     ) -> tuple[Message, ...]:
         """A conversation's last turns as the model reads them, whatever process held them (restarts included);
         nothing without one. Earlier conversations of the session are not replayed, as in Assist.
@@ -232,7 +233,7 @@ class Conversations:
         )
         events = in_conversation(reversed(events), conversation)
         sent = [a for e in events if isinstance(e, UserTurn) for a in e.attachments]
-        wanted = _shown(sent, sees, reads)
+        wanted = _shown(sent, sees, reads, document_pages)
         shown = await look(wanted) if look is not None and wanted else {}
         return to_messages(events, names=names, shown=shown, sees=sees)
 
@@ -276,16 +277,18 @@ class Conversations:
             self._open.setdefault(session, _Open(exchange.conversation_id, latest[0].at))
 
 
-def _shown(sent: Sequence[Attached], sees: bool, reads: frozenset[str]) -> list[Attached]:
+def _shown(sent: Sequence[Attached], sees: bool, reads: frozenset[str], pages: int | None) -> list[Attached]:
     """The files of a conversation a model looks at itself, the latest first: up to `IMAGES` images when it `sees`, up
-    to `DOCUMENTS` documents of the types it `reads` whole, each small enough for providers (`IMAGE_BYTES`,
-    `DOCUMENT_BYTES`), and together no more than `SHOWN_BYTES`, so that no request grows past what they take."""
+    to `DOCUMENTS` documents it reads whole (of a type it `reads`, no longer than its `pages`), each small enough for
+    providers (`IMAGE_BYTES`, `DOCUMENT_BYTES`), and together no more than `SHOWN_BYTES`, so that no request grows
+    past what they take."""
     left = {AttachmentKind.IMAGE: IMAGES if sees else 0, AttachmentKind.FILE: DOCUMENTS}
     largest = {AttachmentKind.IMAGE: IMAGE_BYTES, AttachmentKind.FILE: DOCUMENT_BYTES}
     budget, wanted = SHOWN_BYTES, []
     for attached in reversed(sent):
         kind, size = attached.kind, attached.blob.size
-        if kind is AttachmentKind.FILE and attached.blob.media_type not in reads:
+        counted = attached.read.pages if attached.read else None
+        if kind is AttachmentKind.FILE and not reads_whole(reads, pages, attached.blob.media_type, counted):
             continue
         if left.get(kind, 0) and size <= min(largest[kind], budget):
             left[kind] -= 1
