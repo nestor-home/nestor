@@ -261,6 +261,16 @@ async def test_a_result_with_nothing_to_tell_is_withheld_once_and_never_brought_
     assert len(home.model.requests) == 1, "a withheld result is done: it is not written again"
 
 
+async def test_a_failed_task_may_not_be_left_untold() -> None:
+    """Silence on a failure is not "nothing to tell": the delivery fails, and it is tried again after a restart."""
+    home = Home(model=ScriptedModel(f"{SILENT} rien de neuf"))
+    await home.task("t1", status=TaskStatus.FAILED, still_talking=False)
+    async with home.returns():
+        pass
+    assert await home.journal.history(DeliveryWithheld) == await home.journal.history(TaskDelivered) == []
+    assert len(await home.journal.history(DeliveryFailed)) == 1
+
+
 @pytest.mark.parametrize("known", [True, False])
 async def test_a_task_from_an_unknown_person_stays_in_its_conversation(known: bool) -> None:
     home = Home()

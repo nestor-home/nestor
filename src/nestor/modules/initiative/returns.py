@@ -85,6 +85,7 @@ class Returns(Component):
             Notification(
                 _task_instruction(started, ended, written=written),
                 About(Source.TASK, ended.task_id, ended.status.value),
+                must_tell=ended.status is not TaskStatus.COMPLETED,  # a failure is always told
                 files=ended.files,
             ),
             origin=started.origin,
@@ -107,6 +108,7 @@ class Returns(Component):
             Notification(
                 _tool_instruction(deferred, returned),
                 About(Source.TOOL, returned.call_id, status),
+                must_tell=not returned.ok,
                 files=returned.files,
             ),
             origin=deferred.address,

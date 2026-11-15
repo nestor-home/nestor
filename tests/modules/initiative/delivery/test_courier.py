@@ -112,6 +112,16 @@ async def test_a_private_message_is_only_announced_aloud_and_written_at_once() -
     assert [a for a, _ in voice.sent] == [SALON] and [a for a, _ in telegram.sent] == [TELEGRAM]
 
 
+async def test_a_private_message_with_nothing_to_tell_is_neither_announced_nor_written() -> None:
+    model = ScriptedModel(f"{SILENT} une publicité", "Mail de la banque.")
+    sender, journal, voice, telegram = courier(StaticPresence().set("mathis", home=True), model=model)
+    async with sender:
+        bank = Notification("Mail de la banque.", About(Source.WATCH, "banque"))
+        assert await sender.deliver(MATHIS, bank, private=True) == SALON
+    assert voice.sent == telegram.sent == [] and len(model.requests) == 1
+    assert [w.reason for w in await journal.history(DeliveryWithheld)] == ["une publicité"]
+
+
 async def test_a_reaction_cancels_the_follow_up() -> None:
     sender, journal, _, telegram = courier(StaticPresence().set("mathis", home=True))
     async with sender:

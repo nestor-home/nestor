@@ -211,7 +211,7 @@ class Agent(Assistant):
         final = reply._final.strip()
         if not final or final.startswith(SILENT):
             return Silence(final.removeprefix(SILENT).strip())
-        return Draft(reply._final, (*notification.files, *reply._made))
+        return Draft(final, (*notification.files, *reply._made))
 
     async def delivered(
         self,

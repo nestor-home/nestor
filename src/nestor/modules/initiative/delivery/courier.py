@@ -87,8 +87,8 @@ class Courier(Component):
     ) -> Address | None:
         """Deliver now what `notification` brings to `person`; returns where, or `None` (logged as `DeliveryFailed`)
         when nothing could take it. Wherever it goes, the notification and its answer become a turn of that
-        conversation. A notification that may stay silent and has nothing to tell is withheld there
-        (`DeliveryWithheld`) and leaves no turn; one that must be told and gets no answer goes on to the next place.
+        conversation. A notification with nothing to tell is withheld there (`DeliveryWithheld`) and leaves no turn,
+        unless it `must_tell`: then it goes on to the next place.
         `to` is a place asked for (a channel someone named): it is written there, whatever the policy.
         `private`: its content is the person's (a mail): aloud, others may hear, so the room only hears that something
         waits for them and the content is written at once; aloud in full only with nowhere to write."""
@@ -119,6 +119,8 @@ class Courier(Component):
         if private and plan.spoken and plan.written:
             notice = replace(notification, text=f"{notification.text}\n\n{NOTICE}")
             noticed = await self._send(person, plan.spoken, Medium.SPOKEN, notice)
+            if noticed and not noticed.said:
+                return noticed.address  # nothing to tell: withheld there, and not written either
             if noticed and (written_to := await self._send(person, plan.written, Medium.WRITTEN, notification)):
                 return written_to.address
         elif plan.spoken and (spoken := await self._send(person, plan.spoken, Medium.SPOKEN, notification)):
