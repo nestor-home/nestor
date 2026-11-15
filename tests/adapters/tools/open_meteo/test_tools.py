@@ -6,7 +6,7 @@ import httpx
 import pytest
 import respx
 
-from nestor.adapters.tools.open_meteo import OpenMeteo
+from nestor.adapters.tools.open_meteo.tools import OpenMeteo
 from nestor.modules.channels import Address
 from nestor.modules.cognition.tools import ToolContext, ToolFailed
 

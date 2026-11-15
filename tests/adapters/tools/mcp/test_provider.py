@@ -31,8 +31,9 @@ from mcp.types import (
 from mcp.types import Tool as RemoteTool
 from pydantic import SecretStr
 
-from nestor.adapters.tools.mcp import BearerToken, McpSettings, McpToolProvider, McpTransport
-from nestor.adapters.tools.mcp.plugin import plugin
+from nestor.adapters.tools.mcp import plugin
+from nestor.adapters.tools.mcp.provider import BearerToken, McpToolProvider, McpTransport
+from nestor.adapters.tools.mcp.settings import McpSettings
 from nestor.core import Health, ProviderError
 from nestor.core.i18n import Locale
 from nestor.modules.channels import Address
@@ -52,7 +53,7 @@ from nestor.runtime import Family, Services
 from nestor.testing.i18n import EchoLocalizer
 from nestor.testing.journal import MemoryBlobStore, MemoryEventLog
 
-from ..served import Asgi, Served, bearer, eventually
+from ...served import Asgi, Served, bearer, eventually
 
 type LogCapture = pytest.LogCaptureFixture
 

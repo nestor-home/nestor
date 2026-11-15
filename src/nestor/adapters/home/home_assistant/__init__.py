@@ -19,7 +19,7 @@ from nestor.adapters.home.home_assistant.client import websocket_url
 from nestor.adapters.home.home_assistant.home import HomeAssistant
 from nestor.adapters.home.home_assistant.installation import PresenceMapping
 from nestor.adapters.home.home_assistant.presence import HomeAssistantPresence
-from nestor.adapters.tools.mcp import BearerToken, McpToolProvider
+from nestor.adapters.tools.mcp.provider import BearerToken, McpToolProvider
 from nestor.core import ContractError, PersonId
 from nestor.modules.cognition.tools import SensitiveWhen
 from nestor.runtime import AdapterSettings, Family, Plugin, RequiredSecret, Services

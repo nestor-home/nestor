@@ -8,7 +8,7 @@ import httpx
 import pytest
 import respx
 
-from nestor.adapters.tools.openstreetmap import NOMINATIM, ROUTING, OpenStreetMap
+from nestor.adapters.tools.openstreetmap.tools import NOMINATIM, ROUTING, OpenStreetMap
 from nestor.modules.channels import Address
 from nestor.modules.cognition.tools import ToolContext, ToolFailed
 

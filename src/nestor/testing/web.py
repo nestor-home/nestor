@@ -1,8 +1,8 @@
-"""The contract suite every web search adapter must pass, through the `web_search` tool the agent calls."""
+"""The contract suite every web search engine must pass, through the `web_search` tool the agent calls."""
 
 from nestor.modules.channels import Address
 from nestor.modules.cognition.tools import ToolContext, ToolFailed
-from nestor.modules.web import Found, WebSearch
+from nestor.modules.web import Found, WebSearch, WebSearchTools
 
 CONTEXT = ToolContext(address=Address("web", "chat"))
 # what the engine knows for any query but `NOTHING`, most relevant first
@@ -29,7 +29,7 @@ class WebSearchContract:
         raise NotImplementedError
 
     async def _web_search(self, engine: WebSearch, **arguments: object) -> dict:
-        [tool] = engine.tools()
+        [tool] = WebSearchTools([engine]).tools()
         assert tool.name == "web_search"
         async with engine:
             output = await tool.run(arguments, CONTEXT)

@@ -4,8 +4,6 @@ from collections.abc import Sequence
 
 from nestor.adapters.common.http import JsonApi
 from nestor.modules.web import Found, WebSearch
-from nestor.runtime import Family, Plugin, Services
-from nestor.runtime.plugins import AdapterSettings, RequiredSecret
 
 API = "https://api.tavily.com"
 
@@ -31,16 +29,3 @@ class TavilySearch(WebSearch):
 
     async def close(self) -> None:
         await self._api.aclose()
-
-
-class TavilySettings(AdapterSettings):
-    api_key: RequiredSecret
-
-
-def build(settings: TavilySettings, name: str, services: Services) -> TavilySearch:
-    search = TavilySearch(settings.api_key.get_secret_value())
-    search.name = name
-    return search
-
-
-plugin = Plugin(Family.TOOLS, "tavily", TavilySettings, build)

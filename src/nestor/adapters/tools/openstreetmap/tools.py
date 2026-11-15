@@ -1,7 +1,4 @@
-"""OpenStreetMap for places and journeys (`find_place`, `route`): Nominatim finds places, OSRM computes routes by
-car, bike or on foot. No key. The public servers of the OpenStreetMap community serve a household's use, one search a
-second at most; an instance of one's own replaces them by address. No public transport, no traffic: OpenStreetMap
-knows neither."""
+"""OpenStreetMap for places and journeys (`find_place`, `route`): Nominatim finds places, OSRM computes routes by"""
 
 import asyncio
 import time
@@ -13,8 +10,6 @@ from nestor.adapters.common.http import JsonApi
 from nestor.core import ProviderError
 from nestor.modules.cognition.model import ToolSpec
 from nestor.modules.cognition.tools import Risk, Tool, ToolContext, ToolFailed, ToolOutput, ToolProvider, bounded
-from nestor.runtime import Family, Plugin, Services
-from nestor.runtime.plugins import AdapterSettings
 
 NOMINATIM = "https://nominatim.openstreetmap.org"
 ROUTING = "https://routing.openstreetmap.de"  # the routing behind openstreetmap.org: one server per profile
@@ -181,23 +176,3 @@ def _place(found: Mapping[str, Any]) -> dict[str, object]:
         "longitude": float(found["lon"]),
         **{key: value for key, value in known.items() if value},
     }
-
-
-class OpenStreetMapSettings(AdapterSettings):
-    home: str | None = None  # the home's address, where journeys start when no start is asked
-    nominatim_url: str = NOMINATIM
-    routing_url: str = ROUTING  # serves `/routed-car`, `/routed-bike` and `/routed-foot`
-
-
-def build(settings: OpenStreetMapSettings, name: str, services: Services) -> OpenStreetMap:
-    maps = OpenStreetMap(
-        home=settings.home,
-        language=services.locale,
-        nominatim_url=settings.nominatim_url,
-        routing_url=settings.routing_url,
-    )
-    maps.name = name
-    return maps
-
-
-plugin = Plugin(Family.TOOLS, "openstreetmap", OpenStreetMapSettings, build)

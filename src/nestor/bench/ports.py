@@ -18,13 +18,12 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict
 
 from nestor.bench.types import Case, CaseResult, Dataset, Startup, Summary
-from nestor.core import ContractError
+from nestor.core import Component, ContractError
 from nestor.core.i18n import Localizer
 from nestor.modules.channels import SpeechModel, TranscriptionModel
 from nestor.modules.cognition import LanguageModel
 from nestor.modules.cognition.delegation import Executor
 from nestor.modules.cognition.embedding import EmbeddingModel
-from nestor.modules.cognition.tools import ToolProvider
 from nestor.modules.identity import SpeakerModel
 from nestor.runtime.config import NestorConfig
 from nestor.runtime.plugins import Plugin
@@ -56,7 +55,7 @@ class Trial[K: Knobs]:
     localizer: Localizer | None = None  # the engine's, for a suite that runs the agent itself
     # the variant's `executors` and `tools`, built but never started, when the suite asks for them
     executors: tuple[Executor, ...] = ()
-    tools: tuple[ToolProvider, ...] = ()
+    tools: tuple[Component, ...] = ()
 
     def model(self, role: str) -> LanguageModel:
         try:

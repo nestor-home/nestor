@@ -5,7 +5,7 @@ from typing import Any
 import httpx2
 
 from nestor.adapters.connectors.mcp.auth import ConnectionAuth
-from nestor.adapters.tools.mcp import BearerToken, McpToolProvider
+from nestor.adapters.tools.mcp.provider import BearerToken, McpToolProvider
 from nestor.core import ProviderError
 from nestor.modules.connectors import Access, AuthKind, Connection
 

@@ -1,6 +1,6 @@
 """Base class of everything plugged into Nestor (adapters, executors, bodies…)."""
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from enum import StrEnum
 from types import TracebackType
 from typing import Self
@@ -35,6 +35,12 @@ class Component:
     def health_detail(self) -> Message | None:
         """Why it is degraded or unavailable, for people (a message of the component's catalogue)."""
         return None
+
+    def notes(self) -> Sequence[str]:
+        """What the agent should know about how it runs right now, that is not a fault: a free tier in use, a
+        fallback serving. For the model, in English, one sentence each, saying what it means for the person (a key
+        would make it reliable); the agent says it when it bears on what it is asked, not in every answer."""
+        return ()
 
     def details(self) -> Mapping[str, str]:
         """What people may want to know about it (its model, its speech service…), never a secret."""

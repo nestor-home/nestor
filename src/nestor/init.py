@@ -87,6 +87,13 @@ TELEGRAM = """  - kind: telegram
 """
 
 FOOTER = """
+tools:                             # no key needed
+  - kind: exa                      # web search engines, on their free tiers; an api_key for one makes it reliable
+  - kind: parallel
+  - kind: firecrawl
+  - kind: keenable
+  - kind: web-pages                # reads a page found
+
 # home:                             # Home Assistant: who is home, and its actions (Assist's MCP server)
 #   kind: home-assistant
 #   url: ${{HOME_ASSISTANT_URL}}

@@ -1,6 +1,8 @@
-"""MCP servers as tool providers: Home Assistant's `/api/mcp` first, any remote MCP server later."""
+"""MCP servers as tool providers: Home Assistant's `/api/mcp`, and any remote MCP server a household connects."""
 
-from nestor.adapters.tools.mcp.provider import BearerToken, McpToolProvider, McpTransport
 from nestor.adapters.tools.mcp.settings import McpSettings, build
+from nestor.runtime import Family, Plugin
 
-__all__ = ["BearerToken", "McpSettings", "McpToolProvider", "McpTransport", "build"]
+plugin = Plugin(Family.TOOLS, "mcp", McpSettings, build)
+
+__all__ = ["plugin"]

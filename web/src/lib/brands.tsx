@@ -16,6 +16,8 @@ import claudeSvg from "@lobehub/icons-static-svg/icons/claude.svg?raw";
 import claudecodeSvg from "@lobehub/icons-static-svg/icons/claudecode.svg?raw";
 import codexSvg from "@lobehub/icons-static-svg/icons/codex.svg?raw";
 import elevenlabsSvg from "@lobehub/icons-static-svg/icons/elevenlabs.svg?raw";
+import exaSvg from "@lobehub/icons-static-svg/icons/exa.svg?raw";
+import firecrawlSvg from "@lobehub/icons-static-svg/icons/firecrawl.svg?raw";
 import geminiSvg from "@lobehub/icons-static-svg/icons/gemini.svg?raw";
 import groqSvg from "@lobehub/icons-static-svg/icons/groq.svg?raw";
 import hermesagentSvg from "@lobehub/icons-static-svg/icons/hermesagent.svg?raw";
@@ -83,7 +85,9 @@ import {
 } from "simple-icons";
 import cartesiaSvg from "@/assets/brands/cartesia.svg?raw";
 import gradiumSvg from "@/assets/brands/gradium.svg?raw";
+import keenableSvg from "@/assets/brands/keenable.svg?raw";
 import llamaCppSvg from "@/assets/brands/llama-cpp.svg?raw";
+import parallelSvg from "@/assets/brands/parallel.svg?raw";
 import piperSvg from "@/assets/brands/piper.svg?raw";
 import slackSvg from "@/assets/brands/slack.svg?raw";
 import { type Args, tr } from "@/i18n/runtime";
@@ -174,6 +178,10 @@ const BRANDS = {
   huggingface: simple("Hugging Face", siHuggingface),
   // the web, the weather, maps
   brave: simple("Brave Search", siBrave),
+  exa: lobe("Exa", exaSvg),
+  parallel: official("Parallel", parallelSvg), // in neither icon set
+  firecrawl: lobe("Firecrawl", firecrawlSvg),
+  keenable: official("Keenable", keenableSvg), // in neither icon set
   searxng: simple("SearXNG", siSearxng),
   tavily: lobe("Tavily", tavilySvg),
   "open-meteo": monogram("Open-Meteo", "OM"),

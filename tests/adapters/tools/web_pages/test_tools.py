@@ -7,12 +7,12 @@ import pytest
 import respx
 
 from nestor.adapters.documents import FileReader
-from nestor.adapters.tools.web_pages import WebPages
+from nestor.adapters.tools.web_pages.tools import WebPages
 from nestor.modules.channels import Address
 from nestor.modules.cognition.tools import ToolContext, ToolFailed
 from nestor.testing.documents import text_pdf
 
-from ..dns import resolve
+from ...dns import resolve
 
 CONTEXT = ToolContext(address=Address("web", "chat"))
 DNS = {"news.example": "93.184.215.14", "files.example": "93.184.215.15", "nas.home": "192.168.1.20"}

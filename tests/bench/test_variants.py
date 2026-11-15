@@ -125,6 +125,12 @@ class Lamp(Component):
     name = "lamp"
 
 
+def lamp(settings: AdapterSettings, name: str, services: object) -> Lamp:
+    built = Lamp()
+    built.name = name
+    return built
+
+
 def test_a_suite_that_offers_the_agent_its_tools_gets_the_variant_s_executors_and_tools_named_as_configured(
     tmp_path: Path,
 ) -> None:
@@ -132,16 +138,14 @@ def test_a_suite_that_offers_the_agent_its_tools_gets_the_variant_s_executors_an
         [
             *Quiz.plugins,
             Plugin(Family.EXECUTOR, "scripted", Described, scripted),
-            Plugin(Family.TOOLS, "lamp", AdapterSettings, lambda settings, name, services: Lamp()),
+            Plugin(Family.TOOLS, "lamp", AdapterSettings, lamp),
         ]
     )
     text = "models: {m: {type: language, provider: oracle}}\n"
     text += "executors: [{kind: scripted, description: web}, {kind: scripted, name: code, description: repos}]\n"
-    path = write_variant(tmp_path, "v", text)
+    path = write_variant(tmp_path, "v", f"{text}tools: [{{kind: lamp, name: desk}}]\n")
     equipped = load_variant(path, Equipped(), plugins, EchoLocalizer(), environ={})
     assert [(e.name, e.description) for e in equipped.executors] == [("scripted", "web"), ("code", "repos")]
-    assert load_variant(path, Quiz(), plugins, EchoLocalizer(), environ={}).executors == (), "only when asked"
-    with pytest.raises(ContractError, match="built a Lamp, not a ToolProvider"):
-        load_variant(
-            write_variant(tmp_path, "w", f"{text}tools: [{{kind: lamp}}]\n"), Equipped(), plugins, EchoLocalizer()
-        )
+    assert [t.name for t in equipped.tools] == ["desk"]
+    unequipped = load_variant(path, Quiz(), plugins, EchoLocalizer(), environ={})
+    assert (unequipped.executors, unequipped.tools) == ((), ()), "only when asked"

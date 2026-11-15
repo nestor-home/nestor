@@ -46,6 +46,7 @@ from nestor.modules.conversation import (
 from nestor.modules.household import Household
 from nestor.modules.initiative import MessageBook, MessageTools, ScheduleBook, ScheduleTools
 from nestor.modules.journal import Journal
+from nestor.runtime.app import offered_tools
 from nestor.testing.journal import MemoryBlobStore, MemoryEventLog
 
 NAME = "routing"
@@ -206,7 +207,7 @@ def _agent(trial: Trial[Knobs]) -> Agent:
     delegation = Delegation(TaskManager(journal, trial.executors))
     messages = MessageTools(MessageBook(journal), household)
     schedules = ScheduleTools(ScheduleBook(journal, timezone=config.persona.timezone))
-    providers: Sequence[ToolProvider] = (delegation, messages, schedules, *trial.tools)
+    providers: Sequence[ToolProvider] = (delegation, messages, schedules, *offered_tools(trial.tools))
     tools: list[Tool] = [replace(tool, run=_dry) for provider in providers for tool in provider.tools()]
     persona = config.persona
     return Agent(

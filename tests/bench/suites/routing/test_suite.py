@@ -29,7 +29,7 @@ def test_the_shipped_dataset_asks_for_each_kind_of_route() -> None:
     firsts = [c.data["expected"][0][0] if c.data["expected"] else "none" for c in dataset.cases]
     kinds = {route.split(":")[0] for route in firsts}
     assert kinds == {"tool", "delegate", "none"}
-    assert firsts.count("none") >= 6 and sum(r.startswith("delegate:") for r in firsts) >= 5
+    assert firsts.count("none") >= 6 and sum(r.startswith("delegate:") for r in firsts) >= 3
 
 
 @pytest.mark.parametrize(

@@ -1,5 +1,4 @@
-"""Open-Meteo for the weather (`weather`): forecasts from the national weather services, free for a household, no
-key. Places are found by Open-Meteo's own geocoding; the home's place is used when none is asked."""
+"""Open-Meteo for the weather (`weather`): forecasts from the national weather services, free for a household, no"""
 
 from collections.abc import Mapping, Sequence
 from typing import Any
@@ -8,8 +7,6 @@ from nestor.adapters.common.http import JsonApi
 from nestor.core import ProviderError
 from nestor.modules.cognition.model import ToolSpec
 from nestor.modules.cognition.tools import Risk, Tool, ToolContext, ToolFailed, ToolOutput, ToolProvider, bounded
-from nestor.runtime import Family, Plugin, Services
-from nestor.runtime.plugins import AdapterSettings
 
 FORECAST = "https://api.open-meteo.com/v1"
 GEOCODING = "https://geocoding-api.open-meteo.com/v1"
@@ -17,7 +14,6 @@ MAX_DAYS = 16
 HOURS = 24  # how far `next_hours` looks
 HOURS_STEP = 3
 PLACES_KEPT = 256  # places found, kept for the next forecasts
-
 CURRENT = "temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,weather_code,wind_speed_10m"
 HOURLY = "temperature_2m,precipitation_probability,precipitation,weather_code"
 DAILY = (
@@ -54,7 +50,6 @@ SKY = {  # WMO weather interpretation codes, as Open-Meteo documents them
     96: "thunderstorm with hail",
     99: "thunderstorm with heavy hail",
 }
-
 WEATHER = ToolSpec(
     "weather",
     "The weather now, over the next hours and for the coming days, at home or at a place. Temperatures in °C, wind "
@@ -173,16 +168,3 @@ def _forecast(answer: Mapping[str, Any]) -> dict[str, object]:
 def _at(series: Mapping[str, Any], key: str, index: int) -> object:
     values = series.get(key) or []
     return values[index] if index < len(values) else None
-
-
-class OpenMeteoSettings(AdapterSettings):
-    home: str | None = None  # the home's town, for the weather when no place is asked: "Lyon"
-
-
-def build(settings: OpenMeteoSettings, name: str, services: Services) -> OpenMeteo:
-    weather = OpenMeteo(home=settings.home, language=services.locale)
-    weather.name = name
-    return weather
-
-
-plugin = Plugin(Family.TOOLS, "open-meteo", OpenMeteoSettings, build)

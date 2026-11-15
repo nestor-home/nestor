@@ -4,7 +4,7 @@ actions (its MCP server, Assist's tools)."""
 import asyncio
 
 from nestor.adapters.home.home_assistant.presence import HomeAssistantPresence
-from nestor.adapters.tools.mcp import McpToolProvider
+from nestor.adapters.tools.mcp.provider import McpToolProvider
 from nestor.core import Health
 from nestor.core.i18n import Message
 from nestor.modules.home import Home, HomeOverview

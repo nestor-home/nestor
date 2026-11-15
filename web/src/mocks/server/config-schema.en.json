@@ -6750,6 +6750,321 @@
           "title": "BraveSettings",
           "type": "object"
         },
+        "exa": {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "exa",
+              "type": "string",
+              "x-nestor": {
+                "field": "kind",
+                "title_id": "config-tools-exa-kind",
+                "help_id": "config-tools-exa-kind-help",
+                "fallback_title_id": "config-field-kind",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-exa",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Kind",
+                "help": null
+              }
+            },
+            "name": {
+              "type": "string",
+              "description": "the instance's name; the kind by default",
+              "x-nestor": {
+                "field": "name",
+                "title_id": "config-tools-exa-name",
+                "help_id": "config-tools-exa-name-help",
+                "fallback_title_id": "config-field-name",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-exa",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Name",
+                "help": null
+              }
+            },
+            "api_key": {
+              "anyOf": [
+                {
+                  "format": "password",
+                  "type": "string",
+                  "writeOnly": true
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Api Key",
+              "x-nestor": {
+                "field": "api_key",
+                "title_id": "config-tools-exa-api_key",
+                "help_id": "config-tools-exa-api_key-help",
+                "fallback_title_id": "config-field-api_key",
+                "secret": true,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-exa",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "API key",
+                "help": "Optional: without a key, Exa's free tier, which may be slow or limited at times."
+              }
+            },
+            "url": {
+              "default": "https://mcp.exa.ai/mcp",
+              "title": "Url",
+              "type": "string",
+              "x-nestor": {
+                "field": "url",
+                "title_id": "config-tools-exa-url",
+                "help_id": "config-tools-exa-url-help",
+                "fallback_title_id": "config-field-url",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-exa",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "URL",
+                "help": null
+              }
+            }
+          },
+          "title": "ExaSettings",
+          "type": "object",
+          "required": [
+            "kind"
+          ]
+        },
+        "firecrawl": {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "firecrawl",
+              "type": "string",
+              "x-nestor": {
+                "field": "kind",
+                "title_id": "config-tools-firecrawl-kind",
+                "help_id": "config-tools-firecrawl-kind-help",
+                "fallback_title_id": "config-field-kind",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-firecrawl",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Kind",
+                "help": null
+              }
+            },
+            "name": {
+              "type": "string",
+              "description": "the instance's name; the kind by default",
+              "x-nestor": {
+                "field": "name",
+                "title_id": "config-tools-firecrawl-name",
+                "help_id": "config-tools-firecrawl-name-help",
+                "fallback_title_id": "config-field-name",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-firecrawl",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Name",
+                "help": null
+              }
+            },
+            "api_key": {
+              "anyOf": [
+                {
+                  "format": "password",
+                  "type": "string",
+                  "writeOnly": true
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Api Key",
+              "x-nestor": {
+                "field": "api_key",
+                "title_id": "config-tools-firecrawl-api_key",
+                "help_id": "config-tools-firecrawl-api_key-help",
+                "fallback_title_id": "config-field-api_key",
+                "secret": true,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-firecrawl",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "API key",
+                "help": "Optional: without a key, Firecrawl's free tier, which may be slow or limited at times."
+              }
+            },
+            "url": {
+              "default": "https://api.firecrawl.dev",
+              "title": "Url",
+              "type": "string",
+              "x-nestor": {
+                "field": "url",
+                "title_id": "config-tools-firecrawl-url",
+                "help_id": "config-tools-firecrawl-url-help",
+                "fallback_title_id": "config-field-url",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-firecrawl",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "URL",
+                "help": null
+              }
+            }
+          },
+          "title": "FirecrawlSettings",
+          "type": "object",
+          "required": [
+            "kind"
+          ]
+        },
+        "keenable": {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "keenable",
+              "type": "string",
+              "x-nestor": {
+                "field": "kind",
+                "title_id": "config-tools-keenable-kind",
+                "help_id": "config-tools-keenable-kind-help",
+                "fallback_title_id": "config-field-kind",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-keenable",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Kind",
+                "help": null
+              }
+            },
+            "name": {
+              "type": "string",
+              "description": "the instance's name; the kind by default",
+              "x-nestor": {
+                "field": "name",
+                "title_id": "config-tools-keenable-name",
+                "help_id": "config-tools-keenable-name-help",
+                "fallback_title_id": "config-field-name",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-keenable",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Name",
+                "help": null
+              }
+            },
+            "api_key": {
+              "anyOf": [
+                {
+                  "format": "password",
+                  "type": "string",
+                  "writeOnly": true
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Api Key",
+              "x-nestor": {
+                "field": "api_key",
+                "title_id": "config-tools-keenable-api_key",
+                "help_id": "config-tools-keenable-api_key-help",
+                "fallback_title_id": "config-field-api_key",
+                "secret": true,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-keenable",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "API key",
+                "help": "Optional: without a key, Keenable's free tier, which may be slow or limited at times."
+              }
+            },
+            "url": {
+              "default": "https://api.keenable.ai",
+              "title": "Url",
+              "type": "string",
+              "x-nestor": {
+                "field": "url",
+                "title_id": "config-tools-keenable-url",
+                "help_id": "config-tools-keenable-url-help",
+                "fallback_title_id": "config-field-url",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-keenable",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "URL",
+                "help": null
+              }
+            }
+          },
+          "title": "KeenableSettings",
+          "type": "object",
+          "required": [
+            "kind"
+          ]
+        },
         "mcp": {
           "$defs": {
             "McpTransport": {
@@ -7367,6 +7682,111 @@
             }
           },
           "title": "OpenStreetMapSettings",
+          "type": "object",
+          "required": [
+            "kind"
+          ]
+        },
+        "parallel": {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "parallel",
+              "type": "string",
+              "x-nestor": {
+                "field": "kind",
+                "title_id": "config-tools-parallel-kind",
+                "help_id": "config-tools-parallel-kind-help",
+                "fallback_title_id": "config-field-kind",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-parallel",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Kind",
+                "help": null
+              }
+            },
+            "name": {
+              "type": "string",
+              "description": "the instance's name; the kind by default",
+              "x-nestor": {
+                "field": "name",
+                "title_id": "config-tools-parallel-name",
+                "help_id": "config-tools-parallel-name-help",
+                "fallback_title_id": "config-field-name",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-parallel",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Name",
+                "help": null
+              }
+            },
+            "api_key": {
+              "anyOf": [
+                {
+                  "format": "password",
+                  "type": "string",
+                  "writeOnly": true
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Api Key",
+              "x-nestor": {
+                "field": "api_key",
+                "title_id": "config-tools-parallel-api_key",
+                "help_id": "config-tools-parallel-api_key-help",
+                "fallback_title_id": "config-field-api_key",
+                "secret": true,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-parallel",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "API key",
+                "help": "Optional: without a key, Parallel's free tier, which may be slow or limited at times."
+              }
+            },
+            "url": {
+              "default": "https://search.parallel.ai/mcp",
+              "title": "Url",
+              "type": "string",
+              "x-nestor": {
+                "field": "url",
+                "title_id": "config-tools-parallel-url",
+                "help_id": "config-tools-parallel-url-help",
+                "fallback_title_id": "config-field-url",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-parallel",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "URL",
+                "help": null
+              }
+            }
+          },
+          "title": "ParallelSettings",
           "type": "object",
           "required": [
             "kind"

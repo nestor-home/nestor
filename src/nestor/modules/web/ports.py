@@ -1,52 +1,21 @@
-"""The web search port: an engine that answers a query with pages, offered to the agent as `web_search`."""
+"""The web search port: an engine that answers a query with pages. The household plugs one or several; the agent gets
+one `web_search` tool over them (`WebSearchTools`)."""
 
 from abc import ABC, abstractmethod
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
 
-from nestor.core import ProviderError
-from nestor.modules.cognition.model import ToolSpec
-from nestor.modules.cognition.tools import Risk, Tool, ToolContext, ToolFailed, ToolOutput, ToolProvider, bounded
-from nestor.modules.web.types import UNTRUSTED, Found
-
-MAX_RESULTS = 10
-
-SEARCH = ToolSpec(
-    "web_search",
-    "Search the web. Returns the title, address and an excerpt of each page found, the most relevant first; "
-    f"read a page in full with read_page when one is offered. {UNTRUSTED}",
-    {
-        "type": "object",
-        "properties": {
-            "query": {"type": "string", "description": "what to search for, as you would type it in a search engine"},
-            "max_results": {"type": "integer", "minimum": 1, "maximum": MAX_RESULTS, "default": 5},
-        },
-        "required": ["query"],
-    },
-)
+from nestor.core import Component
+from nestor.modules.web.types import Found
 
 
-class WebSearch(ToolProvider, ABC):
-    """Contract: `search` returns pages, the most relevant first, none for a query nothing matches (the tool keeps the
-    first `limit`, which the engine may also ask for); a provider that cannot answer raises `ProviderError`. One
-    engine per household: the tool's name is unique."""
+class WebSearch(Component, ABC):
+    """Contract (checked by `nestor.testing.web.WebSearchContract`): `search` returns pages, the most relevant first,
+    none for a query nothing matches (at most `limit`); an engine that cannot answer raises `ProviderError`.
+
+    `free_tier`: it answers without a key, on a free tier that may be slow, limited or closed at times; an engine with
+    a key, or one the household hosts, is not."""
+
+    free_tier: bool = False
 
     @abstractmethod
     async def search(self, query: str, *, limit: int) -> Sequence[Found]: ...
-
-    def tools(self) -> Sequence[Tool]:
-        return (Tool(spec=SEARCH, run=self._run, risk=Risk.READ, timeout_s=20.0),)
-
-    async def _run(self, arguments: Mapping[str, object], context: ToolContext) -> ToolOutput:
-        query = str(arguments.get("query", "")).strip()
-        if not query:
-            raise ToolFailed("give what to search for")
-        limit = bounded(arguments.get("max_results"), default=5, maximum=MAX_RESULTS)
-        try:
-            found = await self.search(query, limit=limit)
-        except ProviderError as error:
-            raise ToolFailed(f"the web search failed: {error}") from None
-        pages = [
-            {"title": f.title, "url": f.url, "excerpt": f.snippet} | ({"published": f.published} if f.published else {})
-            for f in found[:limit]
-        ]
-        return {"query": query, "pages": pages, "note": UNTRUSTED}

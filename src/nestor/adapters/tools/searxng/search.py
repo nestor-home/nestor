@@ -1,14 +1,9 @@
-"""SearXNG as the household's web search: a metasearch engine it hosts itself, no key, nothing sent to a search
-company under its name. The instance must allow the JSON format (`search.formats: [html, json]` in its settings)."""
+"""SearXNG as the household's web search: a metasearch engine it hosts itself, no key, nothing sent to a search"""
 
 from collections.abc import Sequence
 
-from pydantic import SecretStr
-
 from nestor.adapters.common.http import JsonApi
 from nestor.modules.web import Found, WebSearch
-from nestor.runtime import Family, Plugin, Services
-from nestor.runtime.plugins import AdapterSettings
 
 
 class SearxngSearch(WebSearch):
@@ -37,18 +32,3 @@ class SearxngSearch(WebSearch):
 
     async def close(self) -> None:
         await self._api.aclose()
-
-
-class SearxngSettings(AdapterSettings):
-    url: str  # the instance, e.g. http://searxng:8080
-    token: SecretStr | None = None  # sent as `Authorization: Bearer …`, for an instance behind a proxy that asks
-
-
-def build(settings: SearxngSettings, name: str, services: Services) -> SearxngSearch:
-    token = settings.token.get_secret_value() if settings.token else None
-    search = SearxngSearch(settings.url, token=token, language=services.locale)
-    search.name = name
-    return search
-
-
-plugin = Plugin(Family.TOOLS, "searxng", SearxngSettings, build)

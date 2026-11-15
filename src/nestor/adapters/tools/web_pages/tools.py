@@ -1,18 +1,12 @@
-"""Reading a web page for the agent (`read_page`): its title and the text of its content, a PDF's text, a text file
-as it is. Only public addresses (`adapters/common/web.py`): a page never reaches the household's own network."""
+"""Reading a web page for the agent (`read_page`): its title and the text of its content, a PDF's text, a text file"""
 
 from collections.abc import Mapping, Sequence
 
-from pydantic import Field, PositiveFloat, PositiveInt
-
 from nestor.adapters.common.web import PAGES, PublicWeb, WebError, readable
-from nestor.adapters.documents import FileReader
 from nestor.modules.cognition.model import ToolSpec
 from nestor.modules.cognition.tools import Risk, Tool, ToolContext, ToolFailed, ToolOutput, ToolProvider
 from nestor.modules.conversation import DocumentReader
 from nestor.modules.web import UNTRUSTED
-from nestor.runtime import Family, Plugin, Services
-from nestor.runtime.plugins import AdapterSettings
 
 READ = ToolSpec(
     "read_page",
@@ -51,17 +45,3 @@ class WebPages(ToolProvider):
         if page.title:
             return {"url": fetched.url, "title": page.title, "text": page.text, "note": UNTRUSTED}
         return {"url": fetched.url, "text": page.text, "note": UNTRUSTED}
-
-
-class WebPagesSettings(AdapterSettings):
-    timeout_s: PositiveFloat = 15.0
-    max_bytes: PositiveInt = Field(default=5_000_000, json_schema_extra={"advanced": True})
-
-
-def build(settings: WebPagesSettings, name: str, services: Services) -> WebPages:
-    pages = WebPages(FileReader(), timeout_s=settings.timeout_s, max_bytes=settings.max_bytes)
-    pages.name = name
-    return pages
-
-
-plugin = Plugin(Family.TOOLS, "web-pages", WebPagesSettings, build)

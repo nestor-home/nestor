@@ -5,8 +5,6 @@ from collections.abc import Sequence
 from nestor.adapters.common.http import JsonApi
 from nestor.adapters.common.text import html_to_text
 from nestor.modules.web import Found, WebSearch
-from nestor.runtime import Family, Plugin, Services
-from nestor.runtime.plugins import AdapterSettings, RequiredSecret
 
 API = "https://api.search.brave.com/res/v1"
 
@@ -36,16 +34,3 @@ class BraveSearch(WebSearch):
 
     async def close(self) -> None:
         await self._api.aclose()
-
-
-class BraveSettings(AdapterSettings):
-    api_key: RequiredSecret
-
-
-def build(settings: BraveSettings, name: str, services: Services) -> BraveSearch:
-    search = BraveSearch(settings.api_key.get_secret_value(), language=services.locale)
-    search.name = name
-    return search
-
-
-plugin = Plugin(Family.TOOLS, "brave", BraveSettings, build)
