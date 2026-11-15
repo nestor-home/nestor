@@ -30,7 +30,19 @@ import openrouterSvg from "@lobehub/icons-static-svg/icons/openrouter.svg?raw";
 import tavilySvg from "@lobehub/icons-static-svg/icons/tavily.svg?raw";
 import vllmSvg from "@lobehub/icons-static-svg/icons/vllm.svg?raw";
 import type { LucideIcon } from "lucide-react";
-import { CalendarDays, Cpu, FileDiff, Globe, KeyRound, Mail, Mic, Plug, RadioTower, Webhook } from "lucide-react";
+import {
+  CalendarDays,
+  Cpu,
+  FileDiff,
+  Globe,
+  KeyRound,
+  Mail,
+  Mic,
+  Plug,
+  RadioTower,
+  Search,
+  Webhook,
+} from "lucide-react";
 import {
   type SimpleIcon,
   siAnthropic,
@@ -174,6 +186,7 @@ const BRANDS = {
   huggingface: simple("Hugging Face", siHuggingface),
   // the web, the weather, maps
   brave: simple("Brave Search", siBrave),
+  "free-web-search": concept("brand-free-web-search", Search),
   searxng: simple("SearXNG", siSearxng),
   tavily: lobe("Tavily", tavilySvg),
   "open-meteo": monogram("Open-Meteo", "OM"),

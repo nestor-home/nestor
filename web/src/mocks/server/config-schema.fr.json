@@ -6750,6 +6750,95 @@
           "title": "BraveSettings",
           "type": "object"
         },
+        "free-web-search": {
+          "$defs": {
+            "Tier": {
+              "enum": [
+                "exa",
+                "parallel",
+                "firecrawl",
+                "keenable"
+              ],
+              "title": "Tier",
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "free-web-search",
+              "type": "string",
+              "x-nestor": {
+                "field": "kind",
+                "title_id": "config-tools-free-web-search-kind",
+                "help_id": "config-tools-free-web-search-kind-help",
+                "fallback_title_id": "config-field-kind",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-free-web-search",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Type",
+                "help": null
+              }
+            },
+            "name": {
+              "type": "string",
+              "description": "the instance's name; the kind by default",
+              "x-nestor": {
+                "field": "name",
+                "title_id": "config-tools-free-web-search-name",
+                "help_id": "config-tools-free-web-search-name-help",
+                "fallback_title_id": "config-field-name",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-free-web-search",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Nom",
+                "help": null
+              }
+            },
+            "engines": {
+              "items": {
+                "$ref": "#/$defs/Tier"
+              },
+              "minItems": 1,
+              "title": "Engines",
+              "type": "array",
+              "x-nestor": {
+                "field": "engines",
+                "title_id": "config-tools-free-web-search-engines",
+                "help_id": "config-tools-free-web-search-engines-help",
+                "fallback_title_id": "config-field-engines",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "tools-free-web-search",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Offres gratuites",
+                "help": "Prises à tour de rôle, dans cet ordre : exa, parallel, firecrawl, keenable."
+              }
+            }
+          },
+          "title": "FreeWebSearchSettings",
+          "type": "object",
+          "required": [
+            "kind"
+          ]
+        },
         "mcp": {
           "$defs": {
             "McpTransport": {

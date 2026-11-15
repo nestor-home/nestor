@@ -17,6 +17,7 @@ from nestor.modules.conversation.events import (
     UserTurn,
 )
 from nestor.modules.conversation.mentions import Mentions
+from nestor.modules.conversation.notes import RunningNotes
 from nestor.modules.conversation.persona import Instructions, Persona
 from nestor.modules.conversation.ports import (
     ContextProvider,
@@ -80,6 +81,7 @@ __all__ = [
     "NotificationTurn",
     "Persona",
     "ReplyPhase",
+    "RunningNotes",
     "Sections",
     "Silence",
     "Source",

@@ -50,6 +50,7 @@ from nestor.modules.conversation import (
     Mentions,
     ModelChoice,
     Persona,
+    RunningNotes,
     Speakers,
 )
 from nestor.modules.home import Home, PresenceSource, RoomMentions
@@ -296,7 +297,15 @@ class Nestor:
             channels={
                 c.channel_id: ChannelProfile(c.style, c.conversation_ends_after_s, c.sends) for c in self.channels
             },
-            context=[delegation, memory, watch_tools, message_tools, schedule_tools, self.confirmations],
+            context=[
+                delegation,
+                memory,
+                watch_tools,
+                message_tools,
+                schedule_tools,
+                self.confirmations,
+                RunningNotes(lambda: (p.component for p in self.plugged if isinstance(p.component, Component))),
+            ],
             speakers=self.speakers,
             mentions=Mentions(
                 [message_tools, *([RoomMentions(self.home)] if self.home else []), delegation, *connector_tools]
