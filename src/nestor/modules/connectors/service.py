@@ -125,12 +125,17 @@ class Connections(Component):
             raise ClientRequired(f"{kind}: the service registers no OAuth client: type one")
         return self._consent(kind, owner, redirect_uri, found.oauth, found.client, filled)
 
-    async def complete(self, state: str, code: str) -> Connection:
-        """Back from the provider: exchange the code, name the account, record the connection."""
+    async def complete(self, state: str, code: str, issuer: str | None = None) -> Connection:
+        """Back from the provider: exchange the code, name the account, record the connection. `issuer` is who sent
+        the person back (`iss`, RFC 9207): when the server names itself, or when it is given, it must be the server
+        the person was sent to, so that another server's code is never exchanged here."""
         self._drop_stale()
         pending = self._pending.pop(state, None)
         if pending is None:
             raise ContractError("unknown or expired authorization request: start again")
+        expected = pending.spec.issuer
+        if (pending.spec.names_itself or issuer) and expected and not _same_issuer(issuer, expected):
+            raise ContractError(f"the answer comes from {issuer or 'an unnamed server'}, not {expected}: start again")
         tokens = await self.tokens.exchange(pending.spec, pending.client, code, pending.verifier, pending.redirect_uri)
         connection = Connection(kind=pending.kind, owner=pending.owner, account="", auth=AuthKind.OAUTH2)
         if self.connector(pending.kind).info.auth is AuthKind.DISCOVERED:
@@ -349,6 +354,11 @@ def _filled(connector: Connector, secrets: Secrets) -> dict[str, str]:
     if missing := [f for f in fields if not filled[f.name] and f.default is None]:
         raise FieldsMissing(connector.info.kind, missing)
     return filled
+
+
+def _same_issuer(given: str | None, expected: str) -> bool:
+    """RFC 9207 compares issuers exactly; a trailing slash is the only difference servers commonly make."""
+    return given is not None and given.rstrip("/") == expected.rstrip("/")
 
 
 def _spec_json(spec: OAuthSpec) -> str:

@@ -5,6 +5,7 @@ streams. A name that resolves to a public address when checked and a private one
 caught."""
 
 import asyncio
+import email.utils
 import ipaddress
 import socket
 import urllib.parse
@@ -16,7 +17,7 @@ import httpx
 from nestor.adapters.common.http import USER_AGENT, retryable
 from nestor.adapters.common.text import Page, page_text
 from nestor.adapters.documents.reader import HTML
-from nestor.core import ProviderError
+from nestor.core import ProviderError, utc_now
 from nestor.modules.conversation import DocumentReader
 
 REDIRECTS = 5
@@ -25,11 +26,12 @@ FEEDS = "application/rss+xml, application/atom+xml, application/rdf+xml;q=0.9, a
 
 
 class WebError(ProviderError):
-    """What kept an address from being read, worded for whoever asked (the model, a log): `reason`."""
+    """What kept an address from being read, worded for whoever asked (the model, a log): `reason`; `retry_after_s`
+    when the site said how long to wait (`Retry-After`)."""
 
-    def __init__(self, reason: str, *, transient: bool) -> None:
+    def __init__(self, reason: str, *, transient: bool, retry_after_s: float | None = None) -> None:
         super().__init__("web", reason, transient=transient)
-        self.reason = reason
+        self.reason, self.retry_after_s = reason, retry_after_s
 
 
 @dataclass(frozen=True, slots=True)
@@ -73,7 +75,11 @@ class PublicWeb:
                         continue
                     if response.is_error:
                         status = response.status_code
-                        raise WebError(f"{url} answered HTTP {status}", transient=retryable(status))
+                        raise WebError(
+                            f"{url} answered HTTP {status}",
+                            transient=retryable(status),
+                            retry_after_s=retry_after(response.headers.get("retry-after")),
+                        )
                     return Fetched(url, response.status_code, response.headers, await self._body(response))
             except (httpx.HTTPError, httpx.InvalidURL) as error:
                 raise WebError(f"{url} could not be read: {type(error).__name__}", transient=True) from None
@@ -125,3 +131,15 @@ async def public(url: str) -> None:
         raise WebError(
             f"{parts.hostname} is not a public address: only pages on the internet can be read", transient=False
         )
+
+
+def retry_after(value: str | None) -> float | None:
+    """A `Retry-After` header in seconds (it gives seconds or a date); `None` without one or one unreadable."""
+    if not value:
+        return None
+    if value.strip().isdigit():
+        return float(value)
+    try:
+        return max(0.0, (email.utils.parsedate_to_datetime(value) - utc_now()).total_seconds())
+    except (TypeError, ValueError):
+        return None

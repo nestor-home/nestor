@@ -146,6 +146,18 @@ async def test_a_feed_that_cannot_be_read_yields_nothing_and_is_read_again_once_
         assert [i.title for i in await taken(source)] == ["Linux 7.0"]
 
 
+async def test_a_feed_that_asks_to_wait_is_not_read_again_before_then(web: respx.MockRouter, tmp_path: Path) -> None:
+    feed = FakeFeed()
+    route = web.get(URL).mock(side_effect=feed)
+    async with feed_source(tmp_path / "rss") as source:  # its first state taken
+        route.mock(return_value=httpx.Response(429, headers={"Retry-After": "3600"}))
+        assert await taken(source) == []
+        calls = route.call_count
+        route.mock(side_effect=feed)
+        feed.add("Linux 7.0")
+        assert await taken(source) == [] and route.call_count == calls, "an hour asked: not one more request"
+
+
 @pytest.mark.parametrize("url", ["http://nas.home/feed.xml", "http://127.0.0.1:8470/feed", "file:///etc/passwd"])
 async def test_a_feed_off_the_public_internet_is_never_fetched(web: respx.MockRouter, tmp_path: Path, url: str) -> None:
     inside = web.route().respond(200, content=FakeFeed().body())

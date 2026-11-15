@@ -26,6 +26,9 @@ class OAuthSpec:
     extra_authorize: Mapping[str, str] = field(default_factory=dict)  # e.g. access_type=offline, prompt=consent
     client_credentials: bool = True  # the person registers their own OAuth client (Home Assistant's model)
     resource: str | None = None  # RFC 8707: the protected resource the tokens are for, sent with every request
+    # RFC 9207: the authorization server, and whether it names itself (`iss`) when it sends the person back
+    issuer: str | None = None
+    names_itself: bool = False
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

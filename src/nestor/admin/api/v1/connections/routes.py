@@ -77,6 +77,7 @@ async def oauth_callback(
     state_: Annotated[str, Query(alias="state")] = "",
     code: str = "",
     error: str = "",
+    iss: str | None = None,
 ) -> RedirectResponse:
     """Back from the provider (directly or through the relay): complete, then show the connection in the
     front (`/connections/<id>?connected=1`) or why it failed (`/connections/failed?error=<code>&kind=<kind>`)."""
@@ -93,7 +94,7 @@ async def oauth_callback(
     if error or not code:
         return failed("provider_error", flow.kind)
     try:
-        connection = await connecting.connections.complete(issued, code)
+        connection = await connecting.connections.complete(issued, code, iss)
     except ContractError:
         return failed("expired", flow.kind)
     except ProviderError:

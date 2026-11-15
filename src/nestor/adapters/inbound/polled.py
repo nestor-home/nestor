@@ -6,12 +6,14 @@ states of all addresses at once, each within `deadline_s`, so that what arrives 
 taken when the next one is asked for: only then is the state that follows it saved, so an item whose triage was cut
 short (a stop, a cancellation) comes again after a restart, and one that was handled never does. A check that fails
 in any way (network, an error status, an address off the internet, a body that cannot be read, the deadline) is
-logged and retried at the next round: `items()` never ends with an error of the web.
+logged and retried at the next round, or once the wait a site asked for (`Retry-After`) is over: `items()` never ends
+with an error of the web.
 """
 
 import asyncio
 import hashlib
 import logging
+import time
 from abc import abstractmethod
 from collections.abc import AsyncGenerator, Sequence
 from dataclasses import dataclass, field
@@ -29,6 +31,7 @@ from nestor.runtime.plugins import AdapterSettings
 log = logging.getLogger(__name__)
 
 AT_ONCE = 4  # addresses checked together: polite to the network, quick for a long list
+MAX_WAIT_S = 86_400.0  # a site asking to wait longer is read again the next day
 
 type State = dict[str, Any]
 
@@ -70,6 +73,7 @@ class Polled(InboundEventSource):
             w.url: StateFile(folder / f"{hashlib.sha256(w.url.encode()).hexdigest()[:16]}.json") for w in watched
         }
         self._states: dict[str, State] = {}
+        self._resume: dict[str, float] = {}  # by address: when a site that asked to wait (`Retry-After`) is read again
         self._at_once = asyncio.Semaphore(AT_ONCE)
 
     async def start(self) -> None:
@@ -95,11 +99,15 @@ class Polled(InboundEventSource):
     async def _check(self, watched: Watched) -> list[tuple[Incoming, State]]:
         """The items a check of `watched` found; its state saved now when there is none to take first."""
         known = self._states.get(watched.url)
+        if self._resume.get(watched.url, 0.0) > time.monotonic():
+            return []  # it asked to wait: not before then
         try:
             async with self._at_once, asyncio.timeout(self._deadline_s):
                 check = await self.check(watched, known)
         except WebError as error:
             log.warning("%s could not check %s: %s", self.name, watched.name, error)
+            if error.retry_after_s:
+                self._resume[watched.url] = time.monotonic() + min(error.retry_after_s, MAX_WAIT_S)
             return []
         except Exception:  # whatever went wrong with this address, the others and the next round go on
             log.exception("%s could not check %s", self.name, watched.name)
