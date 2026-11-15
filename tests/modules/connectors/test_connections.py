@@ -299,6 +299,19 @@ async def test_a_message_names_only_the_accounts_its_writer_may_use_by_their_ser
     assert "use its tools" in source.instruction(mailbox) and "their own" in source.instruction(mailbox)
 
 
+async def test_two_accounts_of_one_service_are_named_by_the_least_that_tells_them_apart() -> None:
+    setup = Setup()
+    for address in ("mathis@free.fr", "mathis@gmail.com", "lea@free.fr"):
+        setup.imap.account = address
+        await setup.connections.connect("imap", MATHIS, {"password": "app-password"})
+    named = {m.label: m.handle for m in ConnectorTools(setup.connections).mentionable(Person(id=MATHIS, name="Mathis"))}
+    assert named == {
+        "mathis@free.fr": "imap-mathis-free",
+        "mathis@gmail.com": "imap-mathis-gmail",
+        "lea@free.fr": "imap-lea",
+    }
+
+
 async def test_an_account_is_named_by_the_services_its_connector_declares_each_with_its_own_tools() -> None:
     setup = Setup()
     setup.mail.info = replace(
