@@ -68,7 +68,7 @@ class Draft:
 
 @dataclass(frozen=True, slots=True)
 class Silence:
-    """The answer to a notification with nothing to tell: nothing to send, and why (empty when it wrote nothing)."""
+    """The answer to a notification with nothing to tell (`SILENT`): nothing to send, and why."""
 
     reason: str = ""
 
@@ -203,14 +203,19 @@ class Agent(Assistant):
         """The answer to a notification (a task's result, a watch, a message to pass on) for this conversation, to be
         delivered through `medium` to `person`: a draft, in the persona's voice and with the conversation's
         history, the model's final words only (what it wrote before calling tools is left out), with the files that
-        go with it (the notification's, and what tools made meanwhile). `Silence`: nothing to tell (it wrote nothing,
-        or `SILENT` and its reason). Nothing is logged until it is delivered (`delivered`): a message that could not go
-        out was never said. Raises `ProviderError` when the model cannot write it."""
+        go with it (the notification's, and what tools made meanwhile). `Silence`: it chose to tell nothing, opening
+        its answer with `SILENT` and the reason (a closing `SILENT` after real words is dropped from them).
+        Nothing is logged until it is delivered (`delivered`): a message that could not go out was never said.
+        Raises `ProviderError` when the model cannot write it, or wrote nothing: only a choice is silence."""
         reply = AgentReply(self, address, medium, notification, person=person)
         await reply.collect()
         final = reply._final.strip()
-        if not final or final.startswith(SILENT):
-            return Silence(final.removeprefix(SILENT).strip())
+        if final[: len(SILENT)].upper() == SILENT:
+            return Silence(final[len(SILENT) :].strip())
+        if final[-len(SILENT) :].upper() == SILENT:  # words, then the marker: the words go
+            final = final[: -len(SILENT)].strip()
+        if not final:
+            raise ProviderError("model", "wrote nothing for a notification", transient=True)
         return Draft(final, (*notification.files, *reply._made))
 
     async def delivered(

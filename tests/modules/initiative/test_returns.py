@@ -259,6 +259,7 @@ async def test_a_result_with_nothing_to_tell_is_withheld_once_and_never_brought_
         pass
     assert home.telegram.sent == home.voice.sent == []
     assert len(home.model.requests) == 1, "a withheld result is done: it is not written again"
+    assert await home.journal.history(TaskDelivered) == [], "nothing was passed on: the journal does not say so"
 
 
 async def test_a_failed_task_may_not_be_left_untold() -> None:
@@ -389,6 +390,18 @@ async def test_a_call_cut_short_by_a_restart_is_said_to_have_failed() -> None:
     [returned] = await home.journal.history(ToolReturned)
     assert not returned.ok and "restarted" in returned.output
     assert "Failure:" in model.requests[2].messages[-1].content
+
+
+async def test_a_call_that_failed_may_not_be_left_untold() -> None:
+    model = ScriptedModel(ToolCall("c1", "count_mails"), "Je regarde.", f"{SILENT} rien à dire")
+    home = Home(model=model, tools=[slow_tool(asyncio.Event())])
+    await home.agent.respond(InboundMessage(address=TELEGRAM, sender=Sender("42"), text="Combien ?")).collect()
+    await home.agent.toolbox.close()  # the process stops while the call runs: it failed
+
+    restarted = Home(model=model, journal=home.journal)
+    async with restarted.returns():
+        await until(restarted.journal, DeliveryFailed)
+    assert await home.journal.history(DeliveryWithheld, ToolResultDelivered) == []
 
 
 async def test_a_result_that_came_back_while_nobody_listened_is_delivered_once_at_the_next_start() -> None:

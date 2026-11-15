@@ -403,7 +403,8 @@ async def test_a_check_that_announced_itself_then_found_nothing_tells_nothing(ma
     agent = make_agent(model=AnnouncingThenSilent(), tools=[tool("light_on", light_on)])
     reminder = Notification("A wake-up is due now: check the light.", About(Source.SCHEDULE, "s1"))
 
-    assert await agent.compose(VOICE, MATHIS, reminder, Medium.SPOKEN) == Silence()
+    with pytest.raises(ProviderError, match="wrote nothing"):  # only a choice is silence: this is a failure
+        await agent.compose(VOICE, MATHIS, reminder, Medium.SPOKEN)
 
 
 async def test_a_composed_message_raises_rather_than_excuses_itself(make_agent: MakeAgent, journal: Journal) -> None:
@@ -414,6 +415,21 @@ async def test_a_composed_message_raises_rather_than_excuses_itself(make_agent: 
     with pytest.raises(ProviderError):
         await agent.compose(TELEGRAM, MATHIS, parcel, Medium.WRITTEN)
     assert await journal.history(FallbackSpoken) == []
+
+
+@pytest.mark.parametrize(
+    ("written", "composed"),
+    [
+        ("[silent] prix inchangé", Silence("prix inchangé")),
+        ("Rien de neuf, je te laisse.\n\n[SILENT]", Draft("Rien de neuf, je te laisse.")),
+    ],
+)
+async def test_the_silence_marker_is_read_whatever_its_case_and_never_sent(
+    make_agent: MakeAgent, written: str, composed: object
+) -> None:
+    agent = make_agent(model=ScriptedModel(written))
+    price = Notification("A wake-up is due now: check the price.", About(Source.SCHEDULE, "s1"))
+    assert await agent.compose(TELEGRAM, MATHIS, price, Medium.WRITTEN) == composed
 
 
 async def test_a_notification_may_stay_silent_with_a_reason_unless_it_must_be_told(make_agent: MakeAgent) -> None:
