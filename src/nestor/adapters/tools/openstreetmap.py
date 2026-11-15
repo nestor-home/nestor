@@ -32,7 +32,8 @@ class Mode(StrEnum):
 
 FIND = ToolSpec(
     "find_place",
-    "Find places by name, address or kind (a shop, a station, a street): their full address and coordinates.",
+    "Find places by name, address or kind (a shop, a station, a street): their full address and coordinates, and the "
+    "opening hours (OpenStreetMap's syntax), website and phone OpenStreetMap knows for them.",
     {
         "type": "object",
         "properties": {
@@ -152,19 +153,33 @@ class OpenStreetMap(ToolProvider):
                 await asyncio.sleep(wait)
             try:
                 return await self._nominatim.get(
-                    "/search", {"q": query, "format": "jsonv2", "limit": limit, "accept-language": self._language}
+                    "/search",
+                    {
+                        "q": query,
+                        "format": "jsonv2",
+                        "limit": limit,
+                        "extratags": 1,
+                        "accept-language": self._language,
+                    },
                 )
             finally:
                 self._last_search = time.monotonic()
 
 
 def _place(found: Mapping[str, Any]) -> dict[str, object]:
+    tags: Mapping[str, Any] = found.get("extratags") or {}
+    known = {
+        "opening_hours": tags.get("opening_hours"),
+        "website": tags.get("website") or tags.get("contact:website"),
+        "phone": tags.get("phone") or tags.get("contact:phone"),
+    }
     return {
         "name": found.get("name") or found.get("display_name"),
         "address": found.get("display_name"),
         "kind": found.get("type"),
         "latitude": float(found["lat"]),
         "longitude": float(found["lon"]),
+        **{key: value for key, value in known.items() if value},
     }
 
 

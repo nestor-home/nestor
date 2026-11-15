@@ -1,0 +1,27 @@
+{"dataset": "routing", "version": 1}
+{"case": "r01", "said": "Il va pleuvoir demain à Lyon ?", "expected": [["tool:weather"], ["delegate:hermes"]], "label": "météo"}
+{"case": "r02", "said": "Il fait combien dehors là ?", "expected": [["tool:weather"], ["delegate:hermes"]], "label": "météo"}
+{"case": "r03", "said": "Combien de temps à vélo de la gare Part-Dieu à la place Bellecour ?", "expected": [["tool:route", "tool:find_place"], ["delegate:hermes"]], "label": "trajet"}
+{"case": "r04", "said": "Trouve-moi l'adresse de la mairie de Villeurbanne", "expected": [["tool:find_place"], ["delegate:hermes"]], "label": "lieu"}
+{"case": "r05", "said": "Résume-moi cette page : https://www.service-public.fr/particuliers/vosdroits/F1342", "expected": [["tool:read_page"], ["delegate:hermes"]], "label": "page"}
+{"case": "r06", "said": "Rappelle-moi demain à 9 h d'appeler le plombier", "expected": [["tool:schedule"]], "label": "réveil"}
+{"case": "r07", "said": "Tous les lundis à 8 h, envoie-moi la météo de la semaine", "expected": [["tool:schedule"]], "label": "réveil récurrent"}
+{"case": "r08", "said": "Dis à Mathilde que je rentre tard ce soir", "expected": [["tool:message_person"]], "label": "message"}
+{"case": "r09", "said": "Demande à Mathilde si elle veut des pizzas ce soir", "expected": [["tool:message_person"]], "label": "question"}
+{"case": "r10", "said": "Où en est la recherche que je t'ai demandée ?", "expected": [["tool:task_status", "none"]], "label": "suivi"}
+{"case": "r11", "said": "Trouve-moi les trois meilleurs aspirateurs robots à moins de 400 €, avec ce qu'en disent les tests", "expected": [["delegate:hermes"]], "label": "recherche web"}
+{"case": "r12", "said": "Compare les forfaits mobiles 5G à moins de 15 € par mois chez les opérateurs français", "expected": [["delegate:hermes"]], "label": "recherche web"}
+{"case": "r13", "said": "Quels sont les horaires de la déchetterie de Villeurbanne ce samedi ?", "expected": [["tool:find_place"], ["delegate:hermes", "tool:read_page"]], "label": "recherche web"}
+{"case": "r14", "said": "Cherche les dernières nouvelles sur la grève SNCF de cette semaine", "expected": [["delegate:hermes"]], "label": "actualité"}
+{"case": "r15", "said": "Écris un script Python qui renomme les photos d'un dossier par date, teste-le et donne-le-moi", "expected": [["delegate:hermes", "delegate:claude-code", "delegate:codex"]], "label": "calcul dans le conteneur"}
+{"case": "r16", "said": "Corrige le test qui échoue dans mon dépôt nestor, sur mon Mac", "expected": [["delegate:claude-code", "delegate:codex"]], "label": "code de Mathis"}
+{"case": "r17", "said": "Fais le ménage dans les fichiers temporaires de mon Mac", "expected": [], "label": "hors de portée"}
+{"case": "r18", "said": "Salut Richie, ça va ?", "expected": [], "label": "bavardage"}
+{"case": "r19", "said": "Combien font 17 fois 23 ?", "expected": [], "label": "connaissance"}
+{"case": "r20", "said": "C'est quoi la différence entre un virus et une bactérie ?", "expected": [], "label": "connaissance"}
+{"case": "r21", "said": "Traduis « je suis en retard » en anglais", "expected": [], "label": "connaissance"}
+{"case": "r22", "said": "Merci, c'est parfait !", "expected": [], "label": "bavardage"}
+{"case": "r23", "said": "Appelle ma mère", "expected": [], "label": "impossible"}
+{"case": "r24", "said": "Imprime le devis sur l'imprimante du bureau", "expected": [], "label": "impossible"}
+{"case": "r25", "said": "Quelle heure est-il ?", "expected": [], "label": "connaissance"}
+{"case": "r26", "said": "Ouvre une PR qui met à jour le README du SDK TypeScript avec le nouvel exemple d'appairage", "expected": [["delegate:claude-code", "delegate:codex"]], "label": "code de Mathis"}

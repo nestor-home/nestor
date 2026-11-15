@@ -11,6 +11,7 @@ from nestor.core import Component, ContractError
 from nestor.modules.cognition import LanguageModel
 from nestor.runtime.config import ConfigError
 from nestor.runtime.plugins import AdapterSettings, Family, Plugin, Registry
+from nestor.testing.cognition import ScriptedExecutor
 from nestor.testing.i18n import EchoLocalizer
 
 from .kit import ORACLE, Quiz, registry, write_variant
@@ -104,3 +105,43 @@ def test_a_model_kind_that_builds_something_else_is_refused(tmp_path: Path) -> N
     odd = Plugin(Family.MODEL, "lamp", AdapterSettings, lambda settings, name, services: Lamp(), serves=LanguageModel)
     with pytest.raises(ContractError, match="plugin 'lamp-language' built a Lamp, not a LanguageModel"):
         load(write_variant(tmp_path, "v", "models: {m: {type: language, provider: lamp}}\n"), Registry([odd]))
+
+
+class Described(AdapterSettings):
+    description: str
+
+
+def scripted(settings: Described, name: str, services: object) -> ScriptedExecutor:
+    executor = ScriptedExecutor()
+    executor.name, executor.description = name, settings.description
+    return executor
+
+
+class Equipped(Quiz):
+    components = True
+
+
+class Lamp(Component):
+    name = "lamp"
+
+
+def test_a_suite_that_offers_the_agent_its_tools_gets_the_variant_s_executors_and_tools_named_as_configured(
+    tmp_path: Path,
+) -> None:
+    plugins = Registry(
+        [
+            *Quiz.plugins,
+            Plugin(Family.EXECUTOR, "scripted", Described, scripted),
+            Plugin(Family.TOOLS, "lamp", AdapterSettings, lambda settings, name, services: Lamp()),
+        ]
+    )
+    text = "models: {m: {type: language, provider: oracle}}\n"
+    text += "executors: [{kind: scripted, description: web}, {kind: scripted, name: code, description: repos}]\n"
+    path = write_variant(tmp_path, "v", text)
+    equipped = load_variant(path, Equipped(), plugins, EchoLocalizer(), environ={})
+    assert [(e.name, e.description) for e in equipped.executors] == [("scripted", "web"), ("code", "repos")]
+    assert load_variant(path, Quiz(), plugins, EchoLocalizer(), environ={}).executors == (), "only when asked"
+    with pytest.raises(ContractError, match="built a Lamp, not a ToolProvider"):
+        load_variant(
+            write_variant(tmp_path, "w", f"{text}tools: [{{kind: lamp}}]\n"), Equipped(), plugins, EchoLocalizer()
+        )
