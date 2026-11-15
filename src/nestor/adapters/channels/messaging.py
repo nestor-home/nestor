@@ -174,13 +174,14 @@ class MessagingChannel(Channel, ABC):
             await self._conversations.aclose()
         await self.disconnect()
 
-    async def retry_later(self, error: Exception, failures: int, *, after_s: float | None = None) -> None:
+    async def retry_later(self, error: Exception, failures: int) -> None:
         """After the `failures`-th failure in a row to reach the platform: raises `error` when nothing will get past
-        it (a `ProviderError` that is not transient), otherwise waits (`after_s` when the platform says how long),
+        it (a `ProviderError` that is not transient), otherwise waits (as long as the platform asked, when it said),
         or less when the channel closes meanwhile."""
         if isinstance(error, ProviderError) and not error.transient:
             raise error
-        delay = after_s or min(self._retry_delay_s * 2**failures, self._max_retry_delay_s)
+        asked = error.retry_after_s if isinstance(error, ProviderError) else None
+        delay = asked or min(self._retry_delay_s * 2**failures, self._max_retry_delay_s)
         logger.warning("%s: %s, retrying in %.1f s", self.brand, error, delay)
         await self.unless_closed(asyncio.sleep(delay))
 

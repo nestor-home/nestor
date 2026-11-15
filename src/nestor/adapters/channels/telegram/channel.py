@@ -90,7 +90,7 @@ class TelegramChannel(MessagingChannel):
             try:
                 result = await self.unless_closed(poll)
             except ProviderError as error:
-                await self.retry_later(error, failures, after_s=error.retry_after_s)
+                await self.retry_later(error, failures)
                 failures += 1
                 continue
             if self.closed:

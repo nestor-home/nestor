@@ -30,7 +30,7 @@ logging.getLogger("httpx").addFilter(_RedactBotToken())
 
 
 class TelegramError(ProviderError):
-    """A failed Bot API call; `retry_after_s` is set when Telegram asks to slow down."""
+    """A call Telegram refused, with how long to wait when it asks to slow down (`retry_after_s`)."""
 
     def __init__(self, message: str, *, transient: bool, retry_after_s: float | None = None) -> None:
         super().__init__(PROVIDER, message, transient=transient, retry_after_s=retry_after_s)

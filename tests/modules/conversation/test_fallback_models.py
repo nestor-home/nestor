@@ -3,6 +3,8 @@ has started speaking does not, since a second answer would repeat the first's be
 
 from collections.abc import AsyncGenerator
 
+import pytest
+
 from nestor.core import ProviderError
 from nestor.modules.channels import InboundMessage, Sender
 from nestor.modules.cognition import (
@@ -106,10 +108,12 @@ class ReadingShort(ScriptedModel):
     document_pages = 100
 
 
-async def test_a_fallback_never_gets_a_document_longer_than_it_reads(journal: Journal) -> None:
+@pytest.mark.parametrize("pages", [300, None], ids=["too-long", "not-counted"])
+async def test_a_fallback_never_gets_a_document_longer_than_it_reads(journal: Journal, pages: int | None) -> None:
+    """Nor one whose pages were not counted: the provider would refuse the whole request."""
     short = ReadingShort("Résumé.")
     falling = FallingBack([("gemini", Reading(fail=OVERLOADED)), ("claude", short)], journal)
-    book = Document(media_type="application/pdf", data=b"%PDF", pages=300)
+    book = Document(media_type="application/pdf", data=b"%PDF", pages=pages)
     [o async for o in falling.stream(ModelRequest(messages=(Message.user("résume", documents=(book,)),)))]
     assert short.requests[0].messages[0].documents == ()
 

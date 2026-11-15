@@ -3,6 +3,7 @@
 
 import asyncio
 import codecs
+import functools
 import io
 import logging
 import re
@@ -28,25 +29,28 @@ def is_text(media_type: str) -> bool:
 
 def pdf_text(data: bytes) -> str | None:
     """The text of each page of a PDF, page after page; `None` when it cannot be read."""
-    try:
-        reader = PdfReader(io.BytesIO(data))
-        if reader.is_encrypted and not reader.decrypt(""):
-            return None
-        pages = [page.extract_text() or "" for page in reader.pages[:MAX_PAGES]]
-        left = len(reader.pages) - len(pages)
-    except Exception as error:  # a damaged file fails pypdf in many ways: none may fail the turn
-        logger.info("could not read a PDF: %s", error)
-        return None
-    text = "\n\n".join(f"[page {i}]\n{p.strip()}" for i, p in enumerate(pages, 1) if p.strip())
-    return f"{text}\n\n[{left} more pages not read]" if text and left > 0 else text
+    return _pdf(data)[0]
 
 
 def pdf_pages(data: bytes) -> int | None:
     """How many pages a PDF has; `None` when it cannot be read."""
+    return _pdf(data)[1]
+
+
+@functools.lru_cache(maxsize=4)  # its text, then its pages, are asked of the same document: parsed once
+def _pdf(data: bytes) -> tuple[str | None, int | None]:
     try:
-        return len(PdfReader(io.BytesIO(data)).pages)
-    except Exception:  # a damaged file fails pypdf in many ways
-        return None
+        reader = PdfReader(io.BytesIO(data))
+        if reader.is_encrypted and not reader.decrypt(""):
+            return None, None
+        pages = [page.extract_text() or "" for page in reader.pages[:MAX_PAGES]]
+        count = len(reader.pages)
+    except Exception as error:  # a damaged file fails pypdf in many ways: none may fail the turn
+        logger.info("could not read a PDF: %s", error)
+        return None, None
+    left = count - len(pages)
+    text = "\n\n".join(f"[page {i}]\n{p.strip()}" for i, p in enumerate(pages, 1) if p.strip())
+    return (f"{text}\n\n[{left} more pages not read]" if text and left > 0 else text), count
 
 
 class FileReader(DocumentReader):

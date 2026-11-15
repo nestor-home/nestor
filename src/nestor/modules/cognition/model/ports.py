@@ -34,5 +34,6 @@ class LanguageModel(Model, ABC):
 
 
 def reads_whole(reads: frozenset[str], limit: int | None, media_type: str, pages: int | None) -> bool:
-    """Whether a model that `reads` these types, up to `limit` pages (`document_pages`), reads such a document whole."""
-    return media_type in reads and (limit is None or pages is None or pages <= limit)
+    """Whether a model that `reads` these types, up to `limit` pages (`document_pages`), reads such a document whole;
+    one whose pages were not counted is never sent to a model with a limit, which would refuse the whole request."""
+    return media_type in reads and (limit is None or (pages is not None and pages <= limit))
