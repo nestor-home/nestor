@@ -1,17 +1,19 @@
 """Fetching from the public web on the household's behalf (a page the agent reads, a feed or a page watched): only
 public addresses, so that nothing reaches the household's own network (the router, Home Assistant, a NAS), whatever
 a search result, a message or a redirection asks. Each redirection is checked again and a body is capped while it
-streams. A name that resolves to a public address when checked and a private one when fetched (DNS rebinding) is not
-caught."""
+streams. Every connection goes to an address checked as it opens: a name that resolves to a public address when an
+address is checked and to a private one when it is fetched (DNS rebinding) reaches nothing."""
 
 import asyncio
 import ipaddress
 import socket
 import urllib.parse
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 
+import httpcore
 import httpx
+from httpcore._backends.anyio import AnyIOBackend  # `httpcore.AnyIOBackend` is a placeholder without anyio
 
 from nestor.adapters.common.http import USER_AGENT, retry_after, retryable
 from nestor.adapters.common.text import Page, page_text
@@ -64,7 +66,9 @@ class PublicWeb:
         """The body at `url`, following redirections on the internet; a `WebError` for an address off it, an error
         status, a body over the cap or a network failure. `headers` (`If-None-Match`…) go with each request."""
         if self._client is None:
-            self._client = httpx.AsyncClient(headers=self._headers, timeout=self._timeout_s, follow_redirects=False)
+            self._client = httpx.AsyncClient(
+                headers=self._headers, timeout=self._timeout_s, follow_redirects=False, transport=_public_transport()
+            )
         for _ in range(REDIRECTS + 1):
             await public(url)
             try:
@@ -121,12 +125,50 @@ async def public(url: str) -> None:
         raise WebError(f"{url} is not a web address", transient=False) from None
     if parts.scheme not in ("http", "https") or not parts.hostname:
         raise WebError(f"{url} is not a web address", transient=False)
+    await _global(parts.hostname, port)
+
+
+async def _global(host: str, port: int | None) -> str:
+    """The address to connect to for `host`: one of those it resolves to, all of them on the public internet."""
     try:
-        found = await asyncio.get_running_loop().getaddrinfo(parts.hostname, port, type=socket.SOCK_STREAM)
+        found = await asyncio.get_running_loop().getaddrinfo(host, port, type=socket.SOCK_STREAM)
     except (OSError, UnicodeError):
-        raise WebError(f"{parts.hostname} could not be found", transient=True) from None
-    addresses = {str(info[4][0]).split("%")[0] for info in found}  # an IPv6 address may carry its interface
+        raise WebError(f"{host} could not be found", transient=True) from None
+    addresses = [str(info[4][0]).split("%")[0] for info in found]  # an IPv6 address may carry its interface
     if not addresses or not all(ipaddress.ip_address(a).is_global for a in addresses):
-        raise WebError(
-            f"{parts.hostname} is not a public address: only pages on the internet can be read", transient=False
-        )
+        raise WebError(f"{host} is not a public address: only pages on the internet can be read", transient=False)
+    return addresses[0]
+
+
+class _PublicNetwork(AnyIOBackend):
+    """Opens a connection only to a public address, resolved and checked as it opens: what the name resolves to
+    then is where the connection goes, whatever it resolved to a moment before."""
+
+    async def connect_tcp(
+        self,
+        host: str,
+        port: int,
+        timeout: float | None = None,
+        local_address: str | None = None,
+        socket_options: Iterable[httpcore.SOCKET_OPTION] | None = None,
+    ) -> httpcore.AsyncNetworkStream:
+        try:
+            address = await _global(host, port)
+        except WebError as refused:
+            raise httpcore.ConnectError(refused.reason) from None
+        return await super().connect_tcp(address, port, timeout, local_address, socket_options)
+
+    async def connect_unix_socket(
+        self, path: str, timeout: float | None = None, socket_options: Iterable[httpcore.SOCKET_OPTION] | None = None
+    ) -> httpcore.AsyncNetworkStream:
+        raise httpcore.ConnectError("not a web address")
+
+
+def _public_transport() -> httpx.AsyncHTTPTransport:
+    """httpx's transport, its connections opened by `_PublicNetwork`: httpx takes no network of its own, so its pool
+    is replaced by one with the same TLS settings that uses it."""
+    transport = httpx.AsyncHTTPTransport()
+    transport._pool = httpcore.AsyncConnectionPool(
+        ssl_context=httpx.create_ssl_context(), network_backend=_PublicNetwork()
+    )
+    return transport
