@@ -88,7 +88,7 @@ async def test_a_check_that_found_nothing_chains_from_its_wake_up(tmp_path: Path
         for event in (
             ScheduleFired(source="scheduler", schedule_id="s1", due_at=utc_now()),
             DeliveryConsidered(source="courier", about=s1, reason=REASON, written=TELEGRAM, person=MATHIS),
-            DeliveryWithheld(source="courier", address=TELEGRAM, about=s1, person=MATHIS),
+            DeliveryWithheld(source="courier", address=TELEGRAM, about=s1, person=MATHIS, reason="toujours 1 799 €"),
         ):
             await admin.nestor.journal.publish(event)
         found = by_type(await items(await admin.api()))
@@ -96,6 +96,7 @@ async def test_a_check_that_found_nothing_chains_from_its_wake_up(tmp_path: Path
         withheld = found["initiative.withheld"][0]
         assert considered["cause"] == fired["position"] and withheld["cause"] == considered["position"]
         assert withheld["links"]["delivery"] == "schedule:s1"
+        assert withheld["detail"] == "toujours 1 799 €", "why it said nothing is read in the journal"
 
 
 async def test_a_task_chains_from_its_start_to_its_result(tmp_path: Path) -> None:

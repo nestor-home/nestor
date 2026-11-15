@@ -14,10 +14,10 @@ from nestor.core import PersonId
 from nestor.modules.channels import Address, Exchange, InboundMessage, Medium, Sender
 from nestor.modules.cognition.model import ModelRequest, ToolCall, ToolSpec
 from nestor.modules.cognition.tools import Risk, SensitiveWhen, Tool, Toolbox, ToolContext
-from nestor.modules.conversation import Agent, Attachments, ModelChoice, Persona
+from nestor.modules.conversation import SILENT, Agent, Attachments, ModelChoice, Persona, Source
 from nestor.modules.household import Account, Household, Person
 from nestor.modules.identity import Identified, Speaker
-from nestor.modules.initiative import Courier, MessageBook, MessageRequested
+from nestor.modules.initiative import Courier, DeliveryFailed, DeliveryWithheld, MessageBook, MessageRequested
 from nestor.modules.initiative.confirmations import ConfirmationAnswered, ConfirmationRequested, Confirmations
 from nestor.modules.journal import Journal
 from nestor.testing.channels import InMemoryChannel
@@ -146,6 +146,19 @@ async def test_a_sensitive_action_asked_aloud_is_confirmed_in_writing_then_runs_
     assert home.opened == [{**GARAGE, "by": MATHIS.id, "at": str(SALON)}], "as theirs, in the room it was asked"
     assert home.voice.sent == [(SALON, "Le garage s'ouvre.")]
     assert [e.approved for e in await home.journal.history(ConfirmationAnswered)] == [True]
+
+
+async def test_a_confirmation_to_ask_for_is_never_withheld() -> None:
+    """The model may not decide that asking for a confirmation has nothing to tell: it stays undelivered, visibly."""
+    home = Home(f"{SILENT} rien à dire", f"{SILENT} rien à dire")
+    async with home:
+        await home.call("turn_on", GARAGE, VOICE_OF_MATHIS)
+        for _ in range(200):
+            if await home.journal.history(DeliveryFailed):
+                break
+            await asyncio.sleep(0.01)
+    assert await home.journal.history(DeliveryWithheld) == []
+    assert [f.about.source for f in await home.journal.history(DeliveryFailed)] == [Source.CONFIRMATION]
 
 
 async def test_a_light_is_not_confirmed_and_a_refusal_does_nothing() -> None:

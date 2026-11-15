@@ -42,9 +42,7 @@ class Scheduler(Component):
         for schedule, due_at in due:
             await self.book.fired(schedule.id, due_at)  # before it runs: never twice
             owner = self.household.person(schedule.owner) if schedule.owner else None
-            notification = Notification(
-                self._instruction(schedule, due_at, owner), About(Source.SCHEDULE, schedule.id), quiet=True
-            )
+            notification = Notification(self._instruction(schedule, due_at, owner), About(Source.SCHEDULE, schedule.id))
             try:  # where it was set, or wherever its owner is reached; a delivery nothing took is journaled
                 await self.courier.deliver(owner, notification, origin=schedule.created_in)
             except Exception:  # one wake-up failing never stops the others

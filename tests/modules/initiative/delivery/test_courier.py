@@ -177,26 +177,30 @@ async def test_a_notification_waits_for_the_answer_being_written() -> None:
     assert [text for _, text in telegram.sent] == ["Ton colis est arrivé."]
 
 
-async def test_a_check_that_found_nothing_is_withheld_and_says_so_in_the_journal() -> None:
-    """Nothing reaches the person, nothing enters the conversation, and the journal shows that it ran."""
+async def test_a_check_that_found_nothing_is_withheld_with_its_reason_in_the_journal() -> None:
+    """Nothing reaches the person, nothing enters the conversation, and the journal shows that it ran, and why."""
     sender, journal, voice, telegram = courier(StaticPresence(Granularity.HOME).set("mathis", home=False))
-    sender.agent.models = ModelChoice.single(ScriptedModel(SILENT))
+    sender.agent.models = ModelChoice.single(ScriptedModel(f"{SILENT} toujours 1 799 €, au-dessus du seuil"))
     async with sender:
-        reminder = Notification("A wake-up is due now: check the price of the TV.", PRICE, quiet=True)
+        reminder = Notification("A wake-up is due now: check the price of the TV.", PRICE)
         assert await sender.deliver(MATHIS, reminder) == TELEGRAM
 
     assert voice.sent == telegram.sent == []
-    assert [(w.about, w.address) for w in await journal.history(DeliveryWithheld)] == [(PRICE, TELEGRAM)]
+    (withheld,) = await journal.history(DeliveryWithheld)
+    assert (withheld.about, withheld.address) == (PRICE, TELEGRAM)
+    assert withheld.reason == "toujours 1 799 €, au-dessus du seuil"
     assert await journal.history(Delivered, DeliveryFailed, NotificationTurn, AssistantTurn) == []
 
 
 async def test_a_notification_that_must_be_told_is_never_dropped_silently() -> None:
-    """Saying nothing to a parcel that arrived is a failure: the next place is tried, then it is journaled."""
+    """Saying nothing to a message someone asked to pass on is a failure: the next place is tried, then it is
+    journaled."""
     sender, journal, voice, telegram = courier(
         StaticPresence().set("mathis", home=True), model=ScriptedModel(SILENT, "")
     )
     async with sender:
-        assert await sender.deliver(MATHIS, Notification("Le colis est arrivé.", PARCEL)) is None
+        message = Notification("Léa asks you to call her back.", PARCEL, must_tell=True)
+        assert await sender.deliver(MATHIS, message) is None
 
     assert voice.sent == telegram.sent == []
     assert await journal.history(DeliveryWithheld) == []

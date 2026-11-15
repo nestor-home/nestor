@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 from nestor.core import Component, PersonId, ProviderError, utc_now
 from nestor.core.i18n import Message
 from nestor.modules.channels import Address, Channel, Medium
-from nestor.modules.conversation import About, Agent, Notification, UserTurn
+from nestor.modules.conversation import About, Agent, Notification, Silence, UserTurn
 from nestor.modules.home import PresenceSource
 from nestor.modules.household import Person
 from nestor.modules.initiative.delivery.events import Delivered, DeliveryConsidered, DeliveryFailed, DeliveryWithheld
@@ -164,11 +164,13 @@ class Courier(Component):
                 draft = await self.agent.compose(address, person, notification, medium)
         except ProviderError:
             return None
-        if draft is None:
-            if not notification.quiet:
+        if isinstance(draft, Silence):
+            if notification.must_tell:
                 return None
             await self.journal.publish(
-                DeliveryWithheld(source=self.name, address=address, about=notification.about, person=who)
+                DeliveryWithheld(
+                    source=self.name, address=address, about=notification.about, person=who, reason=draft.reason
+                )
             )
             return _Sent(address, said=False)
         files = await self.agent.attachments.sent(draft.files, channel.sends)

@@ -10,12 +10,13 @@ from nestor.core import PersonId
 from nestor.modules.channels import Address, InboundMessage, Medium, Sender
 from nestor.modules.cognition.model import ModelRequest, ToolCall
 from nestor.modules.cognition.tools import Toolbox, ToolContext, ToolFailed
-from nestor.modules.conversation import Agent, Attachments, ModelChoice, Persona
+from nestor.modules.conversation import SILENT, Agent, Attachments, ModelChoice, Persona
 from nestor.modules.household import Account, Household, Person
 from nestor.modules.identity import Speaker
 from nestor.modules.initiative import (
     Courier,
     DeliveryPolicy,
+    DeliveryWithheld,
     MessageBook,
     MessageDelivered,
     MessageRequested,
@@ -191,6 +192,18 @@ async def test_someone_nobody_recognised_has_a_message_passed_on_signed_by_the_r
     composed = home.model.requests[0].messages[-1].content
     assert "Someone at home, in salon, asked you to pass this on to Mathilde: Le dîner est prêt." in composed
     assert "Mathis" not in composed, "nobody is named who did not ask"
+
+
+async def test_a_message_to_pass_on_is_never_withheld() -> None:
+    """The model may not decide that a message someone asked for has nothing to tell: answering with the silence
+    marker leaves it undelivered, and whoever asked is told."""
+    home = Home(f"{SILENT} rien à dire", "Je n'ai pas pu prévenir Mathilde.")
+    async with home:
+        await home.send(MATHIS, person="mathilde", text="Rappelle-moi.")
+        await home.settled(1)
+    assert await home.journal.history(DeliveryWithheld) == []
+    assert len(await home.journal.history(MessageUndelivered)) == 1
+    assert home.telegram.sent == [(MATHIS_CHAT, "Je n'ai pas pu prévenir Mathilde.")]
 
 
 async def test_a_message_that_cannot_get_through_is_told_to_whoever_asked() -> None:

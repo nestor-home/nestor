@@ -35,10 +35,12 @@ from nestor.modules.conversation import (
     Notification,
     NotificationTurn,
     Sections,
+    Silence,
     Source,
     TurnContext,
     UserTurn,
 )
+from nestor.modules.conversation.persona import MUST_TELL
 from nestor.modules.identity import Heard
 from nestor.modules.journal import Journal
 from nestor.testing.cognition.model import ScriptedModel
@@ -70,8 +72,7 @@ async def test_each_medium_answers_with_its_own_model(make_agent: MakeAgent) -> 
     parcel = Notification("The parcel arrived.", About(Source.WATCH, "w1"))
     composed = await agent.compose(TELEGRAM, MATHIS, parcel, Medium.SPOKEN)
 
-    assert composed is not None
-    assert (said, typed, composed.text) == (("Il fait beau.",), ("Voici le détail.",), "C'est prêt.")
+    assert (said, typed, composed) == (("Il fait beau.",), ("Voici le détail.",), Draft("C'est prêt."))
     assert (len(spoken.requests), len(written.requests)) == (2, 1)
 
 
@@ -381,7 +382,7 @@ async def test_a_composed_message_uses_the_conversation_and_is_left_to_its_sende
 async def test_a_composed_message_is_its_last_message_only(make_agent: MakeAgent) -> None:
     """Nobody waits for it: what the model said before calling its tools ("je regarde") never goes out."""
     agent = make_agent(model=Announcing(), tools=[tool("light_on", light_on)])
-    reminder = Notification("A wake-up is due now: turn the light on.", About(Source.SCHEDULE, "s1"), quiet=True)
+    reminder = Notification("A wake-up is due now: turn the light on.", About(Source.SCHEDULE, "s1"))
 
     assert await agent.compose(VOICE, MATHIS, reminder, Medium.SPOKEN) == Draft("C'est allumé.")
 
@@ -400,9 +401,9 @@ class AnnouncingThenSilent(Announcing):
 
 async def test_a_check_that_announced_itself_then_found_nothing_tells_nothing(make_agent: MakeAgent) -> None:
     agent = make_agent(model=AnnouncingThenSilent(), tools=[tool("light_on", light_on)])
-    reminder = Notification("A wake-up is due now: check the light.", About(Source.SCHEDULE, "s1"), quiet=True)
+    reminder = Notification("A wake-up is due now: check the light.", About(Source.SCHEDULE, "s1"))
 
-    assert await agent.compose(VOICE, MATHIS, reminder, Medium.SPOKEN) is None
+    assert await agent.compose(VOICE, MATHIS, reminder, Medium.SPOKEN) == Silence()
 
 
 async def test_a_composed_message_raises_rather_than_excuses_itself(make_agent: MakeAgent, journal: Journal) -> None:
@@ -415,16 +416,16 @@ async def test_a_composed_message_raises_rather_than_excuses_itself(make_agent: 
     assert await journal.history(FallbackSpoken) == []
 
 
-async def test_a_notification_says_when_it_may_stay_silent(make_agent: MakeAgent) -> None:
-    model = ScriptedModel(SILENT, "Le colis est là.")
+async def test_a_notification_may_stay_silent_with_a_reason_unless_it_must_be_told(make_agent: MakeAgent) -> None:
+    model = ScriptedModel(f"{SILENT} rien sous 500 €", "Léa te demande de la rappeler.")
     agent = make_agent(model=model)
-    price = Notification("A wake-up is due now: check the price.", About(Source.SCHEDULE, "s1"), quiet=True)
-    parcel = Notification("The parcel arrived.", About(Source.WATCH, "w1"))
+    fridge = Notification("A task you delegated has ended: no fridge under 500 €.", About(Source.TASK, "t1"))
+    message = Notification("Léa asks you to call her back.", About(Source.MESSAGE, "m1"), must_tell=True)
 
-    assert await agent.compose(TELEGRAM, MATHIS, price, Medium.WRITTEN) is None
-    assert await agent.compose(TELEGRAM, MATHIS, parcel, Medium.WRITTEN) == Draft("Le colis est là.")
-    quiet, told = (request.messages[0].content for request in model.requests)
-    assert SILENT in quiet and SILENT not in told, "only the turn that may go unanswered is told so"
+    assert await agent.compose(TELEGRAM, MATHIS, fridge, Medium.WRITTEN) == Silence("rien sous 500 €")
+    assert await agent.compose(TELEGRAM, MATHIS, message, Medium.WRITTEN) == Draft("Léa te demande de la rappeler.")
+    may, must = (request.messages[0].content for request in model.requests)
+    assert MUST_TELL not in may and MUST_TELL in must, "only the turn that must be answered is told so"
 
 
 async def test_instructions_carry_persona_channel_person_and_context(make_agent: MakeAgent) -> None:

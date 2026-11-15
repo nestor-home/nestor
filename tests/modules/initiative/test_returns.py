@@ -22,6 +22,7 @@ from nestor.modules.cognition.delegation.service import TaskManager
 from nestor.modules.cognition.model import Role, ToolCall, ToolSpec
 from nestor.modules.cognition.tools import Made, Tool, Toolbox, ToolCalled, ToolContext, ToolDeferred, ToolReturned
 from nestor.modules.conversation import (
+    SILENT,
     About,
     Agent,
     AgentSettings,
@@ -34,7 +35,7 @@ from nestor.modules.conversation import (
     Source,
 )
 from nestor.modules.household import Account, Household, Person
-from nestor.modules.initiative import Courier, Delivered, DeliveryFailed, Returns, ToolResultDelivered
+from nestor.modules.initiative import Courier, Delivered, DeliveryFailed, DeliveryWithheld, Returns, ToolResultDelivered
 from nestor.modules.journal import Journal
 from nestor.testing.channels import InMemoryChannel
 from nestor.testing.cognition import ScriptedModel
@@ -243,6 +244,21 @@ async def test_an_undeliverable_result_is_logged_and_retried_later() -> None:
     async with home.returns():
         pass
     assert len(home.telegram.sent) == 1
+
+
+async def test_a_result_with_nothing_to_tell_is_withheld_once_and_never_brought_back() -> None:
+    """A search that found nothing: nothing sent, the reason kept, and a restart does not ask again."""
+    home = Home(model=ScriptedModel(f"{SILENT} aucune offre sous 500 €", "Rien à signaler."))
+    await home.task("t1", notify=Notify.MESSAGE, still_talking=False)
+    async with home.returns():
+        pass
+    (withheld,) = await home.journal.history(DeliveryWithheld)
+    assert withheld.reason == "aucune offre sous 500 €"
+
+    async with Home(model=home.model, journal=home.journal).returns():  # Nestor restarted
+        pass
+    assert home.telegram.sent == home.voice.sent == []
+    assert len(home.model.requests) == 1, "a withheld result is done: it is not written again"
 
 
 @pytest.mark.parametrize("known", [True, False])

@@ -26,7 +26,15 @@ from nestor.modules.conversation.ports import (
     Sections,
     TurnContext,
 )
-from nestor.modules.conversation.service import Agent, AgentSettings, ChannelProfile, Draft, LiveReplies, ModelChoice
+from nestor.modules.conversation.service import (
+    Agent,
+    AgentSettings,
+    ChannelProfile,
+    Draft,
+    LiveReplies,
+    ModelChoice,
+    Silence,
+)
 from nestor.modules.conversation.speakers import Speakers
 from nestor.modules.conversation.titles import ConversationTitles
 from nestor.modules.conversation.types import (
@@ -73,6 +81,7 @@ __all__ = [
     "Persona",
     "ReplyPhase",
     "Sections",
+    "Silence",
     "Source",
     "SpeakerDeclared",
     "Speakers",
