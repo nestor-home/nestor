@@ -31,6 +31,11 @@ nothing is sent, the reason is kept. Write {SILENT} exactly so, in English, what
 MUST_TELL = f"""What opens this turn must reach them, whatever they asked to hear about: tell them, in a message of \
 yours. {SILENT} is not an answer here."""
 
+ALREADY_TOLD = """You already wrote to them about this; what you told them, oldest first:
+{told}
+Tell only what is new or has changed since (another offer, a lower price, something that ended): what they already \
+know is not news."""
+
 VOICE_ANSWER = """Your answer goes back as a voice message: write it to be heard, briefly, without Markdown, lists, \
 URLs or emoji."""
 

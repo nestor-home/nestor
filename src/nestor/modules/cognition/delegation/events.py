@@ -7,7 +7,8 @@ from nestor.modules.journal import BlobRef
 
 
 class TaskStarted(Event, event_type="task.started"):
-    """`exchange` is the conversation and turn that delegated it, when one did."""
+    """`exchange` is the conversation and turn that delegated it, when one did; `thread`, what its result continues
+    (a recurring wake-up that delegated it: `Notification.thread`)."""
 
     task_id: str
     objective: str
@@ -16,6 +17,7 @@ class TaskStarted(Event, event_type="task.started"):
     requested_by: PersonId | None = None
     notify: Notify = Notify.AUTO
     exchange: Exchange | None = None
+    thread: str | None = None
 
 
 class TaskAttached(Event, event_type="task.attached"):

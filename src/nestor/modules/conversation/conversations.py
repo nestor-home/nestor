@@ -48,6 +48,7 @@ from nestor.modules.identity import Speaker
 from nestor.modules.journal import Journal
 
 SOURCE = "agent"
+TOLD = 3  # the last answers of a thread read back before its next notification is answered
 IMAGES = 4  # the last images of a conversation a model that sees them looks at again, every turn
 DOCUMENT_BYTES = 10_000_000  # a document larger than this is read as text, never sent whole
 DOCUMENTS = 2  # the last documents of a conversation a model that reads them whole reads again, every turn
@@ -98,6 +99,7 @@ class Turn:
                 about=notification.about,
                 exchange=self.exchange,
                 person=person,
+                thread=notification.thread,
             )
         )
 
@@ -236,6 +238,16 @@ class Conversations:
         wanted = _shown(sent, sees, reads, document_pages)
         shown = await look(wanted) if look is not None and wanted else {}
         return to_messages(events, names=names, shown=shown, sees=sees)
+
+    async def told(self, thread: str, *, limit: int = TOLD) -> list[AssistantTurn]:
+        """What was answered to the last `limit` notifications of `thread`, oldest first, wherever they went: what the
+        person already knows of it. A notification withheld left no answer."""
+        notified = [e for e in await self.journal.history(NotificationTurn) if e.thread == thread][-limit:]
+        if not notified:
+            return []
+        turns = {e.exchange for e in notified}
+        answers = await self.journal.history(AssistantTurn, since=notified[0].at)
+        return [a for a in answers if a.exchange in turns and a.text.strip()]
 
     async def fell_back(self, address: Address, reason: FallbackReason) -> FallbackSpoken:
         """A provider failed while drafting outside any turn (a notification's answer)."""

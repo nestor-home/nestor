@@ -10,6 +10,7 @@ import contextlib
 from collections.abc import AsyncIterator, Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from nestor.core import ContractError, PersonId, ProviderError, utc_now
 from nestor.core.i18n import Localizer
@@ -41,7 +42,7 @@ from nestor.modules.conversation.conversations import Conversations, Turn
 from nestor.modules.conversation.events import AssistantTurn
 from nestor.modules.conversation.history import notification_message
 from nestor.modules.conversation.mentions import Mentions
-from nestor.modules.conversation.persona import MUST_TELL, VOICE_ANSWER, Instructions, Persona
+from nestor.modules.conversation.persona import ALREADY_TOLD, MUST_TELL, VOICE_ANSWER, Instructions, Persona
 from nestor.modules.conversation.ports import ContextProvider, Layer, TurnContext
 from nestor.modules.conversation.speakers import Speakers
 from nestor.modules.conversation.types import (
@@ -85,6 +86,7 @@ class ChannelProfile:
         return self.conversation_ends_after_s or medium.conversation_ends_after_s
 
 
+TOLD_CHARS = 1_500  # of each answer of a thread read back
 SAID_MESSAGES = 3  # the person's messages a turn looks things up with, as NVIDIA's RAG concatenates them
 
 
@@ -398,6 +400,8 @@ class AgentReply(Reply):
         turn = instructions.turn
         if isinstance(opening, Notification) and opening.must_tell:
             turn = f"{turn}\n\n{MUST_TELL}"
+        if isinstance(opening, Notification) and opening.thread and (told := await self._told(opening.thread)):
+            turn = f"{turn}\n\n{ALREADY_TOLD.format(told=told)}"
         if self._voiced:
             turn = f"{turn}\n\n{VOICE_ANSWER}"
         messages = [
@@ -405,7 +409,8 @@ class AgentReply(Reply):
             *history,
         ]
         exchange = self._turn.exchange if self._turn else None
-        context = ToolContext(address=self._address, speaker=self._speaker, exchange=exchange)
+        thread = opening.thread if isinstance(opening, Notification) else None
+        context = ToolContext(address=self._address, speaker=self._speaker, exchange=exchange, thread=thread)
         wait_s = agent.settings.tool_wait_s(self._medium)
         for _ in range(agent.settings.max_tool_rounds):
             try:
@@ -426,6 +431,14 @@ class AgentReply(Reply):
             messages += [
                 Message(role=Role.TOOL, content=d.output, tool_call_id=c.id) for c, d in zip(calls, done, strict=True)
             ]
+
+    async def _told(self, thread: str) -> str:
+        """What the person was told in `thread` before, dated in the household's time, each answer cut short."""
+        zone = ZoneInfo(self._agent.persona.timezone)
+        return "\n".join(
+            f"- {a.at.astimezone(zone):%A %d %B %H:%M}: {_cut(a.text, TOLD_CHARS)}"
+            for a in await self._agent.conversations.told(thread)
+        )
 
     def _said(self, history: Sequence[Message]) -> str | None:
         """What a module looks up for this turn: the last messages that opened turns of the conversation (a
@@ -538,3 +551,8 @@ def _share(heard: str, messages: list[str]) -> list[str]:
 
 def _letters(text: str) -> int:
     return len("".join(text.split()))
+
+
+def _cut(text: str, chars: int) -> str:
+    text = " ".join(text.split())
+    return text if len(text) <= chars else f"{text[:chars].rstrip()}…"

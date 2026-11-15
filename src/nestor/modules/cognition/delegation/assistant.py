@@ -117,6 +117,7 @@ class Delegation(ToolProvider, ContextProvider, MentionSource):
                 notify=notify,
                 executor=str(executor) if executor else None,
                 exchange=context.exchange,
+                thread=context.thread,
             )
         except ContractError as error:
             raise ToolFailed(str(error)) from None

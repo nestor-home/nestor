@@ -141,6 +141,7 @@ class Toolbox(Component):
                 output=output,
                 person=context.person,
                 exchange=context.exchange,
+                thread=context.thread,
             )
         )
 

@@ -127,6 +127,7 @@ class TaskManager(Component):
         notify: Notify = Notify.AUTO,
         executor: str | None = None,
         exchange: Exchange | None = None,
+        thread: str | None = None,
     ) -> Task:
         if self._writer is None:
             raise ContractError("the task manager must be started before delegating")
@@ -143,6 +144,7 @@ class TaskManager(Component):
             requested_by=requested_by,
             notify=notify,
             exchange=exchange,
+            thread=thread,
         )
         await self.journal.publish(event)
         task = self.tasks[event.task_id] = _task(event, None)

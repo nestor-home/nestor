@@ -90,6 +90,7 @@ class Returns(Component):
                 about,
                 must_tell=ended.status is not TaskStatus.COMPLETED,  # a failure is always told
                 files=ended.files,
+                thread=started.thread,
             ),
             origin=started.origin,
             written=written,
@@ -113,6 +114,7 @@ class Returns(Component):
                 about,
                 must_tell=not returned.ok,
                 files=returned.files,
+                thread=deferred.thread,
             ),
             origin=deferred.address,
         )
