@@ -28,7 +28,6 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 from nestor.bench.errors import BenchError
-from nestor.bench.journal import MemoryBlobs, Unlogged
 from nestor.bench.ports import Knobs, Suite, Trial
 from nestor.bench.types import Better, Case, CaseResult, Dataset, Finding, Metric, Summary, Unit
 from nestor.core import ContractError, PersonId, ProviderError
@@ -52,6 +51,7 @@ from nestor.modules.initiative.returns import task_instruction
 from nestor.modules.initiative.schedules.scheduler import wake_up_instruction
 from nestor.modules.initiative.watches.keeper import ANNOUNCE
 from nestor.modules.journal import Journal
+from nestor.testing.journal import MemoryBlobStore, MemoryEventLog
 
 NAME = "notifications"
 EXPECTED = frozenset({"tell", "silent"})
@@ -193,7 +193,7 @@ def _agent(trial: Trial[Knobs]) -> Agent:
     persona, localizer = trial.config.persona, trial.localizer
     if localizer is None:
         raise ContractError("the notifications suite runs the agent: it needs the engine's localizer")
-    journal = Journal(Unlogged())
+    journal = Journal(MemoryEventLog())
     return Agent(
         models=ModelChoice.single(trial.model("written")),
         persona=Persona(**{**persona.model_dump(), "locale": Locale(persona.locale)}),
@@ -201,5 +201,5 @@ def _agent(trial: Trial[Knobs]) -> Agent:
         journal=journal,
         household=Household([PERSON]),
         toolbox=Toolbox(journal),
-        attachments=Attachments(MemoryBlobs()),
+        attachments=Attachments(MemoryBlobStore()),
     )

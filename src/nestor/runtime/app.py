@@ -160,33 +160,18 @@ class Nestor:
         def optional[M: Model](key: str | None, wanted: type[M], role: str) -> M | None:
             return chosen(models, key, wanted, ("agent", role)) if key else None
 
-        self.executors = [
-            _build(self.plugged, registry, Family.EXECUTOR, c, c.name or c.plugin, ("executors", i), services, Executor)
-            for i, c in enumerate(config.executors)
-        ]
-        self.channels = [
-            _build(self.plugged, registry, Family.CHANNEL, c, c.name or c.plugin, ("channels", i), services, Channel)
-            for i, c in enumerate(config.channels)
-        ]
+        self.executors = build_each(
+            config.executors, "executors", Family.EXECUTOR, Executor, registry, services, self.plugged
+        )
+        self.channels = build_each(
+            config.channels, "channels", Family.CHANNEL, Channel, registry, services, self.plugged
+        )
         if len({c.channel_id for c in self.channels}) != len(self.channels):
             raise ContractError("two channels have the same name: give each a distinct `name`")
-        self.tools = [
-            _build(self.plugged, registry, Family.TOOLS, c, c.name or c.plugin, ("tools", i), services, ToolProvider)
-            for i, c in enumerate(config.tools)
-        ]
-        self.inbound = [
-            _build(
-                self.plugged,
-                registry,
-                Family.INBOUND,
-                c,
-                c.name or c.plugin,
-                ("inbound", i),
-                services,
-                InboundEventSource,
-            )
-            for i, c in enumerate(config.inbound)
-        ]
+        self.tools = build_each(config.tools, "tools", Family.TOOLS, ToolProvider, registry, services, self.plugged)
+        self.inbound = build_each(
+            config.inbound, "inbound", Family.INBOUND, InboundEventSource, registry, services, self.plugged
+        )
         self.home = (
             _build(self.plugged, registry, Family.HOME, config.home, "home", ("home",), services, Home)
             if config.home
@@ -574,6 +559,32 @@ def build_models(
         )
         built[key] = model
     return built
+
+
+def build_each[C](
+    configs: Sequence[AdapterConfig],
+    section: str,
+    family: Family,
+    expected: type[C],
+    registry: Registry,
+    services: Services,
+    plugged: list[Plugged] | None = None,
+) -> list[C]:
+    """Every adapter of a section of the configuration (`executors`, `tools`…), named as configured, built but not
+    started."""
+    return [
+        _build(
+            plugged if plugged is not None else [],
+            registry,
+            family,
+            c,
+            c.name or c.plugin,
+            (section, i),
+            services,
+            expected,
+        )
+        for i, c in enumerate(configs)
+    ]
 
 
 def _build[C](

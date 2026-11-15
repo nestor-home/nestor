@@ -35,7 +35,6 @@ from pathlib import Path
 from typing import Any
 
 from nestor.bench.errors import BenchError
-from nestor.bench.journal import Unlogged
 from nestor.bench.metrics import percentile
 from nestor.bench.ports import Knobs, Suite, Trial
 from nestor.bench.suites.speaker_id.store import MemoryVoiceprints
@@ -45,6 +44,7 @@ from nestor.core.i18n import Message
 from nestor.modules.identity import PHRASES, SpeakerModel, Vector, Voices, VoiceSpace
 from nestor.modules.identity.audio import centroid, similarity
 from nestor.modules.journal import Journal
+from nestor.testing.journal import MemoryEventLog
 
 NAME = "speaker-id"
 REPLAY = "replay"
@@ -180,7 +180,7 @@ class SpeakerId(Suite[Household, Knobs]):
                 return found
             embedder = _voices_of(trial)
             store = MemoryVoiceprints()
-            voices = Voices(embedder, store, Journal(Unlogged()), settings=trial.config.voices.settings())
+            voices = Voices(embedder, store, Journal(MemoryEventLog()), settings=trial.config.voices.settings())
             await voices.start()
             first = await asyncio.to_thread(read_pcm, next(iter(shared.phrases.values()))[0])
             async with self._inference:
@@ -237,7 +237,7 @@ class SpeakerId(Suite[Household, Knobs]):
             store = MemoryVoiceprints()
             for person, profile in (await state.voices.store.profiles(embedder.space)).items():
                 await store.enroll(person, embedder.space, profile.anchor, learning=learning, at=ENROLLED_AT)
-            heard_by[learning] = Voices(remembered, store, Journal(Unlogged()), settings=settings)
+            heard_by[learning] = Voices(remembered, store, Journal(MemoryEventLog()), settings=settings)
             await heard_by[learning].start()
         turns: list[list[Any]] = []
         learned = 0

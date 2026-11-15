@@ -22,7 +22,9 @@ from nestor.core import ContractError
 from nestor.core.i18n import Localizer
 from nestor.modules.channels import SpeechModel, TranscriptionModel
 from nestor.modules.cognition import LanguageModel
+from nestor.modules.cognition.delegation import Executor
 from nestor.modules.cognition.embedding import EmbeddingModel
+from nestor.modules.cognition.tools import ToolProvider
 from nestor.modules.identity import SpeakerModel
 from nestor.runtime.config import NestorConfig
 from nestor.runtime.plugins import Plugin
@@ -52,6 +54,9 @@ class Trial[K: Knobs]:
     # how starting each went ("voices", "transcription", "speech"): such a model is measured, never replayed
     started: Mapping[str, Startup] = field(default_factory=dict)
     localizer: Localizer | None = None  # the engine's, for a suite that runs the agent itself
+    # the variant's `executors` and `tools`, built but never started, when the suite asks for them
+    executors: tuple[Executor, ...] = ()
+    tools: tuple[ToolProvider, ...] = ()
 
     def model(self, role: str) -> LanguageModel:
         try:
@@ -79,6 +84,7 @@ class Suite[S, K: Knobs](ABC):
     voices: bool = False  # it tells voices apart with the variant's `voices.embedder`
     transcription: bool = False  # it hears recordings with the variant's `agent.transcription`
     speech: bool = False  # it records answers with the variant's `agent.speech`
+    components: bool = False  # it offers the agent the variant's executors and tools, never started nor run
     plugins: tuple[Plugin[Any], ...] = ()  # extra model kinds for variants (a deterministic fake for CI)
 
     @abstractmethod

@@ -5,7 +5,8 @@ Layers, from the most stable to the most specific:
     modules   → core
     runtime   → core, modules, adapters (it assembles them)
     admin     → core, modules, runtime (the web interface over an assembled Nestor)
-    bench     → core, modules, runtime (benchmarks build models from configuration fragments)
+    bench     → core, modules, runtime, testing (benchmarks build models from configuration fragments; a run keeps
+                its journal and files in memory, with the test kit's)
     testing   → core, modules (the test kit ships with the package: no third-party imports)
     adapters  → anything: each adapter owns its vendor SDK
 """
@@ -25,7 +26,7 @@ ALLOWED_INTERNAL = {
     "runtime": {"core", "modules", "runtime", "adapters"},  # composes the built-in storage
     "testing": {"core", "modules", "testing"},
     "admin": {"core", "modules", "runtime", "admin"},  # the web interface over an assembled Nestor
-    "bench": {"core", "modules", "runtime", "bench"},  # builds a variant's models as the runtime would
+    "bench": {"core", "modules", "runtime", "testing", "bench"},  # builds a variant's models as the runtime would
 }
 # Third-party packages allowed outside adapters, per layer. Each addition is a design decision.
 THIRD_PARTY_ALLOWED: dict[str, set[str]] = {
