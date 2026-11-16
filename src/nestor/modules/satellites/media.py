@@ -224,17 +224,19 @@ class MediaSessions(Component):
         del self._live[session_id]
         if live.timer is not None and live.timer is not asyncio.current_task():
             live.timer.cancel()
-        await self._relay.stop(session_id)
-        await self.journal.publish(
-            MediaSessionClosed(
-                source=self.name,
-                session_id=session_id,
-                device_id=live.device_id,
-                room=live.room,
-                duration_s=round(time.monotonic() - live.started, 1),
-                reason=reason,
+        try:
+            await self._relay.stop(session_id)
+        finally:  # ended for the household even when the connection would not close cleanly
+            await self.journal.publish(
+                MediaSessionClosed(
+                    source=self.name,
+                    session_id=session_id,
+                    device_id=live.device_id,
+                    room=live.room,
+                    duration_s=round(time.monotonic() - live.started, 1),
+                    reason=reason,
+                )
             )
-        )
 
     async def check(self) -> None:
         """End at once the sessions whose person signed out, or may no longer do what they do (their role, or
