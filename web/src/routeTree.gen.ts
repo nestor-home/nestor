@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
+import { Route as AppCamerasRouteImport } from './routes/_app/cameras'
 import { Route as AppChatRouteImport } from './routes/_app/chat'
 import { Route as AppConfigRouteImport } from './routes/_app/config'
 import { Route as AppHouseRouteImport } from './routes/_app/house'
@@ -67,6 +68,11 @@ const LoginRoute = LoginRouteImport.update({
 const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppCamerasRoute = AppCamerasRouteImport.update({
+  id: '/cameras',
+  path: '/cameras',
   getParentRoute: () => AppRoute,
 } as any)
 const AppChatRoute = AppChatRouteImport.update({
@@ -296,6 +302,7 @@ const AppSatellitesSatelliteIdCapabilitiesRoute =
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/login': typeof LoginRoute
+  '/cameras': typeof AppCamerasRoute
   '/chat': typeof AppChatRouteWithChildren
   '/config': typeof AppConfigRouteWithChildren
   '/house': typeof AppHouseRoute
@@ -341,6 +348,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
+  '/cameras': typeof AppCamerasRoute
   '/house': typeof AppHouseRoute
   '/journal': typeof AppJournalRoute
   '/memories': typeof AppMemoriesRoute
@@ -384,6 +392,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/_app/cameras': typeof AppCamerasRoute
   '/_app/chat': typeof AppChatRouteWithChildren
   '/_app/config': typeof AppConfigRouteWithChildren
   '/_app/house': typeof AppHouseRoute
@@ -433,6 +442,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/cameras'
     | '/chat'
     | '/config'
     | '/house'
@@ -478,6 +488,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
+    | '/cameras'
     | '/house'
     | '/journal'
     | '/memories'
@@ -520,6 +531,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_app'
     | '/login'
+    | '/_app/cameras'
     | '/_app/chat'
     | '/_app/config'
     | '/_app/house'
@@ -592,6 +604,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/cameras': {
+      id: '/_app/cameras'
+      path: '/cameras'
+      fullPath: '/cameras'
+      preLoaderRoute: typeof AppCamerasRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/chat': {
@@ -984,6 +1003,7 @@ const AppSatellitesSatelliteIdRouteWithChildren =
   )
 
 interface AppRouteChildren {
+  AppCamerasRoute: typeof AppCamerasRoute
   AppChatRoute: typeof AppChatRouteWithChildren
   AppConfigRoute: typeof AppConfigRouteWithChildren
   AppHouseRoute: typeof AppHouseRoute
@@ -1011,6 +1031,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppCamerasRoute: AppCamerasRoute,
   AppChatRoute: AppChatRouteWithChildren,
   AppConfigRoute: AppConfigRouteWithChildren,
   AppHouseRoute: AppHouseRoute,

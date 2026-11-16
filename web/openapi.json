@@ -6586,6 +6586,571 @@
         }
       }
     },
+    "/api/v1/media/devices": {
+      "get": {
+        "tags": [
+          "media"
+        ],
+        "summary": "List Media Devices",
+        "description": "The devices the caller may watch or call through, connected or not.",
+        "operationId": "listMediaDevices",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaDevicesOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/satellites/{device_id}/media/sessions": {
+      "post": {
+        "tags": [
+          "media"
+        ],
+        "summary": "Open Media Session",
+        "description": "Watch or call through the device: the answer to the browser's WebRTC offer.",
+        "operationId": "openMediaSession",
+        "parameters": [
+          {
+            "name": "device_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Device Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MediaOfferIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaSessionOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/media/sessions/{session_id}": {
+      "delete": {
+        "tags": [
+          "media"
+        ],
+        "summary": "Close Media Session",
+        "description": "End one's own session (or any, for whom may on every device).",
+        "operationId": "closeMediaSession",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/satellites/{device_id}/media/snapshot": {
+      "post": {
+        "tags": [
+          "media"
+        ],
+        "summary": "Take Snapshot",
+        "description": "A still picture of what the device films now, kept a few days.",
+        "operationId": "takeSnapshot",
+        "parameters": [
+          {
+            "name": "device_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Device Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/satellites/{device_id}/media/access": {
+      "put": {
+        "tags": [
+          "media"
+        ],
+        "summary": "Set Media Access",
+        "description": "Who of the household may watch the device or call through it, and whether its camera may film; what it no\nlonger allows ends at once.",
+        "operationId": "setMediaAccess",
+        "parameters": [
+          {
+            "name": "device_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Device Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MediaAccessIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaAccessOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/tasks": {
       "get": {
         "tags": [
@@ -12967,6 +13532,11 @@
               "invitation_unknown",
               "invitation_used",
               "journal_entry_unknown",
+              "media_camera_off",
+              "media_forbidden",
+              "media_off",
+              "media_offline",
+              "media_unable",
               "last_owner",
               "memory_shared",
               "memory_unknown",
@@ -14319,6 +14889,196 @@
         ],
         "title": "MeOut"
       },
+      "MediaAccessIn": {
+        "properties": {
+          "viewers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 64,
+            "title": "Viewers",
+            "default": []
+          },
+          "callers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 64,
+            "title": "Callers",
+            "default": []
+          },
+          "camera": {
+            "type": "boolean",
+            "title": "Camera",
+            "default": true
+          }
+        },
+        "type": "object",
+        "title": "MediaAccessIn",
+        "description": "Who may watch the device or call through it besides the owners, and whether its camera may film."
+      },
+      "MediaAccessOut": {
+        "properties": {
+          "viewers": {
+            "items": {
+              "$ref": "#/components/schemas/PersonRef"
+            },
+            "type": "array",
+            "title": "Viewers"
+          },
+          "callers": {
+            "items": {
+              "$ref": "#/components/schemas/PersonRef"
+            },
+            "type": "array",
+            "title": "Callers"
+          },
+          "camera": {
+            "type": "boolean",
+            "title": "Camera"
+          }
+        },
+        "type": "object",
+        "required": [
+          "viewers",
+          "callers",
+          "camera"
+        ],
+        "title": "MediaAccessOut"
+      },
+      "MediaDeviceOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "room": {
+            "type": "string",
+            "title": "Room"
+          },
+          "connected": {
+            "type": "boolean",
+            "title": "Connected"
+          },
+          "can_view": {
+            "type": "boolean",
+            "title": "Can View"
+          },
+          "can_call": {
+            "type": "boolean",
+            "title": "Can Call"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "room",
+          "connected",
+          "can_view",
+          "can_call"
+        ],
+        "title": "MediaDeviceOut",
+        "description": "A device the caller may watch or call through."
+      },
+      "MediaDevicesOut": {
+        "properties": {
+          "available": {
+            "type": "boolean",
+            "title": "Available"
+          },
+          "devices": {
+            "items": {
+              "$ref": "#/components/schemas/MediaDeviceOut"
+            },
+            "type": "array",
+            "title": "Devices"
+          }
+        },
+        "type": "object",
+        "required": [
+          "available",
+          "devices"
+        ],
+        "title": "MediaDevicesOut"
+      },
+      "MediaOfferIn": {
+        "properties": {
+          "purpose": {
+            "$ref": "#/components/schemas/Purpose"
+          },
+          "sdp": {
+            "type": "string",
+            "maxLength": 100000,
+            "title": "Sdp"
+          },
+          "type": {
+            "type": "string",
+            "const": "offer",
+            "title": "Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "purpose",
+          "sdp",
+          "type"
+        ],
+        "title": "MediaOfferIn",
+        "description": "The browser's WebRTC offer for a session: to watch (`view`), or to call (`call`)."
+      },
+      "MediaSessionOut": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "sdp": {
+            "type": "string",
+            "title": "Sdp"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "video": {
+            "type": "boolean",
+            "title": "Video"
+          },
+          "audio": {
+            "type": "boolean",
+            "title": "Audio"
+          },
+          "max_s": {
+            "type": "integer",
+            "title": "Max S"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "sdp",
+          "type",
+          "video",
+          "audio",
+          "max_s"
+        ],
+        "title": "MediaSessionOut",
+        "description": "The session that opened: the WebRTC answer, what it carries, how long at most."
+      },
       "MemoryOut": {
         "properties": {
           "id": {
@@ -15153,6 +15913,15 @@
         "title": "Proof",
         "description": "Which way the pairing proof travelled."
       },
+      "Purpose": {
+        "type": "string",
+        "enum": [
+          "view",
+          "call"
+        ],
+        "title": "Purpose",
+        "description": "Why a person opens a media session on a device."
+      },
       "QuietHoursOut": {
         "properties": {
           "start": {
@@ -15552,6 +16321,17 @@
               }
             ],
             "title": "Connected"
+          },
+          "films": {
+            "type": "boolean",
+            "title": "Films"
+          },
+          "calls": {
+            "type": "boolean",
+            "title": "Calls"
+          },
+          "access": {
+            "$ref": "#/components/schemas/MediaAccessOut"
           }
         },
         "type": "object",
@@ -15570,7 +16350,10 @@
           "paired_at",
           "last_seen_at",
           "approved_by",
-          "connected"
+          "connected",
+          "films",
+          "calls",
+          "access"
         ],
         "title": "SatelliteOut"
       },
@@ -15779,7 +16562,11 @@
           "schedules.manage.all",
           "schedules.manage.own",
           "messages.read.all",
-          "messages.read.own"
+          "messages.read.own",
+          "media.view",
+          "media.view.all",
+          "media.call",
+          "media.call.all"
         ],
         "title": "Scope",
         "description": "What an action needs. Code checks scopes, never roles: the role table is the only place they meet."

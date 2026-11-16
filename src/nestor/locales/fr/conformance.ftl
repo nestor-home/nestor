@@ -100,3 +100,16 @@ conformance-not-conformant = { $count ->
 } sur { $total }
 conformance-no-command = nestor : donnez la commande du satellite après --, par exemple : nestor satellites conformance -- ./mon-satellite --core { "{url}" }
 conformance-no-program = nestor : impossible de lancer { $program } (introuvable ou non exécutable)
+conformance-no-unasked-media = n'ouvre aucune connexion média sans qu'on la demande (M1)
+conformance-opens-media = ouvre une connexion média quand on la demande, avec ce qui est demandé (M1)
+conformance-sends-video = envoie la vidéo de sa caméra pendant la session (M1)
+conformance-calls = envoie son micro pendant un appel (M1)
+conformance-ends-media-when-told = termine la session quand on le lui dit (M2)
+conformance-ends-media-in-time = termine la session de lui-même après { $seconds } s (M2)
+conformance-sends-picture = envoie une image fixe quand on la demande
+conformance-media-missing = média non vérifiable sans l'extra media ({ $module } manquant)
+conformance-media-offers = { $count } offres média que personne n'a demandées
+conformance-no-media-offer = aucune offre média en { $seconds } s
+conformance-no-video-frame = aucune image vidéo du satellite
+conformance-media-still-open = la connexion est encore ouverte
+conformance-no-picture = aucune image du satellite

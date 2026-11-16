@@ -61,7 +61,8 @@ async def list_satellites(request: Request, caller: Pairer) -> SatellitesOut:
     return SatellitesOut(
         pending=[PendingOut.of(p, words, now) for p in pending],
         paired=[
-            SatelliteOut.of(s, pairing, people.ref(approved.get(s.id)), heard, words) for s in pairing.satellites()
+            SatelliteOut.of(s, pairing, people.ref(approved.get(s.id)), heard, words, people)
+            for s in pairing.satellites()
         ],
         additions=[AdditionOut.of(a, pending, people, words) for a in additions],
     )
@@ -148,8 +149,9 @@ async def get_satellite(request: Request, caller: Pairer, device_id: str) -> Sat
     satellite = next((s for s in pairing.satellites() if s.id == device_id), None)
     if satellite is None:
         raise not_found("satellite_unknown")
-    approved = People(admin.nestor.household).ref((await approvers(admin)).get(device_id))
-    return SatelliteOut.of(satellite, pairing, approved, admin.nestor.heard_rooms(), caller.phrasebook)
+    people = People(admin.nestor.household)
+    approved = people.ref((await approvers(admin)).get(device_id))
+    return SatelliteOut.of(satellite, pairing, approved, admin.nestor.heard_rooms(), caller.phrasebook, people)
 
 
 @router.post("/satellites/{device_id}/identify", status_code=204)
@@ -197,8 +199,11 @@ async def approve_satellite(request: Request, caller: Pairer, body: ApprovalIn) 
         if refused.reason == "not_a_device_code_method":
             raise ApiError(400, "not_a_device_code_method") from None
         raise ApiError(400, "pairing_refused") from None
-    approved = People(admin.nestor.household).ref(caller.person)
-    return SatelliteOut.of(satellite, admin.nestor.pairing, approved, admin.nestor.heard_rooms(), caller.phrasebook)
+    people = People(admin.nestor.household)
+    nestor = admin.nestor
+    return SatelliteOut.of(
+        satellite, nestor.pairing, people.ref(caller.person), nestor.heard_rooms(), caller.phrasebook, people
+    )
 
 
 @router.delete("/satellites/{device_id}", status_code=204)

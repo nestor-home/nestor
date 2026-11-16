@@ -74,7 +74,7 @@ export interface Db {
 }
 
 /** Bumped when the shape changes; the stress fixture keeps its own copy. */
-const KEY = () => (stressed() ? "nestor.mock.db.v20.stress" : "nestor.mock.db.v20");
+const KEY = () => (stressed() ? "nestor.mock.db.v21.stress" : "nestor.mock.db.v21");
 
 export function fresh(): Db {
   const connections = fixtures.connections();

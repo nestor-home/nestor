@@ -9,7 +9,7 @@ their voice when voices are recognised. Unprompted messages go to the most recen
 import asyncio
 import contextlib
 import logging
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from typing import Any
 
 from pipecat.transports.base_transport import BaseTransport, TransportParams
@@ -46,10 +46,20 @@ class SatelliteVoice(AudioOffers):
         self._by_transport: dict[BaseTransport, VoiceSession] = {}
         self._closed = False
         self._running: set[asyncio.Task[None]] = set()
+        self._calling: Callable[[str], bool] = lambda _device_id: False
 
-    def serve(self, assistant: Assistant, links: Mapping[str, SatelliteLink]) -> None:
-        """Answer with `assistant` the devices whose link is up in `links` (device id → its link)."""
+    def serve(
+        self,
+        assistant: Assistant,
+        links: Mapping[str, SatelliteLink],
+        *,
+        calling: Callable[[str], bool] | None = None,
+    ) -> None:
+        """Answer with `assistant` the devices whose link is up in `links` (device id → its link), but those in a
+        call (`calling`): nothing of a call reaches the assistant."""
         self._assistant, self._links = assistant, links
+        if calling is not None:
+            self._calling = calling
 
     async def hang_up(self, link: SatelliteLink) -> None:
         """The device's link ended: its audio ends too (A3), and its answered offers are forgotten."""
@@ -140,6 +150,8 @@ class SatelliteVoice(AudioOffers):
         link = self._links.get(device_id)
         if link is None:
             raise PermissionError("this device has no link up")
+        if self._calling(device_id):
+            raise PermissionError("this device is in a call")
         if pc_id is not None and self._owners.get(pc_id) != device_id:
             raise PermissionError("this peer connection belongs to no session of this device")
         return link

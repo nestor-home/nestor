@@ -6,6 +6,7 @@
     WS    /satellites/{device_id}/link     hello (manifest, token) first   → welcome, then messages
     POST  /satellites/{device_id}/audio    Bearer token, SDP   → SDP answer {sdp, type, pc_id}
     PATCH /satellites/{device_id}/audio    Bearer token, ICE   → {status}
+    POST  /satellites/{device_id}/media    Bearer token, {session, sdp, type} → SDP answer {sdp, type}
 
 Errors follow `pairing.error`. The token comes once, with the first `approved` answer. A link whose
 `hello` is late, off-contract or for another device is closed with 4400, one with a refused token
@@ -15,10 +16,11 @@ its own peer connections. Wrong enrollment codes are counted per client address.
 
 import asyncio
 import contextlib
+import ipaddress
 import json
 import logging
 from abc import ABC, abstractmethod
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Mapping
 from enum import IntEnum
 from typing import Any
 
@@ -28,6 +30,7 @@ from fastapi.responses import JSONResponse
 from nestor.core import Capability, ContractError
 from nestor.modules.satellites import (
     AUDIO,
+    VIDEO_CAPTURE,
     EnrollmentRefused,
     Manifest,
     NotPending,
@@ -66,6 +69,7 @@ class AudioOffers(ABC):
         """Add the device's ICE candidates to one of its own peer connections."""
 
 
+type MediaOffer = Callable[[str, dict[str, Any]], Awaitable[dict[str, Any]]]  # `PermissionError` refuses with 403
 type Linked = Callable[[WebSocket, Satellite, Manifest, frozenset[Capability]], Awaitable[None]]
 type Refused = Callable[[str, Close, str], None]
 
@@ -82,11 +86,13 @@ class SatelliteGateway:
         on_link: Linked,
         allowed: Callable[[Satellite], frozenset[Capability]] = lambda satellite: satellite.capabilities,
         audio: AudioOffers | None = None,
+        media: MediaOffer | None = None,
         refused: Refused | None = None,
         hello_deadline_s: float = HELLO_DEADLINE_S,
     ) -> None:
         self._pairing = pairing
         self._on_link, self._allowed, self._audio, self._refused = on_link, allowed, audio, refused
+        self._media = media
         self._hello_deadline_s = hello_deadline_s
         self._links: dict[str, tuple[WebSocket, frozenset[Capability]]] = {}  # device id → its link, what it may do
 
@@ -96,6 +102,7 @@ class SatelliteGateway:
         app.add_api_route("/satellites/pairings/{pairing_id}", self._poll, methods=["GET"])
         app.add_api_websocket_route("/satellites/{device_id}/link", self._link)
         app.add_api_route("/satellites/{device_id}/audio", self._offer, methods=["POST", "PATCH"])
+        app.add_api_route("/satellites/{device_id}/media", self._media_offer, methods=["POST"])
 
     async def close(self) -> None:
         """Close every link (1001): its device reconnects once the core is back."""
@@ -132,6 +139,9 @@ class SatelliteGateway:
             return
         satellite, manifest = greeted
         allowed = self._allowed(satellite)
+        if VIDEO_CAPTURE in allowed and not secure(socket.scope):  # M7: its token would travel in the clear
+            logger.warning("satellites: %s links without TLS: it may not film", device_id)
+            allowed -= {VIDEO_CAPTURE}
         if previous := self._links.get(device_id):
             await _close(previous[0], Close.REPLACED)
         self._links[device_id] = (socket, allowed)
@@ -183,12 +193,35 @@ class SatelliteGateway:
         except PermissionError as refusal:
             raise HTTPException(403, str(refusal)) from None
 
+    async def _media_offer(self, device_id: str, request: Request) -> Any:
+        """The device connects for a session the core asked it to open (M1)."""
+        self._authenticate(device_id, request)
+        if self._media is None or device_id not in self._links:
+            raise HTTPException(403, "a media session needs this device's link up")
+        try:
+            return await self._media(device_id, await request.json())
+        except PermissionError as refusal:
+            raise HTTPException(403, str(refusal)) from None
+        except (KeyError, ValueError) as error:
+            raise HTTPException(422, f"not an offer: {error}") from None
+
     def _authenticate(self, device_id: str, request: Request) -> Satellite:
         scheme, _, token = request.headers.get("authorization", "").partition(" ")
         satellite = self._pairing.authenticate(device_id, token) if scheme.lower() == "bearer" and token else None
         if satellite is None:
             raise HTTPException(401, "pair this device first", headers={"WWW-Authenticate": 'Bearer realm="nestor"'})
         return satellite
+
+
+def secure(scope: Mapping[str, Any]) -> bool:
+    """Whether a link is safe for a device that films: over TLS (directly, or behind a proxy the server trusts with
+    `X-Forwarded-Proto`), or from the core's own machine."""
+    if scope.get("scheme") in ("wss", "https"):
+        return True
+    try:
+        return ipaddress.ip_address((scope.get("client") or ("",))[0]).is_loopback
+    except ValueError:
+        return False
 
 
 async def _close(socket: WebSocket, code: Close) -> None:

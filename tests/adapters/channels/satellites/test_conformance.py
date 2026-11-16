@@ -120,6 +120,8 @@ async def test_a_driver_program_that_exits_is_reported() -> None:
         (Faults(honours_retry_after=False), "waits for Retry-After when rate-limited (P6)"),
         (Faults(reports_update=False), "reports where its software stands (U1)"),
         (Faults(installs_unreported=True), "never installs a version it did not report (U2)"),
+        (Faults(opens_unasked_media=True), "opens no media connection unless asked (M1)"),
+        (Faults(ends_media=False), "ends the session when told (M2)"),
     ],
     ids=[
         "no acks",
@@ -137,6 +139,8 @@ async def test_a_driver_program_that_exits_is_reported() -> None:
         "ignores Retry-After",
         "silent about its software",
         "installs what it is told",
+        "opens media unasked",
+        "never ends media",
     ],
 )
 async def test_a_broken_satellite_is_caught(faults: Faults, failing: str) -> None:

@@ -38,6 +38,8 @@ async def delete_session(request: Request, caller: SignedIn) -> Response:
     admin = state(request)
     if caller.session:
         admin.sessions.close(caller.session)
+        if admin.nestor.media is not None:  # what it watched or called through ends with it
+            await admin.nestor.media.check()
     response = Response(status_code=204)
     admin.cookie.clear(response)
     return response

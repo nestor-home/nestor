@@ -28,6 +28,7 @@ const ROUTES = [
   "/connections",
   "/connections/c-gmail-mathis",
   "/connections/catalogue",
+  "/cameras",
   "/satellites",
   "/satellites/reachy-living-room",
   "/system",

@@ -948,6 +948,107 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/media/devices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Media Devices
+         * @description The devices the caller may watch or call through, connected or not.
+         */
+        get: operations["listMediaDevices"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/satellites/{device_id}/media/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Open Media Session
+         * @description Watch or call through the device: the answer to the browser's WebRTC offer.
+         */
+        post: operations["openMediaSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/media/sessions/{session_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Close Media Session
+         * @description End one's own session (or any, for whom may on every device).
+         */
+        delete: operations["closeMediaSession"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/satellites/{device_id}/media/snapshot": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Take Snapshot
+         * @description A still picture of what the device films now, kept a few days.
+         */
+        post: operations["takeSnapshot"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/satellites/{device_id}/media/access": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set Media Access
+         * @description Who of the household may watch the device or call through it, and whether its camera may film; what it no
+         *     longer allows ends at once.
+         */
+        put: operations["setMediaAccess"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tasks": {
         parameters: {
             query?: never;
@@ -2208,7 +2309,7 @@ export interface components {
              * Code
              * @enum {string}
              */
-            code: "addition_over" | "addition_unknown" | "attachment_unknown" | "audio_format" | "bad_token" | "chat_busy" | "chat_needs_person" | "chat_off" | "client_incomplete" | "client_missing" | "client_required" | "config_history_unknown" | "config_invalid" | "config_unavailable" | "conflict" | "connection_unknown" | "connector_unknown" | "cross_origin" | "csrf_failed" | "empty_memory" | "executor_unknown" | "executors_unreachable" | "fields_missing" | "forbidden" | "http_error" | "identify_unsupported" | "invalid" | "invalid_code" | "invalid_credentials" | "invalid_login" | "invalid_request" | "invitation_expired" | "invitation_revoked" | "invitation_unknown" | "invitation_used" | "journal_entry_unknown" | "last_owner" | "memory_shared" | "memory_unknown" | "method_not_allowed" | "no_connectors" | "no_secret_key" | "not_a_device_code_method" | "not_found" | "not_oauth" | "oauth" | "own_connections_only" | "pairing_refused" | "pending_unknown" | "person_required" | "person_unknown" | "provider_error" | "provider_refused" | "restart_unconfirmed" | "satellite_offline" | "satellite_unknown" | "secret_in_use" | "secret_unknown" | "task_unknown" | "throttled" | "too_many_additions" | "unauthenticated" | "unknown_locale" | "unknown_person" | "unknown_tool" | "unsupported_media_type" | "update_not_installable" | "update_unavailable" | "update_unconfirmed" | "update_unsupported" | "use_me_password" | "voice_not_yours" | "voices_off" | "watch_unknown" | "schedule_unknown" | "service_refused" | "confirmation_unknown" | "weak_password" | "wrong_password";
+            code: "addition_over" | "addition_unknown" | "attachment_unknown" | "audio_format" | "bad_token" | "chat_busy" | "chat_needs_person" | "chat_off" | "client_incomplete" | "client_missing" | "client_required" | "config_history_unknown" | "config_invalid" | "config_unavailable" | "conflict" | "connection_unknown" | "connector_unknown" | "cross_origin" | "csrf_failed" | "empty_memory" | "executor_unknown" | "executors_unreachable" | "fields_missing" | "forbidden" | "http_error" | "identify_unsupported" | "invalid" | "invalid_code" | "invalid_credentials" | "invalid_login" | "invalid_request" | "invitation_expired" | "invitation_revoked" | "invitation_unknown" | "invitation_used" | "journal_entry_unknown" | "media_camera_off" | "media_forbidden" | "media_off" | "media_offline" | "media_unable" | "last_owner" | "memory_shared" | "memory_unknown" | "method_not_allowed" | "no_connectors" | "no_secret_key" | "not_a_device_code_method" | "not_found" | "not_oauth" | "oauth" | "own_connections_only" | "pairing_refused" | "pending_unknown" | "person_required" | "person_unknown" | "provider_error" | "provider_refused" | "restart_unconfirmed" | "satellite_offline" | "satellite_unknown" | "secret_in_use" | "secret_unknown" | "task_unknown" | "throttled" | "too_many_additions" | "unauthenticated" | "unknown_locale" | "unknown_person" | "unknown_tool" | "unsupported_media_type" | "update_not_installable" | "update_unavailable" | "update_unconfirmed" | "update_unsupported" | "use_me_password" | "voice_not_yours" | "voices_off" | "watch_unknown" | "schedule_unknown" | "service_refused" | "confirmation_unknown" | "weak_password" | "wrong_password";
             /** Message Id */
             message_id: string;
             /** Args */
@@ -2635,6 +2736,93 @@ export interface components {
             /** Pending Changes */
             pending_changes: string[];
         };
+        /**
+         * MediaAccessIn
+         * @description Who may watch the device or call through it besides the owners, and whether its camera may film.
+         */
+        MediaAccessIn: {
+            /**
+             * Viewers
+             * @default []
+             */
+            viewers: string[];
+            /**
+             * Callers
+             * @default []
+             */
+            callers: string[];
+            /**
+             * Camera
+             * @default true
+             */
+            camera: boolean;
+        };
+        /** MediaAccessOut */
+        MediaAccessOut: {
+            /** Viewers */
+            viewers: components["schemas"]["PersonRef"][];
+            /** Callers */
+            callers: components["schemas"]["PersonRef"][];
+            /** Camera */
+            camera: boolean;
+        };
+        /**
+         * MediaDeviceOut
+         * @description A device the caller may watch or call through.
+         */
+        MediaDeviceOut: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string | null;
+            /** Room */
+            room: string;
+            /** Connected */
+            connected: boolean;
+            /** Can View */
+            can_view: boolean;
+            /** Can Call */
+            can_call: boolean;
+        };
+        /** MediaDevicesOut */
+        MediaDevicesOut: {
+            /** Available */
+            available: boolean;
+            /** Devices */
+            devices: components["schemas"]["MediaDeviceOut"][];
+        };
+        /**
+         * MediaOfferIn
+         * @description The browser's WebRTC offer for a session: to watch (`view`), or to call (`call`).
+         */
+        MediaOfferIn: {
+            purpose: components["schemas"]["Purpose"];
+            /** Sdp */
+            sdp: string;
+            /**
+             * Type
+             * @constant
+             */
+            type: "offer";
+        };
+        /**
+         * MediaSessionOut
+         * @description The session that opened: the WebRTC answer, what it carries, how long at most.
+         */
+        MediaSessionOut: {
+            /** Session Id */
+            session_id: string;
+            /** Sdp */
+            sdp: string;
+            /** Type */
+            type: string;
+            /** Video */
+            video: boolean;
+            /** Audio */
+            audio: boolean;
+            /** Max S */
+            max_s: number;
+        };
         /** MemoryOut */
         MemoryOut: {
             /** Id */
@@ -2914,6 +3102,12 @@ export interface components {
          * @enum {string}
          */
         Proof: "device_code" | "enrollment_code";
+        /**
+         * Purpose
+         * @description Why a person opens a media session on a device.
+         * @enum {string}
+         */
+        Purpose: "view" | "call";
         /** QuietHoursOut */
         QuietHoursOut: {
             /** Start */
@@ -3051,6 +3245,11 @@ export interface components {
             approved_by: components["schemas"]["PersonRef"] | null;
             /** Connected */
             connected: boolean | null;
+            /** Films */
+            films: boolean;
+            /** Calls */
+            calls: boolean;
+            access: components["schemas"]["MediaAccessOut"];
         };
         /** SatellitesOut */
         SatellitesOut: {
@@ -3110,7 +3309,7 @@ export interface components {
          * @description What an action needs. Code checks scopes, never roles: the role table is the only place they meet.
          * @enum {string}
          */
-        Scope: "accounts.manage" | "accounts.owners.manage" | "household.read" | "agent.read" | "agent.chat" | "household.connections.manage" | "own.connections.manage" | "satellites.manage" | "system.read" | "config.manage" | "journal.read.all" | "journal.read.own" | "memory.manage.all" | "memory.manage.own" | "tasks.manage" | "tasks.manage.own" | "watches.manage.all" | "watches.manage.own" | "schedules.manage.all" | "schedules.manage.own" | "messages.read.all" | "messages.read.own";
+        Scope: "accounts.manage" | "accounts.owners.manage" | "household.read" | "agent.read" | "agent.chat" | "household.connections.manage" | "own.connections.manage" | "satellites.manage" | "system.read" | "config.manage" | "journal.read.all" | "journal.read.own" | "memory.manage.all" | "memory.manage.own" | "tasks.manage" | "tasks.manage.own" | "watches.manage.all" | "watches.manage.own" | "schedules.manage.all" | "schedules.manage.own" | "messages.read.all" | "messages.read.own" | "media.view" | "media.view.all" | "media.call" | "media.call.all";
         /** SecretIn */
         SecretIn: {
             /** Value */
@@ -8623,6 +8822,480 @@ export interface operations {
             };
         };
     };
+    listMediaDevices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaDevicesOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    openMediaSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                device_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MediaOfferIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaSessionOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    closeMediaSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    takeSnapshot: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                device_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    setMediaAccess: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                device_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MediaAccessIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaAccessOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
     listTasks: {
         parameters: {
             query?: never;
@@ -12499,7 +13172,7 @@ export const changeKindValues: ReadonlyArray<FlattenedDeepRequired<components>["
 export const chatRoleValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ChatRole"]> = ["person", "assistant", "note", "fallback", "tool"];
 export const chatStreamOutTypeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ChatStreamOut"]["type"]> = ["text", "end", "failed", "done"];
 export const dayValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Day"]> = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
-export const errorDetailCodeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ErrorDetail"]["code"]> = ["addition_over", "addition_unknown", "attachment_unknown", "audio_format", "bad_token", "chat_busy", "chat_needs_person", "chat_off", "client_incomplete", "client_missing", "client_required", "config_history_unknown", "config_invalid", "config_unavailable", "conflict", "connection_unknown", "connector_unknown", "cross_origin", "csrf_failed", "empty_memory", "executor_unknown", "executors_unreachable", "fields_missing", "forbidden", "http_error", "identify_unsupported", "invalid", "invalid_code", "invalid_credentials", "invalid_login", "invalid_request", "invitation_expired", "invitation_revoked", "invitation_unknown", "invitation_used", "journal_entry_unknown", "last_owner", "memory_shared", "memory_unknown", "method_not_allowed", "no_connectors", "no_secret_key", "not_a_device_code_method", "not_found", "not_oauth", "oauth", "own_connections_only", "pairing_refused", "pending_unknown", "person_required", "person_unknown", "provider_error", "provider_refused", "restart_unconfirmed", "satellite_offline", "satellite_unknown", "secret_in_use", "secret_unknown", "task_unknown", "throttled", "too_many_additions", "unauthenticated", "unknown_locale", "unknown_person", "unknown_tool", "unsupported_media_type", "update_not_installable", "update_unavailable", "update_unconfirmed", "update_unsupported", "use_me_password", "voice_not_yours", "voices_off", "watch_unknown", "schedule_unknown", "service_refused", "confirmation_unknown", "weak_password", "wrong_password"];
+export const errorDetailCodeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ErrorDetail"]["code"]> = ["addition_over", "addition_unknown", "attachment_unknown", "audio_format", "bad_token", "chat_busy", "chat_needs_person", "chat_off", "client_incomplete", "client_missing", "client_required", "config_history_unknown", "config_invalid", "config_unavailable", "conflict", "connection_unknown", "connector_unknown", "cross_origin", "csrf_failed", "empty_memory", "executor_unknown", "executors_unreachable", "fields_missing", "forbidden", "http_error", "identify_unsupported", "invalid", "invalid_code", "invalid_credentials", "invalid_login", "invalid_request", "invitation_expired", "invitation_revoked", "invitation_unknown", "invitation_used", "journal_entry_unknown", "media_camera_off", "media_forbidden", "media_off", "media_offline", "media_unable", "last_owner", "memory_shared", "memory_unknown", "method_not_allowed", "no_connectors", "no_secret_key", "not_a_device_code_method", "not_found", "not_oauth", "oauth", "own_connections_only", "pairing_refused", "pending_unknown", "person_required", "person_unknown", "provider_error", "provider_refused", "restart_unconfirmed", "satellite_offline", "satellite_unknown", "secret_in_use", "secret_unknown", "task_unknown", "throttled", "too_many_additions", "unauthenticated", "unknown_locale", "unknown_person", "unknown_tool", "unsupported_media_type", "update_not_installable", "update_unavailable", "update_unconfirmed", "update_unsupported", "use_me_password", "voice_not_yours", "voices_off", "watch_unknown", "schedule_unknown", "service_refused", "confirmation_unknown", "weak_password", "wrong_password"];
 export const familyValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Family"]> = ["model", "executor", "channel", "home", "tools", "inbound", "connector"];
 export const granularityValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Granularity"]> = ["home", "occupied_rooms", "person_room"];
 export const healthValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Health"]> = ["started", "degraded", "unavailable"];
@@ -12513,9 +13186,10 @@ export const pairingMethodValues: ReadonlyArray<FlattenedDeepRequired<components
 export const problemValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Problem"]> = ["too_short", "too_quiet", "too_loud", "other_voice"];
 export const problemCodeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ProblemCode"]> = ["missing", "extra", "invalid", "unknown_kind", "reference", "secret", "no_answering_model", "not_answering", "not_embedding", "not_speaker", "not_transcribing", "not_speaking", "unknown_model", "shared_account"];
 export const proofValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Proof"]> = ["device_code", "enrollment_code"];
+export const purposeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Purpose"]> = ["view", "call"];
 export const riskValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Risk"]> = ["read", "write", "sensitive"];
 export const roleValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Role"]> = ["owner", "admin", "member", "guest"];
-export const scopeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Scope"]> = ["accounts.manage", "accounts.owners.manage", "household.read", "agent.read", "agent.chat", "household.connections.manage", "own.connections.manage", "satellites.manage", "system.read", "config.manage", "journal.read.all", "journal.read.own", "memory.manage.all", "memory.manage.own", "tasks.manage", "tasks.manage.own", "watches.manage.all", "watches.manage.own", "schedules.manage.all", "schedules.manage.own", "messages.read.all", "messages.read.own"];
+export const scopeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Scope"]> = ["accounts.manage", "accounts.owners.manage", "household.read", "agent.read", "agent.chat", "household.connections.manage", "own.connections.manage", "satellites.manage", "system.read", "config.manage", "journal.read.all", "journal.read.own", "memory.manage.all", "memory.manage.own", "tasks.manage", "tasks.manage.own", "watches.manage.all", "watches.manage.own", "schedules.manage.all", "schedules.manage.own", "messages.read.all", "messages.read.own", "media.view", "media.view.all", "media.call", "media.call.all"];
 export const shapeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Shape"]> = ["one", "list", "named"];
 export const stageValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Stage"]> = ["waiting", "device_seen", "paired", "cancelled", "expired"];
 export const statusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Status"]> = ["connected", "needs_reauth", "error"];

@@ -24,7 +24,9 @@ from nestor.modules.channels import Address, Assistant, Attachment, Channel, Inb
 from nestor.modules.journal import Journal
 from nestor.modules.satellites import (
     AUDIO,
+    MEDIA_INDICATOR,
     TEXT_DISPLAY,
+    VIDEO_CAPTURE,
     Manifest,
     Pairing,
     Satellite,
@@ -32,6 +34,7 @@ from nestor.modules.satellites import (
 )
 
 if TYPE_CHECKING:
+    from nestor.adapters.channels.satellites.media import SatelliteMedia
     from nestor.adapters.channels.satellites.voice.audio import SatelliteVoice
 
 logger = logging.getLogger(__name__)
@@ -67,6 +70,7 @@ class SatellitesChannel(Channel, SatelliteHost):
         self._assistant: Assistant | None = None
         self._hosting: tuple[Pairing, Journal] | None = None
         self._links: dict[str, SatelliteLink] = {}  # device id → its current link
+        self._media = _media(self._links, voice)
         self._gateway: SatelliteGateway | None = None
         self._server: DeviceServer | None = None
         self._closed = asyncio.Event()
@@ -83,18 +87,25 @@ class SatellitesChannel(Channel, SatelliteHost):
         return f"http://{f'[{host}]' if ':' in host else host}:{self._port}"
 
     def allowed(self, satellite: Satellite) -> frozenset[Capability]:
-        """What a paired device is granted on its link: its pairing's capabilities the core can serve."""
-        return satellite.capabilities if self._voice else satellite.capabilities - AUDIO
+        """What a paired device is granted on its link: its pairing's capabilities the core can serve. Audio serves
+        the voice and calls (without a voice, `welcome` says the core does not talk: no voice offers); filming and
+        its indicator only media."""
+        served = {VIDEO_CAPTURE: bool(self._media), MEDIA_INDICATOR: bool(self._media)}
+        served |= dict.fromkeys(AUDIO, bool(self._voice or self._media))
+        return frozenset(c for c in satellite.capabilities if served.get(c, True))
 
     async def serve(self, assistant: Assistant) -> None:
         if self._hosting is None:
             raise ContractError("the runtime hosts satellites before serving the channel")
         self._assistant = assistant
         if self._voice is not None:
-            self._voice.serve(assistant, self._links)
+            self._voice.serve(assistant, self._links, calling=self._media.calling if self._media else None)
         if self._closed.is_set():
             return
-        gateway = SatelliteGateway(self._hosting[0], on_link=self._linked, allowed=self.allowed, audio=self._voice)
+        offer = self._media.device_offer if self._media else None
+        gateway = SatelliteGateway(
+            self._hosting[0], on_link=self._linked, allowed=self.allowed, audio=self._voice, media=offer
+        )
         self._gateway = gateway
         self._server = DeviceServer(host=self._host, port=self._port, gateway=gateway)
         logger.info("satellites: %s serving on http://%s:%d", self.channel_id, self._host, self._port)
@@ -125,8 +136,14 @@ class SatellitesChannel(Channel, SatelliteHost):
         for link in showing:
             link.show(text)
 
+    def media_relay(self) -> "SatelliteMedia | None":
+        """What watching and calling through the devices go through: `None` without aiortc (the `media` extra)."""
+        return self._media
+
     async def close(self) -> None:
         self._closed.set()
+        if self._media is not None:
+            await self._media.close()
         if self._voice is not None:
             await self._voice.close()
         if self._gateway is not None:
@@ -142,7 +159,7 @@ class SatellitesChannel(Channel, SatelliteHost):
     ) -> None:
         assert self._hosting is not None
         pairing, journal = self._hosting
-        link = SatelliteLink(socket, satellite, manifest, journal, allowed=allowed,
+        link = SatelliteLink(socket, satellite, manifest, journal, allowed=allowed, voice=self._voice is not None,
                              reported=lambda status: pairing.reported(satellite.id, status))  # fmt: skip
         self._links[satellite.id] = link
         try:
@@ -151,6 +168,8 @@ class SatellitesChannel(Channel, SatelliteHost):
         finally:
             if self._links.get(satellite.id) is link:
                 del self._links[satellite.id]
+                if self._media is not None:
+                    await self._media.left(satellite.id)
                 if self._voice is not None:
                     await self._voice.hang_up(link)
 
@@ -177,3 +196,13 @@ class SatellitesChannel(Channel, SatelliteHost):
             message, written = "".join(written).strip(), []
             if message:
                 link.show(message, final=part.last)
+
+
+def _media(links: dict[str, SatelliteLink], voice: "SatelliteVoice | None") -> "SatelliteMedia | None":
+    """The media relay, when aiortc is installed (the `media` extra); a call ends the device's voice session."""
+    try:
+        from nestor.adapters.channels.satellites.media import SatelliteMedia
+    except ImportError:
+        logger.info("satellites: install the media extra to watch and call through devices")
+        return None
+    return SatelliteMedia(links, on_call=voice.hang_up if voice else None)

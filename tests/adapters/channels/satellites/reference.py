@@ -4,11 +4,14 @@ It pairs (with the enrollment code it was launched with, else by "showing" its d
 `code`, falling back to it when the enrollment code is refused), opens its link with its token in
 `hello`, acknowledges every intent, offers audio when allowed and plays what it receives, reports one
 observation, types what it is asked to (`type`) when allowed, reports a newer version of its software when allowed to
-update (and installs only that one), reconnects when the core closes its link, and pairs again
-when its token is refused. Its faults can be switched on to prove the conformance suite catches them.
+update (and installs only that one), opens a media session only when asked (its camera when it films, for a call
+its microphone while its voice steps aside) and ends it when told and at its time, sends a picture when asked,
+reconnects when the core closes its link, and pairs again when its token is refused. Its faults can be switched on to
+prove the conformance suite catches them.
 """
 
 import asyncio
+import base64
 import contextlib
 import json
 from collections.abc import Awaitable, Callable
@@ -18,7 +21,7 @@ from typing import Any
 import httpx
 import websockets
 from aiortc import RTCConfiguration, RTCPeerConnection, RTCSessionDescription
-from aiortc.mediastreams import AudioStreamTrack, MediaStreamError, MediaStreamTrack
+from aiortc.mediastreams import AudioStreamTrack, MediaStreamError, MediaStreamTrack, VideoStreamTrack
 
 from nestor.adapters.channels.satellites.conformance import Launch
 from nestor.modules.behavior import Behavior
@@ -38,6 +41,7 @@ from nestor.modules.satellites import (
 
 TOKEN_REFUSED = 4401
 FOUND = "9.9.9"  # the newer version of its software it finds at its own source
+PICTURE = b"\xff\xd8\xff\xe0 a still picture \xff\xd9"
 
 
 @dataclass(frozen=True, slots=True)
@@ -57,6 +61,8 @@ class Faults:
     offers_unallowed_audio: bool = False  # offers audio although welcome allowed none
     reports_update: bool = True  # says where its software stands when allowed device.update
     installs_unreported: bool = False  # installs whatever version intent.update names
+    opens_unasked_media: bool = False  # connects for media as soon as it is welcomed (M1)
+    ends_media: bool = True  # ends a session when told and at its time (M2)
 
 
 class ReferenceSatellite:
@@ -152,6 +158,7 @@ class ReferenceSatellite:
         url = self.url.replace("http", "ws", 1) + f"/satellites/{self.manifest.device.id}/link"
         async with websockets.connect(url) as link:
             audio: asyncio.Task[None] | None = None
+            media: dict[str, asyncio.Task[None]] = {}  # by session
 
             async def send(message: wire.Message | dict[str, Any]) -> None:
                 await link.send(json.dumps(message if isinstance(message, dict) else wire.encode(message)))
@@ -175,6 +182,9 @@ class ReferenceSatellite:
                         self.welcomed.set()
                         if self.allowed & {AUDIO_CAPTURE, AUDIO_PLAYBACK} or self.faults.offers_unallowed_audio:
                             audio = asyncio.create_task(self._audio(http, token))
+                        if self.faults.opens_unasked_media:
+                            unasked = wire.MediaOpenIntent(session="unasked", video=True, audio=False, max_s=60)
+                            media["unasked"] = asyncio.create_task(self._media(http, token, unasked))
                         if self.observe:
                             await send(wire.PersonObservation(count=1, confidence=0.92))
                         if UPDATE in self.allowed and self.faults.reports_update:
@@ -193,12 +203,24 @@ class ReferenceSatellite:
                         message.version == FOUND or self.faults.installs_unreported
                     ):
                         await send(wire.UpdateStatusReport(state=UpdateState.INSTALLING, version=message.version))
+                    if isinstance(message, wire.MediaOpenIntent):
+                        if message.audio and audio is not None:  # nothing of a call reaches the voice
+                            audio.cancel()
+                            audio = None
+                        media[message.session] = asyncio.create_task(self._media(http, token, message))
+                    ending = isinstance(message, wire.MediaCloseIntent) and self.faults.ends_media
+                    if ending and (session := media.pop(message.session, None)) is not None:
+                        session.cancel()
+                    if isinstance(message, wire.SnapshotIntent):
+                        await send(wire.SnapshotReport(of=envelope.id, jpeg=base64.b64encode(PICTURE).decode()))
                     if self.observe and message == wire.BehaviorIntent(behavior=Behavior.IDLE):
                         await send(wire.PersonObservation(count=1, confidence=0.9))  # still there once it stopped
             except websockets.ConnectionClosed:
                 pass
             finally:
                 self._send = None
+                for session in media.values():  # M2: a session ends with the link
+                    session.cancel()
                 if audio is not None:
                     audio.cancel()
                     with contextlib.suppress(asyncio.CancelledError):
@@ -231,6 +253,30 @@ class ReferenceSatellite:
                 player.cancel()
                 with contextlib.suppress(asyncio.CancelledError):
                     await player
+
+    async def _media(self, http: httpx.AsyncClient, token: str, intent: wire.MediaOpenIntent) -> None:
+        """The session the core asked for: its camera when asked, its microphone in a call, until its time is up or
+        it is cancelled (told to end, or the link went down)."""
+        peer = RTCPeerConnection(RTCConfiguration(iceServers=[]))
+        if intent.video:
+            peer.addTrack(VideoStreamTrack())
+        if intent.audio:
+            peer.addTrack(AudioStreamTrack())
+        try:
+            await peer.setLocalDescription(await peer.createOffer())
+            offer = {"session": intent.session, "sdp": peer.localDescription.sdp, "type": "offer"}
+            headers = {"Authorization": f"Bearer {token}"}
+            response = await http.post(f"/satellites/{self.manifest.device.id}/media", json=offer, headers=headers)
+            if response.status_code != 200:
+                return
+            answer = response.json()
+            await peer.setRemoteDescription(RTCSessionDescription(sdp=answer["sdp"], type=answer["type"]))
+            if self.faults.ends_media:
+                await asyncio.sleep(intent.max_s)
+            else:
+                await asyncio.Event().wait()
+        finally:
+            await peer.close()
 
     async def _play(self, track: MediaStreamTrack) -> None:
         with contextlib.suppress(MediaStreamError):

@@ -649,6 +649,7 @@ const PEOPLE = cap(
   "vision.person_detection",
   fr("person detection (no image sent)", "détection de personnes (sans image transmise)"),
 );
+const CAMERA = cap("video.capture", fr("camera", "caméra"));
 const FACE = cap("expression.emotion", fr("expressions", "expressions"));
 const HEAD = cap("motion.head", fr("head movements", "mouvements de tête"));
 
@@ -755,7 +756,9 @@ export function satellites(): Satellite[] {
       can_identify: true,
       model: "Reachy Mini",
       room: LIVING_ROOM,
-      capabilities: [MIC, SPEAKER, VAD, PEOPLE, FACE, HEAD, UPDATE],
+      capabilities: [MIC, SPEAKER, VAD, CAMERA, PEOPLE, FACE, HEAD, UPDATE],
+      films: true,
+      calls: true,
       paired_at: minutes(60 * 24 * 26),
       approved_by: ref("mathis"),
       connected: true,
@@ -769,6 +772,7 @@ export function satellites(): Satellite[] {
         version: "0.4.1",
         notes: "https://github.com/nestor-home/nestor-reachy/releases/tag/v0.4.1",
       },
+      access: { viewers: [ref("lea")], callers: [ref("jules"), ref("lea")], camera: true },
     },
     {
       id: "reachy-office",
@@ -776,7 +780,9 @@ export function satellites(): Satellite[] {
       can_identify: true,
       model: "Reachy Mini",
       room: OFFICE,
-      capabilities: [MIC, SPEAKER, VAD, FACE],
+      capabilities: [MIC, SPEAKER, VAD, CAMERA, FACE],
+      films: true,
+      calls: true,
       paired_at: minutes(60 * 24 * 20),
       approved_by: ref("mathis"),
       connected: false,
@@ -786,6 +792,7 @@ export function satellites(): Satellite[] {
       protocol: PROTOCOL,
       can_update: false,
       update: null,
+      access: { viewers: [], callers: [], camera: false },
     },
     {
       id: "pi-bedroom",
@@ -794,6 +801,8 @@ export function satellites(): Satellite[] {
       model: "Raspberry Pi 5 · ReSpeaker",
       room: BEDROOM,
       capabilities: [MIC, SPEAKER],
+      films: false,
+      calls: true,
       paired_at: minutes(60 * 24 * 12),
       approved_by: ref("lea"),
       connected: true,
@@ -803,6 +812,7 @@ export function satellites(): Satellite[] {
       protocol: PROTOCOL,
       can_update: true,
       update: { state: "current", version: null, notes: null },
+      access: { viewers: [], callers: [ref("lea")], camera: true },
     },
   ];
 }

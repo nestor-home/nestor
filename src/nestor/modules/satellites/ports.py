@@ -3,6 +3,7 @@
 from abc import ABC, abstractmethod
 
 from nestor.modules.journal import Journal
+from nestor.modules.satellites.media import MediaRelay
 from nestor.modules.satellites.service import Pairing
 
 
@@ -21,3 +22,7 @@ class SatelliteHost(ABC):
         """The base URL devices reach this host at (it goes into pairing URIs), `None` when it serves
         none. `seen_as` is the host name the household reaches Nestor by (the admin's, as the browser
         sees it): a host listening on every interface is reached by that name."""
+
+    def media_relay(self) -> MediaRelay | None:
+        """What watching and calling through its devices go through, `None` when it relays no media."""
+        return None

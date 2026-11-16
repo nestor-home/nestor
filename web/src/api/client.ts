@@ -82,6 +82,22 @@ export async function unwrap<T>(call: Promise<{ data?: T; error?: ErrorBody; res
   throw toError(result.response.status, result.error);
 }
 
+/** The file name a response's `Content-Disposition` gives (RFC 6266: `filename*` first), if any. */
+export function attachmentName(response: Response): string | null {
+  const header = response.headers.get("Content-Disposition") ?? "";
+  const encoded = /filename\*\s*=\s*[^']*'[^']*'([^;]+)/i.exec(header)?.[1];
+  if (encoded) {
+    try {
+      return decodeURIComponent(encoded.trim());
+    } catch {
+      // a malformed encoding: the plain name, if there is one
+    }
+  }
+  const plain = /filename\s*=\s*(?:"((?:[^"\\]|\\.)*)"|([^;]+))/i.exec(header);
+  const name = plain?.[1]?.replace(/\\(.)/g, "$1") ?? plain?.[2]?.trim();
+  return name || null;
+}
+
 /** The API's refusal as an ApiError, whatever answered: the API's own error, else the status in words. */
 export function toError(status: number, body: ErrorBody | undefined): ApiError {
   const error = body?.error; // undefined when no API answered (a proxy, a server going down)

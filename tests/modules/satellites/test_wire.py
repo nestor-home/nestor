@@ -42,6 +42,10 @@ MESSAGES: list[wire.Message] = [
     ),
     wire.UpdateStatusReport(state=UpdateState.CURRENT),
     wire.UpdateIntent(version="0.6.0"),
+    wire.MediaOpenIntent(session="s1", video=True, audio=False, max_s=600),
+    wire.MediaCloseIntent(session="s1"),
+    wire.SnapshotIntent(),
+    wire.SnapshotReport(of="intent-2", jpeg="/9j/4AAQSkZJRg=="),
 ]
 
 

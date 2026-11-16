@@ -5,14 +5,17 @@ from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
+from nestor.admin.api.v1.media.schemas import MediaAccessOut
 from nestor.admin.api.v1.shared import Input, People, PersonRef
 from nestor.admin.presentation import Phrasebook
 from nestor.core import Capability, utc_now
 from nestor.core.i18n import Message
 from nestor.modules.satellites import (
+    AUDIO,
     IDENTIFY,
     RECOMMENDED,
     UPDATE,
+    VIDEO_CAPTURE,
     Addition,
     AdditionStatus,
     Pairing,
@@ -128,6 +131,9 @@ class SatelliteOut(BaseModel):
     last_seen_at: datetime | None  # when it last connected or disconnected; None: never since pairing
     approved_by: PersonRef | None
     connected: bool | None  # its room can be heard right now; None without a spoken channel to tell
+    films: bool  # allowed video.capture: it can be watched
+    calls: bool  # allowed audio.capture and audio.playback: it can be called through
+    access: MediaAccessOut  # who may watch it or call through it besides the owners (`PUT …/media/access`)
 
     @classmethod
     def of(
@@ -137,6 +143,7 @@ class SatelliteOut(BaseModel):
         approved_by: PersonRef | None,
         heard: frozenset[str] | None,
         words: Phrasebook,
+        people: People,
     ) -> "SatelliteOut":
         status = pairing.update_status(satellite.id)
         return cls(
@@ -155,6 +162,9 @@ class SatelliteOut(BaseModel):
             last_seen_at=pairing.last_seen(satellite.id),
             approved_by=approved_by,
             connected=satellite.room in heard if heard is not None else None,
+            films=VIDEO_CAPTURE in satellite.capabilities,
+            calls=satellite.capabilities >= AUDIO,
+            access=MediaAccessOut.of(satellite.access, people),
         )
 
 

@@ -1,5 +1,5 @@
 /** One function per API operation, on the generated client: screens read the answers as the API sends them. */
-import { client, unwrap } from "./client";
+import { attachmentName, client, unwrap } from "./client";
 import type {
   AcceptInvitation,
   Approval,
@@ -10,6 +10,8 @@ import type {
   Credentials,
   Id,
   JournalFilters,
+  MediaAccessChange,
+  MediaPurpose,
   MemoryQuery,
   NewAddition,
   NewInvitation,
@@ -176,6 +178,42 @@ export const api = {
     unwrap(client.POST("/api/v1/satellites/approvals", { body: { ...body, pairing_id: pairing } })),
   revoke: (device: string) =>
     done(client.DELETE("/api/v1/satellites/{device_id}", { params: { path: { device_id: device } } })),
+
+  // watching and calling through satellites
+  mediaDevices: () => unwrap(client.GET("/api/v1/media/devices")),
+  /** Watches or calls through a device from the browser's WebRTC offer; answers the session and its answer. */
+  openMediaSession: (device: string, purpose: MediaPurpose, offer: string) =>
+    unwrap(
+      client.POST("/api/v1/satellites/{device_id}/media/sessions", {
+        params: { path: { device_id: device } },
+        body: { purpose, sdp: offer, type: "offer" },
+      }),
+    ),
+  /** Ends a session; `keepalive` lets it leave with a page that closes. */
+  closeMediaSession: (session: string, keepalive = false) =>
+    done(
+      client.DELETE("/api/v1/media/sessions/{session_id}", { params: { path: { session_id: session } }, keepalive }),
+    ),
+  /** A still picture of what the device films now, as a JPEG, with the name the server gives the file. */
+  snapshot: async (device: string): Promise<{ blob: Blob; name: string | null }> => {
+    let name: string | null = null;
+    const blob = await unwrap(
+      client
+        .POST("/api/v1/satellites/{device_id}/media/snapshot", {
+          params: { path: { device_id: device } },
+          parseAs: "blob",
+        })
+        .then((result) => {
+          name = attachmentName(result.response);
+          return result;
+        }),
+    );
+    return { blob: blob as Blob, name };
+  },
+  setMediaAccess: (device: string, body: MediaAccessChange) =>
+    unwrap(
+      client.PUT("/api/v1/satellites/{device_id}/media/access", { params: { path: { device_id: device } }, body }),
+    ),
 
   // voices
   voice: (person: Id) =>

@@ -21,6 +21,7 @@ import { personName } from "@/lib/people";
 import { useCan, useMe } from "@/lib/session";
 import { IdentifyButton } from "./add-satellite";
 import { DeviceMark } from "./device-mark";
+import { MediaAccessSection } from "./media-access";
 import { SatelliteUpdateButton } from "./satellite-update";
 
 /** What each capability lets the assistant do, said for the household. */
@@ -30,6 +31,7 @@ const MEANS: Record<string, string> = {
   "audio.capture": "sat-means-audio-capture",
   "audio.playback": "sat-means-audio-playback",
   "audio.speech_activity": "sat-means-audio-speech-activity",
+  "video.capture": "sat-means-video-capture",
   "vision.person_detection": "sat-means-vision-person-detection",
   "expression.emotion": "sat-means-expression-emotion",
   "motion.head": "sat-means-motion-head",
@@ -138,6 +140,7 @@ export function SatelliteOverview({ satellite: s }: { satellite: Satellite }) {
           {s.software.name} {s.software.version} · {s.protocol}
         </Fact>
       </Facts>
+      <MediaAccessSection satellite={s} />
       {canRevoke ? (
         <Section title={t("sat-revoke")}>
           <p className="mb-4 max-w-2xl text-sm text-ink-muted">{t("sat-revoke-hint")}</p>

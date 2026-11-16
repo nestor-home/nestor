@@ -9,6 +9,7 @@ nav-memories = Souvenirs
 nav-watches = Veilles
 nav-tasks = Tâches
 nav-house = Maison
+nav-cameras = Caméras
 nav-group-agenda = Agenda
 nav-schedules = Réveils et rappels
 nav-messages = Messages

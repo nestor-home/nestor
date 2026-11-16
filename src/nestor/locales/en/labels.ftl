@@ -29,6 +29,10 @@ scope-name = { $scope ->
     [schedules-manage-own] manage one's own wake-ups
     [messages-read-all] read every message and confirmation
     [messages-read-own] read one's own messages and confirmations
+    [media-view] watch the cameras one is allowed
+    [media-view-all] watch every camera
+    [media-call] call through the satellites one is allowed
+    [media-call-all] call through every satellite
    *[other] { $scope }
 }
 invitation-status = { $status ->

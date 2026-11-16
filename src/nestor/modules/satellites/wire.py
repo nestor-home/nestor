@@ -4,9 +4,10 @@ and the JSON bodies of pairing over HTTP. The standard is https://nestorhome.dev
     {"type": "intent.expression", "id": "…", "at": "2026-10-30T12:00:00+00:00",
      "payload": {"expression": "joy", "intensity": 1.0}}
 
-The link, a WebSocket per device, carries them; WebRTC only carries audio. Satellite → core: `hello`
-(its manifest and token, first), `ack` (of an intent id), `observation.*`, `input.text`, `update.status`.
-Core → satellite: `welcome` (what it may do), `intent.*` (`intent.text`, `intent.update` included), each
+The link, a WebSocket per device, carries them; WebRTC only carries media: the voice's audio, and the sessions a
+person opens to watch or call (`intent.media.open`). Satellite → core: `hello` (its manifest and token, first),
+`ack` (of an intent id), `observation.*`, `input.text`, `update.status`, `media.snapshot`. Core → satellite:
+`welcome` (what it may do), `intent.*` (`intent.text`, `intent.update`, `intent.media.*` included), each
 acknowledged by id.
 
 Pairing bodies (`PairingRequest`, `EnrollmentProof`, and the answers `ticket_json`, `state_json`,
@@ -37,6 +38,7 @@ from nestor.modules.satellites.types import (
     SPEECH_ACTIVITY,
     TEXT_INPUT,
     UPDATE,
+    VIDEO_CAPTURE,
     Manifest,
     PairingMethod,
     PairingState,
@@ -76,6 +78,10 @@ SHOWN_MAX = 16000  # characters of one `intent.text`: a longer answer goes in se
 type Shown = Annotated[str, Size(1, SHOWN_MAX)]  # one message of the assistant
 type Version = Annotated[str, Size(1, 64)]  # a version of the software a device runs
 type Link = Annotated[str, Size(9, 512, r"^https://\S+$")]  # an address for people, opened by their browser
+type Session = Annotated[str, Size(1, 64)]  # a media session's id, given by the core
+type Lasting = Annotated[int, Bounds(1, 3600)]  # the longest a media session may last, in seconds
+SNAPSHOT_MAX = 4_000_000  # characters of a still picture in base64: about 3 MB of JPEG
+type Jpeg = Annotated[str, Size(1, SNAPSHOT_MAX)]  # a JPEG picture, in base64
 
 
 class Direction(StrEnum):
@@ -155,11 +161,13 @@ class UpdateStatusReport(Message, message_type="update.status", direction=Direct
 
 
 class Welcome(Message, message_type="welcome", direction=Direction.TO_SATELLITE):
-    """Answer to `hello`: where the device is and what it was allowed to do."""
+    """Answer to `hello`: where the device is and what it was allowed to do; `voice`: the core talks with it, so a
+    device allowed audio offers its voice (A1); without, its audio serves only the calls a person opens (M1)."""
 
     device_id: str
     room: str
     capabilities: tuple[str, ...]
+    voice: bool = True
 
 
 class BehaviorIntent(Message, message_type="intent.behavior", direction=Direction.TO_SATELLITE):
@@ -196,12 +204,41 @@ class UpdateIntent(Message, message_type="intent.update", direction=Direction.TO
     version: Version
 
 
+class MediaOpenIntent(Message, message_type="intent.media.open", direction=Direction.TO_SATELLITE):
+    """A person opened a session: offer it at once (`POST /satellites/{device_id}/media`), the camera's video when
+    `video`, the microphone and the speaker both ways when `audio` (a call); show it while it lasts, end it at
+    `max_s` at the latest (M1 to M3)."""
+
+    session: Session
+    video: bool
+    audio: bool
+    max_s: Lasting
+
+
+class MediaCloseIntent(Message, message_type="intent.media.close", direction=Direction.TO_SATELLITE):
+    """End the session `session` now (M2)."""
+
+    session: Session
+
+
+class SnapshotIntent(Message, message_type="intent.media.snapshot", direction=Direction.TO_SATELLITE):
+    """Take a still picture now and send it (`media.snapshot`); needs `video.capture`."""
+
+
+class SnapshotReport(Message, message_type="media.snapshot", direction=Direction.TO_CORE):
+    """The still picture asked by the intent `of`: a JPEG, in base64 (needs `video.capture`)."""
+
+    of: str
+    jpeg: Jpeg
+
+
 # What a satellite must have been allowed before it sends a message of that kind.
 NEEDS: dict[type[Message], Capability] = {
     PersonObservation: PERSON_DETECTION,
     SpeechActivityObservation: SPEECH_ACTIVITY,
     TextInput: TEXT_INPUT,
     UpdateStatusReport: UPDATE,
+    SnapshotReport: VIDEO_CAPTURE,
 }
 
 

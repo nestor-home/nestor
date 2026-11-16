@@ -128,6 +128,33 @@ const TITLES: [RegExp, (m: RegExpMatchArray) => Message][] = [
     /^Satellite (\S+) \((.+), room “(.+)”\) asks to pair$/,
     (m) => msg("journal-satellite-pairing-requested", { device: m[1] ?? "", model: m[2] ?? "", room: m[3] ?? "" }),
   ],
+  [
+    /^(\S+): (\d+) may watch, (\d+) may call, camera (on|off)$/,
+    (m) =>
+      msg("journal-satellite-media-access", {
+        device: m[1] ?? "",
+        viewers: Number(m[2]),
+        callers: Number(m[3]),
+        camera: m[4] ?? "on",
+      }),
+  ],
+  [
+    /^(Watching|Call through) (\S+) \(room “(.+)”\)$/,
+    (m) =>
+      msg("journal-media-opened", {
+        purpose: m[1] === "Watching" ? "view" : "call",
+        device: m[2] ?? "",
+        room: m[3] ?? "",
+      }),
+  ],
+  [
+    /^(\S+): session ended after (\d+) s \((\w+)\)$/,
+    (m) => msg("journal-media-closed", { device: m[1] ?? "", seconds: Number(m[2]), reason: m[3] ?? "closed" }),
+  ],
+  [
+    /^Picture taken by (\S+) \(room “(.+)”\)$/,
+    (m) => msg("journal-media-snapshot", { device: m[1] ?? "", room: m[2] ?? "" }),
+  ],
   [/^Memory recorded$/, () => msg("journal-memory-recorded", { drawn: "no" })],
 ];
 

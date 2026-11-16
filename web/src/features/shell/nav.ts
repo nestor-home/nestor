@@ -42,6 +42,7 @@ export const NAV: NavGroup[] = [
     items: [
       item("/people", "nav-people", "people:read", "p"),
       item("/house", "nav-house", "home:read", "o"),
+      item("/cameras", "nav-cameras", "media:read", "i"),
       item("/memories", "nav-memories", "memories:read", "m"),
     ],
   },

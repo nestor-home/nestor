@@ -20,3 +20,6 @@ export const modelTypeLabel = (type: ModelType) => tr("model-type", { type });
 export const modelTypeHint = (type: ModelType) => tr("model-type-help", { type });
 export const weekdayLabel = (day: Day) => tr("schedule-day", { day });
 export const granularityLabel = (granularity: Granularity) => tr("home-granularity", { granularity });
+
+/** A device as people know it: the name it was given, else its id. */
+export const deviceName = (device: { id: string; name?: string | null }) => device.name ?? device.id;

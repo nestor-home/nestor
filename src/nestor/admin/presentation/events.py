@@ -79,6 +79,9 @@ from nestor.modules.journal import Entry, FileRef
 from nestor.modules.memory import MemoryCorrected, MemoryForgotten, MemoryRecorded
 from nestor.modules.memory.episodes import EpisodeSummarized
 from nestor.modules.satellites import (
+    MediaEnd,
+    MediaSessionClosed,
+    MediaSessionOpened,
     PersonDetected,
     SatelliteAdditionCancelled,
     SatelliteAdditionCompleted,
@@ -88,11 +91,13 @@ from nestor.modules.satellites import (
     SatelliteDisconnected,
     SatelliteEnrollmentRefused,
     SatelliteIdentifyRequested,
+    SatelliteMediaAccessSet,
     SatellitePaired,
     SatellitePairingRequested,
     SatelliteRevoked,
     SatelliteUpdateReported,
     SatelliteUpdateRequested,
+    SnapshotTaken,
     SpeechActivityObserved,
     UpdateState,
 )
@@ -190,6 +195,10 @@ CATEGORIES: Mapping[Kind, tuple[type[Event], ...]] = {
         SatelliteAdditionExpired,
         SatelliteEnrollmentRefused,
         SatelliteIdentifyRequested,
+        SatelliteMediaAccessSet,
+        MediaSessionOpened,
+        MediaSessionClosed,
+        SnapshotTaken,
     ),
     Kind.VOICE: (SpeakerDeclared, VoiceEnrolled, VoiceForgotten, VoiceLearningChanged),
     Kind.OBSERVATION: (PersonDetected, SpeechActivityObserved),
@@ -506,6 +515,38 @@ class EventDescriber:
             ),
             SatelliteIdentifyRequested: lambda e: self._line(
                 e, Message.of("journal-satellite-identify-requested", device=e.device_id), people=[e.requested_by]
+            ),
+            SatelliteMediaAccessSet: lambda e: self._line(
+                e,
+                Message.of(
+                    "journal-satellite-media-access",
+                    device=e.device_id,
+                    viewers=len(e.viewers),
+                    callers=len(e.callers),
+                    camera="on" if e.camera else "off",
+                ),
+                people=[e.by],
+            ),
+            MediaSessionOpened: lambda e: self._line(
+                e,
+                Message.of(
+                    "journal-media-opened", device=e.device_id, purpose="call" if e.audio else "view", room=e.room
+                ),
+                people=[e.person],
+                room=e.room,
+            ),
+            MediaSessionClosed: lambda e: self._line(
+                e,
+                Message.of("journal-media-closed", device=e.device_id, seconds=round(e.duration_s), reason=e.reason),
+                room=e.room,
+                tone=Tone.WARNING if e.reason is MediaEnd.FAILED else Tone.NORMAL,
+            ),
+            SnapshotTaken: lambda e: self._line(
+                e,
+                Message.of("journal-media-snapshot", device=e.device_id, room=e.room),
+                people=[e.person],
+                room=e.room,
+                attachments=_made((e.file,)),
             ),
             SatelliteRevoked: lambda e: self._line(
                 e,

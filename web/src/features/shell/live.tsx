@@ -17,7 +17,8 @@ const STALE: Partial<Record<Kind, readonly (readonly unknown[])[]>> = {
   watch: [keys.watches],
   memory: [["memories"]],
   connection: [keys.connections],
-  satellite: [keys.satellites, keys.home], // its list and each satellite: a connection, an update reported
+  // its list, each satellite and the devices one may watch: a connection, an update reported, who may use it
+  satellite: [keys.satellites, keys.home, keys.mediaDevices],
   presence: [keys.people, keys.home],
   schedule: [keys.schedules],
   delivery: [keys.messages], // a message passed on, delivered or not
