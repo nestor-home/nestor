@@ -203,6 +203,7 @@ journal-media-opened = { $purpose ->
 journal-media-closed = { $device } : session terminée après { $seconds } s, { $reason ->
     [timed_out] sa durée maximale est passée
     [signed_out] la personne s'est déconnectée
+    [access_changed] la personne n'y a plus droit
     [device_left] l'appareil est parti
     [failed] elle n'a pas pu s'ouvrir
    *[closed] fermée
