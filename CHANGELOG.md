@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.14.0](https://github.com/nestor-home/nestor/compare/v0.13.0...v0.14.0) (2026-11-16)
+
+
+### Features
+
+* a notifications bench; the silence marker stays in English and failures are told ([#161](https://github.com/nestor-home/nestor/issues/161)) ([4ecb677](https://github.com/nestor-home/nestor/commit/4ecb6774f1de4df5eb0a5e3ffc840449d510be5f))
+* a task's files reach the executor and come back to people, on every channel ([#169](https://github.com/nestor-home/nestor/issues/169)) ([784a756](https://github.com/nestor-home/nestor/commit/784a7562723bdf0a8a545472d6f4459b51bd0a38))
+* a web search with no key, and notes the agent gets on how it runs ([#164](https://github.com/nestor-home/nestor/issues/164)) ([e2cc856](https://github.com/nestor-home/nestor/commit/e2cc85604df96d7ab1e51e594b709e00e9e0e39f))
+* an MCP server for executors, their way back to Nestor while they work on a task ([#168](https://github.com/nestor-home/nestor/issues/168)) ([47bcd08](https://github.com/nestor-home/nestor/commit/47bcd080a9a6a688844a41ec086d0586eac70b94))
+* executor routing bench ([#163](https://github.com/nestor-home/nestor/issues/163)) ([5ea8cb2](https://github.com/nestor-home/nestor/commit/5ea8cb2729210346b8aeb8ef73797819066c7169))
+* watch and call through satellites from the admin, relayed by the core ([#173](https://github.com/nestor-home/nestor/issues/173)) ([893dfc9](https://github.com/nestor-home/nestor/commit/893dfc9ec157ee67b08ae35cbdace3ff24fe55f9))
+
+
+### Bug Fixes
+
+* a notification may stay silent with its reason, and silence is never replayed ([#159](https://github.com/nestor-home/nestor/issues/159)) ([b9f67b0](https://github.com/nestor-home/nestor/commit/b9f67b050d9f24a2b40456b5f76b9a02212b7425))
+* a recurring wake-up reads back what it and its tasks already told ([#165](https://github.com/nestor-home/nestor/issues/165)) ([e34db91](https://github.com/nestor-home/nestor/commit/e34db91c8b38a80fa991b3e4b181d7ac0f27c963))
+* **deps:** update dependency simple-icons to v16.38.0 ([#171](https://github.com/nestor-home/nestor/issues/171)) ([950d3d6](https://github.com/nestor-home/nestor/commit/950d3d63001c54018bc40e000967ab0969b9c860))
+* the public web client connects only to an address checked as the connection opens ([#167](https://github.com/nestor-home/nestor/issues/167)) ([4ebab9a](https://github.com/nestor-home/nestor/commit/4ebab9a104758077cfc7b95a8a243bf05a0c6563))
+* two accounts of one service get distinct mentions ([#166](https://github.com/nestor-home/nestor/issues/166)) ([6ab4f4b](https://github.com/nestor-home/nestor/commit/6ab4f4b59fec62cd5f99d992c4bd796b14b57517))
+
 ## [0.13.0](https://github.com/nestor-home/nestor/compare/v0.12.0...v0.13.0) (2026-11-15)
 
 
