@@ -22,6 +22,10 @@ NOTICE = (
     "This is said aloud in a room where others may hear, and its content is theirs: say only, in one short "
     "sentence, that something came for them and that you wrote it to them, nothing of what it says."
 )
+FILES_NOTICE = (
+    "This is said aloud, and the files that come with it cannot be: say briefly what it brings, and that you wrote "
+    "it to them with its files."
+)
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -91,7 +95,8 @@ class Courier(Component):
         unless it `must_tell`: then it goes on to the next place.
         `to` is a place asked for (a channel someone named): it is written there, whatever the policy.
         `private`: its content is the person's (a mail): aloud, others may hear, so the room only hears that something
-        waits for them once the content is written; aloud in full only with nowhere to write."""
+        waits for them once the content is written; aloud in full only with nowhere to write. Files (a document a
+        task made) cannot be said either: written with them, and the room hears what it brings."""
         plan = (
             Plan(spoken=None, written=to, reason=Message.of("delivery-place-asked", channel=to.channel))
             if to
@@ -116,11 +121,12 @@ class Courier(Component):
                 reason=plan.reason,
             )
         )
-        if private and plan.spoken and plan.written:
-            # its content decides, written; the room only hears that something waits once it is
+        if (private or notification.files) and plan.spoken and plan.written:
+            # its content decides, written with its files; the room only hears of it once it is
             if written_to := await self._send(person, plan.written, Medium.WRITTEN, notification):
                 if written_to.said:
-                    notice = replace(notification, text=f"{notification.text}\n\n{NOTICE}")
+                    said = NOTICE if private else FILES_NOTICE
+                    notice = replace(notification, text=f"{notification.text}\n\n{said}", files=())
                     await self._send(person, plan.spoken, Medium.SPOKEN, notice)
                 return written_to.address
         else:

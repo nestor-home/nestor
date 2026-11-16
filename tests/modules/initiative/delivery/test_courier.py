@@ -4,7 +4,7 @@ import asyncio
 
 from nestor.core import PersonId, ProviderError, new_id
 from nestor.core.i18n import Message
-from nestor.modules.channels import Address, Exchange, InboundMessage, Medium, Sender
+from nestor.modules.channels import Address, AttachmentKind, Exchange, InboundMessage, Medium, Sender
 from nestor.modules.cognition.tools import Toolbox
 from nestor.modules.conversation import (
     SILENT,
@@ -30,6 +30,7 @@ from nestor.modules.initiative import (
     DeliveryPolicy,
     DeliveryWithheld,
 )
+from nestor.modules.initiative.delivery.courier import FILES_NOTICE
 from nestor.modules.journal import Journal
 from nestor.testing.channels import InMemoryChannel
 from nestor.testing.cognition import ScriptedModel
@@ -49,12 +50,20 @@ class Satellite(InMemoryChannel):
     room = "salon"
 
 
+class Messaging(InMemoryChannel):
+    sends = frozenset(AttachmentKind)
+
+
 def courier(
-    presence: StaticPresence, *, follow_up_after_s: float = 0.02, model: ScriptedModel | None = None
+    presence: StaticPresence,
+    *,
+    follow_up_after_s: float = 0.02,
+    model: ScriptedModel | None = None,
+    blobs: MemoryBlobStore | None = None,
 ) -> tuple[Courier, Journal, Satellite, InMemoryChannel]:
     journal = Journal(MemoryEventLog())
     agent = Agent(
-        attachments=Attachments(MemoryBlobStore()),
+        attachments=Attachments(blobs or MemoryBlobStore()),
         models=ModelChoice.single(model or ScriptedModel(*["Ton colis est arrivé."] * 4)),
         persona=Persona(name="Richie", character="Tu es Richie."),
         journal=journal,
@@ -62,7 +71,7 @@ def courier(
         localizer=EchoLocalizer(),
         toolbox=Toolbox(journal),
     )
-    voice, telegram = Satellite("voice"), InMemoryChannel("telegram")
+    voice, telegram = Satellite("voice"), Messaging("telegram")
     return (
         Courier(
             journal,
@@ -110,6 +119,20 @@ async def test_a_private_message_is_only_announced_aloud_and_written_at_once() -
         )
         assert sender.scheduled() == (), "already written: no follow-up"
     assert [a for a, _ in voice.sent] == [SALON] and [a for a, _ in telegram.sent] == [TELEGRAM]
+
+
+async def test_a_result_with_a_file_is_written_with_it_and_the_room_hears_what_it_brings() -> None:
+    """A voice cannot carry a document: it would be lost if the result were only said."""
+    blobs = MemoryBlobStore()
+    devis = await blobs.put(b"%PDF devis", "application/pdf")
+    model = ScriptedModel("Voici le devis corrigé.", "Le devis corrigé est arrivé, je te l'ai écrit.")
+    sender, _, voice, telegram = courier(StaticPresence().set("mathis", home=True), model=model, blobs=blobs)
+    async with sender:
+        done = Notification("Le devis est corrigé.", About(Source.TASK, "t1", "completed"), files=(devis,))
+        assert await sender.deliver(MATHIS, done) == TELEGRAM
+    assert [a for a, _ in voice.sent] == [SALON] and [a for a, _ in telegram.sent] == [TELEGRAM]
+    assert [f.data for f in telegram.files[0]] == [b"%PDF devis"]
+    assert FILES_NOTICE in str(model.requests[1].messages[-1].content), "aloud, it says the files were written"
 
 
 async def test_a_private_message_with_nothing_to_tell_is_neither_written_nor_announced() -> None:
