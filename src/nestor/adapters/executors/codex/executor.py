@@ -92,11 +92,13 @@ class CodexExecutor(RemoteExecutor):
         try:
             rpc = await self._session()
             await self._call(rpc, "fs/createDirectory", {"path": folder})
+            placed = []
             async for file, data in assignment.placed():  # plain names, never twice
                 encoded = (await asyncio.to_thread(base64.b64encode, data)).decode()  # up to 27 MB: off the loop
                 await self._call(rpc, "fs/writeFile", {"path": posixpath.join(folder, file), "dataBase64": encoded})
+                placed.append(file)
             settings = self._thread_settings(assignment.access, folder)
-            objective = assignment.brief(folder)
+            objective = assignment.brief(folder, placed)
             thread = str((await self._call(rpc, "thread/start", settings))["thread"]["id"])
             self._join(rpc, thread)
             turn = await self._call(

@@ -28,13 +28,15 @@ class FileLinks:
         if request.method != link.method:
             return PlainTextResponse(f"this link takes {link.method}", status_code=405)
         if link.method == "GET":
-            given = next((g for g in task.given if g.blob.digest == link.target), None)
-            if given is None:
+            given = next(g for g in task.given if g.blob.digest == link.target)  # signed for a file given
+            try:
+                data = await self._nestor.blobs.get(given.blob.digest)
+            except KeyError:  # no longer stored
                 return PlainTextResponse(NO_LINK, status_code=404)
-            return file_response(await self._nestor.blobs.get(given.blob.digest), given.blob.media_type, given.name)
+            return file_response(data, given.blob.media_type, given.name)
+        self._links.used(token)  # once, even when two requests race with it
         if (data := await read_body(request, FILE_BYTES)) is None:
             return PlainTextResponse(f"larger than {FILE_BYTES // 1_000_000} MB", status_code=413)
-        self._links.used(token)
         kind = AttachmentKind.of(link.media_type)
         made = Attachment(kind=kind, data=data, media_type=link.media_type, name=link.target)
         kept = await self._nestor.tasks.add_file(task, made)

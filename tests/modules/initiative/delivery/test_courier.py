@@ -160,6 +160,17 @@ async def test_a_result_with_a_file_is_said_aloud_when_it_cannot_be_written() ->
     assert "devis.pdf" not in str(model.requests[-1].messages[0].content), "it is not told the file goes with it"
 
 
+async def test_a_private_message_that_cannot_be_written_is_never_said_aloud_in_full() -> None:
+    """Others may hear: it waits for a place to write, tried again later."""
+    sender, journal, voice, telegram = courier(StaticPresence().set("mathis", home=True), follow_up_after_s=10)
+    assert isinstance(telegram, Messaging)
+    telegram.refuses = True
+    async with sender:
+        bank = Notification("Mail de la banque.", About(Source.WATCH, "banque"))
+        assert await sender.deliver(MATHIS, bank, private=True) is None
+    assert voice.sent == [] and len(await journal.history(DeliveryFailed)) == 1
+
+
 async def test_a_private_message_with_nothing_to_tell_is_neither_written_nor_announced() -> None:
     """Its content decides, not the announcement: the room hears nothing either."""
     model = ScriptedModel(f"{SILENT} une publicité", "Mail de la banque.")

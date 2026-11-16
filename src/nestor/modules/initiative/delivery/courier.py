@@ -126,8 +126,8 @@ class Courier(Component):
         )
         unheard = plan.spoken is not None and bool(self._unsent(plan.spoken, notification.files))
         written_first = (private or unheard) and plan.spoken is not None and plan.written is not None
-        # its content decides, written with its files; the room only hears of it once it is; with nowhere to write
-        # after all, it is said aloud, without what cannot be heard
+        # its content decides, written with its files; the room only hears of it once it is; when it cannot be
+        # written after all, files are said aloud without what cannot be heard, private content never (tried again)
         if (
             written_first
             and plan.spoken
@@ -139,7 +139,8 @@ class Courier(Component):
                 notice = replace(notification, text=f"{notification.text}\n\n{said}", files=())
                 await self._send(person, plan.spoken, Medium.SPOKEN, notice)
             return written_to.address
-        if plan.spoken and (spoken := await self._send(person, plan.spoken, Medium.SPOKEN, notification)):
+        aloud = plan.spoken and not (private and written_first)
+        if aloud and plan.spoken and (spoken := await self._send(person, plan.spoken, Medium.SPOKEN, notification)):
             if plan.follow_up and spoken.said:
                 self._watch_reaction(person, plan, notification)
             return spoken.address

@@ -1,6 +1,6 @@
 """Values of delegated tasks: status, outcome, progress reporting and how to deliver the result."""
 
-from collections.abc import AsyncIterator, Awaitable, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable, Sequence
 from dataclasses import dataclass, field
 from enum import StrEnum
 
@@ -67,12 +67,12 @@ class Assignment:
             except KeyError:
                 continue
 
-    def brief(self, folder: str | None = None) -> str:
-        """The objective, the files sent with it in `folder` when the executor placed them there, and how to reach
-        Nestor's tools when it can: the files by link, without a folder."""
+    def brief(self, folder: str | None = None, placed: Sequence[str] = ()) -> str:
+        """The objective, the files the executor `placed` in its `folder`, and how to reach Nestor's tools when it
+        can: the files by link, without a folder."""
         parts = [self.objective]
-        if folder is not None and self.files:
-            parts.append(PLACED.format(folder=folder, names=", ".join(f.name for f in self.files)))
+        if folder is not None and placed:
+            parts.append(PLACED.format(folder=folder, names=", ".join(placed)))
         if self.task is not None:
             parts.append(BRIEF.format(task=self.task, links=BY_LINK if folder is None else ""))
         return "\n\n".join(parts)

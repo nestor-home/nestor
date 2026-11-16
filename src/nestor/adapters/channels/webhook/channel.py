@@ -53,7 +53,12 @@ class WebhookChannel(PushChannel):
 
 def _body(conversation: str, text: str, attachments: tuple[Attachment, ...]) -> bytes:
     files = [
-        {"kind": a.kind.value, "media_type": a.media_type, "name": a.name, "data": base64.b64encode(a.data).decode()}
+        {
+            "kind": a.kind.value,
+            "media_type": a.media_type,
+            "name": a.file_name,
+            "data": base64.b64encode(a.data).decode(),
+        }
         for a in attachments
     ]
     return json.dumps({"to": conversation, "text": text, "attachments": files}, ensure_ascii=False).encode()

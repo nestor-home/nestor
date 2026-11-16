@@ -15,7 +15,7 @@ from nestor.core import Health
 from nestor.core.i18n import Locale, Message
 from nestor.modules.channels import AttachmentKind
 from nestor.modules.cognition.delegation import Assignment, NestorAccess, Progress, TaskStatus
-from nestor.modules.journal import FileRef
+from nestor.modules.journal import BlobRef, FileRef
 from nestor.runtime import Services
 from nestor.testing.cognition import ExecutorContract
 from nestor.testing.i18n import EchoLocalizer
@@ -129,7 +129,8 @@ async def test_only_files_within_the_task_s_own_folder_come_back(tmp_path: Path)
 async def test_the_files_sent_with_a_task_wait_in_its_own_folder_and_the_brief_names_them(tmp_path: Path) -> None:
     record = tmp_path / "record.json"
     store = MemoryBlobStore()
-    sent = (FileRef(await store.put(b"%PDF devis", "application/pdf"), "devis.pdf"),)
+    gone = FileRef(BlobRef("0" * 64, 3, "image/png"), "photo.png")  # no longer stored: neither placed nor named
+    sent = (FileRef(await store.put(b"%PDF devis", "application/pdf"), "devis.pdf"), gone)
     folders = []
     async with claude(tmp_path / "work", record=("--record", str(record))) as executor:
         (tmp_path / "work").mkdir()
