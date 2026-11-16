@@ -16,13 +16,13 @@ from nestor.adapters.executors.codex import CodexSettings, Sandbox, build
 from nestor.adapters.executors.common import MAX_FILES
 from nestor.core import ContractError, Health, ProviderError
 from nestor.core.i18n import Locale, Message
-from nestor.modules.channels import AttachmentKind
+from nestor.modules.channels import Attachment, AttachmentKind
 from nestor.modules.cognition.delegation import Assignment, NestorAccess, Progress, TaskStatus
 from nestor.runtime import Services
 from nestor.testing.cognition import RemoteExecutorContract
 from nestor.testing.i18n import EchoLocalizer
 
-from .fakes import CWD, FakeCodex
+from .fakes import CWD, TASK, FakeCodex
 
 
 class TestCodexExecutor(RemoteExecutorContract):
@@ -58,8 +58,10 @@ async def test_the_task_runs_where_and_how_the_configuration_says() -> None:
         async with codex.executor(**options) as executor:
             await executor.run(Assignment("Corrige le test."), Progress())
     [started] = [params for method, params in codex.requests if method == "thread/start"]
+    [folder] = codex.folders
+    assert folder.startswith(f"{CWD}/task-"), "a folder of its own, under the working directory"
     assert {k: started[k] for k in ("cwd", "sandbox", "approvalPolicy", "model", "config")} == {
-        "cwd": CWD,
+        "cwd": folder,
         "sandbox": "read-only",
         "approvalPolicy": "never",
         "model": "gpt-6.1",
@@ -69,6 +71,18 @@ async def test_the_task_runs_where_and_how_the_configuration_says() -> None:
     [turn] = [params for method, params in codex.requests if method == "turn/start"]
     assert turn["input"] == [{"type": "text", "text": "Corrige le test."}]
     assert turn["outputSchema"]["required"] == ["report", "files"]
+
+
+async def test_the_files_sent_with_a_task_wait_in_its_own_folder_and_the_brief_names_them() -> None:
+    sent = (Attachment(kind=AttachmentKind.FILE, data=b"%PDF devis", media_type="application/pdf", name="devis.pdf"),)
+    async with FakeCodex() as codex, codex.executor() as executor:
+        await executor.run(Assignment("Corrige le devis.", files=sent), Progress())
+        await executor.run(Assignment("Corrige-le encore.", files=sent), Progress())
+    first, second = codex.folders
+    assert first != second, "each task its own folder"
+    assert (codex.files[f"{first}/devis.pdf"], codex.files[f"{second}/devis.pdf"]) == (b"%PDF devis", b"%PDF devis")
+    turn = next(params for method, params in codex.requests if method == "turn/start")
+    assert f"Files sent with the task, in {first}: devis.pdf." in turn["input"][0]["text"]
 
 
 async def test_nestor_s_mcp_server_joins_the_thread_s_own_servers_for_that_thread_only() -> None:
@@ -108,22 +122,23 @@ async def test_a_final_answer_that_is_not_a_structured_report_is_the_report() ->
     assert outcome.status is TaskStatus.COMPLETED and outcome.result == "Tout est vert."
 
 
-async def test_the_files_the_report_lists_come_back_from_the_working_directory_only() -> None:
+async def test_the_files_the_report_lists_come_back_from_the_task_s_own_folder_only() -> None:
     pdf = b"%PDF-1.7 devis"
-    files = {f"{CWD}/devis.pdf": pdf, f"{CWD}/big.bin": b"x" * 2_000, "/etc/passwd": b"root:x:0:0"}
+    files = {f"{TASK}/devis.pdf": pdf, f"{TASK}/big.bin": b"x" * 2_000, "/etc/passwd": b"root:x:0:0"}
     listed = [
         "devis.pdf",
-        f"{CWD}/big.bin",
+        f"{TASK}/big.bin",
         "/etc/passwd",
-        f"{CWD}/../../etc/passwd",
-        f"{CWD}/missing.txt",
-        CWD + "/sub",
+        f"{TASK}/../../etc/passwd",
+        f"{TASK}/missing.txt",
+        TASK + "/sub",
     ]
-    files[f"{CWD}/sub/inner.txt"] = b"inner"
+    files[f"{TASK}/sub/inner.txt"] = b"inner"
     files["/srv/codex/.codex/auth.json"] = b'{"token": "secret"}'
-    links = {f"{CWD}/auth.json": "/srv/codex/.codex/auth.json", f"{CWD}/home": "/srv/codex/.codex"}
-    files[f"{CWD}/locked.txt"] = b"mine"
-    listed += ["auth.json", "home/auth.json", "locked.txt"]
+    links = {f"{TASK}/auth.json": "/srv/codex/.codex/auth.json", f"{TASK}/home": "/srv/codex/.codex"}
+    files[f"{TASK}/locked.txt"] = b"mine"
+    files[f"{CWD}/other.txt"] = b"another task's"
+    listed += ["auth.json", "home/auth.json", "locked.txt", f"{TASK}/../other.txt"]
     codex = FakeCodex(files=files, links=links, report={"report": "Devis écrit.", "files": listed})
     async with codex, codex.executor(max_file_bytes=1_000) as executor:
         outcome = await executor.run(Assignment("Écris le devis."), Progress())
@@ -143,14 +158,15 @@ async def test_the_files_the_report_lists_come_back_from_the_working_directory_o
         "auth.json (a link, not followed)",
         "home/auth.json (a link, not followed)",
         "locked.txt (wc: ",
+        "other.txt (outside the working directory)",
     ):
         assert left in outcome.result, left
     read = [params["path"] for method, params in codex.requests if method == "fs/readFile"]
-    assert read == [f"{CWD}/devis.pdf"], "nothing too large or outside is downloaded, not even through a link"
+    assert read == [f"{codex.folders[0]}/devis.pdf"], "nothing too large or outside is downloaded, not even by link"
 
 
 async def test_no_more_files_than_the_limit_come_back() -> None:
-    files = {f"{CWD}/{n}.txt": b"x" for n in range(MAX_FILES + 2)}
+    files = {f"{TASK}/{n}.txt": b"x" for n in range(MAX_FILES + 2)}
     codex = FakeCodex(files=files, report={"report": "Faits.", "files": list(files)})
     async with codex, codex.executor() as executor:
         outcome = await executor.run(Assignment("Écris-les."), Progress())
@@ -294,8 +310,8 @@ async def test_stopping_a_turn_that_already_finished_returns_false() -> None:
 
 async def test_stopping_or_following_an_unknown_task_fails_without_raising() -> None:
     async with FakeCodex() as codex, codex.executor() as executor:
-        assert await executor.stop("thread-9:turn-9") is False
-        unknown = await executor.follow("thread-9:turn-9", Progress())
+        assert await executor.stop("thread-9:turn-9:task-x") is False
+        unknown = await executor.follow("thread-9:turn-9:task-x", Progress())
         garbled = await executor.follow("no-separator", Progress())
     assert unknown.status is TaskStatus.FAILED and "invalid thread id" in (unknown.error or "")
     assert garbled.status is TaskStatus.FAILED
@@ -309,7 +325,7 @@ async def test_a_codex_that_cannot_be_reached_is_unavailable() -> None:
         with pytest.raises(ProviderError) as refused:
             await missing.submit(Assignment("Corrige le test."))
         outcome = await missing.run(Assignment("Corrige le test."), Progress())
-        followed = await missing.follow("thread-1:turn-2", Progress())
+        followed = await missing.follow("thread-1:turn-2:task-x", Progress())
         health = (missing.health(), missing.health_detail())
     assert refused.value.transient and outcome.status is TaskStatus.FAILED and followed.status is TaskStatus.FAILED
     assert health == (Health.UNAVAILABLE, Message.of("health-executor-unreachable", executor="codex"))
@@ -319,7 +335,7 @@ async def test_a_reply_outside_the_protocol_or_a_session_that_hangs_up_is_a_prov
     async with FakeCodex(garbled=True) as codex, codex.executor() as executor:
         with pytest.raises(ProviderError) as garbled:
             await executor.submit(Assignment("Corrige le test."))
-        followed = await executor.follow("thread-1:turn-2", Progress())
+        followed = await executor.follow("thread-1:turn-2:task-x", Progress())
     async with FakeCodex(hangs_up=True) as codex, codex.executor() as executor:
         with pytest.raises(ProviderError) as hung_up:
             await executor.submit(Assignment("Corrige le test."))

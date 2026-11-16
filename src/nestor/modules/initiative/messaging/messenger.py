@@ -44,8 +44,11 @@ class Messenger(Component):
             Notification(
                 self._instruction(message, person, sender), About(Source.MESSAGE, message.message_id), must_tell=True
             ),
-            # the conversation it was asked in is a way back only to whoever asked: never someone else's
-            origin=message.origin if sender is not None and sender.id == person.id else None,
+            # the conversation it was asked in is a way back only to whoever asked there: never someone else's (a
+            # task's question goes to whoever handed it over, in the conversation they did)
+            origin=message.origin
+            if message.task is not None or (sender is not None and sender.id == person.id)
+            else None,
             written=message.in_writing,
             to=person.address_on(message.channel) if message.channel else None,
         )

@@ -6,7 +6,7 @@ from typing import Any
 import pytest
 
 from nestor.core import ContractError, PersonId
-from nestor.modules.channels import Address, Attachment, AttachmentKind
+from nestor.modules.channels import Address, Attachment, AttachmentKind, Medium
 from nestor.modules.cognition import (
     Executor,
     Notify,
@@ -23,7 +23,7 @@ from nestor.modules.cognition.delegation import Assignment, ExecutorKeys, Nestor
 from nestor.modules.cognition.delegation.assistant import Delegation
 from nestor.modules.cognition.delegation.service import INTERRUPTED, TaskManager
 from nestor.modules.cognition.tools import ToolContext
-from nestor.modules.conversation import TurnContext
+from nestor.modules.conversation import Attached, Conversations, TurnContext
 from nestor.modules.identity import Speaker
 from nestor.modules.journal import BlobRef, Journal
 from nestor.testing.cognition import (
@@ -249,6 +249,42 @@ async def test_the_agent_delegates_follows_and_cancels_through_its_tools(journal
     assert [t["task_id"] for t in status["running"]] == [task_id]
     assert cancelled == {"stopped": True, "status": "cancelled"}
     assert after["recently_finished"][0]["status"] == "cancelled"
+
+
+async def test_the_files_sent_in_the_conversation_go_with_the_task_but_not_what_was_said_aloud() -> None:
+    journal, blobs, remote = Journal(MemoryEventLog()), MemoryBlobStore(), FakeRemote()
+    chat, mathis = Address("telegram", "42"), Speaker.account(MATHIS)
+    devis, other, photo, voice = [
+        await blobs.put(data, media)
+        for data, media in [
+            (b"%PDF devis", "application/pdf"),
+            (b"%PDF autre", "application/pdf"),
+            (b"jpeg", "image/jpeg"),
+            (b"ogg", "audio/ogg"),
+        ]
+    ]
+    conversations = Conversations(journal, ends_after_s=lambda address, medium: 3600)
+    first = await conversations.turn(chat, Medium.WRITTEN)
+    sent = (
+        Attached(AttachmentKind.FILE, devis, "../devis.pdf"),
+        Attached(AttachmentKind.VOICE, voice),
+        Attached(AttachmentKind.IMAGE, photo),
+    )
+    await first.said("Voilà le devis", Medium.WRITTEN, mathis, sent)
+    second = await conversations.turn(chat, Medium.WRITTEN)
+    sent = (Attached(AttachmentKind.FILE, other, "devis.pdf"), Attached(AttachmentKind.FILE, devis, "devis.pdf"))
+    await second.said("Et l'autre", Medium.WRITTEN, mathis, sent)
+    context = ToolContext(address=chat, speaker=mathis, exchange=second.exchange)
+    expected = [("devis.pdf", b"%PDF devis"), ("file.jpg", b"jpeg"), ("devis (2).pdf", b"%PDF autre")]
+    async with TaskManager(journal, [ScriptedRemoteExecutor(remote, duration_s=None)], blobs=blobs) as tasks:
+        tool = next(t for t in Delegation(tasks).tools() if t.name == "delegate_task")
+        task_id = str(data(await tool.run({"objective": "Compare les devis"}, context))["task_id"])
+        await asyncio.sleep(0.01)
+        [run] = remote.runs.values()
+        assert [(f.name, f.data) for f in run.assignment.files] == expected, "plain names, none twice, no voice"
+    async with TaskManager(journal, [ScriptedRemoteExecutor(remote, duration_s=None)], blobs=blobs) as tasks:
+        assert [g.name for g in tasks.tasks[task_id].given] == [name for name, _ in expected], "kept by the journal"
+        await tasks.cancel(task_id)
 
 
 async def test_the_delegation_tools_refuse_bad_arguments(journal: Journal) -> None:

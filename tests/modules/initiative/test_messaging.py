@@ -138,6 +138,16 @@ async def test_a_question_a_task_asks_is_answered_back_to_it_by_the_person_asked
     assert "Questions waiting" not in home.model.requests[-1].messages[0].text, "answered, it is closed"
 
 
+async def test_a_question_a_task_asks_comes_to_the_conversation_it_was_handed_over_in() -> None:
+    """Odile can be reached nowhere else: she asked from a chat the household has no account of."""
+    home, chat = Home("Claude Code demande si la TVA est à 20 %."), Address("telegram", "99")
+    async with home:
+        await home.book.request(ODILE.id, "Is VAT 20 %?", requested_by=None, origin=chat, expects_reply=True, task="t1")
+        await home.settled(1)
+    [delivered] = await home.journal.history(MessageDelivered)
+    assert delivered.address == chat and home.telegram.sent[0][0] == chat
+
+
 async def test_a_question_is_passed_on_and_its_answer_comes_back_to_whoever_asked() -> None:
     home = Home(
         ToolCall(

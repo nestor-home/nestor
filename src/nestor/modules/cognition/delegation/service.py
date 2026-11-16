@@ -10,12 +10,12 @@ work is stopped.
 import asyncio
 import contextlib
 import logging
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
 
 from nestor.core import Component, ContractError, Event, PersonId, new_id, utc_now
-from nestor.modules.channels import Address, Attachment, Exchange
+from nestor.modules.channels import Address, Attachment, AttachmentKind, Exchange
 from nestor.modules.cognition.delegation.events import (
     ExecutorCalled,
     TaskAttached,
@@ -27,7 +27,15 @@ from nestor.modules.cognition.delegation.events import (
 )
 from nestor.modules.cognition.delegation.keys import ExecutorKeys, capability, digest
 from nestor.modules.cognition.delegation.ports import Executor, RemoteExecutor
-from nestor.modules.cognition.delegation.types import Assignment, NestorTools, Notify, Outcome, Progress, TaskStatus
+from nestor.modules.cognition.delegation.types import (
+    Assignment,
+    Given,
+    NestorTools,
+    Notify,
+    Outcome,
+    Progress,
+    TaskStatus,
+)
 from nestor.modules.journal import BlobRef, BlobStore, Journal
 
 logger = logging.getLogger(__name__)
@@ -47,6 +55,7 @@ class Task:
     exchange: Exchange | None = None
     capability: str | None = None  # the digest of what its executor calls Nestor's MCP server with for it
     ref: str | None = None
+    given: tuple[Given, ...] = ()  # sent with it
     files: list[BlobRef] = field(default_factory=list)  # handed back while it ran (`attach_file`)
     steps: list[str] = field(default_factory=list)
     outcome: Outcome | None = None
@@ -143,13 +152,15 @@ class TaskManager(Component):
         executor: str | None = None,
         exchange: Exchange | None = None,
         thread: str | None = None,
+        given: Sequence[Given] = (),
     ) -> Task:
+        """`given`: the files sent with the task, which its executor receives."""
         if self._writer is None:
             raise ContractError("the task manager must be started before delegating")
         chosen = self.executors.get(executor) if executor else self.default_executor
         if chosen is None:
             raise ContractError(f"no executor named {executor!r}" if executor else "no executor is plugged in")
-        assignment = await self._assignment(objective, chosen)
+        assignment = await self._assignment(objective, chosen, tuple(given))
         event = TaskStarted(
             source=self.name,
             session=origin.session,
@@ -162,6 +173,7 @@ class TaskManager(Component):
             exchange=exchange,
             thread=thread,
             capability=digest(assignment.task) if assignment.task else None,
+            given=tuple(given),
         )
         await self.journal.publish(event)
         task = self.tasks[event.task_id] = _task(event, None)
@@ -204,14 +216,32 @@ class TaskManager(Component):
         )
         return kept
 
-    async def _assignment(self, objective: str, executor: Executor) -> Assignment:
-        """What `executor` is given: with Nestor's MCP server when it reaches it, a capability for the task."""
+    async def _assignment(self, objective: str, executor: Executor, given: tuple[Given, ...]) -> Assignment:
+        """What `executor` is given: the files sent with the task, and with Nestor's MCP server when it reaches it,
+        a capability for the task."""
+        files = await self._read(given)
         if self._keys is None or executor.nestor_tools is NestorTools.NONE:
-            return Assignment(objective)
+            return Assignment(objective, files=files)
         if executor.nestor_tools is NestorTools.CONFIGURED:  # its own configuration holds the server and its key
-            return Assignment(objective, capability())
+            return Assignment(objective, capability(), files=files)
         access = await self._keys.access(executor.name)
-        return Assignment(objective, capability(), access) if access else Assignment(objective)
+        return Assignment(objective, capability(), access, files) if access else Assignment(objective, files=files)
+
+    async def _read(self, given: tuple[Given, ...]) -> tuple[Attachment, ...]:
+        if self._blobs is None or not given:
+            return ()
+        blobs = self._blobs
+        return tuple(
+            [
+                Attachment(
+                    kind=AttachmentKind.of(g.file.media_type),
+                    data=await blobs.get(g.file.digest),
+                    media_type=g.file.media_type,
+                    name=g.name,
+                )
+                for g in given
+            ]
+        )
 
     async def cancel(self, task_id: str) -> Outcome:
         """Ask the executor to stop; the outcome says whether the stop was confirmed."""
@@ -345,5 +375,6 @@ def _task(event: TaskStarted, ref: str | None) -> Task:
         started_at=event.at,
         exchange=event.exchange,
         capability=event.capability,
+        given=event.given,
         ref=ref,
     )

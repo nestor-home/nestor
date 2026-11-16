@@ -1,5 +1,8 @@
-"""What the executors share: the instructions a task comes with, the report a coding agent ends with, and the
-files it hands back.
+"""What the executors share: the instructions a task comes with, the folder a coding agent works on a task in,
+the report it ends with, and the files it hands back.
+
+A coding agent works on each task in a folder of its own under its working directory (`task_folder`), where the files
+sent with the task are placed before it starts: it reads them with its own tools, and the brief names them.
 
 A coding agent (Codex, Claude Code) ends its task with a structured report (`REPORT_SCHEMA`): the text for the
 assistant, and the absolute paths of the files it made for the requester. Those files are read back from the
@@ -9,9 +12,11 @@ working directory only, within a size and count limit; what is left out is said 
 import json
 import mimetypes
 import posixpath
+import secrets
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 
+from nestor.core import utc_now
 from nestor.modules.channels import Attachment, AttachmentKind
 from nestor.modules.cognition import Outcome
 
@@ -33,6 +38,11 @@ REPORT_SCHEMA: dict[str, object] = {
 MAX_STEP_LENGTH = 160
 MAX_FILES = 10
 MAX_FILE_BYTES = 20_000_000
+
+
+def task_folder() -> str:
+    """The name of a task's own folder, under the working directory: dated, never twice the same."""
+    return f"task-{utc_now():%Y%m%d-%H%M%S}-{secrets.token_hex(3)}"
 
 
 def step(text: str) -> str:

@@ -37,7 +37,7 @@ THIRD_PARTY_ALLOWED: dict[str, set[str]] = {
     # to Nestor
     "runtime": {"pydantic", "pydantic_core", "yaml", "ruamel", "dotenv", "uvicorn"},
     "admin": {"fastapi", "starlette", "pydantic", "uvicorn"},  # the JSON API served next to Nestor
-    "mcp_server": {"mcp"},  # the MCP SDK's server
+    "mcp_server": {"mcp", "starlette"},  # the MCP SDK's server, and the links to the tasks' files beside it
     "bench": {"pydantic", "yaml"},  # a suite's knobs are settings like an adapter's; variants are YAML fragments
 }
 

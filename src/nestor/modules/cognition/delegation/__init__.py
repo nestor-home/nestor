@@ -22,6 +22,7 @@ from nestor.modules.cognition.delegation.ports import Executor, RemoteExecutor
 from nestor.modules.cognition.delegation.types import (
     RESUME,
     Assignment,
+    Given,
     NestorAccess,
     NestorTools,
     Notify,
@@ -38,6 +39,7 @@ __all__ = [
     "ExecutorKeyIssued",
     "ExecutorKeyRevoked",
     "ExecutorKeys",
+    "Given",
     "NestorAccess",
     "NestorTools",
     "Notify",
