@@ -236,14 +236,15 @@ async def test_an_unprompted_message_in_writing_goes_to_the_screens_of_the_room(
             await channel.send(KITCHEN, "Ta lessive est terminée.", Medium.SPOKEN, ())
 
 
-async def test_without_a_voice_no_audio_is_allowed_on_the_link() -> None:
+async def test_without_a_voice_the_core_does_not_talk_and_audio_only_serves_calls() -> None:
     async with home(voice=False) as (_, pairing, _, url):
         token = await paired(pairing, MANIFEST)
         async with websockets.connect(link_url(url, MANIFEST.device.id)) as link:
             await link.send(hello(MANIFEST, token))
             welcome = await received(link)
             assert isinstance(welcome, wire.Welcome)
-            assert not {"audio.capture", "audio.playback"} & set(welcome.capabilities)
+            assert {"audio.capture", "audio.playback"} <= set(welcome.capabilities), "a person may call through it"
+            assert welcome.voice is False, "so it offers no voice"
             async with httpx.AsyncClient(base_url=url) as client:
                 assert (await _offer(client, MANIFEST.device.id, token)).status_code == 403
 

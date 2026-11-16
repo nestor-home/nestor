@@ -69,7 +69,7 @@ class MediaRelay(ABC):
 
     @abstractmethod
     def linked(self, device_id: str) -> frozenset[Capability] | None:
-        """What the device was granted at pairing, `None` when its link is down."""
+        """What the device's link was allowed (`welcome`), `None` when its link is down."""
 
     @abstractmethod
     async def start(
@@ -143,7 +143,7 @@ class MediaSessions(Component):
         return list(self._live.values())
 
     def linked(self, device_id: str) -> frozenset[Capability] | None:
-        """What the device was granted, `None` while its link is down."""
+        """What the device's link was allowed, `None` while it is down."""
         return self._relay.linked(device_id)
 
     def may(self, satellite: Satellite, viewer: Viewer, purpose: Purpose) -> bool:

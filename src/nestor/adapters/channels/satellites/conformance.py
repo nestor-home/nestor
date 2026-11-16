@@ -266,9 +266,10 @@ class _Media:
     session the check opened, and keeps what it receives."""
 
     def __init__(self) -> None:
-        from aiortc import RTCPeerConnection, RTCSessionDescription
+        from aiortc import RTCConfiguration, RTCPeerConnection, RTCSessionDescription
 
-        self._connection, self._description = RTCPeerConnection, RTCSessionDescription
+        self._connection = lambda: RTCPeerConnection(RTCConfiguration(iceServers=[]))  # no STUN to wait for
+        self._description = RTCSessionDescription
         self.waiting: str | None = None  # the session the check opened
         self.connections: asyncio.Queue[tuple[Any, list[Any]]] = asyncio.Queue()
         self.unasked = 0  # offers for no session the core opened (M1)
@@ -538,7 +539,7 @@ class FakeCore:
 
     async def _check_media(self, core: _Core, link: _Link, findings: Findings) -> None:
         """M1, M2: nothing unasked; what was asked when asked; a picture; the end when told and at its time."""
-        films, call = VIDEO_CAPTURE in link.allowed, link.satellite.capabilities >= AUDIO
+        films, call = VIDEO_CAPTURE in link.allowed, link.allowed >= AUDIO
         if not films and not call:
             return
         if core.media is None:

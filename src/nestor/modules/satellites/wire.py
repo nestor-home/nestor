@@ -161,11 +161,13 @@ class UpdateStatusReport(Message, message_type="update.status", direction=Direct
 
 
 class Welcome(Message, message_type="welcome", direction=Direction.TO_SATELLITE):
-    """Answer to `hello`: where the device is and what it was allowed to do."""
+    """Answer to `hello`: where the device is and what it was allowed to do; `voice`: the core talks with it, so a
+    device allowed audio offers its voice (A1); without, its audio serves only the calls a person opens (M1)."""
 
     device_id: str
     room: str
     capabilities: tuple[str, ...]
+    voice: bool = True
 
 
 class BehaviorIntent(Message, message_type="intent.behavior", direction=Direction.TO_SATELLITE):

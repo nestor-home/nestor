@@ -59,11 +59,13 @@ class SatelliteLink(Online):
         *,
         allowed: frozenset[Capability],
         reported: Reported,
+        voice: bool = True,
         ack_timeout_s: float = 2.0,
     ) -> None:
         self.satellite = satellite
         self.manifest = manifest
         self.allowed = allowed  # what `welcome` granted: the pairing's capabilities the core can serve
+        self.voice = voice  # the core talks with it (`welcome`): it offers its voice when allowed audio
         self._reported = reported
         self._socket = socket
         self._journal = journal
@@ -128,7 +130,8 @@ class SatelliteLink(Online):
         """Welcome the device, then read it until it leaves or `close` is called; `typed` answers each
         text it sends, in order."""
         satellite = self.satellite
-        self.send(wire.Welcome(device_id=satellite.id, room=satellite.room, capabilities=tuple(sorted(self.allowed))))
+        allowed = tuple(sorted(self.allowed))
+        self.send(wire.Welcome(device_id=satellite.id, room=satellite.room, capabilities=allowed, voice=self.voice))
         software, protocol = self.manifest.software, self.manifest.protocol
         await self._journal.publish(SatelliteConnected(source=SOURCE, device_id=satellite.id, room=satellite.room,
                                                        software=software, protocol=protocol))  # fmt: skip

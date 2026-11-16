@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import av
-from aiortc import MediaStreamTrack, RTCPeerConnection, RTCSessionDescription
+from aiortc import MediaStreamTrack, RTCConfiguration, RTCPeerConnection, RTCSessionDescription
 from aiortc.contrib.media import MediaRelay as TrackRelay
 from aiortc.mediastreams import MediaStreamError
 
@@ -33,6 +33,7 @@ OFFER_WAIT_S = 30.0  # the device connects within this once asked: ICE gathering
 SNAPSHOT_WAIT_S = 10.0
 SAMPLE_RATE = 48_000
 FRAME_SAMPLES = 960  # 20 ms
+LOCAL = RTCConfiguration(iceServers=[])  # the device and the browser reach the core directly: no STUN to wait for
 
 
 class Forwarded(MediaStreamTrack):
@@ -96,10 +97,8 @@ class SatelliteMedia(MediaRelay):
         self._ended = ended
 
     def linked(self, device_id: str) -> frozenset[Capability] | None:
-        """What a person granted the device at pairing, while its link is up: a call needs no voice of the core's
-        (`welcome` leaves audio out without one, so that the device offers no voice session)."""
         link = self._links.get(device_id)
-        return link.satellite.capabilities if link else None
+        return link.allowed if link else None
 
     async def start(
         self, session_id: str, device_id: str, *, video: bool, audio: bool, max_s: int, offer: Mapping[str, Any]
@@ -120,7 +119,7 @@ class SatelliteMedia(MediaRelay):
             raise ProviderError(
                 PROVIDER, f"{device_id} did not connect in {self._offer_wait_s:g} s", transient=True
             ) from None
-        viewer = session.viewer = RTCPeerConnection()
+        viewer = session.viewer = RTCPeerConnection(LOCAL)
         self._watch(viewer, session_id, MediaEnd.CLOSED)
         if audio:
 
@@ -141,7 +140,7 @@ class SatelliteMedia(MediaRelay):
         session = self._sessions.get(str(body.get("session", "")))
         if session is None or session.device_id != device_id or session.device.done():
             raise PermissionError("no session of this device waits for its connection")
-        connection = RTCPeerConnection()
+        connection = RTCPeerConnection(LOCAL)
         self._watch(connection, session.id, MediaEnd.DEVICE_LEFT)
 
         @connection.on("track")

@@ -86,8 +86,10 @@ class SatellitesChannel(Channel, SatelliteHost):
         return f"http://{f'[{host}]' if ':' in host else host}:{self._port}"
 
     def allowed(self, satellite: Satellite) -> frozenset[Capability]:
-        """What a paired device is granted on its link: its pairing's capabilities the core can serve."""
-        return satellite.capabilities if self._voice else satellite.capabilities - AUDIO
+        """What a paired device is granted on its link: its pairing's capabilities the core can serve. Its audio
+        serves calls even without a voice (`welcome` then says the core does not talk: no voice offers); without
+        media to relay either, nothing serves it."""
+        return satellite.capabilities if self._voice or self._media else satellite.capabilities - AUDIO
 
     async def serve(self, assistant: Assistant) -> None:
         if self._hosting is None:
@@ -154,7 +156,7 @@ class SatellitesChannel(Channel, SatelliteHost):
     ) -> None:
         assert self._hosting is not None
         pairing, journal = self._hosting
-        link = SatelliteLink(socket, satellite, manifest, journal, allowed=allowed,
+        link = SatelliteLink(socket, satellite, manifest, journal, allowed=allowed, voice=self._voice is not None,
                              reported=lambda status: pairing.reported(satellite.id, status))  # fmt: skip
         self._links[satellite.id] = link
         try:
