@@ -79,7 +79,7 @@ from nestor.modules.journal import Journal
 from nestor.modules.memory import Memories, SearchIndex
 from nestor.modules.memory.assistant import MemoryTools
 from nestor.modules.memory.episodes import Consolidator, Episodes
-from nestor.modules.satellites import Pairing, SatelliteHost
+from nestor.modules.satellites import MediaSessions, Pairing, SatelliteHost
 from nestor.modules.system import ReleaseFeed, RestartRequested, Updates
 from nestor.modules.web import WebSearch, WebSearchTools
 from nestor.runtime.config import AdapterConfig, ComponentConfig, ConfigError, ModelConfig, NestorConfig, ProblemCode
@@ -223,6 +223,10 @@ class Nestor:
             if isinstance(channel, SatelliteHost):
                 channel.host_satellites(self.pairing, self.journal)
         self.blobs = FileBlobStore(config.data_dir / BLOBS)
+        # watching and calling through the devices, when a host relays their media (aiortc, the `media` extra)
+        relays = (relay for c in self.channels if isinstance(c, SatelliteHost) and (relay := c.media_relay()))
+        relay = next(relays, None)
+        self.media = MediaSessions(self.journal, self.pairing, relay, self.blobs) if relay else None
         # executors reach Nestor's MCP server where the admin is: its public address, and keys kept in the vault
         public_url = config.admin.public_url if config.admin else None
         self.executor_keys: ExecutorKeys | None = None
@@ -437,6 +441,7 @@ class Nestor:
             self.accounts.activity,
             self.accounts,
             self.pairing,
+            *([self.media] if self.media else []),  # after the pairing: it reads who may watch
             *connections,
             *self.models.values(),
             *self._memory_parts,  # after its embedder

@@ -29,6 +29,8 @@ PERSON_DETECTION = Capability("vision.person_detection")
 SPEECH_ACTIVITY = Capability("audio.speech_activity")
 IDENTIFY = Capability("device.identify")  # it can make itself noticed (blink, wiggle, chime): an aid, never a proof
 UPDATE = Capability("device.update")  # it can install a newer version of its own software, on a person's request
+VIDEO_CAPTURE = Capability("video.capture")  # it films, only in a session a person opened (`intent.media.open`)
+MEDIA_INDICATOR = Capability("media.indicator")  # it shows that a session is open (a light, a screen)
 
 _SLUG = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")  # device ids and rooms end up in addresses (`satellites:salon`)
 _CAPABILITY = re.compile(r"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$")
@@ -274,6 +276,17 @@ class Satellite:
     protocol: str  # the protocol version it speaks, as last declared
     brand: str | None = None
     name: str | None = None  # what the household calls it, given when it was added
+    access: "MediaAccess" = field(default_factory=lambda: MediaAccess())
+
+
+@dataclass(frozen=True, slots=True)
+class MediaAccess:
+    """Who of the household may watch a device or call through it, besides its owners, and whether its camera may
+    film at all. Set by whoever manages satellites; nobody by default."""
+
+    viewers: frozenset[PersonId] = frozenset()
+    callers: frozenset[PersonId] = frozenset()
+    camera: bool = True
 
 
 class UpdateState(StrEnum):

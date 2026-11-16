@@ -2,8 +2,10 @@
 Never a token, never a code in clear: only their hashes."""
 
 from datetime import datetime
+from enum import StrEnum
 
 from nestor.core import Capability, Event, PersonId
+from nestor.modules.journal import FileRef
 from nestor.modules.satellites.types import Device, PairingMethod, Proof, Software, UpdateState
 
 
@@ -128,3 +130,54 @@ class SpeechActivityObserved(Event, event_type="observation.speech.activity"):
     device_id: str
     room: str
     active: bool
+
+
+class SatelliteMediaAccessSet(Event, event_type="satellite.media.access.set"):
+    """Who may watch the device or call through it besides its owners, and whether its camera may film."""
+
+    device_id: str
+    viewers: tuple[PersonId, ...] = ()
+    callers: tuple[PersonId, ...] = ()
+    camera: bool = True
+    by: PersonId | None = None
+
+
+class MediaEnd(StrEnum):
+    """Why a media session ended."""
+
+    CLOSED = "closed"  # whoever opened it closed it
+    TIMED_OUT = "timed_out"  # its longest duration passed
+    SIGNED_OUT = "signed_out"  # the admin session it belonged to ended, or lost the right to it
+    DEVICE_LEFT = "device_left"  # the device's link or connection went down
+    FAILED = "failed"  # it could not be set up: the device did not answer, or the connection failed
+
+
+class MediaSessionOpened(Event, event_type="media.session.opened"):
+    """A person watches a device (`video`) or calls through it (`audio`, both ways), until `MediaSessionClosed`."""
+
+    session_id: str
+    device_id: str
+    room: str
+    video: bool
+    audio: bool
+    max_s: int
+    person: PersonId | None = None
+    account_id: str | None = None
+
+
+class MediaSessionClosed(Event, event_type="media.session.closed"):
+    session_id: str
+    device_id: str
+    room: str
+    duration_s: float
+    reason: MediaEnd
+
+
+class SnapshotTaken(Event, event_type="media.snapshot.taken"):
+    """A still picture of what a device films, for a person (`account_id`) or for the agent asked by `person`."""
+
+    device_id: str
+    room: str
+    file: FileRef
+    person: PersonId | None = None
+    account_id: str | None = None

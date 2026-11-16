@@ -28,6 +28,8 @@ scope-name = { $scope ->
     [schedules-manage-own] gérer ses propres réveils
     [messages-read-all] lire tous les messages et confirmations
     [messages-read-own] lire ses propres messages et confirmations
+    [media-view] regarder les caméras qui lui sont ouvertes
+    [media-call] appeler par les satellites qui lui sont ouverts
    *[other] { $scope }
 }
 invitation-status = { $status ->

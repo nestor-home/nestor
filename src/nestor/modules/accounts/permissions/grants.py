@@ -12,6 +12,8 @@ _MEMBER = _OWN | {
     Scope.TASKS_MANAGE_OWN,
     Scope.WATCHES_MANAGE_OWN,
     Scope.SCHEDULES_MANAGE_OWN,
+    Scope.MEDIA_VIEW,  # each device still lists who may (`MediaAccess`)
+    Scope.MEDIA_CALL,
 }
 _ADMIN = _MEMBER | {
     Scope.ACCOUNTS_MANAGE,

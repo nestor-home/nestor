@@ -182,6 +182,30 @@ journal-detail-allowed = { $count ->
    *[other] Allowed: { $capabilities }
 }
 journal-satellite-revoked = Satellite { $device } revoked
+journal-satellite-media-access = { $device }: { $viewers ->
+    [0] nobody but the owners may watch it
+    [one] one person may watch it
+   *[other] { $viewers } people may watch it
+}, { $callers ->
+    [0] nobody but the owners may call through it
+    [one] one may call through it
+   *[other] { $callers } may call through it
+}, camera { $camera ->
+    [off] off
+   *[on] on
+}
+journal-media-opened = { $purpose ->
+    [call] Call through { $device } ({ $room })
+   *[view] Watching { $device } ({ $room })
+}
+journal-media-closed = { $device }: session ended after { $seconds } s, { $reason ->
+    [timed_out] its longest duration passed
+    [signed_out] its viewer signed out
+    [device_left] the device left
+    [failed] it could not be set up
+   *[closed] closed
+}
+journal-media-snapshot = Picture taken by { $device } ({ $room })
 journal-satellite-connected = Satellite { $device } connected ({ $room })
 journal-satellite-disconnected = Satellite { $device } disconnected ({ $room })
 journal-detail-software = { $name } { $version }

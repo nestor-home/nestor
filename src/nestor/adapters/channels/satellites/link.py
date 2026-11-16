@@ -8,6 +8,7 @@ service keeps it). What the device was not allowed is ignored.
 """
 
 import asyncio
+import base64
 import contextlib
 import json
 import logging
@@ -17,7 +18,7 @@ from typing import Any
 
 from fastapi import WebSocket
 
-from nestor.core import Capabilities, Capability, ContractError
+from nestor.core import Capabilities, Capability, ContractError, ProviderError
 from nestor.modules.behavior import EXPRESSION, HEAD_MOTION, Behavior, Body, Expression
 from nestor.modules.journal import Journal
 from nestor.modules.satellites import (
@@ -70,6 +71,7 @@ class SatelliteLink(Online):
         self._unacknowledged: dict[str, tuple[float, str]] = {}
         self._outbox: asyncio.Queue[dict[str, Any] | None] = asyncio.Queue()
         self._typed: asyncio.Queue[str | None] = asyncio.Queue()
+        self._pictures: dict[str, asyncio.Future[bytes]] = {}  # by the id of the intent that asked for each
         self._closed = asyncio.Event()
 
     @property
@@ -85,14 +87,30 @@ class SatelliteLink(Online):
         """Ask the device to install `version` of its software (it was allowed `device.update`)."""
         self.send(wire.UpdateIntent(version=version))
 
-    def send(self, message: wire.Message) -> None:
-        if self._closed.is_set():
-            return
-        self._forget_overdue()
+    def send(self, message: wire.Message) -> str:
+        """Queue `message` for the device; its id."""
         data = wire.encode(message)
+        if self._closed.is_set():
+            return data["id"]
+        self._forget_overdue()
         if message.message_type.startswith("intent."):
             self._unacknowledged[data["id"]] = (time.monotonic(), message.message_type)
         self._outbox.put_nowait(data)
+        return data["id"]
+
+    async def snapshot(self, timeout_s: float) -> bytes:
+        """A still picture from the device's camera (it was allowed `video.capture`): its JPEG."""
+        asked = self.send(wire.SnapshotIntent())
+        picture = self._pictures[asked] = asyncio.get_running_loop().create_future()
+        try:
+            async with asyncio.timeout(timeout_s):
+                return await picture
+        except TimeoutError:
+            raise ProviderError(
+                SOURCE, f"{self.satellite.id} sent no picture in {timeout_s:g} s", transient=True
+            ) from None
+        finally:
+            self._pictures.pop(asked, None)
 
     def show(self, text: str, *, final: bool = True) -> None:
         """The assistant's words, to show: in as many `intent.text` as the protocol's size needs, cut
@@ -186,6 +204,11 @@ class SatelliteLink(Online):
                 )
             case wire.UpdateStatusReport(state=state, version=version, notes=notes):
                 await self._reported(UpdateStatus(state, version, notes))
+            case wire.SnapshotReport(of=asked, jpeg=jpeg):
+                if (picture := self._pictures.get(asked)) is not None and not picture.done():
+                    picture.set_result(base64.b64decode(jpeg))
+                else:
+                    logger.warning("satellite %s sent a picture nobody asked for: ignored", satellite.id)
 
     def _forget_overdue(self) -> None:
         deadline = time.monotonic() - self._ack_timeout_s

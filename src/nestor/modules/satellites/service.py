@@ -42,6 +42,7 @@ from nestor.modules.satellites.events import (
     SatelliteDisconnected,
     SatelliteEnrollmentRefused,
     SatelliteIdentifyRequested,
+    SatelliteMediaAccessSet,
     SatellitePaired,
     SatellitePairingRequested,
     SatelliteRevoked,
@@ -56,6 +57,7 @@ from nestor.modules.satellites.types import (
     AdditionStatus,
     Device,
     Manifest,
+    MediaAccess,
     PairingMethod,
     PairingState,
     PairingStatus,
@@ -202,10 +204,12 @@ class Pairing(Component):
 
     async def start(self) -> None:
         """Rebuild the paired satellites (the latest pairing of each device, unless revoked since, with
-        the software it last connected with and when it was last seen) and the additions in progress."""
+        the software it last connected with, when it was last seen and who may watch or call it) and the additions
+        in progress."""
         history = await self.journal.history(
             SatellitePaired,
             SatelliteRevoked,
+            SatelliteMediaAccessSet,
             SatelliteConnected,
             SatelliteDisconnected,
             SatelliteAdditionStarted,
@@ -219,6 +223,9 @@ class Pairing(Component):
                     self._satellites[event.device.id] = _satellite(event)
                 case SatelliteRevoked():
                     self._satellites.pop(event.device_id, None)
+                case SatelliteMediaAccessSet() if event.device_id in self._satellites:
+                    access = MediaAccess(frozenset(event.viewers), frozenset(event.callers), event.camera)
+                    self.set_access(event.device_id, access)
                 case SatelliteConnected():
                     self._declared(event.device_id, event.software, event.protocol)
                     self._seen[event.device_id] = event.at
@@ -235,6 +242,11 @@ class Pairing(Component):
 
     def satellites(self) -> list[Satellite]:
         return sorted(self._satellites.values(), key=lambda s: s.id)
+
+    def set_access(self, device_id: str, access: MediaAccess) -> Satellite:
+        """Who may watch or call through the device (journaled by `MediaSessions.set_access`)."""
+        satellite = self._satellites[device_id] = replace(self._satellites[device_id], access=access)
+        return satellite
 
     def pending(self) -> list[PendingPairing]:
         self._expire()

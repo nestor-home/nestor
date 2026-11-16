@@ -1,5 +1,5 @@
 version = 1
-revision = 5
+revision = 3
 requires-python = ">=3.12"
 resolution-markers = [
     "python_full_version >= '3.14'",
@@ -1288,6 +1288,9 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+media = [
+    { name = "aiortc" },
+]
 voice = [
     { name = "pipecat-ai", extra = ["webrtc"] },
 ]
@@ -1311,6 +1314,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "aioimaplib", specifier = ">=2.0.3" },
+    { name = "aiortc", marker = "extra == 'media'", specifier = "==1.15.0" },
     { name = "cryptography", specifier = ">=50.0.2" },
     { name = "fastapi", specifier = ">=0.162.0" },
     { name = "fluent-runtime", specifier = ">=0.4.0" },
@@ -1328,7 +1332,7 @@ requires-dist = [
     { name = "uvicorn", specifier = ">=0.54.0" },
     { name = "websockets", specifier = ">=17" },
 ]
-provides-extras = ["voice", "voice-id"]
+provides-extras = ["voice", "media", "voice-id"]
 
 [package.metadata.requires-dev]
 dev = [

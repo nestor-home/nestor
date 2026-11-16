@@ -25,6 +25,7 @@ from nestor.admin.api.v1.home import routes as home
 from nestor.admin.api.v1.household import routes as household
 from nestor.admin.api.v1.i18n import routes as i18n
 from nestor.admin.api.v1.journal import routes as journal
+from nestor.admin.api.v1.media import routes as media
 from nestor.admin.api.v1.memories import routes as memories
 from nestor.admin.api.v1.messages import routes as messages
 from nestor.admin.api.v1.satellites import routes as satellites
@@ -72,6 +73,7 @@ RESOURCES = (
     connections,
     satellites,
     journal,
+    media,
     tasks,
     executors,
     watches,

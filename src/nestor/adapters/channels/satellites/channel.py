@@ -12,6 +12,7 @@ place, not an account: whoever is there may speak, and who it is comes from thei
 
 import asyncio
 import logging
+from collections.abc import Awaitable, Callable
 from typing import TYPE_CHECKING
 
 from fastapi import WebSocket
@@ -32,6 +33,7 @@ from nestor.modules.satellites import (
 )
 
 if TYPE_CHECKING:
+    from nestor.adapters.channels.satellites.media import SatelliteMedia
     from nestor.adapters.channels.satellites.voice.audio import SatelliteVoice
 
 logger = logging.getLogger(__name__)
@@ -67,6 +69,7 @@ class SatellitesChannel(Channel, SatelliteHost):
         self._assistant: Assistant | None = None
         self._hosting: tuple[Pairing, Journal] | None = None
         self._links: dict[str, SatelliteLink] = {}  # device id → its current link
+        self._media = _media(self._links, self._calling)
         self._gateway: SatelliteGateway | None = None
         self._server: DeviceServer | None = None
         self._closed = asyncio.Event()
@@ -94,7 +97,10 @@ class SatellitesChannel(Channel, SatelliteHost):
             self._voice.serve(assistant, self._links)
         if self._closed.is_set():
             return
-        gateway = SatelliteGateway(self._hosting[0], on_link=self._linked, allowed=self.allowed, audio=self._voice)
+        offer = self._media.device_offer if self._media else None
+        gateway = SatelliteGateway(
+            self._hosting[0], on_link=self._linked, allowed=self.allowed, audio=self._voice, media=offer
+        )
         self._gateway = gateway
         self._server = DeviceServer(host=self._host, port=self._port, gateway=gateway)
         logger.info("satellites: %s serving on http://%s:%d", self.channel_id, self._host, self._port)
@@ -125,8 +131,14 @@ class SatellitesChannel(Channel, SatelliteHost):
         for link in showing:
             link.show(text)
 
+    def media_relay(self) -> "SatelliteMedia | None":
+        """What watching and calling through the devices go through: `None` without aiortc (the `media` extra)."""
+        return self._media
+
     async def close(self) -> None:
         self._closed.set()
+        if self._media is not None:
+            await self._media.close()
         if self._voice is not None:
             await self._voice.close()
         if self._gateway is not None:
@@ -151,8 +163,19 @@ class SatellitesChannel(Channel, SatelliteHost):
         finally:
             if self._links.get(satellite.id) is link:
                 del self._links[satellite.id]
+                if self._media is not None:
+                    await self._media.left(satellite.id)
                 if self._voice is not None:
                     await self._voice.hang_up(link)
+
+    async def _calling(self, link: SatelliteLink, active: bool) -> None:
+        """A call goes through the device (`active`) or ended: its voice steps aside meanwhile."""
+        if self._voice is None:
+            return
+        if active:
+            await self._voice.hold(link)
+        else:
+            self._voice.release(link.satellite.id)
 
     async def _typed(self, link: SatelliteLink, text: str) -> None:
         """A typed turn: answered in writing where it shows text, otherwise aloud (T3)."""
@@ -177,3 +200,15 @@ class SatellitesChannel(Channel, SatelliteHost):
             message, written = "".join(written).strip(), []
             if message:
                 link.show(message, final=part.last)
+
+
+def _media(
+    links: dict[str, SatelliteLink], calling: "Callable[[SatelliteLink, bool], Awaitable[None]]"
+) -> "SatelliteMedia | None":
+    """The media relay, when aiortc is installed (the `media` extra)."""
+    try:
+        from nestor.adapters.channels.satellites.media import SatelliteMedia
+    except ImportError:
+        logger.info("satellites: install the media extra to watch and call through devices")
+        return None
+    return SatelliteMedia(links, calling=calling)

@@ -46,6 +46,7 @@ class SatelliteVoice(AudioOffers):
         self._by_transport: dict[BaseTransport, VoiceSession] = {}
         self._closed = False
         self._running: set[asyncio.Task[None]] = set()
+        self._held: set[str] = set()  # devices in a call: no voice session meanwhile
 
     def serve(self, assistant: Assistant, links: Mapping[str, SatelliteLink]) -> None:
         """Answer with `assistant` the devices whose link is up in `links` (device id → its link)."""
@@ -57,6 +58,16 @@ class SatelliteVoice(AudioOffers):
         self._owners = {pc: owner for pc, owner in self._owners.items() if owner != device}
         if session := self._sessions.get(device):
             await session.stop()
+
+    async def hold(self, link: SatelliteLink) -> None:
+        """A call goes through the device: its voice session ends, and none starts until `release`, so nothing of
+        the call reaches the assistant."""
+        self._held.add(link.satellite.id)
+        await self.hang_up(link)
+
+    def release(self, device_id: str) -> None:
+        """The call ended: the device may offer its voice again."""
+        self._held.discard(device_id)
 
     async def offer(self, device_id: str, body: dict[str, Any]) -> dict[str, Any]:
         link = self._link(device_id, body.get("pc_id"))
@@ -140,6 +151,8 @@ class SatelliteVoice(AudioOffers):
         link = self._links.get(device_id)
         if link is None:
             raise PermissionError("this device has no link up")
+        if device_id in self._held:
+            raise PermissionError("this device is in a call")
         if pc_id is not None and self._owners.get(pc_id) != device_id:
             raise PermissionError("this peer connection belongs to no session of this device")
         return link
