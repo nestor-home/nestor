@@ -8,7 +8,9 @@ still running; otherwise every refusal reads the same. Calls are limited per key
 
 - `server.py`: the MCP server and the endpoint the admin serves, assembled from the tools;
 - `guard.py`: the key and the rate, checked before the MCP app sees a request;
-- `access.py`: what every tool builds on (its task, its requester, what was sent with it);
+- `access.py`: what every tool builds on (its task, its requester, when its conversation started);
+- `links.py` and `files.py`: short-lived links to the tasks' files, and the endpoint behind them (`/mcp/files/…`):
+  files never go through the executor's model;
 - `tools/`: the tools, a module per subject, each with a `register(mcp, access)`; a new subject is a new module
   listed in `tools/__init__.py`.
 """

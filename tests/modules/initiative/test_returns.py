@@ -36,6 +36,7 @@ from nestor.modules.conversation import (
     Persona,
     Source,
 )
+from nestor.modules.conversation.persona import MUST_TELL
 from nestor.modules.household import Account, Household, Person
 from nestor.modules.initiative import Courier, Delivered, DeliveryFailed, DeliveryWithheld, Returns, ToolResultDelivered
 from nestor.modules.journal import Journal
@@ -113,8 +114,10 @@ class Home:
         notify: Notify = Notify.AUTO,
         status: TaskStatus = TaskStatus.COMPLETED,
         still_talking: bool = True,
+        by_mathis: bool = False,
     ) -> None:
-        """A task asked aloud; `still_talking`: its spoken conversation goes on when it ends."""
+        """A task asked aloud; `still_talking`: its spoken conversation goes on when it ends; `by_mathis`: in his own
+        turn, rather than in one Nestor opened (a wake-up that delegates)."""
         if still_talking:
             await self.agent.conversations.turn(VOICE, Medium.SPOKEN)
         await self.journal.publish(
@@ -126,6 +129,7 @@ class Home:
                 origin=VOICE,
                 requested_by=MATHIS.id,
                 notify=notify,
+                asked=by_mathis,
             )
         )
         await self.journal.publish(
@@ -274,6 +278,16 @@ async def test_a_failed_task_may_not_be_left_untold() -> None:
     assert len(await home.journal.history(DeliveryFailed)) == 1
 
 
+async def test_what_a_person_asked_for_is_told_even_when_it_found_nothing() -> None:
+    """They wait for it: the model is told it must answer, and silence is a failed delivery, not "nothing to tell"."""
+    home = Home(model=ScriptedModel(f"{SILENT} rien d'autre à signaler"))
+    await home.task("t1", notify=Notify.MESSAGE, still_talking=False, by_mathis=True)
+    async with home.returns():
+        pass
+    assert MUST_TELL in str(home.model.requests[0].messages[0].content)
+    assert await home.journal.history(DeliveryWithheld) == [] and len(await home.journal.history(DeliveryFailed)) == 1
+
+
 @pytest.mark.parametrize("known", [True, False])
 async def test_a_task_from_an_unknown_person_stays_in_its_conversation(known: bool) -> None:
     home = Home()
@@ -384,9 +398,11 @@ async def test_a_file_a_delegated_task_made_goes_with_the_answer_that_brings_its
         await until(home.journal, TaskDelivered)
 
     assert home.telegram.sent == [(TELEGRAM, "Voici ton rapport.")]
-    assert [[(a.kind, a.data) for a in files] for files in home.telegram.files] == [[(AttachmentKind.FILE, pdf)]]
+    assert [[(a.name, a.data) for a in files] for files in home.telegram.files] == [[("rapport.pdf", pdf)]]
+    turn = str(home.model.requests[0].messages[0].content)
+    assert "go with your answer" in turn and "rapport.pdf" in turn, "the model knows the file goes with its words"
     [ended] = await home.journal.history(TaskEnded)
-    assert [home.blobs.blobs[f.digest] for f in ended.files] == [pdf]
+    assert [home.blobs.blobs[f.blob.digest] for f in ended.files] == [pdf]
 
 
 async def test_a_call_cut_short_by_a_restart_is_said_to_have_failed() -> None:

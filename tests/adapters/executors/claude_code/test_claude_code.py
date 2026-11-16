@@ -15,9 +15,11 @@ from nestor.core import Health
 from nestor.core.i18n import Locale, Message
 from nestor.modules.channels import AttachmentKind
 from nestor.modules.cognition.delegation import Assignment, NestorAccess, Progress, TaskStatus
+from nestor.modules.journal import BlobRef, FileRef
 from nestor.runtime import Services
 from nestor.testing.cognition import ExecutorContract
 from nestor.testing.i18n import EchoLocalizer
+from nestor.testing.journal import MemoryBlobStore
 
 FAKE = Path(__file__).with_name("fake_claude.py")
 
@@ -65,11 +67,8 @@ async def test_the_session_runs_where_and_how_the_configuration_says(tmp_path: P
     def given(flag: str) -> str:
         return arguments[arguments.index(flag) + 1]
 
-    assert (seen["objective"], seen["cwd"], seen["api_key"]) == (
-        "--help me: corrige le test",
-        str(tmp_path.resolve()),
-        "sk-ant-test",
-    )
+    assert (seen["objective"], seen["api_key"]) == ("--help me: corrige le test", "sk-ant-test")
+    assert Path(seen["cwd"]).parent == tmp_path.resolve(), "in a folder of its own, under the working directory"
     assert "sk-ant-test" not in " ".join(arguments)
     assert {"-p", "--verbose"} <= set(arguments) and given("--output-format") == "stream-json"
     assert steps[0] == f"session {given('--session-id')}"
@@ -87,7 +86,7 @@ async def test_the_report_comes_back_with_its_files_and_the_tool_calls_are_progr
     assert [(f.name, f.kind, f.media_type, f.data) for f in outcome.files] == [
         ("rapport.md", AttachmentKind.FILE, "text/markdown", b"# Rapport")
     ]
-    assert steps[1:] == [f"Write: {tmp_path.resolve() / 'rapport.md'}", "Bash: ls -la", "TodoWrite"]
+    assert steps[1].startswith(f"Write: {tmp_path.resolve()}/task-") and steps[2:] == ["Bash: ls -la", "TodoWrite"]
 
 
 @pytest.mark.parametrize(("behave", "report"), [("text", "Fini."), ("odd", '{"summary": "Fini."}'), ("huge", "Fini.")])
@@ -110,10 +109,10 @@ async def test_a_failed_or_crashed_run_is_a_failure_with_its_reason(tmp_path: Pa
     assert (outcome.status, outcome.error) == (TaskStatus.FAILED, error)
 
 
-async def test_only_files_within_the_working_directory_come_back(tmp_path: Path) -> None:
+async def test_only_files_within_the_task_s_own_folder_come_back(tmp_path: Path) -> None:
     folder = tmp_path / "work"
     folder.mkdir()
-    (tmp_path / "secret.txt").write_text("secret")
+    (folder / "secret.txt").write_text("secret")  # in the working directory, another task's say
     async with claude(folder, "files", max_file_bytes=1_000) as executor:
         outcome = await executor.run(Assignment("Fais les fichiers."), Progress())
     assert [(f.name, f.data) for f in outcome.files] == [("ok.txt", b"ok")]
@@ -125,6 +124,23 @@ async def test_only_files_within_the_working_directory_come_back(tmp_path: Path)
         ("missing.txt", "missing"),
     ]:
         assert f"{name} ({why})" in outcome.result, name
+
+
+async def test_the_files_sent_with_a_task_wait_in_its_own_folder_and_the_brief_names_them(tmp_path: Path) -> None:
+    record = tmp_path / "record.json"
+    store = MemoryBlobStore()
+    gone = FileRef(BlobRef("0" * 64, 3, "image/png"), "photo.png")  # no longer stored: neither placed nor named
+    sent = (FileRef(await store.put(b"%PDF devis", "application/pdf"), "devis.pdf"), gone)
+    folders = []
+    async with claude(tmp_path / "work", record=("--record", str(record))) as executor:
+        (tmp_path / "work").mkdir()
+        for _ in range(2):
+            await executor.run(Assignment("Corrige le devis.", files=sent, reader=store.get), Progress())
+            seen = json.loads(record.read_text())
+            folders.append(seen["cwd"])
+            assert seen["found"] == {"devis.pdf": "%PDF devis"}
+            assert f"Files sent with the task, in {seen['cwd']}: devis.pdf." in seen["objective"]
+    assert folders[0] != folders[1], "each task its own folder"
 
 
 async def test_a_stop_ends_even_a_process_that_ignores_it(tmp_path: Path) -> None:

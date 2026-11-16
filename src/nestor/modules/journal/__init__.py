@@ -7,6 +7,6 @@ to the live subscribers.
 
 from nestor.modules.journal.ports import BlobStore, EventLog
 from nestor.modules.journal.service import Journal, Subscription
-from nestor.modules.journal.types import BlobRef, Entry, LogQuery
+from nestor.modules.journal.types import BlobRef, Entry, FileRef, LogQuery
 
-__all__ = ["BlobRef", "BlobStore", "Entry", "EventLog", "Journal", "LogQuery", "Subscription"]
+__all__ = ["BlobRef", "BlobStore", "Entry", "EventLog", "FileRef", "Journal", "LogQuery", "Subscription"]

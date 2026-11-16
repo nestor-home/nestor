@@ -21,10 +21,11 @@ def register(mcp: MCPServer, access: TaskAccess) -> None:
     )
     async def ask_requester(task: str, question: str, ctx: Context) -> dict[str, object]:
         found = await access.task(ctx, task, "ask_requester")
+        requester = access.requester(found)
         asked = await book.request(
-            access.requester(found),
+            requester,
             f'{found.executor}, working on "{found.objective[:OBJECTIVE_CHARS]}": {question}',
-            requested_by=None,
+            requested_by=requester,  # the task acts for whoever handed it over
             origin=found.origin,
             expects_reply=True,
             exchange=found.exchange,

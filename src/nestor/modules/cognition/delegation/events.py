@@ -3,13 +3,14 @@
 from nestor.core import Event, PersonId
 from nestor.modules.channels import Address, Exchange
 from nestor.modules.cognition.delegation.types import Notify, TaskStatus
-from nestor.modules.journal import BlobRef
+from nestor.modules.journal import FileRef
 
 
 class TaskStarted(Event, event_type="task.started"):
     """`exchange` is the conversation and turn that delegated it, when one did; `thread`, what its result continues
     (a recurring wake-up that delegated it: `Notification.thread`); `capability`, the digest of the value its executor
-    calls Nestor's MCP server with for it (never the value), when it reaches it."""
+    calls Nestor's MCP server with for it (never the value), when it reaches it; `given`, the files sent with it;
+    `asked`, whether a person asked for it in their own turn, rather than Nestor (a wake-up)."""
 
     task_id: str
     objective: str
@@ -20,6 +21,8 @@ class TaskStarted(Event, event_type="task.started"):
     exchange: Exchange | None = None
     thread: str | None = None
     capability: str | None = None
+    given: tuple[FileRef, ...] = ()
+    asked: bool = False  # by a person, in their own turn: its result is always told
 
 
 class TaskAttached(Event, event_type="task.attached"):
@@ -46,7 +49,7 @@ class TaskEnded(Event, event_type="task.ended"):
     result: str | None = None
     error: str | None = None
     duration_s: float
-    files: tuple[BlobRef, ...] = ()  # what the executor made, to go with the answer that brings the result
+    files: tuple[FileRef, ...] = ()  # what the executor made, to go with the answer that brings the result
 
 
 class TaskDelivered(Event, event_type="task.delivered"):
@@ -60,8 +63,7 @@ class TaskFileAdded(Event, event_type="task.file.added"):
     """A file the executor handed back while it worked (`attach_file`): it goes with the result."""
 
     task_id: str
-    file: BlobRef
-    name: str
+    file: FileRef
 
 
 class ExecutorKeyIssued(Event, event_type="executor.key.issued"):

@@ -11,7 +11,7 @@ from nestor.modules.cognition.model import Document, Image
 from nestor.modules.cognition.tools import Results, ToolContext
 from nestor.modules.conversation.ports import DocumentReader
 from nestor.modules.conversation.types import Attached, Outgoing, Read
-from nestor.modules.journal import BlobRef, BlobStore
+from nestor.modules.journal import BlobRef, BlobStore, FileRef
 
 logger = logging.getLogger(__name__)
 
@@ -61,13 +61,17 @@ class Attachments:
         voice = Attachment(kind=AttachmentKind.VOICE, data=audio, media_type=VOICE_TYPE)
         return Outgoing((voice,), (Attached(kind=AttachmentKind.VOICE, blob=blob, transcript=text),))
 
-    async def sent(self, made: Sequence[BlobRef], sends: Collection[AttachmentKind]) -> Outgoing:
-        """The files tools `made` that a channel which `sends` these kinds can send, to send and as kept."""
-        sendable = [blob for blob in made if AttachmentKind.of(blob.media_type) in sends]
+    async def sent(self, made: Sequence[FileRef], sends: Collection[AttachmentKind]) -> Outgoing:
+        """The files tools `made` that a channel which `sends` these kinds can send, to send and as kept, by name."""
+        named = {f.blob.digest: f.name for f in made}
+        sendable = [f.blob for f in made if AttachmentKind.of(f.blob.media_type) in sends]
         found = [(AttachmentKind.of(blob.media_type), blob, data) async for blob, data in self._stored(sendable)]
         return Outgoing(
-            tuple(Attachment(kind=kind, data=data, media_type=blob.media_type) for kind, blob, data in found),
-            tuple(Attached(kind=kind, blob=blob) for kind, blob, _ in found),
+            tuple(
+                Attachment(kind=kind, data=data, media_type=blob.media_type, name=named[blob.digest])
+                for kind, blob, data in found
+            ),
+            tuple(Attached(kind=kind, blob=blob, name=named[blob.digest]) for kind, blob, _ in found),
         )
 
     async def shown(self, attached: Sequence[Attached]) -> Mapping[str, Image | Document]:

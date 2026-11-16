@@ -5,7 +5,7 @@ from collections.abc import Mapping
 
 from nestor.core import Event, PersonId
 from nestor.modules.channels import Address, Exchange
-from nestor.modules.journal import BlobRef
+from nestor.modules.journal import FileRef
 
 
 class ToolCalled(Event, event_type="agent.tool.called"):
@@ -29,7 +29,7 @@ class ToolCompleted(Event, event_type="agent.tool.completed"):
     output: str
     ok: bool
     duration_s: float
-    files: tuple[BlobRef, ...] = ()
+    files: tuple[FileRef, ...] = ()
     exchange: Exchange | None = None
 
 
@@ -45,6 +45,7 @@ class ToolDeferred(Event, event_type="agent.tool.deferred"):
     person: PersonId | None = None
     exchange: Exchange | None = None
     thread: str | None = None  # what its result continues (`Notification.thread`)
+    asked: bool = False  # a person asked for it in their own turn: its result is always told
 
 
 class ToolReturned(Event, event_type="agent.tool.returned"):
@@ -55,7 +56,7 @@ class ToolReturned(Event, event_type="agent.tool.returned"):
     output: str
     ok: bool
     duration_s: float
-    files: tuple[BlobRef, ...] = ()  # what it made, to go with the answer to its notification
+    files: tuple[FileRef, ...] = ()  # what it made, to go with the answer to its notification
     exchange: Exchange | None = None
 
 

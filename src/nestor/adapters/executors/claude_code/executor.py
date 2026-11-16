@@ -1,6 +1,7 @@
 """Claude Code, run headless, running Nestor's tasks."""
 
 import asyncio
+import functools
 import json
 import shutil
 import tempfile
@@ -18,6 +19,7 @@ from nestor.adapters.executors.common import (
     REPORT_SCHEMA,
     Report,
     Unreadable,
+    task_folder,
 )
 from nestor.adapters.executors.process import Child
 from nestor.core import Health
@@ -71,16 +73,28 @@ class ClaudeCodeExecutor(Executor):
         return {"permission_mode": self._mode.value} | ({"model": self._model} if self._model else {})
 
     async def run(self, assignment: Assignment, progress: Progress) -> Outcome:
+        """In a folder of its own under the working directory, where the files sent with the task are placed."""
+        try:
+            folder, placed = await self._prepare(assignment)
+        except OSError as error:
+            return Outcome.failed(f"the task's folder could not be made: {error.strerror or error}")
         with tempfile.TemporaryDirectory(prefix="nestor-claude-") as private:  # its key never on a command line
             servers = _mcp_config(assignment.access, Path(private)) if assignment.access else None
-            return await self._run(assignment.brief(), progress, servers)
+            return await self._run(assignment.brief(str(folder), placed), progress, servers, folder)
 
-    async def _run(self, objective: str, progress: Progress, servers: Path | None) -> Outcome:
+    async def _prepare(self, assignment: Assignment) -> tuple[Path, list[str]]:
+        """The task's folder, and the names of the files placed in it."""
+        folder, placed = self._cwd / task_folder(), []
+        await asyncio.to_thread(folder.mkdir)
+        async for name, data in assignment.placed():  # plain names, never twice
+            await asyncio.to_thread((folder / name).write_bytes, data)
+            placed.append(name)
+        return folder, placed
+
+    async def _run(self, objective: str, progress: Progress, servers: Path | None, folder: Path) -> Outcome:
         session = str(uuid.uuid4())
         try:
-            child = await Child.start(
-                [*self._command, *self._arguments(session, servers)], cwd=self._cwd, env=self._env
-            )
+            child = await Child.start([*self._command, *self._arguments(session, servers)], cwd=folder, env=self._env)
         except OSError as error:
             return Outcome.failed(f"Claude Code could not start: {error.strerror or error}")
         progress(f"session {session}")
@@ -99,7 +113,7 @@ class ClaudeCodeExecutor(Executor):
         if result.get("is_error") or result.get("subtype") != "success":
             return Outcome.failed(str(result.get("result") or result.get("subtype") or "Claude Code failed"))
         report = Report.of(result.get("structured_output") or result.get("result") or "")
-        return await report.outcome(str(self._cwd), self._read)
+        return await report.outcome(str(folder), functools.partial(self._read, folder))
 
     def _arguments(self, session: str, servers: Path | None) -> list[str]:
         arguments = [
@@ -148,9 +162,10 @@ class ClaudeCodeExecutor(Executor):
                         progress(tool_step(used))
         return result
 
-    async def _read(self, path: str) -> bytes:
-        resolved, root = Path(path).resolve(), self._cwd.resolve()
-        if not resolved.is_relative_to(root):  # a link out of the working directory
+    async def _read(self, folder: Path, path: str) -> bytes:
+        """A file the task made, within its own `folder`."""
+        resolved = Path(path).resolve()
+        if not resolved.is_relative_to(folder.resolve()):  # a link out of the task's folder
             raise Unreadable("outside the working directory")
         if not resolved.is_file():
             raise Unreadable("not a file" if resolved.exists() else "missing")

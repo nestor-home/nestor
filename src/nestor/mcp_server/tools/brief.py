@@ -18,7 +18,7 @@ def register(mcp: MCPServer, access: TaskAccess) -> None:
     @mcp.tool(
         description=(
             "What the task is: its objective, who asked, when and where, the conversation it came from, and the "
-            "files they sent (read one with read_file)."
+            "files they sent (read_file gives a link to each)."
         )
     )
     async def task_brief(task: str, ctx: Context) -> dict[str, object]:
@@ -26,14 +26,13 @@ def register(mcp: MCPServer, access: TaskAccess) -> None:
         persona = nestor.config.persona
         asked_at = found.started_at.astimezone(ZoneInfo(persona.timezone))
         requester = nestor.household.person(found.requested_by) if found.requested_by else None
-        sent = await access.sent(found)
         conversation = (
             await transcript(
                 nestor.journal,
                 nestor.household,
                 address=found.origin,
                 conversation=found.exchange.conversation_id,
-                since=sent.since,
+                since=await access.since(found),
                 assistant=persona.name,
                 timezone=persona.timezone,
             )
@@ -47,8 +46,8 @@ def register(mcp: MCPServer, access: TaskAccess) -> None:
             "channel": found.origin.channel,
             "conversation": conversation[-BRIEF_LINES:],
             "files": [
-                {"file": a.blob.digest, "name": a.name, "media_type": a.blob.media_type, "bytes": a.blob.size}
-                for a in sent.files
+                {"file": g.blob.digest, "name": g.name, "media_type": g.blob.media_type, "bytes": g.blob.size}
+                for g in found.given
             ],
         }
 

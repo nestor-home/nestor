@@ -27,6 +27,7 @@ class TaskFileOut(BaseModel):
     """A file the task handed back; its bytes at `/tasks/{id}/files/{index}`."""
 
     index: int
+    name: str  # as the executor named it
     kind: AttachmentKind
     media_type: str
     size: int  # in bytes
@@ -65,7 +66,13 @@ class TaskOut(BaseModel):
             result=outcome.result if outcome else None,
             error=outcome.error if outcome else None,
             files=[
-                TaskFileOut(index=i, kind=AttachmentKind.of(f.media_type), media_type=f.media_type, size=f.size)
+                TaskFileOut(
+                    index=i,
+                    name=f.name,
+                    kind=AttachmentKind.of(f.blob.media_type),
+                    media_type=f.blob.media_type,
+                    size=f.blob.size,
+                )
                 for i, f in enumerate(afterwards.files.get(task.id, ()))
             ],
         )

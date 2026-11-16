@@ -6,7 +6,7 @@ from typing import Any
 import pytest
 
 from nestor.core import ContractError, PersonId
-from nestor.modules.channels import Address, Attachment, AttachmentKind
+from nestor.modules.channels import Address, Attachment, AttachmentKind, Medium
 from nestor.modules.cognition import (
     Executor,
     Notify,
@@ -23,7 +23,7 @@ from nestor.modules.cognition.delegation import Assignment, ExecutorKeys, Nestor
 from nestor.modules.cognition.delegation.assistant import Delegation
 from nestor.modules.cognition.delegation.service import INTERRUPTED, TaskManager
 from nestor.modules.cognition.tools import ToolContext
-from nestor.modules.conversation import TurnContext
+from nestor.modules.conversation import Attached, Conversations, TurnContext
 from nestor.modules.identity import Speaker
 from nestor.modules.journal import BlobRef, Journal
 from nestor.testing.cognition import (
@@ -102,7 +102,7 @@ async def test_the_files_a_task_made_are_kept_and_one_that_cannot_be_is_said_not
         task = await tasks.delegate("Écris-les", origin=VOICE, requested_by=MATHIS)
         outcome = await tasks.wait(task.id)
     [ended] = await journal.history(TaskEnded)
-    assert [blobs.blobs[f.digest] for f in ended.files] == [b"kept"]
+    assert [blobs.blobs[f.blob.digest] for f in ended.files] == [b"kept"]
     assert ended.result == outcome.result == "Écrits.\nFiles not kept: b.txt (OSError)"
     assert outcome.files == (), "the bytes live in the blob store, not in the task"
     async with TaskManager(Journal(MemoryEventLog()), [Writer()]) as nowhere:
@@ -251,6 +251,42 @@ async def test_the_agent_delegates_follows_and_cancels_through_its_tools(journal
     assert after["recently_finished"][0]["status"] == "cancelled"
 
 
+async def test_the_files_sent_in_the_conversation_go_with_the_task_but_not_what_was_said_aloud() -> None:
+    journal, blobs, remote = Journal(MemoryEventLog()), MemoryBlobStore(), FakeRemote()
+    chat, mathis = Address("telegram", "42"), Speaker.account(MATHIS)
+    devis, other, photo, voice = [
+        await blobs.put(data, media)
+        for data, media in [
+            (b"%PDF devis", "application/pdf"),
+            (b"%PDF autre", "application/pdf"),
+            (b"jpeg", "image/jpeg"),
+            (b"ogg", "audio/ogg"),
+        ]
+    ]
+    conversations = Conversations(journal, ends_after_s=lambda address, medium: 3600)
+    first = await conversations.turn(chat, Medium.WRITTEN)
+    sent = (
+        Attached(AttachmentKind.FILE, devis, "../devis.pdf"),
+        Attached(AttachmentKind.VOICE, voice),
+        Attached(AttachmentKind.IMAGE, photo),
+    )
+    await first.said("Voilà le devis", Medium.WRITTEN, mathis, sent)
+    second = await conversations.turn(chat, Medium.WRITTEN)
+    sent = (Attached(AttachmentKind.FILE, other, "devis.pdf"), Attached(AttachmentKind.FILE, devis, "devis.pdf"))
+    await second.said("Et l'autre", Medium.WRITTEN, mathis, sent)
+    context = ToolContext(address=chat, speaker=mathis, exchange=second.exchange)
+    expected = [("devis.pdf", b"%PDF devis"), ("image.jpg", b"jpeg"), ("devis (2).pdf", b"%PDF autre")]
+    async with TaskManager(journal, [ScriptedRemoteExecutor(remote, duration_s=None)], blobs=blobs) as tasks:
+        tool = next(t for t in Delegation(tasks).tools() if t.name == "delegate_task")
+        task_id = str(data(await tool.run({"objective": "Compare les devis"}, context))["task_id"])
+        await asyncio.sleep(0.01)
+        [run] = remote.runs.values()
+        assert [placed async for placed in run.assignment.placed()] == expected, "plain names, none twice, no voice"
+    async with TaskManager(journal, [ScriptedRemoteExecutor(remote, duration_s=None)], blobs=blobs) as tasks:
+        assert [g.name for g in tasks.tasks[task_id].given] == [name for name, _ in expected], "kept by the journal"
+        await tasks.cancel(task_id)
+
+
 async def test_the_delegation_tools_refuse_bad_arguments(journal: Journal) -> None:
     from nestor.modules.cognition.tools import ToolFailed
 
@@ -356,7 +392,7 @@ async def test_a_file_an_executor_hands_back_while_it_works_goes_with_the_result
         remote.finish(next(iter(remote.runs)), Outcome.completed("Devis prêt."))
         await tasks.wait(task.id)
     [ended] = await journal.history(TaskEnded)
-    assert ended.files == (kept,) and blobs.blobs[kept.digest] == b"%PDF-1.7 devis"
+    assert ended.files == (kept,) and blobs.blobs[kept.blob.digest] == b"%PDF-1.7 devis"
 
 
 async def test_a_revoked_key_stays_revoked_and_the_executor_works_without_nestor_s_tools() -> None:

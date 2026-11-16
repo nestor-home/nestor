@@ -18,6 +18,7 @@ from nestor.adapters.executors.codex import CodexExecutor
 
 RELAY = Path(__file__).with_name("relay.py")
 CWD = "/srv/codex/work"
+TASK = f"{CWD}/task"  # in `files`, `links` and the report's files: the task's own folder, whatever Nestor names it
 REPORT = {"report": "C'est fait.", "files": []}
 ITEMS = (  # what a turn does, as `item/started` says it
     {"type": "userMessage", "id": "u1", "content": []},
@@ -56,7 +57,8 @@ class FakeCodex:
     `asks`: the turn sends this approval request first and keeps the answer in `answers`; `files`: what the
     filesystem holds; `report`: the final answer; `refuses`: no thread starts; `garbled`: threads come back in
     another shape; `hangs_up`: the session ends as a thread is asked for; `lags`: the history still reads a
-    finished turn as running; `links`: symbolic links of the filesystem, to the paths they lead to."""
+    finished turn as running; `links`: symbolic links of the filesystem, to the paths they lead to; `folders`: the
+    folders made, in order."""
 
     def __init__(
         self,
@@ -77,6 +79,7 @@ class FakeCodex:
         self.holds, self.fails, self.confirms_stop, self.daemon, self.asks = holds, fails, confirms_stop, daemon, asks
         self.files, self.refuses, self.garbled, self.hangs_up = files or {}, refuses, garbled, hangs_up
         self.lags, self.links = lags, links or {}
+        self.folders: list[str] = []
         self.report = REPORT if report is None else report
         self.threads: dict[str, FakeThread] = {}
         self.requests: list[tuple[str, dict[str, Any]]] = []
@@ -110,7 +113,7 @@ class FakeCodex:
         return CodexExecutor(**options)
 
     def turn(self, ref: str) -> FakeTurn:
-        thread, _, turn = ref.partition(":")
+        thread, turn, *_ = ref.split(":")
         return next(t for t in self.threads[thread].turns if t.id == turn)
 
     async def finish(self, ref: str, *, report: object = None) -> None:
@@ -217,6 +220,17 @@ class FakeCodex:
                 if path not in self.files or path.endswith("locked.txt"):
                     return {"exitCode": 1, "stdout": "", "stderr": f"wc: {path}: open: No such file or directory\n"}
                 return {"exitCode": 0, "stdout": f"  {len(self.files[path])} {path}\n", "stderr": ""}
+            case "fs/createDirectory":
+                folder = params["path"]
+                self.folders.append(folder)
+                self.files = {_moved(k, folder): v for k, v in self.files.items()}
+                self.links = {_moved(k, folder): v for k, v in self.links.items()}
+                if isinstance(self.report, dict) and isinstance(listed := self.report.get("files"), list):
+                    self.report = {**self.report, "files": [_moved(f, folder) for f in listed]}
+                return {}
+            case "fs/writeFile":
+                self.files[params["path"]] = base64.b64decode(params["dataBase64"])
+                return {}
             case "fs/readFile":
                 path = self.links.get(params["path"], params["path"])
                 return {"dataBase64": base64.b64encode(self.files[path]).decode()}
@@ -271,3 +285,7 @@ class FakeCodex:
 class _Refused(Exception):
     def __init__(self, code: int, message: str) -> None:
         self.code, self.message = code, message
+
+
+def _moved(path: str, folder: str) -> str:
+    return folder + path.removeprefix(TASK) if path.startswith(TASK + "/") else path

@@ -3,7 +3,6 @@
 `tasks.manage` reaches every task; `tasks.manage.own` the tasks the account's person asked for.
 """
 
-import mimetypes
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
@@ -15,8 +14,8 @@ from nestor.admin.api.v1.security import Caller, allowed
 from nestor.admin.api.v1.shared import People
 from nestor.admin.api.v1.tasks.afterwards import Afterwards
 from nestor.admin.api.v1.tasks.schemas import CancelOut, TaskOut, TasksOut
-from nestor.admin.files import file_response
 from nestor.admin.state import state
+from nestor.http import file_response
 from nestor.modules.accounts import Scope
 from nestor.modules.cognition import TaskStatus
 
@@ -55,14 +54,12 @@ async def get_task_file(request: Request, caller: Manager, task_id: str, index: 
     files = (await Afterwards.of(admin)).files.get(task.id, ())
     if not 0 <= index < len(files):
         raise not_found("attachment_unknown")
-    blob = files[index]
+    file = files[index]
     try:
-        data = await admin.nestor.blobs.get(blob.digest)
+        data = await admin.nestor.blobs.get(file.blob.digest)
     except KeyError:
         raise not_found("attachment_unknown") from None
-    return file_response(
-        data, blob.media_type, f"{task.id}-{index + 1}{mimetypes.guess_extension(blob.media_type) or ''}"
-    )
+    return file_response(data, file.blob.media_type, file.name)
 
 
 @router.post("/tasks/{task_id}/cancel")

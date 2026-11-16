@@ -1,5 +1,8 @@
 """What comes back to a conversation by itself, as a tool's result comes back to a model: a delegated task that ended,
-a tool call that went on in the background. Each is delivered once to whoever asked, even across restarts."""
+a tool call that went on in the background. Each is delivered once to whoever asked, even across restarts.
+
+What a person asked for is always told, whatever it found: they wait for it. What Nestor started by itself (a wake-up
+that delegates, a watch) may end in silence when there is nothing new; a failure is always told."""
 
 import asyncio
 import contextlib
@@ -88,7 +91,7 @@ class Returns(Component):
             Notification(
                 task_instruction(started.objective, ended, written=written),
                 about,
-                must_tell=ended.status is not TaskStatus.COMPLETED,  # a failure is always told
+                must_tell=_must_tell(ok=ended.status is TaskStatus.COMPLETED, asked=started.asked),
                 files=ended.files,
                 thread=started.thread,
             ),
@@ -112,7 +115,7 @@ class Returns(Component):
             Notification(
                 _tool_instruction(deferred, returned),
                 about,
-                must_tell=not returned.ok,
+                must_tell=_must_tell(ok=returned.ok, asked=deferred.asked),
                 files=returned.files,
                 thread=deferred.thread,
             ),
@@ -144,6 +147,12 @@ class Returns(Component):
                 await self.task_ended(event)
             elif isinstance(event, ToolReturned):
                 await self.tool_returned(event)
+
+
+def _must_tell(*, ok: bool, asked: bool) -> bool:
+    """A failure, or what a person asked for in their own turn, is always told: only what Nestor started by itself may
+    end in silence."""
+    return not ok or asked
 
 
 def task_instruction(objective: str, ended: TaskEnded, *, written: bool) -> str:

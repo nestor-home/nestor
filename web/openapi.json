@@ -16098,6 +16098,10 @@
             "type": "integer",
             "title": "Index"
           },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
           "kind": {
             "$ref": "#/components/schemas/AttachmentKind"
           },
@@ -16113,6 +16117,7 @@
         "type": "object",
         "required": [
           "index",
+          "name",
           "kind",
           "media_type",
           "size"

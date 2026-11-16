@@ -201,6 +201,7 @@ async def test_every_event_of_a_turn_carries_its_conversation_and_its_turn(
     [answer] = await journal.history(AssistantTurn)  # "Merci" got no answer: nothing to log
     assert len(of_the_turn) == 6
     assert {getattr(e, "exchange", None) for e in [*of_the_turn, answer]} == {turn}
+    assert [t.asked for t in await journal.history(TaskStarted)] == [True], "Mathis asked for it: always told"
 
 
 async def test_a_fallback_and_a_cut_belong_to_the_turn_they_happened_in(

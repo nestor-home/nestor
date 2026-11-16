@@ -135,7 +135,8 @@ class Confirmations(InWriting, ToolProvider, ContextProvider):
             raise ContractError("confirmations are attached to the toolbox before serving")
         call = ToolCall(new_id(), found.tool, dict(found.arguments))
         # it runs where it was asked, as theirs: their account vouched for it
-        result = await self._run(call, ToolContext(address=found.origin, speaker=Speaker.account(found.person)))
+        asked = ToolContext(address=found.origin, speaker=Speaker.account(found.person), asked=True)  # they confirmed
+        result = await self._run(call, asked)
         self._background(
             self.courier.deliver(
                 None,

@@ -1,5 +1,5 @@
 """Matrix channel against a fake homeserver: the messaging contract, invitations joined, the history before a start
-skipped, encrypted rooms left unread, and the token refused."""
+skipped, encrypted rooms left unread, the token refused, and documents and audio files sent as what they are."""
 
 import asyncio
 import json
@@ -12,8 +12,8 @@ import pytest
 
 from nestor.adapters.channels.matrix.channel import VOICE, MatrixChannel
 from nestor.core import ProviderError
-from nestor.modules.channels import Assistant, Attachment, AttachmentKind
-from nestor.testing.channels import MessagingChannelContract, Platform, ScriptedAssistant
+from nestor.modules.channels import Address, Assistant, Attachment, AttachmentKind
+from nestor.testing.channels import DEVIS, SONG, MessagingChannelContract, Platform, ScriptedAssistant
 
 TOKEN = "syt_bot_token"
 BOT, ADA = "@nestor:home.test", "@ada:home.test"
@@ -21,8 +21,8 @@ ROOM = "!kitchen:home.test"
 
 
 class FakeHomeserver:
-    """Just enough of the client-server API: `/sync` hands out queued events, sent messages and uploads are kept,
-    media are served back, invitations are recorded."""
+    """Just enough of the client-server API: `/sync` hands out queued events, sent messages and uploads are kept
+    (`too_large` refuses uploads), media are served back, invitations are recorded."""
 
     def __init__(self) -> None:
         self.events: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
@@ -30,6 +30,7 @@ class FakeHomeserver:
         self.joined: list[str] = []
         self.sent: list[dict[str, Any]] = []
         self.media: dict[str, bytes] = {}
+        self.too_large = False
         self.history = [message(ADA, {"msgtype": "m.text", "body": "said before the start"})]
         self.transport = httpx.MockTransport(self.handle)
 
@@ -50,6 +51,8 @@ class FakeHomeserver:
         if "/typing/" in path:
             return httpx.Response(200, json={})
         if path == "/_matrix/media/v3/upload":
+            if self.too_large:
+                return httpx.Response(413, json={"errcode": "M_TOO_LARGE", "error": "Upload too large"})
             uri = f"mxc://home.test/up{len(self.media)}"
             self.media[uri] = request.content
             return httpx.Response(200, json={"content_uri": uri})
@@ -115,6 +118,7 @@ async def serving(server: FakeHomeserver, assistant: Assistant, token: str = TOK
 class MatrixPlatform(Platform):
     def __init__(self, server: FakeHomeserver, channel: MatrixChannel) -> None:
         self.channel = channel
+        self.address = Address(channel.channel_id, ROOM)
         self.server = server
 
     async def send(self, text: str, *attachments: Attachment) -> None:
@@ -138,6 +142,16 @@ class MatrixPlatform(Platform):
 
     def voices(self) -> list[bytes]:
         return self.server.voices()
+
+    def refuse_files(self) -> None:
+        self.server.too_large = True
+
+    def files(self) -> list[tuple[str | None, bytes]]:
+        """Files sent other than voice messages, by the name a client shows: `filename`, or else `body`."""
+        sent = self.server.sent
+        return [
+            (m.get("filename") or m["body"], self.server.media[m["url"]]) for m in sent if "url" in m and VOICE not in m
+        ]
 
 
 class TestMatrixMessaging(MessagingChannelContract):
@@ -184,3 +198,16 @@ async def test_an_invitation_sent_while_the_bot_was_stopped_is_joined() -> None:
     async with serving(server, ScriptedAssistant(lambda message: "?")):
         await eventually(lambda: bool(server.joined))
     assert server.joined == [ROOM]
+
+
+async def test_a_document_and_an_audio_file_are_sent_as_what_they_are() -> None:
+    server = FakeHomeserver()
+    assistant = ScriptedAssistant(lambda message: "Voici.", files=(DEVIS, SONG))
+    async with serving(server, assistant):
+        server.say({"msgtype": "m.text", "body": "le devis ?"})
+        await eventually(lambda: len(server.sent) == 3)
+    sent = [(m["msgtype"], m["info"]["mimetype"], m["info"]["size"], VOICE in m) for m in server.sent[1:]]
+    assert sent == [
+        ("m.file", "application/pdf", len(DEVIS.data), False),
+        ("m.audio", "audio/mpeg", len(SONG.data), False),
+    ]

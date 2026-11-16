@@ -10,7 +10,7 @@ work is stopped.
 import asyncio
 import contextlib
 import logging
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
 
@@ -27,8 +27,15 @@ from nestor.modules.cognition.delegation.events import (
 )
 from nestor.modules.cognition.delegation.keys import ExecutorKeys, capability, digest
 from nestor.modules.cognition.delegation.ports import Executor, RemoteExecutor
-from nestor.modules.cognition.delegation.types import Assignment, NestorTools, Notify, Outcome, Progress, TaskStatus
-from nestor.modules.journal import BlobRef, BlobStore, Journal
+from nestor.modules.cognition.delegation.types import (
+    Assignment,
+    NestorTools,
+    Notify,
+    Outcome,
+    Progress,
+    TaskStatus,
+)
+from nestor.modules.journal import BlobStore, FileRef, Journal
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +54,8 @@ class Task:
     exchange: Exchange | None = None
     capability: str | None = None  # the digest of what its executor calls Nestor's MCP server with for it
     ref: str | None = None
-    files: list[BlobRef] = field(default_factory=list)  # handed back while it ran (`attach_file`)
+    given: tuple[FileRef, ...] = ()  # sent with it
+    files: list[FileRef] = field(default_factory=list)  # handed back while it ran (`attach_file`)
     steps: list[str] = field(default_factory=list)
     outcome: Outcome | None = None
     job: asyncio.Task[None] | None = field(default=None, repr=False)
@@ -101,7 +109,7 @@ class TaskManager(Component):
         """Rebuild the tasks from the journal and pick up the ones that were running."""
         self._writer = asyncio.create_task(self._write(), name="task-manager writer")
         attached = {e.task_id: e.ref for e in await self.journal.history(TaskAttached)}
-        added: dict[str, list[BlobRef]] = {}
+        added: dict[str, list[FileRef]] = {}
         for event in await self.journal.history(TaskFileAdded):
             added.setdefault(event.task_id, []).append(event.file)
         ended = {e.task_id: e for e in await self.journal.history(TaskEnded)}
@@ -143,13 +151,17 @@ class TaskManager(Component):
         executor: str | None = None,
         exchange: Exchange | None = None,
         thread: str | None = None,
+        given: Sequence[FileRef] = (),
+        asked: bool = False,
     ) -> Task:
+        """`given`: the files sent with the task, which its executor receives; `asked`: a person asked for it in
+        their own turn, so its result is always told."""
         if self._writer is None:
             raise ContractError("the task manager must be started before delegating")
         chosen = self.executors.get(executor) if executor else self.default_executor
         if chosen is None:
             raise ContractError(f"no executor named {executor!r}" if executor else "no executor is plugged in")
-        assignment = await self._assignment(objective, chosen)
+        assignment = await self._assignment(objective, chosen, tuple(given))
         event = TaskStarted(
             source=self.name,
             session=origin.session,
@@ -162,6 +174,8 @@ class TaskManager(Component):
             exchange=exchange,
             thread=thread,
             capability=digest(assignment.task) if assignment.task else None,
+            given=tuple(given),
+            asked=asked,
         )
         await self.journal.publish(event)
         task = self.tasks[event.task_id] = _task(event, None)
@@ -192,26 +206,28 @@ class TaskManager(Component):
         """A step of `task`, said by its executor through Nestor's MCP server."""
         self._progress(task)(step)
 
-    async def add_file(self, task: Task, file: Attachment) -> BlobRef:
+    async def add_file(self, task: Task, file: Attachment) -> FileRef:
         """A file `task`'s executor hands back while it works: kept, journaled, and sent with the result."""
         if self._blobs is None:
             raise ContractError("files cannot be kept here")
-        kept = await self._blobs.put(file.data, file.media_type)
+        kept = FileRef(await self._blobs.put(file.data, file.media_type), file.file_name)
         task.files.append(kept)
-        name = file.name or file.media_type
         await self.journal.publish(
-            TaskFileAdded(source=self.name, session=task.origin.session, task_id=task.id, file=kept, name=name)
+            TaskFileAdded(source=self.name, session=task.origin.session, task_id=task.id, file=kept)
         )
         return kept
 
-    async def _assignment(self, objective: str, executor: Executor) -> Assignment:
-        """What `executor` is given: with Nestor's MCP server when it reaches it, a capability for the task."""
-        if self._keys is None or executor.nestor_tools is NestorTools.NONE:
-            return Assignment(objective)
-        if executor.nestor_tools is NestorTools.CONFIGURED:  # its own configuration holds the server and its key
-            return Assignment(objective, capability())
-        access = await self._keys.access(executor.name)
-        return Assignment(objective, capability(), access) if access else Assignment(objective)
+    async def _assignment(self, objective: str, executor: Executor, given: tuple[FileRef, ...]) -> Assignment:
+        """What `executor` is given: the files sent with the task, read only by an executor that places them, and
+        with Nestor's MCP server when it reaches it, a capability for the task."""
+        reader = self._blobs.get if self._blobs else None
+        task, access = None, None
+        if self._keys is not None and executor.nestor_tools is NestorTools.CONFIGURED:
+            task = capability()  # its own configuration holds the server and its key
+        elif self._keys is not None and executor.nestor_tools is NestorTools.PASSED:
+            access = await self._keys.access(executor.name)
+            task = capability() if access else None
+        return Assignment(objective, task, access, given, reader)
 
     async def cancel(self, task_id: str) -> Outcome:
         """Ask the executor to stop; the outcome says whether the stop was confirmed."""
@@ -309,17 +325,17 @@ class TaskManager(Component):
             )
         )
 
-    async def _keep(self, task: Task, made: tuple[Attachment, ...]) -> tuple[tuple[BlobRef, ...], list[str]]:
+    async def _keep(self, task: Task, made: tuple[Attachment, ...]) -> tuple[tuple[FileRef, ...], list[str]]:
         """The files kept in the blob store, and those that could not be, with why: the task ends either way."""
-        kept: list[BlobRef] = []
+        kept: list[FileRef] = []
         lost: list[str] = []
         for file in made:
-            name = file.name or file.media_type
+            name = file.file_name
             if self._blobs is None:
                 lost.append(f"{name} (nowhere to keep it)")
                 continue
             try:
-                kept.append(await self._blobs.put(file.data, file.media_type))
+                kept.append(FileRef(await self._blobs.put(file.data, file.media_type), name))
             except Exception as error:  # a full disk must not lose the task's end
                 logger.warning("task %s: a file could not be kept (%s)", task.id, error)
                 lost.append(f"{name} ({type(error).__name__})")
@@ -345,5 +361,6 @@ def _task(event: TaskStarted, ref: str | None) -> Task:
         started_at=event.at,
         exchange=event.exchange,
         capability=event.capability,
+        given=event.given,
         ref=ref,
     )

@@ -37,6 +37,11 @@ class Answer:
         """Its recording, to send as a voice message in place of the text."""
         return next((a for a in self.attachments if a.kind is AttachmentKind.VOICE), None)
 
+    @property
+    def files(self) -> tuple[Attachment, ...]:
+        """What goes with it other than its recording: pictures, documents, audio files."""
+        return tuple(a for a in self.attachments if a.kind is not AttachmentKind.VOICE)
+
 
 class Reply(ABC):
     """An answer streamed as text chunks, in one or more messages: the assistant ends a message
@@ -124,8 +129,11 @@ class Channel(Component, ABC):
       turn's medium suggests, unless its configuration says otherwise;
     - files sent with a message reach the assistant as `InboundMessage.attachments`, downloaded; one it cannot fetch
       is left out, and a message left with nothing is answered with an excuse rather than dropped;
-    - `sends` are the attachments it can deliver: one that sends `VOICE` sends a message's recording
-      (`Answer.voice`) as a voice message, and writes the text when there is none.
+    - `sends` are the attachments it can deliver, and the only ones it is given: one that sends `VOICE` sends a
+      message's recording (`Answer.voice`) as a voice message, and writes the text when there is none;
+    - a file the platform refuses (too large, a type it does not take), a recording too, is logged and left out,
+      the text going without it: `send` raises only when the text itself could not go, so that a retry elsewhere
+      never says it twice.
     """
 
     media: frozenset[Medium] = frozenset({Medium.WRITTEN})  # how its turns can travel

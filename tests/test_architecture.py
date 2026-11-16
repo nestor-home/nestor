@@ -4,8 +4,9 @@ Layers, from the most stable to the most specific:
     core      → standard library only
     modules   → core
     runtime   → core, modules, adapters (it assembles them)
-    admin     → core, modules, runtime, mcp_server (the web interface over an assembled Nestor, and its MCP server)
-    mcp_server → core, modules, runtime (Nestor's MCP server for executors, served by the admin)
+    http      → core, modules (what Nestor's HTTP servers share: bodies within a limit, files that never run)
+    admin     → core, modules, runtime, mcp_server, http (the web interface over an assembled Nestor, its MCP server)
+    mcp_server → core, modules, runtime, http (Nestor's MCP server for executors, served by the admin)
     bench     → core, modules, runtime, testing (benchmarks build models from configuration fragments; a run keeps
                 its journal and files in memory, with the test kit's)
     testing   → core, modules (the test kit ships with the package: no third-party imports)
@@ -26,8 +27,16 @@ ALLOWED_INTERNAL = {
     "modules": {"core", "modules"},
     "runtime": {"core", "modules", "runtime", "adapters"},  # composes the built-in storage
     "testing": {"core", "modules", "testing"},
-    "admin": {"core", "modules", "runtime", "mcp_server", "admin"},  # the web interface, and the MCP server it serves
-    "mcp_server": {"core", "modules", "runtime", "mcp_server"},  # Nestor's MCP server for executors
+    "http": {"core", "modules", "http"},  # what Nestor's HTTP servers share
+    "admin": {
+        "core",
+        "modules",
+        "runtime",
+        "mcp_server",
+        "http",
+        "admin",
+    },  # the web interface, and the MCP server it serves
+    "mcp_server": {"core", "modules", "runtime", "http", "mcp_server"},  # Nestor's MCP server for executors
     "bench": {"core", "modules", "runtime", "testing", "bench"},  # builds a variant's models as the runtime would
 }
 # Third-party packages allowed outside adapters, per layer. Each addition is a design decision.
@@ -37,7 +46,8 @@ THIRD_PARTY_ALLOWED: dict[str, set[str]] = {
     # to Nestor
     "runtime": {"pydantic", "pydantic_core", "yaml", "ruamel", "dotenv", "uvicorn"},
     "admin": {"fastapi", "starlette", "pydantic", "uvicorn"},  # the JSON API served next to Nestor
-    "mcp_server": {"mcp"},  # the MCP SDK's server
+    "http": {"starlette"},  # requests and responses, as the admin's FastAPI and the MCP SDK both serve them
+    "mcp_server": {"mcp", "starlette"},  # the MCP SDK's server, and the links to the tasks' files beside it
     "bench": {"pydantic", "yaml"},  # a suite's knobs are settings like an adapter's; variants are YAML fragments
 }
 

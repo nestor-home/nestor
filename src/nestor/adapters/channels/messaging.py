@@ -12,7 +12,7 @@ import contextlib
 import logging
 import re
 from abc import ABC, abstractmethod
-from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable
+from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
@@ -32,6 +32,7 @@ from nestor.modules.channels import (
     InboundMessage,
     Medium,
     Sender,
+    base_type,
 )
 from nestor.runtime.plugins import ChannelSettings, Services
 
@@ -75,10 +76,25 @@ def kind_of(media_type: str, *, voice: bool = False) -> AttachmentKind:
     as the platform marks it."""
     if voice:
         return AttachmentKind.VOICE
-    base = media_type.split(";")[0].strip().lower()
+    base = base_type(media_type)
     if base in IMAGE_TYPES:
         return AttachmentKind.IMAGE
     return AttachmentKind.AUDIO if base.startswith("audio/") else AttachmentKind.FILE
+
+
+async def files_sent(
+    channel: Channel, conversation: str, files: Sequence[Attachment], sending: Awaitable[object]
+) -> bool:
+    """Whether `sending`, the request of `channel` that carries `files`, went: one the platform refuses
+    (`ProviderError`) is logged and the files are left out, as every channel does (`Channel`); the caller then sends
+    the text alone if it was to go with them."""
+    try:
+        await sending
+    except ProviderError as error:
+        kinds = ", ".join(file.kind for file in files)
+        logger.warning("%s: left out what could not be sent to %s (%s): %s", channel.name, conversation, kinds, error)
+        return False
+    return True
 
 
 class MessagingSettings(ChannelSettings):
@@ -104,8 +120,9 @@ class MessagingChannel(Channel, ABC):
 
     Contract for a platform: `receive` yields the messages it gets until the channel is `closed`, and raises
     `ProviderError` on a failure it cannot get past (a bad token), waiting with `retry_later` before trying again
-    otherwise; `deliver` sends a message of an answer, with the attachments of the kinds it `sends`, raising
-    `ProviderError` when it cannot; `disconnect` releases the platform's connections.
+    otherwise; `deliver` sends a message of an answer with its files, leaving out those the platform refuses
+    (`files_sent`) and raising `ProviderError` only when the text could not go; `disconnect` releases the platform's
+    connections.
     """
 
     file_limit: int | None = None  # the largest file the platform lets a bot download, in bytes

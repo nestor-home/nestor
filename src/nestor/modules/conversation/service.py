@@ -42,7 +42,14 @@ from nestor.modules.conversation.conversations import Conversations, Turn
 from nestor.modules.conversation.events import AssistantTurn
 from nestor.modules.conversation.history import notification_message
 from nestor.modules.conversation.mentions import Mentions
-from nestor.modules.conversation.persona import ALREADY_TOLD, MUST_TELL, VOICE_ANSWER, Instructions, Persona
+from nestor.modules.conversation.persona import (
+    ALREADY_TOLD,
+    FILES_GO,
+    MUST_TELL,
+    VOICE_ANSWER,
+    Instructions,
+    Persona,
+)
 from nestor.modules.conversation.ports import ContextProvider, Layer, TurnContext
 from nestor.modules.conversation.speakers import Speakers
 from nestor.modules.conversation.types import (
@@ -56,7 +63,7 @@ from nestor.modules.conversation.types import (
 )
 from nestor.modules.household import Household, Person
 from nestor.modules.identity import Heard, Speaker
-from nestor.modules.journal import BlobRef, Journal
+from nestor.modules.journal import FileRef, Journal
 
 
 @dataclass(frozen=True, slots=True)
@@ -64,7 +71,7 @@ class Draft:
     """An answer to a notification, to deliver: its words, and the files that go with it (kept)."""
 
     text: str
-    files: tuple[BlobRef, ...] = ()
+    files: tuple[FileRef, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -308,7 +315,7 @@ class AgentReply(Reply):
         self._chunks: asyncio.Queue[str | MessageEnd | None] = asyncio.Queue()
         self._message: list[str] = []  # the message being written
         self._ended: list[tuple[str, AssistantTurn | None]] = []  # the messages written, logged if recorded
-        self._made: list[BlobRef] = []  # files the tools made, to go with the last message
+        self._made: list[FileRef] = []  # files the tools made, to go with the last message
         self._worker: asyncio.Task[None] | None = None
         self._interrupted = False
         self._over = False
@@ -400,6 +407,9 @@ class AgentReply(Reply):
         turn = instructions.turn
         if isinstance(opening, Notification) and opening.must_tell:
             turn = f"{turn}\n\n{MUST_TELL}"
+        if isinstance(opening, Notification) and opening.files:
+            names = ", ".join(f.name for f in opening.files)
+            turn = f"{turn}\n\n{FILES_GO.format(names=names)}"
         if isinstance(opening, Notification) and opening.thread and (told := await self._told(opening.thread)):
             turn = f"{turn}\n\n{ALREADY_TOLD.format(told=told)}"
         if self._voiced:
@@ -410,7 +420,10 @@ class AgentReply(Reply):
         ]
         exchange = self._turn.exchange if self._turn else None
         thread = opening.thread if isinstance(opening, Notification) else None
-        context = ToolContext(address=self._address, speaker=self._speaker, exchange=exchange, thread=thread)
+        asked = not isinstance(opening, Notification)  # a person's message, not what Nestor brought by itself
+        context = ToolContext(
+            address=self._address, speaker=self._speaker, exchange=exchange, thread=thread, asked=asked
+        )
         wait_s = agent.settings.tool_wait_s(self._medium)
         for _ in range(agent.settings.max_tool_rounds):
             try:

@@ -18,7 +18,7 @@ from nestor.adapters.channels.email.settings import EmailSettings
 from nestor.adapters.channels.email.smtp import Security
 from nestor.adapters.connectors.imap.account import ImapAccount
 from nestor.adapters.connectors.imap.inbound import ImapTiming
-from nestor.modules.channels import Assistant, Attachment
+from nestor.modules.channels import Address, Assistant, Attachment
 from nestor.testing.channels import MessagingChannelContract, Platform, ScriptedAssistant
 
 from ...mailboxes import PASSWORD, FakeMailbox, ScriptedClient
@@ -28,11 +28,13 @@ VOUCHED = f"mx.maison.test; dkim=pass header.d=maison.test; spf=pass smtp.mailfr
 
 
 class FakeSmtp:
-    """Just enough SMTP over asyncio: EHLO, AUTH PLAIN, MAIL, RCPT, DATA, QUIT; the messages kept, parsed."""
+    """Just enough SMTP over asyncio: EHLO, AUTH PLAIN, MAIL, RCPT, DATA, QUIT; the messages kept, parsed, those with
+    attachments refused as too large when `too_large`."""
 
     def __init__(self) -> None:
         self.messages: list[EmailMessage] = []
         self.logins: list[tuple[str, str]] = []
+        self.too_large = False
         self.port = 0
         self._server: asyncio.Server | None = None
 
@@ -62,8 +64,12 @@ class FakeSmtp:
                 body = b""
                 while (chunk := await reader.readline()) != b".\r\n":
                     body += chunk
-                self.messages.append(BytesParser(policy=policy.default).parsebytes(body))
-                writer.write(b"250 queued\r\n")
+                message = BytesParser(policy=policy.default).parsebytes(body)
+                if self.too_large and any(True for _ in message.iter_attachments()):
+                    writer.write(b"552 message size exceeds fixed limit\r\n")
+                else:
+                    self.messages.append(message)
+                    writer.write(b"250 queued\r\n")
             elif verb == "QUIT":
                 writer.write(b"221 bye\r\n")
                 await writer.drain()
@@ -128,6 +134,7 @@ async def serving(mailbox: FakeMailbox, assistant: Assistant) -> AsyncGenerator[
 class EmailPlatform(Platform):
     def __init__(self, mailbox: FakeMailbox, channel: EmailChannel, smtp: FakeSmtp) -> None:
         self.mailbox, self.channel, self.smtp = mailbox, channel, smtp
+        self.address = Address(channel.channel_id, ADA)
 
     async def send(self, text: str, *attachments: Attachment) -> None:
         self.mailbox.deliver(mail(text, *attachments))
@@ -141,6 +148,17 @@ class EmailPlatform(Platform):
 
     def voices(self) -> list[bytes]:
         return []
+
+    def refuse_files(self) -> None:
+        self.smtp.too_large = True
+
+    def files(self) -> list[tuple[str | None, bytes]]:
+        found = [
+            (part.get_filename(), part.get_payload(decode=True))
+            for m in self.smtp.messages
+            for part in m.iter_attachments()
+        ]
+        return [(name, data) for name, data in found if isinstance(data, bytes)]
 
 
 class TestEmailMessaging(MessagingChannelContract):

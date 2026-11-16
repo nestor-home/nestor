@@ -12,8 +12,8 @@ from fastapi.responses import JSONResponse, Response
 from nestor.adapters.common.state import StateFile
 from nestor.adapters.inbound.webhook.hooks import Hook, proven
 from nestor.adapters.inbound.webhook.posts import EVENTS, incoming
-from nestor.adapters.inbound.webhook.server import read_body
 from nestor.core import new_id
+from nestor.http import read_body
 from nestor.modules.initiative import InboundEventSource, Incoming
 from nestor.runtime.server import EmbeddedServer
 

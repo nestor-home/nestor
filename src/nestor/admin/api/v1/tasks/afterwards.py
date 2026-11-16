@@ -9,7 +9,7 @@ from nestor.modules.channels import Address
 from nestor.modules.cognition.delegation.events import TaskDelivered, TaskEnded
 from nestor.modules.conversation import Source
 from nestor.modules.initiative import Delivered
-from nestor.modules.journal import BlobRef
+from nestor.modules.journal import FileRef
 
 
 @dataclass(frozen=True, slots=True)
@@ -22,7 +22,7 @@ class Delivery:
 @dataclass(frozen=True, slots=True)
 class Afterwards:
     ended: dict[str, datetime]
-    files: dict[str, tuple[BlobRef, ...]]  # what each task handed back, kept in the blob store
+    files: dict[str, tuple[FileRef, ...]]  # what each task handed back, kept in the blob store
     delivered: dict[str, Delivery]  # in the conversation, or by the courier; the latest wins
 
     @classmethod

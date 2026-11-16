@@ -1,8 +1,10 @@
 """What the central agent sees of delegation: three tools and a section of its instructions."""
 
+import posixpath
 from collections.abc import Iterable, Mapping, Sequence
 
 from nestor.core import ContractError
+from nestor.modules.channels import AttachmentKind, plain_name
 from nestor.modules.cognition.delegation.service import TaskManager
 from nestor.modules.cognition.delegation.types import Notify, TaskStatus
 from nestor.modules.cognition.model import ToolSpec
@@ -15,8 +17,11 @@ from nestor.modules.conversation import (
     MentionSource,
     Sections,
     TurnContext,
+    UserTurn,
 )
+from nestor.modules.conversation.history import in_conversation
 from nestor.modules.household import Person
+from nestor.modules.journal import FileRef
 
 HOW_TO_DELEGATE = """You never do long work yourself: you talk, and you hand over to an executor anything that needs \
 acting, searching or computing beyond your own tools. To hand over, call delegate_task with a precise, verifiable \
@@ -118,10 +123,28 @@ class Delegation(ToolProvider, ContextProvider, MentionSource):
                 executor=str(executor) if executor else None,
                 exchange=context.exchange,
                 thread=context.thread,
+                given=await self._given(context),
+                asked=context.asked,
             )
         except ContractError as error:
             raise ToolFailed(str(error)) from None
         return {"task_id": task.id, "status": "running", "note": "Started: tell the person in a few words."}
+
+    async def _given(self, context: ToolContext) -> tuple[FileRef, ...]:
+        """The files people sent in the conversation until now, but the recordings of what they said: the executor
+        receives them with the task, by names none of which is another's."""
+        if context.exchange is None:
+            return ()
+        history = await self.tasks.journal.history(UserTurn, session=context.address.session)
+        given: dict[str, FileRef] = {}
+        taken: set[str] = set()
+        for turn in in_conversation(history, context.exchange.conversation_id):
+            for sent in turn.attachments:
+                if sent.kind is not AttachmentKind.VOICE and sent.blob.digest not in given:
+                    name = _unique(plain_name(sent.name, sent.blob.media_type), taken)
+                    taken.add(name)
+                    given[sent.blob.digest] = FileRef(sent.blob, name)
+        return tuple(given.values())
 
     async def _status(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
         """Running tasks, and the last finished ones without their result (already announced), so the
@@ -139,3 +162,12 @@ class Delegation(ToolProvider, ContextProvider, MentionSource):
             "status": outcome.status.value,
             **({"error": outcome.error} if outcome.error else {}),
         }
+
+
+def _unique(name: str, taken: set[str]) -> str:
+    """`name`, or `name (2)`, `name (3)`… when it is taken."""
+    stem, extension = posixpath.splitext(name)
+    found, n = name, 2
+    while found in taken:
+        found, n = f"{stem} ({n}){extension}", n + 1
+    return found

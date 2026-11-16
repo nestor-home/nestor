@@ -1,8 +1,9 @@
-"""Files the admin hands out, as they were sent to Nestor: they must never run in the admin's origin."""
+"""Files Nestor serves as they were sent to it or made for someone (the admin, the links to a task's files): they
+must never run in the origin that serves them."""
 
 from urllib.parse import quote
 
-from fastapi import Response
+from starlette.responses import Response
 
 from nestor.modules.channels import IMAGE_TYPES
 

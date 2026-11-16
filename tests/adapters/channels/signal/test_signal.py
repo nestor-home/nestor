@@ -4,6 +4,7 @@ ignored, pictures sent as attachments, and the polling that gets past an outage.
 import asyncio
 import base64
 import json
+import re
 from collections.abc import AsyncGenerator, Callable
 from contextlib import asynccontextmanager
 from typing import Any
@@ -11,21 +12,22 @@ from typing import Any
 import httpx
 
 from nestor.adapters.channels.signal.channel import SignalChannel
-from nestor.modules.channels import Assistant, Attachment, AttachmentKind
+from nestor.modules.channels import Address, Assistant, Attachment, AttachmentKind
 from nestor.testing.channels import MessagingChannelContract, Platform, ScriptedAssistant
 
 BOT, ADA = "+33100000000", "+33600000000"
 
 
 class FakeSignalApi:
-    """`/v1/receive` hands out queued envelopes, `/v2/send` keeps what was sent, attachments are served by id;
-    `down` answers 503 a number of times first."""
+    """`/v1/receive` hands out queued envelopes, `/v2/send` keeps what was sent (`too_large` refuses a message with
+    attachments), attachments are served by id; `down` answers 503 a number of times first."""
 
     def __init__(self) -> None:
         self.envelopes: list[dict[str, Any]] = []
         self.sent: list[dict[str, Any]] = []
         self.files: dict[str, bytes] = {}
         self.down = 0
+        self.too_large = False
         self.transport = httpx.MockTransport(self.handle)
 
     async def handle(self, request: httpx.Request) -> httpx.Response:
@@ -39,7 +41,10 @@ class FakeSignalApi:
             found, self.envelopes = self.envelopes, []
             return httpx.Response(200, json=[{"envelope": e, "account": BOT} for e in found])
         if path == "/v2/send":
-            self.sent.append(json.loads(request.content))
+            body = json.loads(request.content)
+            if self.too_large and body.get("base64_attachments"):
+                return httpx.Response(400, json={"error": "attachment too large"})
+            self.sent.append(body)
             return httpx.Response(201, json={"timestamp": "1"})
         if path.startswith("/v1/attachments/"):
             return httpx.Response(200, content=self.files[path.rsplit("/", 1)[1]])
@@ -82,6 +87,7 @@ async def serving(api: FakeSignalApi, assistant: Assistant) -> AsyncGenerator[Si
 class SignalPlatform(Platform):
     def __init__(self, api: FakeSignalApi, channel: SignalChannel) -> None:
         self.channel = channel
+        self.address = Address("signal", ADA)
         self.api = api
 
     async def send(self, text: str, *attachments: Attachment) -> None:
@@ -100,6 +106,20 @@ class SignalPlatform(Platform):
 
     def voices(self) -> list[bytes]:
         return []
+
+    def refuse_files(self) -> None:
+        self.api.too_large = True
+
+    def files(self) -> list[tuple[str | None, bytes]]:
+        """Every attachment sent, read as signal-cli-rest-api reads its data URIs: the name the person sees, and the
+        content."""
+        found: list[tuple[str | None, bytes]] = []
+        for message in self.api.sent:
+            for uri in message.get("base64_attachments", []):
+                read = re.fullmatch(r"data:[^;,]+;filename=([^;,]+);base64,(.*)", uri)
+                assert read is not None, f"not a data URI signal-cli-rest-api reads: {uri[:60]}"
+                found.append((read[1], base64.b64decode(read[2])))
+        return found
 
 
 class TestSignalMessaging(MessagingChannelContract):
@@ -126,7 +146,7 @@ async def test_a_picture_the_assistant_made_goes_as_an_attachment() -> None:
     api = FakeSignalApi()
     picture = Attachment(kind=AttachmentKind.IMAGE, data=b"png", media_type="image/png", name="dessin.png")
     api.say("dessine")
-    async with serving(api, ScriptedAssistant(lambda message: "Voilà.", pictures=(picture,))):
+    async with serving(api, ScriptedAssistant(lambda message: "Voilà.", files=(picture,))):
         await eventually(lambda: bool(api.sent))
     [sent] = api.sent
     assert sent["message"] == "Voilà."

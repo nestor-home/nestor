@@ -75,7 +75,7 @@ from nestor.modules.initiative import (
     WatchTriggered,
 )
 from nestor.modules.initiative.confirmations import ConfirmationAnswered, ConfirmationRequested
-from nestor.modules.journal import BlobRef, Entry
+from nestor.modules.journal import Entry, FileRef
 from nestor.modules.memory import MemoryCorrected, MemoryForgotten, MemoryRecorded
 from nestor.modules.memory.episodes import EpisodeSummarized
 from nestor.modules.satellites import (
@@ -335,7 +335,7 @@ class EventDescriber:
             TaskFileAdded: lambda e: self._line(
                 e,
                 Message.of("journal-task-file-added", task=e.task_id),
-                detail=e.name,
+                detail=e.file.name,
                 attachments=_made((e.file,)),
             ),
             ExecutorCalled: lambda e: self._line(
@@ -779,6 +779,6 @@ class EventDescriber:
         )
 
 
-def _made(files: tuple[BlobRef, ...]) -> tuple[Attached, ...]:
+def _made(files: tuple[FileRef, ...]) -> tuple[Attached, ...]:
     """What a tool made, shown with its call: whether or not the conversation could receive it."""
-    return tuple(Attached(kind=AttachmentKind.of(blob.media_type), blob=blob) for blob in files)
+    return tuple(Attached(kind=AttachmentKind.of(f.blob.media_type), blob=f.blob, name=f.name) for f in files)

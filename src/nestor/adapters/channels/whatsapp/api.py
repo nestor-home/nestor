@@ -9,6 +9,12 @@ from nestor.adapters.common.http import HttpApi
 from nestor.modules.channels import Attachment, AttachmentKind
 
 GRAPH = "https://graph.facebook.com/v21.0"
+MESSAGE_TYPES = {  # the message that carries each kind of file
+    AttachmentKind.IMAGE: "image",
+    AttachmentKind.VOICE: "audio",  # OGG/Opus, which WhatsApp plays as a voice message
+    AttachmentKind.AUDIO: "audio",
+    AttachmentKind.FILE: "document",
+}
 
 
 class CloudApi:
@@ -23,13 +29,19 @@ class CloudApi:
         url = (await self._api.request("GET", f"/{media_id}")).json()["url"]
         return (await self._api.request("GET", url)).content  # Meta's media host asks for the token too
 
-    async def upload(self, file: Attachment) -> str:
-        name = file.name or ("voice.ogg" if file.kind is AttachmentKind.VOICE else "image")
+    async def send_file(self, to: str, file: Attachment) -> None:
+        """`file` uploaded, then sent as the message of its kind; a document shows its name (a file without one takes
+        its kind's, with the extension of its type: `file.pdf`)."""
+        kind = MESSAGE_TYPES[file.kind]
+        content = {"id": await self._upload(file)}
+        await self.send(to, kind, content | ({"filename": file.file_name} if kind == "document" else {}))
+
+    async def _upload(self, file: Attachment) -> str:
         uploaded = await self._api.request(
             "POST",
             f"/{self._number}/media",
             data={"messaging_product": "whatsapp", "type": file.media_type},
-            files={"file": (name, file.data, file.media_type)},
+            files={"file": (file.file_name, file.data, file.media_type)},
         )
         return str(uploaded.json()["id"])
 

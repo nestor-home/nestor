@@ -18,6 +18,7 @@ from nestor.adapters.executors.common import (
     Report,
     Unreadable,
     described,
+    task_folder,
 )
 from nestor.adapters.executors.jsonrpc import Closed, Message, RpcError, StdioRpc
 from nestor.core import ContractError, Health, ProviderError
@@ -85,10 +86,19 @@ class CodexExecutor(RemoteExecutor):
             await rpc.close()
 
     async def submit(self, assignment: Assignment) -> str:
-        objective = assignment.brief()
+        """In a folder of its own under the working directory, where the files sent with the task are placed."""
+        name = task_folder()
+        folder = posixpath.join(self._cwd, name)
         try:
             rpc = await self._session()
-            settings = self._thread_settings(assignment.access)
+            await self._call(rpc, "fs/createDirectory", {"path": folder})
+            placed = []
+            async for file, data in assignment.placed():  # plain names, never twice
+                encoded = (await asyncio.to_thread(base64.b64encode, data)).decode()  # up to 27 MB: off the loop
+                await self._call(rpc, "fs/writeFile", {"path": posixpath.join(folder, file), "dataBase64": encoded})
+                placed.append(file)
+            settings = self._thread_settings(assignment.access, folder)
+            objective = assignment.brief(folder, placed)
             thread = str((await self._call(rpc, "thread/start", settings))["thread"]["id"])
             self._join(rpc, thread)
             turn = await self._call(
@@ -96,7 +106,7 @@ class CodexExecutor(RemoteExecutor):
                 "turn/start",
                 {"threadId": thread, "input": [{"type": "text", "text": objective}], "outputSchema": REPORT_SCHEMA},
             )
-            return f"{thread}:{turn['turn']['id']}"
+            return f"{thread}:{turn['turn']['id']}:{name}"
         except (KeyError, TypeError) as error:
             raise ProviderError(self.name, f"unexpected reply from Codex: {error!r}", transient=False) from None
         except RpcError as error:
@@ -105,13 +115,13 @@ class CodexExecutor(RemoteExecutor):
             raise ProviderError(self.name, f"submission failed: {described(error)}", transient=True) from None
 
     async def follow(self, ref: str, progress: Progress) -> Outcome:
-        thread, _, turn = ref.partition(":")
-        if not thread or not turn:
+        if (parsed := _parsed(ref)) is None:
             return Outcome.failed(f"not a Codex task reference: {ref!r}")
+        thread, turn, folder = parsed
         waits = iter(self._reconnect_s)
         while True:
             try:
-                return await self._follow(thread, turn, progress)
+                return await self._follow(thread, turn, posixpath.join(self._cwd, folder), progress)
             except (Closed, TimeoutError, ProviderError) as error:  # the session is lost, the turn may go on
                 if (wait_s := next(waits, None)) is None:
                     return Outcome.failed(f"lost contact with Codex: {described(error)}")
@@ -123,7 +133,9 @@ class CodexExecutor(RemoteExecutor):
                 return Outcome.failed(f"unexpected reply from Codex: {error!r}")
 
     async def stop(self, ref: str) -> bool:
-        thread, _, turn = ref.partition(":")
+        if (parsed := _parsed(ref)) is None:
+            return False
+        thread, turn, _ = parsed
         try:
             async with asyncio.timeout(self._stop_timeout_s):
                 rpc = await self._session()
@@ -137,8 +149,9 @@ class CodexExecutor(RemoteExecutor):
         except (TimeoutError, ProviderError, RpcError, Closed, KeyError, TypeError):
             return False
 
-    async def _follow(self, thread: str, turn: str, progress: Progress) -> Outcome:
-        """Follows the turn in the current session (opened or reopened); `Closed` if it ends meanwhile."""
+    async def _follow(self, thread: str, turn: str, folder: str, progress: Progress) -> Outcome:
+        """Follows the turn in the current session (opened or reopened); `Closed` if it ends meanwhile. `folder`:
+        the task's own, the only one its files come back from."""
         rpc = await self._session()
         events = rpc.listen(thread)
         try:
@@ -146,7 +159,7 @@ class CodexExecutor(RemoteExecutor):
                 resumed = await self._call(rpc, "thread/resume", {"threadId": thread, "excludeTurns": True})
                 self._join(rpc, thread)
                 found = await self._turn(rpc, thread, turn)
-                if found is not None and (outcome := await self._outcome(rpc, found)) is not None:
+                if found is not None and (outcome := await self._outcome(rpc, found, folder)) is not None:
                     return outcome
                 if resumed["thread"]["status"]["type"] != "active":
                     return Outcome.failed("the Codex turn stopped before it ended (its server restarted?)")
@@ -158,7 +171,7 @@ class CodexExecutor(RemoteExecutor):
                 elif (
                     event.get("method") == "turn/completed"
                     and params["turn"]["id"] == turn
-                    and (outcome := await self._outcome(rpc, params["turn"])) is not None
+                    and (outcome := await self._outcome(rpc, params["turn"], folder)) is not None
                 ):
                     return outcome
             raise Closed("the Codex session ended while the turn ran")
@@ -166,11 +179,11 @@ class CodexExecutor(RemoteExecutor):
             rpc.forget(thread)
             self._joined.discard(thread)
 
-    async def _outcome(self, rpc: StdioRpc, turn: Message) -> Outcome | None:
+    async def _outcome(self, rpc: StdioRpc, turn: Message, folder: str) -> Outcome | None:
         """The outcome of a turn as Codex sums it up (its final answer is in the summary), `None` while it runs."""
         match turn["status"]:
             case "completed":
-                return await Report.of(final_answer(turn)).outcome(self._cwd, lambda path: self._read(rpc, path))
+                return await Report.of(final_answer(turn)).outcome(folder, lambda path: self._read(rpc, folder, path))
             case "failed":
                 error = (turn.get("error") or {}).get("message")
                 return Outcome.failed(str(error) if error else "Codex reported the turn as failed")
@@ -183,11 +196,11 @@ class CodexExecutor(RemoteExecutor):
         listed = await self._call(rpc, "thread/turns/list", {"threadId": thread, "itemsView": view, "limit": 20})
         return next((t for t in listed["data"] if t["id"] == turn), None)
 
-    async def _read(self, rpc: StdioRpc, path: str) -> bytes:
-        """A file under the working directory, through no link (a link could lead anywhere on that machine), no
+    async def _read(self, rpc: StdioRpc, folder: str, path: str) -> bytes:
+        """A file under the task's `folder`, through no link (a link could lead anywhere on that machine), no
         larger than the limit: its size is asked first, as one line of the session carries the whole file."""
         try:
-            current, found = posixpath.normpath(self._cwd), {}
+            current, found = posixpath.normpath(folder), {}
             for part in posixpath.relpath(path, current).split("/"):
                 current = posixpath.join(current, part)
                 found = await self._call(rpc, "fs/getMetadata", {"path": current})
@@ -235,10 +248,11 @@ class CodexExecutor(RemoteExecutor):
         rpc.listen(thread)  # from now on: nothing it says about the thread is missed
         self._joined.add(thread)
 
-    def _thread_settings(self, access: NestorAccess | None) -> Message:
-        """The thread's settings; with `access`, Nestor's MCP server among its MCP servers, for this thread only."""
+    def _thread_settings(self, access: NestorAccess | None, folder: str) -> Message:
+        """The thread's settings, working in the task's `folder`; with `access`, Nestor's MCP server among its MCP
+        servers, for this thread only."""
         settings: Message = {
-            "cwd": self._cwd,
+            "cwd": folder,
             "sandbox": self._sandbox.value,
             "approvalPolicy": "never",
             "developerInstructions": self._instructions + FILES_INSTRUCTIONS,
@@ -258,3 +272,9 @@ class CodexExecutor(RemoteExecutor):
         if (refusal := DECLINED.get(method)) is None:
             raise RpcError(-32601, f"Nestor does not answer {method}")
         return refusal
+
+
+def _parsed(ref: str) -> tuple[str, str, str] | None:
+    """A task's reference, `thread:turn:folder` (the folder's name under the working directory)."""
+    parts = ref.split(":")
+    return (parts[0], parts[1], parts[2]) if len(parts) == 3 and all(parts) else None

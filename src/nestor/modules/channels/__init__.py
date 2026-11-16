@@ -11,6 +11,8 @@ from nestor.modules.channels.types import (
     InboundMessage,
     Medium,
     Sender,
+    base_type,
+    plain_name,
 )
 
 __all__ = [
@@ -37,4 +39,6 @@ __all__ = [
     "SpeechModel",
     "TranscriptionModel",
     "Written",
+    "base_type",
+    "plain_name",
 ]

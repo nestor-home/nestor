@@ -44,6 +44,7 @@ src/nestor/
 │   ├── behavior/         attitude and expressions, translated by the plugged body
 │   └── journal/          the append-only event log, live subscriptions, blobs
 ├── runtime/              composition: configuration, adapter registry, lifecycle
+├── http/                 what Nestor's HTTP servers share: a body read within a limit, a file that never runs
 ├── admin/                the admin over the assembled Nestor: accounts sign in to a JSON API (`api/v1`) that
 │                         the web front of `web/` is built on; it also serves that front once built
 ├── mcp_server/           Nestor's MCP server for executors, served by the admin at `/mcp`: an executor's key
@@ -148,7 +149,7 @@ for executors, `adapters/executors/common.py`, `process.py` and `jsonrpc.py`).
   (with `transient` set) — a vendor exception never reaches a module.
 - **Async**: explicit timeouts, cancellation honoured, resources released in `close`.
 - **Helpers**: a generic helper (encoding, HTTP, text, files) lives in a module of its own, shared by what
-  needs it (`adapters/models/common.py`, `adapters/common/text.py`, `admin/files.py`), never as a
+  needs it (`adapters/models/common.py`, `adapters/common/text.py`, `http/files.py`), never as a
   private function at the bottom of a business file. Look for an existing one before writing it, and prefer
   the standard library or a proven implementation to a hand-rolled one.
 - **Public API**: each module exposes its names in `__init__.py` (`__all__`); import from the module

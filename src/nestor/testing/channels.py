@@ -61,12 +61,12 @@ class ScriptedAssistant(Assistant):
         strangers: frozenset[str] = frozenset(),
         voice: Heard | None = None,
         speaks: bool = False,
-        pictures: tuple[Attachment, ...] = (),
+        files: tuple[Attachment, ...] = (),
     ) -> None:
-        """`speaks`: it answers a voice message with one, its text recorded as `OGG` followed by it. `pictures` go
-        with every answer."""
+        """`speaks`: it answers a voice message with one, its text recorded as `OGG` followed by it. `files` (a
+        picture, a document) go with every answer."""
         self._answer = answer
-        self._pictures = pictures
+        self._files = files
         self._voice = voice
         self._speaks = speaks
         self.heard: list[bytes] = []
@@ -91,7 +91,7 @@ class ScriptedAssistant(Assistant):
         text = self._answer(message)
         voiced = self._speaks and any(a.kind is AttachmentKind.VOICE for a in message.attachments)
         voice = Attachment(kind=AttachmentKind.VOICE, data=OGG + text.encode(), media_type="audio/ogg")
-        attachments = ((voice,) if voiced else ()) + self._pictures
+        attachments = ((voice,) if voiced else ()) + self._files
         reply = ScriptedReply(text, word_delay_s=self._word_delay_s, attachments=attachments)
         self.replies.append(reply)
         return reply
@@ -226,6 +226,19 @@ class SpeechModelContract:
         raise AssertionError("no ProviderError raised by an unavailable provider")
 
 
+DEVIS = Attachment(kind=AttachmentKind.FILE, data=b"%PDF-1.7 devis", media_type="application/pdf", name="devis.pdf")
+SONG = Attachment(kind=AttachmentKind.AUDIO, data=b"ID3 chanson", media_type="audio/mpeg", name="chanson.mp3")
+
+
+async def _sent(platform: "Platform", count: int) -> None:
+    """Wait until the bot sent `count` files."""
+    for _ in range(500):
+        if len(platform.files()) >= count:
+            return
+        await asyncio.sleep(0.01)
+    raise AssertionError(f"the bot sent {platform.files()!r}, not {count} files")
+
+
 class MessagingChannelContract:
     """Behaviour every messaging channel (Telegram, and those to come) must show with files. Mix into a `Test…` class
     and implement `serving(assistant)`: an async context that serves the channel against a stand-in for its
@@ -246,6 +259,20 @@ class MessagingChannelContract:
             (photo.kind, photo.data, photo.media_type)
         ]
 
+    async def test_a_document_or_an_audio_file_made_for_an_answer_goes_with_it_by_its_name(self) -> None:
+        assistant = ScriptedAssistant(lambda message: "Voici le devis corrigé.", files=(DEVIS, SONG))
+        async with self.serving(assistant) as platform:
+            await platform.send("le devis ?")
+            await _sent(platform, 2)
+            assert {AttachmentKind.FILE, AttachmentKind.AUDIO} <= platform.channel.sends
+            assert sorted(platform.files()) == [("chanson.mp3", SONG.data), ("devis.pdf", DEVIS.data)]
+
+    async def test_a_document_goes_with_a_message_nestor_sends_by_itself(self) -> None:
+        async with self.serving(ScriptedAssistant(lambda message: "")) as platform:
+            await platform.channel.send(platform.address, "Le devis corrigé est prêt.", Medium.WRITTEN, (DEVIS,))
+            await _sent(platform, 1)
+            assert platform.files() == [("devis.pdf", DEVIS.data)]
+
     async def test_a_voice_message_is_answered_with_one_when_the_assistant_has_a_voice(self) -> None:
         note = Attachment(kind=AttachmentKind.VOICE, data=b"opus", media_type="audio/ogg")
         for speaks in (True, False):
@@ -259,12 +286,24 @@ class MessagingChannelContract:
             else:
                 assert (voices, texts) == ([], ["Noté."]), "without a voice to send, the answer is written"
 
+    async def test_files_the_platform_refuses_are_left_out_and_the_text_goes_once(self) -> None:
+        note = Attachment(kind=AttachmentKind.VOICE, data=b"opus", media_type="audio/ogg")
+        async with self.serving(ScriptedAssistant(lambda message: "Noté.", speaks=True)) as platform:
+            platform.refuse_files()
+            await platform.channel.send(platform.address, "Le devis.", Medium.WRITTEN, (DEVIS,))
+            await platform.channel.send(platform.address, "Le devis et ta chanson.", Medium.WRITTEN, (DEVIS, SONG))
+            await platform.send("", note)
+            await platform.answered(3)
+            assert platform.texts() == ["Le devis.", "Le devis et ta chanson.", "Noté."], "without raising, once"
+            assert (platform.files(), platform.voices()) == ([], [])
+
 
 class Platform:
     """The stand-in for a messaging platform a `MessagingChannelContract` drives: someone of the household writes,
-    and what the bot sent is read back. `channel` is the channel it serves."""
+    and what the bot sent is read back. `channel` is the channel it serves; `address`, where that person is on it."""
 
     channel: Channel
+    address: Address
 
     async def send(self, text: str, *attachments: Attachment) -> None:
         raise NotImplementedError
@@ -277,4 +316,14 @@ class Platform:
         raise NotImplementedError
 
     def voices(self) -> list[bytes]:
+        raise NotImplementedError
+
+    def refuse_files(self) -> None:
+        """From now on, the platform refuses every file the bot sends (as one over its size limit), voice messages
+        included."""
+        raise NotImplementedError
+
+    def files(self) -> list[tuple[str | None, bytes]]:
+        """What the bot sent as files other than voice messages (pictures, documents, audio files): the name the
+        person sees, if the platform shows one, and the content."""
         raise NotImplementedError

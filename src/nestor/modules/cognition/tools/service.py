@@ -16,7 +16,7 @@ from nestor.modules.cognition.tools.ports import InWriting, ToolProvider
 from nestor.modules.cognition.tools.results import Results
 from nestor.modules.cognition.tools.types import Made, Risk, Tool, ToolContext, ToolFailed, ToolOutput
 from nestor.modules.identity import Identified
-from nestor.modules.journal import BlobRef, BlobStore, Journal
+from nestor.modules.journal import BlobStore, FileRef, Journal
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ class Called:
 
     output: str
     ok: bool = True
-    files: tuple[BlobRef, ...] = ()
+    files: tuple[FileRef, ...] = ()
 
 
 class Toolbox(Component):
@@ -142,6 +142,7 @@ class Toolbox(Component):
                 person=context.person,
                 exchange=context.exchange,
                 thread=context.thread,
+                asked=context.asked,
             )
         )
 
@@ -180,7 +181,7 @@ class Toolbox(Component):
             if made:
                 logger.warning("%s made files, but there is nowhere to keep them: they are left out", call.name)
             return Called(output)
-        return Called(output, files=tuple([await blobs.put(f.data, f.media_type) for f in made]))
+        return Called(output, files=tuple([FileRef(await blobs.put(f.data, f.media_type), f.file_name) for f in made]))
 
     async def _run(
         self, call: ToolCall, tool: Tool | None, context: ToolContext, *, confirmed: bool

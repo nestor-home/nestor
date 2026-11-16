@@ -2,7 +2,8 @@
 
 - `/api/v1/…`: the JSON API (accounts, sessions, every resource), the only thing the front talks to;
 - `/connections/callback`: where OAuth providers send the browser back, then on to the front;
-- `/mcp`: Nestor's MCP server for executors (`nestor.mcp_server`), when executors can reach Nestor;
+- `/mcp`: Nestor's MCP server for executors (`nestor.mcp_server`), when executors can reach Nestor, and `/mcp/files/…`
+  the short-lived links to the tasks' files;
 - `/health`, and `/static/relay/…`: the OAuth relay page, a standalone page that a public host serves
   for admins reached over plain HTTP (it forwards the provider's answer to `/connections/callback`);
 - every other GET: the web front (`nestor.admin.front`).
@@ -15,7 +16,6 @@ from fastapi import FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException
-from starlette.routing import Route
 
 from nestor.admin import front
 from nestor.admin.api.v1.app import browser, operation_id, router
@@ -60,7 +60,7 @@ def create_app(nestor: Nestor, settings: AdminSettings) -> FastAPI:
     app.state.executors = None
     if nestor.executor_keys is not None:  # its own key authenticates each call, not an admin session
         app.state.executors = executors = ExecutorServer(nestor, nestor.executor_keys)
-        app.router.routes.append(Route(MCP_PATH, endpoint=executors.endpoint, methods=["GET", "POST", "DELETE"]))
+        app.router.routes.extend(executors.routes(MCP_PATH))
 
     app.include_router(front.router)  # last: it answers every GET left
 

@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 from nestor.modules.channels import Attachment, AttachmentKind
-from nestor.modules.journal import BlobRef
+from nestor.modules.journal import BlobRef, FileRef
 
 NOTIFICATION_CHARS = (
     8000  # of what a notification brings into a conversation: a task's long result keeps its beginning and end
@@ -71,7 +71,7 @@ class Notification:
     text: str
     about: About
     must_tell: bool = False
-    files: tuple[BlobRef, ...] = ()  # what a tool made, to go with the answer
+    files: tuple[FileRef, ...] = ()  # what a tool made, to go with the answer
     thread: str | None = None
 
     def __post_init__(self) -> None:

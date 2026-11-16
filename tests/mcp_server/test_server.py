@@ -1,7 +1,7 @@
 """Nestor's MCP server for executors, served over real HTTP and called by an MCP client: what an executor reaches for
-its task with its key and the task's capability, and the same refusal for anything else."""
+its task with its key and the task's capability, the same refusal for anything else, and the task's files by
+short-lived links."""
 
-import base64
 import json
 from collections.abc import AsyncGenerator, AsyncIterator
 from contextlib import asynccontextmanager
@@ -12,7 +12,6 @@ from typing import Any
 import httpx
 import pytest
 from starlette.applications import Starlette
-from starlette.routing import Route
 
 from nestor.adapters.tools.mcp.provider import BearerToken, McpToolProvider
 from nestor.core import PersonId
@@ -28,6 +27,7 @@ from nestor.modules.cognition.delegation import (
 from nestor.modules.cognition.tools import ToolContext, ToolFailed
 from nestor.modules.conversation import Attached
 from nestor.modules.identity import Speaker
+from nestor.modules.journal import FileRef
 from nestor.runtime import Nestor
 from nestor.runtime.config import parse_config
 from nestor.runtime.plugins import Family, Plugin
@@ -72,6 +72,10 @@ class World:
     def objective(self, task_id: str) -> str:
         return self.nestor.tasks.tasks[task_id].objective
 
+    def reached(self, link: str) -> str:
+        """A link as an executor follows it: here, on this machine, rather than at the public URL."""
+        return self.served.url(link.removeprefix("https://nestor.example"))
+
     def finish(self, task_id: str) -> None:
         ref = self.nestor.tasks.tasks[task_id].ref
         assert ref is not None
@@ -100,7 +104,7 @@ async def world(tmp_path: Path) -> AsyncIterator[World]:
             async with server.running():
                 yield
 
-        served = Served(lambda: Starlette(routes=[Route("/mcp", endpoint=server.endpoint)], lifespan=lifespan))
+        served = Served(lambda: Starlette(routes=server.routes("/mcp"), lifespan=lifespan))
         await served.start()
         try:
             yield World(nestor, served, remote)
@@ -116,7 +120,12 @@ async def delegated(world: World, objective: str, executor: str = "codex") -> tu
     sent = (Attached(kind=AttachmentKind.FILE, blob=quote, name="devis.pdf"),)
     await turn.said("Corrige le devis joint", Medium.WRITTEN, Speaker.account(MATHIS), sent)
     task = await nestor.tasks.delegate(
-        objective, origin=MAIN, requested_by=MATHIS, executor=executor, exchange=turn.exchange
+        objective,
+        origin=MAIN,
+        requested_by=MATHIS,
+        executor=executor,
+        exchange=turn.exchange,
+        given=(FileRef(quote, "devis.pdf"),),
     )
     await eventually(lambda: task.ref is not None)  # submitted: the executor holds its assignment
     return task.id, world.given(task.id)
@@ -145,13 +154,15 @@ async def test_an_executor_works_on_its_task_through_nestor_s_tools(world: World
             "task_brief", "read_file", "recall", "remember", "report_progress",
             "ask_requester", "check_answer", "attach_file",
         }, "no home: no home_state"  # fmt: skip
+        assert [f.name for f in given.files] == ["devis.pdf"] and "read_file gives a link" in given.brief()
         brief = await call(nestor, "task_brief", task=task)
         assert (brief["objective"], brief["requested_by"], brief["channel"]) == ("Corrige le devis", "Mathis", "memory")
         assert any("Corrige le devis joint" in line for line in brief["conversation"])
         [file] = brief["files"]
         assert (file["name"], file["media_type"]) == ("devis.pdf", "application/pdf")
         read = await call(nestor, "read_file", task=task, file=file["file"])
-        assert base64.b64decode(read["base64"]) == PDF
+        async with httpx.AsyncClient() as http:
+            assert (await http.get(world.reached(read["url"]))).content == PDF, "no key: the link is enough"
 
         await world.nestor.memories.remember("Léa préfère les devis en PDF signés", about=PersonId("lea"), source=MAIN)
         await call(nestor, "remember", task=task, fact="Mathis préfère les devis en PDF")
@@ -172,16 +183,18 @@ async def test_an_executor_works_on_its_task_through_nestor_s_tools(world: World
         assert answered == {"status": "answered", "answer": "Oui, 20 %"}
 
         corrected = b"%PDF-1.7 corrige" + bytes(5_000_000)  # bigger than an MCP request's usual cap
-        made = base64.b64encode(corrected).decode()
-        await call(
-            nestor, "attach_file", task=task, name="devis-corrige.pdf", media_type="application/pdf", content=made
-        )
+        upload = await call(nestor, "attach_file", task=task, name="devis-corrige.pdf", media_type="application/pdf")
+        async with httpx.AsyncClient() as http:
+            assert (await http.put(world.reached(upload["upload_url"]), content=corrected)).status_code == 200
+            again = await http.put(world.reached(upload["upload_url"]), content=b"%PDF-1.7 autre")
+            assert again.status_code == 404, "an upload link works once"
 
     world.finish(task_id)
     outcome = await world.nestor.tasks.wait(task_id)
     [ended] = [e for e in await world.nestor.journal.history(TaskEnded) if e.task_id == task_id]
     assert outcome.status.value == "completed" and len(ended.files) == 1
-    assert await world.nestor.blobs.get(ended.files[0].digest) == corrected
+    assert ended.files[0].name == "devis-corrige.pdf", "by the name the executor gave it"
+    assert await world.nestor.blobs.get(ended.files[0].blob.digest) == corrected
     calls = [c for c in await world.nestor.journal.history(ExecutorCalled) if c.task_id == task_id]
     assert {c.tool for c in calls} >= {"task_brief", "attach_file"} and all(
         c.ok and c.executor == "codex" for c in calls
@@ -198,9 +211,16 @@ async def test_another_executor_s_task_an_ended_task_or_a_guess_all_read_the_sam
             with pytest.raises(ToolFailed) as refused:
                 await call(nestor, "task_brief", task=task)
             refusals.append(str(refused.value))
+    assert given.access is not None
+    async with client(world, given.access.key) as nestor:
+        [file] = (await call(nestor, "task_brief", task=given.task))["files"]
+        link = (await call(nestor, "read_file", task=given.task, file=file["file"]))["url"]
     world.finish(codex_task)
     await world.nestor.tasks.wait(codex_task)
-    assert given.access is not None
+    async with httpx.AsyncClient() as http:
+        assert (await http.get(world.reached(link))).status_code == 404, "a link ends with its task"
+        forged = link[:-3] + ("abc" if not link.endswith("abc") else "xyz")
+        assert (await http.get(world.reached(forged))).status_code == 404
     async with client(world, given.access.key) as nestor:
         with pytest.raises(ToolFailed) as ended:
             await call(nestor, "task_brief", task=given.task)
