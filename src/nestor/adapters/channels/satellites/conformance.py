@@ -22,7 +22,12 @@ proves; checks and what was seen instead are `Message`s of the `conformance.ftl`
    again, and falls back to a device code so a person can still pair it;
 4. rate limit (P6): told to wait (429, `Retry-After`), it waits, then pairs.
 
-Checking audio needs the `voice` extra (WebRTC); the rest does not.
+A device that films or can be called is also checked in the first scenario (M1, M2): it opens no media connection
+unless asked, opens one when asked with what was asked (its camera's video, for a call its microphone while it plays
+what the core sends), sends a still picture when asked, and ends the connection when told and at the session's longest
+duration.
+
+Checking audio needs the `voice` extra (WebRTC), media the `media` extra (aiortc); the rest needs neither.
 
     report = await check_satellite(["./my-driver", "--core", "{url}", "--token-file", "{state}/token"])
     assert report.passed, report.failures()
@@ -61,6 +66,7 @@ from nestor.modules.satellites import (
     TEXT_DISPLAY,
     TEXT_INPUT,
     UPDATE,
+    VIDEO_CAPTURE,
     AttemptLimiter,
     Device,
     Manifest,
@@ -73,6 +79,7 @@ from nestor.modules.satellites import (
     Satellite,
     Software,
     pairing_uri,
+    wire,
 )
 from nestor.modules.satellites.codes import ALPHABET
 from nestor.testing.journal import MemoryEventLog
@@ -84,6 +91,8 @@ AUDIO_RATE = 48000
 PAIRING_URI = "NESTOR_PAIRING_URI"
 IDENTIFY_WAIT_S = 5.0  # how long the person waits for a pending device to see its identify
 NO_AUDIO_WAIT_S = 2.0  # how long a device allowed no audio is watched for an offer
+MEDIA_MAX_S = 3  # the longest the checked media session lasts: the device must end it by itself (M2)
+MEDIA_OFFER_WAIT_S = 30.0  # a device's media offer: ICE gathering alone takes seconds on some hosts
 
 
 @dataclass(frozen=True, slots=True)
@@ -252,6 +261,69 @@ def _audio() -> tuple[_Audio | None, str | None]:
         return None, (missing.name or "pipecat").partition(".")[0]
 
 
+class _Media:
+    """The core's side of media sessions, with aiortc (the `media` extra): it takes the device's connection for the
+    session the check opened, and keeps what it receives."""
+
+    def __init__(self) -> None:
+        from aiortc import RTCPeerConnection, RTCSessionDescription
+
+        self._connection, self._description = RTCPeerConnection, RTCSessionDescription
+        self.waiting: str | None = None  # the session the check opened
+        self.connections: asyncio.Queue[tuple[Any, list[Any]]] = asyncio.Queue()
+        self.unasked = 0  # offers for no session the core opened (M1)
+
+    async def offer(self, device_id: str, body: dict[str, Any]) -> dict[str, Any]:
+        if body.get("session") != self.waiting or self.waiting is None:
+            self.unasked += 1
+            raise PermissionError("no session waits for this connection")
+        self.waiting = None
+        connection, tracks = self._connection(), []
+        connection.on("track", tracks.append)
+        await connection.setRemoteDescription(self._description(sdp=body["sdp"], type=body["type"]))
+        for transceiver in connection.getTransceivers():
+            if transceiver.kind == "audio":
+                connection.addTrack(_tone())
+        await connection.setLocalDescription(await connection.createAnswer())
+        self.connections.put_nowait((connection, tracks))
+        return {"sdp": connection.localDescription.sdp, "type": connection.localDescription.type}
+
+
+def _tone() -> Any:
+    """A 440 Hz tone, what the core plays on a device in a call."""
+    import fractions
+
+    import av
+    import numpy as np
+    from aiortc import MediaStreamTrack
+
+    class Tone(MediaStreamTrack):
+        kind = "audio"
+
+        def __init__(self) -> None:
+            super().__init__()
+            self._pts = 0
+
+        async def recv(self) -> Any:
+            await asyncio.sleep(0.02)
+            t = (np.arange(960) + self._pts) / AUDIO_RATE
+            samples = (np.sin(2 * np.pi * 440 * t) * 6000).astype(np.int16).reshape(1, -1)
+            frame = av.AudioFrame.from_ndarray(samples, format="s16", layout="mono")
+            frame.sample_rate, frame.pts, frame.time_base = AUDIO_RATE, self._pts, fractions.Fraction(1, AUDIO_RATE)
+            self._pts += 960
+            return frame
+
+    return Tone()
+
+
+def _media() -> tuple[_Media | None, str | None]:
+    """The media checker, or the missing module that prevents it."""
+    try:
+        return _Media(), None
+    except ModuleNotFoundError as missing:
+        return None, (missing.name or "aiortc").partition(".")[0]
+
+
 @dataclass(slots=True)
 class _Core:
     """One fake core, serving one scenario."""
@@ -263,15 +335,19 @@ class _Core:
     audio_offers: int = 0  # every audio offer received, allowed or not
     audio: _Audio | None = None
     missing: str | None = None  # the module audio checks need, when missing
+    media: _Media | None = None
+    media_missing: str | None = None  # the module media checks need, when missing
 
     @contextlib.asynccontextmanager
     async def serving(self) -> Any:
         self.audio, self.missing = _audio()
+        self.media, self.media_missing = _media()
         port = _free_port()
         gateway = SatelliteGateway(
             self.pairing,
             on_link=self._linked,
             audio=self.audio,
+            media=self.media.offer if self.media else None,
             refused=lambda _device, code, why: self.refusals.append((code, why)),
         )
         server = DeviceServer(host="127.0.0.1", port=port, gateway=gateway)
@@ -347,6 +423,7 @@ class FakeCore:
                 return
             self.probe.welcome(first, first.satellite, first.allowed)
             await self._check_audio(core, first, findings)
+            await self._check_media(core, first, findings)
             await self.probe.run(first, first.satellite, findings)
             await first.close(Close.STOPPING)
             again = await self._next(core, findings, Message.of("conformance-reconnects"))
@@ -458,6 +535,79 @@ class FakeCore:
                          await _within(connection.audio_input_track().recv(), 5.0),
                          Message.of("conformance-no-audio-frame"))  # fmt: skip
         await connection.disconnect()
+
+    async def _check_media(self, core: _Core, link: _Link, findings: Findings) -> None:
+        """M1, M2: nothing unasked; what was asked when asked; a picture; the end when told and at its time."""
+        films, call = VIDEO_CAPTURE in link.allowed, link.satellite.capabilities >= AUDIO
+        if not films and not call:
+            return
+        if core.media is None:
+            findings.add(Message.of("conformance-opens-media"), False,
+                         Message.of("conformance-media-missing", module=core.media_missing or "aiortc"))  # fmt: skip
+            return
+        media = core.media
+        await asyncio.sleep(NO_AUDIO_WAIT_S)
+        findings.add(Message.of("conformance-no-unasked-media"), media.unasked == 0,
+                     Message.of("conformance-media-offers", count=media.unasked))  # fmt: skip
+        for session, max_s, told in (("check-1", 60, True), ("check-2", MEDIA_MAX_S, False)):
+            media.waiting = session
+            opening = wire.MediaOpenIntent(session=session, video=films, audio=call, max_s=max_s)
+            link.send(wire.encode(opening))
+            try:
+                connection, tracks = await asyncio.wait_for(media.connections.get(), MEDIA_OFFER_WAIT_S)
+            except TimeoutError:
+                findings.add(Message.of("conformance-opens-media"), False,
+                             Message.of("conformance-no-media-offer", seconds=MEDIA_OFFER_WAIT_S))  # fmt: skip
+                return
+            await _until_connected(connection, self.deadline_s)
+            if told:
+                findings.add(Message.of("conformance-opens-media"), True)
+                kinds = {t.kind for t in tracks}
+                if films:
+                    video = next((t for t in tracks if t.kind == "video"), None)
+                    findings.add(Message.of("conformance-sends-video"),
+                                 video is not None and await _within(video.recv(), 5.0),
+                                 Message.of("conformance-no-video-frame"))  # fmt: skip
+                if call:
+                    audio = next((t for t in tracks if t.kind == "audio"), None)
+                    findings.add(Message.of("conformance-calls"),
+                                 "audio" in kinds and audio is not None and await _within(audio.recv(), 5.0),
+                                 Message.of("conformance-no-audio-frame"))  # fmt: skip
+                link.send(wire.encode(wire.MediaCloseIntent(session=session)))
+                findings.add(Message.of("conformance-ends-media-when-told"),
+                             await _within(_closed(connection), self.deadline_s),
+                             Message.of("conformance-media-still-open"))  # fmt: skip
+            else:
+                findings.add(Message.of("conformance-ends-media-in-time", seconds=max_s),
+                             await _within(_closed(connection), max_s + self.deadline_s),
+                             Message.of("conformance-media-still-open"))  # fmt: skip
+            await connection.close()
+        if films:
+            link.send(wire.encode(wire.SnapshotIntent()))
+            findings.add(Message.of("conformance-sends-picture"),
+                         await _within(_picture(link), self.deadline_s),
+                         Message.of("conformance-no-picture"))  # fmt: skip
+
+
+async def _until_connected(connection: Any, timeout_s: float) -> None:
+    with contextlib.suppress(TimeoutError):
+        async with asyncio.timeout(timeout_s):
+            while connection.connectionState not in ("connected", "failed", "closed"):
+                await asyncio.sleep(0.05)
+
+
+async def _closed(connection: Any) -> None:
+    """Until the device ends the connection (it closes it, or stops answering)."""
+    while connection.connectionState not in ("closed", "failed", "disconnected"):
+        await asyncio.sleep(0.1)
+
+
+async def _picture(link: _Link) -> None:
+    """Until the device sends a still picture (`media.snapshot`)."""
+    while True:
+        data = await link.receive()
+        if isinstance(data, dict) and data.get("type") == "media.snapshot":
+            return
 
 
 async def _until(condition: Callable[[], bool]) -> None:
