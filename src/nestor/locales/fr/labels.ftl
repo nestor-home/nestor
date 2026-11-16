@@ -29,7 +29,9 @@ scope-name = { $scope ->
     [messages-read-all] lire tous les messages et confirmations
     [messages-read-own] lire ses propres messages et confirmations
     [media-view] regarder les caméras qui lui sont ouvertes
+    [media-view-all] regarder toutes les caméras
     [media-call] appeler par les satellites qui lui sont ouverts
+    [media-call-all] appeler par tous les satellites
    *[other] { $scope }
 }
 invitation-status = { $status ->

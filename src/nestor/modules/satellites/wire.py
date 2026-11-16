@@ -81,7 +81,7 @@ type Link = Annotated[str, Size(9, 512, r"^https://\S+$")]  # an address for peo
 type Session = Annotated[str, Size(1, 64)]  # a media session's id, given by the core
 type Lasting = Annotated[int, Bounds(1, 3600)]  # the longest a media session may last, in seconds
 SNAPSHOT_MAX = 4_000_000  # characters of a still picture in base64: about 3 MB of JPEG
-type Jpeg = Annotated[str, Size(1, SNAPSHOT_MAX, r"^[A-Za-z0-9+/]+={0,2}$")]  # a JPEG picture, in base64
+type Jpeg = Annotated[str, Size(1, SNAPSHOT_MAX)]  # a JPEG picture, in base64
 
 
 class Direction(StrEnum):

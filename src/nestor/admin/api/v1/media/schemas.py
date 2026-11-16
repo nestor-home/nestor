@@ -5,8 +5,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from nestor.admin.api.v1.shared import People, PersonRef
-from nestor.modules.satellites import VIDEO_CAPTURE, MediaAccess, Opened, Purpose, Satellite
-from nestor.modules.satellites.media import CALL
+from nestor.modules.satellites import LiveSession, MediaAccess, Offer, Purpose
 
 
 class MediaDeviceOut(BaseModel):
@@ -20,15 +19,15 @@ class MediaDeviceOut(BaseModel):
     can_call: bool  # it hears and plays sound, and the caller may call through it
 
     @classmethod
-    def of(cls, satellite: Satellite, allowed: frozenset[str] | None, *, view: bool, call: bool) -> "MediaDeviceOut":
-        films = VIDEO_CAPTURE in (satellite.capabilities if allowed is None else allowed)
+    def of(cls, offer: Offer) -> "MediaDeviceOut":
+        satellite = offer.satellite
         return cls(
             id=satellite.id,
             name=satellite.name,
             room=satellite.room,
-            connected=allowed is not None,
-            can_view=view and films and satellite.access.camera,
-            can_call=call and (satellite.capabilities if allowed is None else allowed) >= CALL,
+            connected=offer.linked is not None,
+            can_view=offer.view and satellite.access.camera,
+            can_call=offer.call,
         )
 
 
@@ -56,14 +55,14 @@ class MediaSessionOut(BaseModel):
     max_s: int
 
     @classmethod
-    def of(cls, opened: Opened) -> "MediaSessionOut":
+    def of(cls, live: LiveSession) -> "MediaSessionOut":
         return cls(
-            session_id=opened.session_id,
-            sdp=str(opened.answer["sdp"]),
-            type=str(opened.answer["type"]),
-            video=opened.video,
-            audio=opened.audio,
-            max_s=opened.max_s,
+            session_id=live.id,
+            sdp=str(live.answer["sdp"]),
+            type=str(live.answer["type"]),
+            video=live.video,
+            audio=live.audio,
+            max_s=live.max_s,
         )
 
 

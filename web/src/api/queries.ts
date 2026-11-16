@@ -127,11 +127,12 @@ export const additionQuery = (id: Id) =>
     queryFn: ({ signal }) => api.addition(id, signal),
     refetchInterval: (q) => (q.state.data && !["waiting", "device_seen"].includes(q.state.data.stage) ? false : 1_500),
   });
-/** The devices one may watch or call through; whether each is connected changes on its own. */
+/** The devices one may watch or call through; kept fresh by the live journal (connections, who may use each). */
+/** The live journal refreshes it for whoever reads device connections there; a member reads only their own. */
 export const mediaDevicesQuery = queryOptions({
   queryKey: keys.mediaDevices,
   queryFn: api.mediaDevices,
-  refetchInterval: 10_000,
+  refetchInterval: 30_000,
 });
 /** Kept fresh by the live journal (its connections and what it reports about its software). */
 export const satelliteQuery = (id: string) =>

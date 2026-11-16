@@ -266,10 +266,12 @@ class _Media:
     session the check opened, and keeps what it receives."""
 
     def __init__(self) -> None:
-        from aiortc import RTCConfiguration, RTCPeerConnection, RTCSessionDescription
+        from aiortc import RTCPeerConnection, RTCSessionDescription
 
-        self._connection = lambda: RTCPeerConnection(RTCConfiguration(iceServers=[]))  # no STUN to wait for
-        self._description = RTCSessionDescription
+        from nestor.adapters.channels.satellites.media import LOCAL, Forwarded
+
+        self._connection = lambda: RTCPeerConnection(LOCAL)
+        self._description, self._played = RTCSessionDescription, Forwarded
         self.waiting: str | None = None  # the session the check opened
         self.connections: asyncio.Queue[tuple[Any, list[Any]]] = asyncio.Queue()
         self.unasked = 0  # offers for no session the core opened (M1)
@@ -284,37 +286,10 @@ class _Media:
         await connection.setRemoteDescription(self._description(sdp=body["sdp"], type=body["type"]))
         for transceiver in connection.getTransceivers():
             if transceiver.kind == "audio":
-                connection.addTrack(_tone())
+                connection.addTrack(self._played())  # what the core plays on a device in a call: silence
         await connection.setLocalDescription(await connection.createAnswer())
         self.connections.put_nowait((connection, tracks))
         return {"sdp": connection.localDescription.sdp, "type": connection.localDescription.type}
-
-
-def _tone() -> Any:
-    """A 440 Hz tone, what the core plays on a device in a call."""
-    import fractions
-
-    import av
-    import numpy as np
-    from aiortc import MediaStreamTrack
-
-    class Tone(MediaStreamTrack):
-        kind = "audio"
-
-        def __init__(self) -> None:
-            super().__init__()
-            self._pts = 0
-
-        async def recv(self) -> Any:
-            await asyncio.sleep(0.02)
-            t = (np.arange(960) + self._pts) / AUDIO_RATE
-            samples = (np.sin(2 * np.pi * 440 * t) * 6000).astype(np.int16).reshape(1, -1)
-            frame = av.AudioFrame.from_ndarray(samples, format="s16", layout="mono")
-            frame.sample_rate, frame.pts, frame.time_base = AUDIO_RATE, self._pts, fractions.Fraction(1, AUDIO_RATE)
-            self._pts += 960
-            return frame
-
-    return Tone()
 
 
 def _media() -> tuple[_Media | None, str | None]:
@@ -563,7 +538,6 @@ class FakeCore:
             await _until_connected(connection, self.deadline_s)
             if told:
                 findings.add(Message.of("conformance-opens-media"), True)
-                kinds = {t.kind for t in tracks}
                 if films:
                     video = next((t for t in tracks if t.kind == "video"), None)
                     findings.add(Message.of("conformance-sends-video"),
@@ -572,7 +546,7 @@ class FakeCore:
                 if call:
                     audio = next((t for t in tracks if t.kind == "audio"), None)
                     findings.add(Message.of("conformance-calls"),
-                                 "audio" in kinds and audio is not None and await _within(audio.recv(), 5.0),
+                                 audio is not None and await _within(audio.recv(), 5.0),
                                  Message.of("conformance-no-audio-frame"))  # fmt: skip
                 link.send(wire.encode(wire.MediaCloseIntent(session=session)))
                 findings.add(Message.of("conformance-ends-media-when-told"),

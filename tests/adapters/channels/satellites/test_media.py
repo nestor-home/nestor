@@ -9,7 +9,7 @@ import json
 import math
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 import av
 import httpx
@@ -32,7 +32,9 @@ from nestor.modules.satellites import (
     MediaRefused,
     MediaSessionClosed,
     MediaSessions,
+    Pairing,
     Purpose,
+    Refusal,
     Viewer,
     wire,
 )
@@ -47,8 +49,9 @@ CAMERA = Manifest(
     tuple(DeclaredCapability(c) for c in (VIDEO_CAPTURE, AUDIO_CAPTURE, AUDIO_PLAYBACK)),
     software=SOFTWARE,
 )
-OWNER = Viewer(account_id="a-mathis", person=PersonId("mathis"), owner=True, signed_in="s-1")
-LEA = Viewer(account_id="a-lea", person=PersonId("lea"), owner=False, signed_in="s-2")
+BOTH = frozenset(Purpose)
+OWNER = Viewer(account_id="a-mathis", person=PersonId("mathis"), may=BOTH, everywhere=BOTH)
+LEA = Viewer(account_id="a-lea", person=PersonId("lea"), may=BOTH)
 JPEG = b"\xff\xd8\xff\xe0 a picture \xff\xd9"
 
 
@@ -166,18 +169,19 @@ class Browser:
 @asynccontextmanager
 async def watched(
     *, viewers: frozenset[PersonId] = frozenset(), voice: bool = False, view_max_s: int = 60
-) -> AsyncGenerator[tuple[MediaSessions, Camera, Journal, str]]:
+) -> AsyncGenerator[tuple[MediaSessions, Camera, Journal, str, Pairing]]:
     async with home(voice=voice) as (channel, pairing, journal, url):
         relay = channel.media_relay()
         assert relay is not None, "aiortc is installed for the tests"
         media = MediaSessions(journal, pairing, relay, MemoryBlobStore(), view_max_s=view_max_s)
+        await media.start()
         camera = Camera(url, await paired(pairing, CAMERA))
         if viewers:
-            await media.set_access(CAMERA.device.id, MediaAccess(viewers=viewers))
+            await pairing.set_access(CAMERA.device.id, MediaAccess(viewers=viewers))
         running = asyncio.create_task(camera.run())
-        await _until(lambda: media.linked(CAMERA.device.id) is not None)
+        await _until(lambda: relay.linked(CAMERA.device.id) is not None)
         try:
-            yield media, camera, journal, url
+            yield media, camera, journal, url, pairing
         finally:
             await media.close()
             running.cancel()
@@ -192,11 +196,11 @@ async def ended(journal: Journal, reason: MediaEnd) -> None:
 async def opened(media: MediaSessions, purpose: Purpose, viewer: Viewer, browser: Browser) -> str:
     session = await media.open(CAMERA.device.id, purpose, viewer, await browser.offer())
     await browser.answered(dict(session.answer))
-    return session.session_id
+    return session.id
 
 
 async def test_a_person_allowed_watches_the_camera_only_while_the_session_lasts() -> None:
-    async with watched(viewers=frozenset({PersonId("lea")})) as (media, camera, journal, _):
+    async with watched(viewers=frozenset({PersonId("lea")})) as (media, camera, journal, _, _):
         browser = Browser(call=False)
         session = await opened(media, Purpose.VIEW, LEA, browser)
         await _until(lambda: browser.frames > 5)
@@ -208,7 +212,7 @@ async def test_a_person_allowed_watches_the_camera_only_while_the_session_lasts(
 
 
 async def test_a_call_carries_the_person_s_voice_to_the_device() -> None:
-    async with watched() as (media, camera, _, _):
+    async with watched() as (media, camera, _, _, _):
         browser = Browser(call=True)
         await opened(media, Purpose.CALL, OWNER, browser)
         await _until(lambda: camera.loudest > 1_000 and browser.frames > 5, timeout_s=15)
@@ -217,19 +221,19 @@ async def test_a_call_carries_the_person_s_voice_to_the_device() -> None:
 
 @pytest.mark.parametrize(
     ("viewer", "purpose", "reason"),
-    [(LEA, Purpose.VIEW, "forbidden"), (LEA, Purpose.CALL, "forbidden")],
+    [(LEA, Purpose.VIEW, Refusal.FORBIDDEN), (LEA, Purpose.CALL, Refusal.FORBIDDEN)],
 )
 async def test_nobody_unlisted_opens_anything_and_the_device_is_never_asked(
-    viewer: Viewer, purpose: Purpose, reason: str
+    viewer: Viewer, purpose: Purpose, reason: Refusal
 ) -> None:
-    async with watched() as (media, camera, _, _):
+    async with watched() as (media, camera, _, _, _):
         with pytest.raises(MediaRefused) as refused:
             await media.open(CAMERA.device.id, purpose, viewer, await Browser(call=False).offer())
         assert refused.value.reason == reason and camera.opened == []
 
 
 async def test_a_device_cannot_connect_for_a_session_nobody_opened() -> None:
-    async with watched() as (_, camera, _, url), httpx.AsyncClient(base_url=url) as http:
+    async with watched() as (_, camera, _, url, _), httpx.AsyncClient(base_url=url) as http:
         guessed = {"session": "guessed", "sdp": "v=0", "type": "offer"}
         refused = await http.post(
             f"/satellites/{CAMERA.device.id}/media", json=guessed, headers={"Authorization": f"Bearer {camera.token}"}
@@ -239,32 +243,45 @@ async def test_a_device_cannot_connect_for_a_session_nobody_opened() -> None:
 
 
 async def test_a_session_ends_when_its_time_is_up_and_the_device_is_told() -> None:
-    async with watched(view_max_s=1) as (media, camera, journal, _):
+    async with watched(view_max_s=1) as (media, camera, journal, _, _):
         session = await opened(media, Purpose.VIEW, OWNER, Browser(call=False))
         await ended(journal, MediaEnd.TIMED_OUT)
         await _until(lambda: camera.closed == [session])
 
 
-async def test_a_session_ends_with_the_admin_session_that_opened_it() -> None:
-    async with watched() as (media, _, journal, _):
-        await opened(media, Purpose.VIEW, OWNER, Browser(call=False))
-        await media.signed_out(OWNER.signed_in)
-        await ended(journal, MediaEnd.SIGNED_OUT)
-        assert media.sessions() == []
+@pytest.mark.parametrize(
+    ("now", "reason"),
+    [
+        (None, MediaEnd.SIGNED_OUT),  # their admin session ended
+        (Viewer(account_id="a-mathis", person=PersonId("mathis"), may=frozenset()), MediaEnd.ACCESS_CHANGED),  # role
+    ],
+)
+async def test_a_session_ends_as_soon_as_its_person_is_gone_or_may_no_longer(
+    now: Viewer | None, reason: MediaEnd
+) -> None:
+    gone = asyncio.Event()
+    viewer = replace(OWNER, now=lambda: now if gone.is_set() else OWNER)
+    async with watched() as (media, camera, journal, _, _):
+        session = await opened(media, Purpose.VIEW, viewer, Browser(call=False))
+        gone.set()
+        await media.check()
+        await ended(journal, reason)
+        await _until(lambda: camera.closed == [session])
 
 
 async def test_taking_someone_off_the_list_ends_what_they_watch() -> None:
-    async with watched(viewers=frozenset({PersonId("lea")})) as (media, _, journal, _):
+    async with watched(viewers=frozenset({PersonId("lea")})) as (media, _, journal, _, pairing):
         await opened(media, Purpose.VIEW, LEA, Browser(call=False))
-        await media.set_access(CAMERA.device.id, MediaAccess())
-        await ended(journal, MediaEnd.SIGNED_OUT)
+        await pairing.set_access(CAMERA.device.id, MediaAccess())
+        await media.check()
+        await ended(journal, MediaEnd.ACCESS_CHANGED)
         with pytest.raises(MediaRefused):
             await media.open(CAMERA.device.id, Purpose.VIEW, LEA, await Browser(call=False).offer())
 
 
 async def test_the_voice_of_the_core_steps_aside_during_a_call() -> None:
     """Nothing of a call reaches the assistant: the device may not open its voice session meanwhile."""
-    async with watched(voice=True) as (media, camera, _, url), httpx.AsyncClient(base_url=url) as http:
+    async with watched(voice=True) as (media, camera, _, url, _), httpx.AsyncClient(base_url=url) as http:
         await opened(media, Purpose.CALL, OWNER, Browser(call=True))
         voice = await http.post(
             f"/satellites/{CAMERA.device.id}/audio",
@@ -275,9 +292,9 @@ async def test_the_voice_of_the_core_steps_aside_during_a_call() -> None:
 
 
 async def test_a_picture_comes_from_the_device_and_is_kept_with_its_name() -> None:
-    async with watched() as (media, _, _, _):
-        taken = await media.snapshot(CAMERA.device.id, OWNER)
-        assert taken.name.startswith("entree-") and taken.name.endswith(".jpg")
+    async with watched() as (media, _, _, _, _):
+        taken, jpeg = await media.snapshot(CAMERA.device.id, OWNER)
+        assert taken.name.startswith("entree-") and taken.name.endswith(".jpg") and jpeg == JPEG
 
 
 @pytest.mark.parametrize(

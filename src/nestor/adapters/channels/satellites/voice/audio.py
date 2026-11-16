@@ -9,7 +9,7 @@ their voice when voices are recognised. Unprompted messages go to the most recen
 import asyncio
 import contextlib
 import logging
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from typing import Any
 
 from pipecat.transports.base_transport import BaseTransport, TransportParams
@@ -46,11 +46,20 @@ class SatelliteVoice(AudioOffers):
         self._by_transport: dict[BaseTransport, VoiceSession] = {}
         self._closed = False
         self._running: set[asyncio.Task[None]] = set()
-        self._held: set[str] = set()  # devices in a call: no voice session meanwhile
+        self._calling: Callable[[str], bool] = lambda _device_id: False
 
-    def serve(self, assistant: Assistant, links: Mapping[str, SatelliteLink]) -> None:
-        """Answer with `assistant` the devices whose link is up in `links` (device id → its link)."""
+    def serve(
+        self,
+        assistant: Assistant,
+        links: Mapping[str, SatelliteLink],
+        *,
+        calling: Callable[[str], bool] | None = None,
+    ) -> None:
+        """Answer with `assistant` the devices whose link is up in `links` (device id → its link), but those in a
+        call (`calling`): nothing of a call reaches the assistant."""
         self._assistant, self._links = assistant, links
+        if calling is not None:
+            self._calling = calling
 
     async def hang_up(self, link: SatelliteLink) -> None:
         """The device's link ended: its audio ends too (A3), and its answered offers are forgotten."""
@@ -58,16 +67,6 @@ class SatelliteVoice(AudioOffers):
         self._owners = {pc: owner for pc, owner in self._owners.items() if owner != device}
         if session := self._sessions.get(device):
             await session.stop()
-
-    async def hold(self, link: SatelliteLink) -> None:
-        """A call goes through the device: its voice session ends, and none starts until `release`, so nothing of
-        the call reaches the assistant."""
-        self._held.add(link.satellite.id)
-        await self.hang_up(link)
-
-    def release(self, device_id: str) -> None:
-        """The call ended: the device may offer its voice again."""
-        self._held.discard(device_id)
 
     async def offer(self, device_id: str, body: dict[str, Any]) -> dict[str, Any]:
         link = self._link(device_id, body.get("pc_id"))
@@ -151,7 +150,7 @@ class SatelliteVoice(AudioOffers):
         link = self._links.get(device_id)
         if link is None:
             raise PermissionError("this device has no link up")
-        if device_id in self._held:
+        if self._calling(device_id):
             raise PermissionError("this device is in a call")
         if pc_id is not None and self._owners.get(pc_id) != device_id:
             raise PermissionError("this peer connection belongs to no session of this device")

@@ -1,7 +1,7 @@
 /**
- * The browser's microphone, for recording a voice: asked once, then heard as raw samples through an
- * AudioWorklet (served from the admin's own origin, as its security policy requires). No echo
- * cancellation nor noise suppression: the voiceprint must match what satellites hear.
+ * The browser's microphone: its stream as a caller asks it (a call), or, for recording a voice, heard as raw
+ * samples through an AudioWorklet (served from the admin's own origin, as its security policy requires). No echo
+ * cancellation nor noise suppression for a voice: the voiceprint must match what satellites hear.
  */
 import captureUrl from "./capture.worklet.ts?worker&url";
 
@@ -27,33 +27,34 @@ export interface Microphone {
   close(): void;
 }
 
-export function problemOf(error: unknown): MicrophoneProblem {
+function problemOf(error: unknown): MicrophoneProblem {
   const name = error instanceof DOMException || error instanceof Error ? error.name : "";
   if (name === "NotAllowedError" || name === "SecurityError") return "denied";
   if (name === "NotFoundError" || name === "OverconstrainedError") return "missing";
   return "failed";
 }
 
-/** Opens a microphone (the chosen one, else the browser's default), asking permission if needed. */
-export async function openMicrophone(device?: string | null): Promise<Microphone> {
+/** The microphone's stream as `audio` asks it, asking permission if needed; refused as a `MicrophoneError`. */
+export async function openMicrophoneStream(audio: MediaTrackConstraints): Promise<MediaStream> {
   if (typeof window !== "undefined" && !window.isSecureContext) throw new MicrophoneError("insecure");
-  if (!navigator.mediaDevices?.getUserMedia || typeof AudioContext === "undefined") {
-    throw new MicrophoneError("unsupported");
-  }
-  let stream: MediaStream;
+  if (!navigator.mediaDevices?.getUserMedia) throw new MicrophoneError("unsupported");
   try {
-    stream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        ...(device ? { deviceId: { exact: device } } : {}),
-        channelCount: 1,
-        echoCancellation: false,
-        noiseSuppression: false,
-        autoGainControl: true,
-      },
-    });
+    return await navigator.mediaDevices.getUserMedia({ audio });
   } catch (error) {
     throw new MicrophoneError(problemOf(error));
   }
+}
+
+/** Opens a microphone (the chosen one, else the browser's default), asking permission if needed. */
+export async function openMicrophone(device?: string | null): Promise<Microphone> {
+  if (typeof AudioContext === "undefined") throw new MicrophoneError("unsupported");
+  const stream = await openMicrophoneStream({
+    ...(device ? { deviceId: { exact: device } } : {}),
+    channelCount: 1,
+    echoCancellation: false,
+    noiseSuppression: false,
+    autoGainControl: true,
+  });
   const context = new AudioContext();
   const stop = () => {
     for (const track of stream.getTracks()) track.stop();

@@ -147,7 +147,8 @@ class MediaEnd(StrEnum):
 
     CLOSED = "closed"  # whoever opened it closed it
     TIMED_OUT = "timed_out"  # its longest duration passed
-    SIGNED_OUT = "signed_out"  # the admin session it belonged to ended, or lost the right to it
+    SIGNED_OUT = "signed_out"  # the admin session it belonged to ended (signed out, expired, revoked)
+    ACCESS_CHANGED = "access_changed"  # the device no longer lets its person do it
     DEVICE_LEFT = "device_left"  # the device's link or connection went down
     FAILED = "failed"  # it could not be set up: the device did not answer, or the connection failed
 

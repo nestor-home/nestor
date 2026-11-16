@@ -4,7 +4,7 @@
  * The offer leaves once every candidate is gathered (Nestor does not trickle them).
  */
 import { api, type MediaPurpose, type MediaSession } from "@/api";
-import { MicrophoneError, problemOf } from "@/lib/audio/microphone";
+import { openMicrophoneStream } from "@/lib/audio/microphone";
 
 /** How long candidates may take to gather before the offer leaves with those found. */
 const GATHERING_MS = 3_000;
@@ -25,19 +25,6 @@ export interface Live {
   mute(muted: boolean): void;
   /** Ends it, here and on Nestor; `leaving` when the page closes. */
   close(leaving?: boolean): void;
-}
-
-/** Opens the microphone for a call, with the echo cancelled: the room hears itself otherwise. */
-async function microphone(): Promise<MediaStream> {
-  if (!window.isSecureContext) throw new MicrophoneError("insecure");
-  if (!navigator.mediaDevices?.getUserMedia) throw new MicrophoneError("unsupported");
-  try {
-    return await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-    });
-  } catch (error) {
-    throw new MicrophoneError(problemOf(error));
-  }
 }
 
 function gathered(peer: RTCPeerConnection): Promise<void> {
@@ -66,7 +53,11 @@ export async function connect(
   { video, onEnd }: { video: boolean; onEnd: () => void },
 ): Promise<Live> {
   if (typeof RTCPeerConnection === "undefined") throw new Unsupported();
-  const mic = purpose === "call" ? await microphone() : null;
+  // a call cancels the echo: the room hears itself otherwise
+  const mic =
+    purpose === "call"
+      ? await openMicrophoneStream({ echoCancellation: true, noiseSuppression: true, autoGainControl: true })
+      : null;
   const peer = new RTCPeerConnection();
   const stream = new MediaStream();
   const release = () => {

@@ -12,7 +12,6 @@ place, not an account: whoever is there may speak, and who it is comes from thei
 
 import asyncio
 import logging
-from collections.abc import Awaitable, Callable
 from typing import TYPE_CHECKING
 
 from fastapi import WebSocket
@@ -25,7 +24,9 @@ from nestor.modules.channels import Address, Assistant, Attachment, Channel, Inb
 from nestor.modules.journal import Journal
 from nestor.modules.satellites import (
     AUDIO,
+    MEDIA_INDICATOR,
     TEXT_DISPLAY,
+    VIDEO_CAPTURE,
     Manifest,
     Pairing,
     Satellite,
@@ -69,7 +70,7 @@ class SatellitesChannel(Channel, SatelliteHost):
         self._assistant: Assistant | None = None
         self._hosting: tuple[Pairing, Journal] | None = None
         self._links: dict[str, SatelliteLink] = {}  # device id → its current link
-        self._media = _media(self._links, self._calling)
+        self._media = _media(self._links, voice)
         self._gateway: SatelliteGateway | None = None
         self._server: DeviceServer | None = None
         self._closed = asyncio.Event()
@@ -86,17 +87,19 @@ class SatellitesChannel(Channel, SatelliteHost):
         return f"http://{f'[{host}]' if ':' in host else host}:{self._port}"
 
     def allowed(self, satellite: Satellite) -> frozenset[Capability]:
-        """What a paired device is granted on its link: its pairing's capabilities the core can serve. Its audio
-        serves calls even without a voice (`welcome` then says the core does not talk: no voice offers); without
-        media to relay either, nothing serves it."""
-        return satellite.capabilities if self._voice or self._media else satellite.capabilities - AUDIO
+        """What a paired device is granted on its link: its pairing's capabilities the core can serve. Audio serves
+        the voice and calls (without a voice, `welcome` says the core does not talk: no voice offers); filming and
+        its indicator only media."""
+        served = {VIDEO_CAPTURE: bool(self._media), MEDIA_INDICATOR: bool(self._media)}
+        served |= dict.fromkeys(AUDIO, bool(self._voice or self._media))
+        return frozenset(c for c in satellite.capabilities if served.get(c, True))
 
     async def serve(self, assistant: Assistant) -> None:
         if self._hosting is None:
             raise ContractError("the runtime hosts satellites before serving the channel")
         self._assistant = assistant
         if self._voice is not None:
-            self._voice.serve(assistant, self._links)
+            self._voice.serve(assistant, self._links, calling=self._media.calling if self._media else None)
         if self._closed.is_set():
             return
         offer = self._media.device_offer if self._media else None
@@ -170,15 +173,6 @@ class SatellitesChannel(Channel, SatelliteHost):
                 if self._voice is not None:
                     await self._voice.hang_up(link)
 
-    async def _calling(self, link: SatelliteLink, active: bool) -> None:
-        """A call goes through the device (`active`) or ended: its voice steps aside meanwhile."""
-        if self._voice is None:
-            return
-        if active:
-            await self._voice.hold(link)
-        else:
-            self._voice.release(link.satellite.id)
-
     async def _typed(self, link: SatelliteLink, text: str) -> None:
         """A typed turn: answered in writing where it shows text, otherwise aloud (T3)."""
         assert self._assistant is not None
@@ -204,13 +198,11 @@ class SatellitesChannel(Channel, SatelliteHost):
                 link.show(message, final=part.last)
 
 
-def _media(
-    links: dict[str, SatelliteLink], calling: "Callable[[SatelliteLink, bool], Awaitable[None]]"
-) -> "SatelliteMedia | None":
-    """The media relay, when aiortc is installed (the `media` extra)."""
+def _media(links: dict[str, SatelliteLink], voice: "SatelliteVoice | None") -> "SatelliteMedia | None":
+    """The media relay, when aiortc is installed (the `media` extra); a call ends the device's voice session."""
     try:
         from nestor.adapters.channels.satellites.media import SatelliteMedia
     except ImportError:
         logger.info("satellites: install the media extra to watch and call through devices")
         return None
-    return SatelliteMedia(links, calling=calling)
+    return SatelliteMedia(links, on_call=voice.hang_up if voice else None)

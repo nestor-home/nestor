@@ -8,7 +8,7 @@ service keeps it). What the device was not allowed is ignored.
 """
 
 import asyncio
-import base64
+import binascii
 import contextlib
 import json
 import logging
@@ -102,6 +102,8 @@ class SatelliteLink(Online):
 
     async def snapshot(self, timeout_s: float) -> bytes:
         """A still picture from the device's camera (it was allowed `video.capture`): its JPEG."""
+        if self._closed.is_set():
+            raise ProviderError(SOURCE, f"{self.satellite.id} is not connected", transient=True)
         asked = self.send(wire.SnapshotIntent())
         picture = self._pictures[asked] = asyncio.get_running_loop().create_future()
         try:
@@ -141,6 +143,9 @@ class SatelliteLink(Online):
             await self._read()
         finally:
             self._closed.set()
+            for picture in self._pictures.values():  # asked, never to come
+                if not picture.done():
+                    picture.set_exception(ProviderError(SOURCE, f"{satellite.id} left", transient=True))
             self._outbox.put_nowait(None)
             self._typed.put_nowait(None)
             answering.cancel()
@@ -209,7 +214,11 @@ class SatelliteLink(Online):
                 await self._reported(UpdateStatus(state, version, notes))
             case wire.SnapshotReport(of=asked, jpeg=jpeg):
                 if (picture := self._pictures.get(asked)) is not None and not picture.done():
-                    picture.set_result(base64.b64decode(jpeg))
+                    try:
+                        picture.set_result(binascii.a2b_base64(jpeg, strict_mode=True))
+                    except binascii.Error as error:
+                        refused = ProviderError(SOURCE, f"{satellite.id} sent no JPEG: {error}", transient=False)
+                        picture.set_exception(refused)
                 else:
                     logger.warning("satellite %s sent a picture nobody asked for: ignored", satellite.id)
 

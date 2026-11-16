@@ -7,10 +7,12 @@ import { FormDialog } from "@/components/overlay-form";
 import { Notice } from "@/components/states";
 import { Status } from "@/components/status";
 import { Button } from "@/components/ui/button";
+import { useNow } from "@/hooks/use-now";
 import { useT } from "@/i18n";
 import { tr } from "@/i18n/runtime";
 import { MicrophoneError } from "@/lib/audio/microphone";
 import { remaining } from "@/lib/dates";
+import { deviceName } from "@/lib/labels";
 import { connect, type Live, Unsupported } from "./peer";
 
 type State =
@@ -26,8 +28,6 @@ function problem(error: unknown): string {
   if (error instanceof Unsupported) return tr("cam-unsupported");
   return tr("cam-failed");
 }
-
-export const deviceName = (device: Pick<MediaDevice, "id" | "name">) => device.name ?? device.id;
 
 /**
  * Watching a device, or calling through it, in a dialog: the session lives while the dialog is open, and ends when
@@ -60,7 +60,7 @@ function Session({ device, purpose, close }: { device: MediaDevice; purpose: Med
   const [state, setState] = useState<State>({ status: "connecting" });
   const [attempt, setAttempt] = useState(0);
   const [muted, setMuted] = useState(false);
-  const [now, setNow] = useState(() => Date.now());
+  const now = useNow();
   const video = useRef<HTMLVideoElement>(null);
   const live = state.status === "live" ? state.live : null;
 
@@ -101,17 +101,11 @@ function Session({ device, purpose, close }: { device: MediaDevice; purpose: Med
   }, [live]);
 
   useEffect(() => {
-    if (state.status !== "live") return;
-    const timer = setInterval(() => {
-      const at = Date.now();
-      setNow(at);
-      if (at >= state.until) {
-        state.live.close();
-        setState({ status: "ended" });
-      }
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [state]);
+    if (state.status === "live" && now.getTime() >= state.until) {
+      state.live.close();
+      setState({ status: "ended" });
+    }
+  }, [now, state]);
 
   const shows = live?.session.video ?? false;
   return (
@@ -147,7 +141,7 @@ function Session({ device, purpose, close }: { device: MediaDevice; purpose: Med
       <FormActions
         hint={
           state.status === "live" ? (
-            <Status tone="accent">{t("cam-left", { remaining: remaining(state.until, new Date(now)) })}</Status>
+            <Status tone="accent">{t("cam-left", { remaining: remaining(state.until, now) })}</Status>
           ) : null
         }
       >

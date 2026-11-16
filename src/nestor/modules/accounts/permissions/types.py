@@ -35,5 +35,7 @@ class Scope(StrEnum):
     SCHEDULES_MANAGE_OWN = "schedules.manage.own"  # the wake-ups set for the person
     MESSAGES_READ_ALL = "messages.read.all"  # every message passed on, question and confirmation waiting
     MESSAGES_READ_OWN = "messages.read.own"  # those the person sent or receives, and their own confirmations
-    MEDIA_VIEW = "media.view"  # watch the satellites that film, those an owner listed them for (`MediaAccess`)
-    MEDIA_CALL = "media.call"  # call through the satellites that hear and play sound, those listed for them
+    MEDIA_VIEW = "media.view"  # watch the satellites that film and list the person (`MediaAccess`)
+    MEDIA_VIEW_ALL = "media.view.all"  # watch every satellite that films
+    MEDIA_CALL = "media.call"  # call through the satellites that hear, play sound and list the person
+    MEDIA_CALL_ALL = "media.call.all"  # call through every satellite that hears and plays sound

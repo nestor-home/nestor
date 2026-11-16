@@ -1,13 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { Camera, Eye, Phone } from "lucide-react";
+import type { ReactNode } from "react";
 import { type MediaDevice, mediaDevicesQuery } from "@/api";
 import { RowList } from "@/components/page";
 import { Empty, Failure, Loading } from "@/components/states";
 import { Status } from "@/components/status";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/i18n";
-import { useCan, useMe } from "@/lib/session";
-import { deviceName, LiveDialog } from "./live-dialog";
+import { deviceName } from "@/lib/labels";
+import { useMe } from "@/lib/session";
+import { LiveDialog } from "./live-dialog";
 import { SnapshotDialog } from "./snapshot-dialog";
 
 /** The devices one may watch or call through, each with what one may do: no picture until asked. */
@@ -31,9 +33,12 @@ export function CamerasList() {
 
 function DeviceRow({ device: d }: { device: MediaDevice }) {
   const t = useT();
-  const view = useCan("media:view") && d.can_view;
-  const call = useCan("media:call") && d.can_call;
   const name = deviceName(d);
+  const trigger = (icon: ReactNode, label: string, action: string) => (
+    <Button variant="outline" size="sm" disabled={!d.connected} aria-label={action}>
+      {icon} {label}
+    </Button>
+  );
   return (
     <li className="grid gap-x-6 gap-y-3 px-5 py-3.5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
       <div className="min-w-0">
@@ -45,41 +50,26 @@ function DeviceRow({ device: d }: { device: MediaDevice }) {
           ) : (
             <Status tone="attention">{t("sat-state-offline")}</Status>
           )}
-          {view ? null : <span>{t("cam-call-only")}</span>}
+          {d.can_view ? null : <span>{t("cam-call-only")}</span>}
         </p>
       </div>
       <div className="flex flex-wrap gap-2">
-        {view ? (
+        {d.can_view ? (
           <LiveDialog
             device={d}
             purpose="view"
-            trigger={
-              <Button variant="outline" size="sm" disabled={!d.connected} aria-label={t("cam-view-for", { name })}>
-                <Eye /> {t("cam-view")}
-              </Button>
-            }
+            trigger={trigger(<Eye />, t("cam-view"), t("cam-view-for", { name }))}
           />
         ) : null}
-        {call ? (
+        {d.can_call ? (
           <LiveDialog
             device={d}
             purpose="call"
-            trigger={
-              <Button variant="outline" size="sm" disabled={!d.connected} aria-label={t("cam-call-for", { name })}>
-                <Phone /> {t("cam-call")}
-              </Button>
-            }
+            trigger={trigger(<Phone />, t("cam-call"), t("cam-call-for", { name }))}
           />
         ) : null}
-        {view ? (
-          <SnapshotDialog
-            device={d}
-            trigger={
-              <Button variant="outline" size="sm" disabled={!d.connected} aria-label={t("cam-picture-for", { name })}>
-                <Camera /> {t("cam-picture")}
-              </Button>
-            }
-          />
+        {d.can_view ? (
+          <SnapshotDialog device={d} trigger={trigger(<Camera />, t("cam-picture"), t("cam-picture-for", { name }))} />
         ) : null}
       </div>
     </li>

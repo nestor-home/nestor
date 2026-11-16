@@ -16,6 +16,7 @@ its own peer connections. Wrong enrollment codes are counted per client address.
 
 import asyncio
 import contextlib
+import ipaddress
 import json
 import logging
 from abc import ABC, abstractmethod
@@ -53,7 +54,6 @@ class Close(IntEnum):
     STOPPING = 1001  # the core stops: reconnect
     OFF_CONTRACT = 4400  # `hello` late, off-contract or for another device
     TOKEN_REFUSED = 4401  # forget the token and pair again
-    INSECURE = 4403  # a device that films links over TLS only (`wss`), unless on the core's own machine
     REPLACED = 4409  # a newer link of this device took over
 
 
@@ -138,10 +138,10 @@ class SatelliteGateway:
         if greeted is None:
             return
         satellite, manifest = greeted
-        if VIDEO_CAPTURE in satellite.capabilities and not secure(socket.scope):
-            await self._turn_away(socket, device_id, Close.INSECURE, "a device that films links over TLS only")
-            return
         allowed = self._allowed(satellite)
+        if VIDEO_CAPTURE in allowed and not secure(socket.scope):  # M7: its token would travel in the clear
+            logger.warning("satellites: %s links without TLS: it may not film", device_id)
+            allowed -= {VIDEO_CAPTURE}
         if previous := self._links.get(device_id):
             await _close(previous[0], Close.REPLACED)
         self._links[device_id] = (socket, allowed)
@@ -216,8 +216,12 @@ class SatelliteGateway:
 def secure(scope: Mapping[str, Any]) -> bool:
     """Whether a link is safe for a device that films: over TLS (directly, or behind a proxy the server trusts with
     `X-Forwarded-Proto`), or from the core's own machine."""
-    client = (scope.get("client") or ("",))[0]
-    return scope.get("scheme") in ("wss", "https") or client in ("127.0.0.1", "::1")
+    if scope.get("scheme") in ("wss", "https"):
+        return True
+    try:
+        return ipaddress.ip_address((scope.get("client") or ("",))[0]).is_loopback
+    except ValueError:
+        return False
 
 
 async def _close(socket: WebSocket, code: Close) -> None:

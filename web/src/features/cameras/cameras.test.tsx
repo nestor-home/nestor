@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { db } from "@/mocks/db";
 import { MockPeer } from "@/mocks/peer";
 import { server } from "@/mocks/server";
-import { renderApp } from "@/test/render";
+import { liveItem, renderApp } from "@/test/render";
 
 /** jsdom has neither WebRTC nor media streams: the mock peer stands for the browser's, a stream only holds tracks. */
 class Stream {
@@ -24,6 +24,9 @@ class Stream {
 /** The browser's microphone: one track, which a call mutes and stops. */
 const mic = { enabled: true, stopped: false, stop: () => {} } as unknown as MediaStreamTrack & { stopped: boolean };
 const getUserMedia = vi.fn();
+/** The object URLs made for pictures, and those given back. */
+const created: string[] = [];
+const revoked: string[] = [];
 
 /** What the admin asks of the devices (opening, ending, pictures), as `METHOD path`. */
 function sent(): string[] {
@@ -42,8 +45,13 @@ beforeEach(() => {
   Object.assign(mic, { enabled: true, stopped: false, stop: () => Object.assign(mic, { stopped: true }) });
   getUserMedia.mockReset().mockResolvedValue(Object.assign(new Stream(), { tracks: [mic] }));
   Object.defineProperty(navigator, "mediaDevices", { value: { getUserMedia }, configurable: true });
-  URL.createObjectURL = () => "blob:picture";
-  URL.revokeObjectURL = () => undefined;
+  created.length = 0;
+  revoked.length = 0;
+  URL.createObjectURL = () => {
+    created.push(`blob:picture-${created.length}`);
+    return created.at(-1) as string;
+  };
+  URL.revokeObjectURL = (url) => void revoked.push(url);
 });
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -70,6 +78,18 @@ describe("the cameras page", () => {
     expect(within(office).getByRole("button", { name: /Call/ })).toBeDisabled();
     const bedroom = await deviceRow("Jules's speaker");
     expect(within(bedroom).queryByRole("button", { name: /View/ })).not.toBeInTheDocument();
+  });
+
+  it("follows a device that connects, from the live journal", async () => {
+    const { stream } = renderApp("/cameras");
+    expect(within(await deviceRow("reachy-office")).getByRole("button", { name: /Call/ })).toBeDisabled();
+    const office = db.satellites.find((s) => s.id === "reachy-office");
+    if (!office) throw new Error("fixture changed");
+    office.connected = true;
+    stream.emit(liveItem({ type: "satellite.connected", links: { satellite: "reachy-office" } }));
+    await waitFor(async () =>
+      expect(within(await deviceRow("reachy-office")).getByRole("button", { name: /Call/ })).toBeEnabled(),
+    );
   });
 
   it("is not offered to an account that may neither watch nor call", async () => {
@@ -170,17 +190,32 @@ describe("the cameras page", () => {
     expect(within(dialog).queryByText(/s left/)).not.toBeInTheDocument();
   });
 
-  it("takes a picture on demand, to look at and download", async () => {
+  it("takes a picture on demand, to look at and download under the server's name, and lets it go on closing", async () => {
     const user = userEvent.setup();
     renderApp("/cameras");
     await user.click(within(await deviceRow("Living room Reachy")).getByRole("button", { name: /picture/i }));
     const dialog = await screen.findByRole("dialog", { name: "Picture from Living room Reachy" });
     expect(
       await within(dialog).findByRole("img", { name: "What Living room Reachy films in “living room”" }),
-    ).toHaveAttribute("src", "blob:picture");
+    ).toHaveAttribute("src", "blob:picture-0");
     expect(within(dialog).getByRole("link", { name: /Download/ })).toHaveAttribute(
       "download",
-      expect.stringMatching(/^reachy-living-room-\d{4}-\d\d-\d\d-\d{4}\.jpg$/),
+      expect.stringMatching(/^living room-\d{8}-\d{6}\.jpg$/),
     );
+    await user.click(within(dialog).getAllByRole("button", { name: "Close" }).at(-1) as HTMLElement);
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(revoked).toEqual(created);
+  });
+
+  it("keeps no picture that arrives after its dialog closed", async () => {
+    const requests = sent();
+    const user = userEvent.setup();
+    renderApp("/cameras");
+    await user.click(within(await deviceRow("Living room Reachy")).getByRole("button", { name: /picture/i }));
+    const dialog = await screen.findByRole("dialog", { name: "Picture from Living room Reachy" });
+    await waitFor(() => expect(requests).toContain("POST /api/v1/satellites/reachy-living-room/media/snapshot"));
+    await user.click(within(dialog).getAllByRole("button", { name: "Close" }).at(-1) as HTMLElement);
+    await new Promise((resolve) => setTimeout(resolve, 900)); // the mock takes 600 ms to answer
+    expect(revoked).toEqual(created);
   });
 });

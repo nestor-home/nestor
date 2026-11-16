@@ -225,7 +225,7 @@ class Pairing(Component):
                     self._satellites.pop(event.device_id, None)
                 case SatelliteMediaAccessSet() if event.device_id in self._satellites:
                     access = MediaAccess(frozenset(event.viewers), frozenset(event.callers), event.camera)
-                    self.set_access(event.device_id, access)
+                    self._satellites[event.device_id] = replace(self._satellites[event.device_id], access=access)
                 case SatelliteConnected():
                     self._declared(event.device_id, event.software, event.protocol)
                     self._seen[event.device_id] = event.at
@@ -243,9 +243,24 @@ class Pairing(Component):
     def satellites(self) -> list[Satellite]:
         return sorted(self._satellites.values(), key=lambda s: s.id)
 
-    def set_access(self, device_id: str, access: MediaAccess) -> Satellite:
-        """Who may watch or call through the device (journaled by `MediaSessions.set_access`)."""
-        satellite = self._satellites[device_id] = replace(self._satellites[device_id], access=access)
+    def satellite(self, device_id: str) -> Satellite | None:
+        return self._satellites.get(device_id)
+
+    async def set_access(self, device_id: str, access: MediaAccess, *, by: PersonId | None = None) -> Satellite:
+        """Who of the household may watch the device or call through it, besides those whose role lets them on
+        every device, and whether its camera may film; `KeyError` for an unknown device."""
+        satellite = replace(self._satellites[device_id], access=access)
+        await self.journal.publish(
+            SatelliteMediaAccessSet(
+                source=self.name,
+                device_id=device_id,
+                viewers=tuple(sorted(access.viewers)),
+                callers=tuple(sorted(access.callers)),
+                camera=access.camera,
+                by=by,
+            )
+        )
+        self._satellites[device_id] = satellite
         return satellite
 
     def pending(self) -> list[PendingPairing]:

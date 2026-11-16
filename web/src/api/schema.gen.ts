@@ -1000,7 +1000,7 @@ export interface paths {
         post?: never;
         /**
          * Close Media Session
-         * @description End one's own session (an owner: any).
+         * @description End one's own session (or any, for whom may on every device).
          */
         delete: operations["closeMediaSession"];
         options?: never;
@@ -1038,7 +1038,8 @@ export interface paths {
         get?: never;
         /**
          * Set Media Access
-         * @description Who of the household may watch the device or call through it, and whether its camera may film.
+         * @description Who of the household may watch the device or call through it, and whether its camera may film; what it no
+         *     longer allows ends at once.
          */
         put: operations["setMediaAccess"];
         post?: never;
@@ -3103,6 +3104,7 @@ export interface components {
         Proof: "device_code" | "enrollment_code";
         /**
          * Purpose
+         * @description Why a person opens a media session on a device.
          * @enum {string}
          */
         Purpose: "view" | "call";
@@ -3243,6 +3245,10 @@ export interface components {
             approved_by: components["schemas"]["PersonRef"] | null;
             /** Connected */
             connected: boolean | null;
+            /** Films */
+            films: boolean;
+            /** Calls */
+            calls: boolean;
             access: components["schemas"]["MediaAccessOut"];
         };
         /** SatellitesOut */
@@ -3303,7 +3309,7 @@ export interface components {
          * @description What an action needs. Code checks scopes, never roles: the role table is the only place they meet.
          * @enum {string}
          */
-        Scope: "accounts.manage" | "accounts.owners.manage" | "household.read" | "agent.read" | "agent.chat" | "household.connections.manage" | "own.connections.manage" | "satellites.manage" | "system.read" | "config.manage" | "journal.read.all" | "journal.read.own" | "memory.manage.all" | "memory.manage.own" | "tasks.manage" | "tasks.manage.own" | "watches.manage.all" | "watches.manage.own" | "schedules.manage.all" | "schedules.manage.own" | "messages.read.all" | "messages.read.own" | "media.view" | "media.call";
+        Scope: "accounts.manage" | "accounts.owners.manage" | "household.read" | "agent.read" | "agent.chat" | "household.connections.manage" | "own.connections.manage" | "satellites.manage" | "system.read" | "config.manage" | "journal.read.all" | "journal.read.own" | "memory.manage.all" | "memory.manage.own" | "tasks.manage" | "tasks.manage.own" | "watches.manage.all" | "watches.manage.own" | "schedules.manage.all" | "schedules.manage.own" | "messages.read.all" | "messages.read.own" | "media.view" | "media.view.all" | "media.call" | "media.call.all";
         /** SecretIn */
         SecretIn: {
             /** Value */
@@ -13183,7 +13189,7 @@ export const proofValues: ReadonlyArray<FlattenedDeepRequired<components>["schem
 export const purposeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Purpose"]> = ["view", "call"];
 export const riskValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Risk"]> = ["read", "write", "sensitive"];
 export const roleValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Role"]> = ["owner", "admin", "member", "guest"];
-export const scopeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Scope"]> = ["accounts.manage", "accounts.owners.manage", "household.read", "agent.read", "agent.chat", "household.connections.manage", "own.connections.manage", "satellites.manage", "system.read", "config.manage", "journal.read.all", "journal.read.own", "memory.manage.all", "memory.manage.own", "tasks.manage", "tasks.manage.own", "watches.manage.all", "watches.manage.own", "schedules.manage.all", "schedules.manage.own", "messages.read.all", "messages.read.own", "media.view", "media.call"];
+export const scopeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Scope"]> = ["accounts.manage", "accounts.owners.manage", "household.read", "agent.read", "agent.chat", "household.connections.manage", "own.connections.manage", "satellites.manage", "system.read", "config.manage", "journal.read.all", "journal.read.own", "memory.manage.all", "memory.manage.own", "tasks.manage", "tasks.manage.own", "watches.manage.all", "watches.manage.own", "schedules.manage.all", "schedules.manage.own", "messages.read.all", "messages.read.own", "media.view", "media.view.all", "media.call", "media.call.all"];
 export const shapeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Shape"]> = ["one", "list", "named"];
 export const stageValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Stage"]> = ["waiting", "device_seen", "paired", "cancelled", "expired"];
 export const statusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Status"]> = ["connected", "needs_reauth", "error"];

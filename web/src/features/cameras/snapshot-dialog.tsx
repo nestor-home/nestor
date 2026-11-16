@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { Download, RotateCw } from "lucide-react";
-import { type ReactElement, useEffect } from "react";
+import { type ReactElement, useEffect, useState } from "react";
 import { api, type MediaDevice } from "@/api";
 import { AgentFigure } from "@/components/agent-figure";
 import { FormActions } from "@/components/form-actions";
@@ -8,14 +8,7 @@ import { FormDialog } from "@/components/overlay-form";
 import { Failure } from "@/components/states";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { useT } from "@/i18n";
-import { deviceName } from "./live-dialog";
-
-/** `salon-2026-11-16-1842.jpg`: the device and the minute it was taken. */
-function fileName(device: MediaDevice, at: Date): string {
-  const two = (n: number) => String(n).padStart(2, "0");
-  const day = `${at.getFullYear()}-${two(at.getMonth() + 1)}-${two(at.getDate())}`;
-  return `${device.id}-${day}-${two(at.getHours())}${two(at.getMinutes())}.jpg`;
-}
+import { deviceName } from "@/lib/labels";
 
 /** A still picture of what a device films, taken when the dialog opens, to look at or keep. */
 export function SnapshotDialog({ device, trigger }: { device: MediaDevice; trigger: ReactElement }) {
@@ -29,22 +22,19 @@ export function SnapshotDialog({ device, trigger }: { device: MediaDevice; trigg
 
 function Snapshot({ device, close }: { device: MediaDevice; close: () => void }) {
   const t = useT();
-  const take = useMutation({
-    mutationFn: async () => ({ url: URL.createObjectURL(await api.snapshot(device.id)), at: new Date() }),
-  });
-  const picture = take.data;
+  const take = useMutation({ mutationFn: () => api.snapshot(device.id) });
   const { mutate } = take;
   useEffect(() => {
     const start = setTimeout(() => mutate()); // once, even when React mounts it twice (strict mode)
     return () => clearTimeout(start);
   }, [mutate]);
-  useEffect(() => (picture ? () => URL.revokeObjectURL(picture.url) : undefined), [picture]);
+  const url = useObjectUrl(take.data?.blob);
   return (
     <div className="grid gap-4">
       <div className="grid aspect-video place-items-center overflow-hidden rounded-lg bg-paper-sunken">
-        {picture ? (
+        {url ? (
           <img
-            src={picture.url}
+            src={url}
             alt={t("cam-picture-alt", { name: deviceName(device), room: device.room })}
             className="size-full object-contain"
           />
@@ -60,12 +50,8 @@ function Snapshot({ device, close }: { device: MediaDevice; close: () => void })
         <Button variant="outline" disabled={take.isPending} onClick={() => mutate()}>
           <RotateCw /> {t("cam-picture-again")}
         </Button>
-        {picture ? (
-          <a
-            href={picture.url}
-            download={fileName(device, picture.at)}
-            className={buttonVariants({ variant: "outline" })}
-          >
+        {url ? (
+          <a href={url} download={take.data?.name ?? ""} className={buttonVariants({ variant: "outline" })}>
             <Download /> {t("cam-download")}
           </a>
         ) : null}
@@ -73,4 +59,19 @@ function Snapshot({ device, close }: { device: MediaDevice; close: () => void })
       </FormActions>
     </div>
   );
+}
+
+/** A URL for `blob` while it is shown, revoked when the blob changes or the dialog goes away. */
+function useObjectUrl(blob: Blob | undefined): string | null {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!blob) return;
+    const made = URL.createObjectURL(blob);
+    setUrl(made);
+    return () => {
+      URL.revokeObjectURL(made);
+      setUrl(null);
+    };
+  }, [blob]);
+  return url;
 }

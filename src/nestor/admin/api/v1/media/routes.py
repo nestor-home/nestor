@@ -1,16 +1,18 @@
 """Watching and calling through the satellites: the devices the caller may use, a session opened from the browser's
 WebRTC offer and ended, a still picture, and who may (`media.access`).
 
-Watching needs `media.view`, calling `media.call`, and the device listing the caller's person (`MediaAccess`) unless
-they own the household; setting who may needs `satellites.manage`. A session ends at its longest duration, when the
-browser leaves, and when the caller signs out; each is journaled.
+Watching needs `media.view` and the device listing the caller's person (`MediaAccess`), or `media.view.all`; calling
+`media.call`, or `media.call.all`. Setting who may needs `satellites.manage`. A session ends at its longest duration,
+when the browser leaves, when the caller's admin session ends, and as soon as they may no longer do it; each is
+journaled.
 """
 
+from collections.abc import Callable
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request, Response
 
-from nestor.admin.api.v1.errors import ApiError, not_found
+from nestor.admin.api.v1.errors import ApiError, ErrorCode, not_found
 from nestor.admin.api.v1.media.schemas import (
     MediaAccessIn,
     MediaAccessOut,
@@ -24,78 +26,77 @@ from nestor.admin.api.v1.shared import People
 from nestor.admin.state import state
 from nestor.core import PersonId
 from nestor.http import file_response
-from nestor.modules.accounts import Scope
-from nestor.modules.satellites import VIDEO_CAPTURE, MediaAccess, MediaEnd, MediaRefused, MediaSessions, Purpose, Viewer
-from nestor.modules.satellites.media import CALL
+from nestor.modules.accounts import Principal, Scope
+from nestor.modules.satellites import MediaAccess, MediaEnd, MediaRefused, MediaSessions, Purpose, Refusal, Viewer
 
 router = APIRouter(tags=["media"])
 Watcher = Annotated[Caller, Depends(allowed(Scope.MEDIA_VIEW, Scope.MEDIA_CALL))]
 Manager = Annotated[Caller, Depends(allowed(Scope.SATELLITES_MANAGE))]
-SCOPES = {Purpose.VIEW: Scope.MEDIA_VIEW, Purpose.CALL: Scope.MEDIA_CALL}
+MAY = {Purpose.VIEW: Scope.MEDIA_VIEW, Purpose.CALL: Scope.MEDIA_CALL}
+EVERYWHERE = {Purpose.VIEW: Scope.MEDIA_VIEW_ALL, Purpose.CALL: Scope.MEDIA_CALL_ALL}
+REFUSED: dict[Refusal, tuple[int, ErrorCode]] = {
+    Refusal.FORBIDDEN: (403, "media_forbidden"),
+    Refusal.CAMERA_OFF: (409, "media_camera_off"),
+    Refusal.UNABLE: (409, "media_unable"),
+    Refusal.OFFLINE: (409, "media_offline"),
+}
 
 
 @router.get("/media/devices")
 async def list_media_devices(request: Request, caller: Watcher) -> MediaDevicesOut:
     """The devices the caller may watch or call through, connected or not."""
-    nestor = state(request).nestor
-    media, viewer = nestor.media, _viewer(caller)
+    media = state(request).nestor.media
     if media is None:
         return MediaDevicesOut(available=False, devices=[])
-    devices = []
-    for satellite in nestor.pairing.satellites():
-        if VIDEO_CAPTURE not in satellite.capabilities and not satellite.capabilities >= CALL:
-            continue  # neither films nor calls: nothing to watch or call through
-        view = caller.principal.can(Scope.MEDIA_VIEW) and media.may(satellite, viewer, Purpose.VIEW)
-        call = caller.principal.can(Scope.MEDIA_CALL) and media.may(satellite, viewer, Purpose.CALL)
-        if view or call:
-            devices.append(MediaDeviceOut.of(satellite, media.linked(satellite.id), view=view, call=call))
-    return MediaDevicesOut(available=True, devices=devices)
+    return MediaDevicesOut(
+        available=True, devices=[MediaDeviceOut.of(o) for o in media.offers(_viewer(request, caller))]
+    )
 
 
 @router.post("/satellites/{device_id}/media/sessions")
 async def open_media_session(request: Request, caller: Watcher, device_id: str, body: MediaOfferIn) -> MediaSessionOut:
     """Watch or call through the device: the answer to the browser's WebRTC offer."""
-    caller.principal.require(SCOPES[body.purpose])
     try:
-        opened = await _media(request).open(
-            device_id, body.purpose, _viewer(caller), {"sdp": body.sdp, "type": body.type}
+        live = await _media(request).open(
+            device_id, body.purpose, _viewer(request, caller), {"sdp": body.sdp, "type": body.type}
         )
     except MediaRefused as refused:
         raise _refusal(refused) from None
-    return MediaSessionOut.of(opened)
+    return MediaSessionOut.of(live)
 
 
 @router.delete("/media/sessions/{session_id}", status_code=204)
 async def close_media_session(request: Request, caller: Watcher, session_id: str) -> Response:
-    """End one's own session (an owner: any)."""
-    await _media(request).close_session(session_id, MediaEnd.CLOSED, by=_viewer(caller))
+    """End one's own session (or any, for whom may on every device)."""
+    await _media(request).close_session(session_id, MediaEnd.CLOSED, by=_viewer(request, caller))
     return Response(status_code=204)
 
 
 @router.post("/satellites/{device_id}/media/snapshot")
 async def take_snapshot(request: Request, caller: Watcher, device_id: str) -> Response:
     """A still picture of what the device films now, kept a few days."""
-    caller.principal.require(Scope.MEDIA_VIEW)
-    nestor = state(request).nestor
     try:
-        taken = await _media(request).snapshot(device_id, _viewer(caller))
+        taken, jpeg = await _media(request).snapshot(device_id, _viewer(request, caller))
     except MediaRefused as refused:
         raise _refusal(refused) from None
-    return file_response(await nestor.blobs.get(taken.blob.digest), "image/jpeg", taken.name)
+    return file_response(jpeg, "image/jpeg", taken.name)
 
 
 @router.put("/satellites/{device_id}/media/access")
 async def set_media_access(request: Request, caller: Manager, device_id: str, body: MediaAccessIn) -> MediaAccessOut:
-    """Who of the household may watch the device or call through it, and whether its camera may film."""
+    """Who of the household may watch the device or call through it, and whether its camera may film; what it no
+    longer allows ends at once."""
     admin = state(request)
     people = People(admin.nestor.household)
     if unknown := [p for p in [*body.viewers, *body.callers] if not people.known(p)]:
         raise ApiError(422, "person_unknown", person=unknown[0])
     access = MediaAccess(frozenset(map(PersonId, body.viewers)), frozenset(map(PersonId, body.callers)), body.camera)
     try:
-        satellite = await _media(request).set_access(device_id, access, by=caller.person)
-    except MediaRefused:
+        satellite = await admin.nestor.pairing.set_access(device_id, access, by=caller.person)
+    except KeyError:
         raise not_found("satellite_unknown") from None
+    if admin.nestor.media is not None:
+        await admin.nestor.media.check()
     return MediaAccessOut.of(satellite.access, people)
 
 
@@ -106,24 +107,31 @@ def _media(request: Request) -> MediaSessions:
     return media
 
 
-def _viewer(caller: Caller) -> Viewer:
+def _viewer(request: Request, caller: Caller) -> Viewer:
+    """The caller, as long as their admin session lasts: their role is read again at each check."""
+    admin, session = state(request), caller.session
+
+    def now() -> Viewer | None:
+        account = admin.accounts.accounts.get(session.account_id) if session else None
+        if session is None or account is None or account.disabled or not admin.sessions.alive(session):
+            return None
+        return _as_viewer(account.principal())
+
+    return _as_viewer(caller.principal, now)
+
+
+def _as_viewer(principal: Principal, now: Callable[[], Viewer | None] | None = None) -> Viewer:
     return Viewer(
-        account_id=caller.account_id or "",
-        person=caller.person,
-        owner=caller.principal.can(Scope.OWNERS_MANAGE),
-        signed_in=caller.session.id if caller.session else "",
+        account_id=principal.account_id,
+        person=principal.person,
+        may=frozenset(p for p, scope in MAY.items() if principal.can(scope)),
+        everywhere=frozenset(p for p, scope in EVERYWHERE.items() if principal.can(scope)),
+        now=now,
     )
 
 
 def _refusal(refused: MediaRefused) -> ApiError:
-    if refused.reason == "unknown":
+    if refused.reason is Refusal.UNKNOWN:
         return not_found("satellite_unknown")
-    match refused.reason:
-        case "forbidden":
-            return ApiError(403, "media_forbidden")
-        case "camera_off":
-            return ApiError(409, "media_camera_off")
-        case "unable":
-            return ApiError(409, "media_unable")
-        case _:
-            return ApiError(409, "media_offline")
+    status, code = REFUSED[refused.reason]
+    return ApiError(status, code)

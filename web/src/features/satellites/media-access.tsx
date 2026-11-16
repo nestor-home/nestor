@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
-import { api, keys, type Person, peopleQuery, type Satellite } from "@/api";
+import { api, keys, peopleQuery, type Satellite } from "@/api";
 import { FormActions } from "@/components/form-actions";
 import { useNotify } from "@/components/notices";
 import { FormDialog } from "@/components/overlay-form";
@@ -9,20 +9,14 @@ import { FormError, Loading } from "@/components/states";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
+import { isOwner } from "@/features/accounts/rules";
 import { useT } from "@/i18n";
 import { tr } from "@/i18n/runtime";
+import { deviceName } from "@/lib/labels";
 import { useCan } from "@/lib/session";
-
-/** What a satellite allows of watching and calling: it films, and it both hears and plays sound. */
-export function mediaOf(s: Satellite): { films: boolean; calls: boolean } {
-  const has = (name: string) => s.capabilities.some((c) => c.name === name);
-  return { films: has("video.capture"), calls: has("audio.capture") && has("audio.playback") };
-}
 
 const names = (people: { name: string }[]) =>
   people.length ? people.map((p) => p.name).join(", ") : tr("sat-media-owners-only");
-
-const isOwner = (p: Person) => p.account?.role === "owner";
 
 /**
  * Who of the household may watch the satellite or call through it, besides its owners, and whether its camera may
@@ -31,7 +25,7 @@ const isOwner = (p: Person) => p.account?.role === "owner";
 export function MediaAccessSection({ satellite: s }: { satellite: Satellite }) {
   const t = useT();
   const manages = useCan("satellites:write");
-  const { films, calls } = mediaOf(s);
+  const { films, calls } = s;
   if (!manages || !(films || calls)) return null;
   const { access } = s;
   return (
@@ -39,7 +33,7 @@ export function MediaAccessSection({ satellite: s }: { satellite: Satellite }) {
       title={t("sat-media-title")}
       aside={
         <FormDialog
-          title={t("sat-media-edit-title", { name: s.name ?? s.id })}
+          title={t("sat-media-edit-title", { name: deviceName(s) })}
           description={t("sat-media-owners-note")}
           wide
           trigger={
@@ -88,12 +82,12 @@ function MediaAccessForm({
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: keys.satellites });
       void queryClient.invalidateQueries({ queryKey: keys.mediaDevices });
-      notify(t("sat-media-saved", { name: s.name ?? s.id }));
+      notify(t("sat-media-saved", { name: deviceName(s) }));
       onDone();
     },
   });
   if (people.isPending) return <Loading lines={2} />;
-  const household = (people.data ?? []).filter((p) => !isOwner(p));
+  const household = (people.data ?? []).filter((p) => !isOwner(p.account));
 
   function submit(event: FormEvent) {
     event.preventDefault();

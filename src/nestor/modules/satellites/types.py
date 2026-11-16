@@ -262,6 +262,23 @@ def _methods(data: object) -> tuple[PairingMethod, ...]:
     return tuple(PairingMethod(m) for m in data)
 
 
+@dataclass(frozen=True, slots=True)
+class MediaAccess:
+    """Who of the household may watch a device or call through it, besides its owners, and whether its camera may
+    film at all. Set by whoever manages satellites; nobody by default."""
+
+    viewers: frozenset[PersonId] = frozenset()
+    callers: frozenset[PersonId] = frozenset()
+    camera: bool = True
+
+
+class Purpose(StrEnum):
+    """Why a person opens a media session on a device."""
+
+    VIEW = "view"  # watch what it films
+    CALL = "call"  # talk through it and hear the room, with its video when the person may watch too
+
+
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Satellite:
     """A paired device: where it is and what it was allowed to do. Only its token's hash is kept."""
@@ -276,17 +293,7 @@ class Satellite:
     protocol: str  # the protocol version it speaks, as last declared
     brand: str | None = None
     name: str | None = None  # what the household calls it, given when it was added
-    access: "MediaAccess" = field(default_factory=lambda: MediaAccess())
-
-
-@dataclass(frozen=True, slots=True)
-class MediaAccess:
-    """Who of the household may watch a device or call through it, besides its owners, and whether its camera may
-    film at all. Set by whoever manages satellites; nobody by default."""
-
-    viewers: frozenset[PersonId] = frozenset()
-    callers: frozenset[PersonId] = frozenset()
-    camera: bool = True
+    access: MediaAccess = field(default_factory=MediaAccess)
 
 
 class UpdateState(StrEnum):

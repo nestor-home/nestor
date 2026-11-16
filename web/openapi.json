@@ -6817,7 +6817,7 @@
           "media"
         ],
         "summary": "Close Media Session",
-        "description": "End one's own session (an owner: any).",
+        "description": "End one's own session (or any, for whom may on every device).",
         "operationId": "closeMediaSession",
         "parameters": [
           {
@@ -7034,7 +7034,7 @@
           "media"
         ],
         "summary": "Set Media Access",
-        "description": "Who of the household may watch the device or call through it, and whether its camera may film.",
+        "description": "Who of the household may watch the device or call through it, and whether its camera may film; what it no\nlonger allows ends at once.",
         "operationId": "setMediaAccess",
         "parameters": [
           {
@@ -15919,7 +15919,8 @@
           "view",
           "call"
         ],
-        "title": "Purpose"
+        "title": "Purpose",
+        "description": "Why a person opens a media session on a device."
       },
       "QuietHoursOut": {
         "properties": {
@@ -16321,6 +16322,14 @@
             ],
             "title": "Connected"
           },
+          "films": {
+            "type": "boolean",
+            "title": "Films"
+          },
+          "calls": {
+            "type": "boolean",
+            "title": "Calls"
+          },
           "access": {
             "$ref": "#/components/schemas/MediaAccessOut"
           }
@@ -16342,6 +16351,8 @@
           "last_seen_at",
           "approved_by",
           "connected",
+          "films",
+          "calls",
           "access"
         ],
         "title": "SatelliteOut"
@@ -16553,7 +16564,9 @@
           "messages.read.all",
           "messages.read.own",
           "media.view",
-          "media.call"
+          "media.view.all",
+          "media.call",
+          "media.call.all"
         ],
         "title": "Scope",
         "description": "What an action needs. Code checks scopes, never roles: the role table is the only place they meet."

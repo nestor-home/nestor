@@ -1,5 +1,5 @@
 /** One function per API operation, on the generated client: screens read the answers as the API sends them. */
-import { client, unwrap } from "./client";
+import { attachmentName, client, unwrap } from "./client";
 import type {
   AcceptInvitation,
   Approval,
@@ -194,14 +194,22 @@ export const api = {
     done(
       client.DELETE("/api/v1/media/sessions/{session_id}", { params: { path: { session_id: session } }, keepalive }),
     ),
-  /** A still picture of what the device films now, as a JPEG. */
-  snapshot: (device: string) =>
-    unwrap(
-      client.POST("/api/v1/satellites/{device_id}/media/snapshot", {
-        params: { path: { device_id: device } },
-        parseAs: "blob",
-      }),
-    ) as Promise<Blob>,
+  /** A still picture of what the device films now, as a JPEG, with the name the server gives the file. */
+  snapshot: async (device: string): Promise<{ blob: Blob; name: string | null }> => {
+    let name: string | null = null;
+    const blob = await unwrap(
+      client
+        .POST("/api/v1/satellites/{device_id}/media/snapshot", {
+          params: { path: { device_id: device } },
+          parseAs: "blob",
+        })
+        .then((result) => {
+          name = attachmentName(result.response);
+          return result;
+        }),
+    );
+    return { blob: blob as Blob, name };
+  },
   setMediaAccess: (device: string, body: MediaAccessChange) =>
     unwrap(
       client.PUT("/api/v1/satellites/{device_id}/media/access", { params: { path: { device_id: device } }, body }),
