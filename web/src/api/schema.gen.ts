@@ -3243,6 +3243,7 @@ export interface components {
             approved_by: components["schemas"]["PersonRef"] | null;
             /** Connected */
             connected: boolean | null;
+            access: components["schemas"]["MediaAccessOut"];
         };
         /** SatellitesOut */
         SatellitesOut: {

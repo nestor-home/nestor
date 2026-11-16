@@ -16320,6 +16320,9 @@
               }
             ],
             "title": "Connected"
+          },
+          "access": {
+            "$ref": "#/components/schemas/MediaAccessOut"
           }
         },
         "type": "object",
@@ -16338,7 +16341,8 @@
           "paired_at",
           "last_seen_at",
           "approved_by",
-          "connected"
+          "connected",
+          "access"
         ],
         "title": "SatelliteOut"
       },
