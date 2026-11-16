@@ -27,7 +27,7 @@ export interface Microphone {
   close(): void;
 }
 
-function problemOf(error: unknown): MicrophoneProblem {
+export function problemOf(error: unknown): MicrophoneProblem {
   const name = error instanceof DOMException || error instanceof Error ? error.name : "";
   if (name === "NotAllowedError" || name === "SecurityError") return "denied";
   if (name === "NotFoundError" || name === "OverconstrainedError") return "missing";

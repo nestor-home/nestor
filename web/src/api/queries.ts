@@ -26,6 +26,7 @@ export const keys = {
   satellite: (id: string) => ["satellites", id] as const,
   pairingMethods: ["satellites", "pairing-methods"] as const,
   addition: (id: Id) => ["satellites", "additions", id] as const,
+  mediaDevices: ["media", "devices"] as const,
   tasks: ["tasks"] as const,
   task: (id: Id) => ["tasks", id] as const,
   watches: ["watches"] as const,
@@ -126,6 +127,12 @@ export const additionQuery = (id: Id) =>
     queryFn: ({ signal }) => api.addition(id, signal),
     refetchInterval: (q) => (q.state.data && !["waiting", "device_seen"].includes(q.state.data.stage) ? false : 1_500),
   });
+/** The devices one may watch or call through; whether each is connected changes on its own. */
+export const mediaDevicesQuery = queryOptions({
+  queryKey: keys.mediaDevices,
+  queryFn: api.mediaDevices,
+  refetchInterval: 10_000,
+});
 /** Kept fresh by the live journal (its connections and what it reports about its software). */
 export const satelliteQuery = (id: string) =>
   queryOptions({ queryKey: keys.satellite(id), queryFn: () => api.satellite(id) });

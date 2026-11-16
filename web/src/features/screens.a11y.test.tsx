@@ -20,6 +20,7 @@ const SCREENS: [string, string | RegExp][] = [
   ["/people/mathis", "Mathis"],
   ["/people/jules", "Jules"],
   ["/house", "Home"],
+  ["/cameras", "Cameras"],
   ["/schedules", "Reminders"],
   ["/messages", "Messages"],
   ["/memories", "Memories"],

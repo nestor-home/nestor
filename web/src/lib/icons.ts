@@ -8,6 +8,7 @@ import {
   AudioLines,
   BookMarked,
   Bot,
+  Cctv,
   CircleAlert,
   CircleArrowUp,
   CircleCheck,
@@ -36,6 +37,7 @@ import {
   Smile,
   Sun,
   Users,
+  Video,
   Volume2,
   Workflow,
   Wrench,
@@ -84,6 +86,7 @@ export const CAPABILITY_ICON: Record<string, LucideIcon> = {
   "audio.capture": Mic,
   "audio.playback": Volume2,
   "audio.speech_activity": AudioLines,
+  "video.capture": Video,
   "vision.person_detection": ScanFace,
   "expression.emotion": Smile,
   "motion.head": Move3d,
@@ -101,6 +104,7 @@ export const DEVICE_KIND: [string[], LucideIcon][] = [
   [["audio.playback"], CAPABILITY_ICON["audio.playback"] as LucideIcon],
   [["audio.capture"], CAPABILITY_ICON["audio.capture"] as LucideIcon],
   [["vision.person_detection"], CAPABILITY_ICON["vision.person_detection"] as LucideIcon],
+  [["video.capture"], CAPABILITY_ICON["video.capture"] as LucideIcon],
 ];
 
 export const SECTION_ICON = {
@@ -110,6 +114,7 @@ export const SECTION_ICON = {
   "/people": Users,
   "/memories": BookMarked,
   "/house": House,
+  "/cameras": Cctv,
   "/schedules": AlarmClock,
   "/messages": MessagesSquare,
   "/watches": Radar,

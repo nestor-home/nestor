@@ -25,7 +25,8 @@ from nestor.admin.state import state
 from nestor.core import PersonId
 from nestor.http import file_response
 from nestor.modules.accounts import Scope
-from nestor.modules.satellites import MediaAccess, MediaEnd, MediaRefused, MediaSessions, Purpose, Viewer
+from nestor.modules.satellites import VIDEO_CAPTURE, MediaAccess, MediaEnd, MediaRefused, MediaSessions, Purpose, Viewer
+from nestor.modules.satellites.media import CALL
 
 router = APIRouter(tags=["media"])
 Watcher = Annotated[Caller, Depends(allowed(Scope.MEDIA_VIEW, Scope.MEDIA_CALL))]
@@ -42,6 +43,8 @@ async def list_media_devices(request: Request, caller: Watcher) -> MediaDevicesO
         return MediaDevicesOut(available=False, devices=[])
     devices = []
     for satellite in nestor.pairing.satellites():
+        if VIDEO_CAPTURE not in satellite.capabilities and not satellite.capabilities >= CALL:
+            continue  # neither films nor calls: nothing to watch or call through
         view = caller.principal.can(Scope.MEDIA_VIEW) and media.may(satellite, viewer, Purpose.VIEW)
         call = caller.principal.can(Scope.MEDIA_CALL) and media.may(satellite, viewer, Purpose.CALL)
         if view or call:

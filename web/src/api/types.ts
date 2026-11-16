@@ -85,6 +85,15 @@ export type Satellite = S["SatelliteOut"];
 export type Satellites = S["SatellitesOut"];
 export type Approval = Omit<S["ApprovalIn"], "pairing_id">;
 
+// -- watching and calling through satellites -------------------------------------------------------
+
+export type MediaPurpose = S["Purpose"];
+export type MediaDevice = S["MediaDeviceOut"];
+export type MediaDevices = S["MediaDevicesOut"];
+export type MediaSession = S["MediaSessionOut"];
+export type MediaAccess = S["MediaAccessOut"];
+export type MediaAccessChange = S["MediaAccessIn"];
+
 // -- tasks, watches, memories ---------------------------------------------------------------------
 
 export type TaskStatus = S["TaskStatus"];

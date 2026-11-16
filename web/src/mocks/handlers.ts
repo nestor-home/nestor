@@ -91,6 +91,51 @@ function file(kind: In<"AttachmentKind">): Response {
 }
 
 const signedIn = () => db.accounts.find((a) => a.id === db.signedIn) ?? null;
+const scopes = () => {
+  const account = signedIn();
+  return account ? SCOPES[account.role] : [];
+};
+
+// -- watching and calling ---------------------------------------------------------------------------
+
+/** The sessions open on the mock server, by id: which device, and since when. */
+const sessions = new Map<string, { device: string; room: string; opened: number }>();
+
+/** What answers the browser's offer: no device films here, the browser's mock peer shows a test pattern instead. */
+const MOCK_ANSWER = "v=0\r\no=- 0 0 IN IP4 127.0.0.1\r\ns=nestor-mock\r\nt=0 0\r\n";
+
+function mediaOf(satellite: In<"SatelliteOut">): { films: boolean; calls: boolean } {
+  const has = (name: string) => satellite.capabilities.some((c) => c.name === name);
+  return { films: has("video.capture"), calls: has("audio.capture") && has("audio.playback") };
+}
+
+/** Whether the reader may watch or call through the device: an owner always, else when it lists their person. */
+function mayMedia(satellite: In<"SatelliteOut">, purpose: In<"Purpose">): boolean {
+  const account = signedIn();
+  if (!account || !scopes().includes(purpose === "view" ? "media.view" : "media.call")) return false;
+  if (account.role === "owner") return true;
+  const listed = purpose === "view" ? satellite.access.viewers : satellite.access.callers;
+  return listed.some((p) => p.id === account.person?.id);
+}
+
+/** Without the scope of what is asked (or of either, for the list), the server refuses. */
+function mediaRefused(purpose?: In<"Purpose">): Response | null {
+  const held = scopes();
+  const needs = purpose ? [`media.${purpose}`] : ["media.view", "media.call"];
+  return needs.some((s) => held.includes(s as In<"Scope">)) ? null : fail(403, "forbidden");
+}
+
+/** The device a session or a picture is asked of, when the reader may and it can; else the server's refusal. */
+function mediaDevice(id: string, purpose: In<"Purpose">): { satellite: In<"SatelliteOut">; films: boolean } | Response {
+  const satellite = db.satellites.find((x) => x.id === id);
+  if (!satellite) return notFound("satellite");
+  if (!mayMedia(satellite, purpose)) return fail(403, "media_forbidden");
+  const { films, calls } = mediaOf(satellite);
+  if (purpose === "view" ? !films : !calls) return fail(409, "media_unable");
+  if (purpose === "view" && !satellite.access.camera) return fail(409, "media_camera_off");
+  if (!satellite.connected) return fail(409, "media_offline");
+  return { satellite, films };
+}
 
 /** Every call but sign-in and invitations needs the session; unsafe ones also the CSRF header. */
 function guard(request: Request): Response | null {
@@ -111,6 +156,7 @@ let downUntil = 0;
 export function resetServer(): void {
   downUntil = 0;
   recordings.clear();
+  sessions.clear();
   for (const timer of pending) clearTimeout(timer);
   pending.clear();
 }
@@ -1038,6 +1084,118 @@ export const handlers = [
     return noContent();
   }),
 
+  // -- watching and calling through satellites ------------------------------------------------
+  http.get(`${API}/media/devices`, ({ request }) => {
+    const refused = guard(request) ?? mediaRefused();
+    if (refused) return refused;
+    const devices = db.satellites.flatMap((satellite) => {
+      const view = mayMedia(satellite, "view");
+      const call = mayMedia(satellite, "call");
+      if (!view && !call) return [];
+      const { films, calls } = mediaOf(satellite);
+      return [
+        {
+          id: satellite.id,
+          name: satellite.name,
+          room: satellite.room,
+          connected: satellite.connected === true,
+          can_view: view && films && satellite.access.camera,
+          can_call: call && calls,
+        } satisfies In<"MediaDeviceOut">,
+      ];
+    });
+    return json({ available: true, devices } satisfies In<"MediaDevicesOut">);
+  }),
+
+  http.post(`${API}/satellites/:id/media/sessions`, async ({ request, params }) => {
+    const body = (await request.json()) as In<"MediaOfferIn">;
+    const refused = guard(request) ?? mediaRefused(body.purpose);
+    if (refused) return refused;
+    const found = mediaDevice(String(params.id), body.purpose);
+    if (found instanceof Response) return found;
+    const { satellite, films } = found;
+    await delay(400);
+    const id = newId("media");
+    const video = body.purpose === "view" || (films && satellite.access.camera && mayMedia(satellite, "view"));
+    sessions.set(id, { device: satellite.id, room: satellite.room, opened: Date.now() });
+    const opening = body.purpose === "call" ? "Call through" : "Watching";
+    journalize({
+      type: "media.session.opened",
+      title: `${opening} ${satellite.id} (room “${satellite.room}”)`,
+      people: signedIn()?.person ? [signedIn()?.person as In<"PersonRef">] : [],
+      room: satellite.room,
+      links: { satellite: satellite.id },
+    });
+    return json({
+      session_id: id,
+      sdp: MOCK_ANSWER,
+      type: "answer",
+      video,
+      audio: body.purpose === "call",
+      max_s: body.purpose === "call" ? 30 * 60 : 10 * 60,
+    } satisfies In<"MediaSessionOut">);
+  }),
+
+  http.delete(`${API}/media/sessions/:id`, ({ request, params }) => {
+    const refused = guard(request) ?? mediaRefused();
+    if (refused) return refused;
+    const session = sessions.get(String(params.id));
+    if (session) {
+      sessions.delete(String(params.id));
+      const seconds = Math.round((Date.now() - session.opened) / 1000);
+      journalize({
+        type: "media.session.closed",
+        title: `${session.device}: session ended after ${seconds} s (closed)`,
+        room: session.room,
+        links: { satellite: session.device },
+      });
+    }
+    return noContent();
+  }),
+
+  http.post(`${API}/satellites/:id/media/snapshot`, async ({ request, params }) => {
+    const refused = guard(request) ?? mediaRefused("view");
+    if (refused) return refused;
+    const found = mediaDevice(String(params.id), "view");
+    if (found instanceof Response) return found;
+    await delay(600);
+    journalize({
+      type: "media.snapshot.taken",
+      title: `Picture taken by ${found.satellite.id} (room “${found.satellite.room}”)`,
+      people: signedIn()?.person ? [signedIn()?.person as In<"PersonRef">] : [],
+      room: found.satellite.room,
+      links: { satellite: found.satellite.id },
+      attachments: [
+        { index: 0, kind: "image", media_type: "image/png", size: picture().length, name: null, transcript: null },
+      ],
+    });
+    return new HttpResponse(picture(), { headers: { "Content-Type": "image/png" } });
+  }),
+
+  http.put(`${API}/satellites/:id/media/access`, async ({ request, params }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    if (!scopes().includes("satellites.manage")) return fail(403, "forbidden");
+    const satellite = db.satellites.find((x) => x.id === params.id);
+    if (!satellite) return notFound("satellite");
+    const body = (await request.json()) as In<"MediaAccessIn">;
+    const unknown = [...(body.viewers ?? []), ...(body.callers ?? [])].find((p) => !db.people.some((x) => x.id === p));
+    if (unknown) return fail(422, "person_unknown", { person: unknown });
+    satellite.access = {
+      viewers: [...(body.viewers ?? [])].sort().map(refOf),
+      callers: [...(body.callers ?? [])].sort().map(refOf),
+      camera: body.camera ?? true,
+    };
+    const { viewers, callers, camera } = satellite.access;
+    journalize({
+      type: "satellite.media.access.set",
+      title: `${satellite.id}: ${viewers.length} may watch, ${callers.length} may call, camera ${camera ? "on" : "off"}`,
+      people: signedIn()?.person ? [signedIn()?.person as In<"PersonRef">] : [],
+      links: { satellite: satellite.id },
+    });
+    return json(satellite.access satisfies In<"MediaAccessOut">);
+  }),
+
   // -- tasks, watches, memories -----------------------------------------------------------------
   http.get(`${API}/tasks`, ({ request }) => {
     const refused = guard(request);
@@ -1544,6 +1702,7 @@ function pair(
     protocol: PROTOCOL,
     can_update: pending.capabilities.some((c) => c.name === "device.update"),
     update: null,
+    access: { viewers: [], callers: [], camera: true },
   };
   db.pairing = db.pairing.filter((p) => p.pairing_id !== pending.pairing_id);
   db.satellites = [...db.satellites.filter((s) => s.id !== satellite.id), satellite];

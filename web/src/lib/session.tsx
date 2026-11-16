@@ -29,6 +29,8 @@ const PERMISSIONS = {
   "config.manage": ["config:manage"],
   "agent.read": ["agent:read"],
   "agent.chat": ["chat:write"],
+  "media.view": ["media:read", "media:view"],
+  "media.call": ["media:read", "media:call"],
 } as const satisfies Record<Scope, readonly string[]>;
 
 export type Permission = (typeof PERMISSIONS)[Scope][number];
