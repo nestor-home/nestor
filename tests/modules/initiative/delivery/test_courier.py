@@ -31,7 +31,7 @@ from nestor.modules.initiative import (
     DeliveryWithheld,
 )
 from nestor.modules.initiative.delivery.courier import FILES_NOTICE
-from nestor.modules.journal import Journal
+from nestor.modules.journal import FileRef, Journal
 from nestor.testing.channels import InMemoryChannel
 from nestor.testing.cognition import ScriptedModel
 from nestor.testing.home import StaticPresence
@@ -128,10 +128,12 @@ async def test_a_result_with_a_file_is_written_with_it_and_the_room_hears_what_i
     model = ScriptedModel("Voici le devis corrigé.", "Le devis corrigé est arrivé, je te l'ai écrit.")
     sender, _, voice, telegram = courier(StaticPresence().set("mathis", home=True), model=model, blobs=blobs)
     async with sender:
-        done = Notification("Le devis est corrigé.", About(Source.TASK, "t1", "completed"), files=(devis,))
+        done = Notification(
+            "Le devis est corrigé.", About(Source.TASK, "t1", "completed"), files=(FileRef(devis, "devis.pdf"),)
+        )
         assert await sender.deliver(MATHIS, done) == TELEGRAM
     assert [a for a, _ in voice.sent] == [SALON] and [a for a, _ in telegram.sent] == [TELEGRAM]
-    assert [f.data for f in telegram.files[0]] == [b"%PDF devis"]
+    assert [(f.name, f.data) for f in telegram.files[0]] == [("devis.pdf", b"%PDF devis")]
     assert FILES_NOTICE in str(model.requests[1].messages[-1].content), "aloud, it says the files were written"
 
 

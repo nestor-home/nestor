@@ -15,7 +15,7 @@ SIGNATURE = "X-Nestor-Signature"
 class WebhookChannel(PushChannel):
     name = "webhook"
     brand = "webhook"
-    sends = frozenset({AttachmentKind.IMAGE, AttachmentKind.VOICE})
+    sends = frozenset(AttachmentKind)  # every file goes in the body, whatever it is
 
     def __init__(
         self,

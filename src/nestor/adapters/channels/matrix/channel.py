@@ -20,7 +20,12 @@ PROVIDER = "matrix"
 CLIENT = "/_matrix/client/v3"
 VOICE = "org.matrix.msc3245.voice"  # what marks an audio message as a voice message (MSC3245)
 FILES = frozenset({"m.image", "m.audio", "m.file", "m.video"})
-SENT = {AttachmentKind.IMAGE: "m.image", AttachmentKind.VOICE: "m.audio"}
+SENT = {
+    AttachmentKind.IMAGE: "m.image",
+    AttachmentKind.VOICE: "m.audio",
+    AttachmentKind.AUDIO: "m.audio",
+    AttachmentKind.FILE: "m.file",
+}
 # what `/sync` brings: the rooms' messages and invitations, nothing else (presence, receipts, state)
 FILTER = json.dumps(
     {
@@ -39,7 +44,7 @@ FILTER = json.dumps(
 class MatrixChannel(MessagingChannel):
     name = "matrix"
     brand = "matrix"
-    sends = frozenset({AttachmentKind.VOICE, AttachmentKind.IMAGE})
+    sends = frozenset(SENT)
 
     typing_every_s = 20.0  # each lasts 30 s
 
@@ -88,15 +93,15 @@ class MatrixChannel(MessagingChannel):
 
     async def deliver(self, conversation: str, answer: Answer) -> None:
         """The recording when it has one (its text as the message's caption, as Matrix clients show it), written
-        otherwise; then its pictures."""
-        pictures = [a for a in answer.attachments if a.kind is AttachmentKind.IMAGE]
+        otherwise; then its other files (pictures, documents, audio files), each a message under its name."""
         voice = answer.voice
         if voice is not None:
             await self._send_file(conversation, voice, caption=answer.text)
         else:
             await self._send(conversation, {"msgtype": "m.text", "body": answer.text})
-        for picture in pictures:
-            await self._send_file(conversation, picture)
+        for file in answer.attachments:
+            if file.kind is not AttachmentKind.VOICE:
+                await self._send_file(conversation, file)
 
     async def show_typing(self, conversation: str) -> None:
         await self._set_typing(conversation, {"typing": True, "timeout": 30000})
@@ -145,7 +150,7 @@ class MatrixChannel(MessagingChannel):
         await self._json("PUT", f"{CLIENT}/rooms/{_quoted(room)}/send/m.room.message/{new_id()}", json=content)
 
     async def _send_file(self, room: str, file: Attachment, *, caption: str | None = None) -> None:
-        name = file.name or ("voice.ogg" if file.kind is AttachmentKind.VOICE else "image")
+        name = file.file_name
         uploaded = await self._json(
             "POST",
             "/_matrix/media/v3/upload",

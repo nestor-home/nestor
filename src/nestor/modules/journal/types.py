@@ -43,3 +43,11 @@ class BlobRef:
     digest: str
     size: int
     media_type: str
+
+
+@dataclass(frozen=True, slots=True)
+class FileRef:
+    """A stored file and the name it goes by, as the person receives it (`devis.pdf`), when it has one."""
+
+    blob: BlobRef
+    name: str | None = None

@@ -30,7 +30,7 @@ class WhatsAppChannel(MessagingChannel):
     name = "whatsapp"
     brand = "whatsapp"
     file_limit = FILE_LIMIT
-    sends = frozenset({AttachmentKind.IMAGE, AttachmentKind.VOICE})
+    sends = frozenset({AttachmentKind.IMAGE, AttachmentKind.VOICE, AttachmentKind.AUDIO, AttachmentKind.FILE})
 
     def __init__(
         self,
@@ -110,12 +110,12 @@ class WhatsAppChannel(MessagingChannel):
 
     async def deliver(self, conversation: str, answer: Answer) -> None:
         """The recording when it has one (WhatsApp shows no caption on a voice message: the text follows it), the
-        text otherwise; then the pictures.
+        text otherwise; then the other files: pictures, documents by their name, audio files.
         """
         if answer.voice is not None:
-            await self._api.send(conversation, "audio", {"id": await self._api.upload(answer.voice)})
+            await self._api.send_file(conversation, answer.voice)
         else:
             for part in split_text(answer.text, MESSAGE_LIMIT):
                 await self._api.send(conversation, "text", {"body": part})
-        for picture in (a for a in answer.attachments if a.kind is AttachmentKind.IMAGE):
-            await self._api.send(conversation, "image", {"id": await self._api.upload(picture)})
+        for file in (a for a in answer.attachments if a.kind is not AttachmentKind.VOICE):
+            await self._api.send_file(conversation, file)

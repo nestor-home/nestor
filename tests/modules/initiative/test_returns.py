@@ -406,7 +406,7 @@ async def test_a_file_a_delegated_task_made_goes_with_the_answer_that_brings_its
     assert home.telegram.sent == [(TELEGRAM, "Voici ton rapport.")]
     assert [[(a.kind, a.data) for a in files] for files in home.telegram.files] == [[(AttachmentKind.FILE, pdf)]]
     [ended] = await home.journal.history(TaskEnded)
-    assert [home.blobs.blobs[f.digest] for f in ended.files] == [pdf]
+    assert [home.blobs.blobs[f.blob.digest] for f in ended.files] == [pdf]
 
 
 async def test_a_call_cut_short_by_a_restart_is_said_to_have_failed() -> None:

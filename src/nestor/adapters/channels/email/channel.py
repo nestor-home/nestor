@@ -28,7 +28,7 @@ TIMING = ImapTiming(fetch_bytes=25 * 1024 * 1024)  # a message is fetched with i
 class EmailChannel(MessagingChannel):
     name = "email"
     brand = "email"
-    sends = frozenset({AttachmentKind.IMAGE})
+    sends = frozenset({AttachmentKind.IMAGE, AttachmentKind.FILE, AttachmentKind.AUDIO})
 
     def __init__(
         self,
@@ -85,9 +85,9 @@ class EmailChannel(MessagingChannel):
         if replying_to:
             message["In-Reply-To"] = message["References"] = replying_to
         message.set_content(answer.text)
-        for picture in (a for a in answer.attachments if a.kind is AttachmentKind.IMAGE):
-            main, _, sub = picture.media_type.partition("/")
-            message.add_attachment(picture.data, maintype=main, subtype=sub, filename=picture.name or f"image.{sub}")
+        for file in (a for a in answer.attachments if a.kind in self.sends):
+            main, _, sub = file.media_type.partition("/")
+            message.add_attachment(file.data, maintype=main, subtype=sub, filename=file.file_name)
         host, port, security = self._smtp
         await asyncio.to_thread(
             send,

@@ -1,8 +1,10 @@
 """Discord channel against a fake gateway (a real WebSocket server) and a mocked HTTP API: the messaging contract,
 direct messages answered and a server's channel only when the bot is mentioned, a reconnection asked by Discord,
-a refused token, and long answers split."""
+a refused token, long answers split, files sent ten by message, and the text kept when files are refused."""
 
 import asyncio
+import email.parser
+import email.policy
 import json
 from collections.abc import AsyncGenerator, Callable
 from contextlib import asynccontextmanager
@@ -14,16 +16,18 @@ from websockets.asyncio.server import ServerConnection, serve
 
 from nestor.adapters.channels.discord.channel import DiscordChannel
 from nestor.core import ProviderError
-from nestor.modules.channels import Assistant, Attachment, AttachmentKind
-from nestor.testing.channels import MessagingChannelContract, Platform, ScriptedAssistant
+from nestor.modules.channels import Address, Assistant, Attachment, AttachmentKind, Medium
+from nestor.testing.channels import DEVIS, MessagingChannelContract, Platform, ScriptedAssistant
 
 TOKEN = "bot.token.secret"
 BOT, ADA = "100", "7"
 
 
 class FakeDiscord:
-    """The gateway hands out queued messages after Hello and READY; the API keeps what was posted and serves files.
-    `refuse` closes the gateway as Discord does for a bad token; `reconnect` asks the bot to come back once."""
+    """The gateway hands out queued messages after Hello and READY; the API keeps what was posted (the files of a
+    multipart message under `files`, by name, ten at most) and serves files. `refuse` closes the gateway as Discord
+    does for a bad token; `reconnect` asks the bot to come back once; `too_large` refuses any file, as Discord does
+    one over the size limit."""
 
     def __init__(self) -> None:
         self.events: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
@@ -32,6 +36,7 @@ class FakeDiscord:
         self.identified: list[dict[str, Any]] = []
         self.refuse = False
         self.reconnect = False
+        self.too_large = False
         self.heartbeat_ms = 45000  # never acknowledged: a short one makes the bot find the connection dead
         self.port = 0
         self.transport = httpx.MockTransport(self.handle)
@@ -69,8 +74,10 @@ class FakeDiscord:
             return httpx.Response(204)
         if request.url.path.endswith("/messages"):
             if request.headers["content-type"].startswith("multipart/"):
-                payload = request.content.split(b'name="payload_json"\r\n\r\n')[1].split(b"\r\n--")[0]
-                self.posted.append(json.loads(payload) | {"files": request.content.count(b'name="files[')})
+                payload, files = multipart(request)
+                if self.too_large or len(files) > 10:
+                    return httpx.Response(413, json={"message": "Request entity too large", "code": 40005})
+                self.posted.append(payload | {"files": files})
             else:
                 self.posted.append(json.loads(request.content))
             return httpx.Response(200, json={"id": str(len(self.posted))})
@@ -97,6 +104,23 @@ class FakeDiscord:
         return [p["content"] for p in self.posted if p.get("content")]
 
 
+def multipart(request: httpx.Request) -> tuple[dict[str, Any], list[tuple[str | None, bytes]]]:
+    """A multipart message's `payload_json`, and its `files[n]` parts by the name each carries."""
+    head = f"Content-Type: {request.headers['content-type']}\r\n\r\n".encode()
+    form = email.parser.BytesParser(policy=email.policy.HTTP).parsebytes(head + request.content)
+    payload: dict[str, Any] = {}
+    files: list[tuple[str | None, bytes]] = []
+    for part in form.iter_parts():
+        field = part.get_param("name", header="content-disposition")
+        data = part.get_payload(decode=True)
+        assert isinstance(data, bytes)
+        if field == "payload_json":
+            payload = json.loads(data)
+        elif isinstance(field, str) and field.startswith("files["):
+            files.append((part.get_filename(), data))
+    return payload, files
+
+
 async def eventually(condition: Callable[[], bool], timeout_s: float = 2.0) -> None:
     async with asyncio.timeout(timeout_s):
         while not condition():
@@ -121,6 +145,7 @@ async def serving(discord: FakeDiscord, assistant: Assistant) -> AsyncGenerator[
 class DiscordPlatform(Platform):
     def __init__(self, discord: FakeDiscord, channel: DiscordChannel) -> None:
         self.channel = channel
+        self.address = Address(channel.channel_id, "42")
         self.discord = discord
 
     async def send(self, text: str, *attachments: Attachment) -> None:
@@ -147,6 +172,9 @@ class DiscordPlatform(Platform):
 
     def voices(self) -> list[bytes]:
         return []
+
+    def files(self) -> list[tuple[str | None, bytes]]:
+        return [file for p in self.discord.posted for file in p.get("files", [])]
 
 
 class TestDiscordMessaging(MessagingChannelContract):
@@ -186,11 +214,31 @@ async def test_a_long_answer_is_split_and_a_picture_goes_with_its_last_part() ->
     discord = FakeDiscord()
     picture = Attachment(kind=AttachmentKind.IMAGE, data=b"png", media_type="image/png")
     long = "Une phrase. " * 300
-    async with serving(discord, ScriptedAssistant(lambda message: long, pictures=(picture,))):
+    async with serving(discord, ScriptedAssistant(lambda message: long, files=(picture,))):
         discord.say("raconte")
         await eventually(lambda: any(p.get("files") for p in discord.posted))
     assert all(len(p["content"]) <= 2000 for p in discord.posted) and len(discord.posted) == 2
-    assert discord.posted[-1]["files"] == 1
+    assert discord.posted[-1]["files"] == [("image.png", b"png")]
+
+
+async def test_files_go_ten_by_message() -> None:
+    discord = FakeDiscord()
+    pages = tuple(
+        Attachment(kind=AttachmentKind.FILE, data=b"%PDF", media_type="application/pdf", name=f"page{n}.pdf")
+        for n in range(12)
+    )
+    async with serving(discord, ScriptedAssistant(lambda message: "Les pages.", files=pages)):
+        discord.say("le dossier")
+        await eventually(lambda: sum(len(p.get("files", [])) for p in discord.posted) == 12)
+    assert [(p["content"], len(p["files"])) for p in discord.posted] == [("Les pages.", 10), ("", 2)]
+
+
+async def test_the_text_goes_alone_when_its_files_are_refused() -> None:
+    discord = FakeDiscord()
+    discord.too_large = True
+    async with serving(discord, ScriptedAssistant(echo)) as channel:
+        await channel.send(Address(channel.channel_id, "42"), "Le devis.", Medium.WRITTEN, (DEVIS,))
+    assert discord.posted == [{"content": "Le devis."}]
 
 
 async def test_a_refused_token_stops_the_channel() -> None:

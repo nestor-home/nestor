@@ -55,14 +55,13 @@ async def get_task_file(request: Request, caller: Manager, task_id: str, index: 
     files = (await Afterwards.of(admin)).files.get(task.id, ())
     if not 0 <= index < len(files):
         raise not_found("attachment_unknown")
-    blob = files[index]
+    file = files[index]
     try:
-        data = await admin.nestor.blobs.get(blob.digest)
+        data = await admin.nestor.blobs.get(file.blob.digest)
     except KeyError:
         raise not_found("attachment_unknown") from None
-    return file_response(
-        data, blob.media_type, f"{task.id}-{index + 1}{mimetypes.guess_extension(blob.media_type) or ''}"
-    )
+    extension = mimetypes.guess_extension(file.blob.media_type) or ""
+    return file_response(data, file.blob.media_type, file.name or f"{task.id}-{index + 1}{extension}")
 
 
 @router.post("/tasks/{task_id}/cancel")

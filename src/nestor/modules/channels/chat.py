@@ -119,11 +119,12 @@ class ChatBusy(ContractError):
 
 class ChatChannel(Channel):
     """A chat a page serves (the admin's): the page signs people in, so each message names its person
-    (`Sender.person`) and nobody needs an account on it. An answer to a voice message goes back as one; the page plays
-    it from the journal. Its conversations are listed by their title."""
+    (`Sender.person`) and nobody needs an account on it. An answer to a voice message goes back as one; the page shows
+    or plays it, and every other file (a picture, a document, an audio file), from the journal. Its conversations are
+    listed by their title."""
 
     name = "chat"
-    sends = frozenset({AttachmentKind.VOICE, AttachmentKind.IMAGE})
+    sends = frozenset(AttachmentKind)  # the page reads every file from the journal
     titled = True
 
     def __init__(self, channel_id: str, *, conversation_ends_after_s: float | None = None) -> None:

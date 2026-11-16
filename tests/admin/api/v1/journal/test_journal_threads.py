@@ -26,6 +26,7 @@ from nestor.modules.initiative import (
     WatchCreated,
     WatchTriggered,
 )
+from nestor.modules.journal import FileRef
 from nestor.modules.memory import MemoryRecorded
 
 from ....harness import OWNER, PASSWORD, Api, Harness
@@ -308,7 +309,7 @@ async def test_a_file_a_tool_or_a_task_made_shows_with_its_line(made_by: str, tm
                 output="{}",
                 ok=True,
                 duration_s=4.0,
-                files=(picture,),
+                files=(FileRef(picture),),
             )
             if made_by == "agent.tool.completed"
             else TaskEnded(
@@ -317,7 +318,7 @@ async def test_a_file_a_tool_or_a_task_made_shows_with_its_line(made_by: str, tm
                 status=TaskStatus.COMPLETED,
                 result="drawn",
                 duration_s=9.0,
-                files=(picture,),
+                files=(FileRef(picture),),
             )
         )
         api = await admin.api()

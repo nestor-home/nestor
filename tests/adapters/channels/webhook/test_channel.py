@@ -7,6 +7,7 @@ import json
 
 from nestor.adapters.channels.webhook.channel import SIGNATURE, WebhookChannel
 from nestor.modules.channels import Address, Attachment, AttachmentKind, Medium
+from nestor.testing.channels import DEVIS, SONG
 
 from ..push import Recorder
 
@@ -28,3 +29,25 @@ async def test_a_webhook_body_is_signed_with_its_secret() -> None:
     ]
     expected = hmac.new(b"s3cret", posted.content, hashlib.sha256).hexdigest()
     assert posted.headers[SIGNATURE] == f"sha256={expected}"
+
+
+async def test_a_document_and_an_audio_file_go_in_the_body_by_their_name() -> None:
+    server = Recorder()
+    async with WebhookChannel("webhook", url="https://hooks.test/nestor", transport=server.transport) as hook:
+        assert {AttachmentKind.FILE, AttachmentKind.AUDIO} <= hook.sends, "or the core leaves them out"
+        await hook.send(Address("webhook", "lea"), "Le devis corrigé, et ta chanson.", Medium.WRITTEN, (DEVIS, SONG))
+    [posted] = server.requests
+    assert json.loads(posted.content)["attachments"] == [
+        {
+            "kind": "file",
+            "media_type": "application/pdf",
+            "name": "devis.pdf",
+            "data": base64.b64encode(DEVIS.data).decode(),
+        },
+        {
+            "kind": "audio",
+            "media_type": "audio/mpeg",
+            "name": "chanson.mp3",
+            "data": base64.b64encode(SONG.data).decode(),
+        },
+    ]

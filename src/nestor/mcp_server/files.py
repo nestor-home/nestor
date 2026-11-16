@@ -42,5 +42,5 @@ class FileLinks:
                 kind=AttachmentKind.of(link.media_type), data=bytes(data), media_type=link.media_type, name=link.file
             )
             kept = await self._nestor.tasks.add_file(task, made)
-            return JSONResponse({"status": "attached", "file": kept.digest, "bytes": kept.size})
+            return JSONResponse({"status": "attached", "file": kept.blob.digest, "bytes": kept.blob.size})
         return PlainTextResponse("download with GET, upload with PUT", status_code=405)

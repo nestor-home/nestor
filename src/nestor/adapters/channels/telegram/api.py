@@ -69,8 +69,8 @@ class BotApi:
         return self._result(method, await self._post(method, json=payload, timeout=timeout))
 
     async def upload(self, method: str, fields: dict[str, str], name: str, file: Attachment) -> Any:
-        """`method` with `file` sent as its `name` field, the other fields beside it."""
-        upload = {name: (file.name or name, file.data, file.media_type)}
+        """`method` with `file` sent as its `name` field, by the name a person sees, the other fields beside it."""
+        upload = {name: (file.file_name, file.data, file.media_type)}
         return self._result(method, await self._post(method, data=fields, files=upload))
 
     async def download(self, file_id: str, *, max_bytes: int = FILE_BYTES) -> bytes:

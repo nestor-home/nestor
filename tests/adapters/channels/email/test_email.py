@@ -18,7 +18,7 @@ from nestor.adapters.channels.email.settings import EmailSettings
 from nestor.adapters.channels.email.smtp import Security
 from nestor.adapters.connectors.imap.account import ImapAccount
 from nestor.adapters.connectors.imap.inbound import ImapTiming
-from nestor.modules.channels import Assistant, Attachment
+from nestor.modules.channels import Address, Assistant, Attachment
 from nestor.testing.channels import MessagingChannelContract, Platform, ScriptedAssistant
 
 from ...mailboxes import PASSWORD, FakeMailbox, ScriptedClient
@@ -128,6 +128,7 @@ async def serving(mailbox: FakeMailbox, assistant: Assistant) -> AsyncGenerator[
 class EmailPlatform(Platform):
     def __init__(self, mailbox: FakeMailbox, channel: EmailChannel, smtp: FakeSmtp) -> None:
         self.mailbox, self.channel, self.smtp = mailbox, channel, smtp
+        self.address = Address(channel.channel_id, ADA)
 
     async def send(self, text: str, *attachments: Attachment) -> None:
         self.mailbox.deliver(mail(text, *attachments))
@@ -141,6 +142,14 @@ class EmailPlatform(Platform):
 
     def voices(self) -> list[bytes]:
         return []
+
+    def files(self) -> list[tuple[str | None, bytes]]:
+        found = [
+            (part.get_filename(), part.get_payload(decode=True))
+            for m in self.smtp.messages
+            for part in m.iter_attachments()
+        ]
+        return [(name, data) for name, data in found if isinstance(data, bytes)]
 
 
 class TestEmailMessaging(MessagingChannelContract):

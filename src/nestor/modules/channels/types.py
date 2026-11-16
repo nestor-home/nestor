@@ -1,5 +1,6 @@
 """Values exchanged with channels: where a message comes from, who sent it, what it carries."""
 
+import mimetypes
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
@@ -103,6 +104,11 @@ class Attachment:
     data: bytes = field(repr=False)
     media_type: str
     name: str | None = None
+
+    @property
+    def file_name(self) -> str:
+        """The name a person sees it by: its own, else its kind with its type's extension (`file.pdf`)."""
+        return self.name or f"{self.kind}{mimetypes.guess_extension(self.media_type.split(';')[0].strip()) or ''}"
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

@@ -4,7 +4,9 @@ Meta posts each message to a webhook this channel serves on its own port (8473),
 household gives Meta (`https://<host>/whatsapp`, through its reverse proxy). The webhook is verified with
 `verify_token`, and every post is checked against Meta's signature (`X-Hub-Signature-256`, the app secret). Text,
 pictures, voice messages, audio files and documents reach the assistant; a voice message is answered with one (OGG/
-Opus is what WhatsApp plays). Limits: WhatsApp lets a business answer freely only within 24 hours of the person's last
+Opus is what WhatsApp plays), and answers carry the pictures, documents and audio files the assistant made. Limits:
+WhatsApp takes documents as PDF, text and Office files only, and audio files as AAC, AMR, MP3, M4A or OGG/Opus, played
+without their name; it lets a business answer freely only within 24 hours of the person's last
 message, so a reminder sent later than that may be refused; a message received while Nestor was stopped is lost
 once Meta gives up retrying.
 """

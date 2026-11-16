@@ -2,7 +2,8 @@
 `MessagingChannel`.
 
 The bot joins the rooms it is invited to and answers in them. Text, pictures, voice messages, audio files and files
-reach the assistant; a voice message is answered with one when the assistant has a voice. Limits: end-to-end
+reach the assistant; a voice message is answered with one when the assistant has a voice, and the files the
+assistant made (pictures, documents, audio files) go after the text, each under its name. Limits: end-to-end
 encrypted rooms are not read (the bot sees only their encrypted events), so a direct chat must be created without
 encryption; messages sent while the bot was stopped are skipped at its next start.
 """

@@ -56,7 +56,7 @@ from nestor.modules.conversation.types import (
 )
 from nestor.modules.household import Household, Person
 from nestor.modules.identity import Heard, Speaker
-from nestor.modules.journal import BlobRef, Journal
+from nestor.modules.journal import FileRef, Journal
 
 
 @dataclass(frozen=True, slots=True)
@@ -64,7 +64,7 @@ class Draft:
     """An answer to a notification, to deliver: its words, and the files that go with it (kept)."""
 
     text: str
-    files: tuple[BlobRef, ...] = ()
+    files: tuple[FileRef, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -308,7 +308,7 @@ class AgentReply(Reply):
         self._chunks: asyncio.Queue[str | MessageEnd | None] = asyncio.Queue()
         self._message: list[str] = []  # the message being written
         self._ended: list[tuple[str, AssistantTurn | None]] = []  # the messages written, logged if recorded
-        self._made: list[BlobRef] = []  # files the tools made, to go with the last message
+        self._made: list[FileRef] = []  # files the tools made, to go with the last message
         self._worker: asyncio.Task[None] | None = None
         self._interrupted = False
         self._over = False

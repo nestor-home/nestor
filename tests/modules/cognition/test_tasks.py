@@ -102,7 +102,7 @@ async def test_the_files_a_task_made_are_kept_and_one_that_cannot_be_is_said_not
         task = await tasks.delegate("Écris-les", origin=VOICE, requested_by=MATHIS)
         outcome = await tasks.wait(task.id)
     [ended] = await journal.history(TaskEnded)
-    assert [blobs.blobs[f.digest] for f in ended.files] == [b"kept"]
+    assert [blobs.blobs[f.blob.digest] for f in ended.files] == [b"kept"]
     assert ended.result == outcome.result == "Écrits.\nFiles not kept: b.txt (OSError)"
     assert outcome.files == (), "the bytes live in the blob store, not in the task"
     async with TaskManager(Journal(MemoryEventLog()), [Writer()]) as nowhere:
@@ -392,7 +392,7 @@ async def test_a_file_an_executor_hands_back_while_it_works_goes_with_the_result
         remote.finish(next(iter(remote.runs)), Outcome.completed("Devis prêt."))
         await tasks.wait(task.id)
     [ended] = await journal.history(TaskEnded)
-    assert ended.files == (kept,) and blobs.blobs[kept.digest] == b"%PDF-1.7 devis"
+    assert ended.files == (kept,) and blobs.blobs[kept.blob.digest] == b"%PDF-1.7 devis"
 
 
 async def test_a_revoked_key_stays_revoked_and_the_executor_works_without_nestor_s_tools() -> None:

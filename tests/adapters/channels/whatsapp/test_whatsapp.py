@@ -5,6 +5,7 @@ import asyncio
 import hashlib
 import hmac
 import json
+import re
 from collections.abc import AsyncGenerator, Callable
 from contextlib import asynccontextmanager
 from typing import Any
@@ -13,7 +14,7 @@ import httpx
 import pytest
 
 from nestor.adapters.channels.whatsapp.channel import WhatsAppChannel
-from nestor.modules.channels import Assistant, Attachment, AttachmentKind
+from nestor.modules.channels import Address, Assistant, Attachment, AttachmentKind
 from nestor.testing.channels import MessagingChannelContract, Platform, ScriptedAssistant
 
 TOKEN, VERIFY, SECRET = "EAAG-token", "nestor-verify", "app-secret"
@@ -25,7 +26,7 @@ class FakeGraph:
 
     def __init__(self) -> None:
         self.sent: list[dict[str, Any]] = []
-        self.uploaded: dict[str, bytes] = {}
+        self.uploaded: dict[str, tuple[str, str, bytes]] = {}  # by media id: file name, media type, content
         self.media: dict[str, bytes] = {}
         self.transport = httpx.MockTransport(self.handle)
 
@@ -40,7 +41,7 @@ class FakeGraph:
             return httpx.Response(200, json={"messages": [{"id": "wamid.1"}]})
         if path.endswith(f"/{NUMBER}/media"):
             media_id = f"up{len(self.uploaded)}"
-            self.uploaded[media_id] = request.content
+            self.uploaded[media_id] = upload(request)
             return httpx.Response(200, json={"id": media_id})
         media_id = path.rsplit("/", 1)[1]
         return httpx.Response(200, json={"url": f"https://lookaside.test/{media_id}"})
@@ -49,11 +50,38 @@ class FakeGraph:
         return [m["text"]["body"] for m in self.sent if m["type"] == "text"]
 
     def voices(self) -> list[bytes]:
-        return [self._file(m["audio"]["id"]) for m in self.sent if m["type"] == "audio"]
+        """Audio messages in OGG/Opus, which WhatsApp plays as voice messages."""
+        return [self.uploaded[m["audio"]["id"]][2] for m in self.sent if m["type"] == "audio" and self._voice(m)]
 
-    def _file(self, media_id: str) -> bytes:
-        upload = self.uploaded[media_id]
-        return upload.split(b'filename="voice.ogg"\r\nContent-Type: audio/ogg\r\n\r\n')[1].split(b"\r\n--")[0]
+    def files(self) -> list[tuple[str | None, bytes]]:
+        """Pictures (shown unnamed), documents by the name their message gives, audio files by the name they were
+        uploaded with (WhatsApp's player shows none)."""
+        found: list[tuple[str | None, bytes]] = []
+        for m in self.sent:
+            if m["type"] in ("image", "document", "audio") and not self._voice(m):
+                name, _, content = self.uploaded[m[m["type"]]["id"]]
+                found.append((None if m["type"] == "image" else m[m["type"]].get("filename", name), content))
+        return found
+
+    def _voice(self, message: dict[str, Any]) -> bool:
+        return message["type"] == "audio" and self.uploaded[message["audio"]["id"]][1] == "audio/ogg"
+
+
+def upload(request: httpx.Request) -> tuple[str, str, bytes]:
+    """The file of a media upload (its `file` part), as Meta reads it: name, media type (the `type` field), content."""
+    boundary = request.headers["content-type"].split("boundary=")[1].encode()
+    fields: dict[str, str] = {}
+    name, content = "", b""
+    for part in request.content.split(b"--" + boundary)[1:-1]:
+        head, _, body = part.strip(b"\r\n").partition(b"\r\n\r\n")
+        field = re.search(rb'name="([^"]+)"', head)
+        assert field is not None
+        if field[1] == b"file" and (filename := re.search(rb'filename="([^"]*)"', head)):
+            name, content = filename[1].decode(), body
+        else:
+            fields[field[1].decode()] = body.decode()
+    assert fields["messaging_product"] == "whatsapp"
+    return name, fields["type"], content
 
 
 def notification(*messages: dict[str, Any]) -> dict[str, Any]:
@@ -100,6 +128,7 @@ async def serving(graph: FakeGraph, assistant: Assistant) -> AsyncGenerator[tupl
 class WhatsAppPlatform(Platform):
     def __init__(self, graph: FakeGraph, channel: WhatsAppChannel, meta: httpx.AsyncClient) -> None:
         self.graph, self.channel, self.meta = graph, channel, meta
+        self.address = Address("whatsapp", ADA)
 
     async def send(self, text: str, *attachments: Attachment) -> None:
         messages = []
@@ -125,6 +154,9 @@ class WhatsAppPlatform(Platform):
 
     def voices(self) -> list[bytes]:
         return self.graph.voices()
+
+    def files(self) -> list[tuple[str | None, bytes]]:
+        return self.graph.files()
 
 
 class TestWhatsAppMessaging(MessagingChannelContract):

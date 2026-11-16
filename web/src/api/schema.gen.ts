@@ -3224,6 +3224,8 @@ export interface components {
         TaskFileOut: {
             /** Index */
             index: number;
+            /** Name */
+            name: string | null;
             kind: components["schemas"]["AttachmentKind"];
             /** Media Type */
             media_type: string;

@@ -4,6 +4,7 @@ ignored, pictures sent as attachments, and the polling that gets past an outage.
 import asyncio
 import base64
 import json
+import re
 from collections.abc import AsyncGenerator, Callable
 from contextlib import asynccontextmanager
 from typing import Any
@@ -11,7 +12,7 @@ from typing import Any
 import httpx
 
 from nestor.adapters.channels.signal.channel import SignalChannel
-from nestor.modules.channels import Assistant, Attachment, AttachmentKind
+from nestor.modules.channels import Address, Assistant, Attachment, AttachmentKind
 from nestor.testing.channels import MessagingChannelContract, Platform, ScriptedAssistant
 
 BOT, ADA = "+33100000000", "+33600000000"
@@ -54,6 +55,17 @@ class FakeSignalApi:
     def texts(self) -> list[str]:
         return [m["message"] for m in self.sent if m["message"]]
 
+    def attachments(self) -> list[tuple[str | None, bytes]]:
+        """Every attachment sent, read as signal-cli-rest-api reads its data URIs: the name the person sees, and the
+        content."""
+        found: list[tuple[str | None, bytes]] = []
+        for message in self.sent:
+            for uri in message.get("base64_attachments", []):
+                read = re.fullmatch(r"data:[^;,]+;filename=([^;,]+);base64,(.*)", uri)
+                assert read is not None, f"not a data URI signal-cli-rest-api reads: {uri[:60]}"
+                found.append((read[1], base64.b64decode(read[2])))
+        return found
+
 
 async def eventually(condition: Callable[[], bool], timeout_s: float = 2.0) -> None:
     async with asyncio.timeout(timeout_s):
@@ -82,6 +94,7 @@ async def serving(api: FakeSignalApi, assistant: Assistant) -> AsyncGenerator[Si
 class SignalPlatform(Platform):
     def __init__(self, api: FakeSignalApi, channel: SignalChannel) -> None:
         self.channel = channel
+        self.address = Address("signal", ADA)
         self.api = api
 
     async def send(self, text: str, *attachments: Attachment) -> None:
@@ -100,6 +113,9 @@ class SignalPlatform(Platform):
 
     def voices(self) -> list[bytes]:
         return []
+
+    def files(self) -> list[tuple[str | None, bytes]]:
+        return self.api.attachments()
 
 
 class TestSignalMessaging(MessagingChannelContract):
@@ -126,7 +142,7 @@ async def test_a_picture_the_assistant_made_goes_as_an_attachment() -> None:
     api = FakeSignalApi()
     picture = Attachment(kind=AttachmentKind.IMAGE, data=b"png", media_type="image/png", name="dessin.png")
     api.say("dessine")
-    async with serving(api, ScriptedAssistant(lambda message: "Voilà.", pictures=(picture,))):
+    async with serving(api, ScriptedAssistant(lambda message: "Voilà.", files=(picture,))):
         await eventually(lambda: bool(api.sent))
     [sent] = api.sent
     assert sent["message"] == "Voilà."

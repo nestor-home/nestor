@@ -4,6 +4,7 @@ their own, with the tools called on the way and the files they sent."""
 import asyncio
 import base64
 import json
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -12,7 +13,9 @@ from pydantic import ValidationError
 
 from nestor.admin.api.v1.chat.schemas import FILE_LIMIT, ChatFileIn
 from nestor.modules.accounts import Role
-from nestor.modules.cognition.model import ToolCall
+from nestor.modules.cognition.model import ToolCall, ToolSpec
+from nestor.modules.cognition.tools import Made, Risk, Tool, ToolContext
+from nestor.testing.channels import DEVIS, SONG
 
 from ....harness import Api, Harness
 
@@ -144,6 +147,28 @@ async def test_a_photo_is_kept_with_the_message_and_served_from_the_journal(tmp_
     assert (sent["text"], file["kind"], file["name"], file["size"]) == ("", "image", "salon.png", len(PNG))
     assert served.content == PNG
     assert (title["title"], title["files"]) == ("", ["image"]), "a chat opened with a photo is named by it"
+
+
+async def test_a_document_and_an_audio_file_made_for_an_answer_are_served_with_it(tmp_path: Path) -> None:
+    async def correct(arguments: Mapping[str, object], context: ToolContext) -> Made:
+        return Made({"made": "the quote and the song, sent with your answer"}, (DEVIS, SONG))
+
+    replies = (ToolCall("c1", "correct_quote", {}), "Voici le devis corrigé.")
+    async with Harness(tmp_path, chat=True, replies=replies) as admin:
+        admin.home.tools.given += (
+            Tool(spec=ToolSpec("correct_quote", "Corrects the quote."), run=correct, risk=Risk.READ),
+        )
+        api = await admin.api()
+        await say(api, "c1", "Corrige le devis")
+        answer = (await api.get("/api/v1/chats/c1")).json()["messages"][-1]
+        served = [await api.get(f"/api/v1/journal/{f['position']}/attachments/{f['index']}") for f in answer["files"]]
+
+    assert answer["text"] == "Voici le devis corrigé."
+    assert [(f["name"], f["kind"], f["media_type"]) for f in answer["files"]] == [
+        ("devis.pdf", "file", "application/pdf"),
+        ("chanson.mp3", "audio", "audio/mpeg"),
+    ], "by the names the tool gave them"
+    assert [r.content for r in served] == [DEVIS.data, SONG.data]
 
 
 async def test_a_message_says_something_in_a_file_the_server_can_read(tmp_path: Path) -> None:

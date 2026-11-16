@@ -33,7 +33,7 @@ _MENTION = re.compile(r"<@[A-Z0-9]+>")
 class SlackChannel(MessagingChannel):
     name = "slack"
     brand = "slack"
-    sends = frozenset({AttachmentKind.IMAGE})
+    sends = frozenset({AttachmentKind.IMAGE, AttachmentKind.AUDIO, AttachmentKind.FILE})
 
     def __init__(
         self,
@@ -87,8 +87,8 @@ class SlackChannel(MessagingChannel):
     async def deliver(self, conversation: str, answer: Answer) -> None:
         for part in split_text(answer.text, MESSAGE_LIMIT):
             await self._call(self._bot, "chat.postMessage", {"channel": conversation, "text": part})
-        for picture in (a for a in answer.attachments if a.kind is AttachmentKind.IMAGE):
-            await self._upload(conversation, picture)
+        for file in (a for a in answer.attachments if a.kind in self.sends):
+            await self._upload(conversation, file)
 
     def _incoming(self, event: Mapping[str, Any]) -> Incoming | None:
         kind, subtype = event.get("type"), event.get("subtype")
@@ -117,8 +117,9 @@ class SlackChannel(MessagingChannel):
         return Pending(kind=kind, media_type=media_type, fetch=fetch, name=file.get("name"), size=file.get("size"))
 
     async def _upload(self, channel: str, file: Attachment) -> None:
-        """Slack's upload in three steps: an address to send the file to, the file, then the share in the channel."""
-        name = file.name or f"image.{file.media_type.rpartition('/')[2]}"
+        """Slack's upload in three steps, the same for any file: an address to send the file to, the file, then the
+        share in the channel, under the file's name."""
+        name = file.file_name
         ticket = await self._call(
             self._bot, "files.getUploadURLExternal", form={"filename": name, "length": str(len(file.data))}
         )

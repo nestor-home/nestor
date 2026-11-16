@@ -22,20 +22,26 @@ describe("tasks and watches", () => {
   });
 
   it("hands over the files a task made, on its page and in its story", async () => {
-    const pdf = { index: 0, kind: "file", media_type: "application/pdf", size: 2048 } as const;
+    const pdf = {
+      index: 0,
+      name: "devis-corrige.pdf",
+      kind: "file",
+      media_type: "application/pdf",
+      size: 2048,
+    } as const;
     const task = db.tasks.find((t) => t.id === "t-3f2a1c");
     const ended = db.journal.find((e) => e.record.type === "task.ended" && e.item.links.task === "t-3f2a1c");
     if (!task || !ended) throw new Error("the energy task is in the mocks");
     task.files = [pdf];
-    ended.item.attachments = [{ ...pdf, name: null, transcript: null }];
+    ended.item.attachments = [{ ...pdf, transcript: null }];
     renderApp("/tasks/t-3f2a1c");
     const chain = await screen.findByRole("article");
-    expect(within(chain).getByRole("link", { name: /File/ })).toHaveAttribute(
+    expect(within(chain).getByRole("link", { name: /devis-corrige\.pdf/ })).toHaveAttribute(
       "href",
       `/api/v1/journal/${ended.item.position}/attachments/0`,
     );
     const aside = screen.getByText("file").closest("div");
-    expect(within(aside as HTMLElement).getByRole("link", { name: /File/ })).toHaveAttribute(
+    expect(within(aside as HTMLElement).getByRole("link", { name: /devis-corrige\.pdf/ })).toHaveAttribute(
       "href",
       "/api/v1/tasks/t-3f2a1c/files/0",
     );

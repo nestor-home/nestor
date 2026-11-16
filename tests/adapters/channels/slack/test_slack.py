@@ -14,7 +14,7 @@ from websockets.asyncio.server import ServerConnection, serve
 
 from nestor.adapters.channels.slack.channel import SlackChannel
 from nestor.core import ProviderError
-from nestor.modules.channels import Assistant, Attachment, AttachmentKind
+from nestor.modules.channels import Address, Assistant, Attachment, AttachmentKind
 from nestor.testing.channels import MessagingChannelContract, Platform, ScriptedAssistant
 
 APP, BOT = "xapp-1-secret", "xoxb-secret"
@@ -23,13 +23,17 @@ ADA = "U07"
 
 class FakeSlack:
     """Socket Mode hands out queued events in envelopes and records the acknowledgements; the Web API keeps posted
-    messages and the three steps of an upload; private files are served to the bot's token only."""
+    messages and the three steps of an upload, and shares in a channel only a file whose bytes arrived; private files
+    are served to the bot's token only."""
 
     def __init__(self) -> None:
         self.events: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
         self.acked: list[str] = []
         self.posted: list[dict[str, Any]] = []
         self.uploads: list[tuple[str, Any]] = []
+        self.tickets: dict[str, str] = {}  # file id: the name asked for it
+        self.received: dict[str, bytes] = {}
+        self.shared: list[tuple[str, bytes]] = []  # the name shown in the channel, the bytes
         self.files: dict[str, bytes] = {}
         self.port = 0
         self.transport = httpx.MockTransport(self.handle)
@@ -62,6 +66,7 @@ class FakeSlack:
         if request.url.host == "files.slack.test":
             if path.startswith("/upload/"):
                 self.uploads.append(("bytes", request.content))
+                self.received[path.removeprefix("/upload/")] = request.content
                 return httpx.Response(200, text="OK")
             if token != BOT:
                 return httpx.Response(403)
@@ -76,12 +81,18 @@ class FakeSlack:
             self.posted.append(json.loads(request.content))
             return httpx.Response(200, json={"ok": True})
         if path.endswith("/files.getUploadURLExternal"):
-            self.uploads.append(("ticket", dict(httpx.QueryParams(request.content.decode()))))
-            return httpx.Response(
-                200, json={"ok": True, "upload_url": "https://files.slack.test/upload/F1", "file_id": "F1"}
-            )
+            form = dict(httpx.QueryParams(request.content.decode()))
+            file_id = f"F{len(self.tickets) + 1}"
+            self.tickets[file_id] = form["filename"]
+            self.uploads.append(("ticket", form))
+            upload_url = f"https://files.slack.test/upload/{file_id}"
+            return httpx.Response(200, json={"ok": True, "upload_url": upload_url, "file_id": file_id})
         if path.endswith("/files.completeUploadExternal"):
-            self.uploads.append(("shared", json.loads(request.content)))
+            body = json.loads(request.content)
+            self.uploads.append(("shared", body))
+            if any(f["id"] not in self.received for f in body["files"]):
+                return httpx.Response(200, json={"ok": False, "error": "file_not_found"})
+            self.shared += [(f.get("title") or self.tickets[f["id"]], self.received[f["id"]]) for f in body["files"]]
             return httpx.Response(200, json={"ok": True})
         return httpx.Response(200, json={"ok": False, "error": "unknown_method"})
 
@@ -139,6 +150,7 @@ async def serving(slack: FakeSlack, assistant: Assistant, app_token: str = APP) 
 class SlackPlatform(Platform):
     def __init__(self, slack: FakeSlack, channel: SlackChannel) -> None:
         self.channel = channel
+        self.address = Address(channel.channel_id, "D1")
         self.slack = slack
 
     async def send(self, text: str, *attachments: Attachment) -> None:
@@ -165,6 +177,9 @@ class SlackPlatform(Platform):
 
     def voices(self) -> list[bytes]:
         return []
+
+    def files(self) -> list[tuple[str | None, bytes]]:
+        return list(self.slack.shared)
 
 
 class TestSlackMessaging(MessagingChannelContract):
@@ -195,7 +210,7 @@ async def test_events_are_acknowledged_and_a_channel_is_answered_once_when_the_b
 async def test_a_picture_is_uploaded_in_three_steps() -> None:
     slack = FakeSlack()
     picture = Attachment(kind=AttachmentKind.IMAGE, data=b"png", media_type="image/png", name="dessin.png")
-    async with serving(slack, ScriptedAssistant(lambda message: "Voilà.", pictures=(picture,))):
+    async with serving(slack, ScriptedAssistant(lambda message: "Voilà.", files=(picture,))):
         slack.say("dessine")
         await eventually(lambda: any(step == "shared" for step, _ in slack.uploads))
     (_, ticket), (_, sent), (_, shared) = slack.uploads

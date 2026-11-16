@@ -45,6 +45,7 @@ class FakeBotApi:
         self.files: dict[str, bytes] = {}  # by file id
         self.voices: list[tuple[str, bytes, str | None]] = []  # chat, recording, caption
         self.photos: list[tuple[str, bytes, str | None]] = []  # chat, picture, caption
+        self.documents: list[tuple[str, str | None, bytes]] = []  # chat, file name, content: documents and audio files
         self.sent: list[tuple[int | str, str]] = []
         self.payloads: list[dict[str, Any]] = []
         self.actions: list[tuple[int, str]] = []
@@ -96,10 +97,14 @@ class FakeBotApi:
                 raise failure
             return failure
         if method in ("sendVoice", "sendPhoto"):
-            fields, file = multipart(request)
+            fields, _, file = multipart(request, method.removeprefix("send").lower())
             sent = self.voices if method == "sendVoice" else self.photos
             sent.append((fields["chat_id"], file, fields.get("caption")))
             return ok({"message_id": len(sent)})
+        if method in ("sendDocument", "sendAudio"):
+            fields, name, file = multipart(request, method.removeprefix("send").lower())
+            self.documents.append((fields["chat_id"], name, file))
+            return ok({"message_id": len(self.documents)})
         payload = json.loads(request.content)
         if method == "getFile":
             known = payload["file_id"] in self.files
@@ -127,17 +132,22 @@ class FakeBotApi:
         return self.updates
 
 
-def multipart(request: httpx.Request) -> tuple[dict[str, str], bytes]:
-    """The text fields of a multipart upload, and its file."""
+def multipart(request: httpx.Request, field: str) -> tuple[dict[str, str], str | None, bytes]:
+    """The text fields of a multipart upload, and the name and content of the file it sends as `field` (the Bot API
+    ignores a file under any other field: the method then fails)."""
     boundary = request.headers["content-type"].split("boundary=")[1].encode()
-    fields, file = {}, b""
+    fields: dict[str, str] = {}
+    files: dict[str, tuple[str, bytes]] = {}
     for part in request.content.split(b"--" + boundary)[1:-1]:
         head, _, body = part.strip(b"\r\n").partition(b"\r\n\r\n")
-        if b"filename=" in head:
-            file = body
-        elif named := re.search(rb'name="([^"]+)"', head):
+        named = re.search(rb'name="([^"]+)"', head)
+        assert named is not None
+        if filename := re.search(rb'filename="([^"]*)"', head):
+            files[named[1].decode()] = (filename[1].decode(), body)
+        else:
             fields[named[1].decode()] = body.decode()
-    return fields, file
+    name, file = files[field]
+    return fields, name, file
 
 
 def ok(result: object) -> httpx.Response:
@@ -555,7 +565,7 @@ async def test_a_long_voice_answer_follows_its_recording_in_writing(api: FakeBot
 @pytest.mark.parametrize("text", ["Voilà ton dessin.", "Une phrase. " * 120], ids=["short", "over-the-caption"])
 async def test_a_picture_goes_with_its_answer_as_caption_when_it_fits(api: FakeBotApi, text: str) -> None:
     picture = Attachment(kind=AttachmentKind.IMAGE, data=b"png bytes", media_type="image/png")
-    assistant = ScriptedAssistant(lambda message: text, pictures=(picture,))
+    assistant = ScriptedAssistant(lambda message: text, files=(picture,))
     async with serving(api, assistant):
         api.say("dessine-moi Nestor")
         await eventually(lambda: bool(api.photos))
@@ -583,6 +593,7 @@ class TelegramPlatform(Platform):
 
     def __init__(self, api: FakeBotApi, channel: TelegramChannel) -> None:
         self.channel = channel
+        self.address = Address("telegram", str(ADA))
         self.api = api
 
     async def send(self, text: str, *attachments: Attachment) -> None:
@@ -609,6 +620,10 @@ class TelegramPlatform(Platform):
     def voices(self) -> list[bytes]:
         return [voice for _, voice, _ in self.api.voices]
 
+    def files(self) -> list[tuple[str | None, bytes]]:
+        photos: list[tuple[str | None, bytes]] = [(None, photo) for _, photo, _ in self.api.photos]  # shown unnamed
+        return photos + [(name, file) for _, name, file in self.api.documents]
+
 
 class TestTelegramMessaging(MessagingChannelContract):
     @asynccontextmanager
@@ -620,7 +635,7 @@ class TestTelegramMessaging(MessagingChannelContract):
 
 async def test_an_answer_whose_picture_cannot_be_sent_still_says_its_words(api: FakeBotApi) -> None:
     picture = Attachment(kind=AttachmentKind.IMAGE, data=b"png bytes", media_type="image/png")
-    assistant = ScriptedAssistant(lambda message: "Voilà ton dessin.", pictures=(picture,))
+    assistant = ScriptedAssistant(lambda message: "Voilà ton dessin.", files=(picture,))
     api.failures["sendPhoto"].append(
         httpx.Response(400, json={"ok": False, "error_code": 400, "description": "Bad Request: file too big"})
     )

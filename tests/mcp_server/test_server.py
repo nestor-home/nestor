@@ -198,7 +198,8 @@ async def test_an_executor_works_on_its_task_through_nestor_s_tools(world: World
     outcome = await world.nestor.tasks.wait(task_id)
     [ended] = [e for e in await world.nestor.journal.history(TaskEnded) if e.task_id == task_id]
     assert outcome.status.value == "completed" and len(ended.files) == 1
-    assert await world.nestor.blobs.get(ended.files[0].digest) == corrected
+    assert ended.files[0].name == "devis-corrige.pdf", "by the name the executor gave it"
+    assert await world.nestor.blobs.get(ended.files[0].blob.digest) == corrected
     calls = [c for c in await world.nestor.journal.history(ExecutorCalled) if c.task_id == task_id]
     assert {c.tool for c in calls} >= {"task_brief", "attach_file"} and all(
         c.ok and c.executor == "codex" for c in calls

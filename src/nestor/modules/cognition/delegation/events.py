@@ -3,7 +3,7 @@
 from nestor.core import Event, PersonId
 from nestor.modules.channels import Address, Exchange
 from nestor.modules.cognition.delegation.types import Given, Notify, TaskStatus
-from nestor.modules.journal import BlobRef
+from nestor.modules.journal import FileRef
 
 
 class TaskStarted(Event, event_type="task.started"):
@@ -47,7 +47,7 @@ class TaskEnded(Event, event_type="task.ended"):
     result: str | None = None
     error: str | None = None
     duration_s: float
-    files: tuple[BlobRef, ...] = ()  # what the executor made, to go with the answer that brings the result
+    files: tuple[FileRef, ...] = ()  # what the executor made, to go with the answer that brings the result
 
 
 class TaskDelivered(Event, event_type="task.delivered"):
@@ -61,8 +61,7 @@ class TaskFileAdded(Event, event_type="task.file.added"):
     """A file the executor handed back while it worked (`attach_file`): it goes with the result."""
 
     task_id: str
-    file: BlobRef
-    name: str
+    file: FileRef
 
 
 class ExecutorKeyIssued(Event, event_type="executor.key.issued"):

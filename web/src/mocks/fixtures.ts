@@ -851,10 +851,12 @@ export const DEPENDENCIES_RESULT = fr(
   "12 dépendances mises à jour, tests au vert. Le rapport et une capture du tableau de bord sont joints.",
 );
 /** What the tasks handed back, as the task API lists them (the journal's `task.ended` carries the same). */
-export const ENERGY_FILES: Task["files"] = [{ index: 0, kind: "file", media_type: "application/pdf", size: 48_200 }];
+export const ENERGY_FILES: Task["files"] = [
+  { index: 0, name: "energy-offers.pdf", kind: "file", media_type: "application/pdf", size: 48_200 },
+];
 export const DEPENDENCIES_FILES: Task["files"] = [
-  { index: 0, kind: "file", media_type: "text/markdown", size: 3_412 },
-  { index: 1, kind: "image", media_type: "image/png", size: 182_400 },
+  { index: 0, name: "report.md", kind: "file", media_type: "text/markdown", size: 3_412 },
+  { index: 1, name: "dashboard.png", kind: "image", media_type: "image/png", size: 182_400 },
 ];
 
 export function tasks(): Task[] {

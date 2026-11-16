@@ -17,20 +17,21 @@ from nestor.adapters.channels.discord.gateway import INTENTS, Beat, Fatal, frame
 from nestor.adapters.channels.messaging import Incoming, MessagingChannel, Pending, kind_of, split_text
 from nestor.adapters.common.http import HttpApi
 from nestor.core import ProviderError
-from nestor.modules.channels import Address, Answer, AttachmentKind, Sender
+from nestor.modules.channels import Address, Answer, Attachment, AttachmentKind, Sender
 
 logger = logging.getLogger(__name__)
 
 PROVIDER = "discord"
 API = "https://discord.com/api/v10"
 MESSAGE_LIMIT = 2000
+FILES_LIMIT = 10  # files in one message
 VOICE_MESSAGE = 1 << 13  # a message's flag
 
 
 class DiscordChannel(MessagingChannel):
     name = "discord"
     brand = "discord"
-    sends = frozenset({AttachmentKind.IMAGE})
+    sends = frozenset({AttachmentKind.IMAGE, AttachmentKind.AUDIO, AttachmentKind.FILE})
 
     typing_every_s = 8.0  # Discord shows it for 10 s
 
@@ -80,21 +81,39 @@ class DiscordChannel(MessagingChannel):
         await self._files.aclose()
 
     async def deliver(self, conversation: str, answer: Answer) -> None:
+        """The text, its files with its last part, by ten (what a message holds); written alone when the files
+        cannot be sent."""
         parts = split_text(answer.text, MESSAGE_LIMIT) or [""]
-        pictures = [a for a in answer.attachments if a.kind is AttachmentKind.IMAGE]
+        files = [a for a in answer.attachments if a.kind in self.sends]
         for part in parts[:-1]:
-            await self._api.request("POST", f"/channels/{conversation}/messages", json={"content": part})
-        last = {"content": parts[-1]}
-        if not pictures:
-            await self._api.request("POST", f"/channels/{conversation}/messages", json=last)
+            await self._post(conversation, part)
+        if not files:
+            await self._post(conversation, parts[-1])
             return
-        files = {
-            f"files[{n}]": (p.name or f"image{n}.{p.media_type.rpartition('/')[2]}", p.data, p.media_type)
-            for n, p in enumerate(pictures)
+        for n in range(0, len(files), FILES_LIMIT):
+            text = parts[-1] if n == 0 else ""
+            try:
+                await self._post(conversation, text, files[n : n + FILES_LIMIT])
+            except ProviderError as error:
+                logger.warning("discord: files could not be sent to %s: %s", conversation, error)
+                if text:
+                    await self._post(conversation, text)
+
+    async def _post(self, conversation: str, text: str, files: list[Attachment] | None = None) -> None:
+        """A message; with `files`, sent as a form whose parts carry each file under its name."""
+        path = f"/channels/{conversation}/messages"
+        if not files:
+            await self._api.request("POST", path, json={"content": text})
+            return
+        parts = {
+            f"files[{n}]": (
+                f.file_name,
+                f.data,
+                f.media_type,
+            )
+            for n, f in enumerate(files)
         }
-        await self._api.request(
-            "POST", f"/channels/{conversation}/messages", data={"payload_json": json.dumps(last)}, files=files
-        )
+        await self._api.request("POST", path, data={"payload_json": json.dumps({"content": text})}, files=parts)
 
     async def show_typing(self, conversation: str) -> None:
         await self._api.request("POST", f"/channels/{conversation}/typing")

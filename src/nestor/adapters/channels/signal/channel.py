@@ -11,7 +11,7 @@ import httpx
 from nestor.adapters.channels.messaging import Incoming, MessagingChannel, Pending, kind_of
 from nestor.adapters.common.http import HttpApi
 from nestor.core import ProviderError
-from nestor.modules.channels import Address, Answer, AttachmentKind, Sender
+from nestor.modules.channels import Address, Answer, Attachment, AttachmentKind, Sender
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ GROUP = "group."  # how signal-cli-rest-api names a group: this prefix and its i
 class SignalChannel(MessagingChannel):
     name = "signal"
     brand = "signal"
-    sends = frozenset({AttachmentKind.IMAGE})
+    sends = frozenset({AttachmentKind.IMAGE, AttachmentKind.AUDIO, AttachmentKind.FILE})
 
     def __init__(
         self,
@@ -62,13 +62,11 @@ class SignalChannel(MessagingChannel):
         await self._api.aclose()
 
     async def deliver(self, conversation: str, answer: Answer) -> None:
-        pictures = [a for a in answer.attachments if a.kind is AttachmentKind.IMAGE]
+        """The text and its files in one message, each file by its name (one without a name takes its kind's, with
+        the extension of its type: `file.pdf`)."""
         body: dict[str, Any] = {"message": answer.text, "number": self._number, "recipients": [conversation]}
-        if pictures:
-            body["base64_attachments"] = [
-                f"data:{p.media_type};filename={p.name or 'image'};base64,{base64.b64encode(p.data).decode()}"
-                for p in pictures
-            ]
+        if files := [a for a in answer.attachments if a.kind is not AttachmentKind.VOICE]:
+            body["base64_attachments"] = [_data_uri(f) for f in files]
         await self._api.request("POST", "/v2/send", json=body)
 
     def _incoming(self, envelope: Mapping[str, Any]) -> Incoming | None:
@@ -97,6 +95,12 @@ class SignalChannel(MessagingChannel):
             return (await self._api.request("GET", f"/v1/attachments/{attachment_id}")).content
 
         return Pending(kind=kind, media_type=media_type, fetch=fetch, name=name, size=attachment.get("size"))
+
+
+def _data_uri(file: Attachment) -> str:
+    """A file as signal-cli-rest-api takes it, with its name."""
+    name = file.file_name
+    return f"data:{file.media_type};filename={name};base64,{base64.b64encode(file.data).decode()}"
 
 
 def _envelopes(response: httpx.Response) -> list[Mapping[str, Any]]:
