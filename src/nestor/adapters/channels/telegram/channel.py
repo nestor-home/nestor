@@ -1,7 +1,5 @@
 """The Telegram channel: a bot polling `getUpdates`, a `MessagingChannel`."""
 
-import contextlib
-import logging
 from collections.abc import AsyncIterator, Awaitable, Callable
 from datetime import UTC, datetime
 from typing import Any
@@ -9,13 +7,18 @@ from typing import Any
 import httpx
 from pydantic import ValidationError
 
-from nestor.adapters.channels.messaging import Incoming, MessagingChannel, Pending, split_text, utf16_length
+from nestor.adapters.channels.messaging import (
+    Incoming,
+    MessagingChannel,
+    Pending,
+    files_sent,
+    split_text,
+    utf16_length,
+)
 from nestor.adapters.channels.telegram.api import BotApi, TelegramError
 from nestor.adapters.channels.telegram.messages import UPDATES, File, Message, Update, User
 from nestor.core import ProviderError
-from nestor.modules.channels import Address, Answer, Attachment, AttachmentKind, Sender
-
-logger = logging.getLogger(__name__)
+from nestor.modules.channels import Address, Answer, Attachment, AttachmentKind, Sender, base_type
 
 MESSAGE_LIMIT = 4096  # Telegram's limit, in UTF-16 code units
 CAPTION_LIMIT = 1024  # a file's caption
@@ -108,7 +111,7 @@ class TelegramChannel(MessagingChannel):
         """A message as a voice message when it has its recording, written otherwise, then its other files
         (pictures, documents, audio files); a single file takes the text as caption when it fits and nothing is said
         aloud."""
-        files = [a for a in answer.attachments if a.kind is not AttachmentKind.VOICE]
+        files = answer.files
         if answer.voice is not None:
             await self._send_captioned(conversation, answer.text, answer.voice)
         elif len(files) == 1:
@@ -117,28 +120,20 @@ class TelegramChannel(MessagingChannel):
         else:
             await self._send_text(conversation, answer.text)
         for file in files:
-            with contextlib.suppress(ProviderError):  # said by `_upload`: the words went out already
-                await self._upload(conversation, file)
+            await files_sent(self, conversation, (file,), self._upload(conversation, file))
 
     async def _send_captioned(self, chat_id: str, text: str, file: Attachment) -> None:
         """A file with `text` as caption when it fits, or written after it; written alone when the file cannot be
         sent."""
         fits = utf16_length(text) <= CAPTION_LIMIT
-        try:
-            await self._upload(chat_id, file, caption=text if fits else None)
-        except ProviderError:
-            fits = False
-        if not fits:
+        uploading = self._upload(chat_id, file, caption=text if fits else None)
+        if not (await files_sent(self, chat_id, (file,), uploading) and fits):
             await self._send_text(chat_id, text)
 
     async def _upload(self, chat_id: str, file: Attachment, *, caption: str | None = None) -> None:
         method, field = _upload_as(file)
         fields = {"chat_id": chat_id} | ({"caption": caption} if caption is not None else {})
-        try:
-            await self._api.upload(method, fields, field, file)
-        except ProviderError as error:
-            logger.warning("telegram: a %s could not be sent to %s: %s", file.kind, chat_id, error)
-            raise
+        await self._api.upload(method, fields, field, file)
 
     async def _send_text(self, chat_id: str, text: str) -> None:
         for part in split_text(text, MESSAGE_LIMIT, measure=utf16_length):
@@ -155,7 +150,7 @@ def _upload_as(file: Attachment) -> tuple[str, str]:
             return "sendVoice", "voice"
         case AttachmentKind.IMAGE:
             return "sendPhoto", "photo"
-        case AttachmentKind.AUDIO if file.media_type.split(";")[0].strip().lower() in MUSIC_TYPES:
+        case AttachmentKind.AUDIO if base_type(file.media_type) in MUSIC_TYPES:
             return "sendAudio", "audio"
         case _:
             return "sendDocument", "document"

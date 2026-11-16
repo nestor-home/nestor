@@ -3,7 +3,6 @@
 import asyncio
 import contextlib
 import json
-import logging
 import re
 from collections.abc import AsyncIterator, Mapping
 from datetime import datetime
@@ -14,12 +13,10 @@ from websockets.asyncio.client import ClientConnection, connect
 from websockets.exceptions import WebSocketException
 
 from nestor.adapters.channels.discord.gateway import INTENTS, Beat, Fatal, frames, frames_of
-from nestor.adapters.channels.messaging import Incoming, MessagingChannel, Pending, kind_of, split_text
+from nestor.adapters.channels.messaging import Incoming, MessagingChannel, Pending, files_sent, kind_of, split_text
 from nestor.adapters.common.http import HttpApi
 from nestor.core import ProviderError
 from nestor.modules.channels import Address, Answer, Attachment, AttachmentKind, Sender
-
-logger = logging.getLogger(__name__)
 
 PROVIDER = "discord"
 API = "https://discord.com/api/v10"
@@ -84,35 +81,24 @@ class DiscordChannel(MessagingChannel):
         """The text, its files with its last part, by ten (what a message holds); written alone when the files
         cannot be sent."""
         parts = split_text(answer.text, MESSAGE_LIMIT) or [""]
-        files = [a for a in answer.attachments if a.kind in self.sends]
+        files = answer.files
         for part in parts[:-1]:
             await self._post(conversation, part)
         if not files:
             await self._post(conversation, parts[-1])
             return
         for n in range(0, len(files), FILES_LIMIT):
-            text = parts[-1] if n == 0 else ""
-            try:
-                await self._post(conversation, text, files[n : n + FILES_LIMIT])
-            except ProviderError as error:
-                logger.warning("discord: files could not be sent to %s: %s", conversation, error)
-                if text:
-                    await self._post(conversation, text)
+            text, batch = parts[-1] if n == 0 else "", files[n : n + FILES_LIMIT]
+            if not await files_sent(self, conversation, batch, self._post(conversation, text, batch)) and text:
+                await self._post(conversation, text)
 
-    async def _post(self, conversation: str, text: str, files: list[Attachment] | None = None) -> None:
+    async def _post(self, conversation: str, text: str, files: tuple[Attachment, ...] = ()) -> None:
         """A message; with `files`, sent as a form whose parts carry each file under its name."""
         path = f"/channels/{conversation}/messages"
         if not files:
             await self._api.request("POST", path, json={"content": text})
             return
-        parts = {
-            f"files[{n}]": (
-                f.file_name,
-                f.data,
-                f.media_type,
-            )
-            for n, f in enumerate(files)
-        }
+        parts = {f"files[{n}]": (f.file_name, f.data, f.media_type) for n, f in enumerate(files)}
         await self._api.request("POST", path, data={"payload_json": json.dumps({"content": text})}, files=parts)
 
     async def show_typing(self, conversation: str) -> None:

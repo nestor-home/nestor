@@ -24,7 +24,6 @@ from nestor.adapters.executors.common import (
 from nestor.adapters.executors.process import Child
 from nestor.core import Health
 from nestor.core.i18n import Message
-from nestor.modules.channels import Attachment
 from nestor.modules.cognition.delegation import Assignment, Executor, NestorAccess, NestorTools, Outcome, Progress
 
 
@@ -76,18 +75,18 @@ class ClaudeCodeExecutor(Executor):
     async def run(self, assignment: Assignment, progress: Progress) -> Outcome:
         """In a folder of its own under the working directory, where the files sent with the task are placed."""
         try:
-            folder = await asyncio.to_thread(self._prepare, assignment.files)
+            folder = await self._prepare(assignment)
         except OSError as error:
             return Outcome.failed(f"the task's folder could not be made: {error.strerror or error}")
         with tempfile.TemporaryDirectory(prefix="nestor-claude-") as private:  # its key never on a command line
             servers = _mcp_config(assignment.access, Path(private)) if assignment.access else None
             return await self._run(assignment.brief(str(folder)), progress, servers, folder)
 
-    def _prepare(self, files: Sequence[Attachment]) -> Path:
+    async def _prepare(self, assignment: Assignment) -> Path:
         folder = self._cwd / task_folder()
-        folder.mkdir()
-        for file in files:
-            (folder / str(file.name)).write_bytes(file.data)  # a plain name, never twice (`Given`)
+        await asyncio.to_thread(folder.mkdir)
+        async for name, data in assignment.placed():  # plain names, never twice
+            await asyncio.to_thread((folder / name).write_bytes, data)
         return folder
 
     async def _run(self, objective: str, progress: Progress, servers: Path | None, folder: Path) -> Outcome:

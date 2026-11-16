@@ -3,7 +3,6 @@
 import asyncio
 import json
 import logging
-import re
 from collections import defaultdict, deque
 from collections.abc import AsyncGenerator, AsyncIterator, Callable
 from contextlib import asynccontextmanager
@@ -32,13 +31,16 @@ from nestor.runtime import Services
 from nestor.testing.channels import OGG, MessagingChannelContract, Platform, ScriptedAssistant
 from nestor.testing.i18n import EchoLocalizer
 
+from ..forms import multipart
+
 TOKEN = "123456:secret-token"
 ADA, BOB, STRANGER = 7, 8, 9
 
 
 class FakeBotApi:
     """Just enough of the Bot API: queued updates for `getUpdates`, recorded `sendMessage` and
-    `sendChatAction` calls, and scripted failures (an exception or a response) per method."""
+    `sendChatAction` calls, and scripted failures (an exception or a response) per method; `too_large` refuses every
+    file sent."""
 
     def __init__(self) -> None:
         self.updates: list[dict[str, Any]] = []
@@ -50,6 +52,7 @@ class FakeBotApi:
         self.payloads: list[dict[str, Any]] = []
         self.actions: list[tuple[int, str]] = []
         self.polls = 0
+        self.too_large = False
         self.failures: dict[str, deque[httpx.Response | Exception]] = defaultdict(deque)
         self._next_update = 1
         self.transport = httpx.MockTransport(self.handle)
@@ -96,13 +99,15 @@ class FakeBotApi:
             if isinstance(failure, Exception):
                 raise failure
             return failure
-        if method in ("sendVoice", "sendPhoto"):
-            fields, _, file = multipart(request, method.removeprefix("send").lower())
-            sent = self.voices if method == "sendVoice" else self.photos
-            sent.append((fields["chat_id"], file, fields.get("caption")))
-            return ok({"message_id": len(sent)})
-        if method in ("sendDocument", "sendAudio"):
-            fields, name, file = multipart(request, method.removeprefix("send").lower())
+        if method in ("sendVoice", "sendPhoto", "sendDocument", "sendAudio"):
+            if self.too_large:
+                return error(413, "Request Entity Too Large")
+            fields, files = multipart(request)
+            name, file = files[method.removeprefix("send").lower()]  # the Bot API ignores a file under another field
+            if method in ("sendVoice", "sendPhoto"):
+                sent = self.voices if method == "sendVoice" else self.photos
+                sent.append((fields["chat_id"], file, fields.get("caption")))
+                return ok({"message_id": len(sent)})
             self.documents.append((fields["chat_id"], name, file))
             return ok({"message_id": len(self.documents)})
         payload = json.loads(request.content)
@@ -130,24 +135,6 @@ class FakeBotApi:
         while not self.updates and asyncio.get_running_loop().time() < deadline:
             await asyncio.sleep(0.005)
         return self.updates
-
-
-def multipart(request: httpx.Request, field: str) -> tuple[dict[str, str], str | None, bytes]:
-    """The text fields of a multipart upload, and the name and content of the file it sends as `field` (the Bot API
-    ignores a file under any other field: the method then fails)."""
-    boundary = request.headers["content-type"].split("boundary=")[1].encode()
-    fields: dict[str, str] = {}
-    files: dict[str, tuple[str, bytes]] = {}
-    for part in request.content.split(b"--" + boundary)[1:-1]:
-        head, _, body = part.strip(b"\r\n").partition(b"\r\n\r\n")
-        named = re.search(rb'name="([^"]+)"', head)
-        assert named is not None
-        if filename := re.search(rb'filename="([^"]*)"', head):
-            files[named[1].decode()] = (filename[1].decode(), body)
-        else:
-            fields[named[1].decode()] = body.decode()
-    name, file = files[field]
-    return fields, name, file
 
 
 def ok(result: object) -> httpx.Response:
@@ -620,6 +607,9 @@ class TelegramPlatform(Platform):
     def voices(self) -> list[bytes]:
         return [voice for _, voice, _ in self.api.voices]
 
+    def refuse_files(self) -> None:
+        self.api.too_large = True
+
     def files(self) -> list[tuple[str | None, bytes]]:
         photos: list[tuple[str | None, bytes]] = [(None, photo) for _, photo, _ in self.api.photos]  # shown unnamed
         return photos + [(name, file) for _, name, file in self.api.documents]
@@ -631,15 +621,3 @@ class TestTelegramMessaging(MessagingChannelContract):
         api = FakeBotApi()
         async with serving(api, assistant) as (channel, _):
             yield TelegramPlatform(api, channel)
-
-
-async def test_an_answer_whose_picture_cannot_be_sent_still_says_its_words(api: FakeBotApi) -> None:
-    picture = Attachment(kind=AttachmentKind.IMAGE, data=b"png bytes", media_type="image/png")
-    assistant = ScriptedAssistant(lambda message: "Voilà ton dessin.", files=(picture,))
-    api.failures["sendPhoto"].append(
-        httpx.Response(400, json={"ok": False, "error_code": 400, "description": "Bad Request: file too big"})
-    )
-    async with serving(api, assistant):
-        api.say("dessine-moi Nestor")
-        await eventually(lambda: bool(api.sent))
-    assert api.texts(ADA) == ["Voilà ton dessin."]

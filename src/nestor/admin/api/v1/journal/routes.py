@@ -19,10 +19,10 @@ from nestor.admin.api.v1.journal.schemas import (
 from nestor.admin.api.v1.journal.stream import events
 from nestor.admin.api.v1.security import Caller, allowed
 from nestor.admin.api.v1.shared import People
-from nestor.admin.files import file_response
 from nestor.admin.presentation import Kind, Tone
 from nestor.admin.state import state
 from nestor.core import PersonId
+from nestor.http import file_response
 from nestor.modules.accounts import Scope
 
 router = APIRouter(tags=["journal"])

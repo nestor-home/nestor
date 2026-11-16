@@ -23,8 +23,8 @@ ADA = "U07"
 
 class FakeSlack:
     """Socket Mode hands out queued events in envelopes and records the acknowledgements; the Web API keeps posted
-    messages and the three steps of an upload, and shares in a channel only a file whose bytes arrived; private files
-    are served to the bot's token only."""
+    messages and the three steps of an upload, and shares in a channel only a file whose bytes arrived (`too_large`
+    refuses every upload); private files are served to the bot's token only."""
 
     def __init__(self) -> None:
         self.events: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
@@ -35,6 +35,7 @@ class FakeSlack:
         self.received: dict[str, bytes] = {}
         self.shared: list[tuple[str, bytes]] = []  # the name shown in the channel, the bytes
         self.files: dict[str, bytes] = {}
+        self.too_large = False
         self.port = 0
         self.transport = httpx.MockTransport(self.handle)
 
@@ -81,6 +82,8 @@ class FakeSlack:
             self.posted.append(json.loads(request.content))
             return httpx.Response(200, json={"ok": True})
         if path.endswith("/files.getUploadURLExternal"):
+            if self.too_large:
+                return httpx.Response(200, json={"ok": False, "error": "file_too_large"})
             form = dict(httpx.QueryParams(request.content.decode()))
             file_id = f"F{len(self.tickets) + 1}"
             self.tickets[file_id] = form["filename"]
@@ -177,6 +180,9 @@ class SlackPlatform(Platform):
 
     def voices(self) -> list[bytes]:
         return []
+
+    def refuse_files(self) -> None:
+        self.slack.too_large = True
 
     def files(self) -> list[tuple[str | None, bytes]]:
         return list(self.slack.shared)

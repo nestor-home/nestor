@@ -408,7 +408,7 @@ class AgentReply(Reply):
         if isinstance(opening, Notification) and opening.must_tell:
             turn = f"{turn}\n\n{MUST_TELL}"
         if isinstance(opening, Notification) and opening.files:
-            names = ", ".join(f.name or f.blob.media_type for f in opening.files)
+            names = ", ".join(f.name for f in opening.files)
             turn = f"{turn}\n\n{FILES_GO.format(names=names)}"
         if isinstance(opening, Notification) and opening.thread and (told := await self._told(opening.thread)):
             turn = f"{turn}\n\n{ALREADY_TOLD.format(told=told)}"
@@ -420,7 +420,10 @@ class AgentReply(Reply):
         ]
         exchange = self._turn.exchange if self._turn else None
         thread = opening.thread if isinstance(opening, Notification) else None
-        context = ToolContext(address=self._address, speaker=self._speaker, exchange=exchange, thread=thread)
+        asked = not isinstance(opening, Notification)  # a person's message, not what Nestor brought by itself
+        context = ToolContext(
+            address=self._address, speaker=self._speaker, exchange=exchange, thread=thread, asked=asked
+        )
         wait_s = agent.settings.tool_wait_s(self._medium)
         for _ in range(agent.settings.max_tool_rounds):
             try:

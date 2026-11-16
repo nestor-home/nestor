@@ -45,6 +45,7 @@ class ToolDeferred(Event, event_type="agent.tool.deferred"):
     person: PersonId | None = None
     exchange: Exchange | None = None
     thread: str | None = None  # what its result continues (`Notification.thread`)
+    asked: bool = False  # a person asked for it in their own turn: its result is always told
 
 
 class ToolReturned(Event, event_type="agent.tool.returned"):

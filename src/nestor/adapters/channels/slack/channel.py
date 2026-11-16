@@ -11,13 +11,7 @@ import httpx
 from websockets.asyncio.client import ClientConnection, connect
 from websockets.exceptions import WebSocketException
 
-from nestor.adapters.channels.messaging import (
-    Incoming,
-    MessagingChannel,
-    Pending,
-    kind_of,
-    split_text,
-)
+from nestor.adapters.channels.messaging import Incoming, MessagingChannel, Pending, files_sent, kind_of, split_text
 from nestor.adapters.common.http import HttpApi
 from nestor.core import ProviderError
 from nestor.modules.channels import Address, Answer, Attachment, AttachmentKind, Sender
@@ -87,8 +81,8 @@ class SlackChannel(MessagingChannel):
     async def deliver(self, conversation: str, answer: Answer) -> None:
         for part in split_text(answer.text, MESSAGE_LIMIT):
             await self._call(self._bot, "chat.postMessage", {"channel": conversation, "text": part})
-        for file in (a for a in answer.attachments if a.kind in self.sends):
-            await self._upload(conversation, file)
+        for file in answer.files:
+            await files_sent(self, conversation, (file,), self._upload(conversation, file))
 
     def _incoming(self, event: Mapping[str, Any]) -> Incoming | None:
         kind, subtype = event.get("type"), event.get("subtype")
@@ -119,12 +113,11 @@ class SlackChannel(MessagingChannel):
     async def _upload(self, channel: str, file: Attachment) -> None:
         """Slack's upload in three steps, the same for any file: an address to send the file to, the file, then the
         share in the channel, under the file's name."""
-        name = file.file_name
         ticket = await self._call(
-            self._bot, "files.getUploadURLExternal", form={"filename": name, "length": str(len(file.data))}
+            self._bot, "files.getUploadURLExternal", form={"filename": file.file_name, "length": str(len(file.data))}
         )
         await self._uploads.request("POST", ticket["upload_url"], content=file.data)
-        files = [{"id": ticket["file_id"], "title": name}]
+        files = [{"id": ticket["file_id"], "title": file.file_name}]
         await self._call(self._bot, "files.completeUploadExternal", {"files": files, "channel_id": channel})
 
     async def _call(

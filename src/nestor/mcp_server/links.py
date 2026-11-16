@@ -12,22 +12,19 @@ import json
 import secrets
 import time
 from dataclasses import dataclass
-from enum import StrEnum
 
 LINK_S = 600
 
 
-class Way(StrEnum):
-    DOWNLOAD = "download"
-    UPLOAD = "upload"
-
-
 @dataclass(frozen=True, slots=True)
 class Link:
-    way: Way
+    """What a link allows: `GET` downloads the file sent with `task` whose digest is `target`; `PUT` uploads a file
+    named `target`, of `media_type`, to go with its result."""
+
+    method: str
     task: str  # its id
-    file: str  # what it reaches: the digest of a file sent with it, or the name of one to upload
-    media_type: str
+    target: str
+    media_type: str = ""
 
 
 class Links:
@@ -37,27 +34,23 @@ class Links:
         self._key = secrets.token_bytes(32)
         self._used: dict[str, float] = {}  # upload links already used, until they expire
 
-    def download(self, task: str, digest: str, media_type: str) -> str:
-        return self._url(Link(Way.DOWNLOAD, task, digest, media_type))
+    def download(self, task: str, digest: str) -> str:
+        return self._url(Link("GET", task, digest))
 
     def upload(self, task: str, name: str, media_type: str) -> str:
-        return self._url(Link(Way.UPLOAD, task, name, media_type))
+        return self._url(Link("PUT", task, name, media_type))
 
     def read(self, token: str) -> Link | None:
         """The link a token is, while it is valid; `None` for anything else."""
         payload, _, signature = token.partition(".")
         if not hmac.compare_digest(self._sign(payload), signature):
             return None
-        try:
-            way, task, file, media_type, until = json.loads(_decode(payload))
-            link = Link(Way(way), task, file, media_type)
-        except ValueError:
-            return None
+        method, task, target, media_type, until = json.loads(_decode(payload))
         now = time.time()
         self._used = {t: end for t, end in self._used.items() if end >= now}
         if now > until or token in self._used:
             return None
-        return link
+        return Link(method, task, target, media_type)
 
     def used(self, token: str) -> None:
         """An upload link that did its work: never again."""
@@ -65,7 +58,7 @@ class Links:
 
     def _url(self, link: Link) -> str:
         until = int(time.time()) + LINK_S
-        payload = _encode(json.dumps([link.way, link.task, link.file, link.media_type, until]).encode())
+        payload = _encode(json.dumps([link.method, link.task, link.target, link.media_type, until]).encode())
         return f"{self._base}/{payload}.{self._sign(payload)}"
 
     def _sign(self, payload: str) -> str:

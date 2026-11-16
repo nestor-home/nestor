@@ -15,7 +15,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 from nestor.core import Component, ContractError, Event, PersonId, new_id, utc_now
-from nestor.modules.channels import Address, Attachment, AttachmentKind, Exchange
+from nestor.modules.channels import Address, Attachment, Exchange
 from nestor.modules.cognition.delegation.events import (
     ExecutorCalled,
     TaskAttached,
@@ -29,7 +29,6 @@ from nestor.modules.cognition.delegation.keys import ExecutorKeys, capability, d
 from nestor.modules.cognition.delegation.ports import Executor, RemoteExecutor
 from nestor.modules.cognition.delegation.types import (
     Assignment,
-    Given,
     NestorTools,
     Notify,
     Outcome,
@@ -55,7 +54,7 @@ class Task:
     exchange: Exchange | None = None
     capability: str | None = None  # the digest of what its executor calls Nestor's MCP server with for it
     ref: str | None = None
-    given: tuple[Given, ...] = ()  # sent with it
+    given: tuple[FileRef, ...] = ()  # sent with it
     files: list[FileRef] = field(default_factory=list)  # handed back while it ran (`attach_file`)
     steps: list[str] = field(default_factory=list)
     outcome: Outcome | None = None
@@ -152,9 +151,11 @@ class TaskManager(Component):
         executor: str | None = None,
         exchange: Exchange | None = None,
         thread: str | None = None,
-        given: Sequence[Given] = (),
+        given: Sequence[FileRef] = (),
+        asked: bool = False,
     ) -> Task:
-        """`given`: the files sent with the task, which its executor receives."""
+        """`given`: the files sent with the task, which its executor receives; `asked`: a person asked for it in
+        their own turn, so its result is always told."""
         if self._writer is None:
             raise ContractError("the task manager must be started before delegating")
         chosen = self.executors.get(executor) if executor else self.default_executor
@@ -174,6 +175,7 @@ class TaskManager(Component):
             thread=thread,
             capability=digest(assignment.task) if assignment.task else None,
             given=tuple(given),
+            asked=asked,
         )
         await self.journal.publish(event)
         task = self.tasks[event.task_id] = _task(event, None)
@@ -208,39 +210,24 @@ class TaskManager(Component):
         """A file `task`'s executor hands back while it works: kept, journaled, and sent with the result."""
         if self._blobs is None:
             raise ContractError("files cannot be kept here")
-        kept = FileRef(await self._blobs.put(file.data, file.media_type), file.name)
+        kept = FileRef(await self._blobs.put(file.data, file.media_type), file.file_name)
         task.files.append(kept)
         await self.journal.publish(
             TaskFileAdded(source=self.name, session=task.origin.session, task_id=task.id, file=kept)
         )
         return kept
 
-    async def _assignment(self, objective: str, executor: Executor, given: tuple[Given, ...]) -> Assignment:
-        """What `executor` is given: the files sent with the task, and with Nestor's MCP server when it reaches it,
-        a capability for the task."""
-        files = await self._read(given)
-        if self._keys is None or executor.nestor_tools is NestorTools.NONE:
-            return Assignment(objective, files=files)
-        if executor.nestor_tools is NestorTools.CONFIGURED:  # its own configuration holds the server and its key
-            return Assignment(objective, capability(), files=files)
-        access = await self._keys.access(executor.name)
-        return Assignment(objective, capability(), access, files) if access else Assignment(objective, files=files)
-
-    async def _read(self, given: tuple[Given, ...]) -> tuple[Attachment, ...]:
-        if self._blobs is None or not given:
-            return ()
-        blobs = self._blobs
-        return tuple(
-            [
-                Attachment(
-                    kind=AttachmentKind.of(g.file.media_type),
-                    data=await blobs.get(g.file.digest),
-                    media_type=g.file.media_type,
-                    name=g.name,
-                )
-                for g in given
-            ]
-        )
+    async def _assignment(self, objective: str, executor: Executor, given: tuple[FileRef, ...]) -> Assignment:
+        """What `executor` is given: the files sent with the task, read only by an executor that places them, and
+        with Nestor's MCP server when it reaches it, a capability for the task."""
+        reader = self._blobs.get if self._blobs else None
+        task, access = None, None
+        if self._keys is not None and executor.nestor_tools is NestorTools.CONFIGURED:
+            task = capability()  # its own configuration holds the server and its key
+        elif self._keys is not None and executor.nestor_tools is NestorTools.PASSED:
+            access = await self._keys.access(executor.name)
+            task = capability() if access else None
+        return Assignment(objective, task, access, given, reader)
 
     async def cancel(self, task_id: str) -> Outcome:
         """Ask the executor to stop; the outcome says whether the stop was confirmed."""
@@ -343,12 +330,12 @@ class TaskManager(Component):
         kept: list[FileRef] = []
         lost: list[str] = []
         for file in made:
-            name = file.name or file.media_type
+            name = file.file_name
             if self._blobs is None:
                 lost.append(f"{name} (nowhere to keep it)")
                 continue
             try:
-                kept.append(FileRef(await self._blobs.put(file.data, file.media_type), file.name))
+                kept.append(FileRef(await self._blobs.put(file.data, file.media_type), name))
             except Exception as error:  # a full disk must not lose the task's end
                 logger.warning("task %s: a file could not be kept (%s)", task.id, error)
                 lost.append(f"{name} ({type(error).__name__})")

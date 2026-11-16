@@ -286,6 +286,17 @@ class MessagingChannelContract:
             else:
                 assert (voices, texts) == ([], ["Noté."]), "without a voice to send, the answer is written"
 
+    async def test_files_the_platform_refuses_are_left_out_and_the_text_goes_once(self) -> None:
+        note = Attachment(kind=AttachmentKind.VOICE, data=b"opus", media_type="audio/ogg")
+        async with self.serving(ScriptedAssistant(lambda message: "Noté.", speaks=True)) as platform:
+            platform.refuse_files()
+            await platform.channel.send(platform.address, "Le devis.", Medium.WRITTEN, (DEVIS,))
+            await platform.channel.send(platform.address, "Le devis et ta chanson.", Medium.WRITTEN, (DEVIS, SONG))
+            await platform.send("", note)
+            await platform.answered(3)
+            assert platform.texts() == ["Le devis.", "Le devis et ta chanson.", "Noté."], "without raising, once"
+            assert (platform.files(), platform.voices()) == ([], [])
+
 
 class Platform:
     """The stand-in for a messaging platform a `MessagingChannelContract` drives: someone of the household writes,
@@ -305,6 +316,11 @@ class Platform:
         raise NotImplementedError
 
     def voices(self) -> list[bytes]:
+        raise NotImplementedError
+
+    def refuse_files(self) -> None:
+        """From now on, the platform refuses every file the bot sends (as one over its size limit), voice messages
+        included."""
         raise NotImplementedError
 
     def files(self) -> list[tuple[str | None, bytes]]:

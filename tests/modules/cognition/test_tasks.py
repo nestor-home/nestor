@@ -275,13 +275,13 @@ async def test_the_files_sent_in_the_conversation_go_with_the_task_but_not_what_
     sent = (Attached(AttachmentKind.FILE, other, "devis.pdf"), Attached(AttachmentKind.FILE, devis, "devis.pdf"))
     await second.said("Et l'autre", Medium.WRITTEN, mathis, sent)
     context = ToolContext(address=chat, speaker=mathis, exchange=second.exchange)
-    expected = [("devis.pdf", b"%PDF devis"), ("file.jpg", b"jpeg"), ("devis (2).pdf", b"%PDF autre")]
+    expected = [("devis.pdf", b"%PDF devis"), ("image.jpg", b"jpeg"), ("devis (2).pdf", b"%PDF autre")]
     async with TaskManager(journal, [ScriptedRemoteExecutor(remote, duration_s=None)], blobs=blobs) as tasks:
         tool = next(t for t in Delegation(tasks).tools() if t.name == "delegate_task")
         task_id = str(data(await tool.run({"objective": "Compare les devis"}, context))["task_id"])
         await asyncio.sleep(0.01)
         [run] = remote.runs.values()
-        assert [(f.name, f.data) for f in run.assignment.files] == expected, "plain names, none twice, no voice"
+        assert [placed async for placed in run.assignment.placed()] == expected, "plain names, none twice, no voice"
     async with TaskManager(journal, [ScriptedRemoteExecutor(remote, duration_s=None)], blobs=blobs) as tasks:
         assert [g.name for g in tasks.tasks[task_id].given] == [name for name, _ in expected], "kept by the journal"
         await tasks.cancel(task_id)

@@ -9,10 +9,10 @@ import contextlib
 import json
 
 from nestor.core import Component, Event, PersonId
-from nestor.modules.channels import Address, Exchange
+from nestor.modules.channels import Address
 from nestor.modules.cognition.delegation import Notify, TaskDelivered, TaskEnded, TaskStarted, TaskStatus
 from nestor.modules.cognition.tools import ToolDeferred, ToolReturned
-from nestor.modules.conversation import About, Notification, Source, UserTurn
+from nestor.modules.conversation import About, Notification, Source
 from nestor.modules.household import Household, Person
 from nestor.modules.initiative.delivery.courier import Courier
 from nestor.modules.initiative.delivery.events import DeliveryWithheld
@@ -91,8 +91,7 @@ class Returns(Component):
             Notification(
                 task_instruction(started.objective, ended, written=written),
                 about,
-                must_tell=ended.status is not TaskStatus.COMPLETED
-                or await self._asked(started.origin, started.exchange),
+                must_tell=_must_tell(ok=ended.status is TaskStatus.COMPLETED, asked=started.asked),
                 files=ended.files,
                 thread=started.thread,
             ),
@@ -116,7 +115,7 @@ class Returns(Component):
             Notification(
                 _tool_instruction(deferred, returned),
                 about,
-                must_tell=not returned.ok or await self._asked(deferred.address, deferred.exchange),
+                must_tell=_must_tell(ok=returned.ok, asked=deferred.asked),
                 files=returned.files,
                 thread=deferred.thread,
             ),
@@ -139,13 +138,6 @@ class Returns(Component):
             e.about.key == about.key and e.address == address for e in await self.journal.history(DeliveryWithheld)
         )
 
-    async def _asked(self, address: Address, exchange: Exchange | None) -> bool:
-        """Whether a person asked for it: the turn it started in was theirs, not one Nestor opened."""
-        if exchange is None:
-            return False
-        turns = await self.journal.history(UserTurn, session=address.session)
-        return any(t.exchange is not None and t.exchange.turn_id == exchange.turn_id for t in turns)
-
     def _person(self, person: PersonId | None) -> Person | None:
         return self.household.person(person) if person else None
 
@@ -155,6 +147,12 @@ class Returns(Component):
                 await self.task_ended(event)
             elif isinstance(event, ToolReturned):
                 await self.tool_returned(event)
+
+
+def _must_tell(*, ok: bool, asked: bool) -> bool:
+    """A failure, or what a person asked for in their own turn, is always told: only what Nestor started by itself may
+    end in silence."""
+    return not ok or asked
 
 
 def task_instruction(objective: str, ended: TaskEnded, *, written: bool) -> str:

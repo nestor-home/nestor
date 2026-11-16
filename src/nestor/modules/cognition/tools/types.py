@@ -40,6 +40,7 @@ class ToolContext:
     speaker: Speaker = _NOBODY
     exchange: Exchange | None = None
     thread: str | None = None  # what the turn continues, when a notification opened it (`Notification.thread`)
+    asked: bool = False  # a person opened the turn, rather than Nestor: what the call starts is theirs to hear of
 
     @property
     def person(self) -> PersonId | None:

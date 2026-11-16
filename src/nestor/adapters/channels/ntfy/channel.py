@@ -1,15 +1,11 @@
 """The ntfy channel: a notification for each message, with its files (pictures, documents, audio)."""
 
-import logging
-
 import httpx
 
+from nestor.adapters.channels.messaging import files_sent
 from nestor.adapters.channels.push import PushChannel
 from nestor.adapters.common.http import HttpApi
-from nestor.core import ProviderError
 from nestor.modules.channels import Attachment, AttachmentKind
-
-logger = logging.getLogger(__name__)
 
 
 class NtfyChannel(PushChannel):
@@ -27,18 +23,13 @@ class NtfyChannel(PushChannel):
     async def push(self, conversation: str, text: str, attachments: tuple[Attachment, ...]) -> None:
         """One notification a file (ntfy takes one attachment a message), the words with the first; written alone
         when that file cannot be sent."""
-        files = [a for a in attachments if a.kind in self.sends]
-        if not files:
+        if not attachments:
             await self._api.request("POST", f"/{conversation}", content=text.encode())
             return
-        for n, file in enumerate(files):
+        for n, file in enumerate(attachments):
             words = text if n == 0 else ""
-            try:
-                await self._attach(conversation, file, words)
-            except ProviderError as error:
-                logger.warning("ntfy: a %s could not be sent to %s: %s", file.kind, conversation, error)
-                if words:
-                    await self._api.request("POST", f"/{conversation}", content=words.encode())
+            if not await files_sent(self, conversation, (file,), self._attach(conversation, file, words)) and words:
+                await self._api.request("POST", f"/{conversation}", content=words.encode())
 
     async def _attach(self, conversation: str, file: Attachment, text: str) -> None:
         params = {"filename": file.file_name}

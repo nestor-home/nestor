@@ -309,7 +309,7 @@ async def test_a_file_a_tool_or_a_task_made_shows_with_its_line(made_by: str, tm
                 output="{}",
                 ok=True,
                 duration_s=4.0,
-                files=(FileRef(picture),),
+                files=(FileRef(picture, "nestor.png"),),
             )
             if made_by == "agent.tool.completed"
             else TaskEnded(
@@ -318,7 +318,7 @@ async def test_a_file_a_tool_or_a_task_made_shows_with_its_line(made_by: str, tm
                 status=TaskStatus.COMPLETED,
                 result="drawn",
                 duration_s=9.0,
-                files=(FileRef(picture),),
+                files=(FileRef(picture, "nestor.png"),),
             )
         )
         api = await admin.api()

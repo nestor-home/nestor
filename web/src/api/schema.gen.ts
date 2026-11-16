@@ -3225,7 +3225,7 @@ export interface components {
             /** Index */
             index: number;
             /** Name */
-            name: string | null;
+            name: string;
             kind: components["schemas"]["AttachmentKind"];
             /** Media Type */
             media_type: string;

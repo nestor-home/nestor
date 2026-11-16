@@ -27,7 +27,7 @@ class TaskFileOut(BaseModel):
     """A file the task handed back; its bytes at `/tasks/{id}/files/{index}`."""
 
     index: int
-    name: str | None  # as the executor named it
+    name: str  # as the executor named it
     kind: AttachmentKind
     media_type: str
     size: int  # in bytes

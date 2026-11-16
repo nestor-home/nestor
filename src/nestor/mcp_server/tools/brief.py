@@ -46,7 +46,7 @@ def register(mcp: MCPServer, access: TaskAccess) -> None:
             "channel": found.origin.channel,
             "conversation": conversation[-BRIEF_LINES:],
             "files": [
-                {"file": g.file.digest, "name": g.name, "media_type": g.file.media_type, "bytes": g.file.size}
+                {"file": g.blob.digest, "name": g.name, "media_type": g.blob.media_type, "bytes": g.blob.size}
                 for g in found.given
             ],
         }

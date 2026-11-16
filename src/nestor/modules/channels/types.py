@@ -1,6 +1,7 @@
 """Values exchanged with channels: where a message comes from, who sent it, what it carries."""
 
 import mimetypes
+import posixpath
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
@@ -78,6 +79,19 @@ class Sender:
     person: PersonId | None = None
 
 
+def base_type(media_type: str) -> str:
+    """A media type without its parameters, lower-cased: `text/plain; charset=utf-8` is `text/plain`."""
+    return media_type.split(";")[0].strip().lower()
+
+
+def plain_name(name: str | None, media_type: str) -> str:
+    """The name a person sees a file by: its own, without any folder (it may be written in one), else its kind with
+    its type's extension (`file.pdf`, `image.png`)."""
+    plain = posixpath.basename((name or "").replace("\\", "/")).strip(" .")
+    base = base_type(media_type)
+    return plain or f"{AttachmentKind.of(base)}{mimetypes.guess_extension(base) or ''}"
+
+
 class AttachmentKind(StrEnum):
     """What a file sent along a message is, as the person meant it."""
 
@@ -89,7 +103,7 @@ class AttachmentKind(StrEnum):
     @classmethod
     def of(cls, media_type: str) -> "AttachmentKind":
         """What a file made by Nestor is, from its type: a picture, an audio file, or another file."""
-        base = media_type.split(";")[0].strip().lower()
+        base = base_type(media_type)
         return cls.IMAGE if base in IMAGE_TYPES else cls.AUDIO if base.startswith("audio/") else cls.FILE
 
 
@@ -107,8 +121,8 @@ class Attachment:
 
     @property
     def file_name(self) -> str:
-        """The name a person sees it by: its own, else its kind with its type's extension (`file.pdf`)."""
-        return self.name or f"{self.kind}{mimetypes.guess_extension(self.media_type.split(';')[0].strip()) or ''}"
+        """The name a person sees it by (`plain_name`)."""
+        return plain_name(self.name, self.media_type)
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

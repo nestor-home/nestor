@@ -1,5 +1,6 @@
 """The Signal channel: a number served by signal-cli-rest-api, long-polling `/v1/receive`, a `MessagingChannel`."""
 
+import asyncio
 import base64
 import logging
 from collections.abc import AsyncIterator, Mapping
@@ -8,7 +9,7 @@ from typing import Any
 
 import httpx
 
-from nestor.adapters.channels.messaging import Incoming, MessagingChannel, Pending, kind_of
+from nestor.adapters.channels.messaging import Incoming, MessagingChannel, Pending, files_sent, kind_of
 from nestor.adapters.common.http import HttpApi
 from nestor.core import ProviderError
 from nestor.modules.channels import Address, Answer, Attachment, AttachmentKind, Sender
@@ -63,10 +64,13 @@ class SignalChannel(MessagingChannel):
 
     async def deliver(self, conversation: str, answer: Answer) -> None:
         """The text and its files in one message, each file by its name (one without a name takes its kind's, with
-        the extension of its type: `file.pdf`)."""
+        the extension of its type: `file.pdf`); the text alone when signal-cli refuses the files."""
         body: dict[str, Any] = {"message": answer.text, "number": self._number, "recipients": [conversation]}
-        if files := [a for a in answer.attachments if a.kind is not AttachmentKind.VOICE]:
-            body["base64_attachments"] = [_data_uri(f) for f in files]
+        if files := answer.files:
+            uris = await asyncio.to_thread(lambda: [_data_uri(f) for f in files])  # documents of many MB
+            sending = self._api.request("POST", "/v2/send", json=body | {"base64_attachments": uris})
+            if await files_sent(self, conversation, files, sending):
+                return
         await self._api.request("POST", "/v2/send", json=body)
 
     def _incoming(self, envelope: Mapping[str, Any]) -> Incoming | None:
@@ -99,8 +103,7 @@ class SignalChannel(MessagingChannel):
 
 def _data_uri(file: Attachment) -> str:
     """A file as signal-cli-rest-api takes it, with its name."""
-    name = file.file_name
-    return f"data:{file.media_type};filename={name};base64,{base64.b64encode(file.data).decode()}"
+    return f"data:{file.media_type};filename={file.file_name};base64,{base64.b64encode(file.data).decode()}"
 
 
 def _envelopes(response: httpx.Response) -> list[Mapping[str, Any]]:

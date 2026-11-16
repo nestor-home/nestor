@@ -12,16 +12,14 @@ from typing import Any
 import httpx
 import pytest
 from starlette.applications import Starlette
-from starlette.routing import Route
 
 from nestor.adapters.tools.mcp.provider import BearerToken, McpToolProvider
 from nestor.core import PersonId
-from nestor.mcp_server import FILES, ExecutorServer, guard
+from nestor.mcp_server import ExecutorServer, guard
 from nestor.modules.channels import Address, AttachmentKind, Medium
 from nestor.modules.cognition.delegation import (
     Assignment,
     ExecutorCalled,
-    Given,
     NestorTools,
     Outcome,
     TaskEnded,
@@ -29,6 +27,7 @@ from nestor.modules.cognition.delegation import (
 from nestor.modules.cognition.tools import ToolContext, ToolFailed
 from nestor.modules.conversation import Attached
 from nestor.modules.identity import Speaker
+from nestor.modules.journal import FileRef
 from nestor.runtime import Nestor
 from nestor.runtime.config import parse_config
 from nestor.runtime.plugins import Family, Plugin
@@ -105,11 +104,7 @@ async def world(tmp_path: Path) -> AsyncIterator[World]:
             async with server.running():
                 yield
 
-        routes = [
-            Route("/mcp", endpoint=server.endpoint),
-            Route(f"/mcp{FILES}/{{token}}", endpoint=server.files, methods=["GET", "PUT"]),
-        ]
-        served = Served(lambda: Starlette(routes=routes, lifespan=lifespan))
+        served = Served(lambda: Starlette(routes=server.routes("/mcp"), lifespan=lifespan))
         await served.start()
         try:
             yield World(nestor, served, remote)
@@ -130,7 +125,7 @@ async def delegated(world: World, objective: str, executor: str = "codex") -> tu
         requested_by=MATHIS,
         executor=executor,
         exchange=turn.exchange,
-        given=(Given("devis.pdf", quote),),
+        given=(FileRef(quote, "devis.pdf"),),
     )
     await eventually(lambda: task.ref is not None)  # submitted: the executor holds its assignment
     return task.id, world.given(task.id)
@@ -159,7 +154,7 @@ async def test_an_executor_works_on_its_task_through_nestor_s_tools(world: World
             "task_brief", "read_file", "recall", "remember", "report_progress",
             "ask_requester", "check_answer", "attach_file",
         }, "no home: no home_state"  # fmt: skip
-        assert [f.data for f in given.files] == [PDF] and "read_file gives a link" in given.brief()
+        assert [f.name for f in given.files] == ["devis.pdf"] and "read_file gives a link" in given.brief()
         brief = await call(nestor, "task_brief", task=task)
         assert (brief["objective"], brief["requested_by"], brief["channel"]) == ("Corrige le devis", "Mathis", "memory")
         assert any("Corrige le devis joint" in line for line in brief["conversation"])

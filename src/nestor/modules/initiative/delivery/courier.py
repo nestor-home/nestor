@@ -10,13 +10,13 @@ from datetime import datetime, timedelta
 
 from nestor.core import Component, PersonId, ProviderError, utc_now
 from nestor.core.i18n import Message
-from nestor.modules.channels import Address, Channel, Medium
+from nestor.modules.channels import Address, AttachmentKind, Channel, Medium
 from nestor.modules.conversation import About, Agent, Notification, Silence, UserTurn
 from nestor.modules.home import PresenceSource
 from nestor.modules.household import Person
 from nestor.modules.initiative.delivery.events import Delivered, DeliveryConsidered, DeliveryFailed, DeliveryWithheld
 from nestor.modules.initiative.delivery.policy import DeliveryPolicy, Plan
-from nestor.modules.journal import Journal
+from nestor.modules.journal import FileRef, Journal
 
 logger = logging.getLogger(__name__)
 
@@ -124,21 +124,31 @@ class Courier(Component):
                 reason=plan.reason,
             )
         )
-        if (private or notification.files) and plan.spoken and plan.written:
-            # its content decides, written with its files; the room only hears of it once it is
-            if written_to := await self._send(person, plan.written, Medium.WRITTEN, notification):
-                if written_to.said:
-                    said = NOTICE if private else FILES_NOTICE
-                    notice = replace(notification, text=f"{notification.text}\n\n{said}", files=())
-                    await self._send(person, plan.spoken, Medium.SPOKEN, notice)
-                return written_to.address
-        else:
-            if plan.spoken and (spoken := await self._send(person, plan.spoken, Medium.SPOKEN, notification)):
-                if plan.follow_up and spoken.said:
-                    self._watch_reaction(person, plan, notification)
-                return spoken.address
-            if plan.written and (written_to := await self._send(person, plan.written, Medium.WRITTEN, notification)):
-                return written_to.address
+        unheard = plan.spoken is not None and bool(self._unsent(plan.spoken, notification.files))
+        written_first = (private or unheard) and plan.spoken is not None and plan.written is not None
+        # its content decides, written with its files; the room only hears of it once it is; with nowhere to write
+        # after all, it is said aloud, without what cannot be heard
+        if (
+            written_first
+            and plan.spoken
+            and plan.written
+            and (written_to := await self._send(person, plan.written, Medium.WRITTEN, notification))
+        ):
+            if written_to.said:
+                said = NOTICE if private else FILES_NOTICE
+                notice = replace(notification, text=f"{notification.text}\n\n{said}", files=())
+                await self._send(person, plan.spoken, Medium.SPOKEN, notice)
+            return written_to.address
+        if plan.spoken and (spoken := await self._send(person, plan.spoken, Medium.SPOKEN, notification)):
+            if plan.follow_up and spoken.said:
+                self._watch_reaction(person, plan, notification)
+            return spoken.address
+        if (
+            plan.written
+            and not written_first
+            and (written_to := await self._send(person, plan.written, Medium.WRITTEN, notification))
+        ):
+            return written_to.address
         tried = tuple(a for a in (plan.spoken, plan.written) if a)
         await self.journal.publish(
             DeliveryFailed(
@@ -146,6 +156,12 @@ class Courier(Component):
             )
         )
         return None
+
+    def _unsent(self, address: Address, files: tuple[FileRef, ...]) -> tuple[FileRef, ...]:
+        """The files the channel of `address` cannot send (a satellite sends none)."""
+        channel = self.channels.get(address.channel)
+        sends = channel.sends if channel else frozenset()
+        return tuple(f for f in files if AttachmentKind.of(f.blob.media_type) not in sends)
 
     async def _open(self, origin: Address | None) -> bool:
         """Whether the conversation it came from is spoken and still going on."""
@@ -169,6 +185,8 @@ class Courier(Component):
         channel = self.channels.get(address.channel)
         if channel is None or not channel.reachable(address, medium):
             return None
+        if unsent := self._unsent(address, notification.files):  # the model tells of the files that go only
+            notification = replace(notification, files=tuple(f for f in notification.files if f not in unsent))
         conversations = self.agent.conversations
         who = person.id if person else None
         try:

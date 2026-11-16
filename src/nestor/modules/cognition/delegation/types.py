@@ -1,12 +1,12 @@
 """Values of delegated tasks: status, outcome, progress reporting and how to deliver the result."""
 
-from collections.abc import Callable
+from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass, field
 from enum import StrEnum
 
 from nestor.core import Capability
 from nestor.modules.channels import Attachment
-from nestor.modules.journal import BlobRef
+from nestor.modules.journal import FileRef
 
 RESUME = Capability("delegation.resume")
 
@@ -38,41 +38,43 @@ class NestorAccess:
 BRIEF = """Nestor, the household assistant that handed you this task, gives you tools for it through its MCP server \
 `nestor`. Call each with task="{task}": task_brief first (who asked, the conversation it came from); recall and \
 remember for what you need to know of them; report_progress at each step; ask_requester when you need them rather \
-than guessing or giving up, then check_answer later.{files} Never write the task value anywhere else."""
-LINKS = """ read_file gives a link to download a file they sent (task_brief lists them), attach_file a link to upload \
-each file you make for them; each link works a few minutes, with curl or any HTTP client."""
+than guessing or giving up, then check_answer later.{links} Never write the task value anywhere else."""
 PLACED = "Files sent with the task, in {folder}: {names}."
-FOLDER = """ Files sent with the task are in your folder; the files you make for them go in it too and are listed \
-in your report, not uploaded."""
-
-
-@dataclass(frozen=True, slots=True)
-class Given:
-    """A file sent with a task: what people sent in the conversation it was handed over in, until then."""
-
-    name: str  # a plain file name, none twice among a task's files: what it is written as in an executor's folder
-    file: BlobRef
+BY_LINK = """ read_file gives a link to download a file they sent (task_brief lists them), attach_file a link to \
+upload each file you make for them; each link works a few minutes, with curl or any HTTP client."""
 
 
 @dataclass(frozen=True, slots=True)
 class Assignment:
     """What an executor is given: the objective, the files sent with it, and when it reaches Nestor's tools, the
     task's capability (`task`, `nstt_…`) its tools take, valid while the task runs, and `access` when Nestor passes the
-    server itself."""
+    server itself. `files` are references: an executor that places them in a folder of its own reads them (`placed`),
+    one reached by link never does."""
 
     objective: str
     task: str | None = field(default=None, repr=False)
     access: NestorAccess | None = None
-    files: tuple[Attachment, ...] = field(default=(), repr=False)
+    files: tuple[FileRef, ...] = ()  # names plain and none twice among a task's files
+    reader: Callable[[str], Awaitable[bytes]] | None = field(default=None, repr=False, compare=False)
+
+    async def placed(self) -> AsyncIterator[tuple[str, bytes]]:
+        """The files sent with it, by name and content, read one at a time; one no longer stored is left out."""
+        if self.reader is None:
+            return
+        for file in self.files:
+            try:
+                yield file.name, await self.reader(file.blob.digest)
+            except KeyError:
+                continue
 
     def brief(self, folder: str | None = None) -> str:
-        """The objective, where the files sent with it are, and how to reach Nestor's tools when the executor can.
-        `folder`: where the executor placed the files in its own workspace; without it, they are reached by link."""
+        """The objective, the files sent with it in `folder` when the executor placed them there, and how to reach
+        Nestor's tools when it can: the files by link, without a folder."""
         parts = [self.objective]
         if folder is not None and self.files:
-            parts.append(PLACED.format(folder=folder, names=", ".join(f.name or "" for f in self.files)))
+            parts.append(PLACED.format(folder=folder, names=", ".join(f.name for f in self.files)))
         if self.task is not None:
-            parts.append(BRIEF.format(task=self.task, files=FOLDER if folder is not None else LINKS))
+            parts.append(BRIEF.format(task=self.task, links=BY_LINK if folder is None else ""))
         return "\n\n".join(parts)
 
 

@@ -9,7 +9,7 @@ from typing import Any
 
 import httpx
 
-from nestor.adapters.channels.messaging import Incoming, MessagingChannel, Pending, kind_of
+from nestor.adapters.channels.messaging import Incoming, MessagingChannel, Pending, files_sent, kind_of
 from nestor.adapters.common.http import HttpApi
 from nestor.core import ProviderError, new_id
 from nestor.modules.channels import Address, Answer, Attachment, AttachmentKind, Sender
@@ -93,15 +93,15 @@ class MatrixChannel(MessagingChannel):
 
     async def deliver(self, conversation: str, answer: Answer) -> None:
         """The recording when it has one (its text as the message's caption, as Matrix clients show it), written
-        otherwise; then its other files (pictures, documents, audio files), each a message under its name."""
+        otherwise or when the recording is refused; then its other files (pictures, documents, audio files), each
+        a message under its name."""
         voice = answer.voice
-        if voice is not None:
-            await self._send_file(conversation, voice, caption=answer.text)
-        else:
+        if voice is None or not await files_sent(
+            self, conversation, (voice,), self._send_file(conversation, voice, caption=answer.text)
+        ):
             await self._send(conversation, {"msgtype": "m.text", "body": answer.text})
-        for file in answer.attachments:
-            if file.kind is not AttachmentKind.VOICE:
-                await self._send_file(conversation, file)
+        for file in answer.files:
+            await files_sent(self, conversation, (file,), self._send_file(conversation, file))
 
     async def show_typing(self, conversation: str) -> None:
         await self._set_typing(conversation, {"typing": True, "timeout": 30000})
@@ -150,22 +150,21 @@ class MatrixChannel(MessagingChannel):
         await self._json("PUT", f"{CLIENT}/rooms/{_quoted(room)}/send/m.room.message/{new_id()}", json=content)
 
     async def _send_file(self, room: str, file: Attachment, *, caption: str | None = None) -> None:
-        name = file.file_name
         uploaded = await self._json(
             "POST",
             "/_matrix/media/v3/upload",
-            params={"filename": name},
+            params={"filename": file.file_name},
             content=file.data,
             headers={"Content-Type": file.media_type},
         )
         content: dict[str, Any] = {
             "msgtype": SENT[file.kind],
-            "body": caption or name,
+            "body": caption or file.file_name,
             "url": uploaded["content_uri"],
             "info": {"mimetype": file.media_type, "size": len(file.data)},
         }
         if caption:
-            content["filename"] = name
+            content["filename"] = file.file_name
         if file.kind is AttachmentKind.VOICE:
             content |= {VOICE: {}, "org.matrix.msc1767.audio": {}}
         await self._send(room, content)

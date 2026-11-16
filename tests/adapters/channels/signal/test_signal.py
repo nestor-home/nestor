@@ -19,14 +19,15 @@ BOT, ADA = "+33100000000", "+33600000000"
 
 
 class FakeSignalApi:
-    """`/v1/receive` hands out queued envelopes, `/v2/send` keeps what was sent, attachments are served by id;
-    `down` answers 503 a number of times first."""
+    """`/v1/receive` hands out queued envelopes, `/v2/send` keeps what was sent (`too_large` refuses a message with
+    attachments), attachments are served by id; `down` answers 503 a number of times first."""
 
     def __init__(self) -> None:
         self.envelopes: list[dict[str, Any]] = []
         self.sent: list[dict[str, Any]] = []
         self.files: dict[str, bytes] = {}
         self.down = 0
+        self.too_large = False
         self.transport = httpx.MockTransport(self.handle)
 
     async def handle(self, request: httpx.Request) -> httpx.Response:
@@ -40,7 +41,10 @@ class FakeSignalApi:
             found, self.envelopes = self.envelopes, []
             return httpx.Response(200, json=[{"envelope": e, "account": BOT} for e in found])
         if path == "/v2/send":
-            self.sent.append(json.loads(request.content))
+            body = json.loads(request.content)
+            if self.too_large and body.get("base64_attachments"):
+                return httpx.Response(400, json={"error": "attachment too large"})
+            self.sent.append(body)
             return httpx.Response(201, json={"timestamp": "1"})
         if path.startswith("/v1/attachments/"):
             return httpx.Response(200, content=self.files[path.rsplit("/", 1)[1]])
@@ -54,17 +58,6 @@ class FakeSignalApi:
 
     def texts(self) -> list[str]:
         return [m["message"] for m in self.sent if m["message"]]
-
-    def attachments(self) -> list[tuple[str | None, bytes]]:
-        """Every attachment sent, read as signal-cli-rest-api reads its data URIs: the name the person sees, and the
-        content."""
-        found: list[tuple[str | None, bytes]] = []
-        for message in self.sent:
-            for uri in message.get("base64_attachments", []):
-                read = re.fullmatch(r"data:[^;,]+;filename=([^;,]+);base64,(.*)", uri)
-                assert read is not None, f"not a data URI signal-cli-rest-api reads: {uri[:60]}"
-                found.append((read[1], base64.b64decode(read[2])))
-        return found
 
 
 async def eventually(condition: Callable[[], bool], timeout_s: float = 2.0) -> None:
@@ -114,8 +107,19 @@ class SignalPlatform(Platform):
     def voices(self) -> list[bytes]:
         return []
 
+    def refuse_files(self) -> None:
+        self.api.too_large = True
+
     def files(self) -> list[tuple[str | None, bytes]]:
-        return self.api.attachments()
+        """Every attachment sent, read as signal-cli-rest-api reads its data URIs: the name the person sees, and the
+        content."""
+        found: list[tuple[str | None, bytes]] = []
+        for message in self.api.sent:
+            for uri in message.get("base64_attachments", []):
+                read = re.fullmatch(r"data:[^;,]+;filename=([^;,]+);base64,(.*)", uri)
+                assert read is not None, f"not a data URI signal-cli-rest-api reads: {uri[:60]}"
+                found.append((read[1], base64.b64decode(read[2])))
+        return found
 
 
 class TestSignalMessaging(MessagingChannelContract):

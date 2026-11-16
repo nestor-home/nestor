@@ -92,9 +92,9 @@ class CodexExecutor(RemoteExecutor):
         try:
             rpc = await self._session()
             await self._call(rpc, "fs/createDirectory", {"path": folder})
-            for file in assignment.files:  # a plain name, never twice (`Given`)
-                path, data = posixpath.join(folder, str(file.name)), base64.b64encode(file.data).decode()
-                await self._call(rpc, "fs/writeFile", {"path": path, "dataBase64": data})
+            async for file, data in assignment.placed():  # plain names, never twice
+                encoded = (await asyncio.to_thread(base64.b64encode, data)).decode()  # up to 27 MB: off the loop
+                await self._call(rpc, "fs/writeFile", {"path": posixpath.join(folder, file), "dataBase64": encoded})
             settings = self._thread_settings(assignment.access, folder)
             objective = assignment.brief(folder)
             thread = str((await self._call(rpc, "thread/start", settings))["thread"]["id"])
@@ -113,9 +113,9 @@ class CodexExecutor(RemoteExecutor):
             raise ProviderError(self.name, f"submission failed: {described(error)}", transient=True) from None
 
     async def follow(self, ref: str, progress: Progress) -> Outcome:
-        thread, turn, folder, *_ = [*ref.split(":", 2), "", ""]
-        if not thread or not turn or not folder:
+        if (parsed := _parsed(ref)) is None:
             return Outcome.failed(f"not a Codex task reference: {ref!r}")
+        thread, turn, folder = parsed
         waits = iter(self._reconnect_s)
         while True:
             try:
@@ -131,7 +131,9 @@ class CodexExecutor(RemoteExecutor):
                 return Outcome.failed(f"unexpected reply from Codex: {error!r}")
 
     async def stop(self, ref: str) -> bool:
-        thread, turn, *_ = [*ref.split(":", 2), ""]
+        if (parsed := _parsed(ref)) is None:
+            return False
+        thread, turn, _ = parsed
         try:
             async with asyncio.timeout(self._stop_timeout_s):
                 rpc = await self._session()
@@ -268,3 +270,9 @@ class CodexExecutor(RemoteExecutor):
         if (refusal := DECLINED.get(method)) is None:
             raise RpcError(-32601, f"Nestor does not answer {method}")
         return refusal
+
+
+def _parsed(ref: str) -> tuple[str, str, str] | None:
+    """A task's reference, `thread:turn:folder` (the folder's name under the working directory)."""
+    parts = ref.split(":")
+    return (parts[0], parts[1], parts[2]) if len(parts) == 3 and all(parts) else None

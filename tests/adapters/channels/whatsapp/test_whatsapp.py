@@ -5,7 +5,6 @@ import asyncio
 import hashlib
 import hmac
 import json
-import re
 from collections.abc import AsyncGenerator, Callable
 from contextlib import asynccontextmanager
 from typing import Any
@@ -17,17 +16,21 @@ from nestor.adapters.channels.whatsapp.channel import WhatsAppChannel
 from nestor.modules.channels import Address, Assistant, Attachment, AttachmentKind
 from nestor.testing.channels import MessagingChannelContract, Platform, ScriptedAssistant
 
+from ..forms import multipart
+
 TOKEN, VERIFY, SECRET = "EAAG-token", "nestor-verify", "app-secret"
 NUMBER, ADA = "1098", "33600000000"
 
 
 class FakeGraph:
-    """The Cloud API: sent messages kept, uploads give ids, media served by id then by address."""
+    """The Cloud API: sent messages kept, uploads give ids (`too_large` refuses them), media served by id then by
+    address."""
 
     def __init__(self) -> None:
         self.sent: list[dict[str, Any]] = []
-        self.uploaded: dict[str, tuple[str, str, bytes]] = {}  # by media id: file name, media type, content
+        self.uploaded: dict[str, tuple[str | None, str, bytes]] = {}  # by media id: file name, media type, content
         self.media: dict[str, bytes] = {}
+        self.too_large = False
         self.transport = httpx.MockTransport(self.handle)
 
     def handle(self, request: httpx.Request) -> httpx.Response:
@@ -40,6 +43,8 @@ class FakeGraph:
             self.sent.append(json.loads(request.content))
             return httpx.Response(200, json={"messages": [{"id": "wamid.1"}]})
         if path.endswith(f"/{NUMBER}/media"):
+            if self.too_large:
+                return httpx.Response(400, json={"error": {"message": "Param file must be a file with a size"}})
             media_id = f"up{len(self.uploaded)}"
             self.uploaded[media_id] = upload(request)
             return httpx.Response(200, json={"id": media_id})
@@ -49,38 +54,15 @@ class FakeGraph:
     def texts(self) -> list[str]:
         return [m["text"]["body"] for m in self.sent if m["type"] == "text"]
 
-    def voices(self) -> list[bytes]:
-        """Audio messages in OGG/Opus, which WhatsApp plays as voice messages."""
-        return [self.uploaded[m["audio"]["id"]][2] for m in self.sent if m["type"] == "audio" and self._voice(m)]
-
-    def files(self) -> list[tuple[str | None, bytes]]:
-        """Pictures (shown unnamed), documents by the name their message gives, audio files by the name they were
-        uploaded with (WhatsApp's player shows none)."""
-        found: list[tuple[str | None, bytes]] = []
-        for m in self.sent:
-            if m["type"] in ("image", "document", "audio") and not self._voice(m):
-                name, _, content = self.uploaded[m[m["type"]]["id"]]
-                found.append((None if m["type"] == "image" else m[m["type"]].get("filename", name), content))
-        return found
-
-    def _voice(self, message: dict[str, Any]) -> bool:
+    def voice(self, message: dict[str, Any]) -> bool:
         return message["type"] == "audio" and self.uploaded[message["audio"]["id"]][1] == "audio/ogg"
 
 
-def upload(request: httpx.Request) -> tuple[str, str, bytes]:
+def upload(request: httpx.Request) -> tuple[str | None, str, bytes]:
     """The file of a media upload (its `file` part), as Meta reads it: name, media type (the `type` field), content."""
-    boundary = request.headers["content-type"].split("boundary=")[1].encode()
-    fields: dict[str, str] = {}
-    name, content = "", b""
-    for part in request.content.split(b"--" + boundary)[1:-1]:
-        head, _, body = part.strip(b"\r\n").partition(b"\r\n\r\n")
-        field = re.search(rb'name="([^"]+)"', head)
-        assert field is not None
-        if field[1] == b"file" and (filename := re.search(rb'filename="([^"]*)"', head)):
-            name, content = filename[1].decode(), body
-        else:
-            fields[field[1].decode()] = body.decode()
+    fields, files = multipart(request)
     assert fields["messaging_product"] == "whatsapp"
+    name, content = files["file"]
     return name, fields["type"], content
 
 
@@ -153,10 +135,21 @@ class WhatsAppPlatform(Platform):
         return self.graph.texts()
 
     def voices(self) -> list[bytes]:
-        return self.graph.voices()
+        """Audio messages in OGG/Opus, which WhatsApp plays as voice messages."""
+        return [self.graph.uploaded[m["audio"]["id"]][2] for m in self.graph.sent if self.graph.voice(m)]
+
+    def refuse_files(self) -> None:
+        self.graph.too_large = True
 
     def files(self) -> list[tuple[str | None, bytes]]:
-        return self.graph.files()
+        """Pictures (shown unnamed), documents by the name their message gives, audio files by the name they were
+        uploaded with (WhatsApp's player shows none)."""
+        found: list[tuple[str | None, bytes]] = []
+        for m in self.graph.sent:
+            if m["type"] in ("image", "document", "audio") and not self.graph.voice(m):
+                name, _, content = self.graph.uploaded[m[m["type"]]["id"]]
+                found.append((None if m["type"] == "image" else m[m["type"]].get("filename", name), content))
+        return found
 
 
 class TestWhatsAppMessaging(MessagingChannelContract):

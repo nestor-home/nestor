@@ -11,8 +11,8 @@ from nestor.modules.channels import Address, Assistant, Attachment, Channel, Med
 
 
 class PushChannel(Channel, ABC):
-    """Contract: `push` delivers `text` with the `attachments` of the kinds the channel `sends` to `conversation`
-    (a topic, a target), raising `ProviderError` when it cannot."""
+    """Contract: `push` delivers `text` with its `attachments` to `conversation` (a topic, a target), leaving out
+    those the server refuses (`files_sent`) and raising `ProviderError` only when the text could not go."""
 
     def __init__(self, channel_id: str) -> None:
         super().__init__(channel_id)

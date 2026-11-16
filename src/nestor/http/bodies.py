@@ -1,6 +1,6 @@
-"""What the webhook server reads of a request: its body, within a limit."""
+"""Request bodies read within a limit, whatever a client declares or sends."""
 
-from fastapi import Request
+from starlette.requests import Request
 
 
 async def read_body(request: Request, limit: int) -> bytes | None:

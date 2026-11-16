@@ -32,17 +32,16 @@ class CloudApi:
     async def send_file(self, to: str, file: Attachment) -> None:
         """`file` uploaded, then sent as the message of its kind; a document shows its name (a file without one takes
         its kind's, with the extension of its type: `file.pdf`)."""
-        name = file.file_name
         kind = MESSAGE_TYPES[file.kind]
-        content = {"id": await self._upload(file, name)}
-        await self.send(to, kind, content | ({"filename": name} if kind == "document" else {}))
+        content = {"id": await self._upload(file)}
+        await self.send(to, kind, content | ({"filename": file.file_name} if kind == "document" else {}))
 
-    async def _upload(self, file: Attachment, name: str) -> str:
+    async def _upload(self, file: Attachment) -> str:
         uploaded = await self._api.request(
             "POST",
             f"/{self._number}/media",
             data={"messaging_product": "whatsapp", "type": file.media_type},
-            files={"file": (name, file.data, file.media_type)},
+            files={"file": (file.file_name, file.data, file.media_type)},
         )
         return str(uploaded.json()["id"])
 

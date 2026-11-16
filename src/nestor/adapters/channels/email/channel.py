@@ -11,14 +11,14 @@ from typing import Any
 
 from nestor.adapters.channels.email.authentication import authenticated, automatic
 from nestor.adapters.channels.email.smtp import Security, send
-from nestor.adapters.channels.messaging import Incoming, MessagingChannel, Pending
+from nestor.adapters.channels.messaging import Incoming, MessagingChannel, Pending, files_sent
 from nestor.adapters.connectors.imap.account import ImapAccount, session
 from nestor.adapters.connectors.imap.aioimap import AioImapClient
 from nestor.adapters.connectors.imap.client import MailboxClient
 from nestor.adapters.connectors.imap.inbound import ImapTiming, UidCursor, folder_end, newer
 from nestor.adapters.connectors.imap.message import MailMessage
 from nestor.core import ProviderError
-from nestor.modules.channels import Address, Answer, AttachmentKind, Sender
+from nestor.modules.channels import Address, Answer, Attachment, AttachmentKind, Sender
 
 logger = logging.getLogger(__name__)
 
@@ -76,6 +76,13 @@ class EmailChannel(MessagingChannel):
                 failures += 1
 
     async def deliver(self, conversation: str, answer: Answer) -> None:
+        """One mail in the thread, with its files; the text alone when the server refuses them."""
+        files = answer.files
+        if files and await files_sent(self, conversation, files, self._send(conversation, answer.text, files)):
+            return
+        await self._send(conversation, answer.text, ())
+
+    async def _send(self, conversation: str, text: str, files: tuple[Attachment, ...]) -> None:
         subject, replying_to = self._threads.get(conversation, ("", ""))
         message = EmailMessage(policy=policy.SMTP)
         message["From"], message["To"] = self._address, conversation
@@ -84,8 +91,8 @@ class EmailChannel(MessagingChannel):
         message["Auto-Submitted"] = "auto-replied"  # RFC 3834: responders do not answer it
         if replying_to:
             message["In-Reply-To"] = message["References"] = replying_to
-        message.set_content(answer.text)
-        for file in (a for a in answer.attachments if a.kind in self.sends):
+        message.set_content(text)
+        for file in files:
             main, _, sub = file.media_type.partition("/")
             message.add_attachment(file.data, maintype=main, subtype=sub, filename=file.file_name)
         host, port, security = self._smtp

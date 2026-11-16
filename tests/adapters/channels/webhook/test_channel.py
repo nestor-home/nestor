@@ -1,9 +1,12 @@
-"""The webhook channel against a mocked server: its body, signed as GitHub signs its own."""
+"""The webhook channel against a mocked server: its body, signed as GitHub signs its own, and the text alone when
+the address refuses its files."""
 
 import base64
 import hashlib
 import hmac
 import json
+
+import httpx
 
 from nestor.adapters.channels.webhook.channel import SIGNATURE, WebhookChannel
 from nestor.modules.channels import Address, Attachment, AttachmentKind, Medium
@@ -51,3 +54,20 @@ async def test_a_document_and_an_audio_file_go_in_the_body_by_their_name() -> No
             "data": base64.b64encode(SONG.data).decode(),
         },
     ]
+
+
+async def test_the_text_goes_alone_when_the_address_refuses_its_files() -> None:
+    posted: list[dict[str, object]] = []
+
+    def server(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        if body["attachments"]:
+            return httpx.Response(413, text="Payload Too Large")
+        posted.append(body)
+        return httpx.Response(200)
+
+    async with WebhookChannel(
+        "webhook", url="https://hooks.test/nestor", transport=httpx.MockTransport(server)
+    ) as hook:
+        await hook.send(Address("webhook", "lea"), "Le devis corrigé.", Medium.WRITTEN, (DEVIS,))
+    assert posted == [{"to": "lea", "text": "Le devis corrigé.", "attachments": []}]

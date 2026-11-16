@@ -13,11 +13,13 @@ import pytest
 from nestor.adapters.executors.claude_code import ClaudeCodeExecutor, ClaudeCodeSettings, PermissionMode, build
 from nestor.core import Health
 from nestor.core.i18n import Locale, Message
-from nestor.modules.channels import Attachment, AttachmentKind
+from nestor.modules.channels import AttachmentKind
 from nestor.modules.cognition.delegation import Assignment, NestorAccess, Progress, TaskStatus
+from nestor.modules.journal import FileRef
 from nestor.runtime import Services
 from nestor.testing.cognition import ExecutorContract
 from nestor.testing.i18n import EchoLocalizer
+from nestor.testing.journal import MemoryBlobStore
 
 FAKE = Path(__file__).with_name("fake_claude.py")
 
@@ -126,12 +128,13 @@ async def test_only_files_within_the_task_s_own_folder_come_back(tmp_path: Path)
 
 async def test_the_files_sent_with_a_task_wait_in_its_own_folder_and_the_brief_names_them(tmp_path: Path) -> None:
     record = tmp_path / "record.json"
-    sent = (Attachment(kind=AttachmentKind.FILE, data=b"%PDF devis", media_type="application/pdf", name="devis.pdf"),)
+    store = MemoryBlobStore()
+    sent = (FileRef(await store.put(b"%PDF devis", "application/pdf"), "devis.pdf"),)
     folders = []
     async with claude(tmp_path / "work", record=("--record", str(record))) as executor:
         (tmp_path / "work").mkdir()
         for _ in range(2):
-            await executor.run(Assignment("Corrige le devis.", files=sent), Progress())
+            await executor.run(Assignment("Corrige le devis.", files=sent, reader=store.get), Progress())
             seen = json.loads(record.read_text())
             folders.append(seen["cwd"])
             assert seen["found"] == {"devis.pdf": "%PDF devis"}

@@ -47,7 +47,8 @@ class BlobRef:
 
 @dataclass(frozen=True, slots=True)
 class FileRef:
-    """A stored file and the name it goes by, as the person receives it (`devis.pdf`), when it has one."""
+    """A stored file and the name a person sees it by (`devis.pdf`), set once where it is stored: a plain name, without
+    any folder (`channels.plain_name`)."""
 
     blob: BlobRef
-    name: str | None = None
+    name: str

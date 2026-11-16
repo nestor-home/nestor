@@ -16,11 +16,13 @@ from nestor.adapters.executors.codex import CodexSettings, Sandbox, build
 from nestor.adapters.executors.common import MAX_FILES
 from nestor.core import ContractError, Health, ProviderError
 from nestor.core.i18n import Locale, Message
-from nestor.modules.channels import Attachment, AttachmentKind
+from nestor.modules.channels import AttachmentKind
 from nestor.modules.cognition.delegation import Assignment, NestorAccess, Progress, TaskStatus
+from nestor.modules.journal import FileRef
 from nestor.runtime import Services
 from nestor.testing.cognition import RemoteExecutorContract
 from nestor.testing.i18n import EchoLocalizer
+from nestor.testing.journal import MemoryBlobStore
 
 from .fakes import CWD, TASK, FakeCodex
 
@@ -74,10 +76,11 @@ async def test_the_task_runs_where_and_how_the_configuration_says() -> None:
 
 
 async def test_the_files_sent_with_a_task_wait_in_its_own_folder_and_the_brief_names_them() -> None:
-    sent = (Attachment(kind=AttachmentKind.FILE, data=b"%PDF devis", media_type="application/pdf", name="devis.pdf"),)
+    store = MemoryBlobStore()
+    sent = (FileRef(await store.put(b"%PDF devis", "application/pdf"), "devis.pdf"),)
     async with FakeCodex() as codex, codex.executor() as executor:
-        await executor.run(Assignment("Corrige le devis.", files=sent), Progress())
-        await executor.run(Assignment("Corrige-le encore.", files=sent), Progress())
+        await executor.run(Assignment("Corrige le devis.", files=sent, reader=store.get), Progress())
+        await executor.run(Assignment("Corrige-le encore.", files=sent, reader=store.get), Progress())
     first, second = codex.folders
     assert first != second, "each task its own folder"
     assert (codex.files[f"{first}/devis.pdf"], codex.files[f"{second}/devis.pdf"]) == (b"%PDF devis", b"%PDF devis")

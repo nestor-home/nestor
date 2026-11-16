@@ -38,7 +38,6 @@ from nestor.modules.conversation import (
 )
 from nestor.modules.conversation.persona import MUST_TELL
 from nestor.modules.household import Account, Household, Person
-from nestor.modules.identity import Speaker
 from nestor.modules.initiative import Courier, Delivered, DeliveryFailed, DeliveryWithheld, Returns, ToolResultDelivered
 from nestor.modules.journal import Journal
 from nestor.testing.channels import InMemoryChannel
@@ -119,11 +118,6 @@ class Home:
     ) -> None:
         """A task asked aloud; `still_talking`: its spoken conversation goes on when it ends; `by_mathis`: in his own
         turn, rather than in one Nestor opened (a wake-up that delegates)."""
-        exchange = None
-        if by_mathis:
-            turn = await self.agent.conversations.turn(VOICE, Medium.SPOKEN)
-            await turn.said("Trouve-moi une télé sous 500 €", Medium.SPOKEN, Speaker.account(MATHIS.id))
-            exchange = turn.exchange
         if still_talking:
             await self.agent.conversations.turn(VOICE, Medium.SPOKEN)
         await self.journal.publish(
@@ -135,7 +129,7 @@ class Home:
                 origin=VOICE,
                 requested_by=MATHIS.id,
                 notify=notify,
-                exchange=exchange,
+                asked=by_mathis,
             )
         )
         await self.journal.publish(

@@ -21,8 +21,8 @@ ROOM = "!kitchen:home.test"
 
 
 class FakeHomeserver:
-    """Just enough of the client-server API: `/sync` hands out queued events, sent messages and uploads are kept,
-    media are served back, invitations are recorded."""
+    """Just enough of the client-server API: `/sync` hands out queued events, sent messages and uploads are kept
+    (`too_large` refuses uploads), media are served back, invitations are recorded."""
 
     def __init__(self) -> None:
         self.events: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
@@ -30,6 +30,7 @@ class FakeHomeserver:
         self.joined: list[str] = []
         self.sent: list[dict[str, Any]] = []
         self.media: dict[str, bytes] = {}
+        self.too_large = False
         self.history = [message(ADA, {"msgtype": "m.text", "body": "said before the start"})]
         self.transport = httpx.MockTransport(self.handle)
 
@@ -50,6 +51,8 @@ class FakeHomeserver:
         if "/typing/" in path:
             return httpx.Response(200, json={})
         if path == "/_matrix/media/v3/upload":
+            if self.too_large:
+                return httpx.Response(413, json={"errcode": "M_TOO_LARGE", "error": "Upload too large"})
             uri = f"mxc://home.test/up{len(self.media)}"
             self.media[uri] = request.content
             return httpx.Response(200, json={"content_uri": uri})
@@ -83,12 +86,6 @@ class FakeHomeserver:
 
     def voices(self) -> list[bytes]:
         return [self.media[m["url"]] for m in self.sent if VOICE in m]
-
-    def files(self) -> list[tuple[str | None, bytes]]:
-        """Files sent other than voice messages, by the name a client shows: `filename`, or else `body`."""
-        return [
-            (m.get("filename") or m["body"], self.media[m["url"]]) for m in self.sent if "url" in m and VOICE not in m
-        ]
 
 
 def message(sender: str, content: dict[str, Any]) -> dict[str, Any]:
@@ -146,8 +143,15 @@ class MatrixPlatform(Platform):
     def voices(self) -> list[bytes]:
         return self.server.voices()
 
+    def refuse_files(self) -> None:
+        self.server.too_large = True
+
     def files(self) -> list[tuple[str | None, bytes]]:
-        return self.server.files()
+        """Files sent other than voice messages, by the name a client shows: `filename`, or else `body`."""
+        sent = self.server.sent
+        return [
+            (m.get("filename") or m["body"], self.server.media[m["url"]]) for m in sent if "url" in m and VOICE not in m
+        ]
 
 
 class TestMatrixMessaging(MessagingChannelContract):

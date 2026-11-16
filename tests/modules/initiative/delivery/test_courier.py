@@ -4,7 +4,7 @@ import asyncio
 
 from nestor.core import PersonId, ProviderError, new_id
 from nestor.core.i18n import Message
-from nestor.modules.channels import Address, AttachmentKind, Exchange, InboundMessage, Medium, Sender
+from nestor.modules.channels import Address, Attachment, AttachmentKind, Exchange, InboundMessage, Medium, Sender
 from nestor.modules.cognition.tools import Toolbox
 from nestor.modules.conversation import (
     SILENT,
@@ -52,6 +52,12 @@ class Satellite(InMemoryChannel):
 
 class Messaging(InMemoryChannel):
     sends = frozenset(AttachmentKind)
+    refuses = False  # nothing written gets through
+
+    async def send(self, to: Address, text: str, medium: Medium, attachments: tuple[Attachment, ...]) -> None:
+        if self.refuses:
+            raise ProviderError(self.channel_id, "unreachable", transient=True)
+        await super().send(to, text, medium, attachments)
 
 
 def courier(
@@ -135,6 +141,23 @@ async def test_a_result_with_a_file_is_written_with_it_and_the_room_hears_what_i
     assert [a for a, _ in voice.sent] == [SALON] and [a for a, _ in telegram.sent] == [TELEGRAM]
     assert [(f.name, f.data) for f in telegram.files[0]] == [("devis.pdf", b"%PDF devis")]
     assert FILES_NOTICE in str(model.requests[1].messages[-1].content), "aloud, it says the files were written"
+
+
+async def test_a_result_with_a_file_is_said_aloud_when_it_cannot_be_written() -> None:
+    """What they asked for reaches them all the same, without what a voice cannot carry."""
+    blobs = MemoryBlobStore()
+    devis = await blobs.put(b"%PDF devis", "application/pdf")
+    model = ScriptedModel("Voici le devis corrigé.", "Le devis corrigé est prêt.")
+    sender, _, voice, telegram = courier(StaticPresence().set("mathis", home=True), model=model, blobs=blobs)
+    assert isinstance(telegram, Messaging)
+    telegram.refuses = True
+    async with sender:
+        done = Notification(
+            "Le devis est corrigé.", About(Source.TASK, "t1", "completed"), files=(FileRef(devis, "devis.pdf"),)
+        )
+        assert await sender.deliver(MATHIS, done) == SALON
+    assert voice.sent == [(SALON, "Le devis corrigé est prêt.")] and voice.files == [()]
+    assert "devis.pdf" not in str(model.requests[-1].messages[0].content), "it is not told the file goes with it"
 
 
 async def test_a_private_message_with_nothing_to_tell_is_neither_written_nor_announced() -> None:

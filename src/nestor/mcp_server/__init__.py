@@ -15,6 +15,6 @@ still running; otherwise every refusal reads the same. Calls are limited per key
   listed in `tools/__init__.py`.
 """
 
-from nestor.mcp_server.server import FILES, ExecutorServer
+from nestor.mcp_server.server import ExecutorServer
 
-__all__ = ["FILES", "ExecutorServer"]
+__all__ = ["ExecutorServer"]

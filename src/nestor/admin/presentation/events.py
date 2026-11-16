@@ -335,7 +335,7 @@ class EventDescriber:
             TaskFileAdded: lambda e: self._line(
                 e,
                 Message.of("journal-task-file-added", task=e.task_id),
-                detail=e.name,
+                detail=e.file.name,
                 attachments=_made((e.file,)),
             ),
             ExecutorCalled: lambda e: self._line(
