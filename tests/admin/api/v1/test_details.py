@@ -43,20 +43,25 @@ async def test_the_files_a_task_handed_back_download_from_it_for_who_reaches_it(
         task = await nestor.tasks.delegate("Le devis en PDF", origin=TELEGRAM, requested_by=MATHIS)
         while not admin.remote.runs:
             await asyncio.sleep(0.01)
-        made = Attachment(kind=AttachmentKind.FILE, data=b"%PDF-1.7 devis", media_type="application/pdf")
+        made = Attachment(
+            kind=AttachmentKind.FILE, data=b"%PDF-1.7 devis", media_type="application/pdf", name="devis.pdf"
+        )
         admin.remote.finish(next(iter(admin.remote.runs)), Outcome.completed("Le devis est prêt.", files=(made,)))
         while not await nestor.journal.history(TaskEnded):
             await asyncio.sleep(0.01)
         owner, guest = await admin.api(), await admin.api("mathilde")
 
         listed = (await owner.get(f"/api/v1/tasks/{task.id}")).json()["files"]
-        assert listed == [{"index": 0, "kind": "file", "media_type": "application/pdf", "size": 14}]
+        assert listed == [
+            {"index": 0, "name": "devis.pdf", "kind": "file", "media_type": "application/pdf", "size": 14}
+        ]
         got = await owner.get(f"/api/v1/tasks/{task.id}/files/0")
         assert (got.status_code, got.content, got.headers["content-type"]) == (
             200,
             b"%PDF-1.7 devis",
             "application/octet-stream",
         ), "downloaded, never shown in place"
+        assert "devis.pdf" in got.headers["content-disposition"], "by the name the executor gave it"
         assert (await owner.get(f"/api/v1/tasks/{task.id}/files/1")).status_code == 404
         assert (await guest.get(f"/api/v1/tasks/{task.id}/files/0")).json()["error"]["code"] == "task_unknown"
 
