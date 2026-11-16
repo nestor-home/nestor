@@ -404,7 +404,9 @@ async def test_a_file_a_delegated_task_made_goes_with_the_answer_that_brings_its
         await until(home.journal, TaskDelivered)
 
     assert home.telegram.sent == [(TELEGRAM, "Voici ton rapport.")]
-    assert [[(a.kind, a.data) for a in files] for files in home.telegram.files] == [[(AttachmentKind.FILE, pdf)]]
+    assert [[(a.name, a.data) for a in files] for files in home.telegram.files] == [[("rapport.pdf", pdf)]]
+    turn = str(home.model.requests[0].messages[0].content)
+    assert "go with your answer" in turn and "rapport.pdf" in turn, "the model knows the file goes with its words"
     [ended] = await home.journal.history(TaskEnded)
     assert [home.blobs.blobs[f.blob.digest] for f in ended.files] == [pdf]
 

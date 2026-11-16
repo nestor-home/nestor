@@ -3,6 +3,7 @@ when a spoken announcement gets no reaction (a closed door, the shower)."""
 
 import asyncio
 import contextlib
+import logging
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
@@ -16,6 +17,8 @@ from nestor.modules.household import Person
 from nestor.modules.initiative.delivery.events import Delivered, DeliveryConsidered, DeliveryFailed, DeliveryWithheld
 from nestor.modules.initiative.delivery.policy import DeliveryPolicy, Plan
 from nestor.modules.journal import Journal
+
+logger = logging.getLogger(__name__)
 
 FOLLOW_UP = "You said this aloud a moment ago but nobody reacted; write it now, briefly, as a message."
 NOTICE = (
@@ -171,10 +174,12 @@ class Courier(Component):
         try:
             async with conversations.free(address):  # drafted after the answer being written, never in its middle
                 draft = await self.agent.compose(address, person, notification, medium)
-        except ProviderError:
+        except ProviderError as error:
+            logger.warning("%s: the model could not write it for %s: %s", notification.about, address, error)
             return None
         if isinstance(draft, Silence):
             if notification.must_tell:
+                logger.warning("%s: the model kept silent where it had to tell (%s)", notification.about, draft.reason)
                 return None
             await self.journal.publish(
                 DeliveryWithheld(

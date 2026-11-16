@@ -42,7 +42,14 @@ from nestor.modules.conversation.conversations import Conversations, Turn
 from nestor.modules.conversation.events import AssistantTurn
 from nestor.modules.conversation.history import notification_message
 from nestor.modules.conversation.mentions import Mentions
-from nestor.modules.conversation.persona import ALREADY_TOLD, MUST_TELL, VOICE_ANSWER, Instructions, Persona
+from nestor.modules.conversation.persona import (
+    ALREADY_TOLD,
+    FILES_GO,
+    MUST_TELL,
+    VOICE_ANSWER,
+    Instructions,
+    Persona,
+)
 from nestor.modules.conversation.ports import ContextProvider, Layer, TurnContext
 from nestor.modules.conversation.speakers import Speakers
 from nestor.modules.conversation.types import (
@@ -400,6 +407,9 @@ class AgentReply(Reply):
         turn = instructions.turn
         if isinstance(opening, Notification) and opening.must_tell:
             turn = f"{turn}\n\n{MUST_TELL}"
+        if isinstance(opening, Notification) and opening.files:
+            names = ", ".join(f.name or f.blob.media_type for f in opening.files)
+            turn = f"{turn}\n\n{FILES_GO.format(names=names)}"
         if isinstance(opening, Notification) and opening.thread and (told := await self._told(opening.thread)):
             turn = f"{turn}\n\n{ALREADY_TOLD.format(told=told)}"
         if self._voiced:
