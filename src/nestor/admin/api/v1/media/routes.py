@@ -7,7 +7,6 @@ when the browser leaves, when the caller's admin session ends, and as soon as th
 journaled.
 """
 
-from collections.abc import Callable
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request, Response
@@ -26,14 +25,12 @@ from nestor.admin.api.v1.shared import People
 from nestor.admin.state import state
 from nestor.core import PersonId
 from nestor.http import file_response
-from nestor.modules.accounts import Principal, Scope
-from nestor.modules.satellites import MediaAccess, MediaEnd, MediaRefused, MediaSessions, Purpose, Refusal, Viewer
+from nestor.modules.accounts import Scope
+from nestor.modules.satellites import MediaAccess, MediaEnd, MediaRefused, MediaSessions, Refusal, Viewer
 
 router = APIRouter(tags=["media"])
 Watcher = Annotated[Caller, Depends(allowed(Scope.MEDIA_VIEW, Scope.MEDIA_CALL))]
 Manager = Annotated[Caller, Depends(allowed(Scope.SATELLITES_MANAGE))]
-MAY = {Purpose.VIEW: Scope.MEDIA_VIEW, Purpose.CALL: Scope.MEDIA_CALL}
-EVERYWHERE = {Purpose.VIEW: Scope.MEDIA_VIEW_ALL, Purpose.CALL: Scope.MEDIA_CALL_ALL}
 REFUSED: dict[Refusal, tuple[int, ErrorCode]] = {
     Refusal.FORBIDDEN: (403, "media_forbidden"),
     Refusal.CAMERA_OFF: (409, "media_camera_off"),
@@ -115,19 +112,9 @@ def _viewer(request: Request, caller: Caller) -> Viewer:
         account = admin.accounts.accounts.get(session.account_id) if session else None
         if session is None or account is None or account.disabled or not admin.sessions.alive(session):
             return None
-        return _as_viewer(account.principal())
+        return Viewer.of(account.principal())
 
-    return _as_viewer(caller.principal, now)
-
-
-def _as_viewer(principal: Principal, now: Callable[[], Viewer | None] | None = None) -> Viewer:
-    return Viewer(
-        account_id=principal.account_id,
-        person=principal.person,
-        may=frozenset(p for p, scope in MAY.items() if principal.can(scope)),
-        everywhere=frozenset(p for p, scope in EVERYWHERE.items() if principal.can(scope)),
-        now=now,
-    )
+    return Viewer.of(caller.principal, now)
 
 
 def _refusal(refused: MediaRefused) -> ApiError:

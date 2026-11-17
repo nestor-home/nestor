@@ -9,6 +9,7 @@ from nestor.adapters.models.common import base64_of, turns
 from nestor.core import ContractError
 from nestor.modules.cognition import (
     Document,
+    Image,
     Message,
     Role,
     ToolSpec,
@@ -64,6 +65,9 @@ def _blocks(message: Message, provider: str) -> list[Block]:
             if message.tool_call_id is None:
                 raise ContractError(f"{provider}: a tool message must say which call it answers (tool_call_id)")
             result: Block = {"type": "tool_result", "tool_use_id": message.tool_call_id}
+            if message.images:  # what the tool gave the model to look at, in its result
+                text = [{"type": "text", "text": message.content}] if message.content else []
+                return [result | {"content": [*text, *map(_image, message.images)]}]
             return [result | ({"content": message.content} if message.content else {})]
         case Role.ASSISTANT:
             # the reasoning first, as Claude wrote it before its words and calls
@@ -75,14 +79,17 @@ def _blocks(message: Message, provider: str) -> list[Block]:
             return [*reasoning, *text, *calls]
         case _:
             documents = [_document(d) for d in message.documents]
-            images = [{"type": "image", "source": _base64(i.media_type, i.data)} for i in message.images]
             text = [{"type": "text", "text": message.content}] if message.content.strip() else []
-            return [*documents, *images, *text]
+            return [*documents, *map(_image, message.images), *text]
 
 
 def _document(document: Document) -> Block:
     title = {"title": document.name} if document.name else {}
     return {"type": "document", "source": _base64(document.media_type, document.data), **title}
+
+
+def _image(image: Image) -> Block:
+    return {"type": "image", "source": _base64(image.media_type, image.data)}
 
 
 def _base64(media_type: str, data: bytes) -> dict[str, str]:

@@ -25,11 +25,13 @@ CONFIRMED = {"type": "boolean", "description": "true only once the person explic
 
 @dataclass(frozen=True, slots=True)
 class Called:
-    """What a call gave the turn: `output` for the model, whether it worked, and the files it made, kept."""
+    """What a call gave the turn: `output` for the model, whether it worked, the files it made and the pictures it
+    gave the model to look at, kept."""
 
     output: str
     ok: bool = True
     files: tuple[FileRef, ...] = ()
+    seen: tuple[FileRef, ...] = ()
 
 
 class Toolbox(Component):
@@ -118,6 +120,7 @@ class Toolbox(Component):
                 ok=called.ok,
                 duration_s=_since(started),
                 files=called.files,
+                seen=called.seen,
                 exchange=context.exchange,
             )
         )
@@ -158,6 +161,7 @@ class Toolbox(Component):
                     ok=called.ok,
                     duration_s=_since(started),
                     files=called.files,
+                    seen=called.seen,
                     exchange=context.exchange,
                 )
             )
@@ -169,24 +173,23 @@ class Toolbox(Component):
 
     async def _result(self, call: ToolCall, tool: Tool | None, context: ToolContext, *, confirmed: bool) -> Called:
         try:
-            output, made = await self._run(call, tool, context, confirmed=confirmed)
+            ran = await self._run(call, tool, context, confirmed=confirmed)
         except ToolFailed as failure:
             return Called(_error(str(failure)), ok=False)
         except Exception as error:  # a broken tool must not break the conversation
             return Called(_error(f"{call.name} failed ({type(error).__name__})"), ok=False)
+        output = _text(ran.output)
         if self._results is not None:
             output = await self._results.fit(call, output, context)
         blobs = self._blobs
         if blobs is None:
-            if made:
-                logger.warning("%s made files, but there is nowhere to keep them: they are left out", call.name)
+            if ran.files or ran.seen:
+                logger.warning("%s gave files, but there is nowhere to keep them: they are left out", call.name)
             return Called(output)
-        return Called(output, files=tuple([FileRef(await blobs.put(f.data, f.media_type), f.file_name) for f in made]))
+        return Called(output, files=await _kept(blobs, ran.files), seen=await _kept(blobs, ran.seen))
 
-    async def _run(
-        self, call: ToolCall, tool: Tool | None, context: ToolContext, *, confirmed: bool
-    ) -> tuple[str, tuple[Attachment, ...]]:
-        """What the model receives and the files the tool made; `ToolFailed` says why it did not run, any other error
+    async def _run(self, call: ToolCall, tool: Tool | None, context: ToolContext, *, confirmed: bool) -> Made:
+        """What the tool gave: for the model, files and pictures; `ToolFailed` says why it did not run, any other error
         that the tool broke."""
         if tool is None:
             raise ToolFailed(f"unknown tool {call.name!r}")
@@ -197,11 +200,13 @@ class Toolbox(Component):
         if tool.owner is not None and context.person != tool.owner:
             who = "ask who is asking first" if context.person is None else f"only {tool.owner} may use it"
             raise ToolFailed(f"this belongs to {tool.owner}: {who}")
+        if tool.vouched and (context.speaker.by is not Identified.ACCOUNT or context.person is None):
+            raise ToolFailed(f"{tool.name} needs to know for sure who asks: they ask from their own account")
         if tool.risk_of(arguments) is Risk.SENSITIVE and not confirmed:
             # in place only in a live conversation on their account: aloud on a satellite, or in a turn nobody
             # takes part in (a wake-up), the person confirms in writing
             if context.speaker.by is not Identified.ACCOUNT or context.exchange is None:
-                return _text(await self._confirm_in_writing(call, tool, context)), ()
+                return Made(await self._confirm_in_writing(call, tool, context))
             if call.arguments.get("confirmed") is not True:
                 raise ToolFailed(
                     f"{tool.name} is sensitive: describe exactly what you will do, ask the person to confirm, "
@@ -212,10 +217,10 @@ class Toolbox(Component):
                 ran = await tool.run(arguments, context)
         except TimeoutError:
             raise ToolFailed(f"{tool.name} did not answer within {tool.timeout_s:g} s") from None
-        output, made = (_text(ran.output), ran.files) if isinstance(ran, Made) else (_text(ran), ())
+        made = ran if isinstance(ran, Made) else Made(ran)
         if tool.owner is not None and not context.speaker.private and self.in_writing is not None:
-            return _text(await self.in_writing.send(call, output, context)), ()
-        return output, made
+            return Made(await self.in_writing.send(call, _text(made.output), context))
+        return made
 
     async def _confirm_in_writing(self, call: ToolCall, tool: Tool, context: ToolContext) -> ToolOutput:
         if context.person is None:
@@ -242,6 +247,10 @@ def _spec(tool: Tool) -> ToolSpec:
     parameters["properties"] = {**(existing if isinstance(existing, dict) else {}), "confirmed": CONFIRMED}
     description = f"{tool.spec.description} Sensitive: the person confirms first."
     return ToolSpec(tool.spec.name, description, parameters)
+
+
+async def _kept(blobs: BlobStore, files: tuple[Attachment, ...]) -> tuple[FileRef, ...]:
+    return tuple([FileRef(await blobs.put(f.data, f.media_type), f.file_name) for f in files])
 
 
 def _since(started: float) -> float:

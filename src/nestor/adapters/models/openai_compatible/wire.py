@@ -2,6 +2,7 @@
 gives. Its streamed answers are decoded in `stream`."""
 
 import json
+from collections.abc import Sequence
 from enum import StrEnum
 from typing import Any
 
@@ -19,9 +20,33 @@ from nestor.modules.cognition import (
 SIGNATURES = {b"\x89PNG": "image/png", b"\xff\xd8\xff": "image/jpeg", b"GIF8": "image/gif"}
 
 
+SEEN = "[The pictures your tools just gave, for you to look at: not sent by anyone]"
+
+
 class ImageEndpoint(StrEnum):
     IMAGES = "images"  # POST /images/generations
     CHAT = "chat"  # POST /chat/completions with `modalities`
+
+
+def wire_messages(messages: Sequence[Message], provider: str, *, cache_control: bool) -> list[dict[str, object]]:
+    """The dialogue in the chat completions' shape. A tool message carries text only: the pictures a round of calls
+    gave follow its results, in a user message (`SEEN`)."""
+    wired: list[dict[str, object]] = []
+    seen: list[Image] = []
+    for message in messages:
+        if seen and message.role is not Role.TOOL:
+            wired.append(_seen(seen))
+            seen = []
+        wired.append(wire_message(message, provider, cache_control=cache_control))
+        if message.role is Role.TOOL:
+            seen += message.images
+    if seen:
+        wired.append(_seen(seen))
+    return wired
+
+
+def _seen(images: Sequence[Image]) -> dict[str, object]:
+    return {"role": "user", "content": [{"type": "text", "text": SEEN}, *map(_picture, images)]}
 
 
 def wire_message(message: Message, provider: str, *, cache_control: bool) -> dict[str, object]:
@@ -37,8 +62,7 @@ def wire_message(message: Message, provider: str, *, cache_control: bool) -> dic
                 raise ContractError(f"{provider}: a tool message must say which call it answers (tool_call_id)")
             return {"role": "tool", "tool_call_id": message.tool_call_id, "content": message.content}
         case Role.USER if message.images:
-            pictures = [{"type": "image_url", "image_url": {"url": _data_url(i)}} for i in message.images]
-            return {"role": "user", "content": [{"type": "text", "text": message.text}, *pictures]}
+            return {"role": "user", "content": [{"type": "text", "text": message.text}, *map(_picture, message.images)]}
         case _ if cache_control and message.layers:
             parts: list[dict[str, object]] = [
                 {"type": "text", "text": layer, "cache_control": {"type": "ephemeral"}}
@@ -50,6 +74,10 @@ def wire_message(message: Message, provider: str, *, cache_control: bool) -> dic
             return {"role": message.role.value, "content": parts}
         case _:
             return {"role": message.role.value, "content": message.text}
+
+
+def _picture(image: Image) -> dict[str, object]:
+    return {"type": "image_url", "image_url": {"url": _data_url(image)}}
 
 
 def _data_url(image: Image) -> str:

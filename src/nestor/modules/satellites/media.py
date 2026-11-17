@@ -20,6 +20,7 @@ from enum import StrEnum
 from typing import Any
 
 from nestor.core import Capability, Component, ContractError, PersonId, ProviderError, new_id, utc_now
+from nestor.modules.accounts import Principal, Scope
 from nestor.modules.journal import BlobStore, FileRef, Journal
 from nestor.modules.satellites.events import MediaEnd, MediaSessionClosed, MediaSessionOpened, SnapshotTaken
 from nestor.modules.satellites.service import Pairing
@@ -32,6 +33,9 @@ CHECK_S = 5.0  # how often each session's person is checked again (signed out, r
 DAY_S = 86_400.0
 
 type Ended = Callable[[str, MediaEnd], Awaitable[None]]
+
+MAY = {Purpose.VIEW: Scope.MEDIA_VIEW, Purpose.CALL: Scope.MEDIA_CALL}  # on the devices that list the person
+EVERYWHERE = {Purpose.VIEW: Scope.MEDIA_VIEW_ALL, Purpose.CALL: Scope.MEDIA_CALL_ALL}  # on every device
 
 
 @dataclass(frozen=True, slots=True)
@@ -48,6 +52,17 @@ class Viewer:
 
     def current(self) -> "Viewer | None":
         return self.now() if self.now is not None else self
+
+    @classmethod
+    def of(cls, principal: Principal, now: Callable[[], "Viewer | None"] | None = None) -> "Viewer":
+        """What `principal`'s role lets them do with the devices."""
+        return cls(
+            account_id=principal.account_id,
+            person=principal.person,
+            may=frozenset(p for p, scope in MAY.items() if principal.can(scope)),
+            everywhere=frozenset(p for p, scope in EVERYWHERE.items() if principal.can(scope)),
+            now=now,
+        )
 
 
 class Refusal(StrEnum):
@@ -168,6 +183,10 @@ class MediaSessions(Component):
             return True
         listed = satellite.access.viewers if purpose is Purpose.VIEW else satellite.access.callers
         return viewer.person is not None and viewer.person in listed
+
+    def devices(self) -> list[Satellite]:
+        """Every paired device, whoever may use it."""
+        return self._pairing.satellites()
 
     def offers(self, viewer: Viewer) -> list[Offer]:
         """The devices `viewer` may watch or call through, connected or not."""

@@ -273,3 +273,26 @@ async def test_a_history_window_opening_on_an_answer_starts_at_the_next_words_of
     )
     await collect(ModelRequest(messages=window))
     assert sent(route)["contents"] == [{"role": "user", "parts": [{"text": "Merci."}]}]
+
+
+async def test_pictures_tools_gave_follow_the_round_s_results(api: respx.MockRouter) -> None:
+    route = api.post(STREAM).mock(return_value=streamed(*TEXT_REPLY))
+    calls = (ToolCall("c1", "look", {"room": "salon"}, replay="c2ln"), ToolCall("c2", "weather", {}, replay="c2ln"))
+    await collect(
+        ModelRequest(
+            messages=(
+                Message.user("Il fait beau et le salon est rangé ?"),
+                Message(role=Role.ASSISTANT, tool_calls=calls),
+                Message(
+                    role=Role.TOOL,
+                    content="taken",
+                    tool_call_id="c1",
+                    images=(Image(media_type="image/jpeg", data=b"png"),),
+                ),
+                Message(role=Role.TOOL, content="sunny", tool_call_id="c2"),
+            )
+        )
+    )
+    parts = sent(route)["contents"][-1]["parts"]
+    assert [next(iter(p)) for p in parts] == ["functionResponse", "functionResponse", "inlineData"]
+    assert parts[2] == {"inlineData": {"mimeType": "image/jpeg", "data": "cG5n"}}

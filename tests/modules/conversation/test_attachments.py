@@ -8,8 +8,8 @@ import pytest
 from nestor.adapters.documents import FileReader
 from nestor.modules.channels import Address, Attachment, AttachmentKind, InboundMessage, Sender
 from nestor.modules.cognition.images import ImageTools
-from nestor.modules.cognition.model import ModelRequest, Role, ToolCall
-from nestor.modules.cognition.tools import Results
+from nestor.modules.cognition.model import ModelRequest, Role, ToolCall, ToolSpec
+from nestor.modules.cognition.tools import Made, Results, Risk, Tool
 from nestor.modules.conversation import AnswerAttached, Attachments, ChannelProfile, UserTurn
 from nestor.modules.conversation.conversations import DOCUMENTS, IMAGES
 from nestor.modules.conversation.history import IMAGE_BYTES
@@ -264,3 +264,46 @@ async def test_the_files_of_one_request_stay_within_what_providers_take(make_age
 
     users = [m for m in model.requests[-1].messages if m.role is Role.USER]
     assert [d.name for m in users for d in m.documents] == ["1.pdf"], "two would weigh more than a request may"
+
+
+async def _snap(arguments: object, context: object) -> Made:
+    return Made({"picture": "taken now, attached"}, seen=(PHOTO,))
+
+
+SNAP = Tool(spec=ToolSpec("snap", "Take a picture of the room."), run=_snap, risk=Risk.READ)
+
+
+async def test_a_picture_a_tool_took_is_shown_with_its_result_now_and_in_the_next_turns(make_agent: MakeAgent) -> None:
+    model = Seeing(ToolCall("call-1", "snap", {}), "La lampe est allumée.", "Toujours.")
+    blobs = MemoryBlobStore()
+    agent = make_agent(model=model, tools=(SNAP,), attachments=Attachments(blobs), blobs=blobs)
+    await agent.respond(sent("la lampe du salon ?")).collect()
+    await agent.respond(sent("et maintenant ?")).collect()
+    for request in model.requests[1:]:  # right after the call, then replayed with the history
+        [result] = [m for m in request.messages if m.role is Role.TOOL]
+        assert [i.data for i in result.images] == [PHOTO.data] and result.content.endswith("attached]")
+
+
+async def test_a_model_that_does_not_see_is_told_a_tool_s_picture_is_beyond_it(make_agent: MakeAgent) -> None:
+    model = ScriptedModel(ToolCall("call-1", "snap", {}), "Je ne vois pas les images.")
+    blobs = MemoryBlobStore()
+    agent = make_agent(model=model, tools=(SNAP,), attachments=Attachments(blobs), blobs=blobs)
+    await agent.respond(sent("la lampe du salon ?")).collect()
+    [result] = [m for m in model.requests[1].messages if m.role is Role.TOOL]
+    assert result.images == () and "you cannot see" in result.content
+
+
+async def test_a_picture_just_taken_comes_first_and_the_oldest_give_way(make_agent: MakeAgent) -> None:
+    photos = [
+        Attachment(kind=AttachmentKind.IMAGE, data=f"photo {i}".encode(), media_type="image/png") for i in range(4)
+    ]
+    model = Seeing(*["Vu."] * len(photos), ToolCall("call-1", "snap", {}), "La lampe est allumée.")
+    blobs = MemoryBlobStore()
+    agent = make_agent(model=model, tools=(SNAP,), attachments=Attachments(blobs), blobs=blobs)
+    for photo in photos:
+        await agent.respond(sent("", photo)).collect()
+    await agent.respond(sent("la lampe ?")).collect()
+    request = model.requests[-1]
+    [result] = [m for m in request.messages if m.role is Role.TOOL]
+    assert [i.data for i in result.images] == [PHOTO.data]
+    assert sum(len(m.images) for m in request.messages) == IMAGES

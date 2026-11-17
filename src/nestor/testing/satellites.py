@@ -15,6 +15,7 @@ with the gateway (`nestor.adapters.channels.satellites.conformance`).
 import asyncio
 import time
 from abc import ABC, abstractmethod
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -25,7 +26,9 @@ from nestor.modules.satellites import (
     IDENTIFY,
     TEXT_DISPLAY,
     UPDATE,
+    VIDEO_CAPTURE,
     Manifest,
+    MediaRelay,
     Online,
     Pairing,
     Satellite,
@@ -33,6 +36,7 @@ from nestor.modules.satellites import (
     UpdateState,
     wire,
 )
+from nestor.modules.satellites.media import Ended
 
 SOFTWARE = Software("nestor-test-satellite", "1.0.0")  # what test devices declare they run
 
@@ -210,3 +214,27 @@ async def pair_by_code(pairing: Pairing, manifest: Manifest, *, by: PersonId | N
     ticket = await pairing.request(manifest)
     assert ticket.device_code is not None
     return await pairing.approve(ticket.device_code, pairing_id=ticket.id, by=by)
+
+
+class FilmingRelay(MediaRelay):
+    """Media of devices whose links are up and allowed to film: every session opens, and each picture is `jpeg`;
+    `pictures` counts those asked for."""
+
+    def __init__(self, jpeg: bytes) -> None:
+        self.jpeg, self.pictures = jpeg, 0
+
+    def linked(self, device_id: str) -> frozenset[Capability] | None:
+        return frozenset({VIDEO_CAPTURE})
+
+    async def start(
+        self, session_id: str, device_id: str, *, video: bool, audio: bool, max_s: int, offer: Mapping[str, Any]
+    ) -> Mapping[str, Any]:
+        return {"sdp": "v=0", "type": "answer"}
+
+    async def stop(self, session_id: str) -> None: ...
+
+    async def snapshot(self, device_id: str) -> bytes:
+        self.pictures += 1
+        return self.jpeg
+
+    def on_ended(self, ended: Ended) -> None: ...

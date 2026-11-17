@@ -590,3 +590,23 @@ class TestOpenRouterLive(LanguageModelContract):
 def test_the_model_names_its_provider_and_its_model(base_url: str, brand: str | None) -> None:
     built = model(base_url=base_url)
     assert built.brand == brand and built.details() == {"model": "vendor/model"}
+
+
+async def test_pictures_tools_gave_follow_the_round_s_results_in_a_user_message(api: respx.MockRouter) -> None:
+    route = api.post(COMPLETIONS).mock(return_value=streamed(*TEXT_REPLY))
+    calls = (ToolCall("call_a", "look", {"room": "salon"}), ToolCall("call_b", "weather", {}))
+    picture = Image(media_type="image/jpeg", data=b"\xff\xd8")
+    await collect(
+        ModelRequest(
+            messages=(
+                Message.user("Il fait beau et le salon est rangé ?"),
+                Message(role=Role.ASSISTANT, tool_calls=calls),
+                Message(role=Role.TOOL, content="taken", tool_call_id="call_a", images=(picture,)),
+                Message(role=Role.TOOL, content="sunny", tool_call_id="call_b"),
+            )
+        )
+    )
+    messages: Any = sent(route)["messages"]
+    assert [m["role"] for m in messages] == ["user", "assistant", "tool", "tool", "user"]
+    assert messages[2]["content"] == "taken", "a tool message carries text only"
+    assert messages[-1]["content"][1] == {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64,/9g="}}

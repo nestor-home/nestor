@@ -10,6 +10,7 @@ from nestor.modules.cognition.tools import ToolCalled, ToolCompleted, ToolDeferr
 from nestor.modules.conversation.events import AnswerCut, AssistantTurn, NotificationTurn, UserTurn
 from nestor.modules.conversation.types import Attached, Notification
 from nestor.modules.identity import Identified, Speaker
+from nestor.modules.journal import FileRef
 
 IMAGE_BYTES = 5_000_000  # the most providers take for one image (Anthropic): a larger one is only mentioned
 HISTORY_EVENTS = (UserTurn, NotificationTurn, AssistantTurn, AnswerCut, ToolCalled, ToolCompleted, ToolDeferred)
@@ -33,15 +34,35 @@ def heard(events: Iterable[Event]) -> dict[str, str]:
     return {e.answer: e.heard for e in events if isinstance(e, AnswerCut)}
 
 
-def notification_message(notification: Notification) -> Message:
-    """A notification as the model reads it, when it answers it and every time the history is replayed: a user-role
-    message that says it comes from Nestor, not from anyone in the conversation (models take such messages for the
-    person's otherwise)."""
-    return Message.user(f"[From Nestor itself, not said by anyone here: {notification.about}]\n{notification.text}")
-
-
 type Shown = Mapping[str, Image | Document]
 """The files the model looks at itself, by digest: pictures it sees, documents it reads whole."""
+
+
+def notification_message(notification: Notification, shown: Shown, sees: bool) -> Message:
+    """A notification as the model reads it, when it answers it and every time the history is replayed: a user-role
+    message that says it comes from Nestor, not from anyone in the conversation (models take such messages for the
+    person's otherwise), with the pictures a tool took for it (`seen`)."""
+    said = f"[From Nestor itself, not said by anyone here: {notification.about}]\n{notification.text}"
+    content, images = _looked(said, notification.seen, shown, sees)
+    return Message.user(content, images=images)
+
+
+def tool_message(call_id: str, output: str, seen: Sequence[FileRef], shown: Shown, sees: bool) -> Message:
+    """A call's result as the model reads it, with the pictures the tool gave it to look at."""
+    content, images = _looked(output, seen, shown, sees)
+    return Message(role=Role.TOOL, content=content, tool_call_id=call_id, images=images)
+
+
+def seen_attached(seen: Sequence[FileRef]) -> list[Attached]:
+    """The pictures a tool gave the model, as the files of a conversation it may look at."""
+    return [Attached(kind=AttachmentKind.IMAGE, blob=f.blob, name=f.name) for f in seen]
+
+
+def _looked(text: str, seen: Sequence[FileRef], shown: Shown, sees: bool) -> tuple[str, tuple[Image, ...]]:
+    """`text` followed by a note for each picture of `seen`, and those the model looks at."""
+    attached = seen_attached(seen)
+    images = tuple(f for a in attached if isinstance(f := shown.get(a.blob.digest), Image))
+    return "\n".join(p for p in (text, *(_note(a, shown, sees) for a in attached)) if p), images
 
 
 def user_message(turn: UserTurn, *, name: str | None = None, shown: Shown | None = None, sees: bool = False) -> Message:
@@ -105,6 +126,7 @@ def to_messages(
     received then; its result comes back later as a notification. On a shared device, where several people may
     speak in one conversation, `names` labels each message with who said it, when anyone knows. `shown` and `sees`
     say what the model looks at itself (`user_message`)."""
+    shown = shown or {}
     results = {e.call_id: e for e in events if isinstance(e, ToolCompleted | ToolDeferred)}
     cut = heard(events)
     messages: list[Message] = []
@@ -113,7 +135,8 @@ def to_messages(
             name = names(event.speaker) if names and event.speaker.by is not Identified.ACCOUNT else None
             messages.append(user_message(event, name=name, shown=shown, sees=sees))
         elif isinstance(event, NotificationTurn):
-            messages.append(notification_message(Notification(event.text, event.about)))
+            notification = Notification(event.text, event.about, seen=event.seen)
+            messages.append(notification_message(notification, shown, sees))
         elif isinstance(event, AssistantTurn) and (text := cut.get(event.id, event.text)):
             messages.append(Message(role=Role.ASSISTANT, content=text))
         elif isinstance(event, ToolCalled) and (result := results.get(event.call_id)):
@@ -123,5 +146,6 @@ def to_messages(
                 messages[-1] = Message(role=Role.ASSISTANT, content=before.content, tool_calls=(call,))
             else:
                 messages.append(Message(role=Role.ASSISTANT, tool_calls=(call,)))
-            messages.append(Message(role=Role.TOOL, content=result.output, tool_call_id=event.call_id))
+            seen = result.seen if isinstance(result, ToolCompleted) else ()
+            messages.append(tool_message(event.call_id, result.output, seen, shown, sees))
     return tuple(messages)

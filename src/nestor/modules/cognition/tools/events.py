@@ -22,7 +22,8 @@ class ToolCalled(Event, event_type="agent.tool.called"):
 
 class ToolCompleted(Event, event_type="agent.tool.completed"):
     """The call answered within the turn: `output` is what the model received, the result (its start and end, when
-    too long) or the reason of the failure; `files`, what it made, to go with the answer."""
+    too long) or the reason of the failure; `files`, what it made, to go with the answer; `seen`, the pictures it
+    gave the model to look at."""
 
     call_id: str
     name: str
@@ -30,6 +31,7 @@ class ToolCompleted(Event, event_type="agent.tool.completed"):
     ok: bool
     duration_s: float
     files: tuple[FileRef, ...] = ()
+    seen: tuple[FileRef, ...] = ()
     exchange: Exchange | None = None
 
 
@@ -57,6 +59,7 @@ class ToolReturned(Event, event_type="agent.tool.returned"):
     ok: bool
     duration_s: float
     files: tuple[FileRef, ...] = ()  # what it made, to go with the answer to its notification
+    seen: tuple[FileRef, ...] = ()  # the pictures it gave the model to look at, with its notification
     exchange: Exchange | None = None
 
 

@@ -79,7 +79,7 @@ from nestor.modules.journal import Journal
 from nestor.modules.memory import Memories, SearchIndex
 from nestor.modules.memory.assistant import MemoryTools
 from nestor.modules.memory.episodes import Consolidator, Episodes
-from nestor.modules.satellites import MediaSessions, Pairing, SatelliteHost
+from nestor.modules.satellites import LookTools, MediaSessions, Pairing, SatelliteHost
 from nestor.modules.system import ReleaseFeed, RestartRequested, Updates
 from nestor.modules.web import WebSearch, WebSearchTools
 from nestor.runtime.config import AdapterConfig, ComponentConfig, ConfigError, ModelConfig, NestorConfig, ProblemCode
@@ -300,6 +300,11 @@ class Nestor:
                 *([self.home.tools] if self.home else []),
                 *connector_tools,
                 *([ImageTools(images)] if (images := optional(drawing, ImageModel, "images")) else []),
+                *(
+                    [LookTools(self.media, self.accounts)]
+                    if self.media and model("agent.written", roles["written"]).vision
+                    else []
+                ),
             ],
             in_writing=self.confirmations,
             results=(results := Results(self.journal, self.blobs, budget=config.agent.tool_result_chars)),
