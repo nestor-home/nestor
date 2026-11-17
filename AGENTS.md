@@ -7,13 +7,14 @@ read it before changing anything.
 
 ```bash
 uv sync                      # installs the dev group by default
-uv run pre-commit install    # once: ruff, ty and lockfile checks on every commit
+uv run lefthook install      # once: ruff, ty, the lockfile, Biome and tsc on the files you push
 uv run ruff check && uv run ruff format --check && uv run ty check && uv run pytest
 ```
 
 All four must pass before a change is done; CI runs them on Python 3.12 to 3.14 with `uv sync --locked`.
-`pytest` also measures branch coverage and fails under 95 %. Manage dependencies with `uv add` /
-`uv remove` only, and commit `uv.lock`.
+`pytest` also measures branch coverage and fails under 95 %. It runs the tests in random order
+(pytest-randomly; CI seeds every part of a run alike): replay a failure with `--randomly-seed=<the seed it printed>`.
+Manage dependencies with `uv add` / `uv remove` only, and commit `uv.lock`.
 
 ## Layout
 

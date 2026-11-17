@@ -156,7 +156,7 @@ journal's format without a migration: read the [changelog](CHANGELOG.md) before 
 
 ```bash
 uv sync
-uv run pre-commit install
+uv run lefthook install   # once: checks the files you push
 uv run ruff check && uv run ruff format --check && uv run ty check && uv run pytest
 ```
 
