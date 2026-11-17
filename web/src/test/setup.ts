@@ -2,6 +2,8 @@ import "@testing-library/jest-dom/vitest";
 import { act, cleanup, configure } from "@testing-library/react";
 import { afterAll, afterEach, beforeAll, beforeEach, vi } from "vitest";
 import { setCsrfToken } from "@/api";
+import { activate } from "@/i18n/runtime";
+import { DEFAULT_LOCALE } from "@/i18n/catalog";
 import { reset } from "@/mocks/db";
 import { resetServer } from "@/mocks/handlers";
 import { server } from "@/mocks/server";
@@ -95,6 +97,11 @@ afterEach(async () => {
   });
   cleanup();
   server.resetHandlers();
+  // files share their modules (`isolate: false`): what a test changed outside React goes back as it was
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+  activate(DEFAULT_LOCALE);
+  localStorage.clear();
   const found = complaints.splice(0);
   if (found.length) throw new Error(`The test printed warnings or errors:\n${found.join("\n")}`);
 });
