@@ -19,8 +19,9 @@ jobs:
       - run: uv run ruff format --check
       - run: uv run ty check
 
-  # The suite in parallel: each Python version in three parts (pytest-split, by the recorded durations of
-  # .test_durations), each part on every core of its runner (pytest-xdist). Coverage is measured on the newest version
+  # The suite in parallel: each Python version in three parts (pytest-split, balanced by the durations recorded in
+  # .test_durations: refresh with `pytest --store-durations` when the suite changes a lot), each part on every core of
+  # its runner (pytest-xdist). Coverage is measured on the newest version
   # only, and checked once all its parts are in (`coverage`).
   test:
     runs-on: ubuntu-latest
@@ -41,16 +42,12 @@ jobs:
       - if: matrix.python != '3.14'
         run: uv run pytest -n auto --splits 3 --group ${{ matrix.group }} --no-cov
       - if: matrix.python == '3.14'
-        run: >-
-          uv run pytest -n auto --splits 3 --group ${{ matrix.group }} --cov-report= --cov-fail-under=0
-          --store-durations --durations-path durations-${{ matrix.group }}.json
+        run: uv run pytest -n auto --splits 3 --group ${{ matrix.group }} --cov-report= --cov-fail-under=0
       - if: matrix.python == '3.14'
         uses: actions/upload-artifact@v7
         with:
           name: coverage-${{ matrix.group }}
-          path: |
-            .coverage.${{ matrix.group }}
-            durations-${{ matrix.group }}.json
+          path: .coverage.${{ matrix.group }}
           include-hidden-files: true
 
   coverage:

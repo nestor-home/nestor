@@ -12,6 +12,7 @@ export default defineConfig({
   testDir: "e2e",
   fullyParallel: true,
   retries: process.env.CI ? 2 : 0,
+  workers: process.env.CI ? 4 : undefined, // a CI runner's cores; locally, half of them
   use: { baseURL: base ?? "http://localhost:5173", locale: "en-US", trace: "on-first-retry" },
   projects: [
     { name: "light", use: { ...devices["Desktop Chrome"], colorScheme: "light" }, testIgnore: /\/e2e\/live\// },
