@@ -11,7 +11,7 @@ const base = process.env.E2E_BASE ?? process.env.NESTOR_URL;
 export default defineConfig({
   testDir: "e2e",
   fullyParallel: true,
-  retries: process.env.CI ? 2 : 0,
+  retries: 0, // a test that needs a retry has a bug: find it
   workers: process.env.CI ? 4 : undefined, // a CI runner's cores; locally, half of them
   use: { baseURL: base ?? "http://localhost:5173", locale: "en-US", trace: "on-first-retry" },
   projects: [
