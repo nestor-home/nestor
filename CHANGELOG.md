@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.15.0](https://github.com/nestor-home/nestor/compare/v0.14.0...v0.15.0) (2026-11-17)
+
+
+### Features
+
+* the agent looks at a room through a camera, for whoever may see it ([#177](https://github.com/nestor-home/nestor/issues/177)) ([0ba4d31](https://github.com/nestor-home/nestor/commit/0ba4d31346296aed19e41f7b7bc529f5c50c9ebd))
+
+
+### Bug Fixes
+
+* **deps:** update dependency aiortc to v1.16.0 ([#174](https://github.com/nestor-home/nestor/issues/174)) ([7bfc115](https://github.com/nestor-home/nestor/commit/7bfc1159dcc755fae329e65069ed19dbccccfdad))
+
 ## [0.14.0](https://github.com/nestor-home/nestor/compare/v0.13.0...v0.14.0) (2026-11-16)
 
 
