@@ -217,14 +217,14 @@ async def pair_by_code(pairing: Pairing, manifest: Manifest, *, by: PersonId | N
 
 
 class FilmingRelay(MediaRelay):
-    """Media of devices whose links are up and allowed `linked`: every session opens, and each picture is `jpeg`;
+    """Media of devices whose links are up and allowed to film: every session opens, and each picture is `jpeg`;
     `pictures` counts those asked for."""
 
-    def __init__(self, jpeg: bytes, linked: frozenset[Capability] = frozenset({VIDEO_CAPTURE})) -> None:
-        self.jpeg, self._linked, self.pictures = jpeg, linked, 0
+    def __init__(self, jpeg: bytes) -> None:
+        self.jpeg, self.pictures = jpeg, 0
 
     def linked(self, device_id: str) -> frozenset[Capability] | None:
-        return self._linked
+        return frozenset({VIDEO_CAPTURE})
 
     async def start(
         self, session_id: str, device_id: str, *, video: bool, audio: bool, max_s: int, offer: Mapping[str, Any]

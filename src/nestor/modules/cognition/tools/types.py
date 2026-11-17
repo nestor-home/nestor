@@ -93,13 +93,16 @@ class ToolFailed(NestorError):
 class Tool:
     """`risk` is the tool's; `assess`, when given, decides it call by call from the arguments (turning a light off is
     a write, unlocking the door is sensitive). `owner` is the person whose own data it reads or acts on (their
-    mailbox): it serves them only. `connection`, the connected account it acts on, by its id."""
+    mailbox): it serves them only. `vouched`: it serves only someone the channel authenticated (their account), as a
+    voice or a name only personalises (looking through a camera). `connection`, the connected account it acts on, by
+    its id."""
 
     spec: ToolSpec
     run: Callable[[Mapping[str, object], ToolContext], Awaitable[ToolOutput | Made]]
     risk: Risk = Risk.READ
     assess: Callable[[Mapping[str, object]], Risk] | None = None
     owner: PersonId | None = None
+    vouched: bool = False
     connection: str | None = None
     timeout_s: float = 60.0  # at most: past the turn's wait, it goes on in the background
 

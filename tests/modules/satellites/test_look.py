@@ -6,9 +6,11 @@ from contextlib import asynccontextmanager
 
 import pytest
 
-from nestor.core import PersonId
+from nestor.core import PersonId, utc_now
+from nestor.modules.accounts import Account, Role
 from nestor.modules.channels import Address
-from nestor.modules.cognition.tools import Made, ToolContext, ToolFailed
+from nestor.modules.cognition.model import ToolCall
+from nestor.modules.cognition.tools import Made, Toolbox, ToolContext, ToolFailed
 from nestor.modules.identity import Identified, Speaker
 from nestor.modules.journal import Journal
 from nestor.modules.satellites import (
@@ -20,8 +22,6 @@ from nestor.modules.satellites import (
     MediaAccess,
     MediaSessions,
     Pairing,
-    Purpose,
-    Viewer,
 )
 from nestor.testing.journal import MemoryBlobStore, MemoryEventLog
 from nestor.testing.satellites import SOFTWARE, FilmingRelay, pair_by_code
@@ -29,10 +29,16 @@ from nestor.testing.satellites import SOFTWARE, FilmingRelay, pair_by_code
 CAMERA = Manifest(Device("camera-salon", "pi", "salon"), (DeclaredCapability(VIDEO_CAPTURE),), software=SOFTWARE)
 JPEG = b"\xff\xd8 the living room \xff\xd9"
 MATHIS, LEA = PersonId("mathis"), PersonId("lea")
-ROLES = {  # what each person's account lets them do: Mathis owns the household, Léa is a member
-    MATHIS: Viewer(account_id="a-mathis", person=MATHIS, may=frozenset(Purpose), everywhere=frozenset(Purpose)),
-    LEA: Viewer(account_id="a-lea", person=LEA, may=frozenset(Purpose)),
-}
+
+
+class Accounts:
+    """Mathis owns the household, Léa is a member."""
+
+    def of_person(self, person: PersonId) -> Account | None:
+        role = {MATHIS: Role.OWNER, LEA: Role.MEMBER}.get(person)
+        return Account(id=f"a-{person}", login=person, role=role, person=person, created_at=utc_now()) if role else None
+
+
 WRITING = Address("telegram", "mathis")
 
 
@@ -48,7 +54,7 @@ async def home(*, camera: bool = True) -> AsyncGenerator[tuple[LookTools, Pairin
     async with pairing:
         if camera:
             await pair_by_code(pairing, CAMERA)
-        yield LookTools(MediaSessions(journal, pairing, relay, MemoryBlobStore()), ROLES.get), pairing, relay
+        yield LookTools(MediaSessions(journal, pairing, relay, MemoryBlobStore()), Accounts()), pairing, relay
 
 
 async def test_someone_who_may_see_the_room_gets_a_picture_for_the_model_only() -> None:
@@ -62,8 +68,9 @@ async def test_someone_who_may_see_the_room_gets_a_picture_for_the_model_only() 
 @pytest.mark.parametrize("by", [Identified.VOICE, Identified.SAID, Identified.UNKNOWN])
 async def test_only_an_account_vouches_for_who_looks(by: Identified) -> None:
     async with home() as (look, _, relay):
-        with pytest.raises(ToolFailed, match="own account"):
-            await look.look({"room": "salon"}, asked(MATHIS, by))
+        toolbox = Toolbox(Journal(MemoryEventLog()), providers=[look])
+        called = await toolbox.call(ToolCall("c1", "look", {"room": "salon"}), asked(MATHIS, by))
+    assert not called.ok and "own account" in called.output and called.seen == ()
     assert relay.pictures == 0
 
 

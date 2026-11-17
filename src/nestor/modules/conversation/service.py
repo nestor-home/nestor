@@ -398,8 +398,8 @@ class AgentReply(Reply):
         )
         opening = self._opening
         if isinstance(opening, Notification):  # not in the journal yet: read as it will be once delivered
-            shown = await self._look(opening.seen, model)
-            history = (*history, notification_message(opening, shown=shown, sees=model.vision))
+            shown = await self._look(opening.seen, model, history)
+            history = (*history, notification_message(opening, shown, model.vision))
         shared = isinstance(opening, InboundMessage) and opening.sender is None
         said = self._said(history)
         instructions = await agent.instructions(
@@ -442,15 +442,16 @@ class AgentReply(Reply):
             agent.replies.set(self, ReplyPhase.THINKING)
             done = await asyncio.gather(*(agent.toolbox.call(call, context, wait_s=wait_s) for call in calls))
             self._made += [file for called in done for file in called.files]
-            shown = await self._look([f for called in done for f in called.seen], model)
+            shown = await self._look([f for called in done for f in called.seen], model, messages)
             messages += [
-                tool_message(c.id, d.output, d.seen, shown=shown, sees=model.vision)
-                for c, d in zip(calls, done, strict=True)
+                tool_message(c.id, d.output, d.seen, shown, model.vision) for c, d in zip(calls, done, strict=True)
             ]
 
-    async def _look(self, seen: Sequence[FileRef], model: LanguageModel) -> Shown:
-        """The pictures of `seen` the model looks at now: none when it does not see images."""
-        wanted = to_show(seen_attached(seen), model.vision, model.reads, model.document_pages)
+    async def _look(self, seen: Sequence[FileRef], model: LanguageModel, request: Sequence[Message]) -> Shown:
+        """The pictures of `seen` the model looks at now, within what the `request` shows already: none when it does
+        not see images."""
+        already = [f for m in request for f in (*m.images, *m.documents)]
+        wanted = to_show(seen_attached(seen), model.vision, model.reads, model.document_pages, already=already)
         return await self._agent.attachments.shown(wanted) if wanted else {}
 
     async def _told(self, thread: str) -> str:

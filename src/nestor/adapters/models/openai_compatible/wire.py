@@ -46,8 +46,7 @@ def wire_messages(messages: Sequence[Message], provider: str, *, cache_control: 
 
 
 def _seen(images: Sequence[Image]) -> dict[str, object]:
-    pictures = [{"type": "image_url", "image_url": {"url": _data_url(i)}} for i in images]
-    return {"role": "user", "content": [{"type": "text", "text": SEEN}, *pictures]}
+    return {"role": "user", "content": [{"type": "text", "text": SEEN}, *map(_picture, images)]}
 
 
 def wire_message(message: Message, provider: str, *, cache_control: bool) -> dict[str, object]:
@@ -63,8 +62,7 @@ def wire_message(message: Message, provider: str, *, cache_control: bool) -> dic
                 raise ContractError(f"{provider}: a tool message must say which call it answers (tool_call_id)")
             return {"role": "tool", "tool_call_id": message.tool_call_id, "content": message.content}
         case Role.USER if message.images:
-            pictures = [{"type": "image_url", "image_url": {"url": _data_url(i)}} for i in message.images]
-            return {"role": "user", "content": [{"type": "text", "text": message.text}, *pictures]}
+            return {"role": "user", "content": [{"type": "text", "text": message.text}, *map(_picture, message.images)]}
         case _ if cache_control and message.layers:
             parts: list[dict[str, object]] = [
                 {"type": "text", "text": layer, "cache_control": {"type": "ephemeral"}}
@@ -76,6 +74,10 @@ def wire_message(message: Message, provider: str, *, cache_control: bool) -> dic
             return {"role": message.role.value, "content": parts}
         case _:
             return {"role": message.role.value, "content": message.text}
+
+
+def _picture(image: Image) -> dict[str, object]:
+    return {"type": "image_url", "image_url": {"url": _data_url(image)}}
 
 
 def _data_url(image: Image) -> str:

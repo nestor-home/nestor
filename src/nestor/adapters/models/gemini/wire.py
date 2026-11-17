@@ -6,6 +6,8 @@ from typing import Any
 from nestor.adapters.models.common import base64_of, turns
 from nestor.core import ContractError
 from nestor.modules.cognition import (
+    Document,
+    Image,
     Message,
     Role,
     ToolSpec,
@@ -45,8 +47,7 @@ def _parts(message: Message, names: Mapping[str, str], provider: str) -> list[Pa
             if call not in names:
                 raise ContractError(f"{provider}: a tool message must answer a call of the dialogue (tool_call_id)")
             answer = {"functionResponse": {"id": call, "name": names[call], "response": {"result": message.content}}}
-            seen = [{"inlineData": {"mimeType": i.media_type, "data": base64_of(i.data)}} for i in message.images]
-            return [answer, *seen]  # what the tool gave the model to look at, with its result
+            return [answer, *map(_inline, message.images)]  # what the tool gave the model to look at, with its result
         case Role.ASSISTANT:
             text = [{"text": message.content}] if message.content.strip() else []
             calls = [
@@ -58,10 +59,12 @@ def _parts(message: Message, names: Mapping[str, str], provider: str) -> list[Pa
             ]
             return [*text, *calls]
         case _:
-            files = [*message.documents, *message.images]
-            inline = [{"inlineData": {"mimeType": f.media_type, "data": base64_of(f.data)}} for f in files]
             text = [{"text": message.content}] if message.content.strip() else []
-            return [*inline, *text]
+            return [*map(_inline, (*message.documents, *message.images)), *text]
+
+
+def _inline(file: Image | Document) -> Part:
+    return {"inlineData": {"mimeType": file.media_type, "data": base64_of(file.data)}}
 
 
 def wire_tool(tool: ToolSpec) -> dict[str, object]:

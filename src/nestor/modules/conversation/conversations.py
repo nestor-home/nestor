@@ -26,7 +26,7 @@ from datetime import datetime, timedelta
 
 from nestor.core import Event, PersonId, SessionId, new_id, utc_now
 from nestor.modules.channels import Address, AttachmentKind, Exchange, Medium
-from nestor.modules.cognition.model import Message, reads_whole
+from nestor.modules.cognition.model import Document, Image, Message, reads_whole
 from nestor.modules.cognition.tools import ToolCompleted
 from nestor.modules.conversation.events import (
     AnswerAttached,
@@ -229,7 +229,7 @@ class Conversations:
         """A conversation's last turns as the model reads them, whatever process held them (restarts included);
         nothing without one. Earlier conversations of the session are not replayed, as in Assist.
 
-        `look` gives the files a model looks at itself (`_shown`): the others are mentioned only, a document read as
+        `look` gives the files a model looks at itself (`to_show`): the others are mentioned only, a document read as
         text then."""
         if conversation is None:
             return ()
@@ -303,14 +303,23 @@ def _files(event: Event) -> Sequence[Attached]:
             return ()
 
 
-def to_show(sent: Sequence[Attached], sees: bool, reads: frozenset[str], pages: int | None) -> list[Attached]:
+def to_show(
+    sent: Sequence[Attached],
+    sees: bool,
+    reads: frozenset[str],
+    pages: int | None,
+    *,
+    already: Sequence[Image | Document] = (),
+) -> list[Attached]:
     """The files of a conversation a model looks at itself, the latest first: up to `IMAGES` images when it `sees`, up
     to `DOCUMENTS` documents it reads whole (of a type it `reads`, no longer than its `pages`), each small enough for
     providers (`IMAGE_BYTES`, `DOCUMENT_BYTES`), and together no more than `SHOWN_BYTES`, so that no request grows
-    past what they take."""
-    left = {AttachmentKind.IMAGE: IMAGES if sees else 0, AttachmentKind.FILE: DOCUMENTS}
+    past what they take: counting what the request shows `already` (the history, when a turn's tools add pictures)."""
+    images = sum(isinstance(f, Image) for f in already)
+    left = {AttachmentKind.IMAGE: max(0, IMAGES - images) if sees else 0, AttachmentKind.FILE: DOCUMENTS}
+    left[AttachmentKind.FILE] -= min(DOCUMENTS, len(already) - images)
     largest = {AttachmentKind.IMAGE: IMAGE_BYTES, AttachmentKind.FILE: DOCUMENT_BYTES}
-    budget, wanted = SHOWN_BYTES, []
+    budget, wanted = SHOWN_BYTES - sum(len(f.data) for f in already), []
     for attached in reversed(sent):
         kind, size = attached.kind, attached.blob.size
         counted = attached.read.pages if attached.read else None
