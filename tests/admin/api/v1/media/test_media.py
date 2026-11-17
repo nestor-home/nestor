@@ -1,11 +1,8 @@
 """Watching through the satellites from the admin: who may, by role and by the device's list, and what ends with
 the admin session. The relay is a double; the real one is proven with aiortc in the satellites channel's tests."""
 
-from collections.abc import Mapping
 from pathlib import Path
-from typing import Any
 
-from nestor.core import Capability
 from nestor.modules.accounts import Role
 from nestor.modules.satellites import (
     VIDEO_CAPTURE,
@@ -13,13 +10,11 @@ from nestor.modules.satellites import (
     Device,
     Manifest,
     MediaEnd,
-    MediaRelay,
     MediaSessionClosed,
     MediaSessions,
 )
-from nestor.modules.satellites.media import Ended
 from nestor.testing.journal import MemoryBlobStore
-from nestor.testing.satellites import SOFTWARE, pair_by_code
+from nestor.testing.satellites import SOFTWARE, FilmingRelay, pair_by_code
 
 from ....harness import Harness
 
@@ -29,29 +24,10 @@ CAMERA = Manifest(
 JPEG = b"\xff\xd8\xff\xe0 a picture \xff\xd9"
 
 
-class Relay(MediaRelay):
-    """A camera whose link is up, that takes every session and gives a picture."""
-
-    def linked(self, device_id: str) -> frozenset[Capability] | None:
-        return frozenset({VIDEO_CAPTURE})
-
-    async def start(
-        self, session_id: str, device_id: str, *, video: bool, audio: bool, max_s: int, offer: Mapping[str, Any]
-    ) -> Mapping[str, Any]:
-        return {"sdp": "v=0", "type": "answer"}
-
-    async def stop(self, session_id: str) -> None: ...
-
-    async def snapshot(self, device_id: str) -> bytes:
-        return JPEG
-
-    def on_ended(self, ended: Ended) -> None: ...
-
-
 async def watching(admin: Harness) -> MediaSessions:
     nestor = admin.nestor
     await pair_by_code(nestor.pairing, CAMERA)
-    nestor.media = MediaSessions(nestor.journal, nestor.pairing, Relay(), MemoryBlobStore())
+    nestor.media = MediaSessions(nestor.journal, nestor.pairing, FilmingRelay(JPEG), MemoryBlobStore())
     return nestor.media
 
 

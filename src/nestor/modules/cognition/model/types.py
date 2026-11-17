@@ -52,7 +52,7 @@ class Message:
     tool_calls: tuple[ToolCall, ...] = ()
     tool_call_id: str | None = None  # set on TOOL messages: which call this result answers
     layers: tuple[str, ...] = ()
-    images: tuple[Image, ...] = ()  # on USER messages, for a model that sees images (`LanguageModel.vision`)
+    images: tuple[Image, ...] = ()  # on USER and TOOL messages, for a model that sees images (`LanguageModel.vision`)
     documents: tuple[Document, ...] = ()  # on USER messages, of the types the model reads (`LanguageModel.reads`)
 
     @classmethod

@@ -24,6 +24,7 @@ from nestor.modules.satellites.events import (
     SnapshotTaken,
     SpeechActivityObserved,
 )
+from nestor.modules.satellites.look import LookTools
 from nestor.modules.satellites.media import (
     SNAPSHOT_DAYS,
     LiveSession,
@@ -108,6 +109,7 @@ __all__ = [
     "DeviceUnavailable",
     "EnrollmentRefused",
     "LiveSession",
+    "LookTools",
     "Manifest",
     "MediaAccess",
     "MediaEnd",

@@ -379,6 +379,29 @@ async def test_a_picture_drawn_after_the_turn_goes_with_the_answer_that_brings_i
     assert [home.blobs.blobs[f.blob.digest] for f in attached.files] == [PNG]
 
 
+class Seeing(ScriptedModel):
+    vision = True
+
+
+async def test_a_picture_a_slow_tool_took_is_shown_with_the_notification_that_brings_it() -> None:
+    done = asyncio.Event()
+
+    async def snap(arguments: Mapping[str, object], context: ToolContext) -> Made:
+        await done.wait()
+        return Made("taken", seen=(Attachment(kind=AttachmentKind.IMAGE, data=PNG, media_type="image/png"),))
+
+    model = Seeing(ToolCall("c1", "snap"), "Je regarde.", "La lampe est allumée.")
+    home = Home(model=model, tools=[Tool(spec=ToolSpec("snap", "Take a picture"), run=snap)])
+    async with home.returns():
+        await home.agent.respond(InboundMessage(address=TELEGRAM, sender=Sender("42"), text="La lampe ?")).collect()
+        done.set()
+        await until(home.journal, ToolResultDelivered)
+
+    notification = model.requests[2].messages[-1]
+    assert [i.data for i in notification.images] == [PNG]
+    assert home.telegram.files == [()], "a picture taken for the model is not sent"
+
+
 async def test_a_file_a_delegated_task_made_goes_with_the_answer_that_brings_its_result() -> None:
     pdf = b"%PDF-1.7 rapport"
 

@@ -27,6 +27,7 @@ from datetime import datetime, timedelta
 from nestor.core import Event, PersonId, SessionId, new_id, utc_now
 from nestor.modules.channels import Address, AttachmentKind, Exchange, Medium
 from nestor.modules.cognition.model import Message, reads_whole
+from nestor.modules.cognition.tools import ToolCompleted
 from nestor.modules.conversation.events import (
     AnswerAttached,
     AnswerCut,
@@ -41,6 +42,7 @@ from nestor.modules.conversation.history import (
     Names,
     Shown,
     in_conversation,
+    seen_attached,
     to_messages,
 )
 from nestor.modules.conversation.types import Attached, FallbackReason, Mentioned, Notification
@@ -100,6 +102,7 @@ class Turn:
                 exchange=self.exchange,
                 person=person,
                 thread=notification.thread,
+                seen=notification.seen,
             )
         )
 
@@ -234,8 +237,8 @@ class Conversations:
             *HISTORY_EVENTS, session=address.session, newest_first=True, limit=max_events
         )
         events = in_conversation(reversed(events), conversation)
-        sent = [a for e in events if isinstance(e, UserTurn) for a in e.attachments]
-        wanted = _shown(sent, sees, reads, document_pages)
+        sent = [a for e in events for a in _files(e)]
+        wanted = to_show(sent, sees, reads, document_pages)
         shown = await look(wanted) if look is not None and wanted else {}
         return to_messages(events, names=names, shown=shown, sees=sees)
 
@@ -289,7 +292,18 @@ class Conversations:
             self._open.setdefault(session, _Open(exchange.conversation_id, latest[0].at))
 
 
-def _shown(sent: Sequence[Attached], sees: bool, reads: frozenset[str], pages: int | None) -> list[Attached]:
+def _files(event: Event) -> Sequence[Attached]:
+    """The files that came into the conversation with `event`: a person's, and the pictures a tool gave the model."""
+    match event:
+        case UserTurn():
+            return event.attachments
+        case ToolCompleted() | NotificationTurn():
+            return seen_attached(event.seen)
+        case _:
+            return ()
+
+
+def to_show(sent: Sequence[Attached], sees: bool, reads: frozenset[str], pages: int | None) -> list[Attached]:
     """The files of a conversation a model looks at itself, the latest first: up to `IMAGES` images when it `sees`, up
     to `DOCUMENTS` documents it reads whole (of a type it `reads`, no longer than its `pages`), each small enough for
     providers (`IMAGE_BYTES`, `DOCUMENT_BYTES`), and together no more than `SHOWN_BYTES`, so that no request grows

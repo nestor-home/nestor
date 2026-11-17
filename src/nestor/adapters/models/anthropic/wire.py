@@ -64,6 +64,10 @@ def _blocks(message: Message, provider: str) -> list[Block]:
             if message.tool_call_id is None:
                 raise ContractError(f"{provider}: a tool message must say which call it answers (tool_call_id)")
             result: Block = {"type": "tool_result", "tool_use_id": message.tool_call_id}
+            if message.images:  # what the tool gave the model to look at, in its result
+                text = [{"type": "text", "text": message.content}] if message.content else []
+                images = [{"type": "image", "source": _base64(i.media_type, i.data)} for i in message.images]
+                return [result | {"content": [*text, *images]}]
             return [result | ({"content": message.content} if message.content else {})]
         case Role.ASSISTANT:
             # the reasoning first, as Claude wrote it before its words and calls

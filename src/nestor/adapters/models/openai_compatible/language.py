@@ -21,7 +21,7 @@ import httpx
 from nestor.adapters.common.http import identity, provider_error, streamed_lines
 from nestor.adapters.models.common import brand
 from nestor.adapters.models.openai_compatible.stream import ChunkDecoder
-from nestor.adapters.models.openai_compatible.wire import wire_message, wire_tool
+from nestor.adapters.models.openai_compatible.wire import wire_messages, wire_tool
 from nestor.core import ContractError, ProviderError
 from nestor.modules.cognition import (
     LanguageModel,
@@ -91,7 +91,7 @@ class OpenAICompatibleLanguage(LanguageModel):
     def _body(self, request: ModelRequest) -> dict[str, object]:
         body: dict[str, object] = {
             "model": self._model,
-            "messages": [wire_message(m, self._provider, cache_control=self._cache_control) for m in request.messages],
+            "messages": wire_messages(request.messages, self._provider, cache_control=self._cache_control),
             "stream": True,
         }
         if request.tools:  # some servers reject an empty tool list

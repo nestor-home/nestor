@@ -118,6 +118,7 @@ class Returns(Component):
                 must_tell=_must_tell(ok=returned.ok, asked=deferred.asked),
                 files=returned.files,
                 thread=deferred.thread,
+                seen=returned.seen,
             ),
             origin=deferred.address,
         )

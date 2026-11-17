@@ -14,11 +14,13 @@ type ToolOutput = str | Mapping[str, object] | list[object]
 
 @dataclass(frozen=True, slots=True)
 class Made:
-    """What a tool returns when it made files (a picture): `output` goes to the model, `files` go with the answer,
-    where the channel can send them."""
+    """What a tool returns with files: `output` goes to the model, `files` (a picture it drew) go with the answer,
+    where the channel can send them, and `seen` (a picture it took) go to the model, which looks at them, when it sees
+    images."""
 
     output: ToolOutput
-    files: tuple[Attachment, ...]
+    files: tuple[Attachment, ...] = ()
+    seen: tuple[Attachment, ...] = ()
 
 
 class Risk(StrEnum):

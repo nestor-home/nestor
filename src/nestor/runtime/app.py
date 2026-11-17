@@ -29,7 +29,7 @@ from nestor.adapters.storage.sqlite import (
     SQLiteVerifierStore,
 )
 from nestor.adapters.storage.sqlite.identity import SQLiteVoiceprintStore
-from nestor.core import Component, ContractError, Model, ModelType, ProviderError
+from nestor.core import Component, ContractError, Model, ModelType, PersonId, ProviderError
 from nestor.core.i18n import Locale
 from nestor.modules.accounts import Accounts
 from nestor.modules.activity import ActivityMonitor
@@ -79,7 +79,7 @@ from nestor.modules.journal import Journal
 from nestor.modules.memory import Memories, SearchIndex
 from nestor.modules.memory.assistant import MemoryTools
 from nestor.modules.memory.episodes import Consolidator, Episodes
-from nestor.modules.satellites import MediaSessions, Pairing, SatelliteHost
+from nestor.modules.satellites import LookTools, MediaSessions, Pairing, SatelliteHost, Viewer
 from nestor.modules.system import ReleaseFeed, RestartRequested, Updates
 from nestor.modules.web import WebSearch, WebSearchTools
 from nestor.runtime.config import AdapterConfig, ComponentConfig, ConfigError, ModelConfig, NestorConfig, ProblemCode
@@ -300,6 +300,7 @@ class Nestor:
                 *([self.home.tools] if self.home else []),
                 *connector_tools,
                 *([ImageTools(images)] if (images := optional(drawing, ImageModel, "images")) else []),
+                *([LookTools(self.media, self._viewer)] if self.media else []),
             ],
             in_writing=self.confirmations,
             results=(results := Results(self.journal, self.blobs, budget=config.agent.tool_result_chars)),
@@ -397,6 +398,11 @@ class Nestor:
             self.journal, self.agent.replies, self.tasks, quiet_hours=quiet_hours, timezone=config.persona.timezone
         )
         self._stack = AsyncExitStack()
+
+    def _viewer(self, person: PersonId) -> Viewer | None:
+        """What the person's account lets them do with the devices, read when they ask (their role may change)."""
+        account = self.accounts.of_person(person)
+        return Viewer.of(account.principal()) if account else None
 
     def satellite_url(self, seen_as: str) -> str | None:
         """Where devices reach the first host that serves satellites (for pairing URIs), if any."""

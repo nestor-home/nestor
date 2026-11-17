@@ -73,6 +73,7 @@ class Notification:
     must_tell: bool = False
     files: tuple[FileRef, ...] = ()  # what a tool made, to go with the answer
     thread: str | None = None
+    seen: tuple[FileRef, ...] = ()  # pictures a tool took, for the model to look at
 
     def __post_init__(self) -> None:
         if len(self.text) > NOTIFICATION_CHARS:

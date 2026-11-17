@@ -5,6 +5,7 @@ from nestor.core import Event, PersonId
 from nestor.modules.channels import Address, Exchange, Medium
 from nestor.modules.conversation.types import About, Attached, FallbackReason, Mentioned
 from nestor.modules.identity import Speaker
+from nestor.modules.journal import FileRef
 
 
 class UserTurn(Event, event_type="conversation.turn.user"):
@@ -46,6 +47,7 @@ class NotificationTurn(Event, event_type="conversation.turn.notification"):
     exchange: Exchange
     person: PersonId | None = None
     thread: str | None = None  # what it continues (`Notification.thread`)
+    seen: tuple[FileRef, ...] = ()  # pictures a tool took, for the model to look at (`Notification.seen`)
 
 
 class AssistantTurn(Event, event_type="conversation.turn.assistant"):

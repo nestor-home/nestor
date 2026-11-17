@@ -29,7 +29,13 @@ def wire_contents(messages: Sequence[Message], provider: str) -> list[dict[str, 
         answer="model",
         result=lambda part: "functionResponse" in part,
     )
-    return [{"role": role, "parts": parts} for role, parts in wired]
+    return [{"role": role, "parts": _results_first(parts)} for role, parts in wired]
+
+
+def _results_first(parts: list[Part]) -> list[Part]:
+    """A round's results answer its calls together, before the pictures they gave."""
+    answers = [p for p in parts if "functionResponse" in p]
+    return [*answers, *(p for p in parts if "functionResponse" not in p)] if answers else parts
 
 
 def _parts(message: Message, names: Mapping[str, str], provider: str) -> list[Part]:
@@ -38,7 +44,9 @@ def _parts(message: Message, names: Mapping[str, str], provider: str) -> list[Pa
             call = message.tool_call_id or ""
             if call not in names:
                 raise ContractError(f"{provider}: a tool message must answer a call of the dialogue (tool_call_id)")
-            return [{"functionResponse": {"id": call, "name": names[call], "response": {"result": message.content}}}]
+            answer = {"functionResponse": {"id": call, "name": names[call], "response": {"result": message.content}}}
+            seen = [{"inlineData": {"mimeType": i.media_type, "data": base64_of(i.data)}} for i in message.images]
+            return [answer, *seen]  # what the tool gave the model to look at, with its result
         case Role.ASSISTANT:
             text = [{"text": message.content}] if message.content.strip() else []
             calls = [

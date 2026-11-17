@@ -369,3 +369,28 @@ async def test_a_history_window_opening_on_an_answer_starts_at_the_next_words_of
     )
     await collect(ModelRequest(messages=window))
     assert sent(route)["messages"] == [{"role": "user", "content": [{"type": "text", "text": "Merci."}]}]
+
+
+async def test_a_picture_a_tool_gave_goes_in_its_result_after_the_text(api: respx.MockRouter) -> None:
+    route = api.post(MESSAGES).mock(return_value=streamed(*TEXT_REPLY))
+    picture = Image(media_type="image/jpeg", data=b"jpeg bytes")
+    call = ToolCall("toolu_1", "look", {"room": "salon"})
+    await collect(
+        ModelRequest(
+            messages=(
+                Message.user("La lumière du salon est allumée ?"),
+                Message(role=Role.ASSISTANT, tool_calls=(call,)),
+                Message(role=Role.TOOL, content="taken now", tool_call_id="toolu_1", images=(picture,)),
+            )
+        )
+    )
+    assert sent(route)["messages"][-1]["content"] == [
+        {
+            "type": "tool_result",
+            "tool_use_id": "toolu_1",
+            "content": [
+                {"type": "text", "text": "taken now"},
+                {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": "anBlZyBieXRlcw=="}},
+            ],
+        }
+    ]

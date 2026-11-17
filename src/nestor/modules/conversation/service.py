@@ -38,9 +38,9 @@ from nestor.modules.cognition.model import (
 )
 from nestor.modules.cognition.tools import Toolbox, ToolContext
 from nestor.modules.conversation.attachments import Attachments
-from nestor.modules.conversation.conversations import Conversations, Turn
+from nestor.modules.conversation.conversations import Conversations, Turn, to_show
 from nestor.modules.conversation.events import AssistantTurn
-from nestor.modules.conversation.history import notification_message
+from nestor.modules.conversation.history import Shown, notification_message, seen_attached, tool_message
 from nestor.modules.conversation.mentions import Mentions
 from nestor.modules.conversation.persona import (
     ALREADY_TOLD,
@@ -398,7 +398,8 @@ class AgentReply(Reply):
         )
         opening = self._opening
         if isinstance(opening, Notification):  # not in the journal yet: read as it will be once delivered
-            history = (*history, notification_message(opening))
+            shown = await self._look(opening.seen, model)
+            history = (*history, notification_message(opening, shown=shown, sees=model.vision))
         shared = isinstance(opening, InboundMessage) and opening.sender is None
         said = self._said(history)
         instructions = await agent.instructions(
@@ -441,9 +442,16 @@ class AgentReply(Reply):
             agent.replies.set(self, ReplyPhase.THINKING)
             done = await asyncio.gather(*(agent.toolbox.call(call, context, wait_s=wait_s) for call in calls))
             self._made += [file for called in done for file in called.files]
+            shown = await self._look([f for called in done for f in called.seen], model)
             messages += [
-                Message(role=Role.TOOL, content=d.output, tool_call_id=c.id) for c, d in zip(calls, done, strict=True)
+                tool_message(c.id, d.output, d.seen, shown=shown, sees=model.vision)
+                for c, d in zip(calls, done, strict=True)
             ]
+
+    async def _look(self, seen: Sequence[FileRef], model: LanguageModel) -> Shown:
+        """The pictures of `seen` the model looks at now: none when it does not see images."""
+        wanted = to_show(seen_attached(seen), model.vision, model.reads, model.document_pages)
+        return await self._agent.attachments.shown(wanted) if wanted else {}
 
     async def _told(self, thread: str) -> str:
         """What the person was told in `thread` before, dated in the household's time, each answer cut short."""
