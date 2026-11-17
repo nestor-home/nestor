@@ -6,21 +6,69 @@ on:
   pull_request:
 
 jobs:
-  check:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          python-version: "3.14"
+          enable-cache: true
+      - run: uv sync --locked --all-extras
+      - run: uv run ruff check
+      - run: uv run ruff format --check
+      - run: uv run ty check
+
+  # The suite in parallel: each Python version in three parts (pytest-split, by the recorded durations of
+  # .test_durations), each part on every core of its runner (pytest-xdist). Coverage is measured on the newest version
+  # only, and checked once all its parts are in (`coverage`).
+  test:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         python: ["3.12", "3.13", "3.14"]
+        group: [1, 2, 3]
+    env:
+      COVERAGE_FILE: .coverage.${{ matrix.group }}
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.3.3
         with:
           python-version: ${{ matrix.python }}
+          enable-cache: true
       - run: uv sync --locked --all-extras
-      - run: uv run ruff check
-      - run: uv run ruff format --check
-      - run: uv run ty check
-      - run: uv run pytest
+      - if: matrix.python != '3.14'
+        run: uv run pytest -n auto --splits 3 --group ${{ matrix.group }} --no-cov
+      - if: matrix.python == '3.14'
+        run: >-
+          uv run pytest -n auto --splits 3 --group ${{ matrix.group }} --cov-report= --cov-fail-under=0
+          --store-durations --durations-path durations-${{ matrix.group }}.json
+      - if: matrix.python == '3.14'
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-${{ matrix.group }}
+          path: |
+            .coverage.${{ matrix.group }}
+            durations-${{ matrix.group }}.json
+          include-hidden-files: true
+
+  coverage:
+    needs: [test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          python-version: "3.14"
+          enable-cache: true
+      - run: uv sync --locked --all-extras
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: coverage-*
+          merge-multiple: true
+      - run: uv run coverage combine .coverage.*
+      - run: uv run coverage report --skip-covered --show-missing
 
   web:
     runs-on: ubuntu-latest
@@ -42,10 +90,63 @@ jobs:
         run: pnpm api:generate && git diff --exit-code -- src/api/schema.gen.ts
       - run: pnpm lint
       - run: pnpm typecheck
-      - run: pnpm test
       - run: pnpm build
-      - run: pnpm exec playwright install --with-deps chromium
-      - run: pnpm e2e
+
+  web-unit:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: web/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - run: mkdir -p .claude/skills && pnpm install --frozen-lockfile
+      - run: pnpm test --shard=${{ matrix.shard }}/2
+
+  web-e2e:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: web/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - run: mkdir -p .claude/skills && pnpm install --frozen-lockfile
+      - name: Playwright's browser, cached by its version
+        id: playwright
+        run: echo "version=$(pnpm exec playwright --version | cut -d' ' -f2)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v6
+        id: browsers
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ steps.playwright.outputs.version }}
+      - if: steps.browsers.outputs.cache-hit != 'true'
+        run: pnpm exec playwright install --with-deps chromium
+      - if: steps.browsers.outputs.cache-hit == 'true'
+        run: pnpm exec playwright install-deps chromium
+      - run: pnpm e2e --shard=${{ matrix.shard }}/3
 
   # `pip install nestor-home` without any extra: `nestor init` writes a text-only configuration (a local
   # model, no key; Telegram asked for), `check` accepts it and `run` serves the admin, with no Pipecat installed.
@@ -101,7 +202,7 @@ jobs:
 
   # The single check the branch rules require.
   ci:
-    needs: [check, web, text-only, docker]
+    needs: [lint, test, coverage, web, web-unit, web-e2e, text-only, docker]
     if: always()
     runs-on: ubuntu-latest
     steps:
