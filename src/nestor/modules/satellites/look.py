@@ -57,7 +57,9 @@ class LookTools(ToolProvider):
         if account is None:
             raise ToolFailed(f"{person} has no account that may see the cameras")
         viewer = Viewer.of(account.principal())
-        cameras = [o for o in self._media.offers(viewer) if o.view and o.satellite.room == room]
+        cameras = [
+            o for o in self._media.offers(viewer) if o.view and o.satellite.room == room and o.satellite.access.camera
+        ]
         if not cameras:
             raise ToolFailed(f"{context.person} may not see {room}, or no camera films there")
         connected = [o for o in cameras if o.linked is not None] or cameras

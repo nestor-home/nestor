@@ -8,7 +8,7 @@ tools it calls, round after round. Everything observable goes to the journal.
 import asyncio
 import contextlib
 from collections.abc import AsyncIterator, Callable, Iterable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -26,8 +26,10 @@ from nestor.modules.channels import (
     Sender,
 )
 from nestor.modules.cognition.model import (
+    Document,
     Finished,
     FinishReason,
+    Image,
     LanguageModel,
     Message,
     ModelRequest,
@@ -38,7 +40,7 @@ from nestor.modules.cognition.model import (
 )
 from nestor.modules.cognition.tools import Toolbox, ToolContext
 from nestor.modules.conversation.attachments import Attachments
-from nestor.modules.conversation.conversations import Conversations, Turn, to_show
+from nestor.modules.conversation.conversations import IMAGES, SHOWN_BYTES, Conversations, Turn, to_show
 from nestor.modules.conversation.events import AssistantTurn
 from nestor.modules.conversation.history import Shown, notification_message, seen_attached, tool_message
 from nestor.modules.conversation.mentions import Mentions
@@ -398,8 +400,9 @@ class AgentReply(Reply):
         )
         opening = self._opening
         if isinstance(opening, Notification):  # not in the journal yet: read as it will be once delivered
-            shown = await self._look(opening.seen, model, history)
-            history = (*history, notification_message(opening, shown, model.vision))
+            earlier = list(history)
+            shown = await self._look(opening.seen, model, earlier)
+            history = (*earlier, notification_message(opening, shown, model.vision))
         shared = isinstance(opening, InboundMessage) and opening.sender is None
         said = self._said(history)
         instructions = await agent.instructions(
@@ -447,12 +450,13 @@ class AgentReply(Reply):
                 tool_message(c.id, d.output, d.seen, shown, model.vision) for c, d in zip(calls, done, strict=True)
             ]
 
-    async def _look(self, seen: Sequence[FileRef], model: LanguageModel, request: Sequence[Message]) -> Shown:
-        """The pictures of `seen` the model looks at now, within what the `request` shows already: none when it does
-        not see images."""
-        already = [f for m in request for f in (*m.images, *m.documents)]
-        wanted = to_show(seen_attached(seen), model.vision, model.reads, model.document_pages, already=already)
-        return await self._agent.attachments.shown(wanted) if wanted else {}
+    async def _look(self, seen: Sequence[FileRef], model: LanguageModel, request: list[Message]) -> Shown:
+        """The pictures of `seen` the model looks at now (none when it does not see images). They come first: the
+        oldest pictures of the `request` give way, so that it stays within what providers take."""
+        wanted = to_show(seen_attached(seen), model.vision, model.reads, model.document_pages)
+        shown = await self._agent.attachments.shown(wanted) if wanted else {}
+        _make_room(request, list(shown.values()))
+        return shown
 
     async def _told(self, thread: str) -> str:
         """What the person was told in `thread` before, dated in the household's time, each answer cut short."""
@@ -578,3 +582,16 @@ def _letters(text: str) -> int:
 def _cut(text: str, chars: int) -> str:
     text = " ".join(text.split())
     return text if len(text) <= chars else f"{text[:chars].rstrip()}…"
+
+
+def _make_room(request: list[Message], new: Sequence[Image | Document]) -> None:
+    """Drop the oldest pictures of `request`, in place, until it shows no more than `IMAGES` images and `SHOWN_BYTES`
+    with `new` (their notes stay: the model knows they were there)."""
+
+    def over() -> bool:
+        files = [*(f for m in request for f in (*m.images, *m.documents)), *new]
+        return sum(isinstance(f, Image) for f in files) > IMAGES or sum(len(f.data) for f in files) > SHOWN_BYTES
+
+    for position, message in enumerate(request):
+        while message.images and over():
+            message = request[position] = replace(message, images=message.images[1:])

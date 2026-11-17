@@ -291,3 +291,19 @@ async def test_a_model_that_does_not_see_is_told_a_tool_s_picture_is_beyond_it(m
     await agent.respond(sent("la lampe du salon ?")).collect()
     [result] = [m for m in model.requests[1].messages if m.role is Role.TOOL]
     assert result.images == () and "you cannot see" in result.content
+
+
+async def test_a_picture_just_taken_comes_first_and_the_oldest_give_way(make_agent: MakeAgent) -> None:
+    photos = [
+        Attachment(kind=AttachmentKind.IMAGE, data=f"photo {i}".encode(), media_type="image/png") for i in range(4)
+    ]
+    model = Seeing(*["Vu."] * len(photos), ToolCall("call-1", "snap", {}), "La lampe est allumée.")
+    blobs = MemoryBlobStore()
+    agent = make_agent(model=model, tools=(SNAP,), attachments=Attachments(blobs), blobs=blobs)
+    for photo in photos:
+        await agent.respond(sent("", photo)).collect()
+    await agent.respond(sent("la lampe ?")).collect()
+    request = model.requests[-1]
+    [result] = [m for m in request.messages if m.role is Role.TOOL]
+    assert [i.data for i in result.images] == [PHOTO.data]
+    assert sum(len(m.images) for m in request.messages) == IMAGES
