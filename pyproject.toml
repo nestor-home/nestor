@@ -126,6 +126,8 @@ dev = [
     "types-pyyaml>=6.0.12.20261030",
     "respx>=0.22",
     "jsonschema>=4.26.0",
+    "pytest-xdist==3.8.0",
+    "pytest-split==0.11.0",
 ]
 
 [tool.uv.build-backend]

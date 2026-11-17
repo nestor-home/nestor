@@ -38,14 +38,15 @@ def feed_source(folder: Path, url: str = URL) -> FeedSource:
     return FeedSource("rss", [Watched("Kernel", url)], PublicWeb(accept=FEEDS), folder, every_s=0.01)
 
 
-async def taken(source: FeedSource, quiet_s: float = 0.1) -> list[Incoming]:
-    """What the source yields until it stays quiet for `quiet_s`: each item gives the next one that long again, so a
-    slow runner never cuts a batch in two."""
+async def taken(source: FeedSource, count: int = 0, quiet_s: float = 0.1, deadline_s: float = 5.0) -> list[Incoming]:
+    """What the source yields: the `count` items expected (each within `deadline_s`, reached only when one is
+    missing), then whatever more comes before it stays quiet for `quiet_s`."""
     found: list[Incoming] = []
     items = source.items()
     try:
         while True:
-            found.append(await asyncio.wait_for(anext(items), quiet_s))
+            wait_s = deadline_s if len(found) < count else quiet_s
+            found.append(await asyncio.wait_for(anext(items), wait_s))
     except TimeoutError:
         return found
     finally:
@@ -74,7 +75,7 @@ async def test_a_new_entry_is_an_item_with_its_title_link_summary_and_date(
     web.get(URL).mock(side_effect=feed)
     async with feed_source(tmp_path / "rss") as source:
         feed.add("Linux 7.0 released")
-        (item,) = await taken(source)
+        (item,) = await taken(source, count=1)
     assert (item.kind, item.title, item.sender) == ("feed", "Linux 7.0 released", "Kernel")
     assert item.body == "Les nouveautés\n\nhttps://kernel.example/0"
     assert item.data["published"] == "2026-11-13T08:00:00+00:00"
@@ -102,7 +103,7 @@ async def test_what_was_in_the_feed_before_is_not_new_and_a_republished_entry_co
     web.get(URL).mock(side_effect=feed)
     async with feed_source(tmp_path / "rss") as source:
         feed.add("Linux 7.0")
-        assert [i.title for i in await taken(source)] == ["Linux 7.0"]
+        assert [i.title for i in await taken(source, count=1)] == ["Linux 7.0"]
     feed.entries.reverse()  # the feed reorders: its ETag changes, its entries do not
     async with feed_source(tmp_path / "rss") as restarted:
         assert await taken(restarted) == []
@@ -118,7 +119,7 @@ async def test_an_entry_without_a_title_or_a_readable_date_is_named_by_its_summa
             b"<rss><channel><item><guid>1</guid><pubDate>someday</pubDate>"
             b"<description>Linux 7.0 is out, with a new scheduler.</description></item></channel></rss>"
         )
-        (item,) = await taken(source)
+        (item,) = await taken(source, count=1)
     assert item.title == "Linux 7.0 is out, with a new scheduler."
     assert item.data["published"] is None
 
@@ -144,7 +145,7 @@ async def test_a_feed_that_cannot_be_read_yields_nothing_and_is_read_again_once_
         assert await taken(source) == []
         feed.broken = None
         feed.add("Linux 7.0")
-        assert [i.title for i in await taken(source)] == ["Linux 7.0"]
+        assert [i.title for i in await taken(source, count=1)] == ["Linux 7.0"]
 
 
 async def test_a_feed_that_asks_to_wait_is_not_read_again_before_then(web: respx.MockRouter, tmp_path: Path) -> None:
@@ -174,9 +175,9 @@ async def test_an_entry_still_listed_by_a_long_feed_is_never_new_twice(web: resp
     web.get(URL).mock(side_effect=feed)
     async with feed_source(tmp_path / "rss") as source:
         feed.add("Linux 7.0")
-        assert [i.title for i in await taken(source)] == ["Linux 7.0"]
+        assert [i.title for i in await taken(source, count=1)] == ["Linux 7.0"]
         feed.add("Linux 7.1")
-        assert [i.title for i in await taken(source)] == ["Linux 7.1"]
+        assert [i.title for i in await taken(source, count=1)] == ["Linux 7.1"]
 
 
 async def test_an_entry_whose_handling_was_cut_short_comes_again_after_a_restart(
@@ -191,7 +192,7 @@ async def test_an_entry_whose_handling_was_cut_short_comes_again_after_a_restart
         assert (await anext(items)).title == "Linux 7.0"
         await items.aclose()  # stopped while the entry was being triaged: the next one was never asked for
     async with feed_source(tmp_path / "rss") as restarted:
-        assert [i.title for i in await taken(restarted)] == ["Linux 7.0", "Linux 7.1"]
+        assert [i.title for i in await taken(restarted, count=2)] == ["Linux 7.0", "Linux 7.1"]
 
 
 async def test_a_feed_that_redirects_to_a_malformed_address_or_hangs_is_tried_again(
@@ -216,6 +217,6 @@ async def test_a_feed_that_redirects_to_a_malformed_address_or_hangs_is_tried_ag
         route.mock(side_effect=feed)
         assert await taken(source) == [], "the first read that answers takes the feed as it is"
         feed.add("Linux 7.0")
-        assert [i.title for i in await taken(source)] == ["Linux 7.0"]
+        assert [i.title for i in await taken(source, count=1)] == ["Linux 7.0"]
     finally:
         await source.close()

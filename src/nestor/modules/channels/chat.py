@@ -52,6 +52,7 @@ class LiveAnswer:
         self._parts: list[Part] = []
         self._changed = asyncio.Event()
         self._over = False
+        self._stopped = False  # once stopped, nothing more reaches the page: what it has is what is kept
         self._task = asyncio.create_task(self._run())
 
     @property
@@ -73,6 +74,7 @@ class LiveAnswer:
         """Stop writing (asked, or the channel closing): what was written so far reached the page, and stays as it
         is; the assistant stops working on it."""
         if not self._over:
+            self._stopped = True
             await self._reply.interrupt(self._shown())
         self._task.cancel()
         await asyncio.wait({self._task})
@@ -105,6 +107,8 @@ class LiveAnswer:
             self._on_over(self)
 
     def _add(self, part: Part) -> None:
+        if self._stopped:
+            return
         self._parts.append(part)
         self._wake()
 

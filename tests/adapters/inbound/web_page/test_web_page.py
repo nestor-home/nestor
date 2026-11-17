@@ -51,16 +51,19 @@ def page_source(folder: Path, url: str = URL) -> PageSource:
     )
 
 
-async def taken(source: PageSource, wait_s: float = 0.1) -> list[Incoming]:
+async def taken(source: PageSource, count: int = 0, quiet_s: float = 0.1, deadline_s: float = 5.0) -> list[Incoming]:
+    """What the source yields: the `count` items expected (each within `deadline_s`, reached only when one is
+    missing), then whatever more comes before it stays quiet for `quiet_s`."""
     found: list[Incoming] = []
-
-    async def take() -> None:
-        async for item in source.items():
-            found.append(item)
-
-    with pytest.raises(TimeoutError):
-        await asyncio.wait_for(take(), wait_s)
-    return found
+    items = source.items()
+    try:
+        while True:
+            wait_s = deadline_s if len(found) < count else quiet_s
+            found.append(await asyncio.wait_for(anext(items), wait_s))
+    except TimeoutError:
+        return found
+    finally:
+        await items.aclose()
 
 
 async def test_a_change_of_the_content_is_one_item_showing_what_changed(web: respx.MockRouter, tmp_path: Path) -> None:
@@ -68,7 +71,7 @@ async def test_a_change_of_the_content_is_one_item_showing_what_changed(web: res
     async with page_source(tmp_path / "pages") as source:
         assert await taken(source) == [], "the page as it was first read is not a change"
         route.respond(200, html=lamp("45 €", menu="Soldes !"))
-        (item,) = await taken(source)
+        (item,) = await taken(source, count=1)
     assert (item.kind, item.title, item.sender) == ("page", "Lampe FADO", "la lampe")
     assert "- Prix : 59 €\n+ Prix : 45 €" in item.body
     assert "Soldes" not in item.body, "menus are not the page's content"
@@ -87,7 +90,7 @@ async def test_a_change_made_while_down_comes_after_a_restart_and_once(web: resp
         pass
     route.respond(200, html=lamp("45 €"))
     async with page_source(tmp_path / "pages") as restarted:
-        assert len(await taken(restarted)) == 1
+        assert len(await taken(restarted, count=1)) == 1
     async with page_source(tmp_path / "pages") as again:
         assert await taken(again) == []
 
@@ -100,7 +103,7 @@ async def test_an_unreachable_page_yields_nothing_until_it_answers_again(web: re
         route.respond(200, html=lamp("59 €"))
         assert await taken(source) == [], "an outage is not a change"
         route.respond(200, html=lamp("45 €"))
-        assert len(await taken(source)) == 1
+        assert len(await taken(source, count=1)) == 1
 
 
 @pytest.mark.parametrize("url", ["http://nas.home:5000/", "http://192.168.1.1/admin", "http://[::1]/"])
@@ -128,7 +131,7 @@ async def test_a_long_page_shows_only_what_changed(
     route = web.get(URL).respond(200, html=long_page("Prix : 59 €", "Fin"))
     async with page_source(tmp_path / "pages") as source:
         route.respond(200, html=long_page(*change))
-        (item,) = await taken(source, wait_s=1.0)  # reading and comparing a long page takes a while on a busy machine
+        (item,) = await taken(source, count=1)
     changes = item.body.partition("(- before, + now):\n")[2]
     assert changes == shown or (shown == "further down" and shown in changes and "+ " not in changes)
 
@@ -137,7 +140,7 @@ async def test_a_changed_line_that_starts_like_a_diff_header_is_shown(web: respx
     route = web.get(URL).respond(200, html=lamp("59 €").replace("En stock", "++ En stock"))
     async with page_source(tmp_path / "pages") as source:
         route.respond(200, html=lamp("59 €").replace("En stock", "++ Rupture"))
-        (item,) = await taken(source)
+        (item,) = await taken(source, count=1)
     assert "- ++ En stock\n+ ++ Rupture" in item.body
 
 
@@ -160,4 +163,4 @@ async def test_a_reader_that_fails_does_not_stop_the_source(web: respx.MockRoute
         assert await taken(source) == []
         reader.broken = False
         route.respond(200, html=lamp("45 €"))
-        assert len(await taken(source)) == 1
+        assert len(await taken(source, count=1)) == 1

@@ -209,6 +209,15 @@ messages come from `GET /api/v1/i18n/{locale}`), and the agent's figure is the
   `web/src/i18n/catalog.test.ts` fails on all three. The agent speaks in the first person only where it
   speaks (its line on the home page, empty states, toasts after what it does); system texts stay neutral.
 
+### Front tests
+
+Vitest runs the test files in one module graph (`isolate: false`) and in random order: whatever a test changes
+outside React must be back as it was when it ends. `src/test/setup.ts` does it for everything shared: rendered
+trees, the mock server's handlers and data, spies and stubbed globals, the locale, `localStorage` and
+`sessionStorage`, the CSRF token, faked time. A test that changes anything else (a module's own state, a global
+it sets by hand) puts it back in its own `afterEach`, or the reset goes into `setup.ts` when several need it. A file
+that replaces a module with `vi.mock` is listed in `MOCKING` (`vite.config.ts`), which runs it in a graph of its own.
+
 ## Benchmarks
 
 A variant is a fragment of `nestor.yaml` (a whole one works too), with the suite's knobs under `bench`;

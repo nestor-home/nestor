@@ -29,9 +29,16 @@ class StateFile:
         return state if isinstance(state, dict) else {}
 
     async def save(self, state: dict[str, Any]) -> None:
+        """Write `state`; a caller stopped meanwhile (cancelled) stops once the write is done, so that whoever reads
+        the file next (a restart) finds it."""
         text = json.dumps(state, ensure_ascii=False)
         async with self._writing:
-            await asyncio.to_thread(self._write, text)
+            writing = asyncio.ensure_future(asyncio.to_thread(self._write, text))
+            try:
+                await asyncio.shield(writing)
+            except asyncio.CancelledError:
+                await writing
+                raise
 
     def _write(self, text: str) -> None:
         folder = self.path.parent
