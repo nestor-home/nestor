@@ -8,8 +8,6 @@ import io
 import logging
 import re
 
-from pypdf import PdfReader
-
 from nestor.modules.conversation import DocumentReader
 
 logger = logging.getLogger(__name__)
@@ -39,6 +37,8 @@ def pdf_pages(data: bytes) -> int | None:
 
 @functools.lru_cache(maxsize=4)  # its text, then its pages, are asked of the same document: parsed once
 def _pdf(data: bytes) -> tuple[str | None, int | None]:
+    from pypdf import PdfReader  # slow to import: only once a PDF is read, not when Nestor starts
+
     try:
         reader = PdfReader(io.BytesIO(data))
         if reader.is_encrypted and not reader.decrypt(""):

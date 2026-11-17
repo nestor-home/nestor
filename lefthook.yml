@@ -1,0 +1,25 @@
+# Checks the pushed files before they leave the machine, with the versions the locks pin (CI runs the same).
+# Install once: `uv run lefthook install`.
+pre-push:
+  parallel: true
+  commands:
+    ruff-format:
+      glob: "*.py"
+      run: uv run ruff format --check {push_files}
+    ruff-check:
+      glob: "*.py"
+      run: uv run ruff check {push_files}
+    ty:
+      glob: "*.py"
+      run: uv run ty check
+    lock:
+      glob: "{pyproject.toml,uv.lock}"
+      run: uv lock --check
+    biome:
+      root: web/
+      glob: "*.{js,jsx,ts,tsx,json,jsonc,css,grit}"
+      run: pnpm exec biome check --no-errors-on-unmatched {push_files}
+    tsc:
+      root: web/
+      glob: "*.{ts,tsx}"
+      run: pnpm typecheck

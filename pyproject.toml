@@ -122,12 +122,13 @@ dev = [
     "pytest-cov==7.1.0",
     "ruff==0.17.5",
     "ty==0.0.104",
-    "pre-commit==4.7.0",
     "types-pyyaml>=6.0.12.20261030",
     "respx>=0.22",
     "jsonschema>=4.26.0",
     "pytest-xdist==3.8.0",
     "pytest-split==0.11.0",
+    "pytest-randomly==5.1.0",
+    "lefthook==2.2.2",
 ]
 
 [tool.uv.build-backend]
