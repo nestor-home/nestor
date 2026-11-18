@@ -43,7 +43,7 @@ export function HistoryPage() {
                     <span className="block font-medium text-ink">
                       {dayLabel(entry.at)} · {clock(entry.at)}
                     </span>
-                    <span className="block text-[0.9rem] text-ink-muted">
+                    <span className="block text-body text-ink-muted">
                       <Ago iso={entry.at} /> · {t("cfg-history-size", { size: entry.size })}
                     </span>
                   </span>
@@ -111,7 +111,7 @@ function Version({ entry, onRestored }: { entry: HistoryEntry; onRestored: () =>
           >
             {t("cfg-restore-text")}
           </Confirm>
-          {editor.dirty ? <p className="self-center text-[0.85rem] text-ink-muted">{t("cfg-restore-dirty")}</p> : null}
+          {editor.dirty ? <p className="self-center text-meta text-ink-muted">{t("cfg-restore-dirty")}</p> : null}
         </>
       }
     >

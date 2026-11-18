@@ -126,7 +126,7 @@ function Session({ device, purpose, close }: { device: MediaDevice; purpose: Med
         {shows ? null : (
           <div className="grid justify-items-center gap-3 p-6 text-center">
             <AgentFigure state={state.status === "connecting" ? "thinking" : "idle"} size="md" />
-            <p className="text-[0.95rem]">
+            <p className="text-body">
               {state.status === "connecting"
                 ? t("cam-connecting")
                 : state.status === "ended"

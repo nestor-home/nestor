@@ -40,7 +40,7 @@ export function ConnectSheet({
           <Failure error={connector.error} retry={() => void connector.refetch()} />
         ) : (
           <div className="grid gap-7 pt-6">
-            <p className="flex items-center gap-3 text-[0.9rem] text-ink-muted">
+            <p className="flex items-center gap-3 text-body text-ink-muted">
               <ServiceTile kind={connector.data.brand ?? connector.data.kind} />
               <span>
                 {authLabel(connector.data.auth)}

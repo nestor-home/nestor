@@ -30,7 +30,7 @@ export function ConfigOverview() {
         meta={
           <>
             <FileCog className="size-3.5 shrink-0" aria-hidden="true" />
-            <span className="font-mono text-xs [overflow-wrap:anywhere]">{state.path}</span>
+            <span className="font-mono text-micro [overflow-wrap:anywhere]">{state.path}</span>
           </>
         }
       >
@@ -67,7 +67,7 @@ function PageCard({ page }: { page: ConfigPage }) {
           {people.length ? (
             people.slice(0, MARKS).map((p, i) => (
               // biome-ignore lint/suspicious/noArrayIndexKey: a person's position is its place in the file
-              <Pebble key={i} name={String(p.name || p.id || "")} className="size-10 text-[1rem]" />
+              <Pebble key={i} name={String(p.name || p.id || "")} size="lg" />
             ))
           ) : glance.marks.length ? (
             glance.marks.slice(0, MARKS).map((mark) => <ServiceTile key={mark} kind={mark} />)
@@ -75,7 +75,7 @@ function PageCard({ page }: { page: ConfigPage }) {
             <IconTile icon={page.icon} />
           )}
           {Math.max(people.length, glance.marks.length) > MARKS ? (
-            <span className="pl-1 text-[0.88rem] text-ink-muted tabular">
+            <span className="pl-1 text-meta text-ink-muted tabular">
               {t("cfg-sum-extra", { count: Math.max(people.length, glance.marks.length) - MARKS })}
             </span>
           ) : null}
@@ -85,8 +85,8 @@ function PageCard({ page }: { page: ConfigPage }) {
           </span>
         </span>
         <span>
-          <span className="block font-serif text-[1.35rem] leading-tight text-ink">{pageTitle(page, schema, t)}</span>
-          <span className="mt-1.5 line-clamp-2 block text-[0.95rem] [overflow-wrap:anywhere] text-ink-muted">
+          <span className="block title-card text-ink">{pageTitle(page, schema, t)}</span>
+          <span className="mt-1.5 line-clamp-2 block text-body [overflow-wrap:anywhere] text-ink-muted">
             {glance.line}
           </span>
         </span>

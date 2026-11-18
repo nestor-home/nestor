@@ -41,8 +41,8 @@ export function FailedView({ kind, error }: { kind: string | undefined; error: s
           <div className="surface flex max-w-2xl gap-4 p-4">
             {kind ? <ServiceTile kind={kind} /> : <IconTile icon={ShieldX} tone="brick" />}
             <div className="min-w-0 flex-1">
-              {kind ? <p className="text-[1.02rem] font-medium text-ink">{kindName(kind)}</p> : null}
-              <p className="text-[0.95rem] text-ink-muted">{known ? t(known.next) : t("conn-failed-other-next")}</p>
+              {kind ? <p className="text-lead font-medium text-ink">{kindName(kind)}</p> : null}
+              <p className="text-body text-ink-muted">{known ? t(known.next) : t("conn-failed-other-next")}</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {kind ? (
                   <Link to="/connections/catalogue" search={{ connect: kind }} className={buttonVariants()}>

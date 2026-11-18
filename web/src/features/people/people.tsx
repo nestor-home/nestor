@@ -62,13 +62,7 @@ export function PersonFrame({ id, children }: { id: string; children: ReactNode 
     <>
       <PageHeader
         crumbs={<Crumbs trail={trail} />}
-        mark={
-          <Pebble
-            name={person.name}
-            away={person.presence?.home === false}
-            className="size-14 text-[1.5rem] sm:size-16"
-          />
-        }
+        mark={<Pebble name={person.name} away={person.presence?.home === false} size="2xl" />}
         title={person.name}
         meta={
           <>
@@ -114,7 +108,7 @@ function Channel({ account, first }: { account: string; first: boolean }) {
       <ServiceTile kind={account} />
       <span className="min-w-0 flex-1">
         <span className="block font-medium text-ink">{kindName(account)}</span>
-        {handle ? <span className="block truncate font-mono text-[0.8rem] text-ink-muted">{handle}</span> : null}
+        {handle ? <span className="block truncate font-mono text-meta text-ink-muted">{handle}</span> : null}
       </span>
       {first ? <Tag tone="accent">{t("people-reach-first")}</Tag> : null}
     </li>
@@ -154,7 +148,7 @@ export function PersonOverview({ person: p }: { person: Person }) {
             <IconTile icon={UserRound} tone={p.account ? "sage" : "ink"} />
             <span className="min-w-0 flex-1">
               <span className="block font-medium text-ink">{t("people-admin")}</span>
-              <span className="block truncate text-[0.9rem] text-ink-muted">
+              <span className="block truncate text-body text-ink-muted">
                 {account
                   ? `${account.login} · ${roleLabel(account.role)}`
                   : p.account
@@ -175,9 +169,7 @@ export function PersonOverview({ person: p }: { person: Person }) {
           </li>
         </ul>
         {p.reach ? null : (
-          <p className="mt-3 text-[0.92rem] text-ink-muted">
-            {t("people-reached-origin", { assistant: me.assistant })}
-          </p>
+          <p className="mt-3 text-body text-ink-muted">{t("people-reached-origin", { assistant: me.assistant })}</p>
         )}
       </Section>
 
@@ -248,7 +240,7 @@ export function PersonConnections({ person: p }: { person: Person }) {
             </span>
             <span className="min-w-0">
               <span className="block truncate font-medium text-ink">{c.account}</span>
-              <span className="block truncate text-[0.9rem] text-ink-muted">{c.title}</span>
+              <span className="block truncate text-body text-ink-muted">{c.title}</span>
             </span>
           </Link>
         </li>

@@ -113,7 +113,7 @@ function SubjectChips({ search, onChange }: { search: JournalSearch; onChange: (
       aria-label={t("jr-subject-remove", { subject: t(`jr-subject-${key}`), id: search[key] ?? "" })}
     >
       {t(`jr-subject-${key}`)}
-      <span className="truncate font-mono text-[0.75rem] font-normal">{search[key]}</span>
+      <span className="truncate font-mono text-micro font-normal">{search[key]}</span>
       <X className="text-ink-faint" aria-hidden="true" />
     </Button>
   ));
@@ -177,7 +177,7 @@ export function FilterSheet({
             <SlidersHorizontal aria-hidden="true" />
             {t("jr-filters")}
             {chosen.length ? (
-              <span className="rounded-full bg-ink px-1.5 text-[0.75rem] text-paper tabular">{chosen.length}</span>
+              <span className="rounded-full bg-ink px-1.5 text-micro text-paper tabular">{chosen.length}</span>
             ) : null}
           </Button>
         }
@@ -208,7 +208,7 @@ export function FilterSheet({
                                   : [f.key],
                             )
                           }
-                          className="flex min-h-12 w-full items-center gap-3 px-4 text-left text-[0.98rem] aria-pressed:bg-paper-sunken"
+                          className="flex min-h-12 w-full items-center gap-3 px-4 text-left text-body aria-pressed:bg-paper-sunken"
                         >
                           <span
                             aria-hidden="true"
@@ -221,7 +221,7 @@ export function FilterSheet({
                           </span>
                           {f.icon}
                           <span className="flex-1 truncate">{f.label}</span>
-                          <span className="text-[0.85rem] text-ink-muted tabular">{number(f.count)}</span>
+                          <span className="text-meta text-ink-muted tabular">{number(f.count)}</span>
                         </button>
                       </li>
                     );
@@ -302,10 +302,10 @@ function FacetFilter({
         {chosen.length ? (
           <span className="flex items-center gap-1 font-normal">
             {chosen.length > 2 ? (
-              <span className="text-[0.8rem]">{t("jr-facet-selected", { count: chosen.length })}</span>
+              <span className="text-meta">{t("jr-facet-selected", { count: chosen.length })}</span>
             ) : (
               chosen.map((f) => (
-                <span key={f.key} className="rounded-full bg-paper-sunken px-2 text-[0.8rem]">
+                <span key={f.key} className="rounded-full bg-paper-sunken px-2 text-meta">
                   {f.label}
                 </span>
               ))
@@ -335,7 +335,7 @@ function FacetFilter({
                     </span>
                     {f.icon}
                     <span className="flex-1 truncate">{f.label}</span>
-                    <span className="text-[0.8rem] text-ink-muted tabular">{number(f.count)}</span>
+                    <span className="text-meta text-ink-muted tabular">{number(f.count)}</span>
                   </CommandItem>
                 );
               })}

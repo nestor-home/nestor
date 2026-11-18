@@ -1,4 +1,3 @@
-import { ArrowRight } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
@@ -32,9 +31,9 @@ export function PageHeader({
             <span className="min-w-0">{title}</span>
           </h1>
           {meta ? (
-            <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.85rem] text-ink-muted">{meta}</p>
+            <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-meta text-ink-muted">{meta}</p>
           ) : null}
-          {children ? <p className="mt-2 max-w-[60ch] text-[1.05rem] text-ink-muted">{children}</p> : null}
+          {children ? <p className="mt-2 max-w-[60ch] text-lead text-ink-muted">{children}</p> : null}
         </div>
         {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
       </div>
@@ -65,7 +64,7 @@ export function Section({
         <h2 id={headingId} className="display-3 flex items-baseline gap-2.5 text-ink">
           {title}
           {count ? (
-            <span className="rounded-full bg-ink px-2 py-0.5 font-sans text-[0.75rem] font-semibold text-paper tabular">
+            <span className="rounded-full bg-ink px-2 py-0.5 font-sans text-micro font-semibold text-paper tabular">
               {count}
             </span>
           ) : null}
@@ -77,15 +76,10 @@ export function Section({
   );
 }
 
-/** The arrow that ends a linked row, shown on wider screens, darker on hover (the row is the `group`). */
-export function RowArrow() {
-  return <ArrowRight className="hidden size-3.5 text-ink-faint group-hover:text-ink sm:block" aria-hidden="true" />;
-}
-
 /** The opening sentence of a detail screen, in the serif at reading size. */
 export function Lead({ children }: { children: ReactNode }) {
   return (
-    <p className="max-w-2xl font-serif text-[1.2rem] leading-relaxed text-pretty [font-variation-settings:'opsz'_20]">
+    <p className="max-w-2xl font-serif text-heading leading-relaxed text-pretty [font-variation-settings:'opsz'_20]">
       {children}
     </p>
   );
@@ -110,7 +104,7 @@ export function Facts({
     <div className="@container min-w-0">
       <dl
         className={cn(
-          "grid gap-y-2.5 text-sm",
+          "grid gap-y-2.5 text-meta",
           // in a narrow place (an aside, a sheet on a phone) each caption sits above its value
           narrow
             ? "grid-cols-1 gap-x-4 gap-y-1.5 @[19rem]:grid-cols-[7rem_1fr] [&_dd]:mb-1.5 @[19rem]:[&_dd]:mb-0"

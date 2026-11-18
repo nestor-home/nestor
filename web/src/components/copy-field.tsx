@@ -23,7 +23,7 @@ export function CopyField({ value, label }: { value: string; label: string }) {
   const { copied, copy } = useCopy(value);
   return (
     <div className="flex items-stretch overflow-hidden rounded-md border border-rule-strong bg-paper-sunken">
-      <code className="min-w-0 flex-1 truncate px-3 py-2 font-mono text-[0.8rem] text-ink select-all" title={value}>
+      <code className="min-w-0 flex-1 truncate px-3 py-2 font-mono text-meta text-ink select-all" title={value}>
         {value}
       </code>
       <Button
@@ -33,7 +33,7 @@ export function CopyField({ value, label }: { value: string; label: string }) {
         aria-label={tr("action-copy-label", { what: label })}
       >
         {copied ? <Check className="text-sage" /> : <Copy />}
-        <span className="font-mono text-xs">{copied ? tr("action-copied") : tr("action-copy")}</span>
+        <span className="font-mono text-micro">{copied ? tr("action-copied") : tr("action-copy")}</span>
       </Button>
     </div>
   );

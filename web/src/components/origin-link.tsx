@@ -16,7 +16,7 @@ export function OriginLink({ origin }: { origin: { session: string; channel: str
         <MessageSquareText className="size-4 shrink-0" aria-hidden="true" />
         {t("origin-a-conversation")}
       </span>
-      <span className="inline-flex items-center gap-1 text-[0.85rem] whitespace-nowrap text-ink-muted">
+      <span className="inline-flex items-center gap-1 text-meta whitespace-nowrap text-ink-muted">
         <KindMark kind={origin.channel} className="size-3" label={false} />
         {kindName(origin.channel)}
       </span>

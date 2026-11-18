@@ -17,7 +17,7 @@ export function FormActions({
 }) {
   return (
     <div data-slot="form-actions" className={cn("flex flex-wrap items-center justify-end gap-3", className)}>
-      {hint ? <span className="mr-auto text-xs text-ink-muted">{hint}</span> : null}
+      {hint ? <span className="mr-auto text-micro text-ink-muted">{hint}</span> : null}
       {children}
     </div>
   );

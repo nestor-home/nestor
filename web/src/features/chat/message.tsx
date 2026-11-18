@@ -42,7 +42,7 @@ export function PersonMessage({
     >
       {files}
       {text ? (
-        <div className="rounded-3xl rounded-br-md bg-paper-sunken px-4 py-2.5 text-[1rem] leading-relaxed whitespace-pre-wrap text-ink [overflow-wrap:anywhere]">
+        <div className="rounded-3xl rounded-br-md bg-paper-sunken px-4 py-2.5 text-lead leading-relaxed whitespace-pre-wrap text-ink [overflow-wrap:anywhere]">
           <MentionText text={text} mentions={mentions} />
         </div>
       ) : null}
@@ -55,7 +55,7 @@ export const Answer = memo(function Answer({ text, streaming }: { text: string; 
   const translations = useTranslations();
   return (
     <Streamdown
-      className="chat-markdown min-w-0 text-[1rem] leading-7 text-ink [overflow-wrap:anywhere]"
+      className="chat-markdown min-w-0 text-lead leading-7 text-ink [overflow-wrap:anywhere]"
       isAnimating={streaming}
       animated={streaming ? { animation: "fadeIn", duration: 220 } : false}
       caret={streaming ? "block" : undefined}
@@ -114,7 +114,7 @@ export function AnswerActions({ text, interrupted }: { text: string; interrupted
         </TooltipTrigger>
         <TooltipContent>{t(copied ? "action-copied" : "action-copy")}</TooltipContent>
       </Tooltip>
-      {interrupted ? <span className="text-[0.85rem] text-ink-muted">{t("chat-stopped")}</span> : null}
+      {interrupted ? <span className="text-meta text-ink-muted">{t("chat-stopped")}</span> : null}
     </div>
   );
 }
@@ -131,10 +131,10 @@ export function ToolCall({ tool }: { tool: ChatTool }) {
   const t = useT();
   const args = Object.keys(tool.arguments).length ? JSON.stringify(tool.arguments, null, 2) : null;
   return (
-    <Collapsible className="group/tool surface w-full min-w-0 text-[0.9rem]">
+    <Collapsible className="group/tool surface w-full min-w-0 text-body">
       <CollapsibleTrigger className="flex w-full items-center gap-3 px-3 py-2.5 text-left outline-none focus-visible:outline-2 focus-visible:outline-ember">
-        <IconTile icon={Wrench} className="size-8" />
-        <span className="min-w-0 flex-1 truncate font-mono text-[0.82rem] text-ink">{tool.name}</span>
+        <IconTile icon={Wrench} size="sm" />
+        <span className="min-w-0 flex-1 truncate font-mono text-meta text-ink">{tool.name}</span>
         <Status tone={TOOL_TONE[tool.state]} className="shrink-0">
           {tool.state === "done" && tool.duration_s !== null
             ? t("chat-tool-done-in", { duration: duration(tool.duration_s) })
@@ -163,7 +163,7 @@ function ToolBlock({ label, children }: { label: string; children: string }) {
   return (
     <div className="grid gap-1.5">
       <p className="caption">{label}</p>
-      <pre className="max-h-64 overflow-auto rounded-lg bg-paper-sunken px-3 py-2 font-mono text-[0.8rem] leading-relaxed whitespace-pre-wrap text-ink [overflow-wrap:anywhere]">
+      <pre className="max-h-64 overflow-auto rounded-lg bg-paper-sunken px-3 py-2 font-mono text-meta leading-relaxed whitespace-pre-wrap text-ink [overflow-wrap:anywhere]">
         {children}
       </pre>
     </div>
@@ -174,7 +174,7 @@ function ToolBlock({ label, children }: { label: string; children: string }) {
 export function Note({ text, assistant }: { text: string; assistant: string }) {
   const t = useT();
   return (
-    <div className="flex items-center gap-3 text-[0.88rem] text-ink-muted" role="note">
+    <div className="flex items-center gap-3 text-meta text-ink-muted" role="note">
       <span className="h-px flex-1 bg-rule" aria-hidden="true" />
       <span className="flex items-center gap-1.5">
         <span className="size-1.5 rounded-full bg-ember" aria-hidden="true" />
@@ -187,7 +187,7 @@ export function Note({ text, assistant }: { text: string; assistant: string }) {
 
 export function Fallback({ text }: { text: string }) {
   return (
-    <p className="flex items-start gap-2 text-[0.95rem] text-brick">
+    <p className="flex items-start gap-2 text-body text-brick">
       <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
       {text}
     </p>
@@ -222,10 +222,10 @@ export function Files({ files, align = "start" }: { files: ChatFile[]; align?: "
                 download={file.name ?? true}
                 className="surface flex max-w-xs items-center gap-3 p-2.5 pr-4 text-ink"
               >
-                <IconTile icon={FileText} className="size-9" />
+                <IconTile icon={FileText} size="sm" />
                 <span className="min-w-0">
-                  <span className="block truncate text-[0.95rem] font-medium">{name}</span>
-                  <span className="block text-[0.82rem] text-ink-muted tabular">{fileSize(file.size)}</span>
+                  <span className="block truncate text-body font-medium">{name}</span>
+                  <span className="block text-meta text-ink-muted tabular">{fileSize(file.size)}</span>
                 </span>
               </a>
             )}
@@ -240,12 +240,12 @@ function Recording({ url, name, transcript }: { url: string; name: string | null
   const t = useT();
   return (
     <div className="surface grid w-80 max-w-full gap-1.5 p-2.5">
-      {name ? <p className="truncate px-1 text-[0.88rem] font-medium text-ink">{name}</p> : null}
+      {name ? <p className="truncate px-1 text-meta font-medium text-ink">{name}</p> : null}
       <audio controls preload="metadata" src={url} className="h-9 w-full">
         <track kind="captions" />
       </audio>
       {transcript ? (
-        <details className="px-1 text-[0.9rem] text-ink-muted">
+        <details className="px-1 text-body text-ink-muted">
           <summary className="cursor-pointer select-none">{t("chat-transcript")}</summary>
           <p className="mt-1 [overflow-wrap:anywhere]">{transcript}</p>
         </details>

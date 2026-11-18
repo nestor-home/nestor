@@ -124,18 +124,18 @@ function MediaAccessForm({
       {films ? (
         <label htmlFor={`${s.id}-camera`} className="flex items-start justify-between gap-4">
           <span>
-            <span className="block text-sm text-ink">{t("sat-media-camera-switch")}</span>
-            <span className="block text-xs text-ink-muted">{t("sat-media-camera-hint")}</span>
+            <span className="block text-meta text-ink">{t("sat-media-camera-switch")}</span>
+            <span className="block text-micro text-ink-muted">{t("sat-media-camera-hint")}</span>
           </span>
           <Switch id={`${s.id}-camera`} checked={camera} onCheckedChange={setCamera} />
         </label>
       ) : null}
       {household.length === 0 ? (
-        <p className="text-sm text-ink-muted">{t("sat-media-nobody")}</p>
+        <p className="text-meta text-ink-muted">{t("sat-media-nobody")}</p>
       ) : (
-        <table className="w-full text-sm">
+        <table className="w-full text-meta">
           <thead>
-            <tr className="text-left text-[0.8rem] text-ink-muted">
+            <tr className="text-left text-meta text-ink-muted">
               <th scope="col" className="py-1.5 font-medium">
                 {t("sat-media-person")}
               </th>

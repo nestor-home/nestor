@@ -68,11 +68,11 @@ export function ToolSettings({ connection, editable }: { connection: ConnectionD
               {save.isPending ? t("action-saving") : t("action-save")}
             </Button>
           ) : (
-            <span className="text-[0.85rem] text-ink-muted">{t("conn-read-only")}</span>
+            <span className="text-meta text-ink-muted">{t("conn-read-only")}</span>
           )
         }
       >
-        {changed ? <p className="-mt-2 mb-3 text-[0.9rem] text-amber">{t("conn-unsaved")}</p> : null}
+        {changed ? <p className="-mt-2 mb-3 text-body text-amber">{t("conn-unsaved")}</p> : null}
         <FormError error={save.error} />
         <label htmlFor="confirm-writes" className="surface mb-3 flex items-start gap-3 px-4 py-3.5">
           <Checkbox
@@ -82,9 +82,9 @@ export function ToolSettings({ connection, editable }: { connection: ConnectionD
             disabled={!editable}
             className="mt-0.5"
           />
-          <span className="text-[0.95rem] text-ink">
+          <span className="text-body text-ink">
             {t("conn-confirm-writes")}
-            <span className="block text-[0.9rem] text-ink-muted">{t("conn-confirm-writes-hint")}</span>
+            <span className="block text-body text-ink-muted">{t("conn-confirm-writes-hint")}</span>
           </span>
         </label>
         <RowList>
@@ -94,10 +94,10 @@ export function ToolSettings({ connection, editable }: { connection: ConnectionD
               <li key={tool.name} className="flex items-start gap-4 px-4 py-3.5">
                 <div className="min-w-0 flex-1">
                   <label htmlFor={id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <code className="font-mono text-[0.85rem] [overflow-wrap:anywhere] text-ink">{tool.name}</code>
+                    <code className="font-mono text-meta [overflow-wrap:anywhere] text-ink">{tool.name}</code>
                     <RiskTag risk={tool.risk} />
                   </label>
-                  <p id={`${id}-description`} className="mt-0.5 text-[0.9rem] text-ink-muted">
+                  <p id={`${id}-description`} className="mt-0.5 text-body text-ink-muted">
                     {tool.description}
                   </p>
                 </div>

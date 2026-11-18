@@ -97,7 +97,7 @@ function SatelliteUpdate({
       aside={s.software.name}
       footer={
         state === "installing" ? (
-          <p role="status" className="flex items-center gap-2 text-sm text-ink">
+          <p role="status" className="flex items-center gap-2 text-meta text-ink">
             <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
             {t("sat-update-installing", { version })}
           </p>
@@ -124,17 +124,17 @@ function SatelliteUpdate({
           className="surface flex items-center justify-between gap-4 px-4 py-3"
         >
           <span className="min-w-0">
-            <span className="block text-sm text-ink">{t("sat-update-notes", { version })}</span>
-            <span className="block truncate font-mono text-xs text-ink-muted">{new URL(notes).host}</span>
+            <span className="block text-meta text-ink">{t("sat-update-notes", { version })}</span>
+            <span className="block truncate font-mono text-micro text-ink-muted">{new URL(notes).host}</span>
           </span>
           <ExternalLink className="size-4 shrink-0 text-ink-muted" aria-hidden="true" />
         </a>
       ) : (
-        <p className="text-sm text-ink-muted">{t("sat-update-no-notes")}</p>
+        <p className="text-meta text-ink-muted">{t("sat-update-no-notes")}</p>
       )}
       <section aria-label={t("sat-update-steps")}>
         <p className="caption">{t("sat-update-steps")}</p>
-        <ol className="mt-2 grid list-decimal gap-1.5 pl-5 text-sm text-ink">
+        <ol className="mt-2 grid list-decimal gap-1.5 pl-5 text-meta text-ink">
           <li>{t("sat-update-step-fetch", { version, software: s.software.name })}</li>
           <li>{t("sat-update-step-restart")}</li>
           <li>{t("sat-update-step-back", { running })}</li>

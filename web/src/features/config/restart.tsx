@@ -131,7 +131,7 @@ export function Restarting({ phase, className }: { phase: RestartPhase; classNam
       <AgentFigure state="sleeping" size="md" className="shrink-0" />
       <p className="font-medium text-ink">
         {t("cfg-restarting", { agent: me.agent.name })}
-        <span className="block text-[0.9rem] font-normal text-ink-muted">
+        <span className="block text-body font-normal text-ink-muted">
           {phase === "slow" ? t("cfg-restarting-slow") : t("cfg-restarting-hint")}
         </span>
       </p>
@@ -156,7 +156,7 @@ export function RestartBanner() {
         <IconTile icon={RotateCw} tone="amber" />
         <div className="min-w-0 flex-1 basis-48">
           <p className="font-medium text-ink">{t("cfg-restart-required")}</p>
-          <p className="flex flex-wrap items-center gap-x-2 text-[0.9rem] text-ink-muted">
+          <p className="flex flex-wrap items-center gap-x-2 text-body text-ink-muted">
             {t("cfg-pending", { count })}
             {count ? (
               <CollapsibleTrigger className="group/pending inline-flex items-center gap-1 rounded-sm text-ink underline underline-offset-4">
@@ -182,7 +182,7 @@ export function RestartBanner() {
             description={t("cfg-restart-text", { agent: me.agent.name })}
             details={
               <>
-                <ul className="grid gap-1.5 text-sm text-ink">
+                <ul className="grid gap-1.5 text-meta text-ink">
                   <li>{t("cfg-restart-channels")}</li>
                   <li>{t("cfg-restart-tasks")}</li>
                   <li>{t("cfg-restart-apply", { count })}</li>
@@ -198,7 +198,7 @@ export function RestartBanner() {
             }
           />
         ) : (
-          <p className="text-[0.9rem] text-ink-muted">{t("cfg-restart-ask")}</p>
+          <p className="text-body text-ink-muted">{t("cfg-restart-ask")}</p>
         )}
       </div>
       {count ? (

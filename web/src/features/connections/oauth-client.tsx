@@ -19,7 +19,7 @@ export function OAuthClientSection({ connector }: { connector: Connector }) {
   return (
     <section aria-labelledby="oauth-client" className="surface grid gap-4 p-4">
       <div className="flex items-center justify-between gap-3">
-        <h3 id="oauth-client" className="text-[1.15rem] text-ink">
+        <h3 id="oauth-client" className="title-sub text-ink">
           {t("conn-client-title")}
         </h3>
         {registered ? (
@@ -29,20 +29,20 @@ export function OAuthClientSection({ connector }: { connector: Connector }) {
         )}
       </div>
       {registered ? (
-        <p className="text-sm text-ink-muted">
+        <p className="text-meta text-ink-muted">
           {t("conn-client-id")} <code className="text-ink">{registered.client_id}</code>
         </p>
       ) : (
         <>
-          <p className="text-sm text-ink-muted">{t("conn-client-why")}</p>
+          <p className="text-meta text-ink-muted">{t("conn-client-why")}</p>
           {connector.setup ? (
-            <ol className="grid gap-1.5 text-sm text-ink">
+            <ol className="grid gap-1.5 text-meta text-ink">
               {connector.setup
                 .split("\n")
                 .filter(Boolean)
                 .map((step) => (
                   <li key={step} className="flex gap-2">
-                    <span aria-hidden="true" className="font-mono text-xs text-ink-faint">
+                    <span aria-hidden="true" className="font-mono text-micro text-ink-faint">
                       {step.match(/^\d+/)?.[0] ?? "·"}
                     </span>
                     <span>{step.replace(/^\d+\.\s*/, "")}</span>
@@ -54,9 +54,9 @@ export function OAuthClientSection({ connector }: { connector: Connector }) {
       )}
       {connector.oauth ? (
         <div className="grid gap-1.5">
-          <p className="text-[0.8rem] font-medium">{t("conn-redirect-uri")}</p>
+          <p className="text-meta font-medium">{t("conn-redirect-uri")}</p>
           <CopyField value={connector.oauth.redirect_uri} label={t("conn-redirect-uri-label")} />
-          {connector.oauth.relayed ? <p className="text-xs text-ink-muted">{t("conn-relayed")}</p> : null}
+          {connector.oauth.relayed ? <p className="text-micro text-ink-muted">{t("conn-relayed")}</p> : null}
         </div>
       ) : null}
       <FormDialog

@@ -208,20 +208,18 @@ function ComponentCard({
       </span>
       <span className="min-w-0">
         <span className="block font-medium [overflow-wrap:anywhere] text-ink">{c.name}</span>
-        <span className="block truncate text-[0.88rem] text-ink-muted">
+        <span className="block truncate text-meta text-ink-muted">
           {[c.model_type ? modelTypeLabel(c.model_type) : null, brand ? brandName(brand) : c.adapter]
             .filter(Boolean)
             .join(" · ")}
         </span>
       </span>
-      {c.fallback ? (
-        <span className="text-[0.88rem] text-ink-muted">{t("sys-fallback", { model: c.fallback })}</span>
-      ) : null}
+      {c.fallback ? <span className="text-meta text-ink-muted">{t("sys-fallback", { model: c.fallback })}</span> : null}
       {c.health_detail ? (
-        <span className={cn("text-[0.88rem]", unwell(c) ? "text-ink" : "text-ink-muted")}>{c.health_detail}</span>
+        <span className={cn("text-meta", unwell(c) ? "text-ink" : "text-ink-muted")}>{c.health_detail}</span>
       ) : null}
       {urgent ? (
-        <span className="mt-auto border-t border-rule pt-3 text-[0.88rem] text-ink-muted">
+        <span className="mt-auto border-t border-rule pt-3 text-meta text-ink-muted">
           {t(c.health === "unavailable" ? "sys-fix-down" : "sys-fix-degraded")}
         </span>
       ) : null}
@@ -256,7 +254,7 @@ function ComponentSheet({ component: c }: { component: Component }) {
       }
     >
       {unwell(c) ? (
-        <p className="text-[0.98rem] text-ink">{t(c.health === "unavailable" ? "sys-fix-down" : "sys-fix-degraded")}</p>
+        <p className="text-body text-ink">{t(c.health === "unavailable" ? "sys-fix-down" : "sys-fix-degraded")}</p>
       ) : null}
       <Facts narrow>
         <Fact term={t("sys-fact-state")}>
@@ -265,11 +263,11 @@ function ComponentSheet({ component: c }: { component: Component }) {
         {brand ? <Fact term={t("sys-fact-service")}>{brandName(brand)}</Fact> : null}
         {c.model_type ? <Fact term={t("sys-fact-type")}>{modelTypeLabel(c.model_type)}</Fact> : null}
         {c.fallback ? <Fact term={t("sys-fact-fallback")}>{c.fallback}</Fact> : null}
-        <Fact term={t("sys-fact-adapter")} className="font-mono text-[0.8rem] [overflow-wrap:anywhere]">
+        <Fact term={t("sys-fact-adapter")} className="font-mono text-meta [overflow-wrap:anywhere]">
           {c.adapter}
         </Fact>
         {c.version ? (
-          <Fact term={t("sys-fact-version")} className="font-mono text-[0.8rem] [overflow-wrap:anywhere]">
+          <Fact term={t("sys-fact-version")} className="font-mono text-meta [overflow-wrap:anywhere]">
             {c.distribution ? `${c.distribution} ${c.version}` : c.version}
           </Fact>
         ) : null}
@@ -302,12 +300,10 @@ function Instance({ system }: { system: SystemInfo }) {
   return (
     <div className="grid gap-3">
       <div className="surface flex flex-wrap items-center gap-x-4 gap-y-4 p-5">
-        <IconTile icon={Server} tone={system.restart_required ? "amber" : "ink"} className="size-11" />
+        <IconTile icon={Server} tone={system.restart_required ? "amber" : "ink"} size="lg" />
         <div className="min-w-0 flex-1 basis-56">
-          <p className="font-serif text-[1.35rem] leading-tight text-ink">
-            {t("shell-version", { version: system.nestor.version })}
-          </p>
-          <p className="mt-1 text-[0.95rem] text-ink-muted">
+          <p className="title-card text-ink">{t("shell-version", { version: system.nestor.version })}</p>
+          <p className="mt-1 text-body text-ink-muted">
             {system.restart_required
               ? t("sys-restart-waiting", { count: waiting })
               : t("sys-runs", { agent: system.agent.name })}

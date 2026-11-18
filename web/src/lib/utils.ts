@@ -1,5 +1,13 @@
 import { type ClassValue, clsx } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { extendTailwindMerge } from "tailwind-merge";
+
+/** tailwind-merge, told about the type scale of `styles/app.css`: `text-body` is a size, not a colour. */
+const twMerge = extendTailwindMerge({
+  extend: {
+    theme: { text: ["micro", "meta", "body", "lead", "heading", "title", "sheet"] },
+    classGroups: { "font-size": ["title-card", "title-sub", "title-sheet"] },
+  },
+});
 
 /** Joins class names, letting later Tailwind utilities override earlier ones. */
 export function cn(...inputs: ClassValue[]): string {

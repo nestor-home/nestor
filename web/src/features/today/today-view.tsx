@@ -136,8 +136,8 @@ export function TodayView() {
               <li key={a.key} className="surface flex gap-4 p-4">
                 <IconTile icon={a.icon} tone={a.tone === "error" ? "brick" : "amber"} />
                 <div className="min-w-0 flex-1">
-                  <p className="text-[1.02rem] leading-snug font-medium text-ink">{a.title}</p>
-                  {a.detail ? <p className="mt-1 text-[0.92rem] text-ink-muted">{a.detail}</p> : null}
+                  <p className="text-lead leading-snug font-medium text-ink">{a.title}</p>
+                  {a.detail ? <p className="mt-1 text-body text-ink-muted">{a.detail}</p> : null}
                   <Link {...a.link} className={cn(buttonVariants({ size: "sm" }), "mt-3")}>
                     {a.action}
                   </Link>
@@ -150,7 +150,7 @@ export function TodayView() {
               type="button"
               onClick={() => setAll((v) => !v)}
               aria-expanded={all}
-              className="mt-3 inline-flex items-center gap-1.5 text-[0.92rem] font-medium text-ink-muted hover:text-ink"
+              className="mt-3 inline-flex items-center gap-1.5 text-body font-medium text-ink-muted hover:text-ink"
             >
               <ChevronDown className={cn("size-4 transition-transform", all && "rotate-180")} aria-hidden="true" />
               {all ? t("today-needs-fewer") : t("today-needs-more", { count: attention.length - 4 })}
@@ -198,8 +198,8 @@ function Now({ running, items, now }: { running: Task[]; items: JournalItem[]; n
                   <span className="flex items-start gap-4">
                     <IconTile icon={Workflow} tone="task" />
                     <span className="min-w-0 flex-1">
-                      <span className="block text-[1.02rem] leading-snug font-medium text-ink">{task.title}</span>
-                      <span className="mt-1 flex flex-wrap items-center gap-x-2 text-[0.9rem] text-ink-muted">
+                      <span className="block text-lead leading-snug font-medium text-ink">{task.title}</span>
+                      <span className="mt-1 flex flex-wrap items-center gap-x-2 text-body text-ink-muted">
                         {brand ? (
                           <span className="inline-flex items-center gap-1.5">
                             <BrandMark brand={brand} className="size-3.5" label={false} />
@@ -221,14 +221,12 @@ function Now({ running, items, now }: { running: Task[]; items: JournalItem[]; n
               <Link to="/journal" search={threadOf(i)} className="surface flex items-start gap-4 p-4">
                 <IconTile icon={MessageSquareText} />
                 <span className="min-w-0 flex-1">
-                  <span className="flex items-center gap-2 text-[1.02rem] font-medium text-ink">
+                  <span className="flex items-center gap-2 text-lead font-medium text-ink">
                     {i.people.length
                       ? t("home-talking", { people: i.people.map((p) => p.name).join(", ") })
                       : t("home-talking-someone")}
                   </span>
-                  <span className="mt-1 line-clamp-2 block text-[0.92rem] text-ink-muted">
-                    {i.detail_text || say(i)}
-                  </span>
+                  <span className="mt-1 line-clamp-2 block text-body text-ink-muted">{i.detail_text || say(i)}</span>
                 </span>
                 <span className="flex -space-x-1.5">
                   {i.people.map((p) => (
@@ -265,7 +263,7 @@ function Day({ marks, onEvent }: { marks: Mark[]; onEvent: (position: number) =>
     <Section
       title={t("today-so-far")}
       aside={
-        <Link to="/journal" className="inline-flex items-center gap-1 text-[0.92rem] text-ink-muted hover:text-ink">
+        <Link to="/journal" className="inline-flex items-center gap-1 text-body text-ink-muted hover:text-ink">
           {t("home-all-journal")} <ArrowRight className="size-3.5" aria-hidden="true" />
         </Link>
       }
@@ -284,12 +282,12 @@ function Day({ marks, onEvent }: { marks: Mark[]; onEvent: (position: number) =>
             const where = m.room ?? m.channels[0];
             const body = (
               <>
-                <IconTile {...MARK[m.kind]} className="size-9" />
+                <IconTile {...MARK[m.kind]} size="sm" />
                 <span className="min-w-0">
                   <span className="line-clamp-2 block text-ink">{text}</span>
-                  {where ? <span className="block text-[0.85rem] text-ink-muted">{where}</span> : null}
+                  {where ? <span className="block text-meta text-ink-muted">{where}</span> : null}
                 </span>
-                <time dateTime={m.at} className="text-[0.9rem] text-ink-muted tabular">
+                <time dateTime={m.at} className="text-body text-ink-muted tabular">
                   {hourMinute(m.at)}
                 </time>
               </>
@@ -354,14 +352,14 @@ function Next() {
     <Section
       title={t("home-next")}
       aside={
-        <Link to="/activity" className="inline-flex items-center gap-1 text-[0.92rem] text-ink-muted hover:text-ink">
+        <Link to="/activity" className="inline-flex items-center gap-1 text-body text-ink-muted hover:text-ink">
           {t("today-all-activity")} <ArrowRight className="size-3.5" aria-hidden="true" />
         </Link>
       }
     >
       <ul className="grid gap-2.5">
         {quiet ? (
-          <li className="flex items-center gap-3 rounded-(--radius-surface) bg-paper-sunken px-4 py-3 text-[0.95rem] text-ink">
+          <li className="flex items-center gap-3 rounded-(--radius-surface) bg-paper-sunken px-4 py-3 text-body text-ink">
             <MoonStar className="size-5 shrink-0 text-ink-muted" aria-hidden="true" />
             {quiet.active
               ? t("home-quiet-now", { until: clock(quiet.to) })
@@ -370,21 +368,21 @@ function Next() {
         ) : null}
         {coming.map((c) => (
           <li key={c.key} className="surface flex items-start gap-3.5 p-3.5">
-            <IconTile icon={c.icon} tone={c.tone} className="size-9" />
+            <IconTile icon={c.icon} tone={c.tone} size="sm" />
             <span className="min-w-0 flex-1">
-              {c.at ? <span className="block text-[0.85rem] font-medium text-ember">{moment(c.at)}</span> : null}
+              {c.at ? <span className="block text-meta font-medium text-ember">{moment(c.at)}</span> : null}
               <span className="line-clamp-2 block text-ink">{c.text}</span>
-              {c.hint ? <span className="block text-[0.85rem] text-ink-muted">{c.hint}</span> : null}
+              {c.hint ? <span className="block text-meta text-ink-muted">{c.hint}</span> : null}
             </span>
           </li>
         ))}
         {watching.length ? (
           <li>
             <Link to="/activity" className="surface flex items-center gap-3.5 p-3.5">
-              <IconTile icon={Radar} tone="watch" className="size-9" />
+              <IconTile icon={Radar} tone="watch" size="sm" />
               <span className="min-w-0 flex-1">
                 <span className="block text-ink">{t("today-watching", { count: watching.length })}</span>
-                <span className="line-clamp-1 block text-[0.85rem] text-ink-muted">
+                <span className="line-clamp-1 block text-meta text-ink-muted">
                   {watching.map((w) => w.title).join(" · ")}
                 </span>
               </span>
@@ -409,7 +407,7 @@ function Knows() {
     <Section
       title={t("home-knows")}
       aside={
-        <Link to="/memories" className="inline-flex items-center gap-1 text-[0.92rem] text-ink-muted hover:text-ink">
+        <Link to="/memories" className="inline-flex items-center gap-1 text-body text-ink-muted hover:text-ink">
           {t("home-all-memories")} <ArrowRight className="size-3.5" aria-hidden="true" />
         </Link>
       }
@@ -420,10 +418,8 @@ function Knows() {
             <Link to="/memories" search={m.about ? { about: m.about.id } : {}} className="group flex gap-3">
               {m.about ? <Pebble name={m.about.name} className="mt-1" /> : null}
               <span className="min-w-0">
-                <span className="block font-serif text-[1.15rem] leading-snug text-ink group-hover:underline">
-                  {m.text}
-                </span>
-                <span className="mt-1 block text-[0.85rem] text-ink-muted">
+                <span className="block title-sub text-ink group-hover:underline">{m.text}</span>
+                <span className="mt-1 block text-meta text-ink-muted">
                   {m.about ? `${m.about.name} · ` : ""}
                   {m.updated_at >= today ? (
                     t("home-learnt-today", { time: hourMinute(m.updated_at) })

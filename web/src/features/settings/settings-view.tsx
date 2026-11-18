@@ -100,14 +100,14 @@ function Card({
     <li>
       <Link to={to} className="surface flex h-full flex-col gap-4 p-5">
         <span className="flex items-center justify-between">
-          <IconTile icon={icon} className="size-11" />
+          <IconTile icon={icon} size="lg" />
           <ArrowRight className="size-4 text-ink-faint" aria-hidden="true" />
         </span>
         <span>
-          <span className="block font-serif text-[1.35rem] leading-tight text-ink">{title}</span>
-          <span className="mt-1.5 block text-[0.95rem] text-ink-muted">{text}</span>
+          <span className="block title-card text-ink">{title}</span>
+          <span className="mt-1.5 block text-body text-ink-muted">{text}</span>
         </span>
-        {state ? <span className="mt-auto text-[0.88rem] font-medium text-ink">{state}</span> : null}
+        {state ? <span className="mt-auto text-meta font-medium text-ink">{state}</span> : null}
       </Link>
     </li>
   );

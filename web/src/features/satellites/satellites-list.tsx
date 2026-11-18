@@ -98,10 +98,8 @@ function Pending({
             <div className="flex items-start gap-3.5">
               <DeviceTile brand={r.device.brand} capabilities={r.capabilities} className="bg-amber-soft text-amber" />
               <div className="min-w-0 flex-1">
-                <h3 className="font-mono text-[0.95rem] font-medium [overflow-wrap:anywhere] text-ink">
-                  {r.device.id}
-                </h3>
-                <p className="text-[0.92rem] text-ink-muted">
+                <h3 className="font-mono text-body font-medium [overflow-wrap:anywhere] text-ink">{r.device.id}</h3>
+                <p className="text-body text-ink-muted">
                   {t("sat-model-room", { model: r.device.model, room: r.device.room })}
                 </p>
               </div>
@@ -114,7 +112,7 @@ function Pending({
               </Status>
               <CapabilityMarks capabilities={r.capabilities} />
             </p>
-            <p className="text-[0.95rem] text-ink">{r.methods.find((m) => m.id === r.recommended_method)?.hint}</p>
+            <p className="text-body text-ink">{r.methods.find((m) => m.id === r.recommended_method)?.hint}</p>
             {canPair ? (
               <div className="mt-auto flex flex-wrap gap-2">
                 <Button size="sm" onClick={() => onApprove(r.pairing_id)}>
@@ -123,7 +121,7 @@ function Pending({
                 {r.can_identify ? <IdentifyButton pairing={r.pairing_id} /> : null}
               </div>
             ) : (
-              <p className="mt-auto text-[0.92rem] text-ink-muted">{t("sat-approve-forbidden")}</p>
+              <p className="mt-auto text-body text-ink-muted">{t("sat-approve-forbidden")}</p>
             )}
           </li>
         ))}
@@ -165,17 +163,15 @@ function PairedCard({ satellite: s }: { satellite: Satellite }) {
           </span>
         </span>
         <span className="min-w-0">
-          <span className="block font-serif text-[1.35rem] leading-tight [overflow-wrap:anywhere] text-ink">
-            {deviceName(s)}
-          </span>
-          <span className="mt-1 block text-[0.95rem] text-ink-muted">
+          <span className="block title-card [overflow-wrap:anywhere] text-ink">{deviceName(s)}</span>
+          <span className="mt-1 block text-body text-ink-muted">
             {t("sat-model-room", { model: s.model, room: s.room })}
           </span>
         </span>
         <span className="mt-auto flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-rule pt-3">
           <CapabilityMarks capabilities={s.capabilities} />
           {s.update?.state === "available" ? (
-            <span className="inline-flex items-center gap-1.5 text-[0.85rem] font-medium text-ember">
+            <span className="inline-flex items-center gap-1.5 text-meta font-medium text-ember">
               <CircleArrowUp className="size-3.5" aria-hidden="true" />
               {t("sat-update-badge")}
             </span>
@@ -228,7 +224,7 @@ function Additions({ additions }: { additions: Addition[] }) {
                 {a.name ?? a.method.label}
                 <span className="font-normal text-ink-muted"> · {t(`sat-stage-${a.stage.replace("_", "-")}`)}</span>
               </p>
-              <p className="text-[0.88rem] text-ink-muted">
+              <p className="text-meta text-ink-muted">
                 {a.name ? `${a.method.label} · ` : ""}
                 {a.room ? `${t("sat-room", { room: a.room })} · ` : ""}
                 <span className="tabular">{t("sat-expires-in", { remaining: remaining(a.expires_at, now) })}</span>

@@ -109,7 +109,7 @@ function Loaded({ event: { item: event, record } }: { event: JournalEvent }) {
   return (
     <SheetPanel {...tileOf(event)} kind={kindLabel(event.kind)} title={say(event)} description={moment(event.at)}>
       {event.reason ? (
-        <p className="rounded-xl bg-ember-soft px-4 py-3 text-[0.98rem] text-ink">
+        <p className="rounded-xl bg-ember-soft px-4 py-3 text-body text-ink">
           <span className="font-medium text-ember">{t("jr-why-label")} </span>
           {why(event)}
         </p>
@@ -118,9 +118,7 @@ function Loaded({ event: { item: event, record } }: { event: JournalEvent }) {
         event.kind === "tool" ? (
           <pre className="code-block min-w-0">{event.detail_text}</pre>
         ) : (
-          <p className="font-serif text-[1.15rem] leading-snug whitespace-pre-line [overflow-wrap:anywhere]">
-            {event.detail_text}
-          </p>
+          <p className="title-sub whitespace-pre-line [overflow-wrap:anywhere]">{event.detail_text}</p>
         )
       ) : null}
       <Attachments item={event} />
@@ -147,8 +145,8 @@ function Loaded({ event: { item: event, record } }: { event: JournalEvent }) {
         {related.map((r) => (
           <Fact key={`${r.label}-${r.value}`} term={r.label}>
             <Link {...r.link} className="inline-flex max-w-full items-center gap-1 text-ink hover:text-ember">
-              {r.person ? <Pebble name={r.value} className="size-5 text-[0.6rem]" /> : null}
-              <span className={r.person ? "" : "truncate font-mono text-[0.85rem]"}>{r.value}</span>
+              {r.person ? <Pebble name={r.value} size="xs" /> : null}
+              <span className={r.person ? "" : "truncate font-mono text-meta"}>{r.value}</span>
               <ArrowUpRight className="size-3 shrink-0" aria-hidden="true" />
             </Link>
           </Fact>
@@ -157,12 +155,12 @@ function Loaded({ event: { item: event, record } }: { event: JournalEvent }) {
 
       <section aria-labelledby="raw" className="min-w-0">
         <div className="mb-2 flex items-baseline justify-between gap-3">
-          <h3 id="raw" className="text-[1.15rem] text-ink">
+          <h3 id="raw" className="title-sub text-ink">
             {t("jr-raw")}
           </h3>
           <CopyButton value={raw} label={t("jr-raw-copy")} />
         </div>
-        <p className="mb-2 font-mono text-[0.8rem] [overflow-wrap:anywhere] text-ink-muted">
+        <p className="mb-2 font-mono text-meta [overflow-wrap:anywhere] text-ink-muted">
           {event.type} · {event.id}
         </p>
         <pre className="code-block max-h-80 min-w-0 overflow-y-auto">{raw}</pre>

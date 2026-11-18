@@ -1,18 +1,8 @@
 ## Messages : ce qui attend quelqu'un.
 
-message-title = Messages
-message-lede = Les actions qui attendent un accord, les questions qui attendent une réponse, les messages en route.
-message-questions = En attente de réponse
-message-questions-empty = Aucune question en attente.
-message-pending = En route
-message-pending-empty = Tous les messages ont été transmis.
 message-from-to = de { $from } à { $to }
 message-to = à { $to }
-confirmation-title = À confirmer
-confirmation-empty = Rien à confirmer.
-confirmation-empty-hint = Une action sensible demandée à voix haute, comme ouvrir la porte, attend ici l'accord de sa personne.
 confirmation-for = pour { $name }
-confirmation-asked-in = demandé sur { $channel }
 confirmation-expires = sans réponse, abandonnée à { $at }
 confirmation-approve = Approuver
 confirmation-refuse = Refuser

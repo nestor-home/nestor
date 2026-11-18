@@ -77,7 +77,7 @@ function VoiceState({ person, voice }: { person: Person; voice: Voice }) {
   return (
     <div className="surface">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-3 p-5">
-        <IconTile icon={AudioLines} tone={voice.enrolled ? "sage" : "ink"} className="size-11" />
+        <IconTile icon={AudioLines} tone={voice.enrolled ? "sage" : "ink"} size="lg" />
         <div className="min-w-0 flex-1 basis-56">
           {voice.enrolled && voice.enrolled_at ? (
             <p className="font-medium text-ink">
@@ -87,7 +87,7 @@ function VoiceState({ person, voice }: { person: Person; voice: Voice }) {
             <p className="font-medium text-ink">{t("people-voice-none")}</p>
           )}
           {voice.enrolled ? (
-            <p className="mt-0.5 text-[0.92rem] text-ink-muted">
+            <p className="mt-0.5 text-body text-ink-muted">
               {voice.learning || voice.learned ? (
                 <>
                   {t("people-voice-learned", { count: voice.learned })}
@@ -102,7 +102,7 @@ function VoiceState({ person, voice }: { person: Person; voice: Voice }) {
               {voice.learning ? null : <span className="block">{t("people-voice-not-learning")}</span>}
             </p>
           ) : (
-            <p className="mt-0.5 text-[0.92rem] text-ink-muted">{t("people-voice-why", { assistant: me.assistant })}</p>
+            <p className="mt-0.5 text-body text-ink-muted">{t("people-voice-why", { assistant: me.assistant })}</p>
           )}
         </div>
         {voice.manageable ? (
@@ -121,7 +121,7 @@ function VoiceState({ person, voice }: { person: Person; voice: Voice }) {
               disabled={learning.isPending}
               onCheckedChange={(on) => learning.mutate(on)}
             />
-            <label htmlFor={switchId} className="text-[0.95rem] text-ink">
+            <label htmlFor={switchId} className="text-body text-ink">
               {t("people-voice-learning")}
             </label>
           </div>

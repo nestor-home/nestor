@@ -56,7 +56,6 @@ home-quiet-later = Heures calmes de { $from } à { $to }.
 home-upcoming-unless = Sauf réponse d'ici là.
 
 ## Sa journée, ce qu'il sait
-home-today = Aujourd'hui
 home-today-empty = Rien encore aujourd'hui.
 home-moment-conversation = Conversation avec { $people } ({ $count ->
     [one] 1 tour

@@ -41,7 +41,7 @@ function Snapshot({ device, close }: { device: MediaDevice; close: () => void })
         ) : take.isPending ? (
           <div className="grid justify-items-center gap-3" role="status">
             <AgentFigure state="thinking" size="md" />
-            <p className="text-[0.95rem] text-ink-muted">{t("cam-taking")}</p>
+            <p className="text-body text-ink-muted">{t("cam-taking")}</p>
           </div>
         ) : null}
       </div>

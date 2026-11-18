@@ -20,17 +20,17 @@ export function Field({
 }) {
   return (
     <div className={cn("grid gap-1.5", className)}>
-      <Label htmlFor={htmlFor} className="text-[0.8rem] font-medium text-ink">
+      <Label htmlFor={htmlFor} className="text-meta font-medium text-ink">
         {label}
       </Label>
       {children}
       {hint && !error ? (
-        <p id={`${htmlFor}-hint`} className="text-xs text-ink-muted">
+        <p id={`${htmlFor}-hint`} className="text-micro text-ink-muted">
           {hint}
         </p>
       ) : null}
       {error ? (
-        <p id={`${htmlFor}-error`} role="alert" className="text-xs text-brick">
+        <p id={`${htmlFor}-error`} role="alert" className="text-micro text-brick">
           {error}
         </p>
       ) : null}

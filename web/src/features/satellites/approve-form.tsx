@@ -88,10 +88,10 @@ export function ApproveForm({
         </Field>
       </div>
       <fieldset>
-        <legend className="mb-1 text-[0.8rem] font-medium">{t("sat-grant-legend")}</legend>
-        <p className="mb-2 text-xs text-ink-muted">{t("sat-grant-hint")}</p>
+        <legend className="mb-1 text-meta font-medium">{t("sat-grant-legend")}</legend>
+        <p className="mb-2 text-micro text-ink-muted">{t("sat-grant-hint")}</p>
         {request.capabilities.length === 0 ? (
-          <p className="text-sm text-ink-muted">{t("sat-grant-none")}</p>
+          <p className="text-meta text-ink-muted">{t("sat-grant-none")}</p>
         ) : (
           <ul className="grid gap-2 sm:grid-cols-2">
             {request.capabilities.map((c) => {
@@ -112,13 +112,13 @@ export function ApproveForm({
                       }
                       className="mt-0.5"
                     />
-                    <span className="flex items-start gap-2 text-sm">
+                    <span className="flex items-start gap-2 text-meta">
                       {(() => {
                         const Icon = CAPABILITY_ICON[c.name];
                         return Icon ? <Icon className="mt-0.5 size-3.5 text-ink-muted" aria-hidden="true" /> : null;
                       })()}
                       <span>
-                        {c.label} <code className="block text-[0.7rem] text-ink-faint">{c.name}</code>
+                        {c.label} <code className="block text-micro text-ink-faint">{c.name}</code>
                       </span>
                     </span>
                   </label>

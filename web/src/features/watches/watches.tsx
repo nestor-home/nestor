@@ -78,7 +78,7 @@ function Loaded({ watch: w, trail }: { watch: Watch; trail: Crumb[] }) {
         title={w.title}
         meta={
           <>
-            {w.owner ? <Pebble name={w.owner.name} className="size-6 text-[0.65rem]" /> : null}
+            {w.owner ? <Pebble name={w.owner.name} size="sm" /> : null}
             <span>{t("watch-for", { name: personName(w.owner) })}</span>
             <span>{t("watch-created", { when: moment(w.created_at) })}</span>
             {w.until ? <span>{t("watch-until", { when: moment(w.until) })}</span> : null}
@@ -107,33 +107,33 @@ function Loaded({ watch: w, trail }: { watch: Watch; trail: Crumb[] }) {
         <div className="grid gap-4">
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="surface flex flex-col gap-3 p-4">
-              <p className="text-[0.9rem] font-medium text-ink-muted">{t("watch-watches")}</p>
+              <p className="text-body font-medium text-ink-muted">{t("watch-watches")}</p>
               <ul className="mt-auto grid gap-2">
                 {w.kinds.map((k) => (
                   <li key={k} className="flex items-center gap-3 font-medium text-ink">
-                    <BrandTile brand={watchBrand(k)} className="size-9" />
+                    <BrandTile brand={watchBrand(k)} size="sm" />
                     {t("watch-kind", { kind: k })}
                   </li>
                 ))}
               </ul>
             </div>
             <div className="surface flex flex-col gap-3 p-4">
-              <p className="text-[0.9rem] font-medium text-ink-muted">{t("watch-rhythm")}</p>
+              <p className="text-body font-medium text-ink-muted">{t("watch-rhythm")}</p>
               <p className="mt-auto flex items-center gap-3 text-ink">
-                <IconTile icon={Repeat} className="size-9" />
+                <IconTile icon={Repeat} size="sm" />
                 {w.once ? t("watch-rhythm-once") : t("watch-rhythm-every")}
               </p>
             </div>
             <div className="surface flex flex-col gap-3 p-4">
-              <p className="text-[0.9rem] font-medium text-ink-muted">{t("watch-so-far")}</p>
+              <p className="text-body font-medium text-ink-muted">{t("watch-so-far")}</p>
               <p className="mt-auto flex items-center gap-3">
-                <IconTile icon={Radar} tone={w.triggered ? "ember" : "watch"} className="size-9" />
+                <IconTile icon={Radar} tone={w.triggered ? "ember" : "watch"} size="sm" />
                 <span className="min-w-0">
                   <span className={w.triggered ? "block font-medium text-ink" : "block text-ink-muted"}>
                     {w.triggered ? t("watch-triggered-count", { count: w.triggered }) : t("watch-never-triggered")}
                   </span>
                   {w.last_triggered_at ? (
-                    <span className="block text-[0.85rem] text-ink-muted">
+                    <span className="block text-meta text-ink-muted">
                       {t("watch-last")} <Ago iso={w.last_triggered_at} />
                     </span>
                   ) : null}
@@ -142,7 +142,7 @@ function Loaded({ watch: w, trail }: { watch: Watch; trail: Crumb[] }) {
             </div>
           </div>
           {w.origin ? (
-            <p className="text-[0.92rem] text-ink-muted first-letter:uppercase">
+            <p className="text-body text-ink-muted first-letter:uppercase">
               {t("watch-asked-in")} <OriginLink origin={w.origin} />
             </p>
           ) : null}

@@ -62,10 +62,10 @@ export function UpdateAvailable({ compact }: { compact: boolean }) {
             <CircleArrowUp className="relative size-5 shrink-0 text-ember" aria-hidden="true" />
           ) : (
             <>
-              <IconTile icon={CircleArrowUp} tone="ember" className="relative size-11" />
+              <IconTile icon={CircleArrowUp} tone="ember" size="lg" className="relative" />
               <span className="relative min-w-0 flex-1">
-                <span className="block font-serif text-[1.35rem] leading-tight text-ink">{t("upd-available")}</span>
-                <span className="mt-1 block text-[0.95rem] text-ink-muted">
+                <span className="block title-card text-ink">{t("upd-available")}</span>
+                <span className="mt-1 block text-body text-ink-muted">
                   {t("upd-available-running", { latest, running: updates.data?.running ?? "" })}
                 </span>
               </span>
@@ -135,7 +135,7 @@ export function NestorUpdate({
           phase !== "idle" ? (
             <Restarting phase={phase} className="bg-transparent p-0" />
           ) : updates.installing ? (
-            <p role="status" className="text-sm text-ink">
+            <p role="status" className="text-meta text-ink">
               {t("upd-installing", { version })}
             </p>
           ) : !byHand ? (
@@ -189,13 +189,13 @@ function ReleaseNotes({ release }: { release: Release }) {
   return (
     <section aria-label={t("upd-release", { version: release.version })}>
       <h3 className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <span className="font-mono text-sm text-ink">{release.version}</span>
-        <span className="text-xs text-ink-muted">{calendarDay(release.date)}</span>
+        <span className="font-mono text-meta text-ink">{release.version}</span>
+        <span className="text-micro text-ink-muted">{calendarDay(release.date)}</span>
         <a
           href={release.url}
           target="_blank"
           rel="noreferrer"
-          className="ml-auto inline-flex items-center gap-1 text-xs text-ink-muted hover:text-ink"
+          className="ml-auto inline-flex items-center gap-1 text-micro text-ink-muted hover:text-ink"
         >
           {t("upd-notes")}
           <ExternalLink className="size-3" aria-hidden="true" />
@@ -207,7 +207,7 @@ function ReleaseNotes({ release }: { release: Release }) {
         return (
           <div key={kind} className="mt-3">
             <p className={kind === "breaking" ? "caption text-brick" : "caption"}>{t(`upd-kind-${kind}`)}</p>
-            <ul className="mt-1 grid list-disc gap-1 pl-5 text-sm text-ink" lang="en">
+            <ul className="mt-1 grid list-disc gap-1 pl-5 text-meta text-ink" lang="en">
               {changes.map((c) => (
                 <li key={c.text} className="[overflow-wrap:anywhere]">
                   {c.text}
@@ -226,8 +226,8 @@ function ByHand({ updates }: { updates: Updates }) {
   const t = useT();
   return (
     <section className="grid gap-3 border-t border-rule pt-5">
-      <h3 className="font-serif text-lg font-normal">{t("upd-how")}</h3>
-      <p className="text-sm text-ink-muted">{t(`upd-how-${updates.installation ?? "editable"}`)}</p>
+      <h3 className="font-serif text-heading font-normal">{t("upd-how")}</h3>
+      <p className="text-meta text-ink-muted">{t(`upd-how-${updates.installation ?? "editable"}`)}</p>
       {updates.commands.map((command) => (
         <CopyField key={command} value={command} label={t("upd-command")} />
       ))}
@@ -239,7 +239,7 @@ function Restart({ canRestart }: { canRestart: boolean }) {
   const t = useT();
   const { phase, pending, error, restart } = useRestart();
   if (phase !== "idle") return <Restarting phase={phase} className="bg-transparent p-0" />;
-  if (!canRestart) return <p className="text-sm text-ink-muted">{t("upd-then-ask")}</p>;
+  if (!canRestart) return <p className="text-meta text-ink-muted">{t("upd-then-ask")}</p>;
   return (
     <FormActions hint={t("upd-then-restart")}>
       <FormError error={error} />

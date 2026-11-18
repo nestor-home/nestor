@@ -122,7 +122,7 @@ export function Composer({
               ) : (
                 <span className="flex h-16 max-w-52 items-center gap-2 rounded-xl bg-paper-sunken px-3">
                   <FileText className="size-5 shrink-0 text-ink-muted" aria-hidden="true" />
-                  <span className="min-w-0 text-[0.85rem]">
+                  <span className="min-w-0 text-meta">
                     <span className="block truncate font-medium text-ink">{file.file.name}</span>
                     <span className="block text-ink-muted tabular">{fileSize(file.size)}</span>
                   </span>
@@ -249,7 +249,7 @@ function Recording({
         </Button>
       </Hint>
       <span className="live-dot size-2 rounded-full bg-ember" aria-hidden="true" />
-      <span className="text-[0.95rem] text-ink tabular">{time}</span>
+      <span className="text-body text-ink tabular">{time}</span>
       <Level level={level} />
       <Hint label={t("chat-record-send")}>
         <Button

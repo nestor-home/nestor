@@ -153,7 +153,7 @@ export function ChatList({ lead }: { lead: ReactNode }) {
         ) : error ? (
           <Failure error={error} retry={retry} className="mx-1 mt-2" />
         ) : !groups.length ? (
-          <p className="px-2 py-3 text-[0.95rem] text-ink-muted">{t(query ? "chat-search-none" : "chat-none")}</p>
+          <p className="px-2 py-3 text-body text-ink-muted">{t(query ? "chat-search-none" : "chat-none")}</p>
         ) : (
           groups.map(([group, items]) => (
             <section key={group} className="mt-4 first:mt-2">
@@ -171,8 +171,8 @@ export function ChatList({ lead }: { lead: ReactNode }) {
                       )}
                     >
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[0.98rem] font-medium text-ink">{titleOf(chat, t)}</span>
-                        <span className="block text-[0.82rem] text-ink-muted">{moment(chat.updated_at)}</span>
+                        <span className="block truncate text-body font-medium text-ink">{titleOf(chat, t)}</span>
+                        <span className="block text-meta text-ink-muted">{moment(chat.updated_at)}</span>
                       </span>
                       {chat.answering ? (
                         <Status tone="accent" className="shrink-0">

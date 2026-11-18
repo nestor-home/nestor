@@ -123,7 +123,7 @@ function Outcome({ task }: { task: Task }) {
   const t = useT();
   const files = task.files.length ? (
     <div className={task.result || task.error ? "mt-5 border-t border-rule pt-4" : undefined}>
-      <p className="mb-2.5 flex items-center gap-1.5 text-[0.9rem] font-medium text-ink-muted">
+      <p className="mb-2.5 flex items-center gap-1.5 text-body font-medium text-ink-muted">
         <Paperclip className="size-3.5" aria-hidden="true" />
         {t("task-files", { count: task.files.length })}
       </p>
@@ -137,12 +137,10 @@ function Outcome({ task }: { task: Task }) {
         <div className="surface p-5">
           <div className="flex items-start gap-4">
             <IconTile icon={Workflow} tone="task" />
-            <p className="min-w-0 flex-1 self-center font-serif text-[1.2rem] leading-snug text-ink">
-              {task.steps.at(-1) ?? t("task-starting")}
-            </p>
+            <p className="min-w-0 flex-1 self-center title-sub text-ink">{task.steps.at(-1) ?? t("task-starting")}</p>
           </div>
           <span className="thread mt-4 block" aria-hidden="true" />
-          <p className="mt-3 text-[0.92rem] text-ink-muted">{t("task-delivery-pending")}</p>
+          <p className="mt-3 text-body text-ink-muted">{t("task-delivery-pending")}</p>
           {files}
         </div>
       </Section>
@@ -168,7 +166,7 @@ function Outcome({ task }: { task: Task }) {
       <Section title={t("task-result")}>
         <div className="surface corner-marks relative p-5">
           {task.result ? (
-            <p className="max-w-2xl whitespace-pre-line font-serif text-[1.15rem] leading-relaxed text-ink [overflow-wrap:anywhere]">
+            <p className="max-w-2xl whitespace-pre-line font-serif text-heading leading-relaxed text-ink [overflow-wrap:anywhere]">
               {task.result}
             </p>
           ) : null}
@@ -181,7 +179,7 @@ function Outcome({ task }: { task: Task }) {
     <Section title={t("task-result")}>
       <div className="surface-quiet flex items-center gap-4 px-4 py-5">
         <IconTile icon={CircleSlash} />
-        <p className="text-[0.98rem] text-ink-muted">
+        <p className="text-body text-ink-muted">
           {t(task.status === "cancelled" ? "task-stopped-early" : "task-no-result")}
         </p>
       </div>
@@ -195,10 +193,10 @@ function About({ task }: { task: Task }) {
   const took = task.ended_at ? (new Date(task.ended_at).getTime() - new Date(task.started_at).getTime()) / 1000 : null;
   return (
     <aside aria-label={t("task-about")} className="surface self-start p-5">
-      <Facts narrow className="text-[0.95rem]">
+      <Facts narrow className="text-body">
         {task.requested_by ? (
           <Fact term={t("task-asked-by")} className="flex items-center gap-2">
-            <Pebble name={task.requested_by.name} className="size-6 text-[0.65rem]" />
+            <Pebble name={task.requested_by.name} size="sm" />
             {task.requested_by.name}
           </Fact>
         ) : null}
@@ -258,9 +256,7 @@ function Steps({ task }: { task: Task }) {
               />
               {last ? null : <span className="w-px flex-1 bg-rule" />}
             </span>
-            <span
-              className={cn("pb-3.5 text-[0.95rem] [overflow-wrap:anywhere]", last ? "text-ink" : "text-ink-muted")}
-            >
+            <span className={cn("pb-3.5 text-body [overflow-wrap:anywhere]", last ? "text-ink" : "text-ink-muted")}>
               {step}
             </span>
           </li>

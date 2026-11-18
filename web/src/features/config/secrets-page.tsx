@@ -60,13 +60,13 @@ function SecretRow({ secret: s }: { secret: Secret }) {
     <li className="flex flex-wrap items-start gap-x-3.5 gap-y-3 px-4 py-3.5">
       <IconTile icon={KeyRound} tone={s.set ? "ink" : "brick"} />
       <div className="grid min-w-0 flex-1 basis-48 gap-1">
-        <p className="font-mono text-[0.9rem] [overflow-wrap:anywhere] text-ink">{s.name}</p>
+        <p className="font-mono text-body [overflow-wrap:anywhere] text-ink">{s.name}</p>
         {s.set ? (
           <Status tone="ok">{t("cfg-secret-set", { preview: s.preview ?? "•••" })}</Status>
         ) : (
           <Status tone="error">{t("cfg-secret-unset")}</Status>
         )}
-        <p className="flex flex-wrap items-center gap-1.5 text-[0.85rem] text-ink-muted">
+        <p className="flex flex-wrap items-center gap-1.5 text-meta text-ink-muted">
           {s.used_by.length ? (
             <>
               {t("cfg-secret-used-by")}

@@ -85,9 +85,9 @@ export function Scene({
           />
           <p
             aria-live="polite"
-            className="mb-8 line-clamp-5 max-w-[22rem] rounded-2xl sm:mb-12 rounded-bl-sm bg-paper-raised px-4 py-3 text-[1.02rem] leading-snug text-ink shadow-lg"
+            className="mb-8 line-clamp-5 max-w-[22rem] rounded-2xl sm:mb-12 rounded-bl-sm bg-paper-raised px-4 py-3 text-lead leading-snug text-ink shadow-lg"
           >
-            <span className="mb-0.5 block text-[0.78rem] font-medium text-ink-muted">
+            <span className="mb-0.5 block text-meta font-medium text-ink-muted">
               {agent} · {stateLabel}
             </span>
             {line}
@@ -97,7 +97,7 @@ export function Scene({
       </div>
       <div className="sky-ground flex flex-wrap items-end justify-between gap-x-10 gap-y-5 px-5 pt-5 pb-6 sm:px-8">
         <div className="min-w-0">
-          <p className="text-[0.9rem] text-white/65 first-letter:uppercase">{date}</p>
+          <p className="text-body text-white/65 first-letter:uppercase">{date}</p>
           <h1 id="hello" className="mt-1 text-[clamp(1.9rem,4.4vw,2.9rem)] leading-[1.05]">
             {greeting}
           </h1>
@@ -166,12 +166,12 @@ function Rooms({
                 onClick={() => onRoom(r)}
               >
                 <span className="flex items-start justify-between gap-2">
-                  <span className="min-w-0 truncate text-[0.95rem] leading-tight font-semibold">{capital(r.room)}</span>
+                  <span className="min-w-0 truncate text-body leading-tight font-semibold">{capital(r.room)}</span>
                   <span className="flex gap-1 pt-0.5">{devices(r)}</span>
                 </span>
-                <span className="flex min-h-7 flex-wrap items-center gap-1.5 text-[0.85rem]">
+                <span className="flex min-h-7 flex-wrap items-center gap-1.5 text-meta">
                   {r.people.map((p) => (
-                    <Pebble key={p.id} name={p.name} />
+                    <Pebble key={p.id} name={p.name} lit />
                   ))}
                   {r.people.length === 1 ? <span className="font-medium">{r.people[0]?.name}</span> : null}
                   {r.people.length ? null : t("home-room-someone")}
@@ -216,11 +216,11 @@ const QUIET_SHOWN = 6;
 function Group({ label, people, away }: { label: string; people: Person[]; away?: boolean }) {
   return (
     <div>
-      <p className="mb-1.5 text-[0.8rem] text-white/65">{label}</p>
+      <p className="mb-1.5 text-meta text-white/65">{label}</p>
       <ul className="flex flex-wrap gap-x-3 gap-y-1.5">
         {people.map((p) => (
-          <li key={p.id} className="flex items-center gap-1.5 text-[0.92rem]">
-            <Pebble name={p.name} away={away} className={away ? "" : "bg-[#f5f0e6]! text-[#1d1913]!"} />
+          <li key={p.id} className="flex items-center gap-1.5 text-body">
+            <Pebble name={p.name} away={away} lit={!away} />
             {p.name}
           </li>
         ))}

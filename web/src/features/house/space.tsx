@@ -76,7 +76,7 @@ export function HouseSpace() {
                 <KindMark kind={home.data.component.brand} className="size-5 text-ink" label={false} />
               ) : null}
               <span className="text-left">
-                <span className="block text-[0.95rem] font-medium text-ink">{t("hs-system")}</span>
+                <span className="block text-body font-medium text-ink">{t("hs-system")}</span>
                 <Status tone={health.tone}>{t(health.label)}</Status>
               </span>
               <ArrowRight className="ml-2 size-4 text-ink-faint" aria-hidden="true" />
@@ -141,7 +141,7 @@ export function HouseSpace() {
                     <IconTile icon={d.can_view || d.off ? Video : RadioTower} />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-ink">{deviceName(d)}</p>
-                      <p className="text-[0.85rem] text-ink-muted">{capital(d.room)}</p>
+                      <p className="text-meta text-ink-muted">{capital(d.room)}</p>
                     </div>
                     {d.connected ? null : <Status tone="attention">{t("sat-state-offline")}</Status>}
                   </div>
@@ -154,13 +154,13 @@ export function HouseSpace() {
 
         {known.length ? (
           <Link to="/memories" className="surface flex items-center gap-4 p-5">
-            <IconTile icon={BookMarked} tone="sage" className="size-11" />
+            <IconTile icon={BookMarked} tone="sage" size="lg" />
             <span className="min-w-0 flex-1">
-              <span className="block font-serif text-[1.35rem] leading-tight text-ink">
+              <span className="block title-card text-ink">
                 {t("hs-memories", { assistant: me.assistant, count: known.length })}
               </span>
               {latest ? (
-                <span className="mt-1 line-clamp-1 block text-[0.95rem] text-ink-muted">
+                <span className="mt-1 line-clamp-1 block text-body text-ink-muted">
                   {t("message-quoted", { text: latest.text })}
                 </span>
               ) : null}
@@ -200,7 +200,7 @@ function PersonCard({ person: p }: { person: Person }) {
     <li>
       <Link to="/people/$personId" params={{ personId: p.id }} className="surface flex h-full flex-col gap-4 p-4">
         <span className="flex items-start justify-between">
-          <Pebble name={p.name} away={home === false} className="size-12 text-[1.15rem]" />
+          <Pebble name={p.name} away={home === false} size="xl" />
           <span className="flex gap-1.5 pt-1">
             {p.channel_accounts.map((c) => (
               <KindMark key={c} kind={c} className="size-4" label={false} />
@@ -208,8 +208,8 @@ function PersonCard({ person: p }: { person: Person }) {
           </span>
         </span>
         <span>
-          <span className="block font-serif text-[1.35rem] leading-tight text-ink">{p.name}</span>
-          <span className={cn("mt-1 block text-[0.95rem]", home ? "font-medium text-ink" : "text-ink-muted")}>
+          <span className="block title-card text-ink">{p.name}</span>
+          <span className={cn("mt-1 block text-body", home ? "font-medium text-ink" : "text-ink-muted")}>
             {where}
             {p.presence?.since ? (
               <span className="font-normal text-ink-muted">
@@ -239,12 +239,12 @@ function RoomCard({ room: r, onOpen }: { room: RoomNode; onOpen: () => void }) {
         )}
       >
         <span className="flex items-baseline justify-between gap-3">
-          <span className="truncate font-serif text-[1.35rem] leading-tight text-ink">{capital(r.room)}</span>
+          <span className="truncate title-card text-ink">{capital(r.room)}</span>
           {r.active ? (
-            <span className="shrink-0 text-[0.85rem] text-ink-muted">{t("hs-room-events", { count: r.active })}</span>
+            <span className="shrink-0 text-meta text-ink-muted">{t("hs-room-events", { count: r.active })}</span>
           ) : null}
         </span>
-        <span className="flex min-h-7 flex-wrap items-center gap-1.5 text-[0.95rem] text-ink-muted">
+        <span className="flex min-h-7 flex-wrap items-center gap-1.5 text-body text-ink-muted">
           {r.people.map((p) => (
             <Pebble key={p.id} name={p.name} />
           ))}
@@ -257,7 +257,7 @@ function RoomCard({ room: r, onOpen }: { room: RoomNode; onOpen: () => void }) {
           )}
         </span>
         {r.satellites.length ? (
-          <span className="mt-auto flex flex-wrap gap-x-4 gap-y-1 border-t border-rule pt-3 text-[0.88rem] text-ink-muted">
+          <span className="mt-auto flex flex-wrap gap-x-4 gap-y-1 border-t border-rule pt-3 text-meta text-ink-muted">
             {r.satellites.map((s) => {
               const Icon = s.films ? Video : RadioTower;
               return (

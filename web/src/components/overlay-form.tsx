@@ -42,7 +42,7 @@ export function FormDialog({
       {trigger ? <DialogTrigger render={trigger} /> : null}
       <DialogContent className={wide ? "sm:max-w-xl" : "sm:max-w-md"}>
         <DialogHeader>
-          <DialogTitle className="font-serif text-xl font-normal">{title}</DialogTitle>
+          <DialogTitle className="title-card font-normal">{title}</DialogTitle>
           {description ? <DialogDescription>{description}</DialogDescription> : null}
         </DialogHeader>
         {open ? children(() => setOpen(false)) : null}
@@ -117,7 +117,7 @@ export function BottomSheet({
         className="max-h-[85dvh] overflow-y-auto overscroll-contain rounded-t-xl bg-paper pb-[env(safe-area-inset-bottom)]"
       >
         <SheetHeader className="border-b border-rule px-5 pt-5 pb-3">
-          <SheetTitle className="font-serif text-xl font-normal">{title}</SheetTitle>
+          <SheetTitle className="title-card font-normal">{title}</SheetTitle>
         </SheetHeader>
         {children}
       </SheetContent>
@@ -145,11 +145,9 @@ export function FormSheet({
   const [open, setOpen] = useOpenState(controlled, onOpenChange);
   return (
     <SideSheet open={open} onOpenChange={setOpen} trigger={trigger} onClosed={onClosed}>
-      <SheetHeader className="border-b border-rule px-6 pt-6 pb-4">
-        <SheetTitle className="font-serif text-2xl font-normal">{title}</SheetTitle>
-        {description ? <SheetDescription>{description}</SheetDescription> : null}
-      </SheetHeader>
-      <div className="px-6 pb-8">{open ? children(() => setOpen(false)) : null}</div>
+      <SheetPanel title={title} description={description}>
+        {open ? children(() => setOpen(false)) : null}
+      </SheetPanel>
     </SideSheet>
   );
 }
@@ -179,19 +177,19 @@ export function SheetPanel({
     <>
       <SheetHeader className="gap-3 px-6 pt-8 pb-2">
         {kind ? (
-          <span className="flex items-center gap-3 text-[0.9rem] font-medium text-ink-muted">
-            {icon ? <IconTile icon={icon} tone={tone} className="size-9" /> : null}
+          <span className="flex items-center gap-3 text-body font-medium text-ink-muted">
+            {icon ? <IconTile icon={icon} tone={tone} size="sm" /> : null}
             {kind}
           </span>
         ) : null}
-        <SheetTitle className="font-serif text-[1.6rem] leading-snug font-normal">{title}</SheetTitle>
-        <SheetDescription className={description ? "text-[0.98rem] text-ink-muted" : "sr-only"}>
+        <SheetTitle className="title-sheet font-normal">{title}</SheetTitle>
+        <SheetDescription className={description ? "text-body text-ink-muted" : "sr-only"}>
           {description ?? kind ?? title}
         </SheetDescription>
       </SheetHeader>
       <div className="grid gap-7 px-6 pb-8">{children}</div>
       {actions ? (
-        <div className="sticky bottom-0 mt-auto flex flex-wrap gap-2 border-t border-rule bg-paper-raised px-6 py-4">
+        <div data-slot="sheet-actions" className="sticky bottom-0 mt-auto flex flex-wrap gap-2">
           {actions}
         </div>
       ) : null}

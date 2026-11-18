@@ -127,18 +127,18 @@ function BrokenCard({ connection: c }: { connection: Connection }) {
         <Link
           to="/connections/$connectionId"
           params={{ connectionId: c.id }}
-          className="mt-0.5 block truncate text-[1.02rem] font-medium text-ink hover:underline"
+          className="mt-0.5 block truncate text-lead font-medium text-ink hover:underline"
         >
           {c.account}
         </Link>
-        <p className="text-[0.9rem] text-ink-muted">
+        <p className="text-body text-ink-muted">
           {c.title} · {personName(c.owner)}
         </p>
-        <p className="mt-2 text-[0.95rem] text-ink">
+        <p className="mt-2 text-body text-ink">
           {t(c.status === "needs_reauth" ? "conn-fix-reauth" : "conn-fix-error", { assistant: me.assistant })}
         </p>
         {c.status_reason ? (
-          <p className="mt-1 font-mono text-[0.8rem] [overflow-wrap:anywhere] text-ink-muted">
+          <p className="mt-1 font-mono text-meta [overflow-wrap:anywhere] text-ink-muted">
             {rendered(c.status_reason)}
           </p>
         ) : null}
@@ -171,12 +171,12 @@ function AccountCard({ connection: c }: { connection: Connection }) {
           <OwnerMark owner={c.owner} />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-[1.02rem] font-medium text-ink">{c.account}</span>
-          <span className="block text-[0.9rem] text-ink-muted">
+          <span className="block truncate text-lead font-medium text-ink">{c.account}</span>
+          <span className="block text-body text-ink-muted">
             {c.title} · {personName(c.owner)}
           </span>
         </span>
-        <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.85rem] text-ink-muted">
+        <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-meta text-ink-muted">
           <ConnectionStatusMark status={c.status} />
           {c.last_used_at ? (
             <span>

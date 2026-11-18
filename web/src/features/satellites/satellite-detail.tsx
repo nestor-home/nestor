@@ -143,7 +143,7 @@ export function SatelliteOverview({ satellite: s }: { satellite: Satellite }) {
               <Ago iso={s.last_seen_at} />
             </Fact>
           ) : null}
-          <Fact term={t("sat-software")} className="font-mono text-[0.8rem] [overflow-wrap:anywhere]">
+          <Fact term={t("sat-software")} className="font-mono text-meta [overflow-wrap:anywhere]">
             {s.software.name} {s.software.version} · {s.protocol}
           </Fact>
         </Facts>
@@ -152,7 +152,7 @@ export function SatelliteOverview({ satellite: s }: { satellite: Satellite }) {
       {canRevoke ? (
         <Section title={t("sat-revoke")}>
           <div className="surface flex flex-wrap items-center justify-between gap-x-6 gap-y-4 p-5">
-            <p className="max-w-xl text-[0.95rem] text-ink-muted">{t("sat-revoke-hint")}</p>
+            <p className="max-w-xl text-body text-ink-muted">{t("sat-revoke-hint")}</p>
             <Confirm
               trigger={<Button variant="destructive">{t("sat-revoke-action")}</Button>}
               title={t("sat-revoke-title", { id: deviceName(s) })}
@@ -179,8 +179,8 @@ export function SatelliteCapabilities({ satellite: s }: { satellite: Satellite }
           <IconTile icon={CAPABILITY_ICON[c.name] ?? RadioTower} />
           <div className="min-w-0">
             <p className="font-medium text-ink">{c.label}</p>
-            {means(c.name) ? <p className="mt-0.5 text-[0.92rem] text-ink-muted">{means(c.name)}</p> : null}
-            <code className="mt-1.5 block font-mono text-[0.75rem] text-ink-faint">{c.name}</code>
+            {means(c.name) ? <p className="mt-0.5 text-body text-ink-muted">{means(c.name)}</p> : null}
+            <code className="mt-1.5 block font-mono text-micro text-ink-faint">{c.name}</code>
           </div>
         </li>
       ))}

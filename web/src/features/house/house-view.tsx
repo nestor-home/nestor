@@ -44,9 +44,9 @@ export function HouseView() {
 function Part({ title, count, children }: { title: string; count?: number; children: ReactNode }) {
   return (
     <section>
-      <h3 className="mb-3 flex items-baseline gap-2 text-[1.15rem] text-ink">
+      <h3 className="mb-3 flex items-baseline gap-2 title-sub text-ink">
         {title}
-        {count ? <span className="text-[0.85rem] text-ink-muted tabular">{count}</span> : null}
+        {count ? <span className="text-meta text-ink-muted tabular">{count}</span> : null}
       </h3>
       {children}
     </section>
@@ -63,20 +63,16 @@ function Loaded({ home, configure }: { home: Home; configure: ReactNode }) {
     <div className="grid gap-8">
       <header className="grid gap-4">
         <div className="flex items-center gap-4">
-          {brand ? <BrandTile brand={brand} className="size-12" /> : <IconTile icon={House} className="size-12" />}
+          {brand ? <BrandTile brand={brand} size="lg" /> : <IconTile icon={House} size="lg" />}
           <div className="min-w-0 flex-1">
-            <p className="font-serif text-[1.6rem] leading-snug text-ink">
-              {brand ? brandName(brand) : home.component.name}
-            </p>
+            <p className="title-sheet text-ink">{brand ? brandName(brand) : home.component.name}</p>
             <Status tone={health.tone}>{t(health.label)}</Status>
           </div>
         </div>
         {home.component.health_detail ? (
-          <p className="text-[0.95rem] text-ink-muted">{home.component.health_detail}</p>
+          <p className="text-body text-ink-muted">{home.component.health_detail}</p>
         ) : null}
-        <p className="text-[0.98rem] text-ink">
-          {t("house-lede", { granularity: granularityLabel(home.granularity) })}
-        </p>
+        <p className="text-body text-ink">{t("house-lede", { granularity: granularityLabel(home.granularity) })}</p>
         {configure ? <div>{configure}</div> : null}
       </header>
 
@@ -89,14 +85,10 @@ function Loaded({ home, configure }: { home: Home; configure: ReactNode }) {
                 params={{ personId: p.person.id }}
                 className="surface flex items-center gap-3 px-4 py-3"
               >
-                <Pebble
-                  name={p.person.name}
-                  away={!p.entity || p.presence?.home !== true}
-                  className="size-9 text-[0.9rem]"
-                />
+                <Pebble name={p.person.name} away={!p.entity || p.presence?.home !== true} size="lg" />
                 <span className="min-w-0 flex-1">
                   <span className="block text-ink">{p.person.name}</span>
-                  <span className="block truncate font-mono text-[0.78rem] text-ink-muted">
+                  <span className="block truncate font-mono text-meta text-ink-muted">
                     {p.entity ?? t("house-not-tied")}
                     {p.tracker ? ` · ${p.tracker}` : ""}
                   </span>
@@ -107,7 +99,7 @@ function Loaded({ home, configure }: { home: Home; configure: ReactNode }) {
           ))}
         </ul>
         {strangers.length ? (
-          <p className="mt-3 text-[0.92rem] text-ink-muted">
+          <p className="mt-3 text-body text-ink-muted">
             {t("house-strangers", { count: strangers.length, names: strangers.map((r) => r.name).join(", ") })}
           </p>
         ) : null}
@@ -119,8 +111,8 @@ function Loaded({ home, configure }: { home: Home; configure: ReactNode }) {
             {home.tools.map((tool) => (
               <li key={tool.name} className="grid gap-2 px-4 py-3">
                 <span className="min-w-0">
-                  <span className="block font-mono text-[0.85rem] [overflow-wrap:anywhere] text-ink">{tool.name}</span>
-                  <span className="block text-[0.9rem] text-ink-muted">{tool.description}</span>
+                  <span className="block font-mono text-meta [overflow-wrap:anywhere] text-ink">{tool.name}</span>
+                  <span className="block text-body text-ink-muted">{tool.description}</span>
                 </span>
                 <span className="flex flex-wrap gap-1.5">
                   <RiskTag risk={tool.risk} />
@@ -136,7 +128,7 @@ function Loaded({ home, configure }: { home: Home; configure: ReactNode }) {
 
       {home.unplaced_sensors.length ? (
         <div className="surface p-4">
-          <p className="flex items-start gap-2 text-[0.95rem] text-ink">
+          <p className="flex items-start gap-2 text-body text-ink">
             <CircleAlert className="mt-0.5 size-4 shrink-0 text-amber" aria-hidden="true" />
             {t("house-unplaced", { count: home.unplaced_sensors.length })}
           </p>

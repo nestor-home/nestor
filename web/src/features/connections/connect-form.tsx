@@ -77,13 +77,13 @@ export function ConnectForm({
 
   return (
     <section aria-labelledby="connect-account" className="grid gap-4">
-      <h3 id="connect-account" className="text-[1.15rem] text-ink">
+      <h3 id="connect-account" className="title-sub text-ink">
         {t("conn-connect-account")}
       </h3>
       {oauth ? (
-        <p className="text-sm text-ink-muted">{t("conn-oauth-consent")}</p>
+        <p className="text-meta text-ink-muted">{t("conn-oauth-consent")}</p>
       ) : connector.setup ? (
-        <p className="text-sm whitespace-pre-line text-ink-muted">{connector.setup}</p>
+        <p className="text-meta whitespace-pre-line text-ink-muted">{connector.setup}</p>
       ) : null}
       <form onSubmit={submit} className="grid gap-4">
         <Field label={t("conn-account-of")} htmlFor="person" hint={t("conn-account-of-hint")}>
@@ -99,7 +99,7 @@ export function ConnectForm({
         {oauth ? null : main.map(input)}
         {extra.length ? (
           <Collapsible key={clientRequired ? "asked" : "closed"} defaultOpen={clientRequired}>
-            <CollapsibleTrigger className="group/auth inline-flex items-center gap-1.5 rounded-sm text-[0.9rem] font-medium text-ink-muted hover:text-ink">
+            <CollapsibleTrigger className="group/auth inline-flex items-center gap-1.5 rounded-sm text-body font-medium text-ink-muted hover:text-ink">
               <ChevronRight
                 className="size-3.5 transition-transform group-data-panel-open/auth:rotate-90"
                 aria-hidden="true"
@@ -111,7 +111,7 @@ export function ConnectForm({
                 {extra.map(input)}
                 {clientRequired && connector.oauth ? (
                   <div className="grid gap-1.5">
-                    <p className="text-[0.8rem] font-medium">{t("conn-redirect-uri-service")}</p>
+                    <p className="text-meta font-medium">{t("conn-redirect-uri-service")}</p>
                     <CopyField value={connector.oauth.redirect_uri} label={t("conn-redirect-uri-label")} />
                   </div>
                 ) : null}
@@ -119,7 +119,7 @@ export function ConnectForm({
             </CollapsibleContent>
           </Collapsible>
         ) : null}
-        {blocked ? <p className="text-sm text-amber">{t("conn-client-first")}</p> : null}
+        {blocked ? <p className="text-meta text-amber">{t("conn-client-first")}</p> : null}
         <FormError error={error} />
         <FormActions>
           <Button type="submit" disabled={blocked || busy}>
@@ -181,7 +181,7 @@ function Presets({
   const picked = connector.presets.find((p) => Object.entries(p.values).every(([k, v]) => values[k] === v));
   return (
     <fieldset className="grid gap-2">
-      <legend className="mb-2 text-[0.8rem] font-medium text-ink">{t("conn-presets")}</legend>
+      <legend className="mb-2 text-meta font-medium text-ink">{t("conn-presets")}</legend>
       <ToggleGroup
         aria-label={t("conn-presets")}
         value={picked ? [picked.name] : []}
@@ -195,7 +195,7 @@ function Presets({
           <ToggleGroupItem
             key={p.name}
             value={p.name}
-            className="h-auto w-full min-w-0 justify-start gap-2 rounded-md border border-rule bg-paper-raised px-2.5 py-2 text-left text-sm hover:border-rule-strong data-[pressed]:border-ember data-[pressed]:bg-ember-soft/40"
+            className="h-auto w-full min-w-0 justify-start gap-2 rounded-md border border-rule bg-paper-raised px-2.5 py-2 text-left text-meta hover:border-rule-strong data-[pressed]:border-ember data-[pressed]:bg-ember-soft/40"
           >
             <KindMark kind={p.brand ?? connector.kind} label={false} className="size-4 shrink-0 text-ink" />
             <span className="truncate">{p.name}</span>

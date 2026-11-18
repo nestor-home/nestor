@@ -133,8 +133,8 @@ export function ActivityView() {
                     <span className="flex items-start gap-4">
                       <IconTile icon={Workflow} tone="task" />
                       <span className="min-w-0 flex-1">
-                        <span className="block text-[1.02rem] leading-snug font-medium text-ink">{task.title}</span>
-                        <span className="mt-1 flex flex-wrap items-center gap-x-2.5 text-[0.9rem] text-ink-muted">
+                        <span className="block text-lead leading-snug font-medium text-ink">{task.title}</span>
+                        <span className="mt-1 flex flex-wrap items-center gap-x-2.5 text-body text-ink-muted">
                           <Executor name={task.executor} />
                           <span>
                             {t("task-since")} <Ago iso={task.started_at} />
@@ -143,7 +143,7 @@ export function ActivityView() {
                       </span>
                       {task.requested_by ? <Pebble name={task.requested_by.name} /> : null}
                     </span>
-                    <span className="mt-3.5 block text-[0.9rem] text-ink">
+                    <span className="mt-3.5 block text-body text-ink">
                       {task.steps.at(-1) ?? t("home-task-starting")}
                     </span>
                     <span className="thread mt-2.5 block" aria-hidden="true" />
@@ -173,9 +173,9 @@ export function ActivityView() {
                     <When iso={s.next_due} />
                     <span className="min-w-0">
                       <span className="block font-medium text-ink">{s.title}</span>
-                      <span className="line-clamp-1 block text-[0.9rem] text-ink-muted">{s.instruction}</span>
+                      <span className="line-clamp-1 block text-body text-ink-muted">{s.instruction}</span>
                       {s.recurring ? (
-                        <span className="mt-0.5 flex items-center gap-1.5 text-[0.85rem] text-ink-muted">
+                        <span className="mt-0.5 flex items-center gap-1.5 text-meta text-ink-muted">
                           <Repeat className="size-3.5" aria-hidden="true" />
                           {rhythm(s)}
                         </span>
@@ -210,10 +210,10 @@ export function ActivityView() {
                       <OwnerMark owner={w.owner} />
                     </span>
                     <span className="flex-1">
-                      <span className="block text-[1.02rem] leading-snug font-medium text-ink">{w.title}</span>
-                      <span className="mt-1 line-clamp-2 block text-[0.9rem] text-ink-muted">{w.what}</span>
+                      <span className="block text-lead leading-snug font-medium text-ink">{w.title}</span>
+                      <span className="mt-1 line-clamp-2 block text-body text-ink-muted">{w.what}</span>
                     </span>
-                    <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.85rem] text-ink-muted">
+                    <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-meta text-ink-muted">
                       {w.kinds.map((k) => (
                         <WatchKind key={k} kind={k} />
                       ))}
@@ -265,7 +265,7 @@ export function ActivityView() {
                 >
                   <span className="min-w-0">
                     <span className="line-clamp-1 block text-ink">{task.title}</span>
-                    <span className="flex flex-wrap items-center gap-x-2.5 text-[0.85rem] text-ink-muted">
+                    <span className="flex flex-wrap items-center gap-x-2.5 text-meta text-ink-muted">
                       <Executor name={task.executor} />
                       {task.ended_at ? <Ago iso={task.ended_at} /> : null}
                     </span>
@@ -317,8 +317,8 @@ function When({ iso }: { iso: string | null }) {
     : named;
   return (
     <time dateTime={iso} className="grid">
-      <span className="text-[0.8rem] text-ink-muted first-letter:uppercase">{day}</span>
-      <span className="font-serif text-[1.35rem] leading-tight text-ink tabular">{hourMinute(iso)}</span>
+      <span className="text-meta text-ink-muted first-letter:uppercase">{day}</span>
+      <span className="title-card text-ink tabular">{hourMinute(iso)}</span>
     </time>
   );
 }
@@ -352,10 +352,10 @@ function ConfirmationCard({ confirmation: c }: { confirmation: Confirmation }) {
     <li className="surface flex gap-4 p-4">
       <IconTile icon={ShieldQuestion} tone="amber" />
       <div className="min-w-0 flex-1">
-        <p className="text-[0.85rem] font-medium text-amber">{t("act-awaits-approval")}</p>
-        <p className="mt-0.5 font-mono text-[0.95rem] text-ink">{c.tool}</p>
-        {what ? <p className="mt-0.5 text-[0.9rem] text-ink-muted">{what}</p> : null}
-        <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.85rem] text-ink-muted">
+        <p className="text-meta font-medium text-amber">{t("act-awaits-approval")}</p>
+        <p className="mt-0.5 font-mono text-body text-ink">{c.tool}</p>
+        {what ? <p className="mt-0.5 text-body text-ink-muted">{what}</p> : null}
+        <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-meta text-ink-muted">
           <span>{t("confirmation-for", { name: personName(c.person) })}</span>
           <span className="inline-flex items-center gap-1">
             <KindMark kind={c.origin.channel} className="size-3" label={false} />
@@ -388,7 +388,7 @@ function ConfirmationCard({ confirmation: c }: { confirmation: Confirmation }) {
             </Button>
           </div>
         ) : (
-          <p className="mt-2 text-[0.85rem] text-ink-muted">{t("confirmation-not-yours")}</p>
+          <p className="mt-2 text-meta text-ink-muted">{t("confirmation-not-yours")}</p>
         )}
       </div>
     </li>
@@ -411,9 +411,9 @@ function MessageCard({
     <li className="surface flex gap-4 p-4">
       <IconTile icon={icon} tone={tone} />
       <div className="min-w-0 flex-1">
-        <p className="text-[0.85rem] font-medium text-ink-muted">{state}</p>
-        <p className="mt-0.5 font-serif text-[1.1rem] leading-snug text-ink">{t("message-quoted", { text: m.text })}</p>
-        <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.85rem] text-ink-muted">
+        <p className="text-meta font-medium text-ink-muted">{state}</p>
+        <p className="mt-0.5 title-sub text-ink">{t("message-quoted", { text: m.text })}</p>
+        <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-meta text-ink-muted">
           <span>
             {m.requested_by
               ? t("message-from-to", { from: m.requested_by.name, to: m.to.name })
@@ -476,7 +476,7 @@ function TaskPanel({ task, onDone }: { task: Task; onDone: () => void }) {
         </>
       }
     >
-      <Facts narrow className="text-[0.95rem]">
+      <Facts narrow className="text-body">
         <Fact term={t("act-state")}>
           <TaskStatusMark status={task.status} />
         </Fact>
@@ -488,7 +488,7 @@ function TaskPanel({ task, onDone }: { task: Task; onDone: () => void }) {
       </Facts>
       {task.steps.length ? (
         <div>
-          <h3 className="mb-3 text-[1.15rem] text-ink">{t("task-story")}</h3>
+          <h3 className="mb-3 title-sub text-ink">{t("task-story")}</h3>
           <ol className="grid gap-0">
             {task.steps.map((step, index) => {
               const last = index === task.steps.length - 1;
@@ -504,7 +504,7 @@ function TaskPanel({ task, onDone }: { task: Task; onDone: () => void }) {
                     />
                     {last ? null : <span className="w-px flex-1 bg-rule" />}
                   </span>
-                  <span className={cn("pb-3.5 text-[0.95rem]", last ? "text-ink" : "text-ink-muted")}>{step}</span>
+                  <span className={cn("pb-3.5 text-body", last ? "text-ink" : "text-ink-muted")}>{step}</span>
                 </li>
               );
             })}
@@ -513,14 +513,14 @@ function TaskPanel({ task, onDone }: { task: Task; onDone: () => void }) {
       ) : null}
       {task.result ? (
         <div>
-          <h3 className="mb-2 text-[1.15rem] text-ink first-letter:uppercase">{t("task-result")}</h3>
-          <p className="rounded-(--radius-surface) bg-paper-sunken px-4 py-3 text-[0.95rem] whitespace-pre-line text-ink">
+          <h3 className="mb-2 title-sub text-ink first-letter:uppercase">{t("task-result")}</h3>
+          <p className="rounded-(--radius-surface) bg-paper-sunken px-4 py-3 text-body whitespace-pre-line text-ink">
             {task.result}
           </p>
         </div>
       ) : null}
       {task.error ? (
-        <p className="rounded-(--radius-surface) bg-brick-soft px-4 py-3 text-[0.95rem] text-brick">{task.error}</p>
+        <p className="rounded-(--radius-surface) bg-brick-soft px-4 py-3 text-body text-brick">{task.error}</p>
       ) : null}
     </SheetPanel>
   );
@@ -568,7 +568,7 @@ function WatchPanel({ watch: w, onDone }: { watch: Watch; onDone: () => void }) 
         </>
       }
     >
-      <Facts narrow className="text-[0.95rem]">
+      <Facts narrow className="text-body">
         <Fact term={t("watch-watches")}>
           <span className="flex flex-wrap gap-x-3">
             {w.kinds.map((k) => (
@@ -641,7 +641,7 @@ function SchedulePanel({ schedule: s, onDone }: { schedule: Schedule; onDone: ()
         ) : undefined
       }
     >
-      <Facts narrow className="text-[0.95rem]">
+      <Facts narrow className="text-body">
         {s.next_due ? <Fact term={t("act-next")}>{moment(s.next_due)}</Fact> : null}
         <Fact term={t("watch-rhythm")}>{s.recurring ? rhythm(s) : t("schedule-once")}</Fact>
         <Fact term={t("act-for")}>{personName(s.owner)}</Fact>

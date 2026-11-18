@@ -68,7 +68,7 @@ function Entry({
 
 function Clock({ iso, className }: { iso: string; className?: string }) {
   return (
-    <time dateTime={iso} className={cn("text-[0.85rem] text-ink-muted tabular", className)}>
+    <time dateTime={iso} className={cn("text-meta text-ink-muted tabular", className)}>
       {hourMinute(iso)}
     </time>
   );
@@ -102,13 +102,13 @@ function Head({
     <header className="flex items-start gap-3.5">
       <IconTile icon={icon} tone={tone} />
       <div className="min-w-0 flex-1">
-        <h3 className="font-sans text-[1.02rem] leading-snug font-medium text-pretty text-ink [overflow-wrap:anywhere]">
+        <h3 className="font-sans text-lead leading-snug font-medium text-pretty text-ink [overflow-wrap:anywhere]">
           {title}
         </h3>
-        <p className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[0.9rem] text-ink-muted">
+        <p className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-body text-ink-muted">
           {people.map((p) => (
             <span key={p.id} className="inline-flex items-center gap-1.5 text-ink">
-              <Pebble name={p.name} className="size-5 text-[0.6rem]" />
+              <Pebble name={p.name} size="xs" />
               {named ? p.name : <span className="sr-only">{p.name}</span>}
             </span>
           ))}
@@ -130,7 +130,7 @@ function Head({
   );
 }
 
-const LINK = "inline-flex shrink-0 items-center gap-0.5 pt-0.5 text-[0.9rem] text-ink-muted hover:text-ink";
+const LINK = "inline-flex shrink-0 items-center gap-0.5 pt-0.5 text-body text-ink-muted hover:text-ink";
 const FRAME_LABEL = { thread: "jr-story-thread", chain: "jr-story-chain", single: "jr-story-single" } as const;
 
 function Frame({ children, fresh, story }: { children: ReactNode; fresh: boolean; story: Story }) {
@@ -184,7 +184,7 @@ function ThreadCard({ thread, open, isNew, unfolded }: Props & { thread: Thread 
               <button
                 type="button"
                 onClick={() => setAll(true)}
-                className="w-full rounded-full bg-paper-sunken py-1.5 text-center text-[0.9rem] text-ink-muted hover:text-ink"
+                className="w-full rounded-full bg-paper-sunken py-1.5 text-center text-body text-ink-muted hover:text-ink"
               >
                 {t("jr-more-turns", { count: hidden })}
               </button>
@@ -223,7 +223,7 @@ function TurnBlock({ turn, open, unfolded }: { turn: Turn; open: (position: numb
         <div className={SIDE}>
           <Pebble name={who || "?"} className="mt-5" />
           <div className="min-w-0">
-            <p className="mb-1 flex items-baseline gap-2 text-[0.85rem] text-ink-muted">
+            <p className="mb-1 flex items-baseline gap-2 text-meta text-ink-muted">
               <span className="font-medium text-ink">{who}</span>
               <Clock iso={turn.user.at} />
             </p>
@@ -233,7 +233,7 @@ function TurnBlock({ turn, open, unfolded }: { turn: Turn; open: (position: numb
               label={t("jr-entry-label", { text: say(turn.user), detail: turn.user.detail_text })}
               className="w-fit max-w-full rounded-2xl rounded-tl-sm bg-paper-sunken px-3.5 py-2 hover:bg-rule"
             >
-              <span className="block text-[0.98rem] leading-relaxed text-ink [overflow-wrap:anywhere]">
+              <span className="block text-body leading-relaxed text-ink [overflow-wrap:anywhere]">
                 {turn.user.detail_text || say(turn.user)}
               </span>
             </Entry>
@@ -241,7 +241,7 @@ function TurnBlock({ turn, open, unfolded }: { turn: Turn; open: (position: numb
           </div>
         </div>
       ) : (
-        <p className="text-[0.9rem] text-ink-muted">{t("jr-thread-earlier")}</p>
+        <p className="text-body text-ink-muted">{t("jr-thread-earlier")}</p>
       )}
       {answer || cut ? (
         <div className={SIDE}>
@@ -249,7 +249,7 @@ function TurnBlock({ turn, open, unfolded }: { turn: Turn; open: (position: numb
             <AgentFigure state="speaking" size="sm" />
           </span>
           <div className="min-w-0">
-            <p className="mb-0.5 text-[0.85rem] font-medium text-ember">{me.assistant}</p>
+            <p className="mb-0.5 text-meta font-medium text-ember">{me.assistant}</p>
             {answer ? (
               <Entry
                 item={answer}
@@ -259,7 +259,7 @@ function TurnBlock({ turn, open, unfolded }: { turn: Turn; open: (position: numb
               >
                 <span
                   className={cn(
-                    "block font-serif text-[1.1rem] leading-snug [overflow-wrap:anywhere] whitespace-pre-line",
+                    "block title-sub [overflow-wrap:anywhere] whitespace-pre-line",
                     interrupted ? "text-ink-muted" : "text-ink",
                   )}
                 >
@@ -268,7 +268,7 @@ function TurnBlock({ turn, open, unfolded }: { turn: Turn; open: (position: numb
               </Entry>
             ) : null}
             {cut ? (
-              <p className="mt-1 text-[0.9rem] text-ink-muted">{t("jr-cut-by", { heard: cut.detail_text || "…" })}</p>
+              <p className="mt-1 text-body text-ink-muted">{t("jr-cut-by", { heard: cut.detail_text || "…" })}</p>
             ) : null}
             <Between turn={turn} open={open} unfolded={unfolded} />
           </div>
@@ -307,7 +307,7 @@ function Between({ turn, open, unfolded }: { turn: Turn; open: (position: number
             key={item.id}
             to={isTask ? "/tasks/$taskId" : "/watches/$watchId"}
             params={isTask ? { taskId: item.links.task ?? "" } : { watchId: item.links.watch ?? "" }}
-            className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-paper-sunken px-3 py-1 text-[0.9rem] text-ink hover:bg-rule"
+            className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-paper-sunken px-3 py-1 text-body text-ink hover:bg-rule"
           >
             {isTask ? (
               <Workflow className="size-3.5 shrink-0 text-kind-task" aria-hidden="true" />
@@ -322,7 +322,7 @@ function Between({ turn, open, unfolded }: { turn: Turn; open: (position: number
       {calls.length || others.length ? (
         <Collapsible defaultOpen={unfolded} className="w-full min-w-0">
           <CollapsibleTrigger
-            className="group/between inline-flex items-center gap-1.5 rounded-sm text-[0.9rem] text-ink-muted hover:text-ink"
+            className="group/between inline-flex items-center gap-1.5 rounded-sm text-body text-ink-muted hover:text-ink"
             aria-label={t("jr-between-details", { what: parts.join(", ") || t("jr-details") })}
           >
             <ChevronRight
@@ -345,7 +345,7 @@ function Between({ turn, open, unfolded }: { turn: Turn; open: (position: number
                     type="button"
                     data-journal-entry=""
                     onClick={() => open(item.position)}
-                    className="flex min-w-0 items-baseline gap-2 text-left text-[0.9rem] text-ink-muted hover:text-ink"
+                    className="flex min-w-0 items-baseline gap-2 text-left text-body text-ink-muted hover:text-ink"
                   >
                     <span
                       aria-hidden="true"
@@ -387,7 +387,7 @@ function CallDetail({ call, open }: { call: ToolCall; open: (position: number) =
   const event = call.ended ?? call.started;
   return (
     <li className="min-w-0">
-      <p className="flex flex-wrap items-center gap-x-2 text-[0.9rem]">
+      <p className="flex flex-wrap items-center gap-x-2 text-body">
         <span
           aria-hidden="true"
           className={cn("size-1.5 rounded-full", ok === undefined ? "bg-amber" : ok ? "bg-sage" : "bg-brick")}
@@ -397,7 +397,7 @@ function CallDetail({ call, open }: { call: ToolCall; open: (position: number) =
           type="button"
           data-journal-entry=""
           onClick={() => event && open(event.position)}
-          className="font-mono text-[0.82rem] text-ink [overflow-wrap:anywhere] hover:underline"
+          className="font-mono text-meta text-ink [overflow-wrap:anywhere] hover:underline"
           aria-label={t("jr-call-details", { tool: call.name })}
         >
           {call.name}
@@ -418,7 +418,7 @@ function CallDetail({ call, open }: { call: ToolCall; open: (position: number) =
 function Code({ label, children }: { label: string; children: string }) {
   return (
     <figure className="mt-1 min-w-0">
-      <figcaption className="text-[0.82rem] text-ink-muted">{label}</figcaption>
+      <figcaption className="text-meta text-ink-muted">{label}</figcaption>
       <pre className="code-block">{children}</pre>
     </figure>
   );
@@ -491,7 +491,7 @@ function ChainStep({
   const Icon = look.icon;
   return (
     <li className="grid grid-cols-[2.75rem_1.25rem_minmax(0,1fr)] items-baseline gap-x-2">
-      {day ? <span className="col-span-3 pb-1 text-[0.85rem] text-ink-muted first-letter:uppercase">{day}</span> : null}
+      {day ? <span className="col-span-3 pb-1 text-meta text-ink-muted first-letter:uppercase">{day}</span> : null}
       <Clock iso={item.at} />
       <Icon className={cn("size-3.5 translate-y-0.5 justify-self-center", look.tone)} aria-hidden="true" />
       <div className="min-w-0">
@@ -501,7 +501,7 @@ function ChainStep({
           label={t("jr-entry-label", { text: look.label, detail: say(item) })}
           className="-mx-2 -my-1 rounded-lg px-2 py-1 hover:bg-paper-sunken/70"
         >
-          <span className="flex flex-wrap items-baseline gap-x-2 text-[0.95rem]">
+          <span className="flex flex-wrap items-baseline gap-x-2 text-body">
             <span className="font-medium text-ink">{look.label}</span>
             <Source item={item} />
             {is(item, "delivered") || is(item, "deliveryFailed") ? (
@@ -517,15 +517,13 @@ function ChainStep({
             ) : null}
           </span>
           {item.reason ? (
-            <span className="mt-0.5 block text-[0.95rem] text-ink [overflow-wrap:anywhere]">
+            <span className="mt-0.5 block text-body text-ink [overflow-wrap:anywhere]">
               <span className="text-ember">{t("jr-why-label")} </span>
               {why(item)}
             </span>
           ) : null}
           {item.detail_text ? (
-            <span className="mt-0.5 block text-[0.95rem] text-ink-muted [overflow-wrap:anywhere]">
-              {item.detail_text}
-            </span>
+            <span className="mt-0.5 block text-body text-ink-muted [overflow-wrap:anywhere]">{item.detail_text}</span>
           ) : null}
         </Entry>
         <Attachments item={item} className="mt-1.5" />
@@ -558,15 +556,15 @@ function SingleCard({ single, open, isNew }: Props & { single: Single }) {
     <Frame fresh={isNew(item.position)} story={single}>
       <Entry item={item} open={open} label={text} className="-m-1.5 w-auto rounded-xl p-1.5 hover:bg-paper-sunken/60">
         <span className="flex items-center gap-3.5">
-          <IconTile {...tileOf(item)} className="size-9" />
+          <IconTile {...tileOf(item)} size="sm" />
           <span className="min-w-0 flex-1">
-            <span className="block text-[0.98rem] text-ink [overflow-wrap:anywhere]">{text}</span>
+            <span className="block text-body text-ink [overflow-wrap:anywhere]">{text}</span>
             {people.length || item.detail_text || sourced(item) ? (
-              <span className="flex flex-wrap items-center gap-x-2.5 text-[0.88rem] text-ink-muted">
+              <span className="flex flex-wrap items-center gap-x-2.5 text-meta text-ink-muted">
                 <Source item={item} />
                 {people.map((p) => (
                   <span key={p.id} className="inline-flex items-center gap-1.5">
-                    <Pebble name={p.name} className="size-4.5 text-[0.55rem]" />
+                    <Pebble name={p.name} size="xs" />
                     {p.name}
                   </span>
                 ))}

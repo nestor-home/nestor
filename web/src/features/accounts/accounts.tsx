@@ -98,23 +98,19 @@ function AccountCard({ account }: { account: Account }) {
         className="surface flex h-full flex-col gap-4 p-5"
       >
         <span className="flex items-start justify-between gap-3">
-          <Pebble name={nameOf(account)} away={account.disabled} className="size-12 text-[1.15rem]" />
+          <Pebble name={nameOf(account)} away={account.disabled} size="xl" />
           <span className="flex flex-wrap justify-end gap-2 pt-1">
             {account.id === me.account.id ? <Tag tone="accent">{t("acc-you")}</Tag> : null}
             {account.disabled ? <Status tone="idle">{t("acc-disabled")}</Status> : null}
           </span>
         </span>
         <span className="min-w-0">
-          <span className="block font-serif text-[1.35rem] leading-tight [overflow-wrap:anywhere] text-ink">
-            {nameOf(account)}
-          </span>
-          <span className="mt-1 block truncate text-[0.95rem] text-ink-muted">{account.login}</span>
+          <span className="block title-card [overflow-wrap:anywhere] text-ink">{nameOf(account)}</span>
+          <span className="mt-1 block truncate text-body text-ink-muted">{account.login}</span>
         </span>
         <span className="mt-auto border-t border-rule pt-3">
-          <span className="block text-[0.95rem] font-medium text-ink first-letter:uppercase">
-            {roleLabel(account.role)}
-          </span>
-          <span className="block text-[0.88rem] text-ink-muted">{roleHint(account.role)}</span>
+          <span className="block text-body font-medium text-ink first-letter:uppercase">{roleLabel(account.role)}</span>
+          <span className="block text-meta text-ink-muted">{roleHint(account.role)}</span>
         </span>
       </Link>
     </li>
@@ -157,7 +153,7 @@ function InvitationRow({ invitation }: { invitation: Invitation }) {
       <IconTile icon={MailPlus} tone="amber" />
       <div className="min-w-0 flex-1 basis-48">
         <p className="font-medium text-ink">{who}</p>
-        <p className="text-[0.88rem] text-ink-muted">
+        <p className="text-meta text-ink-muted">
           {t("acc-invitation-line", { role: roleLabel(invitation.role), expires: moment(invitation.expires_at) })}
         </p>
       </div>
@@ -223,7 +219,7 @@ export function AccountDetail({ id }: { id: string }) {
         crumbs={<Crumbs trail={trail} />}
         title={
           <span className="flex items-center gap-4">
-            <Pebble name={nameOf(account)} away={account.disabled} className="size-14 text-[1.4rem]" />
+            <Pebble name={nameOf(account)} away={account.disabled} size="2xl" />
             <span className="min-w-0">{nameOf(account)}</span>
           </span>
         }
@@ -278,17 +274,17 @@ export function AccountDetail({ id }: { id: string }) {
             ) : (
               <p className="font-medium text-ink first-letter:uppercase">{roleLabel(account.role)}</p>
             )}
-            <p id="account-role-allows" className="text-[0.95rem] text-ink-muted">
+            <p id="account-role-allows" className="text-body text-ink-muted">
               {roleHint(account.role)}
             </p>
-            {lastOwner && editable ? <p className="text-[0.92rem] text-amber">{t("acc-last-owner")}</p> : null}
+            {lastOwner && editable ? <p className="text-body text-amber">{t("acc-last-owner")}</p> : null}
             <FormError error={change.error} />
           </div>
         </Section>
         {editable ? (
           <Section title={t("acc-signin")}>
             <div className="surface flex flex-wrap items-center justify-between gap-x-6 gap-y-4 p-5">
-              <p className="max-w-md text-[0.95rem] text-ink-muted">
+              <p className="max-w-md text-body text-ink-muted">
                 {account.disabled ? t("acc-disabled-note") : lastOwner ? t("acc-last-owner") : t("acc-disable-hint")}
               </p>
               {account.disabled ? (

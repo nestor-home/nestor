@@ -129,7 +129,7 @@ function Rail({ onSearch, rail }: { onSearch: () => void; rail: ReturnType<typeo
         type="button"
         onClick={onSearch}
         title={t("shell-go-to")}
-        className="flex h-10 items-center gap-2.5 rounded-xl bg-white/6 px-3 text-[0.9rem] text-ink-muted transition-colors hover:bg-white/10 hover:text-ink narrow:justify-center narrow:px-0"
+        className="flex h-10 items-center gap-2.5 rounded-xl bg-white/6 px-3 text-body text-ink-muted transition-colors hover:bg-white/10 hover:text-ink narrow:justify-center narrow:px-0"
       >
         <Search className="size-4.5 shrink-0" aria-hidden="true" />
         <span className="narrow:sr-only">{t("shell-go-to")}</span>
@@ -167,14 +167,14 @@ function RailLink({ space, here, badge }: { space: Space; here: boolean; badge: 
       aria-current={here ? "page" : undefined}
       aria-label={badge ? t("shell-space-waiting", { space: t(space.label), count: badge }) : undefined}
       className={cn(
-        "relative flex h-11 items-center gap-3 rounded-xl px-3 text-[0.95rem] font-medium transition-colors narrow:justify-center narrow:px-0",
-        here ? "bg-[#f5f0e6] text-[#1d1913]" : "text-ink-muted hover:bg-white/8 hover:text-ink",
+        "relative flex h-11 items-center gap-3 rounded-xl px-3 text-body font-medium transition-colors narrow:justify-center narrow:px-0",
+        here ? "bg-day-paper text-day-ink" : "text-ink-muted hover:bg-white/8 hover:text-ink",
       )}
     >
       <space.icon className="size-5 shrink-0" aria-hidden="true" />
       <span className="narrow:sr-only">{t(space.label)}</span>
       {badge ? (
-        <span className="ml-auto grid min-w-5 place-items-center rounded-full bg-ember px-1.5 text-[0.72rem] leading-5 font-semibold text-on-ember tabular narrow:absolute narrow:-top-1 narrow:-right-1">
+        <span className="ml-auto grid min-w-5 place-items-center rounded-full bg-ember px-1.5 text-micro leading-5 font-semibold text-on-ember tabular narrow:absolute narrow:-top-1 narrow:-right-1">
           {badge}
         </span>
       ) : null}
@@ -191,19 +191,19 @@ function SpaceLink({ space, here, badge }: { space: Space; here: boolean; badge:
       aria-current={here ? "page" : undefined}
       aria-label={badge ? t("shell-space-waiting", { space: t(space.label), count: badge }) : undefined}
       className={cn(
-        "group relative grid justify-items-center gap-1 rounded-xl px-1 py-2 text-[0.72rem] leading-tight font-medium transition-colors",
+        "group relative grid justify-items-center gap-1 rounded-xl px-1 py-2 text-micro leading-tight font-medium transition-colors",
         here ? "text-ink" : "text-ink-muted hover:text-ink",
       )}
     >
       <span
         className={cn(
           "relative grid h-9 w-12 place-items-center rounded-full transition-colors",
-          here ? "bg-[#f5f0e6] text-[#1d1913]" : "group-hover:bg-white/8",
+          here ? "bg-day-paper text-day-ink" : "group-hover:bg-white/8",
         )}
       >
         <space.icon className="size-5" aria-hidden="true" />
         {badge ? (
-          <span className="absolute -top-0.5 -right-0.5 grid min-w-4.5 place-items-center rounded-full bg-ember px-1 text-[0.68rem] leading-4.5 font-semibold text-on-ember tabular">
+          <span className="absolute -top-0.5 -right-0.5 grid min-w-4.5 place-items-center rounded-full bg-ember px-1 text-micro leading-4.5 font-semibold text-on-ember tabular">
             {badge}
           </span>
         ) : null}
@@ -235,14 +235,14 @@ function AgentMark() {
         <span
           aria-hidden="true"
           className={cn(
-            "absolute -top-0.5 -right-0.5 size-2.5 rounded-full ring-2 ring-[#100e0b] wide:hidden",
+            "absolute -top-0.5 -right-0.5 size-2.5 rounded-full ring-2 ring-night wide:hidden",
             online ? "live-dot bg-ember" : status === "connecting" ? "bg-amber" : "bg-ink-faint",
           )}
         />
       </span>
       <span className="min-w-0 narrow:hidden">
-        <span className="block truncate font-serif text-[1.45rem] leading-none text-ink">{me.assistant}</span>
-        <span className="mt-1.5 flex items-center gap-1.5 text-[0.82rem] text-ink-muted">
+        <span className="block truncate title-card text-ink">{me.assistant}</span>
+        <span className="mt-1.5 flex items-center gap-1.5 text-meta text-ink-muted">
           <span
             aria-hidden="true"
             className={cn(
@@ -270,7 +270,7 @@ function TopBar({ onSearch }: { onSearch: () => void }) {
         className="flex items-center gap-2 px-1"
       >
         <AgentFigure state={figure} size="sm" />
-        <span className="font-serif text-[1.35rem] leading-none text-ink">{me.assistant}</span>
+        <span className="title-card text-ink">{me.assistant}</span>
       </Link>
       <div className="ml-auto flex items-center gap-1">
         <button

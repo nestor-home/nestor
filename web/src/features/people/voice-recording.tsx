@@ -349,7 +349,7 @@ function RecordingFlow({
           )}
           {devices.length > 1 ? (
             <div className="grid gap-1.5">
-              <label htmlFor="voice-microphone" className="text-[0.8rem] font-medium text-ink">
+              <label htmlFor="voice-microphone" className="text-meta font-medium text-ink">
                 {t("recording-microphone")}
               </label>
               <Choice
@@ -373,7 +373,7 @@ function RecordingFlow({
       {step === "phrases" && recording ? (
         <div className="grid gap-4 text-center">
           <p className="caption">{t("recording-phrase-count", { n: kept.size + 1, total })}</p>
-          <p className="font-serif text-[1.45rem] leading-snug text-balance [overflow-wrap:anywhere] text-ink">
+          <p className="title-card text-balance [overflow-wrap:anywhere] text-ink">
             {t("recording-phrase", { phrase: recording.phrases[current] ?? "" })}
           </p>
           <p role="status" className="text-ink-muted">
@@ -412,7 +412,7 @@ function RecordingFlow({
             ) : null}
           </div>
           <FormError error={error} />
-          <p className="text-sm text-ink-muted">{t("recording-satellite", { assistant })}</p>
+          <p className="text-meta text-ink-muted">{t("recording-satellite", { assistant })}</p>
         </div>
       ) : null}
     </GuidedDialog>
@@ -433,9 +433,7 @@ function Consent({
   const t = useT();
   return (
     <div className="grid gap-4 text-ink">
-      <p className="font-serif text-[1.15rem] leading-snug text-pretty">
-        {t("recording-keeps", { own, name: person.name })}
-      </p>
+      <p className="title-sub text-pretty">{t("recording-keeps", { own, name: person.name })}</p>
       <p className="text-ink-muted">{t("recording-use")}</p>
       <p className="text-ink-muted">{t("recording-not-a-password")}</p>
       {own === "no" ? <p>{t("recording-other-agrees", { name: person.name })}</p> : null}
@@ -448,15 +446,15 @@ function Consent({
           className="mt-0.5"
         />
         <div className="min-w-0">
-          <label htmlFor="voice-learning" className="text-sm font-medium text-ink">
+          <label htmlFor="voice-learning" className="text-meta font-medium text-ink">
             {t("recording-learning")}
           </label>
-          <p id="voice-learning-hint" className="mt-0.5 text-sm text-ink-muted">
+          <p id="voice-learning-hint" className="mt-0.5 text-meta text-ink-muted">
             {t("recording-learning-hint")}
           </p>
         </div>
       </div>
-      <p className="text-sm text-ink-muted">{t("recording-erase", { own, name: person.name })}</p>
+      <p className="text-meta text-ink-muted">{t("recording-erase", { own, name: person.name })}</p>
     </div>
   );
 }
@@ -477,7 +475,7 @@ function HeardResult({ heard }: { heard: Heard }) {
         />
         <div className="absolute -top-1 h-3.5 w-px bg-ink" style={{ left: `${heard.threshold * 100}%` }} />
       </div>
-      <p className="text-sm text-ink-muted tabular">
+      <p className="text-meta text-ink-muted tabular">
         {t("recording-likeness", {
           score: Math.round(heard.score * 100),
           threshold: Math.round(heard.threshold * 100),

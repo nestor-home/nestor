@@ -137,7 +137,7 @@ export function Conversation({ chat }: { chat: string | null }) {
             <div className={cn("flex flex-col items-center gap-4 px-6 text-center", ARRIVES, "duration-500")}>
               <AgentFigure state="idle" size="lg" live />
               <h1 className="display-2 text-ink">{greeting}</h1>
-              <p className="max-w-md text-[1.02rem] text-ink-muted">
+              <p className="max-w-md text-lead text-ink-muted">
                 {t(mentions.length ? "chat-greeting-hint-mentions" : "chat-greeting-hint")}
               </p>
             </div>
@@ -312,12 +312,12 @@ function AnswerBlock({ children, arrives }: { children: ReactNode; arrives?: boo
 
 function SentFiles({ count }: { count: number }) {
   const t = useT();
-  return <p className="text-[0.85rem] text-ink-muted">{t("chat-sending-files", { count })}</p>;
+  return <p className="text-meta text-ink-muted">{t("chat-sending-files", { count })}</p>;
 }
 
 function Thinking({ state, text }: { state: "thinking" | "working"; text: string }) {
   return (
-    <div className={cn("flex items-center gap-2.5 text-[0.95rem] text-ink-muted", ARRIVES)} role="status">
+    <div className={cn("flex items-center gap-2.5 text-body text-ink-muted", ARRIVES)} role="status">
       <AgentFigure state={state} size="sm" live />
       <span className="chat-shimmer">{text}</span>
     </div>
@@ -352,7 +352,7 @@ function Header({ chat, title }: { chat: string; title: Chat | undefined }) {
           <ArrowLeft />
         </Link>
       ) : null}
-      <h1 key={chat} className="min-w-0 flex-1 truncate font-sans text-[1.02rem] font-medium text-ink">
+      <h1 key={chat} className="min-w-0 flex-1 truncate font-sans text-lead font-medium text-ink">
         {title ? titleOf(title, t) : t("chat-new")}
       </h1>
     </header>

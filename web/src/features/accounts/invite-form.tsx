@@ -49,7 +49,7 @@ export function InviteForm({ onDone }: { onDone: () => void }) {
           vars={{ person: sent.invitation.person?.name ?? "", has_person: sent.invitation.person ? "yes" : "no" }}
           elems={{ strong: <strong /> }}
         >
-          <p className="text-sm" />
+          <p className="text-meta" />
         </Localized>
         <CopyField value={new URL(sent.url, window.location.origin).toString()} label={t("acc-invite-link")} />
         <FormActions>

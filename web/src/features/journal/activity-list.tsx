@@ -43,19 +43,19 @@ export function ActivityList({
                 search={clean({ ...search, event: item.position })}
                 className="grid grid-cols-[auto_1fr_auto] items-center gap-x-3.5 px-4 py-3 hover:bg-paper-sunken/60"
               >
-                <IconTile {...tileOf(item)} className="size-9" />
+                <IconTile {...tileOf(item)} size="sm" />
                 <span className="min-w-0">
-                  <span className="block truncate text-[0.98rem] text-ink">{say(item)}</span>
+                  <span className="block truncate text-body text-ink">{say(item)}</span>
                   {item.reason ? (
-                    <span className="block truncate text-[0.88rem] text-ink-muted">
+                    <span className="block truncate text-meta text-ink-muted">
                       <span className="text-ember">{t("jr-why-label")} </span>
                       {why(item)}
                     </span>
                   ) : item.detail_text ? (
-                    <span className="block truncate text-[0.88rem] text-ink-muted">{item.detail_text}</span>
+                    <span className="block truncate text-meta text-ink-muted">{item.detail_text}</span>
                   ) : null}
                 </span>
-                <span className="flex items-center gap-2 text-[0.85rem] text-ink-muted">
+                <span className="flex items-center gap-2 text-meta text-ink-muted">
                   {item.brand ? <KindMark kind={item.brand} className="size-3.5" /> : null}
                   <Ago iso={item.at} />
                 </span>
@@ -67,7 +67,7 @@ export function ActivityList({
       <Link
         to="/journal"
         search={clean(search)}
-        className="mt-3 inline-flex items-center gap-1 text-[0.92rem] text-ink-muted hover:text-ink"
+        className="mt-3 inline-flex items-center gap-1 text-body text-ink-muted hover:text-ink"
       >
         {t("jr-all-in-journal")} <ArrowRight className="size-3.5" aria-hidden="true" />
       </Link>

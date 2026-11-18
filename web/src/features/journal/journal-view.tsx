@@ -231,7 +231,7 @@ function Stories({
           {isFetchingNextPage ? t("loading") : t("jr-older")}
         </Button>
       ) : stories.length ? (
-        <p className="text-center text-[0.9rem] text-ink-muted">{t("jr-beginning")}</p>
+        <p className="text-center text-body text-ink-muted">{t("jr-beginning")}</p>
       ) : null}
     </div>
   );

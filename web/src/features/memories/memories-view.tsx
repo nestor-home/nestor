@@ -56,7 +56,7 @@ export function MemoryList({ query, grouped = false }: { query: MemoryQuery; gro
                   <Link
                     to="/people/$personId"
                     params={{ personId: about.id }}
-                    className="inline-flex shrink-0 items-center gap-2 text-[0.9rem] text-ink-muted hover:text-ink"
+                    className="inline-flex shrink-0 items-center gap-2 text-body text-ink-muted hover:text-ink"
                     aria-label={t("mem-open-person", { name: about.name })}
                   >
                     <Pebble name={about.name} />
@@ -136,7 +136,7 @@ export function MemoriesView({ query, onQuery }: { query: MemoryQuery; onQuery: 
           onChange={(about) => onQuery({ ...query, about: about || undefined })}
         />
         {query.q ? (
-          <p className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.95rem] text-ink">
+          <p className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-body text-ink">
             {t("mem-search-for", { q: query.q })}
             <Button variant="ghost" size="sm" onClick={() => onQuery({ ...query, q: undefined })}>
               <X /> {t("mem-search-clear")}

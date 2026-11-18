@@ -37,7 +37,7 @@ export function ExecutorsSection() {
   const { url } = executors.data;
   return (
     <Section title={t("sys-executors")} count={executors.data.executors.length}>
-      <p className={cn("mb-4 max-w-prose text-[0.95rem]", url ? "text-ink-muted" : "text-amber")}>
+      <p className={cn("mb-4 max-w-prose text-body", url ? "text-ink-muted" : "text-amber")}>
         {url ? t("sys-executors-intro", { url }) : t("sys-executors-off")}
       </p>
       <ul className="grid gap-3 lg:grid-cols-2">
@@ -75,7 +75,7 @@ function ExecutorCard({ executor, manage }: { executor: ExecutorInfo; manage: bo
         {brand ? <BrandTile brand={brand} /> : <IconTile icon={Workflow} />}
         <div className="min-w-0">
           <p className="font-medium [overflow-wrap:anywhere] text-ink">{executor.name}</p>
-          <p className="text-[0.92rem] text-ink-muted">{t("sys-executor-tools", { tools: executor.nestor_tools })}</p>
+          <p className="text-body text-ink-muted">{t("sys-executor-tools", { tools: executor.nestor_tools })}</p>
         </div>
       </div>
       <div className="mt-auto flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-t border-rule pt-3">
@@ -149,9 +149,9 @@ function IssuedKeyView({ executor, issued, close }: { executor: ExecutorInfo; is
       <CopyField value={issued.key} label={t("sys-executor-key-label")} />
       {issued.setup ? (
         <div className="grid gap-2">
-          <p className="text-[0.92rem] text-ink-muted">{t("sys-executor-profile", { name: executor.name })}</p>
+          <p className="text-body text-ink-muted">{t("sys-executor-profile", { name: executor.name })}</p>
           <div className="relative">
-            <pre className="overflow-x-auto rounded-md border border-rule-strong bg-paper-sunken px-3 py-2 pr-20 font-mono text-[0.75rem] text-ink">
+            <pre className="overflow-x-auto rounded-md border border-rule-strong bg-paper-sunken px-3 py-2 pr-20 font-mono text-micro text-ink">
               {issued.setup}
             </pre>
             <div className="absolute top-1.5 right-1.5">
@@ -160,7 +160,7 @@ function IssuedKeyView({ executor, issued, close }: { executor: ExecutorInfo; is
           </div>
         </div>
       ) : (
-        <p className="text-[0.92rem] text-ink-muted">{t("sys-executor-passed", { name: executor.name })}</p>
+        <p className="text-body text-ink-muted">{t("sys-executor-passed", { name: executor.name })}</p>
       )}
       <FormActions>
         <Button onClick={close}>{t("action-close")}</Button>

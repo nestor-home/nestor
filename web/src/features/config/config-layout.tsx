@@ -116,7 +116,7 @@ function SectionNav({ onGo }: { onGo?: () => void }) {
                     onClick={onGo}
                     aria-current={here ? "page" : undefined}
                     className={cn(
-                      "flex min-h-9 items-center gap-2.5 rounded-lg px-2.5 text-[0.95rem] text-ink-muted hover:bg-paper-sunken hover:text-ink",
+                      "flex min-h-9 items-center gap-2.5 rounded-lg px-2.5 text-body text-ink-muted hover:bg-paper-sunken hover:text-ink",
                       here && "bg-paper-sunken font-medium text-ink",
                     )}
                   >
@@ -139,7 +139,7 @@ export function PageMark({ problems, changed }: { problems: number; changed: boo
   const t = useT();
   if (problems)
     return (
-      <span className="rounded-full bg-brick-soft px-1.5 text-[0.8rem] font-medium text-brick tabular">
+      <span className="rounded-full bg-brick-soft px-1.5 text-meta font-medium text-brick tabular">
         {problems}
         <span className="sr-only"> {t("cfg-problems", { count: problems })}</span>
       </span>
@@ -211,7 +211,7 @@ export function SaveBar({ inline = false }: { inline?: boolean }) {
       <IconTile icon={FilePenLine} tone={problems ? "brick" : "ember"} />
       <div className="grid min-w-0 flex-1 gap-0.5">
         <p className="font-medium text-ink">{t("cfg-save-region")}</p>
-        <p aria-live="polite" className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.9rem]">
+        <p aria-live="polite" className="flex flex-wrap items-center gap-x-3 gap-y-1 text-body">
           {editor.checking ? (
             <span className="inline-flex items-center gap-1.5 text-ink-muted">
               <LoaderCircle className="size-3.5 animate-spin" aria-hidden="true" />

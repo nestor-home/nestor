@@ -24,13 +24,13 @@ export function MemoryCard({ memory, about, onOpen }: { memory: Memory; about: b
   return (
     <li>
       <button type="button" className="surface flex h-full w-full flex-col gap-3 p-4 text-left" onClick={onOpen}>
-        <span className="flex-1 font-serif text-[1.1rem] leading-snug text-ink [overflow-wrap:anywhere] [font-variation-settings:'opsz'_18]">
+        <span className="flex-1 title-sub text-ink [overflow-wrap:anywhere] [font-variation-settings:'opsz'_18]">
           {memory.text}
         </span>
-        <span className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[0.85rem] text-ink-muted">
+        <span className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-meta text-ink-muted">
           {about ? (
             <span className="inline-flex items-center gap-1.5 text-ink">
-              {memory.about ? <Pebble name={memory.about.name} className="size-5 text-[0.6rem]" /> : null}
+              {memory.about ? <Pebble name={memory.about.name} size="xs" /> : null}
               {memory.about?.name ?? t("household-everyone")}
             </span>
           ) : null}
@@ -104,7 +104,7 @@ export function MemoryPanel({ memory, editable, onDone }: { memory: Memory; edit
         ) : undefined
       }
     >
-      <Facts narrow className="text-[0.95rem]">
+      <Facts narrow className="text-body">
         <Fact term={t("mem-about-label")}>
           {memory.about ? (
             <Link
@@ -112,7 +112,7 @@ export function MemoryPanel({ memory, editable, onDone }: { memory: Memory; edit
               params={{ personId: memory.about.id }}
               className="inline-flex items-center gap-2 text-ink hover:text-ember"
             >
-              <Pebble name={memory.about.name} className="size-6 text-[0.65rem]" />
+              <Pebble name={memory.about.name} size="sm" />
               {memory.about.name}
             </Link>
           ) : (

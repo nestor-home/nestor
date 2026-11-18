@@ -175,7 +175,7 @@ function Household() {
               <Card
                 // biome-ignore lint/suspicious/noArrayIndexKey: a person's position is its place in the file
                 key={index}
-                mark={<Pebble name={label(p, index)} className="size-10 text-[1rem]" />}
+                mark={<Pebble name={label(p, index)} size="lg" />}
                 title={label(p, index)}
                 line={accounts.length ? accounts.join(" · ") : t("cfg-person-no-account")}
                 marks={accounts}
@@ -294,7 +294,7 @@ function AddButton({ slotKey, slot, onPick }: { slotKey: string; slot: Slot; onP
 function Fields({ slot, plugin, path }: { slot: Slot; plugin: string; path: Path }) {
   const t = useT();
   const schema = slot.kinds[plugin];
-  if (!schema) return <p className="text-sm text-brick">{t("cfg-kind-missing", { kind: plugin })}</p>;
+  if (!schema) return <p className="text-meta text-brick">{t("cfg-kind-missing", { kind: plugin })}</p>;
   return <ObjectFields schema={schema} root={schema} path={path} />;
 }
 
@@ -523,14 +523,14 @@ function NameField({ name, taken, onRename }: { name: string; taken: string[]; o
         id={id}
         value={text}
         spellCheck={false}
-        className="font-mono text-[0.82rem] sm:max-w-72"
+        className="font-mono text-meta sm:max-w-72"
         aria-invalid={problem ? true : undefined}
         aria-describedby={`${id}-help`}
         onChange={(e) => setText(e.target.value)}
         onBlur={commit}
         onKeyDown={(e) => e.key === "Enter" && commit()}
       />
-      <p id={`${id}-help`} className={cn("text-[0.85rem]", problem ? "text-brick" : "text-ink-muted")}>
+      <p id={`${id}-help`} className={cn("text-meta", problem ? "text-brick" : "text-ink-muted")}>
         {problem ?? t("cfg-name-help")}
       </p>
     </div>
@@ -595,10 +595,10 @@ function KindPicker({
                         <Icon className="size-4.5" />
                       </span>
                       <span className="min-w-0">
-                        <span className="block text-[0.95rem] font-medium whitespace-nowrap text-ink">
+                        <span className="block text-body font-medium whitespace-nowrap text-ink">
                           {modelTypeShort(option)}
                         </span>
-                        <span className="hidden text-[0.82rem] leading-snug text-ink-muted md:block">
+                        <span className="hidden text-meta leading-snug text-ink-muted md:block">
                           {modelTypeHint(option)}
                         </span>
                       </span>
@@ -621,10 +621,10 @@ function KindPicker({
                     }}
                     className="surface flex h-full w-full items-center gap-3.5 p-3.5 text-left"
                   >
-                    <ServiceTile kind={provider} className="size-11" />
+                    <ServiceTile kind={provider} size="lg" />
                     <span className="min-w-0 flex-1">
                       <span className="block font-medium text-ink">{kindName(provider)}</span>
-                      <span className="block text-[0.85rem] text-ink-muted">
+                      <span className="block text-meta text-ink-muted">
                         {t("cfg-required-fields", { count: requiredCount(slot.kinds[kind] ?? {}) })}
                       </span>
                     </span>
@@ -682,8 +682,8 @@ function Card({
               <KindMark key={m} kind={m} className="size-4 text-ink-muted" label={false} />
             ))}
           </span>
-          <span className="truncate text-[0.9rem] text-ink-muted">{line}</span>
-          {detail ? <span className="truncate text-[0.85rem] text-ink-faint">{detail}</span> : null}
+          <span className="truncate text-body text-ink-muted">{line}</span>
+          {detail ? <span className="truncate text-meta text-ink-faint">{detail}</span> : null}
           {type || roles.length ? (
             <span className="mt-2 flex flex-wrap gap-1.5">
               {type ? <ModelMark icon={MODEL_TYPE_ICON[type]} label={modelTypeShort(type)} /> : null}
@@ -708,7 +708,7 @@ function ModelMark({ icon: Icon, label, held = false }: { icon: LucideIcon; labe
   return (
     <span
       className={cn(
-        "inline-flex h-6 items-center gap-1.5 rounded-full px-2 text-[0.8rem] font-medium whitespace-nowrap",
+        "inline-flex h-6 items-center gap-1.5 rounded-full px-2 text-meta font-medium whitespace-nowrap",
         held ? "bg-ember-soft text-ember" : "bg-paper-sunken text-ink-muted",
       )}
     >
@@ -758,7 +758,7 @@ function ItemSheet({
       title={title}
       description={
         mark ? (
-          <span className="inline-flex items-center gap-1.5 text-[0.85rem]">
+          <span className="inline-flex items-center gap-1.5 text-meta">
             <KindMark kind={mark} className="size-3.5" label={false} /> {kindName(mark)}
           </span>
         ) : undefined

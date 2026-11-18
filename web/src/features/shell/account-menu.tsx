@@ -61,13 +61,13 @@ export function AccountMenu({ compact = false }: { compact?: boolean | "narrow" 
             : "flex w-full items-center gap-3 rounded-xl p-2 text-left hover:bg-white/8 data-popup-open:bg-white/8 narrow:justify-center"
         }
       >
-        <Pebble name={me.account.person?.name ?? me.account.login} className="size-8 text-[0.8rem]" />
+        <Pebble name={me.account.person?.name ?? me.account.login} size="lg" />
         {compact === true ? null : (
           <span className="min-w-0 flex-1 narrow:hidden">
-            <span className="block truncate text-[0.92rem] font-medium text-ink">
+            <span className="block truncate text-body font-medium text-ink">
               {me.account.person?.name ?? me.account.login}
             </span>
-            <span className="block truncate text-[0.8rem] text-ink-muted">{roleLabel(me.account.role)}</span>
+            <span className="block truncate text-meta text-ink-muted">{roleLabel(me.account.role)}</span>
           </span>
         )}
         <span className="sr-only">{t("shell-account-menu")}</span>
@@ -78,7 +78,7 @@ export function AccountMenu({ compact = false }: { compact?: boolean | "narrow" 
         className="w-60 border border-rule bg-paper-raised"
       >
         <DropdownMenuGroup>
-          <DropdownMenuLabel className="font-mono text-[0.7rem] font-normal">{me.account.login}</DropdownMenuLabel>
+          <DropdownMenuLabel className="font-mono text-micro font-normal">{me.account.login}</DropdownMenuLabel>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>

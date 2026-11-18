@@ -73,7 +73,7 @@ export function Histogram({
           );
         })}
       </svg>
-      <figcaption className="mt-1.5 flex justify-between text-[0.8rem] text-ink-muted tabular">
+      <figcaption className="mt-1.5 flex justify-between text-meta text-ink-muted tabular">
         <span>{moment(histogram.from)}</span>
         <span>{moment(histogram.to)}</span>
       </figcaption>

@@ -51,7 +51,7 @@ export function ConnectionFrame({ id, children }: { id: string; children: ReactN
         crumbs={<Crumbs trail={trail(c.account)} />}
         title={
           <span className="flex items-center gap-3">
-            <ServiceTile kind={c.brand ?? c.kind} className="size-11" />
+            <ServiceTile kind={c.brand ?? c.kind} size="lg" />
             <span className="min-w-0">{c.account}</span>
           </span>
         }
@@ -60,7 +60,7 @@ export function ConnectionFrame({ id, children }: { id: string; children: ReactN
             <ConnectionStatusMark status={c.status} />
             <span>{c.title}</span>
             <span className="inline-flex items-center gap-1.5">
-              <OwnerMark owner={c.owner} className="size-5 text-[0.6rem]" />
+              <OwnerMark owner={c.owner} size="xs" />
               {personName(c.owner)}
             </span>
             <span>{t("conn-connected-at", { when: moment(c.created_at) })}</span>
@@ -98,12 +98,12 @@ export function ConnectionOverview({ connection: c }: { connection: ConnectionDe
         <div className="surface flex gap-4 p-4">
           <IconTile icon={RefreshCw} tone={c.status === "error" ? "brick" : "amber"} />
           <div className="min-w-0 flex-1">
-            <p className="text-[1.02rem] font-medium text-ink">{t("conn-broken", { assistant: me.assistant })}</p>
-            <p className="mt-0.5 text-[0.95rem] text-ink-muted">
+            <p className="text-lead font-medium text-ink">{t("conn-broken", { assistant: me.assistant })}</p>
+            <p className="mt-0.5 text-body text-ink-muted">
               {t(c.status === "needs_reauth" ? "conn-fix-reauth" : "conn-fix-error", { assistant: me.assistant })}
             </p>
             {c.status_reason ? (
-              <p className="mt-1 font-mono text-[0.8rem] [overflow-wrap:anywhere] text-ink-muted">
+              <p className="mt-1 font-mono text-meta [overflow-wrap:anywhere] text-ink-muted">
                 {rendered(c.status_reason)}
               </p>
             ) : null}
@@ -158,10 +158,10 @@ export function ConnectionOverview({ connection: c }: { connection: ConnectionDe
             params={{ personId: c.owner.id }}
             className="surface flex items-center gap-3 px-4 py-3.5"
           >
-            <OwnerMark owner={c.owner} className="size-9 text-[0.9rem]" />
+            <OwnerMark owner={c.owner} size="lg" />
             <span className="min-w-0 flex-1">
               <span className="block text-ink">{c.owner.name}</span>
-              <span className="block text-[0.9rem] text-ink-muted">
+              <span className="block text-body text-ink-muted">
                 {t("conn-who-owner", { assistant: me.assistant, name: c.owner.name })}
               </span>
             </span>
@@ -169,10 +169,10 @@ export function ConnectionOverview({ connection: c }: { connection: ConnectionDe
           </Link>
         ) : (
           <div className="surface flex items-center gap-3 px-4 py-3.5">
-            <OwnerMark owner={null} className="size-9" />
+            <OwnerMark owner={null} size="lg" />
             <p className="min-w-0 flex-1">
               <span className="block text-ink">{personName(null)}</span>
-              <span className="block text-[0.9rem] text-ink-muted">
+              <span className="block text-body text-ink-muted">
                 {t("conn-who-household", { assistant: me.assistant })}
               </span>
             </p>
@@ -182,7 +182,7 @@ export function ConnectionOverview({ connection: c }: { connection: ConnectionDe
 
       {c.services.length ? (
         <Section title={t("conn-services")}>
-          <p className="-mt-2 mb-4 max-w-[60ch] text-[0.95rem] text-ink-muted">
+          <p className="-mt-2 mb-4 max-w-[60ch] text-body text-ink-muted">
             {t("conn-services-hint", { assistant: me.assistant })}
           </p>
           <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -193,9 +193,9 @@ export function ConnectionOverview({ connection: c }: { connection: ConnectionDe
                   {s.brand && s.brand !== c.brand ? kindName(s.brand) : s.name}
                 </span>
                 {s.handle ? (
-                  <code className="shrink-0 font-mono text-[0.85rem] text-ink-muted">@{s.handle}</code>
+                  <code className="shrink-0 font-mono text-meta text-ink-muted">@{s.handle}</code>
                 ) : (
-                  <span className="shrink-0 text-[0.85rem] text-ink-faint">{t("conn-service-unnamed")}</span>
+                  <span className="shrink-0 text-meta text-ink-faint">{t("conn-service-unnamed")}</span>
                 )}
               </li>
             ))}
@@ -229,9 +229,9 @@ function Figure({ label, value, children }: { label: string; value: ReactNode; c
 function FigureBody({ label, value, children }: { label: string; value: ReactNode; children: ReactNode }) {
   return (
     <>
-      <span className="text-[0.85rem] text-ink-muted">{label}</span>
-      <span className="mt-1 font-serif text-[1.6rem] leading-tight text-ink tabular">{value}</span>
-      <span className="mt-1 text-[0.85rem] text-ink-muted">{children}</span>
+      <span className="text-meta text-ink-muted">{label}</span>
+      <span className="mt-1 title-sheet text-ink tabular">{value}</span>
+      <span className="mt-1 text-meta text-ink-muted">{children}</span>
     </>
   );
 }
@@ -267,7 +267,7 @@ export function ConnectionSettings({ connection: c }: { connection: ConnectionDe
       void navigate({ to: "/connections" });
     },
   });
-  if (!editable) return <p className="surface-quiet px-4 py-5 text-[0.95rem] text-ink-muted">{t("conn-read-only")}</p>;
+  if (!editable) return <p className="surface-quiet px-4 py-5 text-body text-ink-muted">{t("conn-read-only")}</p>;
   return (
     <div className="grid gap-10">
       <Section title={t("conn-tab-settings")}>
@@ -275,8 +275,8 @@ export function ConnectionSettings({ connection: c }: { connection: ConnectionDe
           <li className="surface flex gap-4 p-4">
             <IconTile icon={RefreshCw} />
             <div className="min-w-0 flex-1">
-              <h3 className="text-[1.02rem] font-medium text-ink">{t("conn-reconnect")}</h3>
-              <p className="mt-0.5 text-[0.95rem] text-ink-muted">{t("conn-reconnect-hint")}</p>
+              <h3 className="text-lead font-medium text-ink">{t("conn-reconnect")}</h3>
+              <p className="mt-0.5 text-body text-ink-muted">{t("conn-reconnect-hint")}</p>
               <Link
                 to="/connections/catalogue"
                 search={{ connect: c.kind, replaces: c.id }}
@@ -289,8 +289,8 @@ export function ConnectionSettings({ connection: c }: { connection: ConnectionDe
           <li className="surface flex gap-4 p-4">
             <IconTile icon={Unplug} tone="brick" />
             <div className="min-w-0 flex-1">
-              <h3 className="text-[1.02rem] font-medium text-ink">{t("conn-disconnect")}</h3>
-              <p className="mt-0.5 text-[0.95rem] text-ink-muted">{t("conn-disconnect-hint")}</p>
+              <h3 className="text-lead font-medium text-ink">{t("conn-disconnect")}</h3>
+              <p className="mt-0.5 text-body text-ink-muted">{t("conn-disconnect-hint")}</p>
               <Confirm
                 trigger={
                   <Button variant="destructive" size="sm" className="mt-3">

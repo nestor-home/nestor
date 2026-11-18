@@ -39,13 +39,13 @@ export function ConfirmFrame({
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       {trigger ? <AlertDialogTrigger render={trigger} /> : null}
-      <AlertDialogContent className="max-w-md! border border-rule bg-paper-raised">
+      <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle className="font-serif text-xl font-normal">{title}</AlertDialogTitle>
+          <AlertDialogTitle className="title-card font-normal">{title}</AlertDialogTitle>
           <AlertDialogDescription className="text-ink-muted">{description}</AlertDialogDescription>
         </AlertDialogHeader>
         {details}
-        <AlertDialogFooter className="bg-paper-sunken/60">
+        <AlertDialogFooter>
           <AlertDialogCancel disabled={busy}>{cancel}</AlertDialogCancel>
           {action}
         </AlertDialogFooter>

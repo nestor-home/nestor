@@ -57,11 +57,11 @@ function Room({ room: r, items }: { room: RoomNode; items: readonly JournalItem[
                 params={{ personId: p.id }}
                 className="surface flex items-center gap-3 px-4 py-3"
               >
-                <Pebble name={p.name} className="size-9 text-[0.9rem]" />
+                <Pebble name={p.name} size="lg" />
                 <span className="min-w-0 flex-1">
                   <span className="block text-ink">{p.name}</span>
                   {p.presence?.since ? (
-                    <span className="block text-[0.85rem] text-ink-muted">
+                    <span className="block text-meta text-ink-muted">
                       {t("room-since")} <Ago iso={p.presence.since} />
                     </span>
                   ) : null}
@@ -74,7 +74,7 @@ function Room({ room: r, items }: { room: RoomNode; items: readonly JournalItem[
       ) : null}
 
       <div>
-        <h3 className="mb-3 text-[1.15rem] text-ink">{t("room-devices")}</h3>
+        <h3 className="mb-3 title-sub text-ink">{t("room-devices")}</h3>
         {r.satellites.length ? (
           <ul className="grid gap-2">
             {r.satellites.map((s) => (
@@ -87,7 +87,7 @@ function Room({ room: r, items }: { room: RoomNode; items: readonly JournalItem[
                     className="min-w-0 flex-1 hover:underline"
                   >
                     <span className="block text-ink">{deviceName(s)}</span>
-                    <span className="block text-[0.85rem] text-ink-muted">{s.model}</span>
+                    <span className="block text-meta text-ink-muted">{s.model}</span>
                   </Link>
                   {s.connected === false ? (
                     <Status tone="attention">{t("sat-state-offline")}</Status>
@@ -107,11 +107,11 @@ function Room({ room: r, items }: { room: RoomNode; items: readonly JournalItem[
       {r.journal ? (
         <div>
           <div className="mb-3 flex items-baseline justify-between gap-4">
-            <h3 className="text-[1.15rem] text-ink">{t("room-today")}</h3>
+            <h3 className="title-sub text-ink">{t("room-today")}</h3>
             <Link
               to="/journal"
               search={{ room: r.journal }}
-              className="inline-flex items-center gap-1 text-[0.9rem] text-ink-muted hover:text-ink"
+              className="inline-flex items-center gap-1 text-body text-ink-muted hover:text-ink"
             >
               {t("home-all-journal")} <ArrowRight className="size-3.5" aria-hidden="true" />
             </Link>
@@ -119,7 +119,7 @@ function Room({ room: r, items }: { room: RoomNode; items: readonly JournalItem[
           {day.length ? (
             <ol className="grid gap-2.5">
               {day.map((i) => (
-                <li key={i.id} className="grid grid-cols-[3rem_1fr] gap-x-3 text-[0.95rem]">
+                <li key={i.id} className="grid grid-cols-[3rem_1fr] gap-x-3 text-body">
                   <time dateTime={i.at} className="text-ink-muted tabular">
                     {hourMinute(i.at)}
                   </time>

@@ -46,22 +46,22 @@ export function AuthLayout({
           />
           <span aria-hidden="true" className="sky-orb" style={orbOf(now)} />
           <div className="px-5 pt-5 sm:px-8 sm:pt-7">
-            <Wordmark className="text-[1.6rem]" />
+            <Wordmark className="text-sheet" />
           </div>
           <div>
             <div className="flex items-end gap-3 px-5 sm:px-8">
               <AgentFigure state="idle" size="lg" live ground className="shrink-0" />
-              <p className="mb-9 max-w-[20rem] rounded-2xl rounded-bl-sm bg-paper-raised px-4 py-3 text-[1.02rem] leading-snug text-ink shadow-lg">
+              <p className="mb-9 max-w-[20rem] rounded-2xl rounded-bl-sm bg-paper-raised px-4 py-3 text-lead leading-snug text-ink shadow-lg">
                 {line}
               </p>
             </div>
-            <p className="sky-ground px-5 py-4 text-[0.9rem] sm:px-8">{t("auth-footer")}</p>
+            <p className="sky-ground px-5 py-4 text-body sm:px-8">{t("auth-footer")}</p>
           </div>
         </section>
       </div>
       <main className="mx-auto flex w-full max-w-md flex-col justify-center px-5 py-8 sm:px-8 lg:py-16">
         <h1 className="display-2 text-ink">{title}</h1>
-        {intro ? <p className="mt-3 text-[1.05rem] text-ink-muted">{intro}</p> : null}
+        {intro ? <p className="mt-3 text-lead text-ink-muted">{intro}</p> : null}
         <div className="surface mt-7 p-5 sm:p-6">{children}</div>
       </main>
     </div>
