@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.16.0](https://github.com/nestor-home/nestor/compare/v0.15.0...v0.16.0) (2026-11-18)
+
+
+### ⚠ BREAKING CHANGES
+
+* rebuild the admin around what the household does ([#190](https://github.com/nestor-home/nestor/issues/190))
+
+### Features
+
+* camera privacy rules per device, none unless the household sets them ([#186](https://github.com/nestor-home/nestor/issues/186)) ([e07d41a](https://github.com/nestor-home/nestor/commit/e07d41a7f0942e7ec2677ba12d022b6df02aad41))
+* rebuild the admin around what the household does ([#190](https://github.com/nestor-home/nestor/issues/190)) ([767ce4f](https://github.com/nestor-home/nestor/commit/767ce4f9cc533edbb8f068f82ddeed7d9a4703d8))
+
+
+### Bug Fixes
+
+* **deps:** update dependency @lobehub/icons-static-svg to v1.103.0 ([#183](https://github.com/nestor-home/nestor/issues/183)) ([8cee366](https://github.com/nestor-home/nestor/commit/8cee366829c66b8051ff2a90e94412d86edcdc28))
+* **deps:** update dependency @tanstack/react-query to v5.107.2 ([#189](https://github.com/nestor-home/nestor/issues/189)) ([80ea467](https://github.com/nestor-home/nestor/commit/80ea4670ce38ebea41662921a95b8c349af84a0b))
+* **deps:** update dependency @tanstack/react-query to v5.108.0 ([#191](https://github.com/nestor-home/nestor/issues/191)) ([fff6e3e](https://github.com/nestor-home/nestor/commit/fff6e3e5844b12a4a8923680ff92fb331866b27c))
+* **deps:** update dependency lucide-react to v1.74.0 ([#184](https://github.com/nestor-home/nestor/issues/184)) ([5871616](https://github.com/nestor-home/nestor/commit/58716164b707e444b20bdff272428ebc1ea7a42e))
+* **deps:** update dependency streamdown to v2.8.0 ([#192](https://github.com/nestor-home/nestor/issues/192)) ([159c71f](https://github.com/nestor-home/nestor/commit/159c71f701392632c5a3539e45631aa02d6cc08b))
+
 ## [0.15.0](https://github.com/nestor-home/nestor/compare/v0.14.0...v0.15.0) (2026-11-17)
 
 
