@@ -111,9 +111,7 @@ export function PeriodPicker({ search, onChange }: Props) {
   };
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger
-        render={<Button variant="outline" className="h-11 max-w-full rounded-full bg-paper-raised px-4" />}
-      >
+      <PopoverTrigger render={<Button variant="pill" className="h-11 max-w-full px-4" />}>
         <CalendarRange aria-hidden="true" />
         <span className="truncate tabular">{label}</span>
       </PopoverTrigger>

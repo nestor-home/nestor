@@ -8,11 +8,10 @@ import { Link } from "@tanstack/react-router";
 import { Plus, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { type Connection, connectionsQuery } from "@/api";
-import { Ago } from "@/components/ago";
-import { TILE_CARD, TileCard } from "@/components/card";
+import { CardHead } from "@/components/card";
 import { Chips } from "@/components/chips";
 import { Crumbs } from "@/components/crumbs";
-import { OwnerMark, ServiceTile } from "@/components/marks";
+import { ServiceTile } from "@/components/marks";
 import { PageHeader, Section } from "@/components/page";
 import { Empty, Failure, Loading } from "@/components/states";
 import { buttonVariants } from "@/components/ui/button";
@@ -20,7 +19,7 @@ import { useT } from "@/i18n";
 import { rendered } from "@/lib/messages";
 import { personName } from "@/lib/people";
 import { useCan, useMe } from "@/lib/session";
-import { ConnectionStatusMark, needsSomeone } from "./status";
+import { ConnectionCard, ConnectionStatusMark, needsSomeone } from "./parts";
 import { trail } from "./trail";
 
 const HOUSEHOLD = "household";
@@ -105,7 +104,7 @@ export function ConnectionsView() {
             <Section title={t("conn-working-title")} count={working.length}>
               <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {working.map((c) => (
-                  <AccountCard key={c.id} connection={c} />
+                  <ConnectionCard key={c.id} connection={c} />
                 ))}
               </ul>
             </Section>
@@ -122,67 +121,35 @@ function BrokenCard({ connection: c }: { connection: Connection }) {
   const me = useMe();
   const canConnect = useCan("connections:write");
   return (
-    <li className="surface flex gap-4 p-4">
-      <ServiceTile kind={c.brand ?? c.kind} />
-      <div className="min-w-0 flex-1">
-        <ConnectionStatusMark status={c.status} />
-        <Link
-          to="/connections/$connectionId"
-          params={{ connectionId: c.id }}
-          className="mt-0.5 block truncate text-lead font-medium text-ink hover:underline"
-        >
-          {c.account}
-        </Link>
-        <p className="text-body text-ink-muted">
-          {c.title} · {personName(c.owner)}
-        </p>
-        <p className="mt-2 text-body text-ink">
-          {t(c.status === "needs_reauth" ? "conn-fix-reauth" : "conn-fix-error", { assistant: me.assistant })}
-        </p>
-        {c.status_reason ? (
-          <p className="mt-1 font-mono text-meta [overflow-wrap:anywhere] text-ink-muted">
-            {rendered(c.status_reason)}
-          </p>
-        ) : null}
+    <li className="surface p-4">
+      <CardHead
+        mark={<ServiceTile kind={c.brand ?? c.kind} />}
+        title={
+          <Link to="/connections/$connectionId" params={{ connectionId: c.id }} className="hover:underline">
+            {c.account}
+          </Link>
+        }
+        line={`${c.title} · ${personName(c.owner)}`}
+        aside={<ConnectionStatusMark status={c.status} />}
+      >
+        <span className="grid gap-1">
+          <span className="text-body text-ink">
+            {t(c.status === "needs_reauth" ? "conn-fix-reauth" : "conn-fix-error", { assistant: me.assistant })}
+          </span>
+          {c.status_reason ? (
+            <span className="font-mono text-meta text-ink-muted">{rendered(c.status_reason)}</span>
+          ) : null}
+        </span>
         {canConnect ? (
           <Link
             to="/connections/catalogue"
             search={{ connect: c.kind, replaces: c.id }}
-            className={buttonVariants({ size: "sm", className: "mt-3" })}
+            className={buttonVariants({ size: "sm" })}
           >
             <RefreshCw aria-hidden="true" /> {t("conn-reconnect-ellipsis")}
           </Link>
         ) : null}
-      </div>
-      <OwnerMark owner={c.owner} />
-    </li>
-  );
-}
-
-function AccountCard({ connection: c }: { connection: Connection }) {
-  const t = useT();
-  return (
-    <li>
-      <Link to="/connections/$connectionId" params={{ connectionId: c.id }} className={TILE_CARD}>
-        <TileCard
-          marks={<ServiceTile kind={c.brand ?? c.kind} />}
-          aside={<OwnerMark owner={c.owner} />}
-          title={c.account}
-          line={`${c.title} · ${personName(c.owner)}`}
-          foot={
-            <>
-              <ConnectionStatusMark status={c.status} />
-              {c.last_used_at ? (
-                <span>
-                  {t("conn-last-used")} <Ago iso={c.last_used_at} />
-                </span>
-              ) : (
-                <span>{t("conn-never-used-short")}</span>
-              )}
-            </>
-          }
-        />
-      </Link>
+      </CardHead>
     </li>
   );
 }

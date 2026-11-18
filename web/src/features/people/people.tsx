@@ -8,6 +8,7 @@ import { ArrowRight, BookMarked, Gauge, House, MessageSquareText, Plug, UserRoun
 import type { ReactNode } from "react";
 import { connectionsQuery, isMissing, journalFacetsQuery, type Person, type Presence, personQuery } from "@/api";
 import { Ago } from "@/components/ago";
+import { CardHead, OpenArrow } from "@/components/card";
 import { type Crumb, Crumbs } from "@/components/crumbs";
 import { AddCard, IconTile, Pebble, ServiceTile } from "@/components/marks";
 import { Lead, PageHeader, Section } from "@/components/page";
@@ -15,7 +16,7 @@ import { Empty, Failure, Loading } from "@/components/states";
 import { Status, Tag } from "@/components/status";
 import { TabNav } from "@/components/tab-nav";
 import { buttonVariants } from "@/components/ui/button";
-import { ConnectionStatusMark } from "@/features/connections/status";
+import { ConnectionCard } from "@/features/connections/parts";
 import { ActivityList } from "@/features/journal/activity-list";
 import { SubjectStory } from "@/features/journal/subject-story";
 import { MemoryList } from "@/features/memories/memories-view";
@@ -104,14 +105,34 @@ function Channel({ account, first }: { account: string; first: boolean }) {
   const t = useT();
   const handle = handleOf(account);
   return (
-    <li className="surface flex items-center gap-3 p-4">
-      <ServiceTile kind={account} />
-      <span className="min-w-0 flex-1">
-        <span className="block font-medium text-ink">{kindName(account)}</span>
-        {handle ? <span className="block truncate font-mono text-meta text-ink-muted">{handle}</span> : null}
-      </span>
-      {first ? <Tag tone="accent">{t("people-reach-first")}</Tag> : null}
+    <li className="surface p-4">
+      <CardHead
+        mark={<ServiceTile kind={account} />}
+        title={kindName(account)}
+        line={handle ? <span className="font-mono text-meta">{handle}</span> : null}
+        aside={first ? <Tag tone="accent">{t("people-reach-first")}</Tag> : null}
+      />
     </li>
+  );
+}
+
+/** Whether the person can open this interface, and with which account. */
+function AdminAccess({ person: p }: { person: Person }) {
+  const t = useT();
+  const account = useCan("accounts:read") ? p.account : null;
+  return (
+    <CardHead
+      mark={<IconTile icon={UserRound} tone={p.account ? "sage" : "ink"} />}
+      title={t("people-admin")}
+      line={
+        account
+          ? `${account.login} · ${roleLabel(account.role)}`
+          : p.account
+            ? t("people-has-account")
+            : t("people-no-account")
+      }
+      aside={account ? <OpenArrow /> : null}
+    />
   );
 }
 
@@ -144,28 +165,21 @@ export function PersonOverview({ person: p }: { person: Person }) {
           {channels.map((c) => (
             <Channel key={c} account={c} first={c === p.reach} />
           ))}
-          <li className="surface flex items-center gap-3 p-4">
-            <IconTile icon={UserRound} tone={p.account ? "sage" : "ink"} />
-            <span className="min-w-0 flex-1">
-              <span className="block font-medium text-ink">{t("people-admin")}</span>
-              <span className="block truncate text-body text-ink-muted">
-                {account
-                  ? `${account.login} · ${roleLabel(account.role)}`
-                  : p.account
-                    ? t("people-has-account")
-                    : t("people-no-account")}
-              </span>
-            </span>
+          <li>
             {account ? (
               <Link
                 to="/accounts/$accountId"
                 params={{ accountId: account.id }}
-                className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
+                className="group surface block h-full p-4"
                 aria-label={t("people-open-account", { login: account.login })}
               >
-                <ArrowRight />
+                <AdminAccess person={p} />
               </Link>
-            ) : null}
+            ) : (
+              <div className="surface h-full p-4">
+                <AdminAccess person={p} />
+              </div>
+            )}
           </li>
         </ul>
         {p.reach ? null : (
@@ -228,22 +242,7 @@ export function PersonConnections({ person: p }: { person: Person }) {
   return (
     <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
       {own.map((c) => (
-        <li key={c.id}>
-          <Link
-            to="/connections/$connectionId"
-            params={{ connectionId: c.id }}
-            className="surface flex h-full flex-col gap-4 p-4"
-          >
-            <span className="flex items-center justify-between gap-3">
-              <ServiceTile kind={c.brand ?? c.kind} />
-              <ConnectionStatusMark status={c.status} />
-            </span>
-            <span className="min-w-0">
-              <span className="block truncate font-medium text-ink">{c.account}</span>
-              <span className="block truncate text-body text-ink-muted">{c.title}</span>
-            </span>
-          </Link>
-        </li>
+        <ConnectionCard key={c.id} connection={c} />
       ))}
       {canConnect ? (
         <li>

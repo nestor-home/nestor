@@ -6,19 +6,21 @@ import { cn } from "@/lib/utils";
 /**
  * What leads a card or a row: its mark, then its name in medium weight and one muted line, and what it says of
  * itself at the end of the line (a state, an owner, an arrow). The words take what is left and break; the mark
- * and the aside keep their size.
+ * and the aside keep their size. `children` go under the words: more about it, then what one can do (a button).
  */
 export function CardHead({
   mark,
   title,
   line,
   aside,
+  children,
   className,
 }: {
   mark?: ReactNode;
   title: ReactNode;
   line?: ReactNode;
   aside?: ReactNode;
+  children?: ReactNode;
   className?: string;
 }) {
   return (
@@ -27,6 +29,7 @@ export function CardHead({
       <span className="grid min-w-0 flex-1 gap-0.5">
         <span className="title-item text-ink">{title}</span>
         {line ? <span className="text-body text-ink-muted">{line}</span> : null}
+        {children ? <span className="mt-2 grid justify-items-start gap-3">{children}</span> : null}
       </span>
       {aside ? <span className="flex shrink-0 items-center gap-2.5 self-center">{aside}</span> : null}
     </span>

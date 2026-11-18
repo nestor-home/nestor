@@ -2,18 +2,20 @@
  * One connection: the service's logo, the account and where it stands; then what one acts on (reconnecting,
  * its tools, who may use it), then what the agent did with it.
  */
+
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Activity, ArrowRight, Gauge, RefreshCw, Settings2, Unplug, Wrench } from "lucide-react";
+import { Activity, Gauge, RefreshCw, Settings2, Unplug, Wrench } from "lucide-react";
 import type { ReactNode } from "react";
 import { api, type ConnectionDetail, connectionQuery, keys } from "@/api";
 import { Ago } from "@/components/ago";
+import { CardHead, OpenArrow } from "@/components/card";
 import { Confirm } from "@/components/confirm";
 import { Crumbs } from "@/components/crumbs";
 import { IconTile, OwnerMark, ServiceTile } from "@/components/marks";
 import { useNotify } from "@/components/notices";
 import { PageHeader, Section } from "@/components/page";
-import { Failure, Loading } from "@/components/states";
+import { Empty, Failure, Loading } from "@/components/states";
 import { TabNav } from "@/components/tab-nav";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { ActivityList } from "@/features/journal/activity-list";
@@ -23,7 +25,7 @@ import { moment } from "@/lib/dates";
 import { rendered } from "@/lib/messages";
 import { personName } from "@/lib/people";
 import { useCan, useMe } from "@/lib/session";
-import { ConnectionStatusMark, needsSomeone } from "./status";
+import { ConnectionStatusMark, needsSomeone } from "./parts";
 import { trail } from "./trail";
 
 export function useConnection(id: string) {
@@ -49,12 +51,8 @@ export function ConnectionFrame({ id, children }: { id: string; children: ReactN
     <div>
       <PageHeader
         crumbs={<Crumbs trail={trail(c.account)} />}
-        title={
-          <span className="flex items-center gap-3">
-            <ServiceTile kind={c.brand ?? c.kind} size="lg" />
-            <span className="min-w-0">{c.account}</span>
-          </span>
-        }
+        mark={<ServiceTile kind={c.brand ?? c.kind} size="lg" />}
+        title={c.account}
         meta={
           <>
             <ConnectionStatusMark status={c.status} />
@@ -95,28 +93,25 @@ export function ConnectionOverview({ connection: c }: { connection: ConnectionDe
   return (
     <div className="grid gap-10">
       {needsSomeone(c) ? (
-        <div className="surface flex gap-4 p-4">
-          <IconTile icon={RefreshCw} tone={c.status === "error" ? "brick" : "amber"} />
-          <div className="min-w-0 flex-1">
-            <p className="text-lead font-medium text-ink">{t("conn-broken", { assistant: me.assistant })}</p>
-            <p className="mt-0.5 text-body text-ink-muted">
-              {t(c.status === "needs_reauth" ? "conn-fix-reauth" : "conn-fix-error", { assistant: me.assistant })}
-            </p>
+        <div className="surface p-4">
+          <CardHead
+            mark={<IconTile icon={RefreshCw} tone={c.status === "error" ? "brick" : "amber"} />}
+            title={t("conn-broken", { assistant: me.assistant })}
+            line={t(c.status === "needs_reauth" ? "conn-fix-reauth" : "conn-fix-error", { assistant: me.assistant })}
+          >
             {c.status_reason ? (
-              <p className="mt-1 font-mono text-meta [overflow-wrap:anywhere] text-ink-muted">
-                {rendered(c.status_reason)}
-              </p>
+              <span className="font-mono text-meta text-ink-muted">{rendered(c.status_reason)}</span>
             ) : null}
             {editable ? (
               <Link
                 to="/connections/catalogue"
                 search={{ connect: c.kind, replaces: c.id }}
-                className={buttonVariants({ size: "sm", className: "mt-3" })}
+                className={buttonVariants({ size: "sm" })}
               >
-                {t("conn-reconnect-ellipsis")}
+                <RefreshCw aria-hidden="true" /> {t("conn-reconnect-ellipsis")}
               </Link>
             ) : null}
-          </div>
+          </CardHead>
         </div>
       ) : null}
 
@@ -153,29 +148,21 @@ export function ConnectionOverview({ connection: c }: { connection: ConnectionDe
 
       <Section title={t("conn-who")}>
         {c.owner ? (
-          <Link
-            to="/people/$personId"
-            params={{ personId: c.owner.id }}
-            className="surface flex items-center gap-3 px-4 py-3.5"
-          >
-            <OwnerMark owner={c.owner} size="lg" />
-            <span className="min-w-0 flex-1">
-              <span className="block text-ink">{c.owner.name}</span>
-              <span className="block text-body text-ink-muted">
-                {t("conn-who-owner", { assistant: me.assistant, name: c.owner.name })}
-              </span>
-            </span>
-            <ArrowRight className="size-4 text-ink-faint" aria-hidden="true" />
+          <Link to="/people/$personId" params={{ personId: c.owner.id }} className="group surface block p-4">
+            <CardHead
+              mark={<OwnerMark owner={c.owner} size="lg" />}
+              title={c.owner.name}
+              line={t("conn-who-owner", { assistant: me.assistant, name: c.owner.name })}
+              aside={<OpenArrow />}
+            />
           </Link>
         ) : (
-          <div className="surface flex items-center gap-3 px-4 py-3.5">
-            <OwnerMark owner={null} size="lg" />
-            <p className="min-w-0 flex-1">
-              <span className="block text-ink">{personName(null)}</span>
-              <span className="block text-body text-ink-muted">
-                {t("conn-who-household", { assistant: me.assistant })}
-              </span>
-            </p>
+          <div className="surface p-4">
+            <CardHead
+              mark={<OwnerMark owner={null} size="lg" />}
+              title={personName(null)}
+              line={t("conn-who-household", { assistant: me.assistant })}
+            />
           </div>
         )}
       </Section>
@@ -267,33 +254,31 @@ export function ConnectionSettings({ connection: c }: { connection: ConnectionDe
       void navigate({ to: "/connections" });
     },
   });
-  if (!editable) return <p className="surface-quiet px-4 py-5 text-body text-ink-muted">{t("conn-read-only")}</p>;
+  if (!editable) return <Empty>{t("conn-read-only")}</Empty>;
   return (
     <div className="grid gap-10">
       <Section title={t("conn-tab-settings")}>
         <ul className="grid gap-3 lg:grid-cols-2">
-          <li className="surface flex gap-4 p-4">
-            <IconTile icon={RefreshCw} />
-            <div className="min-w-0 flex-1">
-              <h3 className="text-lead font-medium text-ink">{t("conn-reconnect")}</h3>
-              <p className="mt-0.5 text-body text-ink-muted">{t("conn-reconnect-hint")}</p>
+          <li className="surface p-4">
+            <CardHead mark={<IconTile icon={RefreshCw} />} title={t("conn-reconnect")} line={t("conn-reconnect-hint")}>
               <Link
                 to="/connections/catalogue"
                 search={{ connect: c.kind, replaces: c.id }}
-                className={buttonVariants({ variant: "outline", size: "sm", className: "mt-3" })}
+                className={buttonVariants({ variant: "outline", size: "sm" })}
               >
-                {t("conn-reconnect-ellipsis")}
+                <RefreshCw aria-hidden="true" /> {t("conn-reconnect-ellipsis")}
               </Link>
-            </div>
+            </CardHead>
           </li>
-          <li className="surface flex gap-4 p-4">
-            <IconTile icon={Unplug} tone="brick" />
-            <div className="min-w-0 flex-1">
-              <h3 className="text-lead font-medium text-ink">{t("conn-disconnect")}</h3>
-              <p className="mt-0.5 text-body text-ink-muted">{t("conn-disconnect-hint")}</p>
+          <li className="surface p-4">
+            <CardHead
+              mark={<IconTile icon={Unplug} tone="brick" />}
+              title={t("conn-disconnect")}
+              line={t("conn-disconnect-hint")}
+            >
               <Confirm
                 trigger={
-                  <Button variant="destructive" size="sm" className="mt-3">
+                  <Button variant="destructive" size="sm">
                     {t("conn-disconnect-ellipsis")}
                   </Button>
                 }
@@ -303,7 +288,7 @@ export function ConnectionSettings({ connection: c }: { connection: ConnectionDe
               >
                 {t("conn-disconnect-consequence")}
               </Confirm>
-            </div>
+            </CardHead>
           </li>
         </ul>
       </Section>

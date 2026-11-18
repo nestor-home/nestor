@@ -5,6 +5,7 @@ import type { JournalFacets, Kind } from "@/api";
 import { kindValues } from "@/api/schema.gen";
 import { BottomSheet } from "@/components/overlay-form";
 import { Count, RowList } from "@/components/page";
+import { Tag } from "@/components/status";
 import { Button } from "@/components/ui/button";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -106,9 +107,9 @@ function SubjectChips({ search, onChange }: { search: JournalSearch; onChange: (
   return SUBJECTS.filter((key) => search[key] && !(key === "tone" && search.tone === "warning")).map((key) => (
     <Button
       key={key}
-      variant="outline"
+      variant="pill"
       size="sm"
-      className="max-w-full rounded-full border-ink"
+      className="max-w-full border-ink"
       onClick={() => onChange({ ...search, [key]: undefined })}
       aria-label={t("jr-subject-remove", { subject: t(`jr-subject-${key}`), id: search[key] ?? "" })}
     >
@@ -173,7 +174,7 @@ export function FilterSheet({
         onOpenChange={setOpen}
         title={t("jr-filters")}
         trigger={
-          <Button variant="outline" className="h-11 rounded-full bg-paper-raised px-4">
+          <Button variant="pill" className="h-11 px-4">
             <SlidersHorizontal aria-hidden="true" />
             {t("jr-filters")}
             {chosen.length ? <Count n={chosen.length} /> : null}
@@ -246,9 +247,9 @@ export function FilterSheet({
       {chosen.map(({ group, facet }) => (
         <Button
           key={`${group.id}-${facet.key}`}
-          variant="outline"
+          variant="pill"
           size="sm"
-          className="rounded-full border-ink"
+          className="border-ink"
           onClick={() => group.onChange(group.selected.filter((k) => k !== facet.key))}
           aria-label={t("jr-chip-remove", { value: facet.label })}
         >
@@ -290,9 +291,9 @@ function FacetFilter({
       <PopoverTrigger
         render={
           <Button
-            variant="outline"
+            variant="pill"
             size="sm"
-            className={cn("rounded-full border-dashed", selected.length && "border-solid border-ink")}
+            className={cn("border-dashed", selected.length && "border-solid border-ink")}
           />
         }
       >
@@ -302,11 +303,7 @@ function FacetFilter({
             {chosen.length > 2 ? (
               <span className="text-meta">{t("jr-facet-selected", { count: chosen.length })}</span>
             ) : (
-              chosen.map((f) => (
-                <span key={f.key} className="rounded-full bg-paper-sunken px-2 text-meta">
-                  {f.label}
-                </span>
-              ))
+              chosen.map((f) => <Tag key={f.key}>{f.label}</Tag>)
             )}
           </span>
         ) : null}

@@ -1,6 +1,8 @@
 /** Where the OAuth callback sends the browser when connecting did not work: what went wrong, then the next step. */
+
 import { Link } from "@tanstack/react-router";
 import { RotateCw, ShieldX } from "lucide-react";
+import { CardHead } from "@/components/card";
 import { Crumbs } from "@/components/crumbs";
 import { IconTile, ServiceTile } from "@/components/marks";
 import { PageHeader, Section } from "@/components/page";
@@ -38,12 +40,13 @@ export function FailedView({ kind, error }: { kind: string | undefined; error: s
       </PageHeader>
       <div className="grid gap-10">
         <Section title={t("conn-failed-next")}>
-          <div className="surface flex max-w-2xl gap-4 p-4">
-            {kind ? <ServiceTile kind={kind} /> : <IconTile icon={ShieldX} tone="brick" />}
-            <div className="min-w-0 flex-1">
-              {kind ? <p className="text-lead font-medium text-ink">{kindName(kind)}</p> : null}
-              <p className="text-body text-ink-muted">{known ? t(known.next) : t("conn-failed-other-next")}</p>
-              <div className="mt-3 flex flex-wrap gap-2">
+          <div className="surface max-w-2xl p-4">
+            <CardHead
+              mark={kind ? <ServiceTile kind={kind} /> : <IconTile icon={ShieldX} tone="brick" />}
+              title={kind ? kindName(kind) : t("conn-failed-other")}
+              line={known ? t(known.next) : t("conn-failed-other-next")}
+            >
+              <span className="flex flex-wrap gap-2">
                 {kind ? (
                   <Link to="/connections/catalogue" search={{ connect: kind }} className={buttonVariants()}>
                     <RotateCw aria-hidden="true" /> {t("conn-failed-retry")}
@@ -52,8 +55,8 @@ export function FailedView({ kind, error }: { kind: string | undefined; error: s
                 <Link to="/connections" className={buttonVariants({ variant: "outline" })}>
                   {t("conn-failed-back")}
                 </Link>
-              </div>
-            </div>
+              </span>
+            </CardHead>
           </div>
         </Section>
       </div>

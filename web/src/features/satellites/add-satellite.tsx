@@ -43,6 +43,7 @@ import { useNotify } from "@/components/notices";
 import { FormSheet } from "@/components/overlay-form";
 import { QrCode } from "@/components/qr-code";
 import { Failure, FormError, Loading } from "@/components/states";
+import { Tag } from "@/components/status";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -195,9 +196,7 @@ function Choose({ onStarted }: { onStarted: (started: StartedAddition) => void }
                         <span className="flex flex-wrap items-center gap-2 text-body font-medium text-ink">
                           {m.label}
                           {m.id === methods.data.recommended ? (
-                            <span className="rounded-full bg-ember-soft px-2 py-px text-micro font-normal text-ember">
-                              {t("sat-add-recommended")}
-                            </span>
+                            <Tag tone="accent">{t("sat-add-recommended")}</Tag>
                           ) : null}
                         </span>
                         <span className="text-meta font-normal text-ink-muted">{m.hint}</span>

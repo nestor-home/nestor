@@ -2,24 +2,24 @@
  * A page of the configuration: what the file holds as cards and rows a person reads, each opening its
  * form in a sheet. Every edit goes into the one draft; nothing is written before "Save".
  */
-import type { LucideIcon } from "lucide-react";
 import { ArrowDown, ArrowUp, Pencil, Plus, Trash2 } from "lucide-react";
 import { type ReactElement, type ReactNode, useId, useRef, useState } from "react";
 import type { ModelType } from "@/api";
 import { modelTypeValues } from "@/api/schema.gen";
+import { CardHead } from "@/components/card";
 import { Confirm } from "@/components/confirm";
 import { FormActions } from "@/components/form-actions";
 import { Pebble, ServiceTile } from "@/components/marks";
 import { FormDialog, FormSheet } from "@/components/overlay-form";
 import { Fact, Facts, Panel, Section } from "@/components/page";
 import { Empty } from "@/components/states";
-import { Status } from "@/components/status";
+import { Status, Tag } from "@/components/status";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useT } from "@/i18n";
 import { tr } from "@/i18n/runtime";
-import { KindMark, kindName } from "@/lib/brands";
+import { KindMark, KindName, kindName } from "@/lib/brands";
 import { MODEL_TYPE_ICON, roleIcon } from "@/lib/icons";
 import { modelTypeHint } from "@/lib/labels";
 import { cn } from "@/lib/utils";
@@ -673,48 +673,44 @@ function Card({
   const t = useT();
   return (
     <li>
-      <button type="button" onClick={onOpen} className="surface flex h-full w-full items-start gap-3.5 p-4 text-left">
-        {mark}
-        <span className="grid min-w-0 flex-1 gap-0.5">
-          <span className="flex items-center gap-2">
-            <span className="min-w-0 flex-1 truncate font-medium text-ink">{title}</span>
-            {marks.map((m) => (
-              <KindMark key={m} kind={m} className="size-4 text-ink-muted" label={false} />
-            ))}
-          </span>
-          <span className="truncate text-body text-ink-muted">{line}</span>
-          {detail ? <span className="truncate text-meta text-ink-faint">{detail}</span> : null}
+      <button type="button" onClick={onOpen} className="surface h-full w-full p-4 text-left">
+        <CardHead
+          mark={mark}
+          title={title}
+          line={
+            <>
+              <span className="block truncate">{line}</span>
+              {detail ? <span className="block truncate text-meta text-ink-faint">{detail}</span> : null}
+            </>
+          }
+          aside={
+            marks.length ? (
+              <span className="flex gap-1.5 text-ink-muted">
+                {marks.map((m) => (
+                  <KindMark key={m} kind={m} label={false} />
+                ))}
+              </span>
+            ) : null
+          }
+        >
           {type || roles.length ? (
-            <span className="mt-2 flex flex-wrap gap-1.5">
-              {type ? <ModelMark icon={MODEL_TYPE_ICON[type]} label={modelTypeShort(type)} /> : null}
+            <span className="flex flex-wrap gap-1.5">
+              {type ? <Tag icon={MODEL_TYPE_ICON[type]}>{modelTypeShort(type)}</Tag> : null}
               {roles.map((role) => (
-                <ModelMark key={role.field} icon={roleIcon(role.field)} label={role.title} held />
+                <Tag key={role.field} icon={roleIcon(role.field)} tone="accent">
+                  {role.title}
+                </Tag>
               ))}
             </span>
           ) : null}
           {problems || missing ? (
-            <Status tone="error" className="mt-1.5">
+            <Status tone="error">
               {missing ? t("cfg-kind-missing-short") : t("cfg-problems", { count: problems })}
             </Status>
           ) : null}
-        </span>
+        </CardHead>
       </button>
     </li>
-  );
-}
-
-/** What a model is (its type), or a role it holds: an icon and its word, the role in ember since it is in use. */
-function ModelMark({ icon: Icon, label, held = false }: { icon: LucideIcon; label: string; held?: boolean }) {
-  return (
-    <span
-      className={cn(
-        "inline-flex h-6 items-center gap-1.5 rounded-full px-2 text-meta font-medium whitespace-nowrap",
-        held ? "bg-ember-soft text-ember" : "bg-paper-sunken text-ink-muted",
-      )}
-    >
-      <Icon className="size-3.5" aria-hidden="true" />
-      {label}
-    </span>
   );
 }
 
@@ -756,16 +752,10 @@ function ItemSheet({
       onOpenChange={(next) => !next && leave(onClose)}
       onClosed={() => after.current()}
       title={title}
-      description={
-        mark ? (
-          <span className="inline-flex items-center gap-1.5 text-meta">
-            <KindMark kind={mark} className="size-3.5" label={false} /> {kindName(mark)}
-          </span>
-        ) : undefined
-      }
+      description={mark ? <KindName kind={mark} /> : undefined}
     >
       {() => (
-        <div className="grid gap-6 pt-5">
+        <div className="grid gap-6">
           {children}
           <FormActions hint={t("cfg-sheet-note")}>
             {adding ? (

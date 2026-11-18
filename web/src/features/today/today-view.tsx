@@ -120,15 +120,16 @@ export function TodayView() {
         <Section title={t("home-needs")} count={attention.length}>
           <ul className="grid gap-3 md:grid-cols-2">
             {(all ? attention : attention.slice(0, 4)).map((a) => (
-              <li key={a.key} className="surface flex gap-4 p-4">
-                <IconTile icon={a.icon} tone={a.tone === "error" ? "brick" : "amber"} />
-                <div className="min-w-0 flex-1">
-                  <p className="text-lead leading-snug font-medium text-ink">{a.title}</p>
-                  {a.detail ? <p className="mt-1 text-body text-ink-muted">{a.detail}</p> : null}
-                  <Link {...a.link} className={cn(buttonVariants({ size: "sm" }), "mt-3")}>
+              <li key={a.key} className="surface p-4">
+                <CardHead
+                  mark={<IconTile icon={a.icon} tone={a.tone === "error" ? "brick" : "amber"} />}
+                  title={a.title}
+                  line={a.detail}
+                >
+                  <Link {...a.link} className={buttonVariants({ size: "sm" })}>
                     {a.action}
                   </Link>
-                </div>
+                </CardHead>
               </li>
             ))}
           </ul>

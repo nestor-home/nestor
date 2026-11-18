@@ -37,7 +37,7 @@ import {
   watchesQuery,
 } from "@/api";
 import { Ago } from "@/components/ago";
-import { TILE_CARD, TileCard } from "@/components/card";
+import { CardHead, TILE_CARD, TileCard } from "@/components/card";
 import { Chips } from "@/components/chips";
 import { Confirm } from "@/components/confirm";
 import { BrandTile, IconTile, OwnerMark, Pebble, type TileTone } from "@/components/marks";
@@ -322,19 +322,24 @@ function ConfirmationCard({ confirmation: c }: { confirmation: Confirmation }) {
     .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : String(v)}`)
     .join(" · ");
   return (
-    <li className="surface flex gap-4 p-4">
-      <IconTile icon={ShieldQuestion} tone="amber" />
-      <div className="min-w-0 flex-1">
-        <p className="text-meta font-medium text-amber">{t("act-awaits-approval")}</p>
-        <p className="mt-0.5 font-mono text-body text-ink">{c.tool}</p>
-        {what ? <p className="mt-0.5 text-body text-ink-muted">{what}</p> : null}
-        <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-meta text-ink-muted">
+    <li className="surface p-4">
+      <CardHead
+        mark={<IconTile icon={ShieldQuestion} tone="amber" />}
+        title={
+          <>
+            <span className="block text-meta font-medium text-amber">{t("act-awaits-approval")}</span>
+            <span className="font-mono">{c.tool}</span>
+          </>
+        }
+        line={what || null}
+      >
+        <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-meta text-ink-muted">
           <span>{t("confirmation-for", { name: personName(c.person) })}</span>
           <KindName kind={c.origin.channel} />
           <span>{t("confirmation-expires", { at: hourMinute(c.expires_at) })}</span>
-        </p>
+        </span>
         {c.yours ? (
-          <div className="mt-3 flex gap-2">
+          <span className="flex flex-wrap gap-2">
             <Confirm
               trigger={
                 <Button size="sm" disabled={answer.isPending}>
@@ -356,11 +361,11 @@ function ConfirmationCard({ confirmation: c }: { confirmation: Confirmation }) {
             >
               <X /> {t("confirmation-refuse")}
             </Button>
-          </div>
+          </span>
         ) : (
-          <p className="mt-2 text-meta text-ink-muted">{t("confirmation-not-yours")}</p>
+          <span className="text-meta text-ink-muted">{t("confirmation-not-yours")}</span>
         )}
-      </div>
+      </CardHead>
     </li>
   );
 }
@@ -378,12 +383,17 @@ function MessageCard({
 }) {
   const t = useT();
   return (
-    <li className="surface flex gap-4 p-4">
-      <IconTile icon={icon} tone={tone} />
-      <div className="min-w-0 flex-1">
-        <p className="text-meta font-medium text-ink-muted">{state}</p>
-        <p className="mt-0.5 title-sub text-ink">{t("message-quoted", { text: m.text })}</p>
-        <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-meta text-ink-muted">
+    <li className="surface p-4">
+      <CardHead
+        mark={<IconTile icon={icon} tone={tone} />}
+        title={
+          <>
+            <span className="block text-meta font-medium text-ink-muted">{state}</span>
+            {t("message-quoted", { text: m.text })}
+          </>
+        }
+      >
+        <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-meta text-ink-muted">
           <span>
             {m.requested_by
               ? t("message-from-to", { from: m.requested_by.name, to: m.to.name })
@@ -391,8 +401,8 @@ function MessageCard({
           </span>
           {m.channel ? <KindName kind={m.channel} /> : null}
           <Ago iso={m.at} />
-        </p>
-      </div>
+        </span>
+      </CardHead>
     </li>
   );
 }

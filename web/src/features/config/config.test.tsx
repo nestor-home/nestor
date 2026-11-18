@@ -275,7 +275,7 @@ describe("the configuration at a glance", () => {
     );
     const bar = await saveBar();
     expect(await within(bar).findByRole("button", { name: "1 change" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /modified.*Persona.*Alfred/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Persona.*Alfred.*modified/ })).toBeInTheDocument();
     await user.click(within(bar).getByRole("button", { name: "Discard changes" }));
     await user.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Discard" }));
     await waitFor(() => expect(screen.queryByRole("region", { name: "Unsaved changes" })).not.toBeInTheDocument());
