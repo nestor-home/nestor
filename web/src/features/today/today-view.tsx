@@ -206,7 +206,7 @@ function Now({ running, items, now }: { running: Task[]; items: JournalItem[]; n
                             {brandName(brand)}
                           </span>
                         ) : null}
-                        <span>{task.steps.at(-1) ?? t("home-task-starting")}</span>
+                        <span className="min-w-0">{task.steps.at(-1) ?? t("home-task-starting")}</span>
                         <Ago iso={task.started_at} />
                       </span>
                     </span>

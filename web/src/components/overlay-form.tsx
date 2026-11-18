@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import type { ReactElement, ReactNode } from "react";
+import { type ReactElement, type ReactNode, useRef } from "react";
 import { IconTile, type TileTone } from "@/components/marks";
 import {
   Dialog,
@@ -51,21 +51,35 @@ export function FormDialog({
   );
 }
 
+/**
+ * What an overlay holds, kept while it closes: a page that opens a sheet for "the thing I clicked" drops that
+ * thing the moment it closes, and the sheet would empty before it has left.
+ */
+function useKept(open: boolean, children: ReactNode): ReactNode {
+  const kept = useRef(children);
+  if (open) kept.current = children;
+  return kept.current;
+}
+
 /** A sheet from the right, or the full screen from below on a phone: the frame of every sheet. */
 export function SideSheet({
   open,
   onOpenChange,
   trigger,
+  onClosed,
   children,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   trigger?: ReactElement;
+  /** Once it has finished closing: for a page that mounts it only while it shows. */
+  onClosed?: () => void;
   children: ReactNode;
 }) {
   const mobile = useIsMobile();
+  const held = useKept(open, children);
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={onOpenChange} onOpenChangeComplete={(now) => !now && onClosed?.()}>
       {trigger ? <SheetTrigger render={trigger} /> : null}
       <SheetContent
         side={mobile ? "bottom" : "right"}
@@ -75,7 +89,7 @@ export function SideSheet({
             : "w-full overflow-y-auto overscroll-contain bg-paper sm:max-w-xl"
         }
       >
-        {children}
+        {held}
       </SheetContent>
     </Sheet>
   );
@@ -118,6 +132,7 @@ export function FormSheet({
   children,
   open: controlled,
   onOpenChange,
+  onClosed,
 }: {
   trigger?: ReactElement;
   title: string;
@@ -125,10 +140,11 @@ export function FormSheet({
   children: (close: () => void) => ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  onClosed?: () => void;
 }) {
   const [open, setOpen] = useOpenState(controlled, onOpenChange);
   return (
-    <SideSheet open={open} onOpenChange={setOpen} trigger={trigger}>
+    <SideSheet open={open} onOpenChange={setOpen} trigger={trigger} onClosed={onClosed}>
       <SheetHeader className="border-b border-rule px-6 pt-6 pb-4">
         <SheetTitle className="font-serif text-2xl font-normal">{title}</SheetTitle>
         {description ? <SheetDescription>{description}</SheetDescription> : null}

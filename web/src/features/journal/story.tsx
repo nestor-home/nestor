@@ -255,7 +255,7 @@ function TurnBlock({ turn, open, unfolded }: { turn: Turn; open: (position: numb
                 item={answer}
                 open={open}
                 label={t("jr-entry-label", { text: say(answer), detail: answer.detail_text })}
-                className="rounded-md hover:bg-paper-sunken/70"
+                className="-mx-2 -my-1 rounded-lg px-2 py-1 hover:bg-paper-sunken/70"
               >
                 <span
                   className={cn(
@@ -499,7 +499,7 @@ function ChainStep({
           item={item}
           open={open}
           label={t("jr-entry-label", { text: look.label, detail: say(item) })}
-          className="rounded-md hover:bg-paper-sunken/70"
+          className="-mx-2 -my-1 rounded-lg px-2 py-1 hover:bg-paper-sunken/70"
         >
           <span className="flex flex-wrap items-baseline gap-x-2 text-[0.95rem]">
             <span className="font-medium text-ink">{look.label}</span>

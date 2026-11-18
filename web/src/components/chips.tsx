@@ -13,7 +13,10 @@ export function Chips<T extends string>({
   onChange: (id: T) => void;
 }) {
   return (
-    <fieldset className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0">
+    <fieldset
+      // the row scrolls on a phone, and a scrolling box clips on both axes: its padding leaves the pills' shadow room
+      className="-mx-4 -my-3 flex min-w-0 gap-2 overflow-x-auto px-4 py-3 [scrollbar-width:none] sm:m-0 sm:flex-wrap sm:overflow-visible sm:p-0"
+    >
       <legend className="sr-only">{label}</legend>
       {items.map((item) => (
         <button

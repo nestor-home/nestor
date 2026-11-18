@@ -157,6 +157,8 @@ function RecordingFlow({
   const assistant = me.assistant;
   const ownArg = own ? "yes" : "no";
 
+  // mounted while it shows: it closes first, then tells its page, so it leaves as it came
+  const [shown, setShown] = useState(true);
   const [step, setStep] = useState<Step>("consent");
   const [learning, setLearning] = useState(initialLearning);
   const [device, setDevice] = useState<string | null>(null);
@@ -305,15 +307,16 @@ function RecordingFlow({
         {t("recording-continue")}
       </Button>
     ) : step === "done" ? (
-      <Button variant="accent" onClick={onClose}>
+      <Button variant="accent" onClick={() => setShown(false)}>
         {t("recording-done")}
       </Button>
     ) : null;
 
   return (
     <GuidedDialog
-      open
-      onOpenChange={(open) => !open && onClose()}
+      open={shown}
+      onOpenChange={(open) => !open && setShown(false)}
+      onClosed={onClose}
       stage={stage}
       title={title}
       step={step}

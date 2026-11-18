@@ -69,7 +69,11 @@ export function UpdateDialog({
           </div>
           <div className="grid gap-6 px-6 pt-6 pb-6">{children}</div>
         </div>
-        {footer ? <div className="border-t border-rule bg-paper-sunken/60 px-6 py-4">{footer}</div> : null}
+        {footer ? (
+          <div data-slot="dialog-footer" className="border-t border-rule bg-paper-sunken/60 px-6 py-4">
+            {footer}
+          </div>
+        ) : null}
       </DialogContent>
     </Dialog>
   );

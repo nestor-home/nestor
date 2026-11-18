@@ -151,8 +151,9 @@
 }
 
 @layer components {
-  /* the actions of a form in a dialog (FormActions) are its footer, in reach while its body scrolls */
-  [data-slot="dialog-content"] [data-slot="form-actions"] {
+  /* the actions of a form in a dialog (FormActions) are its footer, in reach while its body scrolls; a dialog
+     that lays out its own footer (`data-slot="dialog-footer"`) already holds them there */
+  [data-slot="dialog-content"] [data-slot="form-actions"]:not([data-slot="dialog-footer"] *) {
     position: sticky;
     bottom: -1rem;
     margin-inline: -1rem;

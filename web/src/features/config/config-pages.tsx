@@ -3,7 +3,7 @@
  * form in a sheet. Every edit goes into the one draft; nothing is written before "Save".
  */
 import { ArrowDown, ArrowUp, Pencil, Plus, Trash2 } from "lucide-react";
-import { type ReactElement, type ReactNode, useId, useState } from "react";
+import { type ReactElement, type ReactNode, useId, useRef, useState } from "react";
 import { modelTypeValues } from "@/api/schema.gen";
 import { Confirm } from "@/components/confirm";
 import { FormActions } from "@/components/form-actions";
@@ -670,10 +670,18 @@ function ItemSheet({
   children: ReactNode;
 }) {
   const t = useT();
+  // its page mounts it while an item is open: it closes first, then tells the page, so it leaves as it came
+  const [open, setOpen] = useState(true);
+  const after = useRef(onClose);
+  const leave = (then: () => void) => {
+    after.current = then;
+    setOpen(false);
+  };
   return (
     <FormSheet
-      open
-      onOpenChange={(open) => !open && onClose()}
+      open={open}
+      onOpenChange={(next) => !next && leave(onClose)}
+      onClosed={() => after.current()}
       title={title}
       description={
         mark ? (
@@ -689,7 +697,7 @@ function ItemSheet({
           <FormActions hint={t("cfg-sheet-note")}>
             {adding ? (
               onRemove ? (
-                <Button variant="ghost" onClick={onRemove}>
+                <Button variant="ghost" onClick={() => leave(onRemove)}>
                   {t("cfg-cancel-add")}
                 </Button>
               ) : null
@@ -726,14 +734,14 @@ function ItemSheet({
                     }
                     title={removeTitle}
                     confirm={t("cfg-remove")}
-                    onConfirm={async () => onRemove()}
+                    onConfirm={async () => leave(onRemove)}
                   >
                     {removeText}
                   </Confirm>
                 ) : null}
               </>
             )}
-            <Button onClick={onClose}>{t("cfg-done")}</Button>
+            <Button onClick={() => leave(onClose)}>{t("cfg-done")}</Button>
           </FormActions>
         </div>
       )}
