@@ -3,7 +3,7 @@
  * its state and every answer typed as the API's generated schemas, so the mocks cannot drift from it.
  */
 import { HttpResponse, http, type JsonBodyType, delay as latency, sse } from "msw";
-import type { components } from "@/api/schema.gen";
+import { type components, dayValues } from "@/api/schema.gen";
 import { answerTo, chatMessage, MENTIONS, type MockChat, mentionedIn } from "./chats";
 import * as config from "./config";
 import { LIVE } from "./day";
@@ -140,14 +140,31 @@ function mediaDevice(id: string, purpose: In<"Purpose">): In<"SatelliteOut"> | R
 
 const minutesOf = (clock: string) => Number(clock.slice(0, 2)) * 60 + Number(clock.slice(3, 5));
 
-/** Whether `now`, in the household's time (the browser's, here), falls in the slot: past midnight when it ends
- *  before it starts, a whole day when both are equal. */
-function covers(slot: In<"QuietHoursIO">, now: Date): boolean {
-  const day = (now.getDay() + 6) % 7; // 0 Monday
-  const minute = now.getHours() * 60 + now.getMinutes();
+/** The day and the minute of `now` in the household's time zone (the mock file's `persona.timezone`). */
+function householdTime(now: Date): { day: In<"Day">; minute: number } {
+  const zone = (db.config.document.persona as { timezone?: string } | undefined)?.timezone ?? "UTC";
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: zone,
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(now);
+  const part = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
+  return {
+    day: part("weekday").toLowerCase() as In<"Day">,
+    minute: Number(part("hour")) * 60 + Number(part("minute")),
+  };
+}
+
+/** Whether `now` falls in the slot, in the household's time: past midnight when it ends before it starts, a whole
+ *  day when both are equal. */
+function covers(slot: In<"QuietHoursIO-Output">, now: Date): boolean {
+  const { day, minute } = householdTime(now);
+  const before = dayValues[(dayValues.indexOf(day) + 6) % 7] as In<"Day">;
   const [start, end] = [minutesOf(slot.start), minutesOf(slot.end)];
   if (start < end) return slot.days.includes(day) && start <= minute && minute < end;
-  return (slot.days.includes(day) && minute >= start) || (slot.days.includes((day + 6) % 7) && minute < end);
+  return (slot.days.includes(day) && minute >= start) || (slot.days.includes(before) && minute < end);
 }
 
 /** Why the device's camera does not film now, as the server tells it: its switch, then its privacy rules. Presence
@@ -163,15 +180,6 @@ function cameraOff(satellite: In<"SatelliteOut">): In<"Off"> | null {
     if (!ids.length || ids.some((id) => home(id) !== false)) return "someone_home";
   }
   return null;
-}
-
-/** The quiet hours as the server keeps them, or the first that it refuses (422). */
-function quietIn(slots: In<"QuietHoursIO">[]): In<"QuietHoursIO">[] | null {
-  const clock = /^([01][0-9]|2[0-3]):[0-5][0-9]$/;
-  const valid = slots.every(
-    (q) => q.days.length > 0 && q.days.every((d) => d >= 0 && d <= 6) && clock.test(q.start) && clock.test(q.end),
-  );
-  return valid ? slots.map((q) => ({ days: [...new Set(q.days)].sort(), start: q.start, end: q.end })) : null;
 }
 
 /** A file to download, named as the server names it: quoted when plain, else encoded (RFC 6266). */
@@ -1227,9 +1235,7 @@ export const handlers = [
     const satellite = db.satellites.find((x) => x.id === params.id);
     if (!satellite) return notFound("satellite");
     const body = (await request.json()) as In<"MediaAccessIn">;
-    const privacy = body.privacy ?? { quiet: [], off_when_home: false, home_people: [] };
-    const quiet = quietIn(privacy.quiet ?? []);
-    if (!quiet) return fail(422, "invalid_request");
+    const privacy = { ...NO_RULE(), ...body.privacy };
     const named = [...(body.viewers ?? []), ...(body.callers ?? []), ...(privacy.home_people ?? [])];
     const unknown = named.find((p) => !db.people.some((x) => x.id === p));
     if (unknown) return fail(422, "person_unknown", { person: unknown });
@@ -1239,9 +1245,10 @@ export const handlers = [
       callers: [...(body.callers ?? [])].sort().map(refOf),
       camera: body.camera ?? true,
       privacy: {
-        quiet,
-        off_when_home: privacy.off_when_home ?? false,
-        home_people: [...new Set(privacy.home_people ?? [])].sort().map(refOf),
+        // days without repeats, Monday first, as the server keeps them
+        quiet: privacy.quiet.map((q) => ({ ...q, days: dayValues.filter((d) => q.days.includes(d)) })),
+        off_when_home: privacy.off_when_home,
+        home_people: [...new Set(privacy.home_people)].sort().map(refOf),
       },
     };
     const { viewers, callers, camera } = satellite.access;

@@ -2,7 +2,7 @@ import { fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { db } from "@/mocks/db";
-import { SCOPES } from "@/mocks/fixtures";
+import { NO_RULE, SCOPES } from "@/mocks/fixtures";
 import { server } from "@/mocks/server";
 import { renderApp } from "@/test/render";
 
@@ -17,8 +17,6 @@ function accessSent(): unknown[] {
   });
   return bodies;
 }
-
-const NO_RULE = { quiet: [], off_when_home: false, home_people: [] };
 
 const section = () => screen.findByRole("region", { name: "Watching and calling" });
 
@@ -37,7 +35,7 @@ describe("who may watch a satellite or call through it", () => {
     await user.click(within(dialog).getByRole("checkbox", { name: "Léa may call" }));
     await user.click(within(dialog).getByRole("button", { name: "Save" }));
     expect(await within(await section()).findByText("Jules, Léa", { selector: "dd" })).toBeVisible();
-    expect(bodies).toEqual([{ viewers: ["jules", "lea"], callers: ["jules"], camera: true, privacy: NO_RULE }]);
+    expect(bodies).toEqual([{ viewers: ["jules", "lea"], callers: ["jules"], camera: true, privacy: NO_RULE() }]);
   });
 
   it("turns the camera off: nobody may be ticked to watch it then", async () => {
@@ -50,13 +48,13 @@ describe("who may watch a satellite or call through it", () => {
     expect(within(dialog).getByRole("checkbox", { name: "Jules may watch" })).toHaveAttribute("aria-disabled", "true");
     await user.click(within(dialog).getByRole("button", { name: "Save" }));
     expect(await within(await section()).findByText("off")).toBeVisible();
-    expect(bodies).toEqual([{ viewers: ["lea"], callers: ["jules", "lea"], camera: false, privacy: NO_RULE }]);
+    expect(bodies).toEqual([{ viewers: ["lea"], callers: ["jules", "lea"], camera: false, privacy: NO_RULE() }]);
   });
 
   it("states plainly that a camera has no privacy rule by default", async () => {
     renderApp("/satellites/reachy-living-room");
     expect(
-      await within(await section()).findByText("no rule: the camera films whenever someone allowed asks"),
+      await within(await section()).findByText("No rule: the camera films whenever someone allowed asks."),
     ).toBeVisible();
   });
 
@@ -86,7 +84,7 @@ describe("who may watch a satellite or call through it", () => {
         callers: ["jules", "lea"],
         camera: true,
         privacy: {
-          quiet: [{ days: [0, 1, 2, 3, 4], start: "21:30", end: "07:00" }],
+          quiet: [{ days: ["mon", "tue", "wed", "thu", "fri"], start: "21:30", end: "07:00" }],
           off_when_home: true,
           home_people: ["lea"],
         },

@@ -1,6 +1,7 @@
 import { Plus, X } from "lucide-react";
 import { useId } from "react";
 import type { Day, Privacy, QuietHours } from "@/api";
+import { dayValues } from "@/api/schema.gen";
 import { Choice } from "@/components/choice";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -12,14 +13,10 @@ import { useT } from "@/i18n";
 import { activeLocale, tr } from "@/i18n/runtime";
 import { weekdayLabel } from "@/lib/labels";
 
-/** The days as the server numbers them, 0 Monday to 6 Sunday. */
-const DAYS: readonly Day[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
-const WEEK = [0, 1, 2, 3, 4, 5, 6] as const;
-
-/** A day's short name in the admin's language (1 January 2024 was a Monday). */
-const shortDay = (day: number) =>
-  new Intl.DateTimeFormat(activeLocale(), { weekday: "short" }).format(new Date(2024, 0, 1 + day));
-const fullDay = (day: number) => weekdayLabel(DAYS[day] as Day);
+/** A day's short name in the admin's language, which `weekdayLabel` (full names) does not give: 1 January 2024
+ *  was a Monday. */
+const shortDay = (day: Day) =>
+  new Intl.DateTimeFormat(activeLocale(), { weekday: "short" }).format(new Date(2024, 0, 1 + dayValues.indexOf(day)));
 
 /** One slot in a line: its days, then its times (the whole day when both are equal). */
 function slotText(slot: QuietHours): string {
@@ -70,9 +67,9 @@ export const draftOf = (privacy: Privacy): PrivacyDraft => ({
   people: new Set(privacy.home_people.map((p) => p.id)),
 });
 
-/** What the server takes; days in order, the people only when they are chosen. */
+/** What the server takes; days in order (Monday first), the people only when they are chosen. */
 export const privacyOf = (draft: PrivacyDraft) => ({
-  quiet: draft.quiet.map(({ days, start, end }) => ({ days: [...days].sort(), start, end })),
+  quiet: draft.quiet.map(({ days, start, end }) => ({ days: dayValues.filter((d) => days.includes(d)), start, end })),
   off_when_home: draft.offWhenHome,
   home_people: draft.offWhenHome && draft.some ? [...draft.people].sort() : [],
 });
@@ -101,7 +98,10 @@ export function PrivacyFields({
   const setSlot = (key: number, change: Partial<QuietHours>) =>
     onChange({ ...draft, quiet: draft.quiet.map((q) => (q.key === key ? { ...q, ...change } : q)) });
   const add = () =>
-    onChange({ ...draft, quiet: [...draft.quiet, { key: nextKey++, days: [...WEEK], start: "22:00", end: "07:00" }] });
+    onChange({
+      ...draft,
+      quiet: [...draft.quiet, { key: nextKey++, days: [...dayValues], start: "22:00", end: "07:00" }],
+    });
   const remove = (key: number) => onChange({ ...draft, quiet: draft.quiet.filter((q) => q.key !== key) });
   const tick = (person: string) => (on: boolean) => {
     const people = new Set(draft.people);
@@ -112,9 +112,10 @@ export function PrivacyFields({
 
   return (
     <fieldset className="grid gap-4" disabled={disabled}>
-      <legend className="mb-3 text-sm font-medium text-ink">{t("sat-privacy-title")}</legend>
+      <legend className="mb-1 text-sm font-medium text-ink">{t("sat-privacy-title")}</legend>
+      <p className="-mt-2 text-xs text-ink-muted">{t("sat-privacy-calls")}</p>
       {draft.quiet.length === 0 && !draft.offWhenHome ? (
-        <p className="text-sm text-ink-muted">{t("sat-privacy-none-long")}</p>
+        <p className="text-sm text-ink-muted">{t("sat-privacy-none")}</p>
       ) : null}
       {draft.quiet.map((slot, index) => (
         <fieldset key={slot.key} className="grid gap-3 rounded-lg border border-rule p-3">
@@ -127,11 +128,11 @@ export function PrivacyFields({
               spacing={1}
               className="flex-wrap"
               aria-label={t("sat-privacy-days")}
-              value={slot.days.map(String)}
-              onValueChange={(days: string[]) => setSlot(slot.key, { days: days.map(Number).sort() })}
+              value={slot.days}
+              onValueChange={(days) => setSlot(slot.key, { days: days as Day[] })}
             >
-              {WEEK.map((day) => (
-                <ToggleGroupItem key={day} value={String(day)} aria-label={fullDay(day)}>
+              {dayValues.map((day) => (
+                <ToggleGroupItem key={day} value={day} aria-label={weekdayLabel(day)}>
                   {shortDay(day)}
                 </ToggleGroupItem>
               ))}

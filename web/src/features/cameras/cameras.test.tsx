@@ -84,8 +84,9 @@ describe("the cameras page", () => {
   it("says why a camera does not film now, under its privacy rules", async () => {
     const living = db.satellites.find((s) => s.id === "reachy-living-room");
     if (!living) throw new Error("fixture changed");
-    // the tests run on a Friday at 18:30
-    living.access.privacy.quiet = [{ days: [4], start: "18:00", end: "19:00" }];
+    // the tests run on a Friday at 18:30, in the household's time once it lives in the test's time zone
+    (db.config.document.persona as { timezone: string }).timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    living.access.privacy.quiet = [{ days: ["fri"], start: "18:00", end: "19:00" }];
     const { unmount } = renderApp("/cameras");
     const row = await deviceRow("Living room Reachy");
     expect(within(row).getByText("off during quiet hours")).toBeVisible();
@@ -93,7 +94,7 @@ describe("the cameras page", () => {
     expect(within(row).getByRole("button", { name: /Call/ })).toBeEnabled();
     unmount();
 
-    living.access.privacy.quiet = [{ days: [4], start: "19:00", end: "18:00" }]; // from 19:00 into Saturday
+    living.access.privacy.quiet = [{ days: ["fri"], start: "19:00", end: "18:00" }]; // from 19:00 into Saturday
     living.access.privacy.off_when_home = true; // Mathis is home
     renderApp("/cameras");
     const again = await deviceRow("Living room Reachy");
