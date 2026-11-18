@@ -1,3 +1,5 @@
+import { useQuery } from "@tanstack/react-query";
+import { peopleQuery } from "@/api";
 import {
   Combobox,
   ComboboxContent,
@@ -7,8 +9,6 @@ import {
   ComboboxList,
 } from "@/components/ui/combobox";
 import { tr } from "@/i18n/runtime";
-import { useQuery } from "@tanstack/react-query";
-import { peopleQuery } from "@/api";
 
 interface Option {
   value: string; // "" for the empty choice

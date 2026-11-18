@@ -79,7 +79,7 @@ const PEBBLE_SIZE = {
   xs: "text-[0.5rem]",
   sm: "text-[0.6rem]",
   md: "text-[0.7rem]",
-  lg: "text-[0.9rem]",
+  lg: "text-[1rem]",
   xl: "text-[1.2rem]",
   "2xl": "text-[1.4rem] sm:text-[1.6rem]",
 } as const;

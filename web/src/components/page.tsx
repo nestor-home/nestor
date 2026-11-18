@@ -162,13 +162,19 @@ export function RowList({
   children,
   ordered = false,
   className,
+  ...rest
 }: {
   children: ReactNode;
   ordered?: boolean;
   className?: string;
+  "aria-label"?: string;
 }) {
   const Tag = ordered ? "ol" : "ul";
-  return <Tag className={cn("surface divide-y divide-rule overflow-hidden", className)}>{children}</Tag>;
+  return (
+    <Tag className={cn("surface divide-y divide-rule overflow-hidden", className)} {...rest}>
+      {children}
+    </Tag>
+  );
 }
 
 /**
@@ -180,11 +186,17 @@ export function Panel({
   className,
   marked = false,
   as: Tag = "div",
+  ...rest
 }: {
   children: ReactNode;
   className?: string;
   marked?: boolean;
-  as?: "div" | "li" | "section" | "article";
+  as?: "div" | "li" | "section" | "article" | "aside";
+  "aria-label"?: string;
 }) {
-  return <Tag className={cn("surface relative p-5", marked && "corner-marks", className)}>{children}</Tag>;
+  return (
+    <Tag className={cn("surface relative p-5", marked && "corner-marks", className)} {...rest}>
+      {children}
+    </Tag>
+  );
 }

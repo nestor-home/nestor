@@ -3,14 +3,14 @@
  * who asked and how the answer reached them, its steps as they came, then its trace in the journal.
  */
 import { useQuery } from "@tanstack/react-query";
-import { CircleSlash, Paperclip, TriangleAlert, Volume2, Workflow } from "lucide-react";
+import { Paperclip, TriangleAlert, Volume2, Workflow } from "lucide-react";
 import { isMissing, type Task, taskQuery } from "@/api";
 import { API_BASE } from "@/api/client";
 import { Ago } from "@/components/ago";
 import { type Crumb, Crumbs } from "@/components/crumbs";
 import { IconTile, Pebble } from "@/components/marks";
 import { OriginLink } from "@/components/origin-link";
-import { Fact, Facts, PageHeader, Section, WithAside } from "@/components/page";
+import { Fact, Facts, PageHeader, Panel, Section, WithAside } from "@/components/page";
 import { Empty, Failure, Loading } from "@/components/states";
 import { Files } from "@/features/journal/attachments";
 import { SubjectStory } from "@/features/journal/subject-story";
@@ -86,7 +86,7 @@ function Outcome({ task }: { task: Task }) {
   if (task.status === "running") {
     return (
       <Section title={t("task-now")}>
-        <div className="surface p-5">
+        <Panel>
           <div className="flex items-start gap-4">
             <IconTile icon={Workflow} tone="task" />
             <p className="min-w-0 flex-1 self-center title-sub text-ink">{task.steps.at(-1) ?? t("task-starting")}</p>
@@ -94,14 +94,14 @@ function Outcome({ task }: { task: Task }) {
           <span className="thread mt-4 block" aria-hidden="true" />
           <p className="mt-3 text-body text-ink-muted">{t("task-delivery-pending")}</p>
           {files}
-        </div>
+        </Panel>
       </Section>
     );
   }
   if (task.error) {
     return (
       <Section title={t("task-error")}>
-        <div className="surface p-5">
+        <Panel>
           <div className="flex items-start gap-4">
             <IconTile icon={TriangleAlert} tone="brick" />
             <p className="min-w-0 flex-1 self-center whitespace-pre-line text-brick [overflow-wrap:anywhere]">
@@ -109,32 +109,27 @@ function Outcome({ task }: { task: Task }) {
             </p>
           </div>
           {files}
-        </div>
+        </Panel>
       </Section>
     );
   }
   if (task.result || files) {
     return (
       <Section title={t("task-result")}>
-        <div className="surface corner-marks relative p-5">
+        <Panel marked>
           {task.result ? (
             <p className="max-w-2xl whitespace-pre-line font-serif text-heading leading-relaxed text-ink [overflow-wrap:anywhere]">
               {task.result}
             </p>
           ) : null}
           {files}
-        </div>
+        </Panel>
       </Section>
     );
   }
   return (
     <Section title={t("task-result")}>
-      <div className="surface-quiet flex items-center gap-4 px-4 py-5">
-        <IconTile icon={CircleSlash} />
-        <p className="text-body text-ink-muted">
-          {t(task.status === "cancelled" ? "task-stopped-early" : "task-no-result")}
-        </p>
-      </div>
+      <Empty>{t(task.status === "cancelled" ? "task-stopped-early" : "task-no-result")}</Empty>
     </Section>
   );
 }
@@ -144,7 +139,7 @@ function About({ task }: { task: Task }) {
   const t = useT();
   const took = task.ended_at ? (new Date(task.ended_at).getTime() - new Date(task.started_at).getTime()) / 1000 : null;
   return (
-    <aside aria-label={t("task-about")} className="surface self-start p-5">
+    <Panel as="aside" aria-label={t("task-about")} className="self-start">
       <Facts narrow className="text-body">
         {task.requested_by ? (
           <Fact term={t("task-asked-by")} className="flex items-center gap-2">
@@ -186,6 +181,6 @@ function About({ task }: { task: Task }) {
           </Fact>
         )}
       </Facts>
-    </aside>
+    </Panel>
   );
 }

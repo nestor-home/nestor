@@ -4,12 +4,12 @@ import { Link } from "@tanstack/react-router";
 import type { LucideIcon } from "lucide-react";
 import { KeyRound, Plug, RadioTower, Server, SlidersHorizontal } from "lucide-react";
 import { accountsQuery, connectionsQuery, satellitesQuery, systemQuery } from "@/api";
+import { OpenArrow, TILE_CARD, TileCard } from "@/components/card";
 import { IconTile } from "@/components/marks";
 import { PageHeader } from "@/components/page";
 import { UpdateAvailable } from "@/features/system/updates";
 import { useT } from "@/i18n";
 import { type Permission, useCan, useMe } from "@/lib/session";
-import { OpenArrow, TILE_CARD, TileCard } from "@/components/card";
 
 type To = "/connections" | "/satellites" | "/accounts" | "/config" | "/system";
 

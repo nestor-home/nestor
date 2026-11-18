@@ -1,3 +1,5 @@
+import { type ReactElement, type ReactNode, useState } from "react";
+import { FormError } from "@/components/states";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -11,8 +13,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { useOpenState } from "@/hooks/use-open-state";
 import { tr } from "@/i18n/runtime";
-import { type ReactElement, type ReactNode, useState } from "react";
-import { FormError } from "@/components/states";
 
 /** The frame every confirmation shares: its title, what it means, any detail, then cancel and the action. */
 export function ConfirmFrame({

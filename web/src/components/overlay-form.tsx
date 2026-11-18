@@ -1,3 +1,6 @@
+import type { LucideIcon } from "lucide-react";
+import { type ReactElement, type ReactNode, useRef } from "react";
+import { IconTile, type TileTone } from "@/components/marks";
 import {
   Dialog,
   DialogContent,
@@ -9,9 +12,6 @@ import {
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useOpenState } from "@/hooks/use-open-state";
-import type { LucideIcon } from "lucide-react";
-import { type ReactElement, type ReactNode, useRef } from "react";
-import { IconTile, type TileTone } from "@/components/marks";
 
 /**
  * The one rule for editing: a page shows content; creating or changing is an explicit action that
@@ -159,6 +159,7 @@ export function FormSheet({
 export function SheetPanel({
   icon,
   tone,
+  mark,
   kind,
   title,
   description,
@@ -167,6 +168,8 @@ export function SheetPanel({
 }: {
   icon?: LucideIcon;
   tone?: TileTone;
+  /** what leads the kind when an icon does not say it: a service's logo */
+  mark?: ReactNode;
   kind?: string;
   title: string;
   description?: ReactNode;
@@ -178,7 +181,7 @@ export function SheetPanel({
       <SheetHeader className="gap-3 px-6 pt-8 pb-2">
         {kind ? (
           <span className="flex items-center gap-3 text-body font-medium text-ink-muted">
-            {icon ? <IconTile icon={icon} tone={tone} size="sm" /> : null}
+            {mark ?? (icon ? <IconTile icon={icon} tone={tone} size="sm" /> : null)}
             {kind}
           </span>
         ) : null}

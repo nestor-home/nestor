@@ -72,7 +72,7 @@ describe("ongoing", () => {
       "href",
       expect.stringMatching(/^\/tasks\//),
     );
-    expect(within(sheet).getByRole("button", { name: "Stop" })).toBeInTheDocument();
+    expect(within(sheet).getByRole("button", { name: "Stop…" })).toBeInTheDocument();
   });
 
   it("keeps one lane when asked: only what is watched, with how often each fired", async () => {

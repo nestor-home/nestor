@@ -1,5 +1,6 @@
 import { Minus, Pencil, Plus } from "lucide-react";
 import type { ConfigChange, ConfigDiff } from "@/api";
+import { RowList } from "@/components/page";
 import { useT } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { shown } from "./schema";
@@ -18,7 +19,7 @@ export function Changes({ diff, className }: { diff: ConfigDiff; className?: str
   ].sort((a, b) => a[1].path.localeCompare(b[1].path, undefined, { numeric: true }));
   if (!rows.length) return <p className="text-body text-ink-muted">{t("cfg-no-change")}</p>;
   return (
-    <ul className={cn("surface divide-y divide-rule", className)}>
+    <RowList className={className}>
       {rows.map(([sort, change]) => {
         const Icon = MARK[sort];
         return (
@@ -54,6 +55,6 @@ export function Changes({ diff, className }: { diff: ConfigDiff; className?: str
           </li>
         );
       })}
-    </ul>
+    </RowList>
   );
 }

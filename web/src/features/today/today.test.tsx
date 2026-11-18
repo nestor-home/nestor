@@ -80,6 +80,6 @@ describe("today: the household as one picture, then what it asks, does and plans
 
   it("says when it will write, from the agent's initiative", async () => {
     renderApp("/");
-    expect(await within(await part("Coming up")).findByText("Follow-up to Mathis on telegram")).toBeInTheDocument();
+    expect(await within(await part("Coming up")).findByText("Follow-up to Mathis on Telegram")).toBeInTheDocument();
   });
 });

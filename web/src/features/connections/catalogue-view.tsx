@@ -5,6 +5,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { type Connector, connectionsQuery, connectorsQuery } from "@/api";
+import { TILE_CARD, TileCard } from "@/components/card";
 import { Crumbs } from "@/components/crumbs";
 import { ServiceTile } from "@/components/marks";
 import { PageHeader, Section } from "@/components/page";
@@ -16,7 +17,6 @@ import { useCan } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import { ConnectSheet } from "./connect-sheet";
 import { trail } from "./trail";
-import { TILE_CARD, TileCard } from "@/components/card";
 
 export interface CatalogueSearch {
   connect?: string; // the connector whose sheet is open

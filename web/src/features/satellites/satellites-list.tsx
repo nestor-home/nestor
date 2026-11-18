@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { CircleArrowUp } from "lucide-react";
 import { type Addition, api, keys, messageOf, type PairingRequest, type Satellite, satellitesQuery } from "@/api";
 import { Ago } from "@/components/ago";
+import { TILE_CARD, TileCard } from "@/components/card";
 import { type Crumb, Crumbs } from "@/components/crumbs";
 import { useNotify } from "@/components/notices";
 import { FormDialog } from "@/components/overlay-form";
@@ -151,32 +152,24 @@ function PairedCard({ satellite: s }: { satellite: Satellite }) {
   const t = useT();
   return (
     <li>
-      <Link
-        to="/satellites/$satelliteId"
-        params={{ satelliteId: s.id }}
-        className="surface flex h-full flex-col gap-4 p-5"
-      >
-        <span className="flex items-start justify-between gap-3">
-          <DeviceTile brand={s.brand} capabilities={s.capabilities} />
-          <span className="pt-1 text-right">
-            <Connection satellite={s} />
-          </span>
-        </span>
-        <span className="min-w-0">
-          <span className="block title-card [overflow-wrap:anywhere] text-ink">{deviceName(s)}</span>
-          <span className="mt-1 block text-body text-ink-muted">
-            {t("sat-model-room", { model: s.model, room: s.room })}
-          </span>
-        </span>
-        <span className="mt-auto flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-rule pt-3">
-          <CapabilityMarks capabilities={s.capabilities} />
-          {s.update?.state === "available" ? (
-            <span className="inline-flex items-center gap-1.5 text-meta font-medium text-ember">
-              <CircleArrowUp className="size-3.5" aria-hidden="true" />
-              {t("sat-update-badge")}
-            </span>
-          ) : null}
-        </span>
+      <Link to="/satellites/$satelliteId" params={{ satelliteId: s.id }} className={TILE_CARD}>
+        <TileCard
+          marks={<DeviceTile brand={s.brand} capabilities={s.capabilities} />}
+          aside={<Connection satellite={s} />}
+          title={deviceName(s)}
+          line={t("sat-model-room", { model: s.model, room: s.room })}
+          foot={
+            <>
+              <CapabilityMarks capabilities={s.capabilities} />
+              {s.update?.state === "available" ? (
+                <span className="inline-flex items-center gap-1.5 font-medium text-ember">
+                  <CircleArrowUp className="size-3.5" aria-hidden="true" />
+                  {t("sat-update-badge")}
+                </span>
+              ) : null}
+            </>
+          }
+        />
       </Link>
     </li>
   );

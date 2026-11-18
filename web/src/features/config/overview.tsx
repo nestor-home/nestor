@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { FileCog } from "lucide-react";
 import { configHistoryQuery, secretsQuery } from "@/api";
+import { OpenArrow, TILE_CARD, TileCard } from "@/components/card";
 import { Crumbs } from "@/components/crumbs";
 import { IconTile, Pebble, ServiceTile } from "@/components/marks";
 import { PageHeader, Section } from "@/components/page";
@@ -14,7 +15,6 @@ import { PageMark, SaveBar, usePageMarks } from "./config-layout";
 import { useConfigEditor } from "./editor";
 import { type ConfigPage, GROUP_LABEL, groupsFor, pageTitle } from "./sections";
 import { glanceOf, peopleOf } from "./summary";
-import { OpenArrow, TILE_CARD, TileCard } from "@/components/card";
 
 const MARKS = 4;
 
@@ -67,21 +67,21 @@ function PageCard({ page }: { page: ConfigPage }) {
         <TileCard
           marks={
             <>
-          {people.length ? (
-            people.slice(0, MARKS).map((p, i) => (
-              // biome-ignore lint/suspicious/noArrayIndexKey: a person's position is its place in the file
-              <Pebble key={i} name={String(p.name || p.id || "")} size="lg" />
-            ))
-          ) : glance.marks.length ? (
-            glance.marks.slice(0, MARKS).map((mark) => <ServiceTile key={mark} kind={mark} />)
-          ) : (
-            <IconTile icon={page.icon} />
-          )}
-          {Math.max(people.length, glance.marks.length) > MARKS ? (
-            <span className="pl-1 text-meta text-ink-muted tabular">
-              {t("cfg-sum-extra", { count: Math.max(people.length, glance.marks.length) - MARKS })}
-            </span>
-          ) : null}
+              {people.length ? (
+                people.slice(0, MARKS).map((p, i) => (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: a person's position is its place in the file
+                  <Pebble key={i} name={String(p.name || p.id || "")} size="lg" />
+                ))
+              ) : glance.marks.length ? (
+                glance.marks.slice(0, MARKS).map((mark) => <ServiceTile key={mark} kind={mark} />)
+              ) : (
+                <IconTile icon={page.icon} />
+              )}
+              {Math.max(people.length, glance.marks.length) > MARKS ? (
+                <span className="pl-1 text-meta text-ink-muted tabular">
+                  {t("cfg-sum-extra", { count: Math.max(people.length, glance.marks.length) - MARKS })}
+                </span>
+              ) : null}
             </>
           }
           aside={

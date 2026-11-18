@@ -12,7 +12,7 @@ import { Status } from "@/components/status";
 import { Button } from "@/components/ui/button";
 import { LiveDialog } from "@/features/cameras/live-dialog";
 import { SnapshotDialog } from "@/features/cameras/snapshot-dialog";
-import type { RoomNode } from "@/features/home/mind";
+import type { RoomNode } from "@/features/today/mind";
 import { useT } from "@/i18n";
 import { hourMinute } from "@/lib/dates";
 import { deviceName } from "@/lib/labels";

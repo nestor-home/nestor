@@ -1,3 +1,8 @@
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
+import { Languages, LogOut, Monitor, Moon, Sun } from "lucide-react";
+import { api, keys, setCsrfToken } from "@/api";
+import { Pebble } from "@/components/marks";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,11 +18,6 @@ import { isLocale, type Locale, useLocale, useT } from "@/i18n";
 import { roleLabel } from "@/lib/labels";
 import { useMe } from "@/lib/session";
 import { type ThemeChoice, useTheme } from "@/lib/theme";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
-import { Languages, LogOut, Monitor, Moon, Sun } from "lucide-react";
-import { api, keys, setCsrfToken } from "@/api";
-import { Pebble } from "@/components/marks";
 
 /** Language names in their own language: whoever does not read the current one finds theirs. */
 const LANGUAGES: { value: Locale; name: string }[] = [

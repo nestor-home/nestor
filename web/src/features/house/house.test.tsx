@@ -39,7 +39,7 @@ describe("the house", () => {
     const user = userEvent.setup();
     const { unmount } = renderApp("/house");
     await user.click(await screen.findByRole("button", { name: /Home system/ }));
-    expect(await screen.findByRole("dialog", { name: "Home system" })).toBeInTheDocument();
+    expect(await screen.findByRole("dialog", { name: "Home Assistant" })).toBeInTheDocument();
     unmount();
     db.home = null;
     renderApp("/house");

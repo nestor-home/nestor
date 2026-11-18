@@ -52,16 +52,19 @@ export function TileCard({
 }) {
   return (
     <>
-      <span className="flex w-full items-center justify-between gap-3">
-        <span className="flex min-w-0 items-center gap-1.5">{marks}</span>
-        {aside ? <span className="flex shrink-0 items-center gap-2.5">{aside}</span> : null}
-      </span>
       <span className="block min-w-0 flex-1">
         <span className="block title-card text-ink">{title}</span>
         {line ? <span className="mt-1.5 block text-body text-ink-muted">{line}</span> : null}
       </span>
+      {/* read after its title (a card's name is its title first), drawn above it */}
+      <span className="order-first flex w-full items-center justify-between gap-3">
+        <span className="flex min-w-0 items-center gap-1.5">{marks}</span>
+        {aside ? <span className="flex shrink-0 items-center gap-2.5">{aside}</span> : null}
+      </span>
       {foot ? (
-        <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-meta text-ink-muted">{foot}</span>
+        <span className="mt-auto flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-rule pt-3 text-meta text-ink-muted">
+          {foot}
+        </span>
       ) : null}
     </>
   );

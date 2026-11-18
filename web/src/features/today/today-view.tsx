@@ -36,16 +36,16 @@ import {
 import { Ago } from "@/components/ago";
 import { CardHead, MoreLink, OpenArrow } from "@/components/card";
 import { IconTile, Pebble, type TileTone } from "@/components/marks";
-import { Section } from "@/components/page";
+import { RowList, Section } from "@/components/page";
 import { Empty } from "@/components/states";
 import { buttonVariants } from "@/components/ui/button";
 import { useAgentPresence } from "@/features/agent/presence";
-import { elsewhere, lineOf, type Mark, marksOf, nodeOf, type RoomNode, roomsOf } from "@/features/home/mind";
 import { EventSheet } from "@/features/journal/event-sheet";
 import { merge } from "@/features/journal/merge";
 import { useAttention } from "@/features/shell/attention";
 import { useLiveItems } from "@/features/shell/live";
 import { RunningTask } from "@/features/tasks/parts";
+import { elsewhere, lineOf, type Mark, marksOf, nodeOf, type RoomNode, roomsOf } from "@/features/today/mind";
 import { useNow } from "@/hooks/use-now";
 import { useT } from "@/i18n";
 import { tr } from "@/i18n/runtime";
@@ -280,7 +280,7 @@ function Day({ marks, onEvent }: { marks: Mark[]; onEvent: (position: number) =>
   return (
     <Section title={t("today-so-far")} aside={<MoreLink to="/journal">{t("home-all-journal")}</MoreLink>}>
       {latest.length ? (
-        <ol className="surface divide-y divide-rule overflow-hidden" aria-label={t("today-so-far")}>
+        <RowList ordered aria-label={t("today-so-far")}>
           {latest.map((m) => {
             const text =
               m.kind === "conversation"
@@ -317,7 +317,7 @@ function Day({ marks, onEvent }: { marks: Mark[]; onEvent: (position: number) =>
               </li>
             );
           })}
-        </ol>
+        </RowList>
       ) : (
         <Empty>{t("home-today-empty")}</Empty>
       )}

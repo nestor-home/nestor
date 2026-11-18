@@ -1,3 +1,4 @@
+import type { LucideIcon } from "lucide-react";
 import {
   BellRing,
   Check,
@@ -16,7 +17,6 @@ import type { JournalItem } from "@/api";
 import { tr } from "@/i18n/runtime";
 import { is } from "@/lib/events";
 import { say } from "@/lib/messages";
-import type { LucideIcon } from "lucide-react";
 
 export interface StepLook {
   label: string;

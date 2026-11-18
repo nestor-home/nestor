@@ -2,6 +2,7 @@
  * "Ongoing": everything the agent does for the household on its own, by where it stands: what waits
  * for an answer, what runs, what is planned, what it watches, what just ended. Each opens in a drawer.
  */
+
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { LucideIcon } from "lucide-react";
@@ -36,13 +37,14 @@ import {
   watchesQuery,
 } from "@/api";
 import { Ago } from "@/components/ago";
+import { TILE_CARD, TileCard } from "@/components/card";
 import { Chips } from "@/components/chips";
 import { Confirm } from "@/components/confirm";
 import { BrandTile, IconTile, OwnerMark, Pebble, type TileTone } from "@/components/marks";
 import { useNotify } from "@/components/notices";
 import { OriginLink } from "@/components/origin-link";
 import { SheetPanel, SideSheet } from "@/components/overlay-form";
-import { Fact, Facts, PageHeader, Section } from "@/components/page";
+import { Fact, Facts, PageHeader, RowList, Section } from "@/components/page";
 import { Empty, Loading } from "@/components/states";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { CancelTask, RunningTask, Steps, TaskStatusMark } from "@/features/tasks/parts";
@@ -150,7 +152,7 @@ export function ActivityView() {
           {schedules.isPending ? (
             <Loading lines={2} />
           ) : planned.length ? (
-            <ol className="surface divide-y divide-rule overflow-hidden">
+            <RowList ordered>
               {planned.map((s) => (
                 <li key={s.id}>
                   <button
@@ -173,7 +175,7 @@ export function ActivityView() {
                   </button>
                 </li>
               ))}
-            </ol>
+            </RowList>
           ) : (
             <Empty>{t("schedule-empty-hint", { assistant: me.assistant })}</Empty>
           )}
@@ -188,27 +190,27 @@ export function ActivityView() {
             <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {watching.map((w) => (
                 <li key={w.id}>
-                  <button
-                    type="button"
-                    className="surface flex h-full w-full flex-col gap-3 p-4 text-left"
-                    onClick={() => setOpened({ kind: "watch", id: w.id })}
-                  >
-                    <span className="flex items-center justify-between gap-3">
-                      <BrandTile brand={watchBrand(w.kinds[0])} />
-                      <OwnerMark owner={w.owner} />
-                    </span>
-                    <span className="flex-1">
-                      <span className="block text-lead leading-snug font-medium text-ink">{w.title}</span>
-                      <span className="mt-1 line-clamp-2 block text-body text-ink-muted">{w.what}</span>
-                    </span>
-                    <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-meta text-ink-muted">
-                      {w.kinds.map((k) => (
-                        <WatchKind key={k} kind={k} />
-                      ))}
-                      <span className={w.triggered ? "font-medium text-ember" : ""}>
-                        {w.triggered ? t("watch-triggered-count", { count: w.triggered }) : t("watch-never-triggered")}
-                      </span>
-                    </span>
+                  <button type="button" className={TILE_CARD} onClick={() => setOpened({ kind: "watch", id: w.id })}>
+                    <TileCard
+                      marks={<BrandTile brand={watchBrand(w.kinds[0])} />}
+                      aside={<OwnerMark owner={w.owner} />}
+                      title={w.title}
+                      line={<span className="line-clamp-2">{w.what}</span>}
+                      foot={
+                        <>
+                          <span className="flex flex-wrap gap-x-3">
+                            {w.kinds.map((k) => (
+                              <WatchKind key={k} kind={k} />
+                            ))}
+                          </span>
+                          <span className={w.triggered ? "font-medium text-ember" : ""}>
+                            {w.triggered
+                              ? t("watch-triggered-count", { count: w.triggered })
+                              : t("watch-never-triggered")}
+                          </span>
+                        </>
+                      }
+                    />
                   </button>
                 </li>
               ))}
@@ -243,7 +245,7 @@ export function ActivityView() {
 
       {shows("running") && recent.length ? (
         <Section title={t("act-ended-title")}>
-          <ul className="surface divide-y divide-rule overflow-hidden">
+          <RowList>
             {recent.slice(0, lane === "running" ? 20 : 5).map((task) => (
               <li key={task.id}>
                 <button
@@ -262,7 +264,7 @@ export function ActivityView() {
                 </button>
               </li>
             ))}
-          </ul>
+          </RowList>
         </Section>
       ) : null}
 

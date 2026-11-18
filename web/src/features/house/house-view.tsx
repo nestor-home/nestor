@@ -3,14 +3,15 @@ import { Link } from "@tanstack/react-router";
 import { CircleAlert, House, ShieldCheck } from "lucide-react";
 import type { ReactNode } from "react";
 import { type Home, homeQuery } from "@/api";
-import { BrandTile, IconTile, Pebble } from "@/components/marks";
-import { RowList } from "@/components/page";
+import { CardHead } from "@/components/card";
+import { BrandTile, Pebble } from "@/components/marks";
+import { SheetPanel } from "@/components/overlay-form";
+import { Panel, RowList, Section } from "@/components/page";
 import { RiskTag } from "@/components/risk-tag";
 import { Empty, Failure, Loading } from "@/components/states";
-import { Status, Tag } from "@/components/status";
+import { HealthStatus, Tag } from "@/components/status";
 import { buttonVariants } from "@/components/ui/button";
 import { PresenceMark } from "@/features/people/people";
-import { HEALTH, UNKNOWN } from "@/features/system/system-view";
 import { useT } from "@/i18n";
 import { brandName, brandOf } from "@/lib/brands";
 import { granularityLabel } from "@/lib/labels";
@@ -21,7 +22,7 @@ import { useCan } from "@/lib/session";
  * who is where, the people tied to its entities, what the agent may do through it and at which risk, and the
  * way to its settings.
  */
-export function HouseView() {
+export function HouseSheet() {
   const t = useT();
   const home = useQuery(homeQuery);
   const canConfigure = useCan("config:manage");
@@ -30,70 +31,60 @@ export function HouseView() {
       {t("house-configure")}
     </Link>
   ) : null;
-  if (home.isPending) return <Loading lines={4} />;
-  if (home.isError) return <Failure error={home.error} retry={() => void home.refetch()} />;
   if (!home.data)
     return (
-      <Empty hint={t("house-none-hint")} action={configure}>
-        {t("house-none")}
-      </Empty>
+      <SheetPanel icon={House} kind={t("hs-system")} title={t("hs-system")}>
+        {home.isPending ? (
+          <Loading lines={4} />
+        ) : home.isError ? (
+          <Failure error={home.error} retry={() => void home.refetch()} />
+        ) : (
+          <Empty hint={t("house-none-hint")} action={configure}>
+            {t("house-none")}
+          </Empty>
+        )}
+      </SheetPanel>
     );
   return <Loaded home={home.data} configure={configure} />;
 }
 
-function Part({ title, count, children }: { title: string; count?: number; children: ReactNode }) {
-  return (
-    <section>
-      <h3 className="mb-3 flex items-baseline gap-2 title-sub text-ink">
-        {title}
-        {count ? <span className="text-meta text-ink-muted tabular">{count}</span> : null}
-      </h3>
-      {children}
-    </section>
-  );
-}
-
 function Loaded({ home, configure }: { home: Home; configure: ReactNode }) {
   const t = useT();
-  const health = home.component.health ? HEALTH[home.component.health] : UNKNOWN;
   const brand = brandOf(home.component.brand);
   const tied = new Set(home.people.map((p) => p.entity).filter(Boolean));
   const strangers = home.residents.filter((r) => !tied.has(r.entity));
   return (
-    <div className="grid gap-8">
-      <header className="grid gap-4">
-        <div className="flex items-center gap-4">
-          {brand ? <BrandTile brand={brand} size="lg" /> : <IconTile icon={House} size="lg" />}
-          <div className="min-w-0 flex-1">
-            <p className="title-sheet text-ink">{brand ? brandName(brand) : home.component.name}</p>
-            <Status tone={health.tone}>{t(health.label)}</Status>
-          </div>
-        </div>
+    <SheetPanel
+      mark={brand ? <BrandTile brand={brand} size="sm" /> : undefined}
+      icon={House}
+      kind={t("hs-system")}
+      title={brand ? brandName(brand) : home.component.name}
+      description={<HealthStatus health={home.component.health} />}
+      actions={configure}
+    >
+      <div className="grid gap-2">
         {home.component.health_detail ? (
           <p className="text-body text-ink-muted">{home.component.health_detail}</p>
         ) : null}
         <p className="text-body text-ink">{t("house-lede", { granularity: granularityLabel(home.granularity) })}</p>
-        {configure ? <div>{configure}</div> : null}
-      </header>
+      </div>
 
-      <Part title={t("house-people")} count={home.people.length}>
+      <Section level={3} title={t("house-people")} count={home.people.length}>
         <ul className="grid gap-2">
           {home.people.map((p) => (
             <li key={p.person.id}>
-              <Link
-                to="/people/$personId"
-                params={{ personId: p.person.id }}
-                className="surface flex items-center gap-3 px-4 py-3"
-              >
-                <Pebble name={p.person.name} away={!p.entity || p.presence?.home !== true} size="lg" />
-                <span className="min-w-0 flex-1">
-                  <span className="block text-ink">{p.person.name}</span>
-                  <span className="block truncate font-mono text-meta text-ink-muted">
-                    {p.entity ?? t("house-not-tied")}
-                    {p.tracker ? ` · ${p.tracker}` : ""}
-                  </span>
-                </span>
-                <PresenceMark presence={p.entity ? p.presence : null} />
+              <Link to="/people/$personId" params={{ personId: p.person.id }} className="surface block px-4 py-3">
+                <CardHead
+                  mark={<Pebble name={p.person.name} away={!p.entity || p.presence?.home !== true} size="lg" />}
+                  title={p.person.name}
+                  line={
+                    <span className="font-mono text-meta">
+                      {p.entity ?? t("house-not-tied")}
+                      {p.tracker ? ` · ${p.tracker}` : ""}
+                    </span>
+                  }
+                  aside={<PresenceMark presence={p.entity ? p.presence : null} />}
+                />
               </Link>
             </li>
           ))}
@@ -103,15 +94,15 @@ function Loaded({ home, configure }: { home: Home; configure: ReactNode }) {
             {t("house-strangers", { count: strangers.length, names: strangers.map((r) => r.name).join(", ") })}
           </p>
         ) : null}
-      </Part>
+      </Section>
 
-      <Part title={t("house-actions")} count={home.tools.length}>
+      <Section level={3} title={t("house-actions")} count={home.tools.length}>
         {home.tools.length ? (
           <RowList>
             {home.tools.map((tool) => (
               <li key={tool.name} className="grid gap-2 px-4 py-3">
                 <span className="min-w-0">
-                  <span className="block font-mono text-meta [overflow-wrap:anywhere] text-ink">{tool.name}</span>
+                  <span className="block font-mono text-meta text-ink">{tool.name}</span>
                   <span className="block text-body text-ink-muted">{tool.description}</span>
                 </span>
                 <span className="flex flex-wrap gap-1.5">
@@ -124,23 +115,21 @@ function Loaded({ home, configure }: { home: Home; configure: ReactNode }) {
         ) : (
           <Empty hint={t("house-actions-empty-hint")}>{t("house-actions-empty")}</Empty>
         )}
-      </Part>
+      </Section>
 
       {home.unplaced_sensors.length ? (
-        <div className="surface p-4">
+        <Panel className="p-4">
           <p className="flex items-start gap-2 text-body text-ink">
             <CircleAlert className="mt-0.5 size-4 shrink-0 text-amber" aria-hidden="true" />
             {t("house-unplaced", { count: home.unplaced_sensors.length })}
           </p>
           <p className="mt-2.5 flex flex-wrap gap-1.5">
             {home.unplaced_sensors.map((s) => (
-              <Tag key={s} className="[overflow-wrap:anywhere]">
-                {s}
-              </Tag>
+              <Tag key={s}>{s}</Tag>
             ))}
           </p>
-        </div>
+        </Panel>
       ) : null}
-    </div>
+    </SheetPanel>
   );
 }

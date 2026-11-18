@@ -4,8 +4,8 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, BookMarked, Plus, RadioTower, Video } from "lucide-react";
-import { useState } from "react";
+import { BookMarked, DoorOpen, Plus, RadioTower, Video } from "lucide-react";
+import { useMemo, useState } from "react";
 import {
   homeQuery,
   journalLatestQuery,
@@ -16,16 +16,15 @@ import {
   satellitesQuery,
 } from "@/api";
 import { Ago } from "@/components/ago";
-import { IconTile, Pebble } from "@/components/marks";
+import { CardHead, OpenArrow, TILE_CARD, TileCard } from "@/components/card";
+import { IconTile, Pebble, ServiceTile } from "@/components/marks";
 import { SideSheet } from "@/components/overlay-form";
 import { PageHeader, Section } from "@/components/page";
 import { Empty, Loading } from "@/components/states";
-import { Status } from "@/components/status";
+import { HealthStatus, Status } from "@/components/status";
 import { buttonVariants } from "@/components/ui/button";
-import { SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { type RoomNode, roomsOf } from "@/features/home/mind";
 import { AddSatelliteButton } from "@/features/satellites/add-satellite";
-import { HEALTH, UNKNOWN } from "@/features/system/system-view";
+import { type RoomNode, roomsOf } from "@/features/today/mind";
 import { RoomSheet, Through } from "@/features/today/room-sheet";
 import { useT } from "@/i18n";
 import { KindMark } from "@/lib/brands";
@@ -33,7 +32,7 @@ import { startOfToday } from "@/lib/dates";
 import { deviceName } from "@/lib/labels";
 import { useCan, useMe } from "@/lib/session";
 import { capital, cn } from "@/lib/utils";
-import { HouseView } from "./house-view";
+import { HouseSheet } from "./house-view";
 
 export function HouseSpace() {
   const t = useT();
@@ -52,12 +51,26 @@ export function HouseSpace() {
 
   const household = people.data ?? [];
   const items = day.data?.items ?? [];
-  const rooms = roomsOf({ people: household, satellites: satellites.data?.paired ?? [], items, home: home.data }, 60);
+  const rooms = useMemo(
+    () =>
+      roomsOf(
+        {
+          people: people.data ?? [],
+          satellites: satellites.data?.paired ?? [],
+          items: day.data?.items ?? [],
+          home: home.data,
+        },
+        60,
+      ),
+    [people.data, satellites.data, day.data, home.data],
+  );
   const opened = rooms.find((r) => r.key === open) ?? null;
   const devices = (media.data?.devices ?? []).filter((d) => d.can_view || d.can_call || d.off);
-  const health = home.data?.component.health ? HEALTH[home.data.component.health] : UNKNOWN;
   const known = memories.data ?? [];
-  const latest = [...known].sort((a, b) => b.updated_at.localeCompare(a.updated_at))[0];
+  const latest = known.reduce<(typeof known)[number] | undefined>(
+    (last, m) => (last && last.updated_at >= m.updated_at ? last : m),
+    undefined,
+  );
 
   return (
     <div>
@@ -65,19 +78,15 @@ export function HouseSpace() {
         title={t("space-house")}
         actions={
           canHome && home.data ? (
-            <button
-              type="button"
-              className="surface flex items-center gap-3 px-4 py-2.5"
-              onClick={() => setSystem(true)}
-            >
-              {home.data.component.brand ? (
-                <KindMark kind={home.data.component.brand} className="size-5 text-ink" label={false} />
-              ) : null}
-              <span className="text-left">
-                <span className="block text-body font-medium text-ink">{t("hs-system")}</span>
-                <Status tone={health.tone}>{t(health.label)}</Status>
-              </span>
-              <ArrowRight className="ml-2 size-4 text-ink-faint" aria-hidden="true" />
+            <button type="button" className="group surface px-4 py-2.5 text-left" onClick={() => setSystem(true)}>
+              <CardHead
+                mark={
+                  home.data.component.brand ? <ServiceTile kind={home.data.component.brand} size="sm" /> : undefined
+                }
+                title={t("hs-system")}
+                line={<HealthStatus health={home.data.component.health} />}
+                aside={<OpenArrow />}
+              />
             </button>
           ) : undefined
         }
@@ -134,15 +143,13 @@ export function HouseSpace() {
           <Section title={t("hs-media")} count={devices.length}>
             <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {devices.map((d) => (
-                <li key={d.id} className="surface px-4 py-3.5">
-                  <div className="flex items-center gap-3">
-                    <IconTile icon={d.can_view || d.off ? Video : RadioTower} />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-ink">{deviceName(d)}</p>
-                      <p className="text-meta text-ink-muted">{capital(d.room)}</p>
-                    </div>
-                    {d.connected ? null : <Status tone="attention">{t("sat-state-offline")}</Status>}
-                  </div>
+                <li key={d.id} className="surface p-4">
+                  <CardHead
+                    mark={<IconTile icon={d.can_view || d.off ? Video : RadioTower} />}
+                    title={deviceName(d)}
+                    line={capital(d.room)}
+                    aside={d.connected ? null : <Status tone="attention">{t("sat-state-offline")}</Status>}
+                  />
                   <Through device={d} />
                 </li>
               ))}
@@ -151,31 +158,19 @@ export function HouseSpace() {
         ) : null}
 
         {known.length ? (
-          <Link to="/memories" className="surface flex items-center gap-4 p-5">
-            <IconTile icon={BookMarked} tone="sage" size="lg" />
-            <span className="min-w-0 flex-1">
-              <span className="block title-card text-ink">
-                {t("hs-memories", { assistant: me.assistant, count: known.length })}
-              </span>
-              {latest ? (
-                <span className="mt-1 line-clamp-1 block text-body text-ink-muted">
-                  {t("message-quoted", { text: latest.text })}
-                </span>
-              ) : null}
-            </span>
-            <ArrowRight className="size-4 text-ink-faint" aria-hidden="true" />
+          <Link to="/memories" className="group surface block p-4">
+            <CardHead
+              mark={<IconTile icon={BookMarked} tone="sage" />}
+              title={t("hs-memories", { assistant: me.assistant, count: known.length })}
+              line={latest ? <span className="line-clamp-1">{t("message-quoted", { text: latest.text })}</span> : null}
+              aside={<OpenArrow />}
+            />
           </Link>
         ) : null}
 
         <RoomSheet room={opened} items={items} onClose={() => setOpen(null)} />
         <SideSheet open={system} onOpenChange={setSystem}>
-          <SheetHeader className="sr-only">
-            <SheetTitle>{t("hs-system")}</SheetTitle>
-            <SheetDescription>{t("hs-system")}</SheetDescription>
-          </SheetHeader>
-          <div className="px-6 pt-10 pb-10">
-            <HouseView />
-          </div>
+          <HouseSheet />
         </SideSheet>
       </div>
     </div>
@@ -196,27 +191,23 @@ function PersonCard({ person: p }: { person: Person }) {
         : t("people-presence-away");
   return (
     <li>
-      <Link to="/people/$personId" params={{ personId: p.id }} className="surface flex h-full flex-col gap-4 p-4">
-        <span className="flex items-start justify-between">
-          <Pebble name={p.name} away={home === false} size="xl" />
-          <span className="flex gap-1.5 pt-1">
-            {p.channel_accounts.map((c) => (
-              <KindMark key={c} kind={c} className="size-4" label={false} />
-            ))}
-          </span>
-        </span>
-        <span>
-          <span className="block title-card text-ink">{p.name}</span>
-          <span className={cn("mt-1 block text-body", home ? "font-medium text-ink" : "text-ink-muted")}>
-            {where}
-            {p.presence?.since ? (
-              <span className="font-normal text-ink-muted">
-                {" · "}
-                <Ago iso={p.presence.since} />
-              </span>
-            ) : null}
-          </span>
-        </span>
+      <Link to="/people/$personId" params={{ personId: p.id }} className={TILE_CARD}>
+        <TileCard
+          marks={<Pebble name={p.name} away={home === false} size="lg" />}
+          aside={p.channel_accounts.map((c) => <KindMark key={c} kind={c} className="text-ink-muted" label={false} />)}
+          title={p.name}
+          line={
+            <>
+              <span className={home ? "font-medium text-ink" : undefined}>{where}</span>
+              {p.presence?.since ? (
+                <>
+                  {" · "}
+                  <Ago iso={p.presence.since} />
+                </>
+              ) : null}
+            </>
+          }
+        />
       </Link>
     </li>
   );
@@ -231,42 +222,47 @@ function RoomCard({ room: r, onOpen }: { room: RoomNode; onOpen: () => void }) {
       <button
         type="button"
         onClick={onOpen}
-        className={cn(
-          "surface flex h-full w-full flex-col gap-4 p-4 text-left",
-          lit && "bg-linear-to-b from-ember-soft to-paper-raised to-70%",
-        )}
+        className={cn(TILE_CARD, lit && "bg-linear-to-b from-ember-soft to-paper-raised to-70%")}
       >
-        <span className="flex items-baseline justify-between gap-3">
-          <span className="truncate title-card text-ink">{capital(r.room)}</span>
-          {r.active ? (
-            <span className="shrink-0 text-meta text-ink-muted">{t("hs-room-events", { count: r.active })}</span>
-          ) : null}
-        </span>
-        <span className="flex min-h-7 flex-wrap items-center gap-1.5 text-body text-ink-muted">
-          {r.people.map((p) => (
-            <Pebble key={p.id} name={p.name} />
-          ))}
-          {r.people.length ? (
-            <span className="ml-1 font-medium text-ink">{r.people.map((p) => p.name).join(", ")}</span>
-          ) : r.occupied === null ? (
-            t("room-no-sensor")
-          ) : (
-            t(r.occupied ? "room-someone" : "room-nobody")
-          )}
-        </span>
-        {r.satellites.length ? (
-          <span className="mt-auto flex flex-wrap gap-x-4 gap-y-1 border-t border-rule pt-3 text-meta text-ink-muted">
-            {r.satellites.map((s) => {
-              const Icon = s.films ? Video : RadioTower;
-              return (
-                <span key={s.id} className="inline-flex items-center gap-1.5">
-                  <Icon className={cn("size-4", s.connected === false && "text-brick")} aria-hidden="true" />
-                  {deviceName(s)}
-                </span>
-              );
-            })}
-          </span>
-        ) : null}
+        <TileCard
+          marks={
+            r.people.length ? (
+              <span className="flex -space-x-1.5">
+                {r.people.map((p) => (
+                  <Pebble key={p.id} name={p.name} />
+                ))}
+              </span>
+            ) : (
+              <IconTile icon={DoorOpen} size="sm" />
+            )
+          }
+          aside={r.active ? t("hs-room-events", { count: r.active }) : null}
+          title={capital(r.room)}
+          line={
+            r.people.length ? (
+              <span className="font-medium text-ink">{r.people.map((p) => p.name).join(", ")}</span>
+            ) : r.occupied === null ? (
+              t("room-no-sensor")
+            ) : (
+              t(r.occupied ? "room-someone" : "room-nobody")
+            )
+          }
+          foot={
+            r.satellites.length ? (
+              <span className="flex flex-wrap gap-x-4 gap-y-1">
+                {r.satellites.map((s) => {
+                  const Icon = s.films ? Video : RadioTower;
+                  return (
+                    <span key={s.id} className="inline-flex items-center gap-1.5">
+                      <Icon className={cn("size-4", s.connected === false && "text-brick")} aria-hidden="true" />
+                      {deviceName(s)}
+                    </span>
+                  );
+                })}
+              </span>
+            ) : null
+          }
+        />
       </button>
     </li>
   );

@@ -5,7 +5,7 @@ import type { Person } from "@/api";
 import { AgentFigure, type FigureState } from "@/components/agent-figure";
 import { Dither } from "@/components/dither";
 import { Pebble } from "@/components/marks";
-import type { RoomNode } from "@/features/home/mind";
+import type { RoomNode } from "@/features/today/mind";
 import { useT } from "@/i18n";
 import { capital, cn } from "@/lib/utils";
 import { orbOf, phaseOf } from "./sky";

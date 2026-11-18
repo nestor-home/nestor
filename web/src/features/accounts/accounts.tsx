@@ -1,3 +1,6 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
+import { MailPlus } from "lucide-react";
 import {
   type Account,
   type AccountChange,
@@ -11,6 +14,7 @@ import {
   type Role,
 } from "@/api";
 import { Ago } from "@/components/ago";
+import { TILE_CARD, TileCard } from "@/components/card";
 import { Choice } from "@/components/choice";
 import { Confirm } from "@/components/confirm";
 import { type Crumb, Crumbs } from "@/components/crumbs";
@@ -28,9 +32,6 @@ import { roleHint, roleLabel } from "@/lib/labels";
 import { useCan, useMe } from "@/lib/session";
 import { InviteForm, roleOptions } from "./invite-form";
 import { isLastOwner } from "./rules";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
-import { MailPlus } from "lucide-react";
 
 const nameOf = (account: Account) => account.person?.name ?? account.login;
 
@@ -92,26 +93,24 @@ function AccountCard({ account }: { account: Account }) {
   const me = useMe();
   return (
     <li>
-      <Link
-        to="/accounts/$accountId"
-        params={{ accountId: account.id }}
-        className="surface flex h-full flex-col gap-4 p-5"
-      >
-        <span className="flex items-start justify-between gap-3">
-          <Pebble name={nameOf(account)} away={account.disabled} size="xl" />
-          <span className="flex flex-wrap justify-end gap-2 pt-1">
-            {account.id === me.account.id ? <Tag tone="accent">{t("acc-you")}</Tag> : null}
-            {account.disabled ? <Status tone="idle">{t("acc-disabled")}</Status> : null}
-          </span>
-        </span>
-        <span className="min-w-0">
-          <span className="block title-card [overflow-wrap:anywhere] text-ink">{nameOf(account)}</span>
-          <span className="mt-1 block truncate text-body text-ink-muted">{account.login}</span>
-        </span>
-        <span className="mt-auto border-t border-rule pt-3">
-          <span className="block text-body font-medium text-ink first-letter:uppercase">{roleLabel(account.role)}</span>
-          <span className="block text-meta text-ink-muted">{roleHint(account.role)}</span>
-        </span>
+      <Link to="/accounts/$accountId" params={{ accountId: account.id }} className={TILE_CARD}>
+        <TileCard
+          marks={<Pebble name={nameOf(account)} away={account.disabled} size="lg" />}
+          aside={
+            <>
+              {account.id === me.account.id ? <Tag tone="accent">{t("acc-you")}</Tag> : null}
+              {account.disabled ? <Status tone="idle">{t("acc-disabled")}</Status> : null}
+            </>
+          }
+          title={nameOf(account)}
+          line={account.login}
+          foot={
+            <span>
+              <span className="block font-medium text-ink first-letter:uppercase">{roleLabel(account.role)}</span>
+              <span className="block">{roleHint(account.role)}</span>
+            </span>
+          }
+        />
       </Link>
     </li>
   );

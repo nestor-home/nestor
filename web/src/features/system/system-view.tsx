@@ -1,3 +1,5 @@
+import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import {
   AudioLines,
   Brain,
@@ -16,22 +18,20 @@ import { useEffect, useState } from "react";
 import { type Component, type Health, type SystemInfo, systemQuery } from "@/api";
 import { ConfirmFrame } from "@/components/confirm";
 import { type Crumb, Crumbs } from "@/components/crumbs";
-import { IconTile, type TileTone } from "@/components/marks";
+import { BrandTile, IconTile, type TileTone } from "@/components/marks";
 import { SheetPanel, SideSheet } from "@/components/overlay-form";
 import { Fact, Facts, PageHeader, Section } from "@/components/page";
 import { Failure, FormError, Loading } from "@/components/states";
-import { Status, type StatusTone } from "@/components/status";
+import { HealthStatus, Status } from "@/components/status";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Restarting, useRestart } from "@/features/config/restart";
 import { useT } from "@/i18n";
-import { BrandMark, brandName, brandOf } from "@/lib/brands";
+import { brandName, brandOf } from "@/lib/brands";
 import { modelTypeLabel } from "@/lib/labels";
 import { useCan, useMe } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import { ExecutorsSection } from "./executors";
 import { UpdateAvailable } from "./updates";
-import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
 
 /** What a group of the board holds, its mark, and the configuration page that sets it. */
 interface Group {
@@ -69,14 +69,6 @@ const GROUPS: Group[] = [
   { id: "connectors", title: "sys-slot-connector", icon: Plug, config: "connectors", has: slot("connector") },
   { id: "satellites", title: "sys-slot-satellite", icon: RadioTower, has: slot("satellite") },
 ];
-
-export const HEALTH: Record<Health, { tone: StatusTone; label: string }> = {
-  started: { tone: "ok", label: "sys-health-ok" },
-  degraded: { tone: "attention", label: "sys-health-degraded" },
-  unavailable: { tone: "error", label: "sys-health-down" },
-};
-/** A component that tells nothing about itself. */
-export const UNKNOWN = { tone: "idle", label: "sys-health-unknown" } as const;
 
 const TILE: Partial<Record<Health, TileTone>> = { degraded: "amber", unavailable: "brick" };
 const keyOf = (c: Component) => `${c.slot}-${c.name}`;
@@ -172,17 +164,7 @@ function Board({
 function ComponentTile({ component: c }: { component: Component }) {
   const brand = brandOf(c.brand);
   const tone = (c.health && TILE[c.health]) ?? "ink";
-  if (!brand) return <IconTile icon={groupOf(c).icon} tone={tone} />;
-  return (
-    <span
-      className={cn(
-        "grid size-10 shrink-0 place-items-center rounded-xl",
-        tone === "brick" ? "bg-brick-soft" : tone === "amber" ? "bg-amber-soft" : "bg-paper-sunken",
-      )}
-    >
-      <BrandMark brand={brand} className="size-5 text-ink" label={false} />
-    </span>
-  );
+  return brand ? <BrandTile brand={brand} tone={tone} /> : <IconTile icon={groupOf(c).icon} tone={tone} />;
 }
 
 /** One component: what it is, how it is doing, and (when it is unwell) what to do about it. */
@@ -197,14 +179,11 @@ function ComponentCard({
 }) {
   const t = useT();
   const brand = brandOf(c.brand);
-  const health = c.health ? HEALTH[c.health] : UNKNOWN;
   return (
     <button type="button" onClick={onOpen} className="surface flex h-full w-full flex-col gap-3 p-4 text-left">
       <span className="flex items-start justify-between gap-3">
         <ComponentTile component={c} />
-        <Status tone={health.tone} className="pt-1">
-          {t(health.label)}
-        </Status>
+        <HealthStatus health={c.health} className="pt-1" />
       </span>
       <span className="min-w-0">
         <span className="block font-medium [overflow-wrap:anywhere] text-ink">{c.name}</span>
@@ -233,7 +212,6 @@ function ComponentSheet({ component: c }: { component: Component }) {
   const canConfigure = useCan("config:manage");
   const group = groupOf(c);
   const brand = brandOf(c.brand);
-  const health = c.health ? HEALTH[c.health] : UNKNOWN;
   return (
     <SheetPanel
       icon={group.icon}
@@ -258,7 +236,7 @@ function ComponentSheet({ component: c }: { component: Component }) {
       ) : null}
       <Facts narrow>
         <Fact term={t("sys-fact-state")}>
-          <Status tone={health.tone}>{t(health.label)}</Status>
+          <HealthStatus health={c.health} />
         </Fact>
         {brand ? <Fact term={t("sys-fact-service")}>{brandName(brand)}</Fact> : null}
         {c.model_type ? <Fact term={t("sys-fact-type")}>{modelTypeLabel(c.model_type)}</Fact> : null}

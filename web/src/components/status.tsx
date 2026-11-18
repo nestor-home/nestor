@@ -1,5 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
+import type { Health } from "@/api";
+import { tr } from "@/i18n/runtime";
 import { STATUS_ICON } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 
@@ -38,6 +40,22 @@ export function Status({ tone, children, className }: { tone: StatusTone; childr
   );
 }
 
+const HEALTH: Record<Health, { tone: StatusTone; label: string }> = {
+  started: { tone: "ok", label: "sys-health-ok" },
+  degraded: { tone: "attention", label: "sys-health-degraded" },
+  unavailable: { tone: "error", label: "sys-health-down" },
+};
+
+/** How a component is doing, as its status; `null` when it tells nothing about itself. */
+export function HealthStatus({ health, className }: { health: Health | null | undefined; className?: string }) {
+  const { tone, label } = health ? HEALTH[health] : { tone: "idle" as const, label: "sys-health-unknown" };
+  return (
+    <Status tone={tone} className={className}>
+      {tr(label)}
+    </Status>
+  );
+}
+
 /** A mono chip for data: rooms, channels, capabilities, tool names. */
 export function Tag({
   children,
@@ -53,7 +71,7 @@ export function Tag({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-sm border border-rule px-1.5 py-px text-meta leading-4 text-ink-muted",
+        "inline-flex max-w-full items-center gap-1 rounded-sm border border-rule px-1.5 py-px text-meta leading-4 [overflow-wrap:anywhere] text-ink-muted",
         tone === "accent" && "border-ember/40 text-ember",
         tone === "attention" && "border-amber/50 text-amber",
         tone === "error" && "border-brick/50 text-brick",

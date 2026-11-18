@@ -2,12 +2,14 @@
  * "Connections": the accounts and services the agent uses for the household. Those it can no longer use come
  * first and say what to do; each account leads to its page.
  */
+
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Plus, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { type Connection, connectionsQuery } from "@/api";
 import { Ago } from "@/components/ago";
+import { TILE_CARD, TileCard } from "@/components/card";
 import { Chips } from "@/components/chips";
 import { Crumbs } from "@/components/crumbs";
 import { OwnerMark, ServiceTile } from "@/components/marks";
@@ -161,31 +163,25 @@ function AccountCard({ connection: c }: { connection: Connection }) {
   const t = useT();
   return (
     <li>
-      <Link
-        to="/connections/$connectionId"
-        params={{ connectionId: c.id }}
-        className="surface flex h-full flex-col gap-3 p-4"
-      >
-        <span className="flex items-center justify-between gap-3">
-          <ServiceTile kind={c.brand ?? c.kind} />
-          <OwnerMark owner={c.owner} />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-lead font-medium text-ink">{c.account}</span>
-          <span className="block text-body text-ink-muted">
-            {c.title} · {personName(c.owner)}
-          </span>
-        </span>
-        <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-meta text-ink-muted">
-          <ConnectionStatusMark status={c.status} />
-          {c.last_used_at ? (
-            <span>
-              {t("conn-last-used")} <Ago iso={c.last_used_at} />
-            </span>
-          ) : (
-            <span>{t("conn-never-used-short")}</span>
-          )}
-        </span>
+      <Link to="/connections/$connectionId" params={{ connectionId: c.id }} className={TILE_CARD}>
+        <TileCard
+          marks={<ServiceTile kind={c.brand ?? c.kind} />}
+          aside={<OwnerMark owner={c.owner} />}
+          title={c.account}
+          line={`${c.title} · ${personName(c.owner)}`}
+          foot={
+            <>
+              <ConnectionStatusMark status={c.status} />
+              {c.last_used_at ? (
+                <span>
+                  {t("conn-last-used")} <Ago iso={c.last_used_at} />
+                </span>
+              ) : (
+                <span>{t("conn-never-used-short")}</span>
+              )}
+            </>
+          }
+        />
       </Link>
     </li>
   );
