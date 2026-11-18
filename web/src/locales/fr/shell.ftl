@@ -43,12 +43,12 @@ attention-home = { $health ->
    *[other] Le système domotique répond en partie
 }
 attention-pairing = { $device } attend d'être appairé
-attention-pairing-detail = { $model }, « { $room } » : saisissez le code qu'il affiche.
+attention-pairing-detail = { $model }, « { $room } » : saisissez le code qu'il affiche.
 attention-approve = Approuver
 attention-satellite-offline = { $device } est hors ligne
-attention-satellite-offline-detail = Il n'écoute plus et ne parle plus dans « { $room } ».
+attention-satellite-offline-detail = Il n'écoute plus et ne parle plus dans « { $room } ».
 attention-understand = Détails
-attention-task-failed = La tâche « { $objective } » a échoué
+attention-task-failed = La tâche « { $objective } » a échoué
 attention-component-down = { $name } est en panne
 shell-agent-offline = hors ligne
 shell-agent-label = { $assistant }, { $state }
@@ -61,8 +61,8 @@ space-house = La maison
 space-settings = Réglages
 
 ## Réglages
-set-lede = Ce dont { $assistant } est fait : les services qu'il utilise, les appareils des pièces, qui a accès à quoi.
-set-connections = Comptes et services dont il se sert : mail, agenda, outils.
+set-lede = Ce dont { $assistant } est fait : les services qu'il utilise, les appareils des pièces, qui a accès à quoi.
+set-connections = Comptes et services dont il se sert : mail, agenda, outils.
 set-connections-count = { $count ->
     [0] Aucune connexion
     [one] Une connexion
@@ -80,7 +80,7 @@ set-accounts-count = { $count ->
     [one] Un compte
    *[other] { $count } comptes
 }
-set-config = Modèles, voix, canaux, maison : tout ce qui règle { $assistant }.
+set-config = Modèles, voix, canaux, maison : tout ce qui règle { $assistant }.
 set-system = L'état de chaque composant, les mises à jour, le redémarrage.
 shell-space-waiting = { $space }, { $count ->
     [one] une demande vous attend

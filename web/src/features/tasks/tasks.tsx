@@ -23,7 +23,10 @@ import { CancelTask, Steps, TaskStatusMark } from "./parts";
 export function TaskDetail({ id }: { id: string }) {
   const t = useT();
   const found = useQuery(taskQuery(id));
-  const trail: Crumb[] = [{ label: t("space-activity"), link: { to: "/activity" } }, { label: id }];
+  const trail: Crumb[] = [
+    { label: t("space-activity"), link: { to: "/activity" } },
+    { label: found.data?.title ?? id },
+  ];
   if (found.isPending) return <Loading lines={4} />;
   const task = found.data;
   if (!task) {

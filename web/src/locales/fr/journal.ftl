@@ -38,7 +38,7 @@ jr-facet-person = Personne
 jr-facet-channel = Canal
 jr-facet-room = Pièce
 jr-facet-clear = Effacer les filtres
-jr-facet-search = Filtrer : { $facet }…
+jr-facet-search = Filtrer : { $facet }…
 jr-facet-empty = Aucun résultat.
 jr-facet-selected = { $count } choisis
 
@@ -53,7 +53,7 @@ jr-story-single = Événement
 jr-thread-open = Ouvrir la conversation
 jr-thread-link = Tout le fil
 jr-thread-earlier = … la conversation commence plus tôt
-jr-entry-label = { $text } : { $detail }
+jr-entry-label = { $text } : { $detail }
 jr-file-count = { $count ->
     [one] 1 fichier
    *[other] { $count } fichiers
@@ -70,17 +70,17 @@ jr-more-turns = { $count ->
     [one] Voir l'autre tour
    *[other] Voir les { $count } autres tours
 }
-jr-cut-by = Interrompu par : « { $heard } »
+jr-cut-by = Interrompu par : « { $heard } »
 jr-attachment-image = Photo
 jr-attachment-voice = Message vocal
 jr-attachment-audio = Fichier audio
 jr-attachment-file = Fichier
 jr-attachment-unheard = transcription impossible
-jr-between-details = Ce qui s'est passé : { $what }
+jr-between-details = Ce qui s'est passé : { $what }
 jr-details = détails
 jr-fallback = réponse de secours
 jr-memory-kept = souvenir enregistré
-jr-call-details = Outil { $tool } : détails
+jr-call-details = Outil { $tool } : détails
 jr-call-running = en cours
 jr-call-ok = ok
 jr-call-failed = échec
@@ -92,7 +92,7 @@ jr-chain-watch = Veille · { $what }
 jr-chain-watch-link = veille
 jr-chain-delivery = Prise de parole
 jr-channel-voice = voix
-jr-why-label = pourquoi :
+jr-why-label = pourquoi :
 
 step-task-started = lancée
 step-task-progressed = étape

@@ -31,7 +31,7 @@ action-see = Voir
 loading = Chargement…
 
 error-network = Nestor ne répond pas. Vérifiez qu'il tourne, puis réessayez.
-error-unauthenticated = Votre session a expiré : reconnectez-vous.
+error-unauthenticated = Votre session a expiré : reconnectez-vous.
 error-forbidden = Votre rôle ne permet pas cette action.
 error-not-found = Introuvable.
 error-status = Nestor a répondu par une erreur ({ $status }).

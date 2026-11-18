@@ -24,14 +24,15 @@ export function CardHead({
   className?: string;
 }) {
   return (
-    <span className={cn("flex min-w-0 items-start gap-3.5", className)}>
+    <span className={cn("flex min-w-0 flex-wrap items-start gap-x-3.5 gap-y-2", className)}>
       {mark}
-      <span className="grid min-w-0 flex-1 gap-0.5">
+      {/* the words keep at least 12rem: in a narrower card the aside goes under them rather than crush them */}
+      <span className="grid min-w-0 flex-1 basis-48 gap-0.5">
         <span className="title-item text-ink">{title}</span>
         {line ? <span className="text-body text-ink-muted">{line}</span> : null}
         {children ? <span className="mt-2 grid justify-items-start gap-3">{children}</span> : null}
       </span>
-      {aside ? <span className="flex shrink-0 items-center gap-2.5 self-center">{aside}</span> : null}
+      {aside ? <span className="ml-auto flex max-w-full items-center gap-2.5 self-center">{aside}</span> : null}
     </span>
   );
 }

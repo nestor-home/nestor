@@ -25,7 +25,7 @@ auth-login-taken = Cet identifiant est pris. Choisissez-en un autre.
 auth-login-help = L'identifiant est celui choisi avec l'invitation, pas votre nom. Un propriétaire peut définir un nouveau mot de passe depuis Comptes.
 auth-scene = La maison à cette heure
 auth-line-login = { $part ->
-    [night] Encore debout ?
+    [night] Encore debout ?
     [evening] Bonsoir.
    *[day] Bonjour.
 } Connectez-vous et je vous dis comment va la maison.
@@ -33,6 +33,6 @@ auth-line-invitation = { $part ->
     [night] Bienvenue, même à cette heure.
     [evening] Bonsoir, et bienvenue.
    *[day] Bienvenue.
-} Choisissez comment vous connecter : je vous reconnaîtrai ensuite.
+} Choisissez comment vous connecter : je vous reconnaîtrai ensuite.
 auth-line-checking = Un instant, je cherche votre invitation.
 auth-line-invalid = Je ne trouve pas cette invitation.

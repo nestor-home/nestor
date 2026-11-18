@@ -22,12 +22,12 @@ home-say-delivered = Je viens de parler à { $people } ({ $where }).
 home-say-listening = J'écoute { $people } ({ $where }).
 home-say-answering = Je réponds à { $people }.
 home-say-tool = Je consulte { $tool }.
-home-say-presence-room = { $people } est dans « { $room } ».
+home-say-presence-room = { $people } est dans « { $room } ».
 home-say-presence-away = { $people } vient de partir.
 home-say-memory = C'est noté, je m'en souviendrai.
 home-say-working = { $count ->
-    [one] Je travaille sur « { $objective } ».
-   *[other] Je travaille sur « { $objective } » et { $others ->
+    [one] Je travaille sur « { $objective } ».
+   *[other] Je travaille sur « { $objective } » et { $others ->
         [one] une autre chose
        *[other] { $others } autres choses
     }.
@@ -36,7 +36,7 @@ home-say-concerned = { $count ->
     [one] J'ai besoin de vous pour une chose.
    *[other] J'ai besoin de vous pour { $count } choses.
 }
-home-say-sleeping = Heures calmes : je me tais jusqu'à { $until }.
+home-say-sleeping = Heures calmes : je me tais jusqu'à { $until }.
 home-say-idle = Tout est calme.
 
 ## Les colonnes

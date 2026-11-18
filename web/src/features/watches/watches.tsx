@@ -21,7 +21,10 @@ import { CancelWatch, watchBrand } from "./parts";
 export function WatchDetail({ id }: { id: string }) {
   const t = useT();
   const found = useQuery(watchQuery(id));
-  const trail: Crumb[] = [{ label: t("space-activity"), link: { to: "/activity" } }, { label: id }];
+  const trail: Crumb[] = [
+    { label: t("space-activity"), link: { to: "/activity" } },
+    { label: found.data?.title ?? id },
+  ];
   if (found.isPending) return <Loading lines={4} />;
   const watch = found.data;
   if (!watch) {

@@ -28,7 +28,7 @@ acc-active = actif
 acc-never = jamais
 acc-invitations-empty = Aucune invitation en attente.
 acc-revoke = Retirer…
-acc-revoke-title = Retirer cette invitation ?
+acc-revoke-title = Retirer cette invitation ?
 acc-revoke-confirm = Retirer
 acc-revoke-text = { $has_person ->
     [yes] Le lien créé pour { $person } cessera de fonctionner.
@@ -41,7 +41,7 @@ acc-field-seen = dernière connexion
 acc-enable = Réactiver
 acc-disable = Désactiver…
 acc-disable-hint = Son journal, ses connexions et ses souvenirs sont conservés.
-acc-disable-title = Désactiver le compte de { $name } ?
+acc-disable-title = Désactiver le compte de { $name } ?
 acc-disable-confirm = Désactiver
 acc-disable-text = Il ne pourra plus se connecter. Vous pourrez le réactiver.
 acc-people = Qui a accès

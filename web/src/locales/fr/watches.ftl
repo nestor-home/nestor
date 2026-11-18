@@ -1,6 +1,6 @@
 ## Veilles : ce que l'assistant surveille pour le foyer.
 
-watch-active-empty-hint = Demandez-moi : « préviens-moi quand le colis arrive ».
+watch-active-empty-hint = Demandez-moi : « préviens-moi quand le colis arrive ».
 watch-for = pour { $name }
 watch-kind = { $kind ->
     [mail] mails
@@ -19,8 +19,8 @@ watch-created = créée { $when }
 watch-until = jusqu'au { $when }
 watch-cancel = Annuler la veille
 watch-cancel-action = Annuler la veille…
-watch-cancel-title = Annuler cette veille ?
-watch-cancel-description = Plus rien ne sera signalé pour « { $what } ».
+watch-cancel-title = Annuler cette veille ?
+watch-cancel-description = Plus rien ne sera signalé pour « { $what } ».
 watch-found = Ce qu'elle a trouvé
 watch-found-empty = Rien de pertinent pour l'instant.
 watch-watches = Surveille

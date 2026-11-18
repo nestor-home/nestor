@@ -30,10 +30,10 @@ export function ConfigOverview() {
           <Crumbs trail={[{ label: t("space-settings"), link: { to: "/settings" } }, { label: t("cfg-title") }]} />
         }
         meta={
-          <>
-            <FileCog className="size-3.5 shrink-0" aria-hidden="true" />
+          <span className="flex min-w-0 items-start gap-1.5">
+            <FileCog className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
             <span className="min-w-0 font-mono text-micro">{state.path}</span>
-          </>
+          </span>
         }
       >
         {t("cfg-intro")}

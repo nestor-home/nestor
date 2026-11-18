@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { type Component, type Health, type SystemInfo, systemQuery } from "@/api";
+import { TILE_CARD, TileCard } from "@/components/card";
 import { ConfirmFrame } from "@/components/confirm";
 import { type Crumb, Crumbs } from "@/components/crumbs";
 import { BrandTile, IconTile, type TileTone } from "@/components/marks";
@@ -180,28 +181,26 @@ function ComponentCard({
   const t = useT();
   const brand = brandOf(c.brand);
   return (
-    <button type="button" onClick={onOpen} className="surface flex h-full w-full flex-col gap-3 p-4 text-left">
-      <span className="flex items-start justify-between gap-3">
-        <ComponentTile component={c} />
-        <HealthStatus health={c.health} className="pt-1" />
-      </span>
-      <span className="min-w-0">
-        <span className="min-w-0 block font-medium text-ink">{c.name}</span>
-        <span className="block truncate text-meta text-ink-muted">
-          {[c.model_type ? modelTypeLabel(c.model_type) : null, brand ? brandName(brand) : c.adapter]
-            .filter(Boolean)
-            .join(" · ")}
-        </span>
-      </span>
-      {c.fallback ? <span className="text-meta text-ink-muted">{t("sys-fallback", { model: c.fallback })}</span> : null}
-      {c.health_detail ? (
-        <span className={cn("text-meta", unwell(c) ? "text-ink" : "text-ink-muted")}>{c.health_detail}</span>
-      ) : null}
-      {urgent ? (
-        <span className="mt-auto border-t border-rule pt-3 text-meta text-ink-muted">
-          {t(c.health === "unavailable" ? "sys-fix-down" : "sys-fix-degraded")}
-        </span>
-      ) : null}
+    <button type="button" onClick={onOpen} className={TILE_CARD}>
+      <TileCard
+        marks={<ComponentTile component={c} />}
+        aside={<HealthStatus health={c.health} />}
+        title={c.name}
+        line={
+          <>
+            <span className="block">
+              {[c.model_type ? modelTypeLabel(c.model_type) : null, brand ? brandName(brand) : c.adapter]
+                .filter(Boolean)
+                .join(" · ")}
+            </span>
+            {c.fallback ? <span className="block text-meta">{t("sys-fallback", { model: c.fallback })}</span> : null}
+            {c.health_detail ? (
+              <span className={cn("mt-1 block text-meta", unwell(c) && "text-ink")}>{c.health_detail}</span>
+            ) : null}
+          </>
+        }
+        foot={urgent ? t(c.health === "unavailable" ? "sys-fix-down" : "sys-fix-degraded") : null}
+      />
     </button>
   );
 }

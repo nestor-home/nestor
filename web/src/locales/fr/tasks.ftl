@@ -1,12 +1,12 @@
 ## Tâches : le travail long confié aux exécutants, de la demande à la remise.
 
-task-running-empty-hint = Confiez-moi quelque chose de long : comparer des offres, préparer un dossier.
+task-running-empty-hint = Confiez-moi quelque chose de long : comparer des offres, préparer un dossier.
 task-since = depuis
 task-unknown = Cette tâche n'existe pas ou plus.
 task-took = Durée
 task-cancel = Arrêter
 task-cancel-action = Arrêter…
-task-cancel-title = Arrêter cette tâche ?
+task-cancel-title = Arrêter cette tâche ?
 task-cancel-description = Ce qui est déjà fait est conservé.
 task-cancel-notice = Arrêt de la tâche { $id }…
 task-story = Déroulé
@@ -25,7 +25,7 @@ task-delivered = { $spoken ->
    *[no] Écrite sur { $channel }
 }{ $room ->
     [none] {""}
-   *[other] , dans « { $room } »
+   *[other] , dans « { $room } »
 },
 task-delivery-pending = Le résultat sera transmis à la personne là où elle se trouve.
 task-delivery-none = Pas de remise.
