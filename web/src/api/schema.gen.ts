@@ -2081,9 +2081,7 @@ export interface components {
             /** Client Secret */
             client_secret: string;
         };
-        /** Format: time */
-        "Clock-Input": string;
-        "Clock-Output": string;
+        Clock: string;
         /** ComponentOut */
         ComponentOut: {
             /** Slot */
@@ -3097,7 +3095,7 @@ export interface components {
              * Quiet
              * @default []
              */
-            quiet: components["schemas"]["QuietHoursIO-Input"][];
+            quiet: components["schemas"]["QuietHoursIO"][];
             /**
              * Off When Home
              * @default false
@@ -3112,7 +3110,7 @@ export interface components {
         /** PrivacyOut */
         PrivacyOut: {
             /** Quiet */
-            quiet: components["schemas"]["QuietHoursIO-Output"][];
+            quiet: components["schemas"]["QuietHoursIO"][];
             /** Off When Home */
             off_when_home: boolean;
             /** Home People */
@@ -3164,22 +3162,11 @@ export interface components {
          * @description A time slot when the camera does not film, in the household's time: from `start` to `end` (past midnight when
          *     `end` is not after `start`, a whole day when equal), starting on each of `days`.
          */
-        "QuietHoursIO-Input": {
+        QuietHoursIO: {
             /** Days */
             days: components["schemas"]["Day"][];
-            start: components["schemas"]["Clock-Input"];
-            end: components["schemas"]["Clock-Input"];
-        };
-        /**
-         * QuietHoursIO
-         * @description A time slot when the camera does not film, in the household's time: from `start` to `end` (past midnight when
-         *     `end` is not after `start`, a whole day when equal), starting on each of `days`.
-         */
-        "QuietHoursIO-Output": {
-            /** Days */
-            days: components["schemas"]["Day"][];
-            start: components["schemas"]["Clock-Output"];
-            end: components["schemas"]["Clock-Output"];
+            start: components["schemas"]["Clock"];
+            end: components["schemas"]["Clock"];
         };
         /** QuietHoursOut */
         QuietHoursOut: {

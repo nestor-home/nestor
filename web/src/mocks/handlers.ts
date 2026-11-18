@@ -159,7 +159,7 @@ function householdTime(now: Date): { day: In<"Day">; minute: number } {
 
 /** Whether `now` falls in the slot, in the household's time: past midnight when it ends before it starts, a whole
  *  day when both are equal. */
-function covers(slot: In<"QuietHoursIO-Output">, now: Date): boolean {
+function covers(slot: In<"QuietHoursIO">, now: Date): boolean {
   const { day, minute } = householdTime(now);
   const before = dayValues[(dayValues.indexOf(day) + 6) % 7] as In<"Day">;
   const [start, end] = [minutesOf(slot.start), minutesOf(slot.end)];
