@@ -17,9 +17,9 @@ export function OAuthClientSection({ connector }: { connector: Connector }) {
   const registered = connector.oauth?.registered ? connector.oauth : null;
   const t = useT();
   return (
-    <section aria-labelledby="oauth-client" className="grid gap-4">
-      <div className="flex items-center justify-between gap-3 border-b border-rule pb-2">
-        <h3 id="oauth-client" className="font-serif text-lg font-normal">
+    <section aria-labelledby="oauth-client" className="surface grid gap-4 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <h3 id="oauth-client" className="text-[1.15rem] text-ink">
           {t("conn-client-title")}
         </h3>
         {registered ? (

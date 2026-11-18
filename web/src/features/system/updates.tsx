@@ -5,7 +5,7 @@
  * the commands the server names for the way Nestor is installed.
  */
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { CircleArrowUp, ExternalLink } from "lucide-react";
+import { ArrowRight, CircleArrowUp, ExternalLink } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api, type ChangeKind, keys, type Release, type Updates, updatesQuery } from "@/api";
 import { AgentFigure } from "@/components/agent-figure";
@@ -13,6 +13,7 @@ import { Confirm } from "@/components/confirm";
 import { CopyField } from "@/components/copy-field";
 import { Dither } from "@/components/dither";
 import { FormActions } from "@/components/form-actions";
+import { IconTile } from "@/components/marks";
 import { FormError, Notice } from "@/components/states";
 import { Button } from "@/components/ui/button";
 import { UpdateDialog } from "@/components/update-dialog";
@@ -23,7 +24,10 @@ import { useCan } from "@/lib/session";
 
 const KINDS: ChangeKind[] = ["breaking", "feature", "fix", "other"];
 
-/** In the sidebar's footer, only while a newer release is out; its texture comes alive on hover. */
+/**
+ * Only while a newer release is out: a mark in the rail (`compact`), a card in Settings and on the System page.
+ * Its texture comes alive on hover; either opens the release's dialog.
+ */
 export function UpdateAvailable({ compact }: { compact: boolean }) {
   const t = useT();
   const canRead = useCan("system:read");
@@ -40,12 +44,12 @@ export function UpdateAvailable({ compact }: { compact: boolean }) {
       {latest ? (
         <button
           type="button"
-          title={t("upd-available-version", { version: latest })}
-          aria-label={t("upd-available-version", { version: latest })}
+          title={compact ? t("upd-available-version", { version: latest }) : undefined}
+          aria-label={compact ? t("upd-available-version", { version: latest }) : undefined}
           className={
             compact
               ? "relative grid size-11 place-items-center overflow-hidden rounded-xl hover:bg-white/8"
-              : "surface relative flex w-full items-center gap-3 overflow-hidden px-4 py-3 text-left"
+              : "surface relative flex w-full items-center gap-4 overflow-hidden p-5 text-left"
           }
           onClick={() => setOpen(true)}
           onPointerEnter={() => setHover(true)}
@@ -54,11 +58,18 @@ export function UpdateAvailable({ compact }: { compact: boolean }) {
           {hover ? (
             <Dither shape="ramp-left" from={0} to={0.55} dot={2} animated className="absolute inset-0 text-ember/35" />
           ) : null}
-          <CircleArrowUp className="relative size-5 shrink-0 text-ember" aria-hidden="true" />
-          {compact ? null : (
+          {compact ? (
+            <CircleArrowUp className="relative size-5 shrink-0 text-ember" aria-hidden="true" />
+          ) : (
             <>
-              <span className="relative min-w-0 flex-1 truncate text-ink">{t("upd-available")}</span>
-              <span className="relative font-mono text-[0.8rem] text-ink-muted">{latest}</span>
+              <IconTile icon={CircleArrowUp} tone="ember" className="relative size-11" />
+              <span className="relative min-w-0 flex-1">
+                <span className="block font-serif text-[1.35rem] leading-tight text-ink">{t("upd-available")}</span>
+                <span className="mt-1 block text-[0.95rem] text-ink-muted">
+                  {t("upd-available-running", { latest, running: updates.data?.running ?? "" })}
+                </span>
+              </span>
+              <ArrowRight className="relative size-4 shrink-0 text-ink-faint" aria-hidden="true" />
             </>
           )}
         </button>

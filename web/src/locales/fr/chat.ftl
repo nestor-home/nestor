@@ -1,6 +1,6 @@
 ## Le chat : écrire à l'agent depuis l'admin.
 
-chat-title = Discussion
+chat-title = Parler
 chat-list = Discussions
 chat-new = Nouvelle discussion
 chat-search = Chercher une discussion
@@ -67,3 +67,6 @@ chat-mention-person = Personnes
 chat-mention-room = Pièces
 chat-mention-executor = Exécutants
 chat-mention-connection = Comptes
+chat-back = Toutes les discussions
+chat-greeting-hint = Je lis un fichier ou une photo, et j'écoute un message vocal.
+chat-greeting-hint-mentions = Tapez @ pour nommer quelqu'un, une pièce ou un compte. Je lis aussi un fichier ou une photo, et j'écoute un message vocal.

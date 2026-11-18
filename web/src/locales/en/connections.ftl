@@ -3,17 +3,10 @@
 conn-title = Connections
 conn-intro = Tokens are encrypted and never shown to the model. Only enabled tools are used.
 conn-connect-service = Connect a service
-conn-tab-accounts = Connected accounts
-conn-tab-catalogue = Catalogue
 
 conn-empty = No account connected yet.
 conn-empty-hint = A mailbox for watches, an MCP server for tools.
 conn-open-catalogue = Open the catalogue
-conn-calls-today = { $count ->
-    [0] no call today
-    [one] 1 call today
-   *[other] { $count } calls today
-}
 conn-no-connector = No connector installed.
 conn-feeds-watches = feeds watches
 conn-accounts-count = { $count ->
@@ -21,7 +14,6 @@ conn-accounts-count = { $count ->
    *[other] { $count } accounts
 }
 conn-client-to-create = OAuth client missing
-conn-connect-ellipsis = Connect…
 
 conn-connect = Connect
 conn-connecting = Connecting…
@@ -33,8 +25,6 @@ conn-account-of = Account of
 conn-account-of-hint = One person, or the whole household.
 conn-field-optional = { $label } (optional)
 conn-client-first = Register the OAuth client first.
-conn-status-redirecting = [ redirecting… ]
-conn-status-pending = [ in progress ]
 conn-reconnect-note = The old access stays active until the new one works. Settings are kept.
 conn-presets = Known servers
 conn-credentials = Token or OAuth client
@@ -64,45 +54,17 @@ conn-tools-saved = Tool settings saved.
 conn-no-tools = No tools.
 conn-confirm-writes = Ask for confirmation before writing
 conn-confirm-writes-hint = Sensitive actions, such as sending, always ask.
-conn-unsaved = ● unsaved changes
+conn-unsaved = Unsaved changes.
 
 conn-sections = Connection sections
 conn-tab-overview = Overview
 conn-tab-activity = Activity
 conn-tab-settings = Settings
-conn-owner = account of { $name }
 conn-connected-at = connected { $when }
 conn-broken = { $assistant } can no longer use this account: its tools and watches are paused.
 conn-reconnect = Reconnect
 conn-reconnect-ellipsis = Reconnect…
 conn-reconnect-hint = To switch account or password. Tool settings are kept.
-conn-summary-owned = The { $service } account of { $name }.
-conn-summary-household = { $service } for the whole household.
-conn-summary-usage = { $count ->
-    [0] { $assistant } has not used it today.
-    [one] { $assistant } used it once today.
-   *[other] { $assistant } used it { $count } times today.
-}
-conn-summary-usage-last = { $count ->
-    [0] { $assistant } has not used it today; last time { $ago }.
-    [one] { $assistant } used it once today, last { $ago }.
-   *[other] { $assistant } used it { $count } times today, last { $ago }.
-}
-conn-summary-watches = { $count ->
-    [one] It feeds 1 watch.
-   *[other] It feeds { $count } watches.
-}
-conn-summary-tools = { $enabled } of { $total } tools on{ $writes ->
-    [0] .
-    [one] , 1 of which writes{ $confirm ->
-        [yes] , with confirmation.
-       *[no] , without confirmation.
-    }
-   *[other] , { $writes } of which write{ $confirm ->
-        [yes] , with confirmation.
-       *[no] , without confirmation.
-    }
-}
 conn-latest-uses = Latest uses
 conn-never-used = { $assistant } has not used it yet.
 conn-no-activity = No activity yet.
@@ -122,17 +84,63 @@ conn-failed-crumb = Failure
 conn-failed-denied = Authorisation refused
 conn-failed-denied-text = Nothing was connected.
 conn-failed-expired = Authorisation request expired
-conn-failed-expired-text = More than ten minutes passed. Start again.
+conn-failed-expired-text = More than ten minutes passed.
 conn-failed-unknown = Unknown authorisation request
-conn-failed-unknown-text = It was not started from this session. Start again from the catalogue.
+conn-failed-unknown-text = It was not started from this session.
 conn-failed-exchange = Code refused by the service
-conn-failed-exchange-text = Check the OAuth client, then start again.
+conn-failed-exchange-text = The service did not accept the code with the OAuth client registered here.
 conn-failed-forbidden = Connection no longer allowed
-conn-failed-forbidden-text = The account that started it can no longer connect this service. Sign in with an account that can, then start again.
+conn-failed-forbidden-text = The account that started it can no longer connect this service.
 conn-failed-provider = The service did not authorise it
-conn-failed-provider-text = Start again. If it happens again, check the OAuth client in the service's console.
 conn-failed-other = The service returned an error
 conn-failed-other-text = Error: “{ $error }”.
 conn-failed-no-code = no code
 conn-failed-retry = Start again
 conn-failed-back = Back to connections
+
+conn-lanes = Accounts shown
+conn-lane-all = All
+conn-lane-attention = To reconnect
+conn-attention-title = To reconnect
+conn-attention-empty = I can use every account.
+conn-working-title = Connected
+conn-fix-reauth = The service no longer accepts the access it gave. Reconnect the account: its settings are kept.
+conn-fix-error = The service did not answer as expected. Check the reason given, then reconnect the account if it lasts.
+conn-last-used = last used
+conn-never-used-short = never used
+
+conn-catalogue = Catalogue
+conn-catalogue-lede = An account belongs to one person or to the whole household: you choose when you connect it.
+conn-catalogue-read-only = Your role does not allow connecting a service.
+conn-group-accounts = Mail, calendars and files
+conn-group-tools = Tool servers
+conn-other-server = Another server
+
+conn-glance = At a glance
+conn-figure-calls = Calls today
+conn-figure-tools = Tools on
+conn-figure-writes = { $count ->
+    [0] none can write
+    [one] 1 can write
+   *[other] { $count } can write
+}
+conn-figure-confirm = Asks before writing
+conn-yes = Yes
+conn-no = No
+conn-figure-watches = Watches fed
+conn-figure-watches-note = { $count ->
+    [0] none depends on this account
+   *[other] they stop if you disconnect
+}
+conn-who = Who may use it
+conn-who-owner = { $assistant } uses it only for { $name }.
+conn-who-household = { $assistant } uses it for anyone in the household.
+
+conn-failed-next = Next step
+conn-failed-denied-next = Start again and accept the access on the service's page.
+conn-failed-expired-next = Start again and finish on the service's page without waiting.
+conn-failed-unknown-next = Start again from the catalogue.
+conn-failed-exchange-next = Check the OAuth client, then start again.
+conn-failed-forbidden-next = Sign in with an account that can, then start again.
+conn-failed-provider-next = Start again. If it happens again, check the OAuth client in the service's console.
+conn-failed-other-next = Start again. If it happens again, look this error up in the service's documentation.

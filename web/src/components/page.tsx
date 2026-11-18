@@ -12,8 +12,11 @@ export function PageHeader({
   actions,
   crumbs,
   meta,
+  mark,
 }: {
   title: ReactNode;
+  /** what the page is about, drawn before its title: a person's pebble, a service's tile */
+  mark?: ReactNode;
   children?: ReactNode;
   actions?: ReactNode;
   crumbs?: ReactNode;
@@ -24,7 +27,10 @@ export function PageHeader({
       {crumbs}
       <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
         <div className="min-w-0 max-w-3xl">
-          <h1 className="display-2 [overflow-wrap:anywhere] text-ink">{title}</h1>
+          <h1 className="display-2 flex items-center gap-4 [overflow-wrap:anywhere] text-ink">
+            {mark}
+            <span className="min-w-0">{title}</span>
+          </h1>
           {meta ? (
             <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.85rem] text-ink-muted">{meta}</p>
           ) : null}

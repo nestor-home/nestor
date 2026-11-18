@@ -41,14 +41,9 @@ home-say-idle = Tout est calme.
 
 ## Les colonnes
 home-needs = Ce que j'attends de vous
-home-house = La maison
 home-room-nobody = personne
 home-room-someone = quelqu'un
 home-at-home = À la maison
-home-room-offline = { $count ->
-    [one] appareil hors ligne
-   *[other] { $count } appareils hors ligne
-}
 home-away = Dehors
 home-now = En ce moment
 home-task-starting = démarrage
@@ -58,10 +53,7 @@ home-nothing-now = Rien en cours.
 home-next = À venir
 home-quiet-now = Silence jusqu'à { $until }, sauf urgence.
 home-quiet-later = Heures calmes de { $from } à { $to }.
-home-upcoming = Relance à { $person } sur { $channel } à { $time }.
-home-upcoming-someone = Relance sur { $channel } à { $time }.
 home-upcoming-unless = Sauf réponse d'ici là.
-home-watch-triggered = déclenchée
 
 ## Sa journée, ce qu'il sait
 home-today = Aujourd'hui

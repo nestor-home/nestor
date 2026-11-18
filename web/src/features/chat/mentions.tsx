@@ -63,7 +63,7 @@ export function MentionList({
       <div className="max-h-72 overflow-y-auto p-1">
         {groups.map(([kind, items]) => (
           <section key={kind} className="pb-1">
-            <p className="caption px-2.5 pt-2 pb-1 text-[0.68rem] text-ink-faint">{t(`chat-mention-${kind}`)}</p>
+            <p className="caption px-2.5 pt-2 pb-1">{t(`chat-mention-${kind}`)}</p>
             <ul>
               {items.map((mention) => {
                 const i = options.indexOf(mention);
@@ -80,16 +80,16 @@ export function MentionList({
                         i === active ? "bg-paper-sunken" : "hover:bg-paper-sunken/60",
                       )}
                     >
-                      <span className="grid size-6 shrink-0 place-items-center rounded-md border border-rule bg-paper">
+                      <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-paper-sunken">
                         <MentionMark mention={mention} />
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="flex items-baseline gap-2">
-                          <span className="truncate text-[0.88rem] text-ink">{mention.label}</span>
-                          <span className="shrink-0 font-mono text-[0.72rem] text-ink-faint">@{mention.handle}</span>
+                          <span className="truncate text-[0.95rem] font-medium text-ink">{mention.label}</span>
+                          <span className="shrink-0 font-mono text-[0.78rem] text-ink-muted">@{mention.handle}</span>
                         </span>
                         {mention.detail ? (
-                          <span className="line-clamp-1 block text-[0.78rem] text-ink-muted">{mention.detail}</span>
+                          <span className="line-clamp-1 block text-[0.85rem] text-ink-muted">{mention.detail}</span>
                         ) : null}
                       </span>
                     </button>

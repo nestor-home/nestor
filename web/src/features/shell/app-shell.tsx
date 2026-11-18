@@ -6,6 +6,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { AgentPresenceProvider, useAgentPresence } from "@/features/agent/presence";
 import { RestartBanner } from "@/features/config/restart";
 import { UpdateAvailable } from "@/features/system/updates";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useAccountLocale, useT } from "@/i18n";
 import { useMe } from "@/lib/session";
 import { cn } from "@/lib/utils";
@@ -29,6 +30,7 @@ export function AppShell() {
   const palette = useCommandPalette();
   useGoKeys(destinations(me.scopes));
   const search = () => palette.setOpen(() => true);
+  const mobile = useIsMobile();
 
   return (
     <AgentPresenceProvider>
@@ -38,8 +40,7 @@ export function AppShell() {
       >
         {t("shell-skip")}
       </a>
-      <Rail onSearch={search} />
-      <TopBar onSearch={search} />
+      {mobile ? <TopBar onSearch={search} /> : <Rail onSearch={search} />}
       <main
         id="content"
         className={cn(
@@ -58,7 +59,7 @@ export function AppShell() {
           </div>
         )}
       </main>
-      <TabBar />
+      {mobile ? <TabBar /> : null}
       <CommandPalette open={palette.open} onOpenChange={(open) => palette.setOpen(() => open)} />
     </AgentPresenceProvider>
   );
@@ -77,7 +78,7 @@ function Rail({ onSearch }: { onSearch: () => void }) {
   const t = useT();
   const { spaces, settings, path, waiting } = useSpaces();
   return (
-    <aside className="rail fixed inset-y-0 left-0 z-40 hidden w-[5.5rem] flex-col items-center gap-1 pt-5 pb-3 md:flex">
+    <aside className="rail fixed inset-y-0 left-0 z-40 flex w-[5.5rem] flex-col items-center gap-1 pt-5 pb-3">
       <AgentMark />
       <nav aria-label={t("shell-sections")} className="mt-6 grid w-full gap-1 px-2">
         {spaces.map((s) => (
@@ -182,7 +183,7 @@ function TopBar({ onSearch }: { onSearch: () => void }) {
   const me = useMe();
   const { state: figure } = useAgentPresence();
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-2 bg-paper/92 px-3 pt-[env(safe-area-inset-top)] backdrop-blur-sm md:hidden">
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-2 bg-paper/92 px-3 pt-[env(safe-area-inset-top)] backdrop-blur-sm">
       <Link
         to="/"
         aria-label={t("shell-home-link", { assistant: me.assistant })}
@@ -214,7 +215,7 @@ function TabBar() {
   return (
     <nav
       aria-label={t("shell-sections")}
-      className="rail fixed inset-x-0 bottom-0 z-40 flex justify-around px-1 pt-1.5 pb-[calc(0.375rem+env(safe-area-inset-bottom))] md:hidden"
+      className="rail fixed inset-x-0 bottom-0 z-40 flex justify-around px-1 pt-1.5 pb-[calc(0.375rem+env(safe-area-inset-bottom))]"
     >
       {all.map((s) => (
         <SpaceLink key={s.to} space={s} here={inSpace(s, path)} badge={s.to === "/" ? waiting : 0} />

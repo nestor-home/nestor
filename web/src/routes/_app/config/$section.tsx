@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Empty } from "@/components/states";
+import { ConfigFrame } from "@/features/config/config-layout";
 import { ConfigPageView } from "@/features/config/config-pages";
 import { useConfigEditor } from "@/features/config/editor";
 import { pageOf } from "@/features/config/sections";
@@ -12,6 +13,11 @@ function SectionRoute() {
   const t = useT();
   const { schema } = useConfigEditor();
   const page = pageOf(section, schema);
-  if (!page || page.kind === "secrets" || page.kind === "history") return <Empty>{t("cfg-unknown-page")}</Empty>;
+  if (!page || page.kind === "secrets" || page.kind === "history")
+    return (
+      <ConfigFrame title={section}>
+        <Empty>{t("cfg-unknown-page")}</Empty>
+      </ConfigFrame>
+    );
   return <ConfigPageView key={page.slug} page={page} />;
 }

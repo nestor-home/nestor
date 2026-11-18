@@ -1,7 +1,5 @@
 ## People of the household.
 
-people-title = People
-people-intro = Add them in Configuration › Household.
 people-empty = Nobody in the household yet.
 people-not-found = This person is not part of the household.
 people-has-account = has an account
@@ -27,12 +25,14 @@ people-today = Today, { $name } appears in { $count ->
 people-today-nothing = Nothing concerns { $name } today.
 people-recent = Recently
 people-recent-empty = Nothing about { $name } yet.
-people-recognised-on = recognised on
-people-reached-on = reached first on
-people-reached-origin = the conversation it came from
-people-admin = admin account
+people-reached-on = reached first on { $channel }
+people-reached-origin = No channel comes first: { $assistant } answers where it was asked.
+people-admin = Admin account
 people-conversations-empty = No conversation with { $name } in the journal.
 people-connections-hint = Their connected accounts (mail, calendar) give the assistant tools.
-people-open-catalogue = open the catalogue
+people-open-catalogue = Open the catalogue
 people-connections-empty = No connected account for { $name }.
 people-presence-empty = No known presence change.
+people-reach-title = How { $assistant } reaches them
+people-reach-first = first
+people-open-account = Open the account { $login }

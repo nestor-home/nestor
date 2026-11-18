@@ -1,11 +1,17 @@
-import { ArrowDown, ArrowUp, CircleAlert, Pencil, Plus, Trash2 } from "lucide-react";
+/**
+ * A page of the configuration: what the file holds as cards and rows a person reads, each opening its
+ * form in a sheet. Every edit goes into the one draft; nothing is written before "Save".
+ */
+import { ArrowDown, ArrowUp, Pencil, Plus, Trash2 } from "lucide-react";
 import { type ReactElement, type ReactNode, useId, useState } from "react";
 import { modelTypeValues } from "@/api/schema.gen";
 import { Confirm } from "@/components/confirm";
 import { FormActions } from "@/components/form-actions";
+import { Pebble, ServiceTile } from "@/components/marks";
 import { FormDialog, FormSheet } from "@/components/overlay-form";
-import { Panel, Section } from "@/components/page";
+import { Fact, Facts, Panel, Section } from "@/components/page";
 import { Empty } from "@/components/states";
+import { Status, Tag } from "@/components/status";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,187 +19,197 @@ import { useT } from "@/i18n";
 import { KindMark, kindName } from "@/lib/brands";
 import { modelTypeHint, modelTypeLabel } from "@/lib/labels";
 import { cn } from "@/lib/utils";
+import { ConfigFrame } from "./config-layout";
 import { useConfigEditor } from "./editor";
 import { ObjectFields, Problems } from "./fields";
 import {
   entryOf,
+  fieldsOf,
   freeName,
   getAt,
-  isRecord,
   type JsonSchema,
   move,
   NAME,
   type Path,
-  pluginOf,
   problemsUnder,
   providerOf,
   renamed,
+  resolve,
   type Slot,
+  titleOf,
 } from "./schema";
 import { type ConfigPage, pageTitle } from "./sections";
+import { type Component, componentsOf, defaultShown, peopleOf, rolesOf, valueText } from "./summary";
 
-/**
- * What a component's mark shows: the provider one of its fields names, as the runtime itself brands it
- * (`x-nestor.brands`: a host suffix for an address, `base_url`; a value for a name, a catalogue
- * model), else its kind.
- */
-export function markOf(kind: string, entry: Record<string, unknown>, schema: unknown): string {
-  const fields = isRecord(schema) && isRecord(schema.properties) ? Object.entries(schema.properties) : [];
-  for (const [name, field] of fields) {
-    const brands = isRecord(field) && isRecord(field["x-nestor"]) ? field["x-nestor"].brands : undefined;
-    const value = entry[name];
-    if (!isRecord(brands) || typeof value !== "string") continue;
-    const host = URL.canParse(value) ? new URL(value).hostname : null;
-    const found = Object.entries(brands).find(([key]) =>
-      host === null ? key === value : host === key || host.endsWith(`.${key}`),
-    );
-    if (typeof found?.[1] === "string") return found[1];
-  }
-  return kind;
-}
+const CARDS = "grid gap-3 sm:grid-cols-2";
 
 export function ConfigPageView({ page }: { page: ConfigPage }) {
-  if (page.kind === "household") return <HouseholdPage page={page} />;
-  if (page.kind === "slots") return <SlotsPage page={page} />;
-  return <SectionPage page={page} />;
-}
-
-function PageTitle({ page }: { page: ConfigPage }) {
   const t = useT();
   const { schema } = useConfigEditor();
-  return <h2 className="mb-6 font-serif text-[1.6rem] leading-tight text-ink">{pageTitle(page, schema, t)}</h2>;
-}
-
-/** Persona, initiative, admin: one object each, edited in place. */
-function SectionPage({ page }: { page: ConfigPage }) {
-  const { schema, problems } = useConfigEditor();
   return (
-    <>
-      <PageTitle page={page} />
-      <div className="grid gap-6">
-        {page.keys.map((key) => {
+    <ConfigFrame title={pageTitle(page, schema, t)} about={page.about ? t(page.about) : undefined}>
+      {page.kind === "household" ? (
+        <Household />
+      ) : (
+        page.keys.map((key) => {
+          const slot = schema.slots[key];
+          if (slot?.shape === "named") return <NamedSlot key={key} slotKey={key} slot={slot} />;
+          if (slot?.shape === "list") return <ManySlot key={key} slotKey={key} slot={slot} />;
+          if (slot) return <OneSlot key={key} slotKey={key} slot={slot} />;
           const section = schema.sections[key];
           if (!section) return null;
-          // `data_dir` is a top-level value: its schema wraps it as the one property of an object
-          const path: Path = key === "data_dir" ? [] : [key];
-          const stray = problemsUnder(problems, [key]).filter((p) => p.path.length === 1 && key !== "data_dir");
-          return (
-            <Panel key={key}>
-              <ObjectFields schema={section} root={section} path={path} />
-              <Problems problems={stray} />
-            </Panel>
-          );
-        })}
-      </div>
-    </>
+          const title = page.keys.length > 1 ? (schema.section_titles[key] ?? key) : t("cfg-settings");
+          return <Settings key={key} sectionKey={key} section={section} title={title} />;
+        })
+      )}
+    </ConfigFrame>
+  );
+}
+
+// -- a section of settings (persona, initiative, who uses which model…) ---------------------------
+
+/** One object of the file: each setting and what it is now, changed in a sheet. */
+function Settings({ sectionKey, section, title }: { sectionKey: string; section: JsonSchema; title: string }) {
+  const t = useT();
+  const { schema, draft, problems } = useConfigEditor();
+  const [open, setOpen] = useState(false);
+  // `data_dir` is a top-level value: its schema wraps it as the one property of an object
+  const path: Path = sectionKey === "data_dir" ? [] : [sectionKey];
+  const name = schema.section_titles[sectionKey] ?? sectionKey;
+  const { plain, advanced } = fieldsOf(resolve(section, section).schema);
+  const set = advanced.filter(([field]) => getAt(draft, [...path, field]) !== undefined);
+  const rows = plain.length || set.length ? [...plain, ...set] : advanced;
+  const stray = problemsUnder(problems, [sectionKey]).filter((p) => p.path.length === 1 && path.length === 1);
+  return (
+    <Section
+      title={title}
+      id={`section-${sectionKey}`}
+      aside={
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setOpen(true)}
+          aria-label={t("cfg-edit-item", { item: name })}
+        >
+          <Pencil /> {t("cfg-edit")}
+        </Button>
+      }
+    >
+      <Panel>
+        <Facts>
+          {rows.map(([field, node]) => {
+            const value = valueText(node, getAt(draft, [...path, field]));
+            const fallback = defaultShown(node, section);
+            return (
+              <Fact key={field} term={titleOf(node, field)} className="min-w-0 [overflow-wrap:anywhere]">
+                {value !== null ? (
+                  <span className="line-clamp-3 text-ink">{value}</span>
+                ) : (
+                  <span className="text-ink-faint">
+                    {fallback ? t("cfg-default", { value: fallback }) : t("cfg-unset")}
+                  </span>
+                )}
+                <Problems problems={problemsUnder(problems, [...path, field])} label={titleOf(node, field)} />
+              </Fact>
+            );
+          })}
+        </Facts>
+      </Panel>
+      <Problems problems={stray} />
+      <FormSheet open={open} onOpenChange={setOpen} title={name}>
+        {(close) => (
+          <div className="grid gap-6 pt-5">
+            <ObjectFields schema={section} root={section} path={path} />
+            <Problems problems={stray} />
+            <FormActions hint={t("cfg-sheet-note")}>
+              <Button onClick={close}>{t("cfg-done")}</Button>
+            </FormActions>
+          </div>
+        )}
+      </FormSheet>
+    </Section>
   );
 }
 
 // -- the household ----------------------------------------------------------------------------------
 
-function HouseholdPage({ page }: { page: ConfigPage }) {
+function Household() {
   const t = useT();
   const { schema, draft, set, problems } = useConfigEditor();
   const person = schema.sections.household ?? {};
-  const people = Array.isArray(draft.household) ? (draft.household as Record<string, unknown>[]) : [];
+  const people = peopleOf(draft);
   const [editing, setEditing] = useState<{ index: number; adding: boolean } | null>(null);
-  const add = () => {
-    set(["household"], [...people, { id: "", name: "" }]);
-    setEditing({ index: people.length, adding: true });
-  };
+  const write = (next: Record<string, unknown>[]) => set(["household"], next);
+  const without = (index: number) => people.filter((_, i) => i !== index);
   const label = (p: Record<string, unknown>, i: number) => String(p.name || p.id || t("cfg-item-n", { n: i + 1 }));
+  const current = editing ? people[editing.index] : undefined;
   return (
-    <>
-      <PageTitle page={page} />
-      <Section
-        title={t("cfg-people")}
-        count={people.length}
-        aside={
-          <Button variant="outline" size="sm" onClick={add}>
-            <Plus /> {t("cfg-add-person")}
-          </Button>
-        }
-      >
-        {people.length ? (
-          <ul className="grid gap-2">
-            {people.map((p, index) => {
-              const trouble = problemsUnder(problems, ["household", index]);
-              const accounts = Array.isArray(p.accounts) ? (p.accounts as string[]) : [];
-              return (
-                <ItemCard
-                  // biome-ignore lint/suspicious/noArrayIndexKey: a person's position is its place in the file
-                  key={index}
-                  title={label(p, index)}
-                  subtitle={String(p.id ?? "")}
-                  detail={accounts.join(" · ")}
-                  problems={trouble.length}
-                  index={index}
-                  count={people.length}
-                  onEdit={() => setEditing({ index, adding: false })}
-                  onMove={(by) => set(["household"], move(people, index, by))}
-                  onRemove={async () =>
-                    set(
-                      ["household"],
-                      people.filter((_, i) => i !== index),
-                    )
-                  }
-                  removeTitle={t("cfg-remove-person-title", { name: label(p, index) })}
-                  removeText={t("cfg-remove-person-text")}
-                />
-              );
-            })}
-          </ul>
-        ) : (
-          <Empty>{t("cfg-people-empty")}</Empty>
-        )}
-      </Section>
-      {editing ? (
+    <Section
+      title={t("cfg-people")}
+      count={people.length}
+      aside={
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            write([...people, { id: "", name: "" }]);
+            setEditing({ index: people.length, adding: true });
+          }}
+        >
+          <Plus /> {t("cfg-add-person")}
+        </Button>
+      }
+    >
+      {people.length ? (
+        <ul className={CARDS}>
+          {people.map((p, index) => {
+            const accounts = Array.isArray(p.accounts) ? p.accounts.map(String) : [];
+            return (
+              <Card
+                // biome-ignore lint/suspicious/noArrayIndexKey: a person's position is its place in the file
+                key={index}
+                mark={<Pebble name={label(p, index)} className="size-10 text-[1rem]" />}
+                title={label(p, index)}
+                line={accounts.length ? accounts.join(" · ") : t("cfg-person-no-account")}
+                marks={accounts}
+                problems={problemsUnder(problems, ["household", index]).length}
+                onOpen={() => setEditing({ index, adding: false })}
+              />
+            );
+          })}
+        </ul>
+      ) : (
+        <Empty>{t("cfg-people-empty")}</Empty>
+      )}
+      {editing && current ? (
         <ItemSheet
-          key={editing.index}
-          title={editing.adding ? t("cfg-add-person") : label(people[editing.index] ?? {}, editing.index)}
+          title={editing.adding ? t("cfg-add-person") : label(current, editing.index)}
           adding={editing.adding}
           onClose={() => setEditing(null)}
-          onCancelAdd={() => {
-            set(
-              ["household"],
-              people.filter((_, i) => i !== editing.index),
-            );
+          onRemove={() => {
+            write(without(editing.index));
             setEditing(null);
+          }}
+          removeTitle={t("cfg-remove-person-title", { name: label(current, editing.index) })}
+          removeText={t("cfg-remove-person-text")}
+          order={{
+            item: label(current, editing.index),
+            index: editing.index,
+            count: people.length,
+            move: (by) => {
+              write(move(people, editing.index, by));
+              setEditing({ ...editing, index: editing.index + by });
+            },
           }}
         >
           <ObjectFields schema={person} root={person} path={["household", editing.index]} />
         </ItemSheet>
       ) : null}
-    </>
+    </Section>
   );
 }
 
-// -- components (model, channels, tools…) ---------------------------------------------------------
-
-/** The components of a slot, then the sections that choose among them (the models, then who uses which). */
-function SlotsPage({ page }: { page: ConfigPage }) {
-  const { schema, problems } = useConfigEditor();
-  return (
-    <>
-      {page.keys.map((key) => {
-        const slot = schema.slots[key];
-        const section = schema.sections[key];
-        if (slot?.shape === "named") return <NamedSlot key={key} slotKey={key} slot={slot} />;
-        if (slot?.shape === "list") return <ManySlot key={key} slotKey={key} slot={slot} />;
-        if (slot) return <OneSlot key={key} slotKey={key} slot={slot} main={key === page.keys[0]} />;
-        if (!section) return null;
-        return (
-          <Section key={key} title={schema.section_titles[key] ?? key} id={`section-${key}`}>
-            <Panel>
-              <ObjectFields schema={section} root={section} path={[key]} />
-              <Problems problems={problemsUnder(problems, [key]).filter((p) => p.path.length === 1)} />
-            </Panel>
-          </Section>
-        );
-      })}
-    </>
-  );
-}
+// -- components (models, channels, tools…) ----------------------------------------------------------
 
 const SUMMARY = ["room", "model", "url", "base_url", "description"];
 
@@ -204,72 +220,123 @@ function summary(entry: Record<string, unknown>): string {
     .join(" · ");
 }
 
-/** A slot that takes one component (the model, presence): shown and edited in place. */
-function OneSlot({ slotKey, slot, main }: { slotKey: string; slot: Slot; main: boolean }) {
+function ComponentCard({
+  slot,
+  component: c,
+  title = c.name,
+  line,
+  tags,
+  problems,
+  onOpen,
+}: {
+  slot: Slot;
+  component: Component;
+  title?: string;
+  line: string;
+  tags?: string[];
+  problems: number;
+  onOpen: () => void;
+}) {
+  return (
+    <Card
+      mark={<ServiceTile kind={c.mark} />}
+      title={title}
+      line={line}
+      detail={summary(c.entry)}
+      tags={tags}
+      problems={problems}
+      missing={!slot.kinds[c.plugin]}
+      onOpen={onOpen}
+    />
+  );
+}
+
+/** Nothing in a slot yet: whether one is needed, and the way to add one when a plugin is installed. */
+function NoComponent({ slot, action }: { slot: Slot; action?: ReactNode }) {
+  const t = useT();
+  if (!Object.keys(slot.kinds).length) return <Empty hint={t("cfg-no-plugin-hint")}>{t("cfg-no-plugin")}</Empty>;
+  return (
+    <Empty hint={slot.required ? t("cfg-slot-required") : t("cfg-slot-optional")} action={action}>
+      {t("cfg-slot-none")}
+    </Empty>
+  );
+}
+
+function AddButton({ slot, onPick }: { slot: Slot; onPick: (kind: string) => void }) {
+  const t = useT();
+  if (!Object.keys(slot.kinds).length) return null;
+  return (
+    <KindPicker
+      slot={slot}
+      onPick={onPick}
+      trigger={
+        <Button variant="outline" size="sm">
+          <Plus /> {t("cfg-add-component")}
+        </Button>
+      }
+    />
+  );
+}
+
+function Fields({ slot, plugin, path }: { slot: Slot; plugin: string; path: Path }) {
+  const t = useT();
+  const schema = slot.kinds[plugin];
+  if (!schema) return <p className="text-sm text-brick">{t("cfg-kind-missing", { kind: plugin })}</p>;
+  return <ObjectFields schema={schema} root={schema} path={path} />;
+}
+
+/** A slot that takes one component (the home system): its card, or the choice of what to set up. */
+function OneSlot({ slotKey, slot }: { slotKey: string; slot: Slot }) {
   const t = useT();
   const { draft, set, problems } = useConfigEditor();
-  const entry = getAt(draft, [slotKey]);
-  const kind = isRecord(entry) ? pluginOf(slot, entry) : "";
-  const provider = providerOf(slot, kind);
-  const schema = slot.kinds[kind];
-  const kinds = Object.keys(slot.kinds);
+  const [editing, setEditing] = useState<{ adding: boolean } | null>(null);
+  const current = componentsOf(slot, slotKey, draft)[0];
   const trouble = problemsUnder(problems, [slotKey]);
+  const remove = () => {
+    set([slotKey], undefined);
+    setEditing(null);
+  };
   return (
-    <Section
-      title={slot.title}
-      id={`slot-${slotKey}`}
-      aside={
-        isRecord(entry) && !slot.required ? (
-          <Confirm
-            trigger={
-              <Button variant="ghost" size="sm">
-                <Trash2 /> {t("cfg-remove")}
-              </Button>
-            }
-            title={t("cfg-remove-title", { name: kindName(provider) })}
-            confirm={t("cfg-remove")}
-            onConfirm={async () => set([slotKey], undefined)}
-          >
-            {t("cfg-remove-text")}
-          </Confirm>
-        ) : null
-      }
-    >
-      {isRecord(entry) ? (
-        <Panel marked={main}>
-          <div className="mb-5 flex items-center gap-2.5">
-            <KindMark kind={provider} className="size-5 text-ink" label={false} />
-            <p className="font-serif text-lg text-ink">{kindName(provider)}</p>
-            <span className="text-[0.85rem] text-ink-faint">{kind}</span>
-          </div>
-          {schema ? (
-            <ObjectFields schema={schema} root={schema} path={[slotKey]} />
-          ) : (
-            <p className="text-sm text-brick">{t("cfg-kind-missing", { kind })}</p>
-          )}
-          <Problems problems={trouble.filter((p) => p.path.length <= 1)} />
-        </Panel>
-      ) : kinds.length ? (
-        <Empty
-          hint={slot.required ? t("cfg-slot-required") : t("cfg-slot-optional")}
+    <Section title={slot.title} id={`slot-${slotKey}`}>
+      {current ? (
+        <ul className={CARDS}>
+          <ComponentCard
+            slot={slot}
+            component={current}
+            line={current.plugin}
+            problems={trouble.length}
+            onOpen={() => setEditing({ adding: false })}
+          />
+        </ul>
+      ) : (
+        <NoComponent
+          slot={slot}
           action={
-            <KindPicker
+            <AddButton
               slot={slot}
-              onPick={(k) => set([slotKey], entryOf(slot, k))}
-              trigger={
-                <Button variant="outline" size="sm">
-                  <Plus /> {t("cfg-choose-kind")}
-                </Button>
-              }
+              onPick={(kind) => {
+                set([slotKey], entryOf(slot, kind));
+                setEditing({ adding: true });
+              }}
             />
           }
-        >
-          {t("cfg-slot-unset")}
-        </Empty>
-      ) : (
-        <Empty hint={t("cfg-no-plugin-hint")}>{t("cfg-no-plugin")}</Empty>
+        />
       )}
-      {!isRecord(entry) ? <Problems problems={trouble} /> : null}
+      {current ? null : <Problems problems={trouble} />}
+      {editing && current ? (
+        <ItemSheet
+          title={editing.adding ? t("cfg-add-kind", { kind: current.name }) : current.name}
+          mark={current.provider}
+          adding={editing.adding}
+          onClose={() => setEditing(null)}
+          onRemove={slot.required && !editing.adding ? undefined : remove}
+          removeTitle={t("cfg-remove-title", { name: current.name })}
+          removeText={t("cfg-remove-text")}
+        >
+          <Fields slot={slot} plugin={current.plugin} path={[slotKey]} />
+          <Problems problems={trouble.filter((p) => p.path.length <= 1)} />
+        </ItemSheet>
+      ) : null}
     </Section>
   );
 }
@@ -278,85 +345,68 @@ function OneSlot({ slotKey, slot, main }: { slotKey: string; slot: Slot; main: b
 function ManySlot({ slotKey, slot }: { slotKey: string; slot: Slot }) {
   const t = useT();
   const { draft, set, problems } = useConfigEditor();
-  const entries = Array.isArray(draft[slotKey]) ? (draft[slotKey] as Record<string, unknown>[]) : [];
+  const components = componentsOf(slot, slotKey, draft);
+  const entries = components.map((c) => c.entry);
   const [editing, setEditing] = useState<{ index: number; adding: boolean } | null>(null);
-  const kinds = Object.keys(slot.kinds);
   const write = (next: Record<string, unknown>[]) => set([slotKey], next.length || slot.required ? next : undefined);
-  const nameOf = (e: Record<string, unknown>) => String(e.name || kindName(providerOf(slot, pluginOf(slot, e))));
-  const current = editing ? entries[editing.index] : undefined;
-  const plugin = current ? pluginOf(slot, current) : "";
-  const schema = current ? slot.kinds[plugin] : undefined;
+  const current = editing ? components[editing.index] : undefined;
   const stray = problemsUnder(problems, [slotKey]).filter((p) => p.path.length === 1);
   return (
     <Section
       title={slot.title}
-      count={entries.length}
+      count={components.length}
       id={`slot-${slotKey}`}
       aside={
-        kinds.length ? (
-          <KindPicker
-            slot={slot}
-            onPick={(kind) => {
-              write([...entries, entryOf(slot, kind)]);
-              setEditing({ index: entries.length, adding: true });
-            }}
-            trigger={
-              <Button variant="outline" size="sm">
-                <Plus /> {t("cfg-add-component")}
-              </Button>
-            }
-          />
-        ) : null
+        <AddButton
+          slot={slot}
+          onPick={(kind) => {
+            write([...entries, entryOf(slot, kind)]);
+            setEditing({ index: entries.length, adding: true });
+          }}
+        />
       }
     >
-      {entries.length ? (
-        <ul className="grid gap-2">
-          {entries.map((entry, index) => {
-            const kind = pluginOf(slot, entry);
-            return (
-              <ItemCard
-                // biome-ignore lint/suspicious/noArrayIndexKey: a component's position is its place in the file
-                key={index}
-                mark={markOf(providerOf(slot, kind), entry, slot.kinds[kind])}
-                title={nameOf(entry)}
-                subtitle={kind}
-                detail={summary(entry)}
-                problems={problemsUnder(problems, [slotKey, index]).length}
-                missing={!slot.kinds[kind]}
-                index={index}
-                count={entries.length}
-                onEdit={() => setEditing({ index, adding: false })}
-                onMove={(by) => write(move(entries, index, by))}
-                onRemove={async () => write(entries.filter((_, i) => i !== index))}
-                removeTitle={t("cfg-remove-title", { name: nameOf(entry) })}
-                removeText={t("cfg-remove-text")}
-              />
-            );
-          })}
+      {components.length ? (
+        <ul className={CARDS}>
+          {components.map((c, index) => (
+            <ComponentCard
+              // biome-ignore lint/suspicious/noArrayIndexKey: a component's position is its place in the file
+              key={index}
+              slot={slot}
+              component={c}
+              line={c.name === kindName(c.provider) ? c.plugin : `${kindName(c.provider)} · ${c.plugin}`}
+              problems={problemsUnder(problems, [slotKey, index]).length}
+              onOpen={() => setEditing({ index, adding: false })}
+            />
+          ))}
         </ul>
-      ) : kinds.length ? (
-        <Empty hint={slot.required ? t("cfg-slot-required") : t("cfg-slot-optional")}>{t("cfg-slot-none")}</Empty>
       ) : (
-        <Empty hint={t("cfg-no-plugin-hint")}>{t("cfg-no-plugin")}</Empty>
+        <NoComponent slot={slot} />
       )}
       <Problems problems={stray} />
       {editing && current ? (
         <ItemSheet
-          key={editing.index}
-          title={editing.adding ? t("cfg-add-kind", { kind: kindName(providerOf(slot, plugin)) }) : nameOf(current)}
-          mark={providerOf(slot, plugin)}
+          title={editing.adding ? t("cfg-add-kind", { kind: kindName(current.provider) }) : current.name}
+          mark={current.provider}
           adding={editing.adding}
           onClose={() => setEditing(null)}
-          onCancelAdd={() => {
+          onRemove={() => {
             write(entries.filter((_, i) => i !== editing.index));
             setEditing(null);
           }}
+          removeTitle={t("cfg-remove-title", { name: current.name })}
+          removeText={t("cfg-remove-text")}
+          order={{
+            item: current.name,
+            index: editing.index,
+            count: entries.length,
+            move: (by) => {
+              write(move(entries, editing.index, by));
+              setEditing({ ...editing, index: editing.index + by });
+            },
+          }}
         >
-          {schema ? (
-            <ObjectFields schema={schema} root={schema} path={[slotKey, editing.index]} />
-          ) : (
-            <p className="text-sm text-brick">{t("cfg-kind-missing", { kind: plugin })}</p>
-          )}
+          <Fields slot={slot} plugin={current.plugin} path={[slotKey, editing.index]} />
         </ItemSheet>
       ) : null}
     </Section>
@@ -367,81 +417,62 @@ function ManySlot({ slotKey, slot }: { slotKey: string; slot: Slot }) {
 function NamedSlot({ slotKey, slot }: { slotKey: string; slot: Slot }) {
   const t = useT();
   const { schema: config, draft, set, replace, problems } = useConfigEditor();
-  const named = isRecord(draft[slotKey]) ? (draft[slotKey] as Record<string, Record<string, unknown>>) : {};
-  const names = Object.keys(named);
+  const components = componentsOf(slot, slotKey, draft);
+  const names = components.map((c) => c.name);
   const [editing, setEditing] = useState<{ name: string; adding: boolean } | null>(null);
-  const kinds = Object.keys(slot.kinds);
-  const write = (next: Record<string, unknown>) => set([slotKey], next);
-  const current = editing ? named[editing.name] : undefined;
-  const plugin = current ? pluginOf(slot, current) : "";
-  const schema = current ? slot.kinds[plugin] : undefined;
+  const current = editing ? components.find((c) => c.name === editing.name) : undefined;
   const stray = problemsUnder(problems, [slotKey]).filter((p) => p.path.length === 1);
-  const without = (name: string) => Object.fromEntries(Object.entries(named).filter(([k]) => k !== name));
+  const named = (list: Component[]) => Object.fromEntries(list.map((c) => [c.name, c.entry]));
+  const without = (name: string) => named(components.filter((c) => c.name !== name));
   return (
     <Section
       title={slot.title}
       count={names.length}
       id={`slot-${slotKey}`}
       aside={
-        kinds.length ? (
-          <KindPicker
-            slot={slot}
-            onPick={(kind) => {
-              const name = freeName(providerOf(slot, kind), names);
-              write({ ...named, [name]: entryOf(slot, kind) });
-              setEditing({ name, adding: true });
-            }}
-            trigger={
-              <Button variant="outline" size="sm">
-                <Plus /> {t("cfg-add-component")}
-              </Button>
-            }
-          />
-        ) : null
+        <AddButton
+          slot={slot}
+          onPick={(kind) => {
+            const name = freeName(providerOf(slot, kind), names);
+            set([slotKey], { ...named(components), [name]: entryOf(slot, kind) });
+            setEditing({ name, adding: true });
+          }}
+        />
       }
     >
-      {names.length ? (
-        <ul className="grid gap-2">
-          {Object.entries(named).map(([name, entry]) => {
-            const kind = pluginOf(slot, entry);
-            const provider = providerOf(slot, kind);
+      {components.length ? (
+        <ul className={CARDS}>
+          {components.map((c) => {
+            const type = slot.model_types[c.plugin];
             return (
-              <ItemCard
-                key={name}
-                mark={markOf(provider, entry, slot.kinds[kind])}
-                title={name}
-                subtitle={
-                  slot.model_types[kind]
-                    ? `${kindName(provider)} · ${modelTypeLabel(slot.model_types[kind])}`
-                    : kindName(provider)
-                }
-                detail={summary(entry)}
-                problems={problemsUnder(problems, [slotKey, name]).length}
-                missing={!slot.kinds[kind]}
-                onEdit={() => setEditing({ name, adding: false })}
-                onRemove={async () => write(without(name))}
-                removeTitle={t("cfg-remove-title", { name })}
-                removeText={t("cfg-remove-text")}
+              <ComponentCard
+                key={c.name}
+                slot={slot}
+                component={c}
+                line={type ? `${kindName(c.provider)} · ${modelTypeLabel(type)}` : kindName(c.provider)}
+                tags={rolesOf(config, draft, slotKey, c.name)}
+                problems={problemsUnder(problems, [slotKey, c.name]).length}
+                onOpen={() => setEditing({ name: c.name, adding: false })}
               />
             );
           })}
         </ul>
-      ) : kinds.length ? (
-        <Empty hint={slot.required ? t("cfg-slot-required") : t("cfg-slot-optional")}>{t("cfg-slot-none")}</Empty>
       ) : (
-        <Empty hint={t("cfg-no-plugin-hint")}>{t("cfg-no-plugin")}</Empty>
+        <NoComponent slot={slot} />
       )}
       <Problems problems={stray} />
       {editing && current ? (
         <ItemSheet
-          title={editing.adding ? t("cfg-add-kind", { kind: kindName(providerOf(slot, plugin)) }) : editing.name}
-          mark={providerOf(slot, plugin)}
+          title={editing.adding ? t("cfg-add-kind", { kind: kindName(current.provider) }) : editing.name}
+          mark={current.provider}
           adding={editing.adding}
           onClose={() => setEditing(null)}
-          onCancelAdd={() => {
-            write(without(editing.name));
+          onRemove={() => {
+            set([slotKey], without(editing.name));
             setEditing(null);
           }}
+          removeTitle={t("cfg-remove-title", { name: editing.name })}
+          removeText={t("cfg-remove-text")}
         >
           <NameField
             name={editing.name}
@@ -451,11 +482,7 @@ function NamedSlot({ slotKey, slot }: { slotKey: string; slot: Slot }) {
               setEditing({ ...editing, name: to });
             }}
           />
-          {schema ? (
-            <ObjectFields schema={schema} root={schema} path={[slotKey, editing.name]} />
-          ) : (
-            <p className="text-sm text-brick">{t("cfg-kind-missing", { kind: plugin })}</p>
-          )}
+          <Fields slot={slot} plugin={current.plugin} path={[slotKey, editing.name]} />
         </ItemSheet>
       ) : null}
     </Section>
@@ -493,13 +520,16 @@ function NameField({ name, taken, onRename }: { name: string; taken: string[]; o
   );
 }
 
-/** The model types, in the order the picker shows them. */
-
-/** Choosing what to add: every installed plugin of the slot, with its mark; models grouped by what they serve. */
+/** Choosing what to add: every installed plugin of the slot, by its mark; models grouped by what they serve. */
 function KindPicker({ slot, onPick, trigger }: { slot: Slot; onPick: (kind: string) => void; trigger: ReactElement }) {
   const t = useT();
   return (
-    <FormDialog trigger={trigger} title={t("cfg-pick-title", { slot: slot.title })} description={t("cfg-pick-text")}>
+    <FormDialog
+      trigger={trigger}
+      title={t("cfg-pick-title", { slot: slot.title })}
+      description={t("cfg-pick-text")}
+      wide
+    >
       {(close) => {
         const kinds = Object.keys(slot.kinds);
         const typed = modelTypeValues.map((type) => ({
@@ -509,38 +539,42 @@ function KindPicker({ slot, onPick, trigger }: { slot: Slot; onPick: (kind: stri
         const groups = Object.keys(slot.model_types).length
           ? typed.filter((g) => g.kinds.length)
           : [{ type: null, kinds }];
-        const option = (kind: string) => (
-          <li key={kind}>
-            <button
-              type="button"
-              onClick={() => {
-                close();
-                onPick(kind);
-              }}
-              className="flex w-full items-center gap-3 rounded-md border border-rule bg-paper-raised px-3 py-2.5 text-left hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
-            >
-              <KindMark kind={providerOf(slot, kind)} className="size-5 text-ink" label={false} />
-              <span className="min-w-0 flex-1">
-                <span className="block text-sm text-ink">{kindName(providerOf(slot, kind))}</span>
-                <span className="block text-[0.85rem] text-ink-faint">
-                  {providerOf(slot, kind)} ·{" "}
-                  {t("cfg-required-fields", { count: requiredCount(slot.kinds[kind] ?? {}) })}
+        const option = (kind: string) => {
+          const provider = providerOf(slot, kind);
+          return (
+            <li key={kind}>
+              <button
+                type="button"
+                onClick={() => {
+                  close();
+                  onPick(kind);
+                }}
+                className="flex h-full w-full flex-col items-start gap-2.5 rounded-xl border border-rule bg-paper p-3 text-left transition-colors hover:border-ink"
+              >
+                <KindMark kind={provider} className="size-6 text-ink" label={false} />
+                <span className="min-w-0">
+                  <span className="block text-[0.95rem] font-medium [overflow-wrap:anywhere] text-ink">
+                    {kindName(provider)}
+                  </span>
+                  <span className="block text-[0.82rem] text-ink-muted">
+                    {t("cfg-required-fields", { count: requiredCount(slot.kinds[kind] ?? {}) })}
+                  </span>
                 </span>
-              </span>
-            </button>
-          </li>
-        );
+              </button>
+            </li>
+          );
+        };
         return (
-          <div className="grid gap-5">
+          <div className="grid gap-6">
             {groups.map((group) => (
               <section key={group.type ?? "all"} aria-label={group.type ? modelTypeLabel(group.type) : undefined}>
                 {group.type ? (
-                  <header className="mb-2">
-                    <h3 className="text-[0.92rem] font-medium text-ink">{modelTypeLabel(group.type)}</h3>
-                    <p className="text-[0.82rem] text-ink-muted">{modelTypeHint(group.type)}</p>
+                  <header className="mb-2.5">
+                    <h3 className="text-[0.95rem] font-medium text-ink">{modelTypeLabel(group.type)}</h3>
+                    <p className="text-[0.85rem] text-ink-muted">{modelTypeHint(group.type)}</p>
                   </header>
                 ) : null}
-                <ul className="grid gap-1.5">{group.kinds.map(option)}</ul>
+                <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">{group.kinds.map(option)}</ul>
               </section>
             ))}
           </div>
@@ -554,97 +588,59 @@ function KindPicker({ slot, onPick, trigger }: { slot: Slot; onPick: (kind: stri
 const requiredCount = (schema: JsonSchema) =>
   (schema.required ?? []).filter((r) => schema.properties?.[r]?.const === undefined).length;
 
-function ItemCard({
+// -- the pieces -------------------------------------------------------------------------------------
+
+/** One thing the file holds (a model, a channel, a person): its mark, its name, what it is, and where it stands. */
+function Card({
   mark,
   title,
-  subtitle,
+  line,
   detail,
+  tags = [],
+  marks = [],
   problems,
   missing = false,
-  index,
-  count,
-  onEdit,
-  onMove,
-  onRemove,
-  removeTitle,
-  removeText,
+  onOpen,
 }: {
-  mark?: string;
+  mark: ReactNode;
   title: string;
-  subtitle: string;
-  detail: string;
+  line: string;
+  detail?: string;
+  tags?: string[];
+  /** The channels a person is known on, as small marks. */
+  marks?: string[];
   problems: number;
   missing?: boolean;
-  /** Its place among the others, for the arrows that reorder them; none when the order is not the file's. */
-  index?: number;
-  count?: number;
-  onEdit: () => void;
-  onMove?: (by: -1 | 1) => void;
-  onRemove: () => Promise<void>;
-  removeTitle: string;
-  removeText: string;
+  onOpen: () => void;
 }) {
   const t = useT();
   return (
-    <li
-      className={cn(
-        "flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md border border-rule bg-paper-raised px-4 py-3",
-        problems > 0 && "border-brick/50",
-      )}
-    >
-      {mark ? <KindMark kind={mark} className="size-5 text-ink" label={false} /> : null}
-      <button type="button" onClick={onEdit} className="group min-w-0 flex-1 text-left">
-        <span className="flex flex-wrap items-baseline gap-x-2">
-          <span className="text-[0.95rem] text-ink group-hover:underline group-hover:underline-offset-4">{title}</span>
-          <span className="text-[0.85rem] text-ink-faint">{subtitle}</span>
+    <li>
+      <button type="button" onClick={onOpen} className="surface flex h-full w-full items-start gap-3.5 p-4 text-left">
+        {mark}
+        <span className="grid min-w-0 flex-1 gap-0.5">
+          <span className="flex items-center gap-2">
+            <span className="min-w-0 flex-1 truncate font-medium text-ink">{title}</span>
+            {marks.map((m) => (
+              <KindMark key={m} kind={m} className="size-4 text-ink-muted" label={false} />
+            ))}
+          </span>
+          <span className="truncate text-[0.9rem] text-ink-muted">{line}</span>
+          {detail ? <span className="truncate text-[0.85rem] text-ink-faint">{detail}</span> : null}
+          {tags.length ? (
+            <span className="mt-1.5 flex flex-wrap gap-1.5">
+              {tags.map((tag) => (
+                <Tag key={tag}>{tag}</Tag>
+              ))}
+            </span>
+          ) : null}
+          {problems || missing ? (
+            <Status tone="error" className="mt-1.5">
+              {missing ? t("cfg-kind-missing-short") : t("cfg-problems", { count: problems })}
+            </Status>
+          ) : null}
         </span>
-        {detail ? <span className="mt-0.5 block truncate text-[0.85rem] text-ink-muted">{detail}</span> : null}
       </button>
-      {problems || missing ? (
-        <span className="inline-flex items-center gap-1 text-[0.85rem] text-brick">
-          <CircleAlert className="size-3.5" aria-hidden="true" />
-          {missing ? t("cfg-kind-missing-short") : t("cfg-problems", { count: problems })}
-        </span>
-      ) : null}
-      <span className="flex items-center">
-        <Button variant="ghost" size="icon-sm" onClick={onEdit} aria-label={t("cfg-edit-item", { item: title })}>
-          <Pencil />
-        </Button>
-        {onMove && index !== undefined && count !== undefined ? (
-          <>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              disabled={index === 0}
-              onClick={() => onMove(-1)}
-              aria-label={t("cfg-move-up", { item: title })}
-            >
-              <ArrowUp />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              disabled={index === count - 1}
-              onClick={() => onMove(1)}
-              aria-label={t("cfg-move-down", { item: title })}
-            >
-              <ArrowDown />
-            </Button>
-          </>
-        ) : null}
-        <Confirm
-          trigger={
-            <Button variant="ghost" size="icon-sm" aria-label={t("cfg-remove-item", { item: title })}>
-              <Trash2 />
-            </Button>
-          }
-          title={removeTitle}
-          confirm={t("cfg-remove")}
-          onConfirm={onRemove}
-        >
-          {removeText}
-        </Confirm>
-      </span>
     </li>
   );
 }
@@ -655,14 +651,22 @@ function ItemSheet({
   mark,
   adding,
   onClose,
-  onCancelAdd,
+  onRemove,
+  removeTitle,
+  removeText,
+  order,
   children,
 }: {
   title: string;
   mark?: string;
   adding: boolean;
   onClose: () => void;
-  onCancelAdd: () => void;
+  /** Takes it out of the draft and closes; none for the one component a slot requires. */
+  onRemove?: () => void;
+  removeTitle: string;
+  removeText: string;
+  /** Its place among the others, when the order is the file's. */
+  order?: { item: string; index: number; count: number; move: (by: -1 | 1) => void };
   children: ReactNode;
 }) {
   const t = useT();
@@ -674,7 +678,7 @@ function ItemSheet({
       description={
         mark ? (
           <span className="inline-flex items-center gap-1.5 text-[0.85rem]">
-            <KindMark kind={mark} className="size-3.5" label={false} /> {mark}
+            <KindMark kind={mark} className="size-3.5" label={false} /> {kindName(mark)}
           </span>
         ) : undefined
       }
@@ -684,10 +688,51 @@ function ItemSheet({
           {children}
           <FormActions hint={t("cfg-sheet-note")}>
             {adding ? (
-              <Button variant="ghost" onClick={onCancelAdd}>
-                {t("cfg-cancel-add")}
-              </Button>
-            ) : null}
+              onRemove ? (
+                <Button variant="ghost" onClick={onRemove}>
+                  {t("cfg-cancel-add")}
+                </Button>
+              ) : null
+            ) : (
+              <>
+                {order && order.count > 1 ? (
+                  <span className="flex items-center">
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      disabled={order.index === 0}
+                      onClick={() => order.move(-1)}
+                      aria-label={t("cfg-move-up", { item: order.item })}
+                    >
+                      <ArrowUp />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      disabled={order.index === order.count - 1}
+                      onClick={() => order.move(1)}
+                      aria-label={t("cfg-move-down", { item: order.item })}
+                    >
+                      <ArrowDown />
+                    </Button>
+                  </span>
+                ) : null}
+                {onRemove ? (
+                  <Confirm
+                    trigger={
+                      <Button variant="ghost">
+                        <Trash2 /> {t("cfg-remove")}
+                      </Button>
+                    }
+                    title={removeTitle}
+                    confirm={t("cfg-remove")}
+                    onConfirm={async () => onRemove()}
+                  >
+                    {removeText}
+                  </Confirm>
+                ) : null}
+              </>
+            )}
             <Button onClick={onClose}>{t("cfg-done")}</Button>
           </FormActions>
         </div>

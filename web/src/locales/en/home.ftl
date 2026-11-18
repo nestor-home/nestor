@@ -41,14 +41,9 @@ home-say-idle = All quiet.
 
 ## The columns
 home-needs = What I need from you
-home-house = The house
 home-room-nobody = nobody
 home-room-someone = someone is there
 home-at-home = At home
-home-room-offline = { $count ->
-    [one] device offline
-   *[other] { $count } devices offline
-}
 home-away = Out
 home-now = Right now
 home-task-starting = starting
@@ -58,10 +53,7 @@ home-nothing-now = Nothing right now.
 home-next = Coming up
 home-quiet-now = Silence until { $until }, unless urgent.
 home-quiet-later = Quiet hours from { $from } to { $to }.
-home-upcoming = Follow-up to { $person } on { $channel } at { $time }.
-home-upcoming-someone = Follow-up on { $channel } at { $time }.
 home-upcoming-unless = Unless someone answers first.
-home-watch-triggered = triggered
 
 ## Its day, what it knows
 home-today = Today

@@ -1,19 +1,8 @@
 ## The frame around every screen: navigation, status line, account menu, command palette.
 
-nav-today = Today
 nav-journal = Journal
-nav-chat = Chat
-nav-group-household = Household
 nav-people = People
 nav-memories = Memories
-nav-watches = Watches
-nav-tasks = Tasks
-nav-house = Home
-nav-cameras = Cameras
-nav-group-agenda = Agenda
-nav-schedules = Reminders
-nav-messages = Messages
-nav-group-installation = Setup
 nav-connections = Connections
 nav-satellites = Satellites
 nav-system = System
@@ -34,10 +23,7 @@ shell-display = Display
 shell-theme-to-light = Switch to light
 shell-theme-to-dark = Switch to dark
 
-shell-live-open = live
 shell-live-connecting = connecting…
-shell-live-closed = offline
-shell-live-hint = Live journal
 shell-version = nestor { $version }
 shell-go-to = Go to…
 shell-palette-description = Find a section, a person, a service
@@ -64,11 +50,6 @@ attention-satellite-offline-detail = It no longer listens or speaks in the { $ro
 attention-understand = Details
 attention-task-failed = The task “{ $objective }” failed
 attention-component-down = { $name } is down
-shell-sidebar-toggle = Toggle the sidebar
-shell-sidebar-collapse = Collapse
-shell-sidebar-expand = Expand
-shell-open-menu = Open the menu
-shell-agent-online = online
 shell-agent-offline = offline
 shell-agent-label = { $assistant }, { $state }
 

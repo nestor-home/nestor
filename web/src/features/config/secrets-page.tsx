@@ -5,76 +5,75 @@ import { ApiError, api, keys, messageOf, type Secret, secretsQuery } from "@/api
 import { ConfirmFrame } from "@/components/confirm";
 import { Field } from "@/components/field";
 import { FormActions } from "@/components/form-actions";
+import { IconTile } from "@/components/marks";
 import { useNotify } from "@/components/notices";
 import { FormDialog } from "@/components/overlay-form";
-import { Section } from "@/components/page";
+import { RowList, Section } from "@/components/page";
 import { Empty, Failure, FormError, Loading, Notice } from "@/components/states";
+import { Status, Tag } from "@/components/status";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useT } from "@/i18n";
+import { ConfigFrame } from "./config-layout";
 
 /** The vault: secrets the file refers to as `${secret:name}`, never shown, only replaced. */
 export function SecretsPage() {
   const t = useT();
   const secrets = useQuery(secretsQuery);
   return (
-    <>
-      <h2 className="mb-2 font-serif text-[1.6rem] leading-tight text-ink">{t("cfg-secrets")}</h2>
-      <p className="mb-8 max-w-2xl text-sm text-pretty text-ink-muted">{t("cfg-secrets-intro")}</p>
-      <Section
-        title={t("cfg-secrets-list")}
-        count={secrets.data?.length}
-        aside={
-          <SecretForm
-            trigger={
-              <Button variant="outline" size="sm">
-                <Plus /> {t("cfg-secret-new")}
-              </Button>
-            }
-          />
-        }
-      >
+    <ConfigFrame
+      title={t("cfg-secrets")}
+      about={t("cfg-secrets-intro")}
+      actions={
+        <SecretForm
+          trigger={
+            <Button variant="accent" size="sm">
+              <Plus /> {t("cfg-secret-new")}
+            </Button>
+          }
+        />
+      }
+    >
+      <Section title={t("cfg-secrets-list")} count={secrets.data?.length}>
         {secrets.isPending ? (
           <Loading lines={3} />
         ) : secrets.isError ? (
           <Failure error={secrets.error} retry={() => void secrets.refetch()} />
         ) : secrets.data.length ? (
-          <ul className="divide-y divide-rule border-y border-rule">
+          <RowList>
             {secrets.data.map((s) => (
               <SecretRow key={s.name} secret={s} />
             ))}
-          </ul>
+          </RowList>
         ) : (
           <Empty hint={t("cfg-secrets-empty-hint")}>{t("cfg-secrets-empty")}</Empty>
         )}
       </Section>
-    </>
+    </ConfigFrame>
   );
 }
 
+/** A secret: its name, whether it holds a value (a preview, never the value), and which settings use it. */
 function SecretRow({ secret: s }: { secret: Secret }) {
   const t = useT();
   return (
-    <li className="flex flex-wrap items-start gap-x-4 gap-y-2 py-3.5">
-      <KeyRound className="mt-1 size-4 text-ink-faint" aria-hidden="true" />
-      <div className="min-w-0 flex-1">
-        <p className="font-mono text-[0.85rem] [overflow-wrap:anywhere] text-ink">{s.name}</p>
-        <p className="mt-0.5 text-[0.85rem] text-ink-muted">
-          {s.set ? (
-            t("cfg-secret-set", { preview: s.preview ?? "•••" })
-          ) : (
-            <span className="text-brick">{t("cfg-secret-unset")}</span>
-          )}
-        </p>
-        <p className="mt-1 text-xs text-ink-muted">
+    <li className="flex flex-wrap items-start gap-x-3.5 gap-y-3 px-4 py-3.5">
+      <IconTile icon={KeyRound} tone={s.set ? "ink" : "brick"} />
+      <div className="grid min-w-0 flex-1 basis-48 gap-1">
+        <p className="font-mono text-[0.9rem] [overflow-wrap:anywhere] text-ink">{s.name}</p>
+        {s.set ? (
+          <Status tone="ok">{t("cfg-secret-set", { preview: s.preview ?? "•••" })}</Status>
+        ) : (
+          <Status tone="error">{t("cfg-secret-unset")}</Status>
+        )}
+        <p className="flex flex-wrap items-center gap-1.5 text-[0.85rem] text-ink-muted">
           {s.used_by.length ? (
             <>
-              {t("cfg-secret-used-by")}{" "}
-              {s.used_by.map((path, i) => (
-                <span key={path}>
-                  {i > 0 ? ", " : null}
-                  <code className="text-[0.85rem] text-ink">{path}</code>
-                </span>
+              {t("cfg-secret-used-by")}
+              {s.used_by.map((path) => (
+                <Tag key={path} className="font-mono [overflow-wrap:anywhere]">
+                  {path}
+                </Tag>
               ))}
             </>
           ) : (

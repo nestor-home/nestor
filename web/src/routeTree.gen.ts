@@ -23,7 +23,6 @@ import { Route as AppSystemRouteImport } from './routes/_app/system'
 import { Route as InvitationTokenRouteImport } from './routes/invitation.$token'
 import { Route as AppAccountsIndexRouteImport } from './routes/_app/accounts/index'
 import { Route as AppAccountsAccountIdRouteImport } from './routes/_app/accounts/$accountId'
-import { Route as AppAccountsInvitationsRouteImport } from './routes/_app/accounts/invitations'
 import { Route as AppChatIndexRouteImport } from './routes/_app/chat/index'
 import { Route as AppChatChatRouteImport } from './routes/_app/chat/$chat'
 import { Route as AppConfigIndexRouteImport } from './routes/_app/config/index'
@@ -119,11 +118,6 @@ const AppAccountsIndexRoute = AppAccountsIndexRouteImport.update({
 const AppAccountsAccountIdRoute = AppAccountsAccountIdRouteImport.update({
   id: '/accounts/$accountId',
   path: '/accounts/$accountId',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppAccountsInvitationsRoute = AppAccountsInvitationsRouteImport.update({
-  id: '/accounts/invitations',
-  path: '/accounts/invitations',
   getParentRoute: () => AppRoute,
 } as any)
 const AppChatIndexRoute = AppChatIndexRouteImport.update({
@@ -288,7 +282,6 @@ export interface FileRoutesByFullPath {
   '/system': typeof AppSystemRoute
   '/invitation/$token': typeof InvitationTokenRoute
   '/accounts/$accountId': typeof AppAccountsAccountIdRoute
-  '/accounts/invitations': typeof AppAccountsInvitationsRoute
   '/chat/$chat': typeof AppChatChatRoute
   '/config/$section': typeof AppConfigSectionRoute
   '/config/history': typeof AppConfigHistoryRoute
@@ -329,7 +322,6 @@ export interface FileRoutesByTo {
   '/invitation/$token': typeof InvitationTokenRoute
   '/': typeof AppIndexRoute
   '/accounts/$accountId': typeof AppAccountsAccountIdRoute
-  '/accounts/invitations': typeof AppAccountsInvitationsRoute
   '/chat/$chat': typeof AppChatChatRoute
   '/config/$section': typeof AppConfigSectionRoute
   '/config/history': typeof AppConfigHistoryRoute
@@ -371,7 +363,6 @@ export interface FileRoutesById {
   '/invitation/$token': typeof InvitationTokenRoute
   '/_app/': typeof AppIndexRoute
   '/_app/accounts/$accountId': typeof AppAccountsAccountIdRoute
-  '/_app/accounts/invitations': typeof AppAccountsInvitationsRoute
   '/_app/chat/$chat': typeof AppChatChatRoute
   '/_app/config/$section': typeof AppConfigSectionRoute
   '/_app/config/history': typeof AppConfigHistoryRoute
@@ -416,7 +407,6 @@ export interface FileRouteTypes {
     | '/system'
     | '/invitation/$token'
     | '/accounts/$accountId'
-    | '/accounts/invitations'
     | '/chat/$chat'
     | '/config/$section'
     | '/config/history'
@@ -457,7 +447,6 @@ export interface FileRouteTypes {
     | '/invitation/$token'
     | '/'
     | '/accounts/$accountId'
-    | '/accounts/invitations'
     | '/chat/$chat'
     | '/config/$section'
     | '/config/history'
@@ -498,7 +487,6 @@ export interface FileRouteTypes {
     | '/invitation/$token'
     | '/_app/'
     | '/_app/accounts/$accountId'
-    | '/_app/accounts/invitations'
     | '/_app/chat/$chat'
     | '/_app/config/$section'
     | '/_app/config/history'
@@ -633,13 +621,6 @@ declare module '@tanstack/react-router' {
       path: '/accounts/$accountId'
       fullPath: '/accounts/$accountId'
       preLoaderRoute: typeof AppAccountsAccountIdRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/accounts/invitations': {
-      id: '/_app/accounts/invitations'
-      path: '/accounts/invitations'
-      fullPath: '/accounts/invitations'
-      preLoaderRoute: typeof AppAccountsInvitationsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/chat/': {
@@ -937,7 +918,6 @@ interface AppRouteChildren {
   AppSystemRoute: typeof AppSystemRoute
   AppIndexRoute: typeof AppIndexRoute
   AppAccountsAccountIdRoute: typeof AppAccountsAccountIdRoute
-  AppAccountsInvitationsRoute: typeof AppAccountsInvitationsRoute
   AppConnectionsConnectionIdRoute: typeof AppConnectionsConnectionIdRouteWithChildren
   AppConnectionsCatalogueRoute: typeof AppConnectionsCatalogueRoute
   AppConnectionsFailedRoute: typeof AppConnectionsFailedRoute
@@ -961,7 +941,6 @@ const AppRouteChildren: AppRouteChildren = {
   AppSystemRoute: AppSystemRoute,
   AppIndexRoute: AppIndexRoute,
   AppAccountsAccountIdRoute: AppAccountsAccountIdRoute,
-  AppAccountsInvitationsRoute: AppAccountsInvitationsRoute,
   AppConnectionsConnectionIdRoute: AppConnectionsConnectionIdRouteWithChildren,
   AppConnectionsCatalogueRoute: AppConnectionsCatalogueRoute,
   AppConnectionsFailedRoute: AppConnectionsFailedRoute,

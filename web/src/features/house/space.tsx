@@ -109,6 +109,11 @@ export function HouseSpace() {
           )}
         </Section>
 
+        {media.data && !media.data.available ? (
+          <Section title={t("hs-media")}>
+            <Empty hint={t("hs-media-off-hint")}>{t("hs-media-off")}</Empty>
+          </Section>
+        ) : null}
         {devices.length ? (
           <Section title={t("hs-media")} count={devices.length}>
             <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">

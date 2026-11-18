@@ -4,6 +4,7 @@ import type { Connection, Connector } from "@/api";
 import { ApiError } from "@/api/client";
 import { CopyField } from "@/components/copy-field";
 import { Field } from "@/components/field";
+import { FormActions } from "@/components/form-actions";
 import { PersonPicker } from "@/components/person-picker";
 import { FormError } from "@/components/states";
 import { Button } from "@/components/ui/button";
@@ -27,17 +28,21 @@ type FieldSpec = Connector["fields"][number];
 export function ConnectForm({
   connector,
   replaces,
+  preset,
   onConnected,
 }: {
   connector: Connector;
   replaces: string | null;
+  preset?: string; // the known server whose values the form starts with
   onConnected: (connection: Connection) => void;
 }) {
   const t = useT();
   const oauth = connector.auth === "oauth2";
   const discovered = connector.auth === "discovered";
   const [person, setPerson] = useState("");
-  const [values, setValues] = useState<Record<string, string>>({});
+  const [values, setValues] = useState<Record<string, string>>(
+    () => connector.presets.find((p) => p.name === preset)?.values ?? {},
+  );
   const { phase, connect, error } = useConnect(connector.kind, connector.auth, onConnected);
   const blocked = oauth && !connector.oauth?.registered;
   const busy = phase === "pending" || phase === "redirecting";
@@ -70,7 +75,7 @@ export function ConnectForm({
 
   return (
     <section aria-labelledby="connect-account" className="grid gap-4">
-      <h3 id="connect-account" className="border-b border-rule pb-2 font-serif text-lg font-normal">
+      <h3 id="connect-account" className="text-[1.15rem] text-ink">
         {t("conn-connect-account")}
       </h3>
       {oauth ? (
@@ -92,7 +97,7 @@ export function ConnectForm({
         {oauth ? null : main.map(input)}
         {extra.length ? (
           <Collapsible key={clientRequired ? "asked" : "closed"} defaultOpen={clientRequired}>
-            <CollapsibleTrigger className="group/auth inline-flex items-center gap-1.5 rounded-sm font-mono text-[0.72rem] tracking-wide text-ink-muted uppercase hover:text-ink">
+            <CollapsibleTrigger className="group/auth inline-flex items-center gap-1.5 rounded-sm text-[0.9rem] font-medium text-ink-muted hover:text-ink">
               <ChevronRight
                 className="size-3.5 transition-transform group-data-panel-open/auth:rotate-90"
                 aria-hidden="true"
@@ -100,7 +105,7 @@ export function ConnectForm({
               {t("conn-credentials")}
             </CollapsibleTrigger>
             <CollapsibleContent>
-              <div className="mt-4 grid gap-4 border-t border-dashed border-rule pt-4">
+              <div className="mt-3 grid gap-4">
                 {extra.map(input)}
                 {clientRequired && connector.oauth ? (
                   <div className="grid gap-1.5">
@@ -114,16 +119,11 @@ export function ConnectForm({
         ) : null}
         {blocked ? <p className="text-sm text-amber">{t("conn-client-first")}</p> : null}
         <FormError error={error} />
-        <div className="flex items-center gap-3">
+        <FormActions>
           <Button type="submit" disabled={blocked || busy}>
             {t(BUTTON[phase])}
           </Button>
-          {busy ? (
-            <span role="status" className="font-mono text-xs text-ink-muted">
-              {phase === "redirecting" ? t("conn-status-redirecting") : t("conn-status-pending")}
-            </span>
-          ) : null}
-        </div>
+        </FormActions>
       </form>
     </section>
   );

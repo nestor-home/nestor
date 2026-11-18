@@ -12,7 +12,9 @@ describe("signing in", () => {
     await user.type(await screen.findByLabelText("Login"), "lea");
     await user.type(screen.getByLabelText("Password"), "wrong");
     await user.click(screen.getByRole("button", { name: "Sign in" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Wrong login or password.");
+    const refusal = await screen.findByRole("alert");
+    expect(refusal).toHaveTextContent("Wrong login or password.");
+    expect(refusal).toHaveTextContent("An owner can set a new password from Accounts.");
 
     await user.clear(screen.getByLabelText("Password"));
     await user.type(screen.getByLabelText("Password"), "nestor");
@@ -27,7 +29,13 @@ describe("signing in", () => {
     await user.type(await screen.findByLabelText("Login"), "mathis");
     await user.type(screen.getByLabelText("Password"), "nestor");
     await user.click(screen.getByRole("button", { name: "Sign in" }));
-    await waitFor(() => expect(router.state.location.pathname).toBe("/journal"));
+    await waitFor(() => expect(router.state.location.pathname).toBe("/"));
+  });
+
+  it("is greeted by the agent before anything is asked", async () => {
+    db.signedIn = null;
+    renderApp("/login");
+    expect(await screen.findByText(/Sign in and I'll tell you how the house is doing\./)).toBeInTheDocument();
   });
 });
 
@@ -53,7 +61,7 @@ describe("accepting an invitation", () => {
     await user.clear(screen.getByLabelText("Confirm the password"));
     await user.type(screen.getByLabelText("Confirm the password"), "my grandmother's tea");
     await user.click(screen.getByRole("button", { name: "Accept the invitation" }));
-    await waitFor(() => expect(router.state.location.pathname).toBe("/journal"));
+    await waitFor(() => expect(router.state.location.pathname).toBe("/"));
     expect(db.accounts.some((a) => a.login === "odile" && a.role === "member" && a.person?.id === "odile")).toBe(true);
   });
 
@@ -61,5 +69,7 @@ describe("accepting an invitation", () => {
     db.signedIn = null;
     renderApp("/invitation/inv-perime");
     expect(await screen.findByRole("alert")).toHaveTextContent("Invitation not found.");
+    expect(screen.getByText(/Ask whoever invited you for a new one\./)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Go to sign-in" })).toHaveAttribute("href", "/login");
   });
 });

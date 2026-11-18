@@ -18,9 +18,9 @@ import { cn } from "@/lib/utils";
 import type { JournalSearch } from "./search";
 
 /**
- * The journal's facets as one row of filter buttons (shadcn's faceted filter: a Popover with a
- * searchable Command list). Each value shows its count for the other filters as they are.
- * Kinds combine; person, channel and room pick one.
+ * The journal's facets: on a wide screen one row of filter buttons (a Popover with a searchable Command
+ * list), on a phone one button that opens them all in a sheet. Each value shows its count for the other
+ * filters as they are. Kinds combine; person, channel and room pick one.
  */
 /** Filters that come from a link elsewhere (a task's page, a connection's activity…), shown so they can be removed. */
 const SUBJECTS = ["session", "conversation", "task", "watch", "connection", "satellite", "tone"] as const;
@@ -102,17 +102,18 @@ const cleared = (search: JournalSearch): JournalSearch => ({
 /** Filters arriving from a link (a task, a connection…): shown as chips that remove themselves. */
 function SubjectChips({ search, onChange }: { search: JournalSearch; onChange: (next: JournalSearch) => void }) {
   const t = useT();
-  return SUBJECTS.filter((key) => search[key]).map((key) => (
+  // the problems lane already says the journal is narrowed to what went wrong
+  return SUBJECTS.filter((key) => search[key] && !(key === "tone" && search.tone === "warning")).map((key) => (
     <Button
       key={key}
       variant="outline"
       size="sm"
-      className="max-w-full border-ink"
+      className="max-w-full rounded-full border-ink"
       onClick={() => onChange({ ...search, [key]: undefined })}
       aria-label={t("jr-subject-remove", { subject: t(`jr-subject-${key}`), id: search[key] ?? "" })}
     >
       {t(`jr-subject-${key}`)}
-      <span className="truncate font-mono text-[0.7rem] font-normal">{search[key]}</span>
+      <span className="truncate font-mono text-[0.75rem] font-normal">{search[key]}</span>
       <X className="text-ink-faint" aria-hidden="true" />
     </Button>
   ));
@@ -131,7 +132,7 @@ export function FilterBar({
   const groups = useGroups(facets, search, onChange);
   const active = groups.reduce((n, g) => n + g.selected.length, 0);
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <>
       {groups.map((g) => (
         <FacetFilter key={g.id} {...g} />
       ))}
@@ -142,13 +143,13 @@ export function FilterBar({
           {t("jr-facet-clear")}
         </Button>
       ) : null}
-    </div>
+    </>
   );
 }
 
 /**
- * Below `md`: one "Filtres" button opening a bottom sheet with the same facets as large rows,
- * and the chosen values kept visible above the stream as chips that remove themselves.
+ * On a phone: one button opening a bottom sheet with the same facets as large rows, and the chosen
+ * values kept visible above the stories as chips that remove themselves.
  */
 export function FilterSheet({
   facets,
@@ -166,24 +167,26 @@ export function FilterSheet({
     (g.facets ?? []).filter((f) => g.selected.includes(f.key)).map((f) => ({ group: g, facet: f })),
   );
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <>
       <BottomSheet
         open={open}
         onOpenChange={setOpen}
         title={t("jr-filters")}
         trigger={
-          <Button variant="outline">
+          <Button variant="outline" className="h-11 rounded-full bg-paper-raised px-4">
             <SlidersHorizontal aria-hidden="true" />
             {t("jr-filters")}
-            {chosen.length ? <span className="font-mono text-[0.72rem]">{chosen.length}</span> : null}
+            {chosen.length ? (
+              <span className="rounded-full bg-ink px-1.5 text-[0.75rem] text-paper tabular">{chosen.length}</span>
+            ) : null}
           </Button>
         }
       >
-        <div className="grid gap-6 px-5 pb-6">
+        <div className="grid gap-6 px-5 pt-4">
           {groups.map((g) =>
             g.facets?.length ? (
               <section key={g.id} aria-labelledby={`sheet-${g.id}`}>
-                <h3 id={`sheet-${g.id}`} className="caption mb-1.5">
+                <h3 id={`sheet-${g.id}`} className="caption mb-2">
                   {g.label}
                 </h3>
                 <RowList>
@@ -205,20 +208,20 @@ export function FilterSheet({
                                   : [f.key],
                             )
                           }
-                          className="flex min-h-11 w-full items-center gap-3 px-4 text-left text-sm aria-pressed:bg-paper-sunken"
+                          className="flex min-h-12 w-full items-center gap-3 px-4 text-left text-[0.98rem] aria-pressed:bg-paper-sunken"
                         >
                           <span
                             aria-hidden="true"
                             className={cn(
-                              "grid size-4 place-items-center rounded-sm border border-rule-strong",
+                              "grid size-5 place-items-center rounded-md border border-rule-strong",
                               on && "border-ink bg-ink text-paper",
                             )}
                           >
-                            {on ? <Check className="size-3" /> : null}
+                            {on ? <Check className="size-3.5" /> : null}
                           </span>
                           {f.icon}
                           <span className="flex-1 truncate">{f.label}</span>
-                          <span className="font-mono text-[0.72rem] text-ink-faint tabular">{number(f.count)}</span>
+                          <span className="text-[0.85rem] text-ink-muted tabular">{number(f.count)}</span>
                         </button>
                       </li>
                     );
@@ -247,7 +250,7 @@ export function FilterSheet({
           key={`${group.id}-${facet.key}`}
           variant="outline"
           size="sm"
-          className="border-ink"
+          className="rounded-full border-ink"
           onClick={() => group.onChange(group.selected.filter((k) => k !== facet.key))}
           aria-label={t("jr-chip-remove", { value: facet.label })}
         >
@@ -257,7 +260,7 @@ export function FilterSheet({
         </Button>
       ))}
       <SubjectChips search={search} onChange={onChange} />
-    </div>
+    </>
   );
 }
 
@@ -291,7 +294,7 @@ function FacetFilter({
           <Button
             variant="outline"
             size="sm"
-            className={cn("border-dashed", selected.length && "border-solid border-ink")}
+            className={cn("rounded-full border-dashed", selected.length && "border-solid border-ink")}
           />
         }
       >
@@ -299,10 +302,10 @@ function FacetFilter({
         {chosen.length ? (
           <span className="flex items-center gap-1 font-normal">
             {chosen.length > 2 ? (
-              <span className="font-mono text-[0.7rem]">{t("jr-facet-selected", { count: chosen.length })}</span>
+              <span className="text-[0.8rem]">{t("jr-facet-selected", { count: chosen.length })}</span>
             ) : (
               chosen.map((f) => (
-                <span key={f.key} className="rounded-sm bg-paper-sunken px-1.5 font-mono text-[0.7rem]">
+                <span key={f.key} className="rounded-full bg-paper-sunken px-2 text-[0.8rem]">
                   {f.label}
                 </span>
               ))
@@ -332,7 +335,7 @@ function FacetFilter({
                     </span>
                     {f.icon}
                     <span className="flex-1 truncate">{f.label}</span>
-                    <span className="font-mono text-[0.7rem] text-ink-faint tabular">{number(f.count)}</span>
+                    <span className="text-[0.8rem] text-ink-muted tabular">{number(f.count)}</span>
                   </CommandItem>
                 );
               })}

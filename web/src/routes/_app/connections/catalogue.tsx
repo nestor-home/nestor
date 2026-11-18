@@ -1,34 +1,23 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Guard } from "@/components/guard";
-import { PageHeader } from "@/components/page";
-import { ConnectSheet } from "@/features/connections/connect-sheet";
-import { Catalogue } from "@/features/connections/connections-overview";
-import { ConnectionsTabs } from "@/features/connections/tabs";
-import { useT } from "@/i18n";
+import { type CatalogueSearch, CatalogueView } from "@/features/connections/catalogue-view";
 
-interface Search {
-  connect?: string; // the connector whose sheet is open
-  replaces?: string; // the broken connection being reconnected
-}
+const text = (value: unknown) => (typeof value === "string" && value ? value : undefined);
 
 export const Route = createFileRoute("/_app/connections/catalogue")({
-  validateSearch: (search: Record<string, unknown>): Search => ({
-    ...(typeof search.connect === "string" && search.connect ? { connect: search.connect } : {}),
-    ...(typeof search.replaces === "string" && search.replaces ? { replaces: search.replaces } : {}),
-  }),
+  validateSearch: (search: Record<string, unknown>): CatalogueSearch => {
+    const [connect, replaces, preset] = [text(search.connect), text(search.replaces), text(search.preset)];
+    return { ...(connect ? { connect } : {}), ...(replaces ? { replaces } : {}), ...(preset ? { preset } : {}) };
+  },
   component: CataloguePage,
 });
 
 function CataloguePage() {
-  const { connect, replaces } = Route.useSearch();
+  const search = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
-  const t = useT();
   return (
     <Guard scope="connections:read">
-      <PageHeader title={t("conn-title")} />
-      <ConnectionsTabs />
-      <Catalogue onConnect={(kind) => void navigate({ search: { connect: kind } })} />
-      <ConnectSheet kind={connect} replaces={replaces} onClose={() => void navigate({ search: {} })} />
+      <CatalogueView search={search} onSearch={(next) => void navigate({ search: next })} />
     </Guard>
   );
 }

@@ -60,12 +60,12 @@ export function Files({
                   src={url}
                   alt={name}
                   loading="lazy"
-                  className="max-h-56 max-w-full rounded-lg border border-rule object-contain"
+                  className="max-h-56 max-w-full rounded-xl object-contain shadow-(--lift)"
                 />
               </a>
             ) : attachment.kind === "voice" || attachment.kind === "audio" ? (
               <div className="grid gap-1">
-                <p className="flex items-center gap-1.5 text-[0.82rem] text-ink-muted">
+                <p className="flex items-center gap-1.5 text-[0.85rem] text-ink-muted">
                   <Mic className="size-3.5" aria-hidden="true" />
                   <span className="truncate">{name}</span>
                   {sent && attachment.kind === "voice" && !attachment.transcript ? (
@@ -76,18 +76,18 @@ export function Files({
                   <track kind="captions" />
                 </audio>
                 {attachment.kind === "audio" && attachment.transcript ? (
-                  <p className="text-[0.88rem] text-ink-muted [overflow-wrap:anywhere]">{attachment.transcript}</p>
+                  <p className="text-[0.9rem] text-ink-muted [overflow-wrap:anywhere]">{attachment.transcript}</p>
                 ) : null}
               </div>
             ) : (
               <a
                 href={url}
                 download={attachment.name ?? true}
-                className="inline-flex max-w-full items-center gap-2 rounded-md border border-rule px-3 py-2 text-sm text-ink hover:border-ink"
+                className="surface inline-flex max-w-full items-center gap-2.5 px-3 py-2 text-[0.92rem] text-ink"
               >
                 <FileText className="size-4 shrink-0 text-ink-muted" aria-hidden="true" />
-                <span className="truncate">{name}</span>
-                <span className="shrink-0 font-mono text-xs text-ink-muted">{fileSize(attachment.size)}</span>
+                <span className="truncate font-medium">{name}</span>
+                <span className="shrink-0 text-[0.82rem] text-ink-muted tabular">{fileSize(attachment.size)}</span>
               </a>
             )}
           </li>

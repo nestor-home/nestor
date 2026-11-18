@@ -1,7 +1,6 @@
 ## Système : ce que l'instance a assemblé au démarrage, et l'état de chaque pièce.
 
 sys-title = Système
-sys-started = démarré
 sys-unwell = { $count ->
     [one] 1 composant à surveiller
    *[other] { $count } composants à surveiller
@@ -91,3 +90,31 @@ sys-executor-key-label = la clé
 sys-executor-passed = Nestor la passe à { $name } à chaque tâche : rien à coller.
 sys-executor-profile = Ajoutez ceci à la configuration de { $name } (le config.yaml d'un profil Hermes), puis mettez nestor_mcp: true sur cet exécutant dans la configuration de Nestor.
 sys-executor-setup-label = ce qu'il faut ajouter
+sys-parts = { $count ->
+    [one] 1 composant
+   *[other] { $count } composants
+}
+sys-attention = À regarder
+sys-instance = Cette instance
+sys-slot-voice = Voix
+sys-fix-down = Rien ne passe par lui pour l'instant. Vérifiez que le service derrière répond et que ses réglages sont bons.
+sys-fix-degraded = Il fonctionne en partie : ce qu'il signale dit ce qui manque.
+sys-configure = Configurer
+sys-fact-state = état
+sys-fact-service = service
+sys-fact-type = type
+sys-fact-fallback = secours
+sys-fact-adapter = adaptateur
+sys-fact-version = version
+sys-fact-can = sait
+sys-runs = Fait tourner { $agent }.
+sys-restart-waiting = { $count ->
+    [0] Un redémarrage est attendu.
+    [one] 1 changement attend un redémarrage.
+   *[other] { $count } changements attendent un redémarrage.
+}
+sys-restart = Redémarrer…
+sys-restart-title = Redémarrer { $agent } ?
+sys-restart-text = Il s'arrête proprement et repart en quelques secondes. Une conversation en cours est coupée, les tâches déléguées continuent, et chacun se reconnecte.
+sys-restart-now = Redémarrer maintenant
+upd-available-running = La { $latest } est sortie. Cette instance tourne sur la { $running }.

@@ -90,7 +90,7 @@ export function ObjectFields({
             defaultOpen={advancedTrouble}
             className="@xl:col-span-2"
           >
-            <CollapsibleTrigger className="group/adv inline-flex items-center gap-1.5 rounded-sm font-mono text-[0.72rem] tracking-wide text-ink-muted uppercase hover:text-ink">
+            <CollapsibleTrigger className="group/adv inline-flex items-center gap-1.5 rounded-sm text-[0.9rem] font-medium text-ink-muted hover:text-ink">
               <ChevronRight
                 className="size-3.5 transition-transform group-data-panel-open/adv:rotate-90"
                 aria-hidden="true"
@@ -98,7 +98,7 @@ export function ObjectFields({
               {t("cfg-advanced", { count: advanced.length })}
             </CollapsibleTrigger>
             <CollapsibleContent>
-              <div className="mt-4 grid gap-x-6 gap-y-5 border-t border-dashed border-rule pt-5 @xl:grid-cols-2">
+              <div className="mt-4 grid gap-x-6 gap-y-5 border-t border-rule pt-5 @xl:grid-cols-2">
                 {advanced.map(([name, node]) => (
                   <Property
                     key={name}
@@ -144,8 +144,8 @@ export function Property({
   if (control === "object") {
     const nested = problemsUnder(problems, path).filter((p) => keyOf(p.path) !== keyOf(path));
     return (
-      <fieldset className="grid min-w-0 gap-4 rounded-md border border-rule px-4 pt-2 pb-4 @xl:col-span-2">
-        <legend className="px-1.5 font-serif text-[1.05rem] text-ink">{label}</legend>
+      <fieldset className="grid min-w-0 gap-4 rounded-(--radius-surface) border border-rule px-4 pt-2 pb-4 @xl:col-span-2">
+        <legend className="px-1.5 text-[0.95rem] font-medium text-ink">{label}</legend>
         {helpOf(node) ? <p className="-mt-1 text-xs text-ink-muted">{helpOf(node)}</p> : null}
         <ObjectFields schema={node} root={root} path={path} />
         <Problems problems={here} label={label} />

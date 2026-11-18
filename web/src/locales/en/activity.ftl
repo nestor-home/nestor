@@ -26,3 +26,7 @@ act-for = For
 act-started = Since
 act-found = Found
 act-next = Next
+act-no-source = No source to watch.
+act-no-source-hint = { $assistant } cannot watch anything without a source: a mail account, a feed, a web page.
+act-connect-account = Connect an account
+act-add-source = Add a source

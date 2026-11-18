@@ -1,4 +1,7 @@
 import type { LucideIcon } from "lucide-react";
+import { Users } from "lucide-react";
+import type { PersonRef } from "@/api";
+import { BrandMark, type BrandSlug, KindMark } from "@/lib/brands";
 import { cn } from "@/lib/utils";
 
 const TILE = {
@@ -38,6 +41,40 @@ export function Pebble({ name, away, className }: { name: string; away?: boolean
   return (
     <span aria-hidden="true" data-away={away || undefined} className={cn("pebble size-7 text-[0.72rem]", className)}>
       {name.trim().charAt(0).toUpperCase()}
+    </span>
+  );
+}
+
+const TILE_BOX = "grid size-10 shrink-0 place-items-center rounded-xl bg-paper-sunken text-ink";
+
+/** A service's or a channel's logo on its tile, from the kind the API names: what leads every card of a
+ * service or an account. */
+export function ServiceTile({ kind, className }: { kind: string; className?: string }) {
+  return (
+    <span aria-hidden="true" className={cn(TILE_BOX, className)}>
+      <KindMark kind={kind} label={false} className="size-1/2" />
+    </span>
+  );
+}
+
+/** A brand's logo on its tile, when the code knows the brand itself. */
+export function BrandTile({ brand, className }: { brand: BrandSlug; className?: string }) {
+  return (
+    <span aria-hidden="true" className={cn(TILE_BOX, className)}>
+      <BrandMark brand={brand} label={false} className="size-1/2" />
+    </span>
+  );
+}
+
+/** Whose something is, as a mark: the person's pebble, or the household's when it is everyone's. */
+export function OwnerMark({ owner, className }: { owner: PersonRef | null; className?: string }) {
+  if (owner) return <Pebble name={owner.name} className={className} />;
+  return (
+    <span
+      aria-hidden="true"
+      className={cn("grid size-7 shrink-0 place-items-center rounded-full bg-paper-sunken text-ink-muted", className)}
+    >
+      <Users className="size-1/2" />
     </span>
   );
 }

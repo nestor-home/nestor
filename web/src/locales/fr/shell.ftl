@@ -1,19 +1,8 @@
 ## Le cadre de chaque écran : navigation, ligne d'état, menu du compte, palette de commandes.
 
-nav-today = Aujourd'hui
 nav-journal = Journal
-nav-chat = Discussion
-nav-group-household = Foyer
 nav-people = Personnes
 nav-memories = Souvenirs
-nav-watches = Veilles
-nav-tasks = Tâches
-nav-house = Maison
-nav-cameras = Caméras
-nav-group-agenda = Agenda
-nav-schedules = Réveils et rappels
-nav-messages = Messages
-nav-group-installation = Installation
 nav-connections = Connexions
 nav-satellites = Satellites
 nav-system = Système
@@ -34,10 +23,7 @@ shell-display = Affichage
 shell-theme-to-light = Passer en clair
 shell-theme-to-dark = Passer en sombre
 
-shell-live-open = en direct
 shell-live-connecting = connexion…
-shell-live-closed = hors ligne
-shell-live-hint = Journal en direct
 shell-version = nestor { $version }
 shell-go-to = Aller à…
 shell-palette-description = Chercher une section, une personne, un service
@@ -64,11 +50,6 @@ attention-satellite-offline-detail = Il n'écoute plus et ne parle plus dans « 
 attention-understand = Détails
 attention-task-failed = La tâche « { $objective } » a échoué
 attention-component-down = { $name } est en panne
-shell-sidebar-toggle = Afficher ou masquer la barre latérale
-shell-sidebar-collapse = Réduire
-shell-sidebar-expand = Déplier
-shell-open-menu = Ouvrir le menu
-shell-agent-online = en ligne
 shell-agent-offline = hors ligne
 shell-agent-label = { $assistant }, { $state }
 

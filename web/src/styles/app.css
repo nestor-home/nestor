@@ -29,15 +29,6 @@
   --color-input: var(--rule-strong);
   --color-ring: var(--ember);
 
-  --color-sidebar: var(--paper);
-  --color-sidebar-foreground: var(--ink-muted);
-  --color-sidebar-primary: var(--ink);
-  --color-sidebar-primary-foreground: var(--paper);
-  --color-sidebar-accent: var(--paper-sunken);
-  --color-sidebar-accent-foreground: var(--ink);
-  --color-sidebar-border: var(--rule);
-  --color-sidebar-ring: var(--ember);
-
   --color-paper: var(--paper);
   --color-paper-raised: var(--paper-raised);
   --color-paper-sunken: var(--paper-sunken);

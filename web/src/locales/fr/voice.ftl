@@ -1,6 +1,7 @@
 ## La voix d'une personne : son état sur sa page, puis l'enregistrement guidé, où { $assistant } parle à qui lit.
 
-people-voice = voix
+people-voice = Voix
+people-voice-why = { $assistant } s'en sert pour savoir qui parle à un satellite.
 people-voice-none = Pas encore enregistrée.
 people-voice-recorded = Enregistrée
 people-voice-learned = { $count ->

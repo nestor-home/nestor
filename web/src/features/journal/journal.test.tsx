@@ -73,7 +73,7 @@ describe("the journal", () => {
     const { stream } = renderApp("/journal");
     await stories();
     await user.click(screen.getByRole("button", { name: "Pause" }));
-    expect(screen.getByText("paused")).toBeInTheDocument();
+    expect(screen.getByText("Paused")).toBeInTheDocument();
     stream.emit(liveItem({ detail: "Waiting 1", links: { session: "s-a" } }));
     stream.emit(liveItem({ detail: "Waiting 2", links: { session: "s-b" } }));
     expect(screen.queryByText(/Waiting 1/)).not.toBeInTheDocument();
@@ -99,7 +99,7 @@ describe("the journal", () => {
     await waitFor(() => expect(router.state.location.search).toEqual({}));
   });
 
-  it("opens an event in the drawer from the keyboard, with its raw record, and closes it with Escape", async () => {
+  it("opens an event in its sheet from the keyboard, with its raw record, and closes it with Escape", async () => {
     const user = userEvent.setup();
     const { router } = renderApp("/journal");
     await stories();
@@ -107,7 +107,7 @@ describe("the journal", () => {
     expect(document.activeElement).toHaveAttribute("data-journal-entry");
     await user.keyboard("{Enter}");
     const sheet = await screen.findByRole("dialog");
-    expect(await within(sheet).findByRole("heading", { name: "JSON" })).toBeInTheDocument();
+    expect(await within(sheet).findByRole("heading", { name: "Raw record" })).toBeInTheDocument();
     expect(router.state.location.search).toHaveProperty("event");
     await user.keyboard("{Escape}");
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
@@ -133,11 +133,22 @@ describe("the journal", () => {
     await waitFor(async () => expect((await stories()).length).toBeGreaterThan(before));
   });
 
-  it("shows whether the agent is online beside its name", async () => {
-    const { stream } = renderApp("/journal");
+  it("narrows to a lane of stories, and to what went wrong", async () => {
+    const user = userEvent.setup();
+    const { router } = renderApp("/journal");
     await stories();
-    expect(screen.getByRole("link", { name: "Richie, online" })).toBeInTheDocument();
-    stream.status("closed");
-    expect(await screen.findByRole("link", { name: "Richie, offline" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Tasks" }));
+    await waitFor(() => expect(router.state.location.search).toEqual({ kinds: ["task"] }));
+    expect(screen.getByRole("button", { name: "Tasks" })).toHaveAttribute("aria-pressed", "true");
+    await user.click(screen.getByRole("button", { name: "Problems" }));
+    await waitFor(() => expect(router.state.location.search).toEqual({ tone: "warning" }));
+    await user.click(screen.getByRole("button", { name: "All" }));
+    await waitFor(() => expect(router.state.location.search).toEqual({}));
+  });
+
+  it("leads back to Today", async () => {
+    renderApp("/journal");
+    const trail = await screen.findByRole("navigation", { name: "Breadcrumbs" });
+    expect(within(trail).getByRole("link", { name: "Today" })).toHaveAttribute("href", "/");
   });
 });

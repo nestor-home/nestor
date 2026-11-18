@@ -37,7 +37,7 @@ import {
 import { Ago } from "@/components/ago";
 import { Chips } from "@/components/chips";
 import { Confirm } from "@/components/confirm";
-import { IconTile, Pebble, type TileTone } from "@/components/marks";
+import { BrandTile, IconTile, OwnerMark, Pebble, type TileTone } from "@/components/marks";
 import { useNotify } from "@/components/notices";
 import { OriginLink } from "@/components/origin-link";
 import { SheetPanel, SideSheet } from "@/components/overlay-form";
@@ -66,6 +66,7 @@ export function ActivityView() {
   const tasks = useQuery({ ...tasksQuery, enabled: useCan("tasks:read") });
   const schedules = useQuery({ ...schedulesQuery, enabled: useCan("schedules:read") });
   const watches = useQuery({ ...watchesQuery, enabled: useCan("watches:read") });
+  const canConfigure = useCan("config:manage");
   const [lane, setLane] = useState<Lane>("all");
   const [opened, setOpened] = useState<Opened | null>(null);
 
@@ -199,10 +200,8 @@ export function ActivityView() {
                     onClick={() => setOpened({ kind: "watch", item: w })}
                   >
                     <span className="flex items-center justify-between gap-3">
-                      <span className="grid size-10 place-items-center rounded-xl bg-paper-sunken" aria-hidden="true">
-                        <BrandMark brand={watchBrand(w.kinds[0])} className="size-5" label={false} />
-                      </span>
-                      {w.owner ? <Pebble name={w.owner.name} /> : null}
+                      <BrandTile brand={watchBrand(w.kinds[0])} />
+                      <OwnerMark owner={w.owner} />
                     </span>
                     <span className="line-clamp-3 flex-1 text-[1.02rem] leading-snug font-medium text-ink">
                       {w.what}
@@ -219,6 +218,28 @@ export function ActivityView() {
                 </li>
               ))}
             </ul>
+          ) : watches.data && watches.data.kinds.length === 0 ? (
+            <Empty
+              hint={t("act-no-source-hint", { assistant: me.assistant })}
+              action={
+                <span className="flex flex-wrap gap-2">
+                  <Link to="/connections/catalogue" className={buttonVariants({ variant: "outline", size: "sm" })}>
+                    {t("act-connect-account")}
+                  </Link>
+                  {canConfigure ? (
+                    <Link
+                      to="/config/$section"
+                      params={{ section: "inbound" }}
+                      className={buttonVariants({ variant: "outline", size: "sm" })}
+                    >
+                      {t("act-add-source")}
+                    </Link>
+                  ) : null}
+                </span>
+              }
+            >
+              {t("act-no-source")}
+            </Empty>
           ) : (
             <Empty>{t("watch-active-empty-hint")}</Empty>
           )}

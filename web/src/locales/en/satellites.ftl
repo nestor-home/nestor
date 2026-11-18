@@ -173,3 +173,4 @@ sat-privacy-who = Who counts
 sat-privacy-who-anyone = Anyone of the household
 sat-privacy-who-some = Only these people
 sat-privacy-no-person = Pick at least one person, or anyone of the household.
+sat-lede = The devices { $assistant } hears, speaks and sees through in each room.

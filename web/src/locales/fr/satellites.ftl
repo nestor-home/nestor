@@ -173,3 +173,4 @@ sat-privacy-who = Qui compte
 sat-privacy-who-anyone = N'importe qui du foyer
 sat-privacy-who-some = Seulement ces personnes
 sat-privacy-no-person = Choisissez au moins une personne, ou n'importe qui du foyer.
+sat-lede = Les appareils par lesquels { $assistant } entend, parle et voit dans chaque pièce.

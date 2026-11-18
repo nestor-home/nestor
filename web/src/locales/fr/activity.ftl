@@ -26,3 +26,7 @@ act-for = Pour
 act-started = Depuis
 act-found = Trouvé
 act-next = Prochain
+act-no-source = Aucune source à surveiller.
+act-no-source-hint = { $assistant } ne peut rien surveiller sans source : un compte de mail, un flux, une page web.
+act-connect-account = Connecter un compte
+act-add-source = Ajouter une source

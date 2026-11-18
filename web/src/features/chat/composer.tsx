@@ -112,23 +112,19 @@ export function Composer({
   const empty = !(text.trim() || files.length);
 
   return (
-    <div className="relative rounded-2xl border border-rule-strong bg-paper-raised shadow-[0_1px_0_var(--rule)] transition-[border-color,box-shadow] duration-200 focus-within:border-ink focus-within:shadow-[0_6px_24px_-12px_var(--rule-strong)]">
+    <div className="surface relative transition-shadow duration-200 focus-within:shadow-(--lift-hover)">
       {files.length ? (
         <ul className="flex flex-wrap gap-2 px-3 pt-3" aria-label={t("chat-attached")}>
           {files.map((file) => (
             <li key={file.id} className="group/file relative">
               {file.preview ? (
-                <img
-                  src={file.preview}
-                  alt={file.file.name ?? ""}
-                  className="size-16 rounded-lg border border-rule object-cover"
-                />
+                <img src={file.preview} alt={file.file.name ?? ""} className="size-16 rounded-xl object-cover" />
               ) : (
-                <span className="flex h-16 max-w-52 items-center gap-2 rounded-lg border border-rule bg-paper px-3">
+                <span className="flex h-16 max-w-52 items-center gap-2 rounded-xl bg-paper-sunken px-3">
                   <FileText className="size-5 shrink-0 text-ink-muted" aria-hidden="true" />
-                  <span className="min-w-0 text-[0.8rem]">
-                    <span className="block truncate text-ink">{file.file.name}</span>
-                    <span className="block font-mono text-ink-muted">{fileSize(file.size)}</span>
+                  <span className="min-w-0 text-[0.85rem]">
+                    <span className="block truncate font-medium text-ink">{file.file.name}</span>
+                    <span className="block text-ink-muted tabular">{fileSize(file.size)}</span>
                   </span>
                 </span>
               )}
@@ -136,7 +132,7 @@ export function Composer({
                 type="button"
                 onClick={() => setFiles((current) => current.filter((f) => f.id !== file.id))}
                 aria-label={t("chat-remove-file", { name: file.file.name ?? "" })}
-                className="absolute -top-1.5 -right-1.5 grid size-5 place-items-center rounded-full border border-rule-strong bg-paper-raised text-ink-muted hover:text-ink focus-visible:outline-2 focus-visible:outline-ember"
+                className="absolute -top-2 -right-2 grid size-6 place-items-center rounded-full bg-ink text-paper focus-visible:outline-2 focus-visible:outline-ember"
               >
                 <X className="size-3" aria-hidden="true" />
               </button>
@@ -253,7 +249,7 @@ function Recording({
         </Button>
       </Hint>
       <span className="live-dot size-2 rounded-full bg-ember" aria-hidden="true" />
-      <span className="font-mono text-[0.85rem] text-ink tabular-nums">{time}</span>
+      <span className="text-[0.95rem] text-ink tabular">{time}</span>
       <Level level={level} />
       <Hint label={t("chat-record-send")}>
         <Button
@@ -279,7 +275,7 @@ function Level({ level }: { level: number }) {
         <span
           // biome-ignore lint/suspicious/noArrayIndexKey: a fixed row of bars
           key={i}
-          className="w-1 rounded-full bg-ink-muted transition-[height] duration-100"
+          className="w-1 rounded-full bg-ember transition-[height] duration-100"
           style={{ height: `${Math.max(12, Math.min(100, level * weight * 140))}%` }}
         />
       ))}

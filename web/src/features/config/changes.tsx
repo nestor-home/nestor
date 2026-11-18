@@ -16,13 +16,13 @@ export function Changes({ diff, className }: { diff: ConfigDiff; className?: str
     ...diff.added.map((c) => ["added", c] as [Sort, ConfigChange]),
     ...diff.removed.map((c) => ["removed", c] as [Sort, ConfigChange]),
   ].sort((a, b) => a[1].path.localeCompare(b[1].path, undefined, { numeric: true }));
-  if (!rows.length) return <p className="text-sm text-ink-muted">{t("cfg-no-change")}</p>;
+  if (!rows.length) return <p className="text-[0.95rem] text-ink-muted">{t("cfg-no-change")}</p>;
   return (
-    <ul className={cn("divide-y divide-rule border-y border-rule", className)}>
+    <ul className={cn("surface divide-y divide-rule", className)}>
       {rows.map(([sort, change]) => {
         const Icon = MARK[sort];
         return (
-          <li key={`${sort}:${change.path}`} className="grid grid-cols-[1rem_1fr] gap-x-2 py-2.5">
+          <li key={`${sort}:${change.path}`} className="grid grid-cols-[1rem_1fr] gap-x-2.5 px-3.5 py-2.5">
             <Icon
               className={cn(
                 "mt-0.5 size-3.5",
@@ -31,8 +31,8 @@ export function Changes({ diff, className }: { diff: ConfigDiff; className?: str
               aria-label={t(`cfg-change-${sort}`)}
             />
             <div className="min-w-0">
-              <p className="font-mono text-[0.78rem] [overflow-wrap:anywhere] text-ink">{change.path}</p>
-              <p className="mt-0.5 font-mono text-[0.72rem] [overflow-wrap:anywhere] text-ink-muted">
+              <p className="font-mono text-[0.82rem] [overflow-wrap:anywhere] text-ink">{change.path}</p>
+              <p className="mt-0.5 text-[0.85rem] [overflow-wrap:anywhere] text-ink-muted">
                 {change.secret ? (
                   t("cfg-change-secret")
                 ) : sort === "added" ? (

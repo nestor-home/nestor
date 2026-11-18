@@ -47,7 +47,7 @@ export function MediaAccessSection({ satellite: s }: { satellite: Satellite }) {
         </FormDialog>
       }
     >
-      <Facts>
+      <Facts className="surface max-w-none p-5">
         {films ? (
           <Fact term={t("sat-media-camera")}>
             {access.camera ? t("sat-media-camera-on") : t("sat-media-camera-off")}

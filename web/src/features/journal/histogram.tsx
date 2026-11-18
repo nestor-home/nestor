@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * Activity over the selected time, one bar per bucket. Dragging across bars zooms the journal to
- * that span (the time-range picker does the same from the keyboard).
+ * that span (the period picker does the same from the keyboard).
  */
 export function Histogram({
   histogram,
@@ -18,7 +18,7 @@ export function Histogram({
   const t = useT();
   const ref = useRef<SVGSVGElement>(null);
   const [brush, setBrush] = useState<[number, number] | null>(null);
-  if (!histogram) return <div className="h-14" />;
+  if (!histogram) return <div className="h-[4.75rem]" />;
   const { counts, from, bucket_s } = histogram;
   const max = Math.max(1, ...counts);
   const n = counts.length;
@@ -42,14 +42,14 @@ export function Histogram({
   const high = brush ? Math.max(...brush) : -1;
   const total = counts.reduce((a, b) => a + b, 0);
   return (
-    <figure className="select-none">
+    <figure className="select-none rounded-(--radius-surface) bg-paper-sunken/60 px-4 pt-3 pb-2">
       <svg
         ref={ref}
         role="img"
         aria-label={t("jr-histogram-label", { count: total, from: moment(histogram.from), to: moment(histogram.to) })}
         viewBox={`0 0 ${n * 4} 40`}
         preserveAspectRatio="none"
-        className="h-12 w-full cursor-crosshair touch-none"
+        className="h-10 w-full cursor-crosshair touch-none"
         onPointerDown={(e) => {
           e.currentTarget.setPointerCapture(e.pointerId);
           const i = bucketAt(e.clientX);
@@ -73,7 +73,7 @@ export function Histogram({
           );
         })}
       </svg>
-      <figcaption className="mt-1 flex justify-between font-mono text-[0.66rem] text-ink-faint tabular">
+      <figcaption className="mt-1.5 flex justify-between text-[0.8rem] text-ink-muted tabular">
         <span>{moment(histogram.from)}</span>
         <span>{moment(histogram.to)}</span>
       </figcaption>

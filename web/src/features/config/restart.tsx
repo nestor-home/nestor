@@ -1,17 +1,19 @@
 /**
  * "Restart required": the written configuration applies only once a person restarts the instance.
- * Never automatic — the banner says what is pending, the dialog what a restart does, then it waits
+ * Never automatic: the banner says what is pending, the dialog what a restart does, then it waits
  * for the instance to answer again with nothing pending.
  */
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useRouter } from "@tanstack/react-router";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, RotateCw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { ApiError, api, type Me, meQuery, setCsrfToken } from "@/api";
 import { AgentFigure } from "@/components/agent-figure";
 import { ConfirmFrame } from "@/components/confirm";
+import { IconTile } from "@/components/marks";
 import { useNotify } from "@/components/notices";
 import { FormError } from "@/components/states";
+import { Tag } from "@/components/status";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useT } from "@/i18n";
@@ -122,11 +124,14 @@ export function Restarting({ phase, className }: { phase: RestartPhase; classNam
   const t = useT();
   const me = useMe();
   return (
-    <div role="status" className={cn("flex items-center gap-4 rounded-lg bg-paper-sunken/70 px-5 py-4", className)}>
-      <AgentFigure state="sleeping" size="md" className="relative" />
-      <p className="relative text-sm text-ink">
+    <div
+      role="status"
+      className={cn("flex items-center gap-4 rounded-(--radius-surface) bg-paper-sunken px-5 py-4", className)}
+    >
+      <AgentFigure state="sleeping" size="md" className="shrink-0" />
+      <p className="font-medium text-ink">
         {t("cfg-restarting", { agent: me.agent.name })}
-        <span className="block text-xs text-ink-muted">
+        <span className="block text-[0.9rem] font-normal text-ink-muted">
           {phase === "slow" ? t("cfg-restarting-slow") : t("cfg-restarting-hint")}
         </span>
       </p>
@@ -134,6 +139,7 @@ export function Restarting({ phase, className }: { phase: RestartPhase; classNam
   );
 }
 
+/** Above every page while saved changes wait: what is pending, and the restart a person starts. */
 export function RestartBanner() {
   const t = useT();
   const me = useMe();
@@ -141,27 +147,27 @@ export function RestartBanner() {
   const { phase, pending, error, clearError, restart } = useRestart();
   const [asking, setAsking] = useState(false);
 
-  if (phase !== "idle") return <Restarting phase={phase} className="mb-10" />;
+  if (phase !== "idle") return <Restarting phase={phase} className="mb-8" />;
   if (!me.restart_required) return null;
   const count = me.pending_changes.length;
   return (
-    <Collapsible className="mb-10 rounded-lg bg-paper-sunken/70">
-      <div className="relative flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
-        <AgentFigure state="concerned" size="sm" />
-        <div className="min-w-0 flex-1">
-          <p className="text-sm text-ink">
-            {t("cfg-restart-required")}
-            <span className="text-ink-muted"> · {t("cfg-pending", { count })}</span>
+    <Collapsible className="surface mb-8">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-3 px-4 py-3.5">
+        <IconTile icon={RotateCw} tone="amber" />
+        <div className="min-w-0 flex-1 basis-48">
+          <p className="font-medium text-ink">{t("cfg-restart-required")}</p>
+          <p className="flex flex-wrap items-center gap-x-2 text-[0.9rem] text-ink-muted">
+            {t("cfg-pending", { count })}
+            {count ? (
+              <CollapsibleTrigger className="group/pending inline-flex items-center gap-1 rounded-sm text-ink underline underline-offset-4">
+                {t("cfg-pending-show")}
+                <ChevronRight
+                  className="size-3.5 transition-transform group-data-panel-open/pending:rotate-90"
+                  aria-hidden="true"
+                />
+              </CollapsibleTrigger>
+            ) : null}
           </p>
-          {count ? (
-            <CollapsibleTrigger className="group/pending mt-0.5 inline-flex items-center gap-1 text-[0.82rem] text-ink-muted hover:text-ink">
-              <ChevronRight
-                className="size-3 transition-transform group-data-panel-open/pending:rotate-90"
-                aria-hidden="true"
-              />
-              {t("cfg-pending-show")}
-            </CollapsibleTrigger>
-          ) : null}
         </div>
         {canRestart ? (
           <ConfirmFrame
@@ -171,11 +177,7 @@ export function RestartBanner() {
               setAsking(next);
               if (!next) clearError();
             }}
-            trigger={
-              <Button variant="outline" size="sm">
-                {t("cfg-restart")}
-              </Button>
-            }
+            trigger={<Button variant="accent">{t("cfg-restart")}</Button>}
             title={t("cfg-restart-title", { agent: me.agent.name })}
             description={t("cfg-restart-text", { agent: me.agent.name })}
             details={
@@ -196,15 +198,15 @@ export function RestartBanner() {
             }
           />
         ) : (
-          <p className="text-xs text-ink-muted">{t("cfg-restart-ask")}</p>
+          <p className="text-[0.9rem] text-ink-muted">{t("cfg-restart-ask")}</p>
         )}
       </div>
       {count ? (
         <CollapsibleContent>
-          <ul className="relative grid gap-0.5 border-t border-dashed border-rule px-4 py-3 pl-12 font-mono text-[0.72rem] text-ink-muted">
+          <ul className="flex flex-wrap gap-1.5 border-t border-rule px-4 py-3">
             {me.pending_changes.map((path) => (
-              <li key={path} className="[overflow-wrap:anywhere]">
-                {path}
+              <li key={path}>
+                <Tag className="font-mono [overflow-wrap:anywhere]">{path}</Tag>
               </li>
             ))}
           </ul>

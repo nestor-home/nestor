@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { UpdateDialog } from "@/components/update-dialog";
 import { useT } from "@/i18n";
 import { useCan } from "@/lib/session";
-import { DeviceMark } from "./device-mark";
+import { DeviceTile } from "./device-mark";
 
 type Pending = Exclude<Reported["state"], "current">;
 
@@ -84,9 +84,11 @@ function SatelliteUpdate({
       onOpenChange={onOpenChange}
       tone="ink"
       mark={
-        <span className="mb-5 grid size-20 place-items-center rounded-2xl border border-rule bg-paper-raised text-ink shadow-sm">
-          <DeviceMark brand={s.brand} capabilities={s.capabilities} className="size-10" />
-        </span>
+        <DeviceTile
+          brand={s.brand}
+          capabilities={s.capabilities}
+          className="mb-5 size-20 rounded-2xl bg-paper-raised shadow-(--lift)"
+        />
       }
       title={t("sat-update-title", { name: s.name ?? s.id, version })}
       description={t("sat-update-description")}
@@ -119,7 +121,7 @@ function SatelliteUpdate({
           href={notes}
           target="_blank"
           rel="noreferrer"
-          className="flex items-center justify-between gap-4 rounded-lg border border-rule bg-paper-raised px-4 py-3 hover:border-ink"
+          className="surface flex items-center justify-between gap-4 px-4 py-3"
         >
           <span className="min-w-0">
             <span className="block text-sm text-ink">{t("sat-update-notes", { version })}</span>

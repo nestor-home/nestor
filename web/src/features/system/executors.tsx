@@ -1,16 +1,21 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Workflow } from "lucide-react";
 import { useState } from "react";
 import { api, type ExecutorInfo, executorsQuery, type IssuedKey, keys } from "@/api";
 import { Ago } from "@/components/ago";
 import { Confirm } from "@/components/confirm";
 import { CopyButton, CopyField } from "@/components/copy-field";
+import { FormActions } from "@/components/form-actions";
+import { BrandTile, IconTile } from "@/components/marks";
 import { FormDialog } from "@/components/overlay-form";
-import { RowList, Section } from "@/components/page";
+import { Section } from "@/components/page";
 import { Failure } from "@/components/states";
+import { Status } from "@/components/status";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/i18n";
-import { BrandMark, brandOf } from "@/lib/brands";
+import { brandOf } from "@/lib/brands";
 import { useCan } from "@/lib/session";
+import { cn } from "@/lib/utils";
 
 /**
  * The executors and their keys for Nestor's MCP server: what each reaches while it works, when its key was made and
@@ -32,14 +37,14 @@ export function ExecutorsSection() {
   const { url } = executors.data;
   return (
     <Section title={t("sys-executors")} count={executors.data.executors.length}>
-      <p className="mb-3 max-w-prose text-[0.85rem] text-ink-muted">
+      <p className={cn("mb-4 max-w-prose text-[0.95rem]", url ? "text-ink-muted" : "text-amber")}>
         {url ? t("sys-executors-intro", { url }) : t("sys-executors-off")}
       </p>
-      <RowList>
+      <ul className="grid gap-3 lg:grid-cols-2">
         {executors.data.executors.map((executor) => (
-          <ExecutorRow key={executor.name} executor={executor} manage={canManage && url !== null} />
+          <ExecutorCard key={executor.name} executor={executor} manage={canManage && url !== null} />
         ))}
-      </RowList>
+      </ul>
     </Section>
   );
 }
@@ -48,7 +53,7 @@ export function ExecutorsSection() {
 const MAKE = { label: "sys-executor-key-make", title: "sys-executor-make-title", body: "sys-executor-make-body" };
 const RENEW = { label: "sys-executor-key-renew", title: "sys-executor-renew-title", body: "sys-executor-renew-body" };
 
-function ExecutorRow({ executor, manage }: { executor: ExecutorInfo; manage: boolean }) {
+function ExecutorCard({ executor, manage }: { executor: ExecutorInfo; manage: boolean }) {
   const t = useT();
   const queryClient = useQueryClient();
   const [issued, setIssued] = useState<IssuedKey | null>(null);
@@ -65,14 +70,18 @@ function ExecutorRow({ executor, manage }: { executor: ExecutorInfo; manage: boo
   const { key } = executor;
   const making = key ? RENEW : MAKE;
   return (
-    <li className="grid grid-cols-[1.5rem_minmax(0,1fr)] items-start gap-x-4 gap-y-2 px-5 py-3 sm:grid-cols-[1.5rem_minmax(0,1fr)_auto]">
-      {brand ? <BrandMark brand={brand} className="mt-0.5 size-4.5 text-ink" /> : <span />}
-      <div className="min-w-0">
-        <p className="text-ink">{executor.name}</p>
-        <p className="text-[0.85rem] text-ink-muted">{t("sys-executor-tools", { tools: executor.nestor_tools })}</p>
-        <p className="mt-0.5 text-xs text-ink-faint">
-          {key ? (
-            <>
+    <li className="surface flex flex-col gap-4 p-5">
+      <div className="flex items-start gap-3.5">
+        {brand ? <BrandTile brand={brand} /> : <IconTile icon={Workflow} />}
+        <div className="min-w-0">
+          <p className="font-medium [overflow-wrap:anywhere] text-ink">{executor.name}</p>
+          <p className="text-[0.92rem] text-ink-muted">{t("sys-executor-tools", { tools: executor.nestor_tools })}</p>
+        </div>
+      </div>
+      <div className="mt-auto flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-t border-rule pt-3">
+        {key ? (
+          <Status tone="ok">
+            <span>
               {t("sys-executor-key-made")} <Ago iso={key.issued_at} />
               {" · "}
               {key.last_used_at ? (
@@ -82,43 +91,43 @@ function ExecutorRow({ executor, manage }: { executor: ExecutorInfo; manage: boo
               ) : (
                 t("sys-executor-key-unused")
               )}
-            </>
-          ) : (
-            t("sys-executor-no-key")
-          )}
-        </p>
-      </div>
-      {manage ? (
-        <div className="col-start-2 flex flex-wrap gap-2 sm:col-start-3 sm:justify-end">
-          <Confirm
-            trigger={
-              <Button size="sm" variant={key ? "secondary" : "accent"}>
-                {t(making.label)}
-              </Button>
-            }
-            title={t(making.title, { name: executor.name })}
-            confirm={t(making.label)}
-            tone={key ? "destructive" : "accent"}
-            onConfirm={() => issue.mutateAsync()}
-          >
-            {t(making.body, { name: executor.name, tools: executor.nestor_tools })}
-          </Confirm>
-          {key ? (
+            </span>
+          </Status>
+        ) : (
+          <Status tone="idle">{t("sys-executor-no-key")}</Status>
+        )}
+        {manage ? (
+          <div className="flex flex-wrap gap-2">
             <Confirm
               trigger={
-                <Button size="sm" variant="destructive">
-                  {t("sys-executor-key-revoke")}
+                <Button size="sm" variant={key ? "outline" : "accent"}>
+                  {t(making.label)}
                 </Button>
               }
-              title={t("sys-executor-revoke-title", { name: executor.name })}
-              confirm={t("sys-executor-key-revoke")}
-              onConfirm={() => revoke.mutateAsync()}
+              title={t(making.title, { name: executor.name })}
+              confirm={t(making.label)}
+              tone={key ? "destructive" : "accent"}
+              onConfirm={() => issue.mutateAsync()}
             >
-              {t("sys-executor-revoke-body", { name: executor.name })}
+              {t(making.body, { name: executor.name, tools: executor.nestor_tools })}
             </Confirm>
-          ) : null}
-        </div>
-      ) : null}
+            {key ? (
+              <Confirm
+                trigger={
+                  <Button size="sm" variant="destructive">
+                    {t("sys-executor-key-revoke")}
+                  </Button>
+                }
+                title={t("sys-executor-revoke-title", { name: executor.name })}
+                confirm={t("sys-executor-key-revoke")}
+                onConfirm={() => revoke.mutateAsync()}
+              >
+                {t("sys-executor-revoke-body", { name: executor.name })}
+              </Confirm>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
       <FormDialog
         open={issued !== null}
         onOpenChange={(open) => (open ? null : setIssued(null))}
@@ -140,7 +149,7 @@ function IssuedKeyView({ executor, issued, close }: { executor: ExecutorInfo; is
       <CopyField value={issued.key} label={t("sys-executor-key-label")} />
       {issued.setup ? (
         <div className="grid gap-2">
-          <p className="text-[0.85rem] text-ink-muted">{t("sys-executor-profile", { name: executor.name })}</p>
+          <p className="text-[0.92rem] text-ink-muted">{t("sys-executor-profile", { name: executor.name })}</p>
           <div className="relative">
             <pre className="overflow-x-auto rounded-md border border-rule-strong bg-paper-sunken px-3 py-2 pr-20 font-mono text-[0.75rem] text-ink">
               {issued.setup}
@@ -151,11 +160,11 @@ function IssuedKeyView({ executor, issued, close }: { executor: ExecutorInfo; is
           </div>
         </div>
       ) : (
-        <p className="text-[0.85rem] text-ink-muted">{t("sys-executor-passed", { name: executor.name })}</p>
+        <p className="text-[0.92rem] text-ink-muted">{t("sys-executor-passed", { name: executor.name })}</p>
       )}
-      <Button className="justify-self-end" onClick={close}>
-        {t("action-close")}
-      </Button>
+      <FormActions>
+        <Button onClick={close}>{t("action-close")}</Button>
+      </FormActions>
     </div>
   );
 }

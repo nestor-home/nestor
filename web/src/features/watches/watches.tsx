@@ -1,21 +1,26 @@
+/**
+ * A watch on its page: what it keeps an eye on and for whom, how often it reports, what it found so far,
+ * then each thing it found as the journal tells it.
+ */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate } from "@tanstack/react-router";
-import { api, isMissing, keys, type Watch, watchesQuery, watchQuery } from "@/api";
+import { useNavigate } from "@tanstack/react-router";
+import { Radar, Repeat, Trash2 } from "lucide-react";
+import { api, isMissing, keys, type Watch, watchQuery } from "@/api";
 import { Ago } from "@/components/ago";
 import { Confirm } from "@/components/confirm";
 import { type Crumb, Crumbs } from "@/components/crumbs";
+import { BrandTile, IconTile, Pebble } from "@/components/marks";
 import { useNotify } from "@/components/notices";
 import { OriginLink } from "@/components/origin-link";
-import { PageHeader, RowArrow, RowList, Section, WithAside } from "@/components/page";
+import { PageHeader, Section } from "@/components/page";
 import { Empty, Failure, Loading } from "@/components/states";
-import { Tag } from "@/components/status";
 import { Button } from "@/components/ui/button";
 import { SubjectStory } from "@/features/journal/subject-story";
 import { useT } from "@/i18n";
 import { BrandMark, type BrandSlug, brandOf } from "@/lib/brands";
 import { moment } from "@/lib/dates";
 import { personName } from "@/lib/people";
-import { useCan, useMe } from "@/lib/session";
+import { useCan } from "@/lib/session";
 
 /** The mark of what a watch watches: the kinds Nestor's sources bring, else a brand (a webhook named `github`). */
 const KIND_MARKS: Record<string, BrandSlug> = { mail: "email", feed: "rss", page: "web-page" };
@@ -29,85 +34,9 @@ export function WatchKind({ kind }: { kind: string }) {
   const t = useT();
   return (
     <span className="inline-flex items-center gap-1">
-      <BrandMark brand={KIND_MARKS[kind] ?? brandOf(kind) ?? "webhook"} className="size-3.5" label={false} />
+      <BrandMark brand={watchBrand(kind)} className="size-3.5" label={false} />
       {t("watch-kind", { kind })}
     </span>
-  );
-}
-
-export function WatchesList() {
-  const t = useT();
-  const me = useMe();
-  const canConfigure = useCan("config:manage");
-  const watches = useQuery(watchesQuery);
-  if (watches.isPending) return <Loading lines={2} />;
-  if (watches.isError) return <Failure error={watches.error} retry={() => void watches.refetch()} />;
-  const sources = watches.data.kinds; // what the plugged sources can bring
-  return (
-    <>
-      {sources.length === 0 ? (
-        <Empty
-          className="mb-8"
-          hint={t("watch-no-source-hint", { assistant: me.assistant })}
-          action={
-            <span className="flex flex-wrap gap-x-4 gap-y-1">
-              <Link to="/connections/catalogue" className="text-[0.85rem] text-ember hover:underline">
-                {t("watch-connect-account")}
-              </Link>
-              {canConfigure ? (
-                <Link
-                  to="/config/$section"
-                  params={{ section: "inbound" }}
-                  className="text-[0.85rem] text-ember hover:underline"
-                >
-                  {t("watch-add-source")}
-                </Link>
-              ) : null}
-            </span>
-          }
-        >
-          {t("watch-no-source")}
-        </Empty>
-      ) : null}
-      <Section title={t("watch-active")} count={watches.data.watches.length}>
-        {watches.data.watches.length === 0 ? (
-          <Empty hint={t("watch-active-empty-hint")}>{t("watch-active-empty")}</Empty>
-        ) : (
-          <RowList>
-            {watches.data.watches.map((w) => (
-              <li key={w.id}>
-                <Link
-                  to="/watches/$watchId"
-                  params={{ watchId: w.id }}
-                  className="group grid gap-x-6 gap-y-1 px-5 py-3.5 hover:bg-paper-sunken/60 sm:grid-cols-[minmax(0,1fr)_auto_1rem] sm:items-center"
-                >
-                  <span className="min-w-0">
-                    <span className="block text-ink">{w.what}</span>
-                    <span className="mt-0.5 flex flex-wrap gap-x-3 text-[0.85rem] text-ink-muted">
-                      <span>{t("watch-for", { name: personName(w.owner) })}</span>
-                      {w.kinds.map((k) => (
-                        <WatchKind key={k} kind={k} />
-                      ))}
-                      <span>{w.once ? t("watch-once") : t("watch-every-time")}</span>
-                    </span>
-                  </span>
-                  <span className="text-[0.85rem] text-ink-muted">
-                    {w.last_triggered_at ? (
-                      <>
-                        {t("watch-triggered-count", { count: w.triggered })} · <Ago iso={w.last_triggered_at} />
-                      </>
-                    ) : (
-                      t("watch-never-triggered")
-                    )}
-                  </span>
-                  <RowArrow />
-                </Link>
-              </li>
-            ))}
-          </RowList>
-        )}
-      </Section>
-    </>
   );
 }
 
@@ -149,6 +78,7 @@ function Loaded({ watch: w, trail }: { watch: Watch; trail: Crumb[] }) {
         title={w.what}
         meta={
           <>
+            {w.owner ? <Pebble name={w.owner.name} className="size-6 text-[0.65rem]" /> : null}
             <span>{t("watch-for", { name: personName(w.owner) })}</span>
             <span>{t("watch-created", { when: moment(w.created_at) })}</span>
             {w.until ? <span>{t("watch-until", { when: moment(w.until) })}</span> : null}
@@ -157,7 +87,11 @@ function Loaded({ watch: w, trail }: { watch: Watch; trail: Crumb[] }) {
         actions={
           canCancel ? (
             <Confirm
-              trigger={<Button variant="destructive">{t("watch-cancel-action")}</Button>}
+              trigger={
+                <Button variant="destructive">
+                  <Trash2 /> {t("watch-cancel-action")}
+                </Button>
+              }
               title={t("watch-cancel-title")}
               confirm={t("watch-cancel")}
               onConfirm={() => cancel.mutateAsync()}
@@ -167,33 +101,54 @@ function Loaded({ watch: w, trail }: { watch: Watch; trail: Crumb[] }) {
           ) : null
         }
       />
-      <WithAside>
+      <div className="grid gap-10">
+        <div className="grid gap-4">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="surface flex flex-col gap-3 p-4">
+              <p className="text-[0.9rem] font-medium text-ink-muted">{t("watch-watches")}</p>
+              <ul className="mt-auto grid gap-2">
+                {w.kinds.map((k) => (
+                  <li key={k} className="flex items-center gap-3 font-medium text-ink">
+                    <BrandTile brand={watchBrand(k)} className="size-9" />
+                    {t("watch-kind", { kind: k })}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="surface flex flex-col gap-3 p-4">
+              <p className="text-[0.9rem] font-medium text-ink-muted">{t("watch-rhythm")}</p>
+              <p className="mt-auto flex items-center gap-3 text-ink">
+                <IconTile icon={Repeat} className="size-9" />
+                {w.once ? t("watch-rhythm-once") : t("watch-rhythm-every")}
+              </p>
+            </div>
+            <div className="surface flex flex-col gap-3 p-4">
+              <p className="text-[0.9rem] font-medium text-ink-muted">{t("watch-so-far")}</p>
+              <p className="mt-auto flex items-center gap-3">
+                <IconTile icon={Radar} tone={w.triggered ? "ember" : "watch"} className="size-9" />
+                <span className="min-w-0">
+                  <span className={w.triggered ? "block font-medium text-ink" : "block text-ink-muted"}>
+                    {w.triggered ? t("watch-triggered-count", { count: w.triggered }) : t("watch-never-triggered")}
+                  </span>
+                  {w.last_triggered_at ? (
+                    <span className="block text-[0.85rem] text-ink-muted">
+                      {t("watch-last")} <Ago iso={w.last_triggered_at} />
+                    </span>
+                  ) : null}
+                </span>
+              </p>
+            </div>
+          </div>
+          {w.origin ? (
+            <p className="text-[0.92rem] text-ink-muted first-letter:uppercase">
+              {t("watch-asked-in")} <OriginLink origin={w.origin} />
+            </p>
+          ) : null}
+        </div>
         <Section title={t("watch-found")} count={w.triggered}>
           <SubjectStory filters={{ watch: w.id }} empty={t("watch-found-empty")} />
         </Section>
-        <aside className="grid content-start gap-6 text-sm">
-          <div>
-            <p className="caption mb-1.5">{t("watch-watches")}</p>
-            <p className="flex flex-wrap gap-1">
-              {w.kinds.map((k) => (
-                <Tag key={k}>
-                  <WatchKind kind={k} />
-                </Tag>
-              ))}
-            </p>
-          </div>
-          <div>
-            <p className="caption mb-1.5">{t("watch-rhythm")}</p>
-            <p>{w.once ? t("watch-rhythm-once") : t("watch-rhythm-every")}</p>
-          </div>
-          {w.origin ? (
-            <div>
-              <p className="caption mb-1.5">{t("watch-asked-in")}</p>
-              <OriginLink origin={w.origin} />
-            </div>
-          ) : null}
-        </aside>
-      </WithAside>
+      </div>
     </>
   );
 }

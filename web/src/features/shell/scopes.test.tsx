@@ -11,43 +11,46 @@ function signInAs(role: Role) {
   db.signedIn = account.id;
 }
 
-const ALL = [
-  "Today",
-  "Journal",
-  "People",
-  "Memories",
-  "Watches",
-  "Tasks",
-  "Connections",
-  "Satellites",
-  "System",
-  "Accounts",
-];
+const SPACES = ["Today", "Talk", "Ongoing", "The house", "Settings"];
 
-/** The sections the navigation offers, by accessible name. */
-async function sections() {
+/** The spaces the navigation offers, by accessible name. */
+async function spaces() {
   const nav = await screen.findByRole("navigation", { name: "Sections" });
-  return ALL.filter((name) => within(nav).queryByRole("link", { name }));
+  return SPACES.filter((name) => within(nav).queryByRole("link", { name: new RegExp(`${name}$`) }));
+}
+
+/** What Settings holds for this account, by the title of each card. */
+async function settings() {
+  await screen.findByRole("heading", { level: 1, name: "Settings" });
+  return ["Connections", "Satellites", "Accounts", "Configuration", "System"].filter((name) =>
+    screen.queryByRole("link", { name: new RegExp(`^${name}`) }),
+  );
 }
 
 describe("what the scopes allow", () => {
-  it("shows every section to an owner", async () => {
+  it("shows every space to an owner, and everything the installation is made of", async () => {
+    renderApp("/settings");
+    expect(await spaces()).toEqual(SPACES);
+    expect(await settings()).toEqual(["Connections", "Satellites", "Accounts", "Configuration", "System"]);
+  });
+
+  it("says where one is: a page reached from a space keeps that space current", async () => {
     renderApp("/journal");
-    expect(await sections()).toEqual(ALL);
+    const nav = await screen.findByRole("navigation", { name: "Sections" });
+    expect(within(nav).getByRole("link", { name: /Today$/ })).toHaveAttribute("aria-current", "page");
   });
 
   it("hides accounts from a guest, and explains it on a direct visit", async () => {
     signInAs("guest");
     renderApp("/accounts");
-    expect(await sections()).not.toContain("Accounts");
     expect(await screen.findByRole("heading", { name: "Restricted section" })).toBeInTheDocument();
   });
 
-  it("gives a member only their own corner", async () => {
+  it("gives a member the household and their own connections, not the installation", async () => {
     signInAs("member");
-    renderApp("/journal");
-    // reading the household shows its watches and tasks; changing them is for administrators
-    expect(await sections()).toEqual(["Today", "Journal", "People", "Memories", "Watches", "Tasks", "Connections"]);
+    renderApp("/settings");
+    expect(await spaces()).toEqual(SPACES);
+    expect(await settings()).toEqual(["Connections"]);
   });
 
   it("hides pairing from whoever may only look at satellites", async () => {
@@ -59,8 +62,8 @@ describe("what the scopes allow", () => {
 
   it("sends a signed-out visitor to the login page, remembering where they were going", async () => {
     db.signedIn = null;
-    const { router } = renderApp("/tasks");
+    const { router } = renderApp("/activity");
     expect(await screen.findByRole("heading", { name: "Sign in" })).toBeInTheDocument();
-    expect(router.state.location.search).toEqual({ next: "/tasks" });
+    expect(router.state.location.search).toEqual({ next: "/activity" });
   });
 });

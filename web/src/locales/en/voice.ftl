@@ -1,6 +1,7 @@
 ## A person's voice: its state on their page, then the guided recording, where { $assistant } talks to whoever reads.
 
-people-voice = voice
+people-voice = Voice
+people-voice-why = { $assistant } uses it to tell who is talking to a satellite.
 people-voice-none = Not recorded yet.
 people-voice-recorded = Recorded
 people-voice-learned = { $count ->

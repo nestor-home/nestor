@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ConnectionSettings, useConnection } from "@/features/connections/connection-detail";
+import { ConnectionSettings, useConnection } from "@/features/connections/connection-view";
 
 export const Route = createFileRoute("/_app/connections/$connectionId/settings")({ component: Page });
 

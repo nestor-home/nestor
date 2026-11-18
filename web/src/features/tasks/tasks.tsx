@@ -1,25 +1,30 @@
+/**
+ * A task's whole run on its page: what was asked and where it stands, its outcome and the files it made,
+ * who asked and how the answer reached them, its steps as they came, then its trace in the journal.
+ */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
-import { Volume2 } from "lucide-react";
-import { api, isMissing, keys, type Task, type TaskStatus, taskQuery, tasksQuery } from "@/api";
+import { CircleSlash, Paperclip, TriangleAlert, Volume2, Workflow, X } from "lucide-react";
+import { api, isMissing, keys, type Task, type TaskStatus, taskQuery } from "@/api";
 import { API_BASE } from "@/api/client";
 import { Ago } from "@/components/ago";
 import { Confirm } from "@/components/confirm";
 import { type Crumb, Crumbs } from "@/components/crumbs";
+import { IconTile, Pebble } from "@/components/marks";
 import { useNotify } from "@/components/notices";
 import { OriginLink } from "@/components/origin-link";
-import { PageHeader, RowArrow, RowList, Section, WithAside } from "@/components/page";
+import { Fact, Facts, PageHeader, Section, WithAside } from "@/components/page";
 import { Empty, Failure, Loading } from "@/components/states";
 import { Status, type StatusTone } from "@/components/status";
 import { Button } from "@/components/ui/button";
 import { Files } from "@/features/journal/attachments";
 import { SubjectStory } from "@/features/journal/subject-story";
 import { useT } from "@/i18n";
-import { BrandMark, brandOf } from "@/lib/brands";
+import { BrandMark, brandName, brandOf } from "@/lib/brands";
+import { moment } from "@/lib/dates";
 import { taskStatusLabel } from "@/lib/labels";
-import { personName } from "@/lib/people";
 import { useCan } from "@/lib/session";
 import { duration } from "@/lib/time";
+import { cn } from "@/lib/utils";
 
 const TONE: Record<TaskStatus, StatusTone> = { running: "accent", completed: "ok", failed: "error", cancelled: "idle" };
 
@@ -27,77 +32,14 @@ export function TaskStatusMark({ status }: { status: TaskStatus }) {
   return <Status tone={TONE[status]}>{taskStatusLabel(status)}</Status>;
 }
 
+/** Who does the work: the executor's mark and the name people know it by. */
 function Executor({ name }: { name: string }) {
   const brand = brandOf(name);
   return (
-    <span className="inline-flex items-center gap-1.5 text-[0.85rem] text-ink-muted">
+    <span className="inline-flex items-center gap-1.5">
       {brand ? <BrandMark brand={brand} className="size-3.5" label={false} /> : null}
-      {name}
+      {brand ? brandName(brand) : name}
     </span>
-  );
-}
-
-export function TasksList() {
-  const t = useT();
-  const tasks = useQuery(tasksQuery);
-  if (tasks.isPending) return <Loading lines={3} />;
-  if (tasks.isError) return <Failure error={tasks.error} retry={() => void tasks.refetch()} />;
-  return (
-    <>
-      <Section title={t("task-running")} count={tasks.data.running.length}>
-        {tasks.data.running.length === 0 ? (
-          <Empty hint={t("task-running-empty-hint")}>{t("task-running-empty")}</Empty>
-        ) : (
-          <TaskRows tasks={tasks.data.running} />
-        )}
-      </Section>
-      <Section title={t("task-done")} count={tasks.data.recent.length}>
-        {tasks.data.recent.length === 0 ? (
-          <Empty>{t("task-done-empty")}</Empty>
-        ) : (
-          <TaskRows tasks={tasks.data.recent} />
-        )}
-      </Section>
-    </>
-  );
-}
-
-function TaskRows({ tasks }: { tasks: Task[] }) {
-  const t = useT();
-  return (
-    <RowList>
-      {tasks.map((task) => (
-        <li key={task.id}>
-          <Link
-            to="/tasks/$taskId"
-            params={{ taskId: task.id }}
-            className="group grid gap-x-6 gap-y-1 px-5 py-3.5 hover:bg-paper-sunken/60 sm:grid-cols-[minmax(0,1fr)_8rem_1rem] sm:items-center"
-          >
-            <span className="min-w-0">
-              <span className="block text-ink">{task.objective}</span>
-              <span className="mt-0.5 flex flex-wrap items-center gap-x-3 text-[0.85rem] text-ink-muted">
-                <Executor name={task.executor} />
-                {task.requested_by ? <span>{t("task-for", { name: personName(task.requested_by) })}</span> : null}
-                <span>
-                  {task.status === "running" ? (
-                    <>
-                      {t("task-since")} <Ago iso={task.started_at} />
-                    </>
-                  ) : task.ended_at ? (
-                    <Ago iso={task.ended_at} />
-                  ) : null}
-                </span>
-                {task.status === "running" && task.steps.length ? (
-                  <span className="truncate text-ink">{task.steps.at(-1)}</span>
-                ) : null}
-              </span>
-            </span>
-            <TaskStatusMark status={task.status} />
-            <RowArrow />
-          </Link>
-        </li>
-      ))}
-    </RowList>
   );
 }
 
@@ -125,7 +67,6 @@ export function TaskDetail({ id }: { id: string }) {
       </>
     );
   }
-  const took = task.ended_at ? (new Date(task.ended_at).getTime() - new Date(task.started_at).getTime()) / 1000 : null;
   return (
     <>
       <PageHeader
@@ -135,17 +76,19 @@ export function TaskDetail({ id }: { id: string }) {
           <>
             <TaskStatusMark status={task.status} />
             <Executor name={task.executor} />
-            {task.requested_by ? <span>{t("task-requested-by", { name: personName(task.requested_by) })}</span> : null}
             <span>
               <Ago iso={task.started_at} />
             </span>
-            {took ? <span>{t("task-took", { duration: duration(took) })}</span> : null}
           </>
         }
         actions={
           task.status === "running" && canCancel ? (
             <Confirm
-              trigger={<Button variant="destructive">{t("task-cancel-action")}</Button>}
+              trigger={
+                <Button variant="destructive">
+                  <X /> {t("task-cancel-action")}
+                </Button>
+              }
               title={t("task-cancel-title")}
               confirm={t("task-cancel")}
               onConfirm={() => cancel.mutateAsync()}
@@ -155,41 +98,126 @@ export function TaskDetail({ id }: { id: string }) {
           ) : null
         }
       />
-      <WithAside>
+      <div className="grid gap-10">
+        <WithAside>
+          <Outcome task={task} />
+          <About task={task} />
+        </WithAside>
+        {task.steps.length ? (
+          <Section title={t("task-steps")} count={task.steps.length}>
+            <Steps task={task} />
+          </Section>
+        ) : null}
         <Section title={t("task-story")}>
           <SubjectStory filters={{ task: task.id }} empty={t("task-story-empty")} />
         </Section>
-        <aside className="grid content-start gap-6">
-          {task.result || task.error ? (
-            <div>
-              <p className="caption mb-1.5">{task.error ? t("task-error") : t("task-result")}</p>
-              <p className={task.error ? "text-sm text-brick" : "font-serif text-[1.05rem] leading-relaxed"}>
-                {task.error ?? task.result}
-              </p>
-            </div>
+      </div>
+    </>
+  );
+}
+
+/** Where the task stands, as the first thing read: what it is doing, what it gave back, or why it gave nothing. */
+function Outcome({ task }: { task: Task }) {
+  const t = useT();
+  const files = task.files.length ? (
+    <div className={task.result || task.error ? "mt-5 border-t border-rule pt-4" : undefined}>
+      <p className="mb-2.5 flex items-center gap-1.5 text-[0.9rem] font-medium text-ink-muted">
+        <Paperclip className="size-3.5" aria-hidden="true" />
+        {t("task-files", { count: task.files.length })}
+      </p>
+      <Files files={task.files} url={(index) => `${API_BASE}/tasks/${task.id}/files/${index}`} />
+    </div>
+  ) : null;
+
+  if (task.status === "running") {
+    return (
+      <Section title={t("task-now")}>
+        <div className="surface p-5">
+          <div className="flex items-start gap-4">
+            <IconTile icon={Workflow} tone="task" />
+            <p className="min-w-0 flex-1 self-center font-serif text-[1.2rem] leading-snug text-ink">
+              {task.steps.at(-1) ?? t("task-starting")}
+            </p>
+          </div>
+          <span className="thread mt-4 block" aria-hidden="true" />
+          <p className="mt-3 text-[0.92rem] text-ink-muted">{t("task-delivery-pending")}</p>
+          {files}
+        </div>
+      </Section>
+    );
+  }
+  if (task.error) {
+    return (
+      <Section title={t("task-error")}>
+        <div className="surface p-5">
+          <div className="flex items-start gap-4">
+            <IconTile icon={TriangleAlert} tone="brick" />
+            <p className="min-w-0 flex-1 self-center whitespace-pre-line text-brick [overflow-wrap:anywhere]">
+              {task.error}
+            </p>
+          </div>
+          {files}
+        </div>
+      </Section>
+    );
+  }
+  if (task.result || files) {
+    return (
+      <Section title={t("task-result")}>
+        <div className="surface corner-marks relative p-5">
+          {task.result ? (
+            <p className="max-w-2xl whitespace-pre-line font-serif text-[1.15rem] leading-relaxed text-ink [overflow-wrap:anywhere]">
+              {task.result}
+            </p>
           ) : null}
-          {task.files.length ? (
-            <div>
-              <p className="caption mb-1.5">{t("task-files", { count: task.files.length })}</p>
-              <Files files={task.files} url={(index) => `${API_BASE}/tasks/${task.id}/files/${index}`} />
-            </div>
-          ) : null}
-          {task.origin ? (
-            <div>
-              <p className="caption mb-1.5">{t("task-asked-in")}</p>
-              {task.origin.session ? (
-                <span className="text-sm">
-                  <OriginLink origin={task.origin} />
-                </span>
-              ) : (
-                <p className="text-sm text-ink-muted">{t("task-conversation-older")}</p>
-              )}
-            </div>
-          ) : null}
-          <div>
-            <p className="caption mb-1.5">{t("task-delivery")}</p>
+          {files}
+        </div>
+      </Section>
+    );
+  }
+  return (
+    <Section title={t("task-result")}>
+      <div className="surface-quiet flex items-center gap-4 px-4 py-5">
+        <IconTile icon={CircleSlash} />
+        <p className="text-[0.98rem] text-ink-muted">
+          {t(task.status === "cancelled" ? "task-stopped-early" : "task-no-result")}
+        </p>
+      </div>
+    </Section>
+  );
+}
+
+/** The facts around the run: who asked and where, who did it, how long it took, how the answer arrived. */
+function About({ task }: { task: Task }) {
+  const t = useT();
+  const took = task.ended_at ? (new Date(task.ended_at).getTime() - new Date(task.started_at).getTime()) / 1000 : null;
+  return (
+    <aside aria-label={t("task-about")} className="surface self-start p-5">
+      <Facts narrow className="text-[0.95rem]">
+        {task.requested_by ? (
+          <Fact term={t("task-asked-by")} className="flex items-center gap-2">
+            <Pebble name={task.requested_by.name} className="size-6 text-[0.65rem]" />
+            {task.requested_by.name}
+          </Fact>
+        ) : null}
+        {task.origin ? (
+          <Fact term={t("task-asked-in")}>
+            {task.origin.session ? (
+              <OriginLink origin={task.origin} />
+            ) : (
+              <span className="text-ink-muted">{t("task-conversation-older")}</span>
+            )}
+          </Fact>
+        ) : null}
+        <Fact term={t("task-done-by")}>
+          <Executor name={task.executor} />
+        </Fact>
+        <Fact term={t("task-started")}>{moment(task.started_at)}</Fact>
+        {took ? <Fact term={t("task-took")}>{duration(took)}</Fact> : null}
+        {task.status === "running" ? null : (
+          <Fact term={t("task-delivery")}>
             {task.delivered ? (
-              <p className="flex items-start gap-2 text-sm">
+              <span className="flex items-start gap-2">
                 <Volume2 className="mt-0.5 size-4 shrink-0 text-ember" aria-hidden="true" />
                 <span>
                   {t("task-delivered", {
@@ -197,17 +225,45 @@ export function TaskDetail({ id }: { id: string }) {
                     channel: task.delivered.channel,
                     room: task.delivered.room ?? "none",
                   })}{" "}
-                  <Ago iso={task.delivered.at} className="font-[inherit]" />
+                  <Ago iso={task.delivered.at} />
                 </span>
-              </p>
+              </span>
             ) : (
-              <p className="text-sm text-ink-muted">
-                {task.status === "running" ? t("task-delivery-pending") : t("task-delivery-none")}
-              </p>
+              <span className="text-ink-muted">{t("task-delivery-none")}</span>
             )}
-          </div>
-        </aside>
-      </WithAside>
-    </>
+          </Fact>
+        )}
+      </Facts>
+    </aside>
+  );
+}
+
+/** What the executor reported as it went, oldest first; the last one glows while the task runs. */
+function Steps({ task }: { task: Task }) {
+  return (
+    <ol className="surface px-5 pt-5 pb-1.5">
+      {task.steps.map((step, index) => {
+        const last = index === task.steps.length - 1;
+        return (
+          // biome-ignore lint/suspicious/noArrayIndexKey: steps are an append-only list of plain strings
+          <li key={index} className="grid grid-cols-[1.25rem_1fr] gap-x-3">
+            <span className="flex flex-col items-center" aria-hidden="true">
+              <span
+                className={cn(
+                  "mt-1.5 size-2.5 rounded-full",
+                  last && task.status === "running" ? "live-dot bg-ember" : "bg-rule-strong",
+                )}
+              />
+              {last ? null : <span className="w-px flex-1 bg-rule" />}
+            </span>
+            <span
+              className={cn("pb-3.5 text-[0.95rem] [overflow-wrap:anywhere]", last ? "text-ink" : "text-ink-muted")}
+            >
+              {step}
+            </span>
+          </li>
+        );
+      })}
+    </ol>
   );
 }
