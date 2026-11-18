@@ -2081,6 +2081,7 @@ export interface components {
             /** Client Secret */
             client_secret: string;
         };
+        Clock: string;
         /** ComponentOut */
         ComponentOut: {
             /** Slot */
@@ -2309,7 +2310,7 @@ export interface components {
              * Code
              * @enum {string}
              */
-            code: "addition_over" | "addition_unknown" | "attachment_unknown" | "audio_format" | "bad_token" | "chat_busy" | "chat_needs_person" | "chat_off" | "client_incomplete" | "client_missing" | "client_required" | "config_history_unknown" | "config_invalid" | "config_unavailable" | "conflict" | "connection_unknown" | "connector_unknown" | "cross_origin" | "csrf_failed" | "empty_memory" | "executor_unknown" | "executors_unreachable" | "fields_missing" | "forbidden" | "http_error" | "identify_unsupported" | "invalid" | "invalid_code" | "invalid_credentials" | "invalid_login" | "invalid_request" | "invitation_expired" | "invitation_revoked" | "invitation_unknown" | "invitation_used" | "journal_entry_unknown" | "media_camera_off" | "media_forbidden" | "media_off" | "media_offline" | "media_unable" | "last_owner" | "memory_shared" | "memory_unknown" | "method_not_allowed" | "no_connectors" | "no_secret_key" | "not_a_device_code_method" | "not_found" | "not_oauth" | "oauth" | "own_connections_only" | "pairing_refused" | "pending_unknown" | "person_required" | "person_unknown" | "provider_error" | "provider_refused" | "restart_unconfirmed" | "satellite_offline" | "satellite_unknown" | "secret_in_use" | "secret_unknown" | "task_unknown" | "throttled" | "too_many_additions" | "unauthenticated" | "unknown_locale" | "unknown_person" | "unknown_tool" | "unsupported_media_type" | "update_not_installable" | "update_unavailable" | "update_unconfirmed" | "update_unsupported" | "use_me_password" | "voice_not_yours" | "voices_off" | "watch_unknown" | "schedule_unknown" | "service_refused" | "confirmation_unknown" | "weak_password" | "wrong_password";
+            code: "addition_over" | "addition_unknown" | "attachment_unknown" | "audio_format" | "bad_token" | "chat_busy" | "chat_needs_person" | "chat_off" | "client_incomplete" | "client_missing" | "client_required" | "config_history_unknown" | "config_invalid" | "config_unavailable" | "conflict" | "connection_unknown" | "connector_unknown" | "cross_origin" | "csrf_failed" | "empty_memory" | "executor_unknown" | "executors_unreachable" | "fields_missing" | "forbidden" | "http_error" | "identify_unsupported" | "invalid" | "invalid_code" | "invalid_credentials" | "invalid_login" | "invalid_request" | "invitation_expired" | "invitation_revoked" | "invitation_unknown" | "invitation_used" | "journal_entry_unknown" | "media_camera_off" | "privacy_needs_presence" | "media_forbidden" | "media_off" | "media_offline" | "media_unable" | "last_owner" | "memory_shared" | "memory_unknown" | "method_not_allowed" | "no_connectors" | "no_secret_key" | "not_a_device_code_method" | "not_found" | "not_oauth" | "oauth" | "own_connections_only" | "pairing_refused" | "pending_unknown" | "person_required" | "person_unknown" | "provider_error" | "provider_refused" | "restart_unconfirmed" | "satellite_offline" | "satellite_unknown" | "secret_in_use" | "secret_unknown" | "task_unknown" | "throttled" | "too_many_additions" | "unauthenticated" | "unknown_locale" | "unknown_person" | "unknown_tool" | "unsupported_media_type" | "update_not_installable" | "update_unavailable" | "update_unconfirmed" | "update_unsupported" | "use_me_password" | "voice_not_yours" | "voices_off" | "watch_unknown" | "schedule_unknown" | "service_refused" | "confirmation_unknown" | "weak_password" | "wrong_password";
             /** Message Id */
             message_id: string;
             /** Args */
@@ -2738,7 +2739,8 @@ export interface components {
         };
         /**
          * MediaAccessIn
-         * @description Who may watch the device or call through it besides the owners, and whether its camera may film.
+         * @description Who may watch the device or call through it besides the owners, whether its camera may film, and when it
+         *     does not (`privacy`).
          */
         MediaAccessIn: {
             /**
@@ -2756,6 +2758,14 @@ export interface components {
              * @default true
              */
             camera: boolean;
+            /**
+             * @default {
+             *       "quiet": [],
+             *       "off_when_home": false,
+             *       "home_people": []
+             *     }
+             */
+            privacy: components["schemas"]["PrivacyIO"];
         };
         /** MediaAccessOut */
         MediaAccessOut: {
@@ -2765,6 +2775,7 @@ export interface components {
             callers: components["schemas"]["PersonRef"][];
             /** Camera */
             camera: boolean;
+            privacy: components["schemas"]["PrivacyOut"];
         };
         /**
          * MediaDeviceOut
@@ -2783,6 +2794,7 @@ export interface components {
             can_view: boolean;
             /** Can Call */
             can_call: boolean;
+            off: components["schemas"]["Off"] | null;
         };
         /** MediaDevicesOut */
         MediaDevicesOut: {
@@ -2939,6 +2951,12 @@ export interface components {
             relayed: boolean;
         };
         /**
+         * Off
+         * @description Why a device's camera does not film now.
+         * @enum {string}
+         */
+        Off: "switched_off" | "quiet_hours" | "someone_home";
+        /**
          * OriginOut
          * @description Where something was asked for: a task, a watch.
          */
@@ -3068,6 +3086,37 @@ export interface components {
             diff: components["schemas"]["DiffOut"];
         };
         /**
+         * PrivacyIO
+         * @description When the camera does not film, besides its switch: nothing by default. `off_when_home`: while one of
+         *     `home_people` is home (anyone of the household when empty), as Home Assistant sees it.
+         */
+        PrivacyIO: {
+            /**
+             * Quiet
+             * @default []
+             */
+            quiet: components["schemas"]["QuietHoursIO"][];
+            /**
+             * Off When Home
+             * @default false
+             */
+            off_when_home: boolean;
+            /**
+             * Home People
+             * @default []
+             */
+            home_people: string[];
+        };
+        /** PrivacyOut */
+        PrivacyOut: {
+            /** Quiet */
+            quiet: components["schemas"]["QuietHoursIO"][];
+            /** Off When Home */
+            off_when_home: boolean;
+            /** Home People */
+            home_people: components["schemas"]["PersonRef"][];
+        };
+        /**
          * Problem
          * @description Why a phrase of an enrollment is asked again.
          * @enum {string}
@@ -3108,6 +3157,17 @@ export interface components {
          * @enum {string}
          */
         Purpose: "view" | "call";
+        /**
+         * QuietHoursIO
+         * @description A time slot when the camera does not film, in the household's time: from `start` to `end` (past midnight when
+         *     `end` is not after `start`, a whole day when equal), starting on each of `days`.
+         */
+        QuietHoursIO: {
+            /** Days */
+            days: components["schemas"]["Day"][];
+            start: components["schemas"]["Clock"];
+            end: components["schemas"]["Clock"];
+        };
         /** QuietHoursOut */
         QuietHoursOut: {
             /** Start */
@@ -13172,7 +13232,7 @@ export const changeKindValues: ReadonlyArray<FlattenedDeepRequired<components>["
 export const chatRoleValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ChatRole"]> = ["person", "assistant", "note", "fallback", "tool"];
 export const chatStreamOutTypeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ChatStreamOut"]["type"]> = ["text", "end", "failed", "done"];
 export const dayValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Day"]> = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
-export const errorDetailCodeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ErrorDetail"]["code"]> = ["addition_over", "addition_unknown", "attachment_unknown", "audio_format", "bad_token", "chat_busy", "chat_needs_person", "chat_off", "client_incomplete", "client_missing", "client_required", "config_history_unknown", "config_invalid", "config_unavailable", "conflict", "connection_unknown", "connector_unknown", "cross_origin", "csrf_failed", "empty_memory", "executor_unknown", "executors_unreachable", "fields_missing", "forbidden", "http_error", "identify_unsupported", "invalid", "invalid_code", "invalid_credentials", "invalid_login", "invalid_request", "invitation_expired", "invitation_revoked", "invitation_unknown", "invitation_used", "journal_entry_unknown", "media_camera_off", "media_forbidden", "media_off", "media_offline", "media_unable", "last_owner", "memory_shared", "memory_unknown", "method_not_allowed", "no_connectors", "no_secret_key", "not_a_device_code_method", "not_found", "not_oauth", "oauth", "own_connections_only", "pairing_refused", "pending_unknown", "person_required", "person_unknown", "provider_error", "provider_refused", "restart_unconfirmed", "satellite_offline", "satellite_unknown", "secret_in_use", "secret_unknown", "task_unknown", "throttled", "too_many_additions", "unauthenticated", "unknown_locale", "unknown_person", "unknown_tool", "unsupported_media_type", "update_not_installable", "update_unavailable", "update_unconfirmed", "update_unsupported", "use_me_password", "voice_not_yours", "voices_off", "watch_unknown", "schedule_unknown", "service_refused", "confirmation_unknown", "weak_password", "wrong_password"];
+export const errorDetailCodeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ErrorDetail"]["code"]> = ["addition_over", "addition_unknown", "attachment_unknown", "audio_format", "bad_token", "chat_busy", "chat_needs_person", "chat_off", "client_incomplete", "client_missing", "client_required", "config_history_unknown", "config_invalid", "config_unavailable", "conflict", "connection_unknown", "connector_unknown", "cross_origin", "csrf_failed", "empty_memory", "executor_unknown", "executors_unreachable", "fields_missing", "forbidden", "http_error", "identify_unsupported", "invalid", "invalid_code", "invalid_credentials", "invalid_login", "invalid_request", "invitation_expired", "invitation_revoked", "invitation_unknown", "invitation_used", "journal_entry_unknown", "media_camera_off", "privacy_needs_presence", "media_forbidden", "media_off", "media_offline", "media_unable", "last_owner", "memory_shared", "memory_unknown", "method_not_allowed", "no_connectors", "no_secret_key", "not_a_device_code_method", "not_found", "not_oauth", "oauth", "own_connections_only", "pairing_refused", "pending_unknown", "person_required", "person_unknown", "provider_error", "provider_refused", "restart_unconfirmed", "satellite_offline", "satellite_unknown", "secret_in_use", "secret_unknown", "task_unknown", "throttled", "too_many_additions", "unauthenticated", "unknown_locale", "unknown_person", "unknown_tool", "unsupported_media_type", "update_not_installable", "update_unavailable", "update_unconfirmed", "update_unsupported", "use_me_password", "voice_not_yours", "voices_off", "watch_unknown", "schedule_unknown", "service_refused", "confirmation_unknown", "weak_password", "wrong_password"];
 export const familyValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Family"]> = ["model", "executor", "channel", "home", "tools", "inbound", "connector"];
 export const granularityValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Granularity"]> = ["home", "occupied_rooms", "person_room"];
 export const healthValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Health"]> = ["started", "degraded", "unavailable"];
@@ -13182,6 +13242,7 @@ export const kindValues: ReadonlyArray<FlattenedDeepRequired<components>["schema
 export const mentionKindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["MentionKind"]> = ["person", "room", "executor", "connection"];
 export const modelTypeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ModelType"]> = ["language", "embedding", "speaker", "transcription", "speech", "image"];
 export const nestorToolsValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["NestorTools"]> = ["none", "passed", "configured"];
+export const offValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Off"]> = ["switched_off", "quiet_hours", "someone_home"];
 export const pairingMethodValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PairingMethod"]> = ["device_code.display", "device_code.speech", "enrollment.input", "enrollment.provisioning", "enrollment.qr"];
 export const problemValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Problem"]> = ["too_short", "too_quiet", "too_loud", "other_voice"];
 export const problemCodeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ProblemCode"]> = ["missing", "extra", "invalid", "unknown_kind", "reference", "secret", "no_answering_model", "not_answering", "not_embedding", "not_speaker", "not_transcribing", "not_speaking", "unknown_model", "shared_account"];

@@ -1,8 +1,8 @@
-import { screen, within } from "@testing-library/react";
+import { fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { db } from "@/mocks/db";
-import { SCOPES } from "@/mocks/fixtures";
+import { NO_RULE, SCOPES } from "@/mocks/fixtures";
 import { server } from "@/mocks/server";
 import { renderApp } from "@/test/render";
 
@@ -35,7 +35,7 @@ describe("who may watch a satellite or call through it", () => {
     await user.click(within(dialog).getByRole("checkbox", { name: "Léa may call" }));
     await user.click(within(dialog).getByRole("button", { name: "Save" }));
     expect(await within(await section()).findByText("Jules, Léa", { selector: "dd" })).toBeVisible();
-    expect(bodies).toEqual([{ viewers: ["jules", "lea"], callers: ["jules"], camera: true }]);
+    expect(bodies).toEqual([{ viewers: ["jules", "lea"], callers: ["jules"], camera: true, privacy: NO_RULE() }]);
   });
 
   it("turns the camera off: nobody may be ticked to watch it then", async () => {
@@ -48,7 +48,73 @@ describe("who may watch a satellite or call through it", () => {
     expect(within(dialog).getByRole("checkbox", { name: "Jules may watch" })).toHaveAttribute("aria-disabled", "true");
     await user.click(within(dialog).getByRole("button", { name: "Save" }));
     expect(await within(await section()).findByText("off")).toBeVisible();
-    expect(bodies).toEqual([{ viewers: ["lea"], callers: ["jules", "lea"], camera: false }]);
+    expect(bodies).toEqual([{ viewers: ["lea"], callers: ["jules", "lea"], camera: false, privacy: NO_RULE() }]);
+  });
+
+  it("states plainly that a camera has no privacy rule by default", async () => {
+    renderApp("/satellites/reachy-living-room");
+    expect(
+      await within(await section()).findByText("No rule: the camera films whenever someone allowed asks."),
+    ).toBeVisible();
+  });
+
+  it("sets quiet hours and turns the camera off while chosen people are home", async () => {
+    const bodies = accessSent();
+    const user = userEvent.setup();
+    renderApp("/satellites/reachy-living-room");
+    await user.click(within(await section()).getByRole("button", { name: "Change…" }));
+    const dialog = await screen.findByRole("dialog");
+    await user.click(within(dialog).getByRole("button", { name: "Add quiet hours" }));
+    await user.click(within(dialog).getByRole("button", { name: "Saturday" }));
+    await user.click(within(dialog).getByRole("button", { name: "Sunday" }));
+    fireEvent.change(within(dialog).getByLabelText("From"), { target: { value: "21:30" } });
+    await user.click(within(dialog).getByRole("button", { name: "Add quiet hours" }));
+    await user.click(within(dialog).getByRole("button", { name: "Remove quiet hours 2" }));
+    await user.click(within(dialog).getByRole("switch", { name: /Off while someone is home/ }));
+    await user.click(within(dialog).getByRole("combobox", { name: "Who counts" }));
+    await user.click(await screen.findByRole("option", { name: "Only these people" }));
+    await user.click(within(dialog).getByRole("checkbox", { name: "Léa" }));
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+    const shown = await section();
+    expect(await within(shown).findByText("Mon, Tue, Wed, Thu, Fri, 21:30 to 07:00")).toBeVisible();
+    expect(within(shown).getByText("off while Léa is home")).toBeVisible();
+    expect(bodies).toEqual([
+      {
+        viewers: ["lea"],
+        callers: ["jules", "lea"],
+        camera: true,
+        privacy: {
+          quiet: [{ days: ["mon", "tue", "wed", "thu", "fri"], start: "21:30", end: "07:00" }],
+          off_when_home: true,
+          home_people: ["lea"],
+        },
+      },
+    ]);
+  });
+
+  it("sends no quiet hours without a day", async () => {
+    const bodies = accessSent();
+    const user = userEvent.setup();
+    renderApp("/satellites/reachy-living-room");
+    await user.click(within(await section()).getByRole("button", { name: "Change…" }));
+    const dialog = await screen.findByRole("dialog");
+    await user.click(within(dialog).getByRole("button", { name: "Add quiet hours" }));
+    for (const day of ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"])
+      await user.click(within(dialog).getByRole("button", { name: day }));
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent("Pick at least one day");
+    expect(bodies).toEqual([]);
+  });
+
+  it("says why the camera cannot be off while someone is home without Home Assistant's presence", async () => {
+    db.home = null;
+    const user = userEvent.setup();
+    renderApp("/satellites/reachy-living-room");
+    await user.click(within(await section()).getByRole("button", { name: "Change…" }));
+    const dialog = await screen.findByRole("dialog");
+    await user.click(within(dialog).getByRole("switch", { name: /Off while someone is home/ }));
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent("needs Home Assistant's presence");
   });
 
   it("asks nothing about a camera of a device that does not film", async () => {

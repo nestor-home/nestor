@@ -748,6 +748,9 @@ export function arriving(pairingId: string, room: string | null): MockPending {
   };
 }
 
+/** No privacy rule: a camera films whenever someone allowed asks, until the household sets one. */
+export const NO_RULE = (): Satellite["access"]["privacy"] => ({ quiet: [], off_when_home: false, home_people: [] });
+
 export function satellites(): Satellite[] {
   return [
     {
@@ -772,7 +775,7 @@ export function satellites(): Satellite[] {
         version: "0.4.1",
         notes: "https://github.com/nestor-home/nestor-reachy/releases/tag/v0.4.1",
       },
-      access: { viewers: [ref("lea")], callers: [ref("jules"), ref("lea")], camera: true },
+      access: { viewers: [ref("lea")], callers: [ref("jules"), ref("lea")], camera: true, privacy: NO_RULE() },
     },
     {
       id: "reachy-office",
@@ -792,7 +795,7 @@ export function satellites(): Satellite[] {
       protocol: PROTOCOL,
       can_update: false,
       update: null,
-      access: { viewers: [], callers: [], camera: false },
+      access: { viewers: [], callers: [], camera: false, privacy: NO_RULE() },
     },
     {
       id: "pi-bedroom",
@@ -812,7 +815,7 @@ export function satellites(): Satellite[] {
       protocol: PROTOCOL,
       can_update: true,
       update: { state: "current", version: null, notes: null },
-      access: { viewers: [], callers: [ref("lea")], camera: true },
+      access: { viewers: [], callers: [ref("lea")], camera: true, privacy: NO_RULE() },
     },
   ];
 }

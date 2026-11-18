@@ -13,18 +13,20 @@ import contextlib
 import logging
 import time
 from abc import ABC, abstractmethod
-from collections.abc import Awaitable, Callable, Mapping
+from collections.abc import Awaitable, Callable, Iterable, Mapping
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import StrEnum
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from nestor.core import Capability, Component, ContractError, PersonId, ProviderError, new_id, utc_now
 from nestor.modules.accounts import Principal, Scope
+from nestor.modules.home import PresenceSource
 from nestor.modules.journal import BlobStore, FileRef, Journal
 from nestor.modules.satellites.events import MediaEnd, MediaSessionClosed, MediaSessionOpened, SnapshotTaken
 from nestor.modules.satellites.service import Pairing
-from nestor.modules.satellites.types import AUDIO, VIDEO_CAPTURE, Purpose, Satellite
+from nestor.modules.satellites.types import AUDIO, VIDEO_CAPTURE, Off, Purpose, Satellite
 
 logger = logging.getLogger(__name__)
 
@@ -76,9 +78,9 @@ class Refusal(StrEnum):
 class MediaRefused(ContractError):
     """A session or a picture cannot be had, and why (`reason`)."""
 
-    def __init__(self, reason: Refusal, message: str) -> None:
+    def __init__(self, reason: Refusal, message: str, *, off: Off | None = None) -> None:
         super().__init__(message)
-        self.reason = reason
+        self.reason, self.off = reason, off
 
 
 class MediaRelay(ABC):
@@ -118,6 +120,7 @@ class Offer:
     linked: frozenset[Capability] | None
     view: bool
     call: bool
+    off: Off | None  # why its camera does not film now
 
 
 @dataclass(slots=True)
@@ -150,11 +153,16 @@ class MediaSessions(Component):
         relay: MediaRelay,
         blobs: BlobStore,
         *,
+        presence: PresenceSource | None = None,
+        household: Iterable[PersonId] = (),
+        timezone: str = "UTC",
+        clock: Callable[[], datetime] = utc_now,
         view_max_s: int = 600,
         call_max_s: int = 1800,
         check_s: float = CHECK_S,
     ) -> None:
         self.journal, self._pairing, self._relay, self._blobs = journal, pairing, relay, blobs
+        self._presence, self._household, self._zone, self._clock = presence, tuple(household), ZoneInfo(timezone), clock
         self._max_s = {Purpose.VIEW: view_max_s, Purpose.CALL: call_max_s}
         self._check_s = check_s
         self._live: dict[str, LiveSession] = {}
@@ -196,8 +204,8 @@ class MediaSessions(Component):
             can = satellite.capabilities if linked is None else linked
             view = VIDEO_CAPTURE in can and self.may(satellite, viewer, Purpose.VIEW)
             call = can >= AUDIO and self.may(satellite, viewer, Purpose.CALL)
-            if view or call:
-                found.append(Offer(satellite, linked, view, call))
+            if view or call:  # why its camera does not film, only to whom may watch it
+                found.append(Offer(satellite, linked, view, call, self.off(satellite) if view else None))
         return found
 
     async def open(self, device_id: str, purpose: Purpose, viewer: Viewer, offer: Mapping[str, Any]) -> LiveSession:
@@ -233,7 +241,9 @@ class MediaSessions(Component):
         live.timer = asyncio.create_task(self._time_out(live), name=f"media session {live.id}")
         return live
 
-    async def close_session(self, session_id: str, reason: MediaEnd, *, by: Viewer | None = None) -> None:
+    async def close_session(
+        self, session_id: str, reason: MediaEnd, *, by: Viewer | None = None, off: Off | None = None
+    ) -> None:
         """End a session; `by` a person, only their own, or any of a kind their role allows on every device."""
         live = self._live.get(session_id)
         if live is None:
@@ -254,6 +264,7 @@ class MediaSessions(Component):
                     room=live.room,
                     duration_s=round(time.monotonic() - live.started, 1),
                     reason=reason,
+                    off=off,
                 )
             )
 
@@ -264,8 +275,14 @@ class MediaSessions(Component):
             viewer = live.viewer.current()
             if viewer is None:
                 await self.close_session(live.id, MediaEnd.SIGNED_OUT)
-            elif not self._still(live, viewer):
-                await self.close_session(live.id, MediaEnd.ACCESS_CHANGED)
+            elif ended := self._ends(live, viewer):
+                reason, off = ended
+                await self.close_session(live.id, reason, off=off)
+
+    def off(self, satellite: Satellite) -> Off | None:
+        """Why the device's camera does not film now (`MediaAccess.off`), `None` when it may."""
+        presence = self._presence.presence() if self._presence else None
+        return satellite.access.off(self._clock().astimezone(self._zone), presence, self._household)
 
     async def snapshot(self, device_id: str, viewer: Viewer) -> tuple[FileRef, bytes]:
         """A still picture of what the device films, for `viewer`, who must be allowed to watch it: where it is
@@ -311,21 +328,28 @@ class MediaSessions(Component):
         if purpose is Purpose.VIEW:
             if VIDEO_CAPTURE not in linked:
                 raise MediaRefused(Refusal.UNABLE, f"{device_id} does not film")
-            if not satellite.access.camera:
-                raise MediaRefused(Refusal.CAMERA_OFF, f"the camera of {device_id} is off")
+            if off := self.off(satellite):
+                raise MediaRefused(Refusal.CAMERA_OFF, f"the camera of {device_id} does not film now: {off}", off=off)
         elif not linked >= AUDIO:
             raise MediaRefused(Refusal.UNABLE, f"{device_id} cannot both hear and play sound")
         return satellite, linked
 
     def _films(self, satellite: Satellite, viewer: Viewer) -> bool:
-        """Whether the device's camera may film for `viewer` (a call carries video only then)."""
-        return satellite.access.camera and self.may(satellite, viewer, Purpose.VIEW)
+        """Whether the device's camera may film for `viewer` now (a call carries video only then)."""
+        return self.off(satellite) is None and self.may(satellite, viewer, Purpose.VIEW)
 
-    def _still(self, live: LiveSession, viewer: Viewer) -> bool:
+    def _ends(self, live: LiveSession, viewer: Viewer) -> tuple[MediaEnd, Off | None] | None:
+        """Why a live session may no longer go on (and why its camera stopped, when that is it), `None` while it
+        may. A call through a camera that stops filming ends whole: its video cannot be taken out of it."""
         satellite = self._pairing.satellite(live.device_id)
         if satellite is None or not self.may(satellite, viewer, live.purpose):
-            return False
-        return not live.video or self._films(satellite, viewer)
+            return MediaEnd.ACCESS_CHANGED, None
+        if not live.video:
+            return None
+        if not self.may(satellite, viewer, Purpose.VIEW):
+            return MediaEnd.ACCESS_CHANGED, None
+        off = self.off(satellite)
+        return (MediaEnd.CAMERA_OFF, off) if off else None
 
     async def _checking(self) -> None:
         while True:

@@ -10,7 +10,7 @@ import re
 import types
 import typing
 from collections.abc import Iterator, Mapping
-from datetime import UTC, datetime
+from datetime import UTC, datetime, time
 from enum import Enum
 from typing import Any, get_args, get_origin, get_type_hints
 
@@ -114,7 +114,13 @@ def sample(hint: Any, *, sparse: bool) -> Any:
         return hint(**{f.name: sample(hints[f.name], sparse=sparse) for f in dataclasses.fields(hint)})
     if hint is str:
         return "" if sparse else "mathis"
-    return {float: 0.5, int: 0 if sparse else 2, bool: not sparse, datetime: datetime(2026, 10, 30, tzinfo=UTC)}[hint]
+    return {
+        float: 0.5,
+        int: 0 if sparse else 2,
+        bool: not sparse,
+        datetime: datetime(2026, 10, 30, tzinfo=UTC),
+        time: time(22, 30),
+    }[hint]
 
 
 def entry(cls: type[Event], *, sparse: bool) -> Entry:

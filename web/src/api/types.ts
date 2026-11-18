@@ -93,6 +93,9 @@ export type MediaDevices = S["MediaDevicesOut"];
 export type MediaSession = S["MediaSessionOut"];
 export type MediaAccess = S["MediaAccessOut"];
 export type MediaAccessChange = S["MediaAccessIn"];
+export type Privacy = S["PrivacyOut"];
+export type QuietHours = S["QuietHoursIO"];
+export type CameraOff = S["Off"];
 
 // -- tasks, watches, memories ---------------------------------------------------------------------
 

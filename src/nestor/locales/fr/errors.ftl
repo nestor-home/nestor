@@ -65,7 +65,12 @@ error-memory-shared = Seuls les administrateurs modifient les souvenirs communs.
 error-empty-memory = Un souvenir ne peut pas être vide. Pour l'effacer, oubliez-le.
 error-attachment-unknown = Ce fichier n'est pas disponible.
 error-journal-entry-unknown = Entrée du journal introuvable.
-error-media-camera-off = La caméra de cet appareil est coupée.
+error-media-camera-off = { $off ->
+    [quiet_hours] La caméra de cet appareil ne filme pas pendant ses heures calmes.
+    [someone_home] La caméra de cet appareil ne filme pas tant qu'une des personnes choisies est à la maison.
+   *[other] La caméra de cet appareil est coupée.
+}
+error-privacy-needs-presence = Couper une caméra quand quelqu'un est à la maison demande la présence de Home Assistant, qui n'est pas configurée.
 error-media-forbidden = Vous n'avez pas le droit de regarder cet appareil ni d'appeler par lui.
 error-media-off = Regarder et appeler demandent l'extra media sur ce serveur.
 error-media-offline = Cet appareil n'est pas connecté, ou il n'a pas répondu.

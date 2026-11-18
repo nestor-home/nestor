@@ -50,7 +50,11 @@ function DeviceRow({ device: d }: { device: MediaDevice }) {
           ) : (
             <Status tone="attention">{t("sat-state-offline")}</Status>
           )}
-          {d.can_view ? null : <span>{t("cam-call-only")}</span>}
+          {d.off ? (
+            <Status tone="idle">{t("cam-off-reason", { off: d.off })}</Status>
+          ) : d.can_view ? null : (
+            <span>{t("cam-call-only")}</span>
+          )}
         </p>
       </div>
       <div className="flex flex-wrap gap-2">

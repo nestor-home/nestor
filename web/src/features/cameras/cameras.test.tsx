@@ -74,10 +74,32 @@ describe("the cameras page", () => {
     }
     const office = await deviceRow("reachy-office");
     expect(within(office).getByText("offline")).toBeVisible();
-    expect(within(office).getByText("calls only")).toBeVisible(); // its camera is off
+    expect(within(office).getByText("camera switched off")).toBeVisible();
     expect(within(office).getByRole("button", { name: /Call/ })).toBeDisabled();
     const bedroom = await deviceRow("Jules's speaker");
     expect(within(bedroom).queryByRole("button", { name: /View/ })).not.toBeInTheDocument();
+    expect(within(bedroom).getByText("calls only")).toBeVisible(); // it does not film
+  });
+
+  it("says why a camera does not film now, under its privacy rules", async () => {
+    const living = db.satellites.find((s) => s.id === "reachy-living-room");
+    if (!living) throw new Error("fixture changed");
+    // the tests run on a Friday at 18:30, in the household's time once it lives in the test's time zone
+    (db.config.document.persona as { timezone: string }).timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    living.access.privacy.quiet = [{ days: ["fri"], start: "18:00", end: "19:00" }];
+    const { unmount } = renderApp("/cameras");
+    const row = await deviceRow("Living room Reachy");
+    expect(within(row).getByText("off during quiet hours")).toBeVisible();
+    expect(within(row).queryByRole("button", { name: /View|picture/ })).not.toBeInTheDocument();
+    expect(within(row).getByRole("button", { name: /Call/ })).toBeEnabled();
+    unmount();
+
+    living.access.privacy.quiet = [{ days: ["fri"], start: "19:00", end: "18:00" }]; // from 19:00 into Saturday
+    living.access.privacy.off_when_home = true; // Mathis is home
+    renderApp("/cameras");
+    const again = await deviceRow("Living room Reachy");
+    expect(within(again).getByText("off while someone is home")).toBeVisible();
+    expect(within(again).queryByRole("button", { name: /View/ })).not.toBeInTheDocument();
   });
 
   it("follows a device that connects, from the live journal", async () => {

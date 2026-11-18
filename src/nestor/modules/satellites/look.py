@@ -57,12 +57,15 @@ class LookTools(ToolProvider):
         if account is None:
             raise ToolFailed(f"{person} has no account that may see the cameras")
         viewer = Viewer.of(account.principal())
-        cameras = [
-            o for o in self._media.offers(viewer) if o.view and o.satellite.room == room and o.satellite.access.camera
-        ]
+        cameras = [o for o in self._media.offers(viewer) if o.view and o.satellite.room == room]
         if not cameras:
             raise ToolFailed(f"{context.person} may not see {room}, or no camera films there")
-        connected = [o for o in cameras if o.linked is not None] or cameras
+        filming = [o for o in cameras if o.off is None]
+        if not filming:  # each of its cameras is off now, and the household says why
+            raise ToolFailed(
+                f"the cameras of {room} do not film now: {', '.join(sorted({str(o.off) for o in cameras}))}"
+            )
+        connected = [o for o in filming if o.linked is not None] or filming
         try:
             taken, jpeg = await self._media.snapshot(connected[0].satellite.id, viewer)
         except MediaRefused as refused:

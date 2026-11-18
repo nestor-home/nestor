@@ -12763,6 +12763,10 @@
         ],
         "title": "ClientIn"
       },
+      "Clock": {
+        "type": "string",
+        "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$"
+      },
       "ComponentOut": {
         "properties": {
           "slot": {
@@ -13533,6 +13537,7 @@
               "invitation_used",
               "journal_entry_unknown",
               "media_camera_off",
+              "privacy_needs_presence",
               "media_forbidden",
               "media_off",
               "media_offline",
@@ -14913,11 +14918,19 @@
             "type": "boolean",
             "title": "Camera",
             "default": true
+          },
+          "privacy": {
+            "$ref": "#/components/schemas/PrivacyIO",
+            "default": {
+              "quiet": [],
+              "off_when_home": false,
+              "home_people": []
+            }
           }
         },
         "type": "object",
         "title": "MediaAccessIn",
-        "description": "Who may watch the device or call through it besides the owners, and whether its camera may film."
+        "description": "Who may watch the device or call through it besides the owners, whether its camera may film, and when it\ndoes not (`privacy`)."
       },
       "MediaAccessOut": {
         "properties": {
@@ -14938,13 +14951,17 @@
           "camera": {
             "type": "boolean",
             "title": "Camera"
+          },
+          "privacy": {
+            "$ref": "#/components/schemas/PrivacyOut"
           }
         },
         "type": "object",
         "required": [
           "viewers",
           "callers",
-          "camera"
+          "camera",
+          "privacy"
         ],
         "title": "MediaAccessOut"
       },
@@ -14980,6 +14997,16 @@
           "can_call": {
             "type": "boolean",
             "title": "Can Call"
+          },
+          "off": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Off"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -14989,7 +15016,8 @@
           "room",
           "connected",
           "can_view",
-          "can_call"
+          "can_call",
+          "off"
         ],
         "title": "MediaDeviceOut",
         "description": "A device the caller may watch or call through."
@@ -15404,6 +15432,16 @@
         ],
         "title": "OAuthClientOut"
       },
+      "Off": {
+        "type": "string",
+        "enum": [
+          "switched_off",
+          "quiet_hours",
+          "someone_home"
+        ],
+        "title": "Off",
+        "description": "Why a device's camera does not film now."
+      },
       "OriginOut": {
         "properties": {
           "session": {
@@ -15816,6 +15854,65 @@
         ],
         "title": "PreviewOut"
       },
+      "PrivacyIO": {
+        "properties": {
+          "quiet": {
+            "items": {
+              "$ref": "#/components/schemas/QuietHoursIO"
+            },
+            "type": "array",
+            "maxItems": 16,
+            "title": "Quiet",
+            "default": []
+          },
+          "off_when_home": {
+            "type": "boolean",
+            "title": "Off When Home",
+            "default": false
+          },
+          "home_people": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 64,
+            "title": "Home People",
+            "default": []
+          }
+        },
+        "type": "object",
+        "title": "PrivacyIO",
+        "description": "When the camera does not film, besides its switch: nothing by default. `off_when_home`: while one of\n`home_people` is home (anyone of the household when empty), as Home Assistant sees it."
+      },
+      "PrivacyOut": {
+        "properties": {
+          "quiet": {
+            "items": {
+              "$ref": "#/components/schemas/QuietHoursIO"
+            },
+            "type": "array",
+            "title": "Quiet"
+          },
+          "off_when_home": {
+            "type": "boolean",
+            "title": "Off When Home"
+          },
+          "home_people": {
+            "items": {
+              "$ref": "#/components/schemas/PersonRef"
+            },
+            "type": "array",
+            "title": "Home People"
+          }
+        },
+        "type": "object",
+        "required": [
+          "quiet",
+          "off_when_home",
+          "home_people"
+        ],
+        "title": "PrivacyOut"
+      },
       "Problem": {
         "type": "string",
         "enum": [
@@ -15921,6 +16018,33 @@
         ],
         "title": "Purpose",
         "description": "Why a person opens a media session on a device."
+      },
+      "QuietHoursIO": {
+        "properties": {
+          "days": {
+            "items": {
+              "$ref": "#/components/schemas/Day"
+            },
+            "type": "array",
+            "maxItems": 7,
+            "minItems": 1,
+            "title": "Days"
+          },
+          "start": {
+            "$ref": "#/components/schemas/Clock"
+          },
+          "end": {
+            "$ref": "#/components/schemas/Clock"
+          }
+        },
+        "type": "object",
+        "required": [
+          "days",
+          "start",
+          "end"
+        ],
+        "title": "QuietHoursIO",
+        "description": "A time slot when the camera does not film, in the household's time: from `start` to `end` (past midnight when\n`end` is not after `start`, a whole day when equal), starting on each of `days`."
       },
       "QuietHoursOut": {
         "properties": {

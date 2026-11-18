@@ -14,6 +14,7 @@ import { useT } from "@/i18n";
 import { tr } from "@/i18n/runtime";
 import { deviceName } from "@/lib/labels";
 import { useCan } from "@/lib/session";
+import { draftOf, PrivacyFields, PrivacyRules, privacyOf, privacyProblem } from "./camera-privacy";
 
 const names = (people: { name: string }[]) =>
   people.length ? people.map((p) => p.name).join(", ") : tr("sat-media-owners-only");
@@ -52,6 +53,11 @@ export function MediaAccessSection({ satellite: s }: { satellite: Satellite }) {
             {access.camera ? t("sat-media-camera-on") : t("sat-media-camera-off")}
           </Fact>
         ) : null}
+        {films ? (
+          <Fact term={t("sat-privacy")}>
+            <PrivacyRules privacy={access.privacy} />
+          </Fact>
+        ) : null}
         {films ? <Fact term={t("sat-media-viewers")}>{names(access.viewers)}</Fact> : null}
         {calls ? <Fact term={t("sat-media-callers")}>{names(access.callers)}</Fact> : null}
       </Facts>
@@ -77,8 +83,16 @@ function MediaAccessForm({
   const [camera, setCamera] = useState(s.access.camera);
   const [viewers, setViewers] = useState(() => new Set(s.access.viewers.map((p) => p.id)));
   const [callers, setCallers] = useState(() => new Set(s.access.callers.map((p) => p.id)));
+  const [privacy, setPrivacy] = useState(() => draftOf(s.access.privacy));
+  const [problem, setProblem] = useState<string | null>(null);
   const save = useMutation({
-    mutationFn: () => api.setMediaAccess(s.id, { viewers: [...viewers].sort(), callers: [...callers].sort(), camera }),
+    mutationFn: () =>
+      api.setMediaAccess(s.id, {
+        viewers: [...viewers].sort(),
+        callers: [...callers].sort(),
+        camera,
+        privacy: privacyOf(privacy),
+      }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: keys.satellites });
       void queryClient.invalidateQueries({ queryKey: keys.mediaDevices });
@@ -87,11 +101,14 @@ function MediaAccessForm({
     },
   });
   if (people.isPending) return <Loading lines={2} />;
-  const household = (people.data ?? []).filter((p) => !isOwner(p.account));
+  const everyone = people.data ?? [];
+  const household = everyone.filter((p) => !isOwner(p.account));
 
   function submit(event: FormEvent) {
     event.preventDefault();
-    save.mutate();
+    const wrong = films ? privacyProblem(privacy) : null;
+    setProblem(wrong);
+    if (!wrong) save.mutate();
   }
 
   const toggle = (set: typeof setViewers, id: string) => (on: boolean) =>
@@ -164,7 +181,18 @@ function MediaAccessForm({
           </tbody>
         </table>
       )}
-      <FormError error={save.error} />
+      {films ? (
+        <PrivacyFields
+          draft={privacy}
+          onChange={(next) => {
+            setPrivacy(next);
+            setProblem(null);
+          }}
+          household={everyone}
+          disabled={!camera}
+        />
+      ) : null}
+      <FormError error={problem ?? save.error} />
       <FormActions>
         <Button type="submit" disabled={save.isPending}>
           {t("action-save")}

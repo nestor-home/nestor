@@ -537,7 +537,13 @@ class EventDescriber:
             ),
             MediaSessionClosed: lambda e: self._line(
                 e,
-                Message.of("journal-media-closed", device=e.device_id, seconds=round(e.duration_s), reason=e.reason),
+                Message.of(
+                    "journal-media-closed",
+                    device=e.device_id,
+                    seconds=round(e.duration_s),
+                    reason=e.reason,
+                    off=e.off or "",
+                ),
                 room=e.room,
                 tone=Tone.WARNING if e.reason is MediaEnd.FAILED else Tone.NORMAL,
             ),

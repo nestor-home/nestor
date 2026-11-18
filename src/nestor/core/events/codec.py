@@ -1,6 +1,6 @@
 """JSON conversion of event payloads, driven by type annotations.
 
-Supported field types: `str`, `int`, `float`, `bool`, `None`, enums, `datetime`, `NewType`s of
+Supported field types: `str`, `int`, `float`, `bool`, `None`, enums, `datetime`, `time`, `NewType`s of
 those, `X | None`, `tuple[X, ...]`, `Mapping[str, ...]` (kept as plain JSON) and frozen
 dataclasses made of supported types. Anything else is a contract error: payloads must stay
 plain data so that the event log remains readable without the code that wrote it.
@@ -11,7 +11,7 @@ import enum
 import types
 import typing
 from collections.abc import Mapping
-from datetime import datetime
+from datetime import datetime, time
 from typing import Any, get_args, get_origin, get_type_hints
 
 from nestor.core.exceptions import ContractError
@@ -24,7 +24,7 @@ def encode(value: object) -> JSON:
         return encode(value.value)
     if value is None or isinstance(value, bool | int | float | str):
         return value
-    if isinstance(value, datetime):
+    if isinstance(value, datetime | time):
         return value.isoformat()
     if dataclasses.is_dataclass(value) and not isinstance(value, type):
         return {f.name: encode(getattr(value, f.name)) for f in dataclasses.fields(value)}
@@ -57,6 +57,8 @@ def decode(value: JSON, hint: Any) -> Any:
                 raise ContractError(str(error)) from None
         if hint is datetime and isinstance(value, str):
             return datetime.fromisoformat(value)
+        if hint is time and isinstance(value, str):
+            return time.fromisoformat(value)
         if dataclasses.is_dataclass(hint) and isinstance(value, dict):
             hints = get_type_hints(hint)
             return hint(**{k: decode(v, hints[k]) for k, v in value.items()})

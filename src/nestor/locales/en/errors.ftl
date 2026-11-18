@@ -65,7 +65,12 @@ error-memory-shared = Only administrators change shared memories.
 error-empty-memory = A memory cannot be empty. To erase it, forget it.
 error-attachment-unknown = This file is not available.
 error-journal-entry-unknown = Journal entry not found.
-error-media-camera-off = This device's camera is off.
+error-media-camera-off = { $off ->
+    [quiet_hours] This device's camera does not film during its quiet hours.
+    [someone_home] This device's camera does not film while someone it is off for is home.
+   *[other] This device's camera is off.
+}
+error-privacy-needs-presence = Turning a camera off when someone is home needs Home Assistant's presence, which is not set up.
 error-media-forbidden = You are not allowed to watch this device or call through it.
 error-media-off = Watching and calling need the media extra on this server.
 error-media-offline = This device is not connected, or it did not answer.
