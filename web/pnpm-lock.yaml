@@ -197,8 +197,8 @@ importers:
         specifier: 5.3.0
         version: 5.3.0
       '@lobehub/icons-static-svg':
-        specifier: 1.102.0
-        version: 1.102.0
+        specifier: 1.103.0
+        version: 1.103.0
       '@nestor-home/character':
         specifier: 0.3.0
         version: 0.3.0(react@19.3.1)
@@ -635,8 +635,8 @@ packages:
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
 
-  '@lobehub/icons-static-svg@1.102.0':
-    resolution: {integrity: sha512-3Na6S2kdslmsfnBjuL0PQWQClrmuWe/pWThRN/3J2VzPg5MhVghy8knVu7kd1/lqA9ydZBvwmnKLzuBo0Wm6Qw==}
+  '@lobehub/icons-static-svg@1.103.0':
+    resolution: {integrity: sha512-GOGvK2/jzElmE/Bl1NlbD6Rnu8FhPR+gznjQmQMfUuGe0Qndt6MK1vVnIwd3i3TirgQqYtTn/iCHTkBtQkaGxA==}
 
   '@msw/url@0.1.2':
     resolution: {integrity: sha512-DdeBLQxQ+ZrtmwEmaj7GQ7lbzPCgbbbyAqOz/I4ulo68hwBpfdNvQJ5bmihJUkAAKOeCmqCIG3OFZGosqFN4mA==}
@@ -2876,7 +2876,7 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.6.0
 
-  '@lobehub/icons-static-svg@1.102.0': {}
+  '@lobehub/icons-static-svg@1.103.0': {}
 
   '@msw/url@0.1.2': {}
 
