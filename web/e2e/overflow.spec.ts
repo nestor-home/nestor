@@ -183,7 +183,8 @@ for (const width of [390, 1440]) {
 
     test("nothing overflows in a satellite's update dialog", async ({ page }) => {
       await page.goto("/satellites/reachy-living-room");
-      await page.getByRole("button", { name: "Update available" }).first().click();
+      // the rail names Nestor's own update "Update available: <version>": the satellite's is the exact one
+      await page.getByRole("button", { name: "Update available", exact: true }).click();
       await expect(page.getByRole("dialog", { name: /version 0\.4\.1/ })).toBeVisible();
       await page.waitForTimeout(300);
       expect(await overflows(page)).toEqual([]);
