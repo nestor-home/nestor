@@ -427,3 +427,15 @@
     color: var(--ink-faint);
   }
 }
+
+/* A sheet's form holds its actions at the sheet's foot, however short it is: every box between the sheet and
+   the actions grows down. Outside the layers, so that it wins over a `grid` utility on one of those boxes. */
+[data-slot="sheet-content"] :has([data-slot="form-actions"]):not([data-slot="form-actions"] *) {
+  display: flex;
+  flex-direction: column;
+  flex: 1 0 auto;
+}
+
+[data-slot="sheet-content"] [data-slot="form-actions"] {
+  margin-top: auto;
+}

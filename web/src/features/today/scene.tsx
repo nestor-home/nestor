@@ -84,12 +84,13 @@ export function Scene({
           />
           <p
             aria-live="polite"
-            className="mb-8 line-clamp-5 max-w-[22rem] rounded-2xl sm:mb-12 rounded-bl-sm bg-paper-raised px-4 py-3 text-lead leading-snug text-ink shadow-lg"
+            className="mb-8 max-w-[22rem] rounded-2xl rounded-bl-sm bg-paper-raised px-4 py-3 text-lead leading-snug text-ink shadow-lg sm:mb-12"
           >
             <span className="mb-0.5 block text-meta font-medium text-ink-muted">
               {agent} · {stateLabel}
             </span>
-            {line}
+            {/* clamped inside the padding, so that a cut line never shows under it */}
+            <span className="line-clamp-4 block">{line}</span>
           </p>
         </div>
         {rooms.length ? <Rooms rooms={rooms} focus={focus} onRoom={onRoom} /> : null}
