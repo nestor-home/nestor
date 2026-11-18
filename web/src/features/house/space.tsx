@@ -185,6 +185,9 @@ export function HouseSpace() {
   );
 }
 
+/** The channels a person's card names by their mark; the others are counted. */
+const CHANNELS_SHOWN = 3;
+
 /** A member of the household: where they are, how the agent reaches them. */
 function PersonCard({ person: p }: { person: Person }) {
   const t = useT();
@@ -202,7 +205,16 @@ function PersonCard({ person: p }: { person: Person }) {
       <Link to="/people/$personId" params={{ personId: p.id }} className={TILE_CARD}>
         <TileCard
           marks={<Avatar name={p.name} away={home === false} size="lg" />}
-          aside={p.channel_accounts.map((c) => <KindMark key={c} kind={c} className="text-ink-muted" label={false} />)}
+          aside={
+            <>
+              {p.channel_accounts.slice(0, CHANNELS_SHOWN).map((c) => (
+                <KindMark key={c} kind={c} className="text-ink-muted" label={false} />
+              ))}
+              {p.channel_accounts.length > CHANNELS_SHOWN ? (
+                <span className="text-meta text-ink-muted tabular">+{p.channel_accounts.length - CHANNELS_SHOWN}</span>
+              ) : null}
+            </>
+          }
           title={p.name}
           line={
             <>

@@ -63,8 +63,11 @@ export function TileCard({
       </span>
       {/* read after its title (a card's name is its title first), drawn above it */}
       <span className="order-first flex w-full items-center justify-between gap-3">
-        <span className="flex min-w-0 items-center gap-1.5">{marks}</span>
-        {aside ? <span className="flex shrink-0 items-center gap-2.5">{aside}</span> : null}
+        {/* the marks keep their size; what stands at the other end wraps under itself rather than over them */}
+        <span className="flex shrink-0 items-center gap-1.5">{marks}</span>
+        {aside ? (
+          <span className="flex min-w-0 flex-wrap items-center justify-end gap-x-2.5 gap-y-1.5">{aside}</span>
+        ) : null}
       </span>
       {foot ? (
         <span className="mt-auto flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-rule pt-3 text-meta text-ink-muted">
