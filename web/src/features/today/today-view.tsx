@@ -156,7 +156,7 @@ export function TodayView() {
         </Section>
       ) : null}
 
-      <div className="grid gap-10 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] lg:gap-12">
+      <div className="grid gap-10 @4xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] @4xl:gap-12">
         <div className="grid content-start gap-10">
           <Now running={running} items={items} lastLive={lastLive} />
           <Day marks={marks} onEvent={setEvent} />

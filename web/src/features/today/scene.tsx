@@ -66,10 +66,11 @@ export function Scene({
       <div
         className={cn(
           "grid items-end gap-x-10 gap-y-8 px-5 pt-7 sm:px-8 sm:pt-9",
-          rooms.length ? "lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]" : "",
+          // by the room the page has (the rail takes some), not by the screen
+          rooms.length ? "@3xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]" : "",
         )}
       >
-        <div className="flex items-end gap-3 lg:pb-1">
+        <div className="flex items-end gap-3 @3xl:pb-1">
           <AgentFigure
             state={state}
             size="lg"

@@ -57,7 +57,7 @@ export function AppShell() {
           {bleed ? (
             <Outlet />
           ) : (
-            <div className="mx-auto max-w-[76rem]">
+            <div className="@container mx-auto max-w-[76rem]">
               <RestartBanner />
               <Outlet />
             </div>
