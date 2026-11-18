@@ -12,6 +12,7 @@ import {
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useOpenState } from "@/hooks/use-open-state";
+import { cn } from "@/lib/utils";
 
 /**
  * The one rule for editing: a page shows content; creating or changing is an explicit action that
@@ -83,11 +84,12 @@ export function SideSheet({
       {trigger ? <SheetTrigger render={trigger} /> : null}
       <SheetContent
         side={mobile ? "bottom" : "right"}
-        className={
-          mobile
-            ? "h-[100dvh] w-full overflow-y-auto overscroll-contain bg-paper pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
-            : "w-full overflow-y-auto overscroll-contain bg-paper sm:max-w-xl"
-        }
+        // a column the height of the screen (a phone) or of the window: its panel's body scrolls, never the sheet
+        className={cn(
+          "gap-0 overflow-hidden bg-paper p-0",
+          // the sheet's own rule for a bottom sheet is "as tall as its content": said for that side, the screen wins
+          mobile ? "w-full data-[side=bottom]:h-dvh data-[side=bottom]:border-t-0" : "h-full w-full sm:max-w-xl",
+        )}
       >
         {held}
       </SheetContent>
@@ -112,14 +114,13 @@ export function BottomSheet({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetTrigger render={trigger} />
-      <SheetContent
-        side="bottom"
-        className="max-h-[85dvh] overflow-y-auto overscroll-contain rounded-t-xl bg-paper pb-[env(safe-area-inset-bottom)]"
-      >
-        <SheetHeader className="border-b border-rule px-5 pt-5 pb-3">
+      <SheetContent side="bottom" className="max-h-[85dvh] gap-0 overflow-hidden rounded-t-xl bg-paper p-0">
+        <SheetHeader className="shrink-0 border-b border-rule px-5 pt-5 pr-14 pb-3">
           <SheetTitle className="title-card font-normal">{title}</SheetTitle>
         </SheetHeader>
-        {children}
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-[env(safe-area-inset-bottom)]">
+          {children}
+        </div>
       </SheetContent>
     </Sheet>
   );
@@ -154,7 +155,7 @@ export function FormSheet({
 
 /**
  * What a side sheet holds when it opens one thing (a task, a room, a device): what kind of thing it is, its
- * title, its body, and its actions held at the foot while the body scrolls.
+ * title, its body, which scrolls, and its actions on a foot of their own under it.
  */
 export function SheetPanel({
   icon,
@@ -178,7 +179,7 @@ export function SheetPanel({
 }) {
   return (
     <>
-      <SheetHeader className="gap-3 px-6 pt-8 pb-2">
+      <SheetHeader className="shrink-0 gap-3 px-5 pt-[calc(1.5rem+env(safe-area-inset-top))] pr-14 pb-3 sm:px-6 sm:pt-8">
         {kind ? (
           <span className="flex items-center gap-3 text-body font-medium text-ink-muted">
             {mark ?? (icon ? <IconTile icon={icon} tone={tone} size="sm" /> : null)}
@@ -190,9 +191,17 @@ export function SheetPanel({
           {description ?? kind ?? title}
         </SheetDescription>
       </SheetHeader>
-      <div className="grid gap-7 px-6 pb-8">{children}</div>
+      {/* the one box that scrolls: the head stays above it, the actions under it */}
+      <div
+        className={cn(
+          "min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pt-2 sm:px-6",
+          actions ? "pb-6" : "pb-[calc(2rem+env(safe-area-inset-bottom))]",
+        )}
+      >
+        <div className="grid gap-7">{children}</div>
+      </div>
       {actions ? (
-        <div data-slot="sheet-actions" className="sticky bottom-0 mt-auto flex flex-wrap gap-2">
+        <div className="flex shrink-0 flex-wrap gap-2 border-t border-rule bg-paper-raised px-5 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:px-6">
           {actions}
         </div>
       ) : null}

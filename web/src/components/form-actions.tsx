@@ -2,9 +2,9 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * The actions that end a form, at the end of the line, with an optional `hint` before them. In a
- * dialog they become its footer, and stay in reach while the body scrolls (app.css,
- * `[data-slot="form-actions"]`).
+ * The actions that end a form: together at the end of the line, an optional `hint` before them. They are part
+ * of the form and scroll with it; an overlay that holds actions in reach has its own foot for them
+ * (`SheetPanel`'s `actions`, a dialog's footer).
  */
 export function FormActions({
   hint,
@@ -16,10 +16,7 @@ export function FormActions({
   children: ReactNode;
 }) {
   return (
-    <div
-      data-slot="form-actions"
-      className={cn("flex flex-wrap items-center justify-end gap-x-4 gap-y-2.5", className)}
-    >
+    <div className={cn("flex flex-wrap items-center justify-end gap-x-4 gap-y-2.5", className)}>
       {/* the hint keeps a readable width: where it cannot sit beside the actions, it takes its own line above them */}
       {hint ? <span className="min-w-48 flex-1 text-meta text-ink-muted">{hint}</span> : null}
       <span className="flex flex-wrap items-center justify-end gap-3">{children}</span>

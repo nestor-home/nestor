@@ -201,39 +201,6 @@
 }
 
 @layer components {
-  /* the actions at the foot of a dialog or a sheet stay in reach while its body scrolls, on one footer: those of
-     a form (FormActions) and those of a thing opened in a sheet (SheetPanel). A dialog that lays out its own
-     footer (`data-slot="dialog-footer"`) already holds them there. */
-  [data-slot="dialog-content"] [data-slot="form-actions"]:not([data-slot="dialog-footer"] *),
-  [data-slot="sheet-content"] [data-slot="form-actions"],
-  [data-slot="sheet-actions"] {
-    position: sticky;
-    background: var(--paper-raised);
-    border-top: 1px solid var(--rule);
-  }
-
-  /* stuck to the scrolling box's own foot (`bottom: 0`), never under it; the negative margin only takes back
-     the body's padding once the end is reached */
-  [data-slot="dialog-content"] [data-slot="form-actions"]:not([data-slot="dialog-footer"] *) {
-    bottom: 0;
-    margin-inline: -1rem;
-    margin-bottom: -1rem;
-    padding: 0.75rem 1rem calc(1rem + env(safe-area-inset-bottom));
-  }
-
-  /* a sheet's body pads its sides by 1.5rem and its foot by 2rem (SheetPanel) */
-  [data-slot="sheet-content"] [data-slot="form-actions"] {
-    bottom: 0;
-    margin-inline: -1.5rem;
-    margin-bottom: -2rem;
-    padding: 1rem 1.5rem calc(1rem + env(safe-area-inset-bottom));
-  }
-
-  [data-slot="sheet-actions"] {
-    bottom: 0;
-    padding: 1rem 1.5rem calc(1rem + env(safe-area-inset-bottom));
-  }
-
   /* a quiet caption above a group: sentence case, never shouting */
   .caption {
     font-family: var(--font-ui);
@@ -428,16 +395,4 @@
     pointer-events: none;
     color: var(--ink-faint);
   }
-}
-
-/* A sheet's form holds its actions at the sheet's foot, however short it is: every box between the sheet and
-   the actions grows down. Outside the layers, so that it wins over a `grid` utility on one of those boxes. */
-[data-slot="sheet-content"] :has([data-slot="form-actions"]):not([data-slot="form-actions"] *) {
-  display: flex;
-  flex-direction: column;
-  flex: 1 0 auto;
-}
-
-[data-slot="sheet-content"] [data-slot="form-actions"] {
-  margin-top: auto;
 }
