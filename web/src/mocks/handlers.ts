@@ -142,7 +142,7 @@ const minutesOf = (clock: string) => Number(clock.slice(0, 2)) * 60 + Number(clo
 
 /** Whether `now`, in the household's time (the browser's, here), falls in the slot: past midnight when it ends
  *  before it starts, a whole day when both are equal. */
-function covers(slot: In<"QuietHoursIO-Output">, now: Date): boolean {
+function covers(slot: In<"QuietHoursIO">, now: Date): boolean {
   const day = (now.getDay() + 6) % 7; // 0 Monday
   const minute = now.getHours() * 60 + now.getMinutes();
   const [start, end] = [minutesOf(slot.start), minutesOf(slot.end)];
@@ -166,7 +166,7 @@ function cameraOff(satellite: In<"SatelliteOut">): In<"Off"> | null {
 }
 
 /** The quiet hours as the server keeps them, or the first that it refuses (422). */
-function quietIn(slots: In<"QuietHoursIO-Input">[]): In<"QuietHoursIO-Output">[] | null {
+function quietIn(slots: In<"QuietHoursIO">[]): In<"QuietHoursIO">[] | null {
   const clock = /^([01][0-9]|2[0-3]):[0-5][0-9]$/;
   const valid = slots.every(
     (q) => q.days.length > 0 && q.days.every((d) => d >= 0 && d <= 6) && clock.test(q.start) && clock.test(q.end),

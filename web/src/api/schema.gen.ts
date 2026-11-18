@@ -2260,7 +2260,11 @@ export interface components {
             /** Text */
             text: string;
         };
-        "Day-Input": number;
+        /**
+         * Day
+         * @enum {string}
+         */
+        Day: "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
         /** DeliveredOut */
         DeliveredOut: {
             /**
@@ -3091,7 +3095,7 @@ export interface components {
              * Quiet
              * @default []
              */
-            quiet: components["schemas"]["QuietHoursIO-Input"][];
+            quiet: components["schemas"]["QuietHoursIO"][];
             /**
              * Off When Home
              * @default false
@@ -3106,7 +3110,7 @@ export interface components {
         /** PrivacyOut */
         PrivacyOut: {
             /** Quiet */
-            quiet: components["schemas"]["QuietHoursIO-Output"][];
+            quiet: components["schemas"]["QuietHoursIO"][];
             /** Off When Home */
             off_when_home: boolean;
             /** Home People */
@@ -3158,20 +3162,9 @@ export interface components {
          * @description A time slot when the camera does not film, in the household's time: from `start` to `end` (past midnight when
          *     `end` is not after `start`, a whole day when equal), starting on each of `days`.
          */
-        "QuietHoursIO-Input": {
+        QuietHoursIO: {
             /** Days */
-            days: components["schemas"]["Day-Input"][];
-            start: components["schemas"]["Clock"];
-            end: components["schemas"]["Clock"];
-        };
-        /**
-         * QuietHoursIO
-         * @description A time slot when the camera does not film, in the household's time: from `start` to `end` (past midnight when
-         *     `end` is not after `start`, a whole day when equal), starting on each of `days`.
-         */
-        "QuietHoursIO-Output": {
-            /** Days */
-            days: components["schemas"]["nestor__admin__api__v1__media__schemas__Day"][];
+            days: components["schemas"]["Weekday"][];
             start: components["schemas"]["Clock"];
             end: components["schemas"]["Clock"];
         };
@@ -3342,7 +3335,7 @@ export interface components {
             /** Times */
             times: string[];
             /** Days */
-            days: components["schemas"]["nestor__modules__initiative__schedules__types__Day"][];
+            days: components["schemas"]["Day"][];
             /** Next Due */
             next_due: string | null;
         };
@@ -3656,6 +3649,7 @@ export interface components {
             /** Kinds */
             kinds: string[];
         };
+        Weekday: number;
         /** WrittenOut */
         WrittenOut: {
             diff: components["schemas"]["DiffOut"];
@@ -3664,12 +3658,6 @@ export interface components {
             /** Pending Changes */
             pending_changes: string[];
         };
-        nestor__admin__api__v1__media__schemas__Day: number;
-        /**
-         * Day
-         * @enum {string}
-         */
-        nestor__modules__initiative__schedules__types__Day: "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
     };
     responses: never;
     parameters: never;
@@ -13244,6 +13232,7 @@ export const authKindValues: ReadonlyArray<FlattenedDeepRequired<components>["sc
 export const changeKindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ChangeKind"]> = ["breaking", "feature", "fix", "other"];
 export const chatRoleValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ChatRole"]> = ["person", "assistant", "note", "fallback", "tool"];
 export const chatStreamOutTypeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ChatStreamOut"]["type"]> = ["text", "end", "failed", "done"];
+export const dayValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Day"]> = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 export const errorDetailCodeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ErrorDetail"]["code"]> = ["addition_over", "addition_unknown", "attachment_unknown", "audio_format", "bad_token", "chat_busy", "chat_needs_person", "chat_off", "client_incomplete", "client_missing", "client_required", "config_history_unknown", "config_invalid", "config_unavailable", "conflict", "connection_unknown", "connector_unknown", "cross_origin", "csrf_failed", "empty_memory", "executor_unknown", "executors_unreachable", "fields_missing", "forbidden", "http_error", "identify_unsupported", "invalid", "invalid_code", "invalid_credentials", "invalid_login", "invalid_request", "invitation_expired", "invitation_revoked", "invitation_unknown", "invitation_used", "journal_entry_unknown", "media_camera_off", "privacy_needs_presence", "media_forbidden", "media_off", "media_offline", "media_unable", "last_owner", "memory_shared", "memory_unknown", "method_not_allowed", "no_connectors", "no_secret_key", "not_a_device_code_method", "not_found", "not_oauth", "oauth", "own_connections_only", "pairing_refused", "pending_unknown", "person_required", "person_unknown", "provider_error", "provider_refused", "restart_unconfirmed", "satellite_offline", "satellite_unknown", "secret_in_use", "secret_unknown", "task_unknown", "throttled", "too_many_additions", "unauthenticated", "unknown_locale", "unknown_person", "unknown_tool", "unsupported_media_type", "update_not_installable", "update_unavailable", "update_unconfirmed", "update_unsupported", "use_me_password", "voice_not_yours", "voices_off", "watch_unknown", "schedule_unknown", "service_refused", "confirmation_unknown", "weak_password", "wrong_password"];
 export const familyValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Family"]> = ["model", "executor", "channel", "home", "tools", "inbound", "connector"];
 export const granularityValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Granularity"]> = ["home", "occupied_rooms", "person_room"];
@@ -13271,4 +13260,3 @@ export const taskStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["
 export const toneValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Tone"]> = ["normal", "decision", "warning"];
 export const toolStateValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ToolState"]> = ["running", "done", "failed", "background"];
 export const updateStateValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["UpdateState"]> = ["current", "available", "installing", "failed"];
-export const nestor__modules__initiative__schedules__types__DayValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["nestor__modules__initiative__schedules__types__Day"]> = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];

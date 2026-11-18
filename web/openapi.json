@@ -13369,10 +13369,18 @@
         ],
         "title": "CorrectionIn"
       },
-      "Day-Input": {
-        "type": "integer",
-        "maximum": 6.0,
-        "minimum": 0.0
+      "Day": {
+        "type": "string",
+        "enum": [
+          "mon",
+          "tue",
+          "wed",
+          "thu",
+          "fri",
+          "sat",
+          "sun"
+        ],
+        "title": "Day"
       },
       "DeliveredOut": {
         "properties": {
@@ -15850,7 +15858,7 @@
         "properties": {
           "quiet": {
             "items": {
-              "$ref": "#/components/schemas/QuietHoursIO-Input"
+              "$ref": "#/components/schemas/QuietHoursIO"
             },
             "type": "array",
             "maxItems": 16,
@@ -15880,7 +15888,7 @@
         "properties": {
           "quiet": {
             "items": {
-              "$ref": "#/components/schemas/QuietHoursIO-Output"
+              "$ref": "#/components/schemas/QuietHoursIO"
             },
             "type": "array",
             "title": "Quiet"
@@ -16011,38 +16019,11 @@
         "title": "Purpose",
         "description": "Why a person opens a media session on a device."
       },
-      "QuietHoursIO-Input": {
+      "QuietHoursIO": {
         "properties": {
           "days": {
             "items": {
-              "$ref": "#/components/schemas/Day-Input"
-            },
-            "type": "array",
-            "maxItems": 7,
-            "minItems": 1,
-            "title": "Days"
-          },
-          "start": {
-            "$ref": "#/components/schemas/Clock"
-          },
-          "end": {
-            "$ref": "#/components/schemas/Clock"
-          }
-        },
-        "type": "object",
-        "required": [
-          "days",
-          "start",
-          "end"
-        ],
-        "title": "QuietHoursIO",
-        "description": "A time slot when the camera does not film, in the household's time: from `start` to `end` (past midnight when\n`end` is not after `start`, a whole day when equal), starting on each of `days`."
-      },
-      "QuietHoursIO-Output": {
-        "properties": {
-          "days": {
-            "items": {
-              "$ref": "#/components/schemas/nestor__admin__api__v1__media__schemas__Day"
+              "$ref": "#/components/schemas/Weekday"
             },
             "type": "array",
             "maxItems": 7,
@@ -16587,7 +16568,7 @@
           },
           "days": {
             "items": {
-              "$ref": "#/components/schemas/nestor__modules__initiative__schedules__types__Day"
+              "$ref": "#/components/schemas/Day"
             },
             "type": "array",
             "title": "Days"
@@ -17594,6 +17575,11 @@
         ],
         "title": "WatchesOut"
       },
+      "Weekday": {
+        "type": "integer",
+        "maximum": 6.0,
+        "minimum": 0.0
+      },
       "WrittenOut": {
         "properties": {
           "diff": {
@@ -17618,24 +17604,6 @@
           "pending_changes"
         ],
         "title": "WrittenOut"
-      },
-      "nestor__admin__api__v1__media__schemas__Day": {
-        "type": "integer",
-        "maximum": 6.0,
-        "minimum": 0.0
-      },
-      "nestor__modules__initiative__schedules__types__Day": {
-        "type": "string",
-        "enum": [
-          "mon",
-          "tue",
-          "wed",
-          "thu",
-          "fri",
-          "sat",
-          "sun"
-        ],
-        "title": "Day"
       }
     }
   }

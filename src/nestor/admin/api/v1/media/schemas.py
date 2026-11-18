@@ -69,7 +69,7 @@ class MediaSessionOut(BaseModel):
         )
 
 
-type Day = Annotated[int, Field(ge=0, le=6)]  # 0 Monday to 6 Sunday
+type Weekday = Annotated[int, Field(ge=0, le=6)]  # 0 Monday to 6 Sunday
 type Clock = Annotated[str, Field(pattern=r"^([01][0-9]|2[0-3]):[0-5][0-9]$")]  # HH:MM
 
 
@@ -77,7 +77,7 @@ class QuietHoursIO(BaseModel):
     """A time slot when the camera does not film, in the household's time: from `start` to `end` (past midnight when
     `end` is not after `start`, a whole day when equal), starting on each of `days`."""
 
-    days: list[Day] = Field(min_length=1, max_length=7)
+    days: list[Weekday] = Field(min_length=1, max_length=7)
     start: Clock
     end: Clock
 
