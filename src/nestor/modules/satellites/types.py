@@ -326,7 +326,8 @@ class MediaAccess:
         if any(quiet.covers(now) for quiet in self.privacy.quiet):
             return Off.QUIET_HOURS
         if self.privacy.off_when_home:
-            people = self.privacy.home_people or tuple(household)
+            members = tuple(household)  # someone who left the household no longer counts, though still listed
+            people = [p for p in self.privacy.home_people if p in members] if self.privacy.home_people else members
             if presence is None or any(presence.of(p).home is not False for p in people):
                 return Off.SOMEONE_HOME
         return None

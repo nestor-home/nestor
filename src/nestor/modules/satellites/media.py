@@ -204,8 +204,8 @@ class MediaSessions(Component):
             can = satellite.capabilities if linked is None else linked
             view = VIDEO_CAPTURE in can and self.may(satellite, viewer, Purpose.VIEW)
             call = can >= AUDIO and self.may(satellite, viewer, Purpose.CALL)
-            if view or call:
-                found.append(Offer(satellite, linked, view, call, self.off(satellite)))
+            if view or call:  # why its camera does not film, only to whom may watch it
+                found.append(Offer(satellite, linked, view, call, self.off(satellite) if view else None))
         return found
 
     async def open(self, device_id: str, purpose: Purpose, viewer: Viewer, offer: Mapping[str, Any]) -> LiveSession:

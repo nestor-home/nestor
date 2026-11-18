@@ -74,6 +74,7 @@ def test_quiet_hours_run_past_midnight_from_the_days_they_start_on(at: datetime,
         (home(mathis=False, lea=False), (), Off.SOMEONE_HOME),  # Jules is not tracked: he may be home
         (home(mathis=True, lea=False), ("lea",), None),  # only Léa counts, and she is away
         (home(mathis=False, lea=True), ("lea",), Off.SOMEONE_HOME),
+        (home(mathis=False, lea=False, jules=False), ("paul",), None),  # Paul left the household: he no longer counts
         (None, (), Off.SOMEONE_HOME),  # no presence at all
     ],
 )
