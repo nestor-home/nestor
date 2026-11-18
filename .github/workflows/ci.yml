@@ -152,9 +152,7 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ steps.playwright.outputs.version }}
       - if: steps.browsers.outputs.cache-hit != 'true'
-        run: pnpm exec playwright install --with-deps --only-shell chromium
-      - if: steps.browsers.outputs.cache-hit == 'true'
-        run: pnpm exec playwright install-deps chromium
+        run: pnpm exec playwright install --only-shell chromium  # the runner image has the system libraries
       - run: pnpm e2e --shard=${{ matrix.shard }}/3
 
   # `pip install nestor-home` without any extra: `nestor init` writes a text-only configuration (a local
