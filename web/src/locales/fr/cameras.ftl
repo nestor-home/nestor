@@ -7,6 +7,11 @@ cam-off-hint = Installez Nestor avec l'extra media : nestor-home[media].
 cam-empty = Aucun appareil que vous pouvez voir ou appeler.
 cam-empty-hint = Qui gère les satellites décide qui peut, sur la page de chaque satellite.
 cam-call-only = appel seulement
+cam-off-reason = { $off ->
+    [quiet_hours] coupée pendant les heures calmes
+    [someone_home] coupée quand quelqu'un est à la maison
+   *[switched_off] caméra coupée
+}
 cam-view = Voir
 cam-view-for = Voir { $name }
 cam-call = Appeler

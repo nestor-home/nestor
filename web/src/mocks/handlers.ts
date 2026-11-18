@@ -14,6 +14,7 @@ import {
   METHODS,
   type MockPending,
   type MockPerson,
+  NO_RULE,
   PROTOCOL,
   SCOPES,
   services as servicesOf,
@@ -131,9 +132,46 @@ function mediaDevice(id: string, purpose: In<"Purpose">): In<"SatelliteOut"> | R
   if (!satellite) return notFound("satellite");
   if (!mayMedia(satellite, purpose)) return fail(403, "media_forbidden");
   if (purpose === "view" ? !satellite.films : !satellite.calls) return fail(409, "media_unable");
-  if (purpose === "view" && !satellite.access.camera) return fail(409, "media_camera_off");
+  const off = purpose === "view" ? cameraOff(satellite) : null;
+  if (off) return fail(409, "media_camera_off", { off });
   if (!satellite.connected) return fail(409, "media_offline");
   return satellite;
+}
+
+const minutesOf = (clock: string) => Number(clock.slice(0, 2)) * 60 + Number(clock.slice(3, 5));
+
+/** Whether `now`, in the household's time (the browser's, here), falls in the slot: past midnight when it ends
+ *  before it starts, a whole day when both are equal. */
+function covers(slot: In<"QuietHoursIO-Output">, now: Date): boolean {
+  const day = (now.getDay() + 6) % 7; // 0 Monday
+  const minute = now.getHours() * 60 + now.getMinutes();
+  const [start, end] = [minutesOf(slot.start), minutesOf(slot.end)];
+  if (start < end) return slot.days.includes(day) && start <= minute && minute < end;
+  return (slot.days.includes(day) && minute >= start) || (slot.days.includes((day + 6) % 7) && minute < end);
+}
+
+/** Why the device's camera does not film now, as the server tells it: its switch, then its privacy rules. Presence
+ *  that cannot tell counts as someone home. */
+function cameraOff(satellite: In<"SatelliteOut">): In<"Off"> | null {
+  const { camera, privacy } = satellite.access;
+  if (!camera) return "switched_off";
+  if (privacy.quiet.some((slot) => covers(slot, new Date()))) return "quiet_hours";
+  if (privacy.off_when_home) {
+    if (!db.home) return "someone_home";
+    const ids = privacy.home_people.length ? privacy.home_people.map((p) => p.id) : db.people.map((p) => p.id);
+    const home = (id: string) => db.people.find((p) => p.id === id)?.presence?.home;
+    if (!ids.length || ids.some((id) => home(id) !== false)) return "someone_home";
+  }
+  return null;
+}
+
+/** The quiet hours as the server keeps them, or the first that it refuses (422). */
+function quietIn(slots: In<"QuietHoursIO-Input">[]): In<"QuietHoursIO-Output">[] | null {
+  const clock = /^([01][0-9]|2[0-3]):[0-5][0-9]$/;
+  const valid = slots.every(
+    (q) => q.days.length > 0 && q.days.every((d) => d >= 0 && d <= 6) && clock.test(q.start) && clock.test(q.end),
+  );
+  return valid ? slots.map((q) => ({ days: [...new Set(q.days)].sort(), start: q.start, end: q.end })) : null;
 }
 
 /** A file to download, named as the server names it: quoted when plain, else encoded (RFC 6266). */
@@ -1097,14 +1135,16 @@ export const handlers = [
       const view = mayMedia(satellite, "view");
       const call = mayMedia(satellite, "call");
       if (!view && !call) return [];
+      const off = cameraOff(satellite);
       return [
         {
           id: satellite.id,
           name: satellite.name,
           room: satellite.room,
           connected: satellite.connected === true,
-          can_view: view && satellite.films && satellite.access.camera,
+          can_view: view && satellite.films && off === null,
           can_call: call && satellite.calls,
+          off,
         } satisfies In<"MediaDeviceOut">,
       ];
     });
@@ -1120,7 +1160,7 @@ export const handlers = [
     await delay(400);
     const id = newId("media");
     const video =
-      body.purpose === "view" || (satellite.films && satellite.access.camera && mayMedia(satellite, "view"));
+      body.purpose === "view" || (satellite.films && cameraOff(satellite) === null && mayMedia(satellite, "view"));
     sessions.set(id, { device: satellite.id, room: satellite.room, opened: Date.now() });
     const opening = body.purpose === "call" ? "Call through" : "Watching";
     journalize({
@@ -1187,12 +1227,22 @@ export const handlers = [
     const satellite = db.satellites.find((x) => x.id === params.id);
     if (!satellite) return notFound("satellite");
     const body = (await request.json()) as In<"MediaAccessIn">;
-    const unknown = [...(body.viewers ?? []), ...(body.callers ?? [])].find((p) => !db.people.some((x) => x.id === p));
+    const privacy = body.privacy ?? { quiet: [], off_when_home: false, home_people: [] };
+    const quiet = quietIn(privacy.quiet ?? []);
+    if (!quiet) return fail(422, "invalid_request");
+    const named = [...(body.viewers ?? []), ...(body.callers ?? []), ...(privacy.home_people ?? [])];
+    const unknown = named.find((p) => !db.people.some((x) => x.id === p));
     if (unknown) return fail(422, "person_unknown", { person: unknown });
+    if (privacy.off_when_home && !db.home) return fail(409, "privacy_needs_presence");
     satellite.access = {
       viewers: [...(body.viewers ?? [])].sort().map(refOf),
       callers: [...(body.callers ?? [])].sort().map(refOf),
       camera: body.camera ?? true,
+      privacy: {
+        quiet,
+        off_when_home: privacy.off_when_home ?? false,
+        home_people: [...new Set(privacy.home_people ?? [])].sort().map(refOf),
+      },
     };
     const { viewers, callers, camera } = satellite.access;
     journalize({
@@ -1714,7 +1764,7 @@ function pair(
     protocol: PROTOCOL,
     can_update: pending.capabilities.some((c) => c.name === "device.update"),
     update: null,
-    access: { viewers: [], callers: [], camera: true },
+    access: { viewers: [], callers: [], camera: true, privacy: NO_RULE() },
   };
   db.pairing = db.pairing.filter((p) => p.pairing_id !== pending.pairing_id);
   db.satellites = [...db.satellites.filter((s) => s.id !== satellite.id), satellite];
