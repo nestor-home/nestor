@@ -1,5 +1,6 @@
+import { Link, type LinkProps } from "@tanstack/react-router";
 import type { LucideIcon } from "lucide-react";
-import { Users } from "lucide-react";
+import { Plus, Users } from "lucide-react";
 import type { PersonRef } from "@/api";
 import { BrandMark, type BrandSlug, KindMark } from "@/lib/brands";
 import { cn } from "@/lib/utils";
@@ -76,5 +77,21 @@ export function OwnerMark({ owner, className }: { owner: PersonRef | null; class
     >
       <Users className="size-1/2" />
     </span>
+  );
+}
+
+/** The last card of a list of things one can add: the way to add one, where one is looking at them. */
+export function AddCard({ link, children, className }: { link: LinkProps; children: string; className?: string }) {
+  return (
+    <Link
+      {...link}
+      className={cn(
+        "surface-quiet flex h-full min-h-24 items-center justify-center gap-2 px-4 py-5 text-[0.95rem] font-medium text-ink-muted transition-colors hover:border-ink-faint hover:bg-paper-raised hover:text-ink",
+        className,
+      )}
+    >
+      <Plus className="size-4.5" aria-hidden="true" />
+      {children}
+    </Link>
   );
 }

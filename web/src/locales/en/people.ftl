@@ -36,3 +36,4 @@ people-presence-empty = No known presence change.
 people-reach-title = How { $assistant } reaches them
 people-reach-first = first
 people-open-account = Open the account { $login }
+people-connect = Connect an account

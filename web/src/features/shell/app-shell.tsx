@@ -1,11 +1,12 @@
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
-import { Search } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
+import { useEffect } from "react";
 import { AgentFigure } from "@/components/agent-figure";
 import { Kbd } from "@/components/status";
 import { AgentPresenceProvider, useAgentPresence } from "@/features/agent/presence";
 import { RestartBanner } from "@/features/config/restart";
 import { UpdateAvailable } from "@/features/system/updates";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useIsMobile, useRail } from "@/hooks/use-mobile";
 import { useAccountLocale, useT } from "@/i18n";
 import { useMe } from "@/lib/session";
 import { cn } from "@/lib/utils";
@@ -30,6 +31,7 @@ export function AppShell() {
   useGoKeys(destinations(me.scopes));
   const search = () => palette.setOpen(() => true);
   const mobile = useIsMobile();
+  const rail = useRail();
 
   return (
     <AgentPresenceProvider>
@@ -39,14 +41,15 @@ export function AppShell() {
       >
         {t("shell-skip")}
       </a>
-      {mobile ? <TopBar onSearch={search} /> : <Rail onSearch={search} />}
+      {mobile ? <TopBar onSearch={search} /> : <Rail onSearch={search} rail={rail} />}
       <main
         id="content"
+        data-rail={rail.wide ? "wide" : "narrow"}
         className={cn(
-          "min-w-0 md:pl-[4.75rem] lg:pl-64",
+          "min-w-0 md:pl-[4.75rem] md:wide:pl-64 md:transition-[padding] md:duration-200",
           bleed
             ? "flex h-[calc(100svh-3.5rem-4rem-env(safe-area-inset-bottom))] flex-col overflow-hidden md:h-svh"
-            : "px-4 pt-5 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:px-6 md:pt-8 md:pr-10 md:pb-16 md:pl-[calc(4.75rem+2.5rem)] lg:pl-[calc(16rem+3rem)]",
+            : "px-4 pt-5 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:px-6 md:pt-8 md:pr-10 md:pb-16 md:pl-[calc(4.75rem+2.5rem)] md:wide:pl-[calc(16rem+3rem)]",
         )}
       >
         {bleed ? (
@@ -76,21 +79,61 @@ function useSpaces() {
  * From `md` up: the agent and its state, the way to jump anywhere, the spaces, then settings and the account.
  * Icons alone until `lg`, where each takes its name beside it.
  */
-function Rail({ onSearch }: { onSearch: () => void }) {
+function Rail({ onSearch, rail }: { onSearch: () => void; rail: ReturnType<typeof useRail> }) {
   const t = useT();
   const { spaces, settings, path, waiting } = useSpaces();
+  const { toggle, roomy } = rail;
+  // `[` folds and unfolds it, as ⌘B does, unless one is typing
+  useEffect(() => {
+    if (!roomy) return;
+    function onKey(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+      if (target && (["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName) || target.isContentEditable)) return;
+      const chord = (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "b";
+      if (!chord && (event.key !== "[" || event.metaKey || event.ctrlKey || event.altKey)) return;
+      event.preventDefault();
+      toggle();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [roomy, toggle]);
+  const fold = t(rail.wide ? "shell-rail-fold" : "shell-rail-unfold");
   return (
-    <div className="rail fixed inset-y-0 left-0 z-40 flex w-[4.75rem] flex-col gap-4 px-3 pt-5 pb-3 lg:w-64 lg:px-4">
-      <AgentMark />
+    <div
+      data-rail={rail.wide ? "wide" : "narrow"}
+      className="rail fixed inset-y-0 left-0 z-40 flex w-[4.75rem] flex-col gap-4 px-3 pt-5 pb-3 wide:w-64 wide:px-4 transition-[width] duration-200"
+    >
+      <div className="flex items-center gap-1 narrow:flex-col">
+        <div className="min-w-0 flex-1 narrow:flex-none">
+          <AgentMark />
+        </div>
+        {roomy ? (
+          <button
+            type="button"
+            onClick={toggle}
+            title={`${fold} · [`}
+            aria-label={fold}
+            aria-expanded={rail.wide}
+            aria-keyshortcuts="Meta+B ["
+            className="grid size-9 shrink-0 place-items-center rounded-lg text-ink-faint transition-colors hover:bg-white/8 hover:text-ink"
+          >
+            {rail.wide ? (
+              <PanelLeftClose className="size-4.5" aria-hidden="true" />
+            ) : (
+              <PanelLeftOpen className="size-4.5" aria-hidden="true" />
+            )}
+          </button>
+        ) : null}
+      </div>
       <button
         type="button"
         onClick={onSearch}
         title={t("shell-go-to")}
-        className="flex h-10 items-center gap-2.5 rounded-xl bg-white/6 px-3 text-[0.9rem] text-ink-muted transition-colors hover:bg-white/10 hover:text-ink max-lg:justify-center max-lg:px-0"
+        className="flex h-10 items-center gap-2.5 rounded-xl bg-white/6 px-3 text-[0.9rem] text-ink-muted transition-colors hover:bg-white/10 hover:text-ink narrow:justify-center narrow:px-0"
       >
         <Search className="size-4.5 shrink-0" aria-hidden="true" />
-        <span className="max-lg:sr-only">{t("shell-go-to")}</span>
-        <span className="ml-auto max-lg:hidden">
+        <span className="narrow:sr-only">{t("shell-go-to")}</span>
+        <span className="ml-auto narrow:hidden">
           <Kbd>⌘K</Kbd>
         </span>
       </button>
@@ -104,8 +147,8 @@ function Rail({ onSearch }: { onSearch: () => void }) {
           </div>
         ) : null}
       </nav>
-      <div className="flex items-center gap-1 border-t border-white/8 pt-3 max-lg:flex-col">
-        <div className="min-w-0 flex-1 max-lg:flex-none">
+      <div className="flex items-center gap-1 border-t border-white/8 pt-3 narrow:flex-col">
+        <div className="min-w-0 flex-1 narrow:flex-none">
           <AccountMenu compact="narrow" />
         </div>
         <UpdateAvailable compact />
@@ -124,14 +167,14 @@ function RailLink({ space, here, badge }: { space: Space; here: boolean; badge: 
       aria-current={here ? "page" : undefined}
       aria-label={badge ? t("shell-space-waiting", { space: t(space.label), count: badge }) : undefined}
       className={cn(
-        "relative flex h-11 items-center gap-3 rounded-xl px-3 text-[0.95rem] font-medium transition-colors max-lg:justify-center max-lg:px-0",
+        "relative flex h-11 items-center gap-3 rounded-xl px-3 text-[0.95rem] font-medium transition-colors narrow:justify-center narrow:px-0",
         here ? "bg-[#f5f0e6] text-[#1d1913]" : "text-ink-muted hover:bg-white/8 hover:text-ink",
       )}
     >
       <space.icon className="size-5 shrink-0" aria-hidden="true" />
-      <span className="max-lg:sr-only">{t(space.label)}</span>
+      <span className="narrow:sr-only">{t(space.label)}</span>
       {badge ? (
-        <span className="ml-auto grid min-w-5 place-items-center rounded-full bg-ember px-1.5 text-[0.72rem] leading-5 font-semibold text-on-ember tabular max-lg:absolute max-lg:-top-1 max-lg:-right-1">
+        <span className="ml-auto grid min-w-5 place-items-center rounded-full bg-ember px-1.5 text-[0.72rem] leading-5 font-semibold text-on-ember tabular narrow:absolute narrow:-top-1 narrow:-right-1">
           {badge}
         </span>
       ) : null}
@@ -185,19 +228,19 @@ function AgentMark() {
       to="/"
       title={`${me.assistant} · ${state}`}
       aria-label={t("shell-agent-label", { assistant: me.assistant, state })}
-      className="flex items-center gap-3 rounded-2xl p-1 hover:bg-white/6 max-lg:justify-center"
+      className="flex items-center gap-3 rounded-2xl p-1 hover:bg-white/6 narrow:justify-center"
     >
       <span className="relative shrink-0">
         <AgentFigure state={figure} size="md" live />
         <span
           aria-hidden="true"
           className={cn(
-            "absolute -top-0.5 -right-0.5 size-2.5 rounded-full ring-2 ring-[#100e0b] lg:hidden",
+            "absolute -top-0.5 -right-0.5 size-2.5 rounded-full ring-2 ring-[#100e0b] wide:hidden",
             online ? "live-dot bg-ember" : status === "connecting" ? "bg-amber" : "bg-ink-faint",
           )}
         />
       </span>
-      <span className="min-w-0 max-lg:hidden">
+      <span className="min-w-0 narrow:hidden">
         <span className="block truncate font-serif text-[1.45rem] leading-none text-ink">{me.assistant}</span>
         <span className="mt-1.5 flex items-center gap-1.5 text-[0.82rem] text-ink-muted">
           <span

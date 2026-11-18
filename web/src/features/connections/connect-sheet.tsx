@@ -14,11 +14,13 @@ export function ConnectSheet({
   kind,
   replaces,
   preset,
+  owner,
   onClose,
 }: {
   kind: string | undefined;
   replaces: string | undefined;
   preset: string | undefined; // the known server to start from
+  owner: string | undefined; // whose account it will be, when one comes from a person's page
   onClose: () => void;
 }) {
   const connector = useQuery({ ...connectorQuery(kind ?? ""), enabled: Boolean(kind) });
@@ -50,6 +52,7 @@ export function ConnectSheet({
               connector={connector.data}
               replaces={replaces ?? null}
               preset={preset}
+              owner={owner}
               onConnected={(c) =>
                 void navigate({
                   to: "/connections/$connectionId",

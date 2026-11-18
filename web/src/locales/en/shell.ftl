@@ -86,3 +86,5 @@ shell-space-waiting = { $space }, { $count ->
     [one] one request waits for you
    *[other] { $count } requests wait for you
 }
+shell-rail-fold = Fold the rail
+shell-rail-unfold = Unfold the rail

@@ -9,7 +9,7 @@ import type { ReactNode } from "react";
 import { connectionsQuery, isMissing, journalFacetsQuery, type Person, type Presence, personQuery } from "@/api";
 import { Ago } from "@/components/ago";
 import { type Crumb, Crumbs } from "@/components/crumbs";
-import { IconTile, Pebble, ServiceTile } from "@/components/marks";
+import { AddCard, IconTile, Pebble, ServiceTile } from "@/components/marks";
 import { Lead, PageHeader, Section } from "@/components/page";
 import { Empty, Failure, Loading } from "@/components/states";
 import { Status, Tag } from "@/components/status";
@@ -212,6 +212,7 @@ export function PersonMemories({ person: p }: { person: Person }) {
 export function PersonConnections({ person: p }: { person: Person }) {
   const t = useT();
   const connections = useQuery(connectionsQuery);
+  const canConnect = useCan("connections:write");
   if (connections.isPending) return <Loading lines={2} />;
   const own = (connections.data ?? []).filter((c) => c.owner?.id === p.id);
   if (own.length === 0) {
@@ -219,7 +220,11 @@ export function PersonConnections({ person: p }: { person: Person }) {
       <Empty
         hint={t("people-connections-hint")}
         action={
-          <Link to="/connections/catalogue" className={buttonVariants({ variant: "outline", size: "sm" })}>
+          <Link
+            to="/connections/catalogue"
+            search={{ owner: p.id }}
+            className={buttonVariants({ variant: "outline", size: "sm" })}
+          >
             {t("people-open-catalogue")} <ArrowRight />
           </Link>
         }
@@ -248,6 +253,11 @@ export function PersonConnections({ person: p }: { person: Person }) {
           </Link>
         </li>
       ))}
+      {canConnect ? (
+        <li>
+          <AddCard link={{ to: "/connections/catalogue", search: { owner: p.id } }}>{t("people-connect")}</AddCard>
+        </li>
+      ) : null}
     </ul>
   );
 }

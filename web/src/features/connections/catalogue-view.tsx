@@ -21,6 +21,7 @@ export interface CatalogueSearch {
   connect?: string; // the connector whose sheet is open
   replaces?: string; // the broken connection being reconnected
   preset?: string; // the known server picked on the grid
+  owner?: string; // whose account it will be, when one comes from a person's page
 }
 
 /** A connector found by its address serves tools; the others are a person's or the household's account. */
@@ -63,7 +64,11 @@ export function CatalogueView({
                       key={c.kind}
                       connector={c}
                       accounts={plugged(c.kind)}
-                      onConnect={canConnect ? () => onSearch({ connect: c.kind }) : undefined}
+                      onConnect={
+                        canConnect
+                          ? () => onSearch({ ...(search.owner ? { owner: search.owner } : {}), connect: c.kind })
+                          : undefined
+                      }
                     />
                   ))}
                 </ul>
@@ -76,7 +81,16 @@ export function CatalogueView({
                   {c.presets.map((p) => (
                     <li key={p.name}>
                       <Opens
-                        onOpen={canConnect ? () => onSearch({ connect: c.kind, preset: p.name }) : undefined}
+                        onOpen={
+                          canConnect
+                            ? () =>
+                                onSearch({
+                                  ...(search.owner ? { owner: search.owner } : {}),
+                                  connect: c.kind,
+                                  preset: p.name,
+                                })
+                            : undefined
+                        }
                         className="flex h-full w-full items-center gap-3 p-3 text-left"
                       >
                         <ServiceTile kind={p.brand ?? c.brand ?? c.kind} />
@@ -86,7 +100,11 @@ export function CatalogueView({
                   ))}
                   <li>
                     <Opens
-                      onOpen={canConnect ? () => onSearch({ connect: c.kind }) : undefined}
+                      onOpen={
+                        canConnect
+                          ? () => onSearch({ ...(search.owner ? { owner: search.owner } : {}), connect: c.kind })
+                          : undefined
+                      }
                       className="flex h-full w-full items-center gap-3 p-3 text-left"
                     >
                       <ServiceTile kind={c.brand ?? c.kind} />
@@ -110,6 +128,7 @@ export function CatalogueView({
         kind={search.connect}
         replaces={search.replaces}
         preset={search.preset}
+        owner={search.owner}
         onClose={() => onSearch({})}
       />
     </div>

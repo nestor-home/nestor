@@ -86,3 +86,5 @@ shell-space-waiting = { $space }, { $count ->
     [one] une demande vous attend
    *[other] { $count } demandes vous attendent
 }
+shell-rail-fold = Replier la barre
+shell-rail-unfold = Déplier la barre

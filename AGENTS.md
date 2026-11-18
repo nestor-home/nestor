@@ -214,7 +214,8 @@ messages come from `GET /api/v1/i18n/{locale}`), and the agent's figure is the
 
 The admin is built around what the household does, not around the server's modules.
 
-- **Spaces.** The rail holds four spaces and settings (`features/shell/nav.ts`): Today (the household now),
+- **Spaces.** The rail (it folds to its icons: `[` or ⌘B, remembered) holds four spaces and settings
+  (`features/shell/nav.ts`): Today (the household now),
   Talk, Ongoing (everything the agent does on its own, by where it stands) and The house (people, rooms,
   devices). Settings holds what the installation is made of. A new feature joins the space where a person
   would look for it; it never gets a rail entry of its own. Detail pages belong to a space (`covers`) and their
@@ -230,6 +231,10 @@ The admin is built around what the household does, not around the server's modul
   `IconTile` for what kind of thing a card is, `Pebble` for a person, `BrandMark`/`KindMark` for a service or a
   channel, `Status` for a state, `Tag` for data, `Facts`/`Fact` for a thing's facts, `Chips` for the lanes of a
   list, `TabNav` for the pages of one thing. A card that opens is a `button` or a `Link` with `.surface`.
+- **Add where it is listed.** Wherever a page lists things one can add (a person's accounts, the household,
+  the devices), the way to add one is there: an `AddCard` closing the grid, or a button in the section's `aside`
+  that opens the form in place or leads to it with what is already known (`?owner=` for a person's account).
+  What only the agent creates (reminders, watches, tasks) offers to ask it.
 - **Visual, not flat.** A card leads with a mark (tile, pebble, logo), then its title in medium weight, then one
   muted line; a state is a colour and a word, never a colour alone. Titles in the display face (`display-2` for
   a page, `display-3` for a section, `font-serif` 1.35rem for a card that stands for a thing), everything else

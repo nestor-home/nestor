@@ -8,6 +8,10 @@
 
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
+/* the rail folded to its icons, or unfolded with a name beside each (`useRail`): its own state, not a breakpoint */
+@custom-variant narrow (&:where([data-rail="narrow"], [data-rail="narrow"] *));
+@custom-variant wide (&:where([data-rail="wide"], [data-rail="wide"] *));
+
 /* Tailwind (and the shadcn components) read the identity through these names only. */
 @theme inline {
   --color-background: var(--paper);

@@ -4,7 +4,7 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, BookMarked, RadioTower, Video } from "lucide-react";
+import { ArrowRight, BookMarked, Plus, RadioTower, Video } from "lucide-react";
 import { useState } from "react";
 import {
   homeQuery,
@@ -21,8 +21,10 @@ import { SideSheet } from "@/components/overlay-form";
 import { PageHeader, Section } from "@/components/page";
 import { Empty, Loading } from "@/components/states";
 import { Status } from "@/components/status";
+import { buttonVariants } from "@/components/ui/button";
 import { SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { type RoomNode, roomsOf } from "@/features/home/mind";
+import { AddSatelliteButton } from "@/features/satellites/add-satellite";
 import { HEALTH, UNKNOWN } from "@/features/system/system-view";
 import { RoomSheet, Through } from "@/features/today/room-sheet";
 import { useT } from "@/i18n";
@@ -45,6 +47,8 @@ export function HouseSpace() {
   const media = useQuery({ ...mediaDevicesQuery, enabled: useCan("media:read") });
   const day = useQuery({ ...journalLatestQuery({ from: startOfToday() }, 200), enabled: useCan("journal:read") });
   const memories = useQuery({ ...memoriesQuery({}), enabled: useCan("memories:read") });
+  const canConfigure = useCan("config:manage");
+  const canPair = useCan("satellites:write");
   const [open, setOpen] = useState<string | null>(null);
   const [system, setSystem] = useState(false);
 
@@ -83,7 +87,21 @@ export function HouseSpace() {
         {t("hs-lede", { assistant: me.assistant })}
       </PageHeader>
       <div className="grid gap-10">
-        <Section title={t("hs-people")} count={household.length}>
+        <Section
+          title={t("hs-people")}
+          count={household.length}
+          aside={
+            canConfigure ? (
+              <Link
+                to="/config/$section"
+                params={{ section: "household" }}
+                className={buttonVariants({ variant: "outline", size: "sm" })}
+              >
+                <Plus /> {t("hs-add-person")}
+              </Link>
+            ) : undefined
+          }
+        >
           {people.isPending ? (
             <Loading lines={2} />
           ) : household.length ? (
@@ -97,7 +115,7 @@ export function HouseSpace() {
           )}
         </Section>
 
-        <Section title={t("hs-rooms")} count={rooms.length}>
+        <Section title={t("hs-rooms")} count={rooms.length} aside={canPair ? <AddSatelliteButton /> : undefined}>
           {rooms.length ? (
             <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {rooms.map((r) => (

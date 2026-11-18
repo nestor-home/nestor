@@ -58,12 +58,12 @@ export function AccountMenu({ compact = false }: { compact?: boolean | "narrow" 
         className={
           compact === true
             ? "grid size-11 place-items-center rounded-xl hover:bg-paper-sunken data-popup-open:bg-paper-sunken"
-            : "flex w-full items-center gap-3 rounded-xl p-2 text-left hover:bg-white/8 data-popup-open:bg-white/8 max-lg:justify-center"
+            : "flex w-full items-center gap-3 rounded-xl p-2 text-left hover:bg-white/8 data-popup-open:bg-white/8 narrow:justify-center"
         }
       >
         <Pebble name={me.account.person?.name ?? me.account.login} className="size-8 text-[0.8rem]" />
         {compact === true ? null : (
-          <span className="min-w-0 flex-1 max-lg:hidden">
+          <span className="min-w-0 flex-1 narrow:hidden">
             <span className="block truncate text-[0.92rem] font-medium text-ink">
               {me.account.person?.name ?? me.account.login}
             </span>

@@ -7,7 +7,13 @@ const text = (value: unknown) => (typeof value === "string" && value ? value : u
 export const Route = createFileRoute("/_app/connections/catalogue")({
   validateSearch: (search: Record<string, unknown>): CatalogueSearch => {
     const [connect, replaces, preset] = [text(search.connect), text(search.replaces), text(search.preset)];
-    return { ...(connect ? { connect } : {}), ...(replaces ? { replaces } : {}), ...(preset ? { preset } : {}) };
+    const owner = text(search.owner);
+    return {
+      ...(connect ? { connect } : {}),
+      ...(replaces ? { replaces } : {}),
+      ...(preset ? { preset } : {}),
+      ...(owner ? { owner } : {}),
+    };
   },
   component: CataloguePage,
 });

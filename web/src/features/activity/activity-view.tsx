@@ -10,6 +10,7 @@ import {
   ArrowUpRight,
   Check,
   CircleHelp,
+  Plus,
   Radar,
   Repeat,
   Send,
@@ -117,7 +118,7 @@ export function ActivityView() {
       ) : null}
 
       {shows("running") ? (
-        <Section title={t("act-running-title")} count={running.length}>
+        <Section title={t("act-running-title")} count={running.length} aside={<Ask />}>
           {tasks.isPending ? (
             <Loading lines={2} />
           ) : running.length ? (
@@ -157,7 +158,7 @@ export function ActivityView() {
       ) : null}
 
       {shows("planned") ? (
-        <Section title={t("act-planned-title")} count={planned.length}>
+        <Section title={t("act-planned-title")} count={planned.length} aside={<Ask />}>
           {schedules.isPending ? (
             <Loading lines={2} />
           ) : planned.length ? (
@@ -192,7 +193,7 @@ export function ActivityView() {
       ) : null}
 
       {shows("watching") ? (
-        <Section title={t("act-watching-title")} count={watching.length}>
+        <Section title={t("act-watching-title")} count={watching.length} aside={<Ask />}>
           {watches.isPending ? (
             <Loading lines={2} />
           ) : watching.length ? (
@@ -283,6 +284,18 @@ export function ActivityView() {
         {opened?.kind === "schedule" ? <SchedulePanel schedule={opened.item} onDone={() => setOpened(null)} /> : null}
       </SideSheet>
     </div>
+  );
+}
+
+/** Reminders, watches and tasks are made by asking: the way to the agent, from where one looks at them. */
+function Ask() {
+  const t = useT();
+  const me = useMe();
+  if (!useCan("chat:write")) return null;
+  return (
+    <Link to="/chat" className={buttonVariants({ variant: "outline", size: "sm" })}>
+      <Plus /> {t("act-ask", { assistant: me.assistant })}
+    </Link>
   );
 }
 

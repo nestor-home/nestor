@@ -42,7 +42,11 @@ describe("a person's page", () => {
     await user.keyboard("{Escape}");
     await user.click(screen.getByRole("tab", { name: "Connections" }));
     expect(await screen.findByText("No connected account for Jules.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Open the catalogue" })).toHaveAttribute("href", "/connections/catalogue");
+    // connecting from a person's page starts with that person as the owner
+    expect(screen.getByRole("link", { name: "Open the catalogue" })).toHaveAttribute(
+      "href",
+      "/connections/catalogue?owner=jules",
+    );
     expect(router.state.location.pathname).toBe("/people/jules/connections");
   });
 });

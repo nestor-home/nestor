@@ -36,3 +36,4 @@ hs-memories = { $count ->
 }
 hs-media-off = Watching and calling are off on this server.
 hs-media-off-hint = Install Nestor with the “media” extra to relay the devices' picture and sound.
+hs-add-person = Add a person

@@ -29,17 +29,19 @@ export function ConnectForm({
   connector,
   replaces,
   preset,
+  owner,
   onConnected,
 }: {
   connector: Connector;
   replaces: string | null;
   preset?: string; // the known server whose values the form starts with
+  owner?: string; // the person the account starts as belonging to
   onConnected: (connection: Connection) => void;
 }) {
   const t = useT();
   const oauth = connector.auth === "oauth2";
   const discovered = connector.auth === "discovered";
-  const [person, setPerson] = useState("");
+  const [person, setPerson] = useState(owner ?? "");
   const [values, setValues] = useState<Record<string, string>>(
     () => connector.presets.find((p) => p.name === preset)?.values ?? {},
   );
