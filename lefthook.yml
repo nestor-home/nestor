@@ -17,8 +17,7 @@ pre-push:
       run: uv lock --check
     biome:
       root: web/
-      glob: "*.{js,jsx,ts,tsx,json,jsonc,css,grit}"
-      run: pnpm exec biome check --no-errors-on-unmatched {push_files}
+      run: pnpm exec biome check --no-errors-on-unmatched --files-ignore-unknown=true {push_files}
     tsc:
       root: web/
       glob: "*.{ts,tsx}"
