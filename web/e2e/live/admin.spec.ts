@@ -100,20 +100,24 @@ test("the language switches from French to English and back, server texts includ
   const menu = page.getByRole("button", { name: /Menu du compte|Account menu/ });
   await menu.click();
   await page.getByRole("menuitemradio", { name: "English" }).click();
-  await expect(page.getByRole("link", { name: "Today" })).toBeVisible();
+  await expect(page.getByRole("link", { name: /^Today/ })).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
   await page.getByRole("button", { name: /Account menu/ }).click();
   await page.getByRole("menuitemradio", { name: "Français" }).click();
-  await expect(page.getByRole("link", { name: "Aujourd'hui" })).toBeVisible();
+  await expect(page.getByRole("link", { name: /^Aujourd'hui/ })).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("lang", "fr");
 });
 
 /** Renames the agent through the configuration, restarts it by hand, and checks the new name is live. */
 async function rename(page: Page, from: string, to: string) {
   await page.goto("/config/persona");
+  // a section shows its settings; changing them opens its form
+  const edit = page.getByRole("button", { name: /^(Modifier|Edit) / }).first();
+  await edit.click();
   const name = page.getByRole("textbox", { name: /^(Nom|Name)$/ });
   await expect(name).toHaveValue(from);
   await name.fill(to);
+  await page.getByRole("button", { name: /^(Terminé|Done)$/ }).click();
   const bar = page.getByRole("region", { name: /Modifications non enregistrées|Unsaved changes/ });
   await expect(bar.getByRole("button", { name: /1 modification|1 change/ })).toBeVisible();
   await bar.getByRole("button", { name: /^(Enregistrer|Save)$/ }).click();
@@ -129,7 +133,9 @@ async function rename(page: Page, from: string, to: string) {
   await page.getByLabel(/Mot de passe|Password/).fill(password);
   await page.getByRole("button", { name: /Se connecter|Sign in/ }).click();
   await expect(page).toHaveURL(/\/config\/persona$/);
+  await edit.click();
   await expect(page.getByRole("textbox", { name: /^(Nom|Name)$/ })).toHaveValue(to);
+  await page.getByRole("button", { name: /^(Terminé|Done)$/ }).click();
   await expect(page.getByText(/Redémarrage requis|Restart required/)).toBeHidden();
   await expect(page.getByRole("link", { name: new RegExp(`^${to}`) }).first()).toBeVisible();
 }
