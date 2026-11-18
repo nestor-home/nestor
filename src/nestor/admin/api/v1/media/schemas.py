@@ -1,12 +1,14 @@
 """What the media routes take and send."""
 
+from datetime import time
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, PlainSerializer
 
 from nestor.admin.api.v1.shared import People, PersonRef
 from nestor.core import PersonId
-from nestor.modules.satellites import LiveSession, MediaAccess, Off, Offer, Privacy, Purpose, QuietHours
+from nestor.modules.initiative.schedules.types import Day
+from nestor.modules.satellites import WEEK, LiveSession, MediaAccess, Off, Offer, Privacy, Purpose, QuietHours
 
 
 class MediaDeviceOut(BaseModel):
@@ -69,20 +71,19 @@ class MediaSessionOut(BaseModel):
         )
 
 
-type Weekday = Annotated[int, Field(ge=0, le=6)]  # 0 Monday to 6 Sunday
-type Clock = Annotated[str, Field(pattern=r"^([01][0-9]|2[0-3]):[0-5][0-9]$")]  # HH:MM
+type Clock = Annotated[time, PlainSerializer(lambda t: t.strftime("%H:%M"), return_type=str)]  # read and sent as HH:MM
 
 
 class QuietHoursIO(BaseModel):
     """A time slot when the camera does not film, in the household's time: from `start` to `end` (past midnight when
     `end` is not after `start`, a whole day when equal), starting on each of `days`."""
 
-    days: list[Weekday] = Field(min_length=1, max_length=7)
+    days: list[Day] = Field(min_length=1, max_length=7)
     start: Clock
     end: Clock
 
     def to_domain(self) -> QuietHours:
-        return QuietHours(tuple(sorted(set(self.days))), self.start, self.end)
+        return QuietHours(tuple(d for d in WEEK if d in self.days), self.start, self.end)
 
 
 class PrivacyIO(BaseModel):
@@ -109,7 +110,7 @@ class PrivacyOut(BaseModel):
     @classmethod
     def of(cls, privacy: Privacy, people: People) -> "PrivacyOut":
         return cls(
-            quiet=[QuietHoursIO(days=list(q.days), start=q.start, end=q.end) for q in privacy.quiet],
+            quiet=[QuietHoursIO.model_validate(q, from_attributes=True) for q in privacy.quiet],
             off_when_home=privacy.off_when_home,
             home_people=[ref for p in privacy.home_people if (ref := people.ref(p))],
         )

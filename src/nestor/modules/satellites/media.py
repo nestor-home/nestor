@@ -13,7 +13,7 @@ import contextlib
 import logging
 import time
 from abc import ABC, abstractmethod
-from collections.abc import Awaitable, Callable, Mapping
+from collections.abc import Awaitable, Callable, Iterable, Mapping
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import StrEnum
@@ -26,7 +26,7 @@ from nestor.modules.home import PresenceSource
 from nestor.modules.journal import BlobStore, FileRef, Journal
 from nestor.modules.satellites.events import MediaEnd, MediaSessionClosed, MediaSessionOpened, SnapshotTaken
 from nestor.modules.satellites.service import Pairing
-from nestor.modules.satellites.types import AUDIO, VIDEO_CAPTURE, Purpose, Satellite
+from nestor.modules.satellites.types import AUDIO, VIDEO_CAPTURE, Off, Purpose, Satellite
 
 logger = logging.getLogger(__name__)
 
@@ -65,14 +65,6 @@ class Viewer:
             everywhere=frozenset(p for p, scope in EVERYWHERE.items() if principal.can(scope)),
             now=now,
         )
-
-
-class Off(StrEnum):
-    """Why a device's camera does not film now."""
-
-    SWITCHED_OFF = "switched_off"  # its camera is switched off
-    QUIET_HOURS = "quiet_hours"  # one of its quiet hours
-    SOMEONE_HOME = "someone_home"  # someone it is off for is home, or presence cannot tell
 
 
 class Refusal(StrEnum):
@@ -162,6 +154,7 @@ class MediaSessions(Component):
         blobs: BlobStore,
         *,
         presence: PresenceSource | None = None,
+        household: Iterable[PersonId] = (),
         timezone: str = "UTC",
         clock: Callable[[], datetime] = utc_now,
         view_max_s: int = 600,
@@ -169,7 +162,7 @@ class MediaSessions(Component):
         check_s: float = CHECK_S,
     ) -> None:
         self.journal, self._pairing, self._relay, self._blobs = journal, pairing, relay, blobs
-        self._presence, self._zone, self._clock = presence, ZoneInfo(timezone), clock
+        self._presence, self._household, self._zone, self._clock = presence, tuple(household), ZoneInfo(timezone), clock
         self._max_s = {Purpose.VIEW: view_max_s, Purpose.CALL: call_max_s}
         self._check_s = check_s
         self._live: dict[str, LiveSession] = {}
@@ -248,7 +241,9 @@ class MediaSessions(Component):
         live.timer = asyncio.create_task(self._time_out(live), name=f"media session {live.id}")
         return live
 
-    async def close_session(self, session_id: str, reason: MediaEnd, *, by: Viewer | None = None) -> None:
+    async def close_session(
+        self, session_id: str, reason: MediaEnd, *, by: Viewer | None = None, off: Off | None = None
+    ) -> None:
         """End a session; `by` a person, only their own, or any of a kind their role allows on every device."""
         live = self._live.get(session_id)
         if live is None:
@@ -269,6 +264,7 @@ class MediaSessions(Component):
                     room=live.room,
                     duration_s=round(time.monotonic() - live.started, 1),
                     reason=reason,
+                    off=off,
                 )
             )
 
@@ -280,23 +276,13 @@ class MediaSessions(Component):
             if viewer is None:
                 await self.close_session(live.id, MediaEnd.SIGNED_OUT)
             elif ended := self._ends(live, viewer):
-                await self.close_session(live.id, ended)
+                reason, off = ended
+                await self.close_session(live.id, reason, off=off)
 
     def off(self, satellite: Satellite) -> Off | None:
-        """Why the device's camera does not film now, `None` when it may: its switch, then its privacy rules, if any.
-        Presence that cannot tell counts as someone home: a privacy rule never films on a guess."""
-        access = satellite.access
-        if not access.camera:
-            return Off.SWITCHED_OFF
-        now = self._clock().astimezone(self._zone)
-        if any(quiet.covers(now) for quiet in access.privacy.quiet):
-            return Off.QUIET_HOURS
-        if access.privacy.off_when_home:
-            presence = self._presence.presence() if self._presence else None
-            people = access.privacy.home_people or (tuple(presence.people) if presence else ())
-            if presence is None or not people or any(presence.of(p).home is not False for p in people):
-                return Off.SOMEONE_HOME
-        return None
+        """Why the device's camera does not film now (`MediaAccess.off`), `None` when it may."""
+        presence = self._presence.presence() if self._presence else None
+        return satellite.access.off(self._clock().astimezone(self._zone), presence, self._household)
 
     async def snapshot(self, device_id: str, viewer: Viewer) -> tuple[FileRef, bytes]:
         """A still picture of what the device films, for `viewer`, who must be allowed to watch it: where it is
@@ -352,19 +338,18 @@ class MediaSessions(Component):
         """Whether the device's camera may film for `viewer` now (a call carries video only then)."""
         return self.off(satellite) is None and self.may(satellite, viewer, Purpose.VIEW)
 
-    def _ends(self, live: LiveSession, viewer: Viewer) -> MediaEnd | None:
-        """Why a live session may no longer go on, `None` while it may."""
+    def _ends(self, live: LiveSession, viewer: Viewer) -> tuple[MediaEnd, Off | None] | None:
+        """Why a live session may no longer go on (and why its camera stopped, when that is it), `None` while it
+        may. A call through a camera that stops filming ends whole: its video cannot be taken out of it."""
         satellite = self._pairing.satellite(live.device_id)
         if satellite is None or not self.may(satellite, viewer, live.purpose):
-            return MediaEnd.ACCESS_CHANGED
+            return MediaEnd.ACCESS_CHANGED, None
         if not live.video:
             return None
         if not self.may(satellite, viewer, Purpose.VIEW):
-            return MediaEnd.ACCESS_CHANGED
+            return MediaEnd.ACCESS_CHANGED, None
         off = self.off(satellite)
-        if off is Off.SWITCHED_OFF:
-            return MediaEnd.ACCESS_CHANGED
-        return MediaEnd.PRIVACY if off else None
+        return (MediaEnd.CAMERA_OFF, off) if off else None
 
     async def _checking(self) -> None:
         while True:

@@ -6,7 +6,7 @@ import json
 import types
 import typing
 from dataclasses import fields
-from datetime import UTC, datetime
+from datetime import UTC, datetime, time
 from typing import Any, get_args, get_origin, get_type_hints
 
 import pytest
@@ -51,6 +51,7 @@ def sample(hint: Any) -> Any:
         int: 3,
         bool: True,
         datetime: datetime(2026, 10, 30, 18, 30, tzinfo=UTC),
+        time: time(22, 30),
     }
     return samples[hint]
 

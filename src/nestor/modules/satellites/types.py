@@ -6,13 +6,15 @@ itself; what it may do is decided when a household member approves the pairing.
 """
 
 import re
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, time
 from enum import StrEnum
 from typing import Any
 
 from nestor.core import Capability, ContractError, PersonId
+from nestor.modules.home import Presence
+from nestor.modules.initiative.schedules.types import Day
 
 PROTOCOL = "nestor.satellite/1"  # the version this core's messages follow
 # Every version this core accepts from devices: a later core may serve a device one version behind
@@ -262,44 +264,42 @@ def _methods(data: object) -> tuple[PairingMethod, ...]:
     return tuple(PairingMethod(m) for m in data)
 
 
+class Off(StrEnum):
+    """Why a device's camera does not film now."""
+
+    SWITCHED_OFF = "switched_off"  # its camera is switched off
+    QUIET_HOURS = "quiet_hours"  # one of its quiet hours
+    SOMEONE_HOME = "someone_home"  # someone it is off for is home, or presence cannot tell
+
+
 @dataclass(frozen=True, slots=True)
 class QuietHours:
-    """A time slot when a camera does not film, in the household's time: from `start` to `end` (`HH:MM`; past
-    midnight when `end` is not after `start`, a whole day when they are equal), starting on each of `days` (0 Monday
-    to 6 Sunday)."""
+    """A time slot when a camera does not film, in the household's time: from `start` to `end`, past midnight when
+    `end` is not after `start` (a whole day when equal), starting on each of `days`."""
 
-    days: tuple[int, ...]
-    start: str
-    end: str
+    days: tuple[Day, ...]
+    start: time
+    end: time
 
     def __post_init__(self) -> None:
-        if not self.days or any(not 0 <= d <= 6 for d in self.days) or len(set(self.days)) != len(self.days):
-            raise ContractError("quiet hours need days, each from 0 (Monday) to 6 (Sunday), once")
-        for moment in (self.start, self.end):
-            hours, _, minutes = moment.partition(":")
-            if not (
-                len(moment) == 5 and hours.isdigit() and minutes.isdigit() and int(hours) < 24 and int(minutes) < 60
-            ):
-                raise ContractError(f"{moment!r} is not a time of day (HH:MM)")
+        if not self.days:
+            raise ContractError("quiet hours start on at least one day")
 
     def covers(self, now: datetime) -> bool:
         """Whether `now`, in the household's time, falls in this slot."""
-        day, minute = now.weekday(), now.hour * 60 + now.minute
-        start, end = _minutes(self.start), _minutes(self.end)
-        if start < end:
-            return day in self.days and start <= minute < end
-        return (day in self.days and minute >= start) or ((day - 1) % 7 in self.days and minute < end)
+        today, yesterday, moment = WEEK[now.weekday()], WEEK[now.weekday() - 1], now.time()
+        if self.start < self.end:
+            return today in self.days and self.start <= moment < self.end
+        return (today in self.days and moment >= self.start) or (yesterday in self.days and moment < self.end)
 
 
-def _minutes(moment: str) -> int:
-    hours, _, minutes = moment.partition(":")
-    return int(hours) * 60 + int(minutes)
+WEEK = tuple(Day)  # Monday first, as `datetime.weekday` counts
 
 
 @dataclass(frozen=True, slots=True)
 class Privacy:
     """When a device's camera does not film, besides its switch: during its `quiet` hours, and, when
-    `off_when_home`, while one of `home_people` is home (anyone of the household when empty). Nothing by default: the
+    `off_when_home`, while one of `home_people` is home (the whole household when empty). Nothing by default: the
     camera films whenever someone allowed asks."""
 
     quiet: tuple[QuietHours, ...] = ()
@@ -316,6 +316,20 @@ class MediaAccess:
     callers: frozenset[PersonId] = frozenset()
     camera: bool = True
     privacy: Privacy = Privacy()
+
+    def off(self, now: datetime, presence: Presence | None, household: Iterable[PersonId]) -> Off | None:
+        """Why the camera does not film at `now` (in the household's time), `None` when it may: its switch, then its
+        privacy rules. A person presence cannot place (untracked, unknown, or no presence at all) counts as home:
+        a rule never films on a guess."""
+        if not self.camera:
+            return Off.SWITCHED_OFF
+        if any(quiet.covers(now) for quiet in self.privacy.quiet):
+            return Off.QUIET_HOURS
+        if self.privacy.off_when_home:
+            people = self.privacy.home_people or tuple(household)
+            if presence is None or any(presence.of(p).home is not False for p in people):
+                return Off.SOMEONE_HOME
+        return None
 
 
 class Purpose(StrEnum):

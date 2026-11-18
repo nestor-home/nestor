@@ -6,7 +6,7 @@ from enum import StrEnum
 
 from nestor.core import Capability, Event, PersonId
 from nestor.modules.journal import FileRef
-from nestor.modules.satellites.types import Device, PairingMethod, Privacy, Proof, Software, UpdateState
+from nestor.modules.satellites.types import Device, Off, PairingMethod, Privacy, Proof, Software, UpdateState
 
 
 class SatellitePairingRequested(Event, event_type="satellite.pairing.requested"):
@@ -149,9 +149,9 @@ class MediaEnd(StrEnum):
 
     CLOSED = "closed"  # whoever opened it closed it
     TIMED_OUT = "timed_out"  # its longest duration passed
-    PRIVACY = "privacy"  # the camera stopped filming: its quiet hours began, or someone came home
     SIGNED_OUT = "signed_out"  # the admin session it belonged to ended (signed out, expired, revoked)
     ACCESS_CHANGED = "access_changed"  # the device no longer lets its person do it
+    CAMERA_OFF = "camera_off"  # its camera stopped filming: switched off, quiet hours, someone home (`off`)
     DEVICE_LEFT = "device_left"  # the device's link or connection went down
     FAILED = "failed"  # it could not be set up: the device did not answer, or the connection failed
 
@@ -175,6 +175,7 @@ class MediaSessionClosed(Event, event_type="media.session.closed"):
     room: str
     duration_s: float
     reason: MediaEnd
+    off: Off | None = None  # why its camera stopped, when that ended it
 
 
 class SnapshotTaken(Event, event_type="media.snapshot.taken"):

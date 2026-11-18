@@ -12763,9 +12763,12 @@
         ],
         "title": "ClientIn"
       },
-      "Clock": {
+      "Clock-Input": {
         "type": "string",
-        "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$"
+        "format": "time"
+      },
+      "Clock-Output": {
+        "type": "string"
       },
       "ComponentOut": {
         "properties": {
@@ -15858,7 +15861,7 @@
         "properties": {
           "quiet": {
             "items": {
-              "$ref": "#/components/schemas/QuietHoursIO"
+              "$ref": "#/components/schemas/QuietHoursIO-Input"
             },
             "type": "array",
             "maxItems": 16,
@@ -15888,7 +15891,7 @@
         "properties": {
           "quiet": {
             "items": {
-              "$ref": "#/components/schemas/QuietHoursIO"
+              "$ref": "#/components/schemas/QuietHoursIO-Output"
             },
             "type": "array",
             "title": "Quiet"
@@ -16019,11 +16022,11 @@
         "title": "Purpose",
         "description": "Why a person opens a media session on a device."
       },
-      "QuietHoursIO": {
+      "QuietHoursIO-Input": {
         "properties": {
           "days": {
             "items": {
-              "$ref": "#/components/schemas/Weekday"
+              "$ref": "#/components/schemas/Day"
             },
             "type": "array",
             "maxItems": 7,
@@ -16031,10 +16034,37 @@
             "title": "Days"
           },
           "start": {
-            "$ref": "#/components/schemas/Clock"
+            "$ref": "#/components/schemas/Clock-Input"
           },
           "end": {
-            "$ref": "#/components/schemas/Clock"
+            "$ref": "#/components/schemas/Clock-Input"
+          }
+        },
+        "type": "object",
+        "required": [
+          "days",
+          "start",
+          "end"
+        ],
+        "title": "QuietHoursIO",
+        "description": "A time slot when the camera does not film, in the household's time: from `start` to `end` (past midnight when\n`end` is not after `start`, a whole day when equal), starting on each of `days`."
+      },
+      "QuietHoursIO-Output": {
+        "properties": {
+          "days": {
+            "items": {
+              "$ref": "#/components/schemas/Day"
+            },
+            "type": "array",
+            "maxItems": 7,
+            "minItems": 1,
+            "title": "Days"
+          },
+          "start": {
+            "$ref": "#/components/schemas/Clock-Output"
+          },
+          "end": {
+            "$ref": "#/components/schemas/Clock-Output"
           }
         },
         "type": "object",
@@ -17574,11 +17604,6 @@
           "kinds"
         ],
         "title": "WatchesOut"
-      },
-      "Weekday": {
-        "type": "integer",
-        "maximum": 6.0,
-        "minimum": 0.0
       },
       "WrittenOut": {
         "properties": {

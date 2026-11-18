@@ -228,7 +228,13 @@ class Nestor:
         relay = next(relays, None)
         self.media = (
             MediaSessions(
-                self.journal, self.pairing, relay, self.blobs, presence=self.presence, timezone=config.persona.timezone
+                self.journal,
+                self.pairing,
+                relay,
+                self.blobs,
+                presence=self.presence,
+                household=[p.id for p in self.household.people],
+                timezone=config.persona.timezone,
             )
             if relay
             else None

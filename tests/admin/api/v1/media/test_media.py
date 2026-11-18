@@ -65,17 +65,17 @@ async def test_privacy_rules_are_set_per_device_and_read_back(tmp_path: Path) ->
         await watching(admin)
         owner = await admin.api()
         rules = {
-            "quiet": [{"days": [4, 0], "start": "22:00", "end": "07:00"}],
+            "quiet": [{"days": ["fri", "mon"], "start": "22:00", "end": "07:00"}],
             "off_when_home": True,
             "home_people": ["lucie"],
         }
         set_ = await owner.put("/api/v1/satellites/camera-entree/media/access", {"privacy": rules})
         assert set_.status_code == 200
         privacy = (await owner.get("/api/v1/satellites/camera-entree")).json()["access"]["privacy"]
-        assert privacy["quiet"] == [{"days": [0, 4], "start": "22:00", "end": "07:00"}]
+        assert privacy["quiet"] == [{"days": ["mon", "fri"], "start": "22:00", "end": "07:00"}]
         assert (privacy["off_when_home"], [p["id"] for p in privacy["home_people"]]) == (True, ["lucie"])
 
-        late = {"quiet": [{"days": [0], "start": "24:00", "end": "07:00"}]}
+        late = {"quiet": [{"days": ["mon"], "start": "24:00", "end": "07:00"}]}
         stranger = {"off_when_home": True, "home_people": ["paul"]}
         refused = [
             await owner.put("/api/v1/satellites/camera-entree/media/access", {"privacy": body})
