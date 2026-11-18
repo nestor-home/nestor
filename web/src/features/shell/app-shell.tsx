@@ -19,7 +19,7 @@ import { destinations, inSpace, type Space, visibleSpaces } from "./nav";
 import { useGoKeys } from "./use-go-keys";
 
 /**
- * The frame: a night-ink rail with the agent and the few spaces of the household (a tab bar under the
+ * The frame: a quiet rail with the agent and the few spaces of the household (a tab bar under the
  * thumb on a phone), settings apart at its foot, and ⌘K to jump anywhere.
  */
 export function AppShell() {
@@ -48,10 +48,10 @@ export function AppShell() {
           id="content"
           data-rail={rail.wide ? "wide" : "narrow"}
           className={cn(
-            "min-w-0 md:pl-[4.75rem] md:wide:pl-64 md:transition-[padding] md:duration-200",
+            "min-w-0 md:pl-[3.75rem] md:wide:pl-60 md:transition-[padding] md:duration-200",
             bleed
               ? "flex h-[calc(100svh-3.5rem-4rem-env(safe-area-inset-bottom))] flex-col overflow-hidden md:h-svh"
-              : "px-4 pt-5 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:px-6 md:pt-8 md:pr-10 md:pb-16 md:pl-[calc(4.75rem+2.5rem)] md:wide:pl-[calc(16rem+3rem)]",
+              : "px-4 pt-5 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:px-6 md:pt-8 md:pr-10 md:pb-16 md:pl-[calc(3.75rem+2.5rem)] md:wide:pl-[calc(15rem+3rem)]",
           )}
         >
           {bleed ? (
@@ -104,7 +104,7 @@ function Rail({ onSearch, rail }: { onSearch: () => void; rail: ReturnType<typeo
   return (
     <div
       data-rail={rail.wide ? "wide" : "narrow"}
-      className="rail fixed inset-y-0 left-0 z-40 flex w-[4.75rem] flex-col gap-4 px-3 pt-5 pb-3 wide:w-64 wide:px-4 transition-[width] duration-200"
+      className="rail fixed inset-y-0 left-0 z-40 flex w-[3.75rem] flex-col gap-3 px-2.5 pt-4 pb-3 wide:w-60 wide:px-3 transition-[width] duration-200"
     >
       <div className="flex items-center gap-1 narrow:flex-col">
         <div className="min-w-0 flex-1 narrow:flex-none">
@@ -118,12 +118,12 @@ function Rail({ onSearch, rail }: { onSearch: () => void; rail: ReturnType<typeo
             aria-label={fold}
             aria-expanded={rail.wide}
             aria-keyshortcuts="Meta+B ["
-            className="grid size-9 shrink-0 place-items-center rounded-lg text-ink-faint transition-colors hover:bg-white/8 hover:text-ink"
+            className="grid size-8 shrink-0 place-items-center rounded-md text-ink-faint transition-colors hover:bg-ink/6 hover:text-ink"
           >
             {rail.wide ? (
-              <PanelLeftClose className="size-4.5" aria-hidden="true" />
+              <PanelLeftClose className="size-4" aria-hidden="true" />
             ) : (
-              <PanelLeftOpen className="size-4.5" aria-hidden="true" />
+              <PanelLeftOpen className="size-4" aria-hidden="true" />
             )}
           </button>
         ) : null}
@@ -132,15 +132,15 @@ function Rail({ onSearch, rail }: { onSearch: () => void; rail: ReturnType<typeo
         type="button"
         onClick={onSearch}
         title={t("shell-go-to")}
-        className="flex h-10 items-center gap-2.5 rounded-xl bg-white/6 px-3 text-body text-ink-muted transition-colors hover:bg-white/10 hover:text-ink narrow:justify-center narrow:px-0"
+        className="flex h-9 items-center gap-2.5 rounded-lg bg-paper-raised px-2.5 text-meta text-ink-muted shadow-[inset_0_0_0_1px_var(--rule)] transition-colors hover:text-ink hover:shadow-[inset_0_0_0_1px_var(--rule-strong)] narrow:justify-center narrow:px-0"
       >
-        <Search className="size-4.5 shrink-0" aria-hidden="true" />
+        <Search className="size-4 shrink-0" aria-hidden="true" />
         <span className="narrow:sr-only">{t("shell-go-to")}</span>
         <span className="ml-auto narrow:hidden">
           <Kbd>⌘K</Kbd>
         </span>
       </button>
-      <nav aria-label={t("shell-sections")} className="flex min-h-0 flex-1 flex-col gap-1">
+      <nav aria-label={t("shell-sections")} className="flex min-h-0 flex-1 flex-col gap-0.5">
         {spaces.map((s) => (
           <RailLink key={s.to} space={s} here={inSpace(s, path)} badge={s.to === "/" ? waiting : 0} />
         ))}
@@ -150,7 +150,7 @@ function Rail({ onSearch, rail }: { onSearch: () => void; rail: ReturnType<typeo
           </div>
         ) : null}
       </nav>
-      <div className="flex items-center gap-1 border-t border-white/8 pt-3 narrow:flex-col">
+      <div className="flex items-center gap-1 border-t border-rule pt-2.5 narrow:flex-col">
         <div className="min-w-0 flex-1 narrow:flex-none">
           <AccountMenu compact="narrow" />
         </div>
@@ -170,11 +170,11 @@ function RailLink({ space, here, badge }: { space: Space; here: boolean; badge: 
       aria-current={here ? "page" : undefined}
       aria-label={badge ? t("shell-space-waiting", { space: t(space.label), count: badge }) : undefined}
       className={cn(
-        "relative flex h-11 items-center gap-3 rounded-xl px-3 text-body font-medium transition-colors narrow:justify-center narrow:px-0",
-        here ? "bg-day-paper text-day-ink" : "text-ink-muted hover:bg-white/8 hover:text-ink",
+        "group relative flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-body transition-colors narrow:justify-center narrow:px-0",
+        here ? "bg-paper-raised font-medium text-ink shadow-(--lift)" : "text-ink-muted hover:bg-ink/6 hover:text-ink",
       )}
     >
-      <space.icon className="size-5 shrink-0" aria-hidden="true" />
+      <space.icon className={cn("size-4.5 shrink-0", here ? "text-ember" : "")} aria-hidden="true" />
       <span className="narrow:sr-only">{t(space.label)}</span>
       {badge ? (
         <Count n={badge} tone="ember" className="ml-auto narrow:absolute narrow:-top-1 narrow:-right-1" />
@@ -199,7 +199,7 @@ function SpaceLink({ space, here, badge }: { space: Space; here: boolean; badge:
       <span
         className={cn(
           "relative grid h-9 w-12 place-items-center rounded-full transition-colors",
-          here ? "bg-day-paper text-day-ink" : "group-hover:bg-white/8",
+          here ? "bg-ember-soft text-ember" : "group-hover:bg-ink/6",
         )}
       >
         <space.icon className="size-5" aria-hidden="true" />
@@ -225,21 +225,21 @@ function AgentMark() {
       to="/"
       title={`${me.assistant} · ${state}`}
       aria-label={t("shell-agent-label", { assistant: me.assistant, state })}
-      className="flex items-center gap-3 rounded-2xl p-1 hover:bg-white/6 narrow:justify-center"
+      className="flex items-center gap-2.5 rounded-lg p-1 hover:bg-ink/6 narrow:justify-center"
     >
       <span className="relative shrink-0">
-        <AgentFigure state={figure} size="md" live />
+        <AgentFigure state={figure} size="sm" live className="size-8" />
         <span
           aria-hidden="true"
           className={cn(
-            "absolute -top-0.5 -right-0.5 size-2.5 rounded-full ring-2 ring-night wide:hidden",
+            "absolute -top-0.5 -right-0.5 size-2.5 rounded-full ring-2 ring-paper wide:hidden",
             online ? "live-dot bg-ember" : status === "connecting" ? "bg-amber" : "bg-ink-faint",
           )}
         />
       </span>
       <span className="min-w-0 narrow:hidden">
-        <span className="block truncate title-card text-ink">{me.assistant}</span>
-        <span className="mt-1.5 flex items-center gap-1.5 text-meta text-ink-muted">
+        <span className="block truncate font-serif text-heading leading-none text-ink">{me.assistant}</span>
+        <span className="mt-1 flex items-center gap-1.5 text-micro text-ink-muted">
           <span
             aria-hidden="true"
             className={cn(

@@ -1,25 +1,21 @@
 /**
  * The configuration file as the mock server keeps it: the document as written (references stay
- * `${…}`), the vault of secrets, the history of earlier files, and the checks Nestor runs before
- * writing. The schemas are what this version of Nestor answers (`server/`, `nestor admin mocks`).
+ * `${…}`; `instance.ts` holds it), the vault of secrets, the history of earlier files, and the checks
+ * Nestor runs before writing. The schemas are what this version of Nestor answers (`server/`,
+ * `nestor admin mocks`).
  */
 import type { ConfigDocument, ConfigProblem } from "@/api";
 import type { components } from "@/api/schema.gen";
 import type { JsonSchema } from "@/features/config/schema";
 import { minutes } from "./fixtures";
+import { document, ENVIRON, SCHEMAS, SECRETS } from "./instance";
 import type { Lang } from "./messages";
 import { render } from "./messages";
-import schemaEn from "./server/config-schema.en.json";
-import schemaFr from "./server/config-schema.fr.json";
+
+export { SCHEMAS };
 
 type S = components["schemas"];
 type Change = S["DiffOut"]["added"][number];
-
-/** A JSON module types its strings as `string`, not as the schema's enums: `nestor admin mocks` wrote them from it. */
-export const SCHEMAS: Record<Lang, S["ConfigSchemaOut"]> = {
-  fr: schemaFr as S["ConfigSchemaOut"],
-  en: schemaEn as S["ConfigSchemaOut"],
-};
 
 export interface VaultSecret {
   value: string;
@@ -37,108 +33,6 @@ export interface ConfigDb {
 
 const SLOTS = Object.keys(SCHEMAS.fr.slots);
 
-/** References as a configuration file writes them. */
-const vault = (name: string) => `\${secret:${name}}`;
-const environ = (name: string) => `\${${name}}`;
-
-/** Richie's household, as its `richie.yaml` could read. */
-export function document(): ConfigDocument {
-  return {
-    data_dir: "data/richie",
-    persona: {
-      name: "Richie",
-      locale: "en",
-      language: "English",
-      timezone: "UTC",
-      character:
-        "You are Richie, the Lambert household's assistant. You speak plainly, warmly and with a touch of humour, and you get to the point.",
-    },
-    household: [
-      { id: "mathis", name: "Mathis", accounts: ["telegram:@mathis_l"], reach: "telegram:@mathis_l" },
-      { id: "lea", name: "Léa", accounts: ["telegram:@lea_lambert"], reach: "voice" },
-      { id: "jules", name: "Jules" },
-      { id: "odile", name: "Odile", accounts: ["telegram:@odile.m"], reach: "telegram:@odile.m" },
-    ],
-    models: {
-      sonnet: {
-        type: "language",
-        provider: "openai-compatible",
-        base_url: "https://openrouter.ai/api/v1",
-        api_key: environ("MODEL_API_KEY"),
-        model: "anthropic/claude-sonnet-4.6",
-        extra_body: { provider: { order: ["anthropic"] } },
-      },
-      haiku: {
-        type: "language",
-        provider: "openai-compatible",
-        base_url: "https://openrouter.ai/api/v1",
-        api_key: environ("MODEL_API_KEY"),
-        model: "anthropic/claude-haiku-4.5",
-      },
-      voices: { type: "speaker", provider: "sherpa-onnx", model: "titanet-small" },
-      scribe: {
-        type: "transcription",
-        provider: "elevenlabs",
-        api_key: vault("models.elevenlabs.api_key"),
-        model: "scribe_v2_realtime",
-        language: "en",
-      },
-      victor: {
-        type: "speech",
-        provider: "elevenlabs",
-        api_key: vault("models.elevenlabs.api_key"),
-        voice_id: "Xb7hH8MSUJpSbSDYk0k2",
-        model: "eleven_v4_turbo",
-      },
-    },
-    agent: { spoken: "haiku", written: "sonnet" },
-    watches: { model: "haiku" },
-    channels: [
-      {
-        kind: "satellites",
-        port: 8471,
-        voice: { transcription: "scribe", speech: "victor" },
-      },
-      { kind: "telegram", token: environ("TELEGRAM_TOKEN") },
-    ],
-    executors: [
-      {
-        kind: "hermes",
-        base_url: "http://hermes.local:8642/v1",
-        api_key: vault("executors.hermes.api_key"),
-        model: "hermes-agent",
-        description: "Long research, code, and anything that takes several steps.",
-      },
-    ],
-    tools: [
-      {
-        kind: "mcp",
-        name: "recipes",
-        url: "http://192.168.1.20:8808/mcp_server/sse",
-        transport: "sse",
-        token: vault("tools.recipes.token"),
-        risks: { add_recipe: "write", delete_recipe: "sensitive" },
-        headers: { "X-Household": "lambert-home-7d2f" },
-      },
-    ],
-    home: {
-      kind: "home-assistant",
-      url: "http://homeassistant.local:8123",
-      token: vault("home.token"),
-      people: { mathis: "person.mathis", lea: "person.lea", jules: "person.jules" },
-      rooms: { mathis: "sensor.mathis_area", lea: "sensor.lea_area", jules: "sensor.jules_area" },
-      sensitive: {
-        domains: ["lock", "alarm_control_panel"],
-        device_classes: ["garage", "gate", "door"],
-        names: ["porte"],
-      },
-    },
-    connectors: [{ kind: "google" }, { kind: "imap" }],
-    initiative: { quiet_hours: "22:30-07:30", main_room: "living room" },
-    admin: { host: "0.0.0.0", port: 8470, public_url: "https://nestor.lambert.family" },
-  };
-}
-
 export function fresh(): ConfigDb {
   const now = document();
   const older = structuredClone(now) as Record<string, Record<string, unknown>>;
@@ -155,13 +49,9 @@ export function fresh(): ConfigDb {
       { id: "20261029T183012120000Z", at: minutes(60 * 26), document: older },
       { id: "20261021T090455031000Z", at: minutes(60 * 24 * 9), document: oldest },
     ],
-    vault: {
-      "models.elevenlabs.api_key": { value: "sk_e1d0a8c7b6f5", at: minutes(60 * 24 * 30) },
-      "executors.hermes.api_key": { value: "hermes-7c0f2b91", at: minutes(60 * 24 * 12) },
-      "tools.recipes.token": { value: "eyJhbGciOiJIUzI1NiJ9.recipes", at: minutes(60 * 24 * 12) },
-      "home.token": { value: "eyJhbGciOiJIUzI1NiJ9.home", at: minutes(60 * 24 * 12) },
-      "github.token": { value: "ghp_unused0000", at: minutes(60 * 24 * 40) },
-    },
+    vault: Object.fromEntries(
+      Object.entries(SECRETS).map(([name, [value, age]]) => [name, { value, at: minutes(age) }]),
+    ),
   };
 }
 
@@ -295,8 +185,6 @@ export function prepared(edited: ConfigDocument, current: ConfigDocument) {
 
 // -- checking --------------------------------------------------------------------------------------
 
-const ENVIRON = new Set(["MODEL_API_KEY", "TELEGRAM_TOKEN"]);
-
 function references(node: unknown, path: Path = []): { path: Path; name: string; secret: boolean }[] {
   if (typeof node === "string") {
     return [...node.matchAll(/\$\{(secret:)?([^}]+)\}/g)].map((m) => ({
@@ -414,7 +302,7 @@ export function problems(
 ): ConfigProblem[] {
   const found: Found[] = [];
   for (const r of references(doc)) {
-    if (r.secret ? !(r.name in pending || r.name in db.vault) : !ENVIRON.has(r.name))
+    if (r.secret ? !(r.name in pending || r.name in db.vault) : !(ENVIRON as readonly string[]).includes(r.name))
       found.push({ path: r.path, code: r.secret ? "secret" : "reference", detail: r.name });
   }
   if (!found.length) {

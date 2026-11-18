@@ -5,7 +5,7 @@ import { ArrowUpRight, ChevronRight, Megaphone, MessageSquareText, Radar, Workfl
 import { type ReactNode, useState } from "react";
 import { type JournalItem, taskQuery, watchQuery } from "@/api";
 import { AgentFigure } from "@/components/agent-figure";
-import { IconTile, Pebble, type TileTone } from "@/components/marks";
+import { Avatar, IconTile, type TileTone } from "@/components/marks";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useT } from "@/i18n";
 import { tr } from "@/i18n/runtime";
@@ -104,7 +104,7 @@ function Head({
         <p className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-body text-ink-muted">
           {people.map((p) => (
             <span key={p.id} className="inline-flex items-center gap-1.5 text-ink">
-              <Pebble name={p.name} size="xs" />
+              <Avatar name={p.name} size="xs" />
               {named ? p.name : <span className="sr-only">{p.name}</span>}
             </span>
           ))}
@@ -214,7 +214,7 @@ function TurnBlock({ turn, open, unfolded }: { turn: Turn; open: (position: numb
     <li className="grid gap-3">
       {turn.user ? (
         <div className={SIDE}>
-          <Pebble name={who || "?"} className="mt-5" />
+          <Avatar name={who || "?"} className="mt-5" />
           <div className="min-w-0">
             <p className="mb-1 flex items-baseline gap-2 text-meta text-ink-muted">
               <span className="font-medium text-ink">{who}</span>
@@ -549,7 +549,7 @@ function SingleCard({ single, open, isNew }: Props & { single: Single }) {
                 <Source item={item} />
                 {people.map((p) => (
                   <span key={p.id} className="inline-flex items-center gap-1.5">
-                    <Pebble name={p.name} size="xs" />
+                    <Avatar name={p.name} size="xs" />
                     {p.name}
                   </span>
                 ))}

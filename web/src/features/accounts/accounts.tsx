@@ -18,7 +18,7 @@ import { CardHead, TILE_CARD, TileCard } from "@/components/card";
 import { Choice } from "@/components/choice";
 import { Confirm } from "@/components/confirm";
 import { type Crumb, Crumbs } from "@/components/crumbs";
-import { IconTile, Pebble } from "@/components/marks";
+import { Avatar, IconTile } from "@/components/marks";
 import { useNotify } from "@/components/notices";
 import { FormDialog } from "@/components/overlay-form";
 import { Fact, Facts, PageHeader, RowList, Section } from "@/components/page";
@@ -95,7 +95,7 @@ function AccountCard({ account }: { account: Account }) {
     <li>
       <Link to="/accounts/$accountId" params={{ accountId: account.id }} className={TILE_CARD}>
         <TileCard
-          marks={<Pebble name={nameOf(account)} away={account.disabled} size="lg" />}
+          marks={<Avatar name={nameOf(account)} away={account.disabled} size="lg" />}
           aside={
             <>
               {account.id === me.account.id ? <Tag tone="accent">{t("acc-you")}</Tag> : null}
@@ -217,7 +217,7 @@ export function AccountDetail({ id }: { id: string }) {
         crumbs={<Crumbs trail={trail} />}
         title={
           <span className="flex items-center gap-4">
-            <Pebble name={nameOf(account)} away={account.disabled} size="2xl" />
+            <Avatar name={nameOf(account)} away={account.disabled} size="2xl" />
             <span className="min-w-0">{nameOf(account)}</span>
           </span>
         }

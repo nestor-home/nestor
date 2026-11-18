@@ -30,7 +30,8 @@ export function CardHead({
       <span className="grid min-w-0 flex-1 basis-48 gap-0.5">
         <span className="title-item text-ink">{title}</span>
         {line ? <span className="text-body text-ink-muted">{line}</span> : null}
-        {children ? <span className="mt-2 grid justify-items-start gap-3">{children}</span> : null}
+        {/* what follows keeps its own width (a button stays a button) but never more than the card's */}
+        {children ? <span className="mt-2 grid justify-items-start gap-3 *:max-w-full">{children}</span> : null}
       </span>
       {aside ? <span className="ml-auto flex max-w-full items-center gap-2.5 self-center">{aside}</span> : null}
     </span>

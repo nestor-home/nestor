@@ -6,7 +6,7 @@ import { api, type Memory } from "@/api";
 import { Ago } from "@/components/ago";
 import { Confirm } from "@/components/confirm";
 import { FormActions } from "@/components/form-actions";
-import { Pebble } from "@/components/marks";
+import { Avatar } from "@/components/marks";
 import { useNotify } from "@/components/notices";
 import { FormDialog, SheetPanel } from "@/components/overlay-form";
 import { Fact, Facts } from "@/components/page";
@@ -28,7 +28,7 @@ export function MemoryCard({ memory, about, onOpen }: { memory: Memory; about: b
         <span className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-meta text-ink-muted">
           {about ? (
             <span className="inline-flex items-center gap-1.5 text-ink">
-              {memory.about ? <Pebble name={memory.about.name} size="xs" /> : null}
+              {memory.about ? <Avatar name={memory.about.name} size="xs" /> : null}
               {memory.about?.name ?? t("household-everyone")}
             </span>
           ) : null}
@@ -110,7 +110,7 @@ export function MemoryPanel({ memory, editable, onDone }: { memory: Memory; edit
               params={{ personId: memory.about.id }}
               className="inline-flex items-center gap-2 text-ink hover:text-ember"
             >
-              <Pebble name={memory.about.name} size="sm" />
+              <Avatar name={memory.about.name} size="sm" />
               {memory.about.name}
             </Link>
           ) : (

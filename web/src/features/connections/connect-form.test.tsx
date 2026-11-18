@@ -2,13 +2,13 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { connectors } from "@/mocks/fixtures";
+import { fresh } from "@/mocks/db";
 import { server } from "@/mocks/server";
 import { renderApp, renderWithProviders } from "@/test/render";
 import { ConnectForm } from "./connect-form";
 
 const connector = (kind: string) => {
-  const found = connectors().find((c) => c.kind === kind);
+  const found = fresh().connectors.find((c) => c.kind === kind);
   if (!found) throw new Error(`no fixture ${kind}`);
   return found;
 };

@@ -8,7 +8,7 @@ import { FileCog } from "lucide-react";
 import { configHistoryQuery, secretsQuery } from "@/api";
 import { OpenArrow, TILE_CARD, TileCard } from "@/components/card";
 import { Crumbs } from "@/components/crumbs";
-import { IconTile, Pebble, ServiceTile } from "@/components/marks";
+import { Avatar, IconTile, ServiceTile } from "@/components/marks";
 import { PageHeader, Section } from "@/components/page";
 import { useT } from "@/i18n";
 import { PageMark, SaveBar, usePageMarks } from "./config-layout";
@@ -70,7 +70,7 @@ function PageCard({ page, marks }: { page: ConfigPage; marks: ReturnType<ReturnT
               {people.length ? (
                 people.slice(0, MARKS).map((p, i) => (
                   // biome-ignore lint/suspicious/noArrayIndexKey: a person's position is its place in the file
-                  <Pebble key={i} name={String(p.name || p.id || "")} size="lg" />
+                  <Avatar key={i} name={String(p.name || p.id || "")} size="lg" />
                 ))
               ) : glance.marks.length ? (
                 glance.marks.slice(0, MARKS).map((mark) => <ServiceTile key={mark} kind={mark} />)

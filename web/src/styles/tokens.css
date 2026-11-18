@@ -43,11 +43,10 @@
   --kind-watch: light-dark(#7a4a68, #cf9dbd);
 
   /* fixed, whatever the scheme: the daylight paper and ink that stay so inside the dark rail and the night sky,
-     the rail's night, and the ember of a person's scarf */
+     and the rail's night */
   --day-paper: #f5f0e6;
   --day-ink: #1d1913;
   --night: #100e0b;
-  --scarf: #e8835c;
 
   /* type */
   --font-display: "Fraunces Variable", "Iowan Old Style", "Palatino Linotype", Georgia, serif;

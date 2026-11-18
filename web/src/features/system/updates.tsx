@@ -49,7 +49,7 @@ export function UpdateAvailable({ compact }: { compact: boolean }) {
           aria-label={compact ? t("upd-available-version", { version: latest }) : undefined}
           className={
             compact
-              ? "relative grid size-11 place-items-center overflow-hidden rounded-xl hover:bg-white/8"
+              ? "relative grid size-9 shrink-0 place-items-center overflow-hidden rounded-lg hover:bg-ink/6"
               : "surface relative flex w-full items-center gap-4 overflow-hidden p-5 text-left"
           }
           onClick={() => setOpen(true)}

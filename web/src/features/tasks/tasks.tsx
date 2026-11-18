@@ -8,7 +8,7 @@ import { isMissing, type Task, taskQuery } from "@/api";
 import { API_BASE } from "@/api/client";
 import { Ago } from "@/components/ago";
 import { type Crumb, Crumbs } from "@/components/crumbs";
-import { IconTile, Pebble } from "@/components/marks";
+import { Avatar, IconTile } from "@/components/marks";
 import { OriginLink } from "@/components/origin-link";
 import { Fact, Facts, PageHeader, Panel, Section, WithAside } from "@/components/page";
 import { Empty, Failure, Loading } from "@/components/states";
@@ -144,7 +144,7 @@ function About({ task }: { task: Task }) {
       <Facts narrow className="text-body">
         {task.requested_by ? (
           <Fact term={t("task-asked-by")} className="flex items-center gap-2">
-            <Pebble name={task.requested_by.name} size="sm" />
+            <Avatar name={task.requested_by.name} size="sm" />
             {task.requested_by.name}
           </Fact>
         ) : null}

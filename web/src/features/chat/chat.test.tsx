@@ -51,7 +51,7 @@ describe("the chat", () => {
     renderApp("/chat/c-dinner");
     expect(await screen.findByRole("table")).toHaveTextContent("Omelette");
     expect(screen.getByText("Leek and comté quiche", { exact: false })).toBeInTheDocument();
-    const call = screen.getByRole("button", { name: /homeassistant__HassTurnOn/ });
+    const call = screen.getByRole("button", { name: /intent__HassTurnOn/ });
     expect(call).toHaveTextContent("Done in");
     await user.click(call);
     expect(await screen.findByText(/"area": "kitchen"/)).toBeVisible();

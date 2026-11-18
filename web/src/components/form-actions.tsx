@@ -16,9 +16,13 @@ export function FormActions({
   children: ReactNode;
 }) {
   return (
-    <div data-slot="form-actions" className={cn("flex flex-wrap items-center justify-end gap-3", className)}>
-      {hint ? <span className="mr-auto text-micro text-ink-muted">{hint}</span> : null}
-      {children}
+    <div
+      data-slot="form-actions"
+      className={cn("flex flex-wrap items-center justify-end gap-x-4 gap-y-2.5", className)}
+    >
+      {/* the hint keeps a readable width: where it cannot sit beside the actions, it takes its own line above them */}
+      {hint ? <span className="min-w-48 flex-1 text-meta text-ink-muted">{hint}</span> : null}
+      <span className="flex flex-wrap items-center justify-end gap-3">{children}</span>
     </div>
   );
 }

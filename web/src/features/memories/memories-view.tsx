@@ -10,7 +10,7 @@ import { type Memory, type MemoryQuery, memoriesQuery, peopleQuery } from "@/api
 import { Chips } from "@/components/chips";
 import { type Crumb, Crumbs } from "@/components/crumbs";
 import { FormActions } from "@/components/form-actions";
-import { Pebble } from "@/components/marks";
+import { Avatar } from "@/components/marks";
 import { FormDialog, SideSheet } from "@/components/overlay-form";
 import { PageHeader, Section } from "@/components/page";
 import { Empty, Failure, Loading } from "@/components/states";
@@ -59,7 +59,7 @@ export function MemoryList({ query, grouped = false }: { query: MemoryQuery; gro
                     className="inline-flex shrink-0 items-center gap-2 text-body text-ink-muted hover:text-ink"
                     aria-label={t("mem-open-person", { name: about.name })}
                   >
-                    <Pebble name={about.name} />
+                    <Avatar name={about.name} />
                     <ArrowRight className="size-3.5" aria-hidden="true" />
                   </Link>
                 ) : undefined

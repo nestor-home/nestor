@@ -40,7 +40,7 @@ import { Ago } from "@/components/ago";
 import { CardHead, TILE_CARD, TileCard } from "@/components/card";
 import { Chips } from "@/components/chips";
 import { Confirm } from "@/components/confirm";
-import { BrandTile, IconTile, OwnerMark, Pebble, type TileTone } from "@/components/marks";
+import { Avatar, BrandTile, IconTile, OwnerMark, type TileTone } from "@/components/marks";
 import { useNotify } from "@/components/notices";
 import { OriginLink } from "@/components/origin-link";
 import { SheetPanel, SideSheet } from "@/components/overlay-form";
@@ -201,7 +201,7 @@ export function ActivityView() {
                         </span>
                       ) : null}
                     </span>
-                    {s.owner ? <Pebble name={s.owner.name} /> : null}
+                    {s.owner ? <Avatar name={s.owner.name} /> : null}
                   </button>
                 </li>
               ))}

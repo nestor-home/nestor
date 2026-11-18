@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Languages, LogOut, Monitor, Moon, Sun } from "lucide-react";
 import { api, keys, setCsrfToken } from "@/api";
-import { Pebble } from "@/components/marks";
+import { Avatar } from "@/components/marks";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -58,10 +58,10 @@ export function AccountMenu({ compact = false }: { compact?: boolean | "narrow" 
         className={
           compact === true
             ? "grid size-11 place-items-center rounded-xl hover:bg-paper-sunken data-popup-open:bg-paper-sunken"
-            : "flex w-full items-center gap-3 rounded-xl p-2 text-left hover:bg-white/8 data-popup-open:bg-white/8 narrow:justify-center"
+            : "flex w-full items-center gap-2.5 rounded-lg p-1.5 text-left hover:bg-ink/6 data-popup-open:bg-ink/6 narrow:justify-center"
         }
       >
-        <Pebble name={me.account.person?.name ?? me.account.login} size="lg" />
+        <Avatar name={me.account.person?.name ?? me.account.login} size="lg" />
         {compact === true ? null : (
           <span className="min-w-0 flex-1 narrow:hidden">
             <span className="block truncate text-body font-medium text-ink">

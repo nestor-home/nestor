@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Home } from "@/api";
-import { home, people, satellites } from "@/mocks/fixtures";
+import { fresh } from "@/mocks/db";
+import { satellites } from "@/mocks/fixtures";
 import { liveItem } from "@/test/render";
 import { marksOf, roomsOf } from "./mind";
 
@@ -27,11 +28,12 @@ type Room = Home["rooms"][number];
 
 describe("the rooms", () => {
   it("are the home system's rooms, with the satellites in them, who is there, or that someone is", () => {
-    const answering = home();
+    const { home: answering, people } = fresh();
+    if (!answering) throw new Error("the mock household has a home");
     const [living, kitchen] = answering.rooms as [Room, Room];
     answering.rooms[1] = { ...kitchen, occupied: true }; // a sensor sees someone, nobody is placed there
     const rooms = roomsOf({
-      people: people().map((p) => ({ ...p, connections: [], account: null })),
+      people: people.map((p) => ({ ...p, connections: [], account: null })),
       satellites: satellites(),
       items: [],
       home: answering,

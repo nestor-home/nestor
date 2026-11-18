@@ -3,13 +3,17 @@
  * someone is, and raised surfaces for everything one can open.
  */
 
-/* -- the rail: always night ink, whatever the theme (light-dark() resolves dark inside it) -------- */
+/* -- the rail: a shade under the page, so the page stays the lit thing ------------------------- */
 .rail {
-  color-scheme: dark;
-  /* a little of the ember's warmth where the agent sits, then night */
-  background: radial-gradient(140% 26rem at 0% 0%, rgb(232 131 92 / 0.13), transparent 62%), var(--night);
+  background: color-mix(in oklab, var(--paper-sunken) 55%, var(--paper));
   color: var(--ink);
-  box-shadow: inset -1px 0 0 rgb(255 255 255 / 0.06);
+  box-shadow: inset -1px 0 0 var(--rule);
+}
+
+/* under a phone's thumb it sits over the page: raised, with a rule above */
+nav.rail {
+  background: var(--paper-raised);
+  box-shadow: inset 0 1px 0 var(--rule);
 }
 
 /* -- surfaces --------------------------------------------------------------------------------- */
@@ -129,6 +133,8 @@ button.surface:hover {
 }
 
 .sky-ground {
+  /* always night underfoot: what stands on it resolves its colours dark */
+  color-scheme: dark;
   background: var(--ground);
   color: #f3ecdf;
 }
@@ -190,33 +196,53 @@ button.surface:hover {
   outline-color: #fff;
 }
 
-/* a person: an ink pebble with an ember scarf, as in the film */
-.pebble {
+/* a person: their initials on a quiet tint that is theirs (`data-hue`), drawn from the palette's own colours so
+   it follows the theme */
+.avatar {
+  --tint: var(--ink-muted);
   display: inline-grid;
   width: 2.5em;
   height: 2.5em;
   flex: none;
   place-items: center;
-  border-radius: 50% 50% 46% 46%;
-  background: var(--ink);
-  color: var(--paper);
+  border-radius: 50%;
+  background: color-mix(in oklab, var(--tint) 16%, var(--paper-raised));
+  color: color-mix(in oklab, var(--tint) 82%, var(--ink));
+  font-family: var(--font-ui);
   font-weight: 600;
+  letter-spacing: 0.01em;
   line-height: 1;
-  box-shadow: inset 0 -0.28em 0 0 var(--scarf);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--tint) 26%, transparent);
 }
 
-/* inside a scene that sets its own colours (a lit room, the night sky), the pebble keeps its daylight ink */
-.pebble[data-lit] {
-  background: var(--day-ink);
-  color: var(--day-paper);
+.avatar[data-hue="0"] {
+  --tint: var(--ember);
+}
+.avatar[data-hue="1"] {
+  --tint: var(--sage);
+}
+.avatar[data-hue="2"] {
+  --tint: var(--kind-task);
+}
+.avatar[data-hue="3"] {
+  --tint: var(--amber);
+}
+.avatar[data-hue="4"] {
+  --tint: var(--kind-watch);
+}
+.avatar[data-hue="5"] {
+  --tint: var(--brick);
 }
 
-.pebble[data-away] {
+/* inside a scene that sets its own colours (a lit room, the night sky), the avatar keeps its daylight ones */
+.avatar[data-lit] {
+  color-scheme: light;
+}
+
+.avatar[data-away] {
   background: transparent;
-  color: currentColor;
-  box-shadow:
-    inset 0 0 0 1.5px currentColor,
-    inset 0 -0.28em 0 0 var(--scarf);
+  color: var(--ink-muted);
+  box-shadow: inset 0 0 0 1px var(--rule-strong);
 }
 
 /* -- a task that runs: an ember thread that travels ---------------------------------------------- */

@@ -35,7 +35,7 @@ import {
 } from "@/api";
 import { Ago } from "@/components/ago";
 import { CardHead, MoreLink, OpenArrow } from "@/components/card";
-import { IconTile, Pebble, type TileTone } from "@/components/marks";
+import { Avatar, IconTile, type TileTone } from "@/components/marks";
 import { RowList, Section } from "@/components/page";
 import { Empty } from "@/components/states";
 import { buttonVariants } from "@/components/ui/button";
@@ -256,7 +256,7 @@ function Now({ running, items, lastLive }: { running: Task[]; items: JournalItem
                   aside={
                     <span className="flex -space-x-1.5">
                       {i.people.map((p) => (
-                        <Pebble key={p.id} name={p.name} />
+                        <Avatar key={p.id} name={p.name} />
                       ))}
                     </span>
                   }
@@ -426,7 +426,7 @@ function Knows() {
         {latest.map((m) => (
           <li key={m.id}>
             <Link to="/memories" search={m.about ? { about: m.about.id } : {}} className="group flex gap-3">
-              {m.about ? <Pebble name={m.about.name} className="mt-1" /> : null}
+              {m.about ? <Avatar name={m.about.name} className="mt-1" /> : null}
               <span className="min-w-0">
                 <span className="block title-sub text-ink group-hover:underline">{m.text}</span>
                 <span className="mt-1 block text-meta text-ink-muted">

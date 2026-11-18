@@ -28,6 +28,7 @@ import * as config from "./config";
 import { day } from "./day";
 import type { MockPending, MockPerson } from "./fixtures";
 import * as fixtures from "./fixtures";
+import { brought } from "./instance";
 import { stress, stressed } from "./stress";
 
 /** An addition as the mock server keeps it (the enrollment code in clear: it is the mock's). */
@@ -59,7 +60,7 @@ export interface Db {
   satellites: Satellite[];
   tasks: Task[];
   watches: Watch[];
-  inbound: string[]; // what the configured inbound sources bring (feeds, pages, webhooks), beside the accounts'
+  inbound: string[]; // what the inbound sources of the file bring (feeds, pages, webhooks), beside the accounts'
   schedules: Schedule[];
   messages: Messages;
   confirmations: Confirmation[];
@@ -74,10 +75,15 @@ export interface Db {
 }
 
 /** Bumped when the shape changes; the stress fixture keeps its own copy. */
-const KEY = () => (stressed() ? "nestor.mock.db.v22.stress" : "nestor.mock.db.v22");
+const KEY = () => (stressed() ? "nestor.mock.db.v23.stress" : "nestor.mock.db.v23");
 
 export function fresh(): Db {
+  const settings = config.fresh();
+  const doc = settings.document;
   const connections = fixtures.connections();
+  const satellites = fixtures.satellites();
+  const tasks = fixtures.tasks();
+  const system = fixtures.system(doc, { satellites, connections, tasks });
   const journal = day();
   const learnt = journal.find((e) => e.item.links.memory === "m-07")?.item.position ?? null;
   const memories = fixtures
@@ -85,29 +91,33 @@ export function fresh(): Db {
     .map((m) => (m.learnt_event === fixtures.LEARNT ? { ...m, learnt_event: learnt } : m));
   const state: Db = {
     signedIn: "acc-mathis",
-    people: fixtures.people(),
+    people: fixtures.people(doc),
     accounts: fixtures.accounts(),
     invitations: fixtures.invitations(),
     journal,
-    connectors: fixtures.connectors(),
+    connectors: fixtures.connectors(doc),
     connections,
     tools: Object.fromEntries(connections.map((c) => [c.id, fixtures.tools(c.kind, c.brand)])),
     services: Object.fromEntries(connections.map((c) => [c.id, fixtures.services(c, connections)])),
     pairing: fixtures.pairing(),
     additions: [],
-    satellites: fixtures.satellites(),
-    tasks: fixtures.tasks(),
+    satellites,
+    tasks,
     watches: fixtures.watches(),
-    inbound: ["feed", "page", "washing-machine"],
+    inbound: brought(doc),
     schedules: fixtures.schedules(),
     messages: fixtures.messages(),
     confirmations: fixtures.confirmations(),
-    home: fixtures.home(),
+    home: fixtures.home(
+      doc,
+      system.components.find((c) => c.slot === "home"),
+      satellites,
+    ),
     memories,
-    system: fixtures.system(),
-    executors: fixtures.executors(),
+    system,
+    executors: fixtures.executors(doc),
     updates: fixtures.updates(),
-    config: config.fresh(),
+    config: settings,
     voices: fixtures.voices(),
     chats: chats(),
   };

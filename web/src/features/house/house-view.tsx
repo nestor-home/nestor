@@ -4,7 +4,7 @@ import { CircleAlert, House, ShieldCheck } from "lucide-react";
 import type { ReactNode } from "react";
 import { type Home, homeQuery } from "@/api";
 import { CardHead } from "@/components/card";
-import { BrandTile, Pebble } from "@/components/marks";
+import { Avatar, BrandTile } from "@/components/marks";
 import { SheetPanel } from "@/components/overlay-form";
 import { Panel, RowList, Section } from "@/components/page";
 import { RiskTag } from "@/components/risk-tag";
@@ -75,7 +75,7 @@ function Loaded({ home, configure }: { home: Home; configure: ReactNode }) {
             <li key={p.person.id}>
               <Link to="/people/$personId" params={{ personId: p.person.id }} className="surface block px-4 py-3">
                 <CardHead
-                  mark={<Pebble name={p.person.name} away={!p.entity || p.presence?.home !== true} size="lg" />}
+                  mark={<Avatar name={p.person.name} away={!p.entity || p.presence?.home !== true} size="lg" />}
                   title={p.person.name}
                   line={
                     <span className="font-mono text-meta">

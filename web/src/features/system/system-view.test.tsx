@@ -17,7 +17,7 @@ describe("the system page", () => {
     expect(await screen.findByText(`${unwell} components to watch`)).toBeVisible();
     const wrong = await part(/^To look at/);
     expect(within(wrong).getAllByRole("button")).toHaveLength(unwell);
-    const down = within(wrong).getByRole("button", { name: /Léa's recipes \(MCP\)/ });
+    const down = within(wrong).getByRole("button", { name: /^recipes/ });
     expect(down).toHaveTextContent("down");
     expect(down).toHaveTextContent("Connection refused by 192.168.1.20:8808");
     expect(down).toHaveTextContent("Check that the service behind it answers");
@@ -56,8 +56,8 @@ describe("the system page", () => {
     const user = userEvent.setup();
     renderApp("/system");
     const tools = await part(/^Tools/);
-    await user.click(within(tools).getByRole("button", { name: /Léa's recipes \(MCP\)/ }));
-    const sheet = await screen.findByRole("dialog", { name: "Léa's recipes (MCP)" });
+    await user.click(within(tools).getByRole("button", { name: /^recipes/ }));
+    const sheet = await screen.findByRole("dialog", { name: "recipes" });
     expect(within(sheet).getByText("mcp", { selector: "dd" })).toBeVisible();
     expect(within(sheet).getByText(/Nothing goes through it for now/)).toBeVisible();
     expect(within(sheet).getByRole("link", { name: "Configure" })).toHaveAttribute("href", "/config/tools");

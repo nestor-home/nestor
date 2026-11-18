@@ -9,7 +9,7 @@ import { modelTypeValues } from "@/api/schema.gen";
 import { CardHead } from "@/components/card";
 import { Confirm } from "@/components/confirm";
 import { FormActions } from "@/components/form-actions";
-import { Pebble, ServiceTile } from "@/components/marks";
+import { Avatar, ServiceTile } from "@/components/marks";
 import { FormDialog, FormSheet } from "@/components/overlay-form";
 import { Fact, Facts, Panel, Section } from "@/components/page";
 import { Empty } from "@/components/states";
@@ -175,7 +175,7 @@ function Household() {
               <Card
                 // biome-ignore lint/suspicious/noArrayIndexKey: a person's position is its place in the file
                 key={index}
-                mark={<Pebble name={label(p, index)} size="lg" />}
+                mark={<Avatar name={label(p, index)} size="lg" />}
                 title={label(p, index)}
                 line={accounts.length ? accounts.join(" · ") : t("cfg-person-no-account")}
                 marks={accounts}
@@ -218,14 +218,27 @@ function Household() {
 
 // -- components (models, channels, tools…) ----------------------------------------------------------
 
+/** What a card tells of an entry first, when it holds them; then any other short setting. */
 const SUMMARY = ["room", "model", "url", "base_url", "description"];
+/** What names the entry or picks its plugin: said by the card's title and mark already. */
+const NAMING = new Set(["kind", "type", "provider", "name"]);
 
+/** Two settings of an entry, in words: what a person set, never a secret nor a reference to one. */
 function summary(entry: Record<string, unknown>): string {
-  return SUMMARY.map((k) => entry[k])
-    .filter((v): v is string => typeof v === "string" && v !== "" && !v.includes("${"))
-    .slice(0, 2)
-    .join(" · ");
+  const plain = (v: unknown): v is string | number =>
+    typeof v === "number" || (typeof v === "string" && v !== "" && !v.includes("${"));
+  // beyond the settings a card always tells: an address, an id, a port, not a sentence (a greeting, an error text)
+  const short = (v: unknown) => typeof v !== "string" || v.trim().split(/\s+/).length <= 3;
+  const first = SUMMARY.map((k) => entry[k]).filter(plain);
+  const others = Object.keys(entry)
+    .filter((k) => !SUMMARY.includes(k) && !NAMING.has(k))
+    .map((k) => entry[k])
+    .filter(plain)
+    .filter(short);
+  return [...first, ...others].slice(0, 2).join(" · ");
 }
+
+const same = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
 
 function ComponentCard({
   slot,
@@ -248,12 +261,14 @@ function ComponentCard({
   problems: number;
   onOpen: () => void;
 }) {
+  const told = summary(c.entry);
   return (
     <Card
       mark={<ServiceTile kind={c.mark} />}
       title={title}
-      line={line}
-      detail={summary(c.entry)}
+      // a line that only repeats the title tells nothing: the settings take its place
+      line={same(line, title) ? told : line}
+      detail={same(line, title) ? undefined : told}
       type={type}
       roles={roles}
       problems={problems}

@@ -8,7 +8,7 @@ import { Radar, Repeat } from "lucide-react";
 import { isMissing, type Watch, watchQuery } from "@/api";
 import { Ago } from "@/components/ago";
 import { type Crumb, Crumbs } from "@/components/crumbs";
-import { BrandTile, IconTile, Pebble } from "@/components/marks";
+import { Avatar, BrandTile, IconTile } from "@/components/marks";
 import { OriginLink } from "@/components/origin-link";
 import { PageHeader, Section } from "@/components/page";
 import { Empty, Failure, Loading } from "@/components/states";
@@ -48,7 +48,7 @@ function Loaded({ watch: w, trail }: { watch: Watch; trail: Crumb[] }) {
         title={w.title}
         meta={
           <>
-            {w.owner ? <Pebble name={w.owner.name} size="sm" /> : null}
+            {w.owner ? <Avatar name={w.owner.name} size="sm" /> : null}
             <span>{t("watch-for", { name: personName(w.owner) })}</span>
             <span>{t("watch-created", { when: moment(w.created_at) })}</span>
             {w.until ? <span>{t("watch-until", { when: moment(w.until) })}</span> : null}

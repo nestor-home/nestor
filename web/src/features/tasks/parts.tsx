@@ -8,7 +8,7 @@ import { api, keys, type Task, type TaskStatus } from "@/api";
 import { Ago } from "@/components/ago";
 import { CardHead } from "@/components/card";
 import { Confirm } from "@/components/confirm";
-import { IconTile, Pebble } from "@/components/marks";
+import { Avatar, IconTile } from "@/components/marks";
 import { useNotify } from "@/components/notices";
 import { Status, type StatusTone } from "@/components/status";
 import { Button } from "@/components/ui/button";
@@ -40,7 +40,7 @@ export function RunningTask({ task }: { task: Task }) {
             </span>
           </span>
         }
-        aside={task.requested_by ? <Pebble name={task.requested_by.name} /> : null}
+        aside={task.requested_by ? <Avatar name={task.requested_by.name} /> : null}
       />
       <span className="mt-3.5 block text-body text-ink">{task.steps.at(-1) ?? t("home-task-starting")}</span>
       <span className="thread mt-2.5 block" aria-hidden="true" />

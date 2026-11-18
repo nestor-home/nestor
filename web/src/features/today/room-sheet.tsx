@@ -4,7 +4,7 @@ import { Camera, Eye, Phone, RadioTower, Video } from "lucide-react";
 import { type JournalItem, type MediaDevice, mediaDevicesQuery } from "@/api";
 import { Ago } from "@/components/ago";
 import { CardHead, MoreLink, OpenArrow } from "@/components/card";
-import { IconTile, Pebble } from "@/components/marks";
+import { Avatar, IconTile } from "@/components/marks";
 import { SheetPanel, SideSheet } from "@/components/overlay-form";
 import { Section } from "@/components/page";
 import { Empty } from "@/components/states";
@@ -64,7 +64,7 @@ function Room({ room: r, items }: { room: RoomNode; items: readonly JournalItem[
               >
                 <CardHead
                   className="flex-1"
-                  mark={<Pebble name={p.name} size="lg" />}
+                  mark={<Avatar name={p.name} size="lg" />}
                   title={p.name}
                   line={
                     p.presence?.since ? (

@@ -3,7 +3,7 @@ import { Link, type LinkProps } from "@tanstack/react-router";
 import { ArrowUpRight, ScrollText } from "lucide-react";
 import { type JournalEvent, type JournalItem, journalEventQuery } from "@/api";
 import { CopyButton } from "@/components/copy-field";
-import { Pebble } from "@/components/marks";
+import { Avatar } from "@/components/marks";
 import { SheetPanel, SideSheet } from "@/components/overlay-form";
 import { Fact, Facts } from "@/components/page";
 import { Failure, Loading } from "@/components/states";
@@ -141,7 +141,7 @@ function Loaded({ event: { item: event, record } }: { event: JournalEvent }) {
         {related.map((r) => (
           <Fact key={`${r.label}-${r.value}`} term={r.label}>
             <Link {...r.link} className="inline-flex max-w-full items-center gap-1 text-ink hover:text-ember">
-              {r.person ? <Pebble name={r.value} size="xs" /> : null}
+              {r.person ? <Avatar name={r.value} size="xs" /> : null}
               <span className={r.person ? "" : "truncate font-mono text-meta"}>{r.value}</span>
               <ArrowUpRight className="size-3 shrink-0" aria-hidden="true" />
             </Link>

@@ -268,7 +268,7 @@ export function day(now = Date.now()): JournalEvent[] {
     channels: [VOICE],
     room: LIVING_ROOM,
     links: { ...s1, turn: "u-1" },
-    record: { latency_ms: 1180, model: "claude-sonnet-4.6" },
+    record: { latency_ms: 1180, model: "anthropic/claude-sonnet-4.6" },
   });
 
   // Mathis asks on Telegram for a long task: a thread and a chain at once

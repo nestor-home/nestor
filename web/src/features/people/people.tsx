@@ -10,7 +10,7 @@ import { connectionsQuery, isMissing, journalFacetsQuery, type Person, type Pres
 import { Ago } from "@/components/ago";
 import { CardHead, OpenArrow } from "@/components/card";
 import { type Crumb, Crumbs } from "@/components/crumbs";
-import { AddCard, IconTile, Pebble, ServiceTile } from "@/components/marks";
+import { AddCard, Avatar, IconTile, ServiceTile } from "@/components/marks";
 import { Lead, PageHeader, Section } from "@/components/page";
 import { Empty, Failure, Loading } from "@/components/states";
 import { Status, Tag } from "@/components/status";
@@ -63,7 +63,7 @@ export function PersonFrame({ id, children }: { id: string; children: ReactNode 
     <>
       <PageHeader
         crumbs={<Crumbs trail={trail} />}
-        mark={<Pebble name={person.name} away={person.presence?.home === false} size="2xl" />}
+        mark={<Avatar name={person.name} away={person.presence?.home === false} size="2xl" />}
         title={person.name}
         meta={
           <>

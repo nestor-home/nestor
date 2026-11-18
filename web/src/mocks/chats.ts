@@ -4,8 +4,9 @@
  */
 import type { ChatFile, ChatMessage, ChatTool, Mention } from "@/api";
 import { find, NAMED } from "@/features/chat/mentions";
-import { minutes } from "./fixtures";
+import { connections, minutes, ROOMS, ref, services } from "./fixtures";
 import { fr } from "./french";
+import { document, household, plugged } from "./instance";
 
 export interface MockChat {
   id: string;
@@ -78,7 +79,7 @@ export function chats(): MockChat[] {
           "t1",
         ),
         message("tool", "", dinner, "t1", {
-          tool: tool("homeassistant__HassTurnOn", { area: "kitchen", domain: ["light"] }, '{"success": true}', 0.4),
+          tool: tool("intent__HassTurnOn", { area: "kitchen", domain: ["light"] }, '{"success": true}', 0.4),
         }),
         message("tool", "", dinner, "t1", {
           tool: tool(
@@ -256,52 +257,41 @@ const mention = (
   extra: Partial<Pick<Mention, "aliases" | "detail" | "brand">> = {},
 ): Mention => ({ kind, handle, label, aliases: [label], detail: "", brand: null, ...extra });
 
-/** An account's services by the handle a message names them with, and the aliases the server gives. */
-function connected(account: string, brand: string, handles: string[], kind = brand): Mention[] {
-  const local = account.split("@")[0] ?? account;
-  return handles.map((handle) =>
-    mention("connection", handle, account, { aliases: [kind, brand, local, account], brand }),
-  );
+const ME = "mathis";
+
+/**
+ * What Mathis, who is signed in, may name in a message, as the server lists it from the instance: the people of the
+ * household, the rooms of the home, the executors of the file with what each is for, and the services of the
+ * accounts he may use (his own and the household's, while connected), by the handle a message names them with.
+ */
+function mentions(): Mention[] {
+  const doc = document();
+  const mine = connections().filter((c) => c.owner === null || c.owner.id === ME);
+  return [
+    ...household(doc).map((p) => mention("person", p.id, p.name)),
+    ...ROOMS.map(([id, name]) => mention("room", id.replaceAll(" ", "-"), name)),
+    ...plugged(doc)
+      .filter((p) => p.slot === "executor")
+      .map((p) =>
+        mention("executor", p.name, p.name, { aliases: [], brand: p.brand, detail: String(p.entry.description) }),
+      ),
+    // named from where he stands: with the start of the address when two of the accounts he may use have the service
+    ...mine.flatMap((c) =>
+      services({ ...c, owner: ref(ME) }, mine).flatMap((service) =>
+        service.handle
+          ? [
+              mention("connection", service.handle, c.account, {
+                aliases: [c.kind, c.brand ?? c.kind, c.account.split("@")[0] ?? c.account, c.account],
+                brand: c.brand,
+              }),
+            ]
+          : [],
+      ),
+    ),
+  ];
 }
 
-export const MENTIONS: Mention[] = [
-  mention("person", "mathis", "Mathis"),
-  mention("person", "mathilde", "Mathilde"),
-  mention("person", "lea", "Léa"),
-  mention("room", "salon", fr("Living room", "Salon")),
-  mention("room", "cuisine", fr("Kitchen", "Cuisine")),
-  mention("room", "chambre-lea", fr("Léa's bedroom", "Chambre de Léa")),
-  mention("executor", "hermes", "hermes", {
-    aliases: [],
-    brand: "hermes",
-    detail: fr(
-      "Long tasks: searching the web, reading documents, following up on projects.",
-      "Tâches longues : chercher sur le web, lire des documents, suivre des projets.",
-    ),
-  }),
-  mention("executor", "codex", "codex", {
-    aliases: [],
-    brand: "codex",
-    detail: fr(
-      "Code: reads a repository, changes it, runs its tests, opens a pull request.",
-      "Code : lit un dépôt, le modifie, lance ses tests, ouvre une pull request.",
-    ),
-  }),
-  mention("executor", "claude-code", "claude-code", {
-    aliases: [],
-    brand: "claude-code",
-    detail: fr(
-      "Code and files on this machine: updates a project, writes a report, hands back what it made.",
-      "Code et fichiers sur cette machine : met à jour un projet, écrit un rapport, rend ce qu'il a produit.",
-    ),
-  }),
-  // the accounts Mathis may use, as the server names them: a service alone, or with the start of the address when
-  // another of his accounts has it too (his Outlook calendar and the family's iCloud one)
-  ...connected("mathis.lambert@outlook.com", "microsoft", ["outlook", "calendar-mathis.lambert", "onedrive", "todo"]),
-  ...connected("famille.lambert@icloud.com", "dav", ["calendar-famille.lambert", "contacts"]),
-  ...connected("mathis@mcp.linear.app", "linear", ["linear"], "mcp"),
-  ...connected("household@homeassistant.local:8123", "mcp", ["homeassistant"]),
-];
+export const MENTIONS: Mention[] = mentions();
 
 /** What a text names, as the server reads it. */
 export function mentionedIn(text: string): Mention[] {
@@ -329,7 +319,7 @@ export function answerTo(text: string, files: number): { tool: ChatTool | null; 
   }
   if (/light|lamp|lumi|allum/.test(words)) {
     return {
-      tool: tool("homeassistant__HassTurnOn", { area: "living room", domain: ["light"] }, '{"success": true}', 0.3),
+      tool: tool("intent__HassTurnOn", { area: "living room", domain: ["light"] }, '{"success": true}', 0.3),
       answer: fr("Done, the living room lights are on.", "C'est fait, le salon est allumé."),
     };
   }

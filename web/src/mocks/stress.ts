@@ -5,6 +5,7 @@
  */
 import type { JournalEvent } from "@/api";
 import type { Db } from "./db";
+import { components } from "./fixtures";
 import { type Draft, toItem } from "./messages";
 
 export const STRESS_KEY = "nestor.mock.stress";
@@ -41,11 +42,19 @@ const MARIE = { id: "marie-amelie", name: LONG_NAME };
 /** Adds the stress shapes to a fresh mock state. */
 export function stress(db: Db, now = Date.now()): void {
   const at = (minutes: number) => new Date(now - minutes * 60_000).toISOString();
-  db.people.push({
-    id: "marie-amelie",
+  // a person of the file like the others: the configuration names her, the household lists her
+  const account = `telegram:@${"marie_amelie_de_la_tour".repeat(2)}`;
+  (db.config.document.household as Record<string, unknown>[]).push({
+    id: MARIE.id,
     name: LONG_NAME,
-    channel_accounts: ["voice", `telegram:@${"marie_amelie_de_la_tour".repeat(2)}`, "web"],
-    reach: `telegram:@${"marie_amelie_de_la_tour".repeat(2)}`,
+    accounts: [account],
+    reach: account,
+  });
+  db.people.push({
+    id: MARIE.id,
+    name: LONG_NAME,
+    channel_accounts: [account],
+    reach: account,
     presence: { home: true, room: LONG_ROOM, since: at(3) },
     account: null,
   });
@@ -174,4 +183,6 @@ export function stress(db: Db, now = Date.now()): void {
   const tools = db.config.document.tools as Record<string, unknown>[];
   tools.push({ kind: "mcp", name: LONG_WORD, url: LONG_URL, headers: { [`X-${LONG_WORD}`]: "secret-value" } });
   db.config.vault[`tools.${LONG_WORD}.token.${"x".repeat(40)}`] = { value: LONG_WORD, at: at(5) };
+  // what runs is what the file says: the long server is plugged in, the first satellite is in the long room
+  db.system.components = components(db.config.document, db);
 }

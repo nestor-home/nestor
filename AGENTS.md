@@ -228,14 +228,14 @@ The admin is built around what the household does, not around the server's modul
 - **One set of pieces** (`components/`), never a hand-written copy: `PageHeader` (title, one sentence, actions),
   then the page's body in `grid gap-10`; `Section` (title, count, aside); `.surface` for anything raised that
   holds content (a card, a list: `RowList`, a `Panel`), `Empty` inside the place where things would be;
-  `IconTile` for what kind of thing a card is, `Pebble` for a person, `BrandMark`/`KindMark` for a service or a
+  `IconTile` for what kind of thing a card is, `Avatar` for a person, `BrandMark`/`KindMark` for a service or a
   channel, `Status` for a state, `Tag` for data, `Facts`/`Fact` for a thing's facts, `Chips` for the lanes of a
   list, `TabNav` for the pages of one thing. A card that opens is a `button` or a `Link` with `.surface`.
 - **Add where it is listed.** Wherever a page lists things one can add (a person's accounts, the household,
   the devices), the way to add one is there: an `AddCard` closing the grid, or a button in the section's `aside`
   that opens the form in place or leads to it with what is already known (`?owner=` for a person's account).
   What only the agent creates (reminders, watches, tasks) offers to ask it.
-- **Visual, not flat.** A card leads with a mark (tile, pebble, logo), then its title in medium weight, then one
+- **Visual, not flat.** A card leads with a mark (tile, avatar, logo), then its title in medium weight, then one
   muted line; a state is a colour and a word, never a colour alone. Titles in the display face (`display-2` for
   a page, `display-3` for a section, `font-serif` 1.35rem for a card that stands for a thing), everything else
   in the UI face. Mono only for what is typed or copied (ids, tool names, commands). No uppercase labels, no

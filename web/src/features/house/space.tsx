@@ -17,7 +17,7 @@ import {
 } from "@/api";
 import { Ago } from "@/components/ago";
 import { CardHead, OpenArrow, TILE_CARD, TileCard } from "@/components/card";
-import { IconTile, Pebble, ServiceTile } from "@/components/marks";
+import { Avatar, IconTile, ServiceTile } from "@/components/marks";
 import { SideSheet } from "@/components/overlay-form";
 import { PageHeader, Section } from "@/components/page";
 import { Empty, Loading } from "@/components/states";
@@ -201,7 +201,7 @@ function PersonCard({ person: p }: { person: Person }) {
     <li>
       <Link to="/people/$personId" params={{ personId: p.id }} className={TILE_CARD}>
         <TileCard
-          marks={<Pebble name={p.name} away={home === false} size="lg" />}
+          marks={<Avatar name={p.name} away={home === false} size="lg" />}
           aside={p.channel_accounts.map((c) => <KindMark key={c} kind={c} className="text-ink-muted" label={false} />)}
           title={p.name}
           line={
@@ -237,7 +237,7 @@ function RoomCard({ room: r, onOpen }: { room: RoomNode; onOpen: () => void }) {
             r.people.length ? (
               <span className="flex -space-x-1.5">
                 {r.people.map((p) => (
-                  <Pebble key={p.id} name={p.name} />
+                  <Avatar key={p.id} name={p.name} />
                 ))}
               </span>
             ) : (

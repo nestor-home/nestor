@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Person } from "@/api";
 import { AgentFigure, type FigureState } from "@/components/agent-figure";
 import { Dither } from "@/components/dither";
-import { Pebble } from "@/components/marks";
+import { Avatar } from "@/components/marks";
 import type { RoomNode } from "@/features/today/mind";
 import { useT } from "@/i18n";
 import { capital, cn } from "@/lib/utils";
@@ -172,7 +172,7 @@ function Rooms({
                 </span>
                 <span className="flex min-h-7 flex-wrap items-center gap-1.5 text-meta">
                   {r.people.map((p) => (
-                    <Pebble key={p.id} name={p.name} lit />
+                    <Avatar key={p.id} name={p.name} lit />
                   ))}
                   {r.people.length === 1 ? <span className="font-medium">{r.people[0]?.name}</span> : null}
                   {r.people.length ? null : t("home-room-someone")}
@@ -221,7 +221,7 @@ function Group({ label, people, away }: { label: string; people: Person[]; away?
       <ul className="flex flex-wrap gap-x-3 gap-y-1.5">
         {people.map((p) => (
           <li key={p.id} className="flex items-center gap-1.5 text-body">
-            <Pebble name={p.name} away={away} lit={!away} />
+            <Avatar name={p.name} away={away} />
             {p.name}
           </li>
         ))}

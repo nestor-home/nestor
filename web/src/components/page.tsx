@@ -14,7 +14,7 @@ export function PageHeader({
   mark,
 }: {
   title: ReactNode;
-  /** what the page is about, drawn before its title: a person's pebble, a service's tile */
+  /** what the page is about, drawn before its title: a person's avatar, a service's tile */
   mark?: ReactNode;
   children?: ReactNode;
   actions?: ReactNode;

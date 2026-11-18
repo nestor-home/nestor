@@ -74,8 +74,8 @@ export function BrandTile({ brand, ...tile }: TileProps & { brand: BrandSlug }) 
   );
 }
 
-/** The pebble's sizes, its initial always 2/5 of it: from beside a word (`xs`) to the head of a page (`2xl`). */
-const PEBBLE_SIZE = {
+/** The avatar's sizes, its initials always 2/5 of it: from beside a word (`xs`) to the head of a page (`2xl`). */
+const AVATAR_SIZE = {
   xs: "text-[0.5rem]",
   sm: "text-[0.6rem]",
   md: "text-[0.7rem]",
@@ -84,11 +84,30 @@ const PEBBLE_SIZE = {
   "2xl": "text-[1.4rem] sm:text-[1.6rem]",
 } as const;
 
-export type PebbleSize = keyof typeof PEBBLE_SIZE;
+export type AvatarSize = keyof typeof AVATAR_SIZE;
 
-/** A person as the film draws them: an ink pebble with an ember scarf, their initial on it. `lit` keeps it
- * ink on paper where the scene around it is dark. */
-export function Pebble({
+const HUES = 6;
+
+/** The same person always wears the same tint, wherever they appear. */
+function hueOf(name: string): number {
+  let sum = 0;
+  for (const letter of name.trim().toLowerCase()) sum = (sum * 31 + (letter.codePointAt(0) ?? 0)) % 997;
+  return sum % HUES;
+}
+
+/** One or two initials: the first name's, and the last word's when there is one. */
+function initialsOf(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  const first = words[0]?.charAt(0) ?? "";
+  const last = words.length > 1 ? (words.at(-1)?.charAt(0) ?? "") : "";
+  return (first + last).toUpperCase();
+}
+
+/**
+ * A person: their initials on a quiet tint that is theirs. `away`, it fades to a plain outline. `lit` keeps its
+ * daylight colours where the scene around it sets its own (a lit room at night).
+ */
+export function Avatar({
   name,
   away,
   lit,
@@ -98,38 +117,39 @@ export function Pebble({
   name: string;
   away?: boolean;
   lit?: boolean;
-  size?: PebbleSize;
+  size?: AvatarSize;
   className?: string;
 }) {
   return (
     <span
       aria-hidden="true"
+      data-hue={hueOf(name)}
       data-away={away || undefined}
       data-lit={lit || undefined}
-      className={cn("pebble", PEBBLE_SIZE[size], className)}
+      className={cn("avatar", AVATAR_SIZE[size], className)}
     >
-      {name.trim().charAt(0).toUpperCase()}
+      {initialsOf(name)}
     </span>
   );
 }
 
-/** Whose something is, as a mark: the person's pebble, or the household's when it is everyone's. */
+/** Whose something is, as a mark: the person's avatar, or the household's when it is everyone's. */
 export function OwnerMark({
   owner,
   size = "md",
   className,
 }: {
   owner: PersonRef | null;
-  size?: PebbleSize;
+  size?: AvatarSize;
   className?: string;
 }) {
-  if (owner) return <Pebble name={owner.name} size={size} className={className} />;
+  if (owner) return <Avatar name={owner.name} size={size} className={className} />;
   return (
     <span
       aria-hidden="true"
       className={cn(
         "grid size-[2.5em] shrink-0 place-items-center rounded-full bg-paper-sunken text-ink-muted",
-        PEBBLE_SIZE[size],
+        AVATAR_SIZE[size],
         className,
       )}
     >

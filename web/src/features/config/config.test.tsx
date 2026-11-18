@@ -92,11 +92,11 @@ describe("the configuration", () => {
     await user.click(await screen.findByRole("button", { name: /^Jules/ }));
     const sheet = await screen.findByRole("dialog", { name: "Jules" });
     await user.click(within(sheet).getByRole("button", { name: "Add to Accounts" }));
-    await user.type(within(sheet).getByRole("textbox", { name: "Accounts, item 1" }), "telegram:@jules");
+    await user.type(within(sheet).getByRole("textbox", { name: "Accounts, item 2" }), "telegram:@jules");
     await user.click(within(sheet).getByRole("button", { name: "Done" }));
     await user.click(await screen.findByRole("button", { name: "1 change" }));
     const changes = await screen.findByRole("dialog", { name: "Changes" });
-    expect(within(changes).getByText("household.2.accounts.0")).toBeInTheDocument();
+    expect(within(changes).getByText("household.2.accounts.1")).toBeInTheDocument();
     await user.keyboard("{Escape}");
     await user.click(await screen.findByRole("button", { name: /^Jules.*telegram:@jules/ }));
     const again = await screen.findByRole("dialog", { name: "Jules" });
@@ -247,13 +247,14 @@ describe("the configuration", () => {
 
 describe("the configuration at a glance", () => {
   it("says what each part holds now, by what one tunes", async () => {
+    delete db.config.document.inbound; // a household that follows no feed, page or webhook
     renderApp("/config");
     const talk = await screen.findByRole("region", { name: "How it talks and listens" });
     expect(within(talk).getByRole("link", { name: /Models.*sonnet, haiku, voices and 2 more/ })).toHaveAttribute(
       "href",
       "/config/models",
     );
-    expect(within(talk).getByRole("link", { name: /Channels.*Satellites, Telegram/ })).toBeInTheDocument();
+    expect(within(talk).getByRole("link", { name: /Channels.*Satellites, .*Telegram and 9 more/ })).toBeInTheDocument();
     const household = screen.getByRole("region", { name: "The household" });
     expect(within(household).getByRole("link", { name: /Household.*4 people/ })).toBeInTheDocument();
     const reach = screen.getByRole("region", { name: "What it can reach" });
@@ -316,7 +317,8 @@ describe("a component", () => {
     const sheet = await screen.findByRole("dialog", { name: "Add Discord" });
     await user.click(within(sheet).getByRole("button", { name: "Cancel adding" }));
     await waitFor(() => expect(screen.queryByRole("region", { name: "Unsaved changes" })).not.toBeInTheDocument());
-    expect(screen.queryByRole("button", { name: /^Discord/ })).not.toBeInTheDocument();
+    // the household's own Discord channel, and no second one
+    expect(screen.getAllByRole("button", { name: /^Discord/ })).toHaveLength(1);
   });
 
   it("is cancelled too when its sheet is dismissed before Done", async () => {
@@ -327,7 +329,8 @@ describe("a component", () => {
     await screen.findByRole("dialog", { name: "Add Discord" });
     await user.keyboard("{Escape}");
     await waitFor(() => expect(screen.queryByRole("region", { name: "Unsaved changes" })).not.toBeInTheDocument());
-    expect(screen.queryByRole("button", { name: /^Discord/ })).not.toBeInTheDocument();
+    // the household's own Discord channel, and no second one
+    expect(screen.getAllByRole("button", { name: /^Discord/ })).toHaveLength(1);
   });
 });
 
