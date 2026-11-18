@@ -16,7 +16,7 @@ const SPACES = ["Today", "Talk", "Ongoing", "The house", "Settings"];
 /** The spaces the navigation offers, by accessible name. */
 async function spaces() {
   const nav = await screen.findByRole("navigation", { name: "Sections" });
-  return SPACES.filter((name) => within(nav).queryByRole("link", { name: new RegExp(`${name}$`) }));
+  return SPACES.filter((name) => within(nav).queryByRole("link", { name: new RegExp(`^${name}`) }));
 }
 
 /** What Settings holds for this account, by the title of each card. */
@@ -37,7 +37,7 @@ describe("what the scopes allow", () => {
   it("says where one is: a page reached from a space keeps that space current", async () => {
     renderApp("/journal");
     const nav = await screen.findByRole("navigation", { name: "Sections" });
-    expect(within(nav).getByRole("link", { name: /Today$/ })).toHaveAttribute("aria-current", "page");
+    expect(within(nav).getByRole("link", { name: /^Today/ })).toHaveAttribute("aria-current", "page");
   });
 
   it("hides accounts from a guest, and explains it on a direct visit", async () => {

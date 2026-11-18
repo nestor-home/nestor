@@ -52,7 +52,7 @@ class WatchTriage(Suite[tuple[Watch, ...], TriageKnobs]):
         for number, record in enumerate(records[1:], start=2):
             if "watch" in record and isinstance(record.get("what"), str):
                 kinds = tuple(str(k) for k in record.get("kinds", ("mail",)))
-                watches.append(Watch(id=str(record["watch"]), what=record["what"], kinds=kinds))
+                watches.append(Watch(id=str(record["watch"]), title=record["what"], what=record["what"], kinds=kinds))
             elif "case" in record and isinstance(record.get("title"), str):
                 cases.append(Case(id=str(record["case"]), data=record))
             else:

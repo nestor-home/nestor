@@ -78,14 +78,19 @@ function Rail({ onSearch }: { onSearch: () => void }) {
   const t = useT();
   const { spaces, settings, path, waiting } = useSpaces();
   return (
-    <aside className="rail fixed inset-y-0 left-0 z-40 flex w-[5.5rem] flex-col items-center gap-1 pt-5 pb-3">
+    <div className="rail fixed inset-y-0 left-0 z-40 flex w-[5.5rem] flex-col items-center gap-1 pt-5 pb-3">
       <AgentMark />
-      <nav aria-label={t("shell-sections")} className="mt-6 grid w-full gap-1 px-2">
+      <nav aria-label={t("shell-sections")} className="mt-6 flex w-full flex-1 flex-col gap-1 px-2">
         {spaces.map((s) => (
           <SpaceLink key={s.to} space={s} here={inSpace(s, path)} badge={s.to === "/" ? waiting : 0} />
         ))}
+        {settings ? (
+          <div className="mt-auto grid">
+            <SpaceLink space={settings} here={inSpace(settings, path)} badge={0} />
+          </div>
+        ) : null}
       </nav>
-      <div className="mt-auto grid w-full justify-items-center gap-1 px-2">
+      <div className="grid w-full justify-items-center gap-1 px-2">
         <Tooltip>
           <TooltipTrigger
             render={
@@ -103,11 +108,10 @@ function Rail({ onSearch }: { onSearch: () => void }) {
             {t("shell-go-to")} <Kbd>⌘K</Kbd>
           </TooltipContent>
         </Tooltip>
-        {settings ? <SpaceLink space={settings} here={inSpace(settings, path)} badge={0} /> : null}
         <UpdateAvailable compact />
         <AccountMenu compact />
       </div>
-    </aside>
+    </div>
   );
 }
 
@@ -117,6 +121,7 @@ function SpaceLink({ space, here, badge }: { space: Space; here: boolean; badge:
     <Link
       to={space.to}
       aria-current={here ? "page" : undefined}
+      aria-label={badge ? t("shell-space-waiting", { space: t(space.label), count: badge }) : undefined}
       className={cn(
         "group relative grid justify-items-center gap-1 rounded-xl px-1 py-2 text-[0.72rem] leading-tight font-medium transition-colors",
         here ? "text-ink" : "text-ink-muted hover:text-ink",

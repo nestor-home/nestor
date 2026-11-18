@@ -11,7 +11,8 @@ from nestor.modules.initiative import Watch
 
 class WatchOut(BaseModel):
     id: str
-    what: str  # in the person's words
+    title: str  # the short name the agent gave it
+    what: str  # what it recognises, in the person's words
     kinds: list[str]  # what it watches ("mail")
     owner: PersonRef | None
     once: bool  # ends at the first match
@@ -26,6 +27,7 @@ class WatchOut(BaseModel):
         origin = watch.created_in
         return cls(
             id=watch.id,
+            title=watch.title,
             what=watch.what,
             kinds=list(watch.kinds),
             owner=people.ref(watch.owner),

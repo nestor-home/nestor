@@ -35,6 +35,7 @@ class WatchBook(Component):
                 source=self.name,
                 session=watch.created_in.session if watch.created_in else None,
                 watch_id=watch.id,
+                title=watch.title,
                 what=watch.what,
                 kinds=watch.kinds,
                 once=watch.once,
@@ -63,6 +64,7 @@ class WatchBook(Component):
 def _watch(event: WatchCreated) -> Watch:
     return Watch(
         id=event.watch_id,
+        title=event.title,
         what=event.what,
         kinds=event.kinds,
         once=event.once,

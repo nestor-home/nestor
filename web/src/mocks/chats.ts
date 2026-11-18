@@ -118,7 +118,7 @@ export function chats(): MockChat[] {
           tool: {
             ...tool(
               "delegate_task",
-              { executor: "claude-code", objective: "Update the dependencies" },
+              { title: "Dashboard dependencies", executor: "claude-code", objective: "Update the dependencies" },
               "Task c1a9 started.",
               0.6,
             ),
@@ -185,7 +185,12 @@ export function chats(): MockChat[] {
           ],
         }),
         message("tool", "", voice, "t3", {
-          tool: tool("schedule", { at: "Sunday 10:00", instruction: "Call grandma" }, "Scheduled s-12.", 0.2),
+          tool: tool(
+            "schedule",
+            { title: "Call grandma", at: "Sunday 10:00", instruction: "Call grandma on Sunday" },
+            "Scheduled s-12.",
+            0.2,
+          ),
         }),
         message(
           "assistant",

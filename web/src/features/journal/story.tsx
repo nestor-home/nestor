@@ -432,11 +432,11 @@ function useChainHead(chain: Chain): { title: string; link: ReactNode; icon: Luc
   const task = useQuery({ ...taskQuery(id), enabled: type === "task", refetchInterval: false, retry: false });
   const watch = useQuery({ ...watchQuery(id), enabled: type === "watch", retry: false }).data;
   if (type === "task") {
-    const objective = task.data?.objective ?? chain.items.find((i) => is(i, "taskStarted"))?.detail;
+    const name = task.data?.title ?? chain.items.find((i) => is(i, "taskStarted"))?.detail;
     return {
       icon: Workflow,
       tone: "task",
-      title: t("jr-chain-task", { what: objective ?? id }),
+      title: t("jr-chain-task", { what: name ?? id }),
       link: (
         <Link to="/tasks/$taskId" params={{ taskId: id }} className={LINK}>
           {t("jr-chain-task-link")} <ArrowUpRight className="size-3.5" aria-hidden="true" />
@@ -448,7 +448,7 @@ function useChainHead(chain: Chain): { title: string; link: ReactNode; icon: Luc
     return {
       icon: Radar,
       tone: "watch",
-      title: t("jr-chain-watch", { what: watch?.what ?? id }),
+      title: t("jr-chain-watch", { what: watch?.title ?? id }),
       link: (
         <Link to="/watches/$watchId" params={{ watchId: id }} className={LINK}>
           {t("jr-chain-watch-link")} <ArrowUpRight className="size-3.5" aria-hidden="true" />

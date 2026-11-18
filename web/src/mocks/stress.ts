@@ -122,6 +122,7 @@ export function stress(db: Db, now = Date.now()): void {
 
   db.tasks.unshift({
     id: `t-${"0123456789abcdef".repeat(2)}`,
+    title: `${LONG_WORD} for ${LONG_NAME}`,
     objective: `${LONG_SENTENCE} The file is here: ${LONG_URL}`,
     executor: "hermes",
     status: "running",
@@ -137,6 +138,7 @@ export function stress(db: Db, now = Date.now()): void {
   });
   db.watches.unshift({
     id: `w-${"fedcba9876543210".repeat(2)}`,
+    title: `${LONG_WORD} replies to ${LONG_NAME}`,
     what: `Tell ${LONG_NAME} when ${LONG_WORD} replies about ${LONG_URL}`,
     owner: MARIE,
     kinds: ["mail"],

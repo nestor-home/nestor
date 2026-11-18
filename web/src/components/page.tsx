@@ -107,15 +107,20 @@ export function Facts({
   className?: string;
 }) {
   return (
-    <dl
-      className={cn(
-        "grid gap-y-2.5 text-sm",
-        narrow ? "grid-cols-[7rem_1fr] gap-x-4 gap-y-1.5" : "max-w-2xl grid-cols-1 gap-x-6 sm:grid-cols-[10rem_1fr]",
-        className,
-      )}
-    >
-      {children}
-    </dl>
+    <div className="@container min-w-0">
+      <dl
+        className={cn(
+          "grid gap-y-2.5 text-sm",
+          // in a narrow place (an aside, a sheet on a phone) each caption sits above its value
+          narrow
+            ? "grid-cols-1 gap-x-4 gap-y-1.5 @[19rem]:grid-cols-[7rem_1fr] [&_dd]:mb-1.5 @[19rem]:[&_dd]:mb-0"
+            : "max-w-2xl grid-cols-1 gap-x-6 @[30rem]:grid-cols-[10rem_1fr]",
+          className,
+        )}
+      >
+        {children}
+      </dl>
+    </div>
   );
 }
 
@@ -124,7 +129,7 @@ export function Fact({ term, children, className }: { term: ReactNode; children:
   return (
     <div className="contents">
       <dt className="caption pt-0.5">{term}</dt>
-      <dd className={className}>{children}</dd>
+      <dd className={cn("min-w-0", className)}>{children}</dd>
     </div>
   );
 }

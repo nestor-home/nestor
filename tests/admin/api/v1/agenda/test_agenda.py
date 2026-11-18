@@ -22,9 +22,11 @@ MATHIS, MATHILDE = PersonId("mathis"), PersonId("mathilde")
 async def test_wake_ups_come_soonest_first_each_to_whom_it_was_set_for_and_cancel(tmp_path: Path) -> None:
     async with Harness(tmp_path) as admin:
         book = admin.nestor.schedule_book
-        later = await book.create("Arrose les plantes", owner=MATHILDE, times=(time(8),), days=(Day.SAT, Day.SUN))
+        later = await book.create(
+            "Arrose les plantes", title="Plantes du week-end", owner=MATHILDE, times=(time(8),), days=(Day.SAT, Day.SUN)
+        )
         soon = await book.create(
-            "Rappelle le pain", owner=MATHIS, created_in=TELEGRAM, at=utc_now() + timedelta(hours=1)
+            "Rappelle le pain", title="Pain", owner=MATHIS, created_in=TELEGRAM, at=utc_now() + timedelta(hours=1)
         )
         await admin.account("mathilde", Role.MEMBER, "mathilde")
         owner, member = await admin.api(), await admin.api("mathilde")
@@ -33,6 +35,7 @@ async def test_wake_ups_come_soonest_first_each_to_whom_it_was_set_for_and_cance
         assert [s["id"] for s in listed["schedules"]] == [soon.id, later.id]
         assert listed["timezone"] == "Europe/Paris"
         weekly = listed["schedules"][1]
+        assert (weekly["title"], weekly["instruction"]) == ("Plantes du week-end", "Arrose les plantes")
         assert (weekly["recurring"], weekly["times"], weekly["days"], weekly["owner"]["id"]) == (
             True,
             ["08:00"],

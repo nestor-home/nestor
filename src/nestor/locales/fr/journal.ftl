@@ -39,7 +39,7 @@ journal-tool-returned-failed = Outil { $tool } en échec après { NUMBER($second
 journal-tool-result-stored = Résultat long mis de côté ({ NUMBER($size) } caractères)
 journal-tool-result-delivered = Résultat de l'outil { $tool } transmis
 
-journal-task-started = Tâche { $task } confiée à { $executor }
+journal-task-started = Tâche { $task } confiée à { $executor } : { $title }
 journal-task-attached = Tâche { $task } prise en charge par l'exécutant
 journal-task-progressed = Tâche { $task } : nouvelle étape
 journal-task-cancel-requested = Annulation demandée pour la tâche { $task }
@@ -110,12 +110,12 @@ journal-detail-tried = { $count ->
 }
 
 journal-schedule-created = { $recurring ->
-    [yes] Réveil régulier programmé
-   *[no] Réveil programmé
+    [yes] Réveil régulier programmé : { $title }
+   *[no] Réveil programmé : { $title }
 }
 journal-schedule-fired = Réveil { $id } déclenché
 journal-schedule-cancelled = Réveil { $id } annulé
-journal-watch-created = Veille créée : { $what }
+journal-watch-created = Veille créée : { $title }
 journal-watch-sorted = { $unsorted ->
     [yes] « { $item } » non trié : le modèle n'a pas répondu
    *[no] { $matched ->

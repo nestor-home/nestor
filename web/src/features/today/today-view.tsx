@@ -198,7 +198,7 @@ function Now({ running, items, now }: { running: Task[]; items: JournalItem[]; n
                   <span className="flex items-start gap-4">
                     <IconTile icon={Workflow} tone="task" />
                     <span className="min-w-0 flex-1">
-                      <span className="block text-[1.02rem] leading-snug font-medium text-ink">{task.objective}</span>
+                      <span className="block text-[1.02rem] leading-snug font-medium text-ink">{task.title}</span>
                       <span className="mt-1 flex flex-wrap items-center gap-x-2 text-[0.9rem] text-ink-muted">
                         {brand ? (
                           <span className="inline-flex items-center gap-1.5">
@@ -335,7 +335,7 @@ function Next() {
   const coming: Coming[] = [
     ...(schedules.data?.schedules ?? [])
       .filter((s) => s.next_due)
-      .map((s) => ({ key: s.id, at: s.next_due, icon: AlarmClock, tone: "ink" as const, text: s.instruction })),
+      .map((s) => ({ key: s.id, at: s.next_due, icon: AlarmClock, tone: "ink" as const, text: s.title })),
     ...(initiative.data?.upcoming ?? []).map((u) => ({
       key: `${u.delivery}:${u.due_at}`,
       at: u.due_at,
@@ -385,7 +385,7 @@ function Next() {
               <span className="min-w-0 flex-1">
                 <span className="block text-ink">{t("today-watching", { count: watching.length })}</span>
                 <span className="line-clamp-1 block text-[0.85rem] text-ink-muted">
-                  {watching.map((w) => w.what).join(" · ")}
+                  {watching.map((w) => w.title).join(" · ")}
                 </span>
               </span>
               <ArrowRight className="size-4 text-ink-faint" aria-hidden="true" />

@@ -15,10 +15,7 @@ describe("today: the household as one picture, then what it asks, does and plans
     // a room where someone is names them; who is out is said apart
     expect(await screen.findByRole("button", { name: "Living room · Mathis, Jules" })).toBeInTheDocument();
     expect(screen.getByText("Out").parentElement).toHaveTextContent("Léa");
-    // full titles, never cut
-    expect(
-      await within(await part(/^Right now/)).findByText("Prepare the health insurance claim for Jules's glasses."),
-    ).toBeInTheDocument();
+    expect(await within(await part(/^Right now/)).findByText("Glasses insurance claim")).toBeInTheDocument();
     expect(
       within(await part("Coming up")).getByText(/Quiet hours from 22:30 to 07:30|Silence until 07:30/),
     ).toBeInTheDocument();

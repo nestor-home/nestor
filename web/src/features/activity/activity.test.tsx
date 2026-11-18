@@ -49,10 +49,10 @@ describe("ongoing", () => {
     const user = userEvent.setup();
     renderApp("/activity");
     const planned = await part(/^Planned/);
-    expect(within(planned).getByText("Saturday, Sunday · 09:00")).toBeInTheDocument();
+    expect(await within(planned).findByText("Saturday, Sunday · 09:00")).toBeInTheDocument();
     expect(within(planned).getByText("every day · 10:00")).toBeInTheDocument();
-    await user.click(within(planned).getByRole("button", { name: /Remind Mathis to buy bread\./ }));
-    const sheet = await screen.findByRole("dialog", { name: "Remind Mathis to buy bread." });
+    await user.click(within(planned).getByRole("button", { name: /Buy bread/ }));
+    const sheet = await screen.findByRole("dialog", { name: "Buy bread" });
     await user.click(within(sheet).getByRole("button", { name: "Cancel the reminder" }));
     await user.click(
       within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Cancel the reminder" }),
@@ -66,12 +66,8 @@ describe("ongoing", () => {
     const user = userEvent.setup();
     renderApp("/activity");
     const running = await part(/^Being done/);
-    await user.click(
-      await within(running).findByRole("button", { name: /Prepare the health insurance claim for Jules's glasses\./ }),
-    );
-    const sheet = await screen.findByRole("dialog", {
-      name: "Prepare the health insurance claim for Jules's glasses.",
-    });
+    await user.click(await within(running).findByRole("button", { name: /Glasses insurance claim/ }));
+    const sheet = await screen.findByRole("dialog", { name: "Glasses insurance claim" });
     expect(within(sheet).getByRole("link", { name: /The whole story/ })).toHaveAttribute(
       "href",
       expect.stringMatching(/^\/tasks\//),

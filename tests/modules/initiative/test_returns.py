@@ -124,6 +124,7 @@ class Home:
             TaskStarted(
                 source="t",
                 task_id=task_id,
+                title="Analyse du dépôt",
                 objective="Analyse le dépôt",
                 executor="hermes",
                 origin=VOICE,
@@ -295,6 +296,7 @@ async def test_a_task_from_an_unknown_person_stays_in_its_conversation(known: bo
         TaskStarted(
             source="t",
             task_id="t1",
+            title="X",
             objective="x",
             executor="h",
             origin=VOICE,
@@ -417,7 +419,7 @@ async def test_a_file_a_delegated_task_made_goes_with_the_answer_that_brings_its
     home = Home(model=ScriptedModel("Voici ton rapport."))
     home.telegram.sends = frozenset({AttachmentKind.FILE})
     async with home.returns(), TaskManager(home.journal, [Writer()], blobs=home.blobs) as tasks:
-        await tasks.delegate("Écris le rapport", origin=TELEGRAM, requested_by=MATHIS.id)
+        await tasks.delegate("Écris le rapport", title="Écris le rapport", origin=TELEGRAM, requested_by=MATHIS.id)
         await until(home.journal, TaskDelivered)
 
     assert home.telegram.sent == [(TELEGRAM, "Voici ton rapport.")]

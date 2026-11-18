@@ -143,7 +143,7 @@ export function useAttention(): { items: Attention[]; ready: boolean } {
       key: `task-${task.id}`,
       icon: CircleAlert,
       tone: "error",
-      title: tr("attention-task-failed", { objective: task.objective }),
+      title: tr("attention-task-failed", { objective: task.title }),
       detail: task.error ?? "",
       action: tr("action-see"),
       link: { to: "/tasks/$taskId", params: { taskId: task.id } },

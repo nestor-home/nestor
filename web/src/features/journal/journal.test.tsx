@@ -21,7 +21,7 @@ const storyWith = async (text: string | RegExp) =>
 describe("the journal", () => {
   it("tells a watch as one chain, from the trigger to the message, with the reason", async () => {
     renderApp("/journal");
-    const chain = await storyWith("Messages from Jules's school.");
+    const chain = await storyWith("Jules's school");
     for (const step of ["triggered", "decision", "not delivered", "written"]) {
       expect(within(chain).getByText(step)).toBeInTheDocument();
     }

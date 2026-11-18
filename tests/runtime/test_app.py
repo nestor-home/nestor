@@ -57,7 +57,9 @@ async def test_a_message_goes_through_the_whole_assistant_and_is_persisted(tmp_p
 
 async def test_a_task_started_before_a_restart_is_delivered_after_it(tmp_path: Path) -> None:
     fakes = Fakes()
-    delegate = ToolCall("c1", "delegate_task", {"objective": "Analyse le dépôt", "notify": "message"})
+    delegate = ToolCall(
+        "c1", "delegate_task", {"title": "Analyse le dépôt", "objective": "Analyse le dépôt", "notify": "message"}
+    )
     fakes.script = [delegate, "Je lance l'analyse."]
     nestor = Nestor(config(tmp_path, []), fakes.registry())
     async with nestor:
@@ -421,7 +423,7 @@ async def test_a_watch_created_in_conversation_is_announced_when_its_mail_arrive
 
     fakes = Fakes()
     fakes.script = [
-        ToolCall("c1", "create_watch", {"what": "le colis"}),
+        ToolCall("c1", "create_watch", {"title": "Le colis", "what": "le colis"}),
         "Je te préviens.",
         every_listed_watch,
         "Ton colis est arrivé.",

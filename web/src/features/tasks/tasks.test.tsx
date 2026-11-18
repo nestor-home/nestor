@@ -12,9 +12,7 @@ type ErrorOut = components["schemas"]["ErrorOut"];
 describe("a task's page", () => {
   it("tells a task from its request to its delivery", async () => {
     renderApp("/tasks/t-3f2a1c");
-    expect(
-      await screen.findByRole("heading", { name: /Compare three green electricity offers/, level: 1 }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Green electricity offers", level: 1 })).toBeInTheDocument();
     const crumbs = screen.getByRole("navigation", { name: "Breadcrumbs" });
     expect(within(crumbs).getByRole("link", { name: "Ongoing" })).toHaveAttribute("href", "/activity");
     expect(screen.getByRole("region", { name: "Result" })).toHaveTextContent("The second offer is the cheapest");

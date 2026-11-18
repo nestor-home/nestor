@@ -40,7 +40,9 @@ async def test_the_files_a_task_handed_back_download_from_it_for_who_reaches_it(
     async with Harness(tmp_path) as admin:
         nestor = admin.nestor
         await admin.account("mathilde", Role.MEMBER, "mathilde")
-        task = await nestor.tasks.delegate("Le devis en PDF", origin=TELEGRAM, requested_by=MATHIS)
+        task = await nestor.tasks.delegate(
+            "Le devis en PDF", title="Le devis en PDF", origin=TELEGRAM, requested_by=MATHIS
+        )
         while not admin.remote.runs:
             await asyncio.sleep(0.01)
         made = Attachment(
@@ -84,11 +86,11 @@ async def test_a_task_a_watch_a_satellite_and_an_account_open_one_by_one(tmp_pat
     async with Harness(tmp_path) as admin:
         nestor = admin.nestor
         member = await admin.account("mathilde", Role.MEMBER, "mathilde")
-        theirs = await nestor.tasks.delegate("Plombier", origin=TELEGRAM, requested_by=MATHILDE)
-        mine = await nestor.tasks.delegate("Dépôt", origin=TELEGRAM, requested_by=MATHIS)
+        theirs = await nestor.tasks.delegate("Plombier", title="Plombier", origin=TELEGRAM, requested_by=MATHILDE)
+        mine = await nestor.tasks.delegate("Dépôt", title="Dépôt", origin=TELEGRAM, requested_by=MATHIS)
         await asyncio.sleep(0.01)
         await nestor.tasks.cancel(mine.id)
-        watch = await nestor.watch_book.create(Watch(what="le colis", owner=MATHIS))
+        watch = await nestor.watch_book.create(Watch(title="Le colis", what="le colis", owner=MATHIS))
         await pair_by_code(nestor.pairing, Manifest(Device("mic", "esp32", "bureau"), software=SOFTWARE))
         owner, guest = await admin.api(), await admin.api("mathilde")
 

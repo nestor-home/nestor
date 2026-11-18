@@ -82,3 +82,7 @@ set-accounts-count = { $count ->
 }
 set-config = Models, voices, channels, home: everything that tunes { $assistant }.
 set-system = The state of every component, updates, restart.
+shell-space-waiting = { $space }, { $count ->
+    [one] one request waits for you
+   *[other] { $count } requests wait for you
+}

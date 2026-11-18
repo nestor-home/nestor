@@ -27,7 +27,6 @@ acc-disabled = disabled
 acc-active = active
 acc-never = never
 acc-invitations-empty = No pending invitation.
-} · expires { $expires }
 acc-revoke = Withdraw…
 acc-revoke-title = Withdraw this invitation?
 acc-revoke-confirm = Withdraw

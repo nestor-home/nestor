@@ -821,6 +821,7 @@ export function satellites(): Satellite[] {
 }
 
 /** What the tasks are about, also written in the journal. */
+export const CLAIM_TITLE = fr("Glasses insurance claim", "Remboursement des lunettes");
 export const CLAIM = fr(
   "Prepare the health insurance claim for Jules's glasses.",
   "Préparer le dossier de remboursement de la mutuelle pour les lunettes de Jules.",
@@ -829,6 +830,7 @@ export const CLAIM_STEPS = [
   fr("Insurance claim form downloaded.", "Formulaire de la mutuelle téléchargé."),
   fr("Waiting for the invoice: Gmail needs reconnecting.", "En attente de la facture : Gmail est à reconnecter."),
 ];
+export const SHOPPING_TITLE = fr("Week's shopping list", "Liste de courses de la semaine");
 export const SHOPPING = fr(
   "Make the week's shopping list from Léa's menus.",
   "Préparer la liste de courses de la semaine à partir des menus de Léa.",
@@ -837,6 +839,7 @@ export const SHOPPING_STEP = fr(
   "Reading the “Léa's recipes” MCP server.",
   "Lecture du serveur MCP « Recettes de Léa ».",
 );
+export const ENERGY_TITLE = fr("Green electricity offers", "Offres d'électricité verte");
 export const ENERGY = fr(
   "Compare three green electricity offers and sum up the yearly price gaps.",
   "Comparer trois offres d'électricité verte et résumer les écarts de prix annuels.",
@@ -855,6 +858,7 @@ export const GYM_ERROR = fr(
   "Le site demande une connexion par SMS : impossible sans Léa.",
 );
 
+export const DEPENDENCIES_TITLE = fr("Dashboard dependencies", "Dépendances du tableau de bord");
 export const DEPENDENCIES = fr(
   "Update the home dashboard's dependencies and say what changed.",
   "Mettre à jour les dépendances du tableau de bord de la maison et dire ce qui a changé.",
@@ -876,6 +880,7 @@ export function tasks(): Task[] {
   return [
     {
       id: "t-4410aa",
+      title: CLAIM_TITLE,
       objective: CLAIM,
       executor: "hermes",
       status: "running",
@@ -891,6 +896,7 @@ export function tasks(): Task[] {
     },
     {
       id: "t-88b07e",
+      title: SHOPPING_TITLE,
       objective: SHOPPING,
       executor: "codex",
       status: "running",
@@ -906,6 +912,7 @@ export function tasks(): Task[] {
     },
     {
       id: "t-3f2a1c",
+      title: ENERGY_TITLE,
       objective: ENERGY,
       executor: "hermes",
       status: "completed",
@@ -921,6 +928,7 @@ export function tasks(): Task[] {
     },
     {
       id: "t-a04f12",
+      title: fr("Gym membership cancellation", "Résiliation de la salle de sport"),
       objective: fr("Cancel the gym membership.", "Résilier l'abonnement à la salle de sport."),
       executor: "hermes",
       status: "failed",
@@ -936,6 +944,7 @@ export function tasks(): Task[] {
     },
     {
       id: "t-5e6b70",
+      title: fr("Jules's homework", "Devoirs de Jules"),
       objective: fr("Sum up Jules's homework for the week.", "Récapituler les devoirs de Jules pour la semaine."),
       executor: "codex",
       status: "cancelled",
@@ -951,6 +960,7 @@ export function tasks(): Task[] {
     },
     {
       id: "t-c1a9de",
+      title: DEPENDENCIES_TITLE,
       objective: DEPENDENCIES,
       executor: "claude-code",
       status: "completed",
@@ -969,14 +979,19 @@ export function tasks(): Task[] {
 
 /** A task's label once cancelled (the admin can cancel one). */
 
+/** The watch on the school's reply: its name and what it watches for, as its creation reads in the journal. */
+export const SCHOOL_TRIP_WATCH = fr("School trip reply", "Réponse pour la sortie scolaire");
+export const SCHOOL_TRIP = fr(
+  "News from the school: tell Léa as soon as the school replies about the trip.",
+  "Les nouvelles de l'école : prévenir Léa dès que l'école répond pour la sortie.",
+);
+
 export function watches(): Watch[] {
   return [
     {
       id: "w-9d41",
-      what: fr(
-        "News from the school: tell Léa as soon as the school replies about the trip.",
-        "Les nouvelles de l'école : prévenir Léa dès que l'école répond pour la sortie.",
-      ),
+      title: SCHOOL_TRIP_WATCH,
+      what: SCHOOL_TRIP,
       owner: ref("lea"),
       kinds: ["mail"],
       once: false,
@@ -988,6 +1003,7 @@ export function watches(): Watch[] {
     },
     {
       id: "w-2b77",
+      title: fr("Jules's school", "École de Jules"),
       what: fr("Messages from Jules's school.", "Les messages de l'école de Jules."),
       owner: null,
       kinds: ["mail"],
@@ -1000,6 +1016,7 @@ export function watches(): Watch[] {
     },
     {
       id: "w-f31a",
+      title: fr("Python 3.15 on LWN", "Python 3.15 sur LWN"),
       what: fr("Tell me when LWN writes about Python 3.15.", "Préviens-moi quand LWN parle de Python 3.15."),
       owner: ref("mathis"),
       kinds: ["feed"],
@@ -1012,6 +1029,7 @@ export function watches(): Watch[] {
     },
     {
       id: "w-p8c2",
+      title: fr("Summer camp sign-ups", "Inscriptions au centre aéré"),
       what: fr(
         "Tell me when the town hall opens the summer camp sign-ups.",
         "Préviens-moi quand la mairie ouvre les inscriptions au centre aéré.",
@@ -1027,6 +1045,7 @@ export function watches(): Watch[] {
     },
     {
       id: "w-h5e0",
+      title: fr("Washing machine done", "Machine à laver finie"),
       what: fr(
         "Tell whoever is home when the washing machine is done.",
         "Dire à qui est là quand la machine est finie.",
@@ -1048,6 +1067,7 @@ export function schedules(): Schedule[] {
   return [
     {
       id: "sc-bread",
+      title: fr("Buy bread", "Acheter du pain"),
       instruction: fr("Remind Mathis to buy bread.", "Rappeler à Mathis d'acheter du pain."),
       owner: ref("mathis"),
       origin: { session: "telegram:@mathis_l", channel: "telegram" },
@@ -1059,6 +1079,7 @@ export function schedules(): Schedule[] {
     },
     {
       id: "sc-tv",
+      title: fr("Samsung TV price", "Prix de la télé Samsung"),
       instruction: fr(
         "Check the price of the Samsung 65S92H; tell Mathis only below €1,600.",
         "Vérifier le prix du Samsung 65S92H ; prévenir Mathis seulement sous 1 600 €.",
@@ -1073,6 +1094,7 @@ export function schedules(): Schedule[] {
     },
     {
       id: "sc-plants",
+      title: fr("Water the plants", "Arroser les plantes"),
       instruction: fr("Remind Léa to water the plants.", "Rappeler à Léa d'arroser les plantes."),
       owner: ref("lea"),
       origin: null,

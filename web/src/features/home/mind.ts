@@ -196,7 +196,7 @@ export function lineOf(
   if (state === "working" && task)
     return {
       id: "home-say-working",
-      args: { objective: task.objective, count: context.tasks.length, others: context.tasks.length - 1 },
+      args: { objective: task.title, count: context.tasks.length, others: context.tasks.length - 1 },
     };
   if (context.troubled) return { id: "home-say-concerned", args: { count: context.troubled } };
   if (state === "sleeping" && context.quietUntil)

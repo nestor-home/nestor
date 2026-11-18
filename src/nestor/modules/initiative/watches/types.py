@@ -27,7 +27,8 @@ class Incoming:
 class Watch:
     """A durable commitment: tell `owner` when something matching `what` arrives."""
 
-    what: str  # in the person's words: "le colis Colissimo de la poussette"
+    title: str  # the short name the household knows it by: "Colis de la poussette"
+    what: str  # what to recognise, in the person's words: "le colis Colissimo de la poussette"
     kinds: tuple[str, ...] = ("mail",)
     owner: PersonId | None = None
     created_in: Address | None = None

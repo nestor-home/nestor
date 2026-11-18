@@ -33,6 +33,7 @@ class ScheduleBook(Component):
         self,
         instruction: str,
         *,
+        title: str,
         owner: PersonId | None,
         created_in: Address | None = None,
         at: datetime | None = None,
@@ -41,13 +42,21 @@ class ScheduleBook(Component):
         exchange: Exchange | None = None,
     ) -> Schedule:
         schedule = Schedule(
-            id=new_id(), instruction=instruction, owner=owner, created_in=created_in, at=at, times=times, days=days
+            id=new_id(),
+            title=title,
+            instruction=instruction,
+            owner=owner,
+            created_in=created_in,
+            at=at,
+            times=times,
+            days=days,
         )  # validated before anything is written
         event = ScheduleCreated(
             source=self.name,
             at=self.clock(),
             session=created_in.session if created_in else None,
             schedule_id=schedule.id,
+            title=title,
             instruction=instruction,
             owner=owner,
             created_in=created_in,
@@ -87,6 +96,7 @@ class ScheduleBook(Component):
         if isinstance(event, ScheduleCreated):
             self.schedules[event.schedule_id] = Schedule(
                 id=event.schedule_id,
+                title=event.title,
                 instruction=event.instruction,
                 owner=event.owner,
                 created_in=event.created_in,

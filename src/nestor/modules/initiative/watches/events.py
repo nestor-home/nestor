@@ -10,6 +10,7 @@ class WatchCreated(Event, event_type="watch.created"):
     """`exchange` is the conversation and turn that asked for it, when one did."""
 
     watch_id: str
+    title: str  # the short name the household knows it by
     what: str
     kinds: tuple[str, ...]
     once: bool

@@ -9,21 +9,27 @@ import {
   BEDROOM,
   CLAIM,
   CLAIM_STEPS,
+  CLAIM_TITLE,
   DEPENDENCIES,
   DEPENDENCIES_FILES,
   DEPENDENCIES_RESULT,
+  DEPENDENCIES_TITLE,
   ENERGY,
   ENERGY_FILES,
   ENERGY_RESULT,
   ENERGY_STEPS,
+  ENERGY_TITLE,
   GYM_ERROR,
   HANDBALL,
   KITCHEN,
   LIVING_ROOM,
   OFFICE,
   ref,
+  SCHOOL_TRIP,
+  SCHOOL_TRIP_WATCH,
   SHOPPING,
   SHOPPING_STEP,
+  SHOPPING_TITLE,
 } from "./fixtures";
 import { fr } from "./french";
 import { type Draft as ItemDraft, toItem } from "./messages";
@@ -169,7 +175,8 @@ export function day(now = Date.now()): JournalEvent[] {
   ev({
     ago: 60 * 28 - 0.2,
     type: "watch.created",
-    title: `Watch created: ${fr("news from the school for Léa", "les nouvelles de l'école pour Léa")}`,
+    title: `Watch created: ${SCHOOL_TRIP_WATCH}`,
+    detail: SCHOOL_TRIP,
     people: [ref("lea")],
     channels: ["telegram"],
     links: { session: "s-hier", turn: "t-hier", watch: "w-9d41" },
@@ -317,7 +324,7 @@ export function day(now = Date.now()): JournalEvent[] {
   const started = ev({
     ago: 351.6,
     type: "task.started",
-    title: "Task 3f2a1c handed to hermes",
+    title: `Task 3f2a1c handed to hermes: ${ENERGY_TITLE}`,
     detail: ENERGY,
     people: [ref("mathis")],
     channels: ["telegram"],
@@ -761,7 +768,7 @@ export function day(now = Date.now()): JournalEvent[] {
   ev({
     ago: 30.9,
     type: "task.started",
-    title: "Task 4410aa handed to hermes",
+    title: `Task 4410aa handed to hermes: ${CLAIM_TITLE}`,
     detail: CLAIM,
     people: [ref("mathis")],
     channels: ["telegram"],
@@ -813,7 +820,7 @@ export function day(now = Date.now()): JournalEvent[] {
   ev({
     ago: 11.9,
     type: "task.started",
-    title: "Task 88b07e handed to codex",
+    title: `Task 88b07e handed to codex: ${SHOPPING_TITLE}`,
     detail: SHOPPING,
     people: [ref("lea")],
     channels: ["web"],
@@ -873,7 +880,7 @@ export function day(now = Date.now()): JournalEvent[] {
   ev({
     ago: 539.6,
     type: "task.started",
-    title: "Task c1a9de handed to claude-code",
+    title: `Task c1a9de handed to claude-code: ${DEPENDENCIES_TITLE}`,
     detail: DEPENDENCIES,
     people: [ref("mathis")],
     channels: ["slack"],

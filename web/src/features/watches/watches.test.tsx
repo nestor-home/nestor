@@ -7,7 +7,7 @@ import { renderApp } from "@/test/render";
 describe("a watch's page", () => {
   it("tells what a watch found and how it was announced", async () => {
     renderApp("/watches/w-9d41");
-    expect(await screen.findByRole("heading", { name: /News from the school/, level: 1 })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "School trip reply", level: 1 })).toBeInTheDocument();
     const crumbs = screen.getByRole("navigation", { name: "Breadcrumbs" });
     expect(within(crumbs).getByRole("link", { name: "Ongoing" })).toHaveAttribute("href", "/activity");
     expect(screen.getByText("1 trigger")).toBeInTheDocument();

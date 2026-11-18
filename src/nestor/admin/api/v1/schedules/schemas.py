@@ -10,6 +10,7 @@ from nestor.modules.initiative import Day, Schedule, ScheduleBook
 
 class ScheduleOut(BaseModel):
     id: str
+    title: str  # the short name the agent gave it
     instruction: str  # what the agent does when it wakes, in its own words
     owner: PersonRef | None  # whoever set it: what it finds reaches them
     origin: OriginOut | None  # where it was set
@@ -24,6 +25,7 @@ class ScheduleOut(BaseModel):
         origin = schedule.created_in
         return cls(
             id=schedule.id,
+            title=schedule.title,
             instruction=schedule.instruction,
             owner=people.ref(schedule.owner),
             origin=OriginOut.of(origin) if origin else None,

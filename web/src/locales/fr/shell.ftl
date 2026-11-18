@@ -82,3 +82,7 @@ set-accounts-count = { $count ->
 }
 set-config = Modèles, voix, canaux, maison : tout ce qui règle { $assistant }.
 set-system = L'état de chaque composant, les mises à jour, le redémarrage.
+shell-space-waiting = { $space }, { $count ->
+    [one] une demande vous attend
+   *[other] { $count } demandes vous attendent
+}

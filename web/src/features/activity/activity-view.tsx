@@ -42,12 +42,12 @@ import { useNotify } from "@/components/notices";
 import { OriginLink } from "@/components/origin-link";
 import { SheetPanel, SideSheet } from "@/components/overlay-form";
 import { Fact, Facts, PageHeader, Section } from "@/components/page";
-import { Empty } from "@/components/states";
+import { Empty, Loading } from "@/components/states";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { TaskStatusMark } from "@/features/tasks/tasks";
 import { WatchKind, watchBrand } from "@/features/watches/watches";
 import { useT } from "@/i18n";
-import { tr } from "@/i18n/runtime";
+import { activeLocale, tr } from "@/i18n/runtime";
 import { BrandMark, brandName, brandOf, KindMark, kindName } from "@/lib/brands";
 import { dayLabel, hourMinute, moment } from "@/lib/dates";
 import { weekdayLabel } from "@/lib/labels";
@@ -118,7 +118,9 @@ export function ActivityView() {
 
       {shows("running") ? (
         <Section title={t("act-running-title")} count={running.length}>
-          {running.length ? (
+          {tasks.isPending ? (
+            <Loading lines={2} />
+          ) : running.length ? (
             <ul className="grid gap-3 lg:grid-cols-2">
               {running.map((task) => (
                 <li key={task.id}>
@@ -130,9 +132,7 @@ export function ActivityView() {
                     <span className="flex items-start gap-4">
                       <IconTile icon={Workflow} tone="task" />
                       <span className="min-w-0 flex-1">
-                        <span className="line-clamp-2 block text-[1.02rem] leading-snug font-medium text-ink">
-                          {task.objective}
-                        </span>
+                        <span className="block text-[1.02rem] leading-snug font-medium text-ink">{task.title}</span>
                         <span className="mt-1 flex flex-wrap items-center gap-x-2.5 text-[0.9rem] text-ink-muted">
                           <Executor name={task.executor} />
                           <span>
@@ -158,18 +158,21 @@ export function ActivityView() {
 
       {shows("planned") ? (
         <Section title={t("act-planned-title")} count={planned.length}>
-          {planned.length ? (
+          {schedules.isPending ? (
+            <Loading lines={2} />
+          ) : planned.length ? (
             <ol className="surface divide-y divide-rule overflow-hidden">
               {planned.map((s) => (
                 <li key={s.id}>
                   <button
                     type="button"
-                    className="grid w-full grid-cols-[5.5rem_1fr_auto] items-center gap-x-4 px-4 py-3.5 text-left hover:bg-paper-sunken/60 sm:grid-cols-[7rem_1fr_auto]"
+                    className="grid w-full grid-cols-[minmax(4.5rem,auto)_1fr_auto] items-center gap-x-5 px-4 py-3.5 text-left hover:bg-paper-sunken/60"
                     onClick={() => setOpened({ kind: "schedule", item: s })}
                   >
                     <When iso={s.next_due} />
                     <span className="min-w-0">
-                      <span className="line-clamp-2 block text-ink">{s.instruction}</span>
+                      <span className="block font-medium text-ink">{s.title}</span>
+                      <span className="line-clamp-1 block text-[0.9rem] text-ink-muted">{s.instruction}</span>
                       {s.recurring ? (
                         <span className="mt-0.5 flex items-center gap-1.5 text-[0.85rem] text-ink-muted">
                           <Repeat className="size-3.5" aria-hidden="true" />
@@ -190,7 +193,9 @@ export function ActivityView() {
 
       {shows("watching") ? (
         <Section title={t("act-watching-title")} count={watching.length}>
-          {watching.length ? (
+          {watches.isPending ? (
+            <Loading lines={2} />
+          ) : watching.length ? (
             <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {watching.map((w) => (
                 <li key={w.id}>
@@ -203,8 +208,9 @@ export function ActivityView() {
                       <BrandTile brand={watchBrand(w.kinds[0])} />
                       <OwnerMark owner={w.owner} />
                     </span>
-                    <span className="line-clamp-3 flex-1 text-[1.02rem] leading-snug font-medium text-ink">
-                      {w.what}
+                    <span className="flex-1">
+                      <span className="block text-[1.02rem] leading-snug font-medium text-ink">{w.title}</span>
+                      <span className="mt-1 line-clamp-2 block text-[0.9rem] text-ink-muted">{w.what}</span>
                     </span>
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.85rem] text-ink-muted">
                       {w.kinds.map((k) => (
@@ -257,7 +263,7 @@ export function ActivityView() {
                   onClick={() => setOpened({ kind: "task", item: task })}
                 >
                   <span className="min-w-0">
-                    <span className="line-clamp-1 block text-ink">{task.objective}</span>
+                    <span className="line-clamp-1 block text-ink">{task.title}</span>
                     <span className="flex flex-wrap items-center gap-x-2.5 text-[0.85rem] text-ink-muted">
                       <Executor name={task.executor} />
                       {task.ended_at ? <Ago iso={task.ended_at} /> : null}
@@ -289,9 +295,16 @@ function rhythm(s: Schedule): string {
 /** The day over the hour: the left edge of a planned row, read like an agenda. */
 function When({ iso }: { iso: string | null }) {
   if (!iso) return <span className="text-ink-faint">—</span>;
+  // "Today", "Tomorrow", then a short date: the column stays narrow whatever the language
+  const named = dayLabel(iso);
+  const day = /\d/.test(named)
+    ? new Intl.DateTimeFormat(activeLocale(), { weekday: "short", day: "numeric", month: "short" }).format(
+        new Date(iso),
+      )
+    : named;
   return (
     <time dateTime={iso} className="grid">
-      <span className="text-[0.8rem] text-ink-muted first-letter:uppercase">{dayLabel(iso)}</span>
+      <span className="text-[0.8rem] text-ink-muted first-letter:uppercase">{day}</span>
       <span className="font-serif text-[1.35rem] leading-tight text-ink tabular">{hourMinute(iso)}</span>
     </time>
   );
@@ -426,7 +439,8 @@ function TaskPanel({ task, onDone }: { task: Task; onDone: () => void }) {
       icon={Workflow}
       tone="task"
       kind={t("act-kind-task")}
-      title={task.objective}
+      title={task.title}
+      description={task.objective}
       actions={
         <>
           <Link to="/tasks/$taskId" params={{ taskId: task.id }} className={buttonVariants({ variant: "outline" })}>
@@ -517,7 +531,8 @@ function WatchPanel({ watch: w, onDone }: { watch: Watch; onDone: () => void }) 
       icon={Radar}
       tone="watch"
       kind={t("act-kind-watch")}
-      title={w.what}
+      title={w.title}
+      description={w.what}
       actions={
         <>
           <Link to="/watches/$watchId" params={{ watchId: w.id }} className={buttonVariants({ variant: "outline" })}>
@@ -534,7 +549,7 @@ function WatchPanel({ watch: w, onDone }: { watch: Watch; onDone: () => void }) 
               confirm={t("watch-cancel")}
               onConfirm={() => cancel.mutateAsync()}
             >
-              {t("watch-cancel-description", { what: w.what })}
+              {t("watch-cancel-description", { what: w.title })}
             </Confirm>
           ) : null}
         </>
@@ -594,7 +609,8 @@ function SchedulePanel({ schedule: s, onDone }: { schedule: Schedule; onDone: ()
       icon={AlarmClock}
       tone="ink"
       kind={t("act-kind-schedule")}
-      title={s.instruction}
+      title={s.title}
+      description={s.instruction}
       actions={
         canCancel ? (
           <Confirm
@@ -607,7 +623,7 @@ function SchedulePanel({ schedule: s, onDone }: { schedule: Schedule; onDone: ()
             confirm={t("schedule-cancel-confirm")}
             onConfirm={() => cancel.mutateAsync()}
           >
-            {t("schedule-cancel-description", { what: s.instruction })}
+            {t("schedule-cancel-description", { what: s.title })}
           </Confirm>
         ) : undefined
       }

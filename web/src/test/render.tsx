@@ -102,7 +102,7 @@ const TITLE_OF: Record<string, string> = {
   "conversation.fallback": "Fallback answer: model too slow",
   "agent.tool.called": "Tool weather called",
   "agent.tool.completed": "Tool weather finished in 1.2 s",
-  "task.started": "Task T handed to hermes",
+  "task.started": "Task T handed to hermes: The quote",
   "task.progress": "Task T: new step",
   "task.ended": "Task T completed (2 min)",
   "watch.created": "Watch created: the parcel",

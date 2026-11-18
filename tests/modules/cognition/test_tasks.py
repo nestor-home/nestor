@@ -22,7 +22,7 @@ from nestor.modules.cognition import (
 from nestor.modules.cognition.delegation import Assignment, ExecutorKeys, NestorTools
 from nestor.modules.cognition.delegation.assistant import Delegation
 from nestor.modules.cognition.delegation.service import INTERRUPTED, TaskManager
-from nestor.modules.cognition.tools import ToolContext
+from nestor.modules.cognition.tools import ToolContext, ToolFailed
 from nestor.modules.conversation import Attached, Conversations, TurnContext
 from nestor.modules.identity import Speaker
 from nestor.modules.journal import BlobRef, Journal
@@ -69,7 +69,9 @@ def journal() -> Journal:
 
 async def test_a_delegated_task_runs_in_the_background_and_is_logged(journal: Journal) -> None:
     async with TaskManager(journal, [ScriptedExecutor("Trois soucis trouvés.")]) as tasks:
-        task = await tasks.delegate("Analyse le dépôt", origin=VOICE, requested_by=MATHIS, notify=Notify.MESSAGE)
+        task = await tasks.delegate(
+            "Analyse le dépôt", title="Analyse le dépôt", origin=VOICE, requested_by=MATHIS, notify=Notify.MESSAGE
+        )
         assert task.status is TaskStatus.RUNNING
         outcome = await tasks.wait(task.id)
 
@@ -99,21 +101,21 @@ async def test_the_files_a_task_made_are_kept_and_one_that_cannot_be_is_said_not
     FILES = [("a.txt", b"kept"), ("b.txt", b"too much")]
     blobs = FullDisk()
     async with TaskManager(journal, [Writer()], blobs=blobs) as tasks:
-        task = await tasks.delegate("Écris-les", origin=VOICE, requested_by=MATHIS)
+        task = await tasks.delegate("Écris-les", title="Écris-les", origin=VOICE, requested_by=MATHIS)
         outcome = await tasks.wait(task.id)
     [ended] = await journal.history(TaskEnded)
     assert [blobs.blobs[f.blob.digest] for f in ended.files] == [b"kept"]
     assert ended.result == outcome.result == "Écrits.\nFiles not kept: b.txt (OSError)"
     assert outcome.files == (), "the bytes live in the blob store, not in the task"
     async with TaskManager(Journal(MemoryEventLog()), [Writer()]) as nowhere:
-        lost = await nowhere.wait((await nowhere.delegate("Écris-les", origin=VOICE)).id)
+        lost = await nowhere.wait((await nowhere.delegate("Écris-les", title="Écris-les", origin=VOICE)).id)
     assert lost.result == "Écrits.\nFiles not kept: a.txt (nowhere to keep it); b.txt (nowhere to keep it)"
 
 
 async def test_remote_work_survives_a_restart_and_is_not_started_twice(journal: Journal) -> None:
     remote = FakeRemote()
     async with TaskManager(journal, [ScriptedRemoteExecutor(remote, duration_s=None)]) as tasks:
-        task = await tasks.delegate("Long travail", origin=VOICE)
+        task = await tasks.delegate("Long travail", title="Long travail", origin=VOICE)
         await asyncio.sleep(0.01)
     (ref,) = remote.runs
     assert remote.runs[ref].outcome is None, "a restart must not stop remote work"
@@ -129,11 +131,13 @@ async def test_remote_work_survives_a_restart_and_is_not_started_twice(journal: 
 
 async def test_local_work_cut_by_a_restart_is_reported_not_lost(journal: Journal) -> None:
     async with TaskManager(journal, [ScriptedExecutor(duration_s=30)]) as tasks:
-        task = await tasks.delegate("Travail local", origin=VOICE)
+        task = await tasks.delegate("Travail local", title="Travail local", origin=VOICE)
         await asyncio.sleep(0.01)
     # the shutdown stopped it cleanly; now play a crash: a task the journal still sees running
     await journal.publish(
-        TaskStarted(source="test", task_id="crashed", objective="x", executor="scripted-executor", origin=VOICE)
+        TaskStarted(
+            source="test", task_id="crashed", title="X", objective="x", executor="scripted-executor", origin=VOICE
+        )
     )
     async with TaskManager(journal, [ScriptedExecutor()]) as restarted:
         assert restarted.tasks[task.id].status is TaskStatus.CANCELLED
@@ -144,8 +148,8 @@ async def test_local_work_cut_by_a_restart_is_reported_not_lost(journal: Journal
 async def test_a_cancellation_is_confirmed_or_reported_unconfirmed(journal: Journal) -> None:
     stubborn = Stubborn(duration_s=None, confirms_stop=False)
     async with TaskManager(journal, [ScriptedRemoteExecutor(duration_s=None), stubborn]) as tasks:
-        polite = await tasks.delegate("a", origin=VOICE)
-        hard = await tasks.delegate("b", origin=VOICE, executor="stubborn")
+        polite = await tasks.delegate("a", title="A", origin=VOICE)
+        hard = await tasks.delegate("b", title="B", origin=VOICE, executor="stubborn")
         await asyncio.sleep(0.01)
         assert (await tasks.cancel(polite.id)).status is TaskStatus.CANCELLED
         assert (await tasks.cancel(hard.id)).error == "stop requested, not confirmed"
@@ -168,7 +172,7 @@ async def test_an_executor_that_hangs_on_cancel_is_reported(journal: Journal) ->
             return Outcome.cancelled()
 
     async with TaskManager(journal, [Slow()], cancel_timeout_s=0.01) as tasks:
-        task = await tasks.delegate("x", origin=VOICE)
+        task = await tasks.delegate("x", title="X", origin=VOICE)
         await asyncio.sleep(0.01)
         assert (await tasks.cancel(task.id)).error == "stop requested, not confirmed by the executor"
         assert (await tasks.wait(task.id)).status is TaskStatus.CANCELLED
@@ -192,7 +196,9 @@ async def test_work_stopped_before_it_reached_the_executor_ends_cancelled(journa
             return "never"
 
     async with TaskManager(journal, [Local(), SlowSubmit()]) as tasks:
-        ids = [(await tasks.delegate("x", origin=VOICE, executor=name)).id for name in ("local", "slow-submit")]
+        ids = [
+            (await tasks.delegate("x", title="X", origin=VOICE, executor=name)).id for name in ("local", "slow-submit")
+        ]
         await asyncio.sleep(0.01)
         outcomes = [await tasks.cancel(i) for i in ids]
     assert [o.status for o in outcomes] == [TaskStatus.CANCELLED, TaskStatus.CANCELLED]
@@ -213,7 +219,7 @@ async def test_failures_end_the_task_without_breaking_the_assistant(journal: Jou
 
     executors = [Crashing(), ScriptedRemoteExecutor(refuses=True), Lost()]
     async with TaskManager(journal, executors) as tasks:
-        ids = [(await tasks.delegate("x", origin=VOICE, executor=e.name)).id for e in executors]
+        ids = [(await tasks.delegate("x", title="X", origin=VOICE, executor=e.name)).id for e in executors]
         errors = [(await tasks.wait(i)).error for i in ids]
     assert errors == [
         "RuntimeError: remote agent crashed",
@@ -224,13 +230,13 @@ async def test_failures_end_the_task_without_breaking_the_assistant(journal: Jou
 
 async def test_delegating_needs_a_started_manager_and_a_known_executor(journal: Journal) -> None:
     with pytest.raises(ContractError, match="must be started"):
-        await TaskManager(journal, [ScriptedExecutor()]).delegate("x", origin=VOICE)
+        await TaskManager(journal, [ScriptedExecutor()]).delegate("x", title="X", origin=VOICE)
     async with TaskManager(journal, []) as none:
         with pytest.raises(ContractError, match="no executor is plugged in"):
-            await none.delegate("x", origin=VOICE)
+            await none.delegate("x", title="X", origin=VOICE)
     async with TaskManager(journal, [ScriptedExecutor()]) as tasks:
         with pytest.raises(ContractError, match="no executor named 'codex'"):
-            await tasks.delegate("x", origin=VOICE, executor="codex")
+            await tasks.delegate("x", title="X", origin=VOICE, executor="codex")
 
 
 async def test_the_agent_delegates_follows_and_cancels_through_its_tools(journal: Journal) -> None:
@@ -238,7 +244,9 @@ async def test_the_agent_delegates_follows_and_cancels_through_its_tools(journal
     async with TaskManager(journal, [ScriptedRemoteExecutor(duration_s=None)]) as tasks:
         tools = {t.name: t for t in Delegation(tasks).tools()}
         started = data(
-            await tools["delegate_task"].run({"objective": "Cherche un resto", "notify": "message"}, context)
+            await tools["delegate_task"].run(
+                {"title": " Resto de samedi ", "objective": "Cherche un resto", "notify": "message"}, context
+            )
         )
         task_id = str(started["task_id"])
         status = data(await tools["task_status"].run({}, context))
@@ -246,7 +254,9 @@ async def test_the_agent_delegates_follows_and_cancels_through_its_tools(journal
         after = data(await tools["task_status"].run({}, context))
 
     assert tasks.tasks[task_id].notify is Notify.MESSAGE and tasks.tasks[task_id].requested_by == MATHIS
-    assert [t["task_id"] for t in status["running"]] == [task_id]
+    assert [(t["task_id"], t["title"]) for t in status["running"]] == [(task_id, "Resto de samedi")]
+    (logged,) = await journal.history(TaskStarted)
+    assert (logged.title, logged.objective) == ("Resto de samedi", "Cherche un resto"), "the name beside what is asked"
     assert cancelled == {"stopped": True, "status": "cancelled"}
     assert after["recently_finished"][0]["status"] == "cancelled"
 
@@ -278,26 +288,31 @@ async def test_the_files_sent_in_the_conversation_go_with_the_task_but_not_what_
     expected = [("devis.pdf", b"%PDF devis"), ("image.jpg", b"jpeg"), ("devis (2).pdf", b"%PDF autre")]
     async with TaskManager(journal, [ScriptedRemoteExecutor(remote, duration_s=None)], blobs=blobs) as tasks:
         tool = next(t for t in Delegation(tasks).tools() if t.name == "delegate_task")
-        task_id = str(data(await tool.run({"objective": "Compare les devis"}, context))["task_id"])
+        task_id = str(
+            data(await tool.run({"title": "Devis comparés", "objective": "Compare les devis"}, context))["task_id"]
+        )
         await asyncio.sleep(0.01)
         [run] = remote.runs.values()
         assert [placed async for placed in run.assignment.placed()] == expected, "plain names, none twice, no voice"
     async with TaskManager(journal, [ScriptedRemoteExecutor(remote, duration_s=None)], blobs=blobs) as tasks:
         assert [g.name for g in tasks.tasks[task_id].given] == [name for name, _ in expected], "kept by the journal"
+        assert tasks.tasks[task_id].title == "Devis comparés", "its name too"
         await tasks.cancel(task_id)
 
 
 async def test_the_delegation_tools_refuse_bad_arguments(journal: Journal) -> None:
-    from nestor.modules.cognition.tools import ToolFailed
-
     context = ToolContext(address=VOICE)
     async with TaskManager(journal, [ScriptedExecutor(), ScriptedRemoteExecutor()]) as tasks:
         tools = {t.name: t for t in Delegation(tasks).tools()}
         assert "executor" in data(tools["delegate_task"].spec.parameters["properties"])
         with pytest.raises(ToolFailed, match="notify must be one of"):
-            await tools["delegate_task"].run({"objective": "x", "notify": "pigeon"}, context)
+            await tools["delegate_task"].run({"title": "X", "objective": "x", "notify": "pigeon"}, context)
         with pytest.raises(ToolFailed, match="no executor named"):
-            await tools["delegate_task"].run({"objective": "x", "executor": "codex"}, context)
+            await tools["delegate_task"].run({"title": "X", "objective": "x", "executor": "codex"}, context)
+        for unnamed in ({"objective": "x"}, {"title": " ", "objective": "x"}):
+            with pytest.raises(ToolFailed, match="title must be a short name"):
+                await tools["delegate_task"].run(unnamed, context)
+        assert tasks.tasks == {}, "nothing started"
 
 
 async def test_the_instructions_say_what_executors_can_do_and_what_runs(journal: Journal) -> None:
@@ -311,7 +326,7 @@ async def test_the_instructions_say_what_executors_can_do_and_what_runs(journal:
             == {}
         )
     async with TaskManager(journal, [ScriptedRemoteExecutor(duration_s=None)]) as tasks:
-        await tasks.delegate("Réserver un resto", origin=VOICE)
+        await tasks.delegate("Réserver un resto", title="Réserver un resto", origin=VOICE)
         guidance, running = (
             Delegation(tasks).guidance(),
             str(
@@ -342,8 +357,8 @@ async def test_a_task_for_an_executor_that_reaches_nestor_gets_a_capability_good
     reaching.name, plain.name = "codex", "hermes"
     keys = await keys_for(journal, "codex", "hermes")
     async with TaskManager(journal, [reaching, plain], keys=keys) as tasks:
-        task = await tasks.delegate("Corrige le test", origin=VOICE, executor="codex")
-        other = await tasks.delegate("Cherche un vol", origin=VOICE, executor="hermes")
+        task = await tasks.delegate("Corrige le test", title="Corrige le test", origin=VOICE, executor="codex")
+        other = await tasks.delegate("Cherche un vol", title="Cherche un vol", origin=VOICE, executor="hermes")
         await asyncio.sleep(0.01)
         [given] = [r.assignment for r in remote.runs.values()]
         assert given.task and given.task.startswith("nstt_") and given.access is not None
@@ -366,7 +381,7 @@ async def test_a_capability_still_works_for_a_remote_task_followed_again_after_a
     executor = Reaching(remote, duration_s=None)
     executor.name = "codex"
     async with TaskManager(journal, [executor], keys=await keys_for(journal, "codex")) as tasks:
-        task = await tasks.delegate("Corrige le test", origin=VOICE)
+        task = await tasks.delegate("Corrige le test", title="Corrige le test", origin=VOICE)
         await asyncio.sleep(0.01)
     [run] = remote.runs.values()
     assert run.assignment.task
@@ -383,7 +398,7 @@ async def test_a_file_an_executor_hands_back_while_it_works_goes_with_the_result
     journal, blobs, remote = Journal(MemoryEventLog()), MemoryBlobStore(), FakeRemote()
     executor = Reaching(remote, duration_s=None)
     async with TaskManager(journal, [executor], blobs=blobs) as tasks:
-        task = await tasks.delegate("Écris le devis", origin=VOICE)
+        task = await tasks.delegate("Écris le devis", title="Écris le devis", origin=VOICE)
         await asyncio.sleep(0.01)
         pdf = Attachment(
             kind=AttachmentKind.FILE, data=b"%PDF-1.7 devis", media_type="application/pdf", name="devis.pdf"
@@ -402,9 +417,9 @@ async def test_a_revoked_key_stays_revoked_and_the_executor_works_without_nestor
     keys = await keys_for(journal, "codex")
     async with TaskManager(journal, [executor], keys=keys) as tasks:
         await keys.revoke("codex")
-        await tasks.wait((await tasks.delegate("Corrige le test", origin=VOICE)).id)
+        await tasks.wait((await tasks.delegate("Corrige le test", title="Corrige le test", origin=VOICE)).id)
         await keys.issue("codex")
-        await tasks.wait((await tasks.delegate("Et celui-là", origin=VOICE)).id)
+        await tasks.wait((await tasks.delegate("Et celui-là", title="Et celui-là", origin=VOICE)).id)
     first, second = (r.assignment for r in remote.runs.values())
     assert (first.task, first.access) == (None, None), "no key made behind the person's back"
     assert second.task and second.access, "a key made again works again"

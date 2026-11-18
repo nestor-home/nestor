@@ -81,9 +81,10 @@
     background: var(--paper);
     color: var(--ink);
     font-feature-settings: "ss01", "cv11";
-    /* real text holds URLs, ids and 60-letter words: they break where they must instead of pushing
-       their box (and min-content shrinks with them, so flex and grid children never overflow) */
-    overflow-wrap: anywhere;
+    /* real text holds URLs, ids and 60-letter words: a word breaks only when its box cannot hold it. Never
+       `anywhere`: it makes every box shrinkable to one letter, and labels end up crushed beside their neighbours.
+       What may hold a long word sits in a `min-w-0` box, which then breaks it instead of overflowing. */
+    overflow-wrap: break-word;
   }
 
   /* clock times and short data never break inside */

@@ -75,7 +75,7 @@ function Loaded({ watch: w, trail }: { watch: Watch; trail: Crumb[] }) {
     <>
       <PageHeader
         crumbs={<Crumbs trail={trail} />}
-        title={w.what}
+        title={w.title}
         meta={
           <>
             {w.owner ? <Pebble name={w.owner.name} className="size-6 text-[0.65rem]" /> : null}
@@ -96,11 +96,13 @@ function Loaded({ watch: w, trail }: { watch: Watch; trail: Crumb[] }) {
               confirm={t("watch-cancel")}
               onConfirm={() => cancel.mutateAsync()}
             >
-              {t("watch-cancel-description", { what: w.what })}
+              {t("watch-cancel-description", { what: w.title })}
             </Confirm>
           ) : null
         }
-      />
+      >
+        {w.what}
+      </PageHeader>
       <div className="grid gap-10">
         <div className="grid gap-4">
           <div className="grid gap-3 sm:grid-cols-3">

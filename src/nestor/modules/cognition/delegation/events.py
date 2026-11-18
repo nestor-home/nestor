@@ -13,6 +13,7 @@ class TaskStarted(Event, event_type="task.started"):
     `asked`, whether a person asked for it in their own turn, rather than Nestor (a wake-up)."""
 
     task_id: str
+    title: str  # the short name the household knows it by
     objective: str
     executor: str
     origin: Address  # the channel conversation the task was asked in

@@ -8,7 +8,7 @@ from nestor.modules.channels import AttachmentKind, plain_name
 from nestor.modules.cognition.delegation.service import TaskManager
 from nestor.modules.cognition.delegation.types import Notify, TaskStatus
 from nestor.modules.cognition.model import ToolSpec
-from nestor.modules.cognition.tools import Risk, Tool, ToolContext, ToolFailed, ToolProvider
+from nestor.modules.cognition.tools import TITLE, Risk, Tool, ToolContext, ToolFailed, ToolProvider, titled
 from nestor.modules.conversation import (
     ContextProvider,
     Layer,
@@ -45,6 +45,7 @@ class Delegation(ToolProvider, ContextProvider, MentionSource):
             return ()
         names = list(self.tasks.executors)
         delegate_parameters: dict[str, object] = {
+            "title": TITLE,
             "objective": {"type": "string", "description": "Precise, verifiable objective"},
             "notify": {
                 "type": "string",
@@ -59,7 +60,7 @@ class Delegation(ToolProvider, ContextProvider, MentionSource):
                 spec=ToolSpec(
                     "delegate_task",
                     "Hand a long task over to an executor; it runs in the background.",
-                    {"type": "object", "properties": delegate_parameters, "required": ["objective"]},
+                    {"type": "object", "properties": delegate_parameters, "required": ["title", "objective"]},
                 ),
                 run=self._delegate,
                 risk=Risk.WRITE,
@@ -105,7 +106,7 @@ class Delegation(ToolProvider, ContextProvider, MentionSource):
     async def context(self, turn: TurnContext) -> Sections:
         if not (running := self.tasks.running()):
             return {}
-        listed = "\n".join(f"- {t.id}: {t.objective}" for t in running)
+        listed = "\n".join(f"- {t.id} ({t.title}): {t.objective}" for t in running)
         return {Layer.TURN: f"Tasks running now:\n{listed}"}
 
     async def _delegate(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
@@ -114,9 +115,11 @@ class Delegation(ToolProvider, ContextProvider, MentionSource):
         except ValueError:
             raise ToolFailed(f"notify must be one of: {', '.join(Notify)}") from None
         executor = arguments.get("executor")
+        title = titled(arguments)
         try:
             task = await self.tasks.delegate(
                 str(arguments["objective"]),
+                title=title,
                 origin=context.address,
                 requested_by=context.person,
                 notify=notify,

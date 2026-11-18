@@ -17,8 +17,8 @@ def register(mcp: MCPServer, access: TaskAccess) -> None:
 
     @mcp.tool(
         description=(
-            "What the task is: its objective, who asked, when and where, the conversation it came from, and the "
-            "files they sent (read_file gives a link to each)."
+            "What the task is: its title and objective, who asked, when and where, the conversation it came from, and "
+            "the files they sent (read_file gives a link to each)."
         )
     )
     async def task_brief(task: str, ctx: Context) -> dict[str, object]:
@@ -40,6 +40,7 @@ def register(mcp: MCPServer, access: TaskAccess) -> None:
             else []
         )
         return {
+            "title": found.title,
             "objective": found.objective,
             "requested_by": requester.name if requester else None,
             "asked_at": f"{asked_at:%A %d %B %Y %H:%M} ({persona.timezone})",

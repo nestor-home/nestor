@@ -5,7 +5,7 @@ from datetime import timedelta
 
 from nestor.core import utc_now
 from nestor.modules.cognition.model import ToolSpec
-from nestor.modules.cognition.tools import Risk, Tool, ToolContext, ToolFailed, ToolProvider
+from nestor.modules.cognition.tools import TITLE, Risk, Tool, ToolContext, ToolFailed, ToolProvider, titled
 from nestor.modules.conversation import ContextProvider, Layer, Sections, TurnContext
 from nestor.modules.initiative.watches.book import WatchBook
 from nestor.modules.initiative.watches.types import Watch
@@ -34,12 +34,13 @@ class WatchTools(ToolProvider, ContextProvider):
         create = {
             "type": "object",
             "properties": {
+                "title": TITLE,
                 "what": {"type": "string", "description": "what to watch for, in the person's words"},
                 "kinds": {"type": "array", "items": {"type": "string", "enum": kinds}},
                 "once": {"type": "boolean", "description": "end after the first match (default true)"},
                 "days": {"type": "integer", "minimum": 1, "maximum": 365, "description": "how long to keep watching"},
             },
-            "required": ["what"],
+            "required": ["title", "what"],
         }
         cancel = {"type": "object", "properties": {"watch_id": {"type": "string"}}, "required": ["watch_id"]}
         return (
@@ -64,7 +65,7 @@ class WatchTools(ToolProvider, ContextProvider):
     async def context(self, turn: TurnContext) -> Sections:
         if not self.book.watches:
             return {}
-        listed = "\n".join(f"- [{w.id}] {w.what}" for w in self.book.watches.values())
+        listed = "\n".join(f"- [{w.id}] {w.title}: {w.what}" for w in self.book.watches.values())
         return {Layer.HOUSEHOLD: f"Active watches:\n{listed}"}  # they change when one is created or ends
 
     async def _create(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
@@ -77,6 +78,7 @@ class WatchTools(ToolProvider, ContextProvider):
         days = arguments.get("days")
         watch = await self.book.create(
             Watch(
+                title=titled(arguments),
                 what=str(arguments["what"]),
                 kinds=tuple(str(k) for k in kinds),
                 once=arguments.get("once") is not False,
@@ -86,10 +88,10 @@ class WatchTools(ToolProvider, ContextProvider):
             ),
             exchange=context.exchange,
         )
-        return {"watch_id": watch.id, "watching": watch.what}
+        return {"watch_id": watch.id, "title": watch.title, "watching": watch.what}
 
     async def _list(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
-        return {"watches": [{"watch_id": w.id, "what": w.what} for w in self.book.watches.values()]}
+        return {"watches": [{"watch_id": w.id, "title": w.title, "what": w.what} for w in self.book.watches.values()]}
 
     async def _cancel(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
         if not await self.book.end(str(arguments["watch_id"]), "cancelled"):

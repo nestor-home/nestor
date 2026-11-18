@@ -7,8 +7,6 @@ from mcp.server.mcpserver.exceptions import ToolError
 from nestor.mcp_server.access import TaskAccess
 from nestor.modules.initiative import QuestionState
 
-OBJECTIVE_CHARS = 160  # of the task's objective, said with its question
-
 
 def register(mcp: MCPServer, access: TaskAccess) -> None:
     book = access.nestor.message_book
@@ -24,7 +22,7 @@ def register(mcp: MCPServer, access: TaskAccess) -> None:
         requester = access.requester(found)
         asked = await book.request(
             requester,
-            f'{found.executor}, working on "{found.objective[:OBJECTIVE_CHARS]}": {question}',
+            f'{found.executor}, working on "{found.title}": {question}',
             requested_by=requester,  # the task acts for whoever handed it over
             origin=found.origin,
             expects_reply=True,

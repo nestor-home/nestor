@@ -17,14 +17,14 @@ describe("the admin's language", () => {
     const user = userEvent.setup();
     renderApp("/journal");
     const nav = await screen.findByRole("navigation", { name: "Sections" });
-    expect(within(nav).getByRole("link", { name: "Today" })).toBeInTheDocument();
+    expect(within(nav).getByRole("link", { name: /^Today/ })).toBeInTheDocument();
     expect(document.documentElement.lang).toBe("en");
     expect((await screen.findAllByText(/Jules is in the living room/)).length).toBeGreaterThan(0);
 
     await user.click(screen.getAllByRole("button", { name: /Account menu/ })[0] as HTMLElement);
     await user.click(await screen.findByRole("menuitemradio", { name: "Français" }));
 
-    expect(await screen.findByRole("link", { name: "Aujourd'hui" })).toBeInTheDocument();
+    expect((await screen.findAllByRole("link", { name: /^Aujourd'hui/ })).length).toBeGreaterThan(0);
     expect(document.documentElement.lang).toBe("fr");
     await waitFor(() => expect(db.accounts.find((a) => a.id === "acc-mathis")?.locale).toBe("fr"));
     // the journal's lines come back rendered by the server in French, the household's rooms too
@@ -34,7 +34,7 @@ describe("the admin's language", () => {
   it("uses the browser's language for an account without one", async () => {
     browserReads("fr-FR", "fr");
     renderApp("/journal");
-    expect(await screen.findByRole("link", { name: "Aujourd'hui" })).toBeInTheDocument();
+    expect((await screen.findAllByRole("link", { name: /^Aujourd'hui/ })).length).toBeGreaterThan(0);
     expect((await screen.findAllByText(/Jules est dans la pièce « salon »/)).length).toBeGreaterThan(0);
   });
 });

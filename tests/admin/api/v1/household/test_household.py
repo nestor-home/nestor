@@ -20,12 +20,16 @@ MATHIS, MATHILDE = PersonId("mathis"), PersonId("mathilde")
 async def test_a_member_sees_and_stops_their_own_tasks_only(tmp_path: Path) -> None:
     async with Harness(tmp_path) as admin:
         await admin.account("mathilde", Role.MEMBER, "mathilde")
-        hers = await admin.nestor.tasks.delegate("Trouver un plombier", origin=TELEGRAM, requested_by=MATHILDE)
-        his = await admin.nestor.tasks.delegate("Analyse le dépôt", origin=TELEGRAM, requested_by=MATHIS)
+        hers = await admin.nestor.tasks.delegate(
+            "Trouver un plombier", title="Plombier", origin=TELEGRAM, requested_by=MATHILDE
+        )
+        his = await admin.nestor.tasks.delegate(
+            "Analyse le dépôt", title="Analyse le dépôt", origin=TELEGRAM, requested_by=MATHIS
+        )
         await asyncio.sleep(0.01)
         api = await admin.api("mathilde")
         listed = (await api.get("/api/v1/tasks")).json()
-        assert [t["objective"] for t in listed["running"]] == ["Trouver un plombier"]
+        assert [(t["title"], t["objective"]) for t in listed["running"]] == [("Plombier", "Trouver un plombier")]
         assert listed["running"][0]["status"] == "running" and listed["running"][0]["requested_by"]["id"] == "mathilde"
         assert (await api.post(f"/api/v1/tasks/{his.id}/cancel")).status_code == 404
         stopped = (await api.post(f"/api/v1/tasks/{hers.id}/cancel")).json()
@@ -39,7 +43,7 @@ async def test_a_member_sees_and_stops_their_own_tasks_only(tmp_path: Path) -> N
 
 async def test_a_stop_the_executor_does_not_confirm_is_reported(tmp_path: Path) -> None:
     async with Harness(tmp_path, confirms_stop=False) as admin:
-        task = await admin.nestor.tasks.delegate("Long travail", origin=TELEGRAM)
+        task = await admin.nestor.tasks.delegate("Long travail", title="Long travail", origin=TELEGRAM)
         await asyncio.sleep(0.01)
         stopped = (await (await admin.api()).post(f"/api/v1/tasks/{task.id}/cancel")).json()
         assert stopped["confirmed"] is False and stopped["task"]["error"]
@@ -49,11 +53,12 @@ async def test_a_member_sees_and_cancels_their_own_watches_only(tmp_path: Path) 
     async with Harness(tmp_path) as admin:
         await admin.account("mathilde", Role.MEMBER, "mathilde")
         book = admin.nestor.watch_book
-        hers = await book.create(Watch(what="le colis", owner=MATHILDE))
-        his = await book.create(Watch(what="la facture", owner=MATHIS))
+        hers = await book.create(Watch(title="Colis", what="le colis", owner=MATHILDE))
+        his = await book.create(Watch(title="La facture", what="la facture", owner=MATHIS))
         api = await admin.api("mathilde")
         listed = (await api.get("/api/v1/watches")).json()
-        assert [w["what"] for w in listed["watches"]] == ["le colis"] and listed["kinds"] == ["mail"]
+        assert [(w["title"], w["what"]) for w in listed["watches"]] == [("Colis", "le colis")]
+        assert listed["kinds"] == ["mail"]
         assert (await api.post(f"/api/v1/watches/{his.id}/cancel")).status_code == 404
         assert (await api.post(f"/api/v1/watches/{hers.id}/cancel")).status_code == 204
         assert list(book.watches) == [his.id]
@@ -133,8 +138,8 @@ async def test_resources_say_where_they_come_from_and_what_became_of_them(tmp_pa
 
     async with Harness(tmp_path) as admin:
         nestor = admin.nestor
-        quick = await nestor.tasks.delegate("Vite fait", origin=TELEGRAM, requested_by=MATHIS)
-        other = await nestor.tasks.delegate("Autre", origin=TELEGRAM, requested_by=MATHIS)
+        quick = await nestor.tasks.delegate("Vite fait", title="Vite fait", origin=TELEGRAM, requested_by=MATHIS)
+        other = await nestor.tasks.delegate("Autre", title="Autre", origin=TELEGRAM, requested_by=MATHIS)
         await nestor.tasks.cancel(quick.id)
         await nestor.tasks.cancel(other.id)
         await nestor.journal.publish(TaskDelivered(source="tasks", task_id=quick.id, address=TELEGRAM))
@@ -143,7 +148,9 @@ async def test_resources_say_where_they_come_from_and_what_became_of_them(tmp_pa
                 source="courier", address=Address("telegram", "9"), about=About(Source.TASK, other.id, "cancelled")
             )
         )
-        watch = await nestor.watch_book.create(Watch(what="le colis", owner=MATHIS, created_in=TELEGRAM))
+        watch = await nestor.watch_book.create(
+            Watch(title="Le colis", what="le colis", owner=MATHIS, created_in=TELEGRAM)
+        )
         for item in ("i1", "i2"):
             await nestor.journal.publish(
                 WatchTriggered(

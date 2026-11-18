@@ -71,7 +71,7 @@ export function TaskDetail({ id }: { id: string }) {
     <>
       <PageHeader
         crumbs={<Crumbs trail={trail} />}
-        title={task.objective}
+        title={task.title}
         meta={
           <>
             <TaskStatusMark status={task.status} />
@@ -97,7 +97,9 @@ export function TaskDetail({ id }: { id: string }) {
             </Confirm>
           ) : null
         }
-      />
+      >
+        {task.objective}
+      </PageHeader>
       <div className="grid gap-10">
         <WithAside>
           <Outcome task={task} />

@@ -36,6 +36,7 @@ from nestor.modules.initiative import (
     Schedule,
     ScheduleBook,
     ScheduleCancelled,
+    ScheduleCreated,
     ScheduleFired,
     Scheduler,
     ScheduleTools,
@@ -58,12 +59,16 @@ def paris(day: int, hour: int, minute: int = 0) -> datetime:
 
 def test_a_recurring_wake_up_is_next_due_at_its_first_time_on_one_of_its_days() -> None:
     weekdays = Schedule(
-        id="s", instruction="x", times=(time(8), time(18)), days=(Day.MON, Day.TUE, Day.WED, Day.THU, Day.FRI)
+        id="s",
+        title="Weekdays",
+        instruction="x",
+        times=(time(8), time(18)),
+        days=(Day.MON, Day.TUE, Day.WED, Day.THU, Day.FRI),
     )
     assert weekdays.next_due(paris(2, 7), "Europe/Paris") == paris(2, 8)
     assert weekdays.next_due(paris(2, 8), "Europe/Paris") == paris(2, 18), "strictly after"
     assert weekdays.next_due(paris(6, 19), "Europe/Paris") == paris(9, 8), "Friday evening, then Monday"
-    once = Schedule(id="o", instruction="x", at=paris(3, 9))
+    once = Schedule(id="o", title="Once", instruction="x", at=paris(3, 9))
     assert (once.next_due(paris(2, 9), "UTC"), once.next_due(paris(3, 9), "UTC")) == (paris(3, 9), None)
 
 
@@ -114,7 +119,7 @@ async def test_a_wake_up_runs_once_each_time_it_is_due_with_its_tools_and_tells_
         now=paris(2, 7),
     )
     async with home.book:
-        await home.schedule(instruction="Envoie à Mathis les nouvelles", times=["08:00"])
+        await home.schedule(title="Nouvelles du matin", instruction="Envoie à Mathis les nouvelles", times=["08:00"])
         assert await home.scheduler.wake_due() == 0
         home.clock.now = paris(2, 8, 1)
         assert await home.scheduler.wake_due() == 1
@@ -133,7 +138,9 @@ async def test_a_wake_up_runs_once_each_time_it_is_due_with_its_tools_and_tells_
 async def test_a_wake_up_with_nothing_to_tell_sends_nothing_and_leaves_no_turn() -> None:
     home = Home(ToolCall("c1", "list_schedules", {}), f"{SILENT} toujours au-dessus", now=paris(2, 7))
     async with home.book:
-        await home.schedule(instruction="Si le prix passe sous 1 600 €, dis-le à Mathis", times=["10:00"])
+        await home.schedule(
+            title="Prix sous 1 600 €", instruction="Si le prix passe sous 1 600 €, dis-le à Mathis", times=["10:00"]
+        )
         home.clock.now = paris(2, 10, 1)
         assert await home.scheduler.wake_due() == 1
 
@@ -151,8 +158,8 @@ async def test_a_wake_up_that_fails_does_not_stop_the_others_nor_runs_again(fail
 
     home = Home(fails, "Volets ouverts.", now=paris(2, 7))
     async with home.book:
-        await home.schedule(instruction="Arrose les plantes", times=["08:00"])
-        await home.schedule(instruction="Ouvre les volets", times=["08:00"])
+        await home.schedule(title="Arrose les plantes", instruction="Arrose les plantes", times=["08:00"])
+        await home.schedule(title="Ouvre les volets", instruction="Ouvre les volets", times=["08:00"])
         home.clock.now = paris(2, 8, 1)
         assert await home.scheduler.wake_due() == 2
         assert await home.scheduler.wake_due() == 0, "a failed wake-up is not retried in a loop"
@@ -166,7 +173,7 @@ async def test_a_wake_up_that_fails_does_not_stop_the_others_nor_runs_again(fail
 async def test_a_wake_up_missed_while_stopped_runs_once_when_back_then_follows_its_times() -> None:
     home = Home(*["Fait."] * 3, now=paris(2, 7))
     async with home.book:
-        await home.schedule(instruction="Arrose les plantes", times=["08:00"])
+        await home.schedule(title="Arrose les plantes", instruction="Arrose les plantes", times=["08:00"])
     home.clock.now = paris(5, 12)  # stopped for three days
     home.build()
     async with home.book:
@@ -178,8 +185,10 @@ async def test_a_wake_up_missed_while_stopped_runs_once_when_back_then_follows_i
 async def test_a_one_off_ends_once_run_and_a_cancelled_one_never_runs() -> None:
     home = Home("Fait.", now=paris(2, 7))
     async with home.book:
-        once = await home.schedule(instruction="Rappelle à Mathis d'appeler le plombier", at="2026-11-03T09:00")
-        daily = await home.schedule(instruction="Arrose les plantes", times=["08:00"])
+        once = await home.schedule(
+            title="Appeler le plombier", instruction="Rappelle à Mathis d'appeler le plombier", at="2026-11-03T09:00"
+        )
+        daily = await home.schedule(title="Arrose les plantes", instruction="Arrose les plantes", times=["08:00"])
         cancel = next(t for t in home.tools.tools() if t.spec.name == "cancel_schedule")
         await cancel.run(
             {"schedule_id": daily["schedule_id"]}, ToolContext(address=CHAT, speaker=Speaker.account(MATHIS.id))
@@ -197,11 +206,13 @@ async def test_a_one_off_ends_once_run_and_a_cancelled_one_never_runs() -> None:
 @pytest.mark.parametrize(
     ("arguments", "error"),
     [
-        ({"instruction": "x", "at": "2026-11-01T09:00"}, "has already passed"),
-        ({"instruction": "x", "at": "demain"}, "cannot read the time"),
-        ({"instruction": "x", "times": ["08:00"], "days": ["lundi"]}, "unknown days lundi"),
-        ({"instruction": "x"}, "either once"),
-        ({"instruction": "x", "at": "2026-11-03T09:00", "times": ["08:00"]}, "either once"),
+        ({"title": "T", "instruction": "x", "at": "2026-11-01T09:00"}, "has already passed"),
+        ({"title": "T", "instruction": "x", "at": "demain"}, "cannot read the time"),
+        ({"title": "T", "instruction": "x", "times": ["08:00"], "days": ["lundi"]}, "unknown days lundi"),
+        ({"title": "T", "instruction": "x"}, "either once"),
+        ({"title": "T", "instruction": "x", "at": "2026-11-03T09:00", "times": ["08:00"]}, "either once"),
+        ({"instruction": "x", "at": "2026-11-03T09:00"}, "title must be a short name"),
+        ({"title": " ", "instruction": "x", "at": "2026-11-03T09:00"}, "title must be a short name"),
     ],
 )
 async def test_a_wake_up_that_cannot_be_set_says_why(arguments: dict[str, object], error: str) -> None:
@@ -215,13 +226,23 @@ async def test_a_wake_up_that_cannot_be_set_says_why(arguments: dict[str, object
 async def test_the_wake_ups_set_are_in_the_instructions_with_when_they_are_next_due() -> None:
     home = Home("D'accord.", now=paris(2, 7))
     async with home.book:
-        await home.schedule(instruction="Arrose les plantes", times=["08:00"], days=["sat", "sun"])
+        set_ = await home.schedule(
+            title=" Plantes du week-end ", instruction="Arrose les plantes", times=["08:00"], days=["sat", "sun"]
+        )
+        listed = await next(t for t in home.tools.tools() if t.spec.name == "list_schedules").run(
+            {}, ToolContext(address=CHAT, speaker=Speaker.account(MATHIS.id))
+        )
         section = str(
             await home.tools.context(
                 TurnContext(person=MATHIS, speaker=Speaker.account(MATHIS.id), address=CHAT, said=None)
             )
         )
-    assert "sat, sun at 08:00 (next: Saturday 07 November 08:00): Arrose les plantes" in section
+    when = "sat, sun at 08:00 (next: Saturday 07 November 08:00)"
+    assert f"Plantes du week-end, {when}: Arrose les plantes" in section, "its name, when, what to do"
+    named = {"schedule_id": set_["schedule_id"], "title": "Plantes du week-end", "when": when}
+    assert set_ == named and listed == {"schedules": [{**named, "instruction": "Arrose les plantes"}]}
+    (created,) = await home.journal.history(ScheduleCreated)
+    assert (created.title, created.instruction) == ("Plantes du week-end", "Arrose les plantes")
 
 
 async def test_a_recurring_wake_up_reads_what_it_and_its_tasks_told_before_and_tells_only_what_is_new() -> None:
@@ -229,7 +250,9 @@ async def test_a_recurring_wake_up_reads_what_it_and_its_tasks_told_before_and_t
     second result is answered knowing what the first one told, a day and a conversation later."""
     hermes = ScriptedExecutor(result="LG OLED65C6 à 1 599 € chez Boulanger.")
     hermes.name = "hermes"
-    check = ToolCall("c", "delegate_task", {"objective": "Vérifie le prix des télés", "notify": "message"})
+    check = ToolCall(
+        "c", "delegate_task", {"title": "Prix des télés", "objective": "Vérifie le prix des télés", "notify": "message"}
+    )
     model = ScriptedModel(
         check,
         f"{SILENT} lancé",
@@ -268,7 +291,9 @@ async def test_a_recurring_wake_up_reads_what_it_and_its_tasks_told_before_and_t
     async with book, tasks, Returns(journal, household, courier):
         tool = next(t for t in schedules.tools() if t.spec.name == "schedule")
         context = ToolContext(address=CHAT, speaker=Speaker.account(MATHIS.id))
-        await tool.run({"instruction": "Vérifie le prix des télés", "times": ["09:00"]}, context)
+        await tool.run(
+            {"title": "Prix des télés", "instruction": "Vérifie le prix des télés", "times": ["09:00"]}, context
+        )
         for day in (2, 3):
             clock.now = paris(day, 9, 1)
             assert await scheduler.wake_due() == 1
