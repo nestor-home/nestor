@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, History, RotateCcw } from "lucide-react";
+import { History, RotateCcw } from "lucide-react";
 import { useState } from "react";
 import { ApiError, api, configHistoryQuery, configVersionQuery, type HistoryEntry, keys } from "@/api";
 import { Ago } from "@/components/ago";
+import { CardHead, OpenArrow } from "@/components/card";
 import { Confirm } from "@/components/confirm";
 import { IconTile } from "@/components/marks";
 import { useNotify } from "@/components/notices";
@@ -33,21 +34,21 @@ export function HistoryPage() {
           <ol className="grid gap-3">
             {history.data.map((entry) => (
               <li key={entry.id}>
-                <button
-                  type="button"
-                  onClick={() => setOpened(entry)}
-                  className="surface flex w-full items-center gap-3.5 p-4 text-left"
-                >
-                  <IconTile icon={History} />
-                  <span className="min-w-0 flex-1">
-                    <span className="block font-medium text-ink">
-                      {dayLabel(entry.at)} · {clock(entry.at)}
-                    </span>
-                    <span className="block text-body text-ink-muted">
-                      <Ago iso={entry.at} /> · {t("cfg-history-size", { size: entry.size })}
-                    </span>
-                  </span>
-                  <ArrowRight className="size-4 text-ink-faint" aria-hidden="true" />
+                <button type="button" onClick={() => setOpened(entry)} className="group surface w-full p-4 text-left">
+                  <CardHead
+                    mark={<IconTile icon={History} />}
+                    title={
+                      <span className="first-letter:uppercase">
+                        {dayLabel(entry.at)} · {clock(entry.at)}
+                      </span>
+                    }
+                    line={
+                      <>
+                        <Ago iso={entry.at} /> · {t("cfg-history-size", { size: entry.size })}
+                      </>
+                    }
+                    aside={<OpenArrow />}
+                  />
                 </button>
               </li>
             ))}

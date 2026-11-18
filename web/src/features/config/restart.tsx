@@ -206,7 +206,7 @@ export function RestartBanner() {
           <ul className="flex flex-wrap gap-1.5 border-t border-rule px-4 py-3">
             {me.pending_changes.map((path) => (
               <li key={path}>
-                <Tag className="font-mono [overflow-wrap:anywhere]">{path}</Tag>
+                <Tag className="min-w-0 font-mono">{path}</Tag>
               </li>
             ))}
           </ul>

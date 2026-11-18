@@ -42,7 +42,7 @@ export function PersonMessage({
     >
       {files}
       {text ? (
-        <div className="rounded-3xl rounded-br-md bg-paper-sunken px-4 py-2.5 text-lead leading-relaxed whitespace-pre-wrap text-ink [overflow-wrap:anywhere]">
+        <div className="min-w-0 rounded-3xl rounded-br-md bg-paper-sunken px-4 py-2.5 text-lead leading-relaxed whitespace-pre-wrap text-ink">
           <MentionText text={text} mentions={mentions} />
         </div>
       ) : null}
@@ -55,7 +55,7 @@ export const Answer = memo(function Answer({ text, streaming }: { text: string; 
   const translations = useTranslations();
   return (
     <Streamdown
-      className="chat-markdown min-w-0 text-lead leading-7 text-ink [overflow-wrap:anywhere]"
+      className="chat-markdown min-w-0 text-lead leading-7 text-ink"
       isAnimating={streaming}
       animated={streaming ? { animation: "fadeIn", duration: 220 } : false}
       caret={streaming ? "block" : undefined}
@@ -163,7 +163,7 @@ function ToolBlock({ label, children }: { label: string; children: string }) {
   return (
     <div className="grid gap-1.5">
       <p className="caption">{label}</p>
-      <pre className="max-h-64 overflow-auto rounded-lg bg-paper-sunken px-3 py-2 font-mono text-meta leading-relaxed whitespace-pre-wrap text-ink [overflow-wrap:anywhere]">
+      <pre className="min-w-0 max-h-64 overflow-auto rounded-lg bg-paper-sunken px-3 py-2 font-mono text-meta leading-relaxed whitespace-pre-wrap text-ink">
         {children}
       </pre>
     </div>
@@ -247,7 +247,7 @@ function Recording({ url, name, transcript }: { url: string; name: string | null
       {transcript ? (
         <details className="px-1 text-body text-ink-muted">
           <summary className="cursor-pointer select-none">{t("chat-transcript")}</summary>
-          <p className="mt-1 [overflow-wrap:anywhere]">{transcript}</p>
+          <p className="min-w-0 mt-1">{transcript}</p>
         </details>
       ) : null}
     </div>

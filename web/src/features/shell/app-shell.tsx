@@ -12,7 +12,7 @@ import { useAccountLocale, useT } from "@/i18n";
 import { useMe } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import { AccountMenu } from "./account-menu";
-import { useAttention } from "./attention";
+import { AttentionProvider, useAttention } from "./attention";
 import { CommandPalette, useCommandPalette } from "./command-palette";
 import { useLive } from "./live";
 import { destinations, inSpace, type Space, visibleSpaces } from "./nav";
@@ -35,36 +35,38 @@ export function AppShell() {
   const rail = useRail();
 
   return (
-    <AgentPresenceProvider>
-      <a
-        href="#content"
-        className="sr-only z-50 rounded-md bg-ink px-3 py-2 text-paper focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
-      >
-        {t("shell-skip")}
-      </a>
-      {mobile ? <TopBar onSearch={search} /> : <Rail onSearch={search} rail={rail} />}
-      <main
-        id="content"
-        data-rail={rail.wide ? "wide" : "narrow"}
-        className={cn(
-          "min-w-0 md:pl-[4.75rem] md:wide:pl-64 md:transition-[padding] md:duration-200",
-          bleed
-            ? "flex h-[calc(100svh-3.5rem-4rem-env(safe-area-inset-bottom))] flex-col overflow-hidden md:h-svh"
-            : "px-4 pt-5 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:px-6 md:pt-8 md:pr-10 md:pb-16 md:pl-[calc(4.75rem+2.5rem)] md:wide:pl-[calc(16rem+3rem)]",
-        )}
-      >
-        {bleed ? (
-          <Outlet />
-        ) : (
-          <div className="mx-auto max-w-[76rem]">
-            <RestartBanner />
+    <AttentionProvider>
+      <AgentPresenceProvider>
+        <a
+          href="#content"
+          className="sr-only z-50 rounded-md bg-ink px-3 py-2 text-paper focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
+        >
+          {t("shell-skip")}
+        </a>
+        {mobile ? <TopBar onSearch={search} /> : <Rail onSearch={search} rail={rail} />}
+        <main
+          id="content"
+          data-rail={rail.wide ? "wide" : "narrow"}
+          className={cn(
+            "min-w-0 md:pl-[4.75rem] md:wide:pl-64 md:transition-[padding] md:duration-200",
+            bleed
+              ? "flex h-[calc(100svh-3.5rem-4rem-env(safe-area-inset-bottom))] flex-col overflow-hidden md:h-svh"
+              : "px-4 pt-5 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:px-6 md:pt-8 md:pr-10 md:pb-16 md:pl-[calc(4.75rem+2.5rem)] md:wide:pl-[calc(16rem+3rem)]",
+          )}
+        >
+          {bleed ? (
             <Outlet />
-          </div>
-        )}
-      </main>
-      {mobile ? <TabBar /> : null}
-      <CommandPalette open={palette.open} onOpenChange={(open) => palette.setOpen(() => open)} />
-    </AgentPresenceProvider>
+          ) : (
+            <div className="mx-auto max-w-[76rem]">
+              <RestartBanner />
+              <Outlet />
+            </div>
+          )}
+        </main>
+        {mobile ? <TabBar /> : null}
+        <CommandPalette open={palette.open} onOpenChange={(open) => palette.setOpen(() => open)} />
+      </AgentPresenceProvider>
+    </AttentionProvider>
   );
 }
 

@@ -24,9 +24,7 @@ export function MemoryCard({ memory, about, onOpen }: { memory: Memory; about: b
   return (
     <li>
       <button type="button" className="surface flex h-full w-full flex-col gap-3 p-4 text-left" onClick={onOpen}>
-        <span className="flex-1 title-sub text-ink [overflow-wrap:anywhere] [font-variation-settings:'opsz'_18]">
-          {memory.text}
-        </span>
+        <span className="min-w-0 flex-1 title-sub text-ink [font-variation-settings:'opsz'_18]">{memory.text}</span>
         <span className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-meta text-ink-muted">
           {about ? (
             <span className="inline-flex items-center gap-1.5 text-ink">

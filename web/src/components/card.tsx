@@ -87,10 +87,11 @@ export function OpenArrow({ className }: { className?: string }) {
 }
 
 /** The way to see all of what a section shows a few of, in its `aside`. */
-export function MoreLink({ children, ...link }: LinkProps & { children: string }) {
+export function MoreLink({ children, onClick, ...link }: LinkProps & { children: string; onClick?: () => void }) {
   return (
     <Link
       {...link}
+      onClick={onClick}
       className="-mx-2 inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-body whitespace-nowrap text-ink-muted transition-colors hover:bg-paper-sunken hover:text-ink"
     >
       {children} <ArrowRight className="size-3.5" aria-hidden="true" />

@@ -26,7 +26,7 @@ export function PageHeader({
       {crumbs}
       <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
         <div className="min-w-0 max-w-3xl">
-          <h1 className="display-2 flex items-center gap-4 [overflow-wrap:anywhere] text-ink">
+          <h1 className="display-2 flex items-center gap-4 text-ink">
             {mark}
             <span className="min-w-0">{title}</span>
           </h1>

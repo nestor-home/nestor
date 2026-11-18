@@ -74,7 +74,7 @@ function ExecutorCard({ executor, manage }: { executor: ExecutorInfo; manage: bo
       <div className="flex items-start gap-3.5">
         {brand ? <BrandTile brand={brand} /> : <IconTile icon={Workflow} />}
         <div className="min-w-0">
-          <p className="font-medium [overflow-wrap:anywhere] text-ink">{executor.name}</p>
+          <p className="min-w-0 font-medium text-ink">{executor.name}</p>
           <p className="text-body text-ink-muted">{t("sys-executor-tools", { tools: executor.nestor_tools })}</p>
         </div>
       </div>

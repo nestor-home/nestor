@@ -21,6 +21,7 @@ const MARKS = 4;
 export function ConfigOverview() {
   const t = useT();
   const { schema, state } = useConfigEditor();
+  const marksOf = usePageMarks();
   return (
     <div>
       <PageHeader
@@ -31,7 +32,7 @@ export function ConfigOverview() {
         meta={
           <>
             <FileCog className="size-3.5 shrink-0" aria-hidden="true" />
-            <span className="font-mono text-micro [overflow-wrap:anywhere]">{state.path}</span>
+            <span className="min-w-0 font-mono text-micro">{state.path}</span>
           </>
         }
       >
@@ -43,7 +44,7 @@ export function ConfigOverview() {
           <Section key={group} title={t(GROUP_LABEL[group])}>
             <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {pages.map((page) => (
-                <PageCard key={page.slug} page={page} />
+                <PageCard key={page.slug} page={page} marks={marksOf(page)} />
               ))}
             </ul>
           </Section>
@@ -54,10 +55,9 @@ export function ConfigOverview() {
 }
 
 /** A part of the file: the logos of what it holds (else its tile), its name, and what is set now. */
-function PageCard({ page }: { page: ConfigPage }) {
+function PageCard({ page, marks }: { page: ConfigPage; marks: ReturnType<ReturnType<typeof usePageMarks>> }) {
   const t = useT();
   const { schema, draft } = useConfigEditor();
-  const marks = usePageMarks()(page);
   const glance = useGlance(page);
   const people = page.kind === "household" ? peopleOf(draft) : [];
   const to = `/config/${page.slug}`;

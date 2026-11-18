@@ -49,7 +49,7 @@ export function GuidedDialog({
             <DialogTitle
               ref={heading}
               tabIndex={-1}
-              className="title-card font-normal text-balance [overflow-wrap:anywhere] text-ink outline-none"
+              className="min-w-0 title-card font-normal text-balance text-ink outline-none"
             >
               {title}
             </DialogTitle>

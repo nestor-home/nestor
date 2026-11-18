@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
  * A satellite's mark: its maker's logo when the maker has one, otherwise a picture of what the device
  * is (a robot, a screen, a speaker, a microphone, a sensor), never a letter in a box.
  */
-export function DeviceMark({
+function DeviceMark({
   brand,
   capabilities,
   className,

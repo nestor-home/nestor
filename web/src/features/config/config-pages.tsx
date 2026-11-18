@@ -108,7 +108,7 @@ function Settings({ sectionKey, section, title }: { sectionKey: string; section:
             const value = valueText(node, getAt(draft, [...path, field]));
             const fallback = defaultShown(node, section);
             return (
-              <Fact key={field} term={titleOf(node, field)} className="min-w-0 [overflow-wrap:anywhere]">
+              <Fact key={field} term={titleOf(node, field)} className="min-w-0">
                 {value !== null ? (
                   <span className="line-clamp-3 text-ink">{value}</span>
                 ) : (

@@ -118,7 +118,7 @@ function Loaded({ event: { item: event, record } }: { event: JournalEvent }) {
         event.kind === "tool" ? (
           <pre className="code-block min-w-0">{event.detail_text}</pre>
         ) : (
-          <p className="title-sub whitespace-pre-line [overflow-wrap:anywhere]">{event.detail_text}</p>
+          <p className="min-w-0 title-sub whitespace-pre-line">{event.detail_text}</p>
         )
       ) : null}
       <Attachments item={event} />
@@ -156,7 +156,7 @@ function Loaded({ event: { item: event, record } }: { event: JournalEvent }) {
           </h3>
           <CopyButton value={raw} label={t("jr-raw-copy")} />
         </div>
-        <p className="mb-2 font-mono text-meta [overflow-wrap:anywhere] text-ink-muted">
+        <p className="min-w-0 mb-2 font-mono text-meta text-ink-muted">
           {event.type} · {event.id}
         </p>
         <pre className="code-block max-h-80 min-w-0 overflow-y-auto">{raw}</pre>

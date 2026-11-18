@@ -32,8 +32,8 @@ export function Changes({ diff, className }: { diff: ConfigDiff; className?: str
               aria-label={t(`cfg-change-${sort}`)}
             />
             <div className="min-w-0">
-              <p className="font-mono text-meta [overflow-wrap:anywhere] text-ink">{change.path}</p>
-              <p className="mt-0.5 text-meta [overflow-wrap:anywhere] text-ink-muted">
+              <p className="min-w-0 font-mono text-meta text-ink">{change.path}</p>
+              <p className="min-w-0 mt-0.5 text-meta text-ink-muted">
                 {change.secret ? (
                   t("cfg-change-secret")
                 ) : sort === "added" ? (

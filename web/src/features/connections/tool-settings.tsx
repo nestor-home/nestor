@@ -94,7 +94,7 @@ export function ToolSettings({ connection, editable }: { connection: ConnectionD
               <li key={tool.name} className="flex items-start gap-4 px-4 py-3.5">
                 <div className="min-w-0 flex-1">
                   <label htmlFor={id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <code className="font-mono text-meta [overflow-wrap:anywhere] text-ink">{tool.name}</code>
+                    <code className="min-w-0 font-mono text-meta text-ink">{tool.name}</code>
                     <RiskTag risk={tool.risk} />
                   </label>
                   <p id={`${id}-description`} className="mt-0.5 text-body text-ink-muted">

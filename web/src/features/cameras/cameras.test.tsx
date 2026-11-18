@@ -71,7 +71,7 @@ afterEach(() => {
 /** The house, where one watches and calls: its "Watch and call" part lists the devices one may use. */
 async function deviceRow(name: string): Promise<HTMLElement> {
   const media = await screen.findByRole("region", { name: /^Watch and call/ });
-  const label = await within(media).findByText(name, { selector: "p" });
+  const label = await within(media).findByText(name);
   const row = label.closest("li");
   if (!row) throw new Error(`${name} is a row`);
   return row;

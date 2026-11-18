@@ -76,7 +76,7 @@ export function Files({
                   <track kind="captions" />
                 </audio>
                 {attachment.kind === "audio" && attachment.transcript ? (
-                  <p className="text-body text-ink-muted [overflow-wrap:anywhere]">{attachment.transcript}</p>
+                  <p className="min-w-0 text-body text-ink-muted">{attachment.transcript}</p>
                 ) : null}
               </div>
             ) : (

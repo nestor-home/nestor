@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import type { Schemas } from "./schema";
 
-export type PageKind = "section" | "household" | "slots" | "secrets" | "history";
+type PageKind = "section" | "household" | "slots" | "secrets" | "history";
 
 export const GROUPS = ["agent", "household", "talk", "reach", "install"] as const;
 export type Group = (typeof GROUPS)[number];
@@ -42,7 +42,7 @@ export interface ConfigPage {
   about?: string;
 }
 
-export const PAGES: ConfigPage[] = [
+const PAGES: ConfigPage[] = [
   { slug: "persona", kind: "section", keys: ["persona"], icon: Bot, group: "agent", about: "cfg-about-persona" },
   {
     slug: "initiative",
@@ -152,7 +152,7 @@ export const GROUP_LABEL: Record<Group, string> = {
  * The pages for this instance's schema: the known ones it has, then a page for any section or slot
  * the schema adds (a plugin's, a newer Nestor's), so nothing in the file is out of reach.
  */
-export function pagesFor(schema: Schemas): ConfigPage[] {
+function pagesFor(schema: Schemas): ConfigPage[] {
   const known = new Set(PAGES.flatMap((p) => p.keys));
   const has = (p: ConfigPage) => !p.keys.length || p.keys.some((k) => k in schema.sections || k in schema.slots);
   const added = (keys: string[], kind: PageKind, group: Group): ConfigPage[] =>

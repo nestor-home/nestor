@@ -104,9 +104,7 @@ function Outcome({ task }: { task: Task }) {
         <Panel>
           <div className="flex items-start gap-4">
             <IconTile icon={TriangleAlert} tone="brick" />
-            <p className="min-w-0 flex-1 self-center whitespace-pre-line text-brick [overflow-wrap:anywhere]">
-              {task.error}
-            </p>
+            <p className="min-w-0 flex-1 self-center whitespace-pre-line text-brick">{task.error}</p>
           </div>
           {files}
         </Panel>
@@ -118,7 +116,7 @@ function Outcome({ task }: { task: Task }) {
       <Section title={t("task-result")}>
         <Panel marked>
           {task.result ? (
-            <p className="max-w-2xl whitespace-pre-line font-serif text-heading leading-relaxed text-ink [overflow-wrap:anywhere]">
+            <p className="min-w-0 max-w-2xl whitespace-pre-line font-serif text-heading leading-relaxed text-ink">
               {task.result}
             </p>
           ) : null}

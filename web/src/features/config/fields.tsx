@@ -45,7 +45,7 @@ import {
 const idOf = (path: Path) => `cfg-${path.join("-").replace(/[^\w-]/g, "_")}`;
 
 /** A located problem said at its field: the field's own label instead of the dotted path. */
-export function problemText(problem: ConfigProblem, label?: string): string {
+function problemText(problem: ConfigProblem, label?: string): string {
   if (hasMessage(problem.message_id))
     return tr(problem.message_id, { ...problem.args, path: label ?? keyOf(problem.path) });
   const path = String(problem.args.path ?? "");
@@ -399,7 +399,7 @@ function SecretControl({ id, node, root, path, required, label }: ControlProps) 
     return (
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-rule bg-paper-sunken/60 px-3 py-1.5">
         <KeyRound className="size-3.5 text-ink-faint" aria-hidden="true" />
-        <span id={id} className="min-w-0 flex-1 font-mono text-meta [overflow-wrap:anywhere] text-ink">
+        <span id={id} className="min-w-0 flex-1 font-mono text-meta text-ink">
           {isShown(value)
             ? value.set
               ? t("cfg-secret-set", { preview: value.preview ?? "•••" })

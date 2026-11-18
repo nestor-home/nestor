@@ -116,7 +116,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
   );
 }
 
-export function useCommandKey(setOpen: (update: (open: boolean) => boolean) => void): void {
+function useCommandKey(setOpen: (update: (open: boolean) => boolean) => void): void {
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {

@@ -99,7 +99,7 @@ function Pending({
             <div className="flex items-start gap-3.5">
               <DeviceTile brand={r.device.brand} capabilities={r.capabilities} className="bg-amber-soft text-amber" />
               <div className="min-w-0 flex-1">
-                <h3 className="font-mono text-body font-medium [overflow-wrap:anywhere] text-ink">{r.device.id}</h3>
+                <h3 className="min-w-0 font-mono text-body font-medium text-ink">{r.device.id}</h3>
                 <p className="text-body text-ink-muted">
                   {t("sat-model-room", { model: r.device.model, room: r.device.room })}
                 </p>

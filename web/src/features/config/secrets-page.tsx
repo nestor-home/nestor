@@ -60,7 +60,7 @@ function SecretRow({ secret: s }: { secret: Secret }) {
     <li className="flex flex-wrap items-start gap-x-3.5 gap-y-3 px-4 py-3.5">
       <IconTile icon={KeyRound} tone={s.set ? "ink" : "brick"} />
       <div className="grid min-w-0 flex-1 basis-48 gap-1">
-        <p className="font-mono text-body [overflow-wrap:anywhere] text-ink">{s.name}</p>
+        <p className="min-w-0 font-mono text-body text-ink">{s.name}</p>
         {s.set ? (
           <Status tone="ok">{t("cfg-secret-set", { preview: s.preview ?? "•••" })}</Status>
         ) : (
@@ -71,7 +71,7 @@ function SecretRow({ secret: s }: { secret: Secret }) {
             <>
               {t("cfg-secret-used-by")}
               {s.used_by.map((path) => (
-                <Tag key={path} className="font-mono [overflow-wrap:anywhere]">
+                <Tag key={path} className="min-w-0 font-mono">
                   {path}
                 </Tag>
               ))}

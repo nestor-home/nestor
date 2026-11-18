@@ -186,7 +186,7 @@ function ComponentCard({
         <HealthStatus health={c.health} className="pt-1" />
       </span>
       <span className="min-w-0">
-        <span className="block font-medium [overflow-wrap:anywhere] text-ink">{c.name}</span>
+        <span className="min-w-0 block font-medium text-ink">{c.name}</span>
         <span className="block truncate text-meta text-ink-muted">
           {[c.model_type ? modelTypeLabel(c.model_type) : null, brand ? brandName(brand) : c.adapter]
             .filter(Boolean)
@@ -241,17 +241,17 @@ function ComponentSheet({ component: c }: { component: Component }) {
         {brand ? <Fact term={t("sys-fact-service")}>{brandName(brand)}</Fact> : null}
         {c.model_type ? <Fact term={t("sys-fact-type")}>{modelTypeLabel(c.model_type)}</Fact> : null}
         {c.fallback ? <Fact term={t("sys-fact-fallback")}>{c.fallback}</Fact> : null}
-        <Fact term={t("sys-fact-adapter")} className="font-mono text-meta [overflow-wrap:anywhere]">
+        <Fact term={t("sys-fact-adapter")} className="min-w-0 font-mono text-meta">
           {c.adapter}
         </Fact>
         {c.version ? (
-          <Fact term={t("sys-fact-version")} className="font-mono text-meta [overflow-wrap:anywhere]">
+          <Fact term={t("sys-fact-version")} className="min-w-0 font-mono text-meta">
             {c.distribution ? `${c.distribution} ${c.version}` : c.version}
           </Fact>
         ) : null}
         {c.capabilities.length ? <Fact term={t("sys-fact-can")}>{c.capabilities.join(" · ")}</Fact> : null}
         {Object.entries(c.details).map(([key, value]) => (
-          <Fact key={key} term={key} className="[overflow-wrap:anywhere]">
+          <Fact key={key} term={key} className="min-w-0">
             {value}
           </Fact>
         ))}

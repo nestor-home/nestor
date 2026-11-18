@@ -4,7 +4,7 @@
  */
 import { Link, Outlet, useBlocker, useNavigate, useRouterState } from "@tanstack/react-router";
 import { ChevronsUpDown, FilePenLine, LoaderCircle } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 import { messageOf } from "@/api";
 import { Confirm } from "@/components/confirm";
 import { Crumbs } from "@/components/crumbs";
@@ -36,7 +36,8 @@ export function ConfigLayout() {
 /** Where a page of the file stands in the draft: its problems, and whether it differs from the file. */
 export function usePageMarks() {
   const { base, draft, problems, dirty } = useConfigEditor();
-  const changed = dirty ? changedKeys(base, draft) : new Set<string>();
+  // one diff of the whole draft, however many pages ask
+  const changed = useMemo(() => (dirty ? changedKeys(base, draft) : new Set<string>()), [base, draft, dirty]);
   return (page: ConfigPage) => ({
     problems: page.keys.reduce((n, k) => n + problemsUnder(problems, [k]).length, 0),
     changed: page.keys.some((k) => changed.has(k)),

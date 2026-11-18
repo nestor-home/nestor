@@ -100,9 +100,7 @@ function Head({
     <header className="flex items-start gap-3.5">
       <IconTile icon={icon} tone={tone} />
       <div className="min-w-0 flex-1">
-        <h3 className="font-sans text-lead leading-snug font-medium text-pretty text-ink [overflow-wrap:anywhere]">
-          {title}
-        </h3>
+        <h3 className="min-w-0 font-sans text-lead leading-snug font-medium text-pretty text-ink">{title}</h3>
         <p className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-body text-ink-muted">
           {people.map((p) => (
             <span key={p.id} className="inline-flex items-center gap-1.5 text-ink">
@@ -228,7 +226,7 @@ function TurnBlock({ turn, open, unfolded }: { turn: Turn; open: (position: numb
               label={t("jr-entry-label", { text: say(turn.user), detail: turn.user.detail_text })}
               className="w-fit max-w-full rounded-2xl rounded-tl-sm bg-paper-sunken px-3.5 py-2 hover:bg-rule"
             >
-              <span className="block text-body leading-relaxed text-ink [overflow-wrap:anywhere]">
+              <span className="min-w-0 block text-body leading-relaxed text-ink">
                 {turn.user.detail_text || say(turn.user)}
               </span>
             </Entry>
@@ -254,7 +252,7 @@ function TurnBlock({ turn, open, unfolded }: { turn: Turn; open: (position: numb
               >
                 <span
                   className={cn(
-                    "block title-sub [overflow-wrap:anywhere] whitespace-pre-line",
+                    "block min-w-0 title-sub whitespace-pre-line",
                     interrupted ? "text-ink-muted" : "text-ink",
                   )}
                 >
@@ -349,7 +347,7 @@ function Between({ turn, open, unfolded }: { turn: Turn; open: (position: number
                         item.tone === "warning" ? "bg-brick" : kindDot(item.kind),
                       )}
                     />
-                    <span className="min-w-0 [overflow-wrap:anywhere]">
+                    <span className="min-w-0">
                       {say(item)}
                       {item.detail_text ? <span className="text-ink-faint"> · {item.detail_text}</span> : null}
                     </span>
@@ -392,7 +390,7 @@ function CallDetail({ call, open }: { call: ToolCall; open: (position: number) =
           type="button"
           data-journal-entry=""
           onClick={() => event && open(event.position)}
-          className="font-mono text-meta text-ink [overflow-wrap:anywhere] hover:underline"
+          className="min-w-0 font-mono text-meta text-ink hover:underline"
           aria-label={t("jr-call-details", { tool: call.name })}
         >
           {call.name}
@@ -509,13 +507,13 @@ function ChainStep({
             ) : null}
           </span>
           {item.reason ? (
-            <span className="mt-0.5 block text-body text-ink [overflow-wrap:anywhere]">
+            <span className="min-w-0 mt-0.5 block text-body text-ink">
               <span className="text-ember">{t("jr-why-label")} </span>
               {why(item)}
             </span>
           ) : null}
           {item.detail_text ? (
-            <span className="mt-0.5 block text-body text-ink-muted [overflow-wrap:anywhere]">{item.detail_text}</span>
+            <span className="min-w-0 mt-0.5 block text-body text-ink-muted">{item.detail_text}</span>
           ) : null}
         </Entry>
         <Attachments item={item} className="mt-1.5" />
@@ -545,7 +543,7 @@ function SingleCard({ single, open, isNew }: Props & { single: Single }) {
         <span className="flex items-center gap-3.5">
           <IconTile {...tileOf(item)} size="sm" />
           <span className="min-w-0 flex-1">
-            <span className="block text-body text-ink [overflow-wrap:anywhere]">{text}</span>
+            <span className="min-w-0 block text-body text-ink">{text}</span>
             {people.length || item.detail_text || sourced(item) ? (
               <span className="flex flex-wrap items-center gap-x-2.5 text-meta text-ink-muted">
                 <Source item={item} />

@@ -7,9 +7,7 @@
  * Progress is the addition's `stage`, polled while the sheet is open.
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
 import {
-  ArrowRight,
   AudioLines,
   Check,
   ChevronRight,
@@ -36,6 +34,7 @@ import {
 } from "@/api";
 import { pairingMethodValues } from "@/api/schema.gen";
 import { AgentFigure } from "@/components/agent-figure";
+import { MoreLink } from "@/components/card";
 import { CopyField } from "@/components/copy-field";
 import { Field } from "@/components/field";
 import { FormActions } from "@/components/form-actions";
@@ -520,14 +519,9 @@ function Paired({ addition, close }: { addition: Addition; close: () => void }) 
           {t("sat-addition-paired", { name: addition.name ?? addition.device_id ?? "" })}
         </p>
         {addition.device_id ? (
-          <Link
-            to="/satellites/$satelliteId"
-            params={{ satelliteId: addition.device_id }}
-            onClick={close}
-            className="inline-flex items-center gap-1 text-body text-ember hover:underline"
-          >
-            {t("sat-addition-see")} <ArrowRight className="size-3.5" aria-hidden="true" />
-          </Link>
+          <MoreLink to="/satellites/$satelliteId" params={{ satelliteId: addition.device_id }} onClick={close}>
+            {t("sat-addition-see")}
+          </MoreLink>
         ) : null}
       </div>
     </div>

@@ -14,7 +14,7 @@ import {
   type Role,
 } from "@/api";
 import { Ago } from "@/components/ago";
-import { TILE_CARD, TileCard } from "@/components/card";
+import { CardHead, TILE_CARD, TileCard } from "@/components/card";
 import { Choice } from "@/components/choice";
 import { Confirm } from "@/components/confirm";
 import { type Crumb, Crumbs } from "@/components/crumbs";
@@ -148,14 +148,13 @@ function InvitationRow({ invitation }: { invitation: Invitation }) {
   });
   const who = invitation.person?.name ?? t("acc-invitation-anyone");
   return (
-    <li className="flex flex-wrap items-center gap-x-4 gap-y-3 px-5 py-4">
-      <IconTile icon={MailPlus} tone="amber" />
-      <div className="min-w-0 flex-1 basis-48">
-        <p className="font-medium text-ink">{who}</p>
-        <p className="text-meta text-ink-muted">
-          {t("acc-invitation-line", { role: roleLabel(invitation.role), expires: moment(invitation.expires_at) })}
-        </p>
-      </div>
+    <li className="flex flex-wrap items-center gap-x-4 gap-y-3 px-4 py-3">
+      <CardHead
+        className="flex-1 basis-60"
+        mark={<IconTile icon={MailPlus} tone="amber" size="sm" />}
+        title={who}
+        line={t("acc-invitation-line", { role: roleLabel(invitation.role), expires: moment(invitation.expires_at) })}
+      />
       <Confirm
         trigger={
           <Button variant="destructive" size="sm">

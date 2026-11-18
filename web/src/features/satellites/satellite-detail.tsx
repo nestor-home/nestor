@@ -4,6 +4,7 @@ import { Activity, Cpu, Gauge, RadioTower } from "lucide-react";
 import type { ReactNode } from "react";
 import { api, isMissing, keys, type Satellite, satelliteQuery } from "@/api";
 import { Ago } from "@/components/ago";
+import { CardHead } from "@/components/card";
 import { Confirm } from "@/components/confirm";
 import { type Crumb, Crumbs } from "@/components/crumbs";
 import { IconTile } from "@/components/marks";
@@ -143,7 +144,7 @@ export function SatelliteOverview({ satellite: s }: { satellite: Satellite }) {
               <Ago iso={s.last_seen_at} />
             </Fact>
           ) : null}
-          <Fact term={t("sat-software")} className="font-mono text-meta [overflow-wrap:anywhere]">
+          <Fact term={t("sat-software")} className="min-w-0 font-mono text-meta">
             {s.software.name} {s.software.version} · {s.protocol}
           </Fact>
         </Facts>
@@ -175,13 +176,14 @@ export function SatelliteCapabilities({ satellite: s }: { satellite: Satellite }
   return (
     <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
       {s.capabilities.map((c) => (
-        <li key={c.name} className="surface flex items-start gap-3.5 p-4">
-          <IconTile icon={CAPABILITY_ICON[c.name] ?? RadioTower} />
-          <div className="min-w-0">
-            <p className="font-medium text-ink">{c.label}</p>
-            {means(c.name) ? <p className="mt-0.5 text-body text-ink-muted">{means(c.name)}</p> : null}
-            <code className="mt-1.5 block font-mono text-micro text-ink-faint">{c.name}</code>
-          </div>
+        <li key={c.name} className="surface p-4">
+          <CardHead
+            mark={<IconTile icon={CAPABILITY_ICON[c.name] ?? RadioTower} />}
+            title={c.label}
+            line={means(c.name)}
+          >
+            <code className="font-mono text-micro text-ink-faint">{c.name}</code>
+          </CardHead>
         </li>
       ))}
     </ul>

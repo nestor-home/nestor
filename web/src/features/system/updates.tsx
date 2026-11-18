@@ -5,10 +5,11 @@
  * the commands the server names for the way Nestor is installed.
  */
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, CircleArrowUp, ExternalLink } from "lucide-react";
+import { CircleArrowUp, ExternalLink } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api, type ChangeKind, keys, type Release, type Updates, updatesQuery } from "@/api";
 import { AgentFigure } from "@/components/agent-figure";
+import { OpenArrow } from "@/components/card";
 import { Confirm } from "@/components/confirm";
 import { CopyField } from "@/components/copy-field";
 import { Dither } from "@/components/dither";
@@ -69,7 +70,7 @@ export function UpdateAvailable({ compact }: { compact: boolean }) {
                   {t("upd-available-running", { latest, running: updates.data?.running ?? "" })}
                 </span>
               </span>
-              <ArrowRight className="relative size-4 shrink-0 text-ink-faint" aria-hidden="true" />
+              <OpenArrow className="relative" />
             </>
           )}
         </button>
@@ -84,7 +85,7 @@ export function UpdateAvailable({ compact }: { compact: boolean }) {
  * What the install is doing comes from the server alone (`installing`, `failed`); once it stops
  * answering, or answers on the new version, the dialog follows Nestor through its restart.
  */
-export function NestorUpdate({
+function NestorUpdate({
   open,
   onOpenChange,
   target,
@@ -156,7 +157,7 @@ export function NestorUpdate({
             <p>{t("upd-outdated", { count: updates.left_behind.length })}</p>
             <ul className="mt-1.5 grid gap-0.5">
               {updates.left_behind.map((s) => (
-                <li key={s.id} className="[overflow-wrap:anywhere]">
+                <li key={s.id} className="min-w-0">
                   {s.name ?? s.id}
                 </li>
               ))}
@@ -209,7 +210,7 @@ function ReleaseNotes({ release }: { release: Release }) {
             <p className={kind === "breaking" ? "caption text-brick" : "caption"}>{t(`upd-kind-${kind}`)}</p>
             <ul className="mt-1 grid list-disc gap-1 pl-5 text-meta text-ink" lang="en">
               {changes.map((c) => (
-                <li key={c.text} className="[overflow-wrap:anywhere]">
+                <li key={c.text} className="min-w-0">
                   {c.text}
                 </li>
               ))}
