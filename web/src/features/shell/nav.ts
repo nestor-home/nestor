@@ -1,4 +1,3 @@
-import type { LucideIcon } from "lucide-react";
 import {
   BookMarked,
   House,
@@ -15,6 +14,7 @@ import {
 } from "lucide-react";
 import type { Scope } from "@/api";
 import { type Permission, permissions } from "@/lib/session";
+import type { LucideIcon } from "lucide-react";
 
 /** A place one goes to: its page, who may see it (holding one of `any`), and `g` then its key to jump there. */
 export interface Destination {

@@ -88,7 +88,7 @@ export function MemoryPanel({ memory, editable, onDone }: { memory: Memory; edit
                 </FormDialog>
                 <Confirm
                   trigger={
-                    <Button variant="ghost" className="text-brick hover:text-brick">
+                    <Button variant="destructive">
                       <Trash2 /> {t("mem-forget")}
                     </Button>
                   }

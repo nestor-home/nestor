@@ -7,7 +7,6 @@ import { Link } from "@tanstack/react-router";
 import type { LucideIcon } from "lucide-react";
 import {
   AlarmClock,
-  ArrowRight,
   BookMarked,
   ChevronDown,
   CircleAlert,
@@ -18,14 +17,16 @@ import {
   Send,
   Workflow,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   homeQuery,
   initiativeQuery,
   type JournalItem,
   journalLatestQuery,
   memoriesQuery,
+  type Person,
   peopleQuery,
+  type Satellite,
   satellitesQuery,
   schedulesQuery,
   type Task,
@@ -33,6 +34,7 @@ import {
   watchesQuery,
 } from "@/api";
 import { Ago } from "@/components/ago";
+import { CardHead, MoreLink, OpenArrow } from "@/components/card";
 import { IconTile, Pebble, type TileTone } from "@/components/marks";
 import { Section } from "@/components/page";
 import { Empty } from "@/components/states";
@@ -43,10 +45,12 @@ import { EventSheet } from "@/features/journal/event-sheet";
 import { merge } from "@/features/journal/merge";
 import { useAttention } from "@/features/shell/attention";
 import { useLiveItems } from "@/features/shell/live";
+import { RunningTask } from "@/features/tasks/parts";
+import { useNow } from "@/hooks/use-now";
 import { useT } from "@/i18n";
-import { activeLocale, tr } from "@/i18n/runtime";
-import { BrandMark, brandName, brandOf } from "@/lib/brands";
-import { hourMinute, moment, startOfToday } from "@/lib/dates";
+import { tr } from "@/i18n/runtime";
+import { kindName } from "@/lib/brands";
+import { hourMinute, longDate, moment, startOfToday } from "@/lib/dates";
 import { say } from "@/lib/messages";
 import { useCan, useMe } from "@/lib/session";
 import { cn } from "@/lib/utils";
@@ -64,19 +68,12 @@ const clock = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${S
 const threadOf = (item: JournalItem) =>
   item.links.conversation ? { conversation: item.links.conversation } : { session: item.links.session ?? undefined };
 
-/** A clock for what fades with time: every second just after a live event, else every minute. */
-function useNow(busy: boolean): number {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), busy ? 1_000 : 60_000);
-    return () => clearInterval(timer);
-  }, [busy]);
-  return now;
-}
+/** A clock for what fades with time: every second just after a live event, else every minute. Only the parts
+ * that read the time hold it, so the rest of the page does not render with it. */
+const useClock = (lastLive: number) => useNow(Date.now() - lastLive < 30_000 ? 1_000 : 60_000);
 
 export function TodayView() {
   const t = useT();
-  const me = useMe();
   const canPeople = useCan("people:read");
   const day = useQuery(journalLatestQuery({ from: startOfToday() }, 200));
   const people = useQuery({ ...peopleQuery, enabled: canPeople });
@@ -84,7 +81,6 @@ export function TodayView() {
   const tasks = useQuery({ ...tasksQuery, enabled: useCan("tasks:read") });
   const home = useQuery({ ...homeQuery, enabled: useCan("home:read") });
   const { items: attention } = useAttention();
-  const { state, latest, quiet } = useAgentPresence();
 
   // what arrives live joins the day at once
   const [live, setLive] = useState<JournalItem[]>([]);
@@ -93,20 +89,16 @@ export function TodayView() {
     setLive((current) => [item, ...current].slice(0, 100));
     setLastLive(Date.now());
   });
-  const now = useNow(Date.now() - lastLive < 30_000);
   const items = useMemo(() => merge(live, day.data?.items ?? []), [day.data, live]);
-  const paired = satellites.data?.paired ?? [];
   const running = tasks.data?.running ?? [];
-  const rooms = canPeople ? roomsOf({ people: people.data ?? [], satellites: paired, items, home: home.data }, 60) : [];
-  const { away, homeNoRoom } = elsewhere(people.data ?? []);
-  const marks = useMemo(() => marksOf(items), [items]);
-  const date = new Date(now);
-  const line = lineOf(
-    latest,
-    state,
-    { tasks: running, troubled: attention.length, quietUntil: quiet?.active ? clock(quiet.to) : null },
-    now,
+  const rooms = useMemo(
+    () =>
+      canPeople
+        ? roomsOf({ people: people.data ?? [], satellites: satellites.data?.paired ?? [], items, home: home.data }, 60)
+        : [],
+    [canPeople, people.data, satellites.data, items, home.data],
   );
+  const marks = useMemo(() => marksOf(items), [items]);
   const [open, setOpen] = useState<string | null>(null);
   const [event, setEvent] = useState<number | undefined>();
   const [all, setAll] = useState(false);
@@ -114,18 +106,13 @@ export function TodayView() {
 
   return (
     <div className="grid gap-10 md:gap-12">
-      <Scene
-        now={date}
-        date={new Intl.DateTimeFormat(activeLocale(), { weekday: "long", day: "numeric", month: "long" }).format(date)}
-        greeting={t("home-hello", { greeting: greeting(date), name: me.account.person?.name ?? me.account.login })}
-        agent={me.agent.name}
-        state={state}
-        stateLabel={t(`home-state-${state}`)}
-        line={t(line.id, line.args)}
+      <Hello
+        lastLive={lastLive}
         rooms={rooms}
-        home={homeNoRoom}
-        away={away}
-        focus={latest ? nodeOf(latest, paired) : null}
+        people={people.data}
+        paired={satellites.data?.paired}
+        running={running}
+        troubled={attention.length}
         onRoom={(r: RoomNode) => setOpen(r.key)}
       />
 
@@ -161,7 +148,7 @@ export function TodayView() {
 
       <div className="grid gap-10 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] lg:gap-12">
         <div className="grid content-start gap-10">
-          <Now running={running} items={items} now={now} />
+          <Now running={running} items={items} lastLive={lastLive} />
           <Day marks={marks} onEvent={setEvent} />
         </div>
         <div className="grid content-start gap-10">
@@ -176,9 +163,57 @@ export function TodayView() {
   );
 }
 
-/** Tasks running and conversations under way. */
-function Now({ running, items, now }: { running: Task[]; items: JournalItem[]; now: number }) {
+/** The scene: the hour's sky, the greeting, the agent's line, and who is in which room. */
+function Hello({
+  lastLive,
+  rooms,
+  people,
+  paired = [],
+  running,
+  troubled,
+  onRoom,
+}: {
+  lastLive: number;
+  rooms: RoomNode[];
+  people: Person[] | undefined;
+  paired: Satellite[] | undefined;
+  running: Task[];
+  troubled: number;
+  onRoom: (room: RoomNode) => void;
+}) {
   const t = useT();
+  const me = useMe();
+  const { state, latest, quiet } = useAgentPresence();
+  const now = useClock(lastLive);
+  const { away, homeNoRoom } = useMemo(() => elsewhere(people ?? []), [people]);
+  const line = lineOf(
+    latest,
+    state,
+    { tasks: running, troubled, quietUntil: quiet?.active ? clock(quiet.to) : null },
+    now.getTime(),
+  );
+  return (
+    <Scene
+      now={now}
+      date={longDate(now)}
+      greeting={t("home-hello", { greeting: greeting(now), name: me.account.person?.name ?? me.account.login })}
+      agent={me.agent.name}
+      state={state}
+      stateLabel={t(`home-state-${state}`)}
+      line={t(line.id, line.args)}
+      rooms={rooms}
+      home={homeNoRoom}
+      away={away}
+      focus={latest ? nodeOf(latest, paired) : null}
+      onRoom={onRoom}
+    />
+  );
+}
+
+/** Tasks running and conversations under way. */
+function Now({ running, items, lastLive }: { running: Task[]; items: JournalItem[]; lastLive: number }) {
+  const t = useT();
+  const now = useClock(lastLive).getTime();
   const talks = new Map<string, JournalItem>();
   for (const i of items) {
     const talk = i.links.conversation ?? i.links.session;
@@ -190,49 +225,32 @@ function Now({ running, items, now }: { running: Task[]; items: JournalItem[]; n
     <Section title={t("home-now")} count={running.length + talks.size}>
       {running.length || talks.size ? (
         <ul className="grid gap-3">
-          {running.map((task) => {
-            const brand = brandOf(task.executor);
-            return (
-              <li key={task.id}>
-                <Link to="/tasks/$taskId" params={{ taskId: task.id }} className="surface block p-4">
-                  <span className="flex items-start gap-4">
-                    <IconTile icon={Workflow} tone="task" />
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-lead leading-snug font-medium text-ink">{task.title}</span>
-                      <span className="mt-1 flex flex-wrap items-center gap-x-2 text-body text-ink-muted">
-                        {brand ? (
-                          <span className="inline-flex items-center gap-1.5">
-                            <BrandMark brand={brand} className="size-3.5" label={false} />
-                            {brandName(brand)}
-                          </span>
-                        ) : null}
-                        <span className="min-w-0">{task.steps.at(-1) ?? t("home-task-starting")}</span>
-                        <Ago iso={task.started_at} />
-                      </span>
-                    </span>
-                  </span>
-                  <span className="thread mt-4 block" aria-hidden="true" />
-                </Link>
-              </li>
-            );
-          })}
+          {running.map((task) => (
+            <li key={task.id}>
+              <Link to="/tasks/$taskId" params={{ taskId: task.id }} className="surface block p-4">
+                <RunningTask task={task} />
+              </Link>
+            </li>
+          ))}
           {[...talks.values()].map((i) => (
             <li key={i.links.conversation ?? i.links.session}>
-              <Link to="/journal" search={threadOf(i)} className="surface flex items-start gap-4 p-4">
-                <IconTile icon={MessageSquareText} />
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-center gap-2 text-lead font-medium text-ink">
-                    {i.people.length
+              <Link to="/journal" search={threadOf(i)} className="surface block p-4">
+                <CardHead
+                  mark={<IconTile icon={MessageSquareText} />}
+                  title={
+                    i.people.length
                       ? t("home-talking", { people: i.people.map((p) => p.name).join(", ") })
-                      : t("home-talking-someone")}
-                  </span>
-                  <span className="mt-1 line-clamp-2 block text-body text-ink-muted">{i.detail_text || say(i)}</span>
-                </span>
-                <span className="flex -space-x-1.5">
-                  {i.people.map((p) => (
-                    <Pebble key={p.id} name={p.name} />
-                  ))}
-                </span>
+                      : t("home-talking-someone")
+                  }
+                  line={<span className="line-clamp-2">{i.detail_text || say(i)}</span>}
+                  aside={
+                    <span className="flex -space-x-1.5">
+                      {i.people.map((p) => (
+                        <Pebble key={p.id} name={p.name} />
+                      ))}
+                    </span>
+                  }
+                />
               </Link>
             </li>
           ))}
@@ -260,14 +278,7 @@ function Day({ marks, onEvent }: { marks: Mark[]; onEvent: (position: number) =>
   const row =
     "group grid w-full grid-cols-[auto_1fr_auto] items-center gap-x-4 px-4 py-3 text-left hover:bg-paper-sunken/60";
   return (
-    <Section
-      title={t("today-so-far")}
-      aside={
-        <Link to="/journal" className="inline-flex items-center gap-1 text-body text-ink-muted hover:text-ink">
-          {t("home-all-journal")} <ArrowRight className="size-3.5" aria-hidden="true" />
-        </Link>
-      }
-    >
+    <Section title={t("today-so-far")} aside={<MoreLink to="/journal">{t("home-all-journal")}</MoreLink>}>
       {latest.length ? (
         <ol className="surface divide-y divide-rule overflow-hidden" aria-label={t("today-so-far")}>
           {latest.map((m) => {
@@ -340,8 +351,8 @@ function Next() {
       icon: Send,
       tone: "ember" as const,
       text: u.person
-        ? t("today-follow-up", { person: u.person.name, channel: u.written_on.split(":")[0] ?? u.written_on })
-        : t("today-follow-up-someone", { channel: u.written_on.split(":")[0] ?? u.written_on }),
+        ? t("today-follow-up", { person: u.person.name, channel: kindName(u.written_on.split(":")[0] ?? "") })
+        : t("today-follow-up-someone", { channel: kindName(u.written_on.split(":")[0] ?? "") }),
       hint: t("home-upcoming-unless"),
     })),
   ]
@@ -349,14 +360,7 @@ function Next() {
     .slice(0, 5);
   const watching = watches.data?.watches ?? [];
   return (
-    <Section
-      title={t("home-next")}
-      aside={
-        <Link to="/activity" className="inline-flex items-center gap-1 text-body text-ink-muted hover:text-ink">
-          {t("today-all-activity")} <ArrowRight className="size-3.5" aria-hidden="true" />
-        </Link>
-      }
-    >
+    <Section title={t("home-next")} aside={<MoreLink to="/activity">{t("today-all-activity")}</MoreLink>}>
       <ul className="grid gap-2.5">
         {quiet ? (
           <li className="flex items-center gap-3 rounded-(--radius-surface) bg-paper-sunken px-4 py-3 text-body text-ink">
@@ -367,26 +371,28 @@ function Next() {
           </li>
         ) : null}
         {coming.map((c) => (
-          <li key={c.key} className="surface flex items-start gap-3.5 p-3.5">
-            <IconTile icon={c.icon} tone={c.tone} size="sm" />
-            <span className="min-w-0 flex-1">
-              {c.at ? <span className="block text-meta font-medium text-ember">{moment(c.at)}</span> : null}
-              <span className="line-clamp-2 block text-ink">{c.text}</span>
-              {c.hint ? <span className="block text-meta text-ink-muted">{c.hint}</span> : null}
-            </span>
+          <li key={c.key} className="surface p-3.5">
+            <CardHead
+              mark={<IconTile icon={c.icon} tone={c.tone} size="sm" />}
+              title={
+                <>
+                  {c.at ? <span className="block text-meta font-medium text-ember">{moment(c.at)}</span> : null}
+                  <span className="line-clamp-2">{c.text}</span>
+                </>
+              }
+              line={c.hint}
+            />
           </li>
         ))}
         {watching.length ? (
           <li>
-            <Link to="/activity" className="surface flex items-center gap-3.5 p-3.5">
-              <IconTile icon={Radar} tone="watch" size="sm" />
-              <span className="min-w-0 flex-1">
-                <span className="block text-ink">{t("today-watching", { count: watching.length })}</span>
-                <span className="line-clamp-1 block text-meta text-ink-muted">
-                  {watching.map((w) => w.title).join(" · ")}
-                </span>
-              </span>
-              <ArrowRight className="size-4 text-ink-faint" aria-hidden="true" />
+            <Link to="/activity" className="group surface block p-3.5">
+              <CardHead
+                mark={<IconTile icon={Radar} tone="watch" size="sm" />}
+                title={t("today-watching", { count: watching.length })}
+                line={<span className="line-clamp-1">{watching.map((w) => w.title).join(" · ")}</span>}
+                aside={<OpenArrow />}
+              />
             </Link>
           </li>
         ) : null}
@@ -404,14 +410,7 @@ function Knows() {
   if (!latest.length) return null;
   const today = startOfToday();
   return (
-    <Section
-      title={t("home-knows")}
-      aside={
-        <Link to="/memories" className="inline-flex items-center gap-1 text-body text-ink-muted hover:text-ink">
-          {t("home-all-memories")} <ArrowRight className="size-3.5" aria-hidden="true" />
-        </Link>
-      }
-    >
+    <Section title={t("home-knows")} aside={<MoreLink to="/memories">{t("home-all-memories")}</MoreLink>}>
       <ul className="grid gap-5">
         {latest.map((m) => (
           <li key={m.id}>

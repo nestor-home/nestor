@@ -801,7 +801,7 @@ function ItemSheet({
                 {onRemove ? (
                   <Confirm
                     trigger={
-                      <Button variant="ghost">
+                      <Button variant="destructive">
                         <Trash2 /> {t("cfg-remove")}
                       </Button>
                     }

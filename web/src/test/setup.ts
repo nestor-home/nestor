@@ -34,9 +34,15 @@ globalThis.ResizeObserver ??= class {
   unobserve() {}
   disconnect() {}
 };
-// the character's animation loop has nothing to show in jsdom: tests run as with reduced motion
+// the character's animation loop has nothing to show in jsdom: tests run as with reduced motion; a width
+// query is answered from `window.innerWidth`, which a test sets to lay the screen out as a phone
+const widthHolds = (query: string): boolean => {
+  const [, side, px] = /\((max|min)-width:\s*(\d+)px\)/.exec(query) ?? [];
+  if (!side) return false;
+  return side === "max" ? window.innerWidth <= Number(px) : window.innerWidth >= Number(px);
+};
 globalThis.matchMedia ??= ((query: string) => ({
-  matches: query.includes("prefers-reduced-motion"),
+  matches: query.includes("prefers-reduced-motion") || widthHolds(query),
   media: query,
   onchange: null,
   addEventListener: () => undefined,

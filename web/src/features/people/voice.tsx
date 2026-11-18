@@ -129,7 +129,7 @@ function VoiceState({ person, voice }: { person: Person; voice: Voice }) {
           {voice.learned > 0 ? (
             <Confirm
               trigger={
-                <Button variant="ghost" size="sm">
+                <Button variant="destructive" size="sm">
                   {t("people-voice-forget-learned")}
                 </Button>
               }

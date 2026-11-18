@@ -9,7 +9,7 @@ import { IconTile, Pebble, type TileTone } from "@/components/marks";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useT } from "@/i18n";
 import { tr } from "@/i18n/runtime";
-import { KindMark, kindName } from "@/lib/brands";
+import { KindMark, KindName } from "@/lib/brands";
 import { dayLabel, hourMinute } from "@/lib/dates";
 import { is } from "@/lib/events";
 import { say, why } from "@/lib/messages";
@@ -36,8 +36,6 @@ export function StoryCard({ story, ...props }: Props & { story: Story }) {
 }
 
 // -- the pieces every story shares -----------------------------------------------------------------
-
-const channelName = (channel: string) => (channel === "voice" ? tr("jr-channel-voice") : kindName(channel));
 
 /** A focusable entry: it opens the event's sheet; j/k move between entries. */
 function Entry({
@@ -113,10 +111,7 @@ function Head({
             </span>
           ))}
           {channels.map((c) => (
-            <span key={c} className="inline-flex items-center gap-1">
-              <KindMark kind={c} className="size-3.5" label={false} />
-              {channelName(c)}
-            </span>
+            <KindName key={c} kind={c} />
           ))}
           {rooms.map((r) => (
             <span key={r}>{r}</span>
@@ -507,10 +502,7 @@ function ChainStep({
             {is(item, "delivered") || is(item, "deliveryFailed") ? (
               <span className="inline-flex flex-wrap items-center gap-x-1.5 text-ink-muted">
                 {item.channels.map((c) => (
-                  <span key={c} className="inline-flex items-center gap-1">
-                    <KindMark kind={c} className="size-3.5" label={false} />
-                    {channelName(c)}
-                  </span>
+                  <KindName key={c} kind={c} />
                 ))}
                 {item.room ? <span>· {item.room}</span> : null}
               </span>
@@ -538,12 +530,7 @@ const sourced = (item: JournalItem): item is JournalItem & { brand: string } =>
 /** What brought an item a watch looked at: the account it came to, the feed, the page or the webhook. */
 function Source({ item }: { item: JournalItem }) {
   if (!sourced(item)) return null;
-  return (
-    <span className="inline-flex items-center gap-1 text-ink-muted">
-      <KindMark kind={item.brand} className="size-3.5" label={false} />
-      {kindName(item.brand)}
-    </span>
-  );
+  return <KindName kind={item.brand} className="text-ink-muted" />;
 }
 
 // -- a lone event -----------------------------------------------------------------------------------

@@ -1,8 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
-import { Moon, Plug, RadioTower, Sun, User } from "lucide-react";
-import { useEffect, useState } from "react";
-import { connectionsQuery, peopleQuery, satellitesQuery } from "@/api";
 import {
   CommandDialog,
   CommandEmpty,
@@ -16,6 +11,11 @@ import { useT } from "@/i18n";
 import { useCan, useMe } from "@/lib/session";
 import { useTheme } from "@/lib/theme";
 import { destinations } from "./nav";
+import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
+import { Moon, Plug, RadioTower, Sun, User } from "lucide-react";
+import { useEffect, useState } from "react";
+import { connectionsQuery, peopleQuery, satellitesQuery } from "@/api";
 
 /** ⌘K: jump to a section, a person, a connection or a satellite, or switch the theme. */
 export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {

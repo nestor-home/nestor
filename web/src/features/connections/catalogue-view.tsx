@@ -16,6 +16,7 @@ import { useCan } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import { ConnectSheet } from "./connect-sheet";
 import { trail } from "./trail";
+import { TILE_CARD, TileCard } from "@/components/card";
 
 export interface CatalogueSearch {
   connect?: string; // the connector whose sheet is open
@@ -163,23 +164,25 @@ function ServiceCard({
   const t = useT();
   return (
     <li>
-      <Opens onOpen={onConnect} className="flex h-full w-full flex-col gap-3 p-4 text-left">
-        <span className="flex w-full items-center justify-between gap-3">
-          <ServiceTile kind={c.brand ?? c.kind} size="lg" />
-          {c.auth === "oauth2" && !c.oauth?.registered ? (
-            <Tag tone="attention">{t("conn-client-to-create")}</Tag>
-          ) : accounts ? (
-            <Tag>{t("conn-accounts-count", { count: accounts })}</Tag>
-          ) : null}
-        </span>
-        <span className="flex-1">
-          <span className="block title-card text-ink">{c.title}</span>
-          <span className="mt-1.5 block text-body text-ink-muted">{c.description}</span>
-        </span>
-        <span className="text-meta text-ink-muted">
-          {authLabel(c.auth)}
-          {c.inbound.length ? ` · ${t("conn-feeds-watches")}` : ""}
-        </span>
+      <Opens onOpen={onConnect} className={TILE_CARD}>
+        <TileCard
+          marks={<ServiceTile kind={c.brand ?? c.kind} />}
+          aside={
+            c.auth === "oauth2" && !c.oauth?.registered ? (
+              <Tag tone="attention">{t("conn-client-to-create")}</Tag>
+            ) : accounts ? (
+              <Tag>{t("conn-accounts-count", { count: accounts })}</Tag>
+            ) : null
+          }
+          title={c.title}
+          line={c.description}
+          foot={
+            <span>
+              {authLabel(c.auth)}
+              {c.inbound.length ? ` · ${t("conn-feeds-watches")}` : ""}
+            </span>
+          }
+        />
       </Opens>
     </li>
   );

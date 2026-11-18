@@ -2,13 +2,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { LucideIcon } from "lucide-react";
-import { ArrowRight, KeyRound, Plug, RadioTower, Server, SlidersHorizontal } from "lucide-react";
+import { KeyRound, Plug, RadioTower, Server, SlidersHorizontal } from "lucide-react";
 import { accountsQuery, connectionsQuery, satellitesQuery, systemQuery } from "@/api";
 import { IconTile } from "@/components/marks";
 import { PageHeader } from "@/components/page";
 import { UpdateAvailable } from "@/features/system/updates";
 import { useT } from "@/i18n";
 import { type Permission, useCan, useMe } from "@/lib/session";
+import { OpenArrow, TILE_CARD, TileCard } from "@/components/card";
 
 type To = "/connections" | "/satellites" | "/accounts" | "/config" | "/system";
 
@@ -98,16 +99,8 @@ function Card({
   if (!useCan(scope)) return null;
   return (
     <li>
-      <Link to={to} className="surface flex h-full flex-col gap-4 p-5">
-        <span className="flex items-center justify-between">
-          <IconTile icon={icon} size="lg" />
-          <ArrowRight className="size-4 text-ink-faint" aria-hidden="true" />
-        </span>
-        <span>
-          <span className="block title-card text-ink">{title}</span>
-          <span className="mt-1.5 block text-body text-ink-muted">{text}</span>
-        </span>
-        {state ? <span className="mt-auto text-meta font-medium text-ink">{state}</span> : null}
+      <Link to={to} className={TILE_CARD}>
+        <TileCard marks={<IconTile icon={icon} />} aside={<OpenArrow />} title={title} line={text} foot={state} />
       </Link>
     </li>
   );

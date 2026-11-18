@@ -2,6 +2,7 @@ import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
 import { useEffect } from "react";
 import { AgentFigure } from "@/components/agent-figure";
+import { Count } from "@/components/page";
 import { Kbd } from "@/components/status";
 import { AgentPresenceProvider, useAgentPresence } from "@/features/agent/presence";
 import { RestartBanner } from "@/features/config/restart";
@@ -174,9 +175,7 @@ function RailLink({ space, here, badge }: { space: Space; here: boolean; badge: 
       <space.icon className="size-5 shrink-0" aria-hidden="true" />
       <span className="narrow:sr-only">{t(space.label)}</span>
       {badge ? (
-        <span className="ml-auto grid min-w-5 place-items-center rounded-full bg-ember px-1.5 text-micro leading-5 font-semibold text-on-ember tabular narrow:absolute narrow:-top-1 narrow:-right-1">
-          {badge}
-        </span>
+        <Count n={badge} tone="ember" className="ml-auto narrow:absolute narrow:-top-1 narrow:-right-1" />
       ) : null}
     </Link>
   );
@@ -202,11 +201,7 @@ function SpaceLink({ space, here, badge }: { space: Space; here: boolean; badge:
         )}
       >
         <space.icon className="size-5" aria-hidden="true" />
-        {badge ? (
-          <span className="absolute -top-0.5 -right-0.5 grid min-w-4.5 place-items-center rounded-full bg-ember px-1 text-micro leading-4.5 font-semibold text-on-ember tabular">
-            {badge}
-          </span>
-        ) : null}
+        {badge ? <Count n={badge} tone="ember" className="absolute -top-1 -right-1" /> : null}
       </span>
       {t(space.label)}
     </Link>

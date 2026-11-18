@@ -1,5 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
 import {
   AudioLines,
   Brain,
@@ -32,6 +30,8 @@ import { useCan, useMe } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import { ExecutorsSection } from "./executors";
 import { UpdateAvailable } from "./updates";
+import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 
 /** What a group of the board holds, its mark, and the configuration page that sets it. */
 interface Group {

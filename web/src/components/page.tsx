@@ -41,7 +41,8 @@ export function PageHeader({
   );
 }
 
-/** A titled part of a screen: the serif title, how many it holds, and its own actions. */
+/** A titled part of a screen (`level` 3: of a sheet or of a card): its title, how many it holds, and its own
+ * actions. */
 export function Section({
   title,
   count,
@@ -49,6 +50,7 @@ export function Section({
   children,
   className,
   id,
+  level = 2,
 }: {
   title: string;
   count?: number;
@@ -56,23 +58,50 @@ export function Section({
   children: ReactNode;
   className?: string;
   id?: string;
+  level?: 2 | 3;
 }) {
   const headingId = id ?? `section-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+  const Heading = level === 2 ? "h2" : "h3";
   return (
     <section aria-labelledby={headingId} className={cn("min-w-0", className)}>
-      <div className="mb-4 flex items-baseline justify-between gap-4">
-        <h2 id={headingId} className="display-3 flex items-baseline gap-2.5 text-ink">
+      <div className={cn("flex items-baseline justify-between gap-4", level === 2 ? "mb-4" : "mb-3")}>
+        <Heading
+          id={headingId}
+          className={cn("flex items-baseline gap-2.5 text-ink", level === 2 ? "display-3" : "title-sub")}
+        >
           {title}
-          {count ? (
-            <span className="rounded-full bg-ink px-2 py-0.5 font-sans text-micro font-semibold text-paper tabular">
-              {count}
-            </span>
-          ) : null}
-        </h2>
+          {count ? <Count n={count} /> : null}
+        </Heading>
         {aside}
       </div>
       {children}
     </section>
+  );
+}
+
+/** How many of something, on its small ink pill: beside a title, on a rail entry, on a filter. `ember` when it
+ * waits on someone, `brick` when it counts problems. */
+export function Count({
+  n,
+  tone = "ink",
+  className,
+}: {
+  n: number;
+  tone?: "ink" | "ember" | "brick";
+  className?: string;
+}) {
+  return (
+    <span
+      className={cn(
+        "inline-grid h-5 min-w-5 place-items-center rounded-full px-1.5 font-sans text-micro leading-none font-semibold tabular",
+        tone === "ink" && "bg-ink text-paper",
+        tone === "ember" && "bg-ember text-on-ember",
+        tone === "brick" && "bg-brick-soft text-brick",
+        className,
+      )}
+    >
+      {n}
+    </span>
   );
 }
 

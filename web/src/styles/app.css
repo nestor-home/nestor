@@ -35,6 +35,13 @@
   line-height: 1.2;
 }
 
+/* the name of a thing in a row or a card: the UI face, a step above the text around it */
+@utility title-item {
+  font-size: var(--text-lead);
+  font-weight: 500;
+  line-height: 1.35;
+}
+
 @utility title-sub {
   font-family: var(--font-display);
   font-size: var(--text-heading);

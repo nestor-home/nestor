@@ -12,7 +12,7 @@ import { FormActions } from "@/components/form-actions";
 import { IconTile } from "@/components/marks";
 import { useNotify } from "@/components/notices";
 import { BottomSheet, FormSheet } from "@/components/overlay-form";
-import { PageHeader } from "@/components/page";
+import { Count, PageHeader } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/i18n";
 import { cn } from "@/lib/utils";
@@ -139,8 +139,8 @@ export function PageMark({ problems, changed }: { problems: number; changed: boo
   const t = useT();
   if (problems)
     return (
-      <span className="rounded-full bg-brick-soft px-1.5 text-meta font-medium text-brick tabular">
-        {problems}
+      <span>
+        <Count n={problems} tone="brick" />
         <span className="sr-only"> {t("cfg-problems", { count: problems })}</span>
       </span>
     );
@@ -242,7 +242,7 @@ export function SaveBar({ inline = false }: { inline?: boolean }) {
       <div className="flex flex-wrap items-center gap-2">
         <Confirm
           trigger={
-            <Button variant="ghost" disabled={editor.saving}>
+            <Button variant="destructive" disabled={editor.saving}>
               {t("cfg-discard")}
             </Button>
           }

@@ -32,10 +32,8 @@ import { KindMark } from "@/lib/brands";
 import { startOfToday } from "@/lib/dates";
 import { deviceName } from "@/lib/labels";
 import { useCan, useMe } from "@/lib/session";
-import { cn } from "@/lib/utils";
+import { capital, cn } from "@/lib/utils";
 import { HouseView } from "./house-view";
-
-const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 export function HouseSpace() {
   const t = useT();

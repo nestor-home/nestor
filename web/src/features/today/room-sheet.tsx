@@ -1,10 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, Camera, Eye, Phone, RadioTower, Video } from "lucide-react";
+import { Camera, Eye, Phone, RadioTower, Video } from "lucide-react";
 import { type JournalItem, type MediaDevice, mediaDevicesQuery } from "@/api";
 import { Ago } from "@/components/ago";
+import { CardHead, MoreLink, OpenArrow } from "@/components/card";
 import { IconTile, Pebble } from "@/components/marks";
 import { SheetPanel, SideSheet } from "@/components/overlay-form";
+import { Section } from "@/components/page";
 import { Empty } from "@/components/states";
 import { Status } from "@/components/status";
 import { Button } from "@/components/ui/button";
@@ -16,8 +18,7 @@ import { hourMinute } from "@/lib/dates";
 import { deviceName } from "@/lib/labels";
 import { say } from "@/lib/messages";
 import { useCan } from "@/lib/session";
-
-const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+import { capital } from "@/lib/utils";
 
 /** A room, opened: who is there, its devices and what one can do through them, and its day. */
 export function RoomSheet({
@@ -55,39 +56,43 @@ function Room({ room: r, items }: { room: RoomNode; items: readonly JournalItem[
               <Link
                 to="/people/$personId"
                 params={{ personId: p.id }}
-                className="surface flex items-center gap-3 px-4 py-3"
+                className="group surface flex items-center px-4 py-3"
               >
-                <Pebble name={p.name} size="lg" />
-                <span className="min-w-0 flex-1">
-                  <span className="block text-ink">{p.name}</span>
-                  {p.presence?.since ? (
-                    <span className="block text-meta text-ink-muted">
-                      {t("room-since")} <Ago iso={p.presence.since} />
-                    </span>
-                  ) : null}
-                </span>
-                <ArrowRight className="size-4 text-ink-faint" aria-hidden="true" />
+                <CardHead
+                  className="flex-1"
+                  mark={<Pebble name={p.name} size="lg" />}
+                  title={p.name}
+                  line={
+                    p.presence?.since ? (
+                      <>
+                        {t("room-since")} <Ago iso={p.presence.since} />
+                      </>
+                    ) : null
+                  }
+                  aside={<OpenArrow />}
+                />
               </Link>
             </li>
           ))}
         </ul>
       ) : null}
 
-      <div>
-        <h3 className="mb-3 title-sub text-ink">{t("room-devices")}</h3>
+      <Section level={3} title={t("room-devices")}>
         {r.satellites.length ? (
           <ul className="grid gap-2">
             {r.satellites.map((s) => (
               <li key={s.id} className="surface px-4 py-3.5">
                 <div className="flex items-center gap-3">
-                  <IconTile icon={s.films ? Video : RadioTower} />
                   <Link
                     to="/satellites/$satelliteId"
                     params={{ satelliteId: s.id }}
                     className="min-w-0 flex-1 hover:underline"
                   >
-                    <span className="block text-ink">{deviceName(s)}</span>
-                    <span className="block text-meta text-ink-muted">{s.model}</span>
+                    <CardHead
+                      mark={<IconTile icon={s.films ? Video : RadioTower} />}
+                      title={deviceName(s)}
+                      line={s.model}
+                    />
                   </Link>
                   {s.connected === false ? (
                     <Status tone="attention">{t("sat-state-offline")}</Status>
@@ -102,20 +107,18 @@ function Room({ room: r, items }: { room: RoomNode; items: readonly JournalItem[
         ) : (
           <Empty>{t("room-no-device")}</Empty>
         )}
-      </div>
+      </Section>
 
       {r.journal ? (
-        <div>
-          <div className="mb-3 flex items-baseline justify-between gap-4">
-            <h3 className="title-sub text-ink">{t("room-today")}</h3>
-            <Link
-              to="/journal"
-              search={{ room: r.journal }}
-              className="inline-flex items-center gap-1 text-body text-ink-muted hover:text-ink"
-            >
-              {t("home-all-journal")} <ArrowRight className="size-3.5" aria-hidden="true" />
-            </Link>
-          </div>
+        <Section
+          level={3}
+          title={t("room-today")}
+          aside={
+            <MoreLink to="/journal" search={{ room: r.journal }}>
+              {t("home-all-journal")}
+            </MoreLink>
+          }
+        >
           {day.length ? (
             <ol className="grid gap-2.5">
               {day.map((i) => (
@@ -130,7 +133,7 @@ function Room({ room: r, items }: { room: RoomNode; items: readonly JournalItem[
           ) : (
             <Empty>{t("room-quiet-today")}</Empty>
           )}
-        </div>
+        </Section>
       ) : null}
     </SheetPanel>
   );

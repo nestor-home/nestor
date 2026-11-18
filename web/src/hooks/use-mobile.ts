@@ -1,24 +1,23 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState, useSyncExternalStore } from "react";
 
-const MOBILE_BREAKPOINT = 768;
+/** Whether a media query holds, following it as the window changes (false where there is no `matchMedia`). */
+function useMedia(query: string): boolean {
+  const subscribe = useCallback(
+    (changed: () => void) => {
+      if (typeof matchMedia !== "function") return () => {};
+      const media = matchMedia(query);
+      media.addEventListener("change", changed);
+      return () => media.removeEventListener("change", changed);
+    },
+    [query],
+  );
+  return useSyncExternalStore(subscribe, () => typeof matchMedia === "function" && matchMedia(query).matches);
+}
 
 /** Below `md`: the rail becomes a tab bar under the thumb, and sheets take the screen. */
 export function useIsMobile(): boolean {
-  const [isMobile, setIsMobile] = useState(
-    () => typeof window !== "undefined" && window.innerWidth < MOBILE_BREAKPOINT,
-  );
-  useEffect(() => {
-    if (typeof matchMedia !== "function") return;
-    const media = matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
-    const update = () => setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
-    media.addEventListener("change", update);
-    update();
-    return () => media.removeEventListener("change", update);
-  }, []);
-  return isMobile;
+  return useMedia("(max-width: 767px)");
 }
-
-const WIDE_BREAKPOINT = 1024;
 const FOLDED = "nestor.rail.folded";
 
 /**
@@ -26,7 +25,7 @@ const FOLDED = "nestor.rail.folded";
  * device). Below `lg` it is icons only and cannot unfold.
  */
 export function useRail(): { wide: boolean; roomy: boolean; toggle: () => void } {
-  const [roomy, setRoomy] = useState(() => typeof window !== "undefined" && window.innerWidth >= WIDE_BREAKPOINT);
+  const roomy = useMedia("(min-width: 1024px)");
   const [folded, setFolded] = useState(() => {
     try {
       return localStorage.getItem(FOLDED) === "1";
@@ -34,14 +33,6 @@ export function useRail(): { wide: boolean; roomy: boolean; toggle: () => void }
       return false;
     }
   });
-  useEffect(() => {
-    if (typeof matchMedia !== "function") return;
-    const media = matchMedia(`(min-width: ${WIDE_BREAKPOINT}px)`);
-    const update = () => setRoomy(window.innerWidth >= WIDE_BREAKPOINT);
-    media.addEventListener("change", update);
-    update();
-    return () => media.removeEventListener("change", update);
-  }, []);
   const toggle = useCallback(() => {
     setFolded((was) => {
       try {

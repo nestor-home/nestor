@@ -9,7 +9,7 @@ import { Fact, Facts } from "@/components/page";
 import { Failure, Loading } from "@/components/states";
 import { useT } from "@/i18n";
 import { tr } from "@/i18n/runtime";
-import { KindMark, kindName } from "@/lib/brands";
+import { KindName } from "@/lib/brands";
 import { moment } from "@/lib/dates";
 import { kindLabel } from "@/lib/labels";
 import { say, why } from "@/lib/messages";
@@ -128,17 +128,13 @@ function Loaded({ event: { item: event, record } }: { event: JournalEvent }) {
         {event.channels.length ? (
           <Fact term={t("jr-fact-channel")} className="flex flex-wrap items-center gap-x-3">
             {event.channels.map((c) => (
-              <span key={c} className="inline-flex items-center gap-1.5">
-                <KindMark kind={c} className="size-3.5" label={false} />
-                {c === "voice" ? t("jr-channel-voice") : kindName(c)}
-              </span>
+              <KindName key={c} kind={c} />
             ))}
           </Fact>
         ) : null}
         {event.brand ? (
-          <Fact term={t("jr-fact-through")} className="inline-flex items-center gap-1.5">
-            <KindMark kind={event.brand} className="size-3.5" label={false} />
-            {kindName(event.brand)}
+          <Fact term={t("jr-fact-through")}>
+            <KindName kind={event.brand} />
           </Fact>
         ) : null}
         {seconds !== undefined && seconds !== null ? <Fact term={t("jr-fact-took")}>{duration(seconds)}</Fact> : null}

@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ArrowRight } from "lucide-react";
 import { type JournalFilters, journalLatestQuery } from "@/api";
 import { Ago } from "@/components/ago";
+import { MoreLink } from "@/components/card";
 import { IconTile } from "@/components/marks";
 import { RowList } from "@/components/page";
 import { Empty, Failure, Loading } from "@/components/states";
@@ -64,13 +64,11 @@ export function ActivityList({
           );
         })}
       </RowList>
-      <Link
-        to="/journal"
-        search={clean(search)}
-        className="mt-3 inline-flex items-center gap-1 text-body text-ink-muted hover:text-ink"
-      >
-        {t("jr-all-in-journal")} <ArrowRight className="size-3.5" aria-hidden="true" />
-      </Link>
+      <div className="mt-3">
+        <MoreLink to="/journal" search={clean(search)}>
+          {t("jr-all-in-journal")}
+        </MoreLink>
+      </div>
     </div>
   );
 }

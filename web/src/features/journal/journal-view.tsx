@@ -17,6 +17,7 @@ import { useLive } from "@/features/shell/live";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useT } from "@/i18n";
 import { dayLabel } from "@/lib/dates";
+import { capital } from "@/lib/utils";
 import { EventSheet } from "./event-sheet";
 import { FilterBar, FilterSheet } from "./facets";
 import { Histogram } from "./histogram";
@@ -204,7 +205,7 @@ function Stories({
         <Empty hint={t("jr-empty-hint")}>{t("jr-empty")}</Empty>
       ) : (
         byDay(stories).map(([day, group]) => (
-          <Section key={day} title={day.charAt(0).toUpperCase() + day.slice(1)} count={group.length}>
+          <Section key={day} title={capital(day)} count={group.length}>
             <ol aria-label={t("jr-day-list", { day })} className="grid gap-3">
               {group.map((story) => (
                 <li key={story.key} className="min-w-0">

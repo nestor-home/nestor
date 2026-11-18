@@ -1,6 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
-import type { LinkProps } from "@tanstack/react-router";
-import type { LucideIcon } from "lucide-react";
 import {
   CircleAlert,
   Hourglass,
@@ -25,6 +22,9 @@ import { hourMinute, startOfToday } from "@/lib/dates";
 import { is } from "@/lib/events";
 import { rendered, say } from "@/lib/messages";
 import { useCan } from "@/lib/session";
+import { useQuery } from "@tanstack/react-query";
+import type { LinkProps } from "@tanstack/react-router";
+import type { LucideIcon } from "lucide-react";
 
 /** Components that already speak for themselves: connections, tools and satellites. */
 const SPEAK_FOR_THEMSELVES = new Set<Component["slot"]>(["satellite", "tools", "connector", "home"]);

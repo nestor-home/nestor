@@ -7,11 +7,10 @@ import { Dither } from "@/components/dither";
 import { Pebble } from "@/components/marks";
 import type { RoomNode } from "@/features/home/mind";
 import { useT } from "@/i18n";
-import { cn } from "@/lib/utils";
+import { capital, cn } from "@/lib/utils";
 import { orbOf, phaseOf } from "./sky";
 
 const LIVE = { saccades: true };
-const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /**
  * The household right now, as one picture: the sky of the hour, the agent and what it says, the rooms

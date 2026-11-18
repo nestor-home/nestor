@@ -1,6 +1,3 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
-import { MailPlus } from "lucide-react";
 import {
   type Account,
   type AccountChange,
@@ -31,6 +28,9 @@ import { roleHint, roleLabel } from "@/lib/labels";
 import { useCan, useMe } from "@/lib/session";
 import { InviteForm, roleOptions } from "./invite-form";
 import { isLastOwner } from "./rules";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
+import { MailPlus } from "lucide-react";
 
 const nameOf = (account: Account) => account.person?.name ?? account.login;
 
@@ -159,7 +159,7 @@ function InvitationRow({ invitation }: { invitation: Invitation }) {
       </div>
       <Confirm
         trigger={
-          <Button variant="ghost" size="sm">
+          <Button variant="destructive" size="sm">
             {t("acc-revoke")}
           </Button>
         }

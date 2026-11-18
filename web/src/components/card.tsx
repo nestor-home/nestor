@@ -1,0 +1,93 @@
+import { Link, type LinkProps } from "@tanstack/react-router";
+import { ArrowRight } from "lucide-react";
+import type { ReactNode } from "react";
+import { cn } from "@/lib/utils";
+
+/**
+ * What leads a card or a row: its mark, then its name in medium weight and one muted line, and what it says of
+ * itself at the end of the line (a state, an owner, an arrow). The words take what is left and break; the mark
+ * and the aside keep their size.
+ */
+export function CardHead({
+  mark,
+  title,
+  line,
+  aside,
+  className,
+}: {
+  mark?: ReactNode;
+  title: ReactNode;
+  line?: ReactNode;
+  aside?: ReactNode;
+  className?: string;
+}) {
+  return (
+    <span className={cn("flex min-w-0 items-start gap-3.5", className)}>
+      {mark}
+      <span className="grid min-w-0 flex-1 gap-0.5">
+        <span className="title-item text-ink">{title}</span>
+        {line ? <span className="text-body text-ink-muted">{line}</span> : null}
+      </span>
+      {aside ? <span className="flex shrink-0 items-center gap-2.5 self-center">{aside}</span> : null}
+    </span>
+  );
+}
+
+/**
+ * A card that stands for a thing, in a grid of its kind: its marks across the top with what it says of itself at
+ * the other end, its title in the display face, one muted line, and a foot (its state, when it was used).
+ */
+export function TileCard({
+  marks,
+  aside,
+  title,
+  line,
+  foot,
+}: {
+  marks: ReactNode;
+  aside?: ReactNode;
+  title: ReactNode;
+  line?: ReactNode;
+  foot?: ReactNode;
+}) {
+  return (
+    <>
+      <span className="flex w-full items-center justify-between gap-3">
+        <span className="flex min-w-0 items-center gap-1.5">{marks}</span>
+        {aside ? <span className="flex shrink-0 items-center gap-2.5">{aside}</span> : null}
+      </span>
+      <span className="block min-w-0 flex-1">
+        <span className="block title-card text-ink">{title}</span>
+        {line ? <span className="mt-1.5 block text-body text-ink-muted">{line}</span> : null}
+      </span>
+      {foot ? (
+        <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-meta text-ink-muted">{foot}</span>
+      ) : null}
+    </>
+  );
+}
+
+/** The class of a card that opens, laid out as a `TileCard`. */
+export const TILE_CARD = "group surface flex h-full w-full flex-col gap-4 p-5 text-left";
+
+/** The arrow of a card or a row that leads somewhere, darker on hover (the card is the `group`). */
+export function OpenArrow({ className }: { className?: string }) {
+  return (
+    <ArrowRight
+      className={cn("size-4 shrink-0 text-ink-faint transition-colors group-hover:text-ink", className)}
+      aria-hidden="true"
+    />
+  );
+}
+
+/** The way to see all of what a section shows a few of, in its `aside`. */
+export function MoreLink({ children, ...link }: LinkProps & { children: string }) {
+  return (
+    <Link
+      {...link}
+      className="-mx-2 inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-body whitespace-nowrap text-ink-muted transition-colors hover:bg-paper-sunken hover:text-ink"
+    >
+      {children} <ArrowRight className="size-3.5" aria-hidden="true" />
+    </Link>
+  );
+}

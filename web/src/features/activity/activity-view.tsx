@@ -45,19 +45,19 @@ import { SheetPanel, SideSheet } from "@/components/overlay-form";
 import { Fact, Facts, PageHeader, Section } from "@/components/page";
 import { Empty, Loading } from "@/components/states";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { TaskStatusMark } from "@/features/tasks/tasks";
-import { WatchKind, watchBrand } from "@/features/watches/watches";
+import { CancelTask, RunningTask, Steps, TaskStatusMark } from "@/features/tasks/parts";
+import { CancelWatch, WatchKind, watchBrand } from "@/features/watches/parts";
 import { useT } from "@/i18n";
-import { activeLocale, tr } from "@/i18n/runtime";
-import { BrandMark, brandName, brandOf, KindMark, kindName } from "@/lib/brands";
-import { dayLabel, hourMinute, moment } from "@/lib/dates";
+import { tr } from "@/i18n/runtime";
+import { KindName } from "@/lib/brands";
+import { agendaDay, hourMinute, moment } from "@/lib/dates";
 import { weekdayLabel } from "@/lib/labels";
 import { personName } from "@/lib/people";
 import { useCan, useMe } from "@/lib/session";
-import { cn } from "@/lib/utils";
 
 type Lane = "all" | "you" | "running" | "planned" | "watching";
-type Opened = { kind: "task"; item: Task } | { kind: "watch"; item: Watch } | { kind: "schedule"; item: Schedule };
+/** What the drawer shows, looked up in the lists at each render so that it follows them. */
+type Opened = { kind: "task" | "watch" | "schedule"; id: string };
 
 export function ActivityView() {
   const t = useT();
@@ -80,15 +80,19 @@ export function ActivityView() {
     (a.next_due ?? "9").localeCompare(b.next_due ?? "9"),
   );
   const watching = watches.data?.watches ?? [];
+  const waiting = asks.length + questions.length + pending.length;
   const lanes: { id: Lane; label: string; count: number }[] = [
     { id: "all", label: t("act-all"), count: 0 },
-    { id: "you", label: t("act-you"), count: asks.length + questions.length + pending.length },
+    { id: "you", label: t("act-you"), count: waiting },
     { id: "running", label: t("act-running"), count: running.length },
     { id: "planned", label: t("act-planned"), count: planned.length },
     { id: "watching", label: t("act-watching"), count: watching.length },
   ];
   const shows = (id: Lane) => lane === "all" || lane === id;
-  const waiting = asks.length + questions.length + pending.length;
+  const openTask = opened?.kind === "task" ? [...running, ...recent].find((x) => x.id === opened.id) : undefined;
+  const openWatch = opened?.kind === "watch" ? watching.find((x) => x.id === opened.id) : undefined;
+  const openSchedule = opened?.kind === "schedule" ? planned.find((x) => x.id === opened.id) : undefined;
+  const close = () => setOpened(null);
 
   return (
     <div className="grid gap-10">
@@ -128,25 +132,9 @@ export function ActivityView() {
                   <button
                     type="button"
                     className="surface block w-full p-4 text-left"
-                    onClick={() => setOpened({ kind: "task", item: task })}
+                    onClick={() => setOpened({ kind: "task", id: task.id })}
                   >
-                    <span className="flex items-start gap-4">
-                      <IconTile icon={Workflow} tone="task" />
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-lead leading-snug font-medium text-ink">{task.title}</span>
-                        <span className="mt-1 flex flex-wrap items-center gap-x-2.5 text-body text-ink-muted">
-                          <Executor name={task.executor} />
-                          <span>
-                            {t("task-since")} <Ago iso={task.started_at} />
-                          </span>
-                        </span>
-                      </span>
-                      {task.requested_by ? <Pebble name={task.requested_by.name} /> : null}
-                    </span>
-                    <span className="mt-3.5 block text-body text-ink">
-                      {task.steps.at(-1) ?? t("home-task-starting")}
-                    </span>
-                    <span className="thread mt-2.5 block" aria-hidden="true" />
+                    <RunningTask task={task} />
                   </button>
                 </li>
               ))}
@@ -168,7 +156,7 @@ export function ActivityView() {
                   <button
                     type="button"
                     className="grid w-full grid-cols-[minmax(4.5rem,auto)_1fr_auto] items-center gap-x-5 px-4 py-3.5 text-left hover:bg-paper-sunken/60"
-                    onClick={() => setOpened({ kind: "schedule", item: s })}
+                    onClick={() => setOpened({ kind: "schedule", id: s.id })}
                   >
                     <When iso={s.next_due} />
                     <span className="min-w-0">
@@ -203,7 +191,7 @@ export function ActivityView() {
                   <button
                     type="button"
                     className="surface flex h-full w-full flex-col gap-3 p-4 text-left"
-                    onClick={() => setOpened({ kind: "watch", item: w })}
+                    onClick={() => setOpened({ kind: "watch", id: w.id })}
                   >
                     <span className="flex items-center justify-between gap-3">
                       <BrandTile brand={watchBrand(w.kinds[0])} />
@@ -261,12 +249,12 @@ export function ActivityView() {
                 <button
                   type="button"
                   className="grid w-full grid-cols-[1fr_auto] items-center gap-x-4 px-4 py-3 text-left hover:bg-paper-sunken/60"
-                  onClick={() => setOpened({ kind: "task", item: task })}
+                  onClick={() => setOpened({ kind: "task", id: task.id })}
                 >
                   <span className="min-w-0">
                     <span className="line-clamp-1 block text-ink">{task.title}</span>
                     <span className="flex flex-wrap items-center gap-x-2.5 text-meta text-ink-muted">
-                      <Executor name={task.executor} />
+                      <KindName kind={task.executor} />
                       {task.ended_at ? <Ago iso={task.ended_at} /> : null}
                     </span>
                   </span>
@@ -278,10 +266,10 @@ export function ActivityView() {
         </Section>
       ) : null}
 
-      <SideSheet open={Boolean(opened)} onOpenChange={(open) => !open && setOpened(null)}>
-        {opened?.kind === "task" ? <TaskPanel task={opened.item} onDone={() => setOpened(null)} /> : null}
-        {opened?.kind === "watch" ? <WatchPanel watch={opened.item} onDone={() => setOpened(null)} /> : null}
-        {opened?.kind === "schedule" ? <SchedulePanel schedule={opened.item} onDone={() => setOpened(null)} /> : null}
+      <SideSheet open={Boolean(openTask ?? openWatch ?? openSchedule)} onOpenChange={(open) => !open && close()}>
+        {openTask ? <TaskPanel task={openTask} onDone={close} /> : null}
+        {openWatch ? <WatchPanel watch={openWatch} onDone={close} /> : null}
+        {openSchedule ? <SchedulePanel schedule={openSchedule} onDone={close} /> : null}
       </SideSheet>
     </div>
   );
@@ -307,29 +295,12 @@ function rhythm(s: Schedule): string {
 
 /** The day over the hour: the left edge of a planned row, read like an agenda. */
 function When({ iso }: { iso: string | null }) {
-  if (!iso) return <span className="text-ink-faint">—</span>;
-  // "Today", "Tomorrow", then a short date: the column stays narrow whatever the language
-  const named = dayLabel(iso);
-  const day = /\d/.test(named)
-    ? new Intl.DateTimeFormat(activeLocale(), { weekday: "short", day: "numeric", month: "short" }).format(
-        new Date(iso),
-      )
-    : named;
+  if (!iso) return <span className="text-ink-faint">·</span>;
   return (
     <time dateTime={iso} className="grid">
-      <span className="text-meta text-ink-muted first-letter:uppercase">{day}</span>
+      <span className="text-meta text-ink-muted first-letter:uppercase">{agendaDay(iso)}</span>
       <span className="title-card text-ink tabular">{hourMinute(iso)}</span>
     </time>
-  );
-}
-
-function Executor({ name }: { name: string }) {
-  const brand = brandOf(name);
-  return (
-    <span className="inline-flex items-center gap-1.5">
-      {brand ? <BrandMark brand={brand} className="size-3.5" label={false} /> : null}
-      {brand ? brandName(brand) : name}
-    </span>
   );
 }
 
@@ -357,10 +328,7 @@ function ConfirmationCard({ confirmation: c }: { confirmation: Confirmation }) {
         {what ? <p className="mt-0.5 text-body text-ink-muted">{what}</p> : null}
         <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-meta text-ink-muted">
           <span>{t("confirmation-for", { name: personName(c.person) })}</span>
-          <span className="inline-flex items-center gap-1">
-            <KindMark kind={c.origin.channel} className="size-3" label={false} />
-            {kindName(c.origin.channel)}
-          </span>
+          <KindName kind={c.origin.channel} />
           <span>{t("confirmation-expires", { at: hourMinute(c.expires_at) })}</span>
         </p>
         {c.yours ? (
@@ -419,12 +387,7 @@ function MessageCard({
               ? t("message-from-to", { from: m.requested_by.name, to: m.to.name })
               : t("message-to", { to: m.to.name })}
           </span>
-          {m.channel ? (
-            <span className="inline-flex items-center gap-1">
-              <KindMark kind={m.channel} className="size-3" label={false} />
-              {kindName(m.channel)}
-            </span>
-          ) : null}
+          {m.channel ? <KindName kind={m.channel} /> : null}
           <Ago iso={m.at} />
         </p>
       </div>
@@ -436,17 +399,6 @@ function MessageCard({
 
 function TaskPanel({ task, onDone }: { task: Task; onDone: () => void }) {
   const t = useT();
-  const canCancel = useCan("tasks:write");
-  const queryClient = useQueryClient();
-  const notify = useNotify();
-  const cancel = useMutation({
-    mutationFn: () => api.cancelTask(task.id),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: keys.tasks });
-      notify(t("task-cancel-notice", { id: task.id }));
-      onDone();
-    },
-  });
   return (
     <SheetPanel
       icon={Workflow}
@@ -459,20 +411,7 @@ function TaskPanel({ task, onDone }: { task: Task; onDone: () => void }) {
           <Link to="/tasks/$taskId" params={{ taskId: task.id }} className={buttonVariants({ variant: "outline" })}>
             {t("act-open-page")} <ArrowUpRight />
           </Link>
-          {canCancel && task.status === "running" ? (
-            <Confirm
-              trigger={
-                <Button variant="ghost">
-                  <X /> {t("task-cancel")}
-                </Button>
-              }
-              title={t("task-cancel-title")}
-              confirm={t("task-cancel")}
-              onConfirm={() => cancel.mutateAsync()}
-            >
-              {t("task-cancel-description")}
-            </Confirm>
-          ) : null}
+          <CancelTask task={task} onDone={onDone} />
         </>
       }
     >
@@ -481,43 +420,22 @@ function TaskPanel({ task, onDone }: { task: Task; onDone: () => void }) {
           <TaskStatusMark status={task.status} />
         </Fact>
         <Fact term={t("act-by")}>
-          <Executor name={task.executor} />
+          <KindName kind={task.executor} />
         </Fact>
         {task.requested_by ? <Fact term={t("act-for")}>{task.requested_by.name}</Fact> : null}
         <Fact term={t("act-started")}>{moment(task.started_at)}</Fact>
       </Facts>
       {task.steps.length ? (
-        <div>
-          <h3 className="mb-3 title-sub text-ink">{t("task-story")}</h3>
-          <ol className="grid gap-0">
-            {task.steps.map((step, index) => {
-              const last = index === task.steps.length - 1;
-              return (
-                // biome-ignore lint/suspicious/noArrayIndexKey: steps are an append-only list of plain strings
-                <li key={index} className="grid grid-cols-[1.25rem_1fr] gap-x-3">
-                  <span className="flex flex-col items-center" aria-hidden="true">
-                    <span
-                      className={cn(
-                        "mt-1.5 size-2.5 rounded-full",
-                        last && task.status === "running" ? "live-dot bg-ember" : "bg-rule-strong",
-                      )}
-                    />
-                    {last ? null : <span className="w-px flex-1 bg-rule" />}
-                  </span>
-                  <span className={cn("pb-3.5 text-body", last ? "text-ink" : "text-ink-muted")}>{step}</span>
-                </li>
-              );
-            })}
-          </ol>
-        </div>
+        <Section level={3} title={t("task-story")}>
+          <Steps task={task} />
+        </Section>
       ) : null}
       {task.result ? (
-        <div>
-          <h3 className="mb-2 title-sub text-ink first-letter:uppercase">{t("task-result")}</h3>
+        <Section level={3} title={t("task-result")}>
           <p className="rounded-(--radius-surface) bg-paper-sunken px-4 py-3 text-body whitespace-pre-line text-ink">
             {task.result}
           </p>
-        </div>
+        </Section>
       ) : null}
       {task.error ? (
         <p className="rounded-(--radius-surface) bg-brick-soft px-4 py-3 text-body text-brick">{task.error}</p>
@@ -528,17 +446,6 @@ function TaskPanel({ task, onDone }: { task: Task; onDone: () => void }) {
 
 function WatchPanel({ watch: w, onDone }: { watch: Watch; onDone: () => void }) {
   const t = useT();
-  const canCancel = useCan("watches:write");
-  const queryClient = useQueryClient();
-  const notify = useNotify();
-  const cancel = useMutation({
-    mutationFn: () => api.cancelWatch(w.id),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: keys.watches });
-      notify(t("watch-cancelled-notice"));
-      onDone();
-    },
-  });
   return (
     <SheetPanel
       icon={Radar}
@@ -551,20 +458,7 @@ function WatchPanel({ watch: w, onDone }: { watch: Watch; onDone: () => void }) 
           <Link to="/watches/$watchId" params={{ watchId: w.id }} className={buttonVariants({ variant: "outline" })}>
             {t("watch-found")} <ArrowUpRight />
           </Link>
-          {canCancel ? (
-            <Confirm
-              trigger={
-                <Button variant="ghost">
-                  <Trash2 /> {t("watch-cancel")}
-                </Button>
-              }
-              title={t("watch-cancel-title")}
-              confirm={t("watch-cancel")}
-              onConfirm={() => cancel.mutateAsync()}
-            >
-              {t("watch-cancel-description", { what: w.title })}
-            </Confirm>
-          ) : null}
+          <CancelWatch watch={w} onDone={onDone} />
         </>
       }
     >
@@ -628,7 +522,7 @@ function SchedulePanel({ schedule: s, onDone }: { schedule: Schedule; onDone: ()
         canCancel ? (
           <Confirm
             trigger={
-              <Button variant="outline">
+              <Button variant="destructive">
                 <Trash2 /> {t("schedule-cancel-confirm")}
               </Button>
             }

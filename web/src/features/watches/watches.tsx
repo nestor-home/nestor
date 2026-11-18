@@ -2,43 +2,21 @@
  * A watch on its page: what it keeps an eye on and for whom, how often it reports, what it found so far,
  * then each thing it found as the journal tells it.
  */
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { Radar, Repeat, Trash2 } from "lucide-react";
-import { api, isMissing, keys, type Watch, watchQuery } from "@/api";
+import { Radar, Repeat } from "lucide-react";
+import { isMissing, type Watch, watchQuery } from "@/api";
 import { Ago } from "@/components/ago";
-import { Confirm } from "@/components/confirm";
 import { type Crumb, Crumbs } from "@/components/crumbs";
 import { BrandTile, IconTile, Pebble } from "@/components/marks";
-import { useNotify } from "@/components/notices";
 import { OriginLink } from "@/components/origin-link";
 import { PageHeader, Section } from "@/components/page";
 import { Empty, Failure, Loading } from "@/components/states";
-import { Button } from "@/components/ui/button";
 import { SubjectStory } from "@/features/journal/subject-story";
 import { useT } from "@/i18n";
-import { BrandMark, type BrandSlug, brandOf } from "@/lib/brands";
 import { moment } from "@/lib/dates";
 import { personName } from "@/lib/people";
-import { useCan } from "@/lib/session";
-
-/** The mark of what a watch watches: the kinds Nestor's sources bring, else a brand (a webhook named `github`). */
-const KIND_MARKS: Record<string, BrandSlug> = { mail: "email", feed: "rss", page: "web-page" };
-
-/** The brand that stands for a kind of watch. */
-export const watchBrand = (kind: string | undefined): BrandSlug =>
-  (kind && (KIND_MARKS[kind] ?? brandOf(kind))) || "webhook";
-
-/** What a watch watches ("mail", "feed", a webhook's kind), with its mark. */
-export function WatchKind({ kind }: { kind: string }) {
-  const t = useT();
-  return (
-    <span className="inline-flex items-center gap-1">
-      <BrandMark brand={watchBrand(kind)} className="size-3.5" label={false} />
-      {t("watch-kind", { kind })}
-    </span>
-  );
-}
+import { CancelWatch, watchBrand } from "./parts";
 
 export function WatchDetail({ id }: { id: string }) {
   const t = useT();
@@ -59,18 +37,7 @@ export function WatchDetail({ id }: { id: string }) {
 
 function Loaded({ watch: w, trail }: { watch: Watch; trail: Crumb[] }) {
   const t = useT();
-  const canCancel = useCan("watches:write");
-  const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const notify = useNotify();
-  const cancel = useMutation({
-    mutationFn: () => api.cancelWatch(w.id),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: keys.watches });
-      notify(t("watch-cancelled-notice"));
-      void navigate({ to: "/activity" });
-    },
-  });
   return (
     <>
       <PageHeader
@@ -84,22 +51,7 @@ function Loaded({ watch: w, trail }: { watch: Watch; trail: Crumb[] }) {
             {w.until ? <span>{t("watch-until", { when: moment(w.until) })}</span> : null}
           </>
         }
-        actions={
-          canCancel ? (
-            <Confirm
-              trigger={
-                <Button variant="destructive">
-                  <Trash2 /> {t("watch-cancel-action")}
-                </Button>
-              }
-              title={t("watch-cancel-title")}
-              confirm={t("watch-cancel")}
-              onConfirm={() => cancel.mutateAsync()}
-            >
-              {t("watch-cancel-description", { what: w.title })}
-            </Confirm>
-          ) : null
-        }
+        actions={<CancelWatch watch={w} onDone={() => void navigate({ to: "/activity" })} />}
       >
         {w.what}
       </PageHeader>

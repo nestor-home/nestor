@@ -2,60 +2,27 @@
  * A task's whole run on its page: what was asked and where it stands, its outcome and the files it made,
  * who asked and how the answer reached them, its steps as they came, then its trace in the journal.
  */
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CircleSlash, Paperclip, TriangleAlert, Volume2, Workflow, X } from "lucide-react";
-import { api, isMissing, keys, type Task, type TaskStatus, taskQuery } from "@/api";
+import { useQuery } from "@tanstack/react-query";
+import { CircleSlash, Paperclip, TriangleAlert, Volume2, Workflow } from "lucide-react";
+import { isMissing, type Task, taskQuery } from "@/api";
 import { API_BASE } from "@/api/client";
 import { Ago } from "@/components/ago";
-import { Confirm } from "@/components/confirm";
 import { type Crumb, Crumbs } from "@/components/crumbs";
 import { IconTile, Pebble } from "@/components/marks";
-import { useNotify } from "@/components/notices";
 import { OriginLink } from "@/components/origin-link";
 import { Fact, Facts, PageHeader, Section, WithAside } from "@/components/page";
 import { Empty, Failure, Loading } from "@/components/states";
-import { Status, type StatusTone } from "@/components/status";
-import { Button } from "@/components/ui/button";
 import { Files } from "@/features/journal/attachments";
 import { SubjectStory } from "@/features/journal/subject-story";
 import { useT } from "@/i18n";
-import { BrandMark, brandName, brandOf } from "@/lib/brands";
+import { KindName } from "@/lib/brands";
 import { moment } from "@/lib/dates";
-import { taskStatusLabel } from "@/lib/labels";
-import { useCan } from "@/lib/session";
 import { duration } from "@/lib/time";
-import { cn } from "@/lib/utils";
-
-const TONE: Record<TaskStatus, StatusTone> = { running: "accent", completed: "ok", failed: "error", cancelled: "idle" };
-
-export function TaskStatusMark({ status }: { status: TaskStatus }) {
-  return <Status tone={TONE[status]}>{taskStatusLabel(status)}</Status>;
-}
-
-/** Who does the work: the executor's mark and the name people know it by. */
-function Executor({ name }: { name: string }) {
-  const brand = brandOf(name);
-  return (
-    <span className="inline-flex items-center gap-1.5">
-      {brand ? <BrandMark brand={brand} className="size-3.5" label={false} /> : null}
-      {brand ? brandName(brand) : name}
-    </span>
-  );
-}
+import { CancelTask, Steps, TaskStatusMark } from "./parts";
 
 export function TaskDetail({ id }: { id: string }) {
   const t = useT();
   const found = useQuery(taskQuery(id));
-  const canCancel = useCan("tasks:write");
-  const queryClient = useQueryClient();
-  const notify = useNotify();
-  const cancel = useMutation({
-    mutationFn: () => api.cancelTask(id),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: keys.tasks });
-      notify(t("task-cancel-notice", { id }));
-    },
-  });
   const trail: Crumb[] = [{ label: t("space-activity"), link: { to: "/activity" } }, { label: id }];
   if (found.isPending) return <Loading lines={4} />;
   const task = found.data;
@@ -75,28 +42,13 @@ export function TaskDetail({ id }: { id: string }) {
         meta={
           <>
             <TaskStatusMark status={task.status} />
-            <Executor name={task.executor} />
+            <KindName kind={task.executor} />
             <span>
               <Ago iso={task.started_at} />
             </span>
           </>
         }
-        actions={
-          task.status === "running" && canCancel ? (
-            <Confirm
-              trigger={
-                <Button variant="destructive">
-                  <X /> {t("task-cancel-action")}
-                </Button>
-              }
-              title={t("task-cancel-title")}
-              confirm={t("task-cancel")}
-              onConfirm={() => cancel.mutateAsync()}
-            >
-              {t("task-cancel-description")}
-            </Confirm>
-          ) : null
-        }
+        actions={<CancelTask task={task} />}
       >
         {task.objective}
       </PageHeader>
@@ -107,7 +59,7 @@ export function TaskDetail({ id }: { id: string }) {
         </WithAside>
         {task.steps.length ? (
           <Section title={t("task-steps")} count={task.steps.length}>
-            <Steps task={task} />
+            <Steps task={task} className="surface px-5 pt-5 pb-1.5" />
           </Section>
         ) : null}
         <Section title={t("task-story")}>
@@ -210,7 +162,7 @@ function About({ task }: { task: Task }) {
           </Fact>
         ) : null}
         <Fact term={t("task-done-by")}>
-          <Executor name={task.executor} />
+          <KindName kind={task.executor} />
         </Fact>
         <Fact term={t("task-started")}>{moment(task.started_at)}</Fact>
         {took ? <Fact term={t("task-took")}>{duration(took)}</Fact> : null}
@@ -235,33 +187,5 @@ function About({ task }: { task: Task }) {
         )}
       </Facts>
     </aside>
-  );
-}
-
-/** What the executor reported as it went, oldest first; the last one glows while the task runs. */
-function Steps({ task }: { task: Task }) {
-  return (
-    <ol className="surface px-5 pt-5 pb-1.5">
-      {task.steps.map((step, index) => {
-        const last = index === task.steps.length - 1;
-        return (
-          // biome-ignore lint/suspicious/noArrayIndexKey: steps are an append-only list of plain strings
-          <li key={index} className="grid grid-cols-[1.25rem_1fr] gap-x-3">
-            <span className="flex flex-col items-center" aria-hidden="true">
-              <span
-                className={cn(
-                  "mt-1.5 size-2.5 rounded-full",
-                  last && task.status === "running" ? "live-dot bg-ember" : "bg-rule-strong",
-                )}
-              />
-              {last ? null : <span className="w-px flex-1 bg-rule" />}
-            </span>
-            <span className={cn("pb-3.5 text-body [overflow-wrap:anywhere]", last ? "text-ink" : "text-ink-muted")}>
-              {step}
-            </span>
-          </li>
-        );
-      })}
-    </ol>
   );
 }

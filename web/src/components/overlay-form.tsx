@@ -1,6 +1,3 @@
-import type { LucideIcon } from "lucide-react";
-import { type ReactElement, type ReactNode, useRef } from "react";
-import { IconTile, type TileTone } from "@/components/marks";
 import {
   Dialog,
   DialogContent,
@@ -12,6 +9,9 @@ import {
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useOpenState } from "@/hooks/use-open-state";
+import type { LucideIcon } from "lucide-react";
+import { type ReactElement, type ReactNode, useRef } from "react";
+import { IconTile, type TileTone } from "@/components/marks";
 
 /**
  * The one rule for editing: a page shows content; creating or changing is an explicit action that

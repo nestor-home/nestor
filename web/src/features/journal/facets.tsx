@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { JournalFacets, Kind } from "@/api";
 import { kindValues } from "@/api/schema.gen";
 import { BottomSheet } from "@/components/overlay-form";
-import { RowList } from "@/components/page";
+import { Count, RowList } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -176,9 +176,7 @@ export function FilterSheet({
           <Button variant="outline" className="h-11 rounded-full bg-paper-raised px-4">
             <SlidersHorizontal aria-hidden="true" />
             {t("jr-filters")}
-            {chosen.length ? (
-              <span className="rounded-full bg-ink px-1.5 text-micro text-paper tabular">{chosen.length}</span>
-            ) : null}
+            {chosen.length ? <Count n={chosen.length} /> : null}
           </Button>
         }
       >

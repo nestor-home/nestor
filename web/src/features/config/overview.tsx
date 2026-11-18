@@ -4,7 +4,7 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, FileCog } from "lucide-react";
+import { FileCog } from "lucide-react";
 import { configHistoryQuery, secretsQuery } from "@/api";
 import { Crumbs } from "@/components/crumbs";
 import { IconTile, Pebble, ServiceTile } from "@/components/marks";
@@ -14,6 +14,7 @@ import { PageMark, SaveBar, usePageMarks } from "./config-layout";
 import { useConfigEditor } from "./editor";
 import { type ConfigPage, GROUP_LABEL, groupsFor, pageTitle } from "./sections";
 import { glanceOf, peopleOf } from "./summary";
+import { OpenArrow, TILE_CARD, TileCard } from "@/components/card";
 
 const MARKS = 4;
 
@@ -62,8 +63,10 @@ function PageCard({ page }: { page: ConfigPage }) {
   const to = `/config/${page.slug}`;
   return (
     <li>
-      <Link to={to} className="surface flex h-full flex-col gap-4 p-5">
-        <span className="flex items-center gap-1.5">
+      <Link to={to} className={TILE_CARD}>
+        <TileCard
+          marks={
+            <>
           {people.length ? (
             people.slice(0, MARKS).map((p, i) => (
               // biome-ignore lint/suspicious/noArrayIndexKey: a person's position is its place in the file
@@ -79,17 +82,17 @@ function PageCard({ page }: { page: ConfigPage }) {
               {t("cfg-sum-extra", { count: Math.max(people.length, glance.marks.length) - MARKS })}
             </span>
           ) : null}
-          <span className="ml-auto flex items-center gap-2.5">
-            <PageMark {...marks} />
-            <ArrowRight className="size-4 text-ink-faint" aria-hidden="true" />
-          </span>
-        </span>
-        <span>
-          <span className="block title-card text-ink">{pageTitle(page, schema, t)}</span>
-          <span className="mt-1.5 line-clamp-2 block text-body [overflow-wrap:anywhere] text-ink-muted">
-            {glance.line}
-          </span>
-        </span>
+            </>
+          }
+          aside={
+            <>
+              <PageMark {...marks} />
+              <OpenArrow />
+            </>
+          }
+          title={pageTitle(page, schema, t)}
+          line={<span className="line-clamp-2">{glance.line}</span>}
+        />
       </Link>
     </li>
   );
