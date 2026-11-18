@@ -20,7 +20,7 @@ import {
   Workflow,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import {
   api,
   type Confirmation,
@@ -45,7 +45,8 @@ import { useNotify } from "@/components/notices";
 import { OriginLink } from "@/components/origin-link";
 import { SheetPanel, SideSheet } from "@/components/overlay-form";
 import { Fact, Facts, PageHeader, RowList, Section } from "@/components/page";
-import { Empty, Loading } from "@/components/states";
+import { Empty, Failure, Loading } from "@/components/states";
+import { Status } from "@/components/status";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { CancelTask, RunningTask, Steps, TaskStatusMark } from "@/features/tasks/parts";
 import { CancelWatch, WatchKind, watchBrand } from "@/features/watches/parts";
@@ -64,11 +65,19 @@ type Opened = { kind: "task" | "watch" | "schedule"; id: string };
 export function ActivityView() {
   const t = useT();
   const me = useMe();
-  const confirmations = useQuery({ ...confirmationsQuery, enabled: useCan("messages:read") });
-  const messages = useQuery({ ...messagesQuery, enabled: useCan("messages:read") });
-  const tasks = useQuery({ ...tasksQuery, enabled: useCan("tasks:read") });
-  const schedules = useQuery({ ...schedulesQuery, enabled: useCan("schedules:read") });
-  const watches = useQuery({ ...watchesQuery, enabled: useCan("watches:read") });
+  // a lane shows only to whoever may read what it holds
+  const can: Record<Lane, boolean> = {
+    all: true,
+    you: useCan("messages:read"),
+    running: useCan("tasks:read"),
+    planned: useCan("schedules:read"),
+    watching: useCan("watches:read"),
+  };
+  const confirmations = useQuery({ ...confirmationsQuery, enabled: can.you });
+  const messages = useQuery({ ...messagesQuery, enabled: can.you });
+  const tasks = useQuery({ ...tasksQuery, enabled: can.running });
+  const schedules = useQuery({ ...schedulesQuery, enabled: can.planned });
+  const watches = useQuery({ ...watchesQuery, enabled: can.watching });
   const canConfigure = useCan("config:manage");
   const [lane, setLane] = useState<Lane>("all");
   const [opened, setOpened] = useState<Opened | null>(null);
@@ -83,14 +92,17 @@ export function ActivityView() {
   );
   const watching = watches.data?.watches ?? [];
   const waiting = asks.length + questions.length + pending.length;
-  const lanes: { id: Lane; label: string; count: number }[] = [
-    { id: "all", label: t("act-all"), count: 0 },
-    { id: "you", label: t("act-you"), count: waiting },
-    { id: "running", label: t("act-running"), count: running.length },
-    { id: "planned", label: t("act-planned"), count: planned.length },
-    { id: "watching", label: t("act-watching"), count: watching.length },
-  ];
-  const shows = (id: Lane) => lane === "all" || lane === id;
+  const lanes = (
+    [
+      { id: "all", label: t("act-all"), count: 0 },
+      { id: "you", label: t("act-you"), count: waiting },
+      { id: "running", label: t("act-running"), count: running.length },
+      { id: "planned", label: t("act-planned"), count: planned.length },
+      { id: "watching", label: t("act-watching"), count: watching.length },
+    ] satisfies { id: Lane; label: string; count: number }[]
+  ).filter((l) => can[l.id]);
+  const shows = (id: Lane) => can[id] && (lane === "all" || lane === id);
+  const asking = confirmations.isError ? confirmations : messages.isError ? messages : null;
   const openTask = opened?.kind === "task" ? [...running, ...recent].find((x) => x.id === opened.id) : undefined;
   const openWatch = opened?.kind === "watch" ? watching.find((x) => x.id === opened.id) : undefined;
   const openSchedule = opened?.kind === "schedule" ? planned.find((x) => x.id === opened.id) : undefined;
@@ -103,18 +115,32 @@ export function ActivityView() {
         <Chips label={t("act-title")} items={lanes} value={lane} onChange={setLane} />
       </div>
 
-      {shows("you") && (waiting || lane === "you") ? (
+      {shows("you") && (waiting || asking || lane === "you") ? (
         <Section title={t("act-you-title")} count={waiting}>
-          {waiting ? (
+          {asking ? (
+            <Failure error={asking.error} retry={() => void asking.refetch()} />
+          ) : waiting ? (
             <ul className="grid gap-3 lg:grid-cols-2">
               {asks.map((c) => (
                 <ConfirmationCard key={c.id} confirmation={c} />
               ))}
               {questions.map((m) => (
-                <MessageCard key={m.id} message={m} icon={CircleHelp} tone="amber" state={t("act-awaits-reply")} />
+                <MessageCard
+                  key={m.id}
+                  message={m}
+                  icon={CircleHelp}
+                  tone="amber"
+                  state={<Status tone="pending">{t("act-awaits-reply")}</Status>}
+                />
               ))}
               {pending.map((m) => (
-                <MessageCard key={m.id} message={m} icon={Send} tone="ink" state={t("act-on-its-way")} />
+                <MessageCard
+                  key={m.id}
+                  message={m}
+                  icon={Send}
+                  tone="ink"
+                  state={<Status tone="idle">{t("act-on-its-way")}</Status>}
+                />
               ))}
             </ul>
           ) : (
@@ -125,7 +151,9 @@ export function ActivityView() {
 
       {shows("running") ? (
         <Section title={t("act-running-title")} count={running.length} aside={<Ask />}>
-          {tasks.isPending ? (
+          {tasks.isError ? (
+            <Failure error={tasks.error} retry={() => void tasks.refetch()} />
+          ) : tasks.isPending ? (
             <Loading lines={2} />
           ) : running.length ? (
             <ul className="grid gap-3 lg:grid-cols-2">
@@ -149,7 +177,9 @@ export function ActivityView() {
 
       {shows("planned") ? (
         <Section title={t("act-planned-title")} count={planned.length} aside={<Ask />}>
-          {schedules.isPending ? (
+          {schedules.isError ? (
+            <Failure error={schedules.error} retry={() => void schedules.refetch()} />
+          ) : schedules.isPending ? (
             <Loading lines={2} />
           ) : planned.length ? (
             <RowList ordered>
@@ -184,7 +214,9 @@ export function ActivityView() {
 
       {shows("watching") ? (
         <Section title={t("act-watching-title")} count={watching.length} aside={<Ask />}>
-          {watches.isPending ? (
+          {watches.isError ? (
+            <Failure error={watches.error} retry={() => void watches.refetch()} />
+          ) : watches.isPending ? (
             <Loading lines={2} />
           ) : watching.length ? (
             <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -325,13 +357,9 @@ function ConfirmationCard({ confirmation: c }: { confirmation: Confirmation }) {
     <li className="surface p-4">
       <CardHead
         mark={<IconTile icon={ShieldQuestion} tone="amber" />}
-        title={
-          <>
-            <span className="block text-meta font-medium text-amber">{t("act-awaits-approval")}</span>
-            <span className="font-mono">{c.tool}</span>
-          </>
-        }
+        title={<span className="font-mono">{c.tool}</span>}
         line={what || null}
+        aside={<Status tone="attention">{t("act-awaits-approval")}</Status>}
       >
         <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-meta text-ink-muted">
           <span>{t("confirmation-for", { name: personName(c.person) })}</span>
@@ -379,20 +407,12 @@ function MessageCard({
   message: PassedMessage;
   icon: LucideIcon;
   tone: TileTone;
-  state: string;
+  state: ReactNode;
 }) {
   const t = useT();
   return (
     <li className="surface p-4">
-      <CardHead
-        mark={<IconTile icon={icon} tone={tone} />}
-        title={
-          <>
-            <span className="block text-meta font-medium text-ink-muted">{state}</span>
-            {t("message-quoted", { text: m.text })}
-          </>
-        }
-      >
+      <CardHead mark={<IconTile icon={icon} tone={tone} />} title={t("message-quoted", { text: m.text })} aside={state}>
         <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-meta text-ink-muted">
           <span>
             {m.requested_by

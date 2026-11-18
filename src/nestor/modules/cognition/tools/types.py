@@ -90,9 +90,11 @@ class ToolFailed(NestorError):
 
 
 # the `title` argument of a tool that creates something the household finds again in a list (a task, a wake-up, a
-# watch): the model names it as it creates it
+# watch): the model names it as it creates it, short enough for a card and for a question that quotes it
+TITLE_CHARS = 80
 TITLE: Mapping[str, object] = {
     "type": "string",
+    "maxLength": TITLE_CHARS,
     "description": (
         "Short name a person would recognise it by in a list: 2 to 6 words, in the household's language, not a "
         "sentence, no final period, not the instruction repeated"
@@ -103,7 +105,7 @@ TITLE: Mapping[str, object] = {
 def titled(arguments: Mapping[str, object]) -> str:
     """The `title` a model gave what it creates; the call fails without one."""
     title = arguments.get("title")
-    if not isinstance(title, str) or not title.strip():
+    if not isinstance(title, str) or not title.strip() or len(title.strip()) > TITLE_CHARS:
         raise ToolFailed("title must be a short name, a few words")
     return title.strip()
 

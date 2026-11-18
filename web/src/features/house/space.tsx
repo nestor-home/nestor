@@ -77,14 +77,22 @@ export function HouseSpace() {
       <PageHeader
         title={t("space-house")}
         actions={
-          canHome && home.data ? (
+          canHome && !home.isPending ? (
             <button type="button" className="group surface px-4 py-2.5 text-left" onClick={() => setSystem(true)}>
               <CardHead
                 mark={
-                  home.data.component.brand ? <ServiceTile kind={home.data.component.brand} size="sm" /> : undefined
+                  home.data?.component.brand ? <ServiceTile kind={home.data.component.brand} size="sm" /> : undefined
                 }
                 title={t("hs-system")}
-                line={<HealthStatus health={home.data.component.health} />}
+                line={
+                  home.data ? (
+                    <HealthStatus health={home.data.component.health} />
+                  ) : home.isError ? (
+                    <HealthStatus health={null} />
+                  ) : (
+                    t("house-none")
+                  )
+                }
                 aside={<OpenArrow />}
               />
             </button>

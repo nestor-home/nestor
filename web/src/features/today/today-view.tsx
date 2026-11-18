@@ -75,7 +75,8 @@ const useClock = (lastLive: number) => useNow(Date.now() - lastLive < 30_000 ? 1
 export function TodayView() {
   const t = useT();
   const canPeople = useCan("people:read");
-  const day = useQuery(journalLatestQuery({ from: startOfToday() }, 200));
+  const from = startOfToday();
+  const day = useQuery(journalLatestQuery({ from }, 200));
   const people = useQuery({ ...peopleQuery, enabled: canPeople });
   const satellites = useQuery({ ...satellitesQuery, enabled: useCan("satellites:read") });
   const tasks = useQuery({ ...tasksQuery, enabled: useCan("tasks:read") });
@@ -89,7 +90,15 @@ export function TodayView() {
     setLive((current) => [item, ...current].slice(0, 100));
     setLastLive(Date.now());
   });
-  const items = useMemo(() => merge(live, day.data?.items ?? []), [day.data, live]);
+  // what arrived live before midnight leaves the day with it
+  const items = useMemo(
+    () =>
+      merge(
+        live.filter((i) => Date.parse(i.at) >= Date.parse(from)),
+        day.data?.items ?? [],
+      ),
+    [day.data, live, from],
+  );
   const running = tasks.data?.running ?? [];
   const rooms = useMemo(
     () =>
@@ -375,13 +384,14 @@ function Next() {
           <li key={c.key} className="surface p-3.5">
             <CardHead
               mark={<IconTile icon={c.icon} tone={c.tone} size="sm" />}
-              title={
+              title={<span className="line-clamp-2">{c.text}</span>}
+              line={
                 <>
-                  {c.at ? <span className="block text-meta font-medium text-ember">{moment(c.at)}</span> : null}
-                  <span className="line-clamp-2">{c.text}</span>
+                  {c.at ? <span className="font-medium text-ember">{moment(c.at)}</span> : null}
+                  {c.at && c.hint ? " · " : null}
+                  {c.hint}
                 </>
               }
-              line={c.hint}
             />
           </li>
         ))}

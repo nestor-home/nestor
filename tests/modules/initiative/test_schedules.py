@@ -213,6 +213,7 @@ async def test_a_one_off_ends_once_run_and_a_cancelled_one_never_runs() -> None:
         ({"title": "T", "instruction": "x", "at": "2026-11-03T09:00", "times": ["08:00"]}, "either once"),
         ({"instruction": "x", "at": "2026-11-03T09:00"}, "title must be a short name"),
         ({"title": " ", "instruction": "x", "at": "2026-11-03T09:00"}, "title must be a short name"),
+        ({"title": "Arrose " * 20, "instruction": "x", "at": "2026-11-03T09:00"}, "title must be a short name"),
     ],
 )
 async def test_a_wake_up_that_cannot_be_set_says_why(arguments: dict[str, object], error: str) -> None:

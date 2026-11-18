@@ -749,7 +749,8 @@ function ItemSheet({
   return (
     <FormSheet
       open={open}
-      onOpenChange={(next) => !next && leave(onClose)}
+      // dismissing a sheet that adds is cancelling the add: only Done keeps what it adds
+      onOpenChange={(next) => !next && leave(adding && onRemove ? onRemove : onClose)}
       onClosed={() => after.current()}
       title={title}
       description={mark ? <KindName kind={mark} /> : undefined}

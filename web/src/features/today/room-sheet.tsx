@@ -41,6 +41,10 @@ function Room({ room: r, items }: { room: RoomNode; items: readonly JournalItem[
   const t = useT();
   const media = useQuery({ ...mediaDevicesQuery, enabled: useCan("media:read") });
   const devices = new Map((media.data?.devices ?? []).map((d) => [d.id, d]));
+  // what one may watch or call through here without seeing the satellites themselves (a member)
+  const reachable = (media.data?.devices ?? []).filter(
+    (d) => d.room === r.journal && !r.satellites.some((s) => s.id === d.id) && (d.can_view || d.can_call || d.off),
+  );
   const day = r.journal ? items.filter((i) => i.room === r.journal).slice(0, 6) : [];
   const who = r.people.length
     ? t("room-with", { people: r.people.map((p) => p.name).join(", "), count: r.people.length })
@@ -78,8 +82,18 @@ function Room({ room: r, items }: { room: RoomNode; items: readonly JournalItem[
       ) : null}
 
       <Section level={3} title={t("room-devices")}>
-        {r.satellites.length ? (
+        {r.satellites.length || reachable.length ? (
           <ul className="grid gap-2">
+            {reachable.map((d) => (
+              <li key={d.id} className="surface px-4 py-3.5">
+                <CardHead
+                  mark={<IconTile icon={d.can_view || d.off ? Video : RadioTower} />}
+                  title={deviceName(d)}
+                  aside={d.connected ? null : <Status tone="attention">{t("sat-state-offline")}</Status>}
+                />
+                <Through device={d} />
+              </li>
+            ))}
             {r.satellites.map((s) => (
               <li key={s.id} className="surface px-4 py-3.5">
                 <div className="flex items-center gap-3">

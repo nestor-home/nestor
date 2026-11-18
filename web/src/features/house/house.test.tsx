@@ -43,7 +43,8 @@ describe("the house", () => {
     unmount();
     db.home = null;
     renderApp("/house");
-    await part(/^The household/);
-    expect(screen.queryByRole("button", { name: /Home system/ })).not.toBeInTheDocument();
+    await user.click(await screen.findByRole("button", { name: /Home system.*No home system plugged in/ }));
+    const sheet = await screen.findByRole("dialog", { name: "Home system" });
+    expect(within(sheet).getByRole("link", { name: "Configure" })).toBeInTheDocument();
   });
 });

@@ -316,7 +316,12 @@ export function answerTo(text: string, files: number): { tool: ChatTool | null; 
   if (named) {
     return {
       tool: {
-        ...tool("delegate_task", { executor: named.handle, objective: text }, "Task 7c1e started.", 0.6),
+        ...tool(
+          "delegate_task",
+          { title: fr("Asked in the chat", "Demandé dans le chat"), executor: named.handle, objective: text },
+          "Task 7c1e started.",
+          0.6,
+        ),
         state: "background",
       },
       answer: fr("It's in hand; I'll come back here when it's done.", "C'est lancé ; je reviens ici quand c'est fini."),

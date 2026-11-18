@@ -318,6 +318,17 @@ describe("a component", () => {
     await waitFor(() => expect(screen.queryByRole("region", { name: "Unsaved changes" })).not.toBeInTheDocument());
     expect(screen.queryByRole("button", { name: /^Discord/ })).not.toBeInTheDocument();
   });
+
+  it("is cancelled too when its sheet is dismissed before Done", async () => {
+    const user = userEvent.setup();
+    renderApp("/config/channels");
+    await user.click(await screen.findByRole("button", { name: /^Add/ }));
+    await user.click(within(await screen.findByRole("dialog")).getByRole("button", { name: /^Discord/ }));
+    await screen.findByRole("dialog", { name: "New: Discord" });
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("region", { name: "Unsaved changes" })).not.toBeInTheDocument());
+    expect(screen.queryByRole("button", { name: /^Discord/ })).not.toBeInTheDocument();
+  });
 });
 
 describe("the history", () => {
