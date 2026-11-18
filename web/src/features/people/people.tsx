@@ -94,7 +94,7 @@ export function PersonFrame({ id, children }: { id: string; children: ReactNode 
   const t = useT();
   const { person, pending, error } = usePerson(id);
   const canConnections = useCan("connections:read");
-  const trail: Crumb[] = [{ label: t("people-title"), link: { to: "/people" } }, { label: person?.name ?? id }];
+  const trail: Crumb[] = [{ label: t("space-house"), link: { to: "/house" } }, { label: person?.name ?? id }];
   if (pending) return <Loading lines={3} />;
   if (!person) {
     return (
@@ -168,7 +168,7 @@ export function PersonOverview({ person: p }: { person: Person }) {
       </div>
       <aside className="grid content-start gap-6 text-sm">
         <div>
-          <p className="label-mono mb-1.5">{t("people-recognised-on")}</p>
+          <p className="caption mb-1.5">{t("people-recognised-on")}</p>
           <ul className="grid gap-1">
             {p.channel_accounts.map((c) => (
               <li key={c} className="inline-flex items-center gap-2 font-mono text-[0.8rem]">
@@ -179,7 +179,7 @@ export function PersonOverview({ person: p }: { person: Person }) {
           </ul>
         </div>
         <div>
-          <p className="label-mono mb-1.5">{t("people-reached-on")}</p>
+          <p className="caption mb-1.5">{t("people-reached-on")}</p>
           {p.reach ? (
             <p className="inline-flex items-center gap-2 font-mono text-[0.8rem]">
               <KindMark kind={p.reach} className="size-3.5" />
@@ -190,7 +190,7 @@ export function PersonOverview({ person: p }: { person: Person }) {
           )}
         </div>
         <div>
-          <p className="label-mono mb-1.5">{t("people-admin")}</p>
+          <p className="caption mb-1.5">{t("people-admin")}</p>
           {account ? (
             <Link to="/accounts/$accountId" params={{ accountId: account.id }} className="text-ink hover:text-ember">
               {account.login} · {roleLabel(account.role)}

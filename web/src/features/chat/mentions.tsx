@@ -63,7 +63,7 @@ export function MentionList({
       <div className="max-h-72 overflow-y-auto p-1">
         {groups.map(([kind, items]) => (
           <section key={kind} className="pb-1">
-            <p className="label-mono px-2.5 pt-2 pb-1 text-[0.68rem] text-ink-faint">{t(`chat-mention-${kind}`)}</p>
+            <p className="caption px-2.5 pt-2 pb-1 text-[0.68rem] text-ink-faint">{t(`chat-mention-${kind}`)}</p>
             <ul>
               {items.map((mention) => {
                 const i = options.indexOf(mention);

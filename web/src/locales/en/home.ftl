@@ -78,3 +78,35 @@ home-all-journal = The whole journal
 home-knows = What I know
 home-all-memories = All memories
 home-learnt-today = learnt today at { $time }
+
+## The scene and what opens from it
+today-so-far = Since this morning
+today-all-activity = Everything ongoing
+today-nothing-next = Nothing planned.
+today-follow-up = Follow-up to { $person } on { $channel }
+today-follow-up-someone = Follow-up on { $channel }
+today-watching = { $count ->
+    [one] One active watch
+   *[other] { $count } active watches
+}
+room-with = { $count ->
+    [one] { $people } is here.
+   *[other] { $people } are here.
+}
+room-someone = Someone is here.
+room-nobody = Nobody right now.
+room-no-sensor = No sensor tells whether someone is here.
+room-since = since
+room-devices = Devices
+room-no-device = No satellite in this room.
+room-today = Here today
+room-quiet-today = Nothing happened here today.
+today-needs-more = { $count ->
+    [one] Show one more
+   *[other] Show { $count } more
+}
+today-needs-fewer = Show fewer
+today-rooms-more = { $count ->
+    [one] One more room
+   *[other] { $count } more rooms
+}

@@ -27,7 +27,7 @@ export function PersonVoice({ person }: { person: Person }) {
     if (voice.error instanceof ApiError && voice.error.code === "voices_off") {
       return canConfigure ? (
         <div>
-          <p className="label-mono mb-1.5">{t("people-voice")}</p>
+          <p className="caption mb-1.5">{t("people-voice")}</p>
           <p className="text-ink-muted">{t("people-voice-off")}</p>
           <Link
             to="/config/$section"
@@ -63,7 +63,7 @@ function VoiceState({ person, voice }: { person: Person; voice: Voice }) {
 
   return (
     <div>
-      <p className="label-mono mb-1.5">{t("people-voice")}</p>
+      <p className="caption mb-1.5">{t("people-voice")}</p>
       {voice.enrolled && voice.enrolled_at ? (
         <p className="text-ink">
           {t("people-voice-recorded")} <Ago iso={voice.enrolled_at} />

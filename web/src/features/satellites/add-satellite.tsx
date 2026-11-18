@@ -168,7 +168,7 @@ function Choose({ onStarted }: { onStarted: (started: StartedAddition) => void }
         <legend className="mb-3 text-[0.95rem] font-medium text-ink">{t("sat-add-how")}</legend>
         {groups.map((group) => (
           <div key={group.proof} className="grid gap-2">
-            <p className="label-mono text-[0.7rem]">{group.title}</p>
+            <p className="caption text-[0.7rem]">{group.title}</p>
             <ToggleGroup
               aria-label={group.title}
               value={method ? [method] : []}

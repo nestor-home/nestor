@@ -10,7 +10,7 @@ export interface Crumb {
 /** Where a deep screen sits: each level a link, the current one plain. */
 export function Crumbs({ trail }: { trail: Crumb[] }) {
   return (
-    <nav aria-label={tr("breadcrumbs")} className="mb-5 font-mono text-xs text-ink-muted">
+    <nav aria-label={tr("breadcrumbs")} className="mb-4 text-[0.9rem] text-ink-muted">
       <ol className="flex flex-wrap items-center gap-x-2">
         {trail.map((crumb, i) => (
           <Fragment key={crumb.label}>

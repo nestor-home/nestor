@@ -183,7 +183,7 @@ export function FilterSheet({
           {groups.map((g) =>
             g.facets?.length ? (
               <section key={g.id} aria-labelledby={`sheet-${g.id}`}>
-                <h3 id={`sheet-${g.id}`} className="label-mono mb-1.5">
+                <h3 id={`sheet-${g.id}`} className="caption mb-1.5">
                   {g.label}
                 </h3>
                 <RowList>

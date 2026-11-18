@@ -66,7 +66,7 @@ export function useAttention(): { items: Attention[]; ready: boolean } {
       title: tr("attention-confirmation", { tool: c.tool }),
       detail: tr("attention-confirmation-detail", { at: hourMinute(c.expires_at) }),
       action: tr("attention-answer"),
-      link: { to: "/messages" },
+      link: { to: "/activity" },
     });
   }
   const home = system.data?.components.find((c) => c.slot === "home");

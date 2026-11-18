@@ -114,7 +114,7 @@ export function TaskDetail({ id }: { id: string }) {
       notify(t("task-cancel-notice", { id }));
     },
   });
-  const trail: Crumb[] = [{ label: t("task-title"), link: { to: "/tasks" } }, { label: id }];
+  const trail: Crumb[] = [{ label: t("space-activity"), link: { to: "/activity" } }, { label: id }];
   if (found.isPending) return <Loading lines={4} />;
   const task = found.data;
   if (!task) {
@@ -162,7 +162,7 @@ export function TaskDetail({ id }: { id: string }) {
         <aside className="grid content-start gap-6">
           {task.result || task.error ? (
             <div>
-              <p className="label-mono mb-1.5">{task.error ? t("task-error") : t("task-result")}</p>
+              <p className="caption mb-1.5">{task.error ? t("task-error") : t("task-result")}</p>
               <p className={task.error ? "text-sm text-brick" : "font-serif text-[1.05rem] leading-relaxed"}>
                 {task.error ?? task.result}
               </p>
@@ -170,13 +170,13 @@ export function TaskDetail({ id }: { id: string }) {
           ) : null}
           {task.files.length ? (
             <div>
-              <p className="label-mono mb-1.5">{t("task-files", { count: task.files.length })}</p>
+              <p className="caption mb-1.5">{t("task-files", { count: task.files.length })}</p>
               <Files files={task.files} url={(index) => `${API_BASE}/tasks/${task.id}/files/${index}`} />
             </div>
           ) : null}
           {task.origin ? (
             <div>
-              <p className="label-mono mb-1.5">{t("task-asked-in")}</p>
+              <p className="caption mb-1.5">{t("task-asked-in")}</p>
               {task.origin.session ? (
                 <span className="text-sm">
                   <OriginLink origin={task.origin} />
@@ -187,7 +187,7 @@ export function TaskDetail({ id }: { id: string }) {
             </div>
           ) : null}
           <div>
-            <p className="label-mono mb-1.5">{t("task-delivery")}</p>
+            <p className="caption mb-1.5">{t("task-delivery")}</p>
             {task.delivered ? (
               <p className="flex items-start gap-2 text-sm">
                 <Volume2 className="mt-0.5 size-4 shrink-0 text-ember" aria-hidden="true" />

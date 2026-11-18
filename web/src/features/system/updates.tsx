@@ -15,7 +15,6 @@ import { Dither } from "@/components/dither";
 import { FormActions } from "@/components/form-actions";
 import { FormError, Notice } from "@/components/states";
 import { Button } from "@/components/ui/button";
-import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import { UpdateDialog } from "@/components/update-dialog";
 import { Restarting, useRestart } from "@/features/config/restart";
 import { useT } from "@/i18n";
@@ -39,31 +38,30 @@ export function UpdateAvailable({ compact }: { compact: boolean }) {
   return (
     <>
       {latest ? (
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              tooltip={t("upd-available-version", { version: latest })}
-              className="relative overflow-hidden"
-              onClick={() => setOpen(true)}
-              onPointerEnter={() => setHover(true)}
-              onPointerLeave={() => setHover(false)}
-            >
-              {hover ? (
-                <Dither
-                  shape="ramp-left"
-                  from={0}
-                  to={0.55}
-                  dot={2}
-                  animated
-                  className="absolute inset-0 text-ember/35"
-                />
-              ) : null}
-              <CircleArrowUp className="relative size-4 shrink-0 text-ember" aria-hidden="true" />
-              <span className={compact ? "sr-only" : "relative min-w-0 flex-1 truncate"}>{t("upd-available")}</span>
-              {compact ? null : <span className="relative font-mono text-[0.75rem] text-ink-muted">{latest}</span>}
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+        <button
+          type="button"
+          title={t("upd-available-version", { version: latest })}
+          aria-label={t("upd-available-version", { version: latest })}
+          className={
+            compact
+              ? "relative grid size-11 place-items-center overflow-hidden rounded-xl hover:bg-white/8"
+              : "surface relative flex w-full items-center gap-3 overflow-hidden px-4 py-3 text-left"
+          }
+          onClick={() => setOpen(true)}
+          onPointerEnter={() => setHover(true)}
+          onPointerLeave={() => setHover(false)}
+        >
+          {hover ? (
+            <Dither shape="ramp-left" from={0} to={0.55} dot={2} animated className="absolute inset-0 text-ember/35" />
+          ) : null}
+          <CircleArrowUp className="relative size-5 shrink-0 text-ember" aria-hidden="true" />
+          {compact ? null : (
+            <>
+              <span className="relative min-w-0 flex-1 truncate text-ink">{t("upd-available")}</span>
+              <span className="relative font-mono text-[0.8rem] text-ink-muted">{latest}</span>
+            </>
+          )}
+        </button>
       ) : null}
       <NestorUpdate open={open} onOpenChange={setOpen} target={target} onTarget={setTarget} />
     </>
@@ -197,7 +195,7 @@ function ReleaseNotes({ release }: { release: Release }) {
         if (!changes.length) return null;
         return (
           <div key={kind} className="mt-3">
-            <p className={kind === "breaking" ? "label-mono text-brick" : "label-mono"}>{t(`upd-kind-${kind}`)}</p>
+            <p className={kind === "breaking" ? "caption text-brick" : "caption"}>{t(`upd-kind-${kind}`)}</p>
             <ul className="mt-1 grid list-disc gap-1 pl-5 text-sm text-ink" lang="en">
               {changes.map((c) => (
                 <li key={c.text} className="[overflow-wrap:anywhere]">

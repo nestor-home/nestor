@@ -166,7 +166,7 @@ export function ToolCall({ tool }: { tool: ChatTool }) {
 function ToolBlock({ label, children }: { label: string; children: string }) {
   return (
     <div className="grid gap-1.5">
-      <p className="label-mono text-[0.68rem] text-ink-faint">{label}</p>
+      <p className="caption text-[0.68rem] text-ink-faint">{label}</p>
       <pre className="max-h-64 overflow-auto rounded-md bg-paper-sunken px-3 py-2 font-mono text-[0.78rem] leading-relaxed whitespace-pre-wrap text-ink [overflow-wrap:anywhere]">
         {children}
       </pre>

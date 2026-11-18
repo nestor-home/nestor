@@ -25,3 +25,19 @@ house-unplaced = { $count ->
     [one] 1 occupancy sensor has no room: it is ignored.
    *[other] { $count } occupancy sensors have no room: they are ignored.
 }
+
+## The "house" space
+hs-lede = Who lives here, where each one is, and what { $assistant } hears, speaks and sees through in each room.
+hs-system = Home system
+hs-people = The household
+hs-rooms = The rooms
+hs-rooms-empty = No room known yet: add a satellite or plug a home system.
+hs-media = Watch and call
+hs-room-events = { $count ->
+    [one] once today
+   *[other] { $count } times today
+}
+hs-memories = { $count ->
+    [one] One memory kept by { $assistant }
+   *[other] { $count } memories kept by { $assistant }
+}

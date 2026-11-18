@@ -78,3 +78,35 @@ home-all-journal = Tout le journal
 home-knows = Ce que je sais
 home-all-memories = Tous les souvenirs
 home-learnt-today = appris aujourd'hui à { $time }
+
+## La scène et ce qui s'ouvre depuis elle
+today-so-far = Depuis ce matin
+today-all-activity = Tout ce qui est en cours
+today-nothing-next = Rien de prévu.
+today-follow-up = Relance à { $person } sur { $channel }
+today-follow-up-someone = Relance sur { $channel }
+today-watching = { $count ->
+    [one] Une veille active
+   *[other] { $count } veilles actives
+}
+room-with = { $count ->
+    [one] { $people } s'y trouve.
+   *[other] { $people } s'y trouvent.
+}
+room-someone = Quelqu'un s'y trouve.
+room-nobody = Personne en ce moment.
+room-no-sensor = Aucun capteur ne dit s'il y a quelqu'un.
+room-since = depuis
+room-devices = Appareils
+room-no-device = Aucun satellite dans cette pièce.
+room-today = Aujourd'hui ici
+room-quiet-today = Rien ne s'y est passé aujourd'hui.
+today-needs-more = { $count ->
+    [one] Voir une autre demande
+   *[other] Voir { $count } autres demandes
+}
+today-needs-fewer = Réduire
+today-rooms-more = { $count ->
+    [one] Une autre pièce
+   *[other] { $count } autres pièces
+}

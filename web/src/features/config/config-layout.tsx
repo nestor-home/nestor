@@ -78,7 +78,7 @@ function SubNav() {
     <nav aria-label={t("cfg-nav")} className="sticky top-6 grid gap-5">
       {groups.map((group) => (
         <div key={group}>
-          <p className="label-mono mb-1.5 px-2 text-[0.66rem]">{t(GROUP_LABEL[group])}</p>
+          <p className="caption mb-1.5 px-2 text-[0.66rem]">{t(GROUP_LABEL[group])}</p>
           <ul className="grid gap-px">
             {pages
               .filter((p) => p.group === group)

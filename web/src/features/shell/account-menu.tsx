@@ -85,7 +85,7 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuLabel className="label-mono">{t("shell-theme")}</DropdownMenuLabel>
+          <DropdownMenuLabel className="caption">{t("shell-theme")}</DropdownMenuLabel>
           <DropdownMenuRadioGroup value={choice} onValueChange={(value) => choose(value as ThemeChoice)}>
             <DropdownMenuRadioItem value="system">
               <Monitor /> {t("shell-theme-system")}
@@ -100,7 +100,7 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuLabel className="label-mono flex items-center gap-1.5">
+          <DropdownMenuLabel className="caption flex items-center gap-1.5">
             <Languages className="size-3" aria-hidden="true" /> {t("shell-language")}
           </DropdownMenuLabel>
           <DropdownMenuRadioGroup value={locale} onValueChange={(value) => isLocale(value) && language.mutate(value)}>

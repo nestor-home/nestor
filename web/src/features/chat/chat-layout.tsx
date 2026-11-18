@@ -146,7 +146,7 @@ export function ChatList({ onNavigate, inSheet = false }: { onNavigate?: () => v
         ) : (
           groups.map(([group, items]) => (
             <section key={group} className="mt-3 first:mt-1">
-              <h3 className="label-mono px-2.5 pb-1 text-[0.68rem] text-ink-faint">{t(`chat-group-${group}`)}</h3>
+              <h3 className="caption px-2.5 pb-1 text-[0.68rem] text-ink-faint">{t(`chat-group-${group}`)}</h3>
               <ul className="grid gap-px">
                 {items.map((chat) => (
                   <li key={chat.id}>

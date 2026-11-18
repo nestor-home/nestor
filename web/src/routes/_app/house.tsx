@@ -1,13 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Guard } from "@/components/guard";
-import { HouseView } from "@/features/house/house-view";
+import { HouseSpace } from "@/features/house/space";
 
 export const Route = createFileRoute("/_app/house")({ component: Page });
 
 function Page() {
   return (
-    <Guard scope="home:read">
-      <HouseView />
+    <Guard scope="people:read">
+      <HouseSpace />
     </Guard>
   );
 }

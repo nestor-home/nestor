@@ -20,6 +20,10 @@ import { useCan, useMe } from "@/lib/session";
 /** The mark of what a watch watches: the kinds Nestor's sources bring, else a brand (a webhook named `github`). */
 const KIND_MARKS: Record<string, BrandSlug> = { mail: "email", feed: "rss", page: "web-page" };
 
+/** The brand that stands for a kind of watch. */
+export const watchBrand = (kind: string | undefined): BrandSlug =>
+  (kind && (KIND_MARKS[kind] ?? brandOf(kind))) || "webhook";
+
 /** What a watch watches ("mail", "feed", a webhook's kind), with its mark. */
 export function WatchKind({ kind }: { kind: string }) {
   const t = useT();
@@ -110,7 +114,7 @@ export function WatchesList() {
 export function WatchDetail({ id }: { id: string }) {
   const t = useT();
   const found = useQuery(watchQuery(id));
-  const trail: Crumb[] = [{ label: t("watch-title"), link: { to: "/watches" } }, { label: id }];
+  const trail: Crumb[] = [{ label: t("space-activity"), link: { to: "/activity" } }, { label: id }];
   if (found.isPending) return <Loading lines={4} />;
   const watch = found.data;
   if (!watch) {
@@ -135,7 +139,7 @@ function Loaded({ watch: w, trail }: { watch: Watch; trail: Crumb[] }) {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: keys.watches });
       notify(t("watch-cancelled-notice"));
-      void navigate({ to: "/watches" });
+      void navigate({ to: "/activity" });
     },
   });
   return (
@@ -169,7 +173,7 @@ function Loaded({ watch: w, trail }: { watch: Watch; trail: Crumb[] }) {
         </Section>
         <aside className="grid content-start gap-6 text-sm">
           <div>
-            <p className="label-mono mb-1.5">{t("watch-watches")}</p>
+            <p className="caption mb-1.5">{t("watch-watches")}</p>
             <p className="flex flex-wrap gap-1">
               {w.kinds.map((k) => (
                 <Tag key={k}>
@@ -179,12 +183,12 @@ function Loaded({ watch: w, trail }: { watch: Watch; trail: Crumb[] }) {
             </p>
           </div>
           <div>
-            <p className="label-mono mb-1.5">{t("watch-rhythm")}</p>
+            <p className="caption mb-1.5">{t("watch-rhythm")}</p>
             <p>{w.once ? t("watch-rhythm-once") : t("watch-rhythm-every")}</p>
           </div>
           {w.origin ? (
             <div>
-              <p className="label-mono mb-1.5">{t("watch-asked-in")}</p>
+              <p className="caption mb-1.5">{t("watch-asked-in")}</p>
               <OriginLink origin={w.origin} />
             </div>
           ) : null}

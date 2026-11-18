@@ -1,4 +1,6 @@
+import type { LucideIcon } from "lucide-react";
 import type { ReactElement, ReactNode } from "react";
+import { IconTile, type TileTone } from "@/components/marks";
 import {
   Dialog,
   DialogContent,
@@ -133,5 +135,50 @@ export function FormSheet({
       </SheetHeader>
       <div className="px-6 pb-8">{open ? children(() => setOpen(false)) : null}</div>
     </SideSheet>
+  );
+}
+
+/**
+ * What a side sheet holds when it opens one thing (a task, a room, a device): what kind of thing it is, its
+ * title, its body, and its actions held at the foot while the body scrolls.
+ */
+export function SheetPanel({
+  icon,
+  tone,
+  kind,
+  title,
+  description,
+  children,
+  actions,
+}: {
+  icon?: LucideIcon;
+  tone?: TileTone;
+  kind?: string;
+  title: string;
+  description?: ReactNode;
+  children: ReactNode;
+  actions?: ReactNode;
+}) {
+  return (
+    <>
+      <SheetHeader className="gap-3 px-6 pt-8 pb-2">
+        {kind ? (
+          <span className="flex items-center gap-3 text-[0.9rem] font-medium text-ink-muted">
+            {icon ? <IconTile icon={icon} tone={tone} className="size-9" /> : null}
+            {kind}
+          </span>
+        ) : null}
+        <SheetTitle className="font-serif text-[1.6rem] leading-snug font-normal">{title}</SheetTitle>
+        <SheetDescription className={description ? "text-[0.98rem] text-ink-muted" : "sr-only"}>
+          {description ?? kind ?? title}
+        </SheetDescription>
+      </SheetHeader>
+      <div className="grid gap-7 px-6 pb-8">{children}</div>
+      {actions ? (
+        <div className="sticky bottom-0 mt-auto flex flex-wrap gap-2 border-t border-rule bg-paper-raised px-6 py-4">
+          {actions}
+        </div>
+      ) : null}
+    </>
   );
 }

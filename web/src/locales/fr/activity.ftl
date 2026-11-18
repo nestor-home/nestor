@@ -1,0 +1,28 @@
+## En cours : tout ce que l'agent fait de lui-même pour le foyer, rangé par état.
+
+act-title = En cours
+act-lede = Ce que { $assistant } fait, prévoit et surveille pour vous, et ce qui attend une réponse.
+act-all = Tout
+act-you = À répondre
+act-running = Tâches
+act-planned = Rappels
+act-watching = Veilles
+act-you-title = Attend une réponse
+act-you-empty = Rien n'attend de réponse.
+act-running-title = En train de se faire
+act-planned-title = Prévu
+act-watching-title = Sous surveillance
+act-ended-title = Terminé récemment
+act-awaits-approval = Attend votre accord
+act-awaits-reply = Question posée, sans réponse
+act-on-its-way = Message en route
+act-kind-task = Tâche
+act-kind-watch = Veille
+act-kind-schedule = Rappel
+act-open-page = Tout le déroulé
+act-state = État
+act-by = Confiée à
+act-for = Pour
+act-started = Depuis
+act-found = Trouvé
+act-next = Prochain

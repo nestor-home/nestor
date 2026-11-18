@@ -25,3 +25,19 @@ house-unplaced = { $count ->
     [one] 1 capteur de présence n'a pas de pièce : il est ignoré.
    *[other] { $count } capteurs de présence n'ont pas de pièce : ils sont ignorés.
 }
+
+## L'espace « La maison »
+hs-lede = Qui vit ici, où chacun se trouve, et par quoi { $assistant } entend, parle et voit dans chaque pièce.
+hs-system = Système domotique
+hs-people = Le foyer
+hs-rooms = Les pièces
+hs-rooms-empty = Aucune pièce connue : ajoutez un satellite ou reliez un système domotique.
+hs-media = Voir et appeler
+hs-room-events = { $count ->
+    [one] 1 fois aujourd'hui
+   *[other] { $count } fois aujourd'hui
+}
+hs-memories = { $count ->
+    [one] Un souvenir gardé par { $assistant }
+   *[other] { $count } souvenirs gardés par { $assistant }
+}

@@ -20,7 +20,7 @@ export function PageHeader({
   meta?: ReactNode;
 }) {
   return (
-    <header className="mb-10 md:mb-14">
+    <header className="mb-8">
       {crumbs}
       <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
         <div className="min-w-0 max-w-3xl">
@@ -28,7 +28,7 @@ export function PageHeader({
           {meta ? (
             <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.85rem] text-ink-muted">{meta}</p>
           ) : null}
-          {children ? <p className="lede mt-4 max-w-2xl">{children}</p> : null}
+          {children ? <p className="mt-2 max-w-[60ch] text-[1.05rem] text-ink-muted">{children}</p> : null}
         </div>
         {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
       </div>
@@ -36,7 +36,7 @@ export function PageHeader({
   );
 }
 
-/** A titled part of a screen: a ruled header with the serif title, a count, and its own actions. */
+/** A titled part of a screen: the serif title, how many it holds, and its own actions. */
 export function Section({
   title,
   count,
@@ -54,11 +54,15 @@ export function Section({
 }) {
   const headingId = id ?? `section-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
   return (
-    <section aria-labelledby={headingId} className={cn("mb-14", className)}>
-      <div className="mb-5 flex items-end justify-between gap-4">
+    <section aria-labelledby={headingId} className={cn("min-w-0", className)}>
+      <div className="mb-4 flex items-baseline justify-between gap-4">
         <h2 id={headingId} className="display-3 flex items-baseline gap-2.5 text-ink">
           {title}
-          {count !== undefined ? <span className="font-sans text-sm text-ink-faint tabular">{count}</span> : null}
+          {count ? (
+            <span className="rounded-full bg-ink px-2 py-0.5 font-sans text-[0.75rem] font-semibold text-paper tabular">
+              {count}
+            </span>
+          ) : null}
         </h2>
         {aside}
       </div>
@@ -113,13 +117,13 @@ export function Facts({
 export function Fact({ term, children, className }: { term: ReactNode; children: ReactNode; className?: string }) {
   return (
     <div className="contents">
-      <dt className="label-mono pt-0.5">{term}</dt>
+      <dt className="caption pt-0.5">{term}</dt>
       <dd className={className}>{children}</dd>
     </div>
   );
 }
 
-/** Rows of one kind on a hairline surface, a rule between each: accounts, tasks, satellites… */
+/** Rows of one kind on a raised surface, a rule between each: accounts, tasks, satellites… */
 export function RowList({
   children,
   ordered = false,
@@ -130,15 +134,11 @@ export function RowList({
   className?: string;
 }) {
   const Tag = ordered ? "ol" : "ul";
-  return (
-    <Tag className={cn("divide-y divide-rule rounded-md border border-rule bg-paper-raised", className)}>
-      {children}
-    </Tag>
-  );
+  return <Tag className={cn("surface divide-y divide-rule overflow-hidden", className)}>{children}</Tag>;
 }
 
 /**
- * A hairline-bordered surface. `marked` adds the corner ticks of the signature, for the one or two
+ * A raised surface. `marked` adds the corner ticks of the signature, for the one or two
  * surfaces of a screen that matter most.
  */
 export function Panel({
@@ -152,11 +152,5 @@ export function Panel({
   marked?: boolean;
   as?: "div" | "li" | "section" | "article";
 }) {
-  return (
-    <Tag
-      className={cn("relative rounded-md border border-rule bg-paper-raised p-5", marked && "corner-marks", className)}
-    >
-      {children}
-    </Tag>
-  );
+  return <Tag className={cn("surface relative p-5", marked && "corner-marks", className)}>{children}</Tag>;
 }

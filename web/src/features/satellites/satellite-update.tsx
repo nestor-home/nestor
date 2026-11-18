@@ -131,7 +131,7 @@ function SatelliteUpdate({
         <p className="text-sm text-ink-muted">{t("sat-update-no-notes")}</p>
       )}
       <section aria-label={t("sat-update-steps")}>
-        <p className="label-mono">{t("sat-update-steps")}</p>
+        <p className="caption">{t("sat-update-steps")}</p>
         <ol className="mt-2 grid list-decimal gap-1.5 pl-5 text-sm text-ink">
           <li>{t("sat-update-step-fetch", { version, software: s.software.name })}</li>
           <li>{t("sat-update-step-restart")}</li>

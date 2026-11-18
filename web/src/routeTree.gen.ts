@@ -12,14 +12,13 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
-import { Route as AppCamerasRouteImport } from './routes/_app/cameras'
+import { Route as AppActivityRouteImport } from './routes/_app/activity'
 import { Route as AppChatRouteImport } from './routes/_app/chat'
 import { Route as AppConfigRouteImport } from './routes/_app/config'
 import { Route as AppHouseRouteImport } from './routes/_app/house'
 import { Route as AppJournalRouteImport } from './routes/_app/journal'
 import { Route as AppMemoriesRouteImport } from './routes/_app/memories'
-import { Route as AppMessagesRouteImport } from './routes/_app/messages'
-import { Route as AppSchedulesRouteImport } from './routes/_app/schedules'
+import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppSystemRouteImport } from './routes/_app/system'
 import { Route as InvitationTokenRouteImport } from './routes/invitation.$token'
 import { Route as AppAccountsIndexRouteImport } from './routes/_app/accounts/index'
@@ -35,13 +34,10 @@ import { Route as AppConnectionsIndexRouteImport } from './routes/_app/connectio
 import { Route as AppConnectionsConnectionIdRouteImport } from './routes/_app/connections/$connectionId'
 import { Route as AppConnectionsCatalogueRouteImport } from './routes/_app/connections/catalogue'
 import { Route as AppConnectionsFailedRouteImport } from './routes/_app/connections/failed'
-import { Route as AppPeopleIndexRouteImport } from './routes/_app/people/index'
 import { Route as AppPeoplePersonIdRouteImport } from './routes/_app/people/$personId'
 import { Route as AppSatellitesIndexRouteImport } from './routes/_app/satellites/index'
 import { Route as AppSatellitesSatelliteIdRouteImport } from './routes/_app/satellites/$satelliteId'
-import { Route as AppTasksIndexRouteImport } from './routes/_app/tasks/index'
 import { Route as AppTasksTaskIdRouteImport } from './routes/_app/tasks/$taskId'
-import { Route as AppWatchesIndexRouteImport } from './routes/_app/watches/index'
 import { Route as AppWatchesWatchIdRouteImport } from './routes/_app/watches/$watchId'
 import { Route as AppConnectionsConnectionIdIndexRouteImport } from './routes/_app/connections/$connectionId/index'
 import { Route as AppConnectionsConnectionIdActivityRouteImport } from './routes/_app/connections/$connectionId/activity'
@@ -70,9 +66,9 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppRoute,
 } as any)
-const AppCamerasRoute = AppCamerasRouteImport.update({
-  id: '/cameras',
-  path: '/cameras',
+const AppActivityRoute = AppActivityRouteImport.update({
+  id: '/activity',
+  path: '/activity',
   getParentRoute: () => AppRoute,
 } as any)
 const AppChatRoute = AppChatRouteImport.update({
@@ -100,14 +96,9 @@ const AppMemoriesRoute = AppMemoriesRouteImport.update({
   path: '/memories',
   getParentRoute: () => AppRoute,
 } as any)
-const AppMessagesRoute = AppMessagesRouteImport.update({
-  id: '/messages',
-  path: '/messages',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppSchedulesRoute = AppSchedulesRouteImport.update({
-  id: '/schedules',
-  path: '/schedules',
+const AppSettingsRoute = AppSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => AppRoute,
 } as any)
 const AppSystemRoute = AppSystemRouteImport.update({
@@ -186,11 +177,6 @@ const AppConnectionsFailedRoute = AppConnectionsFailedRouteImport.update({
   path: '/connections/failed',
   getParentRoute: () => AppRoute,
 } as any)
-const AppPeopleIndexRoute = AppPeopleIndexRouteImport.update({
-  id: '/people/',
-  path: '/people/',
-  getParentRoute: () => AppRoute,
-} as any)
 const AppPeoplePersonIdRoute = AppPeoplePersonIdRouteImport.update({
   id: '/people/$personId',
   path: '/people/$personId',
@@ -207,19 +193,9 @@ const AppSatellitesSatelliteIdRoute =
     path: '/satellites/$satelliteId',
     getParentRoute: () => AppRoute,
   } as any)
-const AppTasksIndexRoute = AppTasksIndexRouteImport.update({
-  id: '/tasks/',
-  path: '/tasks/',
-  getParentRoute: () => AppRoute,
-} as any)
 const AppTasksTaskIdRoute = AppTasksTaskIdRouteImport.update({
   id: '/tasks/$taskId',
   path: '/tasks/$taskId',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppWatchesIndexRoute = AppWatchesIndexRouteImport.update({
-  id: '/watches/',
-  path: '/watches/',
   getParentRoute: () => AppRoute,
 } as any)
 const AppWatchesWatchIdRoute = AppWatchesWatchIdRouteImport.update({
@@ -302,14 +278,13 @@ const AppSatellitesSatelliteIdCapabilitiesRoute =
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/login': typeof LoginRoute
-  '/cameras': typeof AppCamerasRoute
+  '/activity': typeof AppActivityRoute
   '/chat': typeof AppChatRouteWithChildren
   '/config': typeof AppConfigRouteWithChildren
   '/house': typeof AppHouseRoute
   '/journal': typeof AppJournalRoute
   '/memories': typeof AppMemoriesRoute
-  '/messages': typeof AppMessagesRoute
-  '/schedules': typeof AppSchedulesRoute
+  '/settings': typeof AppSettingsRoute
   '/system': typeof AppSystemRoute
   '/invitation/$token': typeof InvitationTokenRoute
   '/accounts/$accountId': typeof AppAccountsAccountIdRoute
@@ -329,10 +304,7 @@ export interface FileRoutesByFullPath {
   '/chat/': typeof AppChatIndexRoute
   '/config/': typeof AppConfigIndexRoute
   '/connections/': typeof AppConnectionsIndexRoute
-  '/people/': typeof AppPeopleIndexRoute
   '/satellites/': typeof AppSatellitesIndexRoute
-  '/tasks/': typeof AppTasksIndexRoute
-  '/watches/': typeof AppWatchesIndexRoute
   '/connections/$connectionId/activity': typeof AppConnectionsConnectionIdActivityRoute
   '/connections/$connectionId/settings': typeof AppConnectionsConnectionIdSettingsRoute
   '/connections/$connectionId/tools': typeof AppConnectionsConnectionIdToolsRoute
@@ -348,12 +320,11 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
-  '/cameras': typeof AppCamerasRoute
+  '/activity': typeof AppActivityRoute
   '/house': typeof AppHouseRoute
   '/journal': typeof AppJournalRoute
   '/memories': typeof AppMemoriesRoute
-  '/messages': typeof AppMessagesRoute
-  '/schedules': typeof AppSchedulesRoute
+  '/settings': typeof AppSettingsRoute
   '/system': typeof AppSystemRoute
   '/invitation/$token': typeof InvitationTokenRoute
   '/': typeof AppIndexRoute
@@ -371,10 +342,7 @@ export interface FileRoutesByTo {
   '/chat': typeof AppChatIndexRoute
   '/config': typeof AppConfigIndexRoute
   '/connections': typeof AppConnectionsIndexRoute
-  '/people': typeof AppPeopleIndexRoute
   '/satellites': typeof AppSatellitesIndexRoute
-  '/tasks': typeof AppTasksIndexRoute
-  '/watches': typeof AppWatchesIndexRoute
   '/connections/$connectionId/activity': typeof AppConnectionsConnectionIdActivityRoute
   '/connections/$connectionId/settings': typeof AppConnectionsConnectionIdSettingsRoute
   '/connections/$connectionId/tools': typeof AppConnectionsConnectionIdToolsRoute
@@ -392,14 +360,13 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
-  '/_app/cameras': typeof AppCamerasRoute
+  '/_app/activity': typeof AppActivityRoute
   '/_app/chat': typeof AppChatRouteWithChildren
   '/_app/config': typeof AppConfigRouteWithChildren
   '/_app/house': typeof AppHouseRoute
   '/_app/journal': typeof AppJournalRoute
   '/_app/memories': typeof AppMemoriesRoute
-  '/_app/messages': typeof AppMessagesRoute
-  '/_app/schedules': typeof AppSchedulesRoute
+  '/_app/settings': typeof AppSettingsRoute
   '/_app/system': typeof AppSystemRoute
   '/invitation/$token': typeof InvitationTokenRoute
   '/_app/': typeof AppIndexRoute
@@ -420,10 +387,7 @@ export interface FileRoutesById {
   '/_app/chat/': typeof AppChatIndexRoute
   '/_app/config/': typeof AppConfigIndexRoute
   '/_app/connections/': typeof AppConnectionsIndexRoute
-  '/_app/people/': typeof AppPeopleIndexRoute
   '/_app/satellites/': typeof AppSatellitesIndexRoute
-  '/_app/tasks/': typeof AppTasksIndexRoute
-  '/_app/watches/': typeof AppWatchesIndexRoute
   '/_app/connections/$connectionId/activity': typeof AppConnectionsConnectionIdActivityRoute
   '/_app/connections/$connectionId/settings': typeof AppConnectionsConnectionIdSettingsRoute
   '/_app/connections/$connectionId/tools': typeof AppConnectionsConnectionIdToolsRoute
@@ -442,14 +406,13 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
-    | '/cameras'
+    | '/activity'
     | '/chat'
     | '/config'
     | '/house'
     | '/journal'
     | '/memories'
-    | '/messages'
-    | '/schedules'
+    | '/settings'
     | '/system'
     | '/invitation/$token'
     | '/accounts/$accountId'
@@ -469,10 +432,7 @@ export interface FileRouteTypes {
     | '/chat/'
     | '/config/'
     | '/connections/'
-    | '/people/'
     | '/satellites/'
-    | '/tasks/'
-    | '/watches/'
     | '/connections/$connectionId/activity'
     | '/connections/$connectionId/settings'
     | '/connections/$connectionId/tools'
@@ -488,12 +448,11 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
-    | '/cameras'
+    | '/activity'
     | '/house'
     | '/journal'
     | '/memories'
-    | '/messages'
-    | '/schedules'
+    | '/settings'
     | '/system'
     | '/invitation/$token'
     | '/'
@@ -511,10 +470,7 @@ export interface FileRouteTypes {
     | '/chat'
     | '/config'
     | '/connections'
-    | '/people'
     | '/satellites'
-    | '/tasks'
-    | '/watches'
     | '/connections/$connectionId/activity'
     | '/connections/$connectionId/settings'
     | '/connections/$connectionId/tools'
@@ -531,14 +487,13 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_app'
     | '/login'
-    | '/_app/cameras'
+    | '/_app/activity'
     | '/_app/chat'
     | '/_app/config'
     | '/_app/house'
     | '/_app/journal'
     | '/_app/memories'
-    | '/_app/messages'
-    | '/_app/schedules'
+    | '/_app/settings'
     | '/_app/system'
     | '/invitation/$token'
     | '/_app/'
@@ -559,10 +514,7 @@ export interface FileRouteTypes {
     | '/_app/chat/'
     | '/_app/config/'
     | '/_app/connections/'
-    | '/_app/people/'
     | '/_app/satellites/'
-    | '/_app/tasks/'
-    | '/_app/watches/'
     | '/_app/connections/$connectionId/activity'
     | '/_app/connections/$connectionId/settings'
     | '/_app/connections/$connectionId/tools'
@@ -606,11 +558,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/cameras': {
-      id: '/_app/cameras'
-      path: '/cameras'
-      fullPath: '/cameras'
-      preLoaderRoute: typeof AppCamerasRouteImport
+    '/_app/activity': {
+      id: '/_app/activity'
+      path: '/activity'
+      fullPath: '/activity'
+      preLoaderRoute: typeof AppActivityRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/chat': {
@@ -648,18 +600,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppMemoriesRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/messages': {
-      id: '/_app/messages'
-      path: '/messages'
-      fullPath: '/messages'
-      preLoaderRoute: typeof AppMessagesRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/schedules': {
-      id: '/_app/schedules'
-      path: '/schedules'
-      fullPath: '/schedules'
-      preLoaderRoute: typeof AppSchedulesRouteImport
+    '/_app/settings': {
+      id: '/_app/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AppSettingsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/system': {
@@ -767,13 +712,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppConnectionsFailedRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/people/': {
-      id: '/_app/people/'
-      path: '/people'
-      fullPath: '/people/'
-      preLoaderRoute: typeof AppPeopleIndexRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/_app/people/$personId': {
       id: '/_app/people/$personId'
       path: '/people/$personId'
@@ -795,25 +733,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSatellitesSatelliteIdRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/tasks/': {
-      id: '/_app/tasks/'
-      path: '/tasks'
-      fullPath: '/tasks/'
-      preLoaderRoute: typeof AppTasksIndexRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/_app/tasks/$taskId': {
       id: '/_app/tasks/$taskId'
       path: '/tasks/$taskId'
       fullPath: '/tasks/$taskId'
       preLoaderRoute: typeof AppTasksTaskIdRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/watches/': {
-      id: '/_app/watches/'
-      path: '/watches'
-      fullPath: '/watches/'
-      preLoaderRoute: typeof AppWatchesIndexRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/watches/$watchId': {
@@ -1003,14 +927,13 @@ const AppSatellitesSatelliteIdRouteWithChildren =
   )
 
 interface AppRouteChildren {
-  AppCamerasRoute: typeof AppCamerasRoute
+  AppActivityRoute: typeof AppActivityRoute
   AppChatRoute: typeof AppChatRouteWithChildren
   AppConfigRoute: typeof AppConfigRouteWithChildren
   AppHouseRoute: typeof AppHouseRoute
   AppJournalRoute: typeof AppJournalRoute
   AppMemoriesRoute: typeof AppMemoriesRoute
-  AppMessagesRoute: typeof AppMessagesRoute
-  AppSchedulesRoute: typeof AppSchedulesRoute
+  AppSettingsRoute: typeof AppSettingsRoute
   AppSystemRoute: typeof AppSystemRoute
   AppIndexRoute: typeof AppIndexRoute
   AppAccountsAccountIdRoute: typeof AppAccountsAccountIdRoute
@@ -1024,21 +947,17 @@ interface AppRouteChildren {
   AppWatchesWatchIdRoute: typeof AppWatchesWatchIdRoute
   AppAccountsIndexRoute: typeof AppAccountsIndexRoute
   AppConnectionsIndexRoute: typeof AppConnectionsIndexRoute
-  AppPeopleIndexRoute: typeof AppPeopleIndexRoute
   AppSatellitesIndexRoute: typeof AppSatellitesIndexRoute
-  AppTasksIndexRoute: typeof AppTasksIndexRoute
-  AppWatchesIndexRoute: typeof AppWatchesIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
-  AppCamerasRoute: AppCamerasRoute,
+  AppActivityRoute: AppActivityRoute,
   AppChatRoute: AppChatRouteWithChildren,
   AppConfigRoute: AppConfigRouteWithChildren,
   AppHouseRoute: AppHouseRoute,
   AppJournalRoute: AppJournalRoute,
   AppMemoriesRoute: AppMemoriesRoute,
-  AppMessagesRoute: AppMessagesRoute,
-  AppSchedulesRoute: AppSchedulesRoute,
+  AppSettingsRoute: AppSettingsRoute,
   AppSystemRoute: AppSystemRoute,
   AppIndexRoute: AppIndexRoute,
   AppAccountsAccountIdRoute: AppAccountsAccountIdRoute,
@@ -1052,10 +971,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppWatchesWatchIdRoute: AppWatchesWatchIdRoute,
   AppAccountsIndexRoute: AppAccountsIndexRoute,
   AppConnectionsIndexRoute: AppConnectionsIndexRoute,
-  AppPeopleIndexRoute: AppPeopleIndexRoute,
   AppSatellitesIndexRoute: AppSatellitesIndexRoute,
-  AppTasksIndexRoute: AppTasksIndexRoute,
-  AppWatchesIndexRoute: AppWatchesIndexRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

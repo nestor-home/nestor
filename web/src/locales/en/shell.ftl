@@ -71,3 +71,33 @@ shell-open-menu = Open the menu
 shell-agent-online = online
 shell-agent-offline = offline
 shell-agent-label = { $assistant }, { $state }
+
+## The spaces of the rail
+space-today = Today
+space-chat = Talk
+space-activity = Ongoing
+space-house = The house
+space-settings = Settings
+
+## Settings
+set-lede = What { $assistant } is made of: the services it uses, the devices in the rooms, who may do what.
+set-connections = The accounts and services it uses: mail, calendar, tools.
+set-connections-count = { $count ->
+    [0] No connection
+    [one] One connection
+   *[other] { $count } connections
+}
+set-satellites = The devices it hears, speaks and sees through in each room.
+set-satellites-count = { $count ->
+    [0] No device
+    [one] One device
+   *[other] { $count } devices
+}
+set-satellites-offline = { $count } devices, { $offline } offline
+set-accounts = Who may open this interface, and with which rights.
+set-accounts-count = { $count ->
+    [one] One account
+   *[other] { $count } accounts
+}
+set-config = Models, voices, channels, home: everything that tunes { $assistant }.
+set-system = The state of every component, updates, restart.

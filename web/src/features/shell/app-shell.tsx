@@ -1,26 +1,8 @@
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
-import { PanelLeft, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { AgentFigure } from "@/components/agent-figure";
 import { Kbd } from "@/components/status";
-import { Button } from "@/components/ui/button";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarInset,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarProvider,
-  SidebarRail,
-  useSidebar,
-} from "@/components/ui/sidebar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Wordmark } from "@/components/wordmark";
 import { AgentPresenceProvider, useAgentPresence } from "@/features/agent/presence";
 import { RestartBanner } from "@/features/config/restart";
 import { UpdateAvailable } from "@/features/system/updates";
@@ -28,21 +10,15 @@ import { useAccountLocale, useT } from "@/i18n";
 import { useMe } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import { AccountMenu } from "./account-menu";
+import { useAttention } from "./attention";
 import { CommandPalette, useCommandPalette } from "./command-palette";
 import { useLive } from "./live";
-import { LiveIndicator } from "./live-indicator";
-import { flatNav, type NavItem, visibleNav } from "./nav";
-import { Ticker } from "./ticker";
+import { destinations, inSpace, type Space, visibleSpaces } from "./nav";
 import { useGoKeys } from "./use-go-keys";
 
-function isHere(item: NavItem, path: string): boolean {
-  if (item.to === "/") return path === "/";
-  return path === item.to || path.startsWith(`${item.to}/`);
-}
-
 /**
- * The frame: shadcn's Sidebar, collapsible to an icon rail (⌘B or `[`, remembered), a sheet
- * below `md` opened from the top bar; the mono status line above every screen.
+ * The frame: a night-ink rail with the agent and the few spaces of the household (a tab bar under the
+ * thumb on a phone), settings apart at its foot, and ⌘K to jump anywhere.
  */
 export function AppShell() {
   const t = useT();
@@ -51,242 +27,198 @@ export function AppShell() {
   const bleed = useRouterState({ select: (s) => s.location.pathname.startsWith("/chat") });
   useAccountLocale(me.locale);
   const palette = useCommandPalette();
-  useGoKeys(flatNav(me.scopes));
+  useGoKeys(destinations(me.scopes));
+  const search = () => palette.setOpen(() => true);
 
   return (
-    <SidebarProvider>
-      <AgentPresenceProvider>
-        <a
-          href="#content"
-          className="sr-only z-50 rounded-md bg-ink px-3 py-2 text-paper focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
-        >
-          {t("shell-skip")}
-        </a>
-        <Navigation />
-        <SidebarInset className={cn("min-w-0 bg-paper", bleed && "h-svh overflow-hidden")}>
-          <MobileBar onSearch={() => palette.setOpen(() => true)} />
-          {bleed ? null : <Ticker onSearch={() => palette.setOpen(() => true)} />}
-          <div
-            id="content"
-            className={cn(
-              "min-w-0",
-              bleed
-                ? "flex min-h-0 flex-1 flex-col"
-                : "px-4 pt-8 pb-[calc(4rem+env(safe-area-inset-bottom))] sm:px-6 md:px-10 md:pt-10 lg:px-14",
-            )}
-          >
-            {bleed ? (
-              <Outlet />
-            ) : (
-              <div className="mx-auto max-w-6xl">
-                <RestartBanner />
-                <Outlet />
-              </div>
-            )}
+    <AgentPresenceProvider>
+      <a
+        href="#content"
+        className="sr-only z-50 rounded-md bg-ink px-3 py-2 text-paper focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
+      >
+        {t("shell-skip")}
+      </a>
+      <Rail onSearch={search} />
+      <TopBar onSearch={search} />
+      <main
+        id="content"
+        className={cn(
+          "min-w-0 md:pl-[5.5rem]",
+          bleed
+            ? "flex h-[calc(100svh-3.5rem-4rem-env(safe-area-inset-bottom))] flex-col overflow-hidden md:h-svh"
+            : "px-4 pt-5 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:px-6 md:pt-8 md:pr-10 md:pb-16 md:pl-[calc(5.5rem+2.5rem)]",
+        )}
+      >
+        {bleed ? (
+          <Outlet />
+        ) : (
+          <div className="mx-auto max-w-[76rem]">
+            <RestartBanner />
+            <Outlet />
           </div>
-        </SidebarInset>
-        <CommandPalette open={palette.open} onOpenChange={(open) => palette.setOpen(() => open)} />
-      </AgentPresenceProvider>
-    </SidebarProvider>
+        )}
+      </main>
+      <TabBar />
+      <CommandPalette open={palette.open} onOpenChange={(open) => palette.setOpen(() => open)} />
+    </AgentPresenceProvider>
   );
 }
 
-function Navigation() {
-  const t = useT();
+function useSpaces() {
   const me = useMe();
-  const groups = visibleNav(me.scopes);
   const path = useRouterState({ select: (s) => s.location.pathname });
-  const { state, setOpenMobile, isMobile } = useSidebar();
-  const collapsed = state === "collapsed" && !isMobile;
+  const { spaces, settings } = visibleSpaces(me.scopes);
+  const { items } = useAttention();
+  return { spaces, settings, path, waiting: items.length };
+}
+
+/** From `md` up: the agent, the spaces as labelled pebbles, then search, settings and the account. */
+function Rail({ onSearch }: { onSearch: () => void }) {
+  const t = useT();
+  const { spaces, settings, path, waiting } = useSpaces();
   return (
-    <Sidebar collapsible="icon" className="border-rule">
-      <SidebarHeader className="px-4 pt-6 pb-4 group-data-[collapsible=icon]:px-2">
-        <AgentHeader collapsed={collapsed} onNavigate={() => setOpenMobile(false)} />
-      </SidebarHeader>
-      <SidebarContent>
-        <nav aria-label={t("shell-sections")}>
-          {groups.map((group) => (
-            <SidebarGroup key={group.label ?? "main"} className="py-1.5">
-              {group.label ? (
-                <SidebarGroupLabel className="label-mono h-6 px-2.5 text-[0.68rem]">{t(group.label)}</SidebarGroupLabel>
-              ) : null}
-              <SidebarGroupContent>
-                <SidebarMenu className="gap-px">
-                  {group.items.map((item) => {
-                    const here = isHere(item, path);
-                    return (
-                      <SidebarMenuItem key={item.to}>
-                        <SidebarMenuButton
-                          isActive={here}
-                          tooltip={`${t(item.label)} · g ${item.key}`}
-                          className="group/nav h-9 justify-between text-ink-muted data-active:text-ink pointer-coarse:h-11"
-                          render={
-                            <Link
-                              to={item.to}
-                              aria-current={here ? "page" : undefined}
-                              onClick={() => setOpenMobile(false)}
-                            />
-                          }
-                        >
-                          <span className="flex items-center gap-2.5">
-                            <item.icon
-                              className={cn("size-4", here ? "text-ember" : "text-ink-faint")}
-                              aria-hidden="true"
-                            />
-                            <span className="group-data-[collapsible=icon]:sr-only">{t(item.label)}</span>
-                          </span>
-                          <span
-                            aria-hidden="true"
-                            className="hidden gap-0.5 opacity-0 transition-opacity group-hover/nav:opacity-100 md:inline-flex group-data-[collapsible=icon]:hidden"
-                          >
-                            <Kbd>g</Kbd>
-                            <Kbd>{item.key}</Kbd>
-                          </span>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    );
-                  })}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          ))}
-        </nav>
-      </SidebarContent>
-      <SidebarFooter className="gap-2 border-t border-rule px-2 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
-        <UpdateAvailable compact={collapsed} />
-        <AccountMenu compact={collapsed} />
-        <CollapseToggle />
-      </SidebarFooter>
-      <SidebarRail />
-    </Sidebar>
+    <aside className="rail fixed inset-y-0 left-0 z-40 hidden w-[5.5rem] flex-col items-center gap-1 pt-5 pb-3 md:flex">
+      <AgentMark />
+      <nav aria-label={t("shell-sections")} className="mt-6 grid w-full gap-1 px-2">
+        {spaces.map((s) => (
+          <SpaceLink key={s.to} space={s} here={inSpace(s, path)} badge={s.to === "/" ? waiting : 0} />
+        ))}
+      </nav>
+      <div className="mt-auto grid w-full justify-items-center gap-1 px-2">
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <button
+                type="button"
+                onClick={onSearch}
+                aria-label={t("shell-go-to")}
+                className="grid size-11 place-items-center rounded-xl text-ink-muted hover:bg-white/8 hover:text-ink"
+              />
+            }
+          >
+            <Search className="size-5" aria-hidden="true" />
+          </TooltipTrigger>
+          <TooltipContent side="right">
+            {t("shell-go-to")} <Kbd>⌘K</Kbd>
+          </TooltipContent>
+        </Tooltip>
+        {settings ? <SpaceLink space={settings} here={inSpace(settings, path)} badge={0} /> : null}
+        <UpdateAvailable compact />
+        <AccountMenu compact />
+      </div>
+    </aside>
   );
 }
 
-/**
- * The agent first, the software second: the instance's name ("Richie", "Alfred"…) in the display
- * serif with its live state, and the nestor mark small beneath. Collapsed: the initial and the dot.
- */
-function AgentHeader({ collapsed, onNavigate }: { collapsed: boolean; onNavigate: () => void }) {
+function SpaceLink({ space, here, badge }: { space: Space; here: boolean; badge: number }) {
+  const t = useT();
+  return (
+    <Link
+      to={space.to}
+      aria-current={here ? "page" : undefined}
+      className={cn(
+        "group relative grid justify-items-center gap-1 rounded-xl px-1 py-2 text-[0.72rem] leading-tight font-medium transition-colors",
+        here ? "text-ink" : "text-ink-muted hover:text-ink",
+      )}
+    >
+      <span
+        className={cn(
+          "relative grid h-9 w-12 place-items-center rounded-full transition-colors",
+          here ? "bg-[#f5f0e6] text-[#1d1913]" : "group-hover:bg-white/8",
+        )}
+      >
+        <space.icon className="size-5" aria-hidden="true" />
+        {badge ? (
+          <span className="absolute -top-0.5 -right-0.5 grid min-w-4.5 place-items-center rounded-full bg-ember px-1 text-[0.68rem] leading-4.5 font-semibold text-on-ember tabular">
+            {badge}
+          </span>
+        ) : null}
+      </span>
+      {t(space.label)}
+    </Link>
+  );
+}
+
+/** The agent at the head of the rail: its face follows what it does, its dot whether it is reachable. */
+function AgentMark() {
   const t = useT();
   const me = useMe();
   const { status } = useLive();
   const { state: figure } = useAgentPresence();
   const online = status === "open";
   const state = t(
-    online ? "shell-agent-online" : status === "connecting" ? "shell-live-connecting" : "shell-agent-offline",
+    online ? `home-state-${figure}` : status === "connecting" ? "shell-live-connecting" : "shell-agent-offline",
   );
-  const dot = (
-    <span
-      aria-hidden="true"
-      className={cn(
-        "inline-block size-2 shrink-0 rounded-full",
-        online ? "live-dot bg-ember" : status === "connecting" ? "bg-amber" : "border border-ink-faint",
-      )}
-    />
-  );
-  if (collapsed) {
-    return (
-      <Tooltip>
-        <TooltipTrigger
-          render={
-            <Link
-              to="/"
-              onClick={onNavigate}
-              aria-label={t("shell-agent-label", { assistant: me.assistant, state })}
-              className="relative mx-auto grid size-9 place-items-center rounded-md hover:bg-paper-sunken"
-            />
-          }
-        >
-          <AgentFigure state={figure} size="sm" className="size-7" />
-          <span className="absolute top-0.5 right-0.5">{dot}</span>
-        </TooltipTrigger>
-        <TooltipContent side="right">
-          {me.assistant} · {state}
-        </TooltipContent>
-      </Tooltip>
-    );
-  }
-  return (
-    <div>
-      <Link
-        to="/"
-        onClick={onNavigate}
-        aria-label={t("shell-agent-label", { assistant: me.assistant, state })}
-        className="flex items-center gap-3 rounded-sm"
-      >
-        <AgentFigure state={figure} size="md" live />
-        <span className="min-w-0">
-          <span className="block truncate font-serif text-[1.75rem] leading-none text-ink [font-variation-settings:'SOFT'_100,'opsz'_72]">
-            {me.assistant}
-          </span>
-          <span className="mt-1.5 flex items-center gap-2 text-[0.85rem] text-ink-muted" aria-live="polite">
-            {dot}
-            {online ? t(`home-state-${figure}`) : state}
-          </span>
-        </span>
-      </Link>
-      <p className="mt-4 flex items-center gap-1.5 text-ink-faint">
-        <Wordmark className="text-[0.95rem] text-ink-muted" />
-      </p>
-    </div>
-  );
-}
-
-/** Collapse to the icon rail and back; the shortcut is in the tooltip and the label. */
-function CollapseToggle() {
-  const t = useT();
-  const { state, toggleSidebar, isMobile } = useSidebar();
-  if (isMobile) return null;
-  const label = t(state === "expanded" ? "shell-sidebar-collapse" : "shell-sidebar-expand");
   return (
     <Tooltip>
       <TooltipTrigger
         render={
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={toggleSidebar}
-            aria-expanded={state === "expanded"}
-            aria-keyshortcuts="Meta+B ["
-            className="justify-start gap-2.5 px-2.5 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
+          <Link
+            to="/"
+            aria-label={t("shell-agent-label", { assistant: me.assistant, state })}
+            className="relative grid size-12 place-items-center rounded-2xl hover:bg-white/8"
           />
         }
       >
-        <PanelLeft aria-hidden="true" />
-        <span className="group-data-[collapsible=icon]:sr-only">{label}</span>
+        <AgentFigure state={figure} size="md" live />
+        <span
+          aria-hidden="true"
+          className={cn(
+            "absolute top-0.5 right-0.5 size-2.5 rounded-full ring-2 ring-[#0f0d0a]",
+            online ? "live-dot bg-ember" : status === "connecting" ? "bg-amber" : "bg-ink-faint",
+          )}
+        />
       </TooltipTrigger>
       <TooltipContent side="right">
-        {label} · <Kbd>⌘B</Kbd> <Kbd>[</Kbd>
+        {me.assistant} · {state}
       </TooltipContent>
     </Tooltip>
   );
 }
 
-/** Below `md`: the top bar opens the navigation sheet and keeps the essentials at hand. */
-function MobileBar({ onSearch }: { onSearch: () => void }) {
+/** On a phone: the agent's name, search and the account along the top. */
+function TopBar({ onSearch }: { onSearch: () => void }) {
   const t = useT();
   const me = useMe();
-  const { toggleSidebar, isMobile } = useSidebar();
   const { state: figure } = useAgentPresence();
-  if (!isMobile) return null;
   return (
-    <div className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-rule bg-paper/95 px-2 pt-[env(safe-area-inset-top)] backdrop-blur-[2px] md:hidden">
-      <Button variant="ghost" size="icon-lg" onClick={toggleSidebar} aria-label={t("shell-open-menu")}>
-        <PanelLeft />
-      </Button>
-      <Link to="/" aria-label={t("shell-home-link", { assistant: me.assistant })} className="rounded-sm px-1">
-        <span className="flex items-center gap-2">
-          <AgentFigure state={figure} size="sm" />
-          <span className="font-serif text-[1.35rem] leading-none text-ink">{me.assistant}</span>
-        </span>
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-2 bg-paper/92 px-3 pt-[env(safe-area-inset-top)] backdrop-blur-sm md:hidden">
+      <Link
+        to="/"
+        aria-label={t("shell-home-link", { assistant: me.assistant })}
+        className="flex items-center gap-2 px-1"
+      >
+        <AgentFigure state={figure} size="sm" />
+        <span className="font-serif text-[1.35rem] leading-none text-ink">{me.assistant}</span>
       </Link>
       <div className="ml-auto flex items-center gap-1">
-        <LiveIndicator compact />
-        <Button variant="ghost" size="icon-lg" onClick={onSearch} aria-label={t("shell-go-to")}>
-          <Search />
-        </Button>
+        <button
+          type="button"
+          onClick={onSearch}
+          aria-label={t("shell-go-to")}
+          className="grid size-11 place-items-center rounded-xl text-ink-muted"
+        >
+          <Search className="size-5" aria-hidden="true" />
+        </button>
         <AccountMenu compact />
       </div>
-    </div>
+    </header>
+  );
+}
+
+/** On a phone: the spaces under the thumb. */
+function TabBar() {
+  const t = useT();
+  const { spaces, settings, path, waiting } = useSpaces();
+  const all = settings ? [...spaces, settings] : spaces;
+  return (
+    <nav
+      aria-label={t("shell-sections")}
+      className="rail fixed inset-x-0 bottom-0 z-40 flex justify-around px-1 pt-1.5 pb-[calc(0.375rem+env(safe-area-inset-bottom))] md:hidden"
+    >
+      {all.map((s) => (
+        <SpaceLink key={s.to} space={s} here={inSpace(s, path)} badge={s.to === "/" ? waiting : 0} />
+      ))}
+    </nav>
   );
 }

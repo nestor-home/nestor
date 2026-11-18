@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "./tokens.css";
+@import "./world.css";
 @import "streamdown/styles.css";
 
 @source "../../node_modules/streamdown/dist/*.js";
@@ -158,7 +159,6 @@
 }
 
 @layer components {
-  /* small-caps mono labels for data: field captions, facet groups, nav groups — never above a title */
   /* the actions of a form in a dialog (FormActions) are its footer, in reach while its body scrolls */
   [data-slot="dialog-content"] [data-slot="form-actions"] {
     position: sticky;
@@ -171,7 +171,7 @@
   }
 
   /* a quiet caption above a group: sentence case, never shouting */
-  .label-mono {
+  .caption {
     font-family: var(--font-ui);
     font-size: 0.82rem;
     font-weight: 500;

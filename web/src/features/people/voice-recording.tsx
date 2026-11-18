@@ -369,7 +369,7 @@ function RecordingFlow({
 
       {step === "phrases" && recording ? (
         <div className="grid gap-4 text-center">
-          <p className="label-mono">{t("recording-phrase-count", { n: kept.size + 1, total })}</p>
+          <p className="caption">{t("recording-phrase-count", { n: kept.size + 1, total })}</p>
           <p className="font-serif text-[1.45rem] leading-snug text-balance [overflow-wrap:anywhere] text-ink">
             {t("recording-phrase", { phrase: recording.phrases[current] ?? "" })}
           </p>

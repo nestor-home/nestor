@@ -71,3 +71,33 @@ shell-open-menu = Ouvrir le menu
 shell-agent-online = en ligne
 shell-agent-offline = hors ligne
 shell-agent-label = { $assistant }, { $state }
+
+## Les espaces de la barre
+space-today = Aujourd'hui
+space-chat = Parler
+space-activity = En cours
+space-house = La maison
+space-settings = Réglages
+
+## Réglages
+set-lede = Ce dont { $assistant } est fait : les services qu'il utilise, les appareils des pièces, qui a accès à quoi.
+set-connections = Comptes et services dont il se sert : mail, agenda, outils.
+set-connections-count = { $count ->
+    [0] Aucune connexion
+    [one] Une connexion
+   *[other] { $count } connexions
+}
+set-satellites = Les appareils par lesquels il entend, parle et voit dans chaque pièce.
+set-satellites-count = { $count ->
+    [0] Aucun appareil
+    [one] Un appareil
+   *[other] { $count } appareils
+}
+set-satellites-offline = { $count } appareils, dont { $offline } hors ligne
+set-accounts = Qui peut ouvrir cette interface, et avec quels droits.
+set-accounts-count = { $count ->
+    [one] Un compte
+   *[other] { $count } comptes
+}
+set-config = Modèles, voix, canaux, maison : tout ce qui règle { $assistant }.
+set-system = L'état de chaque composant, les mises à jour, le redémarrage.

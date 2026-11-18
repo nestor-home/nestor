@@ -39,15 +39,21 @@ export function roomsOf({ people, satellites, items, home }: MindInput, limit = 
     return found;
   };
   const placed = new Map<string, RoomNode>(); // a satellite's room → the home system's room it is in
+  const named = new Map<string, RoomNode>(); // the home system's rooms by name: the journal files events under it too
   for (const area of home?.connected ? home.rooms : []) {
     const here = satellites.filter((s) => area.satellites.includes(s.id));
     const room = here[0]?.room ?? null;
     const found = node(room ? `room:${room}` : `area:${area.id}`, area.name, room);
+    named.set(area.name.toLowerCase(), found);
     found.occupied = area.occupied;
     found.people = people.filter((p) => area.people.some((q) => q.id === p.id));
     for (const s of here) placed.set(s.room, found);
   }
-  const byRoom = (room: string) => placed.get(room) ?? node(`room:${room}`, room, room);
+  const byRoom = (room: string) => {
+    const found = placed.get(room) ?? named.get(room.toLowerCase()) ?? node(`room:${room}`, room, room);
+    found.journal ??= room;
+    return found;
+  };
   for (const s of satellites) if (!byRoom(s.room).satellites.includes(s)) byRoom(s.room).satellites.push(s);
   if (!home?.connected)
     for (const p of people) if (p.presence?.home && p.presence.room) byRoom(p.presence.room).people.push(p);

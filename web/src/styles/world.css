@@ -1,0 +1,257 @@
+/*
+ * The household's world, as the film draws it: an ink rail, the sky of the hour, its rooms lit where
+ * someone is, and raised surfaces for everything one can open.
+ */
+
+/* -- the rail: always night ink, whatever the theme (light-dark() resolves dark inside it) -------- */
+.rail {
+  color-scheme: dark;
+  background: #0f0d0a;
+  color: var(--ink);
+}
+
+/* -- surfaces --------------------------------------------------------------------------------- */
+.surface {
+  border-radius: var(--radius-surface);
+  background: var(--paper-raised);
+  box-shadow: var(--lift);
+}
+
+a.surface,
+button.surface {
+  transition:
+    box-shadow var(--duration) var(--ease),
+    transform var(--duration) var(--ease);
+}
+
+a.surface:hover,
+button.surface:hover {
+  box-shadow: var(--lift-hover);
+  transform: translateY(-1px);
+}
+
+.surface-quiet {
+  border-radius: var(--radius-surface);
+  border: 1px dashed var(--rule-strong);
+}
+
+/* -- the sky of the hour ------------------------------------------------------------------------ */
+.sky {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: var(--radius-scene);
+  background: linear-gradient(to bottom, var(--sky-top), var(--sky-mid) 58%, var(--sky-low));
+  color: var(--sky-ink);
+}
+
+.sky[data-phase="night"] {
+  color-scheme: dark;
+  --sky-top: #121027;
+  --sky-mid: #221c3c;
+  --sky-low: #3b2b4e;
+  --sky-ink: #efe6d6;
+  --sky-grain: #0a0818;
+  --ground: #0b0912;
+  --orb: #f1e8d4;
+  --room: #1b1730;
+  --room-ink: #cfc6dc;
+  --room-lit: radial-gradient(120% 120% at 50% 0%, #f6b27a, #e8835c 55%, #b8512f);
+  --room-lit-ink: #1d1410;
+}
+
+.sky[data-phase="dawn"] {
+  color-scheme: dark;
+  --sky-top: #36325f;
+  --sky-mid: #c4735a;
+  --sky-low: #f5cb9f;
+  --sky-ink: #fbf3e4;
+  --sky-grain: #231f45;
+  --ground: #17121d;
+  --orb: #ffe9c4;
+  --room: #2a2440;
+  --room-ink: #ddd3e3;
+  --room-lit: radial-gradient(120% 120% at 50% 0%, #fde4bd, #f6b27a 60%, #dd7f55);
+  --room-lit-ink: #1d1410;
+}
+
+.sky[data-phase="day"] {
+  color-scheme: light;
+  --sky-top: #86afd3;
+  --sky-mid: #c3d8e6;
+  --sky-low: #f1ead9;
+  --sky-ink: #1d1913;
+  --sky-grain: #5f8fba;
+  --ground: #1d1913;
+  --orb: #fff6dc;
+  --room: #e9e1d0;
+  --room-ink: #62584c;
+  --room-lit: radial-gradient(120% 120% at 50% 0%, #fffdf6, #fbf3df 60%, #f5dfc0);
+  --room-lit-ink: #1d1913;
+}
+
+.sky[data-phase="dusk"] {
+  color-scheme: dark;
+  --sky-top: #2c2546;
+  --sky-mid: #b34d2e;
+  --sky-low: #f3ab6c;
+  --sky-ink: #fbf0de;
+  --sky-grain: #1a1532;
+  --ground: #140f17;
+  --orb: #ffd9a0;
+  --room: #241d36;
+  --room-ink: #d6cbdc;
+  --room-lit: radial-gradient(120% 120% at 50% 0%, #fbd3a0, #f0a56a 55%, #c9603a);
+  --room-lit-ink: #1d1410;
+}
+
+.sky-orb {
+  position: absolute;
+  z-index: -1;
+  width: 3.5rem;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--orb);
+  box-shadow:
+    0 0 0 0.9rem color-mix(in srgb, var(--orb) 14%, transparent),
+    0 0 4rem 1rem color-mix(in srgb, var(--orb) 30%, transparent);
+  translate: -50% -50%;
+}
+
+.sky[data-phase="night"] .sky-orb {
+  width: 2.4rem;
+  /* a crescent: the sky bites into the disc */
+  box-shadow:
+    inset -0.7rem 0.2rem 0 0 var(--sky-top),
+    0 0 2.5rem 0.2rem color-mix(in srgb, var(--orb) 22%, transparent);
+}
+
+.sky-ground {
+  background: var(--ground);
+  color: #f3ecdf;
+}
+
+/* -- the rooms: lit where someone is, a quiet chip otherwise ------------------------------------- */
+.room {
+  position: relative;
+  display: flex;
+  min-height: 5.75rem;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.7rem 0.8rem;
+  border-radius: var(--radius-surface);
+  background: var(--room);
+  color: var(--room-ink);
+  box-shadow: 0 10px 24px -12px rgb(0 0 0 / 0.45);
+  text-align: left;
+  transition:
+    filter var(--duration) var(--ease),
+    box-shadow var(--duration) var(--ease);
+}
+
+.room:hover {
+  filter: brightness(1.08);
+}
+
+.room[data-lit] {
+  background: var(--room-lit);
+  color: var(--room-lit-ink);
+}
+
+.room[data-focus],
+.room-chip[data-focus] {
+  box-shadow: inset 0 0 0 2px var(--ember);
+}
+
+.room-chip {
+  display: inline-flex;
+  height: 2.25rem;
+  align-items: center;
+  gap: 0.45rem;
+  padding-inline: 0.85rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--room) 82%, transparent);
+  color: var(--room-ink);
+  font-size: 0.9rem;
+  font-weight: 500;
+  backdrop-filter: blur(6px);
+  transition: filter var(--duration) var(--ease);
+}
+
+.room-chip:hover {
+  filter: brightness(1.08);
+}
+
+.room:focus-visible {
+  outline-offset: -3px;
+  outline-color: #fff;
+}
+
+/* a person: an ink pebble with an ember scarf, as in the film */
+.pebble {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  border-radius: 50% 50% 46% 46%;
+  background: var(--ink);
+  color: var(--paper);
+  font-weight: 600;
+  line-height: 1;
+  box-shadow: inset 0 -0.28em 0 0 #e8835c;
+}
+
+/* on a lit room the pebble stays ink, whatever the hour */
+.room .pebble {
+  background: #1d1913;
+  color: #f5f0e6;
+}
+
+.pebble[data-away] {
+  background: transparent;
+  color: currentColor;
+  box-shadow:
+    inset 0 0 0 1.5px currentColor,
+    inset 0 -0.28em 0 0 #e8835c;
+}
+
+/* -- a task that runs: an ember thread that travels ---------------------------------------------- */
+.thread {
+  position: relative;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--paper-sunken);
+}
+
+.thread::after {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  width: 35%;
+  border-radius: 3px;
+  background: var(--ember);
+  animation: thread 1.8s var(--ease) infinite;
+}
+
+@keyframes thread {
+  from {
+    left: -35%;
+  }
+  to {
+    left: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .thread::after {
+    left: 0;
+    width: 100%;
+    opacity: 0.5;
+    animation: none;
+  }
+  a.surface:hover,
+  button.surface:hover {
+    transform: none;
+  }
+}
