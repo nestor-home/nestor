@@ -92,15 +92,12 @@ cfg-people-empty = Nobody in the household yet.
 cfg-add-person = Add a person
 cfg-remove-person-title = Remove { $name } from the household?
 cfg-remove-person-text = The person leaves the file at the next save; their accounts and memories stay in the database.
-cfg-add-component = Add…
 cfg-reference-default = Default
 cfg-name = Name
 cfg-name-help = Other settings refer to it by this name; renaming it updates them.
 cfg-name-taken = This name is already taken.
 cfg-name-invalid = Letters, digits, “_”, “.” and “-”, starting with a letter or a digit.
-cfg-add-kind = Add: { $kind }
-cfg-pick-title = { $slot }: add
-cfg-pick-text = The plugins installed on this instance.
+cfg-add-kind = New: { $kind }
 cfg-required-fields = { $count ->
     [0] nothing required
     [one] 1 required setting
@@ -231,3 +228,15 @@ cfg-model-type = { $type ->
     [image] Images
    *[other] Other
 }
+cfg-add-one = { $slot ->
+    [models] Add a model
+    [channels] Add a channel
+    [executors] Add an executor
+    [tools] Add a tool
+    [inbound] Add a source
+    [home] Plug a home system
+    [connectors] Add a connector
+   *[other] Add to “{ $title }”
+}
+cfg-pick-model = What it will do, then who provides it.
+cfg-pick-text = What this installation can plug in.

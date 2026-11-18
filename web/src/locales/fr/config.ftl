@@ -92,15 +92,12 @@ cfg-people-empty = Personne dans le foyer pour l'instant.
 cfg-add-person = Ajouter une personne
 cfg-remove-person-title = Retirer { $name } du foyer ?
 cfg-remove-person-text = La personne disparaît du fichier au prochain enregistrement ; ses comptes et souvenirs restent dans la base.
-cfg-add-component = Ajouter…
 cfg-reference-default = Par défaut
 cfg-name = Nom
 cfg-name-help = Les autres réglages s'y réfèrent : le renommer les met à jour.
 cfg-name-taken = Ce nom est déjà pris.
 cfg-name-invalid = Lettres, chiffres, « _ », « . » et « - », en commençant par une lettre ou un chiffre.
-cfg-add-kind = Ajouter : { $kind }
-cfg-pick-title = { $slot } : ajouter
-cfg-pick-text = Les plugins installés sur cette instance.
+cfg-add-kind = Nouveau : { $kind }
 cfg-required-fields = { $count ->
     [0] rien d'obligatoire
     [one] 1 réglage obligatoire
@@ -231,3 +228,15 @@ cfg-model-type = { $type ->
     [image] Images
    *[other] Autre
 }
+cfg-add-one = { $slot ->
+    [models] Ajouter un modèle
+    [channels] Ajouter un canal
+    [executors] Ajouter un exécutant
+    [tools] Ajouter un outil
+    [inbound] Ajouter une source
+    [home] Relier un système domotique
+    [connectors] Ajouter un connecteur
+   *[other] Ajouter à « { $title } »
+}
+cfg-pick-model = Ce qu'il fera, puis qui le fournit.
+cfg-pick-text = Ce que cette installation sait brancher.

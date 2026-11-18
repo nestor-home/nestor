@@ -313,7 +313,7 @@ describe("a component", () => {
     renderApp("/config/channels");
     await user.click(await screen.findByRole("button", { name: /^Add/ }));
     await user.click(within(await screen.findByRole("dialog")).getByRole("button", { name: /^Discord/ }));
-    const sheet = await screen.findByRole("dialog", { name: "Add: Discord" });
+    const sheet = await screen.findByRole("dialog", { name: "New: Discord" });
     await user.click(within(sheet).getByRole("button", { name: "Cancel adding" }));
     await waitFor(() => expect(screen.queryByRole("region", { name: "Unsaved changes" })).not.toBeInTheDocument());
     expect(screen.queryByRole("button", { name: /^Discord/ })).not.toBeInTheDocument();

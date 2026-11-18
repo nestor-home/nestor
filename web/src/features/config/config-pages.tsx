@@ -274,16 +274,17 @@ function NoComponent({ slot, action }: { slot: Slot; action?: ReactNode }) {
   );
 }
 
-function AddButton({ slot, onPick }: { slot: Slot; onPick: (kind: string) => void }) {
+function AddButton({ slotKey, slot, onPick }: { slotKey: string; slot: Slot; onPick: (kind: string) => void }) {
   const t = useT();
   if (!Object.keys(slot.kinds).length) return null;
   return (
     <KindPicker
+      slotKey={slotKey}
       slot={slot}
       onPick={onPick}
       trigger={
         <Button variant="outline" size="sm">
-          <Plus /> {t("cfg-add-component")}
+          <Plus /> {t("cfg-add-one", { slot: slotKey, title: slot.title })}
         </Button>
       }
     />
@@ -325,6 +326,7 @@ function OneSlot({ slotKey, slot }: { slotKey: string; slot: Slot }) {
           slot={slot}
           action={
             <AddButton
+              slotKey={slotKey}
               slot={slot}
               onPick={(kind) => {
                 set([slotKey], entryOf(slot, kind));
@@ -370,6 +372,7 @@ function ManySlot({ slotKey, slot }: { slotKey: string; slot: Slot }) {
       id={`slot-${slotKey}`}
       aside={
         <AddButton
+          slotKey={slotKey}
           slot={slot}
           onPick={(kind) => {
             write([...entries, entryOf(slot, kind)]);
@@ -443,6 +446,7 @@ function NamedSlot({ slotKey, slot }: { slotKey: string; slot: Slot }) {
       id={`slot-${slotKey}`}
       aside={
         <AddButton
+          slotKey={slotKey}
           slot={slot}
           onPick={(kind) => {
             const name = freeName(providerOf(slot, kind), names);
@@ -537,7 +541,17 @@ function NameField({ name, taken, onRename }: { name: string; taken: string[]; o
  * Choosing what to add: for models, the type first (what it will do, with its mark), then who provides it; for
  * anything else, who provides it. One click picks, and its form opens.
  */
-function KindPicker({ slot, onPick, trigger }: { slot: Slot; onPick: (kind: string) => void; trigger: ReactElement }) {
+function KindPicker({
+  slotKey,
+  slot,
+  onPick,
+  trigger,
+}: {
+  slotKey: string;
+  slot: Slot;
+  onPick: (kind: string) => void;
+  trigger: ReactElement;
+}) {
   const t = useT();
   const kinds = Object.keys(slot.kinds);
   const types = modelTypeValues.filter((type) => kinds.some((k) => slot.model_types[k] === type));
@@ -546,8 +560,8 @@ function KindPicker({ slot, onPick, trigger }: { slot: Slot; onPick: (kind: stri
   return (
     <FormDialog
       trigger={trigger}
-      title={t("cfg-pick-title", { slot: slot.title })}
-      description={t("cfg-pick-text")}
+      title={t("cfg-add-one", { slot: slotKey, title: slot.title })}
+      description={t(types.length ? "cfg-pick-model" : "cfg-pick-text")}
       wide
     >
       {(close) => (
