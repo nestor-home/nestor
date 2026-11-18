@@ -1062,7 +1062,7 @@ export function watches(): Watch[] {
   ];
 }
 
-/** Wake-ups and reminders: one for tomorrow morning, two that come back. */
+/** Reminders: one for tomorrow morning, two that come back. */
 export function schedules(): Schedule[] {
   return [
     {

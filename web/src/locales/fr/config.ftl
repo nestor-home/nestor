@@ -97,7 +97,7 @@ cfg-name = Nom
 cfg-name-help = Les autres réglages s'y réfèrent : le renommer les met à jour.
 cfg-name-taken = Ce nom est déjà pris.
 cfg-name-invalid = Lettres, chiffres, « _ », « . » et « - », en commençant par une lettre ou un chiffre.
-cfg-add-kind = Nouveau : { $kind }
+cfg-add-kind = Ajouter { $kind }
 cfg-required-fields = { $count ->
     [0] rien d'obligatoire
     [one] 1 réglage obligatoire

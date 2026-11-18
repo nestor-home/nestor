@@ -110,11 +110,11 @@ journal-detail-tried = { $count ->
 }
 
 journal-schedule-created = { $recurring ->
-    [yes] Réveil régulier programmé : { $title }
-   *[no] Réveil programmé : { $title }
+    [yes] Rappel régulier programmé : { $title }
+   *[no] Rappel programmé : { $title }
 }
-journal-schedule-fired = Réveil { $id } déclenché
-journal-schedule-cancelled = Réveil { $id } annulé
+journal-schedule-fired = C'est l'heure du rappel { $id }
+journal-schedule-cancelled = Rappel { $id } annulé
 journal-watch-created = Veille créée : { $title }
 journal-watch-sorted = { $unsorted ->
     [yes] « { $item } » non trié : le modèle n'a pas répondu

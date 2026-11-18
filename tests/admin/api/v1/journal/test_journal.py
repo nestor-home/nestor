@@ -386,7 +386,7 @@ async def test_the_important_events_are_told_in_the_readers_language(tmp_path: P
             "« Newsletter » vérifié pour 1 veille : aucune ne correspond",
             "Tâche t1 confiée à hermes : Analyse du dépôt\nAnalyse",  # a thing by its name, what it asks beside
             "Veille créée : Colis\nle colis",
-            "Réveil régulier programmé : Plantes\nArrose",
+            "Rappel régulier programmé : Plantes\nArrose",
             "Outil create_watch terminé en 0,2 s",
             "2 personnes vues par reachy-salon",
             "1 personne vue par reachy-salon",

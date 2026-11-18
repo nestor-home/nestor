@@ -97,7 +97,7 @@ cfg-name = Name
 cfg-name-help = Other settings refer to it by this name; renaming it updates them.
 cfg-name-taken = This name is already taken.
 cfg-name-invalid = Letters, digits, “_”, “.” and “-”, starting with a letter or a digit.
-cfg-add-kind = New: { $kind }
+cfg-add-kind = Add { $kind }
 cfg-required-fields = { $count ->
     [0] nothing required
     [one] 1 required setting

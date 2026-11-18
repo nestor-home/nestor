@@ -25,8 +25,8 @@ scope-name = { $scope ->
     [tasks-manage-own] manage one's own tasks
     [watches-manage-all] manage every watch
     [watches-manage-own] manage one's own watches
-    [schedules-manage-all] manage every wake-up
-    [schedules-manage-own] manage one's own wake-ups
+    [schedules-manage-all] manage every reminder
+    [schedules-manage-own] manage one's own reminders
     [messages-read-all] read every message and confirmation
     [messages-read-own] read one's own messages and confirmations
     [media-view] watch the cameras one is allowed
@@ -118,7 +118,7 @@ journal-kind = { $kind ->
     [tool] Tools
     [task] Tasks
     [watch] Watches
-    [schedule] Wake-ups
+    [schedule] Reminders
     [memory] Memories
     [connection] Connections
     [presence] Presence

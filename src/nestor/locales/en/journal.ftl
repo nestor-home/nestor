@@ -111,11 +111,11 @@ journal-detail-tried = { $count ->
 }
 
 journal-schedule-created = { $recurring ->
-    [yes] Regular wake-up set: { $title }
-   *[no] Wake-up set: { $title }
+    [yes] Recurring reminder set: { $title }
+   *[no] Reminder set: { $title }
 }
-journal-schedule-fired = Wake-up { $id } fired
-journal-schedule-cancelled = Wake-up { $id } cancelled
+journal-schedule-fired = Reminder { $id } due
+journal-schedule-cancelled = Reminder { $id } cancelled
 journal-watch-created = Watch created: { $title }
 journal-watch-sorted = { $unsorted ->
     [yes] “{ $item }” not sorted: the model did not answer

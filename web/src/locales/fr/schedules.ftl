@@ -1,4 +1,4 @@
-## Réveils et rappels : ce que l'assistant fera plus tard de lui-même.
+## Rappels : ce que l'assistant fera plus tard de lui-même.
 
 schedule-empty-hint = Demandez à { $assistant } : « rappelle-moi demain à 9 h d'appeler le plombier », « chaque matin à 8 h, la météo ».
 schedule-once = Une fois
