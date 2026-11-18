@@ -42,6 +42,12 @@
   --kind-task: light-dark(#4a5a7c, #9fb0d4);
   --kind-watch: light-dark(#7a4a68, #cf9dbd);
 
+  /* fixed, whatever the scheme: the daylight paper and ink that stay so inside the dark rail and the night sky,
+     and the rail's night */
+  --day-paper: #f5f0e6;
+  --day-ink: #1d1913;
+  --night: #100e0b;
+
   /* type */
   --font-display: "Fraunces Variable", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
   --font-ui: "Instrument Sans Variable", ui-sans-serif, system-ui, sans-serif;
@@ -64,4 +70,12 @@
 
 :root[data-theme="dark"] {
   color-scheme: dark;
+}
+
+/* depth: what sits on the page (cards, drawers) is rounder and lifted; controls keep the small radius */
+:root {
+  --radius-surface: 14px;
+  --radius-scene: 22px;
+  --lift: 0 0 0 1px var(--rule), 0 1px 2px rgb(40 28 12 / 0.05), 0 8px 24px -14px rgb(40 28 12 / 0.28);
+  --lift-hover: 0 0 0 1px var(--rule-strong), 0 2px 4px rgb(40 28 12 / 0.06), 0 14px 30px -14px rgb(40 28 12 / 0.38);
 }

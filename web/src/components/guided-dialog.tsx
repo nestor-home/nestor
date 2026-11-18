@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 export function GuidedDialog({
   open,
   onOpenChange,
+  onClosed,
   stage,
   title,
   step,
@@ -20,6 +21,8 @@ export function GuidedDialog({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Once it has finished closing: for a page that mounts it only while it shows. */
+  onClosed?: () => void;
   stage: ReactNode; // what stands on the band: Nestor
   title: string;
   step?: string;
@@ -35,7 +38,7 @@ export function GuidedDialog({
     heading.current?.focus();
   }, [step]);
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange} onOpenChangeComplete={(now) => !now && onClosed?.()}>
       <DialogContent className="flex max-h-[calc(100dvh-2rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg max-sm:h-[100dvh] max-sm:max-h-none max-sm:max-w-none max-sm:rounded-none max-sm:border-0">
         <div className="relative flex shrink-0 items-center justify-center overflow-hidden bg-paper-sunken pt-[env(safe-area-inset-top)] max-sm:min-h-[38dvh]">
           <Dither shape="horizon" from={0} to={0.7} dot={3} animated className="absolute inset-0 text-ink/15" />
@@ -46,7 +49,7 @@ export function GuidedDialog({
             <DialogTitle
               ref={heading}
               tabIndex={-1}
-              className="font-serif text-2xl leading-tight font-normal text-balance [overflow-wrap:anywhere] text-ink outline-none"
+              className="min-w-0 title-card font-normal text-balance text-ink outline-none"
             >
               {title}
             </DialogTitle>
@@ -55,7 +58,10 @@ export function GuidedDialog({
           <div className="grid gap-5 px-6 pt-4 pb-6">{children}</div>
         </div>
         {footer ? (
-          <div className="flex flex-wrap items-center justify-end gap-3 border-t border-rule bg-paper-sunken/60 px-6 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+          <div
+            data-slot="dialog-footer"
+            className="flex flex-wrap items-center justify-end gap-3 border-t border-rule bg-paper-sunken/60 px-6 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))]"
+          >
             {footer}
           </div>
         ) : null}

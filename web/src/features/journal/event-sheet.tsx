@@ -1,23 +1,23 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, type LinkProps } from "@tanstack/react-router";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, ScrollText } from "lucide-react";
 import { type JournalEvent, type JournalItem, journalEventQuery } from "@/api";
 import { CopyButton } from "@/components/copy-field";
-import { SideSheet } from "@/components/overlay-form";
+import { Avatar } from "@/components/marks";
+import { SheetPanel, SideSheet } from "@/components/overlay-form";
 import { Fact, Facts } from "@/components/page";
 import { Failure, Loading } from "@/components/states";
-import { SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useT } from "@/i18n";
 import { tr } from "@/i18n/runtime";
-import { KindMark } from "@/lib/brands";
+import { KindName } from "@/lib/brands";
 import { moment } from "@/lib/dates";
-import { kindStyle } from "@/lib/icons";
+import { kindLabel } from "@/lib/labels";
 import { say, why } from "@/lib/messages";
 import { duration } from "@/lib/time";
-import { cn } from "@/lib/utils";
 import { Attachments } from "./attachments";
+import { tileOf } from "./tile";
 
-/** One event in full: what it says, what it relates to, and the raw record for debugging. */
+/** One event in full: what it says and why, what it relates to, and the raw record for whoever debugs. */
 export function EventSheet({ position, onClose }: { position: number | undefined; onClose: () => void }) {
   return (
     <SideSheet open={Boolean(position)} onOpenChange={(open) => !open && onClose()}>
@@ -29,23 +29,12 @@ export function EventSheet({ position, onClose }: { position: number | undefined
 function EventDetail({ position }: { position: number }) {
   const t = useT();
   const event = useQuery(journalEventQuery(position));
-  if (event.isPending) {
-    return (
-      <div className="p-6">
-        <SheetTitle className="sr-only">{t("jr-event")}</SheetTitle>
-        <Loading lines={3} />
-      </div>
-    );
-  }
-  if (event.isError) {
-    return (
-      <div className="p-6">
-        <SheetTitle className="mb-4 font-serif text-2xl font-normal">{t("jr-event")}</SheetTitle>
-        <Failure error={event.error} />
-      </div>
-    );
-  }
-  return <Loaded event={event.data} />;
+  if (event.isSuccess) return <Loaded event={event.data} />;
+  return (
+    <SheetPanel icon={ScrollText} kind={t("jr-title")} title={t("jr-event")}>
+      {event.isError ? <Failure error={event.error} retry={() => void event.refetch()} /> : <Loading lines={3} />}
+    </SheetPanel>
+  );
 }
 
 interface Related {
@@ -114,70 +103,64 @@ function useRelated(item: JournalItem): Related[] {
 
 function Loaded({ event: { item: event, record } }: { event: JournalEvent }) {
   const t = useT();
-  const style = kindStyle(event.kind);
-  const Icon = style.icon;
   const related = useRelated(event);
   const raw = JSON.stringify(record, null, 2);
+  const seconds = event.outcome?.duration_s;
   return (
-    <>
-      <SheetHeader className="border-b border-rule px-6 pt-6 pb-4">
-        <p className="flex items-center gap-2 font-mono text-xs text-ink-muted">
-          <Icon className={cn("size-3.5", style.tone)} aria-hidden="true" />
-          <span>{event.type}</span>
-          {event.brand ? <KindMark kind={event.brand} className="size-3.5" /> : null}
+    <SheetPanel {...tileOf(event)} kind={kindLabel(event.kind)} title={say(event)} description={moment(event.at)}>
+      {event.reason ? (
+        <p className="rounded-xl bg-ember-soft px-4 py-3 text-body text-ink">
+          <span className="font-medium text-ember">{t("jr-why-label")} </span>
+          {why(event)}
         </p>
-        <SheetTitle className="mt-1 font-serif text-2xl leading-tight font-normal">{say(event)}</SheetTitle>
-        <SheetDescription className="font-mono text-xs tabular">
-          {moment(event.at)}
-          {event.room ? ` · ${t("jr-event-room", { room: event.room })}` : ""}
-          {event.outcome?.duration_s ? ` · ${duration(event.outcome.duration_s)}` : ""}
-        </SheetDescription>
-      </SheetHeader>
-      <div className="grid min-w-0 grid-cols-1 gap-6 px-6 pb-8">
-        {event.reason ? (
-          <p className="rounded-sm bg-ember-soft/70 px-3 py-2 text-sm">
-            <span className="font-mono text-[0.72rem] text-ember">{t("jr-why")} </span>
-            {why(event)}
-          </p>
-        ) : null}
-        {event.detail_text ? (
-          <p className="text-[0.95rem] leading-relaxed whitespace-pre-line">{event.detail_text}</p>
-        ) : null}
-        <Attachments item={event} />
+      ) : null}
+      {event.detail_text ? (
+        event.kind === "tool" ? (
+          <pre className="code-block min-w-0">{event.detail_text}</pre>
+        ) : (
+          <p className="min-w-0 title-sub whitespace-pre-line">{event.detail_text}</p>
+        )
+      ) : null}
+      <Attachments item={event} />
 
-        {related.length ? (
-          <section aria-labelledby="related">
-            <h3 id="related" className="mb-2 border-b border-rule pb-1.5 font-serif text-lg font-normal">
-              {t("jr-related")}
-            </h3>
-            <Facts narrow>
-              {related.map((r) => (
-                <Fact key={`${r.label}-${r.value}`} term={r.label}>
-                  <Link {...r.link} className="inline-flex items-center gap-1 text-ink hover:text-ember">
-                    <span className={r.person ? "" : "font-mono text-[0.8rem]"}>{r.value}</span>
-                    <ArrowUpRight className="size-3" aria-hidden="true" />
-                  </Link>
-                </Fact>
-              ))}
-            </Facts>
-          </section>
+      <Facts narrow>
+        {event.room ? <Fact term={t("jr-fact-room")}>{event.room}</Fact> : null}
+        {event.channels.length ? (
+          <Fact term={t("jr-fact-channel")} className="flex flex-wrap items-center gap-x-3">
+            {event.channels.map((c) => (
+              <KindName key={c} kind={c} />
+            ))}
+          </Fact>
         ) : null}
+        {event.brand ? (
+          <Fact term={t("jr-fact-through")}>
+            <KindName kind={event.brand} />
+          </Fact>
+        ) : null}
+        {seconds !== undefined && seconds !== null ? <Fact term={t("jr-fact-took")}>{duration(seconds)}</Fact> : null}
+        {related.map((r) => (
+          <Fact key={`${r.label}-${r.value}`} term={r.label}>
+            <Link {...r.link} className="inline-flex max-w-full items-center gap-1 text-ink hover:text-ember">
+              {r.person ? <Avatar name={r.value} size="xs" /> : null}
+              <span className={r.person ? "" : "truncate font-mono text-meta"}>{r.value}</span>
+              <ArrowUpRight className="size-3 shrink-0" aria-hidden="true" />
+            </Link>
+          </Fact>
+        ))}
+      </Facts>
 
-        <section aria-labelledby="raw">
-          <div className="mb-2 flex items-center justify-between border-b border-rule pb-1.5">
-            <h3 id="raw" className="font-serif text-lg font-normal">
-              {t("jr-raw")}
-            </h3>
-            <span className="flex items-center gap-3 font-mono text-[0.7rem] text-ink-faint">
-              {event.id}
-              <CopyButton value={raw} label={t("jr-raw-copy")} />
-            </span>
-          </div>
-          <pre className="max-h-80 overflow-auto rounded-sm bg-paper-sunken p-3 font-mono text-[0.72rem] leading-relaxed text-ink">
-            {raw}
-          </pre>
-        </section>
-      </div>
-    </>
+      <section aria-labelledby="raw" className="min-w-0">
+        <div className="mb-2 flex items-baseline justify-between gap-3">
+          <h3 id="raw" className="title-sub text-ink">
+            {t("jr-raw")}
+          </h3>
+          <CopyButton value={raw} label={t("jr-raw-copy")} />
+        </div>
+        <p className="min-w-0 mb-2 font-mono text-meta text-ink-muted">
+          {event.type} · {event.id}
+        </p>
+        <pre className="code-block max-h-80 min-w-0 overflow-y-auto">{raw}</pre>
+      </section>
+    </SheetPanel>
   );
 }

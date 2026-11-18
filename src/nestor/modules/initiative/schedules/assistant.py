@@ -6,7 +6,7 @@ from zoneinfo import ZoneInfo
 
 from nestor.core import ContractError
 from nestor.modules.cognition.model import ToolSpec
-from nestor.modules.cognition.tools import Risk, Tool, ToolContext, ToolFailed, ToolProvider
+from nestor.modules.cognition.tools import TITLE, Risk, Tool, ToolContext, ToolFailed, ToolProvider, titled
 from nestor.modules.conversation import ContextProvider, Layer, Sections, TurnContext
 from nestor.modules.initiative.schedules.book import ScheduleBook
 from nestor.modules.initiative.schedules.types import Day, Schedule
@@ -31,6 +31,7 @@ class ScheduleTools(ToolProvider, ContextProvider):
         create = {
             "type": "object",
             "properties": {
+                "title": TITLE,
                 "instruction": {"type": "string", "description": "what you will do when it is due, for whom"},
                 "at": {"type": "string", "description": "once, at this local date and time: 2026-11-03T09:00"},
                 "times": {"type": "array", "items": {"type": "string"}, "description": "to repeat, at these: 08:00"},
@@ -40,7 +41,7 @@ class ScheduleTools(ToolProvider, ContextProvider):
                     "description": "the days to repeat on; every day when left out",
                 },
             },
-            "required": ["instruction"],
+            "required": ["title", "instruction"],
         }
         cancel = {"type": "object", "properties": {"schedule_id": {"type": "string"}}, "required": ["schedule_id"]}
         return (
@@ -59,11 +60,14 @@ class ScheduleTools(ToolProvider, ContextProvider):
     async def context(self, turn: TurnContext) -> Sections:
         if not self.book.schedules:
             return {}
-        listed = "\n".join(f"- [{s.id}] {self._when(s)}: {s.instruction}" for s in self.book.schedules.values())
+        listed = "\n".join(
+            f"- [{s.id}] {s.title}, {self._when(s)}: {s.instruction}" for s in self.book.schedules.values()
+        )
         return {Layer.HOUSEHOLD: f"Wake-ups set:\n{listed}"}  # they change when one is set, ends or is cancelled
 
     async def _create(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
         zone = ZoneInfo(self.book.timezone)
+        title = titled(arguments)
         try:
             at = datetime.fromisoformat(str(arguments["at"])) if arguments.get("at") else None
             times = tuple(time.fromisoformat(str(t)) for t in _listed(arguments.get("times")))
@@ -79,6 +83,7 @@ class ScheduleTools(ToolProvider, ContextProvider):
         try:
             schedule = await self.book.create(
                 str(arguments["instruction"]),
+                title=title,
                 owner=context.person,
                 created_in=context.address,
                 at=at,
@@ -88,12 +93,12 @@ class ScheduleTools(ToolProvider, ContextProvider):
             )
         except ContractError as error:
             raise ToolFailed(str(error)) from None
-        return {"schedule_id": schedule.id, "when": self._when(schedule)}
+        return {"schedule_id": schedule.id, "title": schedule.title, "when": self._when(schedule)}
 
     async def _list(self, arguments: Mapping[str, object], context: ToolContext) -> Mapping[str, object]:
         return {
             "schedules": [
-                {"schedule_id": s.id, "when": self._when(s), "instruction": s.instruction}
+                {"schedule_id": s.id, "title": s.title, "when": self._when(s), "instruction": s.instruction}
                 for s in self.book.schedules.values()
             ]
         }

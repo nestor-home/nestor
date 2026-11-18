@@ -40,7 +40,7 @@ journal-tool-returned-failed = Tool { $tool } failed after { NUMBER($seconds, ma
 journal-tool-result-stored = Long result kept aside ({ NUMBER($size) } characters)
 journal-tool-result-delivered = Result of tool { $tool } passed on
 
-journal-task-started = Task { $task } handed to { $executor }
+journal-task-started = Task { $task } handed to { $executor }: { $title }
 journal-task-attached = Task { $task } picked up by the executor
 journal-task-progressed = Task { $task }: new step
 journal-task-cancel-requested = Cancellation requested for task { $task }
@@ -111,12 +111,12 @@ journal-detail-tried = { $count ->
 }
 
 journal-schedule-created = { $recurring ->
-    [yes] Regular wake-up set
-   *[no] Wake-up set
+    [yes] Recurring reminder set: { $title }
+   *[no] Reminder set: { $title }
 }
-journal-schedule-fired = Wake-up { $id } fired
-journal-schedule-cancelled = Wake-up { $id } cancelled
-journal-watch-created = Watch created: { $what }
+journal-schedule-fired = Reminder { $id } due
+journal-schedule-cancelled = Reminder { $id } cancelled
+journal-watch-created = Watch created: { $title }
 journal-watch-sorted = { $unsorted ->
     [yes] “{ $item }” not sorted: the model did not answer
    *[no] { $matched ->

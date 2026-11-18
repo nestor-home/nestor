@@ -56,7 +56,9 @@ async def test_a_watch_chains_to_its_delivery_and_its_follow_up(tmp_path: Path) 
         admin.imap.info = replace(admin.imap.info, brand="gmail")
         mailbox = await admin.nestor.connections.connect("imap", MATHIS, {"server": "s", "password": "p"})
         for event in (
-            WatchCreated(source="watch-book", watch_id="w1", what="le colis", kinds=("mail",), once=True),
+            WatchCreated(
+                source="watch-book", watch_id="w1", title="Le colis", what="le colis", kinds=("mail",), once=True
+            ),
             WatchTriggered(
                 source="watch-keeper",
                 watch_id="w1",
@@ -103,7 +105,9 @@ async def test_a_check_that_found_nothing_chains_from_its_wake_up(tmp_path: Path
 async def test_a_task_chains_from_its_start_to_its_result(tmp_path: Path) -> None:
     async with Harness(tmp_path) as admin:
         for event in (
-            TaskStarted(source="tasks", task_id="t1", objective="Analyse", executor="hermes", origin=TELEGRAM),
+            TaskStarted(
+                source="tasks", task_id="t1", title="Analyse", objective="Analyse", executor="hermes", origin=TELEGRAM
+            ),
             TaskEnded(source="tasks", task_id="t1", status=TaskStatus.COMPLETED, result="ok", duration_s=12),
             DeliveryConsidered(
                 source="courier", about=About(Source.TASK, "t1", "completed"), reason=REASON, written=TELEGRAM
@@ -299,7 +303,9 @@ async def test_a_file_a_tool_or_a_task_made_shows_with_its_line(made_by: str, tm
         if made_by == "task.ended":
             origin = Address("telegram", "42")
             await admin.nestor.journal.publish(
-                TaskStarted(source="tasks", task_id="t1", objective="Draw", executor="codex", origin=origin)
+                TaskStarted(
+                    source="tasks", task_id="t1", title="Draw", objective="Draw", executor="codex", origin=origin
+                )
             )
         await admin.nestor.journal.publish(
             ToolCompleted(

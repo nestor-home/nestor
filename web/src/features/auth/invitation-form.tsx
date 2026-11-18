@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 import { api, type InvitationPreview, keys, setCsrfToken } from "@/api";
+import { ApiError } from "@/api/client";
 import { Field } from "@/components/field";
 import { FormError } from "@/components/states";
 import { Button } from "@/components/ui/button";
@@ -28,7 +29,7 @@ export function InvitationForm({
   );
   const [password, setPassword] = useState("");
   const [repeat, setRepeat] = useState("");
-  const [problem, setProblem] = useState<string | null>(null);
+  const [problem, setProblem] = useState<"short" | "mismatch" | null>(null);
   const accept = useMutation({
     mutationFn: () => api.acceptInvitation(token, { login: login.trim(), password }),
     onSuccess: (me) => {
@@ -38,51 +39,71 @@ export function InvitationForm({
     },
   });
 
+  const taken = accept.error instanceof ApiError && accept.error.code === "conflict";
+
   function submit(event: FormEvent) {
     event.preventDefault();
-    if (password.length < MIN_PASSWORD) return setProblem(t("auth-password-too-short", { min: MIN_PASSWORD }));
-    if (password !== repeat) return setProblem(t("auth-password-mismatch"));
+    if (password.length < MIN_PASSWORD) return setProblem("short");
+    if (password !== repeat) return setProblem("mismatch");
     setProblem(null);
     accept.mutate();
   }
 
   return (
     <form onSubmit={submit} className="grid gap-5">
-      <Field label={t("auth-login")} htmlFor="login" hint={t("auth-login-hint")}>
+      <Field
+        label={t("auth-login")}
+        htmlFor="login"
+        hint={t("auth-login-hint")}
+        error={taken ? t("auth-login-taken") : null}
+      >
         <Input
           id="login"
           autoComplete="username"
           autoCapitalize="none"
           spellCheck={false}
           required
-          className="font-mono"
+          className="h-11 font-mono"
+          aria-invalid={taken || undefined}
           value={login}
           onChange={(e) => setLogin(e.target.value)}
         />
       </Field>
-      <Field label={t("auth-password")} htmlFor="password" hint={t("auth-password-hint", { min: MIN_PASSWORD })}>
+      <Field
+        label={t("auth-password")}
+        htmlFor="password"
+        hint={t("auth-password-hint", { min: MIN_PASSWORD })}
+        error={problem === "short" ? t("auth-password-too-short", { min: MIN_PASSWORD }) : null}
+      >
         <Input
           id="password"
           type="password"
           autoComplete="new-password"
           required
+          className="h-11"
+          aria-invalid={problem === "short" || undefined}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
       </Field>
-      <Field label={t("auth-password-repeat")} htmlFor="repeat" error={problem}>
+      <Field
+        label={t("auth-password-repeat")}
+        htmlFor="repeat"
+        error={problem === "mismatch" ? t("auth-password-mismatch") : null}
+      >
         <Input
           id="repeat"
           type="password"
           autoComplete="new-password"
           required
-          aria-invalid={problem ? true : undefined}
+          className="h-11"
+          aria-invalid={problem === "mismatch" || undefined}
           value={repeat}
           onChange={(e) => setRepeat(e.target.value)}
         />
       </Field>
-      <FormError error={accept.error} />
-      <Button type="submit" size="lg" disabled={accept.isPending}>
+      {taken ? null : <FormError error={accept.error} />}
+      <Button type="submit" size="lg" className="h-11" disabled={accept.isPending}>
         {accept.isPending ? t("auth-accepting") : t("auth-accept")}
       </Button>
     </form>

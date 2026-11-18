@@ -112,10 +112,10 @@ export function PrivacyFields({
 
   return (
     <fieldset className="grid gap-4" disabled={disabled}>
-      <legend className="mb-1 text-sm font-medium text-ink">{t("sat-privacy-title")}</legend>
-      <p className="-mt-2 text-xs text-ink-muted">{t("sat-privacy-calls")}</p>
+      <legend className="mb-1 text-meta font-medium text-ink">{t("sat-privacy-title")}</legend>
+      <p className="-mt-2 text-micro text-ink-muted">{t("sat-privacy-calls")}</p>
       {draft.quiet.length === 0 && !draft.offWhenHome ? (
-        <p className="text-sm text-ink-muted">{t("sat-privacy-none")}</p>
+        <p className="text-meta text-ink-muted">{t("sat-privacy-none")}</p>
       ) : null}
       {draft.quiet.map((slot, index) => (
         <fieldset key={slot.key} className="grid gap-3 rounded-lg border border-rule p-3">
@@ -147,7 +147,7 @@ export function PrivacyFields({
               <X />
             </Button>
           </div>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-meta">
             <Label htmlFor={`${id}-${slot.key}-start`}>{t("sat-privacy-from")}</Label>
             <TimeInput
               id={`${id}-${slot.key}-start`}
@@ -169,12 +169,12 @@ export function PrivacyFields({
         <Button type="button" variant="outline" size="sm" className="w-fit" onClick={add}>
           <Plus /> {t("sat-privacy-add")}
         </Button>
-        {draft.quiet.length ? <p className="text-xs text-ink-muted">{t("sat-privacy-slot-hint")}</p> : null}
+        {draft.quiet.length ? <p className="text-micro text-ink-muted">{t("sat-privacy-slot-hint")}</p> : null}
       </div>
       <label htmlFor={`${id}-home`} className="flex items-start justify-between gap-4">
         <span>
-          <span className="block text-sm text-ink">{t("sat-privacy-home")}</span>
-          <span className="block text-xs text-ink-muted">{t("sat-privacy-home-hint")}</span>
+          <span className="block text-meta text-ink">{t("sat-privacy-home")}</span>
+          <span className="block text-micro text-ink-muted">{t("sat-privacy-home-hint")}</span>
         </span>
         <Switch
           id={`${id}-home`}
@@ -186,7 +186,7 @@ export function PrivacyFields({
       {draft.offWhenHome ? (
         <div className="grid gap-3">
           <div className="grid gap-1.5">
-            <Label htmlFor={`${id}-who`} className="text-[0.8rem] font-medium text-ink">
+            <Label htmlFor={`${id}-who`} className="text-meta font-medium text-ink">
               {t("sat-privacy-who")}
             </Label>
             <Choice
@@ -204,7 +204,7 @@ export function PrivacyFields({
             <ul className="grid gap-2 sm:grid-cols-2">
               {household.map((p) => (
                 <li key={p.id}>
-                  <Label className="flex items-center gap-2 text-sm font-normal text-ink">
+                  <Label className="flex items-center gap-2 text-meta font-normal text-ink">
                     <Checkbox checked={draft.people.has(p.id)} disabled={disabled} onCheckedChange={tick(p.id)} />
                     {p.name}
                   </Label>

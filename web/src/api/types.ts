@@ -130,7 +130,6 @@ export type IssuedKey = S["IssuedKeyOut"];
 // -- the agent ------------------------------------------------------------------------------------
 
 export type AgentActivity = S["AgentActivityOut"];
-export type UpcomingDelivery = S["ScheduledDeliveryOut"];
 export type Initiative = S["InitiativeOut"];
 
 // -- the admin's chat -----------------------------------------------------------------------------

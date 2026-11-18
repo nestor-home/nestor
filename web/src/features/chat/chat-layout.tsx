@@ -1,20 +1,23 @@
 /**
- * The chat: its list of chats beside the open one, as messaging apps lay it out. Below `lg`, the list opens as a
- * sheet. ⇧⌘O starts a new chat from anywhere in it.
+ * Talk: the discussions beside the open one on a wide screen. On a phone they are two levels: the list with a
+ * composer to start a new one, then the discussion with a way back. ⇧⌘O starts a new one from anywhere in it.
  */
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, Outlet, useNavigate, useParams } from "@tanstack/react-router";
 import { Search, SquarePen } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { type Chat, chatsQuery, keys } from "@/api";
 import { ApiError } from "@/api/client";
+import { PageHeader } from "@/components/page";
 import { Failure, Loading, Notice } from "@/components/states";
-import { Kbd } from "@/components/status";
+import { Kbd, Status } from "@/components/status";
 import { Button } from "@/components/ui/button";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useLiveItems } from "@/features/shell/live";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useT } from "@/i18n";
-import { daysBefore, hourMinute } from "@/lib/dates";
+import { daysBefore, moment } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 
 const WEB_CHANNEL = "channels:\n  - kind: web"; // what turns the chat on, in the configuration
@@ -22,6 +25,7 @@ const WEB_CHANNEL = "channels:\n  - kind: web"; // what turns the chat on, in th
 export function ChatLayout() {
   const t = useT();
   const navigate = useNavigate();
+  const mobile = useIsMobile();
   const chats = useQuery(chatsQuery);
   const queryClient = useQueryClient();
   const sessions = chats.data?.sessions;
@@ -45,13 +49,11 @@ export function ChatLayout() {
 
   if (chats.error instanceof ApiError && ["chat_off", "chat_needs_person"].includes(chats.error.code)) {
     return (
-      <div className="mx-auto max-w-xl px-4 pt-16">
-        <h1 className="display-2 text-ink">{t("chat-title")}</h1>
-        <Notice tone="attention" className="mt-6">
+      <div className="mx-auto w-full max-w-xl px-4 pt-8 md:pt-16">
+        <PageHeader title={t("chat-title")} />
+        <Notice tone="attention">
           <p>{chats.error.message}</p>
-          {chats.error.code === "chat_off" ? (
-            <pre className="mt-3 rounded-md bg-paper-sunken px-3 py-2 font-mono text-[0.8rem]">{WEB_CHANNEL}</pre>
-          ) : null}
+          {chats.error.code === "chat_off" ? <pre className="code-block mt-3">{WEB_CHANNEL}</pre> : null}
         </Notice>
       </div>
     );
@@ -59,9 +61,37 @@ export function ChatLayout() {
 
   return (
     <div className="flex h-full min-h-0">
-      <aside className="hidden w-72 shrink-0 flex-col border-r border-rule lg:flex" aria-label={t("chat-list")}>
-        <ChatList />
-      </aside>
+      {mobile ? null : (
+        <aside className="flex w-80 shrink-0 flex-col bg-paper-sunken/50" aria-label={t("chat-list")}>
+          <ChatList
+            lead={
+              <div className="flex items-center justify-between gap-2 px-5 pt-6 pb-3">
+                <h2 className="display-3 text-ink">{t("chat-list")}</h2>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="rounded-full bg-paper-raised"
+                        nativeButton={false}
+                        aria-label={t("chat-new")}
+                        aria-keyshortcuts="Meta+Shift+O"
+                        render={<Link to="/chat" />}
+                      />
+                    }
+                  >
+                    <SquarePen />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {t("chat-new")} · <Kbd>⇧⌘O</Kbd>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            }
+          />
+        </aside>
+      )}
       <div className="flex min-w-0 flex-1 flex-col">
         <Outlet />
       </div>
@@ -79,7 +109,8 @@ function groupOf(iso: string, now: Date): string {
   return "older";
 }
 
-export function ChatList({ onNavigate, inSheet = false }: { onNavigate?: () => void; inSheet?: boolean }) {
+/** The discussions, latest first, found by their words; `lead` is what stands above them. */
+export function ChatList({ lead }: { lead: ReactNode }) {
   const t = useT();
   const { data, isPending: loading, error, refetch: retry } = useQuery(chatsQuery);
   const chats = data?.chats;
@@ -99,78 +130,55 @@ export function ChatList({ onNavigate, inSheet = false }: { onNavigate?: () => v
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className={cn("flex items-center justify-between gap-2 px-4 pt-5 pb-3", inSheet && "pt-3 pr-14")}>
-        <h2 className="font-serif text-[1.35rem] leading-none text-ink">{t("chat-title")}</h2>
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                variant="ghost"
-                size="icon"
-                nativeButton={false}
-                aria-label={t("chat-new")}
-                aria-keyshortcuts="Meta+Shift+O"
-                render={<Link to="/chat" onClick={onNavigate} />}
-              />
-            }
-          >
-            <SquarePen />
-          </TooltipTrigger>
-          <TooltipContent>
-            {t("chat-new")} · <Kbd>⇧⌘O</Kbd>
-          </TooltipContent>
-        </Tooltip>
-      </div>
-      <div className="px-3 pb-2">
-        <label className="flex h-8 items-center gap-2 rounded-md border border-rule bg-paper-raised px-2.5 focus-within:border-ink">
-          <Search className="size-3.5 shrink-0 text-ink-faint" aria-hidden="true" />
-          <span className="sr-only">{t("chat-search")}</span>
-          <input
+      {lead}
+      <search className="px-4 pb-2">
+        <InputGroup className="h-10 rounded-full border-transparent px-1 shadow-(--lift)">
+          <InputGroupAddon>
+            <Search aria-hidden="true" />
+          </InputGroupAddon>
+          <InputGroupInput
             type="search"
+            aria-label={t("chat-search")}
+            placeholder={t("chat-search")}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder={t("chat-search")}
-            className="min-w-0 flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-ink-faint"
           />
-        </label>
-      </div>
-      <nav className="min-h-0 flex-1 overflow-y-auto px-2 pb-6" aria-label={t("chat-list")}>
+        </InputGroup>
+      </search>
+      <nav className="min-h-0 flex-1 overflow-y-auto px-3 pb-6" aria-label={t("chat-list")}>
         {loading ? (
-          <div className="px-2">
+          <div className="px-1 pt-2">
             <Loading lines={4} />
           </div>
         ) : error ? (
-          <Failure error={error} retry={retry} className="mx-2" />
+          <Failure error={error} retry={retry} className="mx-1 mt-2" />
         ) : !groups.length ? (
-          <p className="px-2.5 py-3 text-sm text-ink-muted">{t(query ? "chat-search-none" : "chat-none")}</p>
+          <p className="px-2 py-3 text-body text-ink-muted">{t(query ? "chat-search-none" : "chat-none")}</p>
         ) : (
           groups.map(([group, items]) => (
-            <section key={group} className="mt-3 first:mt-1">
-              <h3 className="label-mono px-2.5 pb-1 text-[0.68rem] text-ink-faint">{t(`chat-group-${group}`)}</h3>
-              <ul className="grid gap-px">
+            <section key={group} className="mt-4 first:mt-2">
+              <h3 className="caption px-2 pb-1.5">{t(`chat-group-${group}`)}</h3>
+              <ul className="grid gap-1">
                 {items.map((chat) => (
                   <li key={chat.id}>
                     <Link
                       to="/chat/$chat"
                       params={{ chat: chat.id }}
-                      onClick={onNavigate}
                       aria-current={chat.id === open ? "page" : undefined}
                       className={cn(
-                        "flex h-9 items-center gap-2 rounded-md px-2.5 text-sm text-ink-muted hover:bg-paper-sunken hover:text-ink pointer-coarse:h-11",
-                        chat.id === open && "bg-paper-sunken text-ink",
+                        "flex min-h-12 items-center gap-3 px-3 py-2",
+                        chat.id === open ? "surface" : "rounded-(--radius-surface) hover:bg-paper-sunken",
                       )}
                     >
-                      <span className="min-w-0 flex-1 truncate">{titleOf(chat, t)}</span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-body font-medium text-ink">{titleOf(chat, t)}</span>
+                        <span className="block text-meta text-ink-muted">{moment(chat.updated_at)}</span>
+                      </span>
                       {chat.answering ? (
-                        <span className="flex shrink-0 items-center">
-                          <span className="live-dot size-1.5 rounded-full bg-ember" aria-hidden="true" />
-                          <span className="sr-only">{t("chat-answering")}</span>
-                        </span>
-                      ) : (
-                        <span className="shrink-0 font-mono text-[0.7rem] text-ink-faint">
-                          {group === "today" ? hourMinute(chat.updated_at) : null}
-                        </span>
-                      )}
+                        <Status tone="accent" className="shrink-0">
+                          {t("chat-answering")}
+                        </Status>
+                      ) : null}
                     </Link>
                   </li>
                 ))}

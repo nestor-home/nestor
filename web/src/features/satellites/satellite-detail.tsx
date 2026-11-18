@@ -1,15 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { Activity, Cpu, Gauge } from "lucide-react";
+import { Activity, Cpu, Gauge, RadioTower } from "lucide-react";
 import type { ReactNode } from "react";
 import { api, isMissing, keys, type Satellite, satelliteQuery } from "@/api";
 import { Ago } from "@/components/ago";
+import { CardHead } from "@/components/card";
 import { Confirm } from "@/components/confirm";
 import { type Crumb, Crumbs } from "@/components/crumbs";
+import { IconTile } from "@/components/marks";
 import { useNotify } from "@/components/notices";
-import { Fact, Facts, Lead, PageHeader, Section } from "@/components/page";
+import { Fact, Facts, Lead, PageHeader, Panel, Section } from "@/components/page";
 import { Empty, Failure, Loading } from "@/components/states";
-import { Status } from "@/components/status";
 import { TabNav } from "@/components/tab-nav";
 import { Button } from "@/components/ui/button";
 import { ActivityList } from "@/features/journal/activity-list";
@@ -17,12 +18,14 @@ import { useT } from "@/i18n";
 import { tr } from "@/i18n/runtime";
 import { moment } from "@/lib/dates";
 import { CAPABILITY_ICON } from "@/lib/icons";
+import { deviceName } from "@/lib/labels";
 import { personName } from "@/lib/people";
 import { useCan, useMe } from "@/lib/session";
 import { IdentifyButton } from "./add-satellite";
-import { DeviceMark } from "./device-mark";
+import { DeviceTile } from "./device-mark";
 import { MediaAccessSection } from "./media-access";
 import { SatelliteUpdateButton } from "./satellite-update";
+import { Connection } from "./satellites-list";
 
 /** What each capability lets the assistant do, said for the household. */
 const MEANS: Record<string, string> = {
@@ -48,11 +51,16 @@ export function useSatellite(id: string): { satellite: Satellite | undefined; pe
   return { satellite: found.data, pending: found.isPending, error: isMissing(found.error) ? null : found.error };
 }
 
+/** A satellite's page: the device and its state, what one does with it at once, then its tabs. */
 export function SatelliteFrame({ id, children }: { id: string; children: ReactNode }) {
   const t = useT();
   const { satellite: s, pending, error } = useSatellite(id);
   const canPair = useCan("satellites:write");
-  const trail: Crumb[] = [{ label: t("sat-title"), link: { to: "/satellites" } }, { label: id }];
+  const trail: Crumb[] = [
+    { label: t("space-settings"), link: { to: "/settings" } },
+    { label: t("sat-title"), link: { to: "/satellites" } },
+    { label: s ? deviceName(s) : id },
+  ];
   if (pending) return <Loading lines={4} />;
   if (error || !s) {
     return (
@@ -68,9 +76,9 @@ export function SatelliteFrame({ id, children }: { id: string; children: ReactNo
       <PageHeader
         crumbs={<Crumbs trail={trail} />}
         title={
-          <span className="inline-flex items-center gap-3">
-            <DeviceMark brand={s.brand} capabilities={s.capabilities} className="size-7 text-ink" />
-            {s.name ?? <span className="font-mono text-[2rem] tracking-tight">{s.id}</span>}
+          <span className="flex items-center gap-4">
+            <DeviceTile brand={s.brand} capabilities={s.capabilities} className="size-14 rounded-2xl" />
+            <span className="min-w-0">{deviceName(s)}</span>
           </span>
         }
         actions={
@@ -81,14 +89,9 @@ export function SatelliteFrame({ id, children }: { id: string; children: ReactNo
         }
         meta={
           <>
-            {s.connected === null ? null : s.connected ? (
-              <Status tone="ok">{t("sat-state-connected")}</Status>
-            ) : (
-              <Status tone="attention">{t("sat-state-offline")}</Status>
-            )}
+            <Connection satellite={s} />
             {s.name ? <span className="font-mono">{s.id}</span> : null}
-            <span>{s.model}</span>
-            <span>{t("sat-room", { room: s.room })}</span>
+            <span>{t("sat-model-room", { model: s.model, room: s.room })}</span>
           </>
         }
       />
@@ -122,62 +125,67 @@ export function SatelliteOverview({ satellite: s }: { satellite: Satellite }) {
   });
   return (
     <div className="grid gap-10">
-      <Lead>
-        {s.connected
-          ? t("sat-summary-connected", { assistant: me.assistant, room: s.room })
-          : s.connected === false
-            ? t("sat-summary-offline", { room: s.room })
-            : t("sat-summary-unknown")}
-      </Lead>
-      <Facts>
-        <Fact term={t("sat-paired-at")}>
-          {s.approved_by
-            ? t("sat-paired-by", { when: moment(s.paired_at), name: personName(s.approved_by) })
-            : moment(s.paired_at)}
-        </Fact>
-        <Fact term={t("sat-last-seen")}>{s.last_seen_at ? <Ago iso={s.last_seen_at} /> : "—"}</Fact>
-        <Fact term={t("sat-software")} className="font-mono text-[0.8rem] [overflow-wrap:anywhere]">
-          {s.software.name} {s.software.version} · {s.protocol}
-        </Fact>
-      </Facts>
+      <Panel className="grid gap-6">
+        <Lead>
+          {s.connected
+            ? t("sat-summary-connected", { assistant: me.assistant, room: s.room })
+            : s.connected === false
+              ? t("sat-summary-offline", { room: s.room })
+              : t("sat-summary-unknown")}
+        </Lead>
+        <Facts>
+          <Fact term={t("sat-paired-at")}>
+            {s.approved_by
+              ? t("sat-paired-by", { when: moment(s.paired_at), name: personName(s.approved_by) })
+              : moment(s.paired_at)}
+          </Fact>
+          {s.last_seen_at ? (
+            <Fact term={t("sat-last-seen")}>
+              <Ago iso={s.last_seen_at} />
+            </Fact>
+          ) : null}
+          <Fact term={t("sat-software")} className="min-w-0 font-mono text-meta">
+            {s.software.name} {s.software.version} · {s.protocol}
+          </Fact>
+        </Facts>
+      </Panel>
       <MediaAccessSection satellite={s} />
       {canRevoke ? (
         <Section title={t("sat-revoke")}>
-          <p className="mb-4 max-w-2xl text-sm text-ink-muted">{t("sat-revoke-hint")}</p>
-          <Confirm
-            trigger={<Button variant="destructive">{t("sat-revoke-action")}</Button>}
-            title={t("sat-revoke-title", { id: s.id })}
-            confirm={t("sat-revoke")}
-            onConfirm={() => revoke.mutateAsync()}
-          >
-            {t("sat-revoke-description", { assistant: me.assistant, room: s.room })}
-          </Confirm>
+          <div className="surface flex flex-wrap items-center justify-between gap-x-6 gap-y-4 p-5">
+            <p className="max-w-xl text-body text-ink-muted">{t("sat-revoke-hint")}</p>
+            <Confirm
+              trigger={<Button variant="destructive">{t("sat-revoke-action")}</Button>}
+              title={t("sat-revoke-title", { id: deviceName(s) })}
+              confirm={t("sat-revoke")}
+              onConfirm={() => revoke.mutateAsync()}
+            >
+              {t("sat-revoke-description", { assistant: me.assistant, room: s.room })}
+            </Confirm>
+          </div>
         </Section>
       ) : null}
     </div>
   );
 }
 
+/** What the device was granted, one card each: what it is called and what it lets the assistant do. */
 export function SatelliteCapabilities({ satellite: s }: { satellite: Satellite }) {
   const t = useT();
   if (s.capabilities.length === 0) return <Empty>{t("sat-capabilities-empty")}</Empty>;
   return (
-    <ul className="grid max-w-3xl gap-px overflow-hidden rounded-md border border-rule bg-rule">
-      {s.capabilities.map((c) => {
-        const Icon = CAPABILITY_ICON[c.name];
-        return (
-          <li key={c.name} className="grid grid-cols-[1.5rem_1fr] gap-x-3 bg-paper-raised px-4 py-3">
-            {Icon ? <Icon className="mt-0.5 size-4 text-ink" aria-hidden="true" /> : <span />}
-            <div>
-              <p className="flex flex-wrap items-baseline gap-x-3">
-                <span className="text-ink">{c.label}</span>
-                <code className="text-[0.7rem] text-ink-faint">{c.name}</code>
-              </p>
-              {means(c.name) ? <p className="mt-0.5 text-sm text-ink-muted">{means(c.name)}</p> : null}
-            </div>
-          </li>
-        );
-      })}
+    <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      {s.capabilities.map((c) => (
+        <li key={c.name} className="surface p-4">
+          <CardHead
+            mark={<IconTile icon={CAPABILITY_ICON[c.name] ?? RadioTower} />}
+            title={c.label}
+            line={means(c.name)}
+          >
+            <code className="font-mono text-micro text-ink-faint">{c.name}</code>
+          </CardHead>
+        </li>
+      ))}
     </ul>
   );
 }

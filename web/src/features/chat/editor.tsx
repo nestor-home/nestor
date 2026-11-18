@@ -146,7 +146,7 @@ export function ChatEditor({
         "aria-multiline": "true",
         role: "textbox",
         class:
-          "chat-editor max-h-60 min-h-12 overflow-y-auto px-4 pt-3.5 pb-1 text-[0.95rem] leading-relaxed text-ink outline-none [overflow-wrap:anywhere]",
+          "chat-editor max-h-60 min-h-12 overflow-y-auto px-4 pt-3.5 pb-1 text-body leading-relaxed text-ink outline-none [overflow-wrap:anywhere]",
       },
       handlePaste: (_view, event) => {
         const files = [...(event.clipboardData?.files ?? [])];

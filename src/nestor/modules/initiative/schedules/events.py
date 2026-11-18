@@ -10,6 +10,7 @@ class ScheduleCreated(Event, event_type="schedule.created"):
     """`once_at` for once; else `times` ("08:00") on `days` (every day when empty), in the household's clock."""
 
     schedule_id: str
+    title: str  # the short name the household knows it by
     instruction: str
     owner: PersonId | None = None
     created_in: Address | None = None

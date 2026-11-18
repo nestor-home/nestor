@@ -11,6 +11,9 @@ import { db, type MockAddition, save } from "./db";
 import { picture, recording } from "./files";
 import {
   arriving,
+  components as componentsOf,
+  connectors as connectorsOf,
+  executors as executorsOf,
   METHODS,
   type MockPending,
   type MockPerson,
@@ -21,6 +24,7 @@ import {
   tools as toolsOf,
 } from "./fixtures";
 import { inFrench } from "./french";
+import { brought } from "./instance";
 import { facets, filtersOf, matching } from "./journal";
 import { catalogueOf, type Draft, errorText, type Lang, localize, render, toItem } from "./messages";
 
@@ -1429,8 +1433,15 @@ export const handlers = [
     const body = (await request.json()) as In<"RestartIn">;
     if (!body.confirm) return fail(400, "restart_unconfirmed");
     // what a restart applies: the file as written; nothing is pending any more
-    const name = (db.config.document.persona as { name?: string } | undefined)?.name;
+    const doc = db.config.document;
+    const name = (doc.persona as { name?: string } | undefined)?.name;
     if (name) db.system.agent.name = name;
+    db.system.components = componentsOf(doc, db);
+    db.inbound = brought(doc);
+    db.connectors = connectorsOf(doc);
+    const keys = new Map(db.executors.executors.map((e) => [e.name, e.key]));
+    db.executors = executorsOf(doc);
+    for (const executor of db.executors.executors) executor.key = keys.get(executor.name) ?? null;
     db.config.restart_required = false;
     db.config.pending_changes = [];
     save();

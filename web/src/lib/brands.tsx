@@ -286,7 +286,8 @@ export function brandColour(slug: BrandSlug): string | null {
 /** What people call a plugin kind or a channel: its brand's name when it has one (`telegram` → Telegram). */
 export function kindName(kind: string): string {
   const slug = brandOf(kind);
-  return slug ? brandName(slug) : kind;
+  if (slug) return brandName(slug);
+  return kind === "voice" ? tr("jr-channel-voice") : kind;
 }
 
 /**
@@ -367,5 +368,15 @@ export function KindMark({ kind, className, label = true }: { kind: string; clas
   if (slug) return <BrandMark brand={slug} className={className} label={label} />;
   return (
     <Plug className={cn("size-4 shrink-0", className)} aria-hidden={!label} aria-label={label ? kind : undefined} />
+  );
+}
+
+/** A kind, a channel or an executor as people read it in a line: its small mark, then its name. */
+export function KindName({ kind, className }: { kind: string; className?: string }) {
+  return (
+    <span className={cn("inline-flex min-w-0 items-center gap-1.5", className)}>
+      <KindMark kind={kind} label={false} className="size-3.5" />
+      {kindName(kind)}
+    </span>
   );
 }

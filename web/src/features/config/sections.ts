@@ -1,6 +1,6 @@
 /**
- * The Configuration area's pages: one per section or slot of the file, grouped as a person thinks
- * of them (who the agent is, what it is made of, the instance), then the vault and the history.
+ * The Configuration area's pages: one per section or slot of the file, grouped by what a person
+ * tunes (the agent, the household, how it talks and listens, what it can reach, the installation).
  */
 import type { LucideIcon } from "lucide-react";
 import {
@@ -8,16 +8,13 @@ import {
   BookMarked,
   Bot,
   Brain,
-  Cable,
   CircleArrowUp,
   Download,
   History,
   House,
   KeyRound,
-  MessageCircle,
   MessagesSquare,
   Plug,
-  Radar,
   Server,
   SlidersHorizontal,
   Sparkles,
@@ -27,7 +24,10 @@ import {
 } from "lucide-react";
 import type { Schemas } from "./schema";
 
-export type PageKind = "section" | "household" | "slots" | "secrets" | "history";
+type PageKind = "section" | "household" | "slots" | "secrets" | "history";
+
+export const GROUPS = ["agent", "household", "talk", "reach", "install"] as const;
+export type Group = (typeof GROUPS)[number];
 
 export interface ConfigPage {
   slug: string;
@@ -35,54 +35,141 @@ export interface ConfigPage {
   /** The document keys the page edits (problems and changes under them are counted here). */
   keys: string[];
   icon: LucideIcon;
-  group: "agent" | "parts" | "instance" | "vault";
+  group: Group;
   /** A message id when the schema has no title for it. */
   label?: string;
+  /** A message id: what the page tunes, in one sentence. */
+  about?: string;
 }
 
-export const PAGES: ConfigPage[] = [
-  { slug: "persona", kind: "section", keys: ["persona"], icon: Bot, group: "agent" },
-  { slug: "household", kind: "household", keys: ["household"], icon: Users, group: "agent" },
-  { slug: "conversation", kind: "section", keys: ["conversation"], icon: MessageCircle, group: "agent" },
-  { slug: "initiative", kind: "section", keys: ["initiative"], icon: Sparkles, group: "agent" },
-  { slug: "voices", kind: "section", keys: ["voices"], icon: AudioLines, group: "agent" },
-  { slug: "memory", kind: "section", keys: ["memory"], icon: BookMarked, group: "agent" },
-  { slug: "models", kind: "slots", keys: ["models", "agent", "watches"], icon: Brain, group: "parts" },
-  { slug: "channels", kind: "slots", keys: ["channels"], icon: MessagesSquare, group: "parts" },
-  { slug: "executors", kind: "slots", keys: ["executors"], icon: Workflow, group: "parts" },
-  { slug: "tools", kind: "slots", keys: ["tools"], icon: Wrench, group: "parts" },
-  { slug: "inbound", kind: "slots", keys: ["inbound"], icon: Download, group: "parts" },
-  { slug: "home", kind: "slots", keys: ["home"], icon: House, group: "parts" },
-  { slug: "connectors", kind: "slots", keys: ["connectors"], icon: Plug, group: "parts" },
-  { slug: "admin", kind: "section", keys: ["admin", "data_dir"], icon: Server, group: "instance" },
-  { slug: "updates", kind: "section", keys: ["updates"], icon: CircleArrowUp, group: "instance" },
-  { slug: "secrets", kind: "secrets", keys: [], icon: KeyRound, group: "vault", label: "cfg-secrets" },
-  { slug: "history", kind: "history", keys: [], icon: History, group: "vault", label: "cfg-history" },
+const PAGES: ConfigPage[] = [
+  { slug: "persona", kind: "section", keys: ["persona"], icon: Bot, group: "agent", about: "cfg-about-persona" },
+  {
+    slug: "initiative",
+    kind: "section",
+    keys: ["initiative"],
+    icon: Sparkles,
+    group: "agent",
+    about: "cfg-about-initiative",
+  },
+  { slug: "memory", kind: "section", keys: ["memory"], icon: BookMarked, group: "agent", about: "cfg-about-memory" },
+  {
+    slug: "household",
+    kind: "household",
+    keys: ["household"],
+    icon: Users,
+    group: "household",
+    about: "cfg-about-household",
+  },
+  {
+    slug: "voices",
+    kind: "section",
+    keys: ["voices"],
+    icon: AudioLines,
+    group: "household",
+    about: "cfg-about-voices",
+  },
+  {
+    slug: "models",
+    kind: "slots",
+    keys: ["models", "agent", "watches"],
+    icon: Brain,
+    group: "talk",
+    about: "cfg-about-models",
+  },
+  {
+    slug: "channels",
+    kind: "slots",
+    keys: ["channels"],
+    icon: MessagesSquare,
+    group: "talk",
+    about: "cfg-about-channels",
+  },
+  { slug: "home", kind: "slots", keys: ["home"], icon: House, group: "reach", about: "cfg-about-home" },
+  {
+    slug: "connectors",
+    kind: "slots",
+    keys: ["connectors"],
+    icon: Plug,
+    group: "reach",
+    about: "cfg-about-connectors",
+  },
+  { slug: "tools", kind: "slots", keys: ["tools"], icon: Wrench, group: "reach", about: "cfg-about-tools" },
+  { slug: "inbound", kind: "slots", keys: ["inbound"], icon: Download, group: "reach", about: "cfg-about-inbound" },
+  {
+    slug: "executors",
+    kind: "slots",
+    keys: ["executors"],
+    icon: Workflow,
+    group: "reach",
+    about: "cfg-about-executors",
+  },
+  {
+    slug: "admin",
+    kind: "section",
+    keys: ["admin", "data_dir"],
+    icon: Server,
+    group: "install",
+    about: "cfg-about-admin",
+  },
+  {
+    slug: "updates",
+    kind: "section",
+    keys: ["updates"],
+    icon: CircleArrowUp,
+    group: "install",
+    about: "cfg-about-updates",
+  },
+  {
+    slug: "secrets",
+    kind: "secrets",
+    keys: [],
+    icon: KeyRound,
+    group: "install",
+    label: "cfg-secrets",
+    about: "cfg-secrets-intro",
+  },
+  {
+    slug: "history",
+    kind: "history",
+    keys: [],
+    icon: History,
+    group: "install",
+    label: "cfg-history",
+    about: "cfg-history-intro",
+  },
 ];
 
-export const GROUP_LABEL: Record<ConfigPage["group"], string> = {
+export const GROUP_LABEL: Record<Group, string> = {
   agent: "cfg-group-agent",
-  parts: "cfg-group-parts",
-  instance: "cfg-group-instance",
-  vault: "cfg-group-vault",
+  household: "cfg-group-household",
+  talk: "cfg-group-talk",
+  reach: "cfg-group-reach",
+  install: "cfg-group-install",
 };
 
 /**
  * The pages for this instance's schema: the known ones it has, then a page for any section or slot
  * the schema adds (a plugin's, a newer Nestor's), so nothing in the file is out of reach.
  */
-export function pagesFor(schema: Schemas): ConfigPage[] {
+function pagesFor(schema: Schemas): ConfigPage[] {
   const known = new Set(PAGES.flatMap((p) => p.keys));
   const has = (p: ConfigPage) => !p.keys.length || p.keys.some((k) => k in schema.sections || k in schema.slots);
-  const added = (keys: string[], kind: PageKind, group: ConfigPage["group"]): ConfigPage[] =>
+  const added = (keys: string[], kind: PageKind, group: Group): ConfigPage[] =>
     keys.filter((k) => !known.has(k)).map((k) => ({ slug: k, kind, keys: [k], icon: SlidersHorizontal, group }));
-  const extra = [
+  return [
+    ...PAGES.filter(has),
     ...added(Object.keys(schema.sections), "section", "agent"),
-    ...added(Object.keys(schema.slots), "slots", "parts"),
+    ...added(Object.keys(schema.slots), "slots", "reach"),
   ];
-  const pages = PAGES.filter(has);
-  const vault = pages.findIndex((p) => p.group === "instance");
-  return [...pages.slice(0, vault), ...extra, ...pages.slice(vault)];
+}
+
+/** The pages by group, in the order a person meets them; a group without a page is left out. */
+export function groupsFor(schema: Schemas): { group: Group; pages: ConfigPage[] }[] {
+  const pages = pagesFor(schema);
+  return GROUPS.map((group) => ({ group, pages: pages.filter((p) => p.group === group) })).filter(
+    (g) => g.pages.length,
+  );
 }
 
 export const pageOf = (slug: string, schema: Schemas): ConfigPage | undefined =>
@@ -98,14 +185,3 @@ export function pageTitle(page: ConfigPage, schema: Schemas, t: (id: string) => 
   const key = page.keys[0] ?? page.slug;
   return schema.section_titles[key] ?? schema.slots[key]?.title ?? key;
 }
-
-/** Icons for the families of components (the sheet that adds one). */
-export const FAMILY_ICON: Record<string, LucideIcon> = {
-  model: Brain,
-  channel: MessagesSquare,
-  executor: Workflow,
-  tools: Wrench,
-  inbound: Radar,
-  presence: House,
-  connector: Cable,
-};

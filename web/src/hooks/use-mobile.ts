@@ -1,19 +1,47 @@
-import { useEffect, useState } from "react";
+import { useCallback, useState, useSyncExternalStore } from "react";
 
-const MOBILE_BREAKPOINT = 768;
-
-/** Below `md`: the sidebar becomes a sheet opened from the top bar. */
-export function useIsMobile(): boolean {
-  const [isMobile, setIsMobile] = useState(
-    () => typeof window !== "undefined" && window.innerWidth < MOBILE_BREAKPOINT,
+/** Whether a media query holds, following it as the window changes (false where there is no `matchMedia`). */
+function useMedia(query: string): boolean {
+  const subscribe = useCallback(
+    (changed: () => void) => {
+      if (typeof matchMedia !== "function") return () => {};
+      const media = matchMedia(query);
+      media.addEventListener("change", changed);
+      return () => media.removeEventListener("change", changed);
+    },
+    [query],
   );
-  useEffect(() => {
-    if (typeof matchMedia !== "function") return;
-    const media = matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
-    const update = () => setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
-    media.addEventListener("change", update);
-    update();
-    return () => media.removeEventListener("change", update);
+  return useSyncExternalStore(subscribe, () => typeof matchMedia === "function" && matchMedia(query).matches);
+}
+
+/** Below `md`: the rail becomes a tab bar under the thumb, and sheets take the screen. */
+export function useIsMobile(): boolean {
+  return useMedia("(max-width: 767px)");
+}
+const FOLDED = "nestor.rail.folded";
+
+/**
+ * Whether the rail shows names beside its icons: from `lg`, unless the person folded it (remembered on this
+ * device). Below `lg` it is icons only and cannot unfold.
+ */
+export function useRail(): { wide: boolean; roomy: boolean; toggle: () => void } {
+  const roomy = useMedia("(min-width: 1024px)");
+  const [folded, setFolded] = useState(() => {
+    try {
+      return localStorage.getItem(FOLDED) === "1";
+    } catch {
+      return false;
+    }
+  });
+  const toggle = useCallback(() => {
+    setFolded((was) => {
+      try {
+        localStorage.setItem(FOLDED, was ? "0" : "1");
+      } catch {
+        // storage unavailable: the choice lasts until the next reload
+      }
+      return !was;
+    });
   }, []);
-  return isMobile;
+  return { wide: roomy && !folded, roomy, toggle };
 }

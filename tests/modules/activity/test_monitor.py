@@ -117,7 +117,9 @@ async def test_a_delegated_task_keeps_it_working_until_it_ends() -> None:
     async with world.tasks, world.monitor:
         since = world.monitor.current().since
         assert (
-            await world.changed(lambda: world.tasks.delegate("Réserver le restaurant", origin=TELEGRAM))
+            await world.changed(
+                lambda: world.tasks.delegate("Réserver le restaurant", title="Réserver le restaurant", origin=TELEGRAM)
+            )
             is Activity.WORKING
         )
         working = world.monitor.current()

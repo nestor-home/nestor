@@ -40,6 +40,18 @@ export function dayLabel(iso: string, now: Date = new Date()): string {
   }).format(at);
 }
 
+/** `Tuesday 28 October`: the date that heads a day. */
+export function longDate(at: Date): string {
+  return format({ weekday: "long", day: "numeric", month: "long" }).format(at);
+}
+
+/** The day of what comes next, short enough for a column: `today`, else `Tue 28 Oct`. */
+export function agendaDay(iso: string, now: Date = new Date()): string {
+  const at = new Date(iso);
+  if (sameDay(at, now)) return tr("day-today");
+  return format({ weekday: "short", day: "numeric", month: "short" }).format(at);
+}
+
 /** `3 Nov 2026`: a calendar day (`YYYY-MM-DD`), as written, whatever the timezone. */
 export function calendarDay(day: string): string {
   return format({ day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(

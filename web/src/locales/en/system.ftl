@@ -1,7 +1,6 @@
 ## System: what this instance assembled at start-up, and the health of each part.
 
 sys-title = System
-sys-started = started
 sys-unwell = { $count ->
     [one] 1 component to watch
    *[other] { $count } components to watch
@@ -91,3 +90,31 @@ sys-executor-key-label = the key
 sys-executor-passed = Nestor hands it to { $name } with each task: nothing to paste.
 sys-executor-profile = Add this to the configuration of { $name } (a Hermes profile's config.yaml), then set nestor_mcp: true on this executor in Nestor's configuration.
 sys-executor-setup-label = what to add
+sys-parts = { $count ->
+    [one] 1 component
+   *[other] { $count } components
+}
+sys-attention = To look at
+sys-instance = This instance
+sys-slot-voice = Voice
+sys-fix-down = Nothing goes through it for now. Check that the service behind it answers and that its settings are right.
+sys-fix-degraded = It works in part: what it reports says what is missing.
+sys-configure = Configure
+sys-fact-state = state
+sys-fact-service = service
+sys-fact-type = type
+sys-fact-fallback = fallback
+sys-fact-adapter = adapter
+sys-fact-version = version
+sys-fact-can = can
+sys-runs = Runs { $agent }.
+sys-restart-waiting = { $count ->
+    [0] A restart is waiting.
+    [one] 1 change waits for a restart.
+   *[other] { $count } changes wait for a restart.
+}
+sys-restart = Restart…
+sys-restart-title = Restart { $agent }?
+sys-restart-text = It stops cleanly and starts again in a few seconds. A conversation under way is cut, delegated tasks keep running, and everyone signs in again.
+sys-restart-now = Restart now
+upd-available-running = { $latest } is out. This instance runs { $running }.

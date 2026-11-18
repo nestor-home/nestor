@@ -1,7 +1,4 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
+import { ConfigOverview } from "@/features/config/overview";
 
-export const Route = createFileRoute("/_app/config/")({
-  beforeLoad: () => {
-    throw redirect({ to: "/config/$section", params: { section: "persona" }, replace: true });
-  },
-});
+export const Route = createFileRoute("/_app/config/")({ component: ConfigOverview });

@@ -36,7 +36,7 @@ export function TabNav({ tabs, label }: { tabs: TabLink[]; label: string }) {
             {t.icon ? <t.icon aria-hidden="true" /> : null}
             {t.label}
             {t.count !== undefined ? (
-              <span className="font-mono text-[0.7rem] text-ink-faint tabular">{t.count}</span>
+              <span className="font-mono text-micro text-ink-faint tabular">{t.count}</span>
             ) : null}
           </TabsTrigger>
         ))}

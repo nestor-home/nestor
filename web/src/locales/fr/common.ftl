@@ -13,12 +13,10 @@ duration-min = { $minutes } min { $seconds }
 duration-h = { $hours } h { $minutes }
 
 household-everyone = tout le foyer
-household-nobody = personne
 
 role-owner-hint = Tout, y compris les comptes et les rôles.
 role-admin-hint = Connexions, satellites et supervision, sans les comptes.
 role-member-hint = Son journal, ses connexions et ses souvenirs.
-
 
 action-cancel = Annuler
 action-save = Enregistrer
@@ -31,10 +29,9 @@ action-copy-label = Copier { $what }
 action-choose = Choisir…
 action-see = Voir
 loading = Chargement…
-empty-generic = Rien pour l'instant.
 
 error-network = Nestor ne répond pas. Vérifiez qu'il tourne, puis réessayez.
-error-unauthenticated = Votre session a expiré : reconnectez-vous.
+error-unauthenticated = Votre session a expiré : reconnectez-vous.
 error-forbidden = Votre rôle ne permet pas cette action.
 error-not-found = Introuvable.
 error-status = Nestor a répondu par une erreur ({ $status }).

@@ -1,12 +1,39 @@
-/** The chat: its list, a chat read from the journal (words, tags, tools, files, Markdown), and when it is off. */
+/** The chat: its list, a chat read from the journal (words, tags, tools, files, Markdown), a phone's two levels, and when it is off. */
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { server } from "@/mocks/server";
 import { renderApp } from "@/test/render";
 
+const WIDTH = window.innerWidth;
+
 describe("the chat", () => {
+  afterEach(() => {
+    window.innerWidth = WIDTH;
+  });
+
+  it("invites to write, with what the agent can take in", async () => {
+    renderApp("/chat");
+    expect(await screen.findByRole("heading", { level: 1, name: "Write to Richie" })).toBeInTheDocument();
+    expect(await screen.findByText(/Type @ to name someone/)).toBeInTheDocument();
+  });
+
+  it("on a phone, lists the chats above the composer, then opens one with a way back", async () => {
+    window.innerWidth = 375;
+    const user = userEvent.setup();
+    const { router } = renderApp("/chat");
+    const list = await screen.findByRole("navigation", { name: "Chats" });
+    expect(screen.queryByRole("complementary", { name: "Chats" })).not.toBeInTheDocument();
+    expect(await screen.findByRole("textbox", { name: "Message Richie" })).toBeInTheDocument();
+    await user.click(await within(list).findByRole("link", { name: /Why are its leaves turning yellow/ }));
+    expect(await screen.findByRole("img", { name: "plant.png" })).toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: "Chats" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("link", { name: "All chats" }));
+    expect(router.state.location.pathname).toBe("/chat");
+    expect(await screen.findByRole("navigation", { name: "Chats" })).toBeInTheDocument();
+  });
+
   it("lists the chats by day and finds one by its words", async () => {
     const user = userEvent.setup();
     renderApp("/chat");
@@ -24,7 +51,7 @@ describe("the chat", () => {
     renderApp("/chat/c-dinner");
     expect(await screen.findByRole("table")).toHaveTextContent("Omelette");
     expect(screen.getByText("Leek and comté quiche", { exact: false })).toBeInTheDocument();
-    const call = screen.getByRole("button", { name: /homeassistant__HassTurnOn/ });
+    const call = screen.getByRole("button", { name: /intent__HassTurnOn/ });
     expect(call).toHaveTextContent("Done in");
     await user.click(call);
     expect(await screen.findByText(/"area": "kitchen"/)).toBeVisible();

@@ -6,6 +6,7 @@ import type {
   Account,
   Capability,
   Component,
+  ConfigDocument,
   Confirmation,
   Connection,
   Connector,
@@ -32,17 +33,18 @@ import type {
   Watch,
 } from "@/api";
 import { scopeValues } from "@/api/schema.gen";
+import { isRecord } from "@/features/config/schema";
 import { oneOf } from "@/lib/enums";
 import { fr } from "./french";
+import { document, household, type Plugged, plugged, publicUrl, SCHEMAS } from "./instance";
 import { render } from "./messages";
 import grants from "./server/role-scopes.json";
 
 export const ASSISTANT = "Richie";
 
-const NAMES: Record<string, string> = { mathis: "Mathis", lea: "Léa", jules: "Jules", odile: "Odile" };
-
-/** A person as the API names them everywhere: `{id, name}`. */
-export const ref = (id: string): PersonRef => ({ id, name: NAMES[id] ?? id });
+/** A person as the API names them everywhere: `{id, name}`, the name the configuration file gives them. */
+export const ref = (id: string): PersonRef => ({ id, name: NAMES.get(id) ?? id });
+const NAMES = new Map(household(document()).map((p) => [p.id, p.name]));
 
 export const minutes = (n: number, from = Date.now()) => new Date(from - n * 60_000).toISOString();
 const ahead = (seconds: number) => new Date(Date.now() + seconds * 1000).toISOString();
@@ -64,6 +66,15 @@ export const HALLWAY = fr("hallway", "entrée");
 export const BEDROOM = fr("bedroom", "chambre");
 const VERANDA = fr("veranda", "véranda");
 
+/** The rooms Home Assistant knows, with what its sensors say of each: someone, nobody, or `null` without a sensor. */
+export const ROOMS = [
+  [LIVING_ROOM, fr("Living room", "Salon"), true],
+  [KITCHEN, fr("Kitchen", "Cuisine"), false],
+  [OFFICE, fr("Office", "Bureau"), null],
+  [HALLWAY, fr("Hallway", "Entrée"), false],
+  [BEDROOM, fr("Bedroom", "Chambre"), false],
+] as const;
+
 /** Voices as recorded: Mathis's, long ago and improved since; nobody else's yet. */
 export function voices(): Record<string, Omit<Voice, "manageable">> {
   return {
@@ -80,41 +91,22 @@ export function voices(): Record<string, Omit<Voice, "manageable">> {
 /** People as the mock keeps them: their account by id, composed into `PersonOut` when served. */
 export type MockPerson = Omit<Person, "account" | "connections"> & { account: string | null };
 
-export function people(): MockPerson[] {
-  return [
-    {
-      id: "mathis",
-      name: "Mathis",
-      channel_accounts: ["voice", "telegram:@mathis_l"],
-      reach: "telegram:@mathis_l",
-      presence: { home: true, room: LIVING_ROOM, since: minutes(61) },
-      account: "acc-mathis",
-    },
-    {
-      id: "lea",
-      name: "Léa",
-      channel_accounts: ["voice", "telegram:@lea_lambert", "web"],
-      reach: "voice",
-      presence: { home: false, room: null, since: minutes(205) },
-      account: "acc-lea",
-    },
-    {
-      id: "jules",
-      name: "Jules",
-      channel_accounts: ["voice"],
-      reach: "voice",
-      presence: { home: true, room: LIVING_ROOM, since: minutes(2) },
-      account: null,
-    },
-    {
-      id: "odile",
-      name: "Odile",
-      channel_accounts: ["telegram:@odile.m"],
-      reach: "telegram:@odile.m",
-      presence: { home: null, room: null, since: null },
-      account: null,
-    },
-  ];
+/** What the file cannot say of a person: where Home Assistant sees them, and the account they open the admin with. */
+const SEEN: Record<string, Pick<MockPerson, "presence" | "account">> = {
+  mathis: { presence: { home: true, room: LIVING_ROOM, since: minutes(61) }, account: "acc-mathis" },
+  lea: { presence: { home: false, room: null, since: minutes(205) }, account: "acc-lea" },
+  jules: { presence: { home: true, room: LIVING_ROOM, since: minutes(2) }, account: null },
+};
+
+/** The people of the configuration file, with where they are; someone Home Assistant does not know is nowhere. */
+export function people(doc: ConfigDocument): MockPerson[] {
+  return household(doc).map((p) => ({
+    id: p.id,
+    name: p.name,
+    channel_accounts: p.accounts,
+    reach: p.reach,
+    ...(SEEN[p.id] ?? { presence: { home: null, room: null, since: null }, account: null }),
+  }));
 }
 
 export function accounts(): Account[] {
@@ -177,7 +169,22 @@ export const MCP_PRESETS = [
   { name: "Hugging Face", brand: "huggingface", values: { url: "https://huggingface.co/mcp" } },
 ];
 
-export function connectors(): Connector[] {
+/** The relay OAuth comes back through: the file's default (`admin.relay_url`). */
+const RELAY = String(
+  (SCHEMAS.en.sections.admin as { properties?: Record<string, { default?: unknown }> }).properties?.relay_url?.default,
+);
+
+/** What each connector of the catalogue says of itself; the file decides which are plugged in (`connectors`). */
+export function connectors(doc: ConfigDocument): Connector[] {
+  const configured = new Set(
+    plugged(doc)
+      .filter((p) => p.slot === "connector")
+      .map((p) => p.plugin),
+  );
+  return catalogue().filter((c) => configured.has(c.kind));
+}
+
+function catalogue(): Connector[] {
   return [
     {
       kind: "google",
@@ -192,7 +199,7 @@ export function connectors(): Connector[] {
       oauth: {
         registered: true,
         client_id: "418230-9kq3hc.apps.googleusercontent.com",
-        redirect_uri: "https://relay.nestor.dev/oauth/callback",
+        redirect_uri: RELAY,
         relayed: true,
       },
     },
@@ -209,7 +216,7 @@ export function connectors(): Connector[] {
       oauth: {
         registered: false,
         client_id: null,
-        redirect_uri: "https://relay.nestor.dev/oauth/callback",
+        redirect_uri: RELAY,
         relayed: true,
       },
     },
@@ -298,7 +305,7 @@ Donnez un client OAuth seulement si le serveur n'en enregistre aucun pour Nestor
       oauth: {
         registered: false,
         client_id: null,
-        redirect_uri: "https://relay.nestor.dev/oauth/callback",
+        redirect_uri: RELAY,
         relayed: true,
       },
     },
@@ -821,6 +828,7 @@ export function satellites(): Satellite[] {
 }
 
 /** What the tasks are about, also written in the journal. */
+export const CLAIM_TITLE = fr("Glasses insurance claim", "Remboursement des lunettes");
 export const CLAIM = fr(
   "Prepare the health insurance claim for Jules's glasses.",
   "Préparer le dossier de remboursement de la mutuelle pour les lunettes de Jules.",
@@ -829,6 +837,7 @@ export const CLAIM_STEPS = [
   fr("Insurance claim form downloaded.", "Formulaire de la mutuelle téléchargé."),
   fr("Waiting for the invoice: Gmail needs reconnecting.", "En attente de la facture : Gmail est à reconnecter."),
 ];
+export const SHOPPING_TITLE = fr("Week's shopping list", "Liste de courses de la semaine");
 export const SHOPPING = fr(
   "Make the week's shopping list from Léa's menus.",
   "Préparer la liste de courses de la semaine à partir des menus de Léa.",
@@ -837,6 +846,7 @@ export const SHOPPING_STEP = fr(
   "Reading the “Léa's recipes” MCP server.",
   "Lecture du serveur MCP « Recettes de Léa ».",
 );
+export const ENERGY_TITLE = fr("Green electricity offers", "Offres d'électricité verte");
 export const ENERGY = fr(
   "Compare three green electricity offers and sum up the yearly price gaps.",
   "Comparer trois offres d'électricité verte et résumer les écarts de prix annuels.",
@@ -855,6 +865,7 @@ export const GYM_ERROR = fr(
   "Le site demande une connexion par SMS : impossible sans Léa.",
 );
 
+export const DEPENDENCIES_TITLE = fr("Dashboard dependencies", "Dépendances du tableau de bord");
 export const DEPENDENCIES = fr(
   "Update the home dashboard's dependencies and say what changed.",
   "Mettre à jour les dépendances du tableau de bord de la maison et dire ce qui a changé.",
@@ -876,6 +887,7 @@ export function tasks(): Task[] {
   return [
     {
       id: "t-4410aa",
+      title: CLAIM_TITLE,
       objective: CLAIM,
       executor: "hermes",
       status: "running",
@@ -891,6 +903,7 @@ export function tasks(): Task[] {
     },
     {
       id: "t-88b07e",
+      title: SHOPPING_TITLE,
       objective: SHOPPING,
       executor: "codex",
       status: "running",
@@ -906,6 +919,7 @@ export function tasks(): Task[] {
     },
     {
       id: "t-3f2a1c",
+      title: ENERGY_TITLE,
       objective: ENERGY,
       executor: "hermes",
       status: "completed",
@@ -921,6 +935,7 @@ export function tasks(): Task[] {
     },
     {
       id: "t-a04f12",
+      title: fr("Gym membership cancellation", "Résiliation de la salle de sport"),
       objective: fr("Cancel the gym membership.", "Résilier l'abonnement à la salle de sport."),
       executor: "hermes",
       status: "failed",
@@ -936,6 +951,7 @@ export function tasks(): Task[] {
     },
     {
       id: "t-5e6b70",
+      title: fr("Jules's homework", "Devoirs de Jules"),
       objective: fr("Sum up Jules's homework for the week.", "Récapituler les devoirs de Jules pour la semaine."),
       executor: "codex",
       status: "cancelled",
@@ -951,6 +967,7 @@ export function tasks(): Task[] {
     },
     {
       id: "t-c1a9de",
+      title: DEPENDENCIES_TITLE,
       objective: DEPENDENCIES,
       executor: "claude-code",
       status: "completed",
@@ -969,14 +986,19 @@ export function tasks(): Task[] {
 
 /** A task's label once cancelled (the admin can cancel one). */
 
+/** The watch on the school's reply: its name and what it watches for, as its creation reads in the journal. */
+export const SCHOOL_TRIP_WATCH = fr("School trip reply", "Réponse pour la sortie scolaire");
+export const SCHOOL_TRIP = fr(
+  "News from the school: tell Léa as soon as the school replies about the trip.",
+  "Les nouvelles de l'école : prévenir Léa dès que l'école répond pour la sortie.",
+);
+
 export function watches(): Watch[] {
   return [
     {
       id: "w-9d41",
-      what: fr(
-        "News from the school: tell Léa as soon as the school replies about the trip.",
-        "Les nouvelles de l'école : prévenir Léa dès que l'école répond pour la sortie.",
-      ),
+      title: SCHOOL_TRIP_WATCH,
+      what: SCHOOL_TRIP,
       owner: ref("lea"),
       kinds: ["mail"],
       once: false,
@@ -988,6 +1010,7 @@ export function watches(): Watch[] {
     },
     {
       id: "w-2b77",
+      title: fr("Jules's school", "École de Jules"),
       what: fr("Messages from Jules's school.", "Les messages de l'école de Jules."),
       owner: null,
       kinds: ["mail"],
@@ -1000,6 +1023,7 @@ export function watches(): Watch[] {
     },
     {
       id: "w-f31a",
+      title: fr("Python 3.15 on LWN", "Python 3.15 sur LWN"),
       what: fr("Tell me when LWN writes about Python 3.15.", "Préviens-moi quand LWN parle de Python 3.15."),
       owner: ref("mathis"),
       kinds: ["feed"],
@@ -1012,6 +1036,7 @@ export function watches(): Watch[] {
     },
     {
       id: "w-p8c2",
+      title: fr("Summer camp sign-ups", "Inscriptions au centre aéré"),
       what: fr(
         "Tell me when the town hall opens the summer camp sign-ups.",
         "Préviens-moi quand la mairie ouvre les inscriptions au centre aéré.",
@@ -1027,6 +1052,7 @@ export function watches(): Watch[] {
     },
     {
       id: "w-h5e0",
+      title: fr("Washing machine done", "Machine à laver finie"),
       what: fr(
         "Tell whoever is home when the washing machine is done.",
         "Dire à qui est là quand la machine est finie.",
@@ -1043,11 +1069,12 @@ export function watches(): Watch[] {
   ];
 }
 
-/** Wake-ups and reminders: one for tomorrow morning, two that come back. */
+/** Reminders: one for tomorrow morning, three that come back. */
 export function schedules(): Schedule[] {
   return [
     {
       id: "sc-bread",
+      title: fr("Buy bread", "Acheter du pain"),
       instruction: fr("Remind Mathis to buy bread.", "Rappeler à Mathis d'acheter du pain."),
       owner: ref("mathis"),
       origin: { session: "telegram:@mathis_l", channel: "telegram" },
@@ -1059,6 +1086,7 @@ export function schedules(): Schedule[] {
     },
     {
       id: "sc-tv",
+      title: fr("Samsung TV price", "Prix de la télé Samsung"),
       instruction: fr(
         "Check the price of the Samsung 65S92H; tell Mathis only below €1,600.",
         "Vérifier le prix du Samsung 65S92H ; prévenir Mathis seulement sous 1 600 €.",
@@ -1072,7 +1100,20 @@ export function schedules(): Schedule[] {
       next_due: ahead(60 * 60 * 12),
     },
     {
+      id: "sc-bins",
+      title: fr("Bins out", "Sortir les poubelles"),
+      instruction: fr("Remind Jules to take the bins out.", "Rappeler à Jules de sortir les poubelles."),
+      owner: ref("lea"),
+      origin: null,
+      recurring: true,
+      once_at: null,
+      times: ["19:00"],
+      days: ["tue"],
+      next_due: ahead(60 * 60 * 24 * 4),
+    },
+    {
       id: "sc-plants",
+      title: fr("Water the plants", "Arroser les plantes"),
       instruction: fr("Remind Léa to water the plants.", "Rappeler à Léa d'arroser les plantes."),
       owner: ref("lea"),
       origin: null,
@@ -1128,83 +1169,77 @@ export function confirmations(): Confirmation[] {
   ];
 }
 
-/** Home Assistant: who it knows, its rooms and the actions it offers. */
-export function home(): Home {
-  const tied = (id: string, entity: string | null, presence: Person["presence"]) => ({
-    person: ref(id),
-    entity,
-    tracker: entity ? `sensor.${id}_area` : null,
-    presence: presence ?? { home: null, room: null, since: null },
-  });
-  const crowd = people();
-  const of = (id: string) => crowd.find((p) => p.id === id)?.presence ?? null;
+/** What Home Assistant lets the agent do. */
+function homeTools(): Home["tools"] {
+  return [
+    {
+      name: "homeassistant__GetLiveContext",
+      description: fr("The state of every exposed device.", "L'état de chaque appareil exposé."),
+      risk: "read",
+      confirmed_when: false,
+    },
+    {
+      name: "intent__HassTurnOff",
+      description: fr("Turns off a device or entity.", "Éteint un appareil ou une entité."),
+      risk: "write",
+      confirmed_when: true,
+    },
+    {
+      name: "intent__HassTurnOn",
+      description: fr("Turns on a device or entity.", "Allume un appareil ou une entité."),
+      risk: "write",
+      confirmed_when: true,
+    },
+    {
+      name: "light__HassLightSet",
+      description: fr("Sets the brightness or colour of a light.", "Règle la luminosité ou la couleur d'une lumière."),
+      risk: "write",
+      confirmed_when: true,
+    },
+  ];
+}
+
+/**
+ * Home Assistant as the file plugs it in (`component`, of the system's): the people the file ties to its entities,
+ * its rooms and who it sees in them, and the actions it offers. `null` when the file has no home.
+ */
+export function home(
+  doc: ConfigDocument,
+  component: Component | undefined,
+  satellites: readonly Satellite[],
+): Home | null {
+  if (!component || !isRecord(doc.home)) return null;
+  const entities = isRecord(doc.home.people) ? doc.home.people : {};
+  const trackers = isRecord(doc.home.rooms) ? doc.home.rooms : {};
+  const crowd = people(doc);
+  const entity = (id: string) => (typeof entities[id] === "string" ? (entities[id] as string) : null);
   return {
-    component: component({
-      slot: "home",
-      name: "home",
-      adapter: "home-assistant",
-      brand: "homeassistant",
-      version: "2026.10.2",
-      health: "started",
-      health_detail: null,
-    }),
+    component: { ...component },
     connected: true,
     granularity: "person_room",
-    rooms: [
-      {
-        id: LIVING_ROOM,
-        name: fr("Living room", "Salon"),
-        occupied: true,
-        people: [ref("mathis"), ref("jules")],
-        satellites: ["reachy-living-room"],
-      },
-      { id: KITCHEN, name: fr("Kitchen", "Cuisine"), occupied: false, people: [], satellites: [] },
-      { id: OFFICE, name: fr("Office", "Bureau"), occupied: null, people: [], satellites: ["reachy-office"] },
-      { id: HALLWAY, name: fr("Hallway", "Entrée"), occupied: false, people: [], satellites: [] },
-      { id: BEDROOM, name: fr("Bedroom", "Chambre"), occupied: false, people: [], satellites: ["pi-bedroom"] },
-    ],
+    rooms: ROOMS.map(([id, name, occupied]) => ({
+      id,
+      name,
+      occupied,
+      people: crowd.filter((p) => p.presence?.room === id).map((p) => ref(p.id)),
+      satellites: satellites.filter((s) => s.room === id).map((s) => s.id),
+    })),
+    // what Home Assistant itself knows: its `person` entities, tied to someone of the file or not
     residents: [
-      { entity: "person.mathis", name: "Mathis", home: true, person: ref("mathis") },
-      { entity: "person.lea", name: "Léa", home: false, person: ref("lea") },
-      { entity: "person.jules", name: "Jules", home: true, person: ref("jules") },
+      ...crowd.flatMap((p) => {
+        const known = entity(p.id);
+        return known ? [{ entity: known, name: p.name, home: p.presence?.home ?? null, person: ref(p.id) }] : [];
+      }),
       { entity: "person.guest", name: fr("Guest", "Invité"), home: null, person: null },
     ],
-    people: [
-      tied("mathis", "person.mathis", of("mathis")),
-      tied("lea", "person.lea", of("lea")),
-      tied("jules", "person.jules", of("jules")),
-      tied("odile", null, null),
-    ],
+    people: crowd.map((p) => ({
+      person: ref(p.id),
+      entity: entity(p.id),
+      tracker: typeof trackers[p.id] === "string" ? (trackers[p.id] as string) : null,
+      presence: entity(p.id) && p.presence ? p.presence : { home: null, room: null, since: null },
+    })),
     unplaced_sensors: ["binary_sensor.garage_motion"],
-    tools: [
-      {
-        name: "homeassistant__GetLiveContext",
-        description: fr("The state of every exposed device.", "L'état de chaque appareil exposé."),
-        risk: "read",
-        confirmed_when: false,
-      },
-      {
-        name: "intent__HassTurnOff",
-        description: fr("Turns off a device or entity.", "Éteint un appareil ou une entité."),
-        risk: "write",
-        confirmed_when: true,
-      },
-      {
-        name: "intent__HassTurnOn",
-        description: fr("Turns on a device or entity.", "Allume un appareil ou une entité."),
-        risk: "write",
-        confirmed_when: true,
-      },
-      {
-        name: "light__HassLightSet",
-        description: fr(
-          "Sets the brightness or colour of a light.",
-          "Règle la luminosité ou la couleur d'une lumière.",
-        ),
-        risk: "write",
-        confirmed_when: true,
-      },
-    ],
+    tools: homeTools(),
   };
 }
 
@@ -1301,21 +1336,6 @@ export function memories(): Memory[] {
   ];
 }
 
-const component = (
-  c: Omit<Component, "capabilities" | "distribution" | "details" | "model_type" | "fallback"> &
-    Partial<Pick<Component, "capabilities" | "model_type" | "fallback">>,
-): Component => ({
-  capabilities: [],
-  distribution: null,
-  details: {},
-  model_type: null,
-  fallback: null,
-  ...c,
-});
-
-const ONE_TASK = fr("1 task running", "1 tâche en cours");
-const PYTHON_SDK_042 = fr("Python SDK 0.4.2", "SDK Python 0.4.2");
-
 /** What the release feed says: two releases after the running 0.9.0, the newest one breaking. */
 export function updates(): Updates {
   return {
@@ -1350,249 +1370,165 @@ export function updates(): Updates {
   };
 }
 
-export function system(): SystemInfo {
+/** What only a running component tells, by `slot/name`: its health when not well, its version, who it is there. */
+type Observed = Partial<Pick<Component, "version" | "health" | "health_detail" | "capabilities">>;
+const OBSERVED: Record<string, Observed> = {
+  "model/sonnet": {
+    health_detail: fr("First token in 640 ms (today's median)", "Premier jeton en 640 ms (médiane du jour)"),
+    capabilities: ["tools", "streaming"],
+  },
+  "executor/hermes": { version: "0.6.1" },
+  "executor/codex": { version: "0.48" },
+  "executor/claude-code": { version: "2.1.4" },
+  "channel/satellites": { version: PROTOCOL },
+  "channel/telegram": { version: "Bot API 9.2", health_detail: "@richie_lambert_bot" },
+  "channel/discord": { health_detail: "Richie#4012" },
+  "channel/slack": { health_detail: "lambert-family.slack.com" },
+  "channel/matrix": { health_detail: "@richie:matrix.lambert.family" },
+  "channel/whatsapp": { health_detail: "+33 6 55 50 42 18" },
+  "channel/openai-api": { health_detail: "/v1/chat/completions" },
+  "home/home": { version: "2026.10.2" },
+  "tools/recipes": { health: "unavailable" },
+};
+
+/** What the rest of the instance does to a component's health: accounts, satellites, tasks. */
+export interface Running {
+  satellites: readonly Satellite[];
+  connections: readonly Connection[];
+  tasks: readonly Task[];
+}
+
+const hostOf = (url: unknown) => (typeof url === "string" && URL.canParse(url) ? new URL(url).host : String(url));
+const count = (value: unknown) => (Array.isArray(value) ? value.length : 0);
+
+/** What a component says of itself from its settings and from what goes through it; `null`: nothing to say. */
+function told(p: Plugged, health: Component["health"], running: Running): string | null {
+  const { entry } = p;
+  if (p.slot === "executor") {
+    const busy = running.tasks.filter((t) => t.executor === p.name && t.status === "running").length;
+    if (!busy) return null;
+    return busy === 1
+      ? fr("1 task running", "1 tâche en cours")
+      : fr(`${busy} tasks running`, `${busy} tâches en cours`);
+  }
+  if (p.slot === "channel") {
+    if (p.plugin === "satellites") {
+      const all = running.satellites.length;
+      const connected = running.satellites.filter((s) => s.connected).length;
+      return fr(`${connected} of ${all} satellites connected`, `${connected} satellites connectés sur ${all}`);
+    }
+    if (p.plugin === "email") return String(entry.address);
+    if (p.plugin === "signal") return String(entry.number);
+    if (p.plugin === "ntfy" || p.plugin === "webhook") return hostOf(entry.url);
+    return null;
+  }
+  if (p.slot === "inbound") {
+    const n = count(entry.feeds) || count(entry.pages) || count(entry.hooks);
+    if (p.plugin === "rss")
+      return n === 1 ? fr("1 feed followed", "1 flux suivi") : fr(`${n} feeds followed`, `${n} flux suivis`);
+    if (p.plugin === "web-page")
+      return n === 1 ? fr("1 page followed", "1 page suivie") : fr(`${n} pages followed`, `${n} pages suivies`);
+    return n === 1 ? "1 webhook" : `${n} webhooks`;
+  }
+  if (p.slot === "home") {
+    const tied = isRecord(entry.people) ? Object.keys(entry.people).length : 0;
+    const actions = homeTools().length;
+    return fr(`${tied} people tied, ${actions} actions`, `${tied} personnes reliées, ${actions} actions`);
+  }
+  if (p.slot === "tools" && health === "unavailable") {
+    const host = hostOf(entry.url);
+    return fr(`Connection refused by ${host}`, `Connexion refusée par ${host}`);
+  }
+  return null;
+}
+
+/** A connector is as well as its accounts: one to authorise again and it is degraded. */
+function reauthorise(p: Plugged, running: Running): Observed {
+  const stale = running.connections.filter((c) => c.kind === p.plugin && c.status === "needs_reauth").length;
+  if (!stale) return {};
   return {
-    nestor: { version: "0.10.0" },
-    agent: { name: ASSISTANT, status: "started" },
-    restart_required: false,
-    pending_changes: [],
-    components: [
-      component({
-        slot: "model",
-        name: "sonnet",
-        adapter: "openai-compatible-language",
-        model_type: "language",
-        fallback: "haiku",
-        brand: "openrouter",
-        version: "anthropic/claude-sonnet-4.6",
-        health: "started",
-        health_detail: fr("First token in 640 ms (today's median)", "Premier jeton en 640 ms (médiane du jour)"),
-        capabilities: ["tools", "streaming"],
-      }),
-      component({
-        slot: "model",
-        name: "haiku",
-        adapter: "openai-compatible-language",
-        model_type: "language",
-        brand: "anthropic",
-        version: "anthropic/claude-haiku-4.5",
-        health: "started",
-        health_detail: null,
-      }),
-      component({
-        slot: "model",
-        name: "scribe",
-        adapter: "elevenlabs-transcription",
-        model_type: "transcription",
-        brand: "elevenlabs",
-        version: "scribe_v2_realtime",
-        health: "started",
-        health_detail: null,
-      }),
-      component({
-        slot: "model",
-        name: "victor",
-        adapter: "elevenlabs-speech",
-        model_type: "speech",
-        brand: "elevenlabs",
-        version: "eleven_v4_turbo",
-        health: "started",
-        health_detail: null,
-      }),
-      component({
-        slot: "executor",
-        name: "Hermes",
-        adapter: "hermes",
-        brand: "hermes",
-        version: "0.6.1",
-        health: "started",
-        health_detail: ONE_TASK,
-      }),
-      component({
-        slot: "executor",
-        name: "Codex",
-        adapter: "codex",
-        brand: "codex",
-        version: "0.48",
-        health: "started",
-        health_detail: ONE_TASK,
-      }),
-      component({
-        slot: "executor",
-        name: "claude-code",
-        adapter: "claude-code",
-        brand: "claude-code",
-        version: "2.1.4",
-        health: "started",
-        health_detail: null,
-      }),
-      component({
-        slot: "channel",
-        name: fr("Voice (satellites)", "Voix (satellites)"),
-        adapter: "satellites",
-        brand: "voice",
-        version: PROTOCOL,
-        health: "started",
-        health_detail: fr("2 of 3 satellites connected", "2 satellites connectés sur 3"),
-      }),
-      component({
-        slot: "channel",
-        name: "Telegram",
-        adapter: "telegram",
-        brand: "telegram",
-        version: "Bot API 9.2",
-        health: "started",
-        health_detail: "@richie_lambert_bot",
-      }),
-      ...(
-        [
-          ["discord", "discord", "Richie#4012"],
-          ["slack", "slack", "lambert-family.slack.com"],
-          ["matrix", "matrix", "@richie:matrix.lambert.family"],
-          ["signal", "signal", "+33 6 •• •• 42 17"],
-          ["whatsapp", "whatsapp", "+33 6 •• •• 42 18"],
-          ["email", "email", "richie@lambert.family"],
-          ["ntfy", "ntfy", "ntfy.sh"],
-          ["webhook", "webhook", "homeassistant.local:8123"],
-          ["openai-api", "openai", "/v1/chat/completions"],
-        ] as const
-      ).map(([name, brand, detail]) =>
-        component({
-          slot: "channel",
-          name,
-          adapter: name,
-          brand,
-          version: null,
-          health: "started",
-          health_detail: detail,
-        }),
-      ),
-      ...(
-        [
-          ["feeds", "rss", "rss", fr("2 feeds followed", "2 flux suivis")],
-          ["pages", "web-page", "web-page", fr("1 page followed", "1 page suivie")],
-          ["webhooks", "webhook-inbound", "webhook", "1 webhook"],
-        ] as const
-      ).map(([name, adapter, brand, detail]) =>
-        component({ slot: "inbound", name, adapter, brand, version: null, health: "started", health_detail: detail }),
-      ),
-      component({
-        slot: "home",
-        name: "home",
-        adapter: "home-assistant",
-        brand: "homeassistant",
-        version: "2026.10.2",
-        health: "started",
-        health_detail: fr("4 people tied, 4 actions", "4 personnes reliées, 4 actions"),
-      }),
-      component({
-        slot: "tools",
-        name: fr("Léa's recipes (MCP)", "Recettes de Léa (MCP)"),
-        adapter: "mcp",
-        brand: "mcp",
-        version: null,
-        health: "unavailable",
-        health_detail: fr("Connection refused by 192.168.1.20:8808", "Connexion refusée par 192.168.1.20:8808"),
-      }),
-      component({
-        slot: "connector",
-        name: "google",
-        adapter: "google",
-        brand: "google",
-        version: null,
-        health: "degraded",
-        health_detail: fr("1 account to authorise again", "1 compte à réautoriser"),
-      }),
-      component({
-        slot: "connector",
-        name: MAILBOX,
-        adapter: "imap",
-        brand: "imap",
-        version: null,
-        health: "started",
-        health_detail: null,
-      }),
-      ...(
-        [
-          ["microsoft", "microsoft"],
-          ["dav", "dav"],
-          ["mcp", "mcp"],
-        ] as const
-      ).map(([name, brand]) =>
-        component({
-          slot: "connector",
-          name,
-          adapter: name === "mcp" ? "mcp-connector" : name,
-          brand,
-          version: null,
-          health: "started",
-          health_detail: null,
-        }),
-      ),
-      component({
-        slot: "satellite",
-        name: "reachy-living-room",
-        adapter: PYTHON_SDK_042,
-        brand: "reachy",
-        version: PROTOCOL,
-        health: "started",
-        health_detail: LIVING_ROOM,
-      }),
-      component({
-        slot: "satellite",
-        name: "reachy-office",
-        adapter: fr("Python SDK 0.4.1", "SDK Python 0.4.1"),
-        brand: "reachy",
-        version: PROTOCOL,
-        health: "unavailable",
-        health_detail: fr("Offline for 97 min", "Hors ligne depuis 97 min"),
-      }),
-      component({
-        slot: "satellite",
-        name: "pi-bedroom",
-        adapter: PYTHON_SDK_042,
-        brand: "raspberry-pi",
-        version: PROTOCOL,
-        health: "started",
-        health_detail: BEDROOM,
-      }),
-    ],
+    health: "degraded",
+    health_detail:
+      stale === 1
+        ? fr("1 account to authorise again", "1 compte à réautoriser")
+        : fr(`${stale} accounts to authorise again`, `${stale} comptes à réautoriser`),
   };
 }
 
-/** The executors and their keys for Nestor's MCP server: Hermes declares it in its profile, Nestor hands it to the
- * others; Claude Code has had no task yet, so no key. */
-export function executors(): Executors {
+/**
+ * What is plugged in: every component of the configuration file Nestor started on, named and branded as the file
+ * says, with what it tells once running; then the paired satellites, as the server presents them.
+ */
+export function components(doc: ConfigDocument, running: Running): Component[] {
+  const configured = plugged(doc).map((p): Component => {
+    const observed = { ...OBSERVED[`${p.slot}/${p.name}`], ...(p.slot === "connector" ? reauthorise(p, running) : {}) };
+    const health = observed.health ?? "started";
+    return {
+      slot: p.slot,
+      name: p.name,
+      adapter: p.plugin,
+      model_type: p.model_type,
+      fallback: p.fallback,
+      brand: p.brand,
+      version: observed.version ?? (p.slot === "model" && typeof p.entry.model === "string" ? p.entry.model : null),
+      distribution: null,
+      capabilities: observed.capabilities ?? [],
+      health,
+      health_detail: observed.health_detail ?? told(p, health, running),
+      details: {},
+    };
+  });
+  const paired = running.satellites.map((s): Component => {
+    const offline = Math.round((Date.now() - Date.parse(s.last_seen_at ?? "")) / 60_000);
+    return {
+      slot: "satellite",
+      name: s.id,
+      adapter: s.model,
+      model_type: null,
+      fallback: null,
+      brand: s.brand,
+      version: s.software.version,
+      distribution: s.software.name,
+      capabilities: s.capabilities.map((c) => c.name).sort(),
+      health: s.connected ? "started" : "unavailable",
+      health_detail: s.connected ? s.room : fr(`Offline for ${offline} min`, `Hors ligne depuis ${offline} min`),
+      details: { room: s.room },
+    };
+  });
+  return [...configured, ...paired];
+}
+
+export function system(doc: ConfigDocument, running: Running): SystemInfo {
   return {
-    url: "https://nestor.example.org/mcp",
-    executors: [
-      {
-        name: "hermes",
-        description: fr(
-          "search the web and browse sites, run code in its own container",
-          "chercher sur le web et naviguer sur des sites, exécuter du code dans son conteneur",
-        ),
-        nestor_tools: "configured",
-        key: { issued_at: minutes(60 * 24 * 3), last_used_at: minutes(42) },
-      },
-      {
-        name: "codex",
-        description: fr(
-          "run the home server: deploy the sites, read the logs",
-          "s'occuper du serveur : déployer les sites, lire les journaux",
-        ),
-        nestor_tools: "passed",
-        key: { issued_at: minutes(60 * 24 * 6), last_used_at: minutes(60 * 5) },
-      },
-      {
-        name: "claude-code",
-        description: fr(
-          "read, change and test the code of the household's projects",
-          "lire, modifier et tester le code des projets du foyer",
-        ),
-        nestor_tools: "passed",
-        key: null,
-      },
-    ],
+    nestor: { version: updates().running },
+    agent: { name: ASSISTANT, status: "started" },
+    restart_required: false,
+    pending_changes: [],
+    components: components(doc, running),
+  };
+}
+
+/** The keys Nestor's MCP server knows the executors by: Claude Code has had no task through it yet, so no key. */
+const KEYS: Record<string, Executors["executors"][number]["key"]> = {
+  hermes: { issued_at: minutes(60 * 24 * 3), last_used_at: minutes(42) },
+  codex: { issued_at: minutes(60 * 24 * 6), last_used_at: minutes(60 * 5) },
+};
+
+/**
+ * The executors of the file and their keys for Nestor's MCP server, served at the admin's public address: Hermes
+ * declares it in its own profile when the file says so, Nestor hands it to the others with each task.
+ */
+export function executors(doc: ConfigDocument): Executors {
+  const address = publicUrl(doc);
+  return {
+    url: address ? `${address}/mcp` : null,
+    executors: plugged(doc)
+      .filter((p) => p.slot === "executor")
+      .map((p) => ({
+        name: p.name,
+        description: String(p.entry.description ?? ""),
+        nestor_tools: p.plugin === "hermes" ? (p.entry.nestor_mcp ? "configured" : "none") : "passed",
+        key: KEYS[p.name] ?? null,
+      })),
   };
 }

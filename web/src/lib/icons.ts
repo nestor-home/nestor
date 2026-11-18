@@ -8,41 +8,42 @@ import {
   AudioLines,
   BookMarked,
   Bot,
-  Cctv,
   CircleAlert,
   CircleArrowUp,
   CircleCheck,
   CircleDashed,
   CircleSlash,
+  Ear,
+  Heading,
   Hourglass,
   House,
+  Image,
   Keyboard,
   KeyRound,
   Lightbulb,
+  ListFilter,
   Megaphone,
-  MessageCircle,
   MessageSquareText,
   MessagesSquare,
   Mic,
   MonitorSmartphone,
   Move3d,
+  PenLine,
   Plug,
   Radar,
   RadioTower,
   ScanEye,
   ScanFace,
-  ScrollText,
-  Server,
-  SlidersHorizontal,
   Smile,
-  Sun,
-  Users,
+  Sparkles,
+  Speech,
   Video,
   Volume2,
+  Waypoints,
   Workflow,
   Wrench,
 } from "lucide-react";
-import type { Kind } from "@/api";
+import type { Kind, ModelType } from "@/api";
 
 export interface KindStyle {
   icon: LucideIcon;
@@ -107,21 +108,27 @@ export const DEVICE_KIND: [string[], LucideIcon][] = [
   [["video.capture"], CAPABILITY_ICON["video.capture"] as LucideIcon],
 ];
 
-export const SECTION_ICON = {
-  "/": Sun,
-  "/journal": ScrollText,
-  "/chat": MessageCircle,
-  "/people": Users,
-  "/memories": BookMarked,
-  "/house": House,
-  "/cameras": Cctv,
-  "/schedules": AlarmClock,
-  "/messages": MessagesSquare,
-  "/watches": Radar,
-  "/tasks": Workflow,
-  "/connections": Plug,
-  "/satellites": RadioTower,
-  "/system": Server,
-  "/accounts": KeyRound,
-  "/config": SlidersHorizontal,
-} satisfies Record<string, LucideIcon>;
+/** What each type of model does, as a mark: a new type fails the typecheck here until it has its look. */
+export const MODEL_TYPE_ICON: Record<ModelType, LucideIcon> = {
+  language: MessagesSquare,
+  embedding: Waypoints,
+  speaker: AudioLines,
+  transcription: Ear,
+  speech: Volume2,
+  image: Image,
+};
+
+/** The roles a model can hold, by the configuration field that names it; any other role gets the plain mark. */
+const ROLE_ICON: Record<string, LucideIcon> = {
+  spoken: Speech,
+  written: PenLine,
+  titles: Heading,
+  transcription: Ear,
+  speech: Volume2,
+  images: Image,
+  model: ListFilter,
+  consolidation: BookMarked,
+  embedder: Waypoints,
+};
+
+export const roleIcon = (field: string): LucideIcon => ROLE_ICON[field] ?? Sparkles;

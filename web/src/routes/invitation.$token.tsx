@@ -4,7 +4,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { api } from "@/api";
 import { Failure, Loading } from "@/components/states";
 import { buttonVariants } from "@/components/ui/button";
-import { AuthLayout } from "@/features/auth/auth-layout";
+import { AuthLayout, partOfDay } from "@/features/auth/auth-layout";
 import { InvitationForm } from "@/features/auth/invitation-form";
 import { useT } from "@/i18n";
 import { roleLabel } from "@/lib/labels";
@@ -19,16 +19,16 @@ function Invitation() {
 
   if (invitation.isPending) {
     return (
-      <AuthLayout title={t("auth-invitation-title")} intro={t("auth-invitation-checking")}>
+      <AuthLayout title={t("auth-invitation-title")} line={t("auth-line-checking")}>
         <Loading lines={2} />
       </AuthLayout>
     );
   }
   if (invitation.isError) {
     return (
-      <AuthLayout title={t("auth-invitation-title")} intro={t("auth-invitation-invalid")}>
+      <AuthLayout title={t("auth-invitation-title")} intro={t("auth-invitation-invalid")} line={t("auth-line-invalid")}>
         <Failure error={invitation.error} />
-        <Link to="/login" className={buttonVariants({ variant: "outline", className: "mt-6 self-start" })}>
+        <Link to="/login" className={buttonVariants({ variant: "outline", className: "mt-5" })}>
           {t("auth-go-to-login")}
         </Link>
       </AuthLayout>
@@ -38,6 +38,7 @@ function Invitation() {
   return (
     <AuthLayout
       title={t("auth-welcome")}
+      line={t("auth-line-invitation", { part: partOfDay(new Date()) })}
       intro={
         <Localized
           id="auth-invitation-intro"
@@ -52,11 +53,7 @@ function Invitation() {
         </Localized>
       }
     >
-      <InvitationForm
-        token={token}
-        invitation={preview}
-        onAccepted={() => void navigate({ to: "/journal", replace: true })}
-      />
+      <InvitationForm token={token} invitation={preview} onAccepted={() => void navigate({ to: "/", replace: true })} />
     </AuthLayout>
   );
 }

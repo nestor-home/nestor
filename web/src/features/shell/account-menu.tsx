@@ -1,7 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { ChevronsUpDown, Languages, LogOut, Monitor, Moon, Sun } from "lucide-react";
+import { Languages, LogOut, Monitor, Moon, Sun } from "lucide-react";
 import { api, keys, setCsrfToken } from "@/api";
+import { Avatar } from "@/components/marks";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,7 +25,9 @@ const LANGUAGES: { value: Locale; name: string }[] = [
   { value: "fr", name: "Français" },
 ];
 
-export function AccountMenu({ compact = false }: { compact?: boolean }) {
+/** `compact`: the mark alone (a phone's top bar); `"narrow"`: the mark alone until `lg`, then the name beside it
+ * (the rail). */
+export function AccountMenu({ compact = false }: { compact?: boolean | "narrow" }) {
   const t = useT();
   const me = useMe();
   const { choice, choose } = useTheme();
@@ -53,39 +56,33 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
     <DropdownMenu>
       <DropdownMenuTrigger
         className={
-          compact
-            ? "grid size-11 place-items-center rounded-md hover:bg-paper-sunken data-popup-open:bg-paper-sunken md:size-9"
-            : "flex w-full items-center gap-3 rounded-md px-2 py-2 text-left hover:bg-paper-sunken data-popup-open:bg-paper-sunken"
+          compact === true
+            ? "grid size-11 place-items-center rounded-xl hover:bg-paper-sunken data-popup-open:bg-paper-sunken"
+            : "flex w-full items-center gap-2.5 rounded-lg p-1.5 text-left hover:bg-ink/6 data-popup-open:bg-ink/6 narrow:justify-center"
         }
       >
-        <span
-          aria-hidden="true"
-          className="grid size-7 shrink-0 place-items-center rounded-sm bg-ink font-serif text-sm text-paper"
-        >
-          {(me.account.person?.name ?? me.account.login).slice(0, 1).toUpperCase()}
-        </span>
-        {compact ? null : (
-          <>
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm text-ink">{me.account.person?.name ?? me.account.login}</span>
-              <span className="block truncate text-[0.85rem] text-ink-muted">{roleLabel(me.account.role)}</span>
+        <Avatar name={me.account.person?.name ?? me.account.login} size="lg" />
+        {compact === true ? null : (
+          <span className="min-w-0 flex-1 narrow:hidden">
+            <span className="block truncate text-body font-medium text-ink">
+              {me.account.person?.name ?? me.account.login}
             </span>
-            <ChevronsUpDown className="size-4 text-ink-faint" aria-hidden="true" />
-          </>
+            <span className="block truncate text-meta text-ink-muted">{roleLabel(me.account.role)}</span>
+          </span>
         )}
         <span className="sr-only">{t("shell-account-menu")}</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent
-        side={compact ? "bottom" : "top"}
-        align={compact ? "end" : "start"}
+        side={compact === true ? "bottom" : "top"}
+        align={compact === true ? "end" : "start"}
         className="w-60 border border-rule bg-paper-raised"
       >
         <DropdownMenuGroup>
-          <DropdownMenuLabel className="font-mono text-[0.7rem] font-normal">{me.account.login}</DropdownMenuLabel>
+          <DropdownMenuLabel className="font-mono text-micro font-normal">{me.account.login}</DropdownMenuLabel>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuLabel className="label-mono">{t("shell-theme")}</DropdownMenuLabel>
+          <DropdownMenuLabel className="caption">{t("shell-theme")}</DropdownMenuLabel>
           <DropdownMenuRadioGroup value={choice} onValueChange={(value) => choose(value as ThemeChoice)}>
             <DropdownMenuRadioItem value="system">
               <Monitor /> {t("shell-theme-system")}
@@ -100,7 +97,7 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuLabel className="label-mono flex items-center gap-1.5">
+          <DropdownMenuLabel className="caption flex items-center gap-1.5">
             <Languages className="size-3" aria-hidden="true" /> {t("shell-language")}
           </DropdownMenuLabel>
           <DropdownMenuRadioGroup value={locale} onValueChange={(value) => isLocale(value) && language.mutate(value)}>

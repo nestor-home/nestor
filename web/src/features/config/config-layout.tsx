@@ -1,120 +1,133 @@
+/**
+ * The Configuration area: one draft of the file for all its pages, the frame every page shares (where
+ * it sits, the way to another section), the bar that saves the draft, and the guard on leaving it.
+ */
 import { Link, Outlet, useBlocker, useNavigate, useRouterState } from "@tanstack/react-router";
-import { FileCog, LoaderCircle } from "lucide-react";
-import { useState } from "react";
+import { ChevronsUpDown, FilePenLine, LoaderCircle } from "lucide-react";
+import { type ReactNode, useMemo, useState } from "react";
 import { messageOf } from "@/api";
 import { Confirm } from "@/components/confirm";
+import { Crumbs } from "@/components/crumbs";
 import { FormActions } from "@/components/form-actions";
+import { IconTile } from "@/components/marks";
 import { useNotify } from "@/components/notices";
-import { FormSheet } from "@/components/overlay-form";
-import { PageHeader } from "@/components/page";
-import { TabNav } from "@/components/tab-nav";
+import { BottomSheet, FormSheet } from "@/components/overlay-form";
+import { Count, PageHeader } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { Changes } from "./changes";
 import { ConfigEditorProvider, changeCount, useConfigEditor } from "./editor";
 import { changedKeys, problemsUnder } from "./schema";
-import { GROUP_LABEL, pageOfKey, pagesFor, pageTitle } from "./sections";
+import { type ConfigPage, GROUP_LABEL, groupsFor, pageOfKey, pageTitle } from "./sections";
 
-/** The Configuration area: its sub-navigation, the page, and the bar that saves the one draft. */
 export function ConfigLayout() {
+  const overview = useRouterState({ select: (s) => s.location.pathname.replace(/\/$/, "") === "/config" });
   return (
     <ConfigEditorProvider>
-      <Frame />
+      <Outlet />
+      {/* the overview states the draft at its top; a page keeps it in reach under what is edited */}
+      {overview ? null : <SaveBar />}
+      <LeaveGuard />
     </ConfigEditorProvider>
   );
 }
 
-function Frame() {
-  const t = useT();
-  const { state } = useConfigEditor();
-  return (
-    <>
-      <PageHeader
-        title={t("cfg-title")}
-        meta={
-          <>
-            <FileCog className="size-3.5 shrink-0" aria-hidden="true" />
-            <span className="font-mono text-xs [overflow-wrap:anywhere]">{state.path}</span>
-          </>
-        }
-      >
-        {t("cfg-intro")}
-      </PageHeader>
-      <div className="md:hidden">
-        <MobileNav />
-      </div>
-      <div className="grid gap-10 md:grid-cols-[11.5rem_minmax(0,1fr)] lg:gap-14">
-        <aside className="hidden md:block">
-          <SubNav />
-        </aside>
-        <div className="min-w-0">
-          <Outlet />
-        </div>
-      </div>
-      <SaveBar />
-      <LeaveGuard />
-    </>
-  );
-}
-
-function usePageMarks() {
+/** Where a page of the file stands in the draft: its problems, and whether it differs from the file. */
+export function usePageMarks() {
   const { base, draft, problems, dirty } = useConfigEditor();
-  const changed = dirty ? changedKeys(base, draft) : new Set<string>();
-  return (keys: string[]) => ({
-    problems: keys.reduce((n, k) => n + problemsUnder(problems, [k]).length, 0),
-    changed: keys.some((k) => changed.has(k)),
+  // one diff of the whole draft, however many pages ask
+  const changed = useMemo(() => (dirty ? changedKeys(base, draft) : new Set<string>()), [base, draft, dirty]);
+  return (page: ConfigPage) => ({
+    problems: page.keys.reduce((n, k) => n + problemsUnder(problems, [k]).length, 0),
+    changed: page.keys.some((k) => changed.has(k)),
   });
 }
 
-function SubNav() {
+/**
+ * A page of the configuration: its trail back to the settings, its title and what it tunes, then its
+ * sections. The other sections are a list beside it on a wide screen, a drawer on a narrow one.
+ */
+export function ConfigFrame({
+  title,
+  about,
+  actions,
+  children,
+}: {
+  title: string;
+  about?: string;
+  actions?: ReactNode;
+  children: ReactNode;
+}) {
+  const t = useT();
+  return (
+    <div>
+      <PageHeader
+        title={title}
+        crumbs={
+          <Crumbs
+            trail={[
+              { label: t("space-settings"), link: { to: "/settings" } },
+              { label: t("cfg-title"), link: { to: "/config" } },
+              { label: title },
+            ]}
+          />
+        }
+        actions={
+          <>
+            {actions}
+            <SectionSwitch />
+          </>
+        }
+      >
+        {about}
+      </PageHeader>
+      <div className="grid gap-10 lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-12">
+        <aside className="hidden lg:block">
+          <div className="sticky top-8">
+            <SectionNav />
+          </div>
+        </aside>
+        <div className="grid min-w-0 content-start gap-10">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+/** Every page of the configuration by group, the current one marked, with what the draft changed or broke. */
+function SectionNav({ onGo }: { onGo?: () => void }) {
   const t = useT();
   const { schema } = useConfigEditor();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const marks = usePageMarks();
-  const pages = pagesFor(schema);
-  const groups = [...new Set(pages.map((p) => p.group))];
   return (
-    <nav aria-label={t("cfg-nav")} className="sticky top-6 grid gap-5">
-      {groups.map((group) => (
+    <nav aria-label={t("cfg-nav")} className="grid gap-5">
+      {groupsFor(schema).map(({ group, pages }) => (
         <div key={group}>
-          <p className="label-mono mb-1.5 px-2 text-[0.66rem]">{t(GROUP_LABEL[group])}</p>
-          <ul className="grid gap-px">
-            {pages
-              .filter((p) => p.group === group)
-              .map((page) => {
-                const to = `/config/${page.slug}`;
-                const here = path === to;
-                const mark = marks(page.keys);
-                return (
-                  <li key={page.slug}>
-                    <Link
-                      to={to}
-                      aria-current={here ? "page" : undefined}
-                      className={cn(
-                        "flex h-8 items-center gap-2 rounded-md px-2 text-[0.85rem] text-ink-muted hover:bg-paper-sunken hover:text-ink",
-                        here && "bg-paper-sunken text-ink",
-                      )}
-                    >
-                      <page.icon
-                        className={cn("size-3.5", here ? "text-ember" : "text-ink-faint")}
-                        aria-hidden="true"
-                      />
-                      <span className="min-w-0 flex-1 truncate">{pageTitle(page, schema, t)}</span>
-                      {mark.problems ? (
-                        <span className="font-mono text-[0.68rem] text-brick tabular">
-                          {mark.problems}
-                          <span className="sr-only"> {t("cfg-problems", { count: mark.problems })}</span>
-                        </span>
-                      ) : mark.changed ? (
-                        <span className="size-1.5 rounded-full bg-ember" title={t("cfg-modified")}>
-                          <span className="sr-only">{t("cfg-modified")}</span>
-                        </span>
-                      ) : null}
-                    </Link>
-                  </li>
-                );
-              })}
+          <p className="caption mb-1.5 px-2.5 text-ink-muted">{t(GROUP_LABEL[group])}</p>
+          <ul className="grid gap-0.5">
+            {pages.map((page) => {
+              const to = `/config/${page.slug}`;
+              const here = path === to;
+              const mark = marks(page);
+              return (
+                <li key={page.slug}>
+                  <Link
+                    to={to}
+                    onClick={onGo}
+                    aria-current={here ? "page" : undefined}
+                    className={cn(
+                      "flex min-h-9 items-center gap-2.5 rounded-lg px-2.5 text-body text-ink-muted hover:bg-paper-sunken hover:text-ink",
+                      here && "bg-paper-sunken font-medium text-ink",
+                    )}
+                  >
+                    <page.icon className={cn("size-4", here ? "text-ember" : "text-ink-faint")} aria-hidden="true" />
+                    <span className="min-w-0 flex-1 truncate">{pageTitle(page, schema, t)}</span>
+                    <PageMark {...mark} />
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         </div>
       ))}
@@ -122,23 +135,52 @@ function SubNav() {
   );
 }
 
-function MobileNav() {
+/** What the draft did to a page, beside its name: the problems it has, else that it changed. */
+export function PageMark({ problems, changed }: { problems: number; changed: boolean }) {
   const t = useT();
-  const { schema } = useConfigEditor();
+  if (problems)
+    return (
+      <span>
+        <Count n={problems} tone="brick" />
+        <span className="sr-only"> {t("cfg-problems", { count: problems })}</span>
+      </span>
+    );
+  if (changed)
+    return (
+      <span className="size-2 rounded-full bg-ember">
+        <span className="sr-only">{t("cfg-modified")}</span>
+      </span>
+    );
+  return null;
+}
+
+/** On a narrow screen, the way to another section: a drawer from the bottom, not a list that eats the page. */
+function SectionSwitch() {
+  const t = useT();
+  const [open, setOpen] = useState(false);
   return (
-    <TabNav
-      label={t("cfg-nav")}
-      tabs={pagesFor(schema).map((page) => ({
-        to: `/config/${page.slug}`,
-        label: pageTitle(page, schema, t),
-        icon: page.icon,
-      }))}
-    />
+    <BottomSheet
+      open={open}
+      onOpenChange={setOpen}
+      title={t("cfg-title")}
+      trigger={
+        <Button variant="outline" size="sm" className="lg:hidden">
+          <ChevronsUpDown /> {t("cfg-switch")}
+        </Button>
+      }
+    >
+      <div className="px-3 py-4">
+        <SectionNav onGo={() => setOpen(false)} />
+      </div>
+    </BottomSheet>
   );
 }
 
-/** The one place a draft is written: its state, the changes, cancel and save. */
-function SaveBar() {
+/**
+ * The one place a draft is written: how many changes, what is wrong with them, cancel and save. It floats
+ * under the page being edited; `inline`, it is the first thing the overview says.
+ */
+export function SaveBar({ inline = false }: { inline?: boolean }) {
   const t = useT();
   const editor = useConfigEditor();
   const notify = useNotify();
@@ -150,7 +192,7 @@ function SaveBar() {
   const first = editor.problems[0];
   const goToProblem = () => {
     const page = first ? pageOfKey(String(first.path[0] ?? ""), editor.schema) : undefined;
-    if (page) void navigate({ to: `/config/${page.slug}` });
+    if (page) void navigate({ to: "/config/$section", params: { section: page.slug } });
   };
   const save = async () => {
     if (await editor.save()) {
@@ -158,13 +200,19 @@ function SaveBar() {
       notify(t("cfg-saved"));
     }
   };
+  const blocked = editor.saving || editor.checking || problems > 0;
   return (
     <section
       aria-label={t("cfg-save-region")}
-      className="sticky bottom-[env(safe-area-inset-bottom)] z-20 -mx-4 mt-10 border-t border-rule bg-paper/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 md:-mx-10 md:px-10 lg:-mx-14 lg:px-14"
+      className={cn(
+        "surface flex flex-wrap items-center gap-x-4 gap-y-3 px-4 py-3",
+        inline ? "" : "sticky bottom-[calc(5rem+env(safe-area-inset-bottom))] z-20 mt-10 md:bottom-5",
+      )}
     >
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-2">
-        <p aria-live="polite" className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1 font-mono text-xs">
+      <IconTile icon={FilePenLine} tone={problems ? "brick" : "ember"} />
+      <div className="grid min-w-0 flex-1 gap-0.5">
+        <p className="font-medium text-ink">{t("cfg-save-region")}</p>
+        <p aria-live="polite" className="flex flex-wrap items-center gap-x-3 gap-y-1 text-body">
           {editor.checking ? (
             <span className="inline-flex items-center gap-1.5 text-ink-muted">
               <LoaderCircle className="size-3.5 animate-spin" aria-hidden="true" />
@@ -172,7 +220,7 @@ function SaveBar() {
             </span>
           ) : null}
           {problems ? (
-            <button type="button" onClick={goToProblem} className="text-brick underline-offset-4 hover:underline">
+            <button type="button" onClick={goToProblem} className="text-brick underline underline-offset-4">
               {t("cfg-problems", { count: problems })}
             </button>
           ) : null}
@@ -185,43 +233,39 @@ function SaveBar() {
               </span>
             ))}
           {count ? (
-            <button type="button" onClick={() => setOpen(true)} className="text-ink underline-offset-4 hover:underline">
+            <button type="button" onClick={() => setOpen(true)} className="text-ink underline underline-offset-4">
               {t("cfg-changes", { count })}
             </button>
           ) : null}
           {editor.saveError && !problems ? <span className="text-brick">{messageOf(editor.saveError)}</span> : null}
         </p>
-        <div className="flex items-center gap-2">
-          <Confirm
-            trigger={
-              <Button variant="ghost" disabled={editor.saving}>
-                {t("cfg-discard")}
-              </Button>
-            }
-            title={t("cfg-discard-title")}
-            confirm={t("cfg-discard-confirm")}
-            onConfirm={async () => editor.discard()}
-          >
-            {t("cfg-discard-text")}
-          </Confirm>
-          <Button
-            variant="accent"
-            onClick={save}
-            disabled={editor.saving || editor.checking || problems > 0 || count === 0}
-          >
-            {editor.saving ? t("cfg-saving") : t("cfg-save")}
-          </Button>
-        </div>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <Confirm
+          trigger={
+            <Button variant="destructive" disabled={editor.saving}>
+              {t("cfg-discard")}
+            </Button>
+          }
+          title={t("cfg-discard-title")}
+          confirm={t("cfg-discard-confirm")}
+          onConfirm={async () => editor.discard()}
+        >
+          {t("cfg-discard-text")}
+        </Confirm>
+        <Button variant="accent" onClick={save} disabled={blocked || count === 0}>
+          {editor.saving ? t("cfg-saving") : t("cfg-save")}
+        </Button>
       </div>
       <FormSheet open={open} onOpenChange={setOpen} title={t("cfg-changes-title")} description={t("cfg-changes-text")}>
         {(close) => (
-          <div className="grid gap-6">
+          <div className="grid gap-6 pt-5">
             {editor.diff ? <Changes diff={editor.diff} /> : null}
             <FormActions>
               <Button variant="outline" onClick={close}>
                 {t("action-close")}
               </Button>
-              <Button variant="accent" onClick={save} disabled={editor.saving || editor.checking || problems > 0}>
+              <Button variant="accent" onClick={save} disabled={blocked}>
                 {editor.saving ? t("cfg-saving") : t("cfg-save")}
               </Button>
             </FormActions>

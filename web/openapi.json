@@ -16519,6 +16519,10 @@
             "type": "string",
             "title": "Id"
           },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
           "instruction": {
             "type": "string",
             "title": "Instruction"
@@ -16589,6 +16593,7 @@
         "type": "object",
         "required": [
           "id",
+          "title",
           "instruction",
           "owner",
           "origin",
@@ -17042,6 +17047,10 @@
             "type": "string",
             "title": "Id"
           },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
           "objective": {
             "type": "string",
             "title": "Objective"
@@ -17133,6 +17142,7 @@
         "type": "object",
         "required": [
           "id",
+          "title",
           "objective",
           "executor",
           "status",
@@ -17467,6 +17477,10 @@
             "type": "string",
             "title": "Id"
           },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
           "what": {
             "type": "string",
             "title": "What"
@@ -17539,6 +17553,7 @@
         "type": "object",
         "required": [
           "id",
+          "title",
           "what",
           "kinds",
           "owner",

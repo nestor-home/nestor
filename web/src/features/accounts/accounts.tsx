@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, MailPlus, Users } from "lucide-react";
+import { MailPlus } from "lucide-react";
 import {
   type Account,
   type AccountChange,
@@ -13,35 +13,41 @@ import {
   keys,
   type Role,
 } from "@/api";
+import { Ago } from "@/components/ago";
+import { CardHead, TILE_CARD, TileCard } from "@/components/card";
 import { Choice } from "@/components/choice";
 import { Confirm } from "@/components/confirm";
 import { type Crumb, Crumbs } from "@/components/crumbs";
+import { Avatar, IconTile } from "@/components/marks";
 import { useNotify } from "@/components/notices";
 import { FormDialog } from "@/components/overlay-form";
 import { Fact, Facts, PageHeader, RowList, Section } from "@/components/page";
 import { Empty, Failure, FormError, Loading } from "@/components/states";
 import { Status, Tag } from "@/components/status";
-import { TabNav } from "@/components/tab-nav";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/i18n";
 import { tr } from "@/i18n/runtime";
 import { moment } from "@/lib/dates";
 import { roleHint, roleLabel } from "@/lib/labels";
-import { personName } from "@/lib/people";
 import { useCan, useMe } from "@/lib/session";
 import { InviteForm, roleOptions } from "./invite-form";
 import { isLastOwner } from "./rules";
 
-const lastOwnerText = () => tr("acc-last-owner");
+const nameOf = (account: Account) => account.person?.name ?? account.login;
 
-export function AccountsHeader() {
+/**
+ * "Accounts": who may open the admin and what their role allows, each one a card that leads to their account;
+ * inviting is a dialog, and the invitations still waiting sit below, where one invites.
+ */
+export function AccountsView() {
   const t = useT();
   const canWrite = useCan("accounts:write");
-  const invitations = useQuery({ ...invitationsQuery, enabled: canWrite });
   const accounts = useQuery(accountsQuery);
+  const trail: Crumb[] = [{ label: t("space-settings"), link: { to: "/settings" } }, { label: t("acc-title") }];
   return (
     <>
       <PageHeader
+        crumbs={<Crumbs trail={trail} />}
         title={t("acc-title")}
         actions={
           canWrite ? (
@@ -61,23 +67,107 @@ export function AccountsHeader() {
       >
         {t("acc-intro")}
       </PageHeader>
-      <TabNav
-        label={t("acc-title")}
-        tabs={[
-          { to: "/accounts", label: t("acc-tab-accounts"), icon: Users, count: accounts.data?.length },
-          ...(canWrite
-            ? [
-                {
-                  to: "/accounts/invitations",
-                  label: t("acc-tab-invitations"),
-                  icon: MailPlus,
-                  count: invitations.data?.length,
-                },
-              ]
-            : []),
-        ]}
-      />
+      <div className="grid gap-10">
+        <Section title={t("acc-people")} count={accounts.data?.length}>
+          {accounts.isPending ? (
+            <Loading lines={3} />
+          ) : accounts.isError ? (
+            <Failure error={accounts.error} retry={() => void accounts.refetch()} />
+          ) : (
+            <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {accounts.data.map((a) => (
+                <AccountCard key={a.id} account={a} />
+              ))}
+            </ul>
+          )}
+        </Section>
+        {canWrite ? <Invitations /> : null}
+      </div>
     </>
+  );
+}
+
+/** Someone who may sign in: who they are, their role and what it allows. */
+function AccountCard({ account }: { account: Account }) {
+  const t = useT();
+  const me = useMe();
+  return (
+    <li>
+      <Link to="/accounts/$accountId" params={{ accountId: account.id }} className={TILE_CARD}>
+        <TileCard
+          marks={<Avatar name={nameOf(account)} away={account.disabled} size="lg" />}
+          aside={
+            <>
+              {account.id === me.account.id ? <Tag tone="accent">{t("acc-you")}</Tag> : null}
+              {account.disabled ? <Status tone="idle">{t("acc-disabled")}</Status> : null}
+            </>
+          }
+          title={nameOf(account)}
+          line={account.login}
+          foot={
+            <span>
+              <span className="block font-medium text-ink first-letter:uppercase">{roleLabel(account.role)}</span>
+              <span className="block">{roleHint(account.role)}</span>
+            </span>
+          }
+        />
+      </Link>
+    </li>
+  );
+}
+
+/** The invitations nobody accepted yet: who for, with which role, until when, and a way to withdraw each. */
+function Invitations() {
+  const t = useT();
+  const invitations = useQuery(invitationsQuery);
+  return (
+    <Section title={t("acc-invitations")} count={invitations.data?.length}>
+      {invitations.isPending ? (
+        <Loading lines={1} />
+      ) : invitations.isError ? (
+        <Failure error={invitations.error} retry={() => void invitations.refetch()} />
+      ) : invitations.data.length === 0 ? (
+        <Empty hint={t("acc-invitations-empty-hint")}>{t("acc-invitations-empty")}</Empty>
+      ) : (
+        <RowList>
+          {invitations.data.map((i) => (
+            <InvitationRow key={i.id} invitation={i} />
+          ))}
+        </RowList>
+      )}
+    </Section>
+  );
+}
+
+function InvitationRow({ invitation }: { invitation: Invitation }) {
+  const t = useT();
+  const queryClient = useQueryClient();
+  const revoke = useMutation({
+    mutationFn: () => api.revokeInvitation(invitation.id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.invitations }),
+  });
+  const who = invitation.person?.name ?? t("acc-invitation-anyone");
+  return (
+    <li className="flex flex-wrap items-center gap-x-4 gap-y-3 px-4 py-3">
+      <CardHead
+        className="flex-1 basis-60"
+        mark={<IconTile icon={MailPlus} tone="amber" size="sm" />}
+        title={who}
+        line={t("acc-invitation-line", { role: roleLabel(invitation.role), expires: moment(invitation.expires_at) })}
+      />
+      <Confirm
+        trigger={
+          <Button variant="destructive" size="sm">
+            {t("acc-revoke")}
+          </Button>
+        }
+        title={t("acc-revoke-title")}
+        confirm={t("acc-revoke-confirm")}
+        onConfirm={() => revoke.mutateAsync()}
+      >
+        {t("acc-revoke-text", { has_person: invitation.person ? "yes" : "no", person: invitation.person?.name ?? "" })}
+      </Confirm>
+    </li>
   );
 }
 
@@ -89,135 +179,15 @@ function useChange(account: Account) {
     mutationFn: (body: AccountChange) => api.changeAccount(account.id, body),
     onSuccess: (updated, body) => {
       queryClient.setQueryData<Account[]>(keys.accounts, (all) => all?.map((a) => (a.id === updated.id ? updated : a)));
-      if (body.role)
-        notify(tr("acc-role-changed", { name: updated.person?.name ?? updated.login, role: roleLabel(updated.role) }));
-      else
-        notify(
-          tr(updated.disabled ? "acc-disabled-done" : "acc-enabled-done", {
-            name: updated.person?.name ?? updated.login,
-          }),
-        );
+      queryClient.setQueryData(keys.account(updated.id), updated);
+      if (body.role) notify(tr("acc-role-changed", { name: nameOf(updated), role: roleLabel(updated.role) }));
+      else notify(tr(updated.disabled ? "acc-disabled-done" : "acc-enabled-done", { name: nameOf(updated) }));
       if (updated.id === me.account.id) void queryClient.invalidateQueries({ queryKey: keys.me });
     },
   });
 }
 
-export function AccountsList() {
-  const accounts = useQuery(accountsQuery);
-  if (accounts.isPending) return <Loading lines={3} />;
-  if (accounts.isError) return <Failure error={accounts.error} retry={() => void accounts.refetch()} />;
-  return (
-    <RowList>
-      {accounts.data.map((a) => (
-        <AccountRow key={a.id} account={a} accounts={accounts.data} />
-      ))}
-    </RowList>
-  );
-}
-
-function AccountRow({ account, accounts }: { account: Account; accounts: Account[] }) {
-  const t = useT();
-  const me = useMe();
-  const editable = useCan("accounts:write");
-  const lastOwner = isLastOwner(account, accounts);
-  const change = useChange(account);
-  const roleId = `role-${account.id}`;
-  return (
-    <li className="grid gap-x-6 gap-y-2 px-5 py-3.5 sm:grid-cols-[minmax(0,1fr)_11rem_1rem] sm:items-center">
-      <Link to="/accounts/$accountId" params={{ accountId: account.id }} className="group min-w-0">
-        <span className="flex flex-wrap items-center gap-2">
-          <span className="text-ink group-hover:text-ember">{account.person?.name ?? account.login}</span>
-          {account.id === me.account.id ? <Tag tone="accent">{t("acc-you")}</Tag> : null}
-          {account.disabled ? <Status tone="idle">{t("acc-disabled")}</Status> : null}
-        </span>
-        <span className="block truncate text-[0.85rem] text-ink-muted">
-          {account.login} · {roleLabel(account.role)}
-        </span>
-      </Link>
-      <div>
-        <label htmlFor={roleId} className="sr-only">
-          {t("acc-role-of", { name: account.person?.name ?? account.login })}
-        </label>
-        {editable ? (
-          <Choice
-            id={roleId}
-            size="sm"
-            value={account.role}
-            options={roleOptions()}
-            disabled={lastOwner || account.disabled || change.isPending}
-            describedBy={lastOwner ? `${account.id}-last-owner` : undefined}
-            onChange={(role: Role) => change.mutate({ role })}
-          />
-        ) : (
-          <Tag>{roleLabel(account.role)}</Tag>
-        )}
-      </div>
-      <ArrowRight className="hidden size-3.5 text-ink-faint sm:block" aria-hidden="true" />
-      {lastOwner && editable ? (
-        <p id={`${account.id}-last-owner`} className="text-[0.85rem] text-amber sm:col-span-3">
-          {lastOwnerText()}
-        </p>
-      ) : null}
-      {change.error ? (
-        <div className="sm:col-span-3">
-          <FormError error={change.error} />
-        </div>
-      ) : null}
-    </li>
-  );
-}
-
-export function InvitationsList() {
-  const t = useT();
-  const invitations = useQuery(invitationsQuery);
-  if (invitations.isPending) return <Loading lines={1} />;
-  if (invitations.isError) return <Failure error={invitations.error} retry={() => void invitations.refetch()} />;
-  if (invitations.data.length === 0) return <Empty>{t("acc-invitations-empty")}</Empty>;
-  return (
-    <RowList>
-      {invitations.data.map((i) => (
-        <InvitationRow key={i.id} invitation={i} />
-      ))}
-    </RowList>
-  );
-}
-
-function InvitationRow({ invitation }: { invitation: Invitation }) {
-  const t = useT();
-  const queryClient = useQueryClient();
-  const revoke = useMutation({
-    mutationFn: () => api.revokeInvitation(invitation.id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.invitations }),
-  });
-  return (
-    <li className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5">
-      <div>
-        <p className="text-sm">{invitation.person?.name ?? roleLabel(invitation.role)}</p>
-        <p className="text-[0.85rem] text-ink-muted">
-          {t("acc-invitation-pending", {
-            role: roleLabel(invitation.role),
-            person: invitation.person ? personName(invitation.person) : "",
-            has_person: invitation.person ? "yes" : "no",
-            expires: moment(invitation.expires_at),
-          })}
-        </p>
-      </div>
-      <Confirm
-        trigger={
-          <Button variant="ghost" size="sm">
-            {t("acc-revoke")}
-          </Button>
-        }
-        title={t("acc-revoke-title")}
-        confirm={t("acc-revoke-confirm")}
-        onConfirm={() => revoke.mutateAsync()}
-      >
-        {t("acc-revoke-text", { email: invitation.person?.name ?? roleLabel(invitation.role) })}
-      </Confirm>
-    </li>
-  );
-}
-
+/** One account: who it is, its role and what the role allows, and whether it may still sign in. */
 export function AccountDetail({ id }: { id: string }) {
   const t = useT();
   const found = useQuery(accountQuery(id));
@@ -225,7 +195,11 @@ export function AccountDetail({ id }: { id: string }) {
   const me = useMe();
   const editable = useCan("accounts:write");
   const account = found.data;
-  const trail: Crumb[] = [{ label: t("acc-title"), link: { to: "/accounts" } }, { label: account?.login ?? id }];
+  const trail: Crumb[] = [
+    { label: t("space-settings"), link: { to: "/settings" } },
+    { label: t("acc-title"), link: { to: "/accounts" } },
+    { label: account?.login ?? id },
+  ];
   const change = useChange(account ?? ({ id } as Account));
   if (found.isPending) return <Loading lines={3} />;
   if (!account) {
@@ -241,21 +215,26 @@ export function AccountDetail({ id }: { id: string }) {
     <>
       <PageHeader
         crumbs={<Crumbs trail={trail} />}
-        title={account.person?.name ?? account.login}
+        title={
+          <span className="flex items-center gap-4">
+            <Avatar name={nameOf(account)} away={account.disabled} size="2xl" />
+            <span className="min-w-0">{nameOf(account)}</span>
+          </span>
+        }
         meta={
           <>
-            <span>{account.login}</span>
             {account.disabled ? (
               <Status tone="idle">{t("acc-disabled")}</Status>
             ) : (
               <Status tone="ok">{t("acc-active")}</Status>
             )}
+            <span>{account.login}</span>
             {account.id === me.account.id ? <Tag tone="accent">{t("acc-you")}</Tag> : null}
           </>
         }
       />
       <div className="grid max-w-2xl gap-10">
-        <Facts>
+        <Facts className="surface max-w-none p-5">
           <Fact term={t("acc-field-person")}>
             {account.person ? (
               <Link to="/people/$personId" params={{ personId: account.person.id }} className="hover:text-ember">
@@ -266,50 +245,69 @@ export function AccountDetail({ id }: { id: string }) {
             )}
           </Fact>
           <Fact term={t("acc-field-created")}>{moment(account.created_at)}</Fact>
+          <Fact term={t("acc-field-seen")}>
+            {account.last_seen_at ? (
+              <Ago iso={account.last_seen_at} />
+            ) : (
+              <span className="text-ink-muted">{t("acc-never")}</span>
+            )}
+          </Fact>
         </Facts>
         <Section title={t("acc-role")}>
-          {editable ? (
-            <div className="grid max-w-sm gap-1.5">
-              <label htmlFor="account-role" className="sr-only">
-                {t("acc-role")}
-              </label>
-              <Choice
-                id="account-role"
-                value={account.role}
-                options={roleOptions()}
-                disabled={lastOwner || account.disabled || change.isPending}
-                onChange={(role: Role) => change.mutate({ role })}
-              />
-              <p className="text-xs text-ink-muted">{lastOwner ? lastOwnerText() : roleHint(account.role)}</p>
-            </div>
-          ) : (
-            <p className="text-sm">{roleLabel(account.role)}</p>
-          )}
-          <FormError error={change.error} />
+          <div className="surface grid gap-3 p-5">
+            {editable ? (
+              <div className="max-w-sm">
+                <label htmlFor="account-role" className="sr-only">
+                  {t("acc-role")}
+                </label>
+                <Choice
+                  id="account-role"
+                  value={account.role}
+                  options={roleOptions()}
+                  disabled={lastOwner || account.disabled || change.isPending}
+                  describedBy="account-role-allows"
+                  onChange={(role: Role) => change.mutate({ role })}
+                />
+              </div>
+            ) : (
+              <p className="font-medium text-ink first-letter:uppercase">{roleLabel(account.role)}</p>
+            )}
+            <p id="account-role-allows" className="text-body text-ink-muted">
+              {roleHint(account.role)}
+            </p>
+            {lastOwner && editable ? <p className="text-body text-amber">{t("acc-last-owner")}</p> : null}
+            <FormError error={change.error} />
+          </div>
         </Section>
         {editable ? (
-          <Section title={account.disabled ? t("acc-enable") : t("acc-disable-section")}>
-            {account.disabled ? (
-              <Button variant="outline" onClick={() => change.mutate({ disabled: false })} disabled={change.isPending}>
-                {t("acc-enable")}
-              </Button>
-            ) : (
-              <>
-                <p className="mb-4 text-sm text-ink-muted">{lastOwner ? lastOwnerText() : t("acc-disable-hint")}</p>
+          <Section title={t("acc-signin")}>
+            <div className="surface flex flex-wrap items-center justify-between gap-x-6 gap-y-4 p-5">
+              <p className="max-w-md text-body text-ink-muted">
+                {account.disabled ? t("acc-disabled-note") : lastOwner ? t("acc-last-owner") : t("acc-disable-hint")}
+              </p>
+              {account.disabled ? (
+                <Button
+                  variant="outline"
+                  onClick={() => change.mutate({ disabled: false })}
+                  disabled={change.isPending}
+                >
+                  {t("acc-enable")}
+                </Button>
+              ) : (
                 <Confirm
                   trigger={
                     <Button variant="destructive" disabled={lastOwner}>
                       {t("acc-disable")}
                     </Button>
                   }
-                  title={t("acc-disable-title", { name: account.person?.name ?? account.login })}
+                  title={t("acc-disable-title", { name: nameOf(account) })}
                   confirm={t("acc-disable-confirm")}
                   onConfirm={() => change.mutateAsync({ disabled: true })}
                 >
                   {t("acc-disable-text")}
                 </Confirm>
-              </>
-            )}
+              )}
+            </div>
           </Section>
         ) : null}
       </div>

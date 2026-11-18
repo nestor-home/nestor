@@ -1,12 +1,5 @@
-## Cameras: watching and calling through satellites, pictures on demand.
+## Watching and calling through satellites, pictures on demand.
 
-cam-title = Cameras
-cam-lede = Nothing is filmed until you ask. Every view, call and picture is written in the journal.
-cam-off = Watching and calling are off on this server.
-cam-off-hint = Install Nestor with the media extra: nestor-home[media].
-cam-empty = No device you may watch or call through.
-cam-empty-hint = Whoever manages the satellites decides who may, on each satellite's page.
-cam-call-only = calls only
 cam-off-reason = { $off ->
     [quiet_hours] off during quiet hours
     [someone_home] off while someone is home
@@ -36,3 +29,5 @@ cam-hang-up = Hang up
 cam-again = Try again
 cam-unsupported = This browser cannot receive video. Use a recent Chrome, Firefox or Safari.
 cam-failed = The connection could not be set up.
+cam-view-note = What it films in “{ $room }”, until you close.
+cam-call-note = “{ $room }” hears you until you hang up.

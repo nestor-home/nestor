@@ -1,8 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
-import { api, keys, setCsrfToken } from "@/api";
+import { api, keys, messageOf, setCsrfToken } from "@/api";
+import { ApiError } from "@/api/client";
 import { Field } from "@/components/field";
-import { FormError } from "@/components/states";
+import { Notice } from "@/components/states";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useT } from "@/i18n";
@@ -20,6 +21,7 @@ export function LoginForm({ onSignedIn }: { onSignedIn: () => void }) {
       onSignedIn();
     },
   });
+  const refused = signIn.error instanceof ApiError && signIn.error.code === "invalid_credentials";
 
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -27,7 +29,7 @@ export function LoginForm({ onSignedIn }: { onSignedIn: () => void }) {
   }
 
   return (
-    <form onSubmit={submit} className="grid gap-5" noValidate={false}>
+    <form onSubmit={submit} className="grid gap-5">
       <Field label={t("auth-login")} htmlFor="login">
         <Input
           id="login"
@@ -36,6 +38,8 @@ export function LoginForm({ onSignedIn }: { onSignedIn: () => void }) {
           required
           autoFocus
           spellCheck={false}
+          className="h-11"
+          aria-invalid={refused || undefined}
           value={login}
           onChange={(e) => setLogin(e.target.value)}
         />
@@ -46,12 +50,19 @@ export function LoginForm({ onSignedIn }: { onSignedIn: () => void }) {
           type="password"
           autoComplete="current-password"
           required
+          className="h-11"
+          aria-invalid={refused || undefined}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
       </Field>
-      <FormError error={signIn.error} />
-      <Button type="submit" size="lg" disabled={signIn.isPending}>
+      {signIn.error ? (
+        <Notice>
+          <p className="font-medium">{messageOf(signIn.error)}</p>
+          {refused ? <p className="mt-1 text-ink-muted">{t("auth-login-help")}</p> : null}
+        </Notice>
+      ) : null}
+      <Button type="submit" size="lg" className="h-11" disabled={signIn.isPending}>
         {signIn.isPending ? t("auth-signing-in") : t("auth-sign-in")}
       </Button>
     </form>

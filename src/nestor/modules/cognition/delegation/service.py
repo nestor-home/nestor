@@ -45,7 +45,8 @@ INTERRUPTED = "interrupted: Nestor stopped while the task was running and this e
 @dataclass(slots=True, kw_only=True)
 class Task:
     id: str
-    objective: str
+    title: str  # the short name the household knows it by
+    objective: str  # what its executor is asked, in full
     executor: str
     origin: Address
     requested_by: PersonId | None
@@ -69,6 +70,7 @@ class Task:
         """What the agent needs to answer "how is it going?": no result, which is announced separately."""
         report: dict[str, object] = {
             "task_id": self.id,
+            "title": self.title,
             "objective": self.objective,
             "executor": self.executor,
             "status": self.status.value,
@@ -145,6 +147,7 @@ class TaskManager(Component):
         self,
         objective: str,
         *,
+        title: str,
         origin: Address,
         requested_by: PersonId | None = None,
         notify: Notify = Notify.AUTO,
@@ -154,8 +157,8 @@ class TaskManager(Component):
         given: Sequence[FileRef] = (),
         asked: bool = False,
     ) -> Task:
-        """`given`: the files sent with the task, which its executor receives; `asked`: a person asked for it in
-        their own turn, so its result is always told."""
+        """`title`: the short name the household knows it by; `given`: the files sent with the task, which its executor
+        receives; `asked`: a person asked for it in their own turn, so its result is always told."""
         if self._writer is None:
             raise ContractError("the task manager must be started before delegating")
         chosen = self.executors.get(executor) if executor else self.default_executor
@@ -166,6 +169,7 @@ class TaskManager(Component):
             source=self.name,
             session=origin.session,
             task_id=new_id()[:8],
+            title=title,
             objective=objective,
             executor=chosen.name,
             origin=origin,
@@ -353,6 +357,7 @@ class TaskManager(Component):
 def _task(event: TaskStarted, ref: str | None) -> Task:
     return Task(
         id=event.task_id,
+        title=event.title,
         objective=event.objective,
         executor=event.executor,
         origin=event.origin,

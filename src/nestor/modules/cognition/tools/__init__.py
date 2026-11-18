@@ -9,6 +9,7 @@ from nestor.modules.cognition.tools.ports import InWriting, ToolProvider
 from nestor.modules.cognition.tools.results import Results
 from nestor.modules.cognition.tools.service import Called, Toolbox
 from nestor.modules.cognition.tools.types import (
+    TITLE,
     Made,
     Risk,
     SensitiveWhen,
@@ -17,9 +18,11 @@ from nestor.modules.cognition.tools.types import (
     ToolFailed,
     ToolOutput,
     bounded,
+    titled,
 )
 
 __all__ = [
+    "TITLE",
     "Called",
     "InWriting",
     "Made",
@@ -38,4 +41,5 @@ __all__ = [
     "ToolReturned",
     "Toolbox",
     "bounded",
+    "titled",
 ]

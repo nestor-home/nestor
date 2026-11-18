@@ -9,6 +9,7 @@ describe("a connection's pages", () => {
     const user = userEvent.setup();
     const { router } = renderApp("/connections/c-gmail-mathis");
     expect(await screen.findByText(/can no longer use this account/)).toBeInTheDocument();
+    expect(screen.getByText("Google refused to renew the token (invalid_grant).")).toBeInTheDocument();
     await user.click(screen.getByRole("link", { name: "Reconnect…" }));
     await waitFor(() => expect(router.state.location.pathname).toBe("/connections/catalogue"));
     expect(router.state.location.search).toEqual({ connect: "google", replaces: "c-gmail-mathis" });
@@ -39,7 +40,7 @@ describe("a connection's pages", () => {
     expect(save).toBeDisabled();
     await user.click(screen.getByRole("switch", { name: /mail_send/ }));
     await user.click(screen.getByRole("checkbox", { name: /Ask for confirmation before writing/ }));
-    expect(screen.getByText("● unsaved changes")).toBeInTheDocument();
+    expect(screen.getByText("Unsaved changes.")).toBeInTheDocument();
     await user.click(save);
     expect(await screen.findByText("Tool settings saved.")).toBeInTheDocument();
     expect(db.connections.find((c) => c.id === "c-imap-lea")?.confirm_writes).toBe(false);
@@ -71,6 +72,8 @@ describe("a connection's pages", () => {
   it("explains a refused consent", async () => {
     renderApp("/connections/failed?kind=google&error=access_denied");
     expect(await screen.findByRole("heading", { name: "Authorisation refused" })).toBeInTheDocument();
+    const next = screen.getByRole("region", { name: "Next step" });
+    expect(within(next).getByText("Start again and accept the access on the service's page.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Start again" })).toHaveAttribute(
       "href",
       "/connections/catalogue?connect=google",
@@ -84,6 +87,12 @@ describe("a connection's pages", () => {
   ])("explains why connecting failed (%s)", async (error, title) => {
     renderApp(`/connections/failed?kind=google&error=${error}`);
     expect(await screen.findByRole("heading", { name: title })).toBeInTheDocument();
+  });
+
+  it("says whose account it is and who the assistant uses it for", async () => {
+    renderApp("/connections/c-imap-lea");
+    const who = await screen.findByRole("region", { name: "Who may use it" });
+    expect(within(who).getByRole("link", { name: /Léa.*uses it only for Léa/ })).toHaveAttribute("href", "/people/lea");
   });
 
   it("says so when the connection is gone", async () => {

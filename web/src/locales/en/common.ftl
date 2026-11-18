@@ -13,12 +13,10 @@ duration-min = { $minutes } min { $seconds }
 duration-h = { $hours } h { $minutes }
 
 household-everyone = whole household
-household-nobody = nobody
 
 role-owner-hint = Everything, accounts and roles included.
 role-admin-hint = Connections, satellites and supervision, without accounts.
 role-member-hint = Their own journal, connections and memories.
-
 
 action-cancel = Cancel
 action-save = Save
@@ -31,7 +29,6 @@ action-copy-label = Copy { $what }
 action-choose = Choose…
 action-see = See
 loading = Loading…
-empty-generic = Nothing here yet.
 
 error-network = Nestor does not answer. Check that it is running, then try again.
 error-unauthenticated = Your session has expired: sign in again.

@@ -210,6 +210,43 @@ messages come from `GET /api/v1/i18n/{locale}`), and the agent's figure is the
   `web/src/i18n/catalog.test.ts` fails on all three. The agent speaks in the first person only where it
   speaks (its line on the home page, empty states, toasts after what it does); system texts stay neutral.
 
+### Interface
+
+The admin is built around what the household does, not around the server's modules.
+
+- **Spaces.** The rail (it folds to its icons: `[` or ⌘B, remembered) holds four spaces and settings
+  (`features/shell/nav.ts`): Today (the household now),
+  Talk, Ongoing (everything the agent does on its own, by where it stands) and The house (people, rooms,
+  devices). Settings holds what the installation is made of. A new feature joins the space where a person
+  would look for it; it never gets a rail entry of its own. Detail pages belong to a space (`covers`) and their
+  breadcrumb leads back to it.
+- **Depth.** A page shows; a thing opens in place. A list item opens a side sheet (`SideSheet` with `SheetPanel`:
+  kind, title, facts, actions at its foot) when a glance and one action are enough, and leads to its page only
+  when it has a story of its own (a person, a connection, a task's whole run). Creating or changing is a
+  `FormDialog` or `FormSheet` opened by a button; a destructive or sensitive action is a `Confirm` over whatever
+  is open. No form at the bottom of a page.
+- **One set of pieces** (`components/`), never a hand-written copy: `PageHeader` (title, one sentence, actions),
+  then the page's body in `grid gap-10`; `Section` (title, count, aside); `.surface` for anything raised that
+  holds content (a card, a list: `RowList`, a `Panel`), `Empty` inside the place where things would be;
+  `IconTile` for what kind of thing a card is, `Avatar` for a person, `BrandMark`/`KindMark` for a service or a
+  channel, `Status` for a state, `Tag` for data, `Facts`/`Fact` for a thing's facts, `Chips` for the lanes of a
+  list, `TabNav` for the pages of one thing. A card that opens is a `button` or a `Link` with `.surface`.
+- **Add where it is listed.** Wherever a page lists things one can add (a person's accounts, the household,
+  the devices), the way to add one is there: an `AddCard` closing the grid, or a button in the section's `aside`
+  that opens the form in place or leads to it with what is already known (`?owner=` for a person's account).
+  What only the agent creates (reminders, watches, tasks) offers to ask it.
+- **Visual, not flat.** A card leads with a mark (tile, avatar, logo), then its title in medium weight, then one
+  muted line; a state is a colour and a word, never a colour alone. Titles in the display face (`display-2` for
+  a page, `display-3` for a section, `font-serif` 1.35rem for a card that stands for a thing), everything else
+  in the UI face. Mono only for what is typed or copied (ids, tool names, commands). No uppercase labels, no
+  eyebrow above a title, no decorative left border, no numbered markers unless the content is a sequence.
+- **Colour and shape** come from `styles/tokens.css` and `styles/world.css` only: paper and ink, ember for what
+  is live or the agent's, sage, amber and brick for states, `--radius-surface` for surfaces and the small
+  radius for controls. The rail and the sky of the Today scene set their own `color-scheme`, so the tokens
+  resolve dark inside them whatever the theme.
+- **Phone first.** Every screen is laid out for 375 px, then widened: grids go from one column up, a row of
+  actions wraps, a sheet takes the screen from below. Nothing scrolls sideways but a row of `Chips`.
+
 ### Front tests
 
 Vitest runs the test files in one module graph (`isolate: false`) and in random order: whatever a test changes

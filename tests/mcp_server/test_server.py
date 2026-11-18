@@ -121,6 +121,7 @@ async def delegated(world: World, objective: str, executor: str = "codex") -> tu
     await turn.said("Corrige le devis joint", Medium.WRITTEN, Speaker.account(MATHIS), sent)
     task = await nestor.tasks.delegate(
         objective,
+        title="Devis corrigé",
         origin=MAIN,
         requested_by=MATHIS,
         executor=executor,
@@ -156,7 +157,8 @@ async def test_an_executor_works_on_its_task_through_nestor_s_tools(world: World
         }, "no home: no home_state"  # fmt: skip
         assert [f.name for f in given.files] == ["devis.pdf"] and "read_file gives a link" in given.brief()
         brief = await call(nestor, "task_brief", task=task)
-        assert (brief["objective"], brief["requested_by"], brief["channel"]) == ("Corrige le devis", "Mathis", "memory")
+        assert (brief["title"], brief["objective"]) == ("Devis corrigé", "Corrige le devis")
+        assert (brief["requested_by"], brief["channel"]) == ("Mathis", "memory")
         assert any("Corrige le devis joint" in line for line in brief["conversation"])
         [file] = brief["files"]
         assert (file["name"], file["media_type"]) == ("devis.pdf", "application/pdf")
@@ -178,6 +180,7 @@ async def test_an_executor_works_on_its_task_through_nestor_s_tools(world: World
         assert (await call(nestor, "check_answer", task=task, question=asked["question"]))["status"] == "waiting"
         question = world.nestor.message_book.get(asked["question"])
         assert question is not None and (question.to, question.task) == (MATHIS, task_id)
+        assert question.text == 'codex, working on "Devis corrigé": La TVA est-elle à 20 % ?', "the task by its name"
         await world.nestor.message_book.answer(asked["question"], "Oui, 20 %", by=MATHIS)
         answered = await call(nestor, "check_answer", task=task, question=asked["question"])
         assert answered == {"status": "answered", "answer": "Oui, 20 %"}

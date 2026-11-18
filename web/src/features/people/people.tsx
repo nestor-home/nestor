@@ -1,28 +1,27 @@
+/**
+ * A person of the household: who they are and where they are now, how the agent reaches and recognises
+ * them, then what concerns them (conversations, memories, connected accounts, presence).
+ */
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { BookMarked, Gauge, House, MessageSquareText, Plug } from "lucide-react";
+import { ArrowRight, BookMarked, Gauge, House, MessageSquareText, Plug, UserRound } from "lucide-react";
 import type { ReactNode } from "react";
-import {
-  connectionsQuery,
-  isMissing,
-  journalFacetsQuery,
-  type Person,
-  type Presence,
-  peopleQuery,
-  personQuery,
-} from "@/api";
+import { connectionsQuery, isMissing, journalFacetsQuery, type Person, type Presence, personQuery } from "@/api";
 import { Ago } from "@/components/ago";
+import { CardHead, OpenArrow } from "@/components/card";
 import { type Crumb, Crumbs } from "@/components/crumbs";
-import { Lead, PageHeader, RowArrow, RowList, Section, WithAside } from "@/components/page";
+import { AddCard, Avatar, IconTile, ServiceTile } from "@/components/marks";
+import { Lead, PageHeader, Section } from "@/components/page";
 import { Empty, Failure, Loading } from "@/components/states";
-import { Status } from "@/components/status";
+import { Status, Tag } from "@/components/status";
 import { TabNav } from "@/components/tab-nav";
-import { ConnectionStatusMark } from "@/features/connections/status";
+import { buttonVariants } from "@/components/ui/button";
+import { ConnectionCard } from "@/features/connections/parts";
 import { ActivityList } from "@/features/journal/activity-list";
 import { SubjectStory } from "@/features/journal/subject-story";
 import { MemoryList } from "@/features/memories/memories-view";
 import { useT } from "@/i18n";
-import { KindMark } from "@/lib/brands";
+import { KindMark, kindName } from "@/lib/brands";
 import { startOfToday } from "@/lib/dates";
 import { roleLabel } from "@/lib/labels";
 import { useCan, useMe } from "@/lib/session";
@@ -39,62 +38,17 @@ export function PresenceMark({ presence }: { presence: Presence | null }) {
   );
 }
 
-export function PeopleList() {
-  const t = useT();
-  const people = useQuery(peopleQuery);
-  if (people.isPending) return <Loading lines={3} />;
-  if (people.isError) return <Failure error={people.error} retry={() => void people.refetch()} />;
-  if (people.data.length === 0) return <Empty>{t("people-empty")}</Empty>;
-  return (
-    <RowList>
-      {people.data.map((p) => (
-        <li key={p.id}>
-          <Link
-            to="/people/$personId"
-            params={{ personId: p.id }}
-            className="group grid grid-cols-[2.25rem_minmax(0,1fr)] items-center gap-x-4 gap-y-1 px-5 py-3.5 hover:bg-paper-sunken/60 sm:grid-cols-[2.25rem_minmax(0,1fr)_minmax(0,1fr)_12rem_1rem]"
-          >
-            <span
-              aria-hidden="true"
-              className="grid size-9 place-items-center rounded-sm bg-paper-sunken font-serif text-lg text-ink"
-            >
-              {p.name.slice(0, 1)}
-            </span>
-            <span>
-              <span className="block text-ink">{p.name}</span>
-              <span className="block text-[0.85rem] text-ink-muted">
-                {p.account ? t("people-has-account") : t("people-no-account")}
-              </span>
-            </span>
-            <span className="hidden flex-wrap gap-x-3 text-[0.85rem] text-ink-muted sm:flex">
-              {p.channel_accounts.map((c) => (
-                <span key={c} className="inline-flex items-center gap-1">
-                  <KindMark kind={c} className="size-3" label={false} />
-                  {c.split(":")[0]}
-                </span>
-              ))}
-            </span>
-            <span className="col-start-2 sm:col-start-auto">
-              <PresenceMark presence={p.presence} />
-            </span>
-            <RowArrow />
-          </Link>
-        </li>
-      ))}
-    </RowList>
-  );
-}
-
 export function usePerson(id: string): { person: Person | undefined; pending: boolean; error: unknown } {
   const found = useQuery(personQuery(id));
   return { person: found.data, pending: found.isPending, error: isMissing(found.error) ? null : found.error };
 }
 
+/** The person, then the pages of what concerns them. */
 export function PersonFrame({ id, children }: { id: string; children: ReactNode }) {
   const t = useT();
   const { person, pending, error } = usePerson(id);
   const canConnections = useCan("connections:read");
-  const trail: Crumb[] = [{ label: t("people-title"), link: { to: "/people" } }, { label: person?.name ?? id }];
+  const trail: Crumb[] = [{ label: t("space-house"), link: { to: "/house" } }, { label: person?.name ?? id }];
   if (pending) return <Loading lines={3} />;
   if (!person) {
     return (
@@ -109,6 +63,7 @@ export function PersonFrame({ id, children }: { id: string; children: ReactNode 
     <>
       <PageHeader
         crumbs={<Crumbs trail={trail} />}
+        mark={<Avatar name={person.name} away={person.presence?.home === false} size="2xl" />}
         title={person.name}
         meta={
           <>
@@ -116,6 +71,12 @@ export function PersonFrame({ id, children }: { id: string; children: ReactNode 
             {person.presence?.since ? (
               <span>
                 {t("people-since")} <Ago iso={person.presence.since} />
+              </span>
+            ) : null}
+            {person.reach ? (
+              <span className="inline-flex items-center gap-1.5">
+                <KindMark kind={person.reach} className="size-3.5" label={false} />
+                {t("people-reached-on", { channel: kindName(person.reach) })}
               </span>
             ) : null}
           </>
@@ -136,72 +97,107 @@ export function PersonFrame({ id, children }: { id: string; children: ReactNode 
   );
 }
 
+/** What comes after the colon of a channel account (`telegram:@lea` → `@lea`), when there is one. */
+const handleOf = (account: string) => account.split(":").slice(1).join(":");
+
+/** One way to the person: the channel's mark, its name, the handle they are known by there. */
+function Channel({ account, first }: { account: string; first: boolean }) {
+  const t = useT();
+  const handle = handleOf(account);
+  return (
+    <li className="surface p-4">
+      <CardHead
+        mark={<ServiceTile kind={account} />}
+        title={kindName(account)}
+        line={handle ? <span className="font-mono text-meta">{handle}</span> : null}
+        aside={first ? <Tag tone="accent">{t("people-reach-first")}</Tag> : null}
+      />
+    </li>
+  );
+}
+
+/** Whether the person can open this interface, and with which account. */
+function AdminAccess({ person: p }: { person: Person }) {
+  const t = useT();
+  const account = useCan("accounts:read") ? p.account : null;
+  return (
+    <CardHead
+      mark={<IconTile icon={UserRound} tone={p.account ? "sage" : "ink"} />}
+      title={t("people-admin")}
+      line={
+        account
+          ? `${account.login} · ${roleLabel(account.role)}`
+          : p.account
+            ? t("people-has-account")
+            : t("people-no-account")
+      }
+      aside={account ? <OpenArrow /> : null}
+    />
+  );
+}
+
 export function PersonOverview({ person: p }: { person: Person }) {
   const t = useT();
   const me = useMe();
   const today = useQuery(journalFacetsQuery({ person: p.id, from: startOfToday() }));
   const account = useCan("accounts:read") ? p.account : null;
   const kinds = new Map(today.data?.kinds.map((k) => [k.key, k.count]));
+  // the channel written to first may be one the person is not recognised on (the voice of the room they are in)
+  const channels =
+    p.reach && !p.channel_accounts.includes(p.reach) ? [p.reach, ...p.channel_accounts] : p.channel_accounts;
   return (
-    <WithAside>
-      <div className="grid content-start gap-10">
-        {today.data ? (
-          <Lead>
-            {today.data.total
-              ? t("people-today", {
-                  name: p.name,
-                  count: today.data.total,
-                  spoken: kinds.get("delivery") ?? 0,
-                  assistant: me.assistant,
-                })
-              : t("people-today-nothing", { name: p.name })}
-          </Lead>
-        ) : null}
-        <Section title={t("people-recent")}>
-          <ActivityList
-            filters={{ person: p.id }}
-            search={{ person: p.id }}
-            limit={6}
-            empty={t("people-recent-empty", { name: p.name })}
-          />
-        </Section>
-      </div>
-      <aside className="grid content-start gap-6 text-sm">
-        <div>
-          <p className="label-mono mb-1.5">{t("people-recognised-on")}</p>
-          <ul className="grid gap-1">
-            {p.channel_accounts.map((c) => (
-              <li key={c} className="inline-flex items-center gap-2 font-mono text-[0.8rem]">
-                <KindMark kind={c} className="size-3.5" />
-                {c}
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div>
-          <p className="label-mono mb-1.5">{t("people-reached-on")}</p>
-          {p.reach ? (
-            <p className="inline-flex items-center gap-2 font-mono text-[0.8rem]">
-              <KindMark kind={p.reach} className="size-3.5" />
-              {p.reach}
-            </p>
-          ) : (
-            <p className="text-ink-muted">{t("people-reached-origin")}</p>
-          )}
-        </div>
-        <div>
-          <p className="label-mono mb-1.5">{t("people-admin")}</p>
-          {account ? (
-            <Link to="/accounts/$accountId" params={{ accountId: account.id }} className="text-ink hover:text-ember">
-              {account.login} · {roleLabel(account.role)}
-            </Link>
-          ) : (
-            <p className="text-ink-muted">{p.account ? t("people-has-account") : t("people-no-account")}</p>
-          )}
-        </div>
-        <PersonVoice person={p} />
-      </aside>
-    </WithAside>
+    <div className="grid gap-10">
+      {today.data ? (
+        <Lead>
+          {today.data.total
+            ? t("people-today", {
+                name: p.name,
+                count: today.data.total,
+                spoken: kinds.get("delivery") ?? 0,
+                assistant: me.assistant,
+              })
+            : t("people-today-nothing", { name: p.name })}
+        </Lead>
+      ) : null}
+
+      <Section title={t("people-reach-title", { assistant: me.assistant })}>
+        <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {channels.map((c) => (
+            <Channel key={c} account={c} first={c === p.reach} />
+          ))}
+          <li>
+            {account ? (
+              <Link
+                to="/accounts/$accountId"
+                params={{ accountId: account.id }}
+                className="group surface block h-full p-4"
+                aria-label={t("people-open-account", { login: account.login })}
+              >
+                <AdminAccess person={p} />
+              </Link>
+            ) : (
+              <div className="surface h-full p-4">
+                <AdminAccess person={p} />
+              </div>
+            )}
+          </li>
+        </ul>
+        {p.reach ? null : (
+          <p className="mt-3 text-body text-ink-muted">{t("people-reached-origin", { assistant: me.assistant })}</p>
+        )}
+      </Section>
+
+      <PersonVoice person={p} />
+
+      <Section title={t("people-recent")}>
+        <ActivityList
+          filters={{ person: p.id }}
+          search={{ person: p.id }}
+          limit={6}
+          empty={t("people-recent-empty", { name: p.name })}
+        />
+      </Section>
+    </div>
   );
 }
 
@@ -222,6 +218,7 @@ export function PersonMemories({ person: p }: { person: Person }) {
 export function PersonConnections({ person: p }: { person: Person }) {
   const t = useT();
   const connections = useQuery(connectionsQuery);
+  const canConnect = useCan("connections:write");
   if (connections.isPending) return <Loading lines={2} />;
   const own = (connections.data ?? []).filter((c) => c.owner?.id === p.id);
   if (own.length === 0) {
@@ -229,8 +226,12 @@ export function PersonConnections({ person: p }: { person: Person }) {
       <Empty
         hint={t("people-connections-hint")}
         action={
-          <Link to="/connections/catalogue" className="text-[0.85rem] text-ember hover:underline">
-            {t("people-open-catalogue")}
+          <Link
+            to="/connections/catalogue"
+            search={{ owner: p.id }}
+            className={buttonVariants({ variant: "outline", size: "sm" })}
+          >
+            {t("people-open-catalogue")} <ArrowRight />
           </Link>
         }
       >
@@ -239,24 +240,16 @@ export function PersonConnections({ person: p }: { person: Person }) {
     );
   }
   return (
-    <RowList>
+    <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
       {own.map((c) => (
-        <li key={c.id}>
-          <Link
-            to="/connections/$connectionId"
-            params={{ connectionId: c.id }}
-            className="grid grid-cols-[1.5rem_1fr_auto] items-center gap-x-4 px-5 py-3 hover:bg-paper-sunken/60"
-          >
-            <KindMark kind={c.brand ?? c.kind} className="size-5" />
-            <span>
-              <span className="block text-ink">{c.account}</span>
-              <span className="text-[0.85rem] text-ink-muted">{c.title}</span>
-            </span>
-            <ConnectionStatusMark status={c.status} />
-          </Link>
-        </li>
+        <ConnectionCard key={c.id} connection={c} />
       ))}
-    </RowList>
+      {canConnect ? (
+        <li>
+          <AddCard link={{ to: "/connections/catalogue", search: { owner: p.id } }}>{t("people-connect")}</AddCard>
+        </li>
+      ) : null}
+    </ul>
   );
 }
 

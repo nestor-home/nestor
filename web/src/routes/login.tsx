@@ -1,6 +1,6 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { meQuery } from "@/api";
-import { AuthLayout } from "@/features/auth/auth-layout";
+import { AuthLayout, partOfDay } from "@/features/auth/auth-layout";
 import { LoginForm } from "@/features/auth/login-form";
 import { useT } from "@/i18n";
 
@@ -8,7 +8,7 @@ import { useT } from "@/i18n";
 export function safeNext(target: unknown): string {
   return typeof target === "string" && target.startsWith("/") && !target.startsWith("//") && !target.includes("\\")
     ? target
-    : "/journal";
+    : "/";
 }
 
 export const Route = createFileRoute("/login")({
@@ -26,7 +26,7 @@ function Login() {
   const navigate = useNavigate();
   const t = useT();
   return (
-    <AuthLayout title={t("auth-login-title")}>
+    <AuthLayout title={t("auth-login-title")} line={t("auth-line-login", { part: partOfDay(new Date()) })}>
       <LoginForm onSignedIn={() => void navigate({ href: safeNext(next), replace: true })} />
     </AuthLayout>
   );

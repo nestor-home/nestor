@@ -1,5 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
+import type { Health } from "@/api";
+import { tr } from "@/i18n/runtime";
 import { STATUS_ICON } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 
@@ -27,7 +29,7 @@ const ICON: Record<StatusTone, LucideIcon | null> = {
 export function Status({ tone, children, className }: { tone: StatusTone; children: ReactNode; className?: string }) {
   const Icon = ICON[tone];
   return (
-    <span className={cn("inline-flex min-w-0 items-center gap-1.5 text-[0.85rem]", TONE[tone], className)}>
+    <span className={cn("inline-flex min-w-0 items-center gap-1.5 text-meta", TONE[tone], className)}>
       {Icon ? (
         <Icon className="size-3.5" aria-hidden="true" />
       ) : (
@@ -35,6 +37,22 @@ export function Status({ tone, children, className }: { tone: StatusTone; childr
       )}
       {children}
     </span>
+  );
+}
+
+const HEALTH: Record<Health, { tone: StatusTone; label: string }> = {
+  started: { tone: "ok", label: "sys-health-ok" },
+  degraded: { tone: "attention", label: "sys-health-degraded" },
+  unavailable: { tone: "error", label: "sys-health-down" },
+};
+
+/** How a component is doing, as its status; `null` when it tells nothing about itself. */
+export function HealthStatus({ health, className }: { health: Health | null | undefined; className?: string }) {
+  const { tone, label } = health ? HEALTH[health] : { tone: "idle" as const, label: "sys-health-unknown" };
+  return (
+    <Status tone={tone} className={className}>
+      {tr(label)}
+    </Status>
   );
 }
 
@@ -53,7 +71,7 @@ export function Tag({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-sm border border-rule px-1.5 py-px text-[0.85rem] leading-4 text-ink-muted",
+        "inline-flex max-w-full items-center gap-1 rounded-sm border border-rule px-1.5 py-px text-meta leading-4 [overflow-wrap:anywhere] text-ink-muted",
         tone === "accent" && "border-ember/40 text-ember",
         tone === "attention" && "border-amber/50 text-amber",
         tone === "error" && "border-brick/50 text-brick",
@@ -68,7 +86,7 @@ export function Tag({
 
 export function Kbd({ children }: { children: ReactNode }) {
   return (
-    <kbd className="inline-flex h-4.5 min-w-4.5 items-center justify-center rounded-sm border border-rule-strong px-1 font-mono text-[0.65rem] leading-none text-ink-muted">
+    <kbd className="inline-flex h-5 min-w-5 items-center justify-center rounded-sm border border-rule-strong px-1 font-mono text-micro leading-none text-ink-muted">
       {children}
     </kbd>
   );

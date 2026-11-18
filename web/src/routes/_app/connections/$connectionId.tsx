@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { connectionQuery, keys } from "@/api";
 import { Guard } from "@/components/guard";
 import { useNotify } from "@/components/notices";
-import { ConnectionFrame } from "@/features/connections/connection-detail";
+import { ConnectionFrame } from "@/features/connections/connection-view";
 import { useT } from "@/i18n";
 
 export const Route = createFileRoute("/_app/connections/$connectionId")({

@@ -48,6 +48,7 @@ export function LiveDialog({
     <FormDialog
       trigger={trigger}
       title={purpose === "call" ? t("cam-call-title", { name }) : t("cam-view-title", { name })}
+      description={t(purpose === "call" ? "cam-call-note" : "cam-view-note", { room: device.room })}
       wide
     >
       {(close) => <Session device={device} purpose={purpose} close={close} />}
@@ -110,7 +111,7 @@ function Session({ device, purpose, close }: { device: MediaDevice; purpose: Med
   const shows = live?.session.video ?? false;
   return (
     <div className="grid gap-4">
-      <div className="relative grid aspect-video place-items-center overflow-hidden rounded-lg bg-ink/90 text-paper">
+      <div data-phase="night" className="sky grid aspect-video place-items-center">
         {/* the device's sound plays from here too, even when it sends no picture */}
         <video
           ref={video}
@@ -125,7 +126,7 @@ function Session({ device, purpose, close }: { device: MediaDevice; purpose: Med
         {shows ? null : (
           <div className="grid justify-items-center gap-3 p-6 text-center">
             <AgentFigure state={state.status === "connecting" ? "thinking" : "idle"} size="md" />
-            <p className="text-sm text-paper/80">
+            <p className="text-body">
               {state.status === "connecting"
                 ? t("cam-connecting")
                 : state.status === "ended"

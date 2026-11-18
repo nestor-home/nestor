@@ -1,6 +1,6 @@
 ## The chat: writing to the agent from the admin.
 
-chat-title = Chat
+chat-title = Talk
 chat-list = Chats
 chat-new = New chat
 chat-search = Search chats
@@ -67,3 +67,6 @@ chat-mention-person = People
 chat-mention-room = Rooms
 chat-mention-executor = Executors
 chat-mention-connection = Accounts
+chat-back = All chats
+chat-greeting-hint = I can read a file or a photo, and listen to a voice message.
+chat-greeting-hint-mentions = Type @ to name someone, a room or an account. I can also read a file or a photo, and listen to a voice message.

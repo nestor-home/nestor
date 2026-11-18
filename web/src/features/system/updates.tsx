@@ -9,13 +9,14 @@ import { CircleArrowUp, ExternalLink } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api, type ChangeKind, keys, type Release, type Updates, updatesQuery } from "@/api";
 import { AgentFigure } from "@/components/agent-figure";
+import { OpenArrow } from "@/components/card";
 import { Confirm } from "@/components/confirm";
 import { CopyField } from "@/components/copy-field";
 import { Dither } from "@/components/dither";
 import { FormActions } from "@/components/form-actions";
+import { IconTile } from "@/components/marks";
 import { FormError, Notice } from "@/components/states";
 import { Button } from "@/components/ui/button";
-import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import { UpdateDialog } from "@/components/update-dialog";
 import { Restarting, useRestart } from "@/features/config/restart";
 import { useT } from "@/i18n";
@@ -24,7 +25,10 @@ import { useCan } from "@/lib/session";
 
 const KINDS: ChangeKind[] = ["breaking", "feature", "fix", "other"];
 
-/** In the sidebar's footer, only while a newer release is out; its texture comes alive on hover. */
+/**
+ * Only while a newer release is out: a mark in the rail (`compact`), a card in Settings and on the System page.
+ * Its texture comes alive on hover; either opens the release's dialog.
+ */
 export function UpdateAvailable({ compact }: { compact: boolean }) {
   const t = useT();
   const canRead = useCan("system:read");
@@ -39,31 +43,37 @@ export function UpdateAvailable({ compact }: { compact: boolean }) {
   return (
     <>
       {latest ? (
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              tooltip={t("upd-available-version", { version: latest })}
-              className="relative overflow-hidden"
-              onClick={() => setOpen(true)}
-              onPointerEnter={() => setHover(true)}
-              onPointerLeave={() => setHover(false)}
-            >
-              {hover ? (
-                <Dither
-                  shape="ramp-left"
-                  from={0}
-                  to={0.55}
-                  dot={2}
-                  animated
-                  className="absolute inset-0 text-ember/35"
-                />
-              ) : null}
-              <CircleArrowUp className="relative size-4 shrink-0 text-ember" aria-hidden="true" />
-              <span className={compact ? "sr-only" : "relative min-w-0 flex-1 truncate"}>{t("upd-available")}</span>
-              {compact ? null : <span className="relative font-mono text-[0.75rem] text-ink-muted">{latest}</span>}
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+        <button
+          type="button"
+          title={compact ? t("upd-available-version", { version: latest }) : undefined}
+          aria-label={compact ? t("upd-available-version", { version: latest }) : undefined}
+          className={
+            compact
+              ? "relative grid size-9 shrink-0 place-items-center overflow-hidden rounded-lg hover:bg-ink/6"
+              : "surface relative flex w-full items-center gap-4 overflow-hidden p-5 text-left"
+          }
+          onClick={() => setOpen(true)}
+          onPointerEnter={() => setHover(true)}
+          onPointerLeave={() => setHover(false)}
+        >
+          {hover ? (
+            <Dither shape="ramp-left" from={0} to={0.55} dot={2} animated className="absolute inset-0 text-ember/35" />
+          ) : null}
+          {compact ? (
+            <CircleArrowUp className="relative size-5 shrink-0 text-ember" aria-hidden="true" />
+          ) : (
+            <>
+              <IconTile icon={CircleArrowUp} tone="ember" size="lg" className="relative" />
+              <span className="relative min-w-0 flex-1">
+                <span className="block title-card text-ink">{t("upd-available")}</span>
+                <span className="mt-1 block text-body text-ink-muted">
+                  {t("upd-available-running", { latest, running: updates.data?.running ?? "" })}
+                </span>
+              </span>
+              <OpenArrow className="relative" />
+            </>
+          )}
+        </button>
       ) : null}
       <NestorUpdate open={open} onOpenChange={setOpen} target={target} onTarget={setTarget} />
     </>
@@ -75,7 +85,7 @@ export function UpdateAvailable({ compact }: { compact: boolean }) {
  * What the install is doing comes from the server alone (`installing`, `failed`); once it stops
  * answering, or answers on the new version, the dialog follows Nestor through its restart.
  */
-export function NestorUpdate({
+function NestorUpdate({
   open,
   onOpenChange,
   target,
@@ -126,7 +136,7 @@ export function NestorUpdate({
           phase !== "idle" ? (
             <Restarting phase={phase} className="bg-transparent p-0" />
           ) : updates.installing ? (
-            <p role="status" className="text-sm text-ink">
+            <p role="status" className="text-meta text-ink">
               {t("upd-installing", { version })}
             </p>
           ) : !byHand ? (
@@ -147,7 +157,7 @@ export function NestorUpdate({
             <p>{t("upd-outdated", { count: updates.left_behind.length })}</p>
             <ul className="mt-1.5 grid gap-0.5">
               {updates.left_behind.map((s) => (
-                <li key={s.id} className="[overflow-wrap:anywhere]">
+                <li key={s.id} className="min-w-0">
                   {s.name ?? s.id}
                 </li>
               ))}
@@ -180,13 +190,13 @@ function ReleaseNotes({ release }: { release: Release }) {
   return (
     <section aria-label={t("upd-release", { version: release.version })}>
       <h3 className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <span className="font-mono text-sm text-ink">{release.version}</span>
-        <span className="text-xs text-ink-muted">{calendarDay(release.date)}</span>
+        <span className="font-mono text-meta text-ink">{release.version}</span>
+        <span className="text-micro text-ink-muted">{calendarDay(release.date)}</span>
         <a
           href={release.url}
           target="_blank"
           rel="noreferrer"
-          className="ml-auto inline-flex items-center gap-1 text-xs text-ink-muted hover:text-ink"
+          className="ml-auto inline-flex items-center gap-1 text-micro text-ink-muted hover:text-ink"
         >
           {t("upd-notes")}
           <ExternalLink className="size-3" aria-hidden="true" />
@@ -197,10 +207,10 @@ function ReleaseNotes({ release }: { release: Release }) {
         if (!changes.length) return null;
         return (
           <div key={kind} className="mt-3">
-            <p className={kind === "breaking" ? "label-mono text-brick" : "label-mono"}>{t(`upd-kind-${kind}`)}</p>
-            <ul className="mt-1 grid list-disc gap-1 pl-5 text-sm text-ink" lang="en">
+            <p className={kind === "breaking" ? "caption text-brick" : "caption"}>{t(`upd-kind-${kind}`)}</p>
+            <ul className="mt-1 grid list-disc gap-1 pl-5 text-meta text-ink" lang="en">
               {changes.map((c) => (
-                <li key={c.text} className="[overflow-wrap:anywhere]">
+                <li key={c.text} className="min-w-0">
                   {c.text}
                 </li>
               ))}
@@ -217,8 +227,8 @@ function ByHand({ updates }: { updates: Updates }) {
   const t = useT();
   return (
     <section className="grid gap-3 border-t border-rule pt-5">
-      <h3 className="font-serif text-lg font-normal">{t("upd-how")}</h3>
-      <p className="text-sm text-ink-muted">{t(`upd-how-${updates.installation ?? "editable"}`)}</p>
+      <h3 className="font-serif text-heading font-normal">{t("upd-how")}</h3>
+      <p className="text-meta text-ink-muted">{t(`upd-how-${updates.installation ?? "editable"}`)}</p>
       {updates.commands.map((command) => (
         <CopyField key={command} value={command} label={t("upd-command")} />
       ))}
@@ -230,7 +240,7 @@ function Restart({ canRestart }: { canRestart: boolean }) {
   const t = useT();
   const { phase, pending, error, restart } = useRestart();
   if (phase !== "idle") return <Restarting phase={phase} className="bg-transparent p-0" />;
-  if (!canRestart) return <p className="text-sm text-ink-muted">{t("upd-then-ask")}</p>;
+  if (!canRestart) return <p className="text-meta text-ink-muted">{t("upd-then-ask")}</p>;
   return (
     <FormActions hint={t("upd-then-restart")}>
       <FormError error={error} />

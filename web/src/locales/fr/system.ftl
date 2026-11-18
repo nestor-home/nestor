@@ -1,7 +1,6 @@
 ## Système : ce que l'instance a assemblé au démarrage, et l'état de chaque pièce.
 
 sys-title = Système
-sys-started = démarré
 sys-unwell = { $count ->
     [one] 1 composant à surveiller
    *[other] { $count } composants à surveiller
@@ -23,7 +22,7 @@ sys-health-unknown = inconnu
 ## Mises à jour : une version plus récente de Nestor, ce qui a changé et comment l'installer.
 
 upd-available = Nouvelle version
-upd-available-version = Mise à jour disponible : { $version }
+upd-available-version = Mise à jour disponible : { $version }
 upd-title = Nestor { $version } est là
 upd-description = Notes de version et mise à jour.
 upd-behind = { $count ->
@@ -31,16 +30,16 @@ upd-behind = { $count ->
    *[other] { $count } versions de retard
 }
 upd-install = Installer la { $version }
-upd-install-title = Installer Nestor { $version } ?
+upd-install-title = Installer Nestor { $version } ?
 upd-install-description = Nestor installe la nouvelle version, vérifie votre configuration, puis redémarre. En cas d'échec, il reste sur la { $running }.
 upd-install-confirm = Installer et redémarrer
 upd-install-hint = Redémarrage après l'installation.
 upd-installing = Installation de la { $version }…
 upd-failed = La { $version } ne s'est pas installée. Nestor reste sur la { $running }.
-upd-breaking = Cette version change les données ou la configuration : relisez les notes avant de mettre à jour.
+upd-breaking = Cette version change les données ou la configuration : relisez les notes avant de mettre à jour.
 upd-outdated = { $count ->
-    [one] Ce satellite ne pourra plus se connecter : mettez-le à jour sur l’appareil, après le serveur.
-   *[other] Ces { $count } satellites ne pourront plus se connecter : mettez-les à jour sur chaque appareil, après le serveur.
+    [one] Ce satellite ne pourra plus se connecter : mettez-le à jour sur l’appareil, après le serveur.
+   *[other] Ces { $count } satellites ne pourront plus se connecter : mettez-les à jour sur chaque appareil, après le serveur.
 }
 upd-release = Version { $version }
 upd-notes = Notes de version
@@ -49,14 +48,14 @@ upd-kind-feature = Nouveautés
 upd-kind-fix = Corrections
 upd-kind-other = Autres
 upd-how = Mettre à jour
-upd-how-container = Dans le dossier de compose.yaml :
-upd-how-uv-tool = Sur la machine de Nestor :
-upd-how-pip = Sur la machine de Nestor :
-upd-how-editable = Nestor tourne depuis un checkout : mettez-le à jour avec git.
+upd-how-container = Dans le dossier de compose.yaml :
+upd-how-uv-tool = Sur la machine de Nestor :
+upd-how-pip = Sur la machine de Nestor :
+upd-how-editable = Nestor tourne depuis un checkout : mettez-le à jour avec git.
 upd-then-restart = Puis redémarrez Nestor.
 upd-then-ask = Puis demandez à un administrateur de redémarrer Nestor.
 upd-command = la commande
-sys-fallback = secours : { $model }
+sys-fallback = secours : { $model }
 
 sys-executors = Les outils de Nestor pour les exécutants
 sys-executors-intro = Pendant une tâche, les exécutants joignent Nestor à { $url } : leur brief, ce que la personne a déjà dit, leurs questions, leurs fichiers. Chacun appelle avec sa propre clé.
@@ -91,3 +90,31 @@ sys-executor-key-label = la clé
 sys-executor-passed = Nestor la passe à { $name } à chaque tâche : rien à coller.
 sys-executor-profile = Ajoutez ceci à la configuration de { $name } (le config.yaml d'un profil Hermes), puis mettez nestor_mcp: true sur cet exécutant dans la configuration de Nestor.
 sys-executor-setup-label = ce qu'il faut ajouter
+sys-parts = { $count ->
+    [one] 1 composant
+   *[other] { $count } composants
+}
+sys-attention = À regarder
+sys-instance = Cette instance
+sys-slot-voice = Voix
+sys-fix-down = Rien ne passe par lui pour l'instant. Vérifiez que le service derrière répond et que ses réglages sont bons.
+sys-fix-degraded = Il fonctionne en partie : ce qu'il signale dit ce qui manque.
+sys-configure = Configurer
+sys-fact-state = état
+sys-fact-service = service
+sys-fact-type = type
+sys-fact-fallback = secours
+sys-fact-adapter = adaptateur
+sys-fact-version = version
+sys-fact-can = sait
+sys-runs = Fait tourner { $agent }.
+sys-restart-waiting = { $count ->
+    [0] Un redémarrage est attendu.
+    [one] 1 changement attend un redémarrage.
+   *[other] { $count } changements attendent un redémarrage.
+}
+sys-restart = Redémarrer…
+sys-restart-title = Redémarrer { $agent } ?
+sys-restart-text = Il s'arrête proprement et repart en quelques secondes. Une conversation en cours est coupée, les tâches déléguées continuent, et chacun se reconnecte.
+sys-restart-now = Redémarrer maintenant
+upd-available-running = La { $latest } est sortie. Cette instance tourne sur la { $running }.

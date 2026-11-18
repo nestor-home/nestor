@@ -1,4 +1,6 @@
-import type { ReactElement, ReactNode } from "react";
+import type { LucideIcon } from "lucide-react";
+import { type ReactElement, type ReactNode, useRef } from "react";
+import { IconTile, type TileTone } from "@/components/marks";
 import {
   Dialog,
   DialogContent,
@@ -10,6 +12,7 @@ import {
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useOpenState } from "@/hooks/use-open-state";
+import { cn } from "@/lib/utils";
 
 /**
  * The one rule for editing: a page shows content; creating or changing is an explicit action that
@@ -40,7 +43,7 @@ export function FormDialog({
       {trigger ? <DialogTrigger render={trigger} /> : null}
       <DialogContent className={wide ? "sm:max-w-xl" : "sm:max-w-md"}>
         <DialogHeader>
-          <DialogTitle className="font-serif text-xl font-normal">{title}</DialogTitle>
+          <DialogTitle className="title-card font-normal">{title}</DialogTitle>
           {description ? <DialogDescription>{description}</DialogDescription> : null}
         </DialogHeader>
         {open ? children(() => setOpen(false)) : null}
@@ -49,31 +52,46 @@ export function FormDialog({
   );
 }
 
+/**
+ * What an overlay holds, kept while it closes: a page that opens a sheet for "the thing I clicked" drops that
+ * thing the moment it closes, and the sheet would empty before it has left.
+ */
+function useKept(open: boolean, children: ReactNode): ReactNode {
+  const kept = useRef(children);
+  if (open) kept.current = children;
+  return kept.current;
+}
+
 /** A sheet from the right, or the full screen from below on a phone: the frame of every sheet. */
 export function SideSheet({
   open,
   onOpenChange,
   trigger,
+  onClosed,
   children,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   trigger?: ReactElement;
+  /** Once it has finished closing: for a page that mounts it only while it shows. */
+  onClosed?: () => void;
   children: ReactNode;
 }) {
   const mobile = useIsMobile();
+  const held = useKept(open, children);
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={onOpenChange} onOpenChangeComplete={(now) => !now && onClosed?.()}>
       {trigger ? <SheetTrigger render={trigger} /> : null}
       <SheetContent
         side={mobile ? "bottom" : "right"}
-        className={
-          mobile
-            ? "h-[100dvh] w-full overflow-y-auto overscroll-contain bg-paper pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
-            : "w-full overflow-y-auto overscroll-contain bg-paper sm:max-w-xl"
-        }
+        // a column the height of the screen (a phone) or of the window: its panel's body scrolls, never the sheet
+        className={cn(
+          "gap-0 overflow-hidden bg-paper p-0",
+          // the sheet's own rule for a bottom sheet is "as tall as its content": said for that side, the screen wins
+          mobile ? "w-full data-[side=bottom]:h-dvh data-[side=bottom]:border-t-0" : "h-full w-full sm:max-w-xl",
+        )}
       >
-        {children}
+        {held}
       </SheetContent>
     </Sheet>
   );
@@ -96,14 +114,13 @@ export function BottomSheet({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetTrigger render={trigger} />
-      <SheetContent
-        side="bottom"
-        className="max-h-[85dvh] overflow-y-auto overscroll-contain rounded-t-xl bg-paper pb-[env(safe-area-inset-bottom)]"
-      >
-        <SheetHeader className="border-b border-rule px-5 pt-5 pb-3">
-          <SheetTitle className="font-serif text-xl font-normal">{title}</SheetTitle>
+      <SheetContent side="bottom" className="max-h-[85dvh] gap-0 overflow-hidden rounded-t-xl bg-paper p-0">
+        <SheetHeader className="shrink-0 border-b border-rule px-5 pt-5 pr-14 pb-3">
+          <SheetTitle className="title-card font-normal">{title}</SheetTitle>
         </SheetHeader>
-        {children}
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-[env(safe-area-inset-bottom)]">
+          {children}
+        </div>
       </SheetContent>
     </Sheet>
   );
@@ -116,6 +133,7 @@ export function FormSheet({
   children,
   open: controlled,
   onOpenChange,
+  onClosed,
 }: {
   trigger?: ReactElement;
   title: string;
@@ -123,15 +141,70 @@ export function FormSheet({
   children: (close: () => void) => ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  onClosed?: () => void;
 }) {
   const [open, setOpen] = useOpenState(controlled, onOpenChange);
   return (
-    <SideSheet open={open} onOpenChange={setOpen} trigger={trigger}>
-      <SheetHeader className="border-b border-rule px-6 pt-6 pb-4">
-        <SheetTitle className="font-serif text-2xl font-normal">{title}</SheetTitle>
-        {description ? <SheetDescription>{description}</SheetDescription> : null}
-      </SheetHeader>
-      <div className="px-6 pb-8">{open ? children(() => setOpen(false)) : null}</div>
+    <SideSheet open={open} onOpenChange={setOpen} trigger={trigger} onClosed={onClosed}>
+      <SheetPanel title={title} description={description}>
+        {open ? children(() => setOpen(false)) : null}
+      </SheetPanel>
     </SideSheet>
+  );
+}
+
+/**
+ * What a side sheet holds when it opens one thing (a task, a room, a device): what kind of thing it is, its
+ * title, its body, which scrolls, and its actions on a foot of their own under it.
+ */
+export function SheetPanel({
+  icon,
+  tone,
+  mark,
+  kind,
+  title,
+  description,
+  children,
+  actions,
+}: {
+  icon?: LucideIcon;
+  tone?: TileTone;
+  /** what leads the kind when an icon does not say it: a service's logo */
+  mark?: ReactNode;
+  kind?: string;
+  title: string;
+  description?: ReactNode;
+  children: ReactNode;
+  actions?: ReactNode;
+}) {
+  return (
+    <>
+      <SheetHeader className="shrink-0 gap-3 px-5 pt-[calc(1.5rem+env(safe-area-inset-top))] pr-14 pb-3 sm:px-6 sm:pt-8">
+        {kind ? (
+          <span className="flex items-center gap-3 text-body font-medium text-ink-muted">
+            {mark ?? (icon ? <IconTile icon={icon} tone={tone} size="sm" /> : null)}
+            {kind}
+          </span>
+        ) : null}
+        <SheetTitle className="title-sheet font-normal">{title}</SheetTitle>
+        <SheetDescription className={description ? "text-body text-ink-muted" : "sr-only"}>
+          {description ?? kind ?? title}
+        </SheetDescription>
+      </SheetHeader>
+      {/* the one box that scrolls: the head stays above it, the actions under it */}
+      <div
+        className={cn(
+          "min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pt-2 sm:px-6",
+          actions ? "pb-6" : "pb-[calc(2rem+env(safe-area-inset-bottom))]",
+        )}
+      >
+        <div className="grid gap-7">{children}</div>
+      </div>
+      {actions ? (
+        <div className="flex shrink-0 flex-wrap gap-2 border-t border-rule bg-paper-raised px-5 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:px-6">
+          {actions}
+        </div>
+      ) : null}
+    </>
   );
 }

@@ -7,9 +7,7 @@
  * Progress is the addition's `stage`, polled while the sheet is open.
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
 import {
-  ArrowRight,
   AudioLines,
   Check,
   ChevronRight,
@@ -36,6 +34,7 @@ import {
 } from "@/api";
 import { pairingMethodValues } from "@/api/schema.gen";
 import { AgentFigure } from "@/components/agent-figure";
+import { MoreLink } from "@/components/card";
 import { CopyField } from "@/components/copy-field";
 import { Field } from "@/components/field";
 import { FormActions } from "@/components/form-actions";
@@ -43,6 +42,7 @@ import { useNotify } from "@/components/notices";
 import { FormSheet } from "@/components/overlay-form";
 import { QrCode } from "@/components/qr-code";
 import { Failure, FormError, Loading } from "@/components/states";
+import { Tag } from "@/components/status";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -165,10 +165,10 @@ function Choose({ onStarted }: { onStarted: (started: StartedAddition) => void }
   return (
     <form onSubmit={submit} className="grid gap-8 pt-5" noValidate>
       <fieldset className="grid gap-5">
-        <legend className="mb-3 text-[0.95rem] font-medium text-ink">{t("sat-add-how")}</legend>
+        <legend className="mb-3 text-body font-medium text-ink">{t("sat-add-how")}</legend>
         {groups.map((group) => (
           <div key={group.proof} className="grid gap-2">
-            <p className="label-mono text-[0.7rem]">{group.title}</p>
+            <p className="caption text-micro">{group.title}</p>
             <ToggleGroup
               aria-label={group.title}
               value={method ? [method] : []}
@@ -192,15 +192,13 @@ function Choose({ onStarted }: { onStarted: (started: StartedAddition) => void }
                         <Icon className="size-4.5" aria-hidden="true" />
                       </span>
                       <span className="grid min-w-0 flex-1 gap-0.5">
-                        <span className="flex flex-wrap items-center gap-2 text-[0.95rem] font-medium text-ink">
+                        <span className="flex flex-wrap items-center gap-2 text-body font-medium text-ink">
                           {m.label}
                           {m.id === methods.data.recommended ? (
-                            <span className="rounded-full bg-ember-soft px-2 py-px text-[0.72rem] font-normal text-ember">
-                              {t("sat-add-recommended")}
-                            </span>
+                            <Tag tone="accent">{t("sat-add-recommended")}</Tag>
                           ) : null}
                         </span>
-                        <span className="text-[0.85rem] font-normal text-ink-muted">{m.hint}</span>
+                        <span className="text-meta font-normal text-ink-muted">{m.hint}</span>
                       </span>
                       <span className="grid size-5 shrink-0 place-items-center rounded-full border border-rule-strong text-paper group-data-[pressed]/method:border-ember group-data-[pressed]/method:bg-ember">
                         <Check
@@ -217,7 +215,7 @@ function Choose({ onStarted }: { onStarted: (started: StartedAddition) => void }
       </fieldset>
 
       <fieldset className="grid gap-4">
-        <legend className="mb-3 text-[0.95rem] font-medium text-ink">{t("sat-add-device")}</legend>
+        <legend className="mb-3 text-body font-medium text-ink">{t("sat-add-device")}</legend>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label={t("sat-add-name")} htmlFor="sat-add-name" hint={t("sat-add-optional")}>
             <Input id="sat-add-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={64} />
@@ -234,7 +232,7 @@ function Choose({ onStarted }: { onStarted: (started: StartedAddition) => void }
       </fieldset>
 
       <Collapsible open={limited !== null} onOpenChange={(on) => setLimited(on ? new Set(KNOWN_CAPABILITIES) : null)}>
-        <CollapsibleTrigger className="group/caps inline-flex items-center gap-1.5 text-[0.92rem] text-ink-muted hover:text-ink">
+        <CollapsibleTrigger className="group/caps inline-flex items-center gap-1.5 text-body text-ink-muted hover:text-ink">
           <ChevronRight
             className="size-3.5 transition-transform group-data-panel-open/caps:rotate-90"
             aria-hidden="true"
@@ -245,7 +243,7 @@ function Choose({ onStarted }: { onStarted: (started: StartedAddition) => void }
           <ul className="mt-3 grid gap-2 sm:grid-cols-2">
             {KNOWN_CAPABILITIES.map((name) => (
               <li key={name}>
-                <label htmlFor={`cap-${name}`} className="flex items-start gap-2.5 text-[0.92rem]">
+                <label htmlFor={`cap-${name}`} className="flex items-start gap-2.5 text-body">
                   <Checkbox
                     id={`cap-${name}`}
                     checked={limited?.has(name) ?? true}
@@ -261,7 +259,7 @@ function Choose({ onStarted }: { onStarted: (started: StartedAddition) => void }
                   />
                   <span>
                     {t(`sat-cap-${name.replace(/[._]/g, "-")}`)}
-                    <code className="block text-[0.72rem] text-ink-faint">{name}</code>
+                    <code className="block text-micro text-ink-faint">{name}</code>
                   </span>
                 </label>
               </li>
@@ -335,7 +333,7 @@ function Progress({ addition }: { addition: Addition }) {
   const steps: readonly string[] = addition.method.proof === "device_code" ? STEPS : ["waiting", "paired"];
   const at = steps.indexOf(addition.stage);
   return (
-    <ol aria-label={t("sat-addition-progress")} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.9rem]">
+    <ol aria-label={t("sat-addition-progress")} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-body">
       {steps.map((step, i) => (
         <li
           key={step}
@@ -361,7 +359,7 @@ function Countdown({ until }: { until: string }) {
   const t = useT();
   const now = useNow();
   return (
-    <p className="text-[0.88rem] text-ink-muted tabular">{t("sat-expires-in", { remaining: remaining(until, now) })}</p>
+    <p className="text-meta text-ink-muted tabular">{t("sat-expires-in", { remaining: remaining(until, now) })}</p>
   );
 }
 
@@ -384,19 +382,19 @@ function Enrollment({ started, addition }: { started: StartedAddition; addition:
         ) : null}
         <div className="grid content-start gap-4">
           <div>
-            <p className="text-[0.88rem] text-ink-muted">{t("sat-addition-code")}</p>
-            <p className="font-mono text-[2.2rem] leading-tight tracking-[0.12em] text-ink">{code}</p>
+            <p className="text-meta text-ink-muted">{t("sat-addition-code")}</p>
+            <p className="font-mono text-4xl leading-tight tracking-widest text-ink">{code}</p>
           </div>
           <CopyField value={code} label={t("sat-addition-code")} />
           {uri ? (
             <CopyField value={uri} label={t("sat-addition-uri")} />
           ) : (
-            <p className="text-[0.92rem] text-ink-muted">{t("sat-addition-no-uri")}</p>
+            <p className="text-body text-ink-muted">{t("sat-addition-no-uri")}</p>
           )}
         </div>
       </div>
       <div className="grid gap-2">
-        <p className="text-[0.92rem] font-medium text-ink">{t("sat-addition-examples")}</p>
+        <p className="text-body font-medium text-ink">{t("sat-addition-examples")}</p>
         <Example
           label={t("sat-example-env")}
           value={uri ? `NESTOR_PAIRING_URI="${uri}"` : `NESTOR_PAIRING_CODE=${canonical}`}
@@ -423,7 +421,7 @@ function Enrollment({ started, addition }: { started: StartedAddition; addition:
 function Example({ label, value }: { label: string; value: string }) {
   return (
     <div className="grid gap-1">
-      <span className="text-[0.82rem] text-ink-muted">{label}</span>
+      <span className="text-meta text-ink-muted">{label}</span>
       <CopyField value={value} label={label} />
     </div>
   );
@@ -442,7 +440,7 @@ function Candidates({ addition }: { addition: Addition }) {
           <AgentFigure state="listening" size="sm" />
           {t("sat-addition-waiting-device")}
         </p>
-        <p className="text-[0.92rem] text-ink-muted">{addition.method.hint}</p>
+        <p className="text-body text-ink-muted">{addition.method.hint}</p>
       </div>
     );
   const request = waiting.find((p) => p.pairing_id === chosen) ?? (waiting.length === 1 ? waiting[0] : undefined);
@@ -480,8 +478,8 @@ function Candidate({ request, chosen, onChoose }: { request: PairingRequest; cho
       )}
     >
       <div className="min-w-0 flex-1">
-        <p className="font-mono text-[0.95rem] text-ink">{request.device.id}</p>
-        <p className="text-[0.88rem] text-ink-muted">
+        <p className="font-mono text-body text-ink">{request.device.id}</p>
+        <p className="text-meta text-ink-muted">
           {t("sat-model-room", { model: request.device.model, room: request.device.room })}
         </p>
       </div>
@@ -517,18 +515,13 @@ function Paired({ addition, close }: { addition: Addition; close: () => void }) 
     <div className="flex flex-wrap items-center gap-4">
       <AgentFigure state="laughing" size="md" />
       <div className="grid gap-1">
-        <p className="text-[1.05rem] text-ink">
+        <p className="text-lead text-ink">
           {t("sat-addition-paired", { name: addition.name ?? addition.device_id ?? "" })}
         </p>
         {addition.device_id ? (
-          <Link
-            to="/satellites/$satelliteId"
-            params={{ satelliteId: addition.device_id }}
-            onClick={close}
-            className="inline-flex items-center gap-1 text-[0.92rem] text-ember hover:underline"
-          >
-            {t("sat-addition-see")} <ArrowRight className="size-3.5" aria-hidden="true" />
-          </Link>
+          <MoreLink to="/satellites/$satelliteId" params={{ satelliteId: addition.device_id }} onClick={close}>
+            {t("sat-addition-see")}
+          </MoreLink>
         ) : null}
       </div>
     </div>

@@ -67,7 +67,11 @@ async def test_a_watch_asked_in_words_on_a_feed_is_announced_when_its_entry_come
     book = WatchBook(journal, [source])
     tools = WatchTools(book)
     talk = ScriptedModel(
-        ToolCall("c1", "create_watch", {"what": "la sortie de Linux 7 sur le flux Kernel", "kinds": ["feed"]}),
+        ToolCall(
+            "c1",
+            "create_watch",
+            {"title": "Sortie de Linux 7", "what": "la sortie de Linux 7 sur le flux Kernel", "kinds": ["feed"]},
+        ),
         "Je te préviens dès que Linux 7 sort.",
         "Linux 7 est sorti !",
     )

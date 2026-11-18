@@ -1,22 +1,28 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { CircleAlert, ShieldCheck } from "lucide-react";
+import { CircleAlert, House, ShieldCheck } from "lucide-react";
 import type { ReactNode } from "react";
-import { type Home, homeQuery, satellitesQuery } from "@/api";
-import { Fact, Facts, PageHeader, Panel, RowList, Section } from "@/components/page";
+import { type Home, homeQuery } from "@/api";
+import { CardHead } from "@/components/card";
+import { Avatar, BrandTile } from "@/components/marks";
+import { SheetPanel } from "@/components/overlay-form";
+import { Panel, RowList, Section } from "@/components/page";
 import { RiskTag } from "@/components/risk-tag";
 import { Empty, Failure, Loading } from "@/components/states";
-import { Status, Tag } from "@/components/status";
+import { HealthStatus, Tag } from "@/components/status";
 import { buttonVariants } from "@/components/ui/button";
 import { PresenceMark } from "@/features/people/people";
-import { HEALTH, UNKNOWN } from "@/features/system/system-view";
 import { useT } from "@/i18n";
-import { KindMark } from "@/lib/brands";
+import { brandName, brandOf } from "@/lib/brands";
 import { granularityLabel } from "@/lib/labels";
 import { useCan } from "@/lib/session";
 
-/** The home system (Home Assistant): whether it answers, who is where, its rooms, who it knows, and its actions. */
-export function HouseView() {
+/**
+ * The home system (Home Assistant), as a sheet opened from The house: whether it answers, how finely it tells
+ * who is where, the people tied to its entities, what the agent may do through it and at which risk, and the
+ * way to its settings.
+ */
+export function HouseSheet() {
   const t = useT();
   const home = useQuery(homeQuery);
   const canConfigure = useCan("config:manage");
@@ -25,156 +31,105 @@ export function HouseView() {
       {t("house-configure")}
     </Link>
   ) : null;
-  if (home.isPending) return <Loading lines={4} />;
-  if (home.isError) return <Failure error={home.error} retry={() => void home.refetch()} />;
   if (!home.data)
     return (
-      <>
-        <PageHeader title={t("house-title")} />
-        <Empty hint={t("house-none-hint")} action={configure}>
-          {t("house-none")}
-        </Empty>
-      </>
+      <SheetPanel icon={House} kind={t("hs-system")} title={t("hs-system")}>
+        {home.isPending ? (
+          <Loading lines={4} />
+        ) : home.isError ? (
+          <Failure error={home.error} retry={() => void home.refetch()} />
+        ) : (
+          <Empty hint={t("house-none-hint")} action={configure}>
+            {t("house-none")}
+          </Empty>
+        )}
+      </SheetPanel>
     );
   return <Loaded home={home.data} configure={configure} />;
 }
 
 function Loaded({ home, configure }: { home: Home; configure: ReactNode }) {
   const t = useT();
-  const health = home.component.health ? HEALTH[home.component.health] : UNKNOWN;
+  const brand = brandOf(home.component.brand);
+  const tied = new Set(home.people.map((p) => p.entity).filter(Boolean));
+  const strangers = home.residents.filter((r) => !tied.has(r.entity));
   return (
-    <>
-      <PageHeader
-        title={t("house-title")}
-        meta={
-          <>
-            {home.component.brand ? <KindMark kind={home.component.brand} className="size-4 text-ink" /> : null}
-            <Status tone={health.tone}>{t(health.label)}</Status>
-            {home.component.health_detail ? <span>{home.component.health_detail}</span> : null}
-          </>
-        }
-        actions={configure}
-      >
-        {t("house-lede", { granularity: granularityLabel(home.granularity) })}
-      </PageHeader>
-      <div className="grid gap-10">
-        <Section title={t("house-people")} count={home.people.length}>
+    <SheetPanel
+      mark={brand ? <BrandTile brand={brand} size="sm" /> : undefined}
+      icon={House}
+      kind={t("hs-system")}
+      title={brand ? brandName(brand) : home.component.name}
+      description={<HealthStatus health={home.component.health} />}
+      actions={configure}
+    >
+      <div className="grid gap-2">
+        {home.component.health_detail ? (
+          <p className="text-body text-ink-muted">{home.component.health_detail}</p>
+        ) : null}
+        <p className="text-body text-ink">{t("house-lede", { granularity: granularityLabel(home.granularity) })}</p>
+      </div>
+
+      <Section level={3} title={t("house-people")} count={home.people.length}>
+        <ul className="grid gap-2">
+          {home.people.map((p) => (
+            <li key={p.person.id}>
+              <Link to="/people/$personId" params={{ personId: p.person.id }} className="surface block px-4 py-3">
+                <CardHead
+                  mark={<Avatar name={p.person.name} away={!p.entity || p.presence?.home !== true} size="lg" />}
+                  title={p.person.name}
+                  line={
+                    <span className="font-mono text-meta">
+                      {p.entity ?? t("house-not-tied")}
+                      {p.tracker ? ` · ${p.tracker}` : ""}
+                    </span>
+                  }
+                  aside={<PresenceMark presence={p.entity ? p.presence : null} />}
+                />
+              </Link>
+            </li>
+          ))}
+        </ul>
+        {strangers.length ? (
+          <p className="mt-3 text-body text-ink-muted">
+            {t("house-strangers", { count: strangers.length, names: strangers.map((r) => r.name).join(", ") })}
+          </p>
+        ) : null}
+      </Section>
+
+      <Section level={3} title={t("house-actions")} count={home.tools.length}>
+        {home.tools.length ? (
           <RowList>
-            {home.people.map((p) => (
-              <li
-                key={p.person.id}
-                className="grid gap-x-6 gap-y-1 px-5 py-3 sm:grid-cols-[minmax(0,12rem)_minmax(0,1fr)_auto] sm:items-center"
-              >
-                <Link
-                  to="/people/$personId"
-                  params={{ personId: p.person.id }}
-                  className="truncate text-ink hover:text-ember"
-                >
-                  {p.person.name}
-                </Link>
-                <span className="truncate font-mono text-[0.8rem] text-ink-muted">
-                  {p.entity ?? t("house-not-tied")}
-                  {p.tracker ? ` · ${p.tracker}` : ""}
+            {home.tools.map((tool) => (
+              <li key={tool.name} className="grid gap-2 px-4 py-3">
+                <span className="min-w-0">
+                  <span className="block font-mono text-meta text-ink">{tool.name}</span>
+                  <span className="block text-body text-ink-muted">{tool.description}</span>
                 </span>
-                <PresenceMark presence={p.entity ? p.presence : null} />
+                <span className="flex flex-wrap gap-1.5">
+                  <RiskTag risk={tool.risk} />
+                  {tool.confirmed_when ? <Tag icon={ShieldCheck}>{t("house-action-confirmed-when")}</Tag> : null}
+                </span>
               </li>
             ))}
           </RowList>
-        </Section>
-        <Rooms home={home} />
-        {home.residents.length ? (
-          <Section title={t("house-residents")} count={home.residents.length}>
-            <RowList>
-              {home.residents.map((r) => (
-                <li key={r.entity} className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1 px-5 py-3">
-                  <span className="min-w-0">
-                    <span className="text-ink">{r.name}</span>{" "}
-                    <span className="font-mono text-[0.8rem] text-ink-muted">{r.entity}</span>
-                  </span>
-                  <span className="text-[0.85rem] text-ink-muted">
-                    {r.person ? t("house-resident-tied", { name: r.person.name }) : t("house-resident-untied")}
-                  </span>
-                </li>
-              ))}
-            </RowList>
-          </Section>
-        ) : null}
-        <Section title={t("house-actions")} count={home.tools.length}>
-          {home.tools.length ? (
-            <RowList>
-              {home.tools.map((tool) => (
-                <li
-                  key={tool.name}
-                  className="grid gap-x-6 gap-y-1 px-5 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
-                >
-                  <span className="min-w-0">
-                    <span className="block font-mono text-[0.85rem] text-ink">{tool.name}</span>
-                    <span className="block text-[0.85rem] text-ink-muted">{tool.description}</span>
-                  </span>
-                  <span className="flex flex-wrap gap-1.5">
-                    <RiskTag risk={tool.risk} />
-                    {tool.confirmed_when ? <Tag icon={ShieldCheck}>{t("house-action-confirmed-when")}</Tag> : null}
-                  </span>
-                </li>
-              ))}
-            </RowList>
-          ) : (
-            <Empty hint={t("house-actions-empty-hint")}>{t("house-actions-empty")}</Empty>
-          )}
-        </Section>
-        {home.unplaced_sensors.length ? (
-          <Panel>
-            <p className="flex items-center gap-2 text-ink">
-              <CircleAlert className="size-4 text-amber" aria-hidden="true" />
-              {t("house-unplaced", { count: home.unplaced_sensors.length })}
-            </p>
-            <p className="mt-2 flex flex-wrap gap-1.5">
-              {home.unplaced_sensors.map((s) => (
-                <Tag key={s}>{s}</Tag>
-              ))}
-            </p>
-          </Panel>
-        ) : null}
-      </div>
-    </>
-  );
-}
+        ) : (
+          <Empty hint={t("house-actions-empty-hint")}>{t("house-actions-empty")}</Empty>
+        )}
+      </Section>
 
-function Rooms({ home }: { home: Home }) {
-  const t = useT();
-  const satellites = useQuery(satellitesQuery);
-  const names = new Map((satellites.data?.paired ?? []).map((s) => [s.id, s.name ?? s.id]));
-  if (!home.connected) return null;
-  return (
-    <Section title={t("house-rooms")} count={home.rooms.length}>
-      {home.rooms.length ? (
-        <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {home.rooms.map((room) => (
-            <Panel as="li" key={room.id} className="grid content-start gap-2">
-              <p className="flex items-center justify-between gap-3">
-                <span className="truncate text-ink">{room.name}</span>
-                {room.occupied === null ? null : (
-                  <Status tone={room.occupied ? "accent" : "idle"}>
-                    {room.occupied ? t("house-room-occupied") : t("house-room-empty")}
-                  </Status>
-                )}
-              </p>
-              <Facts narrow>
-                {home.granularity === "person_room" ? ( // only then does the home place people in rooms
-                  <Fact term={t("house-room-people")}>
-                    {room.people.length ? room.people.map((p) => p.name).join(", ") : t("house-room-nobody")}
-                  </Fact>
-                ) : null}
-                <Fact term={t("house-room-satellites")}>
-                  {room.satellites.length ? room.satellites.map((id) => names.get(id) ?? id).join(", ") : "—"}
-                </Fact>
-              </Facts>
-            </Panel>
-          ))}
-        </ul>
-      ) : (
-        <Empty>{t("house-rooms-empty")}</Empty>
-      )}
-    </Section>
+      {home.unplaced_sensors.length ? (
+        <Panel className="p-4">
+          <p className="flex items-start gap-2 text-body text-ink">
+            <CircleAlert className="mt-0.5 size-4 shrink-0 text-amber" aria-hidden="true" />
+            {t("house-unplaced", { count: home.unplaced_sensors.length })}
+          </p>
+          <p className="mt-2.5 flex flex-wrap gap-1.5">
+            {home.unplaced_sensors.map((s) => (
+              <Tag key={s}>{s}</Tag>
+            ))}
+          </p>
+        </Panel>
+      ) : null}
+    </SheetPanel>
   );
 }

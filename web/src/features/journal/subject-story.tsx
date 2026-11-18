@@ -27,7 +27,7 @@ export function SubjectStory({
       <ol className="grid gap-3">
         {stories.map((story) => (
           <li key={story.key}>
-            <StoryCard story={story} density="comfortable" open={setOpen} isNew={() => false} />
+            <StoryCard story={story} open={setOpen} isNew={() => false} />
           </li>
         ))}
       </ol>

@@ -9,19 +9,32 @@ import { renderApp } from "@/test/render";
 
 type ErrorOut = components["schemas"]["ErrorOut"];
 
-describe("tasks and watches", () => {
+describe("a task's page", () => {
   it("tells a task from its request to its delivery", async () => {
     renderApp("/tasks/t-3f2a1c");
-    expect(
-      await screen.findByRole("heading", { name: /Compare three green electricity offers/, level: 1 }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Green electricity offers", level: 1 })).toBeInTheDocument();
+    const crumbs = screen.getByRole("navigation", { name: "Breadcrumbs" });
+    expect(within(crumbs).getByRole("link", { name: "Ongoing" })).toHaveAttribute("href", "/activity");
+    expect(screen.getByRole("region", { name: "Result" })).toHaveTextContent("The second offer is the cheapest");
+    const steps = within(screen.getByRole("region", { name: /^Steps/ })).getAllByRole("listitem");
+    expect(steps.map((s) => s.textContent)).toEqual([
+      "Read the last two bills.",
+      "Price lists of the three suppliers fetched.",
+      "Worked out over a year, standing charge included.",
+    ]);
+    const about = screen.getByRole("complementary", { name: "About this task" });
+    expect(about).toHaveTextContent("Mathis");
+    expect(about).toHaveTextContent(/Said out loud, in the office/);
+    expect(within(about).getByRole("link", { name: /a conversation/ })).toHaveAttribute(
+      "href",
+      "/journal?session=s-elec",
+    );
     const chain = await screen.findByRole("article");
     for (const step of ["started", "completed", "decision", "said out loud"])
       expect(within(chain).getByText(step)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /a conversation/ })).toHaveAttribute("href", "/journal?session=s-elec");
   });
 
-  it("hands over the files a task made, on its page and in its story", async () => {
+  it("hands over the files a task made, with its result and in its story", async () => {
     const pdf = {
       index: 0,
       name: "devis-corrige.pdf",
@@ -40,11 +53,27 @@ describe("tasks and watches", () => {
       "href",
       `/api/v1/journal/${ended.item.position}/attachments/0`,
     );
-    const aside = screen.getByText("file").closest("div");
-    expect(within(aside as HTMLElement).getByRole("link", { name: /devis-corrige\.pdf/ })).toHaveAttribute(
+    const result = screen.getByRole("region", { name: "Result" });
+    expect(within(result).getByRole("link", { name: /devis-corrige\.pdf/ })).toHaveAttribute(
       "href",
       "/api/v1/tasks/t-3f2a1c/files/0",
     );
+  });
+
+  it("leads a running task with what it is doing now", async () => {
+    renderApp("/tasks/t-4410aa");
+    const now = await screen.findByRole("region", { name: "Right now" });
+    expect(now).toHaveTextContent("Waiting for the invoice: Gmail needs reconnecting.");
+    expect(now).toHaveTextContent("The result will reach the person wherever they are.");
+    expect(screen.queryByRole("region", { name: "Result" })).not.toBeInTheDocument();
+  });
+
+  it("says why a failed task gave nothing", async () => {
+    renderApp("/tasks/t-a04f12");
+    expect(await screen.findByRole("region", { name: "What went wrong" })).toHaveTextContent(
+      "The site asks for a sign-in by text message",
+    );
+    expect(screen.queryByRole("button", { name: "Stop…" })).not.toBeInTheDocument();
   });
 
   it("stops a running task once confirmed", async () => {
@@ -80,47 +109,5 @@ describe("tasks and watches", () => {
     expect(await within(dialog).findByRole("alert")).toHaveTextContent(
       "The service is not responding: the executor does not answer.",
     );
-  });
-
-  it("offers to retry when Nestor is unreachable", async () => {
-    server.use(http.get("/api/v1/tasks", () => HttpResponse.error()));
-    const user = userEvent.setup();
-    renderApp("/tasks");
-    expect(await screen.findByRole("alert")).toHaveTextContent("Nestor does not answer");
-    server.resetHandlers();
-    await user.click(screen.getByRole("button", { name: "Try again" }));
-    expect(await screen.findByText(/Make the week's shopping list/)).toBeInTheDocument();
-  });
-
-  it("tells what a watch found and how it was announced", async () => {
-    renderApp("/watches/w-9d41");
-    const articles = await screen.findAllByRole("article");
-    const chain = articles.find((a) => a.textContent?.includes("triggered")) as HTMLElement;
-    // the conversation where Léa answered is linked to the watch too, as its own thread
-    expect(articles.some((a) => a.textContent?.includes("Put it in the family calendar"))).toBe(true);
-    expect(chain).toHaveTextContent("why: Léa is in the living room");
-    expect(chain).toHaveTextContent("follow-up");
-  });
-
-  it("points to the catalogue when no source can feed a watch", async () => {
-    db.watches = [];
-    db.connectors = db.connectors.map((c) => ({ ...c, inbound: [] }));
-    db.inbound = [];
-    renderApp("/watches");
-    expect(await screen.findByText("No active watch.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "connect an account" })).toHaveAttribute("href", "/connections/catalogue");
-    expect(screen.getByRole("link", { name: "add a source" })).toHaveAttribute("href", "/config/inbound");
-  });
-
-  it("says what each watch watches, and where each item it found came from", async () => {
-    const watch = db.watches.find((w) => w.id === "w-9d41");
-    const triggered = db.journal.find((e) => e.record.type === "watch.triggered" && e.item.links.watch === "w-9d41");
-    if (!watch || !triggered) throw new Error("the school watch is in the mocks");
-    watch.kinds = ["mail", "feed", "github"];
-    triggered.item.brand = "google";
-    renderApp("/watches/w-9d41");
-    const chain = (await screen.findAllByRole("article")).find((a) => a.textContent?.includes("triggered"));
-    expect(chain).toHaveTextContent("Google");
-    for (const kind of ["mail", "feeds", "github"]) expect(screen.getByText(kind)).toBeInTheDocument();
   });
 });

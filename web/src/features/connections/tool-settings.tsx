@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 import { api, type ConnectionDetail, keys } from "@/api";
 import { useNotify } from "@/components/notices";
-import { Panel } from "@/components/page";
+import { RowList, Section } from "@/components/page";
 import { RiskTag } from "@/components/risk-tag";
 import { Empty, FormError } from "@/components/states";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { useT } from "@/i18n";
 
-/** Which tools the assistant gets from this account, and whether writing asks first. */
+/** Which tools the assistant gets from this account, each with its risk, and whether writing asks first. */
 export function ToolSettings({ connection, editable }: { connection: ConnectionDetail; editable: boolean }) {
   const queryClient = useQueryClient();
   const notify = useNotify();
@@ -48,63 +48,72 @@ export function ToolSettings({ connection, editable }: { connection: ConnectionD
     save.mutate();
   }
 
+  if (connection.tools.length === 0) {
+    return (
+      <div className="grid gap-10">
+        <Section title={t("conn-tools")}>
+          <Empty>{t("conn-no-tools")}</Empty>
+        </Section>
+      </div>
+    );
+  }
   return (
-    <Panel as="section">
-      <h2 className="text-xl font-normal">{t("conn-tools")}</h2>
-      {connection.tools.length === 0 ? (
-        <Empty className="mt-4">{t("conn-no-tools")}</Empty>
-      ) : (
-        <form onSubmit={submit} className="mt-4">
-          <ul className="divide-y divide-rule border-y border-rule">
-            {connection.tools.map((tool) => {
-              const id = `tool-${tool.name}`;
-              return (
-                <li key={tool.name} className="flex items-start gap-4 py-3">
-                  <Switch
-                    id={id}
-                    checked={enabled.has(tool.name)}
-                    onCheckedChange={(on) => toggle(tool.name, on)}
-                    disabled={!editable}
-                    aria-describedby={`${id}-description`}
-                    className="mt-0.5"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <label htmlFor={id} className="flex flex-wrap items-center gap-2">
-                      <code className="text-[0.82rem] text-ink">{tool.name}</code>
-                      <RiskTag risk={tool.risk} />
-                    </label>
-                    <p id={`${id}-description`} className="mt-0.5 text-sm text-ink-muted">
-                      {tool.description}
-                    </p>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-          <label htmlFor="confirm-writes" className="mt-5 flex items-start gap-3">
-            <Checkbox
-              id="confirm-writes"
-              checked={confirmWrites}
-              onCheckedChange={(on) => setConfirmWrites(on)}
-              disabled={!editable}
-              className="mt-0.5"
-            />
-            <span className="text-sm">
-              {t("conn-confirm-writes")}
-              <span className="block text-ink-muted">{t("conn-confirm-writes-hint")}</span>
-            </span>
-          </label>
-          <FormError error={save.error} />
-          {editable ? (
-            <div className="mt-5 flex items-center gap-3">
-              <Button type="submit" disabled={!changed || save.isPending}>
-                {save.isPending ? t("action-saving") : t("action-save")}
-              </Button>
-              {changed ? <span className="font-mono text-xs text-amber">{t("conn-unsaved")}</span> : null}
-            </div>
-          ) : null}
-        </form>
-      )}
-    </Panel>
+    <form onSubmit={submit} className="grid gap-10">
+      <Section
+        title={t("conn-tools")}
+        count={enabled.size}
+        aside={
+          editable ? (
+            <Button type="submit" size="sm" disabled={!changed || save.isPending}>
+              {save.isPending ? t("action-saving") : t("action-save")}
+            </Button>
+          ) : (
+            <span className="text-meta text-ink-muted">{t("conn-read-only")}</span>
+          )
+        }
+      >
+        {changed ? <p className="-mt-2 mb-3 text-body text-amber">{t("conn-unsaved")}</p> : null}
+        <FormError error={save.error} />
+        <label htmlFor="confirm-writes" className="surface mb-3 flex items-start gap-3 px-4 py-3.5">
+          <Checkbox
+            id="confirm-writes"
+            checked={confirmWrites}
+            onCheckedChange={(on) => setConfirmWrites(on)}
+            disabled={!editable}
+            className="mt-0.5"
+          />
+          <span className="text-body text-ink">
+            {t("conn-confirm-writes")}
+            <span className="block text-body text-ink-muted">{t("conn-confirm-writes-hint")}</span>
+          </span>
+        </label>
+        <RowList>
+          {connection.tools.map((tool) => {
+            const id = `tool-${tool.name}`;
+            return (
+              <li key={tool.name} className="flex items-start gap-4 px-4 py-3.5">
+                <div className="min-w-0 flex-1">
+                  <label htmlFor={id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <code className="min-w-0 font-mono text-meta text-ink">{tool.name}</code>
+                    <RiskTag risk={tool.risk} />
+                  </label>
+                  <p id={`${id}-description`} className="mt-0.5 text-body text-ink-muted">
+                    {tool.description}
+                  </p>
+                </div>
+                <Switch
+                  id={id}
+                  checked={enabled.has(tool.name)}
+                  onCheckedChange={(on) => toggle(tool.name, on)}
+                  disabled={!editable}
+                  aria-describedby={`${id}-description`}
+                  className="mt-0.5"
+                />
+              </li>
+            );
+          })}
+        </RowList>
+      </Section>
+    </form>
   );
 }

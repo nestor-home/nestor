@@ -7,9 +7,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { createContext, type ReactNode, useContext, useState } from "react";
 import { type AgentActivity, activityQuery, initiativeQuery, type JournalItem, journalLatestQuery } from "@/api";
-import type { AgentState } from "@/features/home/mind";
 import { useAttention } from "@/features/shell/attention";
 import { useLiveItems } from "@/features/shell/live";
+import type { AgentState } from "@/features/today/mind";
 import { startOfToday } from "@/lib/dates";
 import { useCan } from "@/lib/session";
 

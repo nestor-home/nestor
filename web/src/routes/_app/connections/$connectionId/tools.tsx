@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useConnection } from "@/features/connections/connection-detail";
+import { useConnection } from "@/features/connections/connection-view";
 import { ToolSettings } from "@/features/connections/tool-settings";
 import { useCan } from "@/lib/session";
 

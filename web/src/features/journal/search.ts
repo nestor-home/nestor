@@ -2,10 +2,9 @@ import type { JournalFilters } from "@/api";
 import { kindValues, toneValues } from "@/api/schema.gen";
 import { oneOf } from "@/lib/enums";
 
-/** The journal's state in the URL: the API's filters, the density and the open event, all linkable. */
+/** The journal's state in the URL: the API's filters and the open event, all linkable. */
 export interface JournalSearch extends JournalFilters {
-  density?: "compact";
-  event?: number; // the position of the event open in the drawer
+  event?: number; // the position of the event open in the sheet
 }
 
 /** The filters that are plain text, as `GET /journal` takes them. */
@@ -37,11 +36,10 @@ export function parseJournalSearch(search: Record<string, unknown>): JournalSear
   const event = Number(search.event);
   if (Number.isInteger(event) && event > 0) out.event = event;
   if (oneOf(toneValues, search.tone)) out.tone = search.tone;
-  if (search.density === "compact") out.density = "compact";
   return out;
 }
 
-export function filtersOf({ density: _d, event: _e, ...filters }: JournalSearch): JournalFilters {
+export function filtersOf({ event: _e, ...filters }: JournalSearch): JournalFilters {
   return filters;
 }
 

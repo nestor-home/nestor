@@ -88,13 +88,16 @@ const TITLES: [RegExp, (m: RegExpMatchArray) => Message][] = [
     (m) => msg("journal-tool-completed", { tool: m[1] ?? "", seconds: seconds(m[2] ?? "") }),
   ],
   [/^Tool (\S+) failed$/, (m) => msg("journal-tool-failed", { tool: m[1] ?? "" })],
-  [/^Task (\S+) handed to (\S+)$/, (m) => msg("journal-task-started", { task: m[1] ?? "", executor: m[2] ?? "" })],
+  [
+    /^Task (\S+) handed to (\S+): (.+)$/,
+    (m) => msg("journal-task-started", { task: m[1] ?? "", executor: m[2] ?? "", title: m[3] ?? "" }),
+  ],
   [/^Task (\S+): new step$/, (m) => msg("journal-task-progressed", { task: m[1] ?? "" })],
   [
     /^Task (\S+) (completed|failed) \((.+)\)$/,
     (m) => msg("journal-task-ended", { task: m[1] ?? "", status: m[2] ?? "", seconds: seconds(m[3] ?? "") }),
   ],
-  [/^Watch created: (.+)$/, (m) => msg("journal-watch-created", { what: m[1] ?? "" })],
+  [/^Watch created: (.+)$/, (m) => msg("journal-watch-created", { title: m[1] ?? "" })],
   [
     /^“(.+)” checked against (\d+) watch(?:es)?: (none match|(\d+) matched)$/,
     (m) =>

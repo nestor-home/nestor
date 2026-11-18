@@ -56,11 +56,9 @@ export function UpdateDialog({
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto">
           <div className="px-6 pt-5 text-center">
-            <DialogTitle className="font-serif text-2xl leading-tight font-normal text-balance text-ink">
-              {title}
-            </DialogTitle>
+            <DialogTitle className="title-card font-normal text-balance text-ink">{title}</DialogTitle>
             <DialogDescription className="sr-only">{description}</DialogDescription>
-            <p className="mt-2 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 font-mono text-sm text-ink-muted">
+            <p className="mt-2 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 font-mono text-meta text-ink-muted">
               <span>{running}</span>
               <ArrowRight className="size-3.5" aria-hidden="true" />
               <span className={tone === "ember" ? "text-ember" : "text-ink"}>{latest}</span>
@@ -69,7 +67,11 @@ export function UpdateDialog({
           </div>
           <div className="grid gap-6 px-6 pt-6 pb-6">{children}</div>
         </div>
-        {footer ? <div className="border-t border-rule bg-paper-sunken/60 px-6 py-4">{footer}</div> : null}
+        {footer ? (
+          <div data-slot="dialog-footer" className="border-t border-rule bg-paper-sunken/60 px-6 py-4">
+            {footer}
+          </div>
+        ) : null}
       </DialogContent>
     </Dialog>
   );

@@ -1,19 +1,8 @@
 ## The frame around every screen: navigation, status line, account menu, command palette.
 
-nav-today = Today
 nav-journal = Journal
-nav-chat = Chat
-nav-group-household = Household
 nav-people = People
 nav-memories = Memories
-nav-watches = Watches
-nav-tasks = Tasks
-nav-house = Home
-nav-cameras = Cameras
-nav-group-agenda = Agenda
-nav-schedules = Reminders
-nav-messages = Messages
-nav-group-installation = Setup
 nav-connections = Connections
 nav-satellites = Satellites
 nav-system = System
@@ -34,10 +23,7 @@ shell-display = Display
 shell-theme-to-light = Switch to light
 shell-theme-to-dark = Switch to dark
 
-shell-live-open = live
 shell-live-connecting = connecting…
-shell-live-closed = offline
-shell-live-hint = Live journal
 shell-version = nestor { $version }
 shell-go-to = Go to…
 shell-palette-description = Find a section, a person, a service
@@ -64,10 +50,41 @@ attention-satellite-offline-detail = It no longer listens or speaks in the { $ro
 attention-understand = Details
 attention-task-failed = The task “{ $objective }” failed
 attention-component-down = { $name } is down
-shell-sidebar-toggle = Toggle the sidebar
-shell-sidebar-collapse = Collapse
-shell-sidebar-expand = Expand
-shell-open-menu = Open the menu
-shell-agent-online = online
 shell-agent-offline = offline
 shell-agent-label = { $assistant }, { $state }
+
+## The spaces of the rail
+space-today = Today
+space-chat = Talk
+space-activity = Ongoing
+space-house = The house
+space-settings = Settings
+
+## Settings
+set-lede = What { $assistant } is made of: the services it uses, the devices in the rooms, who may do what.
+set-connections = The accounts and services it uses: mail, calendar, tools.
+set-connections-count = { $count ->
+    [0] No connection
+    [one] One connection
+   *[other] { $count } connections
+}
+set-satellites = The devices it hears, speaks and sees through in each room.
+set-satellites-count = { $count ->
+    [0] No device
+    [one] One device
+   *[other] { $count } devices
+}
+set-satellites-offline = { $count } devices, { $offline } offline
+set-accounts = Who may open this interface, and with which rights.
+set-accounts-count = { $count ->
+    [one] One account
+   *[other] { $count } accounts
+}
+set-config = Models, voices, channels, home: everything that tunes { $assistant }.
+set-system = The state of every component, updates, restart.
+shell-space-waiting = { $space }, { $count ->
+    [one] one request waits for you
+   *[other] { $count } requests wait for you
+}
+shell-rail-fold = Fold the rail
+shell-rail-unfold = Unfold the rail

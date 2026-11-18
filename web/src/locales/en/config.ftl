@@ -4,9 +4,46 @@ cfg-title = Configuration
 cfg-intro = Checked before it is written, applied at the next restart.
 cfg-nav = Parts of the configuration
 cfg-group-agent = The agent
-cfg-group-parts = Components
-cfg-group-instance = Instance
-cfg-group-vault = Vault and versions
+cfg-group-household = The household
+cfg-group-talk = How it talks and listens
+cfg-group-reach = What it can reach
+cfg-group-install = The installation
+cfg-switch = Sections
+cfg-about-persona = Its name, its character and the language it answers in.
+cfg-about-initiative = When it may speak up by itself, and where.
+cfg-about-memory = How many memories and past conversations each reply draws on.
+cfg-about-household = The people it knows by name: how each is recognised on a channel, and where to write to them.
+cfg-about-voices = Telling who speaks on a shared device from their voice. It needs a speaker recognition model.
+cfg-about-models = The models it thinks, hears and speaks with, then which one serves each role.
+cfg-about-channels = Where people talk to it: satellites in the rooms, messaging apps, this admin.
+cfg-about-home = The home system: it tells who is home and in which room, and it carries out what is asked of the house.
+cfg-about-connectors = The services a person can connect an account of (mail, calendar, tasks). Each account is then added under Connections.
+cfg-about-tools = What it can look up or do by itself: web search, weather, places, MCP servers.
+cfg-about-inbound = What it follows for the watches: feeds, pages, webhooks.
+cfg-about-executors = The agents it hands long tasks to.
+cfg-about-admin = Where this interface is served, and the address others reach it at.
+cfg-about-updates = Whether it looks for new releases. Nothing installs by itself.
+cfg-sum-people = { $count ->
+    [0] Nobody yet
+    [one] 1 person
+   *[other] { $count } people
+}
+cfg-sum-needed = Nothing yet: one is needed to start
+cfg-sum-none = Nothing set up
+cfg-sum-more = { $names } and { $count } more
+cfg-sum-extra = +{ $count }
+cfg-sum-defaults = Default settings
+cfg-sum-secrets = { $count ->
+    [0] No secrets
+    [one] 1 secret
+   *[other] { $count } secrets
+}
+cfg-sum-secrets-unset = { $count } secrets, { $unset } without a value
+cfg-sum-history = { $count ->
+    [0] No earlier versions
+    [one] 1 earlier version
+   *[other] { $count } earlier versions
+}
 cfg-unknown-page = This part of the configuration does not exist.
 cfg-modified = modified
 
@@ -37,30 +74,36 @@ cfg-secret-replace = Replace
 cfg-secret-replace-label = Replace { $field }
 cfg-secret-keep = Keep current
 cfg-secret-placeholder = new value
+cfg-secret-typed = new value, not saved yet
 
 ## Pages
+cfg-settings = Settings
+cfg-edit = Change
+cfg-unset = Not set
+cfg-on = On
+cfg-off = Off
+cfg-entries = { $count ->
+    [one] 1 entry
+   *[other] { $count } entries
+}
 cfg-people = People
+cfg-person-no-account = No account on a channel
 cfg-people-empty = Nobody in the household yet.
 cfg-add-person = Add a person
 cfg-remove-person-title = Remove { $name } from the household?
 cfg-remove-person-text = The person leaves the file at the next save; their accounts and memories stay in the database.
-cfg-add-component = Add…
 cfg-reference-default = Default
 cfg-name = Name
 cfg-name-help = Other settings refer to it by this name; renaming it updates them.
 cfg-name-taken = This name is already taken.
 cfg-name-invalid = Letters, digits, “_”, “.” and “-”, starting with a letter or a digit.
-cfg-add-kind = Add: { $kind }
-cfg-choose-kind = Choose…
-cfg-pick-title = { $slot }: add
-cfg-pick-text = The plugins installed on this instance.
+cfg-add-kind = Add { $kind }
 cfg-required-fields = { $count ->
     [0] nothing required
     [one] 1 required setting
    *[other] { $count } required settings
 }
-cfg-slot-unset = Nothing configured.
-cfg-slot-none = No components.
+cfg-slot-none = Nothing set up here.
 cfg-slot-required = At least one is needed to start.
 cfg-slot-optional = Optional.
 cfg-no-plugin = No plugin of this kind is installed.
@@ -163,10 +206,10 @@ cfg-history-versions = Earlier versions
 cfg-history-empty = No earlier versions.
 cfg-history-empty-hint = The first appears at the first save from the admin.
 cfg-history-size = { $size } bytes
-cfg-history-version = Version of { $day } at { $time }
+cfg-history-kind = Earlier version
 cfg-history-would = { $count ->
-    [one] Restoring would change 1 setting:
-   *[other] Restoring would change { $count } settings:
+    [one] Restoring would change 1 setting.
+   *[other] Restoring would change { $count } settings.
 }
 cfg-history-same = Same as the current file.
 cfg-history-invalid = This version can no longer be used as it is:
@@ -175,3 +218,25 @@ cfg-restore-title = Restore this version?
 cfg-restore-text = The current file goes to the history; the chosen version applies at the next restart.
 cfg-restore-dirty = Save or discard your current changes first.
 cfg-restored = Version restored: a restart will apply it.
+cfg-pick-type = Type of model
+cfg-model-type = { $type ->
+    [language] Language
+    [embedding] Embeddings
+    [speaker] Speaker voice
+    [transcription] Transcription
+    [speech] Speech
+    [image] Images
+   *[other] Other
+}
+cfg-add-one = { $slot ->
+    [models] Add a model
+    [channels] Add a channel
+    [executors] Add an executor
+    [tools] Add a tool
+    [inbound] Add a source
+    [home] Plug a home system
+    [connectors] Add a connector
+   *[other] Add to “{ $title }”
+}
+cfg-pick-model = What it will do, then who provides it.
+cfg-pick-text = What this installation can plug in.

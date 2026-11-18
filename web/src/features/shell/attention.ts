@@ -11,6 +11,7 @@ import {
   ServerCrash,
   ShieldQuestion,
 } from "lucide-react";
+import { createContext, createElement, type ReactNode, useContext } from "react";
 import {
   type Component,
   confirmationsQuery,
@@ -45,7 +46,7 @@ export interface Attention {
  * reauthorise, a device waiting to pair, a message that did not arrive, a failed task, a part of
  * the system that is down. Each comes with what to do about it.
  */
-export function useAttention(): { items: Attention[]; ready: boolean } {
+function useGathered(): { items: Attention[]; ready: boolean } {
   const canConnections = useCan("connections:read");
   const canSatellites = useCan("satellites:read");
   const canTasks = useCan("tasks:read");
@@ -66,7 +67,7 @@ export function useAttention(): { items: Attention[]; ready: boolean } {
       title: tr("attention-confirmation", { tool: c.tool }),
       detail: tr("attention-confirmation-detail", { at: hourMinute(c.expires_at) }),
       action: tr("attention-answer"),
-      link: { to: "/messages" },
+      link: { to: "/activity" },
     });
   }
   const home = system.data?.components.find((c) => c.slot === "home");
@@ -143,7 +144,7 @@ export function useAttention(): { items: Attention[]; ready: boolean } {
       key: `task-${task.id}`,
       icon: CircleAlert,
       tone: "error",
-      title: tr("attention-task-failed", { objective: task.objective }),
+      title: tr("attention-task-failed", { objective: task.title }),
       detail: task.error ?? "",
       action: tr("action-see"),
       link: { to: "/tasks/$taskId", params: { taskId: task.id } },
@@ -162,4 +163,15 @@ export function useAttention(): { items: Attention[]; ready: boolean } {
     });
   }
   return { items, ready: !connections.isPending || !canConnections };
+}
+
+const AttentionContext = createContext<{ items: Attention[]; ready: boolean }>({ items: [], ready: false });
+
+/** Gathers what needs a person once for the whole shell: the rail, the agent's state and Today all read it. */
+export function AttentionProvider({ children }: { children: ReactNode }) {
+  return createElement(AttentionContext.Provider, { value: useGathered() }, children);
+}
+
+export function useAttention(): { items: Attention[]; ready: boolean } {
+  return useContext(AttentionContext);
 }

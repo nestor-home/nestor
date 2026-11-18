@@ -45,7 +45,7 @@ import {
 const idOf = (path: Path) => `cfg-${path.join("-").replace(/[^\w-]/g, "_")}`;
 
 /** A located problem said at its field: the field's own label instead of the dotted path. */
-export function problemText(problem: ConfigProblem, label?: string): string {
+function problemText(problem: ConfigProblem, label?: string): string {
   if (hasMessage(problem.message_id))
     return tr(problem.message_id, { ...problem.args, path: label ?? keyOf(problem.path) });
   const path = String(problem.args.path ?? "");
@@ -90,7 +90,7 @@ export function ObjectFields({
             defaultOpen={advancedTrouble}
             className="@xl:col-span-2"
           >
-            <CollapsibleTrigger className="group/adv inline-flex items-center gap-1.5 rounded-sm font-mono text-[0.72rem] tracking-wide text-ink-muted uppercase hover:text-ink">
+            <CollapsibleTrigger className="group/adv inline-flex items-center gap-1.5 rounded-sm text-body font-medium text-ink-muted hover:text-ink">
               <ChevronRight
                 className="size-3.5 transition-transform group-data-panel-open/adv:rotate-90"
                 aria-hidden="true"
@@ -98,7 +98,7 @@ export function ObjectFields({
               {t("cfg-advanced", { count: advanced.length })}
             </CollapsibleTrigger>
             <CollapsibleContent>
-              <div className="mt-4 grid gap-x-6 gap-y-5 border-t border-dashed border-rule pt-5 @xl:grid-cols-2">
+              <div className="mt-4 grid gap-x-6 gap-y-5 border-t border-rule pt-5 @xl:grid-cols-2">
                 {advanced.map(([name, node]) => (
                   <Property
                     key={name}
@@ -144,9 +144,9 @@ export function Property({
   if (control === "object") {
     const nested = problemsUnder(problems, path).filter((p) => keyOf(p.path) !== keyOf(path));
     return (
-      <fieldset className="grid min-w-0 gap-4 rounded-md border border-rule px-4 pt-2 pb-4 @xl:col-span-2">
-        <legend className="px-1.5 font-serif text-[1.05rem] text-ink">{label}</legend>
-        {helpOf(node) ? <p className="-mt-1 text-xs text-ink-muted">{helpOf(node)}</p> : null}
+      <fieldset className="grid min-w-0 gap-4 rounded-(--radius-surface) border border-rule px-4 pt-2 pb-4 @xl:col-span-2">
+        <legend className="px-1.5 text-body font-medium text-ink">{label}</legend>
+        {helpOf(node) ? <p className="-mt-1 text-micro text-ink-muted">{helpOf(node)}</p> : null}
         <ObjectFields schema={node} root={root} path={path} />
         <Problems problems={here} label={label} />
         {nested.length && !isRecord(value) ? <Problems problems={nested} /> : null}
@@ -193,13 +193,13 @@ function FieldFrame({
       data-invalid={problems.length ? "" : undefined}
     >
       {inline ? null : (
-        <Label htmlFor={id} className="text-[0.8rem] font-medium text-ink">
+        <Label htmlFor={id} className="text-meta font-medium text-ink">
           {label}
         </Label>
       )}
       {children}
       {help ? (
-        <p id={`${id}-help`} className="text-xs text-pretty text-ink-muted">
+        <p id={`${id}-help`} className="text-micro text-pretty text-ink-muted">
           {help}
         </p>
       ) : null}
@@ -213,7 +213,7 @@ export function Problems({ problems, label, id }: { problems: ConfigProblem[]; l
   return (
     <ul id={id} className="grid gap-0.5">
       {problems.map((p) => (
-        <li key={`${keyOf(p.path)}:${p.code}:${p.message}`} className="text-xs text-brick">
+        <li key={`${keyOf(p.path)}:${p.code}:${p.message}`} className="text-micro text-brick">
           {problemText(p, label)}
         </li>
       ))}
@@ -284,7 +284,7 @@ function TextControl({ id, node, root, path, required, long, mono }: ControlProp
     onChange: (e: { target: { value: string } }) => (e.target.value === "" ? field.clear() : field.set(e.target.value)),
   };
   if (long) return <Textarea {...common} rows={3} className="min-h-20" />;
-  return <Input {...common} className={cn(mono && "font-mono text-[0.82rem]")} spellCheck={!mono} />;
+  return <Input {...common} className={cn(mono && "font-mono text-meta")} spellCheck={!mono} />;
 }
 
 function NumberControl({ id, node, root, path, required, integer }: ControlProps & { integer: boolean }) {
@@ -302,7 +302,7 @@ function NumberControl({ id, node, root, path, required, integer }: ControlProps
       max={schema.maximum}
       value={text}
       placeholder={defaultText(node, root) ?? undefined}
-      className="font-mono text-[0.82rem] tabular sm:max-w-48"
+      className="font-mono text-meta tabular sm:max-w-48"
       {...described(id, node, field.invalid)}
       onChange={(e) => {
         const raw = e.target.value;
@@ -371,7 +371,7 @@ function BooleanControl({ id, node, root, path, required, label }: ControlProps)
   return (
     <div className="flex items-center gap-3 pt-1">
       <Switch id={id} checked={checked} onCheckedChange={(on) => field.set(on)} {...described(id, node, false)} />
-      <Label htmlFor={id} className="text-[0.85rem] text-ink">
+      <Label htmlFor={id} className="text-meta text-ink">
         {label}
       </Label>
     </div>
@@ -399,7 +399,7 @@ function SecretControl({ id, node, root, path, required, label }: ControlProps) 
     return (
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-rule bg-paper-sunken/60 px-3 py-1.5">
         <KeyRound className="size-3.5 text-ink-faint" aria-hidden="true" />
-        <span id={id} className="min-w-0 flex-1 font-mono text-[0.78rem] [overflow-wrap:anywhere] text-ink">
+        <span id={id} className="min-w-0 flex-1 font-mono text-meta text-ink">
           {isShown(value)
             ? value.set
               ? t("cfg-secret-set", { preview: value.preview ?? "•••" })
@@ -431,7 +431,7 @@ function SecretControl({ id, node, root, path, required, label }: ControlProps) 
         value={typed}
         placeholder={t("cfg-secret-placeholder")}
         aria-label={label}
-        className="font-mono text-[0.82rem]"
+        className="font-mono text-meta"
         {...described(id, node, field.invalid)}
         onChange={(e) => {
           setText(e.target.value);
@@ -513,7 +513,7 @@ function ListControl({ id, node, root, path, required, label }: ControlProps) {
                     value={item}
                     aria-label={t("cfg-item-of", { field: label, n: index + 1 })}
                     aria-invalid={itemProblems.length ? true : undefined}
-                    className="font-mono text-[0.82rem]"
+                    className="font-mono text-meta"
                     onChange={(e) => write(items.map((v, i) => (i === index ? e.target.value : v)))}
                   />
                   <ItemButtons
@@ -530,7 +530,7 @@ function ListControl({ id, node, root, path, required, label }: ControlProps) {
           })}
         </ol>
       ) : (
-        <p id={id} className="text-xs text-ink-faint">
+        <p id={id} className="text-micro text-ink-faint">
           {fallback ? t("cfg-list-default", { value: fallback }) : t("cfg-list-empty")}
         </p>
       )}
@@ -591,10 +591,10 @@ function MapControl({ id, node, root, path, required, label }: ControlProps) {
                   value={key}
                   list={keys.length ? `${id}-keys` : undefined}
                   aria-label={t("cfg-map-key", { field: label, n: index + 1 })}
-                  className="font-mono text-[0.82rem] sm:max-w-56"
+                  className="font-mono text-meta sm:max-w-56"
                   onChange={(e) => write(entries.map(([k, v], i) => [i === index ? e.target.value : k, v]))}
                 />
-                <span aria-hidden="true" className="font-mono text-xs text-ink-faint">
+                <span aria-hidden="true" className="font-mono text-micro text-ink-faint">
                   →
                 </span>
                 {valueControl === "enum" ? (
@@ -622,7 +622,7 @@ function MapControl({ id, node, root, path, required, label }: ControlProps) {
                     list={values.length ? `${id}-values` : undefined}
                     value={typeof value === "string" ? value : JSON.stringify(value ?? "")}
                     aria-label={t("cfg-map-value", { field: label, key: key || index + 1 })}
-                    className="font-mono text-[0.82rem]"
+                    className="font-mono text-meta"
                     onChange={(e) => setValue(e.target.value)}
                   />
                 )}
@@ -639,7 +639,7 @@ function MapControl({ id, node, root, path, required, label }: ControlProps) {
           })}
         </ul>
       ) : (
-        <p id={id} className="text-xs text-ink-faint">
+        <p id={id} className="text-micro text-ink-faint">
           {t("cfg-list-empty")}
         </p>
       )}
@@ -685,7 +685,7 @@ function JsonControl({ id, node, root, path, required }: ControlProps) {
         rows={3}
         spellCheck={false}
         placeholder={defaultText(node, root) ?? "{}"}
-        className="min-h-20 font-mono text-[0.78rem]"
+        className="min-h-20 font-mono text-meta"
         aria-invalid={error || field.invalid || undefined}
         aria-describedby={error ? errorId : described(id, node, field.invalid)["aria-describedby"]}
         onChange={(e) => setText(e.target.value)}
@@ -707,7 +707,7 @@ function JsonControl({ id, node, root, path, required }: ControlProps) {
         }}
       />
       {error ? (
-        <p id={errorId} className="text-xs text-brick">
+        <p id={errorId} className="text-micro text-brick">
           {t("cfg-json-invalid")}
         </p>
       ) : null}

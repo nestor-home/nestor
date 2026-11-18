@@ -1,19 +1,8 @@
 ## Le cadre de chaque écran : navigation, ligne d'état, menu du compte, palette de commandes.
 
-nav-today = Aujourd'hui
 nav-journal = Journal
-nav-chat = Discussion
-nav-group-household = Foyer
 nav-people = Personnes
 nav-memories = Souvenirs
-nav-watches = Veilles
-nav-tasks = Tâches
-nav-house = Maison
-nav-cameras = Caméras
-nav-group-agenda = Agenda
-nav-schedules = Réveils et rappels
-nav-messages = Messages
-nav-group-installation = Installation
 nav-connections = Connexions
 nav-satellites = Satellites
 nav-system = Système
@@ -34,10 +23,7 @@ shell-display = Affichage
 shell-theme-to-light = Passer en clair
 shell-theme-to-dark = Passer en sombre
 
-shell-live-open = en direct
 shell-live-connecting = connexion…
-shell-live-closed = hors ligne
-shell-live-hint = Journal en direct
 shell-version = nestor { $version }
 shell-go-to = Aller à…
 shell-palette-description = Chercher une section, une personne, un service
@@ -57,17 +43,48 @@ attention-home = { $health ->
    *[other] Le système domotique répond en partie
 }
 attention-pairing = { $device } attend d'être appairé
-attention-pairing-detail = { $model }, « { $room } » : saisissez le code qu'il affiche.
+attention-pairing-detail = { $model }, « { $room } » : saisissez le code qu'il affiche.
 attention-approve = Approuver
 attention-satellite-offline = { $device } est hors ligne
-attention-satellite-offline-detail = Il n'écoute plus et ne parle plus dans « { $room } ».
+attention-satellite-offline-detail = Il n'écoute plus et ne parle plus dans « { $room } ».
 attention-understand = Détails
-attention-task-failed = La tâche « { $objective } » a échoué
+attention-task-failed = La tâche « { $objective } » a échoué
 attention-component-down = { $name } est en panne
-shell-sidebar-toggle = Afficher ou masquer la barre latérale
-shell-sidebar-collapse = Réduire
-shell-sidebar-expand = Déplier
-shell-open-menu = Ouvrir le menu
-shell-agent-online = en ligne
 shell-agent-offline = hors ligne
 shell-agent-label = { $assistant }, { $state }
+
+## Les espaces de la barre
+space-today = Aujourd'hui
+space-chat = Parler
+space-activity = En cours
+space-house = La maison
+space-settings = Réglages
+
+## Réglages
+set-lede = Ce dont { $assistant } est fait : les services qu'il utilise, les appareils des pièces, qui a accès à quoi.
+set-connections = Comptes et services dont il se sert : mail, agenda, outils.
+set-connections-count = { $count ->
+    [0] Aucune connexion
+    [one] Une connexion
+   *[other] { $count } connexions
+}
+set-satellites = Les appareils par lesquels il entend, parle et voit dans chaque pièce.
+set-satellites-count = { $count ->
+    [0] Aucun appareil
+    [one] Un appareil
+   *[other] { $count } appareils
+}
+set-satellites-offline = { $count } appareils, dont { $offline } hors ligne
+set-accounts = Qui peut ouvrir cette interface, et avec quels droits.
+set-accounts-count = { $count ->
+    [one] Un compte
+   *[other] { $count } comptes
+}
+set-config = Modèles, voix, canaux, maison : tout ce qui règle { $assistant }.
+set-system = L'état de chaque composant, les mises à jour, le redémarrage.
+shell-space-waiting = { $space }, { $count ->
+    [one] une demande vous attend
+   *[other] { $count } demandes vous attendent
+}
+shell-rail-fold = Replier la barre
+shell-rail-unfold = Déplier la barre

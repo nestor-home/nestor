@@ -332,7 +332,7 @@ class EventDescriber:
             ),
             TaskStarted: lambda e: self._line(
                 e,
-                Message.of("journal-task-started", task=e.task_id, executor=e.executor),
+                Message.of("journal-task-started", task=e.task_id, executor=e.executor, title=e.title),
                 detail=e.objective,
                 people=[e.requested_by],
                 channels=[e.origin],
@@ -390,7 +390,7 @@ class EventDescriber:
             ),
             ScheduleCreated: lambda e: self._line(
                 e,
-                Message.of("journal-schedule-created", recurring=_yes(e.once_at is None)),
+                Message.of("journal-schedule-created", recurring=_yes(e.once_at is None), title=e.title),
                 detail=e.instruction,
                 people=[e.owner],
                 channels=[e.created_in],
@@ -430,7 +430,8 @@ class EventDescriber:
             ),
             WatchCreated: lambda e: self._line(
                 e,
-                Message.of("journal-watch-created", what=e.what),
+                Message.of("journal-watch-created", title=e.title),
+                detail=e.what,
                 people=[e.owner],
                 channels=[e.created_in],
             ),

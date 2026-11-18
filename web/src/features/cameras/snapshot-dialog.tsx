@@ -31,7 +31,7 @@ function Snapshot({ device, close }: { device: MediaDevice; close: () => void })
   const url = useObjectUrl(take.data?.blob);
   return (
     <div className="grid gap-4">
-      <div className="grid aspect-video place-items-center overflow-hidden rounded-lg bg-paper-sunken">
+      <div className="grid aspect-video place-items-center overflow-hidden rounded-(--radius-surface) bg-paper-sunken">
         {url ? (
           <img
             src={url}
@@ -41,7 +41,7 @@ function Snapshot({ device, close }: { device: MediaDevice; close: () => void })
         ) : take.isPending ? (
           <div className="grid justify-items-center gap-3" role="status">
             <AgentFigure state="thinking" size="md" />
-            <p className="text-sm text-ink-muted">{t("cam-taking")}</p>
+            <p className="text-body text-ink-muted">{t("cam-taking")}</p>
           </div>
         ) : null}
       </div>

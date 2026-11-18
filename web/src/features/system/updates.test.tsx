@@ -19,7 +19,7 @@ describe("a newer Nestor", () => {
   it("shows in the sidebar, and its dialog says what changed and what breaks", async () => {
     const user = userEvent.setup();
     renderApp("/");
-    await user.click(await screen.findByRole("button", { name: /New release/ }));
+    await user.click(await screen.findByRole("button", { name: /Update available/ }));
     const dialog = await screen.findByRole("dialog", { name: "Nestor 0.10.0 is here" });
     expect(within(dialog).getByText(/2 releases behind/)).toBeVisible();
     expect(within(dialog).getByRole("alert")).toHaveTextContent("This release changes the data or the configuration");
@@ -36,7 +36,7 @@ describe("a newer Nestor", () => {
     const user = userEvent.setup();
     const sent = requests("/system/updates/install");
     renderApp("/");
-    await user.click(await screen.findByRole("button", { name: /New release/ }));
+    await user.click(await screen.findByRole("button", { name: /Update available/ }));
     const dialog = await screen.findByRole("dialog", { name: "Nestor 0.10.0 is here" });
     await user.click(within(dialog).getByRole("button", { name: "Install 0.10.0" }));
     const confirm = await screen.findByRole("alertdialog", { name: "Install Nestor 0.10.0?" });
@@ -52,7 +52,7 @@ describe("a newer Nestor", () => {
   it("follows Nestor through its restart, once it is back on the release and lists nothing newer", async () => {
     const user = userEvent.setup();
     renderApp("/");
-    await user.click(await screen.findByRole("button", { name: /New release/ }));
+    await user.click(await screen.findByRole("button", { name: /Update available/ }));
     const dialog = await screen.findByRole("dialog", { name: "Nestor 0.10.0 is here" });
     await user.click(within(dialog).getByRole("button", { name: "Install 0.10.0" }));
     await user.click(
@@ -66,13 +66,13 @@ describe("a newer Nestor", () => {
     await user.type(screen.getByLabelText("Password"), "nestor");
     await user.click(screen.getByRole("button", { name: "Sign in" }));
     expect(await screen.findByRole("navigation", { name: "Sections" })).toBeVisible();
-    await waitFor(() => expect(screen.queryByRole("button", { name: /New release/ })).toBeNull());
+    await waitFor(() => expect(screen.queryByRole("button", { name: /Update available/ })).toBeNull());
   }, 30_000);
 
   it("goes back to the notes when the confirmation is cancelled", async () => {
     const user = userEvent.setup();
     renderApp("/");
-    await user.click(await screen.findByRole("button", { name: /New release/ }));
+    await user.click(await screen.findByRole("button", { name: /Update available/ }));
     await user.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Install 0.10.0" }));
     await user.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Cancel" }));
     expect(await screen.findByRole("dialog", { name: "Nestor 0.10.0 is here" })).toBeVisible();
@@ -82,7 +82,7 @@ describe("a newer Nestor", () => {
     const user = userEvent.setup();
     db.updates = { ...db.updates, installable: false };
     renderApp("/");
-    await user.click(await screen.findByRole("button", { name: /New release/ }));
+    await user.click(await screen.findByRole("button", { name: /Update available/ }));
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).queryByRole("button", { name: /Install/ })).toBeNull();
     expect(within(dialog).getByText("pip install --upgrade 'nestor-home[voice]'")).toBeVisible();
@@ -93,7 +93,7 @@ describe("a newer Nestor", () => {
     const user = userEvent.setup();
     db.updates = { ...db.updates, failed: "0.10.0" };
     renderApp("/");
-    await user.click(await screen.findByRole("button", { name: /New release/ }));
+    await user.click(await screen.findByRole("button", { name: /Update available/ }));
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText("0.10.0 did not install. Nestor stays on 0.9.0.")).toBeVisible();
   });
@@ -108,7 +108,7 @@ describe("a newer Nestor", () => {
       installable: false,
     };
     renderApp("/");
-    await user.click(await screen.findByRole("button", { name: /New release/ }));
+    await user.click(await screen.findByRole("button", { name: /Update available/ }));
     const dialog = await screen.findByRole("dialog");
     expect(
       await within(dialog).findByText(
@@ -120,11 +120,20 @@ describe("a newer Nestor", () => {
     expect(within(dialog).queryByRole("button", { name: "Restart now" })).toBeNull();
   });
 
+  it("shows as a card on the System page, with the running release, and opens the same dialog", async () => {
+    const user = userEvent.setup();
+    renderApp("/system");
+    const card = await screen.findByRole("button", { name: /New release/ });
+    expect(card).toHaveTextContent("0.10.0 is out. This instance runs 0.9.0.");
+    await user.click(card);
+    expect(await screen.findByRole("dialog", { name: "Nestor 0.10.0 is here" })).toBeVisible();
+  });
+
   it("stays out of the way when the running version is the latest", async () => {
     db.updates = { ...db.updates, releases: [] };
     renderApp("/");
     expect(await screen.findByRole("navigation")).toBeVisible();
-    await waitFor(() => expect(screen.queryByRole("button", { name: /New release/ })).toBeNull());
+    await waitFor(() => expect(screen.queryByRole("button", { name: /Update available/ })).toBeNull());
   });
 });
 
@@ -164,7 +173,7 @@ describe("updating a satellite", () => {
   it("shows no update button for a satellite that cannot update or is up to date", async () => {
     renderApp("/satellites/reachy-office");
     expect(await screen.findByRole("heading", { level: 1 })).toBeVisible();
-    expect(screen.queryByRole("button", { name: /Update/ })).toBeNull();
+    expect(within(screen.getByRole("main")).queryByRole("button", { name: /Update/ })).toBeNull();
   });
 
   it("marks the satellites with an update in the list", async () => {

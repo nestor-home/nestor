@@ -24,6 +24,7 @@ class Schedule:
     """`at` for once; else `times` on `days` (every day when empty), in the household's time zone."""
 
     id: str
+    title: str  # the short name the household knows it by: "Morning news"
     instruction: str  # what the agent does when it wakes: "send Mathis the morning news on Telegram"
     owner: PersonId | None = None  # on whose behalf it runs
     created_in: Address | None = None

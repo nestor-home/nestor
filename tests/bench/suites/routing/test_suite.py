@@ -136,7 +136,9 @@ async def test_the_right_route_is_the_first_the_variant_can_take_and_nothing_is_
     assert "hermes: chercher sur le web" in prompt and "write in French" in prompt, "the runtime's instructions"
     assert {"delegate_task", "schedule", "message_person", "weather"} <= {t.name for t in model.requests[0].tools}
 
-    handed = ScriptedModel(ToolCall("c1", "delegate_task", {"objective": "météo de Lyon demain"}))
+    handed = ScriptedModel(
+        ToolCall("c1", "delegate_task", {"title": "Météo de Lyon demain", "objective": "météo de Lyon demain"})
+    )
     took = await suite.run(WEATHER, None, trial(config, handed, [hermes], []))
     assert (took["route"], took["right"]) == ("delegate:hermes", ["delegate:hermes"]), "the only executor, unnamed"
     assert hermes.objectives == []

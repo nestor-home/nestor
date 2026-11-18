@@ -1,11 +1,11 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
-import type { NavItem } from "./nav";
+import type { Destination } from "./nav";
 
 const TYPING = new Set(["INPUT", "TEXTAREA", "SELECT"]);
 
 /** `g` then a letter jumps to a section, like a terminal pager; ignored while typing. */
-export function useGoKeys(items: readonly NavItem[]): void {
+export function useGoKeys(items: readonly Destination[]): void {
   const navigate = useNavigate();
   useEffect(() => {
     let armed = 0;

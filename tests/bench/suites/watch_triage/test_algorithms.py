@@ -11,9 +11,9 @@ from nestor.modules.cognition import ModelRequest
 from nestor.modules.initiative.watches import Incoming, Watch
 from nestor.testing.cognition import ScriptedModel
 
-PARCEL = Watch(id="w-parcel", what="the stroller parcel")
-SCHOOL = Watch(id="w-school", what="the class trip")
-HOME = Watch(id="w-home", what="the doorbell", kinds=("home.event",))
+PARCEL = Watch(id="w-parcel", title="The stroller parcel", what="the stroller parcel")
+SCHOOL = Watch(id="w-school", title="The class trip", what="the class trip")
+HOME = Watch(id="w-home", title="The doorbell", what="the doorbell", kinds=("home.event",))
 WATCHES = (PARCEL, SCHOOL, HOME)
 CARRIER = Incoming(
     source="mail", kind="mail", title="Votre colis 8R04417 sera livré demain", body="Expéditeur : Petit Pas"

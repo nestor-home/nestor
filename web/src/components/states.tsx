@@ -6,7 +6,8 @@ import { tr } from "@/i18n/runtime";
 import { cn } from "@/lib/utils";
 import { AgentFigure } from "./agent-figure";
 
-/** Nothing to show: the agent beside it, said plainly, with what would make something appear. */
+/** Nothing to show, said inside the place where things would be: the agent beside it, and what would make
+ * something appear. */
 export function Empty({
   children,
   hint,
@@ -19,11 +20,11 @@ export function Empty({
   className?: string;
 }) {
   return (
-    <div className={cn("flex items-center gap-4 py-6", className)}>
-      <AgentFigure state="idle" size="md" />
+    <div className={cn("surface-quiet flex items-center gap-4 px-4 py-5", className)}>
+      <AgentFigure state="idle" size="sm" className="shrink-0" />
       <div className="min-w-0">
-        <p className="text-[1.02rem] text-ink">{children}</p>
-        {hint ? <p className="mt-1 max-w-xl text-ink-muted">{hint}</p> : null}
+        <p className="text-body text-ink">{children}</p>
+        {hint ? <p className="mt-0.5 max-w-xl text-body text-ink-muted">{hint}</p> : null}
         {action ? <div className="mt-3">{action}</div> : null}
       </div>
     </div>
@@ -44,7 +45,7 @@ export function Notice({
     <div
       role="alert"
       className={cn(
-        "rounded-md border px-4 py-3 text-sm text-ink",
+        "rounded-md border px-4 py-3 text-meta text-ink",
         tone === "error" ? "border-brick/40 bg-brick-soft/40" : "border-amber/40 bg-amber-soft/40",
         className,
       )}
@@ -91,7 +92,7 @@ export function Loading({ lines = 3, label }: { lines?: number; label?: string }
 export function FormError({ error }: { error: unknown }) {
   if (!error) return null;
   return (
-    <p role="alert" className="text-sm text-brick">
+    <p role="alert" className="text-meta text-brick">
       {typeof error === "string" ? error : messageOf(error)}
     </p>
   );

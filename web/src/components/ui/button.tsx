@@ -15,11 +15,13 @@ const buttonVariants = cva(
         ghost: "border-transparent text-ink-muted hover:bg-paper-sunken hover:text-ink aria-expanded:bg-paper-sunken",
         destructive: "border-brick/40 bg-transparent text-brick hover:border-brick hover:bg-brick-soft",
         link: "border-transparent text-ember underline-offset-4 hover:underline",
+        /** a filter of a list, or one it holds: round, raised, inked once chosen */
+        pill: "rounded-full border-rule-strong bg-paper-raised text-ink hover:border-ink aria-expanded:border-ink data-popup-open:border-ink",
       },
       size: {
         default: "h-8 px-3",
         xs: "h-6 gap-1 px-2 text-xs [&_svg:not([class*='size-'])]:size-3",
-        sm: "h-7 px-2.5 text-[0.8rem] [&_svg:not([class*='size-'])]:size-3.5",
+        sm: "h-7 px-2.5 text-meta [&_svg:not([class*='size-'])]:size-3.5",
         lg: "h-10 px-4",
         icon: "size-8",
         "icon-xs": "size-6 [&_svg:not([class*='size-'])]:size-3",

@@ -10,11 +10,13 @@ export function OriginLink({ origin }: { origin: { session: string; channel: str
     <Link
       to="/journal"
       search={{ session: origin.session }}
-      className="inline-flex items-center gap-2 text-ink hover:text-ember"
+      className="inline-flex flex-wrap items-center gap-x-2 gap-y-0.5 text-ink hover:text-ember"
     >
-      <MessageSquareText className="size-4" aria-hidden="true" />
-      {t("origin-a-conversation")}
-      <span className="inline-flex items-center gap-1 text-[0.85rem] text-ink-muted">
+      <span className="inline-flex items-center gap-2 whitespace-nowrap">
+        <MessageSquareText className="size-4 shrink-0" aria-hidden="true" />
+        {t("origin-a-conversation")}
+      </span>
+      <span className="inline-flex items-center gap-1 text-meta whitespace-nowrap text-ink-muted">
         <KindMark kind={origin.channel} className="size-3" label={false} />
         {kindName(origin.channel)}
       </span>

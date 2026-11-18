@@ -24,8 +24,8 @@ scope-name = { $scope ->
     [tasks-manage-own] gérer ses propres tâches
     [watches-manage-all] gérer toutes les veilles
     [watches-manage-own] gérer ses propres veilles
-    [schedules-manage-all] gérer tous les réveils
-    [schedules-manage-own] gérer ses propres réveils
+    [schedules-manage-all] gérer tous les rappels
+    [schedules-manage-own] gérer ses propres rappels
     [messages-read-all] lire tous les messages et confirmations
     [messages-read-own] lire ses propres messages et confirmations
     [media-view] regarder les caméras qui lui sont ouvertes
@@ -117,7 +117,7 @@ journal-kind = { $kind ->
     [tool] Outils
     [task] Tâches
     [watch] Veilles
-    [schedule] Réveils
+    [schedule] Rappels
     [memory] Souvenirs
     [connection] Connexions
     [presence] Présence

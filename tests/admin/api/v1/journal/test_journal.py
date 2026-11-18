@@ -239,6 +239,7 @@ async def test_the_important_events_are_told_in_the_readers_language(tmp_path: P
     from nestor.modules.initiative import (
         Delivered,
         DeliveryFailed,
+        ScheduleCreated,
         WatchCreated,
         WatchEnded,
         WatchSorted,
@@ -306,9 +307,19 @@ async def test_the_important_events_are_told_in_the_readers_language(tmp_path: P
             PresenceChanged(source="presence", person=mathis, home=False),
             PresenceChanged(source="presence", person=mathis, home=True),
             PresenceChanged(source="presence", person=PersonId("ghost"), home=None),
-            TaskStarted(source="tasks", task_id="t1", objective="Analyse", executor="hermes", origin=MATHIS_CHAT),
+            TaskStarted(
+                source="tasks",
+                task_id="t1",
+                title="Analyse du dépôt",
+                objective="Analyse",
+                executor="hermes",
+                origin=MATHIS_CHAT,
+            ),
             TaskEnded(source="tasks", task_id="t1", status=TaskStatus.FAILED, error="quota", duration_s=12),
-            WatchCreated(source="watch-book", watch_id="w3", what="le colis", kinds=(), once=True),
+            WatchCreated(source="watch-book", watch_id="w3", title="Colis", what="le colis", kinds=(), once=True),
+            ScheduleCreated(
+                source="schedule-book", schedule_id="s1", title="Plantes", instruction="Arrose", times=("08:00",)
+            ),
             ConnectionChanged(
                 source="connections",
                 connection_id="c1",
@@ -349,8 +360,10 @@ async def test_the_important_events_are_told_in_the_readers_language(tmp_path: P
             ("journal-presence-changed", {"person": "Mathis", "where": "away"}),
             ("journal-presence-changed", {"person": "Mathis", "where": "home"}),
             ("journal-presence-changed", {"person": "ghost", "where": "unknown"}),
-            ("journal-task-started", {"task": "t1", "executor": "hermes"}),
+            ("journal-task-started", {"task": "t1", "executor": "hermes", "title": "Analyse du dépôt"}),
             ("journal-task-ended", {"task": "t1", "status": "failed", "seconds": 12.0}),
+            ("journal-watch-created", {"title": "Colis"}),
+            ("journal-schedule-created", {"recurring": "yes", "title": "Plantes"}),
             ("journal-connection-changed", {"connection": "c1", "status": "needs_reauth"}),
             (
                 "journal-satellite-pairing-requested",
@@ -371,6 +384,9 @@ async def test_the_important_events_are_told_in_the_readers_language(tmp_path: P
         said = "\n".join(f"{i['text']}\n{i['detail_text']}" for i in found)
         for sentence in (  # what Fluent formats: plurals, decimals, percentages, a long text cut short
             "« Newsletter » vérifié pour 1 veille : aucune ne correspond",
+            "Tâche t1 confiée à hermes : Analyse du dépôt\nAnalyse",  # a thing by its name, what it asks beside
+            "Veille créée : Colis\nle colis",
+            "Rappel régulier programmé : Plantes\nArrose",
             "Outil create_watch terminé en 0,2 s",
             "2 personnes vues par reachy-salon",
             "1 personne vue par reachy-salon",

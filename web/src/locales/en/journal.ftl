@@ -1,4 +1,4 @@
-## The journal: stories (conversations, chains, lone events), filters, live edge, event drawer.
+## The journal: stories (conversations, chains, lone events), lanes, filters, live edge, event sheet.
 
 jr-title = Journal
 jr-loading = Loading the journal…
@@ -6,15 +6,11 @@ jr-empty = No events for these filters.
 jr-empty-hint = Widen the time range or drop a filter.
 jr-older = Older
 jr-beginning = Beginning of the journal
-jr-now = now
-jr-paused = paused
+jr-now = Live
+jr-paused = Paused
 jr-new-events = { $count ->
     [one] 1 new event
    *[other] { $count } new events
-}
-jr-story-count = { $count ->
-    [one] 1 story
-   *[other] { $count } stories
 }
 jr-event-count = { $count ->
     [one] 1 event
@@ -33,9 +29,6 @@ jr-range-all = All time
 jr-range-since = Since { $from }
 jr-range-until = Until { $to }
 jr-range-between = { $from } → { $to }
-jr-density = Density
-jr-density-comfortable = Comfortable
-jr-density-compact = Compact
 jr-pause = Pause
 jr-resume = Resume
 jr-pause-hint = Pause the live journal (p)
@@ -57,12 +50,8 @@ jr-histogram-label = { $count ->
 jr-story-thread = Conversation
 jr-story-chain = Sequence
 jr-story-single = Event
-jr-thread-title = { $count ->
-    [0] Conversation
-   *[other] Conversation · { $people }
-}
 jr-thread-open = Open the conversation
-jr-thread-link = thread
+jr-thread-link = Whole thread
 jr-thread-earlier = … the conversation started earlier
 jr-entry-label = { $text }: { $detail }
 jr-file-count = { $count ->
@@ -91,7 +80,6 @@ jr-between-details = What happened: { $what }
 jr-details = details
 jr-fallback = fallback answer
 jr-memory-kept = memory saved
-jr-interrupted = interrupted
 jr-call-details = Tool { $tool }: details
 jr-call-running = running
 jr-call-ok = ok
@@ -104,7 +92,6 @@ jr-chain-watch = Watch · { $what }
 jr-chain-watch-link = watch
 jr-chain-delivery = Speaking up
 jr-channel-voice = voice
-jr-why = why
 jr-why-label = why:
 
 step-task-started = started
@@ -123,8 +110,6 @@ step-withheld = nothing to tell
 step-delivery-failed = not delivered
 
 jr-event = Event
-jr-event-room = { $room }
-jr-related = Related to
 jr-related-person = Person
 jr-related-conversation = Conversation
 jr-related-session = Session
@@ -134,9 +119,9 @@ jr-related-connection = Connection
 jr-related-satellite = Satellite
 jr-related-memory = Memory
 jr-related-cause = Caused by
-jr-raw = JSON
-jr-raw-copy = the JSON
-jr-all-in-journal = see the journal
+jr-raw = Raw record
+jr-raw-copy = the raw record
+jr-all-in-journal = See in the journal
 jr-subject-conversation = Conversation
 jr-subject-session = Session
 jr-subject-task = Task
@@ -149,3 +134,16 @@ jr-filters = Filters
 jr-filters-show = Show
 jr-chip-remove = Remove the filter { $value }
 jr-range-label = Time range
+jr-offline = Live stream cut
+jr-lanes = Kind of story
+jr-lane-all = All
+jr-lane-talk = Conversations
+jr-lane-own = On its own
+jr-lane-tasks = Tasks
+jr-lane-watches = Watches
+jr-lane-memory = Memory
+jr-lane-problems = Problems
+jr-fact-room = Room
+jr-fact-channel = Channel
+jr-fact-through = Through
+jr-fact-took = Took

@@ -15,7 +15,7 @@ import {
 import { useT } from "@/i18n";
 import { useCan, useMe } from "@/lib/session";
 import { useTheme } from "@/lib/theme";
-import { flatNav } from "./nav";
+import { destinations } from "./nav";
 
 /** ⌘K: jump to a section, a person, a connection or a satellite, or switch the theme. */
 export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
@@ -43,7 +43,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
       <CommandList>
         <CommandEmpty>{t("shell-palette-empty")}</CommandEmpty>
         <CommandGroup heading={t("shell-sections")}>
-          {flatNav(me.scopes).map((item) => (
+          {destinations(me.scopes).map((item) => (
             <CommandItem
               key={item.to}
               value={`section ${t(item.label)}`}
@@ -116,7 +116,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
   );
 }
 
-export function useCommandKey(setOpen: (update: (open: boolean) => boolean) => void): void {
+function useCommandKey(setOpen: (update: (open: boolean) => boolean) => void): void {
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {

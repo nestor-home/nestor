@@ -1,16 +1,18 @@
 /**
  * One chat: its messages from the journal, the answer being written over them, and the composer. A new chat (no id
- * yet) greets and centres the composer; its first message gives it an id and opens it. The chat follows its live
- * entries (a tool called, a result coming back by itself) and, opened while an answer is written, follows it again.
+ * yet) greets with the agent's figure and centres the composer (on a phone, above the earlier discussions); its
+ * first message gives it an id and opens it. The chat follows its live entries (a tool called, a result coming back
+ * by itself) and, opened while an answer is written, follows it again.
  */
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ArrowDown, MessagesSquare, SquarePen, Upload } from "lucide-react";
+import { ArrowDown, ArrowLeft, Upload } from "lucide-react";
 import { type DragEvent, memo, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
 import {
   api,
+  type Chat,
   type ChatMessage,
   type ChatMessageIn,
   chatQuery,
@@ -20,10 +22,10 @@ import {
   messageOf,
 } from "@/api";
 import { AgentFigure } from "@/components/agent-figure";
-import { SideSheet } from "@/components/overlay-form";
 import { Failure, Loading } from "@/components/states";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { useLiveItems } from "@/features/shell/live";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useT } from "@/i18n";
 import { useMe } from "@/lib/session";
 import { cn, randomId } from "@/lib/utils";
@@ -39,6 +41,9 @@ export function Conversation({ chat }: { chat: string | null }) {
   const queryClient = useQueryClient();
   const thread = useQuery({ ...chatQuery(chat ?? ""), enabled: chat !== null });
   const live = useLiveAnswer(chat);
+  const mobile = useIsMobile();
+  const chats = useQuery(chatsQuery);
+  const { data: mentions = [] } = useQuery(mentionsQuery);
   const composer = useRef<ComposerHandle>(null);
   const [dragging, setDragging] = useState(false);
   const messages = thread.data?.messages ?? [];
@@ -88,6 +93,9 @@ export function Conversation({ chat }: { chat: string | null }) {
   };
 
   const fresh = chat === null || (thread.isSuccess && !messages.length && !live);
+  // on a phone, a new chat is also the way to the earlier ones: they stand between the greeting and the composer
+  const listed = mobile && chat === null && Boolean(chats.data?.chats.length);
+  const greeting = t("chat-greeting", { assistant: me.assistant });
   const busy = live !== null && (live.state === "waiting" || live.state === "writing");
 
   return (
@@ -105,7 +113,7 @@ export function Conversation({ chat }: { chat: string | null }) {
       }}
       onDrop={onDrop}
     >
-      <Header chat={chat} />
+      {chat === null ? null : <Header chat={chat} title={chats.data?.chats.find((c) => c.id === chat)} />}
       {chat !== null && thread.isPending ? (
         <div className="mx-auto w-full max-w-3xl px-4 pt-10">
           <Loading lines={4} />
@@ -115,11 +123,23 @@ export function Conversation({ chat }: { chat: string | null }) {
           <Failure error={thread.error} retry={thread.refetch} />
         </div>
       ) : (
-        <div className={cn("flex min-h-0 flex-1 flex-col", fresh && "justify-center gap-8 pb-[12vh]")}>
-          {fresh ? (
-            <div className={cn("flex flex-col items-center gap-4 px-4 text-center", ARRIVES, "duration-500")}>
+        <div className={cn("flex min-h-0 flex-1 flex-col", fresh && !listed && "justify-center gap-8 pb-[12vh]")}>
+          {listed ? (
+            <ChatList
+              lead={
+                <div className="flex items-center gap-3 px-4 pt-5 pb-4">
+                  <AgentFigure state="idle" size="md" live className="shrink-0" />
+                  <h1 className="display-3 text-ink">{greeting}</h1>
+                </div>
+              }
+            />
+          ) : fresh ? (
+            <div className={cn("flex flex-col items-center gap-4 px-6 text-center", ARRIVES, "duration-500")}>
               <AgentFigure state="idle" size="lg" live />
-              <p className="display-2 text-ink">{t("chat-greeting", { assistant: me.assistant })}</p>
+              <h1 className="display-2 text-ink">{greeting}</h1>
+              <p className="max-w-md text-lead text-ink-muted">
+                {t(mentions.length ? "chat-greeting-hint-mentions" : "chat-greeting-hint")}
+              </p>
             </div>
           ) : (
             <StickToBottom className="relative min-h-0 flex-1 overflow-hidden" resize="smooth" initial="instant">
@@ -142,7 +162,7 @@ export function Conversation({ chat }: { chat: string | null }) {
         </div>
       )}
       {dragging ? (
-        <div className="pointer-events-none absolute inset-2 z-20 grid animate-in place-items-center rounded-2xl border-2 border-dashed border-ember bg-paper/90 duration-150 fade-in-0 motion-reduce:animate-none">
+        <div className="pointer-events-none absolute inset-2 z-20 grid animate-in place-items-center rounded-(--radius-surface) border-2 border-dashed border-ember bg-paper/90 duration-150 fade-in-0 motion-reduce:animate-none">
           <p className="flex items-center gap-2 text-ink">
             <Upload className="size-5 text-ember" aria-hidden="true" />
             {t("chat-drop")}
@@ -292,12 +312,12 @@ function AnswerBlock({ children, arrives }: { children: ReactNode; arrives?: boo
 
 function SentFiles({ count }: { count: number }) {
   const t = useT();
-  return <p className="text-[0.8rem] text-ink-muted">{t("chat-sending-files", { count })}</p>;
+  return <p className="text-meta text-ink-muted">{t("chat-sending-files", { count })}</p>;
 }
 
 function Thinking({ state, text }: { state: "thinking" | "working"; text: string }) {
   return (
-    <div className={cn("flex items-center gap-2.5 text-[0.9rem] text-ink-muted", ARRIVES)} role="status">
+    <div className={cn("flex items-center gap-2.5 text-body text-ink-muted", ARRIVES)} role="status">
       <AgentFigure state={state} size="sm" live />
       <span className="chat-shimmer">{text}</span>
     </div>
@@ -314,45 +334,27 @@ function ScrollDown() {
       size="icon"
       onClick={() => void scrollToBottom()}
       aria-label={t("chat-scroll-down")}
-      className="absolute bottom-4 left-1/2 -translate-x-1/2 animate-in rounded-full shadow-sm duration-200 fade-in-0 zoom-in-90 motion-reduce:animate-none"
+      className="absolute bottom-4 left-1/2 -translate-x-1/2 animate-in rounded-full bg-paper-raised shadow-(--lift) duration-200 fade-in-0 zoom-in-90 motion-reduce:animate-none"
     >
       <ArrowDown />
     </Button>
   );
 }
 
-/** The chat's name, and below `lg` the list of chats and a new one at hand. */
-function Header({ chat }: { chat: string | null }) {
+/** The chat's name; on a phone, the way back to the discussions before it. */
+function Header({ chat, title }: { chat: string; title: Chat | undefined }) {
   const t = useT();
-  const chats = useQuery(chatsQuery);
-  const [open, setOpen] = useState(false);
-  const found = chats.data?.chats.find((c) => c.id === chat);
-  const title = found ? titleOf(found, t) : t("chat-new");
+  const mobile = useIsMobile();
   return (
-    <header className="flex h-12 shrink-0 items-center gap-1 border-b border-rule px-2 lg:px-4">
-      <Button
-        variant="ghost"
-        size="icon"
-        className="lg:hidden"
-        onClick={() => setOpen(true)}
-        aria-label={t("chat-list")}
-      >
-        <MessagesSquare />
-      </Button>
-      <h1 className="min-w-0 flex-1 truncate text-[0.95rem] text-ink">{title}</h1>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="lg:hidden"
-        aria-label={t("chat-new")}
-        nativeButton={false}
-        render={<Link to="/chat" />}
-      >
-        <SquarePen />
-      </Button>
-      <SideSheet open={open} onOpenChange={setOpen}>
-        <ChatList onNavigate={() => setOpen(false)} inSheet />
-      </SideSheet>
+    <header className="flex h-14 shrink-0 items-center gap-1 border-b border-rule px-2 md:px-6">
+      {mobile ? (
+        <Link to="/chat" aria-label={t("chat-back")} className={buttonVariants({ variant: "ghost", size: "icon" })}>
+          <ArrowLeft />
+        </Link>
+      ) : null}
+      <h1 key={chat} className="min-w-0 flex-1 truncate font-sans text-lead font-medium text-ink">
+        {title ? titleOf(title, t) : t("chat-new")}
+      </h1>
     </header>
   );
 }

@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { UpdateDialog } from "@/components/update-dialog";
 import { useT } from "@/i18n";
 import { useCan } from "@/lib/session";
-import { DeviceMark } from "./device-mark";
+import { DeviceTile } from "./device-mark";
 
 type Pending = Exclude<Reported["state"], "current">;
 
@@ -84,9 +84,11 @@ function SatelliteUpdate({
       onOpenChange={onOpenChange}
       tone="ink"
       mark={
-        <span className="mb-5 grid size-20 place-items-center rounded-2xl border border-rule bg-paper-raised text-ink shadow-sm">
-          <DeviceMark brand={s.brand} capabilities={s.capabilities} className="size-10" />
-        </span>
+        <DeviceTile
+          brand={s.brand}
+          capabilities={s.capabilities}
+          className="mb-5 size-20 rounded-2xl bg-paper-raised shadow-(--lift)"
+        />
       }
       title={t("sat-update-title", { name: s.name ?? s.id, version })}
       description={t("sat-update-description")}
@@ -95,7 +97,7 @@ function SatelliteUpdate({
       aside={s.software.name}
       footer={
         state === "installing" ? (
-          <p role="status" className="flex items-center gap-2 text-sm text-ink">
+          <p role="status" className="flex items-center gap-2 text-meta text-ink">
             <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
             {t("sat-update-installing", { version })}
           </p>
@@ -119,20 +121,20 @@ function SatelliteUpdate({
           href={notes}
           target="_blank"
           rel="noreferrer"
-          className="flex items-center justify-between gap-4 rounded-lg border border-rule bg-paper-raised px-4 py-3 hover:border-ink"
+          className="surface flex items-center justify-between gap-4 px-4 py-3"
         >
           <span className="min-w-0">
-            <span className="block text-sm text-ink">{t("sat-update-notes", { version })}</span>
-            <span className="block truncate font-mono text-xs text-ink-muted">{new URL(notes).host}</span>
+            <span className="block text-meta text-ink">{t("sat-update-notes", { version })}</span>
+            <span className="block truncate font-mono text-micro text-ink-muted">{new URL(notes).host}</span>
           </span>
           <ExternalLink className="size-4 shrink-0 text-ink-muted" aria-hidden="true" />
         </a>
       ) : (
-        <p className="text-sm text-ink-muted">{t("sat-update-no-notes")}</p>
+        <p className="text-meta text-ink-muted">{t("sat-update-no-notes")}</p>
       )}
       <section aria-label={t("sat-update-steps")}>
-        <p className="label-mono">{t("sat-update-steps")}</p>
-        <ol className="mt-2 grid list-decimal gap-1.5 pl-5 text-sm text-ink">
+        <p className="caption">{t("sat-update-steps")}</p>
+        <ol className="mt-2 grid list-decimal gap-1.5 pl-5 text-meta text-ink">
           <li>{t("sat-update-step-fetch", { version, software: s.software.name })}</li>
           <li>{t("sat-update-step-restart")}</li>
           <li>{t("sat-update-step-back", { running })}</li>

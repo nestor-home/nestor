@@ -35,7 +35,8 @@ class TaskFileOut(BaseModel):
 
 class TaskOut(BaseModel):
     id: str
-    objective: str
+    title: str  # the short name the agent gave it
+    objective: str  # what its executor was asked, in full
     executor: str
     status: TaskStatus
     requested_by: PersonRef | None
@@ -54,6 +55,7 @@ class TaskOut(BaseModel):
         delivery = afterwards.delivered.get(task.id)
         return cls(
             id=task.id,
+            title=task.title,
             objective=task.objective,
             executor=task.executor,
             status=task.status,

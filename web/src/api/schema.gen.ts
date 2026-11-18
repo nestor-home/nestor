@@ -3324,6 +3324,8 @@ export interface components {
         ScheduleOut: {
             /** Id */
             id: string;
+            /** Title */
+            title: string;
             /** Instruction */
             instruction: string;
             owner: components["schemas"]["PersonRef"] | null;
@@ -3495,6 +3497,8 @@ export interface components {
         TaskOut: {
             /** Id */
             id: string;
+            /** Title */
+            title: string;
             /** Objective */
             objective: string;
             /** Executor */
@@ -3622,6 +3626,8 @@ export interface components {
         WatchOut: {
             /** Id */
             id: string;
+            /** Title */
+            title: string;
             /** What */
             what: string;
             /** Kinds */
