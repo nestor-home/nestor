@@ -221,3 +221,13 @@ cfg-restore-title = Restore this version?
 cfg-restore-text = The current file goes to the history; the chosen version applies at the next restart.
 cfg-restore-dirty = Save or discard your current changes first.
 cfg-restored = Version restored: a restart will apply it.
+cfg-pick-type = Type of model
+cfg-model-type = { $type ->
+    [language] Language
+    [embedding] Embeddings
+    [speaker] Speaker voice
+    [transcription] Transcription
+    [speech] Speech
+    [image] Images
+   *[other] Other
+}

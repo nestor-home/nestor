@@ -154,13 +154,18 @@ export function glanceOf(page: ConfigPage, schema: Schemas, doc: ConfigDocument)
   return { marks: [], line: line ?? tr("cfg-sum-defaults") };
 }
 
-/** The settings that name a component of a named slot (the roles a model serves), by their titles. */
-export function rolesOf(schema: Schemas, doc: ConfigDocument, slot: string, name: string): string[] {
+/** The roles a component holds: each configuration field that names it, with what the field is called. */
+export function rolesOf(
+  schema: Schemas,
+  doc: ConfigDocument,
+  slot: string,
+  name: string,
+): { field: string; title: string }[] {
   return Object.entries(schema.sections).flatMap(([key, section]) => {
     const held = doc[key];
     if (!isRecord(held)) return [];
     return Object.entries(resolve(section, section).schema.properties ?? {})
       .filter(([field, node]) => node["x-nestor"]?.reference === slot && held[field] === name)
-      .map(([field, node]) => titleOf(node, field));
+      .map(([field, node]) => ({ field, title: titleOf(node, field) }));
   });
 }

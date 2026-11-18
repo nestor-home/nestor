@@ -221,3 +221,13 @@ cfg-restore-title = Restaurer cette version ?
 cfg-restore-text = Le fichier actuel part dans l'historique ; la version choisie s'appliquera au prochain redémarrage.
 cfg-restore-dirty = Enregistrez ou annulez d'abord vos modifications en cours.
 cfg-restored = Version restaurée : un redémarrage l'appliquera.
+cfg-pick-type = Type de modèle
+cfg-model-type = { $type ->
+    [language] Langage
+    [embedding] Embeddings
+    [speaker] Voix reconnue
+    [transcription] Transcription
+    [speech] Synthèse vocale
+    [image] Images
+   *[other] Autre
+}

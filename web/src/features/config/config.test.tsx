@@ -346,23 +346,18 @@ describe("models by what they serve", () => {
     renderApp("/config/models");
     await user.click(await screen.findByRole("button", { name: /^Add/ }));
     const picker = await screen.findByRole("dialog");
-    const groups = within(picker)
-      .getAllByRole("region")
-      .map((g) => g.getAttribute("aria-label"));
-    expect(groups).toEqual([
-      "Language models (LLM)",
-      "Text embeddings",
-      "Speaker recognition",
-      "Speech recognition",
-      "Speech synthesis",
-      "Image generation",
-    ]);
-    expect(
-      within(within(picker).getByRole("region", { name: "Speaker recognition" })).getByText("sherpa-onnx"),
-    ).toBeTruthy();
+    // the type first, each with its word; then who provides it
+    const types = within(within(picker).getByRole("list", { name: "Type of model" }))
+      .getAllByRole("button")
+      .map((b) => b.textContent?.replace(/To .*/, ""));
+    expect(types).toEqual(["Language", "Embeddings", "Speaker voice", "Transcription", "Speech", "Images"]);
+    expect(within(picker).queryByText("sherpa-onnx")).not.toBeInTheDocument();
+    await user.click(within(picker).getByRole("button", { name: /^Speaker voice/ }));
+    expect(within(within(picker).getByRole("list", { name: "Speaker voice" })).getByText("sherpa-onnx")).toBeTruthy();
     await user.keyboard("{Escape}");
 
-    expect(await screen.findByText(/sherpa-onnx · Speaker recognition/)).toBeInTheDocument();
+    // a model's card says its type beside its provider
+    expect((await screen.findAllByText("Speaker voice")).length).toBeGreaterThan(0);
     await user.click(screen.getByRole("button", { name: "Edit Agent" }));
     await user.click(await screen.findByRole("combobox", { name: "Spoken model" }));
     const options = (await screen.findAllByRole("option")).map((o) => o.textContent);

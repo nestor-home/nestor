@@ -2,8 +2,10 @@
  * A page of the configuration: what the file holds as cards and rows a person reads, each opening its
  * form in a sheet. Every edit goes into the one draft; nothing is written before "Save".
  */
+import type { LucideIcon } from "lucide-react";
 import { ArrowDown, ArrowUp, Pencil, Plus, Trash2 } from "lucide-react";
 import { type ReactElement, type ReactNode, useId, useRef, useState } from "react";
+import type { ModelType } from "@/api";
 import { modelTypeValues } from "@/api/schema.gen";
 import { Confirm } from "@/components/confirm";
 import { FormActions } from "@/components/form-actions";
@@ -11,13 +13,15 @@ import { Pebble, ServiceTile } from "@/components/marks";
 import { FormDialog, FormSheet } from "@/components/overlay-form";
 import { Fact, Facts, Panel, Section } from "@/components/page";
 import { Empty } from "@/components/states";
-import { Status, Tag } from "@/components/status";
+import { Status } from "@/components/status";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useT } from "@/i18n";
+import { tr } from "@/i18n/runtime";
 import { KindMark, kindName } from "@/lib/brands";
-import { modelTypeHint, modelTypeLabel } from "@/lib/labels";
+import { MODEL_TYPE_ICON, roleIcon } from "@/lib/icons";
+import { modelTypeHint } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 import { ConfigFrame } from "./config-layout";
 import { useConfigEditor } from "./editor";
@@ -42,6 +46,9 @@ import { type ConfigPage, pageTitle } from "./sections";
 import { type Component, componentsOf, defaultShown, peopleOf, rolesOf, valueText } from "./summary";
 
 const CARDS = "grid gap-3 sm:grid-cols-2";
+
+/** A type of model in a word, where its mark stands beside it. */
+const modelTypeShort = (type: ModelType) => tr("cfg-model-type", { type });
 
 export function ConfigPageView({ page }: { page: ConfigPage }) {
   const t = useT();
@@ -225,7 +232,8 @@ function ComponentCard({
   component: c,
   title = c.name,
   line,
-  tags,
+  type,
+  roles,
   problems,
   onOpen,
 }: {
@@ -233,7 +241,10 @@ function ComponentCard({
   component: Component;
   title?: string;
   line: string;
-  tags?: string[];
+  /** For a model: what kind of model it is. */
+  type?: ModelType;
+  /** For a model: the roles it holds. */
+  roles?: { field: string; title: string }[];
   problems: number;
   onOpen: () => void;
 }) {
@@ -243,7 +254,8 @@ function ComponentCard({
       title={title}
       line={line}
       detail={summary(c.entry)}
-      tags={tags}
+      type={type}
+      roles={roles}
       problems={problems}
       missing={!slot.kinds[c.plugin]}
       onOpen={onOpen}
@@ -449,8 +461,9 @@ function NamedSlot({ slotKey, slot }: { slotKey: string; slot: Slot }) {
                 key={c.name}
                 slot={slot}
                 component={c}
-                line={type ? `${kindName(c.provider)} · ${modelTypeLabel(type)}` : kindName(c.provider)}
-                tags={rolesOf(config, draft, slotKey, c.name)}
+                line={kindName(c.provider)}
+                type={type}
+                roles={rolesOf(config, draft, slotKey, c.name)}
                 problems={problemsUnder(problems, [slotKey, c.name]).length}
                 onOpen={() => setEditing({ name: c.name, adding: false })}
               />
@@ -520,9 +533,16 @@ function NameField({ name, taken, onRename }: { name: string; taken: string[]; o
   );
 }
 
-/** Choosing what to add: every installed plugin of the slot, by its mark; models grouped by what they serve. */
+/**
+ * Choosing what to add: for models, the type first (what it will do, with its mark), then who provides it; for
+ * anything else, who provides it. One click picks, and its form opens.
+ */
 function KindPicker({ slot, onPick, trigger }: { slot: Slot; onPick: (kind: string) => void; trigger: ReactElement }) {
   const t = useT();
+  const kinds = Object.keys(slot.kinds);
+  const types = modelTypeValues.filter((type) => kinds.some((k) => slot.model_types[k] === type));
+  const [type, setType] = useState<ModelType | undefined>(types[0]);
+  const shown = types.length ? kinds.filter((k) => slot.model_types[k] === type) : kinds;
   return (
     <FormDialog
       trigger={trigger}
@@ -530,56 +550,77 @@ function KindPicker({ slot, onPick, trigger }: { slot: Slot; onPick: (kind: stri
       description={t("cfg-pick-text")}
       wide
     >
-      {(close) => {
-        const kinds = Object.keys(slot.kinds);
-        const typed = modelTypeValues.map((type) => ({
-          type,
-          kinds: kinds.filter((k) => slot.model_types[k] === type),
-        }));
-        const groups = Object.keys(slot.model_types).length
-          ? typed.filter((g) => g.kinds.length)
-          : [{ type: null, kinds }];
-        const option = (kind: string) => {
-          const provider = providerOf(slot, kind);
-          return (
-            <li key={kind}>
-              <button
-                type="button"
-                onClick={() => {
-                  close();
-                  onPick(kind);
-                }}
-                className="flex h-full w-full flex-col items-start gap-2.5 rounded-xl border border-rule bg-paper p-3 text-left transition-colors hover:border-ink"
-              >
-                <KindMark kind={provider} className="size-6 text-ink" label={false} />
-                <span className="min-w-0">
-                  <span className="block text-[0.95rem] font-medium [overflow-wrap:anywhere] text-ink">
-                    {kindName(provider)}
-                  </span>
-                  <span className="block text-[0.82rem] text-ink-muted">
-                    {t("cfg-required-fields", { count: requiredCount(slot.kinds[kind] ?? {}) })}
-                  </span>
-                </span>
-              </button>
-            </li>
-          );
-        };
-        return (
-          <div className="grid gap-6">
-            {groups.map((group) => (
-              <section key={group.type ?? "all"} aria-label={group.type ? modelTypeLabel(group.type) : undefined}>
-                {group.type ? (
-                  <header className="mb-2.5">
-                    <h3 className="text-[0.95rem] font-medium text-ink">{modelTypeLabel(group.type)}</h3>
-                    <p className="text-[0.85rem] text-ink-muted">{modelTypeHint(group.type)}</p>
-                  </header>
-                ) : null}
-                <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">{group.kinds.map(option)}</ul>
-              </section>
-            ))}
-          </div>
-        );
-      }}
+      {(close) => (
+        <div className={cn("grid gap-5", types.length && "md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]")}>
+          {types.length ? (
+            <ul
+              aria-label={t("cfg-pick-type")}
+              className="flex gap-2 overflow-x-auto pb-1 md:grid md:content-start md:gap-1 md:overflow-visible md:pb-0"
+            >
+              {types.map((option) => {
+                const Icon = MODEL_TYPE_ICON[option];
+                const chosen = option === type;
+                return (
+                  <li key={option} className="shrink-0">
+                    <button
+                      type="button"
+                      aria-pressed={chosen}
+                      onClick={() => setType(option)}
+                      className={cn(
+                        "flex w-full items-center gap-3 rounded-xl p-2 pr-3 text-left transition-colors",
+                        chosen ? "bg-paper-sunken" : "hover:bg-paper-sunken/60",
+                      )}
+                    >
+                      <span
+                        aria-hidden="true"
+                        className={cn(
+                          "grid size-9 shrink-0 place-items-center rounded-lg",
+                          chosen ? "bg-ink text-paper" : "bg-paper-sunken text-ink-muted",
+                        )}
+                      >
+                        <Icon className="size-4.5" />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-[0.95rem] font-medium whitespace-nowrap text-ink">
+                          {modelTypeShort(option)}
+                        </span>
+                        <span className="hidden text-[0.82rem] leading-snug text-ink-muted md:block">
+                          {modelTypeHint(option)}
+                        </span>
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : null}
+          <ul aria-label={type ? modelTypeShort(type) : undefined} className="grid content-start gap-2.5">
+            {shown.map((kind) => {
+              const provider = providerOf(slot, kind);
+              return (
+                <li key={kind}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      close();
+                      onPick(kind);
+                    }}
+                    className="surface flex h-full w-full items-center gap-3.5 p-3.5 text-left"
+                  >
+                    <ServiceTile kind={provider} className="size-11" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-medium text-ink">{kindName(provider)}</span>
+                      <span className="block text-[0.85rem] text-ink-muted">
+                        {t("cfg-required-fields", { count: requiredCount(slot.kinds[kind] ?? {}) })}
+                      </span>
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
     </FormDialog>
   );
 }
@@ -596,7 +637,8 @@ function Card({
   title,
   line,
   detail,
-  tags = [],
+  type,
+  roles = [],
   marks = [],
   problems,
   missing = false,
@@ -606,7 +648,8 @@ function Card({
   title: string;
   line: string;
   detail?: string;
-  tags?: string[];
+  type?: ModelType;
+  roles?: { field: string; title: string }[];
   /** The channels a person is known on, as small marks. */
   marks?: string[];
   problems: number;
@@ -627,10 +670,11 @@ function Card({
           </span>
           <span className="truncate text-[0.9rem] text-ink-muted">{line}</span>
           {detail ? <span className="truncate text-[0.85rem] text-ink-faint">{detail}</span> : null}
-          {tags.length ? (
-            <span className="mt-1.5 flex flex-wrap gap-1.5">
-              {tags.map((tag) => (
-                <Tag key={tag}>{tag}</Tag>
+          {type || roles.length ? (
+            <span className="mt-2 flex flex-wrap gap-1.5">
+              {type ? <ModelMark icon={MODEL_TYPE_ICON[type]} label={modelTypeShort(type)} /> : null}
+              {roles.map((role) => (
+                <ModelMark key={role.field} icon={roleIcon(role.field)} label={role.title} held />
               ))}
             </span>
           ) : null}
@@ -642,6 +686,21 @@ function Card({
         </span>
       </button>
     </li>
+  );
+}
+
+/** What a model is (its type), or a role it holds: an icon and its word, the role in ember since it is in use. */
+function ModelMark({ icon: Icon, label, held = false }: { icon: LucideIcon; label: string; held?: boolean }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex h-6 items-center gap-1.5 rounded-full px-2 text-[0.8rem] font-medium whitespace-nowrap",
+        held ? "bg-ember-soft text-ember" : "bg-paper-sunken text-ink-muted",
+      )}
+    >
+      <Icon className="size-3.5" aria-hidden="true" />
+      {label}
+    </span>
   );
 }
 

@@ -13,28 +13,37 @@ import {
   CircleCheck,
   CircleDashed,
   CircleSlash,
+  Ear,
+  Heading,
   Hourglass,
   House,
+  Image,
   Keyboard,
   KeyRound,
   Lightbulb,
+  ListFilter,
   Megaphone,
   MessageSquareText,
+  MessagesSquare,
   Mic,
   MonitorSmartphone,
   Move3d,
+  PenLine,
   Plug,
   Radar,
   RadioTower,
   ScanEye,
   ScanFace,
   Smile,
+  Sparkles,
+  Speech,
   Video,
   Volume2,
+  Waypoints,
   Workflow,
   Wrench,
 } from "lucide-react";
-import type { Kind } from "@/api";
+import type { Kind, ModelType } from "@/api";
 
 export interface KindStyle {
   icon: LucideIcon;
@@ -98,3 +107,28 @@ export const DEVICE_KIND: [string[], LucideIcon][] = [
   [["vision.person_detection"], CAPABILITY_ICON["vision.person_detection"] as LucideIcon],
   [["video.capture"], CAPABILITY_ICON["video.capture"] as LucideIcon],
 ];
+
+/** What each type of model does, as a mark: a new type fails the typecheck here until it has its look. */
+export const MODEL_TYPE_ICON: Record<ModelType, LucideIcon> = {
+  language: MessagesSquare,
+  embedding: Waypoints,
+  speaker: AudioLines,
+  transcription: Ear,
+  speech: Volume2,
+  image: Image,
+};
+
+/** The roles a model can hold, by the configuration field that names it; any other role gets the plain mark. */
+const ROLE_ICON: Record<string, LucideIcon> = {
+  spoken: Speech,
+  written: PenLine,
+  titles: Heading,
+  transcription: Ear,
+  speech: Volume2,
+  images: Image,
+  model: ListFilter,
+  consolidation: BookMarked,
+  embedder: Waypoints,
+};
+
+export const roleIcon = (field: string): LucideIcon => ROLE_ICON[field] ?? Sparkles;
