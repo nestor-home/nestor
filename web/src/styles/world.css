@@ -6,8 +6,10 @@
 /* -- the rail: always night ink, whatever the theme (light-dark() resolves dark inside it) -------- */
 .rail {
   color-scheme: dark;
-  background: #0f0d0a;
+  /* a little of the ember's warmth where the agent sits, then night */
+  background: radial-gradient(140% 26rem at 0% 0%, rgb(232 131 92 / 0.13), transparent 62%), #100e0b;
   color: var(--ink);
+  box-shadow: inset -1px 0 0 rgb(255 255 255 / 0.06);
 }
 
 /* -- surfaces --------------------------------------------------------------------------------- */

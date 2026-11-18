@@ -2,7 +2,6 @@ import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { Search } from "lucide-react";
 import { AgentFigure } from "@/components/agent-figure";
 import { Kbd } from "@/components/status";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { AgentPresenceProvider, useAgentPresence } from "@/features/agent/presence";
 import { RestartBanner } from "@/features/config/restart";
 import { UpdateAvailable } from "@/features/system/updates";
@@ -44,10 +43,10 @@ export function AppShell() {
       <main
         id="content"
         className={cn(
-          "min-w-0 md:pl-[5.5rem]",
+          "min-w-0 md:pl-[4.75rem] lg:pl-64",
           bleed
             ? "flex h-[calc(100svh-3.5rem-4rem-env(safe-area-inset-bottom))] flex-col overflow-hidden md:h-svh"
-            : "px-4 pt-5 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:px-6 md:pt-8 md:pr-10 md:pb-16 md:pl-[calc(5.5rem+2.5rem)]",
+            : "px-4 pt-5 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:px-6 md:pt-8 md:pr-10 md:pb-16 md:pl-[calc(4.75rem+2.5rem)] lg:pl-[calc(16rem+3rem)]",
         )}
       >
         {bleed ? (
@@ -73,48 +72,74 @@ function useSpaces() {
   return { spaces, settings, path, waiting: items.length };
 }
 
-/** From `md` up: the agent, the spaces as labelled pebbles, then search, settings and the account. */
+/**
+ * From `md` up: the agent and its state, the way to jump anywhere, the spaces, then settings and the account.
+ * Icons alone until `lg`, where each takes its name beside it.
+ */
 function Rail({ onSearch }: { onSearch: () => void }) {
   const t = useT();
   const { spaces, settings, path, waiting } = useSpaces();
   return (
-    <div className="rail fixed inset-y-0 left-0 z-40 flex w-[5.5rem] flex-col items-center gap-1 pt-5 pb-3">
+    <div className="rail fixed inset-y-0 left-0 z-40 flex w-[4.75rem] flex-col gap-4 px-3 pt-5 pb-3 lg:w-64 lg:px-4">
       <AgentMark />
-      <nav aria-label={t("shell-sections")} className="mt-6 flex w-full flex-1 flex-col gap-1 px-2">
+      <button
+        type="button"
+        onClick={onSearch}
+        title={t("shell-go-to")}
+        className="flex h-10 items-center gap-2.5 rounded-xl bg-white/6 px-3 text-[0.9rem] text-ink-muted transition-colors hover:bg-white/10 hover:text-ink max-lg:justify-center max-lg:px-0"
+      >
+        <Search className="size-4.5 shrink-0" aria-hidden="true" />
+        <span className="max-lg:sr-only">{t("shell-go-to")}</span>
+        <span className="ml-auto max-lg:hidden">
+          <Kbd>⌘K</Kbd>
+        </span>
+      </button>
+      <nav aria-label={t("shell-sections")} className="flex min-h-0 flex-1 flex-col gap-1">
         {spaces.map((s) => (
-          <SpaceLink key={s.to} space={s} here={inSpace(s, path)} badge={s.to === "/" ? waiting : 0} />
+          <RailLink key={s.to} space={s} here={inSpace(s, path)} badge={s.to === "/" ? waiting : 0} />
         ))}
         {settings ? (
           <div className="mt-auto grid">
-            <SpaceLink space={settings} here={inSpace(settings, path)} badge={0} />
+            <RailLink space={settings} here={inSpace(settings, path)} badge={0} />
           </div>
         ) : null}
       </nav>
-      <div className="grid w-full justify-items-center gap-1 px-2">
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <button
-                type="button"
-                onClick={onSearch}
-                aria-label={t("shell-go-to")}
-                className="grid size-11 place-items-center rounded-xl text-ink-muted hover:bg-white/8 hover:text-ink"
-              />
-            }
-          >
-            <Search className="size-5" aria-hidden="true" />
-          </TooltipTrigger>
-          <TooltipContent side="right">
-            {t("shell-go-to")} <Kbd>⌘K</Kbd>
-          </TooltipContent>
-        </Tooltip>
+      <div className="flex items-center gap-1 border-t border-white/8 pt-3 max-lg:flex-col">
+        <div className="min-w-0 flex-1 max-lg:flex-none">
+          <AccountMenu compact="narrow" />
+        </div>
         <UpdateAvailable compact />
-        <AccountMenu compact />
       </div>
     </div>
   );
 }
 
+/** A space in the rail: its icon, its name from `lg`, and what waits there. */
+function RailLink({ space, here, badge }: { space: Space; here: boolean; badge: number }) {
+  const t = useT();
+  return (
+    <Link
+      to={space.to}
+      title={t(space.label)}
+      aria-current={here ? "page" : undefined}
+      aria-label={badge ? t("shell-space-waiting", { space: t(space.label), count: badge }) : undefined}
+      className={cn(
+        "relative flex h-11 items-center gap-3 rounded-xl px-3 text-[0.95rem] font-medium transition-colors max-lg:justify-center max-lg:px-0",
+        here ? "bg-[#f5f0e6] text-[#1d1913]" : "text-ink-muted hover:bg-white/8 hover:text-ink",
+      )}
+    >
+      <space.icon className="size-5 shrink-0" aria-hidden="true" />
+      <span className="max-lg:sr-only">{t(space.label)}</span>
+      {badge ? (
+        <span className="ml-auto grid min-w-5 place-items-center rounded-full bg-ember px-1.5 text-[0.72rem] leading-5 font-semibold text-on-ember tabular max-lg:absolute max-lg:-top-1 max-lg:-right-1">
+          {badge}
+        </span>
+      ) : null}
+    </Link>
+  );
+}
+
+/** A space in the phone's tab bar: its icon over its name. */
 function SpaceLink({ space, here, badge }: { space: Space; here: boolean; badge: number }) {
   const t = useT();
   return (
@@ -145,7 +170,7 @@ function SpaceLink({ space, here, badge }: { space: Space; here: boolean; badge:
   );
 }
 
-/** The agent at the head of the rail: its face follows what it does, its dot whether it is reachable. */
+/** The agent at the head of the rail: its face follows what it does, its name and state beside it from `lg`. */
 function AgentMark() {
   const t = useT();
   const me = useMe();
@@ -156,29 +181,36 @@ function AgentMark() {
     online ? `home-state-${figure}` : status === "connecting" ? "shell-live-connecting" : "shell-agent-offline",
   );
   return (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <Link
-            to="/"
-            aria-label={t("shell-agent-label", { assistant: me.assistant, state })}
-            className="relative grid size-12 place-items-center rounded-2xl hover:bg-white/8"
-          />
-        }
-      >
+    <Link
+      to="/"
+      title={`${me.assistant} · ${state}`}
+      aria-label={t("shell-agent-label", { assistant: me.assistant, state })}
+      className="flex items-center gap-3 rounded-2xl p-1 hover:bg-white/6 max-lg:justify-center"
+    >
+      <span className="relative shrink-0">
         <AgentFigure state={figure} size="md" live />
         <span
           aria-hidden="true"
           className={cn(
-            "absolute top-0.5 right-0.5 size-2.5 rounded-full ring-2 ring-[#0f0d0a]",
+            "absolute -top-0.5 -right-0.5 size-2.5 rounded-full ring-2 ring-[#100e0b] lg:hidden",
             online ? "live-dot bg-ember" : status === "connecting" ? "bg-amber" : "bg-ink-faint",
           )}
         />
-      </TooltipTrigger>
-      <TooltipContent side="right">
-        {me.assistant} · {state}
-      </TooltipContent>
-    </Tooltip>
+      </span>
+      <span className="min-w-0 max-lg:hidden">
+        <span className="block truncate font-serif text-[1.45rem] leading-none text-ink">{me.assistant}</span>
+        <span className="mt-1.5 flex items-center gap-1.5 text-[0.82rem] text-ink-muted">
+          <span
+            aria-hidden="true"
+            className={cn(
+              "size-1.5 shrink-0 rounded-full",
+              online ? "live-dot bg-ember" : status === "connecting" ? "bg-amber" : "bg-ink-faint",
+            )}
+          />
+          <span className="truncate">{state}</span>
+        </span>
+      </span>
+    </Link>
   );
 }
 

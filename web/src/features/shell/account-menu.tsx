@@ -1,7 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { ChevronsUpDown, Languages, LogOut, Monitor, Moon, Sun } from "lucide-react";
+import { Languages, LogOut, Monitor, Moon, Sun } from "lucide-react";
 import { api, keys, setCsrfToken } from "@/api";
+import { Pebble } from "@/components/marks";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,7 +25,9 @@ const LANGUAGES: { value: Locale; name: string }[] = [
   { value: "fr", name: "Français" },
 ];
 
-export function AccountMenu({ compact = false }: { compact?: boolean }) {
+/** `compact`: the mark alone (a phone's top bar); `"narrow"`: the mark alone until `lg`, then the name beside it
+ * (the rail). */
+export function AccountMenu({ compact = false }: { compact?: boolean | "narrow" }) {
   const t = useT();
   const me = useMe();
   const { choice, choose } = useTheme();
@@ -53,31 +56,25 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
     <DropdownMenu>
       <DropdownMenuTrigger
         className={
-          compact
-            ? "grid size-11 place-items-center rounded-md hover:bg-paper-sunken data-popup-open:bg-paper-sunken md:size-9"
-            : "flex w-full items-center gap-3 rounded-md px-2 py-2 text-left hover:bg-paper-sunken data-popup-open:bg-paper-sunken"
+          compact === true
+            ? "grid size-11 place-items-center rounded-xl hover:bg-paper-sunken data-popup-open:bg-paper-sunken"
+            : "flex w-full items-center gap-3 rounded-xl p-2 text-left hover:bg-white/8 data-popup-open:bg-white/8 max-lg:justify-center"
         }
       >
-        <span
-          aria-hidden="true"
-          className="grid size-7 shrink-0 place-items-center rounded-sm bg-ink font-serif text-sm text-paper"
-        >
-          {(me.account.person?.name ?? me.account.login).slice(0, 1).toUpperCase()}
-        </span>
-        {compact ? null : (
-          <>
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm text-ink">{me.account.person?.name ?? me.account.login}</span>
-              <span className="block truncate text-[0.85rem] text-ink-muted">{roleLabel(me.account.role)}</span>
+        <Pebble name={me.account.person?.name ?? me.account.login} className="size-8 text-[0.8rem]" />
+        {compact === true ? null : (
+          <span className="min-w-0 flex-1 max-lg:hidden">
+            <span className="block truncate text-[0.92rem] font-medium text-ink">
+              {me.account.person?.name ?? me.account.login}
             </span>
-            <ChevronsUpDown className="size-4 text-ink-faint" aria-hidden="true" />
-          </>
+            <span className="block truncate text-[0.8rem] text-ink-muted">{roleLabel(me.account.role)}</span>
+          </span>
         )}
         <span className="sr-only">{t("shell-account-menu")}</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent
-        side={compact ? "bottom" : "top"}
-        align={compact ? "end" : "start"}
+        side={compact === true ? "bottom" : "top"}
+        align={compact === true ? "end" : "start"}
         className="w-60 border border-rule bg-paper-raised"
       >
         <DropdownMenuGroup>
