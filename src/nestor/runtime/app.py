@@ -226,7 +226,13 @@ class Nestor:
         # watching and calling through the devices, when a host relays their media (aiortc, the `media` extra)
         relays = (relay for c in self.channels if isinstance(c, SatelliteHost) and (relay := c.media_relay()))
         relay = next(relays, None)
-        self.media = MediaSessions(self.journal, self.pairing, relay, self.blobs) if relay else None
+        self.media = (
+            MediaSessions(
+                self.journal, self.pairing, relay, self.blobs, presence=self.presence, timezone=config.persona.timezone
+            )
+            if relay
+            else None
+        )
         # executors reach Nestor's MCP server where the admin is: its public address, and keys kept in the vault
         public_url = config.admin.public_url if config.admin else None
         self.executor_keys: ExecutorKeys | None = None

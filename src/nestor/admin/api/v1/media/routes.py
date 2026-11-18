@@ -85,9 +85,17 @@ async def set_media_access(request: Request, caller: Manager, device_id: str, bo
     longer allows ends at once."""
     admin = state(request)
     people = People(admin.nestor.household)
-    if unknown := [p for p in [*body.viewers, *body.callers] if not people.known(p)]:
+    named = [*body.viewers, *body.callers, *body.privacy.home_people]
+    if unknown := [p for p in named if not people.known(p)]:
         raise ApiError(422, "person_unknown", person=unknown[0])
-    access = MediaAccess(frozenset(map(PersonId, body.viewers)), frozenset(map(PersonId, body.callers)), body.camera)
+    if body.privacy.off_when_home and admin.nestor.presence is None:
+        raise ApiError(409, "privacy_needs_presence")
+    access = MediaAccess(
+        frozenset(map(PersonId, body.viewers)),
+        frozenset(map(PersonId, body.callers)),
+        body.camera,
+        body.privacy.to_domain(),
+    )
     try:
         satellite = await admin.nestor.pairing.set_access(device_id, access, by=caller.person)
     except KeyError:
@@ -121,4 +129,4 @@ def _refusal(refused: MediaRefused) -> ApiError:
     if refused.reason is Refusal.UNKNOWN:
         return not_found("satellite_unknown")
     status, code = REFUSED[refused.reason]
-    return ApiError(status, code)
+    return ApiError(status, code, off=refused.off or "")

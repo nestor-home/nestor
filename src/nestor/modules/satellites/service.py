@@ -224,7 +224,9 @@ class Pairing(Component):
                 case SatelliteRevoked():
                     self._satellites.pop(event.device_id, None)
                 case SatelliteMediaAccessSet() if event.device_id in self._satellites:
-                    access = MediaAccess(frozenset(event.viewers), frozenset(event.callers), event.camera)
+                    access = MediaAccess(
+                        frozenset(event.viewers), frozenset(event.callers), event.camera, event.privacy
+                    )
                     self._satellites[event.device_id] = replace(self._satellites[event.device_id], access=access)
                 case SatelliteConnected():
                     self._declared(event.device_id, event.software, event.protocol)
@@ -257,6 +259,7 @@ class Pairing(Component):
                 viewers=tuple(sorted(access.viewers)),
                 callers=tuple(sorted(access.callers)),
                 camera=access.camera,
+                privacy=access.privacy,
                 by=by,
             )
         )

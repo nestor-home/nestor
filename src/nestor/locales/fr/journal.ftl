@@ -204,6 +204,7 @@ journal-media-closed = { $device } : session terminée après { $seconds } s, { 
     [timed_out] sa durée maximale est passée
     [signed_out] la personne s'est déconnectée
     [access_changed] la personne n'y a plus droit
+    [privacy] la caméra a cessé de filmer (heures calmes, ou quelqu'un est rentré)
     [device_left] l'appareil est parti
     [failed] elle n'a pas pu s'ouvrir
    *[closed] fermée

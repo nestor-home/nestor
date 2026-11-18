@@ -6,7 +6,7 @@ from enum import StrEnum
 
 from nestor.core import Capability, Event, PersonId
 from nestor.modules.journal import FileRef
-from nestor.modules.satellites.types import Device, PairingMethod, Proof, Software, UpdateState
+from nestor.modules.satellites.types import Device, PairingMethod, Privacy, Proof, Software, UpdateState
 
 
 class SatellitePairingRequested(Event, event_type="satellite.pairing.requested"):
@@ -133,12 +133,14 @@ class SpeechActivityObserved(Event, event_type="observation.speech.activity"):
 
 
 class SatelliteMediaAccessSet(Event, event_type="satellite.media.access.set"):
-    """Who may watch the device or call through it besides its owners, and whether its camera may film."""
+    """Who may watch the device or call through it besides its owners, whether its camera may film, and when it does
+    not (`privacy`)."""
 
     device_id: str
     viewers: tuple[PersonId, ...] = ()
     callers: tuple[PersonId, ...] = ()
     camera: bool = True
+    privacy: Privacy = Privacy()
     by: PersonId | None = None
 
 
@@ -147,6 +149,7 @@ class MediaEnd(StrEnum):
 
     CLOSED = "closed"  # whoever opened it closed it
     TIMED_OUT = "timed_out"  # its longest duration passed
+    PRIVACY = "privacy"  # the camera stopped filming: its quiet hours began, or someone came home
     SIGNED_OUT = "signed_out"  # the admin session it belonged to ended (signed out, expired, revoked)
     ACCESS_CHANGED = "access_changed"  # the device no longer lets its person do it
     DEVICE_LEFT = "device_left"  # the device's link or connection went down

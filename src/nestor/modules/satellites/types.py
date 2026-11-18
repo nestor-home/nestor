@@ -263,13 +263,59 @@ def _methods(data: object) -> tuple[PairingMethod, ...]:
 
 
 @dataclass(frozen=True, slots=True)
+class QuietHours:
+    """A time slot when a camera does not film, in the household's time: from `start` to `end` (`HH:MM`; past
+    midnight when `end` is not after `start`, a whole day when they are equal), starting on each of `days` (0 Monday
+    to 6 Sunday)."""
+
+    days: tuple[int, ...]
+    start: str
+    end: str
+
+    def __post_init__(self) -> None:
+        if not self.days or any(not 0 <= d <= 6 for d in self.days) or len(set(self.days)) != len(self.days):
+            raise ContractError("quiet hours need days, each from 0 (Monday) to 6 (Sunday), once")
+        for moment in (self.start, self.end):
+            hours, _, minutes = moment.partition(":")
+            if not (
+                len(moment) == 5 and hours.isdigit() and minutes.isdigit() and int(hours) < 24 and int(minutes) < 60
+            ):
+                raise ContractError(f"{moment!r} is not a time of day (HH:MM)")
+
+    def covers(self, now: datetime) -> bool:
+        """Whether `now`, in the household's time, falls in this slot."""
+        day, minute = now.weekday(), now.hour * 60 + now.minute
+        start, end = _minutes(self.start), _minutes(self.end)
+        if start < end:
+            return day in self.days and start <= minute < end
+        return (day in self.days and minute >= start) or ((day - 1) % 7 in self.days and minute < end)
+
+
+def _minutes(moment: str) -> int:
+    hours, _, minutes = moment.partition(":")
+    return int(hours) * 60 + int(minutes)
+
+
+@dataclass(frozen=True, slots=True)
+class Privacy:
+    """When a device's camera does not film, besides its switch: during its `quiet` hours, and, when
+    `off_when_home`, while one of `home_people` is home (anyone of the household when empty). Nothing by default: the
+    camera films whenever someone allowed asks."""
+
+    quiet: tuple[QuietHours, ...] = ()
+    off_when_home: bool = False
+    home_people: tuple[PersonId, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
 class MediaAccess:
-    """Who of the household may watch a device or call through it, besides its owners, and whether its camera may
-    film at all. Set by whoever manages satellites; nobody by default."""
+    """Who of the household may watch a device or call through it, besides its owners, whether its camera may film
+    at all, and when it does not (`privacy`). Set by whoever manages satellites; nobody, and no rule, by default."""
 
     viewers: frozenset[PersonId] = frozenset()
     callers: frozenset[PersonId] = frozenset()
     camera: bool = True
+    privacy: Privacy = Privacy()
 
 
 class Purpose(StrEnum):

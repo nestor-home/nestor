@@ -58,3 +58,28 @@ async def test_what_someone_watches_ends_when_they_sign_out(tmp_path: Path) -> N
         assert (await owner.delete("/api/v1/session")).status_code == 204
         [closed] = await admin.nestor.journal.history(MediaSessionClosed)
         assert closed.reason is MediaEnd.SIGNED_OUT
+
+
+async def test_privacy_rules_are_set_per_device_and_read_back(tmp_path: Path) -> None:
+    async with Harness(tmp_path) as admin:
+        await watching(admin)
+        owner = await admin.api()
+        rules = {
+            "quiet": [{"days": [4, 0], "start": "22:00", "end": "07:00"}],
+            "off_when_home": True,
+            "home_people": ["lucie"],
+        }
+        set_ = await owner.put("/api/v1/satellites/camera-entree/media/access", {"privacy": rules})
+        assert set_.status_code == 200
+        privacy = (await owner.get("/api/v1/satellites/camera-entree")).json()["access"]["privacy"]
+        assert privacy["quiet"] == [{"days": [0, 4], "start": "22:00", "end": "07:00"}]
+        assert (privacy["off_when_home"], [p["id"] for p in privacy["home_people"]]) == (True, ["lucie"])
+
+        late = {"quiet": [{"days": [0], "start": "24:00", "end": "07:00"}]}
+        stranger = {"off_when_home": True, "home_people": ["paul"]}
+        refused = [
+            await owner.put("/api/v1/satellites/camera-entree/media/access", {"privacy": body})
+            for body in (late, stranger)
+        ]
+    assert [r.status_code for r in refused] == [422, 422]
+    assert refused[1].json()["error"]["code"] == "person_unknown"

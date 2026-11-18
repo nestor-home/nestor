@@ -71,6 +71,7 @@ ErrorCode = Literal[
     "invitation_used",
     "journal_entry_unknown",
     "media_camera_off",
+    "privacy_needs_presence",
     "media_forbidden",
     "media_off",
     "media_offline",
