@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.17.0](https://github.com/nestor-home/nestor/compare/v0.16.1...v0.17.0) (2026-11-19)
+
+
+### Features
+
+* english acknowledgements no longer cut the voice off, measured by a bench ([#200](https://github.com/nestor-home/nestor/issues/200)) ([8ad7618](https://github.com/nestor-home/nestor/commit/8ad76182929c01e89631f131a64f6dcc9b5b0942))
+
+
+### Bug Fixes
+
+* **deps:** update dependency @lobehub/icons-static-svg to v1.104.0 ([#203](https://github.com/nestor-home/nestor/issues/203)) ([2b0676a](https://github.com/nestor-home/nestor/commit/2b0676a8e449a9f90a24eb2b968d05e03b7f7991))
+
+
+### Documentation
+
+* the readme shows today's admin and says nestor is a preview ([#201](https://github.com/nestor-home/nestor/issues/201)) ([0ce7804](https://github.com/nestor-home/nestor/commit/0ce7804abc114da59728183584031da4b344ab57))
+
 ## [0.16.1](https://github.com/nestor-home/nestor/compare/v0.16.0...v0.16.1) (2026-11-19)
 
 
