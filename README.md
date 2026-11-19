@@ -13,6 +13,7 @@
   <a href="https://github.com/nestor-home/nestor/pkgs/container/nestor"><img alt="Docker image" src="https://img.shields.io/badge/docker-ghcr.io%2Fnestor--home%2Fnestor-1d1913?logo=docker&logoColor=white"></a>
   <a href="https://github.com/nestor-home/nestor/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/nestor-home/nestor/actions/workflows/ci.yml/badge.svg?branch=main"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/github/license/nestor-home/nestor?color=1d1913"></a>
+  <a href="#status"><img alt="Status: preview" src="https://img.shields.io/badge/status-preview-ad401d"></a>
 </p>
 
 <p align="center">
@@ -29,15 +30,16 @@ the right place. Every word it says is in a journal you can read.
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/nestor-home/nestor/main/.github/assets/journal-dark.webp">
-    <img alt="The admin's journal: a watch on the school's mail, triggered, said aloud in the living room, then written on Telegram once Léa left" src="https://raw.githubusercontent.com/nestor-home/nestor/main/.github/assets/journal-light.webp" width="840">
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/nestor-home/nestor/main/.github/assets/admin-dark.webp">
+    <img alt="The admin's Today page: what Nestor is doing, the rooms and who is in them, what waits for you" src="https://raw.githubusercontent.com/nestor-home/nestor/main/.github/assets/admin-light.webp" width="840">
   </picture>
 </p>
 
 ## What it does
 
 - **One assistant, every channel.** Satellites in each room (a speaker, a Reachy Mini, a browser, a
-  terminal) and Telegram reach the same agent, with the same memory. Satellites can type, talk, or both.
+  terminal), the admin's chat and messaging apps (Telegram, WhatsApp, Signal, Discord, Slack, Matrix…)
+  reach the same agent, with the same memory. Satellites can type, talk, film, or all three.
 - **Native Home Assistant.** Presence, rooms and devices come from Home Assistant, and Nestor acts
   through its MCP server. Locks, alarms and garage doors wait for a confirmation in writing.
 - **It speaks first when it matters.** Watches on your mail, reminders and recurring checks, messages
@@ -45,6 +47,8 @@ the right place. Every word it says is in a journal you can read.
   are out, respects quiet hours, and stays silent when a check finds nothing.
 - **Memory you can read.** Dated, sourced facts and summaries of past conversations, found by words and
   by meaning, all visible and editable in the admin.
+- **Your accounts and tools.** Google, Microsoft 365, CalDAV and IMAP accounts, each kept to its owner;
+  web search (free tiers without a key), pages, weather, maps, and any MCP server.
 - **Long work, elsewhere.** Long tasks go to executors: [Hermes](https://github.com/NousResearch/hermes-agent),
   OpenAI Codex, Claude Code, with the files they make; a slow tool keeps running in the background and its
   result comes back into the conversation.
@@ -149,8 +153,10 @@ To start your own, use a template:
 
 ## Status
 
-Nestor is young and moves fast. Until 1.0, a minor release may change the configuration or the
-journal's format without a migration: read the [changelog](CHANGELOG.md) before you upgrade.
+**Preview.** Nestor works end to end, but it is young and moves fast.
+Until it is declared stable, a release may change the configuration or the journal's format without
+a migration: read the [changelog](CHANGELOG.md) before you upgrade, and expect to start your data
+over now and then. Questions and ideas are welcome in [Discussions](https://github.com/orgs/nestor-home/discussions).
 
 ## Development
 
