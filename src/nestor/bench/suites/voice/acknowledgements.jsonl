@@ -1,0 +1,62 @@
+{"dataset": "acknowledgements", "version": 1, "source": "written for this bench: what a person says while the assistant speaks", "kinds": "acknowledgement: must not cut the assistant off; reply: must"}
+{"id": "en-a01", "language": "en", "kind": "acknowledgement", "text": "Mm-hmm."}
+{"id": "en-a02", "language": "en", "kind": "acknowledgement", "text": "Uh-huh."}
+{"id": "en-a03", "language": "en", "kind": "acknowledgement", "text": "Yeah."}
+{"id": "en-a04", "language": "en", "kind": "acknowledgement", "text": "Yeah, yeah."}
+{"id": "en-a05", "language": "en", "kind": "acknowledgement", "text": "Yep."}
+{"id": "en-a06", "language": "en", "kind": "acknowledgement", "text": "Right."}
+{"id": "en-a07", "language": "en", "kind": "acknowledgement", "text": "Right, right."}
+{"id": "en-a08", "language": "en", "kind": "acknowledgement", "text": "Okay."}
+{"id": "en-a09", "language": "en", "kind": "acknowledgement", "text": "OK, sure."}
+{"id": "en-a10", "language": "en", "kind": "acknowledgement", "text": "Sure."}
+{"id": "en-a11", "language": "en", "kind": "acknowledgement", "text": "I see."}
+{"id": "en-a12", "language": "en", "kind": "acknowledgement", "text": "Got it."}
+{"id": "en-a13", "language": "en", "kind": "acknowledgement", "text": "All right."}
+{"id": "en-a14", "language": "en", "kind": "acknowledgement", "text": "Oh, okay."}
+{"id": "en-a15", "language": "en", "kind": "acknowledgement", "text": "Hmm."}
+{"id": "en-a16", "language": "en", "kind": "acknowledgement", "text": "Exactly."}
+{"id": "en-a17", "language": "en", "kind": "acknowledgement", "text": "Nice."}
+{"id": "en-a18", "language": "en", "kind": "acknowledgement", "text": "Wow."}
+{"id": "en-a19", "language": "en", "kind": "acknowledgement", "text": "Yes."}
+{"id": "en-a20", "language": "en", "kind": "acknowledgement", "text": "Gotcha."}
+{"id": "en-r01", "language": "en", "kind": "reply", "text": "Wait."}
+{"id": "en-r02", "language": "en", "kind": "reply", "text": "No, stop."}
+{"id": "en-r03", "language": "en", "kind": "reply", "text": "Hold on."}
+{"id": "en-r04", "language": "en", "kind": "reply", "text": "Sorry?"}
+{"id": "en-r05", "language": "en", "kind": "reply", "text": "What?"}
+{"id": "en-r06", "language": "en", "kind": "reply", "text": "Yeah, but what about Tom?"}
+{"id": "en-r07", "language": "en", "kind": "reply", "text": "Is it going to rain?"}
+{"id": "en-r08", "language": "en", "kind": "reply", "text": "Actually, never mind."}
+{"id": "en-r09", "language": "en", "kind": "reply", "text": "Can you repeat that?"}
+{"id": "en-r10", "language": "en", "kind": "reply", "text": "Okay, that's enough, thanks."}
+{"id": "en-r11", "language": "en", "kind": "reply", "text": "Stop."}
+{"id": "en-r12", "language": "en", "kind": "reply", "text": "Not now."}
+{"id": "en-r13", "language": "en", "kind": "reply", "text": "Right, and the heating?"}
+{"id": "en-r14", "language": "en", "kind": "reply", "text": "Hey Nestor."}
+{"id": "en-r15", "language": "en", "kind": "reply", "text": "Cancel that."}
+{"id": "fr-a01", "language": "fr", "kind": "acknowledgement", "text": "Mmh."}
+{"id": "fr-a02", "language": "fr", "kind": "acknowledgement", "text": "Ouais."}
+{"id": "fr-a03", "language": "fr", "kind": "acknowledgement", "text": "Ouais ouais."}
+{"id": "fr-a04", "language": "fr", "kind": "acknowledgement", "text": "D'accord."}
+{"id": "fr-a05", "language": "fr", "kind": "acknowledgement", "text": "D'accord, d'accord."}
+{"id": "fr-a06", "language": "fr", "kind": "acknowledgement", "text": "Oui."}
+{"id": "fr-a07", "language": "fr", "kind": "acknowledgement", "text": "Ok."}
+{"id": "fr-a08", "language": "fr", "kind": "acknowledgement", "text": "Ah ouais ?"}
+{"id": "fr-a09", "language": "fr", "kind": "acknowledgement", "text": "Je vois."}
+{"id": "fr-a10", "language": "fr", "kind": "acknowledgement", "text": "Exactement."}
+{"id": "fr-a11", "language": "fr", "kind": "acknowledgement", "text": "Carrément."}
+{"id": "fr-a12", "language": "fr", "kind": "acknowledgement", "text": "Super."}
+{"id": "fr-a13", "language": "fr", "kind": "acknowledgement", "text": "Bon."}
+{"id": "fr-a14", "language": "fr", "kind": "acknowledgement", "text": "Euh, oui."}
+{"id": "fr-r01", "language": "fr", "kind": "reply", "text": "Attends."}
+{"id": "fr-r02", "language": "fr", "kind": "reply", "text": "Non, arrête."}
+{"id": "fr-r03", "language": "fr", "kind": "reply", "text": "Stop."}
+{"id": "fr-r04", "language": "fr", "kind": "reply", "text": "Pardon ?"}
+{"id": "fr-r05", "language": "fr", "kind": "reply", "text": "Quoi ?"}
+{"id": "fr-r06", "language": "fr", "kind": "reply", "text": "Ouais mais non."}
+{"id": "fr-r07", "language": "fr", "kind": "reply", "text": "Il va pleuvoir ?"}
+{"id": "fr-r08", "language": "fr", "kind": "reply", "text": "Excuse-moi."}
+{"id": "fr-r09", "language": "fr", "kind": "reply", "text": "Tu peux répéter ?"}
+{"id": "fr-r10", "language": "fr", "kind": "reply", "text": "Ok, ça suffit, merci."}
+{"id": "fr-r11", "language": "fr", "kind": "reply", "text": "Pas maintenant."}
+{"id": "fr-r12", "language": "fr", "kind": "reply", "text": "Et le chauffage ?"}

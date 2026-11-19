@@ -109,6 +109,7 @@ routing = "nestor.bench.suites.routing:suite"
 speaker-id = "nestor.bench.suites.speaker_id:suite"
 transcription = "nestor.bench.suites.voice:transcription"
 speech = "nestor.bench.suites.voice:speech"
+acknowledgements = "nestor.bench.suites.voice:acknowledgements"
 
 [project.urls]
 Homepage = "https://nestorhome.dev"
