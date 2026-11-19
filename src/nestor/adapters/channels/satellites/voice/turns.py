@@ -31,7 +31,7 @@ from pipecat.turns.user_start.base_user_turn_start_strategy import BaseUserTurnS
 from pipecat.turns.user_stop import TurnAnalyzerUserTurnStopStrategy
 from pipecat.turns.user_turn_strategies import UserTurnStrategies
 
-from nestor.adapters.channels.satellites.voice.acknowledgements import is_acknowledgement
+from nestor.modules.channels.acknowledgements import is_acknowledgement
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

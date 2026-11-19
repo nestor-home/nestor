@@ -1,8 +1,9 @@
-"""What a person says while the assistant speaks without meaning to cut it off: "mmh", "ouais", "yeah", "right".
+"""What a person says while the assistant speaks aloud without meaning to cut it off: "mmh", "ouais", "yeah", "right".
+A spoken channel lets these through and stops the assistant for any other word (the satellites' voice does).
 
 One set for every language: a household mixes them ("ok", "yeah" in French), and no word here is a real reply in
 another language. Measured by the `acknowledgements` bench (`bench/voice/`), spoken by a speech model then heard by a
-transcription model, as on a satellite. Imports nothing heavy, so the bench reads it without the `voice` extra.
+transcription model, as on a satellite.
 """
 
 import re

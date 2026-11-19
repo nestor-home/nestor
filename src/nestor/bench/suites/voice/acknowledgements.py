@@ -12,12 +12,12 @@ from importlib.resources.abc import Traversable
 from pathlib import Path
 from typing import Any
 
-from nestor.adapters.channels.satellites.voice.acknowledgements import is_acknowledgement
 from nestor.bench.errors import BenchError
 from nestor.bench.ports import Knobs, Suite, Trial
 from nestor.bench.types import Better, Case, CaseResult, Dataset, Finding, Metric, Summary, Unit
 from nestor.core import ProviderError
 from nestor.core.i18n import Message
+from nestor.modules.channels.acknowledgements import is_acknowledgement
 
 NAME = "acknowledgements"
 RECORDING = "audio/ogg"  # what `SpeechModel.synthesize` records
