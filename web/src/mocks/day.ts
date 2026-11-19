@@ -1,5 +1,5 @@
 /**
- * A day of Richie at the Lambert's, as the journal records it: linked events that the admin turns
+ * A day of Richie at the Martin's, as the journal records it: linked events that the admin turns
  * into threads (a conversation and its tool calls) and chains (a watch triggered → announced →
  * followed up; a task started → progressing → delivered). Times are minutes before "now". Written
  * in English, the French of each text beside it (`fr`).
@@ -510,7 +510,7 @@ export function day(now = Date.now()): JournalEvent[] {
   ev({
     ago: 170.8,
     type: "connection.changed",
-    title: "Connection mathis.lambert27@gmail.com needs to be authorised again",
+    title: "Connection mathis@example.com needs to be authorised again",
     detail: fr(
       "Google refused to renew the token: reconnect the account.",
       "Google a refusé le renouvellement du jeton : reconnectez le compte.",

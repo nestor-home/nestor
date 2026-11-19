@@ -36,7 +36,7 @@ const SLOTS = Object.keys(SCHEMAS.fr.slots);
 export function fresh(): ConfigDb {
   const now = document();
   const older = structuredClone(now) as Record<string, Record<string, unknown>>;
-  (older.persona as Record<string, unknown>).character = "You are Richie, the Lambert household's assistant.";
+  (older.persona as Record<string, unknown>).character = "You are Richie, the Martin household's assistant.";
   (older.initiative as Record<string, unknown>).quiet_hours = "23:00-07:00";
   const oldest = structuredClone(older);
   delete (oldest as Record<string, unknown>).watches;

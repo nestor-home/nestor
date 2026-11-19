@@ -1,5 +1,5 @@
 /**
- * The one instance every screen of the mock describes: Richie, serving the Lambert household. Its configuration
+ * The one instance every screen of the mock describes: Richie, serving the Martin household. Its configuration
  * file is the source of what exists (models, channels, executors, tools, inbound sources, the home, connectors,
  * the people and where they are written to); what runs, who is reached where and what a watch can follow are
  * read from it here, never typed again. What the file cannot know (health, versions, presence) is in `fixtures`.
@@ -29,7 +29,7 @@ export const SECRETS = {
   "channels.slack.bot_token": ["xoxb-4127-richie-9c0e2b", 60 * 24 * 16],
   "channels.matrix.token": ["syt_cmljaGll_b41f7a22", 60 * 24 * 15],
   "channels.whatsapp.token": ["EAAGm0PX4ZCpsBAwhatsapp", 60 * 24 * 14],
-  "channels.whatsapp.verify_token": ["lambert-verify-51c8", 60 * 24 * 14],
+  "channels.whatsapp.verify_token": ["martin-verify-51c8", 60 * 24 * 14],
   "channels.whatsapp.app_secret": ["9f1c2e7ab4d05836", 60 * 24 * 14],
   "channels.email.password": ["hx7-richie-mailbox", 60 * 24 * 13],
   "channels.ntfy.token": ["tk_3f9a7d2f51c8", 60 * 24 * 11],
@@ -60,7 +60,7 @@ export function document(): ConfigDocument {
       language: "English",
       timezone: "UTC",
       character:
-        "You are Richie, the Lambert household's assistant. You speak plainly, warmly and with a touch of humour, and you get to the point.",
+        "You are Richie, the Martin household's assistant. You speak plainly, warmly and with a touch of humour, and you get to the point.",
     },
     // each person by the accounts the channels below know them by, and the one written to first
     household: [
@@ -70,8 +70,8 @@ export function document(): ConfigDocument {
         accounts: [
           "telegram:@mathis_l",
           "slack:U04MATHIS7",
-          "matrix:@mathis:matrix.lambert.family",
-          "email:mathis@lambert.family",
+          "matrix:@mathis:matrix.martin.family",
+          "email:mathis@martin.family",
           "openai-api:mathis",
         ],
         reach: "telegram:@mathis_l",
@@ -79,14 +79,14 @@ export function document(): ConfigDocument {
       {
         id: "lea",
         name: "Léa",
-        accounts: ["telegram:@lea_lambert", "signal:+33655504102"],
-        reach: "telegram:@lea_lambert",
+        accounts: ["telegram:@lea_martin", "signal:+33655504102"],
+        reach: "telegram:@lea_martin",
       },
       {
         id: "jules",
         name: "Jules",
         accounts: ["discord:jules.lbt"],
-        reach: "ntfy:jules-lambert-3f9a",
+        reach: "ntfy:jules-martin-3f9a",
         may_message: ["mathis", "lea", "odile"],
       },
       {
@@ -156,7 +156,7 @@ export function document(): ConfigDocument {
         app_token: vault("channels.slack.app_token"),
         bot_token: vault("channels.slack.bot_token"),
       },
-      { kind: "matrix", homeserver: "https://matrix.lambert.family", token: vault("channels.matrix.token") },
+      { kind: "matrix", homeserver: "https://matrix.martin.family", token: vault("channels.matrix.token") },
       { kind: "signal", url: "http://signal-cli.local:8080", number: "+33655504217" },
       {
         kind: "whatsapp",
@@ -168,11 +168,11 @@ export function document(): ConfigDocument {
       },
       {
         kind: "email",
-        address: "richie@lambert.family",
-        username: "richie@lambert.family",
+        address: "richie@martin.family",
+        username: "richie@martin.family",
         password: vault("channels.email.password"),
-        imap_host: "imap.lambert.family",
-        smtp_host: "smtp.lambert.family",
+        imap_host: "imap.martin.family",
+        smtp_host: "smtp.martin.family",
         smtp_port: 587,
         smtp_security: "starttls",
       },
@@ -198,7 +198,7 @@ export function document(): ConfigDocument {
       },
       {
         kind: "codex",
-        command: ["ssh", "codex@vps.lambert.family", "codex", "app-server", "proxy"],
+        command: ["ssh", "codex@vps.martin.family", "codex", "app-server", "proxy"],
         working_directory: "/srv/codex/work",
         description: fr(
           "run the home server: deploy the sites, read the logs",
@@ -226,7 +226,7 @@ export function document(): ConfigDocument {
         transport: "sse",
         token: vault("tools.recipes.token"),
         risks: { add_recipe: "write", delete_recipe: "sensitive" },
-        headers: { "X-Household": "lambert-home-7d2f" },
+        headers: { "X-Household": "martin-home-7d2f" },
       },
       { kind: "open-meteo", home: "Lyon" },
       { kind: "openstreetmap", home: "Lyon" },
@@ -276,7 +276,7 @@ export function document(): ConfigDocument {
     },
     connectors: [{ kind: "google" }, { kind: "microsoft" }, { kind: "dav" }, { kind: "imap" }, { kind: "mcp" }],
     initiative: { quiet_hours: "22:30-07:30", main_room: "living room" },
-    admin: { host: "0.0.0.0", port: 8470, public_url: "https://nestor.lambert.family" },
+    admin: { host: "0.0.0.0", port: 8470, public_url: "https://nestor.martin.family" },
   };
 }
 

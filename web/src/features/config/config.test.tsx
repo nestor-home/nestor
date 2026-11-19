@@ -221,8 +221,8 @@ describe("the configuration", () => {
     renderApp("/config/tools");
     await user.click(await screen.findByRole("button", { name: /^recipes/ }));
     const sheet = await screen.findByRole("dialog", { name: "recipes" });
-    expect(within(sheet).getByText(/set · lam•••2f/)).toBeInTheDocument();
-    expect(sheet).not.toHaveTextContent("lambert-home-7d2f");
+    expect(within(sheet).getByText(/set · mar•••2f/)).toBeInTheDocument();
+    expect(sheet).not.toHaveTextContent("martin-home-7d2f");
     await user.click(within(sheet).getByRole("button", { name: /Replace HTTP headers, value of X-Household/ }));
     await user.type(within(sheet).getByLabelText("HTTP headers, value of X-Household"), "new-household-key");
     await user.click(within(sheet).getByRole("button", { name: "Done" }));

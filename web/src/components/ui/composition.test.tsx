@@ -202,7 +202,7 @@ describe("ui components in their canonical composition", () => {
         <DropdownMenuTrigger render={<Button variant="outline" />}>Compte</DropdownMenuTrigger>
         <DropdownMenuContent>
           <DropdownMenuGroup>
-            <DropdownMenuLabel>mathis@lambert.family</DropdownMenuLabel>
+            <DropdownMenuLabel>mathis@martin.family</DropdownMenuLabel>
             <DropdownMenuItem>Profil</DropdownMenuItem>
             <DropdownMenuItem>Se déconnecter</DropdownMenuItem>
           </DropdownMenuGroup>
