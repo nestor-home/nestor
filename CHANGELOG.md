@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.16.1](https://github.com/nestor-home/nestor/compare/v0.16.0...v0.16.1) (2026-11-19)
+
+
+### Bug Fixes
+
+* a fictional household in the admin's demo data ([#198](https://github.com/nestor-home/nestor/issues/198)) ([df5fabe](https://github.com/nestor-home/nestor/commit/df5fabe84da8ac6062665005515fa1444b54158d))
+* **deps:** update dependency lucide-react to v1.75.0 ([#199](https://github.com/nestor-home/nestor/issues/199)) ([529e56d](https://github.com/nestor-home/nestor/commit/529e56d739f70703e129e6b38f2c43b7572aa246))
+* **deps:** update dependency sherpa-onnx to v2.0.2 ([#196](https://github.com/nestor-home/nestor/issues/196)) ([22be201](https://github.com/nestor-home/nestor/commit/22be201b8b32eb4cd968d4c0b7cbbd2b523ba10e))
+
 ## [0.16.0](https://github.com/nestor-home/nestor/compare/v0.15.0...v0.16.0) (2026-11-18)
 
 
