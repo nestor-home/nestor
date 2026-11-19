@@ -7,7 +7,7 @@ describe("the connected accounts", () => {
   it("puts the accounts to reconnect first, each with why, what to do and the way to do it", async () => {
     renderApp("/connections");
     const broken = await screen.findByRole("region", { name: /To reconnect/ });
-    const gmail = within(broken).getByRole("link", { name: "mathis.lambert27@gmail.com" }).closest("li");
+    const gmail = within(broken).getByRole("link", { name: "mathis@example.com" }).closest("li");
     if (!gmail) throw new Error("the account is not a card of the list");
     expect(within(gmail).getByText("needs reauthorising")).toBeInTheDocument();
     expect(within(gmail).getByText(/Reconnect the account: its settings are kept/)).toBeInTheDocument();
@@ -18,11 +18,11 @@ describe("the connected accounts", () => {
     );
 
     const working = screen.getByRole("region", { name: /Connected/ });
-    expect(within(working).getByRole("link", { name: /lea@lambert\.family/ })).toHaveAttribute(
+    expect(within(working).getByRole("link", { name: /lea@martin\.family/ })).toHaveAttribute(
       "href",
       "/connections/c-imap-lea",
     );
-    expect(within(working).queryByText("mathis.lambert27@gmail.com")).not.toBeInTheDocument();
+    expect(within(working).queryByText("mathis@example.com")).not.toBeInTheDocument();
   });
 
   it("narrows the list to what needs someone, or to one person's accounts", async () => {
@@ -34,9 +34,9 @@ describe("the connected accounts", () => {
 
     await user.click(screen.getByRole("button", { name: /^Léa/ }));
     expect(screen.getByText("lea@192.168.1.20:8808")).toBeInTheDocument();
-    expect(screen.getByText("lea@lambert.family")).toBeInTheDocument();
-    expect(screen.queryByText("mathis.lambert27@gmail.com")).not.toBeInTheDocument();
-    expect(screen.queryByText("mathis.lambert@outlook.com")).not.toBeInTheDocument();
+    expect(screen.getByText("lea@martin.family")).toBeInTheDocument();
+    expect(screen.queryByText("mathis@example.com")).not.toBeInTheDocument();
+    expect(screen.queryByText("mathis.martin@outlook.com")).not.toBeInTheDocument();
   });
 });
 

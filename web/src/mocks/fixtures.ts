@@ -1,5 +1,5 @@
 /**
- * A believable household for development and tests: Richie serving the Lambert family. Written in
+ * A believable household for development and tests: Richie serving the Martin family. Written in
  * English, with the French of each text beside it (`fr`) for an admin read in French.
  */
 import type {
@@ -336,7 +336,7 @@ export function connections(): Connection[] {
       kind: "google",
       brand: "google",
       title: GOOGLE,
-      account: "mathis.lambert27@gmail.com",
+      account: "mathis@example.com",
       owner: ref("mathis"),
       status: "needs_reauth",
       status_reason: reason(
@@ -357,7 +357,7 @@ export function connections(): Connection[] {
       kind: "imap",
       brand: "imap",
       title: MAILBOX,
-      account: "lea@lambert.family",
+      account: "lea@martin.family",
       owner: ref("lea"),
       status: "connected",
       status_reason: null,
@@ -411,7 +411,7 @@ export function connections(): Connection[] {
       kind: "google",
       brand: "google",
       title: GOOGLE,
-      account: "lea.lambert@gmail.com",
+      account: "lea.martin@gmail.com",
       owner: ref("lea"),
       confirm_writes: true,
       created_at: minutes(60 * 24 * 12),
@@ -423,7 +423,7 @@ export function connections(): Connection[] {
       kind: "google",
       brand: "google",
       title: GOOGLE,
-      account: "lea@studio-lambert.fr",
+      account: "lea@studio-martin.fr",
       owner: ref("lea"),
       confirm_writes: true,
       created_at: minutes(60 * 24 * 5),
@@ -436,7 +436,7 @@ export function connections(): Connection[] {
       kind: "microsoft",
       brand: "microsoft",
       title: MICROSOFT,
-      account: "mathis.lambert@outlook.com",
+      account: "mathis.martin@outlook.com",
       owner: ref("mathis"),
       confirm_writes: true,
       created_at: minutes(60 * 24 * 8),
@@ -449,7 +449,7 @@ export function connections(): Connection[] {
       kind: "dav",
       brand: "dav",
       title: nestor("connector-dav-title"),
-      account: "famille.lambert@icloud.com",
+      account: "famille.martin@icloud.com",
       owner: null,
       confirm_writes: true,
       created_at: minutes(60 * 24 * 40),
@@ -945,7 +945,7 @@ export function tasks(): Task[] {
       steps: [],
       result: null,
       error: GYM_ERROR,
-      origin: { session: "telegram:@lea_lambert", channel: "telegram" },
+      origin: { session: "telegram:@lea_martin", channel: "telegram" },
       delivered: null,
       files: [],
     },
@@ -1381,10 +1381,10 @@ const OBSERVED: Record<string, Observed> = {
   "executor/codex": { version: "0.48" },
   "executor/claude-code": { version: "2.1.4" },
   "channel/satellites": { version: PROTOCOL },
-  "channel/telegram": { version: "Bot API 9.2", health_detail: "@richie_lambert_bot" },
+  "channel/telegram": { version: "Bot API 9.2", health_detail: "@richie_martin_bot" },
   "channel/discord": { health_detail: "Richie#4012" },
-  "channel/slack": { health_detail: "lambert-family.slack.com" },
-  "channel/matrix": { health_detail: "@richie:matrix.lambert.family" },
+  "channel/slack": { health_detail: "martin-family.slack.com" },
+  "channel/matrix": { health_detail: "@richie:matrix.martin.family" },
   "channel/whatsapp": { health_detail: "+33 6 55 50 42 18" },
   "channel/openai-api": { health_detail: "/v1/chat/completions" },
   "home/home": { version: "2026.10.2" },

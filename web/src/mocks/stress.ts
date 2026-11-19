@@ -59,7 +59,7 @@ export function stress(db: Db, now = Date.now()): void {
     account: null,
   });
   const mathis = db.accounts[0];
-  if (mathis) mathis.login = `mathis.lambert.${"main-administrator".repeat(2)}@example.org`;
+  if (mathis) mathis.login = `mathis.martin.${"main-administrator".repeat(2)}@example.org`;
 
   let position = db.journal.reduce((last, e) => Math.max(last, e.item.position), 0);
   const events: JournalEvent[] = [];

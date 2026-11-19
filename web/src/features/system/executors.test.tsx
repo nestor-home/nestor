@@ -17,7 +17,7 @@ async function executorRow(name: string): Promise<HTMLElement> {
 describe("the executors' keys for Nestor's MCP server", () => {
   it("says how each executor reaches Nestor and when its key was made and used", async () => {
     renderApp("/system");
-    expect(await screen.findByText(/executors reach Nestor at https:\/\/nestor.lambert.family\/mcp/)).toBeVisible();
+    expect(await screen.findByText(/executors reach Nestor at https:\/\/nestor.martin.family\/mcp/)).toBeVisible();
     const hermes = await executorRow("hermes");
     expect(within(hermes).getByText("Its own configuration declares Nestor's tools")).toBeVisible();
     expect(within(hermes).getByText(/Key made/)).toBeVisible();

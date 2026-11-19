@@ -68,11 +68,11 @@ describe("connecting an account", () => {
     const onConnected = vi.fn();
     await renderWithProviders(<ConnectForm connector={connector("imap")} replaces={null} onConnected={onConnected} />);
     await user.type(screen.getByLabelText("IMAP server"), "imap.example.org ");
-    await user.type(screen.getByLabelText("Username"), "lea@lambert.family ");
+    await user.type(screen.getByLabelText("Username"), "lea@martin.family ");
     await user.type(screen.getByLabelText("App password"), "s3cret-app");
     await user.click(screen.getByRole("button", { name: "Connect" }));
     await waitFor(() =>
-      expect(onConnected).toHaveBeenCalledWith(expect.objectContaining({ account: "lea@lambert.family" })),
+      expect(onConnected).toHaveBeenCalledWith(expect.objectContaining({ account: "lea@martin.family" })),
     );
   });
 

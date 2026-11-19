@@ -51,7 +51,7 @@ describe("a connection's pages", () => {
     const user = userEvent.setup();
     const { router } = renderApp("/connections/c-imap-lea/settings");
     await user.click(await screen.findByRole("button", { name: "Disconnect…" }));
-    await screen.findByRole("alertdialog", { name: "Disconnect lea@lambert.family?" });
+    await screen.findByRole("alertdialog", { name: "Disconnect lea@martin.family?" });
     await user.keyboard("{Escape}");
     await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
     expect(db.connections.some((c) => c.id === "c-imap-lea")).toBe(true);
