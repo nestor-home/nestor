@@ -3,13 +3,12 @@
 Measured on recordings (see the voice proof of concept): Silero VAD detects speech, Smart Turn v3
 decides after each pause whether the sentence is complete, and gives the turn anyway after 1.5 s of
 silence when it judges it incomplete (as many hesitations kept as with Pipecat's 3 s default, 1.5 s
-faster). An acknowledgement ("mmh", "ouais", "d'accord") while the assistant speaks does not cut it
+faster). An acknowledgement ("mmh", "ouais", "yeah", `acknowledgements.py`) while the assistant speaks does not cut it
 off; a real reply ("attends", "non", a question) does. VAD alone cannot tell them apart: the first
 transcribed words, or speech that lasts, decide.
 """
 
 import asyncio
-import re
 from dataclasses import dataclass
 
 from pipecat.audio.turn.smart_turn.base_smart_turn import SmartTurnParams
@@ -32,47 +31,7 @@ from pipecat.turns.user_start.base_user_turn_start_strategy import BaseUserTurnS
 from pipecat.turns.user_stop import TurnAnalyzerUserTurnStopStrategy
 from pipecat.turns.user_turn_strategies import UserTurnStrategies
 
-# French acknowledgements; a word outside this set makes the speech a real turn.
-BACKCHANNELS = frozenset(
-    [
-        "mmh",
-        "mmm",
-        "mm",
-        "mhm",
-        "hm",
-        "hmm",
-        "hum",
-        "ouais",
-        "ouai",
-        "oui",
-        "ok",
-        "okay",
-        "d'accord",
-        "daccord",
-        "ah",
-        "oh",
-        "bah",
-        "ben",
-        "euh",
-        "voilà",
-        "vois",
-        "je",
-        "exact",
-        "exactement",
-        "carrément",
-        "super",
-        "cool",
-        "bon",
-        "ouf",
-    ]
-)
-_WORD = re.compile(r"[a-zàâçéèêëîïôûùüÿœ']+")
-
-
-def is_backchannel(text: str) -> bool:
-    """True when every word is an acknowledgement; nothing heard is not one."""
-    words = _WORD.findall(text.lower().replace("\u2019", "'"))
-    return bool(words) and all(word in BACKCHANNELS for word in words)
+from nestor.modules.channels.acknowledgements import is_acknowledgement
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -123,7 +82,7 @@ class BackchannelAwareStart(BaseUserTurnStartStrategy):
             self._cancel_timer()
         elif isinstance(frame, InterimTranscriptionFrame | TranscriptionFrame):
             heard = frame.text.strip()
-            if heard and not (self._bot_speaking and is_backchannel(heard)):
+            if heard and not (self._bot_speaking and is_acknowledgement(heard)):
                 # Words while silent (very short speech, late VAD) or a real reply over the assistant.
                 await self.report_user_turn_started()
                 return ProcessFrameResult.STOP

@@ -10,7 +10,7 @@ from nestor.bench import BenchError
 from nestor.bench.recording import Cache
 from nestor.bench.results import Run
 from nestor.bench.runner import Plan, read_dataset, run_suite
-from nestor.bench.suites.voice import Speech, Transcription
+from nestor.bench.suites.voice import Acknowledgements, Speech, Transcription
 from nestor.bench.suites.voice.words import errors
 from nestor.bench.variants import load_variant
 from nestor.core import ProviderError
@@ -39,7 +39,9 @@ EARS = "  ears: {type: transcription, provider: ears}\n"
 VOICE = "  voice: {type: speech, provider: voice}\n"
 
 
-async def bench(folder: Path, suite: Transcription | Speech, models: str, cases: Path | None = None) -> Run:
+async def bench(
+    folder: Path, suite: Transcription | Speech | Acknowledgements, models: str, cases: Path | None = None
+) -> Run:
     path = folder / "variant.yaml"
     path.write_text("models:\n" + models)
     variant = load_variant(path, suite, PLUGINS, EchoLocalizer(), environ={})
@@ -118,3 +120,32 @@ async def test_a_number_heard_back_in_figures_counts_as_said(tmp_path: Path) -> 
     dataset, info = read_dataset(Speech(), cases)
     (run,) = await run_suite(Speech(), dataset, info, [variant], Plan(), Cache(tmp_path / "cache"))
     assert {m.id: m.value for m in run.summary.metrics}["wer"] == 0
+
+
+async def test_acknowledgements_are_judged_on_what_was_heard_and_failures_counted_apart(tmp_path: Path) -> None:
+    lines = [
+        {"dataset": "acknowledgements", "version": 1},
+        {"id": "a1", "kind": "acknowledgement", "text": "Mm-hmm."},
+        {"id": "a2", "kind": "acknowledgement", "text": "Ouais, d'accord."},
+        {"id": "a3", "kind": "acknowledgement", "text": "Yeah, panne."},  # its recording is never heard
+        {"id": "r1", "kind": "reply", "text": "Wait, stop."},
+        {"id": "r2", "kind": "reply", "text": "Yeah but what about Tom?"},
+    ]
+    cases = tmp_path / "cases.jsonl"
+    cases.write_text("".join(json.dumps(line) + "\n" for line in lines))
+
+    run = await bench(tmp_path, Acknowledgements(), VOICE + EARS, cases)
+
+    got = {m.id: m.value for m in run.summary.metrics}
+    assert got["let-through"] == 1.0
+    assert got["cut-off"] == 1.0
+    assert got["failed"] == 1
+    assert run.summary.findings == ()
+
+
+async def test_the_shipped_phrases_are_all_judged_right_as_written(tmp_path: Path) -> None:
+    run = await bench(tmp_path, Acknowledgements(), VOICE + EARS)
+
+    got = {m.id: m.value for m in run.summary.metrics}
+    assert got["let-through-written"] == 1.0
+    assert got["cut-off-written"] == 1.0

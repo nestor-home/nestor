@@ -1,6 +1,5 @@
 import asyncio
 
-import pytest
 from pipecat.frames.frames import (
     BotStartedSpeakingFrame,
     BotStoppedSpeakingFrame,
@@ -11,26 +10,7 @@ from pipecat.frames.frames import (
     VADUserStoppedSpeakingFrame,
 )
 
-from nestor.adapters.channels.satellites.voice.turns import BackchannelAwareStart, is_backchannel
-
-
-@pytest.mark.parametrize(
-    "text", ["Mmh.", "Ouais.", "D'accord, d'accord.", "Ah ouais ?", "ok", "Oui oui", "D\u2019accord"]
-)
-def test_acknowledgements_are_backchannels(text: str) -> None:
-    assert is_backchannel(text)
-
-
-@pytest.mark.parametrize(
-    "text", ["Attends, stop.", "Non.", "Ok ça suffit, merci.", "Et les ours polaires ?", "Ouais mais non", "Excuse-moi"]
-)
-def test_anything_else_is_a_real_turn(text: str) -> None:
-    assert not is_backchannel(text)
-
-
-def test_nothing_heard_is_not_a_backchannel() -> None:
-    assert not is_backchannel("")
-    assert not is_backchannel(" ... ")
+from nestor.adapters.channels.satellites.voice.turns import BackchannelAwareStart
 
 
 class Strategy:
