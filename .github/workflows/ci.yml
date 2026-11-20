@@ -16,7 +16,7 @@ jobs:
     timeout-minutes: 2
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.3.3
+      - uses: astral-sh/setup-uv@v10.4.0
         with:
           python-version: "3.14"
           enable-cache: true
@@ -42,7 +42,7 @@ jobs:
       COVERAGE_FILE: .coverage.${{ matrix.group }}
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.3.3
+      - uses: astral-sh/setup-uv@v10.4.0
         with:
           python-version: ${{ matrix.python }}
           enable-cache: true
@@ -64,7 +64,7 @@ jobs:
     timeout-minutes: 2
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.3.3
+      - uses: astral-sh/setup-uv@v10.4.0
         with:
           python-version: "3.14"
           enable-cache: true
@@ -162,7 +162,7 @@ jobs:
     timeout-minutes: 2
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.3.3
+      - uses: astral-sh/setup-uv@v10.4.0
         with:
           python-version: "3.12"
       - run: uv build --wheel
