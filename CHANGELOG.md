@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.17.1](https://github.com/nestor-home/nestor/compare/v0.17.0...v0.17.1) (2026-11-21)
+
+
+### Bug Fixes
+
+* **deps:** update dependency @tanstack/react-query to v5.108.1 ([#209](https://github.com/nestor-home/nestor/issues/209)) ([7f62146](https://github.com/nestor-home/nestor/commit/7f62146b592d2623287880b1ad29be96c7b66515))
+* **deps:** update dependency lucide-react to v1.76.0 ([#206](https://github.com/nestor-home/nestor/issues/206)) ([90e797f](https://github.com/nestor-home/nestor/commit/90e797fa45575167f76a205f9cc40f0d541d305a))
+* **deps:** update dependency lucide-react to v1.77.0 ([#212](https://github.com/nestor-home/nestor/issues/212)) ([229749a](https://github.com/nestor-home/nestor/commit/229749a4791f56ec837b4e926a8be552fa18d118))
+* **deps:** update dependency tailwind-merge to v3.7.1 ([#211](https://github.com/nestor-home/nestor/issues/211)) ([170634f](https://github.com/nestor-home/nestor/commit/170634f5b9a650902f52b0722c12a7700d03f2df))
+
 ## [0.17.0](https://github.com/nestor-home/nestor/compare/v0.16.1...v0.17.0) (2026-11-19)
 
 
