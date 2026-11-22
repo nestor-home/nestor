@@ -48,7 +48,7 @@ voice = ["pipecat-ai[elevenlabs,webrtc]==1.16.0"]
 media = ["aiortc==1.16.0"]
 # Who speaks, from their voice (`sherpa-onnx-speaker`): runs a voiceprint model on the CPU, no server. Version pinned:
 # the bench calibrated each model's threshold with it.
-voice-id = ["sherpa-onnx==2.0.2"]
+voice-id = ["sherpa-onnx==2.0.3"]
 
 [project.scripts]
 nestor = "nestor.cli:main"
