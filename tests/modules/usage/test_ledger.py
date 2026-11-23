@@ -75,5 +75,10 @@ async def test_a_period_is_the_household_s_and_comes_with_the_one_before_and_whe
         Money(2_000_000),
         Money(5_000_000),
     )
+    today = ledger.span(Period.TODAY)
+    assert (ledger.before(today).since, ledger.before(today).until) == (
+        datetime(2026, 11, 10, tzinfo=paris),
+        datetime(2026, 11, 10, 13, tzinfo=paris),
+    ), "yesterday at the same hours: a morning against a morning"
     month_so_far = (NOW - datetime(2026, 11, 1, tzinfo=paris)) / timedelta(days=30)  # 10 days and 13 hours of 30
     assert summary.projected_month == Money(round(5_000_000 / month_so_far))

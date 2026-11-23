@@ -194,15 +194,10 @@ class UsageFilter:
 class Span:
     """A period resolved in the household's clock: from `since` to `until`, cut into buckets of `every`."""
 
+    period: Period
     since: datetime
     until: datetime
     every: Interval
-
-    @property
-    def before(self) -> "Span":
-        """The span of the same length just before."""
-        length = self.until - self.since
-        return Span(self.since - length, self.since, self.every)
 
     def keeping(self, only: Mapping[Dimension, frozenset[str | None]]) -> UsageFilter:
         return UsageFilter(since=self.since, until=self.until, only=only)
@@ -218,6 +213,7 @@ class Totals:
     units: Mapping[Unit, float] = field(default_factory=dict)
     duration_ms: int = 0
     conversations: int = 0  # the conversations the calls served
+    conversed: Money = ZERO  # what the calls made in a conversation cost (not the background work)
 
 
 @dataclass(frozen=True, slots=True)

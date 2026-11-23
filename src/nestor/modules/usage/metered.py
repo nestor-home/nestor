@@ -3,7 +3,7 @@ every call reaches the ledger the same way. A wrapper changes nothing to what th
 same type, with the same capabilities, and leaves starting and closing the model to whoever owns it."""
 
 from collections.abc import AsyncGenerator, Generator, Mapping, Sequence
-from contextlib import contextmanager
+from contextlib import aclosing, contextmanager
 
 from nestor.core import ContractError, Health, Model, counted, counting
 from nestor.core.i18n import Message as Phrase
@@ -52,8 +52,10 @@ class CountedLanguage(Counted[LanguageModel], LanguageModel):
 
     async def _stream(self, request: ModelRequest, said: Attribution) -> AsyncGenerator[ModelOutput]:
         with self.meter.measure(self.consumer, said) as call:
-            async for output in counted(self.model.stream(request), call.tally):
-                yield output
+            # closed with the call, cut or not: what the provider billed is reported before the call is recorded
+            async with aclosing(counted(self.model.stream(request), call.tally)) as outputs:
+                async for output in outputs:
+                    yield output
 
 
 class CountedEmbedding(Counted[EmbeddingModel], EmbeddingModel):

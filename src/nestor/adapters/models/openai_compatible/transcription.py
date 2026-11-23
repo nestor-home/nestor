@@ -54,7 +54,7 @@ class OpenAICompatibleTranscription(PipecatTranscription):
             text = response.json().get("text")
         except (ValueError, AttributeError):
             raise ProviderError(self._provider, "transcription: the answer is not JSON", transient=True) from None
-        seconds = duration_s(audio)  # billed by how long it lasts
+        seconds = await duration_s(audio)  # billed by how long it lasts
         report(Usage({Unit.AUDIO_SECONDS: seconds} if seconds else {}, served=self._model))
         return text.strip() if isinstance(text, str) else ""
 

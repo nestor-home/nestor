@@ -41,7 +41,8 @@ INSERT = (
 SELECT = f"SELECT {', '.join(FIELDS)}, {', '.join(u.value for u in UNITS)} FROM usage"
 TOTALS = (
     "COALESCE(SUM(cost_nusd), 0), COUNT(*), SUM(cost_nusd IS NULL), COALESCE(SUM(duration_ms), 0), "
-    "COUNT(DISTINCT conversation), " + ", ".join(f"COALESCE(SUM({u.value}), 0)" for u in UNITS)
+    "COUNT(DISTINCT conversation), COALESCE(SUM(CASE WHEN conversation IS NOT NULL THEN cost_nusd END), 0), "
+    + ", ".join(f"COALESCE(SUM({u.value}), 0)" for u in UNITS)
 )
 FORMAT = {Interval.HOUR: "%Y-%m-%dT%H", Interval.DAY: "%Y-%m-%d", Interval.MONTH: "%Y-%m"}
 
@@ -128,10 +129,11 @@ class SQLiteUsageStore(UsageStore):
         rows = await self.database.read(lambda c: c.execute(sql, values).fetchall())
         found = []
         for row in rows:
-            key, (cost, calls, unknown, duration, conversations, *units) = row[: len(keys)], row[len(keys) :]
+            key, (cost, calls, unknown, duration, conversations, conversed, *units) = row[: len(keys)], row[len(keys) :]
             if calls:
                 spent = {u: q for u, q in zip(UNITS, units, strict=True) if q}
-                found.append((tuple(key), Totals(Money(cost), calls, unknown or 0, spent, duration, conversations)))
+                totals = Totals(Money(cost), calls, unknown or 0, spent, duration, conversations, Money(conversed))
+                found.append((tuple(key), totals))
         return found
 
     def _row(self, line: Line) -> tuple[object, ...]:

@@ -28,6 +28,7 @@ BRANDS = {  # host suffix → brand; published in `base_url`'s schema (`x-nestor
     "ai-gateway.vercel.sh": "vercel",
 }
 BRANDED: dict[str, Any] = {"brands": BRANDS}  # the field the brand is read from
+TAILNET = ipaddress.ip_network("100.64.0.0/10")  # the addresses Tailscale gives the household's machines
 
 
 def brand_host(base_url: str) -> str | None:
@@ -41,13 +42,13 @@ def brand(base_url: str) -> str | None:
 
 def on_premises(base_url: str) -> bool:
     """Whether `base_url` is a server of the household's own (loopback, a private address, a `.local` or single-label
-    name, Docker's host): what it serves costs nothing per call."""
+    name, Docker's host, a machine of its Tailscale network): what it serves costs nothing per call."""
     host = (urllib.parse.urlsplit(base_url).hostname or "").lower()
     try:
         address = ipaddress.ip_address(host)
     except ValueError:
-        return host == "localhost" or host.endswith((".local", ".lan", ".internal")) or "." not in host
-    return address.is_loopback or address.is_private or address.is_link_local
+        return host == "localhost" or host.endswith((".local", ".lan", ".internal", ".ts.net")) or "." not in host
+    return address.is_loopback or address.is_private or address.is_link_local or address in TAILNET
 
 
 class EndpointSettings(AdapterSettings):

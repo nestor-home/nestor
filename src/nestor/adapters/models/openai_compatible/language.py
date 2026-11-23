@@ -93,6 +93,7 @@ class OpenAICompatibleLanguage(LanguageModel):
             "model": self._model,
             "messages": wire_messages(request.messages, self._provider, cache_control=self._cache_control),
             "stream": True,
+            "stream_options": {"include_usage": True},  # what the answer consumed, on its last chunk
         }
         if request.tools:  # some servers reject an empty tool list
             body["tools"] = [wire_tool(t) for t in request.tools]

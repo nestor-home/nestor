@@ -10,15 +10,14 @@ import logging
 import time
 from collections.abc import Generator
 from contextlib import contextmanager
-from dataclasses import replace
 from datetime import date
 
-from nestor.core import Component, Tally, utc_now
+from nestor.core import Component, Tally, Unit, Usage, utc_now
 from nestor.modules.journal import Journal
 from nestor.modules.usage.attribution import attribution
 from nestor.modules.usage.events import UsageRecorded
 from nestor.modules.usage.prices import PriceBook
-from nestor.modules.usage.types import Attribution, CallPurpose, Consumer, CostBasis, Outcome
+from nestor.modules.usage.types import ZERO, Attribution, CallPurpose, Consumer, CostBasis, Outcome, Priced
 
 log = logging.getLogger("nestor.usage")
 SOURCE = "usage"
@@ -73,9 +72,12 @@ class Meter(Component):
 
     def _record(self, call: Call) -> None:
         """Price and attribute a finished call, then have it written."""
-        consumer, said = call.consumer, call.said
-        usage = replace(call.tally.usage, served=call.tally.usage.served or consumer.model)
-        priced = self.prices.price(consumer, usage)
+        consumer, said, reported = call.consumer, call.said, call.tally.usage
+        # a call is a request; one that failed before anything was billed cost nothing
+        billed = call.outcome is Outcome.OK or bool(reported.units) or reported.cost is not None
+        units = {**reported.units, Unit.REQUESTS: reported.units.get(Unit.REQUESTS, 0) + 1} if billed else {}
+        usage = Usage(units, reported.cost, reported.served or consumer.model)
+        priced = self.prices.price(consumer, usage) if billed else Priced(ZERO, CostBasis.FREE)
         if priced.basis is CostBasis.UNKNOWN and (usage.units or call.outcome is Outcome.OK):
             self._warn(consumer, "unpriced", "%s: no cost said and no price known for %s", usage.served)
         if said.purpose is CallPurpose.UNATTRIBUTED:

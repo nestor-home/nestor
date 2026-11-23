@@ -102,7 +102,7 @@ class OpenAICompatibleEmbedding(EmbeddingModel):
     def _vectors(self, response: httpx.Response, count: int) -> list[Vector]:
         try:
             answer = response.json()
-            report(spent(answer.get("usage"), answer.get("model"), requests=1))
+            report(spent(answer.get("usage"), answer.get("model") or self._space.model))
             data: list[dict[str, Any]] = sorted(answer["data"], key=lambda d: d.get("index", 0))
             vectors = [[float(x) for x in d["embedding"]] for d in data]
         except (ValueError, KeyError, TypeError, AttributeError):

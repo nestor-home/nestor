@@ -1,8 +1,7 @@
 """The ledger: what was spent, read from the store that projects the journal's `usage.recorded`.
 
-The store is caught up with the journal when it opens, and before a reading once a call was recorded since the last,
-so that what is read is exactly what the journal holds; emptied (another time zone, a new schema), it is rebuilt from
-the journal alone. Periods are
+The store is caught up with the journal when it opens and before every reading, so that what is read is exactly
+what the journal holds; emptied (another time zone, a new schema), it is rebuilt from the journal alone. Periods are
 the household's: "today" starts at its midnight, "this month" on its first.
 """
 
@@ -14,7 +13,7 @@ from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from nestor.core import Component, Money, utc_now
-from nestor.modules.journal import Journal, LogQuery, Subscription
+from nestor.modules.journal import Journal, LogQuery
 from nestor.modules.usage.events import UsageRecorded
 from nestor.modules.usage.ports import Line, UsageStore
 from nestor.modules.usage.types import (
@@ -62,32 +61,21 @@ class Ledger(Component):
         self._zone = ZoneInfo(timezone)
         self._clock = clock
         self._lock = asyncio.Lock()
-        self._recorded: Subscription | None = None  # the calls recorded since the store last caught up
-        self._opened = False
+        self._position: int | None = None  # the last journal position the store holds, once read
 
     async def start(self) -> None:
-        self._recorded = self.journal.subscribe(UsageRecorded)  # before catching up: no call slips in between
         await self.store.open(self.timezone)
         await self.catch_up()
-        self._opened = True
-
-    async def close(self) -> None:
-        if self._recorded is not None:
-            self._recorded.close()
-            self._recorded = None
 
     async def catch_up(self) -> int:
-        """Bring the store up to the journal, if a call was recorded since it last did (or it never did); how many
-        calls it added."""
+        """Bring the store up to the journal; how many calls it added. Nothing new costs one indexed read."""
         async with self._lock:
-            recorded = self._recorded.drain() if self._recorded is not None else []
-            if self._opened and not recorded:
-                return 0
-            added, after = 0, await self.store.position()
+            added, after = 0, self._position if self._position is not None else await self.store.position()
             while entries := await self.journal.log.read(LogQuery(types=RECORDED, after=after, limit=PAGE)):
                 lines = [Line(e.position, call) for e in entries if isinstance(call := e.event(), UsageRecorded)]
                 await self.store.add(lines)
                 added, after = added + len(lines), entries[-1].position
+            self._position = after
             return added
 
     def span(self, period: Period) -> Span:
@@ -96,14 +84,24 @@ class Ledger(Component):
         midnight = now.astimezone(self._zone).replace(hour=0, minute=0, second=0, microsecond=0)
         # calendar arithmetic on the household's clock: a day is a day, whatever the summer time
         since = midnight.replace(day=1) if period is Period.MONTH else midnight - timedelta(days=DAYS[period] - 1)
-        return Span(since, now, BUCKETS[period])
+        return Span(period, since, now, BUCKETS[period])
+
+    def before(self, span: Span) -> Span:
+        """The same stretch of the household's calendar one period back: yesterday at the same hours for today, the
+        seven days before for a week, last month's first days for this month so far."""
+        since, until = span.since.astimezone(self._zone), span.until.astimezone(self._zone)
+        if span.period is Period.MONTH:
+            back = since - (since - timedelta(days=1)).replace(day=1)  # the month before, as long as it is
+        else:
+            back = timedelta(days=DAYS[span.period])
+        return Span(span.period, since - back, min(until - back, since), span.every)
 
     async def summary(self, span: Span, only: Mapping[Dimension, frozenset[str | None]]) -> Summary:
         await self.catch_up()
         month = self.span(Period.MONTH)
         totals, previous, so_far = await asyncio.gather(
             self.store.totals(span.keeping(only)),
-            self.store.totals(span.before.keeping(only)),
+            self.store.totals(self.before(span).keeping(only)),
             self.store.totals(month.keeping(only)),
         )
         local = month.until.astimezone(self._zone)

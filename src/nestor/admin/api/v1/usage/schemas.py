@@ -54,13 +54,14 @@ class UsageQuery(BaseModel):
 
 
 class SpanOut(BaseModel):
+    period: Period
     since: datetime
     until: datetime
     every: Interval  # the buckets the period is drawn in
 
     @classmethod
     def of(cls, span: Span) -> "SpanOut":
-        return cls(since=span.since, until=span.until, every=span.every)
+        return cls(period=span.period, since=span.since, until=span.until, every=span.every)
 
 
 class TotalsOut(BaseModel):
@@ -70,6 +71,7 @@ class TotalsOut(BaseModel):
     units: dict[Unit, float]
     duration_ms: int
     conversations: int
+    conversed_nusd: int  # what the calls made in a conversation cost (not the background work)
 
     @classmethod
     def of(cls, totals: Totals) -> "TotalsOut":
@@ -80,6 +82,7 @@ class TotalsOut(BaseModel):
             units=dict(totals.units),
             duration_ms=totals.duration_ms,
             conversations=totals.conversations,
+            conversed_nusd=totals.conversed.nusd,
         )
 
 

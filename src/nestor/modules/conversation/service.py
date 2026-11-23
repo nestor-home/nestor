@@ -394,15 +394,17 @@ class AgentReply(Reply):
 
     async def _reply_to(self, message: InboundMessage) -> None:
         agent = self._agent
-        self._speaker = await agent.speakers.of(message, await agent.conversations.current(self._address, self._medium))
+        conversation = await agent.conversations.current(self._address, self._medium)
+        self._speaker = await agent.speakers.of(message, conversation)
         self._person = agent.household.person(self._speaker.person) if self._speaker.person else None
+        self._attribute(conversation)  # who spoke, before their voice message is transcribed
         context = ToolContext(address=self._address, speaker=self._speaker)
         kept = await agent.attachments.keep(message.attachments, context)
         heard = (a.transcript for a in kept if a.kind is AttachmentKind.VOICE and a.transcript)
         words = "\n".join(part for part in (message.text.strip(), *heard) if part)
         self._mentions = agent.mentions.named(words, self._person)
         self._turn = await agent.conversations.turn(self._address, self._medium)
-        self._attribute()  # who spoke, in which turn
+        self._attribute()  # in which turn
         said = await self._turn.said(words, self._medium, self._speaker, kept, self._mentions)
         agent.speakers.learn(message.heard, said)
         if phrase := await agent.speakers.enrolling(message):  # a phrase of a voice being recorded

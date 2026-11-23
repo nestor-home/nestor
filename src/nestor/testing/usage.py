@@ -95,6 +95,12 @@ class UsageStoreContract:
             assert totals.units == {Unit.INPUT_TOKENS: 3000, Unit.OUTPUT_TOKENS: 300}
             assert (totals.duration_ms, totals.conversations) == (2400, 1)
 
+    async def test_what_conversations_cost_leaves_the_background_work_out(self) -> None:
+        async with self.opened() as store:
+            await store.add([line(1, NOV), line(2, NOV, cost=500_000, conversation=None, purpose=CallPurpose.WATCH)])
+            totals = await store.totals(UsageFilter())
+        assert (totals.cost, totals.conversed) == (Money(1_500_000), Money(1_000_000))
+
     async def test_a_filter_keeps_a_period_and_the_values_asked_for_none_included(self) -> None:
         async with self.opened() as store:
             await store.add([

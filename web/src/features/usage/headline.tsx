@@ -50,7 +50,7 @@ export function Headline({ summary, trend, period }: { summary: UsageSummary; tr
         />
         <Stat
           term={t("usage-per-conversation")}
-          value={totals.conversations ? money(Math.round(totals.cost_nusd / totals.conversations)) : "-"}
+          value={totals.conversations ? money(Math.round(totals.conversed_nusd / totals.conversations)) : "-"}
           detail={t("usage-conversations", { count: totals.conversations })}
           className="border-l border-rule"
         />

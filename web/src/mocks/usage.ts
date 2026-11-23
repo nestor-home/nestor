@@ -112,6 +112,9 @@ export function mockCalls(now: Date = new Date()): MockCall[] {
       if (quantity) [cost, price] = [Math.round(quantity * perUnit * NANO), LIST];
     }
     const billed = consumer === "sonnet" || consumer === "haiku";
+    // a call is a request, as the meter counts it; one that failed before anything was billed cost nothing
+    const failedBare = who.outcome === "failed" && !Object.keys(units).length;
+    const counted = failedBare ? units : { ...units, requests: 1 };
     return {
       id: `u-${id.toString(36)}`,
       position: id,
@@ -120,9 +123,9 @@ export function mockCalls(now: Date = new Date()): MockCall[] {
       kind: model.kind,
       provider: model.provider,
       served: model.served,
-      units,
-      cost_nusd: cost,
-      basis: billed ? "reported" : model.local ? "free" : cost === null ? "unknown" : "priced",
+      units: counted,
+      cost_nusd: failedBare ? 0 : cost,
+      basis: failedBare ? "free" : billed ? "reported" : model.local ? "free" : cost === null ? "unknown" : "priced",
       price,
       duration_ms: billed ? whole(600, consumer === "sonnet" ? 9000 : 2400) : whole(150, 1400),
       outcome: "ok",
@@ -332,7 +335,7 @@ export function spanOf(period: Period, now: Date = new Date()): Span {
   const back = { today: 1, "7d": 7, "30d": 30, "90d": 90, month: 0 }[period];
   const since = period === "month" ? Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1) : midnight - (back - 1) * DAY;
   const every = period === "today" ? "hour" : period === "90d" ? "week" : "day";
-  return { since: new Date(since).toISOString(), until: now.toISOString(), every };
+  return { period, since: new Date(since).toISOString(), until: now.toISOString(), every };
 }
 
 /** The calls between `span`'s ends that the request keeps of each dimension (an empty value keeps the calls without
@@ -354,12 +357,15 @@ export function within(calls: readonly MockCall[], span: Span, query: URLSearchP
 export function totals(calls: readonly MockCall[]): Totals {
   const units: Record<string, number> = {};
   const conversations = new Set<string>();
-  let [cost, unknown, duration] = [0, 0, 0];
+  let [cost, unknown, duration, conversed] = [0, 0, 0, 0];
   for (const c of calls) {
     if (c.cost_nusd === null || c.cost_nusd === undefined) unknown += 1;
     else cost += c.cost_nusd;
     duration += c.duration_ms;
-    if (c.conversation) conversations.add(c.conversation);
+    if (c.conversation) {
+      conversations.add(c.conversation);
+      conversed += c.cost_nusd ?? 0;
+    }
     for (const [unit, quantity] of Object.entries(c.units)) units[unit] = (units[unit] ?? 0) + (quantity ?? 0);
   }
   return {
@@ -369,6 +375,7 @@ export function totals(calls: readonly MockCall[]): Totals {
     units,
     duration_ms: duration,
     conversations: conversations.size,
+    conversed_nusd: conversed,
   };
 }
 

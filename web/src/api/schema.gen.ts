@@ -3735,6 +3735,7 @@ export interface components {
         };
         /** SpanOut */
         SpanOut: {
+            period: components["schemas"]["Period"];
             /**
              * Since
              * Format: date-time
@@ -3894,6 +3895,8 @@ export interface components {
             duration_ms: number;
             /** Conversations */
             conversations: number;
+            /** Conversed Nusd */
+            conversed_nusd: number;
         };
         /**
          * Unit

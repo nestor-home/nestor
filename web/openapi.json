@@ -19304,6 +19304,9 @@
       },
       "SpanOut": {
         "properties": {
+          "period": {
+            "$ref": "#/components/schemas/Period"
+          },
           "since": {
             "type": "string",
             "format": "date-time",
@@ -19320,6 +19323,7 @@
         },
         "type": "object",
         "required": [
+          "period",
           "since",
           "until",
           "every"
@@ -19759,6 +19763,10 @@
           "conversations": {
             "type": "integer",
             "title": "Conversations"
+          },
+          "conversed_nusd": {
+            "type": "integer",
+            "title": "Conversed Nusd"
           }
         },
         "type": "object",
@@ -19768,7 +19776,8 @@
           "unknown",
           "units",
           "duration_ms",
-          "conversations"
+          "conversations",
+          "conversed_nusd"
         ],
         "title": "TotalsOut"
       },

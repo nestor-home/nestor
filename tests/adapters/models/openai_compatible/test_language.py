@@ -362,6 +362,12 @@ async def test_the_reply_says_how_much_of_the_prompt_came_from_the_cache(api: re
     assert (tally.usage.units[Unit.INPUT_TOKENS], tally.usage.units[Unit.CACHED_INPUT_TOKENS]) == (3000, 2800)
 
 
+async def test_every_streamed_answer_asks_for_what_it_consumed(api: respx.MockRouter) -> None:
+    route = api.post(COMPLETIONS).mock(return_value=streamed(*TEXT_REPLY))
+    await collect()
+    assert sent(route)["stream_options"] == {"include_usage": True}, "most servers say nothing otherwise"
+
+
 async def test_a_usage_without_token_counts_or_cost_is_reported_as_far_as_known(api: respx.MockRouter) -> None:
     local = {"choices": [], "usage": {"prompt_tokens": 30, "completion_tokens": 2}}
     api.post(COMPLETIONS).mock(return_value=streamed(chunk(finish="stop"), {"usage": {"total_tokens": 3}}, local))
