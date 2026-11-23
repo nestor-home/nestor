@@ -12,6 +12,7 @@ from importlib.resources.abc import Traversable
 from pathlib import Path
 
 from fluent.runtime import FluentBundle, FluentResource
+from fluent.runtime.types import FluentType, fluent_number
 from fluent.syntax.ast import Junk, Resource
 
 from nestor.core import ContractError
@@ -106,8 +107,16 @@ def _check(resource: Resource, locale: Locale, name: str, owners: dict[tuple[Loc
         owners[locale, identifier] = name
 
 
+def usd(amount: float, **_: object) -> FluentType:
+    """`USD($amount)`: dollars as every catalogue writes them, to the cent, or to two significant digits under a
+    cent ($0.0042). The admin's bundle has the same function."""
+    small = 0 < float(amount) < 0.01
+    return fluent_number(amount, style="currency", currency="USD", **({"maximumSignificantDigits": 2} if small else {}))
+
+
 def _bundle(locale: Locale, resources: Iterable[Resource]) -> FluentBundle:
-    bundle = FluentBundle([locale], use_isolating=False)  # no bidi marks around arguments in plain text
+    # no bidi marks around arguments in plain text
+    bundle = FluentBundle([locale], use_isolating=False, functions={"USD": usd})
     for resource in resources:
         bundle.add_resource(resource)
     return bundle

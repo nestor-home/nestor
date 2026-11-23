@@ -7,7 +7,7 @@ from enum import StrEnum
 from typing import Any
 
 from nestor.adapters.models.common import base64_of
-from nestor.core import ContractError
+from nestor.core import ContractError, Money, Unit, Usage
 from nestor.modules.channels import AttachmentKind
 from nestor.modules.cognition import (
     Image,
@@ -111,3 +111,24 @@ def file_name(media_type: str) -> str:
     base = media_type.split(";")[0].strip().lower()
     extension = {"audio/ogg": "ogg", "audio/mpeg": "mp3", "audio/mp4": "m4a", "audio/wav": "wav", "audio/webm": "webm"}
     return f"recording.{extension.get(base, base.rpartition('/')[2] or 'bin')}"
+
+
+def spent(usage: object, served: object = None, **more: float) -> Usage:
+    """What an answer's `usage` says it consumed: Chat Completions and embeddings count `prompt_tokens` and
+    `completion_tokens`, the image API `input_tokens` and `output_tokens`; OpenRouter adds what it billed (`cost`).
+    `more`: units the answer itself shows (`images=1`)."""
+    usage = usage if isinstance(usage, dict) else {}
+    details = usage.get("prompt_tokens_details") or usage.get("input_tokens_details")
+    details = details if isinstance(details, dict) else {}
+    units: dict[Unit, float] = {Unit(name): quantity for name, quantity in more.items()}
+    for unit, value in (
+        (Unit.INPUT_TOKENS, usage.get("prompt_tokens", usage.get("input_tokens"))),
+        (Unit.OUTPUT_TOKENS, usage.get("completion_tokens", usage.get("output_tokens"))),
+        (Unit.CACHED_INPUT_TOKENS, details.get("cached_tokens")),
+        (Unit.CACHE_WRITE_TOKENS, details.get("cache_write_tokens")),
+    ):
+        if isinstance(value, int) and not isinstance(value, bool):
+            units[unit] = value
+    cost = usage.get("cost")
+    billed = Money.usd(cost) if isinstance(cost, int | float) and not isinstance(cost, bool) else None
+    return Usage(units, billed, served if isinstance(served, str) and served else None)

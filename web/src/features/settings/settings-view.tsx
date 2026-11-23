@@ -2,16 +2,17 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { LucideIcon } from "lucide-react";
-import { KeyRound, Plug, RadioTower, Server, SlidersHorizontal } from "lucide-react";
-import { accountsQuery, connectionsQuery, satellitesQuery, systemQuery } from "@/api";
+import { Coins, KeyRound, Plug, RadioTower, Server, SlidersHorizontal } from "lucide-react";
+import { accountsQuery, connectionsQuery, satellitesQuery, systemQuery, usageSummaryQuery } from "@/api";
 import { OpenArrow, TILE_CARD, TileCard } from "@/components/card";
 import { IconTile } from "@/components/marks";
 import { PageHeader } from "@/components/page";
 import { UpdateAvailable } from "@/features/system/updates";
+import { money } from "@/features/usage/format";
 import { useT } from "@/i18n";
 import { type Permission, useCan, useMe } from "@/lib/session";
 
-type To = "/connections" | "/satellites" | "/accounts" | "/config" | "/system";
+type To = "/connections" | "/satellites" | "/accounts" | "/config" | "/system" | "/usage";
 
 export function SettingsView() {
   const t = useT();
@@ -20,6 +21,7 @@ export function SettingsView() {
   const satellites = useQuery({ ...satellitesQuery, enabled: useCan("satellites:read") });
   const accounts = useQuery({ ...accountsQuery, enabled: useCan("accounts:read") });
   const system = useQuery({ ...systemQuery, enabled: useCan("system:read") });
+  const month = useQuery({ ...usageSummaryQuery({ period: "month" }), enabled: useCan("usage:read") });
   const offline = satellites.data?.paired.filter((s) => s.connected === false).length ?? 0;
   const cards: { to: To; scope: Permission; icon: LucideIcon; title: string; text: string; state?: string }[] = [
     {
@@ -64,6 +66,14 @@ export function SettingsView() {
       title: t("nav-system"),
       text: t("set-system"),
       state: system.data ? t("shell-version", { version: system.data.nestor.version }) : undefined,
+    },
+    {
+      to: "/usage",
+      scope: "usage:read",
+      icon: Coins,
+      title: t("nav-usage"),
+      text: t("set-usage"),
+      state: month.data ? t("set-usage-month", { spent: money(month.data.totals.cost_nusd) }) : undefined,
     },
   ];
   return (

@@ -4,7 +4,7 @@
  * Messages the server owns (labels of its values, journal lines, reasons, errors) are Nestor's own
  * catalogue, shipped with this admin and completed by `GET /i18n` with the plugins' messages.
  */
-import { FluentBundle, FluentResource } from "@fluent/bundle";
+import { FluentBundle, FluentNumber, FluentResource, type FluentValue } from "@fluent/bundle";
 import { negotiateLanguages } from "@fluent/langneg";
 
 export const LOCALES = ["en", "fr"] as const;
@@ -43,6 +43,23 @@ export function sourcesOf(locale: Locale): Record<string, string> {
 
 const cache = new Map<string, FluentBundle>();
 
+/** How an amount in dollars is written: to the cent, or to two significant digits under a cent ($0.0042). */
+export function dollarsFormat(dollars: number): Intl.NumberFormatOptions {
+  return {
+    style: "currency",
+    currency: "USD",
+    ...(dollars > 0 && dollars < 0.01
+      ? { maximumSignificantDigits: 2 }
+      : { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+  };
+}
+
+/** `USD($amount)` in a message: the server's catalogue writes its amounts with it (`nestor.adapters.i18n.fluent`). */
+function USD([amount]: FluentValue[]): FluentValue {
+  const dollars = Number(amount?.valueOf() ?? 0);
+  return new FluentNumber(dollars, dollarsFormat(dollars));
+}
+
 /**
  * The bundle of a locale: the server's catalogue first (`GET /i18n/{locale}`, plugins' included,
  * once fetched; Nestor's own until then), then the admin's own. On an id both define, the
@@ -53,7 +70,7 @@ export function bundleFor(locale: Locale, server = ""): FluentBundle {
   const cached = cache.get(key);
   if (cached) return cached;
   // no Unicode isolation marks around placeables: they would end up in titles and aria labels
-  const bundle = new FluentBundle(locale, { useIsolating: false });
+  const bundle = new FluentBundle(locale, { useIsolating: false, functions: { USD } });
   bundle.addResource(new FluentResource(server || coreOf(locale)));
   for (const [file, text] of Object.entries(sourcesOf(locale))) {
     const errors = bundle

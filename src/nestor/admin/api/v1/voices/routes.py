@@ -13,6 +13,7 @@ from fastapi import APIRouter, Body, Depends, Request, Response
 from nestor.admin.api.v1.access import household_person, managed_voice, manages_voice
 from nestor.admin.api.v1.errors import not_found
 from nestor.admin.api.v1.security import Caller, allowed
+from nestor.admin.api.v1.shared import ADMIN_CHANNEL
 from nestor.admin.api.v1.voices.audio import pcm
 from nestor.admin.api.v1.voices.schemas import (
     HeardOut,
@@ -25,6 +26,7 @@ from nestor.admin.api.v1.voices.schemas import (
 from nestor.admin.state import state
 from nestor.modules.accounts import Scope
 from nestor.modules.identity import Voices
+from nestor.modules.usage import CallPurpose, attributed
 
 router = APIRouter(tags=["voices"])
 Reader = Annotated[Caller, Depends(allowed(Scope.HOUSEHOLD_READ))]
@@ -62,8 +64,9 @@ async def start_recording(
 async def say_phrase(
     request: Request, caller: Reader, voices: Recognition, recording_id: str, phrase: int, audio: Annotated[bytes, WAV]
 ) -> PhraseOut:
-    managed_voice(state(request), caller, voices.enrollment(recording_id).person)
-    check = await voices.take(recording_id, phrase, pcm(audio))
+    person = managed_voice(state(request), caller, voices.enrollment(recording_id).person)
+    with attributed(purpose=CallPurpose.ENROLLMENT, person=person, channel=ADMIN_CHANNEL):
+        check = await voices.take(recording_id, phrase, pcm(audio))
     return PhraseOut(kept=check.ok, problem=check.problem, taken=check.taken, total=check.total)
 
 
@@ -84,7 +87,9 @@ async def abandon_recording(request: Request, caller: Reader, voices: Recognitio
 @router.post("/voice/hear")
 async def hear(request: Request, caller: Reader, voices: Recognition, audio: Annotated[bytes, WAV]) -> HeardOut:
     """Who a recording is, as the satellites would recognise it: to try one's voice once recorded."""
-    heard = await voices.hear(pcm(audio))
+    # trying a voice once recorded
+    with attributed(purpose=CallPurpose.ENROLLMENT, person=caller.person, channel=ADMIN_CHANNEL):
+        heard = await voices.hear(pcm(audio))
     name = state(request).nestor.household.name_of(heard.person, "") or None
     return HeardOut(person=heard.person, name=name, score=round(heard.score, 3), threshold=voices.threshold)
 

@@ -13,6 +13,7 @@ import {
   CircleCheck,
   CircleDashed,
   CircleSlash,
+  Coins,
   Ear,
   Heading,
   Hourglass,
@@ -68,6 +69,7 @@ const KIND: Record<Kind, KindStyle> = {
   voice: { icon: AudioLines, tone: "text-ink-muted", rail: "bg-rule-strong" },
   observation: { icon: ScanEye, tone: "text-ink-faint", rail: "bg-rule" },
   account: { icon: KeyRound, tone: "text-ink-muted", rail: "bg-rule" },
+  usage: { icon: Coins, tone: "text-ink-faint", rail: "bg-rule" },
   other: { icon: CircleDashed, tone: "text-ink-muted", rail: "bg-rule" },
 };
 

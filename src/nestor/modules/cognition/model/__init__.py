@@ -17,7 +17,6 @@ from nestor.modules.cognition.model.types import (
     ToolCall,
     ToolCallRequested,
     ToolSpec,
-    Usage,
 )
 
 __all__ = [
@@ -36,7 +35,6 @@ __all__ = [
     "ToolCall",
     "ToolCallRequested",
     "ToolSpec",
-    "Usage",
     "json_answer",
     "reads_whole",
     "text_answer",

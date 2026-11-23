@@ -9,7 +9,7 @@ import { join, relative } from "node:path";
 import { parse } from "@fluent/syntax";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
-import { coreOf, LOCALES, sourcesOf } from "./catalog";
+import { bundleFor, coreOf, LOCALES, sourcesOf } from "./catalog";
 
 const ROOT = join(__dirname, "..");
 const SCANNED = ["features", "components", "routes"];
@@ -73,6 +73,13 @@ describe("the catalogues", () => {
       for (const m of text.matchAll(/<Localized\s+id="([a-z0-9-]+)"/g)) asked.add(m[1] as string);
     }
     expect([...asked].filter((id) => !known.has(id)).sort()).toEqual([]);
+  });
+
+  it("write amounts as the server's catalogue asks, with USD()", () => {
+    const bundle = bundleFor("en", "spent = { USD($cost) }");
+    const pattern = bundle.getMessage("spent")?.value;
+    const spent = (cost: number) => (pattern ? bundle.formatPattern(pattern, { cost }) : "");
+    expect([spent(0.0042), spent(1.5)]).toEqual(["$0.0042", "$1.50"]);
   });
 });
 

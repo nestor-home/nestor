@@ -1,10 +1,11 @@
 """Doubles and the contract suite for image models: a model that draws what it is told, and the behaviour every
 `ImageModel` adapter must show."""
 
-from nestor.core import ProviderError
+from nestor.core import ProviderError, Unit, Usage, report
 from nestor.modules.channels import IMAGE_TYPES
 from nestor.modules.cognition.images import ImageModel
 from nestor.modules.cognition.model import Image
+from nestor.testing.usage import consumed, said
 
 PNG = b"\x89PNG\r\n\x1a\n"  # the start of every PNG file
 
@@ -22,6 +23,7 @@ class ScriptedImages(ImageModel):
         self.prompts.append(prompt)
         if self.fail:
             raise ProviderError(self.name, "the picture was refused", transient=False)
+        report(Usage({Unit.IMAGES: 1, Unit.REQUESTS: 1}))
         return Image(media_type="image/png", data=PNG + prompt.encode())
 
 
@@ -40,6 +42,11 @@ class ImageModelContract:
             picture = await images.generate("A black pebble with an orange bow tie")
         assert picture.media_type in IMAGE_TYPES
         assert picture.data
+
+    async def test_a_picture_is_counted(self) -> None:
+        async with self.images() as images:
+            _, tally = await consumed(images.generate("A black pebble with an orange bow tie"))
+        assert said(tally).units.get(Unit.IMAGES) == 1
 
     async def test_a_provider_failure_is_a_provider_error(self) -> None:
         async with self.unavailable_images() as images:

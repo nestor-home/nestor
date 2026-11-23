@@ -1006,6 +1006,58 @@
       "title": "UpdatesConfig",
       "type": "object"
     },
+    "prices": {
+      "additionalProperties": false,
+      "description": "Where a cost comes from when a provider does not say what it billed: a model's own `price`, else the public\nprice list of hosted models, downloaded once a day (nothing of the household is sent).",
+      "properties": {
+        "catalogue": {
+          "default": true,
+          "title": "Catalogue",
+          "type": "boolean",
+          "x-nestor": {
+            "field": "catalogue",
+            "title_id": "config-prices-catalogue",
+            "help_id": "config-prices-catalogue-help",
+            "fallback_title_id": "config-field-catalogue",
+            "secret": false,
+            "secret_values": false,
+            "advanced": false,
+            "group": "prices",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "suggest_keys": null,
+            "suggest_values": null,
+            "title": "Liste publique des prix",
+            "help": "Donne leur prix aux modèles hébergés d'après la liste publique de LiteLLM, téléchargée une fois par jour, quand un fournisseur ne dit pas ce qu'il a facturé."
+          }
+        },
+        "catalogue_url": {
+          "default": "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json",
+          "title": "Catalogue Url",
+          "type": "string",
+          "x-nestor": {
+            "field": "catalogue_url",
+            "title_id": "config-prices-catalogue_url",
+            "help_id": "config-prices-catalogue_url-help",
+            "fallback_title_id": "config-field-catalogue_url",
+            "secret": false,
+            "secret_values": false,
+            "advanced": true,
+            "group": "prices",
+            "reference": null,
+            "model_type": null,
+            "brands": null,
+            "suggest_keys": null,
+            "suggest_values": null,
+            "title": "Adresse de la liste des prix",
+            "help": null
+          }
+        }
+      },
+      "title": "PricesConfig",
+      "type": "object"
+    },
     "data_dir": {
       "type": "object",
       "properties": {
@@ -1044,6 +1096,7 @@
     "initiative": "Initiative",
     "admin": "Administration",
     "updates": "Mises à jour",
+    "prices": "Prix",
     "data_dir": "Données"
   },
   "slots": {
@@ -1070,6 +1123,254 @@
               ],
               "title": "Effort",
               "type": "string"
+            },
+            "ModelPrices": {
+              "additionalProperties": false,
+              "description": "What a model costs when its provider does not say what it billed, as providers write their prices: dollars per\nmillion tokens or characters, per minute of speech heard, per picture or call. What it leaves out is not billed;\nthe tokens read from or written to the cache cost as input unless priced apart.",
+              "properties": {
+                "input_tokens": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Input Tokens",
+                  "x-nestor": {
+                    "field": "input_tokens",
+                    "title_id": "config-model-anthropic-language-modelprices-input_tokens",
+                    "help_id": "config-model-anthropic-language-modelprices-input_tokens-help",
+                    "fallback_title_id": "config-field-input_tokens",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-anthropic-language-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Entrée, par million de tokens",
+                    "help": null
+                  }
+                },
+                "cached_input_tokens": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Cached Input Tokens",
+                  "x-nestor": {
+                    "field": "cached_input_tokens",
+                    "title_id": "config-model-anthropic-language-modelprices-cached_input_tokens",
+                    "help_id": "config-model-anthropic-language-modelprices-cached_input_tokens-help",
+                    "fallback_title_id": "config-field-cached_input_tokens",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-anthropic-language-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Entrée en cache, par million de tokens",
+                    "help": null
+                  }
+                },
+                "cache_write_tokens": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Cache Write Tokens",
+                  "x-nestor": {
+                    "field": "cache_write_tokens",
+                    "title_id": "config-model-anthropic-language-modelprices-cache_write_tokens",
+                    "help_id": "config-model-anthropic-language-modelprices-cache_write_tokens-help",
+                    "fallback_title_id": "config-field-cache_write_tokens",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-anthropic-language-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Écriture en cache, par million de tokens",
+                    "help": null
+                  }
+                },
+                "output_tokens": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Output Tokens",
+                  "x-nestor": {
+                    "field": "output_tokens",
+                    "title_id": "config-model-anthropic-language-modelprices-output_tokens",
+                    "help_id": "config-model-anthropic-language-modelprices-output_tokens-help",
+                    "fallback_title_id": "config-field-output_tokens",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-anthropic-language-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Sortie, par million de tokens",
+                    "help": null
+                  }
+                },
+                "characters": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Characters",
+                  "x-nestor": {
+                    "field": "characters",
+                    "title_id": "config-model-anthropic-language-modelprices-characters",
+                    "help_id": "config-model-anthropic-language-modelprices-characters-help",
+                    "fallback_title_id": "config-field-characters",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-anthropic-language-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Par million de caractères prononcés",
+                    "help": null
+                  }
+                },
+                "audio_minutes": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Audio Minutes",
+                  "x-nestor": {
+                    "field": "audio_minutes",
+                    "title_id": "config-model-anthropic-language-modelprices-audio_minutes",
+                    "help_id": "config-model-anthropic-language-modelprices-audio_minutes-help",
+                    "fallback_title_id": "config-field-audio_minutes",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-anthropic-language-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Par minute entendue",
+                    "help": null
+                  }
+                },
+                "images": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Images",
+                  "x-nestor": {
+                    "field": "images",
+                    "title_id": "config-model-anthropic-language-modelprices-images",
+                    "help_id": "config-model-anthropic-language-modelprices-images-help",
+                    "fallback_title_id": "config-field-images",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-anthropic-language-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Par image",
+                    "help": null
+                  }
+                },
+                "requests": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Requests",
+                  "x-nestor": {
+                    "field": "requests",
+                    "title_id": "config-model-anthropic-language-modelprices-requests",
+                    "help_id": "config-model-anthropic-language-modelprices-requests-help",
+                    "fallback_title_id": "config-field-requests",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-anthropic-language-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Par appel",
+                    "help": null
+                  }
+                }
+              },
+              "title": "ModelPrices",
+              "type": "object"
             }
           },
           "additionalProperties": false,
@@ -1322,6 +1623,26 @@
                 "title": "Modèle de secours",
                 "help": "Répond à sa place quand ce modèle échoue, dans tous ses rôles."
               }
+            },
+            "price": {
+              "$ref": "#/$defs/ModelPrices",
+              "x-nestor": {
+                "field": "price",
+                "title_id": "config-model-anthropic-language-price",
+                "help_id": "config-model-anthropic-language-price-help",
+                "fallback_title_id": "config-field-price",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-anthropic-language",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Prix",
+                "help": "Quand le fournisseur ne dit pas ce qu'il a facturé. En dollars."
+              }
             }
           },
           "required": [
@@ -1444,6 +1765,26 @@
                 "title": "Modèle",
                 "help": "Ex. eleven_v4_turbo."
               }
+            },
+            "price": {
+              "$ref": "#/$defs/ModelPrices",
+              "x-nestor": {
+                "field": "price",
+                "title_id": "config-model-elevenlabs-speech-price",
+                "help_id": "config-model-elevenlabs-speech-price-help",
+                "fallback_title_id": "config-field-price",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-elevenlabs-speech",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Prix",
+                "help": "Quand le fournisseur ne dit pas ce qu'il a facturé. En dollars."
+              }
             }
           },
           "required": [
@@ -1453,7 +1794,257 @@
             "voice_id"
           ],
           "title": "ElevenLabsSpeechSettings",
-          "type": "object"
+          "type": "object",
+          "$defs": {
+            "ModelPrices": {
+              "additionalProperties": false,
+              "description": "What a model costs when its provider does not say what it billed, as providers write their prices: dollars per\nmillion tokens or characters, per minute of speech heard, per picture or call. What it leaves out is not billed;\nthe tokens read from or written to the cache cost as input unless priced apart.",
+              "properties": {
+                "input_tokens": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Input Tokens",
+                  "x-nestor": {
+                    "field": "input_tokens",
+                    "title_id": "config-model-elevenlabs-speech-modelprices-input_tokens",
+                    "help_id": "config-model-elevenlabs-speech-modelprices-input_tokens-help",
+                    "fallback_title_id": "config-field-input_tokens",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-elevenlabs-speech-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Entrée, par million de tokens",
+                    "help": null
+                  }
+                },
+                "cached_input_tokens": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Cached Input Tokens",
+                  "x-nestor": {
+                    "field": "cached_input_tokens",
+                    "title_id": "config-model-elevenlabs-speech-modelprices-cached_input_tokens",
+                    "help_id": "config-model-elevenlabs-speech-modelprices-cached_input_tokens-help",
+                    "fallback_title_id": "config-field-cached_input_tokens",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-elevenlabs-speech-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Entrée en cache, par million de tokens",
+                    "help": null
+                  }
+                },
+                "cache_write_tokens": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Cache Write Tokens",
+                  "x-nestor": {
+                    "field": "cache_write_tokens",
+                    "title_id": "config-model-elevenlabs-speech-modelprices-cache_write_tokens",
+                    "help_id": "config-model-elevenlabs-speech-modelprices-cache_write_tokens-help",
+                    "fallback_title_id": "config-field-cache_write_tokens",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-elevenlabs-speech-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Écriture en cache, par million de tokens",
+                    "help": null
+                  }
+                },
+                "output_tokens": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Output Tokens",
+                  "x-nestor": {
+                    "field": "output_tokens",
+                    "title_id": "config-model-elevenlabs-speech-modelprices-output_tokens",
+                    "help_id": "config-model-elevenlabs-speech-modelprices-output_tokens-help",
+                    "fallback_title_id": "config-field-output_tokens",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-elevenlabs-speech-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Sortie, par million de tokens",
+                    "help": null
+                  }
+                },
+                "characters": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Characters",
+                  "x-nestor": {
+                    "field": "characters",
+                    "title_id": "config-model-elevenlabs-speech-modelprices-characters",
+                    "help_id": "config-model-elevenlabs-speech-modelprices-characters-help",
+                    "fallback_title_id": "config-field-characters",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-elevenlabs-speech-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Par million de caractères prononcés",
+                    "help": null
+                  }
+                },
+                "audio_minutes": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Audio Minutes",
+                  "x-nestor": {
+                    "field": "audio_minutes",
+                    "title_id": "config-model-elevenlabs-speech-modelprices-audio_minutes",
+                    "help_id": "config-model-elevenlabs-speech-modelprices-audio_minutes-help",
+                    "fallback_title_id": "config-field-audio_minutes",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-elevenlabs-speech-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Par minute entendue",
+                    "help": null
+                  }
+                },
+                "images": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Images",
+                  "x-nestor": {
+                    "field": "images",
+                    "title_id": "config-model-elevenlabs-speech-modelprices-images",
+                    "help_id": "config-model-elevenlabs-speech-modelprices-images-help",
+                    "fallback_title_id": "config-field-images",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-elevenlabs-speech-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Par image",
+                    "help": null
+                  }
+                },
+                "requests": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Requests",
+                  "x-nestor": {
+                    "field": "requests",
+                    "title_id": "config-model-elevenlabs-speech-modelprices-requests",
+                    "help_id": "config-model-elevenlabs-speech-modelprices-requests-help",
+                    "fallback_title_id": "config-field-requests",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-elevenlabs-speech-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Par appel",
+                    "help": null
+                  }
+                }
+              },
+              "title": "ModelPrices",
+              "type": "object"
+            }
+          }
         },
         "elevenlabs-transcription": {
           "additionalProperties": false,
@@ -1589,6 +2180,26 @@
                 "title": "Langue",
                 "help": "La langue parlée, ex. fr."
               }
+            },
+            "price": {
+              "$ref": "#/$defs/ModelPrices",
+              "x-nestor": {
+                "field": "price",
+                "title_id": "config-model-elevenlabs-transcription-price",
+                "help_id": "config-model-elevenlabs-transcription-price-help",
+                "fallback_title_id": "config-field-price",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-elevenlabs-transcription",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Prix",
+                "help": "Quand le fournisseur ne dit pas ce qu'il a facturé. En dollars."
+              }
             }
           },
           "required": [
@@ -1597,7 +2208,257 @@
             "api_key"
           ],
           "title": "ElevenLabsTranscriptionSettings",
-          "type": "object"
+          "type": "object",
+          "$defs": {
+            "ModelPrices": {
+              "additionalProperties": false,
+              "description": "What a model costs when its provider does not say what it billed, as providers write their prices: dollars per\nmillion tokens or characters, per minute of speech heard, per picture or call. What it leaves out is not billed;\nthe tokens read from or written to the cache cost as input unless priced apart.",
+              "properties": {
+                "input_tokens": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Input Tokens",
+                  "x-nestor": {
+                    "field": "input_tokens",
+                    "title_id": "config-model-elevenlabs-transcription-modelprices-input_tokens",
+                    "help_id": "config-model-elevenlabs-transcription-modelprices-input_tokens-help",
+                    "fallback_title_id": "config-field-input_tokens",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-elevenlabs-transcription-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Entrée, par million de tokens",
+                    "help": null
+                  }
+                },
+                "cached_input_tokens": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Cached Input Tokens",
+                  "x-nestor": {
+                    "field": "cached_input_tokens",
+                    "title_id": "config-model-elevenlabs-transcription-modelprices-cached_input_tokens",
+                    "help_id": "config-model-elevenlabs-transcription-modelprices-cached_input_tokens-help",
+                    "fallback_title_id": "config-field-cached_input_tokens",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-elevenlabs-transcription-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Entrée en cache, par million de tokens",
+                    "help": null
+                  }
+                },
+                "cache_write_tokens": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Cache Write Tokens",
+                  "x-nestor": {
+                    "field": "cache_write_tokens",
+                    "title_id": "config-model-elevenlabs-transcription-modelprices-cache_write_tokens",
+                    "help_id": "config-model-elevenlabs-transcription-modelprices-cache_write_tokens-help",
+                    "fallback_title_id": "config-field-cache_write_tokens",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-elevenlabs-transcription-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Écriture en cache, par million de tokens",
+                    "help": null
+                  }
+                },
+                "output_tokens": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Output Tokens",
+                  "x-nestor": {
+                    "field": "output_tokens",
+                    "title_id": "config-model-elevenlabs-transcription-modelprices-output_tokens",
+                    "help_id": "config-model-elevenlabs-transcription-modelprices-output_tokens-help",
+                    "fallback_title_id": "config-field-output_tokens",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-elevenlabs-transcription-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Sortie, par million de tokens",
+                    "help": null
+                  }
+                },
+                "characters": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Characters",
+                  "x-nestor": {
+                    "field": "characters",
+                    "title_id": "config-model-elevenlabs-transcription-modelprices-characters",
+                    "help_id": "config-model-elevenlabs-transcription-modelprices-characters-help",
+                    "fallback_title_id": "config-field-characters",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-elevenlabs-transcription-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Par million de caractères prononcés",
+                    "help": null
+                  }
+                },
+                "audio_minutes": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Audio Minutes",
+                  "x-nestor": {
+                    "field": "audio_minutes",
+                    "title_id": "config-model-elevenlabs-transcription-modelprices-audio_minutes",
+                    "help_id": "config-model-elevenlabs-transcription-modelprices-audio_minutes-help",
+                    "fallback_title_id": "config-field-audio_minutes",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-elevenlabs-transcription-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Par minute entendue",
+                    "help": null
+                  }
+                },
+                "images": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Images",
+                  "x-nestor": {
+                    "field": "images",
+                    "title_id": "config-model-elevenlabs-transcription-modelprices-images",
+                    "help_id": "config-model-elevenlabs-transcription-modelprices-images-help",
+                    "fallback_title_id": "config-field-images",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-elevenlabs-transcription-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Par image",
+                    "help": null
+                  }
+                },
+                "requests": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Requests",
+                  "x-nestor": {
+                    "field": "requests",
+                    "title_id": "config-model-elevenlabs-transcription-modelprices-requests",
+                    "help_id": "config-model-elevenlabs-transcription-modelprices-requests-help",
+                    "fallback_title_id": "config-field-requests",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-elevenlabs-transcription-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Par appel",
+                    "help": null
+                  }
+                }
+              },
+              "title": "ModelPrices",
+              "type": "object"
+            }
+          }
         },
         "gemini-language": {
           "additionalProperties": false,
@@ -1799,6 +2660,26 @@
                 "title": "Modèle de secours",
                 "help": "Répond à sa place quand ce modèle échoue, dans tous ses rôles."
               }
+            },
+            "price": {
+              "$ref": "#/$defs/ModelPrices",
+              "x-nestor": {
+                "field": "price",
+                "title_id": "config-model-gemini-language-price",
+                "help_id": "config-model-gemini-language-price-help",
+                "fallback_title_id": "config-field-price",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-gemini-language",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Prix",
+                "help": "Quand le fournisseur ne dit pas ce qu'il a facturé. En dollars."
+              }
             }
           },
           "required": [
@@ -1808,7 +2689,257 @@
             "model"
           ],
           "title": "GeminiLanguageSettings",
-          "type": "object"
+          "type": "object",
+          "$defs": {
+            "ModelPrices": {
+              "additionalProperties": false,
+              "description": "What a model costs when its provider does not say what it billed, as providers write their prices: dollars per\nmillion tokens or characters, per minute of speech heard, per picture or call. What it leaves out is not billed;\nthe tokens read from or written to the cache cost as input unless priced apart.",
+              "properties": {
+                "input_tokens": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Input Tokens",
+                  "x-nestor": {
+                    "field": "input_tokens",
+                    "title_id": "config-model-gemini-language-modelprices-input_tokens",
+                    "help_id": "config-model-gemini-language-modelprices-input_tokens-help",
+                    "fallback_title_id": "config-field-input_tokens",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-gemini-language-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Entrée, par million de tokens",
+                    "help": null
+                  }
+                },
+                "cached_input_tokens": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Cached Input Tokens",
+                  "x-nestor": {
+                    "field": "cached_input_tokens",
+                    "title_id": "config-model-gemini-language-modelprices-cached_input_tokens",
+                    "help_id": "config-model-gemini-language-modelprices-cached_input_tokens-help",
+                    "fallback_title_id": "config-field-cached_input_tokens",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-gemini-language-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Entrée en cache, par million de tokens",
+                    "help": null
+                  }
+                },
+                "cache_write_tokens": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Cache Write Tokens",
+                  "x-nestor": {
+                    "field": "cache_write_tokens",
+                    "title_id": "config-model-gemini-language-modelprices-cache_write_tokens",
+                    "help_id": "config-model-gemini-language-modelprices-cache_write_tokens-help",
+                    "fallback_title_id": "config-field-cache_write_tokens",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-gemini-language-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Écriture en cache, par million de tokens",
+                    "help": null
+                  }
+                },
+                "output_tokens": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Output Tokens",
+                  "x-nestor": {
+                    "field": "output_tokens",
+                    "title_id": "config-model-gemini-language-modelprices-output_tokens",
+                    "help_id": "config-model-gemini-language-modelprices-output_tokens-help",
+                    "fallback_title_id": "config-field-output_tokens",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-gemini-language-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Sortie, par million de tokens",
+                    "help": null
+                  }
+                },
+                "characters": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Characters",
+                  "x-nestor": {
+                    "field": "characters",
+                    "title_id": "config-model-gemini-language-modelprices-characters",
+                    "help_id": "config-model-gemini-language-modelprices-characters-help",
+                    "fallback_title_id": "config-field-characters",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-gemini-language-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Par million de caractères prononcés",
+                    "help": null
+                  }
+                },
+                "audio_minutes": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Audio Minutes",
+                  "x-nestor": {
+                    "field": "audio_minutes",
+                    "title_id": "config-model-gemini-language-modelprices-audio_minutes",
+                    "help_id": "config-model-gemini-language-modelprices-audio_minutes-help",
+                    "fallback_title_id": "config-field-audio_minutes",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-gemini-language-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Par minute entendue",
+                    "help": null
+                  }
+                },
+                "images": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Images",
+                  "x-nestor": {
+                    "field": "images",
+                    "title_id": "config-model-gemini-language-modelprices-images",
+                    "help_id": "config-model-gemini-language-modelprices-images-help",
+                    "fallback_title_id": "config-field-images",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-gemini-language-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Par image",
+                    "help": null
+                  }
+                },
+                "requests": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Requests",
+                  "x-nestor": {
+                    "field": "requests",
+                    "title_id": "config-model-gemini-language-modelprices-requests",
+                    "help_id": "config-model-gemini-language-modelprices-requests-help",
+                    "fallback_title_id": "config-field-requests",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-gemini-language-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Par appel",
+                    "help": null
+                  }
+                }
+              },
+              "title": "ModelPrices",
+              "type": "object"
+            }
+          }
         },
         "openai-compatible-embedding": {
           "additionalProperties": false,
@@ -2115,6 +3246,26 @@
                 "title": "Timeout de lecture (secondes)",
                 "help": null
               }
+            },
+            "price": {
+              "$ref": "#/$defs/ModelPrices",
+              "x-nestor": {
+                "field": "price",
+                "title_id": "config-model-openai-compatible-embedding-price",
+                "help_id": "config-model-openai-compatible-embedding-price-help",
+                "fallback_title_id": "config-field-price",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-openai-compatible-embedding",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Prix",
+                "help": "Quand le fournisseur ne dit pas ce qu'il a facturé. En dollars."
+              }
             }
           },
           "required": [
@@ -2125,7 +3276,257 @@
             "dimensions"
           ],
           "title": "OpenAICompatibleEmbeddingSettings",
-          "type": "object"
+          "type": "object",
+          "$defs": {
+            "ModelPrices": {
+              "additionalProperties": false,
+              "description": "What a model costs when its provider does not say what it billed, as providers write their prices: dollars per\nmillion tokens or characters, per minute of speech heard, per picture or call. What it leaves out is not billed;\nthe tokens read from or written to the cache cost as input unless priced apart.",
+              "properties": {
+                "input_tokens": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Input Tokens",
+                  "x-nestor": {
+                    "field": "input_tokens",
+                    "title_id": "config-model-openai-compatible-embedding-modelprices-input_tokens",
+                    "help_id": "config-model-openai-compatible-embedding-modelprices-input_tokens-help",
+                    "fallback_title_id": "config-field-input_tokens",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-openai-compatible-embedding-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Entrée, par million de tokens",
+                    "help": null
+                  }
+                },
+                "cached_input_tokens": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Cached Input Tokens",
+                  "x-nestor": {
+                    "field": "cached_input_tokens",
+                    "title_id": "config-model-openai-compatible-embedding-modelprices-cached_input_tokens",
+                    "help_id": "config-model-openai-compatible-embedding-modelprices-cached_input_tokens-help",
+                    "fallback_title_id": "config-field-cached_input_tokens",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-openai-compatible-embedding-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Entrée en cache, par million de tokens",
+                    "help": null
+                  }
+                },
+                "cache_write_tokens": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Cache Write Tokens",
+                  "x-nestor": {
+                    "field": "cache_write_tokens",
+                    "title_id": "config-model-openai-compatible-embedding-modelprices-cache_write_tokens",
+                    "help_id": "config-model-openai-compatible-embedding-modelprices-cache_write_tokens-help",
+                    "fallback_title_id": "config-field-cache_write_tokens",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-openai-compatible-embedding-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Écriture en cache, par million de tokens",
+                    "help": null
+                  }
+                },
+                "output_tokens": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Output Tokens",
+                  "x-nestor": {
+                    "field": "output_tokens",
+                    "title_id": "config-model-openai-compatible-embedding-modelprices-output_tokens",
+                    "help_id": "config-model-openai-compatible-embedding-modelprices-output_tokens-help",
+                    "fallback_title_id": "config-field-output_tokens",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-openai-compatible-embedding-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Sortie, par million de tokens",
+                    "help": null
+                  }
+                },
+                "characters": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Characters",
+                  "x-nestor": {
+                    "field": "characters",
+                    "title_id": "config-model-openai-compatible-embedding-modelprices-characters",
+                    "help_id": "config-model-openai-compatible-embedding-modelprices-characters-help",
+                    "fallback_title_id": "config-field-characters",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-openai-compatible-embedding-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Par million de caractères prononcés",
+                    "help": null
+                  }
+                },
+                "audio_minutes": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Audio Minutes",
+                  "x-nestor": {
+                    "field": "audio_minutes",
+                    "title_id": "config-model-openai-compatible-embedding-modelprices-audio_minutes",
+                    "help_id": "config-model-openai-compatible-embedding-modelprices-audio_minutes-help",
+                    "fallback_title_id": "config-field-audio_minutes",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-openai-compatible-embedding-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Par minute entendue",
+                    "help": null
+                  }
+                },
+                "images": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Images",
+                  "x-nestor": {
+                    "field": "images",
+                    "title_id": "config-model-openai-compatible-embedding-modelprices-images",
+                    "help_id": "config-model-openai-compatible-embedding-modelprices-images-help",
+                    "fallback_title_id": "config-field-images",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-openai-compatible-embedding-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Par image",
+                    "help": null
+                  }
+                },
+                "requests": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Requests",
+                  "x-nestor": {
+                    "field": "requests",
+                    "title_id": "config-model-openai-compatible-embedding-modelprices-requests",
+                    "help_id": "config-model-openai-compatible-embedding-modelprices-requests-help",
+                    "fallback_title_id": "config-field-requests",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-openai-compatible-embedding-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Par appel",
+                    "help": null
+                  }
+                }
+              },
+              "title": "ModelPrices",
+              "type": "object"
+            }
+          }
         },
         "openai-compatible-image": {
           "$defs": {
@@ -2136,6 +3537,254 @@
               ],
               "title": "ImageEndpoint",
               "type": "string"
+            },
+            "ModelPrices": {
+              "additionalProperties": false,
+              "description": "What a model costs when its provider does not say what it billed, as providers write their prices: dollars per\nmillion tokens or characters, per minute of speech heard, per picture or call. What it leaves out is not billed;\nthe tokens read from or written to the cache cost as input unless priced apart.",
+              "properties": {
+                "input_tokens": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Input Tokens",
+                  "x-nestor": {
+                    "field": "input_tokens",
+                    "title_id": "config-model-openai-compatible-image-modelprices-input_tokens",
+                    "help_id": "config-model-openai-compatible-image-modelprices-input_tokens-help",
+                    "fallback_title_id": "config-field-input_tokens",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-openai-compatible-image-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Entrée, par million de tokens",
+                    "help": null
+                  }
+                },
+                "cached_input_tokens": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Cached Input Tokens",
+                  "x-nestor": {
+                    "field": "cached_input_tokens",
+                    "title_id": "config-model-openai-compatible-image-modelprices-cached_input_tokens",
+                    "help_id": "config-model-openai-compatible-image-modelprices-cached_input_tokens-help",
+                    "fallback_title_id": "config-field-cached_input_tokens",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-openai-compatible-image-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Entrée en cache, par million de tokens",
+                    "help": null
+                  }
+                },
+                "cache_write_tokens": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Cache Write Tokens",
+                  "x-nestor": {
+                    "field": "cache_write_tokens",
+                    "title_id": "config-model-openai-compatible-image-modelprices-cache_write_tokens",
+                    "help_id": "config-model-openai-compatible-image-modelprices-cache_write_tokens-help",
+                    "fallback_title_id": "config-field-cache_write_tokens",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-openai-compatible-image-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Écriture en cache, par million de tokens",
+                    "help": null
+                  }
+                },
+                "output_tokens": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Output Tokens",
+                  "x-nestor": {
+                    "field": "output_tokens",
+                    "title_id": "config-model-openai-compatible-image-modelprices-output_tokens",
+                    "help_id": "config-model-openai-compatible-image-modelprices-output_tokens-help",
+                    "fallback_title_id": "config-field-output_tokens",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-openai-compatible-image-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Sortie, par million de tokens",
+                    "help": null
+                  }
+                },
+                "characters": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Characters",
+                  "x-nestor": {
+                    "field": "characters",
+                    "title_id": "config-model-openai-compatible-image-modelprices-characters",
+                    "help_id": "config-model-openai-compatible-image-modelprices-characters-help",
+                    "fallback_title_id": "config-field-characters",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-openai-compatible-image-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Par million de caractères prononcés",
+                    "help": null
+                  }
+                },
+                "audio_minutes": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Audio Minutes",
+                  "x-nestor": {
+                    "field": "audio_minutes",
+                    "title_id": "config-model-openai-compatible-image-modelprices-audio_minutes",
+                    "help_id": "config-model-openai-compatible-image-modelprices-audio_minutes-help",
+                    "fallback_title_id": "config-field-audio_minutes",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-openai-compatible-image-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Par minute entendue",
+                    "help": null
+                  }
+                },
+                "images": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Images",
+                  "x-nestor": {
+                    "field": "images",
+                    "title_id": "config-model-openai-compatible-image-modelprices-images",
+                    "help_id": "config-model-openai-compatible-image-modelprices-images-help",
+                    "fallback_title_id": "config-field-images",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-openai-compatible-image-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Par image",
+                    "help": null
+                  }
+                },
+                "requests": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Requests",
+                  "x-nestor": {
+                    "field": "requests",
+                    "title_id": "config-model-openai-compatible-image-modelprices-requests",
+                    "help_id": "config-model-openai-compatible-image-modelprices-requests-help",
+                    "fallback_title_id": "config-field-requests",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-openai-compatible-image-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Par appel",
+                    "help": null
+                  }
+                }
+              },
+              "title": "ModelPrices",
+              "type": "object"
             }
           },
           "additionalProperties": false,
@@ -2357,6 +4006,26 @@
                 "suggest_values": null,
                 "title": "Timeout (secondes)",
                 "help": null
+              }
+            },
+            "price": {
+              "$ref": "#/$defs/ModelPrices",
+              "x-nestor": {
+                "field": "price",
+                "title_id": "config-model-openai-compatible-image-price",
+                "help_id": "config-model-openai-compatible-image-price-help",
+                "fallback_title_id": "config-field-price",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-openai-compatible-image",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Prix",
+                "help": "Quand le fournisseur ne dit pas ce qu'il a facturé. En dollars."
               }
             }
           },
@@ -2634,6 +4303,26 @@
                 "title": "Modèle de secours",
                 "help": "Répond à sa place quand ce modèle échoue, dans tous ses rôles."
               }
+            },
+            "price": {
+              "$ref": "#/$defs/ModelPrices",
+              "x-nestor": {
+                "field": "price",
+                "title_id": "config-model-openai-compatible-language-price",
+                "help_id": "config-model-openai-compatible-language-price-help",
+                "fallback_title_id": "config-field-price",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-openai-compatible-language",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Prix",
+                "help": "Quand le fournisseur ne dit pas ce qu'il a facturé. En dollars."
+              }
             }
           },
           "required": [
@@ -2643,7 +4332,257 @@
             "model"
           ],
           "title": "OpenAICompatibleLanguageSettings",
-          "type": "object"
+          "type": "object",
+          "$defs": {
+            "ModelPrices": {
+              "additionalProperties": false,
+              "description": "What a model costs when its provider does not say what it billed, as providers write their prices: dollars per\nmillion tokens or characters, per minute of speech heard, per picture or call. What it leaves out is not billed;\nthe tokens read from or written to the cache cost as input unless priced apart.",
+              "properties": {
+                "input_tokens": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Input Tokens",
+                  "x-nestor": {
+                    "field": "input_tokens",
+                    "title_id": "config-model-openai-compatible-language-modelprices-input_tokens",
+                    "help_id": "config-model-openai-compatible-language-modelprices-input_tokens-help",
+                    "fallback_title_id": "config-field-input_tokens",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-openai-compatible-language-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Entrée, par million de tokens",
+                    "help": null
+                  }
+                },
+                "cached_input_tokens": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Cached Input Tokens",
+                  "x-nestor": {
+                    "field": "cached_input_tokens",
+                    "title_id": "config-model-openai-compatible-language-modelprices-cached_input_tokens",
+                    "help_id": "config-model-openai-compatible-language-modelprices-cached_input_tokens-help",
+                    "fallback_title_id": "config-field-cached_input_tokens",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-openai-compatible-language-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Entrée en cache, par million de tokens",
+                    "help": null
+                  }
+                },
+                "cache_write_tokens": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Cache Write Tokens",
+                  "x-nestor": {
+                    "field": "cache_write_tokens",
+                    "title_id": "config-model-openai-compatible-language-modelprices-cache_write_tokens",
+                    "help_id": "config-model-openai-compatible-language-modelprices-cache_write_tokens-help",
+                    "fallback_title_id": "config-field-cache_write_tokens",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-openai-compatible-language-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Écriture en cache, par million de tokens",
+                    "help": null
+                  }
+                },
+                "output_tokens": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Output Tokens",
+                  "x-nestor": {
+                    "field": "output_tokens",
+                    "title_id": "config-model-openai-compatible-language-modelprices-output_tokens",
+                    "help_id": "config-model-openai-compatible-language-modelprices-output_tokens-help",
+                    "fallback_title_id": "config-field-output_tokens",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-openai-compatible-language-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Sortie, par million de tokens",
+                    "help": null
+                  }
+                },
+                "characters": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Characters",
+                  "x-nestor": {
+                    "field": "characters",
+                    "title_id": "config-model-openai-compatible-language-modelprices-characters",
+                    "help_id": "config-model-openai-compatible-language-modelprices-characters-help",
+                    "fallback_title_id": "config-field-characters",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-openai-compatible-language-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Par million de caractères prononcés",
+                    "help": null
+                  }
+                },
+                "audio_minutes": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Audio Minutes",
+                  "x-nestor": {
+                    "field": "audio_minutes",
+                    "title_id": "config-model-openai-compatible-language-modelprices-audio_minutes",
+                    "help_id": "config-model-openai-compatible-language-modelprices-audio_minutes-help",
+                    "fallback_title_id": "config-field-audio_minutes",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-openai-compatible-language-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Par minute entendue",
+                    "help": null
+                  }
+                },
+                "images": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Images",
+                  "x-nestor": {
+                    "field": "images",
+                    "title_id": "config-model-openai-compatible-language-modelprices-images",
+                    "help_id": "config-model-openai-compatible-language-modelprices-images-help",
+                    "fallback_title_id": "config-field-images",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-openai-compatible-language-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Par image",
+                    "help": null
+                  }
+                },
+                "requests": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Requests",
+                  "x-nestor": {
+                    "field": "requests",
+                    "title_id": "config-model-openai-compatible-language-modelprices-requests",
+                    "help_id": "config-model-openai-compatible-language-modelprices-requests-help",
+                    "fallback_title_id": "config-field-requests",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-openai-compatible-language-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Par appel",
+                    "help": null
+                  }
+                }
+              },
+              "title": "ModelPrices",
+              "type": "object"
+            }
+          }
         },
         "openai-compatible-speech": {
           "additionalProperties": false,
@@ -2815,6 +4754,26 @@
                 "title": "Timeout (secondes)",
                 "help": null
               }
+            },
+            "price": {
+              "$ref": "#/$defs/ModelPrices",
+              "x-nestor": {
+                "field": "price",
+                "title_id": "config-model-openai-compatible-speech-price",
+                "help_id": "config-model-openai-compatible-speech-price-help",
+                "fallback_title_id": "config-field-price",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-openai-compatible-speech",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Prix",
+                "help": "Quand le fournisseur ne dit pas ce qu'il a facturé. En dollars."
+              }
             }
           },
           "required": [
@@ -2825,7 +4784,257 @@
             "voice"
           ],
           "title": "OpenAICompatibleSpeechSettings",
-          "type": "object"
+          "type": "object",
+          "$defs": {
+            "ModelPrices": {
+              "additionalProperties": false,
+              "description": "What a model costs when its provider does not say what it billed, as providers write their prices: dollars per\nmillion tokens or characters, per minute of speech heard, per picture or call. What it leaves out is not billed;\nthe tokens read from or written to the cache cost as input unless priced apart.",
+              "properties": {
+                "input_tokens": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Input Tokens",
+                  "x-nestor": {
+                    "field": "input_tokens",
+                    "title_id": "config-model-openai-compatible-speech-modelprices-input_tokens",
+                    "help_id": "config-model-openai-compatible-speech-modelprices-input_tokens-help",
+                    "fallback_title_id": "config-field-input_tokens",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-openai-compatible-speech-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Entrée, par million de tokens",
+                    "help": null
+                  }
+                },
+                "cached_input_tokens": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Cached Input Tokens",
+                  "x-nestor": {
+                    "field": "cached_input_tokens",
+                    "title_id": "config-model-openai-compatible-speech-modelprices-cached_input_tokens",
+                    "help_id": "config-model-openai-compatible-speech-modelprices-cached_input_tokens-help",
+                    "fallback_title_id": "config-field-cached_input_tokens",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-openai-compatible-speech-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Entrée en cache, par million de tokens",
+                    "help": null
+                  }
+                },
+                "cache_write_tokens": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Cache Write Tokens",
+                  "x-nestor": {
+                    "field": "cache_write_tokens",
+                    "title_id": "config-model-openai-compatible-speech-modelprices-cache_write_tokens",
+                    "help_id": "config-model-openai-compatible-speech-modelprices-cache_write_tokens-help",
+                    "fallback_title_id": "config-field-cache_write_tokens",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-openai-compatible-speech-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Écriture en cache, par million de tokens",
+                    "help": null
+                  }
+                },
+                "output_tokens": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Output Tokens",
+                  "x-nestor": {
+                    "field": "output_tokens",
+                    "title_id": "config-model-openai-compatible-speech-modelprices-output_tokens",
+                    "help_id": "config-model-openai-compatible-speech-modelprices-output_tokens-help",
+                    "fallback_title_id": "config-field-output_tokens",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-openai-compatible-speech-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Sortie, par million de tokens",
+                    "help": null
+                  }
+                },
+                "characters": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Characters",
+                  "x-nestor": {
+                    "field": "characters",
+                    "title_id": "config-model-openai-compatible-speech-modelprices-characters",
+                    "help_id": "config-model-openai-compatible-speech-modelprices-characters-help",
+                    "fallback_title_id": "config-field-characters",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-openai-compatible-speech-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Par million de caractères prononcés",
+                    "help": null
+                  }
+                },
+                "audio_minutes": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Audio Minutes",
+                  "x-nestor": {
+                    "field": "audio_minutes",
+                    "title_id": "config-model-openai-compatible-speech-modelprices-audio_minutes",
+                    "help_id": "config-model-openai-compatible-speech-modelprices-audio_minutes-help",
+                    "fallback_title_id": "config-field-audio_minutes",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-openai-compatible-speech-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Par minute entendue",
+                    "help": null
+                  }
+                },
+                "images": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Images",
+                  "x-nestor": {
+                    "field": "images",
+                    "title_id": "config-model-openai-compatible-speech-modelprices-images",
+                    "help_id": "config-model-openai-compatible-speech-modelprices-images-help",
+                    "fallback_title_id": "config-field-images",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-openai-compatible-speech-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Par image",
+                    "help": null
+                  }
+                },
+                "requests": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Requests",
+                  "x-nestor": {
+                    "field": "requests",
+                    "title_id": "config-model-openai-compatible-speech-modelprices-requests",
+                    "help_id": "config-model-openai-compatible-speech-modelprices-requests-help",
+                    "fallback_title_id": "config-field-requests",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-openai-compatible-speech-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Par appel",
+                    "help": null
+                  }
+                }
+              },
+              "title": "ModelPrices",
+              "type": "object"
+            }
+          }
         },
         "openai-compatible-transcription": {
           "additionalProperties": false,
@@ -3005,6 +5214,26 @@
                 "title": "Timeout (secondes)",
                 "help": null
               }
+            },
+            "price": {
+              "$ref": "#/$defs/ModelPrices",
+              "x-nestor": {
+                "field": "price",
+                "title_id": "config-model-openai-compatible-transcription-price",
+                "help_id": "config-model-openai-compatible-transcription-price-help",
+                "fallback_title_id": "config-field-price",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-openai-compatible-transcription",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Prix",
+                "help": "Quand le fournisseur ne dit pas ce qu'il a facturé. En dollars."
+              }
             }
           },
           "required": [
@@ -3014,7 +5243,257 @@
             "model"
           ],
           "title": "OpenAICompatibleTranscriptionSettings",
-          "type": "object"
+          "type": "object",
+          "$defs": {
+            "ModelPrices": {
+              "additionalProperties": false,
+              "description": "What a model costs when its provider does not say what it billed, as providers write their prices: dollars per\nmillion tokens or characters, per minute of speech heard, per picture or call. What it leaves out is not billed;\nthe tokens read from or written to the cache cost as input unless priced apart.",
+              "properties": {
+                "input_tokens": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Input Tokens",
+                  "x-nestor": {
+                    "field": "input_tokens",
+                    "title_id": "config-model-openai-compatible-transcription-modelprices-input_tokens",
+                    "help_id": "config-model-openai-compatible-transcription-modelprices-input_tokens-help",
+                    "fallback_title_id": "config-field-input_tokens",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-openai-compatible-transcription-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Entrée, par million de tokens",
+                    "help": null
+                  }
+                },
+                "cached_input_tokens": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Cached Input Tokens",
+                  "x-nestor": {
+                    "field": "cached_input_tokens",
+                    "title_id": "config-model-openai-compatible-transcription-modelprices-cached_input_tokens",
+                    "help_id": "config-model-openai-compatible-transcription-modelprices-cached_input_tokens-help",
+                    "fallback_title_id": "config-field-cached_input_tokens",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-openai-compatible-transcription-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Entrée en cache, par million de tokens",
+                    "help": null
+                  }
+                },
+                "cache_write_tokens": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Cache Write Tokens",
+                  "x-nestor": {
+                    "field": "cache_write_tokens",
+                    "title_id": "config-model-openai-compatible-transcription-modelprices-cache_write_tokens",
+                    "help_id": "config-model-openai-compatible-transcription-modelprices-cache_write_tokens-help",
+                    "fallback_title_id": "config-field-cache_write_tokens",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-openai-compatible-transcription-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Écriture en cache, par million de tokens",
+                    "help": null
+                  }
+                },
+                "output_tokens": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Output Tokens",
+                  "x-nestor": {
+                    "field": "output_tokens",
+                    "title_id": "config-model-openai-compatible-transcription-modelprices-output_tokens",
+                    "help_id": "config-model-openai-compatible-transcription-modelprices-output_tokens-help",
+                    "fallback_title_id": "config-field-output_tokens",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-openai-compatible-transcription-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Sortie, par million de tokens",
+                    "help": null
+                  }
+                },
+                "characters": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Characters",
+                  "x-nestor": {
+                    "field": "characters",
+                    "title_id": "config-model-openai-compatible-transcription-modelprices-characters",
+                    "help_id": "config-model-openai-compatible-transcription-modelprices-characters-help",
+                    "fallback_title_id": "config-field-characters",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-openai-compatible-transcription-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Par million de caractères prononcés",
+                    "help": null
+                  }
+                },
+                "audio_minutes": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Audio Minutes",
+                  "x-nestor": {
+                    "field": "audio_minutes",
+                    "title_id": "config-model-openai-compatible-transcription-modelprices-audio_minutes",
+                    "help_id": "config-model-openai-compatible-transcription-modelprices-audio_minutes-help",
+                    "fallback_title_id": "config-field-audio_minutes",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-openai-compatible-transcription-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Par minute entendue",
+                    "help": null
+                  }
+                },
+                "images": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Images",
+                  "x-nestor": {
+                    "field": "images",
+                    "title_id": "config-model-openai-compatible-transcription-modelprices-images",
+                    "help_id": "config-model-openai-compatible-transcription-modelprices-images-help",
+                    "fallback_title_id": "config-field-images",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-openai-compatible-transcription-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Par image",
+                    "help": null
+                  }
+                },
+                "requests": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Requests",
+                  "x-nestor": {
+                    "field": "requests",
+                    "title_id": "config-model-openai-compatible-transcription-modelprices-requests",
+                    "help_id": "config-model-openai-compatible-transcription-modelprices-requests-help",
+                    "fallback_title_id": "config-field-requests",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-openai-compatible-transcription-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Par appel",
+                    "help": null
+                  }
+                }
+              },
+              "title": "ModelPrices",
+              "type": "object"
+            }
+          }
         },
         "sherpa-onnx-speaker": {
           "additionalProperties": false,
@@ -3146,6 +5625,26 @@
                 "title": "Seuil de reconnaissance",
                 "help": "Par défaut, celui du catalogue. Obligatoire pour un fichier .onnx à vous."
               }
+            },
+            "price": {
+              "$ref": "#/$defs/ModelPrices",
+              "x-nestor": {
+                "field": "price",
+                "title_id": "config-model-sherpa-onnx-speaker-price",
+                "help_id": "config-model-sherpa-onnx-speaker-price-help",
+                "fallback_title_id": "config-field-price",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-sherpa-onnx-speaker",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Prix",
+                "help": "Quand le fournisseur ne dit pas ce qu'il a facturé. En dollars."
+              }
             }
           },
           "required": [
@@ -3154,7 +5653,257 @@
             "model"
           ],
           "title": "SherpaOnnxSpeakerSettings",
-          "type": "object"
+          "type": "object",
+          "$defs": {
+            "ModelPrices": {
+              "additionalProperties": false,
+              "description": "What a model costs when its provider does not say what it billed, as providers write their prices: dollars per\nmillion tokens or characters, per minute of speech heard, per picture or call. What it leaves out is not billed;\nthe tokens read from or written to the cache cost as input unless priced apart.",
+              "properties": {
+                "input_tokens": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Input Tokens",
+                  "x-nestor": {
+                    "field": "input_tokens",
+                    "title_id": "config-model-sherpa-onnx-speaker-modelprices-input_tokens",
+                    "help_id": "config-model-sherpa-onnx-speaker-modelprices-input_tokens-help",
+                    "fallback_title_id": "config-field-input_tokens",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-sherpa-onnx-speaker-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Entrée, par million de tokens",
+                    "help": null
+                  }
+                },
+                "cached_input_tokens": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Cached Input Tokens",
+                  "x-nestor": {
+                    "field": "cached_input_tokens",
+                    "title_id": "config-model-sherpa-onnx-speaker-modelprices-cached_input_tokens",
+                    "help_id": "config-model-sherpa-onnx-speaker-modelprices-cached_input_tokens-help",
+                    "fallback_title_id": "config-field-cached_input_tokens",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-sherpa-onnx-speaker-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Entrée en cache, par million de tokens",
+                    "help": null
+                  }
+                },
+                "cache_write_tokens": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Cache Write Tokens",
+                  "x-nestor": {
+                    "field": "cache_write_tokens",
+                    "title_id": "config-model-sherpa-onnx-speaker-modelprices-cache_write_tokens",
+                    "help_id": "config-model-sherpa-onnx-speaker-modelprices-cache_write_tokens-help",
+                    "fallback_title_id": "config-field-cache_write_tokens",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-sherpa-onnx-speaker-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Écriture en cache, par million de tokens",
+                    "help": null
+                  }
+                },
+                "output_tokens": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Output Tokens",
+                  "x-nestor": {
+                    "field": "output_tokens",
+                    "title_id": "config-model-sherpa-onnx-speaker-modelprices-output_tokens",
+                    "help_id": "config-model-sherpa-onnx-speaker-modelprices-output_tokens-help",
+                    "fallback_title_id": "config-field-output_tokens",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-sherpa-onnx-speaker-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Sortie, par million de tokens",
+                    "help": null
+                  }
+                },
+                "characters": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Characters",
+                  "x-nestor": {
+                    "field": "characters",
+                    "title_id": "config-model-sherpa-onnx-speaker-modelprices-characters",
+                    "help_id": "config-model-sherpa-onnx-speaker-modelprices-characters-help",
+                    "fallback_title_id": "config-field-characters",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-sherpa-onnx-speaker-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Par million de caractères prononcés",
+                    "help": null
+                  }
+                },
+                "audio_minutes": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Audio Minutes",
+                  "x-nestor": {
+                    "field": "audio_minutes",
+                    "title_id": "config-model-sherpa-onnx-speaker-modelprices-audio_minutes",
+                    "help_id": "config-model-sherpa-onnx-speaker-modelprices-audio_minutes-help",
+                    "fallback_title_id": "config-field-audio_minutes",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-sherpa-onnx-speaker-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Par minute entendue",
+                    "help": null
+                  }
+                },
+                "images": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Images",
+                  "x-nestor": {
+                    "field": "images",
+                    "title_id": "config-model-sherpa-onnx-speaker-modelprices-images",
+                    "help_id": "config-model-sherpa-onnx-speaker-modelprices-images-help",
+                    "fallback_title_id": "config-field-images",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-sherpa-onnx-speaker-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Par image",
+                    "help": null
+                  }
+                },
+                "requests": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Requests",
+                  "x-nestor": {
+                    "field": "requests",
+                    "title_id": "config-model-sherpa-onnx-speaker-modelprices-requests",
+                    "help_id": "config-model-sherpa-onnx-speaker-modelprices-requests-help",
+                    "fallback_title_id": "config-field-requests",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-sherpa-onnx-speaker-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Par appel",
+                    "help": null
+                  }
+                }
+              },
+              "title": "ModelPrices",
+              "type": "object"
+            }
+          }
         },
         "sherpa-onnx-transcription": {
           "additionalProperties": false,
@@ -3252,10 +6001,280 @@
                 "title": "Threads CPU",
                 "help": null
               }
+            },
+            "price": {
+              "$ref": "#/$defs/ModelPrices",
+              "x-nestor": {
+                "field": "price",
+                "title_id": "config-model-sherpa-onnx-transcription-price",
+                "help_id": "config-model-sherpa-onnx-transcription-price-help",
+                "fallback_title_id": "config-field-price",
+                "secret": false,
+                "secret_values": false,
+                "advanced": true,
+                "group": "model-sherpa-onnx-transcription",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Prix",
+                "help": "Quand le fournisseur ne dit pas ce qu'il a facturé. En dollars."
+              }
             }
           },
           "title": "SherpaOnnxTranscriptionSettings",
           "type": "object",
+          "$defs": {
+            "ModelPrices": {
+              "additionalProperties": false,
+              "description": "What a model costs when its provider does not say what it billed, as providers write their prices: dollars per\nmillion tokens or characters, per minute of speech heard, per picture or call. What it leaves out is not billed;\nthe tokens read from or written to the cache cost as input unless priced apart.",
+              "properties": {
+                "input_tokens": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Input Tokens",
+                  "x-nestor": {
+                    "field": "input_tokens",
+                    "title_id": "config-model-sherpa-onnx-transcription-modelprices-input_tokens",
+                    "help_id": "config-model-sherpa-onnx-transcription-modelprices-input_tokens-help",
+                    "fallback_title_id": "config-field-input_tokens",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-sherpa-onnx-transcription-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Entrée, par million de tokens",
+                    "help": null
+                  }
+                },
+                "cached_input_tokens": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Cached Input Tokens",
+                  "x-nestor": {
+                    "field": "cached_input_tokens",
+                    "title_id": "config-model-sherpa-onnx-transcription-modelprices-cached_input_tokens",
+                    "help_id": "config-model-sherpa-onnx-transcription-modelprices-cached_input_tokens-help",
+                    "fallback_title_id": "config-field-cached_input_tokens",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-sherpa-onnx-transcription-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Entrée en cache, par million de tokens",
+                    "help": null
+                  }
+                },
+                "cache_write_tokens": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Cache Write Tokens",
+                  "x-nestor": {
+                    "field": "cache_write_tokens",
+                    "title_id": "config-model-sherpa-onnx-transcription-modelprices-cache_write_tokens",
+                    "help_id": "config-model-sherpa-onnx-transcription-modelprices-cache_write_tokens-help",
+                    "fallback_title_id": "config-field-cache_write_tokens",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-sherpa-onnx-transcription-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Écriture en cache, par million de tokens",
+                    "help": null
+                  }
+                },
+                "output_tokens": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Output Tokens",
+                  "x-nestor": {
+                    "field": "output_tokens",
+                    "title_id": "config-model-sherpa-onnx-transcription-modelprices-output_tokens",
+                    "help_id": "config-model-sherpa-onnx-transcription-modelprices-output_tokens-help",
+                    "fallback_title_id": "config-field-output_tokens",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-sherpa-onnx-transcription-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Sortie, par million de tokens",
+                    "help": null
+                  }
+                },
+                "characters": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Characters",
+                  "x-nestor": {
+                    "field": "characters",
+                    "title_id": "config-model-sherpa-onnx-transcription-modelprices-characters",
+                    "help_id": "config-model-sherpa-onnx-transcription-modelprices-characters-help",
+                    "fallback_title_id": "config-field-characters",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-sherpa-onnx-transcription-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Par million de caractères prononcés",
+                    "help": null
+                  }
+                },
+                "audio_minutes": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Audio Minutes",
+                  "x-nestor": {
+                    "field": "audio_minutes",
+                    "title_id": "config-model-sherpa-onnx-transcription-modelprices-audio_minutes",
+                    "help_id": "config-model-sherpa-onnx-transcription-modelprices-audio_minutes-help",
+                    "fallback_title_id": "config-field-audio_minutes",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-sherpa-onnx-transcription-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Par minute entendue",
+                    "help": null
+                  }
+                },
+                "images": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Images",
+                  "x-nestor": {
+                    "field": "images",
+                    "title_id": "config-model-sherpa-onnx-transcription-modelprices-images",
+                    "help_id": "config-model-sherpa-onnx-transcription-modelprices-images-help",
+                    "fallback_title_id": "config-field-images",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-sherpa-onnx-transcription-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Par image",
+                    "help": null
+                  }
+                },
+                "requests": {
+                  "anyOf": [
+                    {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Requests",
+                  "x-nestor": {
+                    "field": "requests",
+                    "title_id": "config-model-sherpa-onnx-transcription-modelprices-requests",
+                    "help_id": "config-model-sherpa-onnx-transcription-modelprices-requests-help",
+                    "fallback_title_id": "config-field-requests",
+                    "secret": false,
+                    "secret_values": false,
+                    "advanced": false,
+                    "group": "model-sherpa-onnx-transcription-modelprices",
+                    "reference": null,
+                    "model_type": null,
+                    "brands": null,
+                    "suggest_keys": null,
+                    "suggest_values": null,
+                    "title": "Par appel",
+                    "help": null
+                  }
+                }
+              },
+              "title": "ModelPrices",
+              "type": "object"
+            }
+          },
           "required": [
             "provider",
             "type"

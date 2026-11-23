@@ -15,9 +15,9 @@ from typing import Any
 
 import yaml
 from dotenv import dotenv_values
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, ValidationInfo, field_validator
+from pydantic import BaseModel, ConfigDict, Field, NonNegativeFloat, ValidationError, ValidationInfo, field_validator
 
-from nestor.core import ModelType, NestorError, PersonId
+from nestor.core import ModelType, NestorError, PersonId, Unit
 from nestor.modules.channels import Address
 from nestor.modules.cognition.tools.results import RESULT_CHARS
 from nestor.modules.conversation import AgentSettings
@@ -179,6 +179,38 @@ class ComponentConfig(BaseModel):
         return dict(self.model_extra or {})
 
 
+class ModelPrices(BaseModel):
+    """What a model costs when its provider does not say what it billed, as providers write their prices: dollars per
+    million tokens or characters, per minute of speech heard, per picture or call. What it leaves out is not billed;
+    the tokens read from or written to the cache cost as input unless priced apart."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    input_tokens: NonNegativeFloat | None = None
+    cached_input_tokens: NonNegativeFloat | None = None
+    cache_write_tokens: NonNegativeFloat | None = None
+    output_tokens: NonNegativeFloat | None = None
+    characters: NonNegativeFloat | None = None
+    audio_minutes: NonNegativeFloat | None = None
+    images: NonNegativeFloat | None = None
+    requests: NonNegativeFloat | None = None
+
+    def by_unit(self) -> dict[Unit, float]:
+        """The prices set, by the unit they price (`audio_minutes` prices `Unit.AUDIO_SECONDS`, by the minute)."""
+        named = {"audio_minutes": Unit.AUDIO_SECONDS}
+        return {named[k] if k in named else Unit(k): v for k, v in self.model_dump(exclude_none=True).items()}
+
+
+class PricesConfig(Section):
+    """Where a cost comes from when a provider does not say what it billed: a model's own `price`, else the public
+    price list of hosted models, downloaded once a day (nothing of the household is sent)."""
+
+    catalogue: bool = True
+    catalogue_url: str = Field(
+        default="https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json",
+        json_schema_extra=ADVANCED,
+    )
+
+
 class ModelConfig(BaseModel):
     """A model of `models`: its `type` and its `provider` pick the plugin; `fallback` names the language model of
     `models` that answers when this one fails before answering, for every role it holds; the other keys are its
@@ -188,6 +220,7 @@ class ModelConfig(BaseModel):
     type: ModelType
     provider: str
     fallback: str | None = None
+    price: ModelPrices | None = None  # what it costs when its provider does not say
 
     @property
     def plugin(self) -> str:
@@ -310,6 +343,7 @@ class NestorConfig(Section):
     initiative: InitiativeConfig = InitiativeConfig()
     admin: AdminConfig | None = None
     updates: UpdatesConfig = UpdatesConfig()
+    prices: PricesConfig = PricesConfig()
     # services accounts are plugged into from the admin; by default every installed one when the admin is on
     connectors: tuple[AdapterConfig, ...] | None = None
 

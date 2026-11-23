@@ -3,7 +3,7 @@
 import asyncio
 from collections.abc import AsyncGenerator, Callable
 
-from nestor.core import ProviderError
+from nestor.core import ProviderError, Unit, Usage, report
 from nestor.modules.cognition import (
     Finished,
     FinishReason,
@@ -15,6 +15,7 @@ from nestor.modules.cognition import (
     ToolCall,
     ToolCallRequested,
 )
+from nestor.testing.usage import consumed, said
 
 type Reply = str | ToolCall | Callable[[ModelRequest], str | ToolCall]
 
@@ -39,6 +40,10 @@ class ScriptedModel(LanguageModel):
         reply = self._replies.pop(0) if self._replies else ""
         if not isinstance(reply, str | ToolCall):
             reply = reply(request)
+        read = sum(len(m.content.split()) for m in request.messages)
+        written = len(reply.split()) if isinstance(reply, str) else 1
+        # a word a token
+        report(Usage({Unit.INPUT_TOKENS: read, Unit.OUTPUT_TOKENS: written, Unit.REQUESTS: 1}, served=self.name))
         try:
             if isinstance(reply, ToolCall):
                 yield ToolCallRequested(reply)
@@ -79,6 +84,11 @@ class LanguageModelContract:
         assert sum(isinstance(o, Finished) for o in outputs) == 1, "more than one Finished"
         assert "".join(o.text for o in outputs if isinstance(o, TextDelta)).strip(), "no text in the reply"
 
+    async def test_a_reply_says_what_it_consumed(self) -> None:
+        async with self.model() as model:
+            _, tally = await consumed(_drain(model.stream(self.text_request())))
+        assert said(tally).units, "a reply says the tokens it read and wrote"
+
     async def test_closing_the_stream_early_is_clean(self) -> None:
         async with self.model() as model:
             stream = model.stream(self.text_request())
@@ -102,3 +112,7 @@ class LanguageModelContract:
             except ProviderError:
                 return
         raise AssertionError("no ProviderError raised by an unavailable provider")
+
+
+async def _drain(outputs: AsyncGenerator[ModelOutput]) -> list[ModelOutput]:
+    return [o async for o in outputs]

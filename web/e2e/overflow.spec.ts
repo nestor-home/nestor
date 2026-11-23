@@ -30,6 +30,7 @@ const ROUTES = [
   "/satellites",
   "/satellites/reachy-living-room",
   "/system",
+  "/usage",
   "/accounts",
   "/accounts/acc-mathis",
   "/config",

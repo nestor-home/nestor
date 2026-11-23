@@ -144,6 +144,32 @@ export type ChatMessageIn = S["ChatMessageIn"];
 export type ChatStreamPart = S["ChatStreamOut"];
 export type Mention = S["MentionOut"];
 
+// -- what Nestor costs -----------------------------------------------------------------------------
+
+export type UsageDimension = S["Dimension"];
+export type UsagePeriod = S["Period"];
+export type UsageInterval = S["Interval"];
+export type UsageUnit = S["Unit"];
+export type CallPurpose = S["CallPurpose"];
+export type CostBasis = S["CostBasis"];
+export type CallOutcome = S["Outcome"];
+export type UsageTotals = S["TotalsOut"];
+export type UsageSpan = S["SpanOut"];
+export type UsageSummary = S["SummaryOut"];
+export type UsageGroup = S["GroupOut"];
+export type UsageGroups = S["GroupsOut"];
+export type UsagePoint = S["PointOut"];
+export type UsageSeries = S["SeriesOut"];
+export type UsageBeat = S["BeatOut"];
+export type UsageRhythm = S["RhythmOut"];
+export type UsageCall = S["CallOut"];
+export type UsageCalls = S["CallsOut"];
+export type ModelPrice = S["PriceOut"];
+export type UsagePrices = S["PricesOut"];
+/** What a reading asks for: a period of the household's clock and the values kept of each dimension (an empty value
+ * keeps the calls without one). */
+export type UsageQuery = NonNullable<Query<"/api/v1/usage/summary">>;
+
 // -- configuration --------------------------------------------------------------------------------
 
 export type ModelType = S["ModelType"];

@@ -24,9 +24,7 @@ class FallingBack(LanguageModel):
         if len(chain) < 2:
             raise ContractError("a fallback chain needs a model and at least one fallback")
         self._chain, self._journal = tuple(chain), journal
-        first = chain[0][1]
-        self.name, self.brand, self.vision, self.reads = first.name, first.brand, first.vision, first.reads
-        self.document_pages = first.document_pages
+        self.mirror(chain[0][1])
 
     async def stream(self, request: ModelRequest) -> AsyncGenerator[ModelOutput]:
         for position, (key, model) in enumerate(self._chain):

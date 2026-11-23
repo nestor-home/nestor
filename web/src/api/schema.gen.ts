@@ -1717,6 +1717,126 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/usage/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Usage Summary
+         * @description The period at a glance: its spending, the period before, this month so far and where it is heading.
+         */
+        get: operations["usageSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/usage/series": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Usage Series
+         * @description Spending over the period, bucket by bucket (by hour today, by week over 90 days), split by `by` if given.
+         */
+        get: operations["usageSeries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/usage/groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Usage Groups
+         * @description Spending by value of a dimension, the costliest first.
+         */
+        get: operations["usageGroups"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/usage/rhythm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Usage Rhythm
+         * @description When the period's spending happened: by hour of each weekday.
+         */
+        get: operations["usageRhythm"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/usage/calls": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Usage Calls
+         * @description The calls one by one, newest first; `before` (a journal position) pages back.
+         */
+        get: operations["usageCalls"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/usage/prices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Usage Prices
+         * @description How each model's calls are valued when its provider does not say what it billed, and where from.
+         */
+        get: operations["usagePrices"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1895,6 +2015,77 @@ export interface components {
             /** Authorize Url */
             authorize_url: string | null;
             connection: components["schemas"]["ConnectionDetail"] | null;
+        };
+        /** BeatOut */
+        BeatOut: {
+            /** Weekday */
+            weekday: number;
+            /** Hour */
+            hour: number;
+            /** Cost Nusd */
+            cost_nusd: number;
+            /** Calls */
+            calls: number;
+        };
+        /**
+         * CallOut
+         * @description One call: what it consumed, what it cost and how that is known, on whose behalf and why.
+         */
+        CallOut: {
+            /** Id */
+            id: string;
+            /** Position */
+            position: number;
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+            /** Consumer */
+            consumer: string;
+            kind: components["schemas"]["ModelType"];
+            /** Provider */
+            provider: string;
+            /** Served */
+            served: string | null;
+            /** Units */
+            units: {
+                [key: string]: number;
+            };
+            /** Cost Nusd */
+            cost_nusd: number | null;
+            basis: components["schemas"]["CostBasis"];
+            /** Price */
+            price: string | null;
+            /** Duration Ms */
+            duration_ms: number;
+            outcome: components["schemas"]["Outcome"];
+            purpose: components["schemas"]["CallPurpose"];
+            person: components["schemas"]["PersonRef"] | null;
+            /** Channel */
+            channel: string | null;
+            medium: components["schemas"]["Medium"] | null;
+            /** Session */
+            session: string | null;
+            /** Conversation */
+            conversation: string | null;
+            /** Turn */
+            turn: string | null;
+            /** Origin */
+            origin: string | null;
+        };
+        /**
+         * CallPurpose
+         * @description Why Nestor called: what the call serves, whichever model type answers it.
+         * @enum {string}
+         */
+        CallPurpose: "turn" | "notification" | "title" | "watch" | "consolidation" | "indexing" | "enrollment" | "task" | "search" | "unattributed";
+        /** CallsOut */
+        CallsOut: {
+            /** Calls */
+            calls: components["schemas"]["CallOut"][];
+            /** Next Before */
+            next_before: number | null;
         };
         /** CancelOut */
         CancelOut: {
@@ -2261,6 +2452,12 @@ export interface components {
             text: string;
         };
         /**
+         * CostBasis
+         * @description How a cost is known.
+         * @enum {string}
+         */
+        CostBasis: "reported" | "priced" | "free" | "nothing" | "unknown";
+        /**
          * Day
          * @enum {string}
          */
@@ -2297,6 +2494,12 @@ export interface components {
             /** Changed */
             changed: components["schemas"]["ChangeOut"][];
         };
+        /**
+         * Dimension
+         * @description What spending is grouped or filtered by: the ledger's columns, shared by the API and the admin.
+         * @enum {string}
+         */
+        Dimension: "consumer" | "kind" | "provider" | "served" | "purpose" | "person" | "channel" | "medium" | "basis" | "outcome" | "origin" | "conversation";
         /** DocumentIn */
         DocumentIn: {
             /** Document */
@@ -2373,6 +2576,19 @@ export interface components {
          * @enum {string}
          */
         Granularity: "home" | "occupied_rooms" | "person_room";
+        /** GroupOut */
+        GroupOut: {
+            /** Key */
+            key: string | null;
+            person?: components["schemas"]["PersonRef"] | null;
+            totals: components["schemas"]["TotalsOut"];
+        };
+        /** GroupsOut */
+        GroupsOut: {
+            by: components["schemas"]["Dimension"];
+            /** Groups */
+            groups: components["schemas"]["GroupOut"][];
+        };
         /**
          * Health
          * @description What a running component can tell about itself.
@@ -2479,6 +2695,11 @@ export interface components {
          * @enum {string}
          */
         InstallKind: "container" | "editable" | "uv-tool" | "pip";
+        /**
+         * Interval
+         * @enum {string}
+         */
+        Interval: "hour" | "day" | "week" | "month";
         /** InvitationAcceptIn */
         InvitationAcceptIn: {
             /** Token */
@@ -2654,7 +2875,7 @@ export interface components {
          * @description What the journal groups entries by: the facets of its filters, one per category, and `other`.
          * @enum {string}
          */
-        Kind: "conversation" | "delivery" | "tool" | "task" | "watch" | "schedule" | "memory" | "connection" | "presence" | "satellite" | "voice" | "observation" | "account" | "other";
+        Kind: "conversation" | "delivery" | "tool" | "task" | "watch" | "schedule" | "memory" | "connection" | "presence" | "satellite" | "voice" | "observation" | "account" | "usage" | "other";
         /** KindFacetOut */
         KindFacetOut: {
             key: components["schemas"]["Kind"];
@@ -2835,6 +3056,14 @@ export interface components {
             /** Max S */
             max_s: number;
         };
+        /**
+         * Medium
+         * @description How a turn travels, typed or said: it decides the answer's form (length, no Markdown when
+         *     spoken), and how long a conversation lasts without a turn. A channel may carry both (a satellite
+         *     with a screen and a microphone).
+         * @enum {string}
+         */
+        Medium: "spoken" | "written";
         /** MemoryOut */
         MemoryOut: {
             /** Id */
@@ -2966,6 +3195,11 @@ export interface components {
             /** Channel */
             channel: string;
         };
+        /**
+         * Outcome
+         * @enum {string}
+         */
+        Outcome: "ok" | "failed" | "cancelled";
         /** OutcomeOut */
         OutcomeOut: {
             /** Ok */
@@ -3025,6 +3259,13 @@ export interface components {
             /** Expires In S */
             expires_in_s: number;
         };
+        /**
+         * Period
+         * @description The spans spending is read over, in the household's days: today, the last 7, 30 or 90 days (today included),
+         *     or the calendar month so far.
+         * @enum {string}
+         */
+        Period: "today" | "7d" | "30d" | "month" | "90d";
         /** PersonOut */
         PersonOut: {
             /** Id */
@@ -3057,6 +3298,16 @@ export interface components {
             /** Total */
             total: number;
         };
+        /** PointOut */
+        PointOut: {
+            /**
+             * Start
+             * Format: date-time
+             */
+            start: string;
+            /** Groups */
+            groups: components["schemas"]["GroupOut"][];
+        };
         /** PresenceOut */
         PresenceOut: {
             /** Home */
@@ -3084,6 +3335,34 @@ export interface components {
             /** Problems */
             problems: components["schemas"]["ProblemOut"][];
             diff: components["schemas"]["DiffOut"];
+        };
+        /**
+         * PriceOut
+         * @description How a model's calls are valued when its provider does not say what it billed.
+         */
+        PriceOut: {
+            /** Consumer */
+            consumer: string;
+            kind: components["schemas"]["ModelType"];
+            /** Provider */
+            provider: string;
+            /** Model */
+            model: string | null;
+            /** Local */
+            local: boolean;
+            /** Source */
+            source: string | null;
+            /** Prices */
+            prices: {
+                [key: string]: number;
+            };
+        };
+        /** PricesOut */
+        PricesOut: {
+            /** Catalogue */
+            catalogue: boolean;
+            /** Prices */
+            prices: components["schemas"]["PriceOut"][];
         };
         /**
          * PrivacyIO
@@ -3246,6 +3525,11 @@ export interface components {
             /** Restarting */
             restarting: boolean;
         };
+        /** RhythmOut */
+        RhythmOut: {
+            /** Beats */
+            beats: components["schemas"]["BeatOut"][];
+        };
         /**
          * Risk
          * @enum {string}
@@ -3371,7 +3655,7 @@ export interface components {
          * @description What an action needs. Code checks scopes, never roles: the role table is the only place they meet.
          * @enum {string}
          */
-        Scope: "accounts.manage" | "accounts.owners.manage" | "household.read" | "agent.read" | "agent.chat" | "household.connections.manage" | "own.connections.manage" | "satellites.manage" | "system.read" | "config.manage" | "journal.read.all" | "journal.read.own" | "memory.manage.all" | "memory.manage.own" | "tasks.manage" | "tasks.manage.own" | "watches.manage.all" | "watches.manage.own" | "schedules.manage.all" | "schedules.manage.own" | "messages.read.all" | "messages.read.own" | "media.view" | "media.view.all" | "media.call" | "media.call.all";
+        Scope: "accounts.manage" | "accounts.owners.manage" | "household.read" | "agent.read" | "agent.chat" | "household.connections.manage" | "own.connections.manage" | "satellites.manage" | "system.read" | "config.manage" | "journal.read.all" | "journal.read.own" | "memory.manage.all" | "memory.manage.own" | "tasks.manage" | "tasks.manage.own" | "watches.manage.all" | "watches.manage.own" | "schedules.manage.all" | "schedules.manage.own" | "messages.read.all" | "messages.read.own" | "media.view" | "media.view.all" | "media.call" | "media.call.all" | "usage.read.all" | "usage.read.own";
         /** SecretIn */
         SecretIn: {
             /** Value */
@@ -3398,6 +3682,13 @@ export interface components {
             values?: {
                 [key: string]: string;
             };
+        };
+        /** SeriesOut */
+        SeriesOut: {
+            span: components["schemas"]["SpanOut"];
+            by: components["schemas"]["Dimension"] | null;
+            /** Points */
+            points: components["schemas"]["PointOut"][];
         };
         /** ServiceOut */
         ServiceOut: {
@@ -3442,6 +3733,20 @@ export interface components {
             /** Version */
             version: string;
         };
+        /** SpanOut */
+        SpanOut: {
+            /**
+             * Since
+             * Format: date-time
+             */
+            since: string;
+            /**
+             * Until
+             * Format: date-time
+             */
+            until: string;
+            every: components["schemas"]["Interval"];
+        };
         /**
          * Stage
          * @description Where an addition stands, for the front's progress.
@@ -3467,6 +3772,15 @@ export interface components {
          * @enum {string}
          */
         Suggest: "people" | "residents";
+        /** SummaryOut */
+        SummaryOut: {
+            span: components["schemas"]["SpanOut"];
+            totals: components["schemas"]["TotalsOut"];
+            previous: components["schemas"]["TotalsOut"];
+            month: components["schemas"]["TotalsOut"];
+            /** Projected Month Nusd */
+            projected_month_nusd: number;
+        };
         /** SystemOut */
         SystemOut: {
             nestor: components["schemas"]["NestorOut"];
@@ -3564,6 +3878,31 @@ export interface components {
          * @enum {string}
          */
         ToolState: "running" | "done" | "failed" | "background";
+        /** TotalsOut */
+        TotalsOut: {
+            /** Cost Nusd */
+            cost_nusd: number;
+            /** Calls */
+            calls: number;
+            /** Unknown */
+            unknown: number;
+            /** Units */
+            units: {
+                [key: string]: number;
+            };
+            /** Duration Ms */
+            duration_ms: number;
+            /** Conversations */
+            conversations: number;
+            /** Conversed Nusd */
+            conversed_nusd: number;
+        };
+        /**
+         * Unit
+         * @description What a call consumes and a price is set by. A new one is added here and nowhere else.
+         * @enum {string}
+         */
+        Unit: "input_tokens" | "cached_input_tokens" | "cache_write_tokens" | "output_tokens" | "images" | "audio_seconds" | "characters" | "requests";
         /**
          * UpdateOut
          * @description What a connected device last reported about its software.
@@ -13222,6 +13561,632 @@ export interface operations {
             };
         };
     };
+    usageSummary: {
+        parameters: {
+            query?: {
+                period?: components["schemas"]["Period"];
+                consumer?: string[] | null;
+                kind?: string[] | null;
+                provider?: string[] | null;
+                served?: string[] | null;
+                purpose?: string[] | null;
+                person?: string[] | null;
+                channel?: string[] | null;
+                medium?: string[] | null;
+                basis?: string[] | null;
+                outcome?: string[] | null;
+                origin?: string[] | null;
+                conversation?: string[] | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SummaryOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    usageSeries: {
+        parameters: {
+            query?: {
+                by?: components["schemas"]["Dimension"] | null;
+                period?: components["schemas"]["Period"];
+                consumer?: string[] | null;
+                kind?: string[] | null;
+                provider?: string[] | null;
+                served?: string[] | null;
+                purpose?: string[] | null;
+                person?: string[] | null;
+                channel?: string[] | null;
+                medium?: string[] | null;
+                basis?: string[] | null;
+                outcome?: string[] | null;
+                origin?: string[] | null;
+                conversation?: string[] | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeriesOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    usageGroups: {
+        parameters: {
+            query: {
+                by: components["schemas"]["Dimension"];
+                period?: components["schemas"]["Period"];
+                consumer?: string[] | null;
+                kind?: string[] | null;
+                provider?: string[] | null;
+                served?: string[] | null;
+                purpose?: string[] | null;
+                person?: string[] | null;
+                channel?: string[] | null;
+                medium?: string[] | null;
+                basis?: string[] | null;
+                outcome?: string[] | null;
+                origin?: string[] | null;
+                conversation?: string[] | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupsOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    usageRhythm: {
+        parameters: {
+            query?: {
+                period?: components["schemas"]["Period"];
+                consumer?: string[] | null;
+                kind?: string[] | null;
+                provider?: string[] | null;
+                served?: string[] | null;
+                purpose?: string[] | null;
+                person?: string[] | null;
+                channel?: string[] | null;
+                medium?: string[] | null;
+                basis?: string[] | null;
+                outcome?: string[] | null;
+                origin?: string[] | null;
+                conversation?: string[] | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RhythmOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    usageCalls: {
+        parameters: {
+            query?: {
+                before?: number | null;
+                limit?: number;
+                period?: components["schemas"]["Period"];
+                consumer?: string[] | null;
+                kind?: string[] | null;
+                provider?: string[] | null;
+                served?: string[] | null;
+                purpose?: string[] | null;
+                person?: string[] | null;
+                channel?: string[] | null;
+                medium?: string[] | null;
+                basis?: string[] | null;
+                outcome?: string[] | null;
+                origin?: string[] | null;
+                conversation?: string[] | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CallsOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    usagePrices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PricesOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
 }
 type FlattenedDeepRequired<T> = {
     [K in keyof T]-?: FlattenedDeepRequired<T[K] extends unknown[] | undefined | null ? Extract<T[K], unknown[]>[number] : T[K]>;
@@ -13234,29 +14199,36 @@ type ReadonlyArray<T> = [
 export const activityValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Activity"]> = ["listening", "speaking", "thinking", "working", "sleeping", "idle"];
 export const attachmentKindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["AttachmentKind"]> = ["image", "voice", "audio", "file"];
 export const authKindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["AuthKind"]> = ["oauth2", "secret", "none", "discovered"];
+export const callPurposeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["CallPurpose"]> = ["turn", "notification", "title", "watch", "consolidation", "indexing", "enrollment", "task", "search", "unattributed"];
 export const changeKindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ChangeKind"]> = ["breaking", "feature", "fix", "other"];
 export const chatRoleValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ChatRole"]> = ["person", "assistant", "note", "fallback", "tool"];
 export const chatStreamOutTypeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ChatStreamOut"]["type"]> = ["text", "end", "failed", "done"];
+export const costBasisValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["CostBasis"]> = ["reported", "priced", "free", "nothing", "unknown"];
 export const dayValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Day"]> = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+export const dimensionValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Dimension"]> = ["consumer", "kind", "provider", "served", "purpose", "person", "channel", "medium", "basis", "outcome", "origin", "conversation"];
 export const errorDetailCodeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ErrorDetail"]["code"]> = ["addition_over", "addition_unknown", "attachment_unknown", "audio_format", "bad_token", "chat_busy", "chat_needs_person", "chat_off", "client_incomplete", "client_missing", "client_required", "config_history_unknown", "config_invalid", "config_unavailable", "conflict", "connection_unknown", "connector_unknown", "cross_origin", "csrf_failed", "empty_memory", "executor_unknown", "executors_unreachable", "fields_missing", "forbidden", "http_error", "identify_unsupported", "invalid", "invalid_code", "invalid_credentials", "invalid_login", "invalid_request", "invitation_expired", "invitation_revoked", "invitation_unknown", "invitation_used", "journal_entry_unknown", "media_camera_off", "privacy_needs_presence", "media_forbidden", "media_off", "media_offline", "media_unable", "last_owner", "memory_shared", "memory_unknown", "method_not_allowed", "no_connectors", "no_secret_key", "not_a_device_code_method", "not_found", "not_oauth", "oauth", "own_connections_only", "pairing_refused", "pending_unknown", "person_required", "person_unknown", "provider_error", "provider_refused", "restart_unconfirmed", "satellite_offline", "satellite_unknown", "secret_in_use", "secret_unknown", "task_unknown", "throttled", "too_many_additions", "unauthenticated", "unknown_locale", "unknown_person", "unknown_tool", "unsupported_media_type", "update_not_installable", "update_unavailable", "update_unconfirmed", "update_unsupported", "use_me_password", "voice_not_yours", "voices_off", "watch_unknown", "schedule_unknown", "service_refused", "confirmation_unknown", "weak_password", "wrong_password"];
 export const familyValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Family"]> = ["model", "executor", "channel", "home", "tools", "inbound", "connector"];
 export const granularityValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Granularity"]> = ["home", "occupied_rooms", "person_room"];
 export const healthValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Health"]> = ["started", "degraded", "unavailable"];
 export const installKindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["InstallKind"]> = ["container", "editable", "uv-tool", "pip"];
+export const intervalValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Interval"]> = ["hour", "day", "week", "month"];
 export const invitationStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["InvitationStatus"]> = ["pending", "accepted", "expired", "revoked"];
-export const kindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Kind"]> = ["conversation", "delivery", "tool", "task", "watch", "schedule", "memory", "connection", "presence", "satellite", "voice", "observation", "account", "other"];
+export const kindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Kind"]> = ["conversation", "delivery", "tool", "task", "watch", "schedule", "memory", "connection", "presence", "satellite", "voice", "observation", "account", "usage", "other"];
+export const mediumValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Medium"]> = ["spoken", "written"];
 export const mentionKindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["MentionKind"]> = ["person", "room", "executor", "connection"];
 export const modelTypeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ModelType"]> = ["language", "embedding", "speaker", "transcription", "speech", "image"];
 export const nestorToolsValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["NestorTools"]> = ["none", "passed", "configured"];
 export const offValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Off"]> = ["switched_off", "quiet_hours", "someone_home"];
+export const outcomeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Outcome"]> = ["ok", "failed", "cancelled"];
 export const pairingMethodValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PairingMethod"]> = ["device_code.display", "device_code.speech", "enrollment.input", "enrollment.provisioning", "enrollment.qr"];
+export const periodValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Period"]> = ["today", "7d", "30d", "month", "90d"];
 export const problemValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Problem"]> = ["too_short", "too_quiet", "too_loud", "other_voice"];
 export const problemCodeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ProblemCode"]> = ["missing", "extra", "invalid", "unknown_kind", "reference", "secret", "no_answering_model", "not_answering", "not_embedding", "not_speaker", "not_transcribing", "not_speaking", "unknown_model", "shared_account"];
 export const proofValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Proof"]> = ["device_code", "enrollment_code"];
 export const purposeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Purpose"]> = ["view", "call"];
 export const riskValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Risk"]> = ["read", "write", "sensitive"];
 export const roleValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Role"]> = ["owner", "admin", "member", "guest"];
-export const scopeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Scope"]> = ["accounts.manage", "accounts.owners.manage", "household.read", "agent.read", "agent.chat", "household.connections.manage", "own.connections.manage", "satellites.manage", "system.read", "config.manage", "journal.read.all", "journal.read.own", "memory.manage.all", "memory.manage.own", "tasks.manage", "tasks.manage.own", "watches.manage.all", "watches.manage.own", "schedules.manage.all", "schedules.manage.own", "messages.read.all", "messages.read.own", "media.view", "media.view.all", "media.call", "media.call.all"];
+export const scopeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Scope"]> = ["accounts.manage", "accounts.owners.manage", "household.read", "agent.read", "agent.chat", "household.connections.manage", "own.connections.manage", "satellites.manage", "system.read", "config.manage", "journal.read.all", "journal.read.own", "memory.manage.all", "memory.manage.own", "tasks.manage", "tasks.manage.own", "watches.manage.all", "watches.manage.own", "schedules.manage.all", "schedules.manage.own", "messages.read.all", "messages.read.own", "media.view", "media.view.all", "media.call", "media.call.all", "usage.read.all", "usage.read.own"];
 export const shapeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Shape"]> = ["one", "list", "named"];
 export const stageValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Stage"]> = ["waiting", "device_seen", "paired", "cancelled", "expired"];
 export const statusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Status"]> = ["connected", "needs_reauth", "error"];
@@ -13264,4 +14236,5 @@ export const suggestValues: ReadonlyArray<FlattenedDeepRequired<components>["sch
 export const taskStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["TaskStatus"]> = ["running", "completed", "failed", "cancelled"];
 export const toneValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Tone"]> = ["normal", "decision", "warning"];
 export const toolStateValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ToolState"]> = ["running", "done", "failed", "background"];
+export const unitValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Unit"]> = ["input_tokens", "cached_input_tokens", "cache_write_tokens", "output_tokens", "images", "audio_seconds", "characters", "requests"];
 export const updateStateValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["UpdateState"]> = ["current", "available", "installing", "failed"];

@@ -14,7 +14,7 @@ from datetime import datetime
 from enum import StrEnum
 
 from nestor.admin.presentation.phrasebook import Phrasebook
-from nestor.core import ContractError, Event, PersonId
+from nestor.core import ContractError, Event, Money, PersonId
 from nestor.core.i18n import Message
 from nestor.modules.accounts import (
     AccountCreated,
@@ -102,6 +102,7 @@ from nestor.modules.satellites import (
     UpdateState,
 )
 from nestor.modules.system import ConfigChanged, RestartRequested, SecretChanged, UpdateFailed, UpdateRequested
+from nestor.modules.usage import CallPurpose, UsageRecorded
 
 log = logging.getLogger(__name__)
 DETAIL_LIMIT = 600
@@ -130,6 +131,7 @@ class Kind(StrEnum):
     VOICE = "voice"
     OBSERVATION = "observation"
     ACCOUNT = "account"
+    USAGE = "usage"  # what each call to a model cost
     OTHER = "other"  # an event of no category: a plugin's, or a type this version does not know
 
 
@@ -213,6 +215,7 @@ CATEGORIES: Mapping[Kind, tuple[type[Event], ...]] = {
         InvitationRevoked,
         AccountLogin,
     ),
+    Kind.USAGE: (UsageRecorded,),
 }
 if missing := set(Kind) - {Kind.OTHER} - set(CATEGORIES):
     raise ContractError(f"journal kinds without events: {sorted(missing)}")
@@ -289,6 +292,17 @@ class EventDescriber:
                 e, Message.of("journal-fallback", reason=e.reason), channels=[e.address], tone=Tone.WARNING
             ),
             ConversationTitled: lambda e: self._line(e, Message.of("journal-conversation-titled", title=e.title)),
+            UsageRecorded: lambda e: self._line(
+                e,
+                Message.of(
+                    "journal-usage-recorded" if e.cost_nusd is not None else "journal-usage-unknown",
+                    consumer=e.consumer,
+                    purpose=e.purpose,
+                    cost=float(Money(e.cost_nusd or 0).dollars),
+                ),
+                people=[e.person],
+                tone=Tone.WARNING if e.purpose is CallPurpose.UNATTRIBUTED else Tone.NORMAL,
+            ),
             ModelFellBack: lambda e: self._line(
                 e,
                 Message.of("journal-model-fell-back", model=e.model, fallback=e.fallback),

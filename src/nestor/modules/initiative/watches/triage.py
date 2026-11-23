@@ -10,7 +10,9 @@ from typing import Any
 
 from nestor.core import ProviderError
 from nestor.modules.cognition.model import LanguageModel, Message, ModelRequest, Role, json_answer
+from nestor.modules.conversation import About, Source
 from nestor.modules.initiative.watches.types import Incoming, Verdict, Watch
+from nestor.modules.usage import CallPurpose, attributed
 
 QUESTION = """You sort incoming items for a home assistant. People asked to be told about these things:
 {watches}
@@ -41,14 +43,21 @@ class Triage:
                 Message.user(_describe(item)),
             )
         )
-        for _ in range(ATTEMPTS):
-            try:
-                found = _verdicts(await json_answer(self.model, request))
-            except ProviderError:
-                continue
-            if found is not None:
-                known = {w.id for w in watches}
-                return {id: verdict for id, verdict in found.items() if id in known}
+        owners = {w.owner for w in watches}
+        with attributed(
+            purpose=CallPurpose.WATCH,
+            person=item.owner or (next(iter(owners)) if len(owners) == 1 else None),
+            # one call sorts for all of them
+            origin=About(Source.WATCH, watches[0].id).key if len(watches) == 1 else None,
+        ):
+            for _ in range(ATTEMPTS):
+                try:
+                    found = _verdicts(await json_answer(self.model, request))
+                except ProviderError:
+                    continue
+                if found is not None:
+                    known = {w.id for w in watches}
+                    return {id: verdict for id, verdict in found.items() if id in known}
         return None
 
 

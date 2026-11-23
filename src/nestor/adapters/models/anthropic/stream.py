@@ -7,14 +7,13 @@ from typing import Any
 from nestor.adapters.common.http import Failure, message_of
 from nestor.adapters.models.anthropic.wire import Block
 from nestor.adapters.models.common import PartialCall
-from nestor.core import new_id
+from nestor.core import Unit, Usage, new_id, report
 from nestor.modules.cognition import (
     Finished,
     FinishReason,
     ModelOutput,
     TextDelta,
     ToolCallRequested,
-    Usage,
 )
 
 REASONING = frozenset({"thinking", "redacted_thinking"})  # the blocks a tool call's reasoning is made of
@@ -40,6 +39,14 @@ class Decoder:
         self._output_tokens: int | None = None
 
     async def outputs(self, events: AsyncIterator[dict[str, Any]]) -> AsyncGenerator[ModelOutput]:
+        try:
+            async for output in self._outputs(events):
+                yield output
+        finally:  # what was billed, even for a reply cut or failed midway
+            if (units := self._units()) or self._model is not None:
+                report(Usage(units | {Unit.REQUESTS: 1}, served=self._model))
+
+    async def _outputs(self, events: AsyncIterator[dict[str, Any]]) -> AsyncGenerator[ModelOutput]:
         async for event in events:
             kind = event.get("type")
             if kind == "message_stop":
@@ -55,7 +62,7 @@ class Decoder:
             if reasoning := self._claimed.get(index):
                 partial.replay = json.dumps(reasoning)
             yield ToolCallRequested(partial.call(self._error))
-        yield Finished(_STOP_REASONS.get(self._stop or "", FinishReason.STOP), self._usage(), self._model)
+        yield Finished(_STOP_REASONS.get(self._stop or "", FinishReason.STOP))
 
     def _read(self, kind: object, event: dict[str, Any]) -> Iterator[str]:
         index = event.get("index", -1)
@@ -64,6 +71,8 @@ class Decoder:
                 message = event.get("message") or {}
                 self._model = message.get("model") or None
                 self._input = message.get("usage") or {}
+                if isinstance(tokens := self._input.get("output_tokens"), int):
+                    self._output_tokens = tokens
             case "content_block_start":
                 block = dict(event.get("content_block") or {})
                 if block.get("type") == "tool_use":
@@ -96,14 +105,17 @@ class Decoder:
                 transient = isinstance(error, dict) and error.get("type") in _TRANSIENT
                 raise self._error(f"error in stream: {message_of(error)}", transient=transient)
 
-    def _usage(self) -> Usage | None:
+    def _units(self) -> dict[Unit, float]:
         """Anthropic counts apart what it read from the cache and wrote to it: the input is all three."""
-        counts = [self._input.get(k) for k in _INPUT_COUNTS]
-        if not isinstance(counts[0], int) or self._output_tokens is None:
-            return None
-        read = counts[1] if isinstance(counts[1], int) else 0
-        return Usage(
-            input_tokens=sum(c for c in counts if isinstance(c, int)),
-            output_tokens=self._output_tokens,
-            cached_input_tokens=read,
-        )
+        fresh, read, written = (self._input.get(k) for k in _INPUT_COUNTS)
+        if not isinstance(fresh, int):
+            return {}
+        read, written = (n if isinstance(n, int) else 0 for n in (read, written))
+        units: dict[Unit, float] = {
+            Unit.INPUT_TOKENS: fresh + read + written,
+            Unit.CACHED_INPUT_TOKENS: read,
+            Unit.CACHE_WRITE_TOKENS: written,
+        }
+        if self._output_tokens is not None:
+            units[Unit.OUTPUT_TOKENS] = self._output_tokens
+        return units

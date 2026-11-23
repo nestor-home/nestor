@@ -13,7 +13,7 @@ import respx
 from nestor import __version__
 from nestor.adapters.models.gemini.language import GeminiLanguage
 from nestor.adapters.models.gemini.wire import UNSIGNED
-from nestor.core import ContractError, ProviderError
+from nestor.core import ContractError, ProviderError, Unit, Usage
 from nestor.modules.cognition import (
     Document,
     Finished,
@@ -28,9 +28,9 @@ from nestor.modules.cognition import (
     ToolCall,
     ToolCallRequested,
     ToolSpec,
-    Usage,
 )
 from nestor.testing.cognition import LanguageModelContract
+from nestor.testing.usage import consumed
 
 BASE_URL = "https://gemini.test/v1beta"
 STREAM = f"{BASE_URL}/models/gemini-2.5-flash:streamGenerateContent"
@@ -55,7 +55,10 @@ def streamed(*chunks: dict[str, Any]) -> httpx.Response:
     return httpx.Response(200, content=body, headers={"content-type": "text/event-stream"})
 
 
-TEXT_REPLY = (chunk({"text": "Ça va"}), chunk({"text": " très bien."}, finish="STOP"))
+TEXT_REPLY = (
+    chunk({"text": "Ça va"}),
+    chunk({"text": " très bien."}, finish="STOP", usageMetadata={"promptTokenCount": 9, "candidatesTokenCount": 4}),
+)
 CALL = {"functionCall": {"name": "set_light", "args": {"room": "salon"}}, "thoughtSignature": "c2lnbmF0dXJl"}
 TOOL_REPLY = (
     chunk({"thought": True, "text": "Il faut la lampe."}, {"text": "Je regarde."}),
@@ -197,8 +200,10 @@ async def test_the_reply_says_what_it_cost_in_tokens_thinking_included(api: resp
         "thoughtsTokenCount": 30,
     }
     api.post(STREAM).mock(return_value=streamed(chunk({"text": "Oui."}, finish="STOP", usageMetadata=usage)))
-    assert (await collect())[-1] == Finished(
-        FinishReason.STOP, Usage(input_tokens=2000, output_tokens=39, cached_input_tokens=1500), "gemini-2.5-flash"
+    _, tally = await consumed(collect())
+    assert tally.usage == Usage(
+        {Unit.INPUT_TOKENS: 2000, Unit.OUTPUT_TOKENS: 39, Unit.CACHED_INPUT_TOKENS: 1500, Unit.REQUESTS: 1},
+        served="gemini-2.5-flash",
     )
 
 

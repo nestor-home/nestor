@@ -32,6 +32,7 @@ const SCREENS: [string, string | RegExp][] = [
   ["/satellites", "Satellites"],
   ["/satellites/reachy-living-room", /Living room Reachy/],
   ["/system", "System"],
+  ["/usage", "Costs"],
   ["/accounts", "Accounts"],
   ["/config/persona", /./],
   ["/config/household", /./],

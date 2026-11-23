@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+from nestor.core import Unit
 from nestor.modules.channels import Address
 from nestor.runtime import ConfigError, load_config
 from nestor.runtime.config import environment, parse_config
@@ -109,6 +110,20 @@ def with_fallbacks(**fallbacks: str) -> str:
     return VALID.replace(
         VALID[VALID.index("models:") : VALID.index("channels:")], "models:\n" + "\n".join(lines) + "\n"
     )
+
+
+def test_a_model_s_price_is_read_by_the_configuration_as_providers_write_prices() -> None:
+    priced = VALID.replace(
+        "    model: anthropic/claude-haiku-5.5\n",
+        "    model: anthropic/claude-haiku-5.5\n    price: {input_tokens: 1, output_tokens: 5, audio_minutes: 0.006}\n",
+    )
+    haiku = parse_config(priced, ENV).models["haiku"]
+    assert "price" not in haiku.settings(), "the configuration reads it, not the model's plugin"
+    assert haiku.price is not None
+    assert haiku.price.by_unit() == {Unit.INPUT_TOKENS: 1, Unit.OUTPUT_TOKENS: 5, Unit.AUDIO_SECONDS: 0.006}
+    for wrong in ("{input_tokens: -1}", "{tokens: 1}"):
+        with pytest.raises(ConfigError, match=r"models\.haiku\.price"):
+            parse_config(priced.replace("{input_tokens: 1, output_tokens: 5, audio_minutes: 0.006}", wrong), ENV)
 
 
 def test_a_model_falls_back_on_others_in_turn() -> None:

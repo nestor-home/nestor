@@ -16,6 +16,7 @@ from typing import Protocol
 
 from nestor.core import Component, ProviderError
 from nestor.modules.cognition.embedding import EmbeddingModel, Indexed, Vector, VectorIndex, fingerprint
+from nestor.modules.usage import CallPurpose, attribute
 
 log = logging.getLogger("nestor.memory")
 BATCH = 64  # items embedded and stored together: a failure loses at most one batch
@@ -144,6 +145,7 @@ class SearchIndex[T: Searchable](Component):
         return len(items)
 
     async def _keep_in_step(self) -> None:
+        attribute(purpose=CallPurpose.INDEXING)  # its own task: every vector it asks for is the index's
         while True:
             await self._dirty.wait()
             self._dirty.clear()

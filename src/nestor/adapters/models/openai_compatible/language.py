@@ -19,7 +19,7 @@ from contextlib import aclosing
 import httpx
 
 from nestor.adapters.common.http import identity, provider_error, streamed_lines
-from nestor.adapters.models.common import brand
+from nestor.adapters.models.common import brand, on_premises
 from nestor.adapters.models.openai_compatible.stream import ChunkDecoder
 from nestor.adapters.models.openai_compatible.wire import wire_messages, wire_tool
 from nestor.core import ContractError, ProviderError
@@ -63,7 +63,7 @@ class OpenAICompatibleLanguage(LanguageModel):
         self._timeout = httpx.Timeout(read_timeout_s, connect=connect_timeout_s)
         self._provider = provider
         self._client: httpx.AsyncClient | None = None
-        self.brand = brand(base_url)
+        self.brand, self.local = brand(base_url), on_premises(base_url)
         self._cache_control = self.brand in _CACHE_CONTROL if cache_control is None else cache_control
 
     def details(self) -> Mapping[str, str]:
@@ -93,6 +93,7 @@ class OpenAICompatibleLanguage(LanguageModel):
             "model": self._model,
             "messages": wire_messages(request.messages, self._provider, cache_control=self._cache_control),
             "stream": True,
+            "stream_options": {"include_usage": True},  # what the answer consumed, on its last chunk
         }
         if request.tools:  # some servers reject an empty tool list
             body["tools"] = [wire_tool(t) for t in request.tools]

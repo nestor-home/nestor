@@ -21,5 +21,5 @@ export function randomId(): string {
 
 /** A name as a title starts: a room (`salon` → `Salon`), a day from `Intl`. */
 export function capital(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
+  return s.charAt(0).toLocaleUpperCase() + s.slice(1);
 }

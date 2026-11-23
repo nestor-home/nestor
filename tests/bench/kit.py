@@ -14,7 +14,8 @@ from nestor.bench.recording import Cache
 from nestor.bench.results import Run
 from nestor.bench.runner import Plan, read_dataset, run_suite
 from nestor.bench.variants import Variant, load_variant
-from nestor.core import ProviderError
+from nestor.core import Money, ProviderError, Usage, report
+from nestor.core import Unit as Consumed
 from nestor.core.i18n import Message
 from nestor.modules.cognition import (
     Finished,
@@ -23,7 +24,6 @@ from nestor.modules.cognition import (
     ModelOutput,
     ModelRequest,
     TextDelta,
-    Usage,
 )
 from nestor.modules.cognition import (
     Message as Said,
@@ -54,9 +54,9 @@ class Oracle(LanguageModel):
             raise ProviderError("oracle", "overloaded", transient=True)
         reply = self.replies.get(question, "?")
         yield TextDelta(reply)
-        yield Finished(
-            FinishReason.STOP, Usage(input_tokens=len(question), output_tokens=len(reply), cost=0.001), self.served
-        )
+        spent = {Consumed.INPUT_TOKENS: len(question), Consumed.OUTPUT_TOKENS: len(reply)}
+        report(Usage(spent, cost=Money.usd("0.001"), served=self.served))
+        yield Finished(FinishReason.STOP)
 
 
 class OracleSettings(AdapterSettings):

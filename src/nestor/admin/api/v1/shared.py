@@ -68,3 +68,6 @@ class OriginOut(BaseModel):
     @classmethod
     def of(cls, address: Address) -> "OriginOut":
         return cls(session=str(address), channel=address.channel)
+
+
+ADMIN_CHANNEL = "admin"  # the channel what the admin asks of the models is counted under (`attributed`)

@@ -32,6 +32,8 @@ scope-name = { $scope ->
     [media-view-all] regarder toutes les caméras
     [media-call] appeler par les satellites qui lui sont ouverts
     [media-call-all] appeler par tous les satellites
+    [usage-read-all] voir ce que tout coûte
+    [usage-read-own] voir ce que coûtent ses propres demandes
    *[other] { $scope }
 }
 invitation-status = { $status ->
@@ -125,6 +127,7 @@ journal-kind = { $kind ->
     [voice] Voix
     [observation] Observations
     [account] Comptes
+    [usage] Coûts
    *[other] Autres
 }
 
@@ -145,4 +148,67 @@ model-type-help = { $type ->
     [speech] Pour donner sa voix à l'assistant.
     [image] Pour dessiner les images qu'on demande.
    *[other] { "" }
+}
+
+usage-purpose = { $purpose ->
+    [turn] réponses
+    [notification] notifications
+    [title] titres
+    [watch] veilles
+    [consolidation] mémoire
+    [indexing] recherche dans la mémoire
+    [enrollment] enregistrement de voix
+    [task] tâches
+    [search] recherche dans l’admin
+    [unattributed] non attribué
+   *[other] { $purpose }
+}
+usage-kind = { $kind ->
+    [language] LLM
+    [embedding] embedding
+    [speaker] reconnaissance de voix
+    [transcription] transcription
+    [speech] synthèse vocale
+    [image] images
+   *[other] { $kind }
+}
+usage-basis = { $basis ->
+    [reported] facturé
+    [priced] estimé
+    [free] gratuit
+    [unknown] inconnu
+    [nothing] rien facturé
+   *[other] { $basis }
+}
+usage-outcome = { $outcome ->
+    [ok] fait
+    [failed] échoué
+    [cancelled] interrompu
+   *[other] { $outcome }
+}
+usage-dimension = { $dimension ->
+    [consumer] modèle
+    [kind] type
+    [provider] fournisseur
+    [served] modèle servi
+    [purpose] usage
+    [person] personne
+    [channel] canal
+    [medium] mode
+    [basis] coût
+    [outcome] issue
+    [origin] origine
+    [conversation] conversation
+   *[other] { $dimension }
+}
+usage-unit = { $unit ->
+    [input_tokens] tokens en entrée
+    [cached_input_tokens] tokens en cache
+    [cache_write_tokens] écritures en cache
+    [output_tokens] tokens en sortie
+    [images] images
+    [audio_seconds] secondes entendues
+    [characters] caractères prononcés
+    [requests] appels
+   *[other] { $unit }
 }

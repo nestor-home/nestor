@@ -5,7 +5,7 @@ import asyncio
 import contextlib
 from collections.abc import AsyncIterator, Callable
 
-from nestor.core import PersonId, ProviderError
+from nestor.core import PersonId, ProviderError, Unit, Usage, report
 from nestor.modules.channels import (
     Address,
     Assistant,
@@ -21,6 +21,7 @@ from nestor.modules.channels import (
     TranscriptionModel,
 )
 from nestor.modules.identity import Heard
+from nestor.testing.usage import consumed, said
 
 OGG = b"OggS"  # how an OGG recording starts
 
@@ -82,7 +83,7 @@ class ScriptedAssistant(Assistant):
     def voice_wait_s(self) -> float | None:
         return 0.5 if self._voice else None
 
-    async def hear(self, audio: bytes) -> Heard | None:
+    async def hear(self, address: Address, audio: bytes) -> Heard | None:
         self.heard.append(audio)
         return self._voice
 
@@ -153,6 +154,7 @@ class ScriptedTranscription(TranscriptionModel):
     async def transcribe(self, audio: bytes, media_type: str) -> str:
         if self.failing:
             raise ProviderError(self.name, "transcription unavailable", transient=True)
+        report(Usage({Unit.AUDIO_SECONDS: len(audio) / 32000, Unit.REQUESTS: 1}))  # as if 16 kHz, 16-bit
         return audio.decode().strip()
 
 
@@ -167,6 +169,7 @@ class ScriptedSpeech(SpeechModel):
     async def synthesize(self, text: str) -> bytes:
         if self.failing:
             raise ProviderError(self.name, "speech unavailable", transient=True)
+        report(Usage({Unit.CHARACTERS: len(text), Unit.REQUESTS: 1}))
         return OGG + text.encode()
 
 
@@ -192,6 +195,12 @@ class TranscriptionModelContract:
         assert word.lower() in text.lower()
         assert text == text.strip()
 
+    async def test_a_transcription_says_what_it_consumed(self) -> None:
+        audio, media_type, _ = self.recording()
+        async with self.model() as model:
+            _, tally = await consumed(model.transcribe(audio, media_type))
+        said(tally)
+
     async def test_provider_failure_is_a_provider_error(self) -> None:
         audio, media_type, _ = self.recording()
         async with self.unavailable_model() as model:
@@ -216,6 +225,12 @@ class SpeechModelContract:
         async with self.model() as model:
             audio = await model.synthesize("Bonjour, c'est un essai.")
         assert audio.startswith(OGG), "not an OGG recording, which messaging apps play as a voice message"
+
+    async def test_speech_counts_the_characters_it_says(self) -> None:
+        text = "Bonjour, c'est un essai."
+        async with self.model() as model:
+            _, tally = await consumed(model.synthesize(text))
+        assert said(tally).units.get(Unit.CHARACTERS) == len(text)
 
     async def test_provider_failure_is_a_provider_error(self) -> None:
         async with self.unavailable_model() as model:

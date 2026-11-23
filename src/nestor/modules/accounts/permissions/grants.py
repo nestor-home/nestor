@@ -14,6 +14,7 @@ _MEMBER = _OWN | {
     Scope.SCHEDULES_MANAGE_OWN,
     Scope.MEDIA_VIEW,  # each device still lists who may (`MediaAccess`)
     Scope.MEDIA_CALL,
+    Scope.USAGE_READ_OWN,
 }
 _ADMIN = _MEMBER | {
     Scope.ACCOUNTS_MANAGE,
@@ -27,6 +28,7 @@ _ADMIN = _MEMBER | {
     Scope.WATCHES_MANAGE_ALL,
     Scope.SCHEDULES_MANAGE_ALL,
     Scope.MESSAGES_READ_ALL,
+    Scope.USAGE_READ_ALL,
 }
 
 GRANTS: Mapping[Role, frozenset[Scope]] = {

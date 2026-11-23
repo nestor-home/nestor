@@ -4,7 +4,7 @@ from collections.abc import AsyncGenerator, AsyncIterator, Iterator
 from typing import Any
 
 from nestor.adapters.common.http import Failure, message_of, retryable
-from nestor.core import new_id
+from nestor.core import Unit, Usage, new_id, report
 from nestor.modules.cognition import (
     Finished,
     FinishReason,
@@ -12,7 +12,6 @@ from nestor.modules.cognition import (
     TextDelta,
     ToolCall,
     ToolCallRequested,
-    Usage,
 )
 
 _FINISHED = {"STOP": FinishReason.STOP, "MAX_TOKENS": FinishReason.LENGTH}
@@ -27,10 +26,18 @@ class Decoder:
         self._error = error
         self._calls: list[ToolCall] = []
         self._finish: str | None = None
-        self._usage: Usage | None = None
+        self._usage: dict[Unit, float] = {}  # Gemini repeats the whole count: the last one holds
         self._model: str | None = None
 
     async def outputs(self, chunks: AsyncIterator[dict[str, Any]]) -> AsyncGenerator[ModelOutput]:
+        try:
+            async for output in self._outputs(chunks):
+                yield output
+        finally:  # what was billed, even for a reply cut or failed midway
+            if self._usage or self._model is not None:
+                report(Usage(self._usage | {Unit.REQUESTS: 1}, served=self._model))
+
+    async def _outputs(self, chunks: AsyncIterator[dict[str, Any]]) -> AsyncGenerator[ModelOutput]:
         async for chunk in chunks:
             for text in self._read(chunk):
                 yield TextDelta(text)
@@ -42,7 +49,7 @@ class Decoder:
         for call in self._calls:
             yield ToolCallRequested(call)
         reason = FinishReason.TOOL_CALLS if self._calls else _FINISHED[self._finish]
-        yield Finished(reason, self._usage, self._model)
+        yield Finished(reason)
 
     def _read(self, chunk: dict[str, Any]) -> Iterator[str]:
         if (error := chunk.get("error")) is not None:
@@ -54,7 +61,7 @@ class Decoder:
         if isinstance(model := chunk.get("modelVersion"), str) and model:
             self._model = model
         if isinstance(usage := chunk.get("usageMetadata"), dict):
-            self._usage = _usage(usage) or self._usage
+            self._usage = _units(usage) or self._usage
         for candidate in (chunk.get("candidates") or ())[:1]:
             for part in (candidate.get("content") or {}).get("parts") or ():
                 if part.get("thought"):
@@ -76,13 +83,13 @@ class Decoder:
         return ToolCall(call.get("id") or new_id(), name, arguments, replay=replay)
 
 
-def _usage(usage: dict[str, Any]) -> Usage | None:
+def _units(usage: dict[str, Any]) -> dict[Unit, float]:
     """Gemini counts its thinking apart from the answer: both are output."""
     prompt = usage.get("promptTokenCount")
     if not isinstance(prompt, int):
-        return None
+        return {}
     output = sum(n for k in ("candidatesTokenCount", "thoughtsTokenCount") if isinstance(n := usage.get(k), int))
-    cached = usage.get("cachedContentTokenCount")
-    return Usage(
-        input_tokens=prompt, output_tokens=output, cached_input_tokens=cached if isinstance(cached, int) else 0
-    )
+    units: dict[Unit, float] = {Unit.INPUT_TOKENS: prompt, Unit.OUTPUT_TOKENS: output}
+    if isinstance(cached := usage.get("cachedContentTokenCount"), int):
+        units[Unit.CACHED_INPUT_TOKENS] = cached
+    return units

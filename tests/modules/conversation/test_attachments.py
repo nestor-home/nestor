@@ -6,7 +6,8 @@ import re
 import pytest
 
 from nestor.adapters.documents import FileReader
-from nestor.modules.channels import Address, Attachment, AttachmentKind, InboundMessage, Sender
+from nestor.core import ModelType
+from nestor.modules.channels import Address, Attachment, AttachmentKind, InboundMessage, Sender, TranscriptionModel
 from nestor.modules.cognition.images import ImageTools
 from nestor.modules.cognition.model import ModelRequest, Role, ToolCall, ToolSpec
 from nestor.modules.cognition.tools import Made, Results, Risk, Tool
@@ -14,6 +15,7 @@ from nestor.modules.conversation import AnswerAttached, Attachments, ChannelProf
 from nestor.modules.conversation.conversations import DOCUMENTS, IMAGES
 from nestor.modules.conversation.history import IMAGE_BYTES
 from nestor.modules.journal import Journal
+from nestor.modules.usage import CallPurpose, Consumer, Meter, PriceBook, UsageRecorded, metered
 from nestor.testing.channels import OGG, ScriptedSpeech, ScriptedTranscription
 from nestor.testing.cognition.images import PNG, ScriptedImages
 from nestor.testing.cognition.model import ScriptedModel
@@ -58,6 +60,19 @@ async def test_a_voice_message_is_kept_heard_and_logged_as_the_person_s_words(
     assert (kept.kind, kept.transcript) == (AttachmentKind.VOICE, "rappelle-moi le pain")
     assert blobs.blobs[kept.blob.digest] == VOICE_NOTE.data
     assert last_user(model.requests[0]).content == "[Said in a voice message:]\nrappelle-moi le pain"
+
+
+async def test_hearing_a_voice_message_is_counted_for_whoever_sent_it(make_agent: MakeAgent, journal: Journal) -> None:
+    async with Meter(journal, PriceBook({})) as meter:
+        ears = Consumer(key="ears", kind=ModelType.TRANSCRIPTION, provider="elevenlabs")
+        transcription = metered(ScriptedTranscription(), ears, meter)
+        assert isinstance(transcription, TranscriptionModel)
+        agent = make_agent(
+            model=ScriptedModel("C'est noté."), attachments=Attachments(MemoryBlobStore(), transcription=transcription)
+        )
+        await agent.respond(sent("", VOICE_NOTE)).collect()
+    [heard] = [c for c in await journal.history(UsageRecorded) if c.consumer == "ears"]
+    assert (heard.purpose, heard.person, heard.channel) == (CallPurpose.TURN, "mathis", "telegram")
 
 
 async def test_a_voice_message_that_cannot_be_transcribed_is_said_so_to_the_model(make_agent: MakeAgent) -> None:

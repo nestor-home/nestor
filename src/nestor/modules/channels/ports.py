@@ -111,9 +111,10 @@ class Assistant(ABC):
         channel need not hand any speech to `hear`."""
         return None
 
-    async def hear(self, audio: bytes) -> Heard | None:
-        """Who said `audio` (16-bit mono PCM at 16 kHz), as far as their voice tells; `None` without recognition.
-        Called as soon as the speech ends, while it is transcribed, so that the turn does not wait for it."""
+    async def hear(self, address: Address, audio: bytes) -> Heard | None:
+        """Who said `audio` (16-bit mono PCM at 16 kHz) at `address`, as far as their voice tells; `None` without
+        recognition. Called as soon as the speech ends, while it is transcribed, so that the turn does not wait for
+        it."""
         return None
 
 

@@ -9,13 +9,15 @@ from pathlib import Path
 
 import pytest
 
+from nestor.adapters.storage.sqlite import SQLiteDatabase, SQLiteEventLog
 from nestor.admin import AdminServer, AdminSettings
 from nestor.cli import main
-from nestor.core import Capability
+from nestor.core import Capability, ModelType, Unit
 from nestor.modules.journal import Journal
 from nestor.modules.satellites import Device, Manifest
 from nestor.modules.satellites.types import DeclaredCapability
 from nestor.modules.system import SecretChanged
+from nestor.modules.usage import CallPurpose, CostBasis, Outcome, UsageRecorded
 from nestor.runtime.app import Restart
 from nestor.runtime.config import ConfigError, load_config
 from nestor.runtime.secrets import open_secrets
@@ -253,3 +255,39 @@ def test_a_configuration_that_cannot_be_read_is_reported_once(
 ) -> None:
     assert main(["-c", str(tmp_path / "absent.yaml"), "check"]) == 2
     assert capsys.readouterr().err.count("nestor:") == 1
+
+
+def test_what_nestor_cost_is_read_from_the_data_folder_by_what_one_asks(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    config = tmp_path / "nestor.yaml"
+    config.write_text(CONFIG.format(data_dir=tmp_path, admin="null"))
+
+    async def spend() -> None:
+        database = SQLiteDatabase(tmp_path / "nestor.db")
+        async with database:
+            journal = Journal(SQLiteEventLog(database))
+            for consumer, cost in (("haiku", 1_200_000), ("haiku", 3_000), ("opus", 40_000_000)):
+                await journal.publish(
+                    UsageRecorded(
+                        source="usage",
+                        consumer=consumer,
+                        kind=ModelType.LANGUAGE,
+                        provider="openrouter",
+                        served=None,
+                        units={Unit.INPUT_TOKENS: 1000},
+                        cost_nusd=cost,
+                        basis=CostBasis.REPORTED,
+                        price="reported",
+                        duration_ms=500,
+                        outcome=Outcome.OK,
+                        purpose=CallPurpose.TURN,
+                    )
+                )
+
+    asyncio.run(spend())
+    monkeypatch.setenv("LANG", "en_US.UTF-8")
+    assert main(["-c", str(config), "usage", "--by", "consumer"]) == 0
+    lines = capsys.readouterr().out.splitlines()
+    assert lines[0] == "Last 30 days: $0.04, 3 calls."
+    assert lines[2:] == ["By model:", "  opus   $0.04  1 call", "  haiku  $0.0012  2 calls"]

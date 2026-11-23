@@ -11,7 +11,8 @@ import httpx
 
 from nestor.adapters.models.elevenlabs.api import elevenlabs_api
 from nestor.adapters.models.pipecat import SAMPLE_RATE, PipecatTranscription
-from nestor.core import ProviderError
+from nestor.adapters.models.recordings import duration_s
+from nestor.core import ProviderError, Unit, Usage, report
 
 if TYPE_CHECKING:
     from pipecat.services.stt_service import STTService
@@ -51,6 +52,8 @@ class ElevenLabsTranscription(PipecatTranscription):
             text = response.json().get("text")
         except ValueError:
             raise ProviderError("elevenlabs", "speech-to-text: the answer is not JSON", transient=True) from None
+        seconds = await duration_s(audio)  # billed by how long it lasts
+        report(Usage({Unit.REQUESTS: 1} | ({Unit.AUDIO_SECONDS: seconds} if seconds else {}), served=self._file_model))
         return text.strip() if isinstance(text, str) else ""
 
     def stt(self) -> "STTService":

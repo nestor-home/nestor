@@ -5,9 +5,10 @@ import math
 from collections.abc import Mapping, Sequence
 from contextlib import AbstractAsyncContextManager
 
-from nestor.core import ProviderError
+from nestor.core import ProviderError, Unit, Usage, report
 from nestor.modules.cognition.embedding import EmbeddingModel, EmbeddingSpace, Indexed, Vector, VectorIndex
 from nestor.testing.text import folded_words
+from nestor.testing.usage import consumed, said
 
 
 class ConceptEmbedder(EmbeddingModel):
@@ -28,10 +29,14 @@ class ConceptEmbedder(EmbeddingModel):
         return self._space
 
     async def embed_documents(self, texts: Sequence[str]) -> list[Vector]:
-        return [self._vector(t) for t in texts]
+        vectors = [self._vector(t) for t in texts]
+        report(Usage({Unit.INPUT_TOKENS: sum(len(t.split()) for t in texts), Unit.REQUESTS: 1}))
+        return vectors
 
     async def embed_query(self, text: str) -> Vector:
-        return self._vector(text)
+        vector = self._vector(text)
+        report(Usage({Unit.INPUT_TOKENS: len(text.split()), Unit.REQUESTS: 1}))
+        return vector
 
     def _vector(self, text: str) -> Vector:
         if self.fail:
@@ -61,6 +66,11 @@ class EmbeddingModelContract:
             question = await embedder.embed_query("Que mange Léa ?")
         assert len(vectors) == 3
         assert all(len(v) == embedder.space.dimensions for v in [*vectors, question])
+
+    async def test_embedding_says_what_it_consumed(self) -> None:
+        async with self.embedder() as embedder:
+            _, tally = await consumed(embedder.embed_documents(["Léa est végétarienne."]))
+        said(tally)
 
     async def test_nothing_to_embed_is_no_vector(self) -> None:
         async with self.embedder() as embedder:

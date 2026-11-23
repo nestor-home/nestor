@@ -8,10 +8,11 @@ transcribed at once. No realtime stream: the first words wait for the end of the
 from typing import TYPE_CHECKING
 
 from nestor.adapters.common.http import HttpApi
-from nestor.adapters.models.common import brand
+from nestor.adapters.models.common import brand, on_premises
 from nestor.adapters.models.openai_compatible.wire import file_name
 from nestor.adapters.models.pipecat import SAMPLE_RATE, PipecatTranscription
-from nestor.core import ProviderError
+from nestor.adapters.models.recordings import duration_s
+from nestor.core import ProviderError, Unit, Usage, report
 
 if TYPE_CHECKING:
     from pipecat.services.stt_service import STTService
@@ -34,7 +35,7 @@ class OpenAICompatibleTranscription(PipecatTranscription):
         headers = {"Authorization": f"Bearer {api_key}"} if api_key else None
         self._api = HttpApi(provider, self._base_url, headers=headers, secret=api_key, timeout_s=timeout_s)
         self._provider = provider
-        self.brand = brand(base_url)
+        self.brand, self.local = brand(base_url), on_premises(base_url)
 
     def details(self) -> dict[str, str]:
         return {"model": self._model, "language": self._language}
@@ -53,6 +54,8 @@ class OpenAICompatibleTranscription(PipecatTranscription):
             text = response.json().get("text")
         except (ValueError, AttributeError):
             raise ProviderError(self._provider, "transcription: the answer is not JSON", transient=True) from None
+        seconds = await duration_s(audio)  # billed by how long it lasts
+        report(Usage({Unit.REQUESTS: 1} | ({Unit.AUDIO_SECONDS: seconds} if seconds else {}), served=self._model))
         return text.strip() if isinstance(text, str) else ""
 
     def stt(self) -> "STTService":

@@ -20,6 +20,7 @@ import { Route as AppJournalRouteImport } from './routes/_app/journal'
 import { Route as AppMemoriesRouteImport } from './routes/_app/memories'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppSystemRouteImport } from './routes/_app/system'
+import { Route as AppUsageRouteImport } from './routes/_app/usage'
 import { Route as InvitationTokenRouteImport } from './routes/invitation.$token'
 import { Route as AppAccountsIndexRouteImport } from './routes/_app/accounts/index'
 import { Route as AppAccountsAccountIdRouteImport } from './routes/_app/accounts/$accountId'
@@ -103,6 +104,11 @@ const AppSettingsRoute = AppSettingsRouteImport.update({
 const AppSystemRoute = AppSystemRouteImport.update({
   id: '/system',
   path: '/system',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppUsageRoute = AppUsageRouteImport.update({
+  id: '/usage',
+  path: '/usage',
   getParentRoute: () => AppRoute,
 } as any)
 const InvitationTokenRoute = InvitationTokenRouteImport.update({
@@ -280,6 +286,7 @@ export interface FileRoutesByFullPath {
   '/memories': typeof AppMemoriesRoute
   '/settings': typeof AppSettingsRoute
   '/system': typeof AppSystemRoute
+  '/usage': typeof AppUsageRoute
   '/invitation/$token': typeof InvitationTokenRoute
   '/accounts/$accountId': typeof AppAccountsAccountIdRoute
   '/chat/$chat': typeof AppChatChatRoute
@@ -319,6 +326,7 @@ export interface FileRoutesByTo {
   '/memories': typeof AppMemoriesRoute
   '/settings': typeof AppSettingsRoute
   '/system': typeof AppSystemRoute
+  '/usage': typeof AppUsageRoute
   '/invitation/$token': typeof InvitationTokenRoute
   '/': typeof AppIndexRoute
   '/accounts/$accountId': typeof AppAccountsAccountIdRoute
@@ -360,6 +368,7 @@ export interface FileRoutesById {
   '/_app/memories': typeof AppMemoriesRoute
   '/_app/settings': typeof AppSettingsRoute
   '/_app/system': typeof AppSystemRoute
+  '/_app/usage': typeof AppUsageRoute
   '/invitation/$token': typeof InvitationTokenRoute
   '/_app/': typeof AppIndexRoute
   '/_app/accounts/$accountId': typeof AppAccountsAccountIdRoute
@@ -405,6 +414,7 @@ export interface FileRouteTypes {
     | '/memories'
     | '/settings'
     | '/system'
+    | '/usage'
     | '/invitation/$token'
     | '/accounts/$accountId'
     | '/chat/$chat'
@@ -444,6 +454,7 @@ export interface FileRouteTypes {
     | '/memories'
     | '/settings'
     | '/system'
+    | '/usage'
     | '/invitation/$token'
     | '/'
     | '/accounts/$accountId'
@@ -484,6 +495,7 @@ export interface FileRouteTypes {
     | '/_app/memories'
     | '/_app/settings'
     | '/_app/system'
+    | '/_app/usage'
     | '/invitation/$token'
     | '/_app/'
     | '/_app/accounts/$accountId'
@@ -600,6 +612,13 @@ declare module '@tanstack/react-router' {
       path: '/system'
       fullPath: '/system'
       preLoaderRoute: typeof AppSystemRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/usage': {
+      id: '/_app/usage'
+      path: '/usage'
+      fullPath: '/usage'
+      preLoaderRoute: typeof AppUsageRouteImport
       parentRoute: typeof AppRoute
     }
     '/invitation/$token': {
@@ -916,6 +935,7 @@ interface AppRouteChildren {
   AppMemoriesRoute: typeof AppMemoriesRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppSystemRoute: typeof AppSystemRoute
+  AppUsageRoute: typeof AppUsageRoute
   AppIndexRoute: typeof AppIndexRoute
   AppAccountsAccountIdRoute: typeof AppAccountsAccountIdRoute
   AppConnectionsConnectionIdRoute: typeof AppConnectionsConnectionIdRouteWithChildren
@@ -939,6 +959,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppMemoriesRoute: AppMemoriesRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppSystemRoute: AppSystemRoute,
+  AppUsageRoute: AppUsageRoute,
   AppIndexRoute: AppIndexRoute,
   AppAccountsAccountIdRoute: AppAccountsAccountIdRoute,
   AppConnectionsConnectionIdRoute: AppConnectionsConnectionIdRouteWithChildren,

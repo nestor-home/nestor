@@ -23,6 +23,7 @@ from nestor.modules.memory.episodes.service import Episodes
 from nestor.modules.memory.episodes.transcript import transcript
 from nestor.modules.memory.episodes.types import Episode, how
 from nestor.modules.memory.service import Memories
+from nestor.modules.usage import CallPurpose, attributed
 
 log = logging.getLogger("nestor.memory")
 ATTEMPTS = 3  # a conversation whose summary fails this many times waits for the next start
@@ -176,7 +177,15 @@ class Consolidator(Component):
             assistant=self.assistant,
             timezone=self.timezone,
         )
-        made = await self._ask(lines, seen, known) if lines else Consolidation("", (), ())
+        with attributed(
+            purpose=CallPurpose.CONSOLIDATION,
+            person=next(iter(seen.participants)) if len(seen.participants) == 1 else None,
+            channel=seen.address.channel,
+            medium=seen.medium,
+            session=seen.address.session,
+            conversation=conversation,
+        ):
+            made = await self._ask(lines, seen, known) if lines else Consolidation("", (), ())
         if made is None:
             self._failed(conversation)
             return 0

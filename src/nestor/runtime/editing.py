@@ -37,9 +37,11 @@ from nestor.runtime.config import (
     ConfigError,
     InitiativeConfig,
     MemoryConfig,
+    ModelPrices,
     NestorConfig,
     PersonaConfig,
     PersonConfig,
+    PricesConfig,
     ProblemCode,
     UpdatesConfig,
     WatchesConfig,
@@ -77,7 +79,7 @@ class Slot:
 
 
 SLOTS = (
-    Slot("models", Family.MODEL, Shape.NAMED, required=True, picks=("provider", "type"), holds=("fallback",)),
+    Slot("models", Family.MODEL, Shape.NAMED, required=True, picks=("provider", "type"), holds=("fallback", "price")),
     Slot("channels", Family.CHANNEL, Shape.LIST, required=True),
     Slot("executors", Family.EXECUTOR, Shape.LIST, required=False),
     Slot("tools", Family.TOOLS, Shape.LIST, required=False),
@@ -94,6 +96,7 @@ SECTIONS: Mapping[str, Any] = {
     "initiative": InitiativeConfig,
     "admin": AdminConfig,
     "updates": UpdatesConfig,
+    "prices": PricesConfig,
 }
 
 
@@ -219,11 +222,15 @@ class ConfigSchema:
         values = {"kind": plugin.kind, "provider": plugin.kind, "type": plugin.model_type}
         name = {"name": {"type": "string", "description": "the instance's name; the kind by default"}}
         fallback = {"fallback": {"type": "string", **LANGUAGE_MODEL}}  # answers when it fails
+        price = {"price": {"$ref": "#/$defs/ModelPrices", "advanced": True}}  # when its provider does not say
+        if slot.family is Family.MODEL:
+            schema.setdefault("$defs", {})["ModelPrices"] = ModelPrices.model_json_schema()
         schema["properties"] = {
             **{key: {"const": values[key], "type": "string"} for key in slot.picks},
             **(name if slot.shape is Shape.LIST else {}),
             **schema["properties"],
             **(fallback if plugin.model_type is ModelType.LANGUAGE else {}),
+            **(price if slot.family is Family.MODEL else {}),
         }
         schema["required"] = [*slot.picks, *schema.get("required", [])]
         return annotate(schema, f"{slot.family.value}-{kind}")

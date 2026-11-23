@@ -11,6 +11,7 @@ from nestor.modules.channels import Exchange
 from nestor.modules.cognition.model import LanguageModel, Message, ModelRequest, Role, text_answer
 from nestor.modules.conversation.events import AssistantTurn, ConversationTitled, NotificationTurn, UserTurn
 from nestor.modules.journal import Journal, Subscription
+from nestor.modules.usage import CallPurpose, attributed
 
 log = logging.getLogger("nestor.conversation")
 TITLE_CHARS = 60
@@ -79,8 +80,17 @@ class ConversationTitles(Component):
         opening = next((e for e in recent if e.exchange.turn_id == exchange.turn_id), None)
         if opening is None:
             return
+        person = opening.speaker.person if isinstance(opening, UserTurn) else opening.person
         try:
-            title = await self._write(opening.text, answer.text)
+            with attributed(
+                purpose=CallPurpose.TITLE,
+                person=person,
+                channel=answer.address.channel,
+                session=answer.session,
+                conversation=exchange.conversation_id,
+                turn=exchange.turn_id,
+            ):
+                title = await self._write(opening.text, answer.text)
         except ProviderError as error:
             log.warning("session %s not titled: %s", session, error)
             return

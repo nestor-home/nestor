@@ -1,7 +1,8 @@
 """JSON conversion of event payloads, driven by type annotations.
 
 Supported field types: `str`, `int`, `float`, `bool`, `None`, enums, `datetime`, `time`, `NewType`s of
-those, `X | None`, `tuple[X, ...]`, `Mapping[str, ...]` (kept as plain JSON) and frozen
+those, `X | None`, `tuple[X, ...]`, `Mapping[K, ...]` (its keys decoded as `K`, so that an enum's come back as its
+members, its values kept as plain JSON) and frozen
 dataclasses made of supported types. Anything else is a contract error: payloads must stay
 plain data so that the event log remains readable without the code that wrote it.
 """
@@ -48,7 +49,8 @@ def decode(value: JSON, hint: Any) -> Any:
     if origin is tuple and isinstance(value, list):
         return tuple(decode(v, args[0]) for v in value)
     if origin in (dict, Mapping) and isinstance(value, dict):
-        return dict(value)
+        key = args[0] if args else str
+        return {decode(k, key): v for k, v in value.items()}  # keys typed (an enum's members), values as JSON
     if isinstance(hint, type):
         if issubclass(hint, enum.Enum):
             try:

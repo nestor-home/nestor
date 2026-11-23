@@ -14,7 +14,7 @@ import respx
 
 from nestor.adapters.models.openai_compatible import language
 from nestor.adapters.models.openai_compatible.language import OpenAICompatibleLanguage
-from nestor.core import ContractError, ProviderError
+from nestor.core import ContractError, Money, ProviderError, Unit, Usage
 from nestor.core.i18n import Locale
 from nestor.modules.cognition import (
     Finished,
@@ -29,11 +29,11 @@ from nestor.modules.cognition import (
     ToolCall,
     ToolCallRequested,
     ToolSpec,
-    Usage,
 )
 from nestor.runtime.plugins import Services
 from nestor.testing.cognition import LanguageModelContract
 from nestor.testing.i18n import EchoLocalizer
+from nestor.testing.usage import consumed
 
 BASE_URL = "https://llm.test/api/v1"
 COMPLETIONS = f"{BASE_URL}/chat/completions"
@@ -77,7 +77,12 @@ def streamed(*chunks: object, done: bool = True) -> httpx.Response:
     return httpx.Response(200, content=sse(*chunks, done=done), headers={"content-type": "text/event-stream"})
 
 
-TEXT_REPLY = (chunk({"role": "assistant", "content": "Ça va"}), chunk({"content": " très bien."}), chunk(finish="stop"))
+TEXT_REPLY = (
+    chunk({"role": "assistant", "content": "Ça va"}),
+    chunk({"content": " très bien."}),
+    chunk(finish="stop"),
+    {"choices": [], "usage": {"prompt_tokens": 9, "completion_tokens": 4}},
+)
 TOOL_REPLY = (
     chunk({"role": "assistant", "tool_calls": [call_fragment(0, id="call_1", name="set_light")]}),
     chunk({"tool_calls": [call_fragment(0, arguments='{"room": "sa')]}),
@@ -270,8 +275,11 @@ async def test_the_reply_says_what_it_cost_and_which_model_answered(api: respx.M
     served = {"model": "vendor/model-2026-10", **chunk(finish="stop")}
     usage = {"choices": [], "usage": {"prompt_tokens": 120, "completion_tokens": 8, "total_tokens": 128, "cost": 4e-5}}
     api.post(COMPLETIONS).mock(return_value=streamed(chunk({"content": "Oui."}), served, usage))
-    assert (await collect())[-1] == Finished(
-        FinishReason.STOP, Usage(input_tokens=120, output_tokens=8, cost=4e-5), "vendor/model-2026-10"
+    _, tally = await consumed(collect())
+    assert tally.usage == Usage(
+        {Unit.INPUT_TOKENS: 120, Unit.OUTPUT_TOKENS: 8, Unit.REQUESTS: 1},
+        cost=Money.usd("0.00004"),
+        served="vendor/model-2026-10",
     )
 
 
@@ -352,15 +360,21 @@ async def test_images_go_with_the_text_as_data_urls_for_a_model_that_sees(
 async def test_the_reply_says_how_much_of_the_prompt_came_from_the_cache(api: respx.MockRouter) -> None:
     usage = {"prompt_tokens": 3000, "completion_tokens": 5, "prompt_tokens_details": {"cached_tokens": 2800}}
     api.post(COMPLETIONS).mock(return_value=streamed(chunk(finish="stop"), {"choices": [], "usage": usage}))
-    finished = (await collect())[-1]
-    assert isinstance(finished, Finished) and finished.usage is not None
-    assert (finished.usage.input_tokens, finished.usage.cached_input_tokens) == (3000, 2800)
+    _, tally = await consumed(collect())
+    assert (tally.usage.units[Unit.INPUT_TOKENS], tally.usage.units[Unit.CACHED_INPUT_TOKENS]) == (3000, 2800)
+
+
+async def test_every_streamed_answer_asks_for_what_it_consumed(api: respx.MockRouter) -> None:
+    route = api.post(COMPLETIONS).mock(return_value=streamed(*TEXT_REPLY))
+    await collect()
+    assert sent(route)["stream_options"] == {"include_usage": True}, "most servers say nothing otherwise"
 
 
 async def test_a_usage_without_token_counts_or_cost_is_reported_as_far_as_known(api: respx.MockRouter) -> None:
     local = {"choices": [], "usage": {"prompt_tokens": 30, "completion_tokens": 2}}
     api.post(COMPLETIONS).mock(return_value=streamed(chunk(finish="stop"), {"usage": {"total_tokens": 3}}, local))
-    assert (await collect())[-1] == Finished(FinishReason.STOP, Usage(input_tokens=30, output_tokens=2))
+    _, tally = await consumed(collect())
+    assert tally.usage == Usage({Unit.INPUT_TOKENS: 30, Unit.OUTPUT_TOKENS: 2, Unit.REQUESTS: 1})
 
 
 async def test_a_malformed_chunk_is_a_provider_error(api: respx.MockRouter) -> None:

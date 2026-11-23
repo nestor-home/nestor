@@ -2,7 +2,9 @@
 calls streamed in fragments, files encoded once, and the dialogue as the turns of a native API."""
 
 import base64
+import ipaddress
 import json
+import urllib.parse
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from functools import lru_cache
@@ -35,6 +37,17 @@ def brand_host(base_url: str) -> str | None:
 
 def brand(base_url: str) -> str | None:
     return BRANDS.get(brand_host(base_url) or "")
+
+
+def on_premises(base_url: str) -> bool:
+    """Whether `base_url` is a server of the household's own (loopback, a private address, a `.local` or single-label
+    name, Docker's host, a machine of its Tailscale network): what it serves costs nothing per call."""
+    host = (urllib.parse.urlsplit(base_url).hostname or "").lower()
+    try:
+        address = ipaddress.ip_address(host)
+    except ValueError:
+        return host == "localhost" or host.endswith((".local", ".lan", ".internal", ".ts.net")) or "." not in host
+    return not address.is_global  # loopback, private, link-local, Tailscale's shared range
 
 
 class EndpointSettings(AdapterSettings):

@@ -11,8 +11,9 @@ import binascii
 from collections.abc import Mapping
 
 from nestor.adapters.common.http import HttpApi, JsonApi
-from nestor.adapters.models.common import brand
-from nestor.adapters.models.openai_compatible.wire import ImageEndpoint, image
+from nestor.adapters.models.common import brand, on_premises
+from nestor.adapters.models.openai_compatible.wire import ImageEndpoint, image, spent
+from nestor.core import report
 from nestor.modules.cognition.images import ImageModel
 from nestor.modules.cognition.model import Image
 
@@ -37,7 +38,7 @@ class OpenAICompatibleImage(ImageModel):
         headers = {"Authorization": f"Bearer {api_key}"} if api_key else None
         self._api = JsonApi(provider, base_url.rstrip("/"), headers=headers, secret=api_key, timeout_s=timeout_s)
         self._files = HttpApi(provider, "", timeout_s=timeout_s)  # where a picture is given by address: no key
-        self.brand = brand(base_url)
+        self.brand, self.local = brand(base_url), on_premises(base_url)
 
     def details(self) -> Mapping[str, str]:
         return {"model": self._model}
@@ -55,6 +56,7 @@ class OpenAICompatibleImage(ImageModel):
         """What `/images/generations` gives for `prompt`: base64 or an address."""
         body = {"model": self._model, "prompt": prompt, "n": 1} | ({"size": self._size} if self._size else {})
         answer = await self._api.post("/images/generations", body | self._extra_body)
+        self._report(answer)
         try:
             found = answer["data"][0]
             return found.get("b64_json") or found.get("url")
@@ -70,10 +72,16 @@ class OpenAICompatibleImage(ImageModel):
             "modalities": ["image", "text"],
         }
         answer = await self._api.post("/chat/completions", body | self._extra_body)
+        self._report(answer)
         try:
             return answer["choices"][0]["message"]["images"][0]["image_url"]["url"]
         except (KeyError, IndexError, TypeError):
             return None
+
+    def _report(self, answer: object) -> None:
+        """One picture asked, and what the answer says it cost."""
+        found = answer if isinstance(answer, dict) else {}
+        report(spent(found.get("usage"), found.get("model") or self._model, images=1, requests=1))
 
     async def _picture(self, given: object, path: str) -> Image:
         """A picture from what the provider gave: base64, a data URL, or an address to fetch it from."""

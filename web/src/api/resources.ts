@@ -18,6 +18,8 @@ import type {
   OAuthClient,
   Role,
   ToolSettings,
+  UsageDimension,
+  UsageQuery,
 } from "./types";
 
 /** A WAV file as the body of a request: sent as it is, not as JSON. */
@@ -252,6 +254,17 @@ export const api = {
         params: { path: { person_id: person }, query: { learned_only: learnedOnly } },
       }),
     ),
+
+  // what Nestor costs
+  usageSummary: (query: UsageQuery) => unwrap(client.GET("/api/v1/usage/summary", { params: { query } })),
+  usageSeries: (query: UsageQuery & { by?: UsageDimension | null }) =>
+    unwrap(client.GET("/api/v1/usage/series", { params: { query } })),
+  usageGroups: (query: UsageQuery & { by: UsageDimension }) =>
+    unwrap(client.GET("/api/v1/usage/groups", { params: { query } })),
+  usageRhythm: (query: UsageQuery) => unwrap(client.GET("/api/v1/usage/rhythm", { params: { query } })),
+  usageCalls: (query: UsageQuery & { before?: number | null; limit?: number }) =>
+    unwrap(client.GET("/api/v1/usage/calls", { params: { query } })),
+  usagePrices: () => unwrap(client.GET("/api/v1/usage/prices")),
 
   // tasks, watches, memories
   tasks: () => unwrap(client.GET("/api/v1/tasks")),
