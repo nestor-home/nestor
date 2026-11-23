@@ -60,7 +60,7 @@ export function UsageView({ search, onSearch }: { search: UsageSearch; onSearch:
   const range: Range = search.range ?? "30d";
   const split: Split = search.by ?? "consumer";
   const only = search.only ?? {};
-  const period = periodOf(range, new Date(Math.floor(now.getTime() / 60_000) * 60_000));
+  const period = periodOf(range, now);
   const filters = filtersOf(period, only);
   const dimensions = useDimensions(period, split);
   const pick = (dimension: UsageDimension, key: string | null) =>

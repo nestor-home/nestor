@@ -37,8 +37,10 @@ export interface Period {
   every: UsageInterval;
 }
 
-/** The period a range covers, up to `now`, and the buckets its chart is cut into. */
-export function periodOf(range: Range, now: Date = new Date()): Period {
+/** The period a range covers, up to `now` to the minute (so that every render of a minute asks the same thing), and
+ * the buckets its chart is cut into. */
+export function periodOf(range: Range, at: Date = new Date()): Period {
+  const now = new Date(Math.floor(at.getTime() / 60_000) * 60_000);
   const midnight = new Date(now);
   midnight.setHours(0, 0, 0, 0);
   const daysBack = (days: number) => new Date(midnight.getTime() - (days - 1) * 86_400_000);
