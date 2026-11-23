@@ -66,6 +66,7 @@ from nestor.modules.conversation.types import (
 from nestor.modules.household import Household, Person
 from nestor.modules.identity import Heard, Speaker
 from nestor.modules.journal import FileRef, Journal
+from nestor.modules.usage import CallPurpose, attribute, attributed
 
 
 @dataclass(frozen=True, slots=True)
@@ -206,7 +207,10 @@ class Agent(Assistant):
         return self.speakers.wait_s if self.speakers.voices is not None else None
 
     async def hear(self, audio: bytes) -> Heard | None:
-        return await self.speakers.voices.hear(audio) if self.speakers.voices is not None else None
+        if self.speakers.voices is None:
+            return None
+        with attributed(purpose=CallPurpose.TURN):  # who is speaking, for the turn their words open
+            return await self.speakers.voices.hear(audio)
 
     async def compose(
         self, address: Address, person: Person | None, notification: Notification, medium: Medium
@@ -354,13 +358,24 @@ class AgentReply(Reply):
     async def _produce(self) -> None:
         agent = self._agent
         agent.replies.set(self, ReplyPhase.THINKING)
+        opening = self._opening
+        asked = isinstance(opening, InboundMessage)
+        attribute(  # what every call this answer makes is for: its own task, so for the rest of it
+            purpose=CallPurpose.TURN if asked else CallPurpose.NOTIFICATION,
+            person=self._person.id if self._person else None,
+            channel=self._address.channel,
+            medium=self._medium,
+            session=self._address.session,
+            origin=None if isinstance(opening, InboundMessage) else opening.about.key,
+        )
         try:
-            opening = self._opening
             if isinstance(opening, InboundMessage):
                 async with agent.conversations.free(self._address):  # after the turn in progress, if any
                     await self._reply_to(opening)
             else:  # a notification's draft belongs to the conversation open there, if any
-                await self._answer(await agent.conversations.current(self._address, self._medium))
+                conversation = await agent.conversations.current(self._address, self._medium)
+                attribute(conversation=conversation)
+                await self._answer(conversation)
                 await self._end_message()
             self._end_turn()
         finally:
@@ -377,6 +392,8 @@ class AgentReply(Reply):
         words = "\n".join(part for part in (message.text.strip(), *heard) if part)
         self._mentions = agent.mentions.named(words, self._person)
         self._turn = await agent.conversations.turn(self._address, self._medium)
+        exchange = self._turn.exchange
+        attribute(person=self._speaker.person, conversation=exchange.conversation_id, turn=exchange.turn_id)
         said = await self._turn.said(words, self._medium, self._speaker, kept, self._mentions)
         agent.speakers.learn(message.heard, said)
         if phrase := await agent.speakers.enrolling(message):  # a phrase of a voice being recorded

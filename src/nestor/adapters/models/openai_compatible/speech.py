@@ -6,8 +6,9 @@ through Pipecat's OpenAI service against the same endpoint."""
 from typing import TYPE_CHECKING
 
 from nestor.adapters.common.http import HttpApi
-from nestor.adapters.models.common import brand
+from nestor.adapters.models.common import brand, on_premises
 from nestor.adapters.models.pipecat import PipecatSpeech
+from nestor.core import Unit, Usage, report
 
 if TYPE_CHECKING:
     from pipecat.services.tts_service import TTSService
@@ -29,7 +30,7 @@ class OpenAICompatibleSpeech(PipecatSpeech):
         self._base_url, self._api_key, self._model, self._voice = base_url.rstrip("/"), api_key, model, voice
         headers = {"Authorization": f"Bearer {api_key}"} if api_key else None
         self._api = HttpApi(provider, self._base_url, headers=headers, secret=api_key, timeout_s=timeout_s)
-        self.brand = brand(base_url)
+        self.brand, self.local = brand(base_url), on_premises(base_url)
 
     def details(self) -> dict[str, str]:
         return {"model": self._model, "voice": self._voice}
@@ -39,7 +40,9 @@ class OpenAICompatibleSpeech(PipecatSpeech):
 
     async def synthesize(self, text: str) -> bytes:
         body = {"model": self._model, "input": text, "voice": self._voice, "response_format": "opus"}
-        return (await self._api.request("POST", "/audio/speech", json=body)).content
+        response = await self._api.request("POST", "/audio/speech", json=body)
+        report(Usage({Unit.CHARACTERS: len(text)}, served=self._model))
+        return response.content
 
     def tts(self) -> "TTSService":
         from pipecat.services.openai.tts import OpenAITTSService

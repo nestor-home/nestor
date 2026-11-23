@@ -33,6 +33,8 @@ scope-name = { $scope ->
     [media-view-all] watch every camera
     [media-call] call through the satellites one is allowed
     [media-call-all] call through every satellite
+    [usage-read-all] see what everything costs
+    [usage-read-own] see what one's own requests cost
    *[other] { $scope }
 }
 invitation-status = { $status ->
@@ -126,6 +128,7 @@ journal-kind = { $kind ->
     [voice] Voices
     [observation] Observations
     [account] Accounts
+    [usage] Costs
    *[other] Other
 }
 
@@ -146,4 +149,67 @@ model-type-help = { $type ->
     [speech] To give the assistant its voice.
     [image] To draw the pictures people ask for.
    *[other] { "" }
+}
+
+usage-purpose = { $purpose ->
+    [turn] answers
+    [notification] notifications
+    [title] titles
+    [watch] watches
+    [consolidation] memory
+    [indexing] memory search
+    [enrollment] voice recording
+    [task] tasks
+    [search] admin search
+    [unattributed] unattributed
+   *[other] { $purpose }
+}
+usage-kind = { $kind ->
+    [language] LLM
+    [embedding] embedding
+    [speaker] voice recognition
+    [transcription] transcription
+    [speech] speech
+    [image] images
+    [executor] executor
+   *[other] { $kind }
+}
+usage-basis = { $basis ->
+    [reported] billed
+    [priced] estimated
+    [free] free
+    [unknown] unknown
+   *[other] { $basis }
+}
+usage-outcome = { $outcome ->
+    [ok] done
+    [failed] failed
+    [cancelled] cut short
+   *[other] { $outcome }
+}
+usage-dimension = { $dimension ->
+    [consumer] model
+    [kind] type
+    [provider] provider
+    [served] served model
+    [purpose] use
+    [person] person
+    [channel] channel
+    [medium] medium
+    [basis] cost
+    [outcome] outcome
+    [origin] origin
+    [conversation] conversation
+   *[other] { $dimension }
+}
+usage-unit = { $unit ->
+    [input_tokens] input tokens
+    [cached_input_tokens] cached tokens
+    [cache_write_tokens] cache writes
+    [output_tokens] output tokens
+    [images] pictures
+    [audio_seconds] seconds heard
+    [characters] characters spoken
+    [requests] calls
+   *[other] { $unit }
 }

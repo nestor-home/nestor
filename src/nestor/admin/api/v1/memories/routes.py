@@ -18,6 +18,9 @@ from nestor.admin.api.v1.shared import People
 from nestor.admin.state import state
 from nestor.core import PersonId
 from nestor.modules.accounts import Scope
+from nestor.modules.usage import CallPurpose, attributed
+
+ADMIN = "admin"  # where these calls come from
 
 router = APIRouter(tags=["memories"])
 Keeper = Annotated[Caller, Depends(allowed(Scope.MEMORY_MANAGE_ALL, Scope.MEMORY_MANAGE_OWN))]
@@ -39,11 +42,12 @@ async def list_memories(
         about = caller.person or ""
     person = PersonId(about) if about else None
     memories = admin.nestor.memories
-    found = (
-        await memories.recall(q, about=person, limit=limit)
-        if q.strip()
-        else await memories.recent(about=person, limit=limit)
-    )
+    with attributed(purpose=CallPurpose.SEARCH, person=caller.person, channel=ADMIN):
+        found = (
+            await memories.recall(q, about=person, limit=limit)
+            if q.strip()
+            else await memories.recent(about=person, limit=limit)
+        )
     people, positions = People(admin.nestor.household), await recorded(admin)
     return [MemoryOut.of(m, caller, people, positions) for m in found if reads_memory(caller, m)]
 

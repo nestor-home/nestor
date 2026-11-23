@@ -25,3 +25,4 @@ class Model(Component, ABC):
     """A model of `models`: a base class per `ModelType` derives from it and sets `type`."""
 
     type: ClassVar[ModelType]
+    local: bool = False  # runs on hardware the household owns (sherpa-onnx, a server at home): nothing billed per call

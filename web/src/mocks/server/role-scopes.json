@@ -24,6 +24,8 @@
     "system.read",
     "tasks.manage",
     "tasks.manage.own",
+    "usage.read.all",
+    "usage.read.own",
     "watches.manage.all",
     "watches.manage.own"
   ],
@@ -49,6 +51,8 @@
     "system.read",
     "tasks.manage",
     "tasks.manage.own",
+    "usage.read.all",
+    "usage.read.own",
     "watches.manage.all",
     "watches.manage.own"
   ],
@@ -64,6 +68,7 @@
     "own.connections.manage",
     "schedules.manage.own",
     "tasks.manage.own",
+    "usage.read.own",
     "watches.manage.own"
   ],
   "guest": [

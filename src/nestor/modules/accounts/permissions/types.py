@@ -39,3 +39,5 @@ class Scope(StrEnum):
     MEDIA_VIEW_ALL = "media.view.all"  # watch every satellite that films
     MEDIA_CALL = "media.call"  # call through the satellites that hear, play sound and list the person
     MEDIA_CALL_ALL = "media.call.all"  # call through every satellite that hears and plays sound
+    USAGE_READ_ALL = "usage.read.all"  # what every call to a model or an executor cost, and on whose behalf
+    USAGE_READ_OWN = "usage.read.own"  # what the person's own requests cost

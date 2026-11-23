@@ -7,6 +7,8 @@ from typing import Any
 
 from nestor.adapters.common.http import MAX_DETAIL, Failure, message_of, retryable
 from nestor.adapters.models.common import PartialCall
+from nestor.adapters.models.openai_compatible.wire import spent
+from nestor.core import report
 from nestor.modules.cognition import (
     Finished,
     FinishReason,
@@ -14,7 +16,6 @@ from nestor.modules.cognition import (
     TextDelta,
     ToolCall,
     ToolCallRequested,
-    Usage,
 )
 
 _FINISH_REASONS = {
@@ -32,10 +33,18 @@ class ChunkDecoder:
         self._error = error
         self._calls: dict[int, PartialCall] = {}
         self._finish: str | None = None
-        self._usage: Usage | None = None
+        self._usage: dict[str, Any] | None = None
         self._model: str | None = None
 
     async def outputs(self, lines: AsyncIterator[str]) -> AsyncGenerator[ModelOutput]:
+        try:
+            async for output in self._outputs(lines):
+                yield output
+        finally:  # what was billed, even for a reply cut or failed midway
+            if self._usage is not None or self._model is not None:
+                report(spent(self._usage, self._model))
+
+    async def _outputs(self, lines: AsyncIterator[str]) -> AsyncGenerator[ModelOutput]:
         async for line in lines:
             if not line.startswith("data:"):
                 continue  # blank separators, `: keep-alive` comments, other SSE fields
@@ -49,7 +58,7 @@ class ChunkDecoder:
                 raise self._error("stream ended before the reply was finished", transient=True)
         for call in self._completed_calls():
             yield ToolCallRequested(call)
-        yield Finished(_FINISH_REASONS.get(self._finish or "stop", FinishReason.STOP), self._usage, self._model)
+        yield Finished(_FINISH_REASONS.get(self._finish or "stop", FinishReason.STOP))
 
     def _parse(self, data: str) -> dict[str, Any]:
         try:
@@ -68,7 +77,7 @@ class ChunkDecoder:
         if isinstance(model := chunk.get("model"), str) and model:
             self._model = model
         if isinstance(usage := chunk.get("usage"), dict):
-            self._usage = _usage(usage) or self._usage
+            self._usage = usage
         for choice in chunk.get("choices") or ():
             delta = choice.get("delta") or {}
             if text := delta.get("content"):
@@ -88,20 +97,3 @@ class ChunkDecoder:
     def _completed_calls(self) -> Iterator[ToolCall]:
         for index in sorted(self._calls):
             yield self._calls[index].call(self._error)
-
-
-def _usage(usage: dict[str, Any]) -> Usage | None:
-    """The usage of a chunk (OpenRouter sends it on the last one, others with `stream_options.include_usage`),
-    with OpenRouter's `cost`."""
-    tokens = usage.get("prompt_tokens"), usage.get("completion_tokens")
-    if not all(isinstance(t, int) for t in tokens):
-        return None
-    cost = usage.get("cost")
-    details = usage.get("prompt_tokens_details")
-    cached = details.get("cached_tokens") if isinstance(details, dict) else None
-    return Usage(
-        input_tokens=int(tokens[0] or 0),
-        output_tokens=int(tokens[1] or 0),
-        cost=float(cost) if isinstance(cost, int | float) else None,
-        cached_input_tokens=cached if isinstance(cached, int) else None,
-    )

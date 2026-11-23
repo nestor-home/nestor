@@ -8,17 +8,19 @@ import subprocess
 import sys
 from collections.abc import Sequence
 from datetime import time
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
 import pytest
 
-from nestor.core import Component, ContractError
+from nestor.core import Component, ContractError, Money, Unit
 from nestor.modules.channels import Address, Medium, TranscriptionModel
 from nestor.modules.cognition import FallingBack, Outcome, TaskDelivered
 from nestor.modules.cognition.model import ModelRequest, ToolCall
 from nestor.modules.cognition.tools import Tool, ToolProvider
 from nestor.modules.conversation import AssistantTurn
+from nestor.modules.usage import CallPurpose, CostBasis, Counted, UsageFilter
 from nestor.modules.web import Found, WebSearch
 from nestor.runtime import Backoff, Nestor, Registry
 from nestor.runtime.config import ConfigError, ProblemCode, parse_config
@@ -53,6 +55,30 @@ async def test_a_message_goes_through_the_whole_assistant_and_is_persisted(tmp_p
     async with Nestor(config(tmp_path, []), fakes.registry()) as restarted:
         assert [t.text for t in await restarted.journal.history(AssistantTurn)] == ["Bonjour Mathis."]
     assert (tmp_path / "nestor.db").exists()
+
+
+async def test_what_a_message_costs_is_in_the_ledger_on_behalf_of_who_sent_it(tmp_path: Path) -> None:
+    text = CONFIG.format(data_dir=tmp_path, replies=["Bonjour Mathis."]).replace(
+        "provider: scripted,", "provider: scripted, price: {input_tokens: 1, output_tokens: 5},"
+    )
+    fakes = Fakes()
+    nestor = Nestor(parse_config(f"{text}prices: {{catalogue: false}}\n", {}), fakes.registry())
+    async with nestor:
+        serving = asyncio.create_task(nestor.serve())
+        await fakes.channels[0].ask("Salut")
+        serving.cancel()
+    async with Nestor(config(tmp_path, []), fakes.registry()) as restarted:
+        (call,) = await restarted.ledger.lines(UsageFilter())
+        (turn,) = await restarted.journal.history(AssistantTurn)
+    assert (call.consumer, call.purpose, call.person, call.channel) == ("main", CallPurpose.TURN, "mathis", "memory")
+    assert turn.exchange is not None and (call.conversation, call.turn) == (
+        turn.exchange.conversation_id,
+        turn.exchange.turn_id,
+    )
+    read, written = call.units[Unit.INPUT_TOKENS], call.units[Unit.OUTPUT_TOKENS]
+    assert written == 2, "the scripted model counts a word a token"
+    cost = Decimal(str(read)) * Decimal("0.000001") + Decimal(written) * Decimal("0.000005")
+    assert (call.cost, call.basis, call.price) == (Money.usd(cost), CostBasis.PRICED, "config")
 
 
 async def test_a_task_started_before_a_restart_is_delivered_after_it(tmp_path: Path) -> None:
@@ -98,7 +124,8 @@ def with_embedder(tmp_path: Path, embedder: str, agent: str = "") -> Any:
 async def test_an_embedding_model_is_declared_with_the_others_and_finds_memories_by_meaning(tmp_path: Path) -> None:
     fakes = Fakes()
     nestor = Nestor(with_embedder(tmp_path, "sens"), fakes.registry())
-    assert nestor.agent.models.written is nestor.models["main"], "the embedder never answers"
+    written = nestor.agent.models.written
+    assert isinstance(written, Counted) and written.consumer.key == "main", "the embedder never answers"
     async with nestor:
         await nestor.memories.remember("Mathis est végétarien.")
         assert nestor.memories.index is not None

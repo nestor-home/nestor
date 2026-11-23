@@ -79,5 +79,6 @@
   "account.locale.changed": "account",
   "account.invited": "account",
   "account.invitation.revoked": "account",
-  "account.login": "account"
+  "account.login": "account",
+  "usage.recorded": "usage"
 }

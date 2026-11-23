@@ -14,7 +14,7 @@ import respx
 from nestor import __version__
 from nestor.adapters.models.anthropic.language import AnthropicLanguage
 from nestor.adapters.models.anthropic.wire import Effort
-from nestor.core import ProviderError
+from nestor.core import ProviderError, Unit, Usage
 from nestor.modules.cognition import (
     Document,
     Finished,
@@ -29,9 +29,9 @@ from nestor.modules.cognition import (
     ToolCall,
     ToolCallRequested,
     ToolSpec,
-    Usage,
 )
 from nestor.testing.cognition import LanguageModelContract
+from nestor.testing.usage import consumed
 
 BASE_URL = "https://claude.test/v1"
 MESSAGES = f"{BASE_URL}/messages"
@@ -229,10 +229,14 @@ async def test_a_pdf_is_a_document_block_and_a_photo_an_image_before_the_words(a
 async def test_the_reply_says_what_it_read_from_the_cache_and_which_model_answered(api: respx.MockRouter) -> None:
     reply = (start(input_tokens=20, cache_read_input_tokens=1800, cache_creation_input_tokens=100), *end())
     api.post(MESSAGES).mock(return_value=streamed(*reply))
-    finished = (await collect())[-1]
-    assert finished == Finished(
-        FinishReason.STOP, Usage(input_tokens=1920, output_tokens=7, cached_input_tokens=1800), "claude-haiku-5-5"
-    )
+    _, tally = await consumed(collect())
+    units = {
+        Unit.INPUT_TOKENS: 1920,
+        Unit.CACHED_INPUT_TOKENS: 1800,
+        Unit.CACHE_WRITE_TOKENS: 100,
+        Unit.OUTPUT_TOKENS: 7,
+    }
+    assert tally.usage == Usage(units, served="claude-haiku-5-5")
 
 
 async def test_an_answer_cut_by_its_length_says_so(api: respx.MockRouter) -> None:

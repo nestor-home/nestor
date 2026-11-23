@@ -123,4 +123,39 @@ CREATE INDEX voiceprints_by_person ON voiceprints (person, anchor, at);
 CREATE INDEX voiceprints_by_turn ON voiceprints (turn);
 """
 
-MIGRATIONS: tuple[str, ...] = (EVENTS + MEMORIES + EPISODES + SECRETS + VERIFIERS + ACTIVITY + VOICES,)
+USAGE = """
+CREATE TABLE usage (
+    id TEXT PRIMARY KEY,  -- the `usage.recorded` event's: a projection of the journal, rebuilt from it at will
+    position INTEGER NOT NULL,  -- in the journal
+    at TEXT NOT NULL,  -- UTC, fixed width
+    hour TEXT NOT NULL,  -- the buckets it falls in, in the household's time zone (`usage_zone`)
+    day TEXT NOT NULL,
+    week TEXT NOT NULL,  -- its Monday
+    month TEXT NOT NULL,
+    consumer TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    provider TEXT NOT NULL,
+    served TEXT,
+    units TEXT NOT NULL,  -- JSON, by unit
+    cost_nusd INTEGER,  -- null: unknown
+    basis TEXT NOT NULL,
+    price TEXT,
+    duration_ms INTEGER NOT NULL,
+    outcome TEXT NOT NULL,
+    purpose TEXT NOT NULL,
+    person TEXT,
+    channel TEXT,
+    medium TEXT,
+    session TEXT,
+    conversation TEXT,
+    turn TEXT,
+    origin TEXT
+) STRICT;
+CREATE INDEX usage_by_time ON usage (at);
+CREATE INDEX usage_by_position ON usage (position);
+CREATE TABLE usage_zone (
+    timezone TEXT NOT NULL  -- the zone the buckets are in: one row
+) STRICT;
+"""
+
+MIGRATIONS: tuple[str, ...] = (EVENTS + MEMORIES + EPISODES + SECRETS + VERIFIERS + ACTIVITY + VOICES + USAGE,)

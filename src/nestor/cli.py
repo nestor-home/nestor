@@ -11,6 +11,7 @@ import logging
 import os
 import shutil
 import sys
+from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
@@ -21,7 +22,7 @@ from nestor.admin import AdminServer, mock_answers, openapi_text, read_token, to
 from nestor.bench import Suites
 from nestor.bench.cli import add_commands as add_bench_commands
 from nestor.bench.cli import main as bench
-from nestor.core import Component, NestorError, PersonId
+from nestor.core import Component, NestorError, PersonId, utc_now
 from nestor.core.i18n import Locale, Message
 from nestor.init import (
     DEFAULT_MODEL,
@@ -37,7 +38,8 @@ from nestor.init import (
 from nestor.modules.accounts import Role
 from nestor.modules.satellites import PairingMethod
 from nestor.modules.satellites.wire import SCHEMAS, write_schemas
-from nestor.runtime.app import Nestor, open_accounts, run_until_stopped
+from nestor.modules.usage import Dimension, Totals, UsageFilter, shown
+from nestor.runtime.app import Nestor, open_accounts, open_ledger, run_until_stopped
 from nestor.runtime.config import ENV_FILE, SECRET_KEY, NestorConfig, environment, load_config
 from nestor.runtime.secrets import ConfigFile, open_secrets, preview
 
@@ -100,6 +102,11 @@ def main(argv: list[str] | None = None) -> int:
     keys.add_parser("revoke", help="revoke an executor's key").add_argument("name")
     add_bench_commands(commands.add_parser("bench", help=words("bench-help"), description=words("bench-help")), words)
     commands.add_parser("restart", help="restart the running instance (applies the configuration written since)")
+    usage = commands.add_parser("usage", help=words("usage-help"), description=words("usage-help"))
+    usage.add_argument("--days", type=int, default=30, help=words("usage-days-help"))
+    usage.add_argument(
+        "--by", type=Dimension, choices=list(Dimension), default=Dimension.CONSUMER, help=words("usage-by-help")
+    )
     secrets = commands.add_parser("secrets", help="the configuration's secrets, kept in the encrypted vault")
     actions = secrets.add_subparsers(dest="action", required=True)
     actions.add_parser("list", help="every secret: set or not, a preview, the configuration fields using it")
@@ -138,6 +145,8 @@ def main(argv: list[str] | None = None) -> int:
             return _executors(args, environ, words)
         if args.command == "secrets":
             return _secrets(args, environ)
+        if args.command == "usage":
+            return asyncio.run(_usage(load_config(args.config, environ), args.days, args.by, words))
         if args.command == "restart":
             _call(load_config(args.config, environ), "POST", "/api/v1/system/restart", {"confirm": True})
             print("restarting: the instance stops cleanly, then starts again")
@@ -341,6 +350,27 @@ def _executors(args: argparse.Namespace, environ: dict[str, str], words: "_Words
         _call(config, "DELETE", f"/api/v1/executors/{args.name}/key")
         print(words("executors-key-revoked", executor=args.name))
     return 0
+
+
+async def _usage(config: NestorConfig, days: int, by: Dimension, words: "_Words") -> int:
+    """What the last `days` cost, then by `by`, the costliest first: read from the data folder, running or not."""
+    async with open_ledger(config.data_dir, config.persona.timezone) as ledger:
+        until = utc_now()
+        where = UsageFilter(since=until - timedelta(days=days), until=until)
+        summary = await ledger.summary(where)
+        groups = await ledger.groups(where, by)
+    print(words("usage-total", days=days, **_spent(summary.totals)))
+    print(words("usage-month", spent=shown(summary.month.cost), projected=shown(summary.projected_month)))
+    if groups:
+        print(words("usage-by", dimension=by.value))
+    width = max((len(g.key or "-") for g in groups), default=0)
+    for group in groups:
+        print(f"  {(group.key or '-').ljust(width)}  {words('usage-line', **_spent(group.totals))}")
+    return 0
+
+
+def _spent(totals: Totals) -> dict[str, str | int]:
+    return {"spent": shown(totals.cost), "calls": totals.calls, "unknown": totals.unknown}
 
 
 class _Words:

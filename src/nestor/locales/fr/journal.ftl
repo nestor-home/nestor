@@ -341,3 +341,5 @@ journal-system-update-requested = Mise à jour de { $running } vers { $target } 
    *[admin] par { $login }
 }
 journal-system-update-failed = Échec de l'installation de { $target } : Nestor reste sur sa version
+journal-usage-recorded = { $consumer } pour { usage-purpose } : { $cost }
+journal-usage-unknown = { $consumer } pour { usage-purpose } : coût inconnu

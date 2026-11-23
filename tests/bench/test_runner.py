@@ -11,7 +11,8 @@ from nestor.bench import BenchError, Trial
 from nestor.bench.recording import Cache, MeasuredModel, Recording
 from nestor.bench.results import Run
 from nestor.bench.runner import Plan, _commit, read_dataset, run_suite
-from nestor.core import ContractError
+from nestor.core import ContractError, Money, Usage
+from nestor.core import Unit as Consumed
 from nestor.modules.cognition import (
     Finished,
     FinishReason,
@@ -179,15 +180,21 @@ async def test_results_name_the_nestor_version_and_the_commit_of_this_source(tmp
     assert run.commit is not None and len(run.commit.removesuffix("+dirty")) == 40, "this source is tracked by git"
 
 
-def test_a_recording_keeps_tool_calls_and_a_reply_without_usage(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    "usage",
+    [Usage(), Usage({Consumed.INPUT_TOKENS: 812, Consumed.OUTPUT_TOKENS: 9}, Money(412_000), "haiku-4.5")],
+    ids=["a reply without usage", "what it consumed"],
+)
+def test_a_recording_keeps_tool_calls_and_what_the_call_consumed(tmp_path: Path, usage: Usage) -> None:
     outputs = (
         TextDelta("Je regarde."),
         ToolCallRequested(ToolCall("call-1", "create_watch", {"what": "le colis"})),
         Finished(FinishReason.TOOL_CALLS),
     )
     cache = Cache(tmp_path)
-    cache.write("ab" * 32, Recording(outputs=outputs, latency_s=0.2, first_output_s=0.1, cold=True))
-    assert cache.read("ab" * 32) == Recording(outputs=outputs, latency_s=0.2, first_output_s=0.1, cold=True)
+    recording = Recording(outputs=outputs, usage=usage, latency_s=0.2, first_output_s=0.1, cold=True)
+    cache.write("ab" * 32, recording)
+    assert cache.read("ab" * 32) == recording
 
 
 async def test_a_measured_model_called_outside_a_case_is_a_mistake_of_the_suite(tmp_path: Path) -> None:

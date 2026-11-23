@@ -11,7 +11,7 @@ from collections.abc import Collection, Mapping, Sequence
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
-from nestor.core import ContractError, PersonId, ProviderError
+from nestor.core import ContractError, PersonId, ProviderError, Unit, Usage, report
 from nestor.modules.identity import (
     Learned,
     Profile,
@@ -21,6 +21,7 @@ from nestor.modules.identity import (
     VoiceSpace,
 )
 from nestor.modules.identity.audio import samples, similarity, unit
+from nestor.testing.usage import consumed, said
 
 RATE = 16000
 _TONE = 0.1  # of full scale: about -23 dBFS, a voice at a normal distance
@@ -70,6 +71,7 @@ class TaggedVoices(SpeakerModel):
         self.calls += 1
         if self.failing:
             raise ProviderError(self.name, "the model cannot run", transient=False)
+        report(Usage({Unit.REQUESTS: 1}))
         speaker, take = speaker_of(audio) or ("", 0)
         base = random.Random(f"voice:{speaker}")
         nudge = random.Random(f"voice:{speaker}#{take}")
@@ -149,6 +151,11 @@ class SpeakerModelContract:
             other = unit(await embedder.embed(self.speech("b", 0)))
         assert len(first) == embedder.space.dimensions
         assert similarity(first, again) >= embedder.threshold > similarity(first, other)
+
+    async def test_a_voiceprint_says_what_it_consumed(self) -> None:
+        async with self.embedder() as embedder:
+            _, tally = await consumed(embedder.embed(self.speech("a", 0)))
+        said(tally)
 
 
 def _sample(n: int, room: str = "salon", turn: str | None = None) -> Learned:

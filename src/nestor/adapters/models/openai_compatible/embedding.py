@@ -15,8 +15,9 @@ from typing import Any
 import httpx
 
 from nestor.adapters.common.http import MAX_DETAIL, detail, identity, provider_error, retryable
-from nestor.adapters.models.common import brand
-from nestor.core import ContractError, ProviderError
+from nestor.adapters.models.common import brand, on_premises
+from nestor.adapters.models.openai_compatible.wire import spent
+from nestor.core import ContractError, ProviderError, report
 from nestor.modules.cognition.embedding import EmbeddingModel, EmbeddingSpace, Vector
 
 
@@ -48,7 +49,7 @@ class OpenAICompatibleEmbedding(EmbeddingModel):
             model=model, dimensions=dimensions, query_prefix=query_prefix, document_prefix=document_prefix
         )
         self._client: httpx.AsyncClient | None = None
-        self.brand = brand(base_url)
+        self.brand, self.local = brand(base_url), on_premises(base_url)
 
     @property
     def space(self) -> EmbeddingSpace:
@@ -100,9 +101,11 @@ class OpenAICompatibleEmbedding(EmbeddingModel):
 
     def _vectors(self, response: httpx.Response, count: int) -> list[Vector]:
         try:
-            data: list[dict[str, Any]] = sorted(response.json()["data"], key=lambda d: d.get("index", 0))
+            answer = response.json()
+            report(spent(answer.get("usage"), answer.get("model"), requests=1))
+            data: list[dict[str, Any]] = sorted(answer["data"], key=lambda d: d.get("index", 0))
             vectors = [[float(x) for x in d["embedding"]] for d in data]
-        except (ValueError, KeyError, TypeError):
+        except (ValueError, KeyError, TypeError, AttributeError):
             raise self._error(f"malformed answer: {response.text[:MAX_DETAIL]}", transient=True) from None
         if len(vectors) != count:
             raise self._error(f"{len(vectors)} vectors for {count} texts", transient=True)

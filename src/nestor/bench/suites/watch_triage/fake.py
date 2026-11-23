@@ -10,6 +10,7 @@ import re
 import unicodedata
 from collections.abc import AsyncGenerator
 
+from nestor.core import Unit, Usage, report
 from nestor.modules.cognition import (
     Finished,
     FinishReason,
@@ -18,7 +19,6 @@ from nestor.modules.cognition import (
     ModelRequest,
     Role,
     TextDelta,
-    Usage,
 )
 from nestor.runtime.plugins import AdapterSettings, Family, Plugin, Services
 
@@ -59,10 +59,9 @@ class FakeTriageModel(LanguageModel):
         ]
         answer = json.dumps({"matches": found})
         yield TextDelta(answer)
-        spent = Usage(
-            input_tokens=len(" ".join(m.content for m in request.messages).split()), output_tokens=len(answer.split())
-        )
-        yield Finished(FinishReason.STOP, spent, SERVED)
+        read = len(" ".join(m.content for m in request.messages).split())
+        report(Usage({Unit.INPUT_TOKENS: read, Unit.OUTPUT_TOKENS: len(answer.split())}, served=SERVED))
+        yield Finished(FinishReason.STOP)
 
 
 class FakeSettings(AdapterSettings):

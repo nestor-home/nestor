@@ -10,6 +10,7 @@ from nestor.adapters.storage.sqlite.connectors import GENERATE, SealedReader, SQ
 from nestor.adapters.storage.sqlite.database import SQLiteDatabase
 from nestor.adapters.storage.sqlite.journal import SQLiteEventLog
 from nestor.adapters.storage.sqlite.memory import SQLiteEpisodeStore, SQLiteMemoryStore
+from nestor.adapters.storage.sqlite.usage import SQLiteUsageStore
 
 __all__ = [
     "GENERATE",
@@ -18,6 +19,7 @@ __all__ = [
     "SQLiteEpisodeStore",
     "SQLiteEventLog",
     "SQLiteMemoryStore",
+    "SQLiteUsageStore",
     "SQLiteVault",
     "SQLiteVectorIndex",
     "SQLiteVerifierStore",

@@ -2,7 +2,8 @@
 
 A call is keyed by what decides its answer: the model as configured (secrets masked), the request, the
 repetition and the seed. A live run measures every call and records its reply; a replayed run reads the
-replies back, with the latencies, usage and model measured when they were recorded, and never calls out.
+replies back, with the latencies, usage and model measured when they were recorded, and never calls out. What a
+call consumed is gathered as the runtime gathers it (`nestor.core.report`), and said again when replayed.
 """
 
 import contextvars
@@ -16,7 +17,7 @@ from typing import Any
 
 from nestor.bench.errors import BenchError
 from nestor.bench.types import Call
-from nestor.core import ContractError, ProviderError
+from nestor.core import ContractError, Money, ProviderError, Tally, Unit, Usage, counted, report
 from nestor.core.i18n import Message
 from nestor.modules.cognition import (
     Finished,
@@ -27,7 +28,6 @@ from nestor.modules.cognition import (
     TextDelta,
     ToolCall,
     ToolCallRequested,
-    Usage,
 )
 
 
@@ -41,12 +41,14 @@ class CaseLog:
     calls: list[Call] = field(default_factory=list)
 
 
+_TOKENS = (Unit.INPUT_TOKENS, Unit.CACHED_INPUT_TOKENS, Unit.OUTPUT_TOKENS)
 CURRENT_CASE: contextvars.ContextVar[CaseLog] = contextvars.ContextVar("nestor_bench_case")
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Recording:
     outputs: tuple[ModelOutput, ...]
+    usage: Usage  # what the call reported it consumed
     latency_s: float
     first_output_s: float | None
     cold: bool
@@ -89,6 +91,7 @@ class Cache:
             raw = json.loads(path.read_text(encoding="utf-8"))
             return Recording(
                 outputs=tuple(_output(o) for o in raw["outputs"]),
+                usage=_usage(raw["usage"]),
                 latency_s=raw["latency_s"],
                 first_output_s=raw["first_output_s"],
                 cold=raw["cold"],
@@ -103,6 +106,7 @@ class Cache:
         path.parent.mkdir(parents=True, exist_ok=True)
         raw = {
             "outputs": [_wire_output(o) for o in recording.outputs],
+            "usage": _wire_usage(recording.usage),
             "latency_s": recording.latency_s,
             "first_output_s": recording.first_output_s,
             "cold": recording.cold,
@@ -134,14 +138,16 @@ class MeasuredModel(LanguageModel):
             if recording is None:
                 raise BenchError(Message.of("bench-no-recording", case=log.case, role=self._role))
             log.calls.append(self._call(key, recording, replayed=True))
+            report(recording.usage)  # to whoever counts around the bench, as the call did when it was recorded
             for output in recording.outputs:
                 yield output
             return
         outputs: list[ModelOutput] = []
         first: float | None = None
         started = time.perf_counter()
+        tally = Tally()
         try:
-            async for output in self._inner.stream(request):
+            async for output in counted(self._inner.stream(request), tally):
                 first = time.perf_counter() - started if first is None else first
                 outputs.append(output)
                 yield output
@@ -150,24 +156,29 @@ class MeasuredModel(LanguageModel):
             raise
         cold, self._cold = self._cold, False
         recording = Recording(
-            outputs=tuple(outputs), latency_s=time.perf_counter() - started, first_output_s=first, cold=cold
+            outputs=tuple(outputs),
+            usage=tally.usage,
+            latency_s=time.perf_counter() - started,
+            first_output_s=first,
+            cold=cold,
         )
         self._cache.write(key, recording)
         log.calls.append(self._call(key, recording, replayed=False))
 
     def _call(self, key: str, recording: Recording, *, replayed: bool) -> Call:
-        finished = next((o for o in recording.outputs if isinstance(o, Finished)), None)
-        usage = finished.usage if finished else None
+        units = recording.usage.units
+        tokens = {u: int(n) if (n := units.get(u)) is not None else None for u in _TOKENS}
+        cost = recording.usage.cost
         return Call(
             role=self._role,
             key=key,
             latency_s=recording.latency_s,
             first_output_s=recording.first_output_s,
-            input_tokens=usage.input_tokens if usage else None,
-            cached_input_tokens=usage.cached_input_tokens if usage else None,
-            output_tokens=usage.output_tokens if usage else None,
-            cost=usage.cost if usage else None,
-            served_model=finished.model if finished else None,
+            input_tokens=tokens[Unit.INPUT_TOKENS],
+            cached_input_tokens=tokens[Unit.CACHED_INPUT_TOKENS],
+            output_tokens=tokens[Unit.OUTPUT_TOKENS],
+            cost=float(cost.dollars) if cost is not None else None,
+            served_model=recording.usage.served,
             replayed=replayed,
             cold=recording.cold,
         )
@@ -179,14 +190,22 @@ def _wire_output(output: ModelOutput) -> dict[str, Any]:
     if isinstance(output, ToolCallRequested):
         call = output.call
         return {"tool_call": {"id": call.id, "name": call.name, "arguments": dict(call.arguments)}}
-    usage = output.usage
-    spent = usage and {
-        "input": usage.input_tokens,
-        "cached": usage.cached_input_tokens,
-        "output": usage.output_tokens,
-        "cost": usage.cost,
+    return {"finished": {"reason": output.reason.value}}
+
+
+def _wire_usage(usage: Usage) -> dict[str, Any]:
+    return {
+        "units": {u.value: q for u, q in usage.units.items()},
+        "cost_nusd": usage.cost.nusd if usage.cost is not None else None,
+        "served": usage.served,
     }
-    return {"finished": {"reason": output.reason.value, "usage": spent, "model": output.model}}
+
+
+def _usage(raw: Mapping[str, Any]) -> Usage:
+    cost = raw["cost_nusd"]
+    return Usage(
+        {Unit(u): q for u, q in raw["units"].items()}, Money(cost) if cost is not None else None, raw["served"]
+    )
 
 
 def _output(raw: Mapping[str, Any]) -> ModelOutput:
@@ -195,16 +214,4 @@ def _output(raw: Mapping[str, Any]) -> ModelOutput:
     if "tool_call" in raw:
         call = raw["tool_call"]
         return ToolCallRequested(ToolCall(call["id"], call["name"], call["arguments"]))
-    finished = raw["finished"]
-    spent = finished["usage"]
-    usage = (
-        None
-        if spent is None
-        else Usage(
-            input_tokens=spent["input"],
-            output_tokens=spent["output"],
-            cost=spent.get("cost"),
-            cached_input_tokens=spent.get("cached"),
-        )
-    )
-    return Finished(FinishReason(finished["reason"]), usage, finished["model"])
+    return Finished(FinishReason(raw["finished"]["reason"]))

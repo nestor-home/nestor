@@ -18,7 +18,7 @@ from nestor.adapters.models.pipecat import SAMPLE_RATE, PipecatTranscription
 from nestor.adapters.models.sherpa_onnx.audio import decoded
 from nestor.adapters.models.sherpa_onnx.catalogue import TRANSCRIPTION_FOLDER, TRANSCRIPTION_RELEASE, TRANSCRIPTIONS
 from nestor.adapters.models.sherpa_onnx.releases import fetch_archive
-from nestor.core import ContractError, ProviderError
+from nestor.core import ContractError, ProviderError, Unit, Usage, report
 
 if TYPE_CHECKING:
     import numpy
@@ -31,6 +31,7 @@ class SherpaOnnxTranscription(PipecatTranscription):
     stream in a worker thread, so recordings and turns may be heard at once."""
 
     name = "sherpa-onnx"
+    local = True
 
     def __init__(
         self,
@@ -80,6 +81,7 @@ class SherpaOnnxTranscription(PipecatTranscription):
 
     async def transcribe(self, audio: bytes, media_type: str) -> str:
         samples = await asyncio.to_thread(decoded, audio, self._provider)
+        report(Usage({Unit.AUDIO_SECONDS: len(samples) / SAMPLE_RATE}, served=self._model))
         return await self.hear(samples)
 
     async def hear(self, samples: "numpy.ndarray") -> str:

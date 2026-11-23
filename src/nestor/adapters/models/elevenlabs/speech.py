@@ -11,6 +11,7 @@ import httpx
 
 from nestor.adapters.models.elevenlabs.api import elevenlabs_api
 from nestor.adapters.models.pipecat import PipecatSpeech
+from nestor.core import Unit, Usage, report
 
 if TYPE_CHECKING:
     from pipecat.services.tts_service import TTSService
@@ -33,6 +34,7 @@ class ElevenLabsSpeech(PipecatSpeech):
             params={"output_format": "opus_48000_64"},
             json={"model_id": self._model, "text": text},  # the model in the body, or it is ignored
         )
+        report(Usage({Unit.CHARACTERS: len(text)}, served=self._model))
         return response.content
 
     async def close(self) -> None:

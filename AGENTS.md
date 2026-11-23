@@ -110,7 +110,18 @@ names a model by `type` and `provider`; the runtime builds it and checks it is o
 models run in the voice pipeline: they derive from `adapters/models/pipecat` (shared by the family, not a provider)
 and wrap their Pipecat service, so a new provider is a few lines; `adapters/models/common.py` is what the providers
 share (the OpenAI-compatible endpoints' settings, tool calls streamed in fragments, files in base64, the dialogue as
-the turns of a native API). A new type is a member of `ModelType`, its base class and its contract, nothing else.
+the turns of a native API). A new type is a member of `ModelType`, its base class and its contract, and its counting
+wrapper in `modules/usage/metered.py`.
+
+Every call says what it consumed with `nestor.core.report(Usage(units, cost, served))`, once it is billed (after the
+provider answered, and in a stream's `finally`, so that a cut or failed answer counts what it cost): the units the
+provider counts (`Unit`: tokens, cached and written to the cache apart, pictures, seconds heard, characters spoken),
+what it billed when it says (`Money`, nano-dollars, never a float), and the model that answered. An adapter never
+prices nor attributes: the runtime wraps every model of `models` in a counted one (`metered`), the `PriceBook` prices
+(the provider's word, the model's `price:`, the public list, nothing for `local` models), and the work says on whose
+behalf it runs (`attributed`, `attribute`) where it starts. Each call becomes a `usage.recorded`; the ledger
+(`/api/v1/usage`, `nestor usage`) is its projection. Plugins get the models themselves (`Services.models`), not counted:
+the live voice pipeline is not in the ledger.
 
 ## Adapters by provider
 

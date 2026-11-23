@@ -15,6 +15,7 @@ from nestor import __version__
 from nestor.adapters.documents import FileReader
 from nestor.adapters.i18n import FluentLocalizer, catalogue_dirs
 from nestor.adapters.oauth import HttpxTokenEndpoint
+from nestor.adapters.prices import LiteLLMCatalogue
 from nestor.adapters.releases import HttpReleaseFeed, PipInstaller, probe
 from nestor.adapters.storage.file import FileBlobStore
 from nestor.adapters.storage.sqlite import (
@@ -24,6 +25,7 @@ from nestor.adapters.storage.sqlite import (
     SQLiteEpisodeStore,
     SQLiteEventLog,
     SQLiteMemoryStore,
+    SQLiteUsageStore,
     SQLiteVault,
     SQLiteVectorIndex,
     SQLiteVerifierStore,
@@ -81,6 +83,7 @@ from nestor.modules.memory.assistant import MemoryTools
 from nestor.modules.memory.episodes import Consolidator, Episodes
 from nestor.modules.satellites import LookTools, MediaSessions, Pairing, SatelliteHost
 from nestor.modules.system import ReleaseFeed, RestartRequested, Updates
+from nestor.modules.usage import Counted, Ledger, Meter, PriceBook, PriceCatalogue, Rates, metered
 from nestor.modules.web import WebSearch, WebSearchTools
 from nestor.runtime.config import AdapterConfig, ComponentConfig, ConfigError, ModelConfig, NestorConfig, ProblemCode
 from nestor.runtime.plugins import Family, Plugged, Registry, Services
@@ -91,6 +94,8 @@ SECRET_KEY = "NESTOR_SECRET_KEY"
 MCP_PATH = "/mcp"  # Nestor's MCP server, on the admin's address
 DATABASE = "nestor.db"
 BLOBS = "blobs"  # what is too heavy for the journal, by content
+PRICES = "prices/litellm.json"  # the last copy of the public price list
+CONFIGURED = "config"  # the source of a price the configuration sets
 
 
 def database_path(data_dir: Path) -> Path:
@@ -123,6 +128,7 @@ class Nestor:
         environ: Mapping[str, str] | None = None,
         token_endpoint: TokenEndpoint | None = None,
         release_feed: ReleaseFeed | None = None,
+        price_catalogue: PriceCatalogue | None = None,
         source: Path | None = None,
         backoff: Backoff | None = None,
     ) -> None:
@@ -144,8 +150,24 @@ class Nestor:
             self.journal, SQLiteVerifierStore(self.database), self.household, SQLiteActivityStore(self.database)
         )
 
-        self.models = models = build_models(config, registry, services, self.plugged)
-        services = replace(services, models=lambda key, wanted, path: chosen(models, key, wanted, path))
+        # what each call costs: the providers' word, the configuration's prices, the public list
+        self.price_catalogue = price_catalogue or (
+            LiteLLMCatalogue(config.data_dir / PRICES, url=config.prices.catalogue_url)
+            if config.prices.catalogue
+            else None
+        )
+        configured = {k: Rates.written(m.price.by_unit(), CONFIGURED) for k, m in config.models.items() if m.price}
+        self.meter = Meter(self.journal, PriceBook(configured, self.price_catalogue))
+        self.ledger = Ledger(self.journal, SQLiteUsageStore(self.database), config.persona.timezone)
+
+        self.models = build_models(config, registry, services, self.plugged)
+        # plugins get the models themselves (a voice pipeline runs their services); Nestor calls them counted
+        services = replace(services, models=lambda key, wanted, path: chosen(self.models, key, wanted, path))
+        models = {
+            key: metered(key, built, config.models[key].provider, _asked(config.models[key]), self.meter)
+            for key, built in self.models.items()
+        }
+        self.consumers = [m.consumer for m in models.values() if isinstance(m, Counted)]  # what the ledger prices
         roles = config.roles([k for k, m in config.models.items() if m.type is ModelType.LANGUAGE])
 
         answering: dict[str, LanguageModel] = {}
@@ -451,8 +473,12 @@ class Nestor:
         vault = [self.vault] if self.vault else []
         updates = [self.updates] if self.updates else []
         voices = [self.voices] if self.voices else []
+        catalogue = [self.price_catalogue] if self.price_catalogue else []
         return [
             self.database,
+            *catalogue,
+            self.meter,  # closes after every model: the last calls are written
+            self.ledger,
             *vault,
             self.accounts.verifiers,
             self.accounts.activity,
@@ -594,6 +620,12 @@ def chosen[M: Model](models: Mapping[str, Model], key: str, wanted: type[M], pat
     return found
 
 
+def _asked(profile: ModelConfig) -> str | None:
+    """The model a profile's settings name (`model`), to price it when its provider names none."""
+    asked = profile.settings().get("model")
+    return asked if isinstance(asked, str) and asked else None
+
+
 def build_models(
     config: NestorConfig, registry: Registry, services: Services, plugged: list[Plugged] | None = None
 ) -> dict[str, Model]:
@@ -689,6 +721,16 @@ async def open_accounts(data_dir: Path, people: Iterable[Person]) -> AsyncGenera
     )
     async with database, accounts:
         yield accounts
+
+
+@contextlib.asynccontextmanager
+async def open_ledger(data_dir: Path, timezone: str) -> AsyncGenerator[Ledger]:
+    """The usage ledger kept in `data_dir`, caught up with the journal, without the rest of Nestor (for the command
+    line, whether the instance runs or not)."""
+    database = SQLiteDatabase(database_path(data_dir))
+    ledger = Ledger(Journal(SQLiteEventLog(database)), SQLiteUsageStore(database), timezone)
+    async with database, ledger:
+        yield ledger
 
 
 def assemble_memories(

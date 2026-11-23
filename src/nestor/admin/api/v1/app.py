@@ -34,6 +34,7 @@ from nestor.admin.api.v1.security import json_only
 from nestor.admin.api.v1.session import routes as session
 from nestor.admin.api.v1.system import routes as system
 from nestor.admin.api.v1.tasks import routes as tasks
+from nestor.admin.api.v1.usage import routes as usage
 from nestor.admin.api.v1.voices import routes as voices
 from nestor.admin.api.v1.watches import routes as watches
 from nestor.admin.presentation import CATEGORIES, Phrasebook
@@ -84,6 +85,7 @@ RESOURCES = (
     system,
     config,
     voices,
+    usage,
 )
 browser = connections.browser  # `/connections/callback`, outside the API prefix
 
