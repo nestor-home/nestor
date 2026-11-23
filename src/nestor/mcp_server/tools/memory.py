@@ -6,7 +6,6 @@ from mcp.server.mcpserver.exceptions import ToolError
 
 from nestor.mcp_server.access import TaskAccess
 from nestor.modules.cognition.tools import ToolFailed
-from nestor.modules.usage import CallPurpose, attributed
 
 
 def register(mcp: MCPServer, access: TaskAccess) -> None:
@@ -19,17 +18,15 @@ def register(mcp: MCPServer, access: TaskAccess) -> None:
         )
     )
     async def recall(task: str, query: str, ctx: Context, since: str = "", until: str = "") -> dict[str, object]:
-        asked = await access.task(ctx, task, "recall")
-        requester = access.requester(asked)
+        requester = access.requester(await access.task(ctx, task, "recall"))
         try:
-            with attributed(purpose=CallPurpose.TASK, person=requester, origin=f"task:{asked.id}"):
-                found = await memory.search(
-                    query,
-                    person=requester,
-                    about=requester,
-                    since=memory.bound(since, end=False),
-                    until=memory.bound(until, end=True),
-                )
+            found = await memory.search(
+                query,
+                person=requester,
+                about=requester,
+                since=memory.bound(since, end=False),
+                until=memory.bound(until, end=True),
+            )
         except ToolFailed as failed:
             raise ToolError(str(failed)) from None
         return dict(found)

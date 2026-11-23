@@ -1,7 +1,8 @@
 """The ledger: what was spent, read from the store that projects the journal's `usage.recorded`.
 
-The store is caught up with the journal when it opens and before every reading, so that what is read is exactly
-what the journal holds; emptied (another time zone, a new schema), it is rebuilt from the journal alone. Periods are
+The store is caught up with the journal when it opens, and before a reading once a call was recorded since the last,
+so that what is read is exactly what the journal holds; emptied (another time zone, a new schema), it is rebuilt from
+the journal alone. Periods are
 the household's: "today" starts at its midnight, "this month" on its first.
 """
 
@@ -13,7 +14,7 @@ from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from nestor.core import Component, Money, utc_now
-from nestor.modules.journal import Journal, LogQuery
+from nestor.modules.journal import Journal, LogQuery, Subscription
 from nestor.modules.usage.events import UsageRecorded
 from nestor.modules.usage.ports import Line, UsageStore
 from nestor.modules.usage.types import (
@@ -61,14 +62,27 @@ class Ledger(Component):
         self._zone = ZoneInfo(timezone)
         self._clock = clock
         self._lock = asyncio.Lock()
+        self._recorded: Subscription | None = None  # the calls recorded since the store last caught up
+        self._opened = False
 
     async def start(self) -> None:
+        self._recorded = self.journal.subscribe(UsageRecorded)  # before catching up: no call slips in between
         await self.store.open(self.timezone)
         await self.catch_up()
+        self._opened = True
+
+    async def close(self) -> None:
+        if self._recorded is not None:
+            self._recorded.close()
+            self._recorded = None
 
     async def catch_up(self) -> int:
-        """Bring the store up to the journal; how many calls it added."""
+        """Bring the store up to the journal, if a call was recorded since it last did (or it never did); how many
+        calls it added."""
         async with self._lock:
+            recorded = self._recorded.drain() if self._recorded is not None else []
+            if self._opened and not recorded:
+                return 0
             added, after = 0, await self.store.position()
             while entries := await self.journal.log.read(LogQuery(types=RECORDED, after=after, limit=PAGE)):
                 lines = [Line(e.position, call) for e in entries if isinstance(call := e.event(), UsageRecorded)]

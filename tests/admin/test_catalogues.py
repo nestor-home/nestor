@@ -105,7 +105,11 @@ def sample(hint: Any, *, sparse: bool) -> Any:
     if origin is tuple:
         return () if sparse else (sample(args[0], sparse=sparse),)
     if origin in (dict, Mapping, typing.Mapping):
-        return {} if sparse else {"room": "salon"}
+        if sparse:
+            return {}
+        key, value = args or (str, object)
+        keyed = isinstance(key, type) and issubclass(key, Enum)  # a call's units, by `Unit`
+        return {sample(key, sparse=False): sample(value, sparse=False)} if keyed else {"room": "salon"}
     if hint is Message:
         return Message.of("delivery-in-room", person="Mathis", room="salon")
     if isinstance(hint, type) and issubclass(hint, Enum):

@@ -143,7 +143,7 @@ class SQLiteUsageStore(UsageStore):
             call.served, call.cost_nusd, call.basis.value, call.price, call.duration_ms, call.outcome.value,
             call.purpose.value, call.person, call.channel, call.medium.value if call.medium else None,
             call.conversation, call.turn, call.origin,
-            *(units.get(u.value, 0) for u in UNITS),
+            *(units.get(u, 0) for u in UNITS),
             local.strftime(FORMAT[Interval.HOUR]), local.strftime(FORMAT[Interval.DAY]), monday.isoformat(),
             local.strftime(FORMAT[Interval.MONTH]),
         )  # fmt: skip
@@ -180,7 +180,7 @@ def _start(bucket: str, every: Interval, zone: ZoneInfo) -> datetime:
 
 def _line(row: Sequence[Any]) -> Line:
     fields: Mapping[str, Any] = dict(zip(FIELDS, row[: len(FIELDS)], strict=True))
-    units = {u.value: q for u, q in zip(UNITS, row[len(FIELDS) :], strict=True) if q}
+    units = {u: q for u, q in zip(UNITS, row[len(FIELDS) :], strict=True) if q}
     call = UsageRecorded(
         source="usage",
         id=fields["id"],

@@ -11,6 +11,7 @@ from nestor.mcp_server.links import Links
 from nestor.modules.cognition.delegation.service import Task
 from nestor.modules.conversation import NotificationTurn, UserTurn
 from nestor.modules.conversation.history import in_conversation
+from nestor.modules.usage import CallPurpose, attribute
 from nestor.runtime import Nestor
 
 SCOPE_KEY = "nestor.executor"  # the executor a request's key belongs to, set by `guard` before the MCP app sees it
@@ -24,12 +25,20 @@ class TaskAccess:
         self._since: dict[str, datetime] = {}  # by running task: when its conversation started, read once
 
     async def task(self, ctx: Context, task: str, tool: str) -> Task:
-        """The running task of the calling executor whose capability is `task`; the call journaled either way."""
+        """The running task of the calling executor whose capability is `task`; the call journaled either way. What
+        the tool then asks of the models is the task's, on behalf of whoever asked for it."""
         request = ctx.request_context.request
         assert request is not None  # served over HTTP, behind `guard`, which named the executor
         found = await self.nestor.tasks.admit(request.scope[SCOPE_KEY], task, tool)
         if found is None:
             raise ToolError(REFUSED)
+        attribute(  # the tool's own call: every tool starts here
+            purpose=CallPurpose.TASK,
+            person=found.requested_by,
+            channel=found.origin.channel,
+            session=found.origin.session,
+            origin=f"task:{found.id}",
+        )
         return found
 
     def requester(self, task: Task) -> PersonId:

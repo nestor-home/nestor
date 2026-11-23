@@ -33,7 +33,8 @@ def attributed(**said: Any) -> Generator[Attribution]:
         _CURRENT.reset(token)
 
 
-def attribute(**said: Any) -> None:
-    """For the rest of the task in progress, what it learns of itself as it goes (who spoke, once known). Only for a
-    task that is that work and nothing else: an answer's own worker, never a loop that serves many."""
-    _CURRENT.set(replace(attribution(), **said))
+def attribute(work: Attribution | None = None, **said: Any) -> None:
+    """For the rest of the task in progress: `work` (by default the current one) with `said` set over it, as the
+    task learns of itself (who spoke, once known). Only for a task that is that work and nothing else: an answer's
+    own worker, a request's handler, never a loop that serves many."""
+    _CURRENT.set(replace(work or attribution(), **said))

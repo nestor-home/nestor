@@ -45,7 +45,7 @@ async def test_a_call_is_recorded_on_behalf_of_whoever_made_it_priced_and_timed(
         with attributed(purpose=CallPurpose.TURN, person="lea", channel="telegram", medium=Medium.WRITTEN, turn="t1"):
             await drawer.generate("Un galet noir")
     (call,) = await recorded(journal)
-    assert (call.consumer, call.kind, call.served, call.units) == ("drawer", "image", "gpt-image-1", {"images": 1})
+    assert (call.consumer, call.kind, call.served, call.units) == ("drawer", "image", "gpt-image-1", {Unit.IMAGES: 1})
     assert (call.cost_nusd, call.basis, call.price, call.outcome) == (
         Money.usd("0.04").nusd,
         CostBasis.PRICED,
@@ -72,7 +72,7 @@ async def test_an_answer_cut_short_is_recorded_as_cut_with_what_it_had_consumed(
         await stream.aclose()  # barge-in
     (call,) = await recorded(journal)
     assert (call.outcome, call.purpose, call.person) == (Outcome.CANCELLED, CallPurpose.TURN, "mathis")
-    assert call.units["input_tokens"] > 0
+    assert call.units[Unit.INPUT_TOKENS] > 0
 
 
 async def test_a_failed_call_is_recorded_as_failed_and_the_failure_still_reaches_the_caller() -> None:

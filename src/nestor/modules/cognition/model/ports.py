@@ -25,6 +25,7 @@ class LanguageModel(Model, ABC):
     """
 
     type = ModelType.LANGUAGE
+    MIRRORED = (*Model.MIRRORED, "vision", "reads", "document_pages")
     vision: bool = False  # whether it looks at the images of a message
     reads: frozenset[str] = frozenset()  # the media types of the documents it reads whole (a PDF), not as text
     document_pages: int | None = None  # the most pages of a document it reads whole; `None`: no limit

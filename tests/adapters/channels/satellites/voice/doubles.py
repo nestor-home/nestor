@@ -193,7 +193,7 @@ class FakeAssistant(Assistant):
     def voice_wait_s(self) -> float | None:
         return 0.5 if self._voice else None
 
-    async def hear(self, audio: bytes) -> Heard | None:
+    async def hear(self, address: Address, audio: bytes) -> Heard | None:
         self.heard.append(audio)
         return self._voice
 

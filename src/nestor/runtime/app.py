@@ -168,7 +168,7 @@ class Nestor:
                 key=key,
                 kind=built.type,
                 provider=built.brand or config.models[key].provider,
-                model=_asked(config.models[key]),
+                model=built.details().get("model"),  # to price it when its provider names none
                 local=built.local,
             )
             for key, built in self.models.items()
@@ -624,12 +624,6 @@ def chosen[M: Model](models: Mapping[str, Model], key: str, wanted: type[M], pat
         code, why = _REFUSED[wanted.type]
         raise ConfigError(f"{where}: {key} {why}", path=path, code=code, detail=key)
     return found
-
-
-def _asked(profile: ModelConfig) -> str | None:
-    """The model a profile's settings name (`model`), to price it when its provider names none."""
-    asked = profile.settings().get("model")
-    return asked if isinstance(asked, str) and asked else None
 
 
 def build_models(

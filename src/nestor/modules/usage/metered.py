@@ -24,7 +24,8 @@ class Counted[M: Model]:
 
     def __init__(self, model: M, consumer: Consumer, meter: Meter) -> None:
         self.model, self.consumer, self.meter = model, consumer, meter
-        self.name, self.brand, self.local = model.name, model.brand, model.local
+        if isinstance(self, Model):  # every counted model is also one of its type (`CountedLanguage`…)
+            self.mirror(model)
 
     @contextmanager
     def counting(self) -> Generator[None]:
@@ -46,10 +47,6 @@ class Counted[M: Model]:
 
 
 class CountedLanguage(Counted[LanguageModel], LanguageModel):
-    def __init__(self, model: LanguageModel, consumer: Consumer, meter: Meter) -> None:
-        super().__init__(model, consumer, meter)
-        self.vision, self.reads, self.document_pages = model.vision, model.reads, model.document_pages
-
     def stream(self, request: ModelRequest) -> AsyncGenerator[ModelOutput]:
         return self._stream(request, attribution())  # on behalf of whoever asks, whoever reads
 
@@ -74,10 +71,6 @@ class CountedEmbedding(Counted[EmbeddingModel], EmbeddingModel):
 
 
 class CountedSpeaker(Counted[SpeakerModel], SpeakerModel):
-    def __init__(self, model: SpeakerModel, consumer: Consumer, meter: Meter) -> None:
-        super().__init__(model, consumer, meter)
-        self.sample_rate = model.sample_rate
-
     @property
     def space(self) -> VoiceSpace:
         return self.model.space

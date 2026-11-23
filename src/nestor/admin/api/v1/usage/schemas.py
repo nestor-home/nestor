@@ -183,7 +183,7 @@ class CallOut(BaseModel):
             **{f: getattr(call, f) for f in cls.model_fields if f not in ("position", "person", "units")},
             position=line.position,
             person=people.ref(call.person),
-            units={Unit(u): q for u, q in call.units.items()},
+            units=dict(call.units),
         )
 
 

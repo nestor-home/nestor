@@ -37,9 +37,10 @@ def sample(hint: Any) -> Any:
         return (sample(args[0]),)
     if origin in (dict, typing.Mapping, __import__("collections.abc").abc.Mapping):
         value = getattr(args[1], "__value__", args[1]) if args else Any  # a `type` alias: what it stands for
+        key = sample(args[0]) if args and args[0] is not str else "pièce"  # an enum's member, as keys go
         if value in (Any, object):
-            return {"pièce": "salon", "niveaux": [1, 2]}
-        return {"pièce": sample(value)}  # typed values: a message's arguments
+            return {key: "salon", "niveaux": [1, 2]}
+        return {key: sample(value)}  # typed values: a message's arguments, a call's units
     if isinstance(hint, type) and issubclass(hint, enum.Enum):
         return list(hint)[-1]
     if dataclasses.is_dataclass(hint):

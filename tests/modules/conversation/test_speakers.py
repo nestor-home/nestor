@@ -70,7 +70,7 @@ async def test_a_recognised_voice_says_who_speaks_and_is_learned_a_little_more(m
     voices = await voices_of(journal, "lea")
     found = speakers(journal, voices)
     agent = make_agent("Oui Léa.", household=HOME, speakers=found)
-    heard = await agent.hear(tagged("lea", take=1))
+    heard = await agent.hear(VOICE, tagged("lea", take=1))
     await agent.respond(message("C'est quoi mon programme ?", VOICE, heard=heard)).collect()
     await found.close()  # the learning runs in the background
     [speaker] = await turns(journal)
@@ -188,7 +188,7 @@ async def test_a_voice_is_recorded_aloud_on_a_satellite_phrase_by_phrase(journal
 async def test_without_voices_there_is_nothing_to_record_or_hear(make_agent: MakeAgent, journal) -> None:
     agent = make_agent(household=HOME, speakers=speakers(journal))
     assert [t.name for t in agent.speakers.tools()] == ["speaker_is"]
-    assert await agent.hear(tagged("lea")) is None and agent.voice_wait_s is None
+    assert await agent.hear(VOICE, tagged("lea")) is None and agent.voice_wait_s is None
     assert await agent.speakers.enrolling(message("Nestor", VOICE)) is None
 
 

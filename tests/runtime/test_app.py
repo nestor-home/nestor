@@ -16,7 +16,7 @@ import pytest
 
 from nestor.core import Component, ContractError, Money, Unit
 from nestor.modules.channels import Address, Medium, TranscriptionModel
-from nestor.modules.cognition import FallingBack, Outcome, TaskDelivered
+from nestor.modules.cognition import FallingBack, Outcome, TaskDelivered, TaskStarted
 from nestor.modules.cognition.model import ModelRequest, ToolCall
 from nestor.modules.cognition.tools import Tool, ToolProvider
 from nestor.modules.conversation import AssistantTurn
@@ -75,7 +75,7 @@ async def test_what_a_message_costs_is_in_the_ledger_on_behalf_of_who_sent_it(tm
         turn.exchange.conversation_id,
         turn.exchange.turn_id,
     )
-    read, written = call.units[Unit.INPUT_TOKENS.value], call.units[Unit.OUTPUT_TOKENS.value]
+    read, written = call.units[Unit.INPUT_TOKENS], call.units[Unit.OUTPUT_TOKENS]
     assert written == 2, "the scripted model counts a word a token"
     cost = Decimal(str(read)) * Decimal("0.000001") + Decimal(written) * Decimal("0.000005")
     assert (call.cost_nusd, call.basis, call.price) == (Money.usd(cost).nusd, CostBasis.PRICED, "config")
@@ -100,7 +100,12 @@ async def test_a_task_started_before_a_restart_is_delivered_after_it(tmp_path: P
         delivered = restarted.journal.subscribe(TaskDelivered)
         if not await restarted.journal.history(TaskDelivered):
             await delivered.next(timeout_s=2)
+        told = [line.call for line in await restarted.ledger.lines(UsageFilter())]
+        (started,) = await restarted.journal.history(TaskStarted)
     assert fakes.channels[-1].sent[0][1] == "Ton analyse est finie : tout est vert."
+    assert {(c.purpose, c.person, c.origin) for c in told if c.purpose is CallPurpose.NOTIFICATION} == {
+        (CallPurpose.NOTIFICATION, "mathis", f"task:{started.task_id}")
+    }, "telling the result is counted for whom it is, as the task's"
 
 
 def test_an_unknown_adapter_kind_lists_what_is_installed(tmp_path: Path) -> None:

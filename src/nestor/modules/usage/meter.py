@@ -88,7 +88,7 @@ class Meter(Component):
                 kind=consumer.kind,
                 provider=consumer.provider,
                 served=usage.served,
-                units={u.value: q for u, q in usage.units.items()},
+                units=usage.units,
                 cost_nusd=priced.cost.nusd if priced.cost is not None else None,
                 basis=priced.basis,
                 price=priced.source,

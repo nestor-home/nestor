@@ -56,7 +56,7 @@ class VoiceSession:
         """`body` is animated in sync with the played audio; `shown` receives what is said, to show it."""
         self.address = address
         played = PlayedText()
-        listener = VoiceListener(assistant) if assistant.voice_wait_s else None
+        listener = VoiceListener(assistant, address) if assistant.voice_wait_s else None
         self._bridge = AssistantBridge(
             assistant, address=address, played=played, listener=listener, quiet_s=settings.quiet_s, shown=shown
         )

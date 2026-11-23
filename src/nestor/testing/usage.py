@@ -47,7 +47,7 @@ def line(position: int, at: datetime, *, cost: int | None = 1_000_000, **given: 
         "kind": ModelType.LANGUAGE,
         "provider": "openrouter",
         "served": "anthropic/claude-haiku-4.5",
-        "units": {Unit.INPUT_TOKENS.value: 1000, Unit.OUTPUT_TOKENS.value: 100},
+        "units": {Unit.INPUT_TOKENS: 1000, Unit.OUTPUT_TOKENS: 100},
         "cost_nusd": cost,
         "basis": CostBasis.REPORTED if cost is not None else CostBasis.UNKNOWN,
         "price": None,

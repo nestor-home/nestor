@@ -18,6 +18,7 @@ from pipecat.tests.utils import SleepFrame, run_test
 
 from nestor.adapters.channels.satellites.voice.listener import VoiceListener
 from nestor.core import PersonId
+from nestor.modules.channels import Address
 from nestor.modules.identity import Heard
 from nestor.testing.channels import ScriptedAssistant
 
@@ -51,7 +52,7 @@ def speech(seconds: float) -> list[Frame]:
 
 
 async def heard_after(frames: list[Frame], assistant: ScriptedAssistant, wait_s: float = 0.5) -> Heard | None:
-    listener = VoiceListener(assistant)
+    listener = VoiceListener(assistant, Address("satellites", "salon"))
     found: list[Heard | None] = []
 
     class Turn(FrameProcessor):
@@ -83,7 +84,7 @@ async def test_an_acknowledgement_before_the_turn_is_not_part_of_it() -> None:
 
 async def test_a_recognition_too_slow_is_not_waited_for() -> None:
     class Slow(ScriptedAssistant):
-        async def hear(self, audio: bytes) -> Heard | None:
+        async def hear(self, address: Address, audio: bytes) -> Heard | None:
             await asyncio.sleep(1)
             return LEA
 

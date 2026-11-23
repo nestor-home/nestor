@@ -2,7 +2,7 @@
 
 from collections.abc import Mapping
 
-from nestor.core import Event, ModelType, PersonId
+from nestor.core import Event, ModelType, PersonId, Unit
 from nestor.modules.channels import Medium
 from nestor.modules.usage.types import CallPurpose, CostBasis, Outcome
 
@@ -15,7 +15,7 @@ class UsageRecorded(Event, event_type="usage.recorded"):
     kind: ModelType
     provider: str  # who bills it
     served: str | None  # the model that answered, as the provider names it
-    units: Mapping[str, float]  # by `Unit` (the codec keeps a mapping's keys as text)
+    units: Mapping[Unit, float]
     cost_nusd: int | None  # nano-dollars; none when unknown
     basis: CostBasis
     price: str | None  # where the price came from, for a cost `priced`: `config`, `catalogue:<date>`

@@ -26,6 +26,17 @@ class Subscription:
         self._journal.unsubscribe(self)
         self.push(None)
 
+    def drain(self) -> list[Event]:
+        """The events published since the last read, taken without waiting (none once closed)."""
+        events: list[Event] = []
+        while not self._queue.empty():
+            event = self._queue.get_nowait()
+            if event is None:
+                self.push(None)  # stay closed
+                break
+            events.append(event)
+        return events
+
     async def __aiter__(self) -> AsyncIterator[Event]:
         while True:
             try:

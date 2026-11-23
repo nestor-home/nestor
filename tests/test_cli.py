@@ -12,7 +12,7 @@ import pytest
 from nestor.adapters.storage.sqlite import SQLiteDatabase, SQLiteEventLog
 from nestor.admin import AdminServer, AdminSettings
 from nestor.cli import main
-from nestor.core import Capability, ModelType
+from nestor.core import Capability, ModelType, Unit
 from nestor.modules.journal import Journal
 from nestor.modules.satellites import Device, Manifest
 from nestor.modules.satellites.types import DeclaredCapability
@@ -275,7 +275,7 @@ def test_what_nestor_cost_is_read_from_the_data_folder_by_what_one_asks(
                         kind=ModelType.LANGUAGE,
                         provider="openrouter",
                         served=None,
-                        units={"input_tokens": 1000},
+                        units={Unit.INPUT_TOKENS: 1000},
                         cost_nusd=cost,
                         basis=CostBasis.REPORTED,
                         price="reported",

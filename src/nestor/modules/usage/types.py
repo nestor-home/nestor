@@ -1,6 +1,5 @@
 """Values of usage: who consumes, why, how a cost was found, and what is asked of the ledger."""
 
-import math
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -9,6 +8,7 @@ from enum import StrEnum
 
 from nestor.core import ModelType, Money, PersonId, SessionId, Unit
 from nestor.modules.channels import Medium
+from nestor.modules.cognition.tools.types import ToolContext
 
 
 class CallPurpose(StrEnum):
@@ -56,12 +56,11 @@ PRICED_PER: Mapping[Unit, int] = {
 ZERO = Money(0)
 
 
-def shown(amount: Money) -> str:
-    """An amount as people read it: to the cent, and below a cent to two significant digits, so that a small call
-    stays visible (`$0.0012`)."""
+def usd(name: str, amount: Money) -> dict[str, float | str]:
+    """An amount as the messages take it, for Fluent to write in the reader's language: its dollars (`name`), and
+    whether it is under a cent (`<name>_small`), then written to two significant digits ($0.0042)."""
     dollars = amount.dollars
-    places = 2 if dollars >= Decimal("0.01") or not dollars else 1 - math.floor(math.log10(dollars))
-    return f"${dollars:,.{places}f}"
+    return {name: float(dollars), f"{name}_small": "yes" if 0 < dollars < Decimal("0.01") else "no"}
 
 
 _INPUT_PARTS = (Unit.CACHED_INPUT_TOKENS, Unit.CACHE_WRITE_TOKENS)  # counted in the input, priced apart when they can
@@ -126,6 +125,24 @@ class Attribution:
     conversation: str | None = None
     turn: str | None = None
     origin: str | None = None  # what the work comes from: `watch:<id>`, `schedule:<id>`, `task:<id>`
+
+    @classmethod
+    def of(
+        cls, context: ToolContext, medium: Medium, *, conversation: str | None = None, origin: str | None = None
+    ) -> "Attribution":
+        """A turn's work, as its tools see it: a person's (`asked`) or Nestor's own telling, who it is for, where,
+        and the conversation and turn it belongs to (`conversation` before the turn is opened)."""
+        exchange = context.exchange
+        return cls(
+            purpose=CallPurpose.TURN if context.asked else CallPurpose.NOTIFICATION,
+            person=context.person,
+            channel=context.address.channel,
+            medium=medium,
+            session=context.address.session,
+            conversation=exchange.conversation_id if exchange else conversation,
+            turn=exchange.turn_id if exchange else None,
+            origin=origin,
+        )
 
 
 class Dimension(StrEnum):

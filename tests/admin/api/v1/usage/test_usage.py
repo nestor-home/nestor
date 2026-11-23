@@ -4,7 +4,7 @@ member reads what their own requests cost and nothing else."""
 from datetime import timedelta
 from pathlib import Path
 
-from nestor.core import ModelType, PersonId, utc_now
+from nestor.core import ModelType, PersonId, Unit, utc_now
 from nestor.modules.accounts import Role
 from nestor.modules.usage import CallPurpose, CostBasis, Outcome, UsageRecorded
 
@@ -23,7 +23,7 @@ def call(
         kind=ModelType.LANGUAGE,
         provider="openrouter",
         served="anthropic/claude-haiku-4.5",
-        units={"input_tokens": 1000, "output_tokens": 50},
+        units={Unit.INPUT_TOKENS: 1000, Unit.OUTPUT_TOKENS: 50},
         cost_nusd=cost,
         basis=CostBasis.REPORTED if cost is not None else CostBasis.UNKNOWN,
         price="reported" if cost is not None else None,

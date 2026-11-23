@@ -23,6 +23,7 @@ class SpeakerModel(Model, ABC):
     """
 
     type = ModelType.SPEAKER
+    MIRRORED = (*Model.MIRRORED, "sample_rate")
     sample_rate: int = 16000
 
     @property

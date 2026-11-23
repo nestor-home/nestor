@@ -37,7 +37,7 @@ from nestor.init import (
 from nestor.modules.accounts import Role
 from nestor.modules.satellites import PairingMethod
 from nestor.modules.satellites.wire import SCHEMAS, write_schemas
-from nestor.modules.usage import Dimension, Period, Totals, shown
+from nestor.modules.usage import Dimension, Period, Totals, usd
 from nestor.runtime.app import Nestor, open_accounts, open_ledger, run_until_stopped
 from nestor.runtime.config import ENV_FILE, SECRET_KEY, NestorConfig, environment, load_config
 from nestor.runtime.secrets import ConfigFile, open_secrets, preview
@@ -360,7 +360,7 @@ async def _usage(config: NestorConfig, period: Period, by: Dimension, words: "_W
         summary = await ledger.summary(span, {})
         groups = await ledger.groups(span.keeping({}), by)
     print(words("usage-total", period=period.name.lower(), **_spent(summary.totals)))  # a Fluent key: no digit first
-    print(words("usage-month", spent=shown(summary.month.cost), projected=shown(summary.projected_month)))
+    print(words("usage-month", **usd("spent", summary.month.cost), **usd("projected", summary.projected_month)))
     if groups:
         print(words("usage-by", dimension=by.value))
     width = max((len(g.key or "-") for g in groups), default=0)
@@ -369,8 +369,8 @@ async def _usage(config: NestorConfig, period: Period, by: Dimension, words: "_W
     return 0
 
 
-def _spent(totals: Totals) -> dict[str, str | int]:
-    return {"spent": shown(totals.cost), "calls": totals.calls, "unknown": totals.unknown}
+def _spent(totals: Totals) -> dict[str, str | int | float]:
+    return {**usd("spent", totals.cost), "calls": totals.calls, "unknown": totals.unknown}
 
 
 class _Words:

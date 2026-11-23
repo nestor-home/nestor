@@ -33,7 +33,7 @@ from nestor.modules.usage.types import (
     Span,
     Totals,
     UsageFilter,
-    shown,
+    usd,
 )
 
 __all__ = [
@@ -68,5 +68,5 @@ __all__ = [
     "attributed",
     "attribution",
     "metered",
-    "shown",
+    "usd",
 ]

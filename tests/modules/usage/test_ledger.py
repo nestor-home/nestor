@@ -5,7 +5,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from nestor.adapters.storage.sqlite import SQLiteDatabase, SQLiteEventLog, SQLiteUsageStore
-from nestor.core import ModelType, Money
+from nestor.core import ModelType, Money, Unit
 from nestor.modules.journal import Journal
 from nestor.modules.usage import (
     CallPurpose,
@@ -30,7 +30,7 @@ def call(at: datetime, cost: int | None, person: str | None = "mathis") -> Usage
         kind=ModelType.LANGUAGE,
         provider="openrouter",
         served=None,
-        units={"input_tokens": 1000},
+        units={Unit.INPUT_TOKENS: 1000},
         cost_nusd=cost,
         basis=CostBasis.REPORTED if cost is not None else CostBasis.UNKNOWN,
         price=None,
@@ -46,6 +46,7 @@ async def test_what_is_published_is_read_at_once_and_a_lost_ledger_is_rebuilt_fr
     journal = Journal(SQLiteEventLog(database))
     async with database:
         async with Ledger(journal, SQLiteUsageStore(database), "Europe/Paris") as ledger:
+            assert await ledger.lines(UsageFilter()) == [], "read once, caught up: the next reading skips the journal"
             await journal.publish(call(NOW, 4_000_000))
             await journal.publish(call(NOW, None, person=None))
             assert [(g.key, g.totals.calls) for g in await ledger.groups(UsageFilter(), Dimension.PERSON)] == [

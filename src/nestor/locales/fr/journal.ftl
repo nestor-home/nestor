@@ -341,5 +341,8 @@ journal-system-update-requested = Mise à jour de { $running } vers { $target } 
    *[admin] par { $login }
 }
 journal-system-update-failed = Échec de l'installation de { $target } : Nestor reste sur sa version
-journal-usage-recorded = { $consumer } pour { usage-purpose } : { $cost }
+journal-usage-recorded = { $consumer } pour { usage-purpose } : { $cost_small ->
+        [yes] { NUMBER($cost, style: "currency", currency: "USD", maximumSignificantDigits: 2) }
+       *[no] { NUMBER($cost, style: "currency", currency: "USD") }
+    }
 journal-usage-unknown = { $consumer } pour { usage-purpose } : coût inconnu

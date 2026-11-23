@@ -20,7 +20,7 @@ from pipecat.frames.frames import (
 )
 from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
 
-from nestor.modules.channels import Assistant
+from nestor.modules.channels import Address, Assistant
 from nestor.modules.identity import Heard
 
 KEEP_S = 30.0  # of microphone audio: longer than any turn worth recognising
@@ -28,9 +28,9 @@ PAD_S = 0.15  # around what the detector found: the first and last syllables are
 
 
 class VoiceListener(FrameProcessor):
-    def __init__(self, assistant: Assistant, *, keep_s: float = KEEP_S, pad_s: float = PAD_S) -> None:
+    def __init__(self, assistant: Assistant, address: Address, *, keep_s: float = KEEP_S, pad_s: float = PAD_S) -> None:
         super().__init__()
-        self._assistant = assistant
+        self._assistant, self._address = assistant, address
         self._keep_s, self._pad_s = keep_s, pad_s
         self._audio: deque[tuple[float, bytes]] = deque()  # (when each chunk ended, wall clock), oldest first
         self._open: float | None = None  # when the speech being heard started
@@ -82,4 +82,4 @@ class VoiceListener(FrameProcessor):
         if self._hearing is not None:
             self._hearing.cancel()
         speech = b"".join(audio for ended, audio in self._audio if any(a <= ended <= b + 0.1 for a, b in self._spans))
-        self._hearing = self.create_task(self._assistant.hear(speech)) if speech else None
+        self._hearing = self.create_task(self._assistant.hear(self._address, speech)) if speech else None
