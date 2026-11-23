@@ -1,8 +1,8 @@
 /** TanStack Query keys and options: screens ask for data through these, never through `api` directly. */
-import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
+import { infiniteQueryOptions, keepPreviousData, queryOptions } from "@tanstack/react-query";
 import { setCsrfToken } from "./client";
 import { api } from "./resources";
-import type { Id, JournalFilters, MemoryQuery } from "./types";
+import type { Id, JournalFilters, MemoryQuery, UsageDimension, UsageFilters, UsageInterval } from "./types";
 
 export const keys = {
   me: ["me"] as const,
@@ -46,6 +46,8 @@ export const keys = {
   chats: ["chats"] as const,
   chat: (id: Id) => ["chats", id] as const,
   mentions: ["chats", "mentions"] as const,
+  usage: (part: string, query: object) => ["usage", part, query] as const,
+  usagePrices: ["usage", "prices"] as const,
 };
 
 export const meQuery = queryOptions({
@@ -187,3 +189,36 @@ export const configHistoryQuery = queryOptions({ queryKey: keys.configHistory, q
 export const configVersionQuery = (id: Id) =>
   queryOptions({ queryKey: keys.configVersion(id), queryFn: () => api.configVersion(id) });
 export const secretsQuery = queryOptions({ queryKey: keys.secrets, queryFn: api.secrets });
+
+// -- what Nestor costs: a reading keeps the previous answer while the next loads, so the charts hold their frame
+
+export const usageSummaryQuery = (query: UsageFilters) =>
+  queryOptions({
+    queryKey: keys.usage("summary", query),
+    queryFn: () => api.usageSummary(query),
+    placeholderData: keepPreviousData,
+  });
+export const usageSeriesQuery = (query: UsageFilters & { every: UsageInterval; by?: UsageDimension | null }) =>
+  queryOptions({
+    queryKey: keys.usage("series", query),
+    queryFn: () => api.usageSeries(query),
+    placeholderData: keepPreviousData,
+  });
+export const usageGroupsQuery = (query: UsageFilters & { by: UsageDimension; limit?: number }) =>
+  queryOptions({
+    queryKey: keys.usage("groups", query),
+    queryFn: () => api.usageGroups(query),
+    placeholderData: keepPreviousData,
+  });
+export const usageCallsQuery = (query: UsageFilters) =>
+  infiniteQueryOptions({
+    queryKey: keys.usage("calls", query),
+    queryFn: ({ pageParam }) => api.usageCalls({ ...query, before: pageParam, limit: 15 }),
+    initialPageParam: null as number | null,
+    getNextPageParam: (page) => page.before,
+  });
+export const usagePricesQuery = queryOptions({
+  queryKey: keys.usagePrices,
+  queryFn: api.usagePrices,
+  staleTime: 300_000,
+});

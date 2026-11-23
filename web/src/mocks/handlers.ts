@@ -27,6 +27,7 @@ import { inFrench } from "./french";
 import { brought } from "./instance";
 import { facets, filtersOf, matching } from "./journal";
 import { catalogueOf, type Draft, errorText, type Lang, localize, render, toItem } from "./messages";
+import * as usage from "./usage";
 
 type In<N extends keyof components["schemas"]> = components["schemas"][N];
 
@@ -96,6 +97,17 @@ function file(kind: In<"AttachmentKind">): Response {
 }
 
 const signedIn = () => db.accounts.find((a) => a.id === db.signedIn) ?? null;
+
+/** Every call of the ledger, made once: four months of them. */
+let ledger: usage.MockCall[] | null = null;
+const calls = () => {
+  ledger ??= usage.mockCalls();
+  return ledger;
+};
+
+/** Whose calls the signed-in account reads: every one's (`undefined`), or only their person's. */
+const ownUsage = (): string | null | undefined =>
+  scopes().includes("usage.read.all") ? undefined : (signedIn()?.person?.id ?? null);
 const scopes = () => {
   const account = signedIn();
   return account ? SCOPES[account.role] : [];
@@ -1323,6 +1335,54 @@ export const handlers = [
     db.watches = db.watches.filter((w) => w.id !== params.id);
     save();
     return noContent();
+  }),
+
+  // what Richie costs: the ledger, read as the server reads it
+  http.get(`${API}/usage/summary`, ({ request }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    return json(usage.summary(calls(), new URL(request.url).searchParams, ownUsage()) satisfies In<"SummaryOut">);
+  }),
+
+  http.get(`${API}/usage/series`, ({ request }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    const query = new URL(request.url).searchParams;
+    const every = (query.get("every") ?? "day") as In<"Interval">;
+    const by = (query.get("by") || null) as In<"Dimension"> | null;
+    const { kept } = usage.filtered(calls(), query, ownUsage());
+    return json({ every, by, timezone: "UTC", points: usage.series(kept, every, by) } satisfies In<"SeriesOut">);
+  }),
+
+  http.get(`${API}/usage/groups`, ({ request }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    const query = new URL(request.url).searchParams;
+    const by = (query.get("by") ?? "consumer") as In<"Dimension">;
+    const limit = Number(query.get("limit")) || undefined;
+    const { kept } = usage.filtered(calls(), query, ownUsage());
+    return json({ by, groups: usage.groups(kept, by).slice(0, limit) } satisfies In<"GroupsOut">);
+  }),
+
+  http.get(`${API}/usage/calls`, ({ request }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    const query = new URL(request.url).searchParams;
+    const before = Number(query.get("before")) || Number.POSITIVE_INFINITY;
+    const limit = Number(query.get("limit")) || 50;
+    const { kept } = usage.filtered(calls(), query, ownUsage());
+    const page = kept
+      .filter((c) => c.position < before)
+      .reverse()
+      .slice(0, limit);
+    const more = page.length === limit;
+    return json({ calls: page, before: more ? (page.at(-1)?.position ?? null) : null } satisfies In<"CallsOut">);
+  }),
+
+  http.get(`${API}/usage/prices`, ({ request }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    return json(usage.PRICES satisfies In<"PricesOut">);
   }),
 
   http.get(`${API}/schedules`, ({ request }) => {

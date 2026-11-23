@@ -42,6 +42,16 @@
   --kind-task: light-dark(#4a5a7c, #9fb0d4);
   --kind-watch: light-dark(#7a4a68, #cf9dbd);
 
+  /* the series of a chart, in this order and never cycled (a seventh is "other", --rule-strong): ember leads.
+     Each step was checked with the dataviz validator against --paper-raised in both themes (lightness band,
+     chroma, colour-blind and normal-vision separation of neighbours, 3:1 contrast). */
+  --series-1: light-dark(#c0532c, #d4683e);
+  --series-2: light-dark(#4a68b0, #6585d4);
+  --series-3: light-dark(#14917a, #1f9e80);
+  --series-4: light-dark(#b07d10, #bb8a1e);
+  --series-5: light-dark(#93518a, #b465ac);
+  --series-6: light-dark(#5f7f2e, #76983c);
+
   /* fixed, whatever the scheme: the daylight paper and ink that stay so inside the dark rail and the night sky,
      and the rail's night */
   --day-paper: #f5f0e6;

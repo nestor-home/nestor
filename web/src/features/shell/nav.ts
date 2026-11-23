@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   BookMarked,
+  Coins,
   House,
   KeyRound,
   ListChecks,
@@ -30,7 +31,8 @@ export interface Destination {
     | "/satellites"
     | "/accounts"
     | "/config"
-    | "/system";
+    | "/system"
+    | "/usage";
   label: string; // a message id of shell.ftl
   icon: LucideIcon;
   any: Permission[];
@@ -64,6 +66,7 @@ const INSTALLATION: Destination[] = [
   { to: "/accounts", label: "nav-accounts", icon: KeyRound, any: ["accounts:read"], key: "a" },
   { to: "/config", label: "nav-config", icon: SlidersHorizontal, any: ["config:manage"], key: "f" },
   { to: "/system", label: "nav-system", icon: Server, any: ["system:read"], key: "y" },
+  { to: "/usage", label: "nav-usage", icon: Coins, any: ["usage:read"], key: "u" },
 ];
 
 export const SPACES: Space[] = [

@@ -255,6 +255,12 @@ The admin is built around what the household does, not around the server's modul
   is live or the agent's, sage, amber and brick for states, `--radius-surface` for surfaces and the small
   radius for controls. The rail and the sky of the Today scene set their own `color-scheme`, so the tokens
   resolve dark inside them whatever the theme.
+- **Charts** are drawn in SVG by the pieces of `features/usage/charts.tsx` (stacked columns, ranked bars, hour by
+  day, sparkline, segmented bar), never a chart library: thin marks, a 2px gap of paper between touching marks,
+  hairline grids, text in ink, a tooltip on every mark that the page repeats elsewhere, and the series colours
+  `--series-1…6` in that order (each validated in both themes; a seventh value is "other", `--rule-strong`). A colour
+  follows its value whatever the filters: people and models in the configuration's order, the server's values in
+  their enum's.
 - **Phone first.** Every screen is laid out for 375 px, then widened: grids go from one column up, a row of
   actions wraps, a sheet takes the screen from below. Nothing scrolls sideways but a row of `Chips`.
 

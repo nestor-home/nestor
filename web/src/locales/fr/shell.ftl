@@ -6,6 +6,7 @@ nav-memories = Souvenirs
 nav-connections = Connexions
 nav-satellites = Satellites
 nav-system = Système
+nav-usage = Coûts
 nav-accounts = Comptes
 nav-config = Configuration
 
@@ -81,6 +82,8 @@ set-accounts-count = { $count ->
    *[other] { $count } comptes
 }
 set-config = Modèles, voix, canaux, maison : tout ce qui règle { $assistant }.
+set-usage = Ce que coûte chaque modèle, pour qui et pour quoi.
+set-usage-month = { $spent } ce mois-ci
 set-system = L'état de chaque composant, les mises à jour, le redémarrage.
 shell-space-waiting = { $space }, { $count ->
     [one] une demande vous attend
