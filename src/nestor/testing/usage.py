@@ -139,6 +139,12 @@ class UsageStoreContract:
             hours = await store.series(UsageFilter(), Interval.HOUR)
             assert hours[0].start == datetime(2026, 11, 2, 0, tzinfo=zone)
 
+    async def test_within_a_bucket_of_time_the_costliest_comes_first(self) -> None:
+        async with self.opened() as store:
+            await store.add([line(1, NOV, consumer="alpha", cost=9_000_000), line(2, NOV, consumer="zulu")])
+            (day,) = await store.series(UsageFilter(), Interval.DAY, Dimension.CONSUMER)
+        assert [g.key for g in day.groups] == ["alpha", "zulu"], "by what they cost, not by their names"
+
     async def test_calls_come_newest_first_page_by_page(self) -> None:
         async with self.opened() as store:
             await store.add([line(p, NOV + timedelta(minutes=p)) for p in range(1, 6)])

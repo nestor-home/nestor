@@ -121,7 +121,8 @@ class SQLiteUsageStore(UsageStore):
         order of `order`), in one aggregate."""
         clause, values = _where(where)
         grouped = f" GROUP BY {', '.join(keys)}" if keys else ""
-        ordered = f" ORDER BY {order}, 1 DESC" if order else (" ORDER BY " + f"{len(keys) + 1} DESC" if keys else "")
+        cost = len(keys) + 1  # the column of the cost, after the keys
+        ordered = f" ORDER BY {order}, {cost} DESC" if order else (f" ORDER BY {cost} DESC" if keys else "")
         selected = "".join(f"{k}, " for k in keys)
         sql = f"SELECT {selected}{TOTALS} FROM usage WHERE {clause}{grouped}{ordered}"
         rows = await self.database.read(lambda c: c.execute(sql, values).fetchall())
