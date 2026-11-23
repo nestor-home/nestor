@@ -7,17 +7,18 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from nestor.core import Money, PersonId, Tally, Unit, Usage, counting
+from nestor.core import ModelType, Money, PersonId, Tally, Unit, Usage, counting
 from nestor.modules.channels import Medium
 from nestor.modules.usage import (
+    Beat,
     CallPurpose,
-    ConsumerKind,
     CostBasis,
     Dimension,
     Interval,
     Line,
     Outcome,
     UsageFilter,
+    UsageRecorded,
     UsageStore,
 )
 
@@ -32,36 +33,34 @@ async def consumed[T](call: Awaitable[T]) -> tuple[T, Tally]:
 
 def said(tally: Tally) -> Usage:
     """What a call reported, after checking it reported at all: the contract of every model."""
-    assert tally.reports, "a call says what it consumed (nestor.core.report), even when the provider says nothing"
+    assert tally.usage != Usage(), "a call says what it consumed (nestor.core.report): its units, or at least its model"
     return tally.usage
 
 
 def line(position: int, at: datetime, *, cost: int | None = 1_000_000, **given: Any) -> Line:
     """A call as the ledger keeps it: 1 000 tokens in, 100 out, $0.001, for `mathis` unless `given` says else."""
     fields: dict[str, Any] = {
+        "source": "usage",
         "id": f"call-{position}",
-        "position": position,
         "at": at,
         "consumer": "haiku",
-        "kind": ConsumerKind.LANGUAGE,
+        "kind": ModelType.LANGUAGE,
         "provider": "openrouter",
         "served": "anthropic/claude-haiku-4.5",
-        "units": {Unit.INPUT_TOKENS: 1000, Unit.OUTPUT_TOKENS: 100},
-        "cost": Money(cost) if cost is not None else None,
+        "units": {Unit.INPUT_TOKENS.value: 1000, Unit.OUTPUT_TOKENS.value: 100},
+        "cost_nusd": cost,
         "basis": CostBasis.REPORTED if cost is not None else CostBasis.UNKNOWN,
-        "price": "reported" if cost is not None else None,
+        "price": None,
         "duration_ms": 800,
         "outcome": Outcome.OK,
         "purpose": CallPurpose.TURN,
         "person": PersonId("mathis"),
         "channel": "telegram",
         "medium": Medium.WRITTEN,
-        "session": None,
         "conversation": "c1",
         "turn": f"t{position}",
-        "origin": None,
     }
-    return Line(**(fields | given))
+    return Line(position, UsageRecorded(**(fields | given)))
 
 
 PARIS = "Europe/Paris"
@@ -94,7 +93,7 @@ class UsageStoreContract:
             totals = await store.totals(UsageFilter())
             assert (totals.cost, totals.calls, totals.unknown) == (Money(3_500_000), 3, 1)
             assert totals.units == {Unit.INPUT_TOKENS: 3000, Unit.OUTPUT_TOKENS: 300}
-            assert totals.duration_ms == 2400
+            assert (totals.duration_ms, totals.conversations) == (2400, 1)
 
     async def test_a_filter_keeps_a_period_and_the_values_asked_for_none_included(self) -> None:
         async with self.opened() as store:
@@ -155,3 +154,10 @@ class UsageStoreContract:
             assert (await again.totals(UsageFilter())).calls == 1, "the same zone keeps it"
         async with self.opened("America/New_York") as moved:
             assert (await moved.position(), (await moved.totals(UsageFilter())).calls) == (0, 0)
+
+    async def test_the_rhythm_is_what_each_hour_of_each_weekday_cost(self) -> None:
+        async with self.opened() as store:
+            late = datetime(2026, 11, 1, 23, 30, tzinfo=UTC)  # Monday 00:30 in Paris
+            await store.add([line(1, late), line(2, late + timedelta(days=7), cost=2_000_000), line(3, NOV)])
+            beats = sorted(await store.rhythm(UsageFilter()), key=lambda b: (b.weekday, b.hour))
+        assert beats == [Beat(0, 0, Money(3_000_000), 2), Beat(0, 10, Money(1_000_000), 1)]

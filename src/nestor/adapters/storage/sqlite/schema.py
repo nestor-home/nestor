@@ -136,7 +136,14 @@ CREATE TABLE usage (
     kind TEXT NOT NULL,
     provider TEXT NOT NULL,
     served TEXT,
-    units TEXT NOT NULL,  -- JSON, by unit
+    input_tokens REAL NOT NULL,  -- one column per `Unit`, 0 when the call did not consume it
+    cached_input_tokens REAL NOT NULL,
+    cache_write_tokens REAL NOT NULL,
+    output_tokens REAL NOT NULL,
+    images REAL NOT NULL,
+    audio_seconds REAL NOT NULL,
+    characters REAL NOT NULL,
+    requests REAL NOT NULL,
     cost_nusd INTEGER,  -- null: unknown
     basis TEXT NOT NULL,
     price TEXT,

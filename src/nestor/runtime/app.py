@@ -83,7 +83,7 @@ from nestor.modules.memory.assistant import MemoryTools
 from nestor.modules.memory.episodes import Consolidator, Episodes
 from nestor.modules.satellites import LookTools, MediaSessions, Pairing, SatelliteHost
 from nestor.modules.system import ReleaseFeed, RestartRequested, Updates
-from nestor.modules.usage import Counted, Ledger, Meter, PriceBook, PriceCatalogue, Rates, metered
+from nestor.modules.usage import Consumer, Ledger, Meter, PriceBook, PriceCatalogue, Rates, metered
 from nestor.modules.web import WebSearch, WebSearchTools
 from nestor.runtime.config import AdapterConfig, ComponentConfig, ConfigError, ModelConfig, NestorConfig, ProblemCode
 from nestor.runtime.plugins import Family, Plugged, Registry, Services
@@ -163,11 +163,17 @@ class Nestor:
         self.models = build_models(config, registry, services, self.plugged)
         # plugins get the models themselves (a voice pipeline runs their services); Nestor calls them counted
         services = replace(services, models=lambda key, wanted, path: chosen(self.models, key, wanted, path))
-        models = {
-            key: metered(key, built, config.models[key].provider, _asked(config.models[key]), self.meter)
+        self.consumers = [  # what the ledger prices: each model of `models`, named by the brand that bills it
+            Consumer(
+                key=key,
+                kind=built.type,
+                provider=built.brand or config.models[key].provider,
+                model=_asked(config.models[key]),
+                local=built.local,
+            )
             for key, built in self.models.items()
-        }
-        self.consumers = [m.consumer for m in models.values() if isinstance(m, Counted)]  # what the ledger prices
+        ]
+        models = {c.key: metered(self.models[c.key], c, self.meter) for c in self.consumers}
         roles = config.roles([k for k, m in config.models.items() if m.type is ModelType.LANGUAGE])
 
         answering: dict[str, LanguageModel] = {}

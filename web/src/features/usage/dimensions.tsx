@@ -14,25 +14,18 @@ import {
   Workflow,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import {
-  type CallPurpose,
-  peopleQuery,
-  type UsageDimension,
-  type UsageGroup,
-  usageGroupsQuery,
-  usagePricesQuery,
-} from "@/api";
-import { callPurposeValues, consumerKindValues, costBasisValues, outcomeValues } from "@/api/schema.gen";
+import { type CallPurpose, peopleQuery, type UsageDimension, type UsageGroup, usagePricesQuery } from "@/api";
+import { callPurposeValues, costBasisValues, modelTypeValues, outcomeValues } from "@/api/schema.gen";
 import { Avatar } from "@/components/marks";
 import { useT } from "@/i18n";
 import { tr } from "@/i18n/runtime";
-import { BrandMark, brandName, brandOf, KindMark, kindName } from "@/lib/brands";
+import { BrandMark, type BrandSlug, brandName, brandOf, KindMark, kindName } from "@/lib/brands";
 import { useCan, useMe } from "@/lib/session";
-import type { Period } from "./search";
+import { capital } from "@/lib/utils";
 
-const SERIES = 6;
+/** How many series have a colour of their own (`--series-1…6`); the rest share one. */
+export const SERIES = 6;
 export const OTHER = "var(--rule-strong)";
-export const seriesColour = (slot: number) => (slot < SERIES ? `var(--series-${slot + 1})` : OTHER);
 
 export const PURPOSE_ICON: Record<CallPurpose, LucideIcon> = {
   turn: MessageSquareText,
@@ -47,42 +40,40 @@ export const PURPOSE_ICON: Record<CallPurpose, LucideIcon> = {
   unattributed: CircleDashed,
 };
 
-/** The model's maker when its provider routes it (`anthropic/claude-…` through OpenRouter), else the provider. */
-export function makerOf(served: string | null | undefined, provider: string): string {
+/** The brand of a model: its maker when its provider routes it (`anthropic/claude-…` through OpenRouter), else its
+ * provider's. */
+export function modelBrand(served: string | null | undefined, provider: string): BrandSlug | null {
   const maker = served?.includes("/") ? served.split("/")[0] : null;
-  return maker && brandOf(maker) ? maker : provider;
+  return (maker ? brandOf(maker) : null) ?? brandOf(provider);
 }
-
-/** A label as it opens a line: the server's labels are written to sit inside a sentence. */
-export const capital = (text: string) => text.charAt(0).toLocaleUpperCase() + text.slice(1);
 
 export interface Dimensions {
   label: (dimension: UsageDimension, key: string | null, group?: UsageGroup) => string;
   mark: (dimension: UsageDimension, key: string | null, group?: UsageGroup) => ReactNode;
-  colour: (dimension: UsageDimension, key: string | null) => string;
+  /** A value's colour: by the household's people and models in their own order, the server's values in theirs,
+   * anything else in `ranked`'s order (what the period spent on it, the costliest first). */
+  colour: (dimension: UsageDimension, key: string | null, ranked?: readonly (string | null)[]) => string;
 }
 
-/** How each value reads, and its colour: the household's people and the configured models in their own order, the
- * server's values in theirs, anything else by what it cost over the period, the costliest first. */
-export function useDimensions(period: Period, split: UsageDimension): Dimensions {
+export function useDimensions(): Dimensions {
   const t = useT();
   const me = useMe();
   const people = useQuery({ ...peopleQuery, enabled: useCan("people:read") }).data ?? [];
   const prices = useQuery(usagePricesQuery).data;
-  const spread = useQuery(
-    usageGroupsQuery({ since: period.since.toISOString(), until: period.until.toISOString(), by: split }),
-  ).data;
   const served = new Map(prices?.prices.map((p) => [p.consumer, p]) ?? []);
-  const orders: Partial<Record<UsageDimension, (string | null)[]>> = {
+  const orders: Partial<Record<UsageDimension, readonly (string | null)[]>> = {
     consumer: prices?.prices.map((p) => p.consumer),
     person: [...people.map((p) => p.id), null],
-    purpose: [...callPurposeValues],
-    kind: [...consumerKindValues],
-    basis: [...costBasisValues],
-    outcome: [...outcomeValues],
+    purpose: callPurposeValues,
+    kind: modelTypeValues,
+    basis: costBasisValues,
+    outcome: outcomeValues,
   };
-  const fallback = spread?.groups.map((g) => g.key) ?? [];
   const nameOf = (id: string) => people.find((p) => p.id === id)?.name ?? id;
+  const brandMark = (provider: string | null, model?: string | null) => {
+    const brand = provider ? modelBrand(model, provider) : null;
+    return brand ? <BrandMark brand={brand} label={false} className="size-5" /> : <Dot />;
+  };
 
   return {
     label: (dimension, key, group) => {
@@ -119,13 +110,10 @@ export function useDimensions(period: Period, split: UsageDimension): Dimensions
           );
         case "consumer": {
           const model = key ? served.get(key) : undefined;
-          const brand = brandOf(makerOf(model?.model, model?.provider ?? ""));
-          return brand ? <BrandMark brand={brand} label={false} className="size-5" /> : <Dot />;
+          return brandMark(model?.provider ?? null, model?.model);
         }
-        case "provider": {
-          const brand = key ? brandOf(key) : null;
-          return brand ? <BrandMark brand={brand} label={false} className="size-5" /> : <Dot />;
-        }
+        case "provider":
+          return brandMark(key);
         case "channel":
           return key ? <KindMark kind={key} label={false} className="size-5" /> : <Dot />;
         case "purpose": {
@@ -136,10 +124,9 @@ export function useDimensions(period: Period, split: UsageDimension): Dimensions
           return <Dot />;
       }
     },
-    colour: (dimension, key) => {
-      const order = orders[dimension] ?? fallback;
-      const slot = order.indexOf(key);
-      return slot < 0 ? OTHER : seriesColour(slot);
+    colour: (dimension, key, ranked = []) => {
+      const slot = (orders[dimension] ?? ranked).indexOf(key);
+      return slot >= 0 && slot < SERIES ? `var(--series-${slot + 1})` : OTHER;
     },
   };
 }

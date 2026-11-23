@@ -1,7 +1,7 @@
-"""The meter: each call to a model or an executor becomes a `usage.recorded` in the journal, priced and attributed.
+"""The meter: each call to a model becomes a `usage.recorded` in the journal, priced and attributed.
 
-A call is counted by whoever makes it on Nestor's behalf (`Metered` around a model, an executor at a task's end),
-through `measure`; the record is written in the background, so that a call never waits for it nor fails with it.
+A call is measured by the counted model that makes it (`metered`), through `measure`; the record is written in the
+background, so that a call never waits for it nor fails with it.
 """
 
 import asyncio
@@ -10,9 +10,10 @@ import logging
 import time
 from collections.abc import Generator
 from contextlib import contextmanager
+from dataclasses import replace
 from datetime import date
 
-from nestor.core import Component, Tally, Usage, utc_now
+from nestor.core import Component, Tally, utc_now
 from nestor.modules.journal import Journal
 from nestor.modules.usage.attribution import attribution
 from nestor.modules.usage.events import UsageRecorded
@@ -68,46 +69,40 @@ class Meter(Component):
             call.outcome = Outcome.FAILED
             raise
         finally:
-            self.record(call)
+            self._record(call)
 
-    def record(self, call: Call) -> None:
+    def _record(self, call: Call) -> None:
         """Price and attribute a finished call, then have it written."""
-        consumer, usage, said = call.consumer, call.tally.usage, call.said
+        consumer, said = call.consumer, call.said
+        usage = replace(call.tally.usage, served=call.tally.usage.served or consumer.model)
         priced = self.prices.price(consumer, usage)
         if priced.basis is CostBasis.UNKNOWN and (usage.units or call.outcome is Outcome.OK):
             self._warn(consumer, "unpriced", "%s: no cost said and no price known for %s", usage.served)
         if said.purpose is CallPurpose.UNATTRIBUTED:
             self._warn(consumer, "unattributed", "%s: called with no reason said (%s)", consumer.kind)
-        event = UsageRecorded(
-            source=SOURCE,
-            session=said.session,
-            consumer=consumer.key,
-            kind=consumer.kind,
-            provider=consumer.provider,
-            served=usage.served or consumer.model,
-            units={u.value: q for u, q in usage.units.items()},
-            cost_nusd=priced.cost.nusd if priced.cost else (0 if priced.basis is CostBasis.FREE else None),
-            basis=priced.basis,
-            price=priced.source,
-            duration_ms=round((time.monotonic() - call.started) * 1000),
-            outcome=call.outcome,
-            purpose=said.purpose,
-            person=said.person,
-            channel=said.channel,
-            medium=said.medium,
-            conversation=said.conversation,
-            turn=said.turn,
-            origin=said.origin,
+        self._queue.put_nowait(
+            UsageRecorded(
+                source=SOURCE,
+                session=said.session,
+                consumer=consumer.key,
+                kind=consumer.kind,
+                provider=consumer.provider,
+                served=usage.served,
+                units={u.value: q for u, q in usage.units.items()},
+                cost_nusd=priced.cost.nusd if priced.cost is not None else None,
+                basis=priced.basis,
+                price=priced.source,
+                duration_ms=round((time.monotonic() - call.started) * 1000),
+                outcome=call.outcome,
+                purpose=said.purpose,
+                person=said.person,
+                channel=said.channel,
+                medium=said.medium,
+                conversation=said.conversation,
+                turn=said.turn,
+                origin=said.origin,
+            )
         )
-        self._queue.put_nowait(event)
-
-    def report(self, consumer: Consumer, usage: Usage, *, outcome: Outcome = Outcome.OK) -> None:
-        """Record what a consumer says it used after the fact (an executor at a task's end), on behalf of the work in
-        progress."""
-        call = Call(consumer, attribution())
-        call.tally.add(usage)
-        call.outcome = outcome
-        self.record(call)
 
     async def _write(self) -> None:
         while (event := await self._queue.get()) is not None:

@@ -29,7 +29,7 @@ from nestor.modules.cognition.tools.types import Risk
 from nestor.modules.connectors.types import AuthKind, Status
 from nestor.modules.household import Household, Person
 from nestor.modules.journal import Entry
-from nestor.modules.usage import CallPurpose, ConsumerKind, CostBasis, Dimension, Outcome
+from nestor.modules.usage import CallPurpose, CostBasis, Dimension, Outcome
 from nestor.runtime import Registry
 from nestor.runtime.config import ProblemCode
 from nestor.runtime.editing import ConfigSchema
@@ -173,7 +173,7 @@ SELECTS = {
     "model-type": ModelType,
     "model-type-help": ModelType,
     "usage-purpose": CallPurpose,
-    "usage-kind": ConsumerKind,
+    "usage-kind": ModelType,
     "usage-basis": CostBasis,
     "usage-outcome": Outcome,
     "usage-dimension": Dimension,

@@ -68,17 +68,17 @@ async def test_what_a_message_costs_is_in_the_ledger_on_behalf_of_who_sent_it(tm
         await fakes.channels[0].ask("Salut")
         serving.cancel()
     async with Nestor(config(tmp_path, []), fakes.registry()) as restarted:
-        (call,) = await restarted.ledger.lines(UsageFilter())
+        ((_, call),) = await restarted.ledger.lines(UsageFilter())
         (turn,) = await restarted.journal.history(AssistantTurn)
     assert (call.consumer, call.purpose, call.person, call.channel) == ("main", CallPurpose.TURN, "mathis", "memory")
     assert turn.exchange is not None and (call.conversation, call.turn) == (
         turn.exchange.conversation_id,
         turn.exchange.turn_id,
     )
-    read, written = call.units[Unit.INPUT_TOKENS], call.units[Unit.OUTPUT_TOKENS]
+    read, written = call.units[Unit.INPUT_TOKENS.value], call.units[Unit.OUTPUT_TOKENS.value]
     assert written == 2, "the scripted model counts a word a token"
     cost = Decimal(str(read)) * Decimal("0.000001") + Decimal(written) * Decimal("0.000005")
-    assert (call.cost, call.basis, call.price) == (Money.usd(cost), CostBasis.PRICED, "config")
+    assert (call.cost_nusd, call.basis, call.price) == (Money.usd(cost).nusd, CostBasis.PRICED, "config")
 
 
 async def test_a_task_started_before_a_restart_is_delivered_after_it(tmp_path: Path) -> None:

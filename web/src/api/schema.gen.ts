@@ -1746,7 +1746,7 @@ export interface paths {
         };
         /**
          * Usage Series
-         * @description Spending over time, by hour, day, week or month of the household's clock, split by `by` if given.
+         * @description Spending over the period, bucket by bucket (by hour today, by week over 90 days), split by `by` if given.
          */
         get: operations["usageSeries"];
         put?: never;
@@ -1769,6 +1769,26 @@ export interface paths {
          * @description Spending by value of a dimension, the costliest first.
          */
         get: operations["usageGroups"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/usage/rhythm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Usage Rhythm
+         * @description When the period's spending happened: by hour of each weekday.
+         */
+        get: operations["usageRhythm"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1996,6 +2016,17 @@ export interface components {
             authorize_url: string | null;
             connection: components["schemas"]["ConnectionDetail"] | null;
         };
+        /** BeatOut */
+        BeatOut: {
+            /** Weekday */
+            weekday: number;
+            /** Hour */
+            hour: number;
+            /** Cost Nusd */
+            cost_nusd: number;
+            /** Calls */
+            calls: number;
+        };
         /**
          * CallOut
          * @description One call: what it consumed, what it cost and how that is known, on whose behalf and why.
@@ -2012,7 +2043,7 @@ export interface components {
             at: string;
             /** Consumer */
             consumer: string;
-            kind: components["schemas"]["ConsumerKind"];
+            kind: components["schemas"]["ModelType"];
             /** Provider */
             provider: string;
             /** Served */
@@ -2053,8 +2084,8 @@ export interface components {
         CallsOut: {
             /** Calls */
             calls: components["schemas"]["CallOut"][];
-            /** Before */
-            before: number | null;
+            /** Next Before */
+            next_before: number | null;
         };
         /** CancelOut */
         CancelOut: {
@@ -2415,12 +2446,6 @@ export interface components {
             presets: components["schemas"]["PresetOut"][];
             oauth: components["schemas"]["OAuthClientOut"] | null;
         };
-        /**
-         * ConsumerKind
-         * @description What consumes: a model of each `ModelType`, or an executor.
-         * @enum {string}
-         */
-        ConsumerKind: "language" | "embedding" | "speaker" | "transcription" | "speech" | "image" | "executor";
         /** CorrectionIn */
         CorrectionIn: {
             /** Text */
@@ -3234,6 +3259,13 @@ export interface components {
             /** Expires In S */
             expires_in_s: number;
         };
+        /**
+         * Period
+         * @description The spans spending is read over, in the household's days: today, the last 7, 30 or 90 days (today included),
+         *     or the calendar month so far.
+         * @enum {string}
+         */
+        Period: "today" | "7d" | "30d" | "month" | "90d";
         /** PersonOut */
         PersonOut: {
             /** Id */
@@ -3311,7 +3343,7 @@ export interface components {
         PriceOut: {
             /** Consumer */
             consumer: string;
-            kind: components["schemas"]["ConsumerKind"];
+            kind: components["schemas"]["ModelType"];
             /** Provider */
             provider: string;
             /** Model */
@@ -3493,6 +3525,11 @@ export interface components {
             /** Restarting */
             restarting: boolean;
         };
+        /** RhythmOut */
+        RhythmOut: {
+            /** Beats */
+            beats: components["schemas"]["BeatOut"][];
+        };
         /**
          * Risk
          * @enum {string}
@@ -3648,11 +3685,8 @@ export interface components {
         };
         /** SeriesOut */
         SeriesOut: {
-            /** Every */
-            every: string;
+            span: components["schemas"]["SpanOut"];
             by: components["schemas"]["Dimension"] | null;
-            /** Timezone */
-            timezone: string;
             /** Points */
             points: components["schemas"]["PointOut"][];
         };
@@ -3699,6 +3733,20 @@ export interface components {
             /** Version */
             version: string;
         };
+        /** SpanOut */
+        SpanOut: {
+            /**
+             * Since
+             * Format: date-time
+             */
+            since: string;
+            /**
+             * Until
+             * Format: date-time
+             */
+            until: string;
+            every: components["schemas"]["Interval"];
+        };
         /**
          * Stage
          * @description Where an addition stands, for the front's progress.
@@ -3726,23 +3774,12 @@ export interface components {
         Suggest: "people" | "residents";
         /** SummaryOut */
         SummaryOut: {
-            /**
-             * Since
-             * Format: date-time
-             */
-            since: string;
-            /**
-             * Until
-             * Format: date-time
-             */
-            until: string;
+            span: components["schemas"]["SpanOut"];
             totals: components["schemas"]["TotalsOut"];
             previous: components["schemas"]["TotalsOut"];
             month: components["schemas"]["TotalsOut"];
             /** Projected Month Nusd */
             projected_month_nusd: number;
-            /** Conversations */
-            conversations: number;
         };
         /** SystemOut */
         SystemOut: {
@@ -3855,6 +3892,8 @@ export interface components {
             };
             /** Duration Ms */
             duration_ms: number;
+            /** Conversations */
+            conversations: number;
         };
         /**
          * Unit
@@ -13523,8 +13562,7 @@ export interface operations {
     usageSummary: {
         parameters: {
             query?: {
-                since?: string | null;
-                until?: string | null;
+                period?: components["schemas"]["Period"];
                 consumer?: string[] | null;
                 kind?: string[] | null;
                 provider?: string[] | null;
@@ -13630,10 +13668,8 @@ export interface operations {
     usageSeries: {
         parameters: {
             query?: {
-                every?: components["schemas"]["Interval"];
                 by?: components["schemas"]["Dimension"] | null;
-                since?: string | null;
-                until?: string | null;
+                period?: components["schemas"]["Period"];
                 consumer?: string[] | null;
                 kind?: string[] | null;
                 provider?: string[] | null;
@@ -13740,9 +13776,7 @@ export interface operations {
         parameters: {
             query: {
                 by: components["schemas"]["Dimension"];
-                limit?: number | null;
-                since?: string | null;
-                until?: string | null;
+                period?: components["schemas"]["Period"];
                 consumer?: string[] | null;
                 kind?: string[] | null;
                 provider?: string[] | null;
@@ -13845,13 +13879,118 @@ export interface operations {
             };
         };
     };
+    usageRhythm: {
+        parameters: {
+            query?: {
+                period?: components["schemas"]["Period"];
+                consumer?: string[] | null;
+                kind?: string[] | null;
+                provider?: string[] | null;
+                served?: string[] | null;
+                purpose?: string[] | null;
+                person?: string[] | null;
+                channel?: string[] | null;
+                medium?: string[] | null;
+                basis?: string[] | null;
+                outcome?: string[] | null;
+                origin?: string[] | null;
+                conversation?: string[] | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RhythmOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
     usageCalls: {
         parameters: {
             query?: {
                 before?: number | null;
                 limit?: number;
-                since?: string | null;
-                until?: string | null;
+                period?: components["schemas"]["Period"];
                 consumer?: string[] | null;
                 kind?: string[] | null;
                 provider?: string[] | null;
@@ -14062,7 +14201,6 @@ export const callPurposeValues: ReadonlyArray<FlattenedDeepRequired<components>[
 export const changeKindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ChangeKind"]> = ["breaking", "feature", "fix", "other"];
 export const chatRoleValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ChatRole"]> = ["person", "assistant", "note", "fallback", "tool"];
 export const chatStreamOutTypeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ChatStreamOut"]["type"]> = ["text", "end", "failed", "done"];
-export const consumerKindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ConsumerKind"]> = ["language", "embedding", "speaker", "transcription", "speech", "image", "executor"];
 export const costBasisValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["CostBasis"]> = ["reported", "priced", "free", "unknown"];
 export const dayValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Day"]> = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 export const dimensionValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Dimension"]> = ["consumer", "kind", "provider", "served", "purpose", "person", "channel", "medium", "basis", "outcome", "origin", "conversation"];
@@ -14081,6 +14219,7 @@ export const nestorToolsValues: ReadonlyArray<FlattenedDeepRequired<components>[
 export const offValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Off"]> = ["switched_off", "quiet_hours", "someone_home"];
 export const outcomeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Outcome"]> = ["ok", "failed", "cancelled"];
 export const pairingMethodValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PairingMethod"]> = ["device_code.display", "device_code.speech", "enrollment.input", "enrollment.provisioning", "enrollment.qr"];
+export const periodValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Period"]> = ["today", "7d", "30d", "month", "90d"];
 export const problemValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Problem"]> = ["too_short", "too_quiet", "too_loud", "other_voice"];
 export const problemCodeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ProblemCode"]> = ["missing", "extra", "invalid", "unknown_kind", "reference", "secret", "no_answering_model", "not_answering", "not_embedding", "not_speaker", "not_transcribing", "not_speaking", "unknown_model", "shared_account"];
 export const proofValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Proof"]> = ["device_code", "enrollment_code"];

@@ -5,10 +5,10 @@ from decimal import Decimal
 
 import pytest
 
-from nestor.core import Money, Unit, Usage
-from nestor.modules.usage import Consumer, ConsumerKind, CostBasis, PriceBook, PriceCatalogue, Priced, Rates
+from nestor.core import ModelType, Money, Unit, Usage
+from nestor.modules.usage import ZERO, Consumer, CostBasis, PriceBook, PriceCatalogue, Priced, Rates
 
-HAIKU = Consumer(key="haiku", kind=ConsumerKind.LANGUAGE, provider="anthropic", model="claude-haiku-4-5")
+HAIKU = Consumer(key="haiku", kind=ModelType.LANGUAGE, provider="anthropic", model="claude-haiku-4-5")
 TOKENS = {Unit.INPUT_TOKENS: 10_000, Unit.CACHED_INPUT_TOKENS: 8_000, Unit.OUTPUT_TOKENS: 1_000}
 
 
@@ -28,10 +28,10 @@ LIST = "catalogue:2026-11-23"
 LISTED = Priced(
     Money.usd("0.0078"), CostBasis.PRICED, LIST
 )  # 2000 fresh tokens at $1, 8000 cached at $0.10, 1000 out at $5
-PI = Consumer(key="pi", kind=ConsumerKind.LANGUAGE, provider="openai-compatible", local=True)
-GROQ = Consumer(key="x", kind=ConsumerKind.LANGUAGE, provider="groq", model="llama")
+PI = Consumer(key="pi", kind=ModelType.LANGUAGE, provider="openai-compatible", local=True)
+GROQ = Consumer(key="x", kind=ModelType.LANGUAGE, provider="groq", model="llama")
 FREE = {"haiku": Rates.written({Unit.INPUT_TOKENS: 0}, "config")}
-UNKNOWN = Priced(None, CostBasis.UNKNOWN, None)
+UNKNOWN = Priced(None, CostBasis.UNKNOWN)
 
 CASES = [
     # what the provider billed is taken as it is, whatever is priced
@@ -40,7 +40,7 @@ CASES = [
         HAIKU,
         Usage(TOKENS, cost=Money(4_200_000)),
         CONFIGURED,
-        Priced(Money(4_200_000), CostBasis.REPORTED, "reported"),
+        Priced(Money(4_200_000), CostBasis.REPORTED),
     ),
     # the configuration's price comes before the list; without its own cache price, the cache is billed as input
     ("configured", HAIKU, Usage(TOKENS), CONFIGURED, Priced(Money.usd("0.03"), CostBasis.PRICED, "config")),
@@ -48,7 +48,7 @@ CASES = [
     # the model that answered is looked up first, then the one asked
     ("served", HAIKU, Usage(TOKENS, served="claude-unlisted"), {}, LISTED),
     # a model of the household's own costs nothing, and says so
-    ("local", PI, Usage(TOKENS), {}, Priced(None, CostBasis.FREE, "local")),
+    ("local", PI, Usage(TOKENS), {}, Priced(ZERO, CostBasis.FREE)),
     # neither said nor listed: unknown, not zero
     ("unlisted", GROQ, Usage(TOKENS), {}, UNKNOWN),
     # a price for none of what the call consumed does not price it

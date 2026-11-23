@@ -12,12 +12,12 @@ import pytest
 from nestor.adapters.storage.sqlite import SQLiteDatabase, SQLiteEventLog
 from nestor.admin import AdminServer, AdminSettings
 from nestor.cli import main
-from nestor.core import Capability
+from nestor.core import Capability, ModelType
 from nestor.modules.journal import Journal
 from nestor.modules.satellites import Device, Manifest
 from nestor.modules.satellites.types import DeclaredCapability
 from nestor.modules.system import SecretChanged
-from nestor.modules.usage import CallPurpose, ConsumerKind, CostBasis, Outcome, UsageRecorded
+from nestor.modules.usage import CallPurpose, CostBasis, Outcome, UsageRecorded
 from nestor.runtime.app import Restart
 from nestor.runtime.config import ConfigError, load_config
 from nestor.runtime.secrets import open_secrets
@@ -272,7 +272,7 @@ def test_what_nestor_cost_is_read_from_the_data_folder_by_what_one_asks(
                     UsageRecorded(
                         source="usage",
                         consumer=consumer,
-                        kind=ConsumerKind.LANGUAGE,
+                        kind=ModelType.LANGUAGE,
                         provider="openrouter",
                         served=None,
                         units={"input_tokens": 1000},

@@ -2,23 +2,23 @@
 
 from collections.abc import Mapping
 
-from nestor.core import Event, PersonId
+from nestor.core import Event, ModelType, PersonId
 from nestor.modules.channels import Medium
-from nestor.modules.usage.types import CallPurpose, ConsumerKind, CostBasis, Outcome
+from nestor.modules.usage.types import CallPurpose, CostBasis, Outcome
 
 
 class UsageRecorded(Event, event_type="usage.recorded"):
-    """One call to a model or an executor. Its cost is fixed when it is recorded, with where its price came from:
+    """One call to a model. Its cost is fixed when it is recorded, with where its price came from:
     a later price never rewrites it. `session` (the envelope's) is the address the work belongs to."""
 
     consumer: str  # its name in the configuration
-    kind: ConsumerKind
+    kind: ModelType
     provider: str  # who bills it
     served: str | None  # the model that answered, as the provider names it
-    units: Mapping[str, float]  # by `Unit`
+    units: Mapping[str, float]  # by `Unit` (the codec keeps a mapping's keys as text)
     cost_nusd: int | None  # nano-dollars; none when unknown
     basis: CostBasis
-    price: str | None  # `reported`, `local`, `config`, `catalogue:<date>`
+    price: str | None  # where the price came from, for a cost `priced`: `config`, `catalogue:<date>`
     duration_ms: int
     outcome: Outcome
     purpose: CallPurpose

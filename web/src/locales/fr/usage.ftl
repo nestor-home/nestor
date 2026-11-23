@@ -9,7 +9,7 @@ usage-range-30d = 30 jours
 usage-range-month = Ce mois-ci
 usage-range-90d = 90 jours
 usage-split = Répartir par
-usage-filter-remove = Retirer ce filtre
+usage-filter-remove = Retirer le filtre { $value }
 usage-filter-clear = Tout effacer
 
 usage-spent-today = Dépensé aujourd'hui
@@ -69,7 +69,7 @@ usage-rate-cached_input_tokens = { $price } / M en cache
 usage-rate-cache_write_tokens = { $price } / M écrits en cache
 usage-rate-output_tokens = { $price } / M en sortie
 usage-rate-characters = { $price } / M caractères
-usage-rate-audio_seconds = { $price } / heure entendue
+usage-rate-audio_seconds = { $price } / min entendue
 usage-rate-images = { $price } / image
 usage-rate-requests = { $price } / appel
 
@@ -85,6 +85,5 @@ usage-medium-written = à l'écrit
 usage-call-model = Modèle
 usage-call-provider = Fournisseur
 usage-call-outcome = Issue
-usage-call-duration = { $seconds } s
 usage-call-origin = Lancé par
 usage-call-units = Consommé

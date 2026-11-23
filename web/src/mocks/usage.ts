@@ -8,6 +8,7 @@
  * (priced from the public list), the voice model runs on the house's own machine.
  */
 import type { components } from "@/api/schema.gen";
+import { document, household } from "./instance";
 
 type S = components["schemas"];
 export type MockCall = S["CallOut"];
@@ -28,34 +29,53 @@ function random(seed: number): () => number {
   };
 }
 
-interface Person {
-  id: string;
-  name: string;
+/** How each person of the household uses Richie; who they are and where they write come from `instance.ts`. */
+interface Habit {
   written: string[]; // the channels they write on, the first most often
   weight: number; // how much they talk to Richie, relative to the others
   voice: number; // share of their written messages that are voice messages
   speaks: number; // spoken turns a day, to the satellites
 }
 
-const PEOPLE: Person[] = [
-  { id: "mathis", name: "Mathis", written: ["telegram", "web", "slack"], weight: 1, voice: 0.08, speaks: 4 },
-  { id: "lea", name: "Léa", written: ["telegram", "signal"], weight: 0.7, voice: 0.25, speaks: 5 },
-  { id: "jules", name: "Jules", written: ["discord"], weight: 0.45, voice: 0, speaks: 3 },
-  { id: "odile", name: "Odile", written: ["whatsapp", "telegram"], weight: 0.25, voice: 0.6, speaks: 2 },
-];
-const SESSION: Record<string, Record<string, string>> = {
-  mathis: { telegram: "telegram:@mathis_l", web: "web:mathis", slack: "slack:U04MATHIS7" },
-  lea: { telegram: "telegram:@lea_martin", signal: "signal:+33655504102" },
-  jules: { discord: "discord:jules.lbt" },
-  odile: { whatsapp: "whatsapp:33655504977", telegram: "telegram:@odile.m" },
+const HABITS: Record<string, Habit> = {
+  mathis: { written: ["telegram", "web", "slack"], weight: 1, voice: 0.08, speaks: 4 },
+  lea: { written: ["telegram", "signal"], weight: 0.7, voice: 0.25, speaks: 5 },
+  jules: { written: ["discord"], weight: 0.45, voice: 0, speaks: 3 },
+  odile: { written: ["whatsapp", "telegram"], weight: 0.25, voice: 0.6, speaks: 2 },
 };
 const ROOMS = ["salon", "cuisine", "chambre-odile", "bureau"];
 
-/** What OpenRouter bills Sonnet and Haiku, per million tokens: input, cached input, output. */
-const RATES = {
-  sonnet: [3, 0.3, 15],
-  haiku: [1, 0.1, 5],
-} as const;
+const config = document();
+const PEOPLE = household(config).map((p) => ({
+  ...p,
+  ...(HABITS[p.id] ?? { written: [], weight: 0, voice: 0, speaks: 0 }),
+  /** the address they write from on a channel: the account it knows them by (the admin's chat by their id) */
+  session: (channel: string) => p.accounts.find((a) => a.startsWith(`${channel}:`)) ?? `${channel}:${p.id}`,
+}));
+const named = (id: string) => {
+  const person = PEOPLE.find((p) => p.id === id);
+  return person ? { id: person.id, name: person.name } : null;
+};
+
+type Consumer = "sonnet" | "haiku" | "scribe" | "victor" | "voices";
+
+/** Each model of the file as the ledger names it: its type, who bills it, the model it serves. */
+const MODELS = Object.fromEntries(
+  Object.entries(config.models as Record<string, Record<string, unknown>>).map(([key, m]) => [
+    key,
+    {
+      kind: m.type as MockCall["kind"],
+      provider: String(m.base_url ?? "").includes("openrouter.ai") ? "openrouter" : String(m.provider),
+      served: String(m.file_model ?? m.model),
+      local: m.provider === "sherpa-onnx",
+    },
+  ]),
+) as Record<Consumer, { kind: MockCall["kind"]; provider: string; served: string; local: boolean }>;
+
+/** What a call costs: what OpenRouter bills Sonnet and Haiku per million tokens (input, cached, output); ElevenLabs
+ * from the public list, by the second heard and by the character spoken. */
+const BILLED = { sonnet: [3, 0.3, 15], haiku: [1, 0.1, 5] } as const;
+const LISTED = { scribe: { audio_seconds: 0.0000611 }, victor: { characters: 0.00004 } } as const;
 
 const NANO = 1e9;
 
@@ -69,53 +89,42 @@ export function mockCalls(now: Date = new Date()): MockCall[] {
 
   const call = (
     at: Date,
-    consumer: "sonnet" | "haiku" | "scribe" | "victor" | "voices",
+    consumer: Consumer,
     purpose: Purpose,
     units: Units,
     who: Partial<MockCall> = {},
   ): MockCall => {
     id += 1;
-    const language = consumer === "sonnet" || consumer === "haiku";
+    const model = MODELS[consumer];
     let cost: number | null = null;
-    if (language) {
-      const [input, cached, output] = RATES[consumer];
+    let price: string | null = null;
+    if (consumer === "sonnet" || consumer === "haiku") {
+      const [input, cached, output] = BILLED[consumer];
       const fresh = (units.input_tokens ?? 0) - (units.cached_input_tokens ?? 0);
       const dollars =
         (fresh * input + (units.cached_input_tokens ?? 0) * cached + (units.output_tokens ?? 0) * output) / 1e6;
       cost = Math.round(dollars * NANO);
-    } else if (consumer === "scribe" && units.audio_seconds) {
-      cost = Math.round(units.audio_seconds * 0.0000611 * NANO);
-    } else if (consumer === "victor") {
-      cost = Math.round((units.characters ?? 0) * 0.00004 * NANO);
     } else if (consumer === "voices") {
-      cost = 0;
+      cost = 0; // on the house's own machine
+    } else {
+      const [unit, perUnit] = Object.entries(LISTED[consumer])[0] as [keyof Units, number];
+      const quantity = units[unit];
+      if (quantity) [cost, price] = [Math.round(quantity * perUnit * NANO), LIST];
     }
-    const kind = {
-      sonnet: "language",
-      haiku: "language",
-      scribe: "transcription",
-      victor: "speech",
-      voices: "speaker",
-    }[consumer] as MockCall["kind"];
+    const billed = consumer === "sonnet" || consumer === "haiku";
     return {
       id: `u-${id.toString(36)}`,
       position: id,
       at: at.toISOString(),
       consumer,
-      kind,
-      provider: language ? "openrouter" : consumer === "voices" ? "sherpa-onnx" : "elevenlabs",
-      served: {
-        sonnet: "anthropic/claude-sonnet-4.6",
-        haiku: "anthropic/claude-haiku-4.5",
-        scribe: "scribe_v1",
-        victor: "eleven_v4_turbo",
-        voices: "titanet-small",
-      }[consumer],
+      kind: model.kind,
+      provider: model.provider,
+      served: model.served,
       units,
       cost_nusd: cost,
-      basis: language ? "reported" : consumer === "voices" ? "free" : cost === null ? "unknown" : "priced",
-      price: language ? "reported" : consumer === "voices" ? "local" : cost === null ? null : LIST,
-      duration_ms: language ? whole(600, consumer === "sonnet" ? 9000 : 2400) : whole(150, 1400),
+      basis: billed ? "reported" : model.local ? "free" : cost === null ? "unknown" : "priced",
+      price,
+      duration_ms: billed ? whole(600, consumer === "sonnet" ? 9000 : 2400) : whole(150, 1400),
       outcome: "ok",
       purpose,
       person: null,
@@ -171,7 +180,7 @@ export function mockCalls(now: Date = new Date()): MockCall[] {
           person: { id: person.id, name: person.name },
           channel,
           medium: "written",
-          session: SESSION[person.id]?.[channel] ?? `${channel}:${person.id}`,
+          session: person.session(channel),
           conversation: `c-${day}-${conversation}`,
           turn: `t-${day}-${conversation}`,
         };
@@ -251,7 +260,7 @@ export function mockCalls(now: Date = new Date()): MockCall[] {
         person: { id: owner.id, name: owner.name },
         channel: "telegram",
         medium: "written",
-        session: SESSION[owner.id]?.telegram ?? null,
+        session: owner.session("telegram"),
         origin: `schedule:${schedule}`,
       });
     }
@@ -261,10 +270,10 @@ export function mockCalls(now: Date = new Date()): MockCall[] {
       if (moment)
         answer(moment, "sonnet", 2, {
           purpose: "notification",
-          person: { id: "mathis", name: "Mathis" },
+          person: named("mathis"),
           channel: "telegram",
           medium: "written",
-          session: SESSION.mathis?.telegram ?? null,
+          session: PEOPLE[0]?.session("telegram") ?? null,
           origin: `task:${pick(TASKS)}`,
         });
     }
@@ -278,7 +287,7 @@ export function mockCalls(now: Date = new Date()): MockCall[] {
             "sonnet",
             4,
             {
-              person: { id: "mathis", name: "Mathis" },
+              person: named("mathis"),
               channel: "web",
               medium: "written",
               session: "web:mathis",
@@ -302,25 +311,14 @@ const SCHEDULES: [string, string, number][] = [
   ["sc-bins", "jules", 19.5],
 ];
 
-// -- the ledger, as the server reads it ----------------------------------------------------------
+// -- the ledger, as the server reads it, in Richie's zone (UTC) ---------------------------------------
 
 type Dimension = S["Dimension"];
+type Period = S["Period"];
+type Span = S["SpanOut"];
 type Totals = S["TotalsOut"];
 type Group = S["GroupOut"];
-const DIMENSIONS: Dimension[] = [
-  "consumer",
-  "kind",
-  "provider",
-  "served",
-  "purpose",
-  "person",
-  "channel",
-  "medium",
-  "basis",
-  "outcome",
-  "origin",
-  "conversation",
-];
+const DAY = 86_400_000;
 
 /** A call's value of a dimension: a person by their id, `null` for a call without one. */
 export function keyOf(call: MockCall, dimension: Dimension): string | null {
@@ -328,73 +326,99 @@ export function keyOf(call: MockCall, dimension: Dimension): string | null {
   return (call[dimension] as string | null) ?? null;
 }
 
-/** The period and the values each dimension keeps, as the request asks (an empty value keeps the calls without
- * one); a member keeps only their own calls. */
-export function filtered(calls: readonly MockCall[], query: URLSearchParams, own: string | null | undefined) {
-  const until = query.get("until") ? new Date(query.get("until") as string) : new Date();
-  const since = query.get("since")
-    ? new Date(query.get("since") as string)
-    : new Date(until.getTime() - 30 * 86_400_000);
-  const only = DIMENSIONS.flatMap((d) => (query.has(d) ? [[d, new Set(query.getAll(d).map((v) => v || null))]] : []));
-  const kept = calls.filter((c) => {
-    const at = new Date(c.at);
-    if (at < since || at >= until) return false;
-    if (own !== undefined && c.person?.id !== own) return false;
-    return only.every(([d, values]) => (values as Set<string | null>).has(keyOf(c, d as Dimension)));
-  });
-  return { kept, since, until };
+/** A period up to now, as the server resolves it: from today's midnight back, or from the month's first. */
+export function spanOf(period: Period, now: Date = new Date()): Span {
+  const midnight = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  const back = { today: 1, "7d": 7, "30d": 30, "90d": 90, month: 0 }[period];
+  const since = period === "month" ? Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1) : midnight - (back - 1) * DAY;
+  const every = period === "today" ? "hour" : period === "90d" ? "week" : "day";
+  return { since: new Date(since).toISOString(), until: now.toISOString(), every };
+}
+
+/** The calls between `span`'s ends that the request keeps of each dimension (an empty value keeps the calls without
+ * one); a member keeps only their own (`own`). */
+export function within(calls: readonly MockCall[], span: Span, query: URLSearchParams, own: string | null | undefined) {
+  const [since, until] = [span.since, span.until];
+  const kept = [...new Set(query.keys())]
+    .filter((d) => d !== "period" && d !== "by" && d !== "before" && d !== "limit")
+    .map((d) => [d as Dimension, new Set(query.getAll(d).map((v) => v || null))] as const);
+  return calls.filter(
+    (c) =>
+      c.at >= since &&
+      c.at < until &&
+      (own === undefined || c.person?.id === own) &&
+      kept.every(([d, values]) => values.has(keyOf(c, d))),
+  );
 }
 
 export function totals(calls: readonly MockCall[]): Totals {
   const units: Record<string, number> = {};
-  let cost = 0;
-  let unknown = 0;
-  let duration = 0;
+  const conversations = new Set<string>();
+  let [cost, unknown, duration] = [0, 0, 0];
   for (const c of calls) {
     if (c.cost_nusd === null || c.cost_nusd === undefined) unknown += 1;
     else cost += c.cost_nusd;
     duration += c.duration_ms;
+    if (c.conversation) conversations.add(c.conversation);
     for (const [unit, quantity] of Object.entries(c.units)) units[unit] = (units[unit] ?? 0) + (quantity ?? 0);
   }
-  return { cost_nusd: cost, calls: calls.length, unknown, units, duration_ms: duration };
+  return {
+    cost_nusd: cost,
+    calls: calls.length,
+    unknown,
+    units,
+    duration_ms: duration,
+    conversations: conversations.size,
+  };
+}
+
+/** The calls by a key, in one pass. */
+function byKey(calls: readonly MockCall[], key: (c: MockCall) => string | null): Map<string | null, MockCall[]> {
+  const grouped = new Map<string | null, MockCall[]>();
+  for (const c of calls) {
+    const k = key(c);
+    const kept = grouped.get(k);
+    if (kept) kept.push(c);
+    else grouped.set(k, [c]);
+  }
+  return grouped;
 }
 
 export function groups(calls: readonly MockCall[], by: Dimension): Group[] {
-  const grouped = new Map<string | null, MockCall[]>();
-  for (const c of calls) {
-    const key = keyOf(c, by);
-    grouped.set(key, [...(grouped.get(key) ?? []), c]);
-  }
-  return [...grouped.entries()]
-    .map(([key, kept]) => ({
-      key,
-      person: by === "person" && kept[0]?.person ? kept[0].person : null,
-      totals: totals(kept),
-    }))
+  return [...byKey(calls, (c) => keyOf(c, by)).entries()]
+    .map(([key, kept]) => ({ key, person: by === "person" ? (kept[0]?.person ?? null) : null, totals: totals(kept) }))
     .sort((a, b) => b.totals.cost_nusd - a.totals.cost_nusd);
 }
 
-/** The start of the bucket a moment falls in, in the household's zone (UTC for Richie). */
-export function bucket(at: Date, every: S["Interval"]): string {
-  const day = new Date(Date.UTC(at.getUTCFullYear(), at.getUTCMonth(), at.getUTCDate()));
-  if (every === "hour") return new Date(day.getTime() + at.getUTCHours() * 3_600_000).toISOString();
-  if (every === "week") return new Date(day.getTime() - ((day.getUTCDay() + 6) % 7) * 86_400_000).toISOString();
+/** When a bucket starts: the hour, the day, its week's Monday, its month's first. */
+function bucket(at: Date, every: S["Interval"]): string {
+  const day = Date.UTC(at.getUTCFullYear(), at.getUTCMonth(), at.getUTCDate());
+  if (every === "hour") return new Date(day + at.getUTCHours() * 3_600_000).toISOString();
+  if (every === "week") return new Date(day - ((at.getUTCDay() + 6) % 7) * DAY).toISOString();
   if (every === "month") return new Date(Date.UTC(at.getUTCFullYear(), at.getUTCMonth(), 1)).toISOString();
-  return day.toISOString();
+  return new Date(day).toISOString();
 }
 
 export function series(calls: readonly MockCall[], every: S["Interval"], by: Dimension | null): S["PointOut"][] {
-  const points = new Map<string, MockCall[]>();
-  for (const c of calls) {
-    const start = bucket(new Date(c.at), every);
-    points.set(start, [...(points.get(start) ?? []), c]);
-  }
-  return [...points.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
+  return [...byKey(calls, (c) => bucket(new Date(c.at), every)).entries()]
+    .sort(([a], [b]) => String(a).localeCompare(String(b)))
     .map(([start, kept]) => ({
-      start,
+      start: String(start),
       groups: by ? groups(kept, by) : [{ key: null, person: null, totals: totals(kept) }],
     }));
+}
+
+export function rhythm(calls: readonly MockCall[]): S["BeatOut"][] {
+  return [
+    ...byKey(calls, (c) => {
+      const at = new Date(c.at);
+      return `${(at.getUTCDay() + 6) % 7}-${at.getUTCHours()}`;
+    }).entries(),
+  ].map(([key, kept]) => {
+    const [weekday, hour] = String(key).split("-").map(Number);
+    const spent = totals(kept);
+    return { weekday: weekday ?? 0, hour: hour ?? 0, cost_nusd: spent.cost_nusd, calls: spent.calls };
+  });
 }
 
 export function summary(
@@ -403,77 +427,37 @@ export function summary(
   own: string | null | undefined,
   now: Date = new Date(),
 ): S["SummaryOut"] {
-  const { kept, since, until } = filtered(all, query, own);
-  const span = until.getTime() - since.getTime();
-  const around = (from: Date, to: Date) => {
-    const asked = new URLSearchParams(query);
-    asked.set("since", from.toISOString());
-    asked.set("until", to.toISOString());
-    return filtered(all, asked, own).kept;
-  };
-  const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  const span = spanOf((query.get("period") ?? "30d") as Period, now);
+  const length = new Date(span.until).getTime() - new Date(span.since).getTime();
+  const before = { ...span, since: new Date(new Date(span.since).getTime() - length).toISOString(), until: span.since };
+  const month = spanOf("month", now);
   const days = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0)).getUTCDate();
-  const month = totals(around(monthStart, now));
-  const elapsed = (now.getTime() - monthStart.getTime()) / (days * 86_400_000);
+  const so_far = totals(within(all, month, query, own));
+  const elapsed = (now.getTime() - new Date(month.since).getTime()) / (days * DAY);
   return {
-    since: since.toISOString(),
-    until: until.toISOString(),
-    totals: totals(kept),
-    previous: totals(around(new Date(since.getTime() - span), since)),
-    month,
-    projected_month_nusd: elapsed > 0 ? Math.round(month.cost_nusd / elapsed) : month.cost_nusd,
-    conversations: new Set(kept.map((c) => c.conversation).filter(Boolean)).size,
+    span,
+    totals: totals(within(all, span, query, own)),
+    previous: totals(within(all, before, query, own)),
+    month: so_far,
+    projected_month_nusd: elapsed > 0 ? Math.round(so_far.cost_nusd / elapsed) : so_far.cost_nusd,
   };
 }
 
-/** How each model is valued when its provider says nothing: OpenRouter bills Sonnet and Haiku itself. */
+/** How each model of the file is valued when its provider says nothing: OpenRouter bills Sonnet and Haiku itself,
+ * ElevenLabs is priced from the public list, written as providers write prices. */
 export const PRICES: S["PricesOut"] = {
   catalogue: true,
-  prices: [
-    {
-      consumer: "sonnet",
-      kind: "language",
-      provider: "openrouter",
-      model: "anthropic/claude-sonnet-4.6",
-      local: false,
-      source: null,
-      prices: {},
-    },
-    {
-      consumer: "haiku",
-      kind: "language",
-      provider: "openrouter",
-      model: "anthropic/claude-haiku-4.5",
-      local: false,
-      source: null,
-      prices: {},
-    },
-    {
-      consumer: "voices",
-      kind: "speaker",
-      provider: "sherpa-onnx",
-      model: "titanet-small",
-      local: true,
-      source: null,
-      prices: {},
-    },
-    {
-      consumer: "scribe",
-      kind: "transcription",
-      provider: "elevenlabs",
-      model: "scribe_v2_realtime",
-      local: false,
-      source: LIST,
-      prices: { audio_seconds: 0.003666 },
-    },
-    {
-      consumer: "victor",
-      kind: "speech",
-      provider: "elevenlabs",
-      model: "eleven_v4_turbo",
-      local: false,
-      source: LIST,
-      prices: { characters: 40 },
-    },
-  ],
+  prices: Object.entries(MODELS).map(([consumer, m]) => {
+    const listed: Record<string, number> = LISTED[consumer as keyof typeof LISTED] ?? {};
+    const per = { audio_seconds: 60, characters: 1_000_000 } as Record<string, number>;
+    return {
+      consumer,
+      kind: m.kind,
+      provider: m.provider,
+      model: m.served,
+      local: m.local,
+      source: Object.keys(listed).length ? LIST : null,
+      prices: Object.fromEntries(Object.entries(listed).map(([unit, perUnit]) => [unit, perUnit * (per[unit] ?? 1)])),
+    };
+  }),
 };

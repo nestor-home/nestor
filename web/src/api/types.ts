@@ -147,24 +147,28 @@ export type Mention = S["MentionOut"];
 // -- what Nestor costs -----------------------------------------------------------------------------
 
 export type UsageDimension = S["Dimension"];
+export type UsagePeriod = S["Period"];
 export type UsageInterval = S["Interval"];
 export type UsageUnit = S["Unit"];
 export type CallPurpose = S["CallPurpose"];
-export type ConsumerKind = S["ConsumerKind"];
 export type CostBasis = S["CostBasis"];
 export type CallOutcome = S["Outcome"];
 export type UsageTotals = S["TotalsOut"];
+export type UsageSpan = S["SpanOut"];
 export type UsageSummary = S["SummaryOut"];
 export type UsageGroup = S["GroupOut"];
 export type UsageGroups = S["GroupsOut"];
 export type UsagePoint = S["PointOut"];
 export type UsageSeries = S["SeriesOut"];
+export type UsageBeat = S["BeatOut"];
+export type UsageRhythm = S["RhythmOut"];
 export type UsageCall = S["CallOut"];
 export type UsageCalls = S["CallsOut"];
 export type ModelPrice = S["PriceOut"];
 export type UsagePrices = S["PricesOut"];
-/** The calls a reading keeps: the period and the values of each dimension (an empty value: calls without one). */
-export type UsageFilters = Omit<NonNullable<Query<"/api/v1/usage/summary">>, never>;
+/** What a reading asks for: a period of the household's clock and the values kept of each dimension (an empty value
+ * keeps the calls without one). */
+export type UsageQuery = NonNullable<Query<"/api/v1/usage/summary">>;
 
 // -- configuration --------------------------------------------------------------------------------
 

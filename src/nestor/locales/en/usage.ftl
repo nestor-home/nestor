@@ -1,9 +1,15 @@
 # `nestor usage`: what Nestor's calls to models cost, read from the data folder.
 
 usage-help = What Nestor's calls to models cost, by model, person, use or any other dimension.
-usage-days-help = How many days back (30 by default).
+usage-period-help = The period: today, 7d, 30d (the default), month or 90d.
 usage-by-help = What to break the spending down by.
-usage-total = Last { $days } days: { $spent }, { $calls } { $calls ->
+usage-total = { $period ->
+    [today] Today
+    [week] Last 7 days
+    [month] This month
+    [quarter] Last 90 days
+   *[other] Last 30 days
+}: { $spent }, { $calls } { $calls ->
     [one] call
    *[other] calls
 }{ $unknown ->

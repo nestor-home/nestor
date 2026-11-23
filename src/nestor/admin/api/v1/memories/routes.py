@@ -14,13 +14,11 @@ from nestor.admin.api.v1.errors import ApiError
 from nestor.admin.api.v1.memories.recorded import recorded
 from nestor.admin.api.v1.memories.schemas import CorrectionIn, MemoryOut
 from nestor.admin.api.v1.security import Caller, allowed
-from nestor.admin.api.v1.shared import People
+from nestor.admin.api.v1.shared import ADMIN_CHANNEL, People
 from nestor.admin.state import state
 from nestor.core import PersonId
 from nestor.modules.accounts import Scope
 from nestor.modules.usage import CallPurpose, attributed
-
-ADMIN = "admin"  # where these calls come from
 
 router = APIRouter(tags=["memories"])
 Keeper = Annotated[Caller, Depends(allowed(Scope.MEMORY_MANAGE_ALL, Scope.MEMORY_MANAGE_OWN))]
@@ -42,7 +40,7 @@ async def list_memories(
         about = caller.person or ""
     person = PersonId(about) if about else None
     memories = admin.nestor.memories
-    with attributed(purpose=CallPurpose.SEARCH, person=caller.person, channel=ADMIN):
+    with attributed(purpose=CallPurpose.SEARCH, person=caller.person, channel=ADMIN_CHANNEL):
         found = (
             await memories.recall(q, about=person, limit=limit)
             if q.strip()

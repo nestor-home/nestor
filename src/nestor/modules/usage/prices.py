@@ -5,9 +5,7 @@ from collections.abc import Mapping
 
 from nestor.core import Usage
 from nestor.modules.usage.ports import PriceCatalogue
-from nestor.modules.usage.types import Consumer, CostBasis, Priced, Rates
-
-REPORTED, LOCAL = "reported", "local"
+from nestor.modules.usage.types import ZERO, Consumer, CostBasis, Priced, Rates
 
 
 class PriceBook:
@@ -15,20 +13,29 @@ class PriceBook:
         """`configured`: the prices the configuration sets, by consumer key."""
         self._configured, self._catalogue = dict(configured), catalogue
 
+    @property
+    def catalogue(self) -> bool:
+        """Whether the public price list is read."""
+        return self._catalogue is not None
+
     def price(self, consumer: Consumer, usage: Usage) -> Priced:
+        """What a call cost, `usage.served` being the model that answered."""
         if usage.cost is not None:
-            return Priced(usage.cost, CostBasis.REPORTED, REPORTED)
+            return Priced(usage.cost, CostBasis.REPORTED)
         if consumer.local:
-            return Priced(None, CostBasis.FREE, LOCAL)
+            return Priced(ZERO, CostBasis.FREE)
         rates = self.rates(consumer, usage.served)
         cost = rates.cost(usage.units) if rates else None
         if rates is None or cost is None:
-            return Priced(None, CostBasis.UNKNOWN, None)
-        return Priced(cost, CostBasis.FREE if cost.nusd == 0 else CostBasis.PRICED, rates.source)
+            return Priced(None, CostBasis.UNKNOWN)
+        return Priced(cost, CostBasis.FREE if cost == ZERO else CostBasis.PRICED, rates.source)
 
     def rates(self, consumer: Consumer, served: str | None = None) -> Rates | None:
-        """The price a consumer's calls are valued at when its provider says no cost: the configuration's, else the
-        catalogue's for the model that answered, else for the one asked."""
+        """The price a consumer's calls are valued at when its provider says no cost: none for a model of the
+        household's own, the configuration's, else the catalogue's for the model that answered, else for the one
+        asked."""
+        if consumer.local:
+            return None
         if (configured := self._configured.get(consumer.key)) is not None:
             return configured
         if self._catalogue is None:

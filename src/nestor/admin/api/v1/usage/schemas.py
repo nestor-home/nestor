@@ -1,28 +1,66 @@
 """Spending as the admin shows it: amounts in nano-dollars (the front formats them), units by name, people named."""
 
-from collections.abc import Mapping
 from datetime import datetime
 
 from pydantic import BaseModel
 
 from nestor.admin.api.v1.shared import People, PersonRef
-from nestor.core import PersonId, Unit
+from nestor.core import ModelType, PersonId, Unit
 from nestor.modules.channels import Medium
 from nestor.modules.usage import (
     PRICED_PER,
+    Beat,
     CallPurpose,
     Consumer,
-    ConsumerKind,
     CostBasis,
     Dimension,
     Group,
+    Interval,
     Line,
     Outcome,
+    Period,
     Point,
     Rates,
+    Span,
     Summary,
     Totals,
 )
+
+Values = list[str] | None  # the values kept of a dimension; an empty one keeps the calls without one
+
+
+class UsageQuery(BaseModel):
+    """What every reading takes: a period of the household's clock, and for each dimension the values to keep
+    (repeated; an empty value keeps the calls without one, such as Nestor's own work for `person`)."""
+
+    period: Period = Period.THIRTY_DAYS
+    consumer: Values = None
+    kind: Values = None
+    provider: Values = None
+    served: Values = None
+    purpose: Values = None
+    person: Values = None
+    channel: Values = None
+    medium: Values = None
+    basis: Values = None
+    outcome: Values = None
+    origin: Values = None
+    conversation: Values = None
+
+    def kept(self) -> dict[Dimension, frozenset[str | None]]:
+        """The values kept, by dimension (each field but the period is one, of its name)."""
+        asked = {Dimension(name): getattr(self, name) for name in type(self).model_fields if name != "period"}
+        return {d: frozenset(v or None for v in values) for d, values in asked.items() if values}
+
+
+class SpanOut(BaseModel):
+    since: datetime
+    until: datetime
+    every: Interval  # the buckets the period is drawn in
+
+    @classmethod
+    def of(cls, span: Span) -> "SpanOut":
+        return cls(since=span.since, until=span.until, every=span.every)
 
 
 class TotalsOut(BaseModel):
@@ -31,6 +69,7 @@ class TotalsOut(BaseModel):
     unknown: int  # calls of unknown cost, left out of `cost_nusd`
     units: dict[Unit, float]
     duration_ms: int
+    conversations: int
 
     @classmethod
     def of(cls, totals: Totals) -> "TotalsOut":
@@ -40,28 +79,25 @@ class TotalsOut(BaseModel):
             unknown=totals.unknown,
             units=dict(totals.units),
             duration_ms=totals.duration_ms,
+            conversations=totals.conversations,
         )
 
 
 class SummaryOut(BaseModel):
-    since: datetime
-    until: datetime
+    span: SpanOut
     totals: TotalsOut
     previous: TotalsOut  # the period of the same length just before
     month: TotalsOut  # this calendar month so far
     projected_month_nusd: int  # the month's spending if it goes on as so far
-    conversations: int  # conversations the period's calls served
 
     @classmethod
-    def of(cls, summary: Summary, since: datetime, until: datetime) -> "SummaryOut":
+    def of(cls, summary: Summary) -> "SummaryOut":
         return cls(
-            since=since,
-            until=until,
+            span=SpanOut.of(summary.span),
             totals=TotalsOut.of(summary.totals),
             previous=TotalsOut.of(summary.previous),
             month=TotalsOut.of(summary.month),
             projected_month_nusd=summary.projected_month.nusd,
-            conversations=summary.conversations,
         )
 
 
@@ -87,19 +123,32 @@ class PointOut(BaseModel):
 
 
 class SeriesOut(BaseModel):
-    every: str
+    span: SpanOut
     by: Dimension | None
-    timezone: str
     points: list[PointOut]
 
     @classmethod
-    def of(cls, points: list[Point], every: str, by: Dimension | None, timezone: str, people: People) -> "SeriesOut":
+    def of(cls, span: Span, points: list[Point], by: Dimension | None, people: People) -> "SeriesOut":
         return cls(
-            every=every,
+            span=SpanOut.of(span),
             by=by,
-            timezone=timezone,
             points=[PointOut(start=p.start, groups=[GroupOut.of(g, by, people) for g in p.groups]) for p in points],
         )
+
+
+class BeatOut(BaseModel):
+    weekday: int  # 0 for Monday
+    hour: int
+    cost_nusd: int
+    calls: int
+
+    @classmethod
+    def of(cls, beat: Beat) -> "BeatOut":
+        return cls(weekday=beat.weekday, hour=beat.hour, cost_nusd=beat.cost.nusd, calls=beat.calls)
+
+
+class RhythmOut(BaseModel):
+    beats: list[BeatOut]  # the hours of the week calls were made at
 
 
 class CallOut(BaseModel):
@@ -109,7 +158,7 @@ class CallOut(BaseModel):
     position: int  # in the journal
     at: datetime
     consumer: str
-    kind: ConsumerKind
+    kind: ModelType
     provider: str
     served: str | None
     units: dict[Unit, float]
@@ -129,52 +178,33 @@ class CallOut(BaseModel):
 
     @classmethod
     def of(cls, line: Line, people: People) -> "CallOut":
+        call = line.call
         return cls(
-            id=line.id,
+            **{f: getattr(call, f) for f in cls.model_fields if f not in ("position", "person", "units")},
             position=line.position,
-            at=line.at,
-            consumer=line.consumer,
-            kind=line.kind,
-            provider=line.provider,
-            served=line.served,
-            units=dict(line.units),
-            cost_nusd=line.cost.nusd if line.cost is not None else None,
-            basis=line.basis,
-            price=line.price,
-            duration_ms=line.duration_ms,
-            outcome=line.outcome,
-            purpose=line.purpose,
-            person=people.ref(line.person),
-            channel=line.channel,
-            medium=line.medium,
-            session=line.session,
-            conversation=line.conversation,
-            turn=line.turn,
-            origin=line.origin,
+            person=people.ref(call.person),
+            units={Unit(u): q for u, q in call.units.items()},
         )
 
 
 class CallsOut(BaseModel):
     calls: list[CallOut]
-    before: int | None  # where the next page starts; none at the first call
+    next_before: int | None  # the cursor of the next page; none at the first call
 
 
 class PriceOut(BaseModel):
     """How a model's calls are valued when its provider does not say what it billed."""
 
     consumer: str
-    kind: ConsumerKind
+    kind: ModelType
     provider: str
     model: str | None
     local: bool  # the household's own: free
-    source: str | None  # `config`, `catalogue:<date>`; none: unknown
-    prices: dict[Unit, float]  # as written: dollars per million tokens or characters, per minute heard, apiece
+    source: str | None  # `config`, `catalogue:<date>`; none: the provider's bill, else unknown
+    prices: dict[Unit, float]  # as written (`PRICED_PER`): per million tokens or characters, per minute, apiece
 
     @classmethod
     def of(cls, consumer: Consumer, rates: Rates | None) -> "PriceOut":
-        written: Mapping[Unit, float] = (
-            {u: float(r * PRICED_PER[u]) for u, r in rates.per_unit.items()} if rates is not None else {}
-        )
         return cls(
             consumer=consumer.key,
             kind=consumer.kind,
@@ -182,7 +212,7 @@ class PriceOut(BaseModel):
             model=consumer.model,
             local=consumer.local,
             source=rates.source if rates is not None else None,
-            prices=dict(written),
+            prices={u: float(r * PRICED_PER[u]) for u, r in rates.per_unit.items()} if rates is not None else {},
         )
 
 

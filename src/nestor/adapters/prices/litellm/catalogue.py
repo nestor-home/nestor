@@ -7,14 +7,13 @@ import logging
 import os
 from collections.abc import Callable, Mapping
 from datetime import UTC, datetime
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 from pathlib import Path
-from typing import Any
 
 import httpx
 
-from nestor.adapters.common.http import USER_AGENT
-from nestor.core import Unit, utc_now
+from nestor.adapters.common.http import HttpApi
+from nestor.core import ProviderError, Unit, utc_now
 from nestor.modules.usage import PriceCatalogue, Rates
 
 log = logging.getLogger("nestor.prices")
@@ -55,28 +54,27 @@ class LiteLLMCatalogue(PriceCatalogue):
         path: Path,
         *,
         url: str = DEFAULT_URL,
-        client: httpx.AsyncClient | None = None,
+        transport: httpx.AsyncBaseTransport | None = None,
         first_s: float = FIRST_S,
         refresh_s: float = REFRESH_S,
         clock: Callable[[], datetime] = utc_now,
     ) -> None:
         """`path`: where the last copy is kept, so that prices are known at once after a restart, offline too."""
         self.path, self.url = path, url
-        self._client, self._own_client = client, client is None
+        self._api = HttpApi(self.name, timeout_s=30.0, transport=transport)
         self._first_s, self._refresh_s, self._clock = first_s, refresh_s, clock
         self._prices: dict[tuple[str, str], Rates] = {}  # (list's provider, model) → rates
         self._worker: asyncio.Task[None] | None = None
 
     async def start(self) -> None:
-        if self._client is None:
-            self._client = httpx.AsyncClient(timeout=30.0, follow_redirects=True, headers={"User-Agent": USER_AGENT})
-        copied = None
-        with contextlib.suppress(OSError, ValueError):
-            copied = await asyncio.to_thread(self._read_copy)
-        if copied is not None:
-            data, at = copied
-            self._prices = _rates(data, at)
-        self._worker = asyncio.create_task(self._keep_fresh(copied[1] if copied else None), name=self.name)
+        copied_at = None
+        if self.path.exists():
+            copied_at = datetime.fromtimestamp(self.path.stat().st_mtime, UTC)
+            try:  # read and priced off the event loop: a few megabytes of JSON
+                self._prices = await asyncio.to_thread(_rates, self.path.read_bytes(), copied_at)
+            except (OSError, ValueError) as error:
+                log.warning("the last copy of the model prices cannot be read: %s", error)
+        self._worker = asyncio.create_task(self._keep_fresh(copied_at), name=self.name)
 
     async def close(self) -> None:
         if self._worker is not None:
@@ -84,9 +82,7 @@ class LiteLLMCatalogue(PriceCatalogue):
             with contextlib.suppress(asyncio.CancelledError):
                 await self._worker
             self._worker = None
-        if self._own_client and self._client is not None:
-            await self._client.aclose()
-            self._client = None
+        await self._api.aclose()
 
     def rates(self, provider: str, model: str) -> Rates | None:
         for listed in _PROVIDERS.get(provider, ()):
@@ -97,20 +93,11 @@ class LiteLLMCatalogue(PriceCatalogue):
 
     async def refresh(self) -> None:
         """Download the list, keep its copy, and price by it from now on. A failure keeps the last good one."""
-        assert self._client is not None, "start the catalogue first"
-        body = bytearray()
-        async with self._client.stream("GET", self.url) as response:
-            response.raise_for_status()
-            async for chunk in response.aiter_bytes():
-                body += chunk
-                if len(body) > MAX_BYTES:
-                    raise ValueError(f"{self.url}: over {MAX_BYTES} bytes, not a price list")
-        data = json.loads(body)
-        at = self._clock()
-        prices = _rates(data, at)
+        body = await self._api.download(self.url, max_bytes=MAX_BYTES)
+        prices = await asyncio.to_thread(_rates, body, self._clock())
         if not prices:
             raise ValueError(f"{self.url}: no price in it")
-        await asyncio.to_thread(self._write_copy, bytes(body))
+        await asyncio.to_thread(self._keep, body)
         self._prices = prices
         log.info("model prices refreshed: %d models", len(prices))
 
@@ -122,23 +109,24 @@ class LiteLLMCatalogue(PriceCatalogue):
             try:
                 await self.refresh()
                 wait = self._refresh_s
-            except (httpx.HTTPError, OSError, ValueError) as error:
-                log.warning("model prices not refreshed (%s): %s", type(error).__name__, error)
+            except (ProviderError, OSError, ValueError) as error:
+                log.warning("model prices not refreshed: %s", error)
                 wait = RETRY_S
 
-    def _read_copy(self) -> tuple[Any, datetime]:
-        at = datetime.fromtimestamp(self.path.stat().st_mtime, UTC)
-        return json.loads(self.path.read_bytes()), at
-
-    def _write_copy(self, body: bytes) -> None:
+    def _keep(self, body: bytes) -> None:
+        """The copy, replaced whole and only once written to disk: a crash never leaves half a list."""
         self.path.parent.mkdir(parents=True, exist_ok=True)
         partial = self.path.with_suffix(".partial")
-        partial.write_bytes(body)
+        with partial.open("wb") as file:
+            file.write(body)
+            file.flush()
+            os.fsync(file.fileno())
         os.replace(partial, self.path)
 
 
-def _rates(data: object, at: datetime) -> dict[tuple[str, str], Rates]:
+def _rates(body: bytes, at: datetime) -> dict[tuple[str, str], Rates]:
     """The list's prices by (provider, model): the name it files them under, without the provider's prefix."""
+    data = json.loads(body)
     source = f"catalogue:{at.date().isoformat()}"
     prices: dict[tuple[str, str], Rates] = {}
     for name, entry in data.items() if isinstance(data, dict) else ():
@@ -148,8 +136,7 @@ def _rates(data: object, at: datetime) -> dict[tuple[str, str], Rates]:
         for field, unit in _FIELDS.items():
             value = entry.get(field)
             if isinstance(value, int | float) and not isinstance(value, bool) and value >= 0:
-                with contextlib.suppress(InvalidOperation):
-                    per_unit[unit] = Decimal(str(value))
+                per_unit[unit] = Decimal(str(value))
         if per_unit:
             prices[(provider, str(name).removeprefix(f"{provider}/"))] = Rates(per_unit, source)
     return prices

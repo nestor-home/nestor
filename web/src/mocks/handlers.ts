@@ -105,6 +105,13 @@ const calls = () => {
   return ledger;
 };
 
+/** What a usage request reads: its query, its period resolved, and the calls it keeps. */
+function reading(request: Request) {
+  const query = new URL(request.url).searchParams;
+  const span = usage.spanOf((query.get("period") ?? "30d") as In<"Period">);
+  return { query, span, kept: usage.within(calls(), span, query, ownUsage()) };
+}
+
 /** Whose calls the signed-in account reads: every one's (`undefined`), or only their person's. */
 const ownUsage = (): string | null | undefined =>
   scopes().includes("usage.read.all") ? undefined : (signedIn()?.person?.id ?? null);
@@ -1347,36 +1354,37 @@ export const handlers = [
   http.get(`${API}/usage/series`, ({ request }) => {
     const refused = guard(request);
     if (refused) return refused;
-    const query = new URL(request.url).searchParams;
-    const every = (query.get("every") ?? "day") as In<"Interval">;
+    const { query, span, kept } = reading(request);
     const by = (query.get("by") || null) as In<"Dimension"> | null;
-    const { kept } = usage.filtered(calls(), query, ownUsage());
-    return json({ every, by, timezone: "UTC", points: usage.series(kept, every, by) } satisfies In<"SeriesOut">);
+    return json({ span, by, points: usage.series(kept, span.every, by) } satisfies In<"SeriesOut">);
   }),
 
   http.get(`${API}/usage/groups`, ({ request }) => {
     const refused = guard(request);
     if (refused) return refused;
-    const query = new URL(request.url).searchParams;
+    const { query, kept } = reading(request);
     const by = (query.get("by") ?? "consumer") as In<"Dimension">;
-    const limit = Number(query.get("limit")) || undefined;
-    const { kept } = usage.filtered(calls(), query, ownUsage());
-    return json({ by, groups: usage.groups(kept, by).slice(0, limit) } satisfies In<"GroupsOut">);
+    return json({ by, groups: usage.groups(kept, by) } satisfies In<"GroupsOut">);
+  }),
+
+  http.get(`${API}/usage/rhythm`, ({ request }) => {
+    const refused = guard(request);
+    if (refused) return refused;
+    return json({ beats: usage.rhythm(reading(request).kept) } satisfies In<"RhythmOut">);
   }),
 
   http.get(`${API}/usage/calls`, ({ request }) => {
     const refused = guard(request);
     if (refused) return refused;
-    const query = new URL(request.url).searchParams;
+    const { query, kept } = reading(request);
     const before = Number(query.get("before")) || Number.POSITIVE_INFINITY;
     const limit = Number(query.get("limit")) || 50;
-    const { kept } = usage.filtered(calls(), query, ownUsage());
     const page = kept
       .filter((c) => c.position < before)
       .reverse()
       .slice(0, limit);
-    const more = page.length === limit;
-    return json({ calls: page, before: more ? (page.at(-1)?.position ?? null) : null } satisfies In<"CallsOut">);
+    const next = page.length === limit ? (page.at(-1)?.position ?? null) : null;
+    return json({ calls: page, next_before: next } satisfies In<"CallsOut">);
   }),
 
   http.get(`${API}/usage/prices`, ({ request }) => {

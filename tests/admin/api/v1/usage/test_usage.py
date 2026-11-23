@@ -4,9 +4,9 @@ member reads what their own requests cost and nothing else."""
 from datetime import timedelta
 from pathlib import Path
 
-from nestor.core import PersonId, utc_now
+from nestor.core import ModelType, PersonId, utc_now
 from nestor.modules.accounts import Role
-from nestor.modules.usage import CallPurpose, ConsumerKind, CostBasis, Outcome, UsageRecorded
+from nestor.modules.usage import CallPurpose, CostBasis, Outcome, UsageRecorded
 
 from ....harness import Harness
 
@@ -20,7 +20,7 @@ def call(
         source="usage",
         at=NOW - timedelta(days=days_ago, minutes=1),
         consumer="main",
-        kind=ConsumerKind.LANGUAGE,
+        kind=ModelType.LANGUAGE,
         provider="openrouter",
         served="anthropic/claude-haiku-4.5",
         units={"input_tokens": 1000, "output_tokens": 50},
@@ -62,12 +62,12 @@ async def test_the_owner_reads_every_call_and_a_member_only_what_their_requests_
         ]
         nestor_own = (await owner.get("/api/v1/usage/summary", person="")).json()["totals"]
         assert (nestor_own["calls"], nestor_own["unknown"]) == (1, 1), "an empty value keeps the calls without one"
-        days = (await owner.get("/api/v1/usage/series", every="day", by="purpose")).json()
+        days = (await owner.get("/api/v1/usage/series", by="purpose")).json()
         assert sum(g["totals"]["calls"] for p in days["points"] for g in p["groups"]) == 4
-        assert days["timezone"] == "Europe/Paris"
+        assert days["span"]["every"] == "day"
         page = (await owner.get("/api/v1/usage/calls", limit=3)).json()
-        rest = (await owner.get("/api/v1/usage/calls", limit=3, before=page["before"])).json()
-        assert (len(page["calls"]), len(rest["calls"]), rest["before"]) == (3, 1, None)
+        rest = (await owner.get("/api/v1/usage/calls", limit=3, before=page["next_before"])).json()
+        assert (len(page["calls"]), len(rest["calls"]), rest["next_before"]) == (3, 1, None)
 
         hers = (await member.get("/api/v1/usage/summary")).json()["totals"]
         assert (hers["cost_nusd"], hers["calls"]) == (500_000, 1)

@@ -2,13 +2,14 @@
 
 import pytest
 
-from nestor.core import Money, ProviderError, Unit
+from nestor.core import ModelType, Money, ProviderError, Unit
 from nestor.modules.channels import Medium
 from nestor.modules.cognition.images import ImageModel
 from nestor.modules.cognition.model import LanguageModel, Message, ModelRequest, text_answer
 from nestor.modules.journal import Journal
 from nestor.modules.usage import (
     CallPurpose,
+    Consumer,
     CostBasis,
     Meter,
     Outcome,
@@ -26,6 +27,10 @@ REQUEST = ModelRequest(messages=(Message.user("Quel temps fait-il demain ?"),))
 PRICES = {"drawer": Rates.written({Unit.IMAGES: 0.04}, "config")}
 
 
+def consumer(key: str, provider: str, asked: str | None, kind: ModelType = ModelType.LANGUAGE) -> Consumer:
+    return Consumer(key=key, kind=kind, provider=provider, model=asked)
+
+
 async def recorded(journal: Journal) -> list[UsageRecorded]:
     return await journal.history(UsageRecorded)
 
@@ -33,7 +38,9 @@ async def recorded(journal: Journal) -> list[UsageRecorded]:
 async def test_a_call_is_recorded_on_behalf_of_whoever_made_it_priced_and_timed() -> None:
     journal = Journal(MemoryEventLog())
     async with Meter(journal, PriceBook(PRICES)) as meter:
-        drawer = metered("drawer", ScriptedImages(), "openai-compatible", "gpt-image-1", meter)
+        drawer = metered(
+            ScriptedImages(), consumer("drawer", "openai-compatible", "gpt-image-1", ModelType.IMAGE), meter
+        )
         assert isinstance(drawer, ImageModel)
         with attributed(purpose=CallPurpose.TURN, person="lea", channel="telegram", medium=Medium.WRITTEN, turn="t1"):
             await drawer.generate("Un galet noir")
@@ -57,7 +64,7 @@ async def test_a_call_is_recorded_on_behalf_of_whoever_made_it_priced_and_timed(
 async def test_an_answer_cut_short_is_recorded_as_cut_with_what_it_had_consumed() -> None:
     journal = Journal(MemoryEventLog())
     async with Meter(journal, PriceBook({})) as meter:
-        model = metered("haiku", ScriptedModel("Il fera beau toute la journée."), "anthropic", None, meter)
+        model = metered(ScriptedModel("Il fera beau toute la journée."), consumer("haiku", "anthropic", None), meter)
         assert isinstance(model, LanguageModel)
         with attributed(purpose=CallPurpose.TURN, person="mathis"):
             stream = model.stream(REQUEST)
@@ -72,7 +79,7 @@ async def test_a_failed_call_is_recorded_as_failed_and_the_failure_still_reaches
     journal = Journal(MemoryEventLog())
     down = ProviderError("anthropic", "overloaded", transient=True)
     async with Meter(journal, PriceBook({})) as meter:
-        model = metered("haiku", ScriptedModel(fail=down), "anthropic", None, meter)
+        model = metered(ScriptedModel(fail=down), consumer("haiku", "anthropic", None), meter)
         assert isinstance(model, LanguageModel)
         with pytest.raises(ProviderError):
             await text_answer(model, REQUEST)
@@ -83,7 +90,7 @@ async def test_a_failed_call_is_recorded_as_failed_and_the_failure_still_reaches
 async def test_a_call_nobody_said_the_reason_of_is_recorded_as_unattributed_not_dropped() -> None:
     journal = Journal(MemoryEventLog())
     async with Meter(journal, PriceBook({})) as meter:
-        model = metered("haiku", ScriptedModel("Oui."), "anthropic", None, meter)
+        model = metered(ScriptedModel("Oui."), consumer("haiku", "anthropic", None), meter)
         assert isinstance(model, LanguageModel)
         await text_answer(model, REQUEST)
     (call,) = await recorded(journal)

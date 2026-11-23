@@ -11,18 +11,6 @@ from nestor.core import ModelType, Money, PersonId, SessionId, Unit
 from nestor.modules.channels import Medium
 
 
-class ConsumerKind(StrEnum):
-    """What consumes: a model of each `ModelType`, or an executor."""
-
-    LANGUAGE = ModelType.LANGUAGE.value
-    EMBEDDING = ModelType.EMBEDDING.value
-    SPEAKER = ModelType.SPEAKER.value
-    TRANSCRIPTION = ModelType.TRANSCRIPTION.value
-    SPEECH = ModelType.SPEECH.value
-    IMAGE = ModelType.IMAGE.value
-    EXECUTOR = "executor"
-
-
 class CallPurpose(StrEnum):
     """Why Nestor called: what the call serves, whichever model type answers it."""
 
@@ -65,14 +53,14 @@ PRICED_PER: Mapping[Unit, int] = {
     Unit.IMAGES: 1,
     Unit.REQUESTS: 1,
 }
-NONE = Money(0)
+ZERO = Money(0)
 
 
 def shown(amount: Money) -> str:
     """An amount as people read it: to the cent, and below a cent to two significant digits, so that a small call
     stays visible (`$0.0012`)."""
-    dollars = amount.nusd / 1e9
-    places = 2 if dollars >= 0.01 or dollars == 0 else 1 - math.floor(math.log10(dollars))
+    dollars = amount.dollars
+    places = 2 if dollars >= Decimal("0.01") or not dollars else 1 - math.floor(math.log10(dollars))
     return f"${dollars:,.{places}f}"
 
 
@@ -110,9 +98,9 @@ class Rates:
 
 @dataclass(frozen=True, slots=True)
 class Priced:
-    cost: Money | None
+    cost: Money | None  # none when unknown
     basis: CostBasis
-    source: str | None  # `reported`, `local`, `config`, `catalogue:<date>`; none when unknown
+    source: str | None = None  # where the price came from, for a cost `priced`: `config`, `catalogue:<date>`
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -120,7 +108,7 @@ class Consumer:
     """A model of `models` or an executor, as the ledger names and prices it."""
 
     key: str  # its name in the configuration
-    kind: ConsumerKind
+    kind: ModelType
     provider: str  # who bills it: the provider's brand when known (`openrouter`), else its plugin (`anthropic`)
     model: str | None = None  # the model the configuration asks for, to price it when the provider names none
     local: bool = False
@@ -157,6 +145,17 @@ class Dimension(StrEnum):
     CONVERSATION = "conversation"
 
 
+class Period(StrEnum):
+    """The spans spending is read over, in the household's days: today, the last 7, 30 or 90 days (today included),
+    or the calendar month so far."""
+
+    TODAY = "today"
+    WEEK = "7d"
+    THIRTY_DAYS = "30d"
+    MONTH = "month"
+    QUARTER = "90d"
+
+
 class Interval(StrEnum):
     HOUR = "hour"
     DAY = "day"
@@ -175,14 +174,33 @@ class UsageFilter:
 
 
 @dataclass(frozen=True, slots=True)
+class Span:
+    """A period resolved in the household's clock: from `since` to `until`, cut into buckets of `every`."""
+
+    since: datetime
+    until: datetime
+    every: Interval
+
+    @property
+    def before(self) -> "Span":
+        """The span of the same length just before."""
+        length = self.until - self.since
+        return Span(self.since - length, self.since, self.every)
+
+    def keeping(self, only: Mapping[Dimension, frozenset[str | None]]) -> UsageFilter:
+        return UsageFilter(since=self.since, until=self.until, only=only)
+
+
+@dataclass(frozen=True, slots=True)
 class Totals:
     """What a set of calls cost and consumed."""
 
-    cost: Money = NONE  # what is known: reported, priced or free
+    cost: Money = ZERO  # what is known: reported, priced or free
     calls: int = 0
     unknown: int = 0  # calls of unknown cost, left out of `cost`
     units: Mapping[Unit, float] = field(default_factory=dict)
     duration_ms: int = 0
+    conversations: int = 0  # the conversations the calls served
 
 
 @dataclass(frozen=True, slots=True)
@@ -197,28 +215,11 @@ class Point:
     groups: tuple[Group, ...]
 
 
-@dataclass(frozen=True, slots=True, kw_only=True)
-class Line:
-    """One call, as the ledger keeps it."""
+@dataclass(frozen=True, slots=True)
+class Beat:
+    """What was spent at one hour of one weekday (0 for Monday), over a period: when the household spends."""
 
-    id: str  # the event's
-    position: int  # in the journal
-    at: datetime
-    consumer: str
-    kind: ConsumerKind
-    provider: str
-    served: str | None
-    units: Mapping[Unit, float]
-    cost: Money | None
-    basis: CostBasis
-    price: str | None
-    duration_ms: int
-    outcome: Outcome
-    purpose: CallPurpose
-    person: PersonId | None
-    channel: str | None
-    medium: Medium | None
-    session: SessionId | None
-    conversation: str | None
-    turn: str | None
-    origin: str | None
+    weekday: int
+    hour: int
+    cost: Money
+    calls: int

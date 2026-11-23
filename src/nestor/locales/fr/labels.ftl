@@ -170,7 +170,6 @@ usage-kind = { $kind ->
     [transcription] transcription
     [speech] synthèse vocale
     [image] images
-    [executor] exécutant
    *[other] { $kind }
 }
 usage-basis = { $basis ->

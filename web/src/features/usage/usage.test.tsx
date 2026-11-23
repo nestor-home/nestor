@@ -25,7 +25,7 @@ describe("the costs", () => {
       expect(rows.every((row) => row.includes("Léa"))).toBe(true);
     });
     expect(within(who).getByRole("button", { name: /Mathis/ })).toHaveAttribute("aria-pressed", "false");
-    const kept = screen.getByRole("button", { name: /Person.*Léa/ });
+    const kept = screen.getByRole("button", { name: "Remove the filter Léa" });
     await user.click(kept);
     await waitFor(async () => expect((await callers()).some((row) => !row.includes("Léa"))).toBe(true));
   });

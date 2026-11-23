@@ -9,7 +9,6 @@ import { IconTile } from "@/components/marks";
 import { PageHeader } from "@/components/page";
 import { UpdateAvailable } from "@/features/system/updates";
 import { money } from "@/features/usage/format";
-import { filtersOf, periodOf } from "@/features/usage/search";
 import { useT } from "@/i18n";
 import { type Permission, useCan, useMe } from "@/lib/session";
 
@@ -22,7 +21,7 @@ export function SettingsView() {
   const satellites = useQuery({ ...satellitesQuery, enabled: useCan("satellites:read") });
   const accounts = useQuery({ ...accountsQuery, enabled: useCan("accounts:read") });
   const system = useQuery({ ...systemQuery, enabled: useCan("system:read") });
-  const month = useQuery({ ...usageSummaryQuery(filtersOf(periodOf("month"))), enabled: useCan("usage:read") });
+  const month = useQuery({ ...usageSummaryQuery({ period: "month" }), enabled: useCan("usage:read") });
   const offline = satellites.data?.paired.filter((s) => s.connected === false).length ?? 0;
   const cards: { to: To; scope: Permission; icon: LucideIcon; title: string; text: string; state?: string }[] = [
     {

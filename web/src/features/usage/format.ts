@@ -51,3 +51,12 @@ export function ticks(max: number, wanted = 4): number[] {
   const top = Math.ceil(max / step) * step;
   return Array.from({ length: Math.round(top / step) + 1 }, (_, i) => i * step);
 }
+
+/** A price as providers write it: to the cent, three significant digits below a dollar ($0.00367). */
+export function rate(dollars: number): string {
+  return new Intl.NumberFormat(activeLocale(), {
+    style: "currency",
+    currency: "USD",
+    ...(dollars < 1 ? { maximumSignificantDigits: 3 } : { minimumFractionDigits: 0, maximumFractionDigits: 2 }),
+  }).format(dollars);
+}

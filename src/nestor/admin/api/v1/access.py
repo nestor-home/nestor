@@ -2,6 +2,8 @@
 that belong to them. Something out of reach is reported as missing, never as forbidden, unless the caller
 may see it but not change it: its existence is not disclosed."""
 
+from collections.abc import Mapping
+
 from nestor.admin.api.v1.errors import ApiError, not_found
 from nestor.admin.api.v1.security import Caller
 from nestor.admin.api.v1.shared import People
@@ -14,6 +16,7 @@ from nestor.modules.cognition.delegation.service import Task
 from nestor.modules.connectors import Connection, Connections
 from nestor.modules.initiative import Schedule, Watch
 from nestor.modules.memory import Memory
+from nestor.modules.usage import Dimension
 
 
 def connections_of(admin: AdminState) -> Connections:
@@ -151,3 +154,15 @@ def reaches_message_of(caller: Caller, *people: PersonId | None) -> bool:
     """A message between these people, or a confirmation waiting for one of them: every one with
     `messages.read.all`, those concerning the account's person with `messages.read.own`."""
     return any(caller.principal.reaches(p, every=Scope.MESSAGES_READ_ALL, own=Scope.MESSAGES_READ_OWN) for p in people)
+
+
+def usage_reach(
+    caller: Caller, only: Mapping[Dimension, frozenset[str | None]]
+) -> dict[Dimension, frozenset[str | None]]:
+    """The calls a caller reads among those asked: every one with `usage.read.all`, else only those made for their
+    person (none without a person), whatever else is asked."""
+    if caller.principal.can(Scope.USAGE_READ_ALL):
+        return dict(only)
+    own: frozenset[str | None] = frozenset({caller.person}) if caller.person else frozenset()
+    asked = only.get(Dimension.PERSON)
+    return {**only, Dimension.PERSON: own & asked if asked is not None else own}

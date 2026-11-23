@@ -11720,37 +11720,12 @@
         "operationId": "usageSummary",
         "parameters": [
           {
-            "name": "since",
+            "name": "period",
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "format": "date-time"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Since"
-            }
-          },
-          {
-            "name": "until",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "format": "date-time"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Until"
+              "$ref": "#/components/schemas/Period",
+              "default": "30d"
             }
           },
           {
@@ -12082,18 +12057,9 @@
           "usage"
         ],
         "summary": "Usage Series",
-        "description": "Spending over time, by hour, day, week or month of the household's clock, split by `by` if given.",
+        "description": "Spending over the period, bucket by bucket (by hour today, by week over 90 days), split by `by` if given.",
         "operationId": "usageSeries",
         "parameters": [
-          {
-            "name": "every",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "$ref": "#/components/schemas/Interval",
-              "default": "day"
-            }
-          },
           {
             "name": "by",
             "in": "query",
@@ -12111,37 +12077,12 @@
             }
           },
           {
-            "name": "since",
+            "name": "period",
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "format": "date-time"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Since"
-            }
-          },
-          {
-            "name": "until",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "format": "date-time"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Until"
+              "$ref": "#/components/schemas/Period",
+              "default": "30d"
             }
           },
           {
@@ -12485,55 +12426,12 @@
             }
           },
           {
-            "name": "limit",
+            "name": "period",
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "integer",
-                  "maximum": 500,
-                  "minimum": 1
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Limit"
-            }
-          },
-          {
-            "name": "since",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "format": "date-time"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Since"
-            }
-          },
-          {
-            "name": "until",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "format": "date-time"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Until"
+              "$ref": "#/components/schemas/Period",
+              "default": "30d"
             }
           },
           {
@@ -12859,6 +12757,347 @@
         }
       }
     },
+    "/api/v1/usage/rhythm": {
+      "get": {
+        "tags": [
+          "usage"
+        ],
+        "summary": "Usage Rhythm",
+        "description": "When the period's spending happened: by hour of each weekday.",
+        "operationId": "usageRhythm",
+        "parameters": [
+          {
+            "name": "period",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Period",
+              "default": "30d"
+            }
+          },
+          {
+            "name": "consumer",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Consumer"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Provider"
+            }
+          },
+          {
+            "name": "served",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Served"
+            }
+          },
+          {
+            "name": "purpose",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Purpose"
+            }
+          },
+          {
+            "name": "person",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Person"
+            }
+          },
+          {
+            "name": "channel",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Channel"
+            }
+          },
+          {
+            "name": "medium",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Medium"
+            }
+          },
+          {
+            "name": "basis",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Basis"
+            }
+          },
+          {
+            "name": "outcome",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Outcome"
+            }
+          },
+          {
+            "name": "origin",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Origin"
+            }
+          },
+          {
+            "name": "conversation",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Conversation"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RhythmOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/usage/calls": {
       "get": {
         "tags": [
@@ -12897,37 +13136,12 @@
             }
           },
           {
-            "name": "since",
+            "name": "period",
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "format": "date-time"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Since"
-            }
-          },
-          {
-            "name": "until",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "format": "date-time"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Until"
+              "$ref": "#/components/schemas/Period",
+              "default": "30d"
             }
           },
           {
@@ -13928,6 +14142,34 @@
         "title": "AuthorizationOut",
         "description": "Either where the browser goes, or, for a discovered service that needs no consent, the connection made."
       },
+      "BeatOut": {
+        "properties": {
+          "weekday": {
+            "type": "integer",
+            "title": "Weekday"
+          },
+          "hour": {
+            "type": "integer",
+            "title": "Hour"
+          },
+          "cost_nusd": {
+            "type": "integer",
+            "title": "Cost Nusd"
+          },
+          "calls": {
+            "type": "integer",
+            "title": "Calls"
+          }
+        },
+        "type": "object",
+        "required": [
+          "weekday",
+          "hour",
+          "cost_nusd",
+          "calls"
+        ],
+        "title": "BeatOut"
+      },
       "CallOut": {
         "properties": {
           "id": {
@@ -13948,7 +14190,7 @@
             "title": "Consumer"
           },
           "kind": {
-            "$ref": "#/components/schemas/ConsumerKind"
+            "$ref": "#/components/schemas/ModelType"
           },
           "provider": {
             "type": "string",
@@ -14139,7 +14381,7 @@
             "type": "array",
             "title": "Calls"
           },
-          "before": {
+          "next_before": {
             "anyOf": [
               {
                 "type": "integer"
@@ -14148,13 +14390,13 @@
                 "type": "null"
               }
             ],
-            "title": "Before"
+            "title": "Next Before"
           }
         },
         "type": "object",
         "required": [
           "calls",
-          "before"
+          "next_before"
         ],
         "title": "CallsOut"
       },
@@ -15229,20 +15471,6 @@
           "oauth"
         ],
         "title": "ConnectorOut"
-      },
-      "ConsumerKind": {
-        "type": "string",
-        "enum": [
-          "language",
-          "embedding",
-          "speaker",
-          "transcription",
-          "speech",
-          "image",
-          "executor"
-        ],
-        "title": "ConsumerKind",
-        "description": "What consumes: a model of each `ModelType`, or an executor."
       },
       "CorrectionIn": {
         "properties": {
@@ -17633,6 +17861,18 @@
         ],
         "title": "PendingOut"
       },
+      "Period": {
+        "type": "string",
+        "enum": [
+          "today",
+          "7d",
+          "30d",
+          "month",
+          "90d"
+        ],
+        "title": "Period",
+        "description": "The spans spending is read over, in the household's days: today, the last 7, 30 or 90 days (today included),\nor the calendar month so far."
+      },
       "PersonOut": {
         "properties": {
           "id": {
@@ -17885,7 +18125,7 @@
             "title": "Consumer"
           },
           "kind": {
-            "$ref": "#/components/schemas/ConsumerKind"
+            "$ref": "#/components/schemas/ModelType"
           },
           "provider": {
             "type": "string",
@@ -18369,6 +18609,22 @@
           "restarting"
         ],
         "title": "RestartOut"
+      },
+      "RhythmOut": {
+        "properties": {
+          "beats": {
+            "items": {
+              "$ref": "#/components/schemas/BeatOut"
+            },
+            "type": "array",
+            "title": "Beats"
+          }
+        },
+        "type": "object",
+        "required": [
+          "beats"
+        ],
+        "title": "RhythmOut"
       },
       "Risk": {
         "type": "string",
@@ -18901,9 +19157,8 @@
       },
       "SeriesOut": {
         "properties": {
-          "every": {
-            "type": "string",
-            "title": "Every"
+          "span": {
+            "$ref": "#/components/schemas/SpanOut"
           },
           "by": {
             "anyOf": [
@@ -18915,10 +19170,6 @@
               }
             ]
           },
-          "timezone": {
-            "type": "string",
-            "title": "Timezone"
-          },
           "points": {
             "items": {
               "$ref": "#/components/schemas/PointOut"
@@ -18929,9 +19180,8 @@
         },
         "type": "object",
         "required": [
-          "every",
+          "span",
           "by",
-          "timezone",
           "points"
         ],
         "title": "SeriesOut"
@@ -19052,6 +19302,30 @@
         ],
         "title": "SoftwareOut"
       },
+      "SpanOut": {
+        "properties": {
+          "since": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Since"
+          },
+          "until": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Until"
+          },
+          "every": {
+            "$ref": "#/components/schemas/Interval"
+          }
+        },
+        "type": "object",
+        "required": [
+          "since",
+          "until",
+          "every"
+        ],
+        "title": "SpanOut"
+      },
       "Stage": {
         "type": "string",
         "enum": [
@@ -19120,15 +19394,8 @@
       },
       "SummaryOut": {
         "properties": {
-          "since": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Since"
-          },
-          "until": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Until"
+          "span": {
+            "$ref": "#/components/schemas/SpanOut"
           },
           "totals": {
             "$ref": "#/components/schemas/TotalsOut"
@@ -19142,21 +19409,15 @@
           "projected_month_nusd": {
             "type": "integer",
             "title": "Projected Month Nusd"
-          },
-          "conversations": {
-            "type": "integer",
-            "title": "Conversations"
           }
         },
         "type": "object",
         "required": [
-          "since",
-          "until",
+          "span",
           "totals",
           "previous",
           "month",
-          "projected_month_nusd",
-          "conversations"
+          "projected_month_nusd"
         ],
         "title": "SummaryOut"
       },
@@ -19494,6 +19755,10 @@
           "duration_ms": {
             "type": "integer",
             "title": "Duration Ms"
+          },
+          "conversations": {
+            "type": "integer",
+            "title": "Conversations"
           }
         },
         "type": "object",
@@ -19502,7 +19767,8 @@
           "calls",
           "unknown",
           "units",
-          "duration_ms"
+          "duration_ms",
+          "conversations"
         ],
         "title": "TotalsOut"
       },

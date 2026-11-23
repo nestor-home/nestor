@@ -50,9 +50,6 @@ class Money:
         return Money(self.nusd + other.nusd)
 
 
-ZERO = Money(0)
-
-
 @dataclass(frozen=True, slots=True)
 class Usage:
     """What a call consumed: `units`, what the provider billed for it when it says (`cost`), and the model that
@@ -76,11 +73,9 @@ class Tally:
 
     def __init__(self) -> None:
         self.usage = Usage()
-        self.reports = 0
 
     def add(self, usage: Usage) -> None:
         self.usage += usage
-        self.reports += 1
 
 
 _COUNTING: ContextVar[tuple[Tally, ...]] = ContextVar("nestor_metering", default=())
