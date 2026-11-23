@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING
 
 from nestor.adapters.models.sherpa_onnx.catalogue import SPEAKER_FOLDER, SPEAKER_RELEASE, SPEAKERS
 from nestor.adapters.models.sherpa_onnx.releases import fetch
-from nestor.core import ContractError, ProviderError, Usage, report
+from nestor.core import ContractError, ProviderError, Unit, Usage, report
 from nestor.modules.identity import SpeakerModel, Vector, VoiceSpace
 from nestor.modules.identity.audio import samples
 
@@ -102,7 +102,7 @@ class SherpaOnnxSpeaker(SpeakerModel):
         extractor = self._extractor
         if extractor is None:
             raise ContractError(f"{self._provider}: used before start()")
-        report(Usage(served=self._model))
+        report(Usage({Unit.REQUESTS: 1}, served=self._model))
         return await asyncio.to_thread(self._embed, extractor, audio)
 
     def _embed(self, extractor: "sherpa_onnx.SpeakerEmbeddingExtractor", audio: bytes) -> Vector:

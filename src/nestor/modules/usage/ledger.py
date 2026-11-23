@@ -31,13 +31,6 @@ from nestor.modules.usage.types import (
 PAGE = 1000  # journal entries read at a time when catching up
 RECORDED = frozenset({UsageRecorded.event_type})
 DAYS: Mapping[Period, int] = {Period.TODAY: 1, Period.WEEK: 7, Period.THIRTY_DAYS: 30, Period.QUARTER: 90}
-BUCKETS: Mapping[Period, Interval] = {
-    Period.TODAY: Interval.HOUR,
-    Period.WEEK: Interval.DAY,
-    Period.THIRTY_DAYS: Interval.DAY,
-    Period.MONTH: Interval.DAY,
-    Period.QUARTER: Interval.WEEK,
-}
 
 
 @dataclass(frozen=True, slots=True)
@@ -61,16 +54,17 @@ class Ledger(Component):
         self._zone = ZoneInfo(timezone)
         self._clock = clock
         self._lock = asyncio.Lock()
-        self._position: int | None = None  # the last journal position the store holds, once read
+        self._position = 0  # the last journal position the store holds, read when it opens
 
     async def start(self) -> None:
         await self.store.open(self.timezone)
+        self._position = await self.store.position()
         await self.catch_up()
 
     async def catch_up(self) -> int:
         """Bring the store up to the journal; how many calls it added. Nothing new costs one indexed read."""
         async with self._lock:
-            added, after = 0, self._position if self._position is not None else await self.store.position()
+            added, after = 0, self._position
             while entries := await self.journal.log.read(LogQuery(types=RECORDED, after=after, limit=PAGE)):
                 lines = [Line(e.position, call) for e in entries if isinstance(call := e.event(), UsageRecorded)]
                 await self.store.add(lines)
@@ -84,7 +78,7 @@ class Ledger(Component):
         midnight = now.astimezone(self._zone).replace(hour=0, minute=0, second=0, microsecond=0)
         # calendar arithmetic on the household's clock: a day is a day, whatever the summer time
         since = midnight.replace(day=1) if period is Period.MONTH else midnight - timedelta(days=DAYS[period] - 1)
-        return Span(period, since, now, BUCKETS[period])
+        return Span(period, since, now)
 
     def before(self, span: Span) -> Span:
         """The same stretch of the household's calendar one period back: yesterday at the same hours for today, the
@@ -94,7 +88,7 @@ class Ledger(Component):
             back = since - (since - timedelta(days=1)).replace(day=1)  # the month before, as long as it is
         else:
             back = timedelta(days=DAYS[span.period])
-        return Span(span.period, since - back, min(until - back, since), span.every)
+        return Span(span.period, since - back, min(until - back, since))
 
     async def summary(self, span: Span, only: Mapping[Dimension, frozenset[str | None]]) -> Summary:
         await self.catch_up()

@@ -8,7 +8,6 @@ from enum import StrEnum
 
 from nestor.core import ModelType, Money, PersonId, SessionId, Unit
 from nestor.modules.channels import Medium
-from nestor.modules.cognition.tools.types import ToolContext
 
 
 class CallPurpose(StrEnum):
@@ -32,6 +31,7 @@ class CostBasis(StrEnum):
     REPORTED = "reported"  # the provider said what it billed
     PRICED = "priced"  # units times a price: the configuration's, or the public catalogue's
     FREE = "free"  # a model of the household's own, or a price of zero
+    NOTHING = "nothing"  # nothing consumed nor billed: a call that failed before it was sent
     UNKNOWN = "unknown"  # neither said nor priced: never counted as zero
 
 
@@ -54,13 +54,6 @@ PRICED_PER: Mapping[Unit, int] = {
     Unit.REQUESTS: 1,
 }
 ZERO = Money(0)
-
-
-def usd(name: str, amount: Money) -> dict[str, float | str]:
-    """An amount as the messages take it, for Fluent to write in the reader's language: its dollars (`name`), and
-    whether it is under a cent (`<name>_small`), then written to two significant digits ($0.0042)."""
-    dollars = amount.dollars
-    return {name: float(dollars), f"{name}_small": "yes" if 0 < dollars < Decimal("0.01") else "no"}
 
 
 _INPUT_PARTS = (Unit.CACHED_INPUT_TOKENS, Unit.CACHE_WRITE_TOKENS)  # counted in the input, priced apart when they can
@@ -126,24 +119,6 @@ class Attribution:
     turn: str | None = None
     origin: str | None = None  # what the work comes from: `watch:<id>`, `schedule:<id>`, `task:<id>`
 
-    @classmethod
-    def of(
-        cls, context: ToolContext, medium: Medium, *, conversation: str | None = None, origin: str | None = None
-    ) -> "Attribution":
-        """A turn's work, as its tools see it: a person's (`asked`) or Nestor's own telling, who it is for, where,
-        and the conversation and turn it belongs to (`conversation` before the turn is opened)."""
-        exchange = context.exchange
-        return cls(
-            purpose=CallPurpose.TURN if context.asked else CallPurpose.NOTIFICATION,
-            person=context.person,
-            channel=context.address.channel,
-            medium=medium,
-            session=context.address.session,
-            conversation=exchange.conversation_id if exchange else conversation,
-            turn=exchange.turn_id if exchange else None,
-            origin=origin,
-        )
-
 
 class Dimension(StrEnum):
     """What spending is grouped or filtered by: the ledger's columns, shared by the API and the admin."""
@@ -190,14 +165,27 @@ class UsageFilter:
     only: Mapping[Dimension, frozenset[str | None]] = field(default_factory=dict)
 
 
+BUCKETS: Mapping[Period, Interval] = {
+    Period.TODAY: Interval.HOUR,
+    Period.WEEK: Interval.DAY,
+    Period.THIRTY_DAYS: Interval.DAY,
+    Period.MONTH: Interval.DAY,
+    Period.QUARTER: Interval.WEEK,
+}
+
+
 @dataclass(frozen=True, slots=True)
 class Span:
-    """A period resolved in the household's clock: from `since` to `until`, cut into buckets of `every`."""
+    """A period resolved in the household's clock: from `since` to `until`."""
 
     period: Period
     since: datetime
     until: datetime
-    every: Interval
+
+    @property
+    def every(self) -> Interval:
+        """The buckets the period is drawn in."""
+        return BUCKETS[self.period]
 
     def keeping(self, only: Mapping[Dimension, frozenset[str | None]]) -> UsageFilter:
         return UsageFilter(since=self.since, until=self.until, only=only)

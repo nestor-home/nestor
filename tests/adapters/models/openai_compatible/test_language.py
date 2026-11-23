@@ -277,7 +277,9 @@ async def test_the_reply_says_what_it_cost_and_which_model_answered(api: respx.M
     api.post(COMPLETIONS).mock(return_value=streamed(chunk({"content": "Oui."}), served, usage))
     _, tally = await consumed(collect())
     assert tally.usage == Usage(
-        {Unit.INPUT_TOKENS: 120, Unit.OUTPUT_TOKENS: 8}, cost=Money.usd("0.00004"), served="vendor/model-2026-10"
+        {Unit.INPUT_TOKENS: 120, Unit.OUTPUT_TOKENS: 8, Unit.REQUESTS: 1},
+        cost=Money.usd("0.00004"),
+        served="vendor/model-2026-10",
     )
 
 
@@ -372,7 +374,7 @@ async def test_a_usage_without_token_counts_or_cost_is_reported_as_far_as_known(
     local = {"choices": [], "usage": {"prompt_tokens": 30, "completion_tokens": 2}}
     api.post(COMPLETIONS).mock(return_value=streamed(chunk(finish="stop"), {"usage": {"total_tokens": 3}}, local))
     _, tally = await consumed(collect())
-    assert tally.usage == Usage({Unit.INPUT_TOKENS: 30, Unit.OUTPUT_TOKENS: 2})
+    assert tally.usage == Usage({Unit.INPUT_TOKENS: 30, Unit.OUTPUT_TOKENS: 2, Unit.REQUESTS: 1})
 
 
 async def test_a_malformed_chunk_is_a_provider_error(api: respx.MockRouter) -> None:

@@ -42,7 +42,8 @@ class ScriptedModel(LanguageModel):
             reply = reply(request)
         read = sum(len(m.content.split()) for m in request.messages)
         written = len(reply.split()) if isinstance(reply, str) else 1
-        report(Usage({Unit.INPUT_TOKENS: read, Unit.OUTPUT_TOKENS: written}, served=self.name))  # a word a token
+        # a word a token
+        report(Usage({Unit.INPUT_TOKENS: read, Unit.OUTPUT_TOKENS: written, Unit.REQUESTS: 1}, served=self.name))
         try:
             if isinstance(reply, ToolCall):
                 yield ToolCallRequested(reply)

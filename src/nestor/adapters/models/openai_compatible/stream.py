@@ -42,7 +42,7 @@ class ChunkDecoder:
                 yield output
         finally:  # what was billed, even for a reply cut or failed midway
             if self._usage is not None or self._model is not None:
-                report(spent(self._usage, self._model))
+                report(spent(self._usage, self._model, requests=1))
 
     async def _outputs(self, lines: AsyncIterator[str]) -> AsyncGenerator[ModelOutput]:
         async for line in lines:

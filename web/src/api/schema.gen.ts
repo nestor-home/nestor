@@ -2456,7 +2456,7 @@ export interface components {
          * @description How a cost is known.
          * @enum {string}
          */
-        CostBasis: "reported" | "priced" | "free" | "unknown";
+        CostBasis: "reported" | "priced" | "free" | "nothing" | "unknown";
         /**
          * Day
          * @enum {string}
@@ -3735,7 +3735,6 @@ export interface components {
         };
         /** SpanOut */
         SpanOut: {
-            period: components["schemas"]["Period"];
             /**
              * Since
              * Format: date-time
@@ -14204,7 +14203,7 @@ export const callPurposeValues: ReadonlyArray<FlattenedDeepRequired<components>[
 export const changeKindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ChangeKind"]> = ["breaking", "feature", "fix", "other"];
 export const chatRoleValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ChatRole"]> = ["person", "assistant", "note", "fallback", "tool"];
 export const chatStreamOutTypeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ChatStreamOut"]["type"]> = ["text", "end", "failed", "done"];
-export const costBasisValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["CostBasis"]> = ["reported", "priced", "free", "unknown"];
+export const costBasisValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["CostBasis"]> = ["reported", "priced", "free", "nothing", "unknown"];
 export const dayValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Day"]> = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 export const dimensionValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Dimension"]> = ["consumer", "kind", "provider", "served", "purpose", "person", "channel", "medium", "basis", "outcome", "origin", "conversation"];
 export const errorDetailCodeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ErrorDetail"]["code"]> = ["addition_over", "addition_unknown", "attachment_unknown", "audio_format", "bad_token", "chat_busy", "chat_needs_person", "chat_off", "client_incomplete", "client_missing", "client_required", "config_history_unknown", "config_invalid", "config_unavailable", "conflict", "connection_unknown", "connector_unknown", "cross_origin", "csrf_failed", "empty_memory", "executor_unknown", "executors_unreachable", "fields_missing", "forbidden", "http_error", "identify_unsupported", "invalid", "invalid_code", "invalid_credentials", "invalid_login", "invalid_request", "invitation_expired", "invitation_revoked", "invitation_unknown", "invitation_used", "journal_entry_unknown", "media_camera_off", "privacy_needs_presence", "media_forbidden", "media_off", "media_offline", "media_unable", "last_owner", "memory_shared", "memory_unknown", "method_not_allowed", "no_connectors", "no_secret_key", "not_a_device_code_method", "not_found", "not_oauth", "oauth", "own_connections_only", "pairing_refused", "pending_unknown", "person_required", "person_unknown", "provider_error", "provider_refused", "restart_unconfirmed", "satellite_offline", "satellite_unknown", "secret_in_use", "secret_unknown", "task_unknown", "throttled", "too_many_additions", "unauthenticated", "unknown_locale", "unknown_person", "unknown_tool", "unsupported_media_type", "update_not_installable", "update_unavailable", "update_unconfirmed", "update_unsupported", "use_me_password", "voice_not_yours", "voices_off", "watch_unknown", "schedule_unknown", "service_refused", "confirmation_unknown", "weak_password", "wrong_password"];

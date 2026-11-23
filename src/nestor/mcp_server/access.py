@@ -9,7 +9,7 @@ from mcp.server.mcpserver.exceptions import ToolError
 from nestor.core import PersonId
 from nestor.mcp_server.links import Links
 from nestor.modules.cognition.delegation.service import Task
-from nestor.modules.conversation import NotificationTurn, UserTurn
+from nestor.modules.conversation import About, NotificationTurn, Source, UserTurn
 from nestor.modules.conversation.history import in_conversation
 from nestor.modules.usage import CallPurpose, attribute
 from nestor.runtime import Nestor
@@ -37,7 +37,7 @@ class TaskAccess:
             person=found.requested_by,
             channel=found.origin.channel,
             session=found.origin.session,
-            origin=f"task:{found.id}",
+            origin=About(Source.TASK, found.id).key,
         )
         return found
 

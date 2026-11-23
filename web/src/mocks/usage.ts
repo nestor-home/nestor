@@ -112,9 +112,6 @@ export function mockCalls(now: Date = new Date()): MockCall[] {
       if (quantity) [cost, price] = [Math.round(quantity * perUnit * NANO), LIST];
     }
     const billed = consumer === "sonnet" || consumer === "haiku";
-    // a call is a request, as the meter counts it; one that failed before anything was billed cost nothing
-    const failedBare = who.outcome === "failed" && !Object.keys(units).length;
-    const counted = failedBare ? units : { ...units, requests: 1 };
     return {
       id: `u-${id.toString(36)}`,
       position: id,
@@ -123,9 +120,9 @@ export function mockCalls(now: Date = new Date()): MockCall[] {
       kind: model.kind,
       provider: model.provider,
       served: model.served,
-      units: counted,
-      cost_nusd: failedBare ? 0 : cost,
-      basis: failedBare ? "free" : billed ? "reported" : model.local ? "free" : cost === null ? "unknown" : "priced",
+      units: { ...units, requests: 1 }, // a call is a request, as every adapter reports
+      cost_nusd: cost,
+      basis: billed ? "reported" : model.local ? "free" : cost === null ? "unknown" : "priced",
       price,
       duration_ms: billed ? whole(600, consumer === "sonnet" ? 9000 : 2400) : whole(150, 1400),
       outcome: "ok",
@@ -194,7 +191,23 @@ export function mockCalls(now: Date = new Date()): MockCall[] {
           calls.push(call(new Date(moment.getTime() + 9000), "victor", "turn", { characters: whole(90, 520) }, who));
         }
         if (rand() < 0.03) {
-          calls.push(call(moment, "sonnet", "turn", {}, { ...who, outcome: "failed", duration_ms: 30_000 }));
+          calls.push(
+            call(
+              moment,
+              "sonnet",
+              "turn",
+              {},
+              {
+                ...who,
+                outcome: "failed", // before it was sent: nothing consumed, nothing billed
+                duration_ms: 30_000,
+                units: {},
+                cost_nusd: 0,
+                basis: "nothing",
+                price: null,
+              },
+            ),
+          );
           answer(moment, "haiku", whole(1, 3), who); // the fallback answers
         } else {
           answer(moment, "sonnet", whole(1, rand() < 0.25 ? 5 : 3), who);
@@ -231,7 +244,7 @@ export function mockCalls(now: Date = new Date()): MockCall[] {
           conversation: `c-${day}-${conversation}`,
           turn: `t-${day}-${conversation}`,
         };
-        calls.push(call(moment, "voices", "turn", { requests: 1 }, who));
+        calls.push(call(moment, "voices", "turn", {}, who));
         const cut = rand() < 0.08; // interrupted halfway: billed as far as it went
         answer(moment, "haiku", cut ? 1 : whole(1, 2), cut ? { ...who, outcome: "cancelled" } : who);
       }
@@ -335,7 +348,7 @@ export function spanOf(period: Period, now: Date = new Date()): Span {
   const back = { today: 1, "7d": 7, "30d": 30, "90d": 90, month: 0 }[period];
   const since = period === "month" ? Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1) : midnight - (back - 1) * DAY;
   const every = period === "today" ? "hour" : period === "90d" ? "week" : "day";
-  return { period, since: new Date(since).toISOString(), until: now.toISOString(), every };
+  return { since: new Date(since).toISOString(), until: now.toISOString(), every };
 }
 
 /** The calls between `span`'s ends that the request keeps of each dimension (an empty value keeps the calls without

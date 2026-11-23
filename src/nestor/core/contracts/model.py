@@ -24,13 +24,13 @@ class ModelType(StrEnum):
 class Model(Component, ABC):
     """A model of `models`: a base class per `ModelType` derives from it and sets `type`."""
 
-    def mirror(self, model: "Model") -> None:
-        """Take on what `model` is (`MIRRORED`), to stand for it."""
-        for attribute in self.MIRRORED:
-            setattr(self, attribute, getattr(model, attribute))
-
     type: ClassVar[ModelType]
     # what a model that stands for another takes from it (a fallback chain, a counted model): a type adds its own
     # capabilities here, beside where it declares them, so that no wrapper forgets one
     MIRRORED: ClassVar[tuple[str, ...]] = ("name", "brand", "local")
     local: bool = False  # runs on hardware the household owns (sherpa-onnx, a server at home): nothing billed per call
+
+    def mirror(self, model: "Model") -> None:
+        """Take on what `model` is (`MIRRORED`), to stand for it."""
+        for attribute in self.MIRRORED:
+            setattr(self, attribute, getattr(model, attribute))

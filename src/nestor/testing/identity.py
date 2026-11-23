@@ -11,7 +11,7 @@ from collections.abc import Collection, Mapping, Sequence
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
-from nestor.core import ContractError, PersonId, ProviderError, Usage, report
+from nestor.core import ContractError, PersonId, ProviderError, Unit, Usage, report
 from nestor.modules.identity import (
     Learned,
     Profile,
@@ -71,7 +71,7 @@ class TaggedVoices(SpeakerModel):
         self.calls += 1
         if self.failing:
             raise ProviderError(self.name, "the model cannot run", transient=False)
-        report(Usage(served=self.name))
+        report(Usage({Unit.REQUESTS: 1}, served=self.name))
         speaker, take = speaker_of(audio) or ("", 0)
         base = random.Random(f"voice:{speaker}")
         nudge = random.Random(f"voice:{speaker}#{take}")

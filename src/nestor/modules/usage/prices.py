@@ -22,6 +22,8 @@ class PriceBook:
         """What a call cost, `usage.served` being the model that answered."""
         if usage.cost is not None:
             return Priced(usage.cost, CostBasis.REPORTED)
+        if not usage.units:
+            return Priced(ZERO, CostBasis.NOTHING)
         if consumer.local:
             return Priced(ZERO, CostBasis.FREE)
         rates = self.rates(consumer, usage.served)

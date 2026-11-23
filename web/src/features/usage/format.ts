@@ -1,17 +1,13 @@
 /** Amounts and quantities as the spending screen shows them, in the reader's language. */
 import { activeLocale } from "@/i18n";
+import { dollarsFormat } from "@/i18n/catalog";
 
 const NANO = 1e9;
 
 /** Dollars to the cent; below a cent, two significant digits, so that a small call stays visible ($0.0042). */
 export function money(nusd: number): string {
   const dollars = nusd / NANO;
-  const small = dollars > 0 && dollars < 0.01;
-  return new Intl.NumberFormat(activeLocale(), {
-    style: "currency",
-    currency: "USD",
-    ...(small ? { maximumSignificantDigits: 2 } : { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-  }).format(dollars);
+  return new Intl.NumberFormat(activeLocale(), dollarsFormat(dollars)).format(dollars);
 }
 
 /** A round amount for an axis: $0, $0.50, $12, $1.2K. */

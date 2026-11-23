@@ -102,7 +102,7 @@ from nestor.modules.satellites import (
     UpdateState,
 )
 from nestor.modules.system import ConfigChanged, RestartRequested, SecretChanged, UpdateFailed, UpdateRequested
-from nestor.modules.usage import CallPurpose, UsageRecorded, usd
+from nestor.modules.usage import CallPurpose, UsageRecorded
 
 log = logging.getLogger(__name__)
 DETAIL_LIMIT = 600
@@ -298,7 +298,7 @@ class EventDescriber:
                     "journal-usage-recorded" if e.cost_nusd is not None else "journal-usage-unknown",
                     consumer=e.consumer,
                     purpose=e.purpose,
-                    **usd("cost", Money(e.cost_nusd or 0)),
+                    cost=float(Money(e.cost_nusd or 0).dollars),
                 ),
                 people=[e.person],
                 tone=Tone.WARNING if e.purpose is CallPurpose.UNATTRIBUTED else Tone.NORMAL,

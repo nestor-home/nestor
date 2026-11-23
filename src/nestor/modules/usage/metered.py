@@ -18,14 +18,14 @@ from nestor.modules.usage.meter import Meter
 from nestor.modules.usage.types import Attribution, Consumer
 
 
-class Counted[M: Model]:
-    """What every counting wrapper shares: the model it counts, which names, describes and reports its health, and
-    one call measured at a time."""
+class Counted[M: Model](Model):
+    """What every counting wrapper shares: the model it counts, which it stands for (`mirror`) and which describes
+    itself and reports its health, and one call measured at a time. Each is also a model of its type
+    (`CountedLanguage`…)."""
 
     def __init__(self, model: M, consumer: Consumer, meter: Meter) -> None:
         self.model, self.consumer, self.meter = model, consumer, meter
-        if isinstance(self, Model):  # every counted model is also one of its type (`CountedLanguage`…)
-            self.mirror(model)
+        self.mirror(model)
 
     @contextmanager
     def counting(self) -> Generator[None]:

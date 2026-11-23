@@ -177,6 +177,7 @@ usage-basis = { $basis ->
     [priced] estimé
     [free] gratuit
     [unknown] inconnu
+    [nothing] rien facturé
    *[other] { $basis }
 }
 usage-outcome = { $outcome ->

@@ -72,6 +72,7 @@ const BASIS_COLOUR: Record<CostBasis, string> = {
   priced: "var(--ink-faint)",
   free: "var(--sage)",
   unknown: "var(--amber)",
+  nothing: "var(--rule-strong)",
 };
 
 export function Sources({ period, only, onPick }: { period: UsagePeriod; only: UsageSearch["only"]; onPick: Pick }) {

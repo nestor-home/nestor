@@ -23,7 +23,7 @@ class ScriptedImages(ImageModel):
         self.prompts.append(prompt)
         if self.fail:
             raise ProviderError(self.name, "the picture was refused", transient=False)
-        report(Usage({Unit.IMAGES: 1}))
+        report(Usage({Unit.IMAGES: 1, Unit.REQUESTS: 1}))
         return Image(media_type="image/png", data=PNG + prompt.encode())
 
 

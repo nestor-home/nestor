@@ -202,7 +202,8 @@ async def test_the_reply_says_what_it_cost_in_tokens_thinking_included(api: resp
     api.post(STREAM).mock(return_value=streamed(chunk({"text": "Oui."}, finish="STOP", usageMetadata=usage)))
     _, tally = await consumed(collect())
     assert tally.usage == Usage(
-        {Unit.INPUT_TOKENS: 2000, Unit.OUTPUT_TOKENS: 39, Unit.CACHED_INPUT_TOKENS: 1500}, served="gemini-2.5-flash"
+        {Unit.INPUT_TOKENS: 2000, Unit.OUTPUT_TOKENS: 39, Unit.CACHED_INPUT_TOKENS: 1500, Unit.REQUESTS: 1},
+        served="gemini-2.5-flash",
     )
 
 

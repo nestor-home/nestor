@@ -81,7 +81,7 @@ class SherpaOnnxTranscription(PipecatTranscription):
 
     async def transcribe(self, audio: bytes, media_type: str) -> str:
         samples = await asyncio.to_thread(decoded, audio, self._provider)
-        report(Usage({Unit.AUDIO_SECONDS: len(samples) / SAMPLE_RATE}, served=self._model))
+        report(Usage({Unit.AUDIO_SECONDS: len(samples) / SAMPLE_RATE, Unit.REQUESTS: 1}, served=self._model))
         return await self.hear(samples)
 
     async def hear(self, samples: "numpy.ndarray") -> str:

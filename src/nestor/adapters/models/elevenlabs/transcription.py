@@ -53,7 +53,7 @@ class ElevenLabsTranscription(PipecatTranscription):
         except ValueError:
             raise ProviderError("elevenlabs", "speech-to-text: the answer is not JSON", transient=True) from None
         seconds = await duration_s(audio)  # billed by how long it lasts
-        report(Usage({Unit.AUDIO_SECONDS: seconds} if seconds else {}, served=self._file_model))
+        report(Usage({Unit.REQUESTS: 1} | ({Unit.AUDIO_SECONDS: seconds} if seconds else {}), served=self._file_model))
         return text.strip() if isinstance(text, str) else ""
 
     def stt(self) -> "STTService":

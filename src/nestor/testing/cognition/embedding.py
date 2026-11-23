@@ -30,12 +30,12 @@ class ConceptEmbedder(EmbeddingModel):
 
     async def embed_documents(self, texts: Sequence[str]) -> list[Vector]:
         vectors = [self._vector(t) for t in texts]
-        report(Usage({Unit.INPUT_TOKENS: sum(len(t.split()) for t in texts)}))
+        report(Usage({Unit.INPUT_TOKENS: sum(len(t.split()) for t in texts), Unit.REQUESTS: 1}))
         return vectors
 
     async def embed_query(self, text: str) -> Vector:
         vector = self._vector(text)
-        report(Usage({Unit.INPUT_TOKENS: len(text.split())}))
+        report(Usage({Unit.INPUT_TOKENS: len(text.split()), Unit.REQUESTS: 1}))
         return vector
 
     def _vector(self, text: str) -> Vector:

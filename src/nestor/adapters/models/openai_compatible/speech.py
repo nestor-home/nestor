@@ -41,7 +41,7 @@ class OpenAICompatibleSpeech(PipecatSpeech):
     async def synthesize(self, text: str) -> bytes:
         body = {"model": self._model, "input": text, "voice": self._voice, "response_format": "opus"}
         response = await self._api.request("POST", "/audio/speech", json=body)
-        report(Usage({Unit.CHARACTERS: len(text)}, served=self._model))
+        report(Usage({Unit.CHARACTERS: len(text), Unit.REQUESTS: 1}, served=self._model))
         return response.content
 
     def tts(self) -> "TTSService":

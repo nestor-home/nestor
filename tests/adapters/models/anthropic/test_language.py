@@ -235,6 +235,7 @@ async def test_the_reply_says_what_it_read_from_the_cache_and_which_model_answer
         Unit.CACHED_INPUT_TOKENS: 1800,
         Unit.CACHE_WRITE_TOKENS: 100,
         Unit.OUTPUT_TOKENS: 7,
+        Unit.REQUESTS: 1,
     }
     assert tally.usage == Usage(units, served="claude-haiku-5-5")
 

@@ -154,7 +154,7 @@ class ScriptedTranscription(TranscriptionModel):
     async def transcribe(self, audio: bytes, media_type: str) -> str:
         if self.failing:
             raise ProviderError(self.name, "transcription unavailable", transient=True)
-        report(Usage({Unit.AUDIO_SECONDS: len(audio) / 32000}))  # as if 16 kHz, 16-bit
+        report(Usage({Unit.AUDIO_SECONDS: len(audio) / 32000, Unit.REQUESTS: 1}))  # as if 16 kHz, 16-bit
         return audio.decode().strip()
 
 
@@ -169,7 +169,7 @@ class ScriptedSpeech(SpeechModel):
     async def synthesize(self, text: str) -> bytes:
         if self.failing:
             raise ProviderError(self.name, "speech unavailable", transient=True)
-        report(Usage({Unit.CHARACTERS: len(text)}))
+        report(Usage({Unit.CHARACTERS: len(text), Unit.REQUESTS: 1}))
         return OGG + text.encode()
 
 

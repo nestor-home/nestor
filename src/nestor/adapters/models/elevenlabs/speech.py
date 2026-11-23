@@ -34,7 +34,7 @@ class ElevenLabsSpeech(PipecatSpeech):
             params={"output_format": "opus_48000_64"},
             json={"model_id": self._model, "text": text},  # the model in the body, or it is ignored
         )
-        report(Usage({Unit.CHARACTERS: len(text)}, served=self._model))
+        report(Usage({Unit.CHARACTERS: len(text), Unit.REQUESTS: 1}, served=self._model))
         return response.content
 
     async def close(self) -> None:

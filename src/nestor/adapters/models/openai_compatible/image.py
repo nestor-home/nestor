@@ -81,7 +81,7 @@ class OpenAICompatibleImage(ImageModel):
     def _report(self, answer: object) -> None:
         """One picture asked, and what the answer says it cost."""
         found = answer if isinstance(answer, dict) else {}
-        report(spent(found.get("usage"), found.get("model") or self._model, images=1))
+        report(spent(found.get("usage"), found.get("model") or self._model, images=1, requests=1))
 
     async def _picture(self, given: object, path: str) -> Image:
         """A picture from what the provider gave: base64, a data URL, or an address to fetch it from."""

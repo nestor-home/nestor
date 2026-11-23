@@ -35,7 +35,7 @@ class Decoder:
                 yield output
         finally:  # what was billed, even for a reply cut or failed midway
             if self._usage or self._model is not None:
-                report(Usage(self._usage, served=self._model))
+                report(Usage(self._usage | {Unit.REQUESTS: 1}, served=self._model))
 
     async def _outputs(self, chunks: AsyncIterator[dict[str, Any]]) -> AsyncGenerator[ModelOutput]:
         async for chunk in chunks:

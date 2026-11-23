@@ -124,7 +124,7 @@ async def test_a_failed_call_is_recorded_as_failed_and_the_failure_still_reaches
         with pytest.raises(ProviderError):
             await text_answer(model, REQUEST)
     (call,) = await recorded(journal)
-    assert (call.outcome, call.basis, call.cost_nusd, call.units) == (Outcome.FAILED, CostBasis.FREE, 0, {}), (
+    assert (call.outcome, call.basis, call.cost_nusd, call.units) == (Outcome.FAILED, CostBasis.NOTHING, 0, {}), (
         "nothing was billed: not a cost unknown"
     )
 

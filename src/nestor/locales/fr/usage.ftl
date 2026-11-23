@@ -9,28 +9,16 @@ usage-total = { $period ->
     [month] Ce mois-ci
     [quarter] 90 derniers jours
    *[other] 30 derniers jours
-} : { $spent_small ->
-        [yes] { NUMBER($spent, style: "currency", currency: "USD", maximumSignificantDigits: 2) }
-       *[no] { NUMBER($spent, style: "currency", currency: "USD") }
-    }, { $calls } { $calls ->
+} : { USD($spent) }, { $calls } { $calls ->
     [one] appel
    *[other] appels
 }{ $unknown ->
     [0] {""}
    *[other] , dont { $unknown } de coût inconnu
 }.
-usage-month = Ce mois-ci : { $spent_small ->
-        [yes] { NUMBER($spent, style: "currency", currency: "USD", maximumSignificantDigits: 2) }
-       *[no] { NUMBER($spent, style: "currency", currency: "USD") }
-    } jusqu’ici, en route vers { $projected_small ->
-        [yes] { NUMBER($projected, style: "currency", currency: "USD", maximumSignificantDigits: 2) }
-       *[no] { NUMBER($projected, style: "currency", currency: "USD") }
-    }.
+usage-month = Ce mois-ci : { USD($spent) } jusqu’ici, en route vers { USD($projected) }.
 usage-by = Par { usage-dimension } :
-usage-line = { $spent_small ->
-        [yes] { NUMBER($spent, style: "currency", currency: "USD", maximumSignificantDigits: 2) }
-       *[no] { NUMBER($spent, style: "currency", currency: "USD") }
-    }  { $calls } { $calls ->
+usage-line = { USD($spent) }  { $calls } { $calls ->
     [one] appel
    *[other] appels
 }{ $unknown ->

@@ -54,14 +54,13 @@ class UsageQuery(BaseModel):
 
 
 class SpanOut(BaseModel):
-    period: Period
     since: datetime
     until: datetime
     every: Interval  # the buckets the period is drawn in
 
     @classmethod
     def of(cls, span: Span) -> "SpanOut":
-        return cls(period=span.period, since=span.since, until=span.until, every=span.every)
+        return cls(since=span.since, until=span.until, every=span.every)
 
 
 class TotalsOut(BaseModel):

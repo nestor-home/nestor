@@ -339,8 +339,5 @@ journal-system-update-requested = Update from { $running } to { $target } reques
    *[admin] by { $login }
 }
 journal-system-update-failed = { $target } failed to install: Nestor stays on its version
-journal-usage-recorded = { $consumer } for { usage-purpose }: { $cost_small ->
-        [yes] { NUMBER($cost, style: "currency", currency: "USD", maximumSignificantDigits: 2) }
-       *[no] { NUMBER($cost, style: "currency", currency: "USD") }
-    }
+journal-usage-recorded = { $consumer } for { usage-purpose }: { USD($cost) }
 journal-usage-unknown = { $consumer } for { usage-purpose }: cost unknown

@@ -53,6 +53,8 @@ CASES = [
     ("unlisted", GROQ, Usage(TOKENS), {}, UNKNOWN),
     # a price for none of what the call consumed does not price it
     ("other units", HAIKU, Usage({Unit.AUDIO_SECONDS: 30}), {}, UNKNOWN),
+    # a call that consumed nothing and was billed nothing cost nothing, whatever its price
+    ("nothing", GROQ, Usage(), {}, Priced(ZERO, CostBasis.NOTHING)),
     # a price of zero is free, not unknown
     ("zero", HAIKU, Usage(TOKENS), FREE, Priced(Money(0), CostBasis.FREE, "config")),
 ]
