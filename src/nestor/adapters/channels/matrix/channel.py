@@ -131,14 +131,12 @@ class MatrixChannel(MessagingChannel):
 
     async def _sync(self, since: str | None, *, timeout_ms: int) -> Mapping[str, Any]:
         """The next batch; failures are retried until the channel closes."""
-        failures = 0
         params = {"timeout": str(timeout_ms), "filter": FILTER} | ({"since": since} if since else {})
         while True:
             try:
                 batch = await self._json("GET", f"{CLIENT}/sync", params=params)
             except ProviderError as error:
-                await self.retry_later(error, failures)
-                failures += 1
+                await self.retry_later(error)
                 continue
             self.reached()
             return batch

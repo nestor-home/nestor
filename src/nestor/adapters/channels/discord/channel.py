@@ -51,14 +51,12 @@ class DiscordChannel(MessagingChannel):
 
     async def receive(self) -> AsyncIterator[Incoming]:
         """Raises `ProviderError` when Discord refuses the token or the intents; other failures reconnect."""
-        failures = 0
         while not self.closed:
             try:
                 gateway = (await self._api.request("GET", "/gateway/bot")).json()["url"]
                 async with connect(f"{gateway}?v=10&encoding=json", logger=frames, max_size=2**24) as socket:
                     self._socket, beat = socket, Beat()
                     async for incoming in self._session(socket, beat):
-                        failures = 0
                         self.reached()
                         yield incoming
                 if beat.asked_to_reconnect:
@@ -69,8 +67,7 @@ class DiscordChannel(MessagingChannel):
             except (ProviderError, OSError, WebSocketException, ValueError, KeyError) as error:
                 if self.closed:
                     return
-                await self.retry_later(error, failures)
-                failures += 1
+                await self.retry_later(error)
 
     async def disconnect(self) -> None:
         if self._socket is not None:

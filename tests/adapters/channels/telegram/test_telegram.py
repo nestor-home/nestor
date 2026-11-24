@@ -309,7 +309,7 @@ async def test_transient_polling_failures_are_retried_and_told_once(
         if "unavailable" in r.getMessage() or "back" in r.getMessage()
     ]
     assert [level for level, _ in said] == [logging.WARNING, logging.INFO], "down once, back once: not each attempt"
-    assert "retrying in" in said[0][1] and "back after" in said[1][1]
+    assert "next attempt in" in said[0][1] and "back after" in said[1][1]
 
 
 async def test_another_instance_polling_is_waited_out_without_leaving_serve(

@@ -206,10 +206,8 @@ class Courier(Component):
                 )
             )
             return _Sent(address, said=False)
-        attachments = self.agent.attachments
-        files = await attachments.sent(draft.files, channel.sends)
-        if draft.voiced:  # recorded once it is sure to go, as an answer to a voice message is
-            files = await attachments.voice(draft.text) + files
+        # recorded once it is sure to go, as an answer to a voice message is
+        files = await self.agent.attachments.outgoing(draft.text, draft.files, channel.sends, voiced=draft.voiced)
         try:  # sent without holding the conversation: a voice says it once the person is answered
             await channel.send(address, draft.text, medium, files.sent)
         except ProviderError:

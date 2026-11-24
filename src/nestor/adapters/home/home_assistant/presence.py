@@ -7,6 +7,7 @@ from dataclasses import dataclass
 
 from pydantic import ValidationError
 
+from nestor.adapters.common.availability import Availability
 from nestor.adapters.home.home_assistant.client import (
     AuthenticationRejected,
     HomeAssistantSession,
@@ -23,7 +24,7 @@ from nestor.adapters.home.home_assistant.installation import (
     StateChanged,
     parse,
 )
-from nestor.core import Availability, Health, ProviderError
+from nestor.core import Health, ProviderError
 from nestor.core.i18n import Message
 from nestor.modules.home import Granularity, HomeOverview, Presence, PresenceSource, Whereabouts
 
@@ -85,7 +86,7 @@ class HomeAssistantPresence(PresenceSource):
         self._granularity = Granularity.HOME
         self._installation: Installation | None = None
         self._task: asyncio.Task[None] | None = None
-        self._availability = Availability(logger, lambda: self.name)
+        self._availability = Availability(logger, lambda: self.name, "presence unknown until it answers")
 
     @property
     def granularity(self) -> Granularity:
@@ -132,7 +133,7 @@ class HomeAssistantPresence(PresenceSource):
         except AuthenticationRejected as error:
             raise ProviderError(self.name, f"access token refused: {error}", transient=False) from None
         except SessionLost as error:
-            self._availability.lost(error, "presence unknown until it answers")
+            self._availability.lost(error)
         self._task = asyncio.create_task(self._run(live), name=f"{self.name}-events")
 
     async def close(self) -> None:
@@ -158,9 +159,7 @@ class HomeAssistantPresence(PresenceSource):
         self._installation, self._granularity = installation, installation.granularity
         if unplaced := installation.unplaced_sensors:
             logger.warning("%s: occupancy sensors without an area, ignored: %s", self.name, ", ".join(unplaced))
-        if self._availability.lost_now:
-            self._availability.back(f"presence granularity {self._granularity}")
-        else:
+        if not self._availability.back(f"presence granularity {self._granularity}"):
             logger.info("%s: connected, presence granularity %s", self.name, self._granularity)
         return _Live(session, installation)
 
@@ -182,7 +181,7 @@ class HomeAssistantPresence(PresenceSource):
                     logger.error("%s: access token refused, no more reconnection: %s", self.name, error)
                     return
                 except SessionLost as error:
-                    self._availability.lost(error, "presence unknown until it answers")
+                    self._availability.lost(error)
                     await asyncio.sleep(delay)
                     delay = min(delay * 2, self._reconnect_max_s)
                     continue
@@ -190,7 +189,7 @@ class HomeAssistantPresence(PresenceSource):
             try:
                 await live.follow()
             except SessionLost as error:
-                self._availability.lost(error, "presence unknown until it answers")
+                self._availability.lost(error)
             finally:
                 self._installation = None
                 await live.session.close()

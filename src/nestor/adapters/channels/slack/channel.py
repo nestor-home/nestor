@@ -49,12 +49,11 @@ class SlackChannel(MessagingChannel):
 
     async def receive(self) -> AsyncIterator[Incoming]:
         """Raises `ProviderError` when Slack refuses a token; other failures reconnect."""
-        failures = 0
         while not self.closed:
             try:
                 url = (await self._call(self._app, "apps.connections.open"))["url"]
                 async with connect(url, max_size=2**24) as socket:
-                    self._socket, failures = socket, 0
+                    self._socket = socket
                     self.reached()
                     async for raw in socket:
                         envelope = json.loads(raw)
@@ -69,8 +68,7 @@ class SlackChannel(MessagingChannel):
             except (ProviderError, OSError, WebSocketException, ValueError, KeyError) as error:
                 if self.closed:
                     return
-                await self.retry_later(error, failures)
-                failures += 1
+                await self.retry_later(error)
 
     async def disconnect(self) -> None:
         if self._socket is not None:

@@ -56,6 +56,6 @@ async def test_a_platform_that_asks_to_wait_is_left_alone_that_long(monkeypatch:
 
     monkeypatch.setattr(asyncio, "sleep", sleep)
     channel = Quiet("quiet", retry_delay_s=1.0)
-    await channel.retry_later(ProviderError("discord", "429", transient=True, retry_after_s=30.0), 0)
-    await channel.retry_later(ProviderError("discord", "502", transient=True), 1)
+    await channel.retry_later(ProviderError("discord", "429", transient=True, retry_after_s=30.0))
+    await channel.retry_later(ProviderError("discord", "502", transient=True))
     assert slept == [30.0, 2.0]

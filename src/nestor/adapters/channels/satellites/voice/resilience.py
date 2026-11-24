@@ -35,8 +35,8 @@ class Outage(StrEnum):
 
 
 def load_clips(folder: Path | None) -> dict[Outage, OutputAudioRawFrame]:
-    """The prerecorded clips found in `folder` (16-bit mono WAV), what is missing told once: without a folder, an
-    outage is met with silence by choice (INFO); a folder without a clip is likely a mistake (WARNING)."""
+    """The prerecorded clips found in `folder` (16-bit mono WAV). Without a folder, an outage is met with silence by
+    choice; a folder that lacks a clip is likely a mistake, told once."""
     clips: dict[Outage, OutputAudioRawFrame] = {}
     missing = []
     for outage in Outage:
@@ -49,9 +49,8 @@ def load_clips(folder: Path | None) -> dict[Outage, OutputAudioRawFrame]:
                 raise ValueError(f"{path}: expected 16-bit PCM")
             pcm = clip.readframes(clip.getnframes())
             clips[outage] = OutputAudioRawFrame(pcm, clip.getframerate(), clip.getnchannels())
-    if missing:
-        level = logging.WARNING if folder else logging.INFO
-        logger.log(level, "voice: no clip for a %s outage%s", " or ".join(missing), f" in {folder}" if folder else "")
+    if folder and missing:
+        logger.warning("voice: no clip for a %s outage in %s", " or ".join(missing), folder)
     return clips
 
 

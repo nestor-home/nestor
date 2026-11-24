@@ -9,7 +9,7 @@ from collections.abc import AsyncIterator, Collection, Iterable, Mapping, Sequen
 from dataclasses import replace
 
 from nestor.core import ProviderError
-from nestor.modules.channels import Attachment, AttachmentKind, SpeechModel, TranscriptionModel
+from nestor.modules.channels import Attachment, AttachmentKind, SpeechModel, TranscriptionModel, base_type
 from nestor.modules.cognition.model import Document, Image
 from nestor.modules.cognition.tools import Results, ToolContext
 from nestor.modules.conversation.ports import DocumentReader
@@ -26,7 +26,6 @@ UNKNOWN_TYPES = frozenset(
     {"", "application/octet-stream", "application/binary", "binary/octet-stream", "application/x-binary"}
 )
 SNIFFED = 4096  # bytes looked at to tell text from binary
-TEXTUAL = ("json", "xml", "yaml")  # the structured text types a name may give to text
 
 
 class Attachments:
@@ -83,6 +82,14 @@ class Attachments:
             tuple(Attached(kind=kind, blob=blob, name=named[blob.digest]) for kind, blob, _ in found),
         )
 
+    async def outgoing(
+        self, text: str, made: Sequence[FileRef], sends: Collection[AttachmentKind], *, voiced: bool
+    ) -> Outgoing:
+        """What goes with a message: its recording when it goes as a voice message, then the files tools `made` that
+        a channel which `sends` these kinds can send."""
+        recorded = await self.voice(text) if voiced else Outgoing()
+        return recorded + await self.sent(made, sends)
+
     async def shown(self, attached: Sequence[Attached]) -> Mapping[str, Image | Document]:
         """`attached` as the model looks at them, by digest: pictures, and other files as documents. The same files
         come back turn after turn: the last ones are kept rather than read again."""
@@ -112,11 +119,27 @@ class Attachments:
                 continue
 
     async def _keep(self, attachment: Attachment, context: ToolContext) -> Attached:
-        attachment = replace(attachment, media_type=identified(attachment))
+        attachment = replace(attachment, media_type=self._identified(attachment))
         blob = await self._blobs.put(attachment.data, attachment.media_type)
         transcript = await self._transcribe(attachment) if attachment.kind in HEARD else None
         read = await self._read(attachment, context) if attachment.kind is AttachmentKind.FILE else None
         return Attached(kind=attachment.kind, blob=blob, name=attachment.name, transcript=transcript, read=read)
+
+    def _identified(self, attachment: Attachment) -> str:
+        """What a file is: the media type its channel announced, unless that says nothing (`application/octet-stream`);
+        then a PDF or text by its content, text typed by its name when the reader reads that type (`.json`), and what
+        its name says for the rest."""
+        if base_type(attachment.media_type) not in UNKNOWN_TYPES:
+            return attachment.media_type
+        named = mimetypes.guess_type(attachment.name, strict=False)[0] if attachment.name else None
+        head = attachment.data[:SNIFFED]
+        if head.startswith(b"%PDF-"):
+            return "application/pdf"
+        if _text(head):  # typed by its name only when that is a text type: a `.ts` source file is no MPEG stream
+            if named is not None and self._documents is not None and self._documents[0].reads(named):
+                return named
+            return "text/plain"
+        return named or "application/octet-stream"
 
     async def _read(self, attachment: Attachment, context: ToolContext) -> Read | None:
         if self._documents is None:
@@ -138,22 +161,6 @@ class Attachments:
         except ProviderError as error:
             logger.warning("could not transcribe a %s: %s", attachment.kind, error)
             return None
-
-
-def identified(attachment: Attachment) -> str:
-    """What a file is: the media type its channel announced, unless that says nothing (`application/octet-stream`);
-    then what its content shows (a PDF, text), typed by its name when the name agrees (`.json`, `.csv`), and what its
-    name says for the rest."""
-    if attachment.media_type.split(";")[0].strip().lower() not in UNKNOWN_TYPES:
-        return attachment.media_type
-    named = mimetypes.guess_type(attachment.name, strict=False)[0] if attachment.name else None
-    head = attachment.data[:SNIFFED]
-    if head.startswith(b"%PDF-"):
-        return "application/pdf"
-    if _text(head):
-        textual = named and (named.startswith("text/") or named.endswith(TEXTUAL))
-        return named if textual else "text/plain"  # a `.ts` source file is no MPEG stream
-    return named or "application/octet-stream"
 
 
 def _text(head: bytes) -> bool:

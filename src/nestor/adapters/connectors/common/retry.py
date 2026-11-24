@@ -5,6 +5,7 @@ import asyncio
 import logging
 from abc import ABC, abstractmethod
 
+from nestor.adapters.common.availability import Availability
 from nestor.core import ProviderError
 
 log = logging.getLogger(__name__)
@@ -51,11 +52,12 @@ class Retry:
     def __init__(self, source: str, backoff: Backoff, *, blocked_s: float = 600.0) -> None:
         self.source, self.backoff, self.blocked_s = source, backoff, blocked_s
         self._blocked = False
+        self._availability = Availability(log, lambda: self.source, "retrying until it answers")
 
     async def after(self, error: ProviderError) -> None:
         if error.transient:
             delay = error.retry_after_s or self.backoff.next()  # the wait the provider asked for, when it said
-            log.warning("%s: %s; retrying in %.1f s", self.source, error, delay)
+            self._availability.lost(f"{error} (next attempt in {delay:.1f} s)")
         else:
             delay = self.blocked_s
             if not self._blocked:
@@ -67,4 +69,5 @@ class Retry:
         if self._blocked:
             log.info("%s resumed", self.source)
         self._blocked = False
+        self._availability.back()
         self.backoff.reset()

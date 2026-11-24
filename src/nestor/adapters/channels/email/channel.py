@@ -54,7 +54,6 @@ class EmailChannel(MessagingChannel):
         self._threads: dict[str, tuple[str, str]] = {}  # by correspondent: the subject and Message-ID to answer
 
     async def receive(self) -> AsyncIterator[Incoming]:
-        failures = 0
         while not self.closed:
             try:
                 async with session(self._imap, self._client, self._timing.timeout_s) as (client, selected):
@@ -62,7 +61,6 @@ class EmailChannel(MessagingChannel):
                     if cursor is None or cursor.uidvalidity != selected.uidvalidity:
                         # mail there before Nestor started, or before the folder was rebuilt, is not answered
                         cursor = self._cursor = await folder_end(client, selected)
-                    failures = 0
                     self.reached()
                     while not self.closed:
                         for uid in await newer(client, cursor):
@@ -73,8 +71,7 @@ class EmailChannel(MessagingChannel):
                         wait = self._timing.idle_s if client.supports_idle else self._timing.poll_s
                         await self.unless_closed(client.wait_for_change(wait))
             except ProviderError as error:
-                await self.retry_later(error, failures)
-                failures += 1
+                await self.retry_later(error)
 
     async def deliver(self, conversation: str, answer: Answer) -> None:
         """One mail in the thread, with its files; the text alone when the server refuses them."""
