@@ -8,7 +8,7 @@ import pytest
 from nestor.core import Event, ProviderError, utc_now
 from nestor.core.events import JSON
 from nestor.modules.channels import Address, Medium
-from nestor.modules.cognition import TaskStarted
+from nestor.modules.cognition.delegation import TurnStarted
 from nestor.modules.cognition.delegation.assistant import Delegation
 from nestor.modules.cognition.delegation.service import TaskManager
 from nestor.modules.cognition.model import Role, ToolCall
@@ -182,7 +182,7 @@ async def test_every_event_of_a_turn_carries_its_conversation_and_its_turn(
     async with TaskManager(journal, [ScriptedExecutor()]) as tasks:
         model = ScriptedModel(
             ToolCall("c1", "remember", {"text": "Mathis aime le thé", "about": "mathis"}),
-            ToolCall("c2", "delegate_task", {"title": "Comparer les théières", "objective": "Comparer les théières"}),
+            ToolCall("c2", "start_task", {"title": "Comparer les théières", "instruction": "Comparer les théières"}),
             "C'est noté, et je compare les théières.",
         )
         agent = make_agent(model=model, tools=[*memories.tools(), *Delegation(tasks).tools()])
@@ -196,12 +196,12 @@ async def test_every_event_of_a_turn_carries_its_conversation_and_its_turn(
     of_the_turn: list[Event] = [
         *await journal.history(ToolCalled, ToolCompleted),
         *await journal.history(MemoryRecorded),
-        *await journal.history(TaskStarted),
+        *await journal.history(TurnStarted),
     ]
     [answer] = await journal.history(AssistantTurn)  # "Merci" got no answer: nothing to log
     assert len(of_the_turn) == 6
     assert {getattr(e, "exchange", None) for e in [*of_the_turn, answer]} == {turn}
-    assert [t.asked for t in await journal.history(TaskStarted)] == [True], "Mathis asked for it: always told"
+    assert [t.asked for t in await journal.history(TurnStarted)] == [True], "Mathis asked for it: always told"
 
 
 async def test_a_fallback_and_a_cut_belong_to_the_turn_they_happened_in(

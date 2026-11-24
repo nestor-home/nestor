@@ -33,17 +33,25 @@ def final_answer(turn: Message) -> str:
     return str(final[-1].get("text") or "") if final else ""
 
 
-def item_step(item: Message) -> str | None:
-    match item.get("type"):
-        case "commandExecution":
-            return step(f"command: {item.get('command')}")
-        case "fileChange":
+def item_step(method: str, item: Message) -> str | None:
+    """What an item of the turn says the agent does, as one step of its progress: its own commentary and plan once
+    written (`item/completed`), the files it edits, the tools it calls, its searches as it starts them
+    (`item/started`). A command it runs is said without its command line: the household reads the steps, and a
+    command may carry a secret."""
+    match method, item.get("type"):
+        case "item/completed", "agentMessage" if item.get("phase") == "commentary" and item.get("text"):
+            return step(str(item["text"]))
+        case "item/completed", "plan" if item.get("text"):
+            return step(str(item["text"]))
+        case "item/started", "commandExecution":
+            return "running a command"
+        case "item/started", "fileChange":
             return step("editing: " + ", ".join(str(c.get("path")) for c in item.get("changes") or ()))
-        case "mcpToolCall":
+        case "item/started", "mcpToolCall":
             return step(f"{item.get('server')}: {item.get('tool')}")
-        case "webSearch":
+        case "item/started", "webSearch":
             return step(f"web search: {item.get('query')}")
-        case "imageGeneration":
+        case "item/started", "imageGeneration":
             return "drawing an image"
         case _:
             return None

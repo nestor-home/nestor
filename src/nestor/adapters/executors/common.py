@@ -1,24 +1,27 @@
-"""What the executors share: the instructions a task comes with, the folder a coding agent works on a task in,
-the report it ends with, and the files it hands back.
+"""What the executors share: the instructions a task comes with, what every executor's settings hold, the folder a
+coding agent works on a task in, the report each turn ends with, and the files it hands back.
 
-A coding agent works on each task in a folder of its own under its working directory (`task_folder`), where the files
-sent with the task are placed before it starts: it reads them with its own tools, and the brief names them.
+A coding agent works on each task in a folder of its own under its working directory (`Assignment.folder`, the same
+for every turn of the task), where the files sent with each instruction are placed before the turn starts: it reads
+them with its own tools, and the brief names them.
 
-A coding agent (Codex, Claude Code) ends its task with a structured report (`REPORT_SCHEMA`): the text for the
-assistant, and the absolute paths of the files it made for the requester. Those files are read back from the
-working directory only, within a size and count limit; what is left out is said at the end of the report.
+A coding agent (Codex, Claude Code) ends each turn with a structured report (`REPORT_SCHEMA`): the text for the
+assistant, the absolute paths of the files it made for the person, and the question it asks them when it cannot go
+on without them. Those files are read back from the working directory only, within a size and count limit; what is
+left out is said at the end of the report.
 """
 
 import json
 import mimetypes
 import posixpath
-import secrets
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 
-from nestor.core import utc_now
+from pydantic import Field, PositiveInt
+
 from nestor.modules.channels import Attachment, AttachmentKind
-from nestor.modules.cognition import Outcome
+from nestor.modules.cognition import Executor, Outcome
+from nestor.runtime.plugins import AdapterSettings
 
 INSTRUCTIONS = (
     "You carry out a task handed over by a home voice assistant. Use your tools and check the result, "
@@ -29,10 +32,21 @@ FILES_INSTRUCTIONS = (
     " If you made files for the requester (a document, a picture), put them in the working directory and list "
     "their absolute paths in `files`; leave it empty otherwise."
 )
+QUESTION_INSTRUCTIONS = (
+    " When you cannot go on without the person, put your question in `question` (empty otherwise): the turn ends, and "
+    "their answer comes back as your next instruction."
+)
 REPORT_SCHEMA: dict[str, object] = {
     "type": "object",
-    "properties": {"report": {"type": "string"}, "files": {"type": "array", "items": {"type": "string"}}},
-    "required": ["report", "files"],
+    "properties": {
+        "report": {"type": "string"},
+        "files": {"type": "array", "items": {"type": "string"}},
+        "question": {
+            "type": "string",
+            "description": "your question to the person when you cannot go on without them; an empty string otherwise",
+        },
+    },
+    "required": ["report", "files", "question"],
     "additionalProperties": False,
 }
 MAX_STEP_LENGTH = 160
@@ -40,9 +54,19 @@ MAX_FILES = 10
 MAX_FILE_BYTES = 20_000_000
 
 
-def task_folder() -> str:
-    """The name of a task's own folder, under the working directory: dated, never twice the same."""
-    return f"task-{utc_now():%Y%m%d-%H%M%S}-{secrets.token_hex(3)}"
+class ExecutorSettings(AdapterSettings):
+    """What every executor's settings hold beside its own: whether it acts with real power (`sensitive`: started or
+    directed from a shared device, the person confirms in writing), and how long a task it finished is kept at hand
+    (`archive_after_days`; `null`: never archived)."""
+
+    sensitive: bool = False
+    archive_after_days: PositiveInt | None = Field(default=30)
+
+    def apply[E: Executor](self, executor: E, name: str) -> E:
+        """`executor`, named and set as these settings say."""
+        executor.name = name  # two setups of one kind are two executors
+        executor.sensitive, executor.archive_after_days = self.sensitive, self.archive_after_days
+        return executor
 
 
 def step(text: str) -> str:
@@ -62,10 +86,12 @@ class Unreadable(Exception):
 
 @dataclass(frozen=True, slots=True)
 class Report:
-    """What the agent ended with: `text` for the assistant, `files` it made, as it listed them."""
+    """What the agent ended its turn with: `text` for the assistant, `files` it made, as it listed them, and the
+    `question` it asks the person when it cannot go on without them."""
 
     text: str
     files: tuple[str, ...] = ()
+    question: str = ""
 
     @classmethod
     def of(cls, reply: object) -> "Report":
@@ -79,13 +105,16 @@ class Report:
         if isinstance(value, dict) and isinstance(value.get("report"), str):
             files = value.get("files")
             listed = tuple(f for f in files if isinstance(f, str) and f) if isinstance(files, list) else ()
-            return cls(value["report"], listed)
+            question = value.get("question")
+            return cls(value["report"], listed, question.strip() if isinstance(question, str) else "")
         return cls(reply if isinstance(reply, str) else json.dumps(reply, ensure_ascii=False))
 
-    async def outcome(self, root: str, read: Callable[[str], Awaitable[bytes]]) -> Outcome:
-        """The completed outcome, with the files read back by `read` (which raises `Unreadable`, for a file too
-        large too); only those under `root`, at most `MAX_FILES`. The report says which were left out and why: the
-        assistant tells the person."""
+    async def outcome(
+        self, root: str, read: Callable[[str], Awaitable[bytes]], *, session: str | None = None
+    ) -> Outcome:
+        """The turn's outcome: asked when it ends on a question, completed otherwise, in `session`; with the files
+        read back by `read` (which raises `Unreadable`, for a file too large too), only those under `root`, at most
+        `MAX_FILES`. The report says which were left out and why: the assistant tells the person."""
         root = posixpath.normpath(root)
         files: list[Attachment] = []
         left: list[str] = []
@@ -103,7 +132,9 @@ class Report:
                     continue
                 files.append(attachment(path, data))
         text = f"{self.text}\nFiles left out: {'; '.join(left)}" if left else self.text
-        return Outcome.completed(text, tuple(files))
+        if self.question:
+            return Outcome.asked(self.question, text, tuple(files), session=session)
+        return Outcome.completed(text, tuple(files), session=session)
 
 
 def attachment(path: str, data: bytes) -> Attachment:

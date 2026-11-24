@@ -1,38 +1,53 @@
-"""Delegation: long tasks handed to executors (Hermes, Codex…) while the conversation goes on.
+"""Delegation: tasks handed to executors (Hermes, Codex, Claude Code…) while the conversation goes on.
 
-Tasks are durable: the journal records them, so they survive the end of a conversation and a
-restart, and their result is delivered once to whoever asked. While it works, an executor may reach Nestor's MCP
-server for its task (`ExecutorKeys`, `Assignment`).
+A task is a durable thread with its executor, a turn at a time: started from a conversation, given more instructions
+while it works (steering) or after (an answer to its question, a follow-up days later), stopped, renamed, archived.
+The journal records it, so it survives the end of a conversation and a restart, and what each turn comes back with is
+delivered once to its owner. While a turn works, its executor may reach Nestor's MCP server for it (`ExecutorKeys`,
+`Assignment`).
 """
 
 from nestor.modules.cognition.delegation.events import (
     ExecutorCalled,
     ExecutorKeyIssued,
     ExecutorKeyRevoked,
-    TaskAttached,
-    TaskCancelRequested,
-    TaskDelivered,
-    TaskEnded,
-    TaskFileAdded,
-    TaskProgressed,
-    TaskStarted,
+    TaskArchived,
+    TaskCreated,
+    TaskNoted,
+    TaskReminded,
+    TaskRenamed,
+    TaskSteered,
+    TurnAttached,
+    TurnDelivered,
+    TurnEnded,
+    TurnFileAdded,
+    TurnStarted,
+    TurnStepped,
+    TurnStopRequested,
 )
 from nestor.modules.cognition.delegation.keys import ExecutorKeys
 from nestor.modules.cognition.delegation.ports import Executor, RemoteExecutor
+from nestor.modules.cognition.delegation.service import Directed, Task, TaskManager, Turn
 from nestor.modules.cognition.delegation.types import (
+    CONTINUE,
     RESUME,
+    STEER,
     Assignment,
     NestorAccess,
     NestorTools,
     Notify,
     Outcome,
     Progress,
-    TaskStatus,
+    TaskState,
+    TurnStatus,
 )
 
 __all__ = [
+    "CONTINUE",
     "RESUME",
+    "STEER",
     "Assignment",
+    "Directed",
     "Executor",
     "ExecutorCalled",
     "ExecutorKeyIssued",
@@ -44,12 +59,22 @@ __all__ = [
     "Outcome",
     "Progress",
     "RemoteExecutor",
-    "TaskAttached",
-    "TaskCancelRequested",
-    "TaskDelivered",
-    "TaskEnded",
-    "TaskFileAdded",
-    "TaskProgressed",
-    "TaskStarted",
-    "TaskStatus",
+    "Task",
+    "TaskArchived",
+    "TaskCreated",
+    "TaskManager",
+    "TaskNoted",
+    "TaskReminded",
+    "TaskRenamed",
+    "TaskState",
+    "TaskSteered",
+    "Turn",
+    "TurnAttached",
+    "TurnDelivered",
+    "TurnEnded",
+    "TurnFileAdded",
+    "TurnStarted",
+    "TurnStatus",
+    "TurnStepped",
+    "TurnStopRequested",
 ]

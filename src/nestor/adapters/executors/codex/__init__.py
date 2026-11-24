@@ -1,11 +1,15 @@
 """OpenAI Codex as a remote executor, through `codex app-server` (JSON-RPC over standard input and output).
 
-A task is a thread started in the configured working directory and one turn carrying the objective, with an
-output schema for the final report (`common.REPORT_SCHEMA`). Progress comes from the turn's `item/started`
-notifications; the outcome from the turn once `turn/completed` says it ended, read back with `thread/turns/list`;
-the files the report lists are read back with `fs/readFile`. A stop is `turn/interrupt`, confirmed once the turn
-reads `interrupted`. The reference is `<thread id>:<turn id>`: after a restart, `thread/resume` rejoins the thread
-and its turns say how it went. Observed on codex-cli 0.160.0 (2026-11-13).
+A task is a Codex thread, working in the task's own folder under the configured working directory, and each
+instruction a turn of it, with an output schema for its report (`common.REPORT_SCHEMA`). The first turn starts the
+thread (`thread/start`); a later one goes on in it (`turn/start` on that thread, after `thread/resume` when this
+session has not loaded it), so Codex remembers the turns before. Progress comes from the turn's items: what the agent
+says and plans, the files it edits, the tools it calls; a command is said without its command line, which may carry a
+secret. The outcome comes from the turn once `turn/completed` says it ended, read back with `thread/turns/list`: its
+report, or its question for the person; the files the report lists are read back with `fs/readFile`. An instruction
+given while a turn works joins it (`turn/steer`, on that turn only). A stop is `turn/interrupt`, confirmed once the
+turn reads `interrupted`. The reference is `<thread id>:<turn id>:<folder>`: after a restart, `thread/resume` rejoins
+the thread and its turns say how it went. Observed on codex-cli 0.160.0 (2026-11-24).
 
 Codex runs where the command runs: `codex app-server` here, or behind a relay to a Codex daemon elsewhere
 (`ssh codex@host codex app-server proxy`), whose turns outlive Nestor. A local `codex app-server` stops with

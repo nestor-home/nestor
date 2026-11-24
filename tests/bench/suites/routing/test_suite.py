@@ -28,7 +28,7 @@ def test_the_shipped_dataset_asks_for_each_kind_of_route() -> None:
     dataset, _ = read_dataset(suite, suite.dataset())
     firsts = [c.data["expected"][0][0] if c.data["expected"] else "none" for c in dataset.cases]
     kinds = {route.split(":")[0] for route in firsts}
-    assert kinds == {"tool", "delegate", "none"}
+    assert kinds == {"tool", "delegate", "continue", "none"}
     assert firsts.count("none") >= 6 and sum(r.startswith("delegate:") for r in firsts) >= 3
 
 
@@ -134,14 +134,14 @@ async def test_the_right_route_is_the_first_the_variant_can_take_and_nothing_is_
     assert weather.asked == 0
     prompt = model.requests[0].messages[0].text
     assert "hermes: chercher sur le web" in prompt and "write in French" in prompt, "the runtime's instructions"
-    assert {"delegate_task", "schedule", "message_person", "weather"} <= {t.name for t in model.requests[0].tools}
+    assert {"start_task", "schedule", "message_person", "weather"} <= {t.name for t in model.requests[0].tools}
 
     handed = ScriptedModel(
-        ToolCall("c1", "delegate_task", {"title": "Météo de Lyon demain", "objective": "météo de Lyon demain"})
+        ToolCall("c1", "start_task", {"title": "Météo de Lyon demain", "instruction": "météo de Lyon demain"})
     )
     took = await suite.run(WEATHER, None, trial(config, handed, [hermes], []))
     assert (took["route"], took["right"]) == ("delegate:hermes", ["delegate:hermes"]), "the only executor, unnamed"
-    assert hermes.objectives == []
+    assert hermes.instructions == []
 
     alone = await suite.run(WEATHER, None, trial(config, ScriptedModel("Je ne peux pas le savoir."), [], []))
     assert (alone["route"], alone["right"], alone["said"]) == ("none", ["none"], "Je ne peux pas le savoir.")

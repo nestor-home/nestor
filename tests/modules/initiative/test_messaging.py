@@ -114,42 +114,6 @@ class Home:
         return await tool.run(arguments, context)
 
 
-async def test_a_question_a_task_asks_is_answered_back_to_it_by_the_person_asked_only() -> None:
-    home = Home("Hermes demande s'il faut un vol direct.", "Pas de quoi.", "Rien.")
-    async with home:
-        asked = await home.book.request(
-            MATHIS.id, "Hermes asks: a direct flight only?", requested_by=None, expects_reply=True, task="t1"
-        )
-        await home.settled(1)
-        await home.say(MATHIS, "Merci")
-        waiting = home.model.requests[-1].messages[0].text
-        with pytest.raises(ToolFailed, match="only the person it was asked to answers it"):
-            await home.run("pass_answer", MATHILDE, MATHILDE_CHAT, question=asked.message_id, answer="Oui")
-        assert home.book.answer_to(asked.message_id) is None
-        await home.run("pass_answer", MATHIS, question=asked.message_id, answer="Oui, direct")
-        await home.say(MATHIS, "Autre chose ?")
-
-    assert f"[{asked.message_id}] a task you handed over asked Mathis" in waiting and "pass_answer" in waiting
-    delivered = home.model.requests[0].messages[-1].content
-    assert (
-        "A task you handed over asks Mathis" in delivered and f"pass_answer (question {asked.message_id})" in delivered
-    )
-    assert home.book.answer_to(asked.message_id) == "Oui, direct"
-    assert "Questions waiting" not in home.model.requests[-1].messages[0].text, "answered, it is closed"
-
-
-async def test_a_question_a_task_asks_comes_to_the_conversation_it_was_handed_over_in() -> None:
-    """Odile can be reached nowhere else: she asked from a chat the household has no account of."""
-    home, chat = Home("Claude Code demande si la TVA est à 20 %."), Address("telegram", "99")
-    async with home:
-        await home.book.request(
-            ODILE.id, "Is VAT 20 %?", requested_by=ODILE.id, origin=chat, expects_reply=True, task="t1"
-        )
-        await home.settled(1)
-    [delivered] = await home.journal.history(MessageDelivered)
-    assert delivered.address == chat and home.telegram.sent[0][0] == chat
-
-
 async def test_a_question_is_passed_on_and_its_answer_comes_back_to_whoever_asked() -> None:
     home = Home(
         ToolCall(

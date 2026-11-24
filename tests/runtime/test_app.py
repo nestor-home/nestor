@@ -16,7 +16,8 @@ import pytest
 
 from nestor.core import Component, ContractError, Money, Unit
 from nestor.modules.channels import Address, Medium, TranscriptionModel
-from nestor.modules.cognition import FallingBack, Outcome, TaskDelivered, TaskStarted
+from nestor.modules.cognition import FallingBack, Outcome
+from nestor.modules.cognition.delegation import TaskCreated, TurnDelivered
 from nestor.modules.cognition.model import ModelRequest, ToolCall
 from nestor.modules.cognition.tools import Tool, ToolProvider
 from nestor.modules.conversation import AssistantTurn
@@ -84,7 +85,7 @@ async def test_what_a_message_costs_is_in_the_ledger_on_behalf_of_who_sent_it(tm
 async def test_a_task_started_before_a_restart_is_delivered_after_it(tmp_path: Path) -> None:
     fakes = Fakes()
     delegate = ToolCall(
-        "c1", "delegate_task", {"title": "Analyse le dépôt", "objective": "Analyse le dépôt", "notify": "message"}
+        "c1", "start_task", {"title": "Analyse le dépôt", "instruction": "Analyse le dépôt", "notify": "message"}
     )
     fakes.script = [delegate, "Je lance l'analyse."]
     nestor = Nestor(config(tmp_path, []), fakes.registry())
@@ -97,11 +98,11 @@ async def test_a_task_started_before_a_restart_is_delivered_after_it(tmp_path: P
 
     restarted = Nestor(config(tmp_path, ["Ton analyse est finie : tout est vert."]), fakes.registry())
     async with restarted:
-        delivered = restarted.journal.subscribe(TaskDelivered)
-        if not await restarted.journal.history(TaskDelivered):
+        delivered = restarted.journal.subscribe(TurnDelivered)
+        if not await restarted.journal.history(TurnDelivered):
             await delivered.next(timeout_s=2)
         told = [line.call for line in await restarted.ledger.lines(UsageFilter())]
-        (started,) = await restarted.journal.history(TaskStarted)
+        (started,) = await restarted.journal.history(TaskCreated)
     assert fakes.channels[-1].sent[0][1] == "Ton analyse est finie : tout est vert."
     assert {(c.purpose, c.person, c.origin) for c in told if c.purpose is CallPurpose.NOTIFICATION} == {
         (CallPurpose.NOTIFICATION, "mathis", f"task:{started.task_id}")

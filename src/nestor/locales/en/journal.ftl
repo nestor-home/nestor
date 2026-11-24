@@ -40,25 +40,34 @@ journal-tool-returned-failed = Tool { $tool } failed after { NUMBER($seconds, ma
 journal-tool-result-stored = Long result kept aside ({ NUMBER($size) } characters)
 journal-tool-result-delivered = Result of tool { $tool } passed on
 
-journal-task-started = Task { $task } handed to { $executor }: { $title }
-journal-task-attached = Task { $task } picked up by the executor
-journal-task-progressed = Task { $task }: new step
-journal-task-cancel-requested = Cancellation requested for task { $task }
-journal-task-ended = Task { $task } { $status ->
-    [completed] completed
+journal-task-created = Task { $task } opened with { $executor }: { $title }
+journal-task-renamed = Task { $task } renamed: { $title }
+journal-task-archived = Task { $task } archived
+journal-task-turn-started = Task { $task }: new instruction
+journal-task-turn-attached = Task { $task } picked up by the executor
+journal-task-turn-step = Task { $task }: new step
+journal-task-steered = Task { $task } { $taken ->
+    [yes] reoriented while it worked
+   *[no] stopped for a new instruction
+}
+journal-task-turn-stop-requested = Stop requested for task { $task }
+journal-task-turn-ended = Task { $task } { $status ->
+    [completed] came back
+    [asked] asks a question
     [failed] failed
-    [cancelled] cancelled
+    [stopped] stopped
    *[other] { $status }
 } ({ NUMBER($seconds, maximumFractionDigits: 0) } s)
-journal-task-delivered = Result of task { $task } passed on
-journal-task-file-added = Task { $task }: a file handed back
+journal-task-turn-delivered = What task { $task } came back with was passed on
+journal-task-turn-file-added = Task { $task }: a file handed back
+journal-task-noted = Task { $task }: a note kept
+journal-task-reminded = Task { $task } still waits for an answer: reminder sent
 journal-executor-called = { $ok ->
     [yes] { $executor } used { $tool }
    *[no] { $executor } was refused { $tool }
 }
 journal-executor-key-issued = New key for { $executor }
 journal-executor-key-revoked = Key of { $executor } revoked
-journal-question-answered = { $by } answered a task's question
 
 journal-subject = { $subject ->
     [task] task { $id } { $status ->

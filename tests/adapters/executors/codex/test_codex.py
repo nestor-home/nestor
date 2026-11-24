@@ -1,5 +1,6 @@
 """Codex executor: the remote executor contract against a fake `codex app-server` reached through a relay, as on a
-server, then what only this protocol can break (sessions that end, approvals, files handed back, stops)."""
+server, then what only this protocol can break (sessions that end, approvals, files handed back, threads that go on,
+steering, stops)."""
 
 import asyncio
 import json
@@ -17,20 +18,25 @@ from nestor.adapters.executors.common import MAX_FILES
 from nestor.core import ContractError, Health, ProviderError
 from nestor.core.i18n import Locale, Message
 from nestor.modules.channels import AttachmentKind
-from nestor.modules.cognition.delegation import Assignment, NestorAccess, Progress, TaskStatus
+from nestor.modules.cognition.delegation import Assignment, NestorAccess, Progress, TurnStatus
 from nestor.modules.journal import FileRef
 from nestor.runtime import Services
 from nestor.testing.cognition import RemoteExecutorContract
 from nestor.testing.i18n import EchoLocalizer
 from nestor.testing.journal import MemoryBlobStore
 
-from .fakes import CWD, TASK, FakeCodex
+from .fakes import CWD, REPORT, TASK, FakeCodex
 
 
 class TestCodexExecutor(RemoteExecutorContract):
     @pytest.fixture(autouse=True)
     async def served(self) -> AsyncIterator[None]:
-        async with FakeCodex() as self.codex, FakeCodex(holds=True) as self.held, FakeCodex(fails=True) as self.failing:
+        async with (
+            FakeCodex() as self.codex,
+            FakeCodex(holds=True) as self.held,
+            FakeCodex(fails=True) as self.failing,
+            FakeCodex(report=REPORT | {"question": "Quel fichier ?"}) as self.asking,
+        ):
             yield
 
     def executor(self) -> Any:
@@ -41,6 +47,9 @@ class TestCodexExecutor(RemoteExecutorContract):
 
     def failing_executor(self) -> Any:
         return self.failing.executor()
+
+    def asking_executor(self) -> Any:
+        return self.asking.executor()
 
 
 async def submitted(codex: FakeCodex, **options: Any) -> tuple[Any, str]:
@@ -61,7 +70,7 @@ async def test_the_task_runs_where_and_how_the_configuration_says() -> None:
             await executor.run(Assignment("Corrige le test."), Progress())
     [started] = [params for method, params in codex.requests if method == "thread/start"]
     [folder] = codex.folders
-    assert folder.startswith(f"{CWD}/task-"), "a folder of its own, under the working directory"
+    assert folder == f"{CWD}/task", "the task's own folder, under the working directory"
     assert {k: started[k] for k in ("cwd", "sandbox", "approvalPolicy", "model", "config")} == {
         "cwd": folder,
         "sandbox": "read-only",
@@ -69,30 +78,31 @@ async def test_the_task_runs_where_and_how_the_configuration_says() -> None:
         "model": "gpt-6.1",
         "config": {"mcp_servers": {}},
     }
-    assert started["developerInstructions"].startswith("Sois bref.") and "`files`" in started["developerInstructions"]
+    instructions = started["developerInstructions"]
+    assert instructions.startswith("Sois bref.") and "`files`" in instructions and "`question`" in instructions
     [turn] = [params for method, params in codex.requests if method == "turn/start"]
-    assert turn["input"] == [{"type": "text", "text": "Corrige le test."}]
-    assert turn["outputSchema"]["required"] == ["report", "files"]
+    assert turn["input"][0]["text"].startswith("Corrige le test.")
+    assert turn["outputSchema"]["required"] == ["report", "files", "question"]
 
 
 async def test_the_files_sent_with_a_task_wait_in_its_own_folder_and_the_brief_names_them() -> None:
     store = MemoryBlobStore()
     sent = (FileRef(await store.put(b"%PDF devis", "application/pdf"), "devis.pdf"),)
     async with FakeCodex() as codex, codex.executor() as executor:
-        await executor.run(Assignment("Corrige le devis.", files=sent, reader=store.get), Progress())
-        await executor.run(Assignment("Corrige-le encore.", files=sent, reader=store.get), Progress())
+        await executor.run(Assignment("Corrige le devis.", folder="task-a", files=sent, reader=store.get), Progress())
+        await executor.run(Assignment("Corrige-le encore.", folder="task-b", files=sent, reader=store.get), Progress())
     first, second = codex.folders
-    assert first != second, "each task its own folder"
+    assert (first, second) == (f"{CWD}/task-a", f"{CWD}/task-b"), "each task its own folder"
     assert (codex.files[f"{first}/devis.pdf"], codex.files[f"{second}/devis.pdf"]) == (b"%PDF devis", b"%PDF devis")
     turn = next(params for method, params in codex.requests if method == "turn/start")
-    assert f"Files sent with the task, in {first}: devis.pdf." in turn["input"][0]["text"]
+    assert f"Files sent with this instruction, in {first}: devis.pdf." in turn["input"][0]["text"]
 
 
 async def test_nestor_s_mcp_server_joins_the_thread_s_own_servers_for_that_thread_only() -> None:
     access = NestorAccess(url="https://nestor.example/mcp", key="nstx_secret-key")
     configured = {"mcp_servers": {"docs": {"url": "https://docs.example/mcp"}}, "model_reasoning_effort": "low"}
     async with FakeCodex() as codex, codex.executor(config=configured) as executor:
-        await executor.run(Assignment("Corrige le test.", "nstt_task", access), Progress())
+        await executor.run(Assignment("Corrige le test.", task="nstt_task", access=access), Progress())
         await executor.run(Assignment("Et celui-là."), Progress())
     first, second = [params for method, params in codex.requests if method == "thread/start"]
     nestor = {"url": access.url, "http_headers": {"Authorization": "Bearer nstx_secret-key"}}
@@ -105,24 +115,84 @@ async def test_nestor_s_mcp_server_joins_the_thread_s_own_servers_for_that_threa
     assert 'task="nstt_task"' in turn["input"][0]["text"]
 
 
-async def test_the_report_is_the_final_answer_and_the_turns_items_are_progress() -> None:
+async def test_the_report_is_the_final_answer_and_what_the_agent_does_is_progress_without_command_lines() -> None:
     steps: list[str] = []
     async with FakeCodex() as codex, codex.executor() as executor:
         outcome = await executor.run(Assignment("Corrige le test."), Progress(steps.append))
     assert outcome.result == "C'est fait." and outcome.files == ()
     assert steps == [
-        "command: /bin/bash -lc 'ls'",
+        "running a command",
         "editing: src/a.py",
         "nestor: read_result",
         "web search: pytest asyncio",
         "drawing an image",
+        "Je lance les tests.",
+        "Lire le test, le corriger.",
     ]
+    assert not any("ls" in step.split() or "bash" in step for step in steps), "a command line may carry a secret"
+
+
+async def test_a_report_with_a_question_ends_the_turn_asked_in_its_thread() -> None:
+    asking = REPORT | {"report": "J'ai trouvé deux devis.", "question": "Lequel corriger ?"}
+    async with FakeCodex(report=asking) as codex, codex.executor() as executor:
+        outcome = await executor.run(Assignment("Corrige le devis."), Progress())
+    [thread] = codex.threads
+    assert (outcome.status, outcome.question, outcome.result, outcome.session) == (
+        TurnStatus.ASKED,
+        "Lequel corriger ?",
+        "J'ai trouvé deux devis.",
+        thread,
+    )
+
+
+async def test_a_later_turn_goes_on_in_the_task_s_thread_and_folder() -> None:
+    async with FakeCodex() as codex, codex.executor() as executor:
+        first = await executor.run(Assignment("Corrige le test.", folder="task-a"), Progress())
+        then = await executor.run(Assignment("Et l'autre.", session=first.session, folder="task-a"), Progress())
+    [thread] = codex.threads.values()
+    assert first.session == then.session == thread.id
+    assert [t.objective.split("\n")[0] for t in thread.turns] == ["Corrige le test.", "Et l'autre."]
+    methods = [m for m, _ in codex.requests]
+    assert methods.count("thread/start") == 1 and "thread/resume" not in methods, "loaded in this session already"
+    assert codex.folders == [f"{CWD}/task-a", f"{CWD}/task-a"], "the same folder, made again harmlessly"
+
+
+async def test_a_later_turn_after_a_restart_resumes_the_thread_first() -> None:
+    access = NestorAccess(url="https://nestor.example/mcp", key="nstx_secret-key")
+    async with FakeCodex() as codex:
+        async with codex.executor() as before:
+            first = await before.run(Assignment("Corrige le test."), Progress())
+        async with codex.executor() as restarted:
+            later = Assignment("Et l'autre.", session=first.session, access=access)
+            then = await asyncio.wait_for(restarted.run(later, Progress()), 5)  # unheard if the thread is not resumed
+    assert then.status is TurnStatus.COMPLETED and then.session == first.session
+    after = [(m, p) for m, p in codex.requests if m in ("thread/start", "thread/resume", "turn/start")]
+    assert [m for m, _ in after] == ["thread/start", "turn/start", "thread/resume", "turn/start"]
+    resumed, started = after[2][1], after[3][1]
+    assert resumed["threadId"] == started["threadId"] == first.session
+    assert resumed["config"]["mcp_servers"]["nestor"]["url"] == access.url, "the thread reaches Nestor again"
+
+
+async def test_an_instruction_is_steered_into_the_working_turn_only() -> None:
+    async with FakeCodex(holds=True) as codex:
+        executor, ref = await submitted(codex)
+        assert await executor.steer(ref, "Fais-le plus court.") is True
+        [(_, steering)] = [(m, p) for m, p in codex.requests if m == "turn/steer"]
+        thread, turn, _ = ref.split(":")
+        assert (steering["threadId"], steering["expectedTurnId"]) == (thread, turn)
+        assert codex.turn(ref).steered == ["Fais-le plus court."]
+        await codex.finish(ref)
+        assert (await executor.follow(ref, Progress())).status is TurnStatus.COMPLETED
+        assert await executor.steer(ref, "Encore plus court.") is False, "the turn ended"
+        assert await executor.steer("not-a-reference", "Plus court.") is False
+        await executor.close()
+    assert codex.turn(ref).steered == ["Fais-le plus court."]
 
 
 async def test_a_final_answer_that_is_not_a_structured_report_is_the_report() -> None:
     async with FakeCodex(report="Tout est vert.") as codex, codex.executor() as executor:
         outcome = await executor.run(Assignment("Lance les tests."), Progress())
-    assert outcome.status is TaskStatus.COMPLETED and outcome.result == "Tout est vert."
+    assert outcome.status is TurnStatus.COMPLETED and outcome.result == "Tout est vert."
 
 
 async def test_the_files_the_report_lists_come_back_from_the_task_s_own_folder_only() -> None:
@@ -194,7 +264,7 @@ async def test_a_turn_a_local_server_took_down_with_it_is_reported_cut_short() -
         await first.close()
         async with codex.executor() as restarted:
             outcome = await restarted.follow(ref, Progress())
-    assert outcome.status is TaskStatus.FAILED and "stopped before it ended" in (outcome.error or "")
+    assert outcome.status is TurnStatus.FAILED and "stopped before it ended" in (outcome.error or "")
 
 
 async def test_a_turn_that_failed_or_was_stopped_elsewhere_says_so_after_a_restart() -> None:
@@ -203,12 +273,12 @@ async def test_a_turn_that_failed_or_was_stopped_elsewhere_says_so_after_a_resta
         await asyncio.sleep(0.2)
         async with codex.executor() as restarted:
             outcome = await restarted.follow(ref, Progress())
-    assert (outcome.status, outcome.error) == (TaskStatus.FAILED, "the model refused")
+    assert (outcome.status, outcome.error) == (TurnStatus.FAILED, "the model refused")
     async with FakeCodex(holds=True) as codex:
         executor, ref = await submitted(codex)
         codex.turn(ref).status = "interrupted"  # someone stopped it from Codex's own interface
         async with codex.executor() as restarted:
-            assert (await restarted.follow(ref, Progress())).status is TaskStatus.CANCELLED
+            assert (await restarted.follow(ref, Progress())).status is TurnStatus.STOPPED
         await executor.close()
 
 
@@ -233,7 +303,7 @@ async def test_a_codex_gone_for_good_while_following_is_a_failure() -> None:
         codex.go_away()
         outcome = await asyncio.wait_for(follow, 10)
         await executor.close()
-    assert outcome.status is TaskStatus.FAILED and "lost contact with Codex" in (outcome.error or "")
+    assert outcome.status is TurnStatus.FAILED and "lost contact with Codex" in (outcome.error or "")
 
 
 async def test_the_end_of_a_turn_is_what_its_notification_says_while_the_history_lags() -> None:
@@ -282,7 +352,7 @@ async def test_a_session_that_never_answers_is_closed_with_its_process(tmp_path:
 async def test_a_request_for_approval_or_input_is_declined(asks: str, answer: dict[str, Any]) -> None:
     async with FakeCodex(asks=asks) as codex, codex.executor() as executor:
         outcome = await executor.run(Assignment("Nettoie le disque."), Progress())
-    assert outcome.status is TaskStatus.COMPLETED
+    assert outcome.status is TurnStatus.COMPLETED
     [given] = codex.answers
     key = next(iter(answer))
     assert {key: {k: given[key][k] for k in answer[key]}} == answer
@@ -316,8 +386,8 @@ async def test_stopping_or_following_an_unknown_task_fails_without_raising() -> 
         assert await executor.stop("thread-9:turn-9:task-x") is False
         unknown = await executor.follow("thread-9:turn-9:task-x", Progress())
         garbled = await executor.follow("no-separator", Progress())
-    assert unknown.status is TaskStatus.FAILED and "invalid thread id" in (unknown.error or "")
-    assert garbled.status is TaskStatus.FAILED
+    assert unknown.status is TurnStatus.FAILED and "invalid thread id" in (unknown.error or "")
+    assert garbled.status is TurnStatus.FAILED
 
 
 async def test_a_codex_that_cannot_be_reached_is_unavailable() -> None:
@@ -330,7 +400,7 @@ async def test_a_codex_that_cannot_be_reached_is_unavailable() -> None:
         outcome = await missing.run(Assignment("Corrige le test."), Progress())
         followed = await missing.follow("thread-1:turn-2:task-x", Progress())
         health = (missing.health(), missing.health_detail())
-    assert refused.value.transient and outcome.status is TaskStatus.FAILED and followed.status is TaskStatus.FAILED
+    assert refused.value.transient and outcome.status is TurnStatus.FAILED and followed.status is TurnStatus.FAILED
     assert health == (Health.UNAVAILABLE, Message.of("health-executor-unreachable", executor="codex"))
 
 
@@ -343,7 +413,7 @@ async def test_a_reply_outside_the_protocol_or_a_session_that_hangs_up_is_a_prov
         with pytest.raises(ProviderError) as hung_up:
             await executor.submit(Assignment("Corrige le test."))
     assert not garbled.value.transient and hung_up.value.transient
-    assert followed.status is TaskStatus.FAILED and "unexpected reply" in (followed.error or "")
+    assert followed.status is TurnStatus.FAILED and "unexpected reply" in (followed.error or "")
 
 
 async def test_a_refused_thread_is_a_provider_error_from_a_codex_that_answers() -> None:
@@ -381,5 +451,5 @@ async def test_live_codex_writes_a_file_and_hands_it_back(tmp_path: Path) -> Non
     ) as executor:
         ref = await executor.submit(Assignment("Write a file hello.txt containing the word bonjour, then report."))
         first = await executor.follow(ref, Progress())
-    assert first.status is TaskStatus.COMPLETED, first
+    assert first.status is TurnStatus.COMPLETED, first
     assert [(f.name, f.data.strip()) for f in first.files] == [("hello.txt", b"bonjour")], json.dumps(first.result)

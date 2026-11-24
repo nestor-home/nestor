@@ -33,7 +33,7 @@ from nestor.bench.types import Better, Case, CaseResult, Dataset, Finding, Metri
 from nestor.core import ContractError, PersonId, ProviderError
 from nestor.core.i18n import Locale, Message
 from nestor.modules.channels import Address, Medium
-from nestor.modules.cognition.delegation import TaskEnded, TaskStatus
+from nestor.modules.cognition.delegation import Task, TurnEnded, TurnStatus
 from nestor.modules.cognition.tools import Toolbox
 from nestor.modules.conversation import (
     SILENT,
@@ -47,7 +47,7 @@ from nestor.modules.conversation import (
     Source,
 )
 from nestor.modules.household import Account, Household, Person
-from nestor.modules.initiative.returns import task_instruction
+from nestor.modules.initiative.returns import turn_instruction
 from nestor.modules.initiative.schedules.scheduler import wake_up_instruction
 from nestor.modules.initiative.watches.keeper import ANNOUNCE
 from nestor.modules.journal import Journal
@@ -166,16 +166,25 @@ def _text(data: Mapping[str, Any], timezone: str = "UTC") -> str:
     """The notification's text, as the house writes it."""
     source = Source(data["source"])
     if source is Source.TASK:
-        status = TaskStatus(data.get("status", "completed"))
-        ended = TaskEnded(
+        status = TurnStatus(data.get("status", "completed"))
+        ended = TurnEnded(
             source="bench",
             task_id="bench",
+            turn_id="bench",
             status=status,
-            result=str(data["result"]) if status is TaskStatus.COMPLETED else None,
-            error=None if status is TaskStatus.COMPLETED else str(data["error"]),
+            result=str(data["result"]) if status is TurnStatus.COMPLETED else None,
+            error=None if status is TurnStatus.COMPLETED else str(data["error"]),
             duration_s=0.0,
         )
-        return task_instruction(str(data["objective"]), ended, written=bool(data.get("written", True)))
+        task = Task(
+            id="bench",
+            title=str(data.get("title", "Tâche")),
+            executor=str(data.get("executor", "hermes")),
+            owner=PERSON.id,
+            origin=CHAT,
+            created_at=datetime.now(ZoneInfo(timezone)),
+        )
+        return turn_instruction(task, str(data["objective"]), ended, written=bool(data.get("written", True)))
     if source is Source.WATCH:
         return ANNOUNCE.format(who="Mathis", what=data["what"], summary=data["summary"], item=data["item"])
     if source is Source.SCHEDULE:  # due now: a wake-up dated otherwise reads as late

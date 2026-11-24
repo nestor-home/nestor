@@ -1,5 +1,5 @@
 """One resource at a time, and what each says about its state: why a connection is broken, since when
-someone is where they are, when a task ended, when an account was last seen."""
+someone is where they are, how a task stands, when an account was last seen."""
 
 import asyncio
 from datetime import timedelta
@@ -8,8 +8,7 @@ from pathlib import Path
 from nestor.core import PersonId, utc_now
 from nestor.core.i18n import Message
 from nestor.modules.accounts import Role
-from nestor.modules.channels import Address, Attachment, AttachmentKind
-from nestor.modules.cognition import Outcome, TaskEnded
+from nestor.modules.channels import Address
 from nestor.modules.connectors import Status
 from nestor.modules.initiative import Watch
 from nestor.modules.satellites import Device, Manifest
@@ -36,38 +35,6 @@ async def test_a_broken_connection_says_why_in_the_readers_language(tmp_path: Pa
         assert connections.connections[connection.id].status_reason, "changing a setting keeps the reason"
 
 
-async def test_the_files_a_task_handed_back_download_from_it_for_who_reaches_it(tmp_path: Path) -> None:
-    async with Harness(tmp_path) as admin:
-        nestor = admin.nestor
-        await admin.account("mathilde", Role.MEMBER, "mathilde")
-        task = await nestor.tasks.delegate(
-            "Le devis en PDF", title="Le devis en PDF", origin=TELEGRAM, requested_by=MATHIS
-        )
-        while not admin.remote.runs:
-            await asyncio.sleep(0.01)
-        made = Attachment(
-            kind=AttachmentKind.FILE, data=b"%PDF-1.7 devis", media_type="application/pdf", name="devis.pdf"
-        )
-        admin.remote.finish(next(iter(admin.remote.runs)), Outcome.completed("Le devis est prêt.", files=(made,)))
-        while not await nestor.journal.history(TaskEnded):
-            await asyncio.sleep(0.01)
-        owner, guest = await admin.api(), await admin.api("mathilde")
-
-        listed = (await owner.get(f"/api/v1/tasks/{task.id}")).json()["files"]
-        assert listed == [
-            {"index": 0, "name": "devis.pdf", "kind": "file", "media_type": "application/pdf", "size": 14}
-        ]
-        got = await owner.get(f"/api/v1/tasks/{task.id}/files/0")
-        assert (got.status_code, got.content, got.headers["content-type"]) == (
-            200,
-            b"%PDF-1.7 devis",
-            "application/octet-stream",
-        ), "downloaded, never shown in place"
-        assert "devis.pdf" in got.headers["content-disposition"], "by the name the executor gave it"
-        assert (await owner.get(f"/api/v1/tasks/{task.id}/files/1")).status_code == 404
-        assert (await guest.get(f"/api/v1/tasks/{task.id}/files/0")).json()["error"]["code"] == "task_unknown"
-
-
 async def test_people_say_since_when_they_are_where_they_are(tmp_path: Path) -> None:
     async with Harness(tmp_path) as admin:
         arrived = utc_now() - timedelta(hours=2)
@@ -86,17 +53,17 @@ async def test_a_task_a_watch_a_satellite_and_an_account_open_one_by_one(tmp_pat
     async with Harness(tmp_path) as admin:
         nestor = admin.nestor
         member = await admin.account("mathilde", Role.MEMBER, "mathilde")
-        theirs = await nestor.tasks.delegate("Plombier", title="Plombier", origin=TELEGRAM, requested_by=MATHILDE)
-        mine = await nestor.tasks.delegate("Dépôt", title="Dépôt", origin=TELEGRAM, requested_by=MATHIS)
+        theirs = await nestor.tasks.start_task("Plombier", title="Plombier", origin=TELEGRAM, owner=MATHILDE)
+        mine = await nestor.tasks.start_task("Dépôt", title="Dépôt", origin=TELEGRAM, owner=MATHIS)
         await asyncio.sleep(0.01)
-        await nestor.tasks.cancel(mine.id)
+        await nestor.tasks.stop(mine.id)
         watch = await nestor.watch_book.create(Watch(title="Le colis", what="le colis", owner=MATHIS))
         await pair_by_code(nestor.pairing, Manifest(Device("mic", "esp32", "bureau"), software=SOFTWARE))
         owner, guest = await admin.api(), await admin.api("mathilde")
 
         ended = (await owner.get(f"/api/v1/tasks/{mine.id}")).json()
-        assert ended["status"] == "cancelled" and ended["ended_at"] is not None
-        assert (await owner.get(f"/api/v1/tasks/{theirs.id}")).json()["ended_at"] is None
+        assert ended["state"] == "ready" and ended["thread"][0]["status"] == "stopped"
+        assert (await owner.get(f"/api/v1/tasks/{theirs.id}")).json()["state"] == "working"
         assert (await guest.get(f"/api/v1/tasks/{theirs.id}")).status_code == 200
         assert (await guest.get(f"/api/v1/tasks/{mine.id}")).json()["error"]["code"] == "task_unknown"
 

@@ -8872,6 +8872,58 @@
                 "help": null
               }
             },
+            "sensitive": {
+              "default": false,
+              "title": "Sensitive",
+              "type": "boolean",
+              "x-nestor": {
+                "field": "sensitive",
+                "title_id": "config-executor-claude-code-sensitive",
+                "help_id": "config-executor-claude-code-sensitive-help",
+                "fallback_title_id": "config-field-sensitive",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "executor-claude-code",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Agit avec de vrais pouvoirs",
+                "help": "Lancée ou réorientée depuis un appareil partagé, une tâche est d’abord confirmée par écrit."
+              }
+            },
+            "archive_after_days": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": 30,
+              "title": "Archive After Days",
+              "x-nestor": {
+                "field": "archive_after_days",
+                "title_id": "config-executor-claude-code-archive_after_days",
+                "help_id": "config-executor-claude-code-archive_after_days-help",
+                "fallback_title_id": "config-field-archive_after_days",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "executor-claude-code",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Archiver une tâche finie après (jours)",
+                "help": "Vide : ses tâches ne sont jamais archivées."
+              }
+            },
             "command": {
               "items": {
                 "type": "string"
@@ -9232,6 +9284,58 @@
                 "help": null
               }
             },
+            "sensitive": {
+              "default": false,
+              "title": "Sensitive",
+              "type": "boolean",
+              "x-nestor": {
+                "field": "sensitive",
+                "title_id": "config-executor-codex-sensitive",
+                "help_id": "config-executor-codex-sensitive-help",
+                "fallback_title_id": "config-field-sensitive",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "executor-codex",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Agit avec de vrais pouvoirs",
+                "help": "Lancée ou réorientée depuis un appareil partagé, une tâche est d’abord confirmée par écrit."
+              }
+            },
+            "archive_after_days": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": 30,
+              "title": "Archive After Days",
+              "x-nestor": {
+                "field": "archive_after_days",
+                "title_id": "config-executor-codex-archive_after_days",
+                "help_id": "config-executor-codex-archive_after_days-help",
+                "fallback_title_id": "config-field-archive_after_days",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "executor-codex",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Archiver une tâche finie après (jours)",
+                "help": "Vide : ses tâches ne sont jamais archivées."
+              }
+            },
             "command": {
               "items": {
                 "type": "string"
@@ -9514,6 +9618,58 @@
                 "suggest_values": null,
                 "title": "Nom",
                 "help": null
+              }
+            },
+            "sensitive": {
+              "default": false,
+              "title": "Sensitive",
+              "type": "boolean",
+              "x-nestor": {
+                "field": "sensitive",
+                "title_id": "config-executor-hermes-sensitive",
+                "help_id": "config-executor-hermes-sensitive-help",
+                "fallback_title_id": "config-field-sensitive",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "executor-hermes",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Agit avec de vrais pouvoirs",
+                "help": "Lancée ou réorientée depuis un appareil partagé, une tâche est d’abord confirmée par écrit."
+              }
+            },
+            "archive_after_days": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": 30,
+              "title": "Archive After Days",
+              "x-nestor": {
+                "field": "archive_after_days",
+                "title_id": "config-executor-hermes-archive_after_days",
+                "help_id": "config-executor-hermes-archive_after_days-help",
+                "fallback_title_id": "config-field-archive_after_days",
+                "secret": false,
+                "secret_values": false,
+                "advanced": false,
+                "group": "executor-hermes",
+                "reference": null,
+                "model_type": null,
+                "brands": null,
+                "suggest_keys": null,
+                "suggest_values": null,
+                "title": "Archiver une tâche finie après (jours)",
+                "help": "Vide : ses tâches ne sont jamais archivées."
               }
             },
             "base_url": {

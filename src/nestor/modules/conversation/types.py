@@ -120,6 +120,7 @@ class MentionKind(StrEnum):
     ROOM = "room"  # a room of the home
     EXECUTOR = "executor"  # an executor, to hand work to
     CONNECTION = "connection"  # a connected account (a mailbox, a calendar), to use
+    TASK = "task"  # a task of whoever writes, to direct
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

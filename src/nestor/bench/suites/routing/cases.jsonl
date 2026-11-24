@@ -25,3 +25,7 @@
 {"case": "r24", "said": "Imprime le devis sur l'imprimante du bureau", "expected": [], "label": "impossible"}
 {"case": "r25", "said": "Quelle heure est-il ?", "expected": [], "label": "connaissance"}
 {"case": "r26", "said": "Ouvre une PR qui met à jour le README du SDK TypeScript avec le nouvel exemple d'appairage", "expected": [["delegate:claude-code", "delegate:codex"]], "label": "code de Mathis"}
+{"case": "r27", "said": "Continue la mise à jour du site : ajoute la page contact", "tasks": [{"id": "site", "title": "Mise à jour du site", "executor": "codex"}], "expected": [["continue:site"]], "label": "suite d'une tâche"}
+{"case": "r28", "said": "C'est un Hisense", "tasks": [{"id": "dish", "title": "Lave-vaisselle connecté", "executor": "codex", "question": "Quelle est la marque du lave-vaisselle ?"}], "expected": [["continue:dish"]], "label": "réponse à une tâche"}
+{"case": "r29", "said": "Il en est où, le site ?", "tasks": [{"id": "site", "title": "Mise à jour du site", "executor": "codex"}], "expected": [["tool:list_tasks", "tool:read_task"]], "label": "suite d'une tâche"}
+{"case": "r30", "said": "Ouvre une PR qui corrige la typo du README du SDK Rust", "tasks": [{"id": "site", "title": "Mise à jour du site", "executor": "codex"}], "expected": [["delegate:claude-code", "delegate:codex"]], "label": "nouvelle tâche"}

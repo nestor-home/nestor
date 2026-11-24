@@ -1,5 +1,5 @@
-"""The requester's memory, through the agent's own memory tools: what is theirs, never another person's nor the
-household's (`recall`), and a fact learned about them while working (`remember`)."""
+"""What Nestor knows of the task's owner, through the agent's own memory tools: what is theirs, never another person's
+nor the household's (`recall`). What the executor learns stays with the task (`note`), never in anyone's memory."""
 
 from mcp.server.mcpserver import Context, MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
@@ -13,26 +13,20 @@ def register(mcp: MCPServer, access: TaskAccess) -> None:
 
     @mcp.tool(
         description=(
-            "What Nestor knows of the requester: their memories matching `query`, and their past conversations "
-            "(dated: since and until as 2026-11-01)."
+            "What Nestor knows of the person the task is for: their memories matching `query`, and their past "
+            "conversations (dated: since and until as 2026-11-01)."
         )
     )
     async def recall(task: str, query: str, ctx: Context, since: str = "", until: str = "") -> dict[str, object]:
-        requester = access.requester(await access.task(ctx, task, "recall"))
+        owner = access.owner(await access.task(ctx, task, "recall"))
         try:
             found = await memory.search(
                 query,
-                person=requester,
-                about=requester,
+                person=owner,
+                about=owner,
                 since=memory.bound(since, end=False),
                 until=memory.bound(until, end=True),
             )
         except ToolFailed as failed:
             raise ToolError(str(failed)) from None
         return dict(found)
-
-    @mcp.tool(description="Keep a lasting fact about the requester, learned while working on the task.")
-    async def remember(task: str, fact: str, ctx: Context) -> dict[str, object]:
-        found = await access.task(ctx, task, "remember")
-        kept = await memory.keep(fact, about=access.requester(found), source=found.origin, exchange=found.exchange)
-        return dict(kept)

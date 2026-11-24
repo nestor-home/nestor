@@ -6,15 +6,11 @@ from pydantic import Field, PositiveFloat, PositiveInt, SecretStr
 
 from nestor.adapters.executors.claude_code.cli import COMMAND, TOOLS, PermissionMode
 from nestor.adapters.executors.claude_code.executor import ClaudeCodeExecutor
-from nestor.adapters.executors.common import (
-    INSTRUCTIONS,
-    MAX_FILE_BYTES,
-)
+from nestor.adapters.executors.common import INSTRUCTIONS, MAX_FILE_BYTES, ExecutorSettings
 from nestor.runtime import Services
-from nestor.runtime.plugins import AdapterSettings
 
 
-class ClaudeCodeSettings(AdapterSettings):
+class ClaudeCodeSettings(ExecutorSettings):
     command: list[str] = Field(default_factory=lambda: list(COMMAND), min_length=1)  # the `claude` command
     working_directory: Path  # where tasks run; files are handed back from there only
     description: str  # what this Claude Code can really do
@@ -23,7 +19,7 @@ class ClaudeCodeSettings(AdapterSettings):
     permission_mode: PermissionMode = PermissionMode.DONT_ASK
     allowed_tools: list[str] = Field(default_factory=lambda: list(TOOLS))  # e.g. "Bash(git *)"
     disallowed_tools: list[str] = Field(default_factory=list)
-    max_budget_usd: PositiveFloat | None = None  # per task
+    max_budget_usd: PositiveFloat | None = None  # per turn
     api_key: SecretStr | None = None  # without it, the account Claude Code is signed in with
     stop_timeout_s: PositiveFloat = 10.0
     max_file_bytes: PositiveInt = MAX_FILE_BYTES
@@ -44,5 +40,4 @@ def build(settings: ClaudeCodeSettings, name: str, services: Services) -> Claude
         stop_timeout_s=settings.stop_timeout_s,
         max_file_bytes=settings.max_file_bytes,
     )
-    executor.name = name  # two Claude Code setups are two executors
-    return executor
+    return settings.apply(executor, name)  # two Claude Code setups are two executors

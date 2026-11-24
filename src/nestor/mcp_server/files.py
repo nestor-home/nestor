@@ -1,6 +1,6 @@
 """The endpoint behind `links`, at `/mcp/files/<link>`: GET downloads a file sent with the task, PUT uploads one made
 for it (the raw content as the body, at most `FILE_BYTES`). Any link that is not valid, or whose task no longer runs,
-reads the same: 404."""
+reads the same: 404, and so does any link once the turn it was given for ended."""
 
 from starlette.requests import Request
 from starlette.responses import JSONResponse, PlainTextResponse, Response
@@ -9,7 +9,7 @@ from nestor.http import file_response, read_body
 from nestor.mcp_server.access import FILE_BYTES
 from nestor.mcp_server.links import Links
 from nestor.modules.channels import Attachment, AttachmentKind
-from nestor.modules.cognition.delegation import TaskStatus
+from nestor.modules.cognition.delegation import TaskState
 from nestor.runtime import Nestor
 
 NO_LINK = "no such link"
@@ -23,7 +23,7 @@ class FileLinks:
         token = request.path_params["token"]
         link = self._links.read(token)
         task = self._nestor.tasks.tasks.get(link.task) if link else None
-        if link is None or task is None or task.status is not TaskStatus.RUNNING:
+        if link is None or task is None or task.state is not TaskState.WORKING:
             return PlainTextResponse(NO_LINK, status_code=404)
         if request.method != link.method:
             return PlainTextResponse(f"this link takes {link.method}", status_code=405)

@@ -10,6 +10,7 @@ from nestor.modules.cognition.tools.results import Results
 from nestor.modules.cognition.tools.service import Called, Toolbox
 from nestor.modules.cognition.tools.types import (
     TITLE,
+    TITLE_CHARS,
     Made,
     Risk,
     SensitiveWhen,
@@ -23,6 +24,7 @@ from nestor.modules.cognition.tools.types import (
 
 __all__ = [
     "TITLE",
+    "TITLE_CHARS",
     "Called",
     "InWriting",
     "Made",

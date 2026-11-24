@@ -18,6 +18,9 @@ class TestScriptedExecutor(ExecutorContract):
     def failing_executor(self) -> Executor:
         return ScriptedExecutor(error="service météo injoignable")
 
+    def asking_executor(self) -> Executor:
+        return ScriptedExecutor(asks="Pour quelle ville ?")
+
 
 class StubbornExecutor(Executor):
     """Ignores the stop request and finishes its work anyway."""
@@ -45,7 +48,7 @@ class RaisingExecutor(Executor):
 
 async def test_the_executor_contract_rejects_hangs_and_raised_failures() -> None:
     class Suite(ExecutorContract):
-        cancel_timeout_s = 0.2
+        stop_timeout_s = 0.2
 
         def slow_executor(self) -> Executor:
             return StubbornExecutor()
@@ -54,7 +57,7 @@ async def test_the_executor_contract_rejects_hangs_and_raised_failures() -> None
             return RaisingExecutor()
 
     with pytest.raises(AssertionError, match="still running"):
-        await Suite().test_cancellation_ends_without_hanging()
+        await Suite().test_stopping_ends_without_hanging()
     with pytest.raises(RuntimeError, match="crashed"):
         await Suite().test_failure_is_returned_not_raised()
 
@@ -64,4 +67,20 @@ async def test_the_executor_contract_accepts_a_local_cancellation() -> None:
         def slow_executor(self) -> Executor:
             return LocalExecutor()
 
-    await Suite().test_cancellation_ends_without_hanging()
+    await Suite().test_stopping_ends_without_hanging()
+
+
+async def test_the_executor_contract_rejects_an_executor_that_forgets_its_session() -> None:
+    class Amnesic(ScriptedExecutor):
+        """Says it continues, but every turn starts a new session."""
+
+        async def run(self, assignment: Assignment, progress: Progress) -> Outcome:
+            outcome = await super().run(Assignment(assignment.instruction), progress)
+            return outcome
+
+    class Suite(ExecutorContract):
+        def executor(self) -> Executor:
+            return Amnesic()
+
+    with pytest.raises(AssertionError):
+        await Suite().test_a_turn_given_its_session_goes_on_in_it()

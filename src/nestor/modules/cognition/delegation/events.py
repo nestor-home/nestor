@@ -1,70 +1,131 @@
-"""Events of delegated tasks: the journal is the only record of a task, so it survives restarts."""
+"""Events of delegated tasks: the journal is the only record of a task and its turns, so they survive restarts."""
 
 from nestor.core import Event, PersonId
 from nestor.modules.channels import Address, Exchange
-from nestor.modules.cognition.delegation.types import Notify, TaskStatus
+from nestor.modules.cognition.delegation.types import Notify, TurnStatus
 from nestor.modules.journal import FileRef
 
 
-class TaskStarted(Event, event_type="task.started"):
-    """`exchange` is the conversation and turn that delegated it, when one did; `thread`, what its result continues
-    (a recurring wake-up that delegated it: `Notification.thread`); `capability`, the digest of the value its executor
-    calls Nestor's MCP server with for it (never the value), when it reaches it; `given`, the files sent with it;
-    `asked`, whether a person asked for it in their own turn, rather than Nestor (a wake-up)."""
+class TaskCreated(Event, event_type="task.created"):
+    """A task, handed to `executor` for `owner` (`None`: for nobody in particular, a wake-up's), from `origin`, where
+    what it comes back with is told; `thread`, what that continues (a recurring wake-up: `Notification.thread`)."""
 
     task_id: str
     title: str  # the short name the household knows it by
-    objective: str
     executor: str
-    origin: Address  # the channel conversation the task was asked in
-    requested_by: PersonId | None = None
-    notify: Notify = Notify.AUTO
-    exchange: Exchange | None = None
+    owner: PersonId | None = None
+    origin: Address  # the channel conversation it was asked in
     thread: str | None = None
-    capability: str | None = None
-    given: tuple[FileRef, ...] = ()
-    asked: bool = False  # by a person, in their own turn: its result is always told
 
 
-class TaskAttached(Event, event_type="task.attached"):
-    """The executor's reference for remote work: what lets Nestor follow it again after a restart."""
+class TaskRenamed(Event, event_type="task.renamed"):
+    task_id: str
+    title: str
+    by: PersonId | None = None
+
+
+class TaskArchived(Event, event_type="task.archived"):
+    """Put away, by someone or after `Executor.archive_after_days` without activity (`by` `None`); an instruction
+    opens it again."""
 
     task_id: str
+    by: PersonId | None = None
+
+
+class TurnStarted(Event, event_type="task.turn.started"):
+    """An instruction, from `by`, with the files sent with it (`given`). `exchange` is the conversation and turn that
+    gave it, when one did; `capability`, the digest of the value its executor calls Nestor's MCP server with for it
+    (never the value); `asked`, whether a person asked for it in their own turn, rather than Nestor (a wake-up)."""
+
+    task_id: str
+    turn_id: str
+    instruction: str
+    by: PersonId | None = None
+    given: tuple[FileRef, ...] = ()
+    notify: Notify = Notify.AUTO
+    exchange: Exchange | None = None
+    capability: str | None = None
+    asked: bool = False  # by a person, in their own turn: what it comes back with is always told
+
+
+class TurnAttached(Event, event_type="task.turn.attached"):
+    """The executor's handle on the turn: what follows remote work again after a restart, and what an instruction is
+    steered to."""
+
+    task_id: str
+    turn_id: str
     ref: str
 
 
-class TaskProgressed(Event, event_type="task.progress"):
+class TurnStepped(Event, event_type="task.turn.step"):
+    """What the executor says it does (`report_progress`, or the step it streams)."""
+
     task_id: str
+    turn_id: str
     step: str
 
 
-class TaskCancelRequested(Event, event_type="task.cancel.requested"):
-    task_id: str
-
-
-class TaskEnded(Event, event_type="task.ended"):
-    """Terminal state; `status` is never RUNNING. A requested but unconfirmed stop ends as FAILED."""
+class TaskSteered(Event, event_type="task.steered"):
+    """An instruction given while a turn worked: `taken` when the executor brought it into the turn; otherwise the
+    turn was stopped and the instruction opens the next."""
 
     task_id: str
-    status: TaskStatus
+    turn_id: str
+    instruction: str
+    by: PersonId | None = None
+    taken: bool
+
+
+class TurnStopRequested(Event, event_type="task.turn.stop-requested"):
+    task_id: str
+    turn_id: str
+    by: PersonId | None = None
+
+
+class TurnFileAdded(Event, event_type="task.turn.file-added"):
+    """A file the executor handed back while the turn worked (`attach_file`): it goes with what the turn brings."""
+
+    task_id: str
+    turn_id: str
+    file: FileRef
+
+
+class TaskNoted(Event, event_type="task.noted"):
+    """What the executor keeps for the task (`note`): read back by Nestor, never a memory of a person."""
+
+    task_id: str
+    text: str
+
+
+class TurnEnded(Event, event_type="task.turn.ended"):
+    """How the turn ended: never `RUNNING`; a requested but unconfirmed stop ends as `FAILED`. `executor_session` is
+    what the next turn continues; `files`, what the executor made, to go with the answer that brings the outcome."""
+
+    task_id: str
+    turn_id: str
+    status: TurnStatus
     result: str | None = None
+    question: str | None = None
     error: str | None = None
     duration_s: float
-    files: tuple[FileRef, ...] = ()  # what the executor made, to go with the answer that brings the result
+    files: tuple[FileRef, ...] = ()
+    executor_session: str | None = None
 
 
-class TaskDelivered(Event, event_type="task.delivered"):
-    """The outcome reached the requester: it is never delivered again, even after a restart."""
+class TurnDelivered(Event, event_type="task.turn.delivered"):
+    """What the turn came back with reached its owner: it is never delivered again, even after a restart."""
 
     task_id: str
+    turn_id: str
     address: Address
 
 
-class TaskFileAdded(Event, event_type="task.file.added"):
-    """A file the executor handed back while it worked (`attach_file`): it goes with the result."""
+class TaskReminded(Event, event_type="task.reminded"):
+    """The owner was reminded of the question the task waits on (the `count`-th time)."""
 
     task_id: str
-    file: FileRef
+    turn_id: str
+    count: int
 
 
 class ExecutorKeyIssued(Event, event_type="executor.key.issued"):
@@ -84,6 +145,6 @@ class ExecutorCalled(Event, event_type="executor.called"):
     module."""
 
     executor: str
-    task_id: str | None  # None when the call matched no running task of that executor
+    task_id: str | None  # None when the call matched no working turn of that executor
     tool: str
     ok: bool

@@ -7157,7 +7157,20 @@
           "tasks"
         ],
         "summary": "List Tasks",
+        "description": "The tasks the caller reaches: waiting on someone first, then working, then the latest active; archived ones\nonly when asked.",
         "operationId": "listTasks",
+        "parameters": [
+          {
+            "name": "archived",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Archived"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -7258,7 +7271,7 @@
           "tasks"
         ],
         "summary": "Get Task",
-        "description": "One task, running or among those the manager still keeps; 404 when unknown or out of reach.",
+        "description": "One task with its thread; 404 when unknown or out of reach.",
         "operationId": "getTask",
         "parameters": [
           {
@@ -7277,7 +7290,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TaskOut"
+                  "$ref": "#/components/schemas/TaskThreadOut"
                 }
               }
             }
@@ -7363,16 +7376,13 @@
             }
           }
         }
-      }
-    },
-    "/api/v1/tasks/{task_id}/files/{index}": {
-      "get": {
+      },
+      "patch": {
         "tags": [
           "tasks"
         ],
-        "summary": "Get Task File",
-        "description": "A file the task handed back; 404 when the task is out of reach or has no such file.",
-        "operationId": "getTaskFile",
+        "summary": "Rename Task",
+        "operationId": "renameTask",
         "parameters": [
           {
             "name": "task_id",
@@ -7382,22 +7392,27 @@
               "type": "string",
               "title": "Task Id"
             }
-          },
-          {
-            "name": "index",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Index"
-            }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskEditIn"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
-            "description": "The file, as the task made it",
+            "description": "Successful Response",
             "content": {
-              "application/octet-stream": {}
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskThreadOut"
+                }
+              }
             }
           },
           "400": {
@@ -7483,14 +7498,137 @@
         }
       }
     },
-    "/api/v1/tasks/{task_id}/cancel": {
+    "/api/v1/tasks/{task_id}/instructions": {
       "post": {
         "tags": [
           "tasks"
         ],
-        "summary": "Cancel Task",
-        "description": "Ask the executor to stop; 404 when the task is unknown, out of reach or already ended.",
-        "operationId": "cancelTask",
+        "summary": "Direct Task",
+        "description": "Give a task an instruction in the name of the account's person: taken into the turn that works when its\nexecutor can, else it opens the next turn, in the same thread (the answer to its question).",
+        "operationId": "directTask",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Task Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InstructionIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DirectedOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tasks/{task_id}/stop": {
+      "post": {
+        "tags": [
+          "tasks"
+        ],
+        "summary": "Stop Task",
+        "description": "Stop the turn that works; the task stays. 404 when the task is unknown or out of reach.",
+        "operationId": "stopTask",
         "parameters": [
           {
             "name": "task_id",
@@ -7508,9 +7646,249 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CancelOut"
+                  "$ref": "#/components/schemas/StopOut"
                 }
               }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tasks/{task_id}/archive": {
+      "post": {
+        "tags": [
+          "tasks"
+        ],
+        "summary": "Archive Task",
+        "description": "Put a task away, its working turn stopped first; an instruction opens it again.",
+        "operationId": "archiveTask",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Task Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskThreadOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tasks/{task_id}/turns/{turn_id}/files/{index}": {
+      "get": {
+        "tags": [
+          "tasks"
+        ],
+        "summary": "Get Task File",
+        "description": "A file of a turn (`TurnOut.files`); 404 when the task is out of reach or has no such file.",
+        "operationId": "getTaskFile",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Task Id"
+            }
+          },
+          {
+            "name": "turn_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Turn Id"
+            }
+          },
+          {
+            "name": "index",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Index"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The file, as it was sent or made",
+            "content": {
+              "application/octet-stream": {}
             }
           },
           "400": {
@@ -14400,23 +14778,6 @@
         ],
         "title": "CallsOut"
       },
-      "CancelOut": {
-        "properties": {
-          "task": {
-            "$ref": "#/components/schemas/TaskOut"
-          },
-          "confirmed": {
-            "type": "boolean",
-            "title": "Confirmed"
-          }
-        },
-        "type": "object",
-        "required": [
-          "task",
-          "confirmed"
-        ],
-        "title": "CancelOut"
-      },
       "CapabilityOut": {
         "properties": {
           "name": {
@@ -15628,6 +15989,23 @@
         "title": "Dimension",
         "description": "What spending is grouped or filtered by: the ledger's columns, shared by the API and the admin."
       },
+      "DirectedOut": {
+        "properties": {
+          "task": {
+            "$ref": "#/components/schemas/TaskThreadOut"
+          },
+          "steered": {
+            "type": "boolean",
+            "title": "Steered"
+          }
+        },
+        "type": "object",
+        "required": [
+          "task",
+          "steered"
+        ],
+        "title": "DirectedOut"
+      },
       "DocumentIn": {
         "properties": {
           "document": {
@@ -16271,6 +16649,22 @@
         ],
         "title": "InstallKind",
         "description": "How this Nestor is installed, which says how it is updated."
+      },
+      "InstructionIn": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 8000,
+            "minLength": 1,
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "InstructionIn",
+        "description": "An instruction for a task: steers the turn that works, else opens the next (an answer to its question)."
       },
       "Interval": {
         "type": "string",
@@ -17428,7 +17822,8 @@
           "person",
           "room",
           "executor",
-          "connection"
+          "connection",
+          "task"
         ],
         "title": "MentionKind",
         "description": "What a message can name with `@`."
@@ -17617,7 +18012,7 @@
           "configured"
         ],
         "title": "NestorTools",
-        "description": "How an executor reaches Nestor's MCP server while it works: its brief, its memory of the requester, questions\nto them, its progress and its files."
+        "description": "How an executor reaches Nestor's MCP server while it works: its brief, its notes, its progress and its files."
       },
       "OAuthClientOut": {
         "properties": {
@@ -19384,6 +19779,23 @@
         ],
         "title": "Status"
       },
+      "StopOut": {
+        "properties": {
+          "task": {
+            "$ref": "#/components/schemas/TaskThreadOut"
+          },
+          "confirmed": {
+            "type": "boolean",
+            "title": "Confirmed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "task",
+          "confirmed"
+        ],
+        "title": "StopOut"
+      },
       "Suggest": {
         "type": "string",
         "enum": [
@@ -19459,6 +19871,21 @@
         ],
         "title": "SystemOut"
       },
+      "TaskEditIn": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Title"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title"
+        ],
+        "title": "TaskEditIn"
+      },
       "TaskFileOut": {
         "properties": {
           "index": {
@@ -19479,6 +19906,10 @@
           "size": {
             "type": "integer",
             "title": "Size"
+          },
+          "given": {
+            "type": "boolean",
+            "title": "Given"
           }
         },
         "type": "object",
@@ -19487,10 +19918,11 @@
           "name",
           "kind",
           "media_type",
-          "size"
+          "size",
+          "given"
         ],
         "title": "TaskFileOut",
-        "description": "A file the task handed back; its bytes at `/tasks/{id}/files/{index}`."
+        "description": "A file of a turn: sent with its instruction (`given`) or handed back; its bytes at\n`/tasks/{id}/turns/{turn}/files/{index}`."
       },
       "TaskOut": {
         "properties": {
@@ -19502,18 +19934,14 @@
             "type": "string",
             "title": "Title"
           },
-          "objective": {
-            "type": "string",
-            "title": "Objective"
-          },
           "executor": {
             "type": "string",
             "title": "Executor"
           },
-          "status": {
-            "$ref": "#/components/schemas/TaskStatus"
+          "state": {
+            "$ref": "#/components/schemas/TaskState"
           },
-          "requested_by": {
+          "owner": {
             "anyOf": [
               {
                 "$ref": "#/components/schemas/PersonRef"
@@ -19526,41 +19954,21 @@
           "origin": {
             "$ref": "#/components/schemas/OriginOut"
           },
-          "delivered": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/DeliveredOut"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "started_at": {
+          "created_at": {
             "type": "string",
             "format": "date-time",
-            "title": "Started At"
+            "title": "Created At"
           },
-          "ended_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Ended At"
+          "last_activity": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Activity"
           },
-          "steps": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Steps"
+          "turns": {
+            "type": "integer",
+            "title": "Turns"
           },
-          "result": {
+          "question": {
             "anyOf": [
               {
                 "type": "string"
@@ -19569,9 +19977,9 @@
                 "type": "null"
               }
             ],
-            "title": "Result"
+            "title": "Question"
           },
-          "error": {
+          "now": {
             "anyOf": [
               {
                 "type": "string"
@@ -19580,66 +19988,149 @@
                 "type": "null"
               }
             ],
-            "title": "Error"
-          },
-          "files": {
-            "items": {
-              "$ref": "#/components/schemas/TaskFileOut"
-            },
-            "type": "array",
-            "title": "Files"
+            "title": "Now"
           }
         },
         "type": "object",
         "required": [
           "id",
           "title",
-          "objective",
           "executor",
-          "status",
-          "requested_by",
+          "state",
+          "owner",
           "origin",
-          "delivered",
-          "started_at",
-          "ended_at",
-          "steps",
-          "result",
-          "error",
-          "files"
+          "created_at",
+          "last_activity",
+          "turns",
+          "question",
+          "now"
         ],
-        "title": "TaskOut"
+        "title": "TaskOut",
+        "description": "A task in a list: how it stands, not its thread."
       },
-      "TaskStatus": {
+      "TaskState": {
         "type": "string",
         "enum": [
-          "running",
-          "completed",
-          "failed",
-          "cancelled"
+          "working",
+          "waiting",
+          "ready",
+          "archived"
         ],
-        "title": "TaskStatus"
+        "title": "TaskState"
       },
-      "TasksOut": {
+      "TaskThreadOut": {
         "properties": {
-          "running": {
-            "items": {
-              "$ref": "#/components/schemas/TaskOut"
-            },
-            "type": "array",
-            "title": "Running"
+          "id": {
+            "type": "string",
+            "title": "Id"
           },
-          "recent": {
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "executor": {
+            "type": "string",
+            "title": "Executor"
+          },
+          "state": {
+            "$ref": "#/components/schemas/TaskState"
+          },
+          "owner": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PersonRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "origin": {
+            "$ref": "#/components/schemas/OriginOut"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "last_activity": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Activity"
+          },
+          "turns": {
+            "type": "integer",
+            "title": "Turns"
+          },
+          "question": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Question"
+          },
+          "now": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Now"
+          },
+          "thread": {
             "items": {
-              "$ref": "#/components/schemas/TaskOut"
+              "$ref": "#/components/schemas/TurnOut"
             },
             "type": "array",
-            "title": "Recent"
+            "title": "Thread"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Notes"
           }
         },
         "type": "object",
         "required": [
-          "running",
-          "recent"
+          "id",
+          "title",
+          "executor",
+          "state",
+          "owner",
+          "origin",
+          "created_at",
+          "last_activity",
+          "turns",
+          "question",
+          "now",
+          "thread",
+          "notes"
+        ],
+        "title": "TaskThreadOut",
+        "description": "A task with its thread, the first turn first, and what its executor kept for it."
+      },
+      "TasksOut": {
+        "properties": {
+          "tasks": {
+            "items": {
+              "$ref": "#/components/schemas/TaskOut"
+            },
+            "type": "array",
+            "title": "Tasks"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tasks"
         ],
         "title": "TasksOut"
       },
@@ -19777,6 +20268,132 @@
           "conversed_nusd"
         ],
         "title": "TotalsOut"
+      },
+      "TurnOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "instruction": {
+            "type": "string",
+            "title": "Instruction"
+          },
+          "by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PersonRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/TurnStatus"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Started At"
+          },
+          "ended_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended At"
+          },
+          "steps": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Steps"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result"
+          },
+          "question": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Question"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "files": {
+            "items": {
+              "$ref": "#/components/schemas/TaskFileOut"
+            },
+            "type": "array",
+            "title": "Files"
+          },
+          "delivered": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeliveredOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "instruction",
+          "by",
+          "status",
+          "started_at",
+          "ended_at",
+          "steps",
+          "result",
+          "question",
+          "error",
+          "files",
+          "delivered"
+        ],
+        "title": "TurnOut"
+      },
+      "TurnStatus": {
+        "type": "string",
+        "enum": [
+          "running",
+          "completed",
+          "asked",
+          "failed",
+          "stopped"
+        ],
+        "title": "TurnStatus"
       },
       "Unit": {
         "type": "string",

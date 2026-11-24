@@ -17,8 +17,7 @@ from nestor.admin.state import AdminState
 from nestor.core import Event, SessionId
 from nestor.core.events.codec import JSON
 from nestor.modules.accounts import Principal, Scope
-from nestor.modules.cognition import TaskEnded, TaskStarted
-from nestor.modules.cognition.delegation.events import TaskDelivered
+from nestor.modules.cognition.delegation import TaskCreated, TurnDelivered, TurnEnded, TurnStarted
 from nestor.modules.cognition.tools import ResultStored, ToolCalled, ToolCompleted, ToolDeferred, ToolReturned
 from nestor.modules.conversation import About, AnswerCut, AssistantTurn, NotificationTurn, Source, UserTurn
 from nestor.modules.identity import Identified
@@ -46,7 +45,7 @@ _DELIVERY = frozenset(
 )
 # what brought each kind of notification, and the field of that event naming it
 _BROUGHT_BY: dict[Source, tuple[type[Event], str]] = {
-    Source.TASK: (TaskEnded, "task_id"),
+    Source.TASK: (TurnEnded, "task_id"),
     Source.TOOL: (ToolReturned, "call_id"),
     Source.WATCH: (WatchTriggered, "watch_id"),
     Source.SCHEDULE: (ScheduleFired, "schedule_id"),
@@ -211,10 +210,12 @@ def _cause_rule(entry: Entry) -> _Rule | None:
         return of(ToolDeferred, "call_id")
     if kind == ToolResultDelivered.event_type:
         return of(ToolReturned, "call_id")
-    if kind == TaskEnded.event_type:
-        return of(TaskStarted, "task_id")
-    if kind == TaskDelivered.event_type:
-        return of(TaskEnded, "task_id")
+    if kind == TurnStarted.event_type:
+        return of(TaskCreated, "task_id")
+    if kind == TurnEnded.event_type:
+        return of(TurnStarted, "turn_id")
+    if kind == TurnDelivered.event_type:
+        return of(TurnEnded, "turn_id")
     if kind == WatchTriggered.event_type:
         return of(WatchCreated, "watch_id")
     if kind == WatchEnded.event_type:

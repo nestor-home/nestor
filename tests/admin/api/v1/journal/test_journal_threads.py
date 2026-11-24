@@ -12,8 +12,8 @@ from nestor.core import PersonId, new_id, utc_now
 from nestor.core.i18n import Message
 from nestor.modules.accounts import Role
 from nestor.modules.channels import Address, Attachment, AttachmentKind, Exchange, InboundMessage, Medium, Sender
-from nestor.modules.cognition import TaskEnded, TaskStarted, TaskStatus
-from nestor.modules.cognition.delegation.events import TaskDelivered
+from nestor.modules.cognition import TurnStatus
+from nestor.modules.cognition.delegation import TaskCreated, TurnDelivered, TurnEnded, TurnStarted
 from nestor.modules.cognition.tools import ToolCompleted
 from nestor.modules.conversation import About, AssistantTurn, Conversations, NotificationTurn, Source, UserTurn
 from nestor.modules.home import PresenceChanged
@@ -105,22 +105,25 @@ async def test_a_check_that_found_nothing_chains_from_its_wake_up(tmp_path: Path
 async def test_a_task_chains_from_its_start_to_its_result(tmp_path: Path) -> None:
     async with Harness(tmp_path) as admin:
         for event in (
-            TaskStarted(
-                source="tasks", task_id="t1", title="Analyse", objective="Analyse", executor="hermes", origin=TELEGRAM
+            TaskCreated(source="tasks", task_id="t1", title="Analyse", executor="hermes", origin=TELEGRAM),
+            TurnStarted(source="tasks", task_id="t1", turn_id="u1", instruction="Analyse"),
+            TurnEnded(
+                source="tasks", task_id="t1", turn_id="u1", status=TurnStatus.COMPLETED, result="ok", duration_s=12
             ),
-            TaskEnded(source="tasks", task_id="t1", status=TaskStatus.COMPLETED, result="ok", duration_s=12),
             DeliveryConsidered(
                 source="courier", about=About(Source.TASK, "t1", "completed"), reason=REASON, written=TELEGRAM
             ),
-            TaskDelivered(source="tasks", task_id="t1", address=TELEGRAM),
+            TurnDelivered(source="tasks", task_id="t1", turn_id="u1", address=TELEGRAM),
         ):
             await admin.nestor.journal.publish(event)
         found = by_type(await items(await admin.api(), task="t1"))
-        started, ended = found["task.started"][0], found["task.ended"][0]
-        assert ended["cause"] == started["position"] and ended["outcome"] == {"ok": True, "duration_s": 12.0}
+        created, started = found["task.created"][0], found["task.turn.started"][0]
+        ended = found["task.turn.ended"][0]
+        assert started["cause"] == created["position"] and ended["cause"] == started["position"]
+        assert ended["outcome"] == {"ok": True, "duration_s": 12.0}
         assert found["initiative.considered"][0]["cause"] == ended["position"]
-        assert found["task.delivered"][0]["cause"] == ended["position"]
-        assert started["cause"] is None
+        assert found["task.turn.delivered"][0]["cause"] == ended["position"]
+        assert created["cause"] is None
 
 
 async def test_an_unprompted_message_chains_from_its_delivery_through_its_cue(tmp_path: Path) -> None:
@@ -295,18 +298,17 @@ async def test_the_files_of_a_message_come_to_who_may_read_it_and_only_pictures_
         assert (await api.get(f"/api/v1/journal/{item['position']}/attachments/2")).status_code == 404
 
 
-@pytest.mark.parametrize("made_by", ["agent.tool.completed", "task.ended"])
+@pytest.mark.parametrize("made_by", ["agent.tool.completed", "task.turn.ended"])
 async def test_a_file_a_tool_or_a_task_made_shows_with_its_line(made_by: str, tmp_path: Path) -> None:
     """Even where the conversation could not receive it (a voice in a room)."""
     async with Harness(tmp_path) as admin:
         picture = await admin.nestor.blobs.put(b"\x89PNG drawn", "image/png")
-        if made_by == "task.ended":
+        if made_by == "task.turn.ended":
             origin = Address("telegram", "42")
             await admin.nestor.journal.publish(
-                TaskStarted(
-                    source="tasks", task_id="t1", title="Draw", objective="Draw", executor="codex", origin=origin
-                )
+                TaskCreated(source="tasks", task_id="t1", title="Draw", executor="codex", origin=origin)
             )
+            await admin.nestor.journal.publish(TurnStarted(source="tasks", task_id="t1", turn_id="u1", instruction="x"))
         await admin.nestor.journal.publish(
             ToolCompleted(
                 source="toolbox",
@@ -318,10 +320,11 @@ async def test_a_file_a_tool_or_a_task_made_shows_with_its_line(made_by: str, tm
                 files=(FileRef(picture, "nestor.png"),),
             )
             if made_by == "agent.tool.completed"
-            else TaskEnded(
+            else TurnEnded(
                 source="tasks",
                 task_id="t1",
-                status=TaskStatus.COMPLETED,
+                turn_id="u1",
+                status=TurnStatus.COMPLETED,
                 result="drawn",
                 duration_s=9.0,
                 files=(FileRef(picture, "nestor.png"),),

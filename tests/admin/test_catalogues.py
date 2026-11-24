@@ -24,7 +24,7 @@ from nestor.admin.presentation import EventDescriber, Kind, Phrasebook
 from nestor.core import Event, ModelType, PersonId, Unit
 from nestor.core.i18n import Locale, Message
 from nestor.modules.accounts import InvitationStatus, Role
-from nestor.modules.cognition.delegation.types import TaskStatus
+from nestor.modules.cognition.delegation.types import TaskState, TurnStatus
 from nestor.modules.cognition.tools.types import Risk
 from nestor.modules.connectors.types import AuthKind, Status
 from nestor.modules.household import Household, Person
@@ -169,7 +169,8 @@ def test_every_error_the_api_sends_and_every_configuration_problem_has_its_sente
 SELECTS = {
     "role-name": Role,
     "invitation-status": InvitationStatus,
-    "task-status": TaskStatus,
+    "task-state": TaskState,
+    "turn-status": TurnStatus,
     "connection-status": Status,
     "tool-risk": Risk,
     "auth-kind": AuthKind,

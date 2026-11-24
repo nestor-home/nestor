@@ -29,16 +29,26 @@ from nestor.modules.accounts import (
     InvitationRevoked,
 )
 from nestor.modules.channels import Address, AttachmentKind
-from nestor.modules.cognition import (
-    ModelFellBack,
-    TaskAttached,
-    TaskCancelRequested,
-    TaskDelivered,
-    TaskEnded,
-    TaskProgressed,
-    TaskStarted,
+from nestor.modules.cognition import ModelFellBack
+from nestor.modules.cognition.delegation import (
+    ExecutorCalled,
+    ExecutorKeyIssued,
+    ExecutorKeyRevoked,
+    TaskArchived,
+    TaskCreated,
+    TaskNoted,
+    TaskReminded,
+    TaskRenamed,
+    TaskSteered,
+    TurnAttached,
+    TurnDelivered,
+    TurnEnded,
+    TurnFileAdded,
+    TurnStarted,
+    TurnStatus,
+    TurnStepped,
+    TurnStopRequested,
 )
-from nestor.modules.cognition.delegation import ExecutorCalled, ExecutorKeyIssued, ExecutorKeyRevoked, TaskFileAdded
 from nestor.modules.cognition.tools import ResultStored, ToolCalled, ToolCompleted, ToolDeferred, ToolReturned
 from nestor.modules.connectors import ConnectionChanged, ConnectionCreated, ConnectionRemoved
 from nestor.modules.conversation import (
@@ -64,7 +74,6 @@ from nestor.modules.initiative import (
     MessageDelivered,
     MessageRequested,
     MessageUndelivered,
-    QuestionAnswered,
     ScheduleCancelled,
     ScheduleCreated,
     ScheduleFired,
@@ -154,7 +163,6 @@ CATEGORIES: Mapping[Kind, tuple[type[Event], ...]] = {
         MessageRequested,
         MessageDelivered,
         MessageUndelivered,
-        QuestionAnswered,
     ),
     Kind.TOOL: (
         ToolCalled,
@@ -167,13 +175,19 @@ CATEGORIES: Mapping[Kind, tuple[type[Event], ...]] = {
         ConfirmationAnswered,
     ),
     Kind.TASK: (
-        TaskStarted,
-        TaskAttached,
-        TaskProgressed,
-        TaskFileAdded,
-        TaskCancelRequested,
-        TaskEnded,
-        TaskDelivered,
+        TaskCreated,
+        TaskRenamed,
+        TaskArchived,
+        TurnStarted,
+        TurnAttached,
+        TurnStepped,
+        TaskSteered,
+        TurnFileAdded,
+        TaskNoted,
+        TurnStopRequested,
+        TurnEnded,
+        TurnDelivered,
+        TaskReminded,
         ExecutorCalled,
         ExecutorKeyIssued,
         ExecutorKeyRevoked,
@@ -344,23 +358,38 @@ class EventDescriber:
             ToolResultDelivered: lambda e: self._line(
                 e, Message.of("journal-tool-result-delivered", tool=e.tool), channels=[e.address], tool=e.tool
             ),
-            TaskStarted: lambda e: self._line(
+            TaskCreated: lambda e: self._line(
                 e,
-                Message.of("journal-task-started", task=e.task_id, executor=e.executor, title=e.title),
-                detail=e.objective,
-                people=[e.requested_by],
+                Message.of("journal-task-created", task=e.task_id, executor=e.executor, title=e.title),
+                people=[e.owner],
                 channels=[e.origin],
             ),
-            TaskAttached: lambda e: self._line(e, Message.of("journal-task-attached", task=e.task_id)),
-            TaskProgressed: lambda e: self._line(
-                e, Message.of("journal-task-progressed", task=e.task_id), detail=e.step
+            TaskRenamed: lambda e: self._line(
+                e, Message.of("journal-task-renamed", task=e.task_id, title=e.title), people=[e.by]
             ),
-            TaskFileAdded: lambda e: self._line(
+            TaskArchived: lambda e: self._line(e, Message.of("journal-task-archived", task=e.task_id), people=[e.by]),
+            TurnStarted: lambda e: self._line(
                 e,
-                Message.of("journal-task-file-added", task=e.task_id),
+                Message.of("journal-task-turn-started", task=e.task_id),
+                detail=e.instruction,
+                people=[e.by],
+                attachments=_made(e.given),
+            ),
+            TurnAttached: lambda e: self._line(e, Message.of("journal-task-turn-attached", task=e.task_id)),
+            TurnStepped: lambda e: self._line(e, Message.of("journal-task-turn-step", task=e.task_id), detail=e.step),
+            TaskSteered: lambda e: self._line(
+                e,
+                Message.of("journal-task-steered", task=e.task_id, taken=_yes(e.taken)),
+                detail=e.instruction,
+                people=[e.by],
+            ),
+            TurnFileAdded: lambda e: self._line(
+                e,
+                Message.of("journal-task-turn-file-added", task=e.task_id),
                 detail=e.file.name,
                 attachments=_made((e.file,)),
             ),
+            TaskNoted: lambda e: self._line(e, Message.of("journal-task-noted", task=e.task_id), detail=e.text),
             ExecutorCalled: lambda e: self._line(
                 e,
                 Message.of("journal-executor-called", executor=e.executor, tool=e.tool, ok=_yes(e.ok)),
@@ -371,25 +400,22 @@ class EventDescriber:
             ExecutorKeyRevoked: lambda e: self._line(
                 e, Message.of("journal-executor-key-revoked", executor=e.executor)
             ),
-            TaskCancelRequested: lambda e: self._line(e, Message.of("journal-task-cancel-requested", task=e.task_id)),
-            TaskEnded: lambda e: self._line(
+            TurnStopRequested: lambda e: self._line(
+                e, Message.of("journal-task-turn-stop-requested", task=e.task_id), people=[e.by]
+            ),
+            TurnEnded: lambda e: self._line(
                 e,
-                Message.of("journal-task-ended", task=e.task_id, status=e.status, seconds=e.duration_s),
-                detail=e.error or e.result or "",
-                tone=Tone.WARNING if e.status == "failed" else Tone.NORMAL,
-                outcome=(e.status == "completed", e.duration_s),
+                Message.of("journal-task-turn-ended", task=e.task_id, status=e.status, seconds=e.duration_s),
+                detail=e.question or e.error or e.result or "",
+                tone=Tone.WARNING if e.status in (TurnStatus.FAILED, TurnStatus.ASKED) else Tone.NORMAL,
+                outcome=(e.status is not TurnStatus.FAILED, e.duration_s),
                 attachments=_made(e.files),
             ),
-            TaskDelivered: lambda e: self._line(
-                e, Message.of("journal-task-delivered", task=e.task_id), channels=[e.address]
+            TurnDelivered: lambda e: self._line(
+                e, Message.of("journal-task-turn-delivered", task=e.task_id), channels=[e.address]
             ),
+            TaskReminded: lambda e: self._line(e, Message.of("journal-task-reminded", task=e.task_id)),
             DeliveryConsidered: self._considered,
-            QuestionAnswered: lambda e: self._line(
-                e,
-                Message.of("journal-question-answered", by=self.name(e.by) or self.assistant),
-                detail=e.answer,
-                people=[e.by],
-            ),
             MessageRequested: lambda e: self._line(
                 e,
                 Message.of(

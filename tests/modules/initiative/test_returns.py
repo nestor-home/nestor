@@ -1,24 +1,17 @@
-"""What comes back by itself, an ended task or a tool slower than its turn, reaches whoever asked: in the
-conversation, in writing, or as soon as Nestor is back."""
+"""What comes back by itself, a turn of a task that ended (its report, its question, its failure) or a tool slower
+than its turn, reaches whoever asked: in the conversation, in writing, or as soon as Nestor is back."""
 
 import asyncio
-from collections.abc import Iterable, Mapping
+import contextlib
+from collections.abc import AsyncGenerator, Iterable, Mapping, Sequence
+from datetime import timedelta
 
 import pytest
 
 from nestor.core import Event, PersonId, ProviderError
 from nestor.modules.channels import Address, Attachment, AttachmentKind, InboundMessage, Medium, Sender
-from nestor.modules.cognition import (
-    Executor,
-    Notify,
-    Outcome,
-    Progress,
-    TaskDelivered,
-    TaskEnded,
-    TaskStarted,
-    TaskStatus,
-)
-from nestor.modules.cognition.delegation import Assignment
+from nestor.modules.cognition import Executor, Notify, Outcome, Progress, TaskState
+from nestor.modules.cognition.delegation import Assignment, TaskReminded, TurnDelivered, TurnEnded
 from nestor.modules.cognition.delegation.service import TaskManager
 from nestor.modules.cognition.model import Role, ToolCall, ToolSpec
 from nestor.modules.cognition.tools import Made, Tool, Toolbox, ToolCalled, ToolContext, ToolDeferred, ToolReturned
@@ -39,9 +32,10 @@ from nestor.modules.conversation import (
 from nestor.modules.conversation.persona import MUST_TELL
 from nestor.modules.household import Account, Household, Person
 from nestor.modules.initiative import Courier, Delivered, DeliveryFailed, DeliveryWithheld, Returns, ToolResultDelivered
+from nestor.modules.initiative.returns import REMINDERS, TICK_S
 from nestor.modules.journal import Journal
 from nestor.testing.channels import InMemoryChannel
-from nestor.testing.cognition import ScriptedModel
+from nestor.testing.cognition import ScriptedExecutor, ScriptedModel
 from nestor.testing.cognition.images import PNG
 from nestor.testing.i18n import EchoLocalizer
 from nestor.testing.journal import MemoryBlobStore, MemoryEventLog
@@ -84,8 +78,10 @@ class Home:
         journal: Journal | None = None,
         tools: Iterable[Tool] = (),
         tool_wait_s: float = 0.05,
+        executors: Iterable[Executor] = (),
     ) -> None:
-        """`journal`: another home's, to start again on what it wrote (a restart)."""
+        """`journal`: another home's, to start again on what it wrote (a restart); `executors` beside the scripted
+        ones: one that reports, one that fails, one that asks."""
         self.journal = journal or Journal(MemoryEventLog())
         self.household = Household([MATHIS])
         self.model = model or ScriptedModel(*["Ton analyse est finie : tout est vert."] * 3)
@@ -103,55 +99,74 @@ class Home:
         self.voice = voice or VoiceChannel()
         self.telegram = InMemoryChannel("telegram")
         self.courier = Courier(self.journal, self.agent, [self.voice, self.telegram])
+        reports, fails, asks = (
+            ScriptedExecutor("tout est vert"),
+            ScriptedExecutor(error="boom"),
+            ScriptedExecutor(asks="Quelle branche ?"),
+        )
+        reports.name, fails.name, asks.name = "reports", "fails", "asks"
+        self.executors = [reports, fails, asks, *executors]
+        self.tasks: TaskManager | None = None  # the running one, inside `returns()`
 
-    def returns(self) -> Returns:
-        return Returns(self.journal, self.household, self.courier)
+    @contextlib.asynccontextmanager
+    async def returns(
+        self, *, reminders: Sequence[timedelta] = REMINDERS, tick_s: float = TICK_S
+    ) -> AsyncGenerator[Returns]:
+        """Nestor running: its tasks, rebuilt from the journal, then what comes back from them."""
+        tasks = TaskManager(self.journal, self.executors, blobs=self.blobs)
+        async with tasks:
+            self.tasks = tasks
+            try:
+                returns = Returns(self.journal, self.household, self.courier, tasks, reminders=reminders, tick_s=tick_s)
+                async with returns:
+                    yield returns
+            finally:
+                self.tasks = None
 
     async def task(
         self,
-        task_id: str,
         *,
         notify: Notify = Notify.AUTO,
-        status: TaskStatus = TaskStatus.COMPLETED,
+        executor: str = "reports",
         still_talking: bool = True,
         by_mathis: bool = False,
-    ) -> None:
-        """A task asked aloud; `still_talking`: its spoken conversation goes on when it ends; `by_mathis`: in his own
-        turn, rather than in one Nestor opened (a wake-up that delegates)."""
+        owner: PersonId | None = MATHIS.id,
+    ) -> str:
+        """A task asked aloud, its first turn run to its end; `still_talking`: its spoken conversation goes on when it
+        ends; `by_mathis`: in his own turn, rather than in one Nestor opened (a wake-up that delegates). Run by the
+        Nestor running, or by one that stops right after (what comes back is then delivered at the next start)."""
         if still_talking:
             await self.agent.conversations.turn(VOICE, Medium.SPOKEN)
-        await self.journal.publish(
-            TaskStarted(
-                source="t",
-                task_id=task_id,
+        async with contextlib.AsyncExitStack() as stack:
+            tasks = self.tasks or await stack.enter_async_context(
+                TaskManager(self.journal, self.executors, blobs=self.blobs)
+            )
+            task = await tasks.start_task(
+                "Analyse le dépôt",
                 title="Analyse du dépôt",
-                objective="Analyse le dépôt",
-                executor="hermes",
                 origin=VOICE,
-                requested_by=MATHIS.id,
+                owner=owner,
+                executor=executor,
                 notify=notify,
                 asked=by_mathis,
             )
-        )
-        await self.journal.publish(
-            TaskEnded(
-                source="t",
-                task_id=task_id,
-                status=status,
-                result="tout est vert",
-                error=None if status is TaskStatus.COMPLETED else "boom",
-                duration_s=3.0,
-            )
-        )
+            await tasks.wait(task.id)
+        return task.id
+
+
+async def delivered(journal: Journal, count: int = 1) -> None:
+    for _ in range(500):
+        if len(await journal.history(TurnDelivered)) >= count:
+            return
+        await asyncio.sleep(0.01)
+    raise AssertionError("nothing was delivered")
 
 
 async def test_a_result_is_said_in_the_conversation_it_was_asked_in() -> None:
     home = Home()
     async with home.returns():
-        await home.task("t1")
-        await home.journal.subscribe(TaskDelivered).next(timeout_s=1) if not await home.journal.history(
-            TaskDelivered
-        ) else None
+        await home.task()
+        await delivered(home.journal)
 
     assert home.voice.sent == [(VOICE, "Ton analyse est finie : tout est vert.")]
     assert home.telegram.sent == []
@@ -163,7 +178,7 @@ async def test_a_result_is_said_in_the_conversation_it_was_asked_in() -> None:
 async def test_a_result_after_the_spoken_conversation_is_over_is_written() -> None:
     """Nestor speaks unprompted only when it is sure someone listens: here nothing says who is in the room."""
     home = Home()
-    await home.task("t1", still_talking=False)
+    await home.task(still_talking=False)
     async with home.returns():
         pass
     assert home.voice.sent == [] and home.telegram.sent == [(TELEGRAM, "Ton analyse est finie : tout est vert.")]
@@ -173,7 +188,7 @@ async def test_the_person_answering_a_result_is_answered_with_it_in_mind() -> No
     """The result comes back into the conversation it is delivered in, as a tool's result does: the person's next
     message is answered knowing it, even after a restart."""
     home = Home(model=ScriptedModel("Ton analyse est finie : tout est vert.", "Oui, tout est vert."))
-    await home.task("t1", still_talking=False)
+    task_id = await home.task(still_talking=False)
     async with home.returns():
         pass
     restarted = Home(model=home.model, journal=home.journal)
@@ -181,10 +196,10 @@ async def test_the_person_answering_a_result_is_answered_with_it_in_mind() -> No
     assert await restarted.agent.respond(reply).collect() == ("Oui, tout est vert.",)
     history = home.model.requests[1].messages[1:]
     assert [m.role for m in history] == [Role.USER, Role.ASSISTANT, Role.USER]
-    assert "Result: tout est vert" in history[0].content and "not said by anyone here" in history[0].content
+    assert "Report: tout est vert" in history[0].content and "not said by anyone here" in history[0].content
     [internal] = await home.journal.history(NotificationTurn)
     assert (internal.about, internal.person, internal.address) == (
-        About(Source.TASK, "t1", "completed"),
+        About(Source.TASK, task_id, "completed"),
         MATHIS.id,
         TELEGRAM,
     )
@@ -194,7 +209,7 @@ async def test_the_person_answering_a_result_is_answered_with_it_in_mind() -> No
 
 async def test_a_result_asked_in_writing_goes_where_the_person_reads() -> None:
     home = Home()
-    await home.task("t1", notify=Notify.MESSAGE)
+    await home.task(notify=Notify.MESSAGE)
     async with home.returns():
         pass
     assert home.telegram.sent == [(TELEGRAM, "Ton analyse est finie : tout est vert.")]
@@ -203,7 +218,7 @@ async def test_a_result_asked_in_writing_goes_where_the_person_reads() -> None:
 
 async def test_nobody_listening_on_voice_means_a_message() -> None:
     home = Home(voice=VoiceChannel(connected=False))
-    await home.task("t1")
+    await home.task()
     async with home.returns():
         pass
     assert [d.address for d in await home.journal.history(Delivered)] == [TELEGRAM]
@@ -211,7 +226,7 @@ async def test_nobody_listening_on_voice_means_a_message() -> None:
 
 async def test_a_failed_send_falls_back_to_the_next_channel() -> None:
     home = Home(voice=VoiceChannel(broken=True))
-    await home.task("t1")
+    await home.task()
     async with home.returns():
         pass
     assert home.telegram.sent and [t.address for t in await home.journal.history(AssistantTurn)] == [TELEGRAM]
@@ -219,33 +234,93 @@ async def test_a_failed_send_falls_back_to_the_next_channel() -> None:
 
 async def test_a_result_is_delivered_once_even_across_restarts() -> None:
     home = Home()
-    await home.task("t1")
+    await home.task()
     async with home.returns():
         pass
     async with home.returns():
         pass
     assert len(home.voice.sent) == 1
-    assert [d.task_id for d in await home.journal.history(TaskDelivered)] == ["t1"]
+    assert len(await home.journal.history(TurnDelivered)) == 1
 
 
-async def test_a_cancelled_task_is_not_announced_and_a_failure_is() -> None:
-    home = Home()
-    await home.task("t1", status=TaskStatus.CANCELLED)
-    await home.task("t2", status=TaskStatus.FAILED)
+async def test_a_stopped_turn_is_not_announced_and_a_failure_is() -> None:
+    home = Home(executors=[ScriptedExecutor(duration_s=30)])
     async with home.returns():
-        pass
+        assert home.tasks is not None
+        task = await home.tasks.start_task("x", title="X", origin=VOICE, owner=MATHIS.id, executor="scripted-executor")
+        await asyncio.sleep(0.01)
+        await home.tasks.stop(task.id)
+        await home.task(executor="fails")
+        await delivered(home.journal)
     assert len(home.voice.sent) == 1
     assert "Failure: boom" in home.model.requests[0].messages[-1].content
+
+
+async def test_a_question_is_always_told_with_how_to_pass_its_answer_on() -> None:
+    home = Home(model=ScriptedModel("Quelle branche veux-tu ?"))
+    async with home.returns():
+        task_id = await home.task(executor="asks")
+        await delivered(home.journal)
+    told = str(home.model.requests[-1].messages[-1].content)
+    assert "Quelle branche ?" in told and f"continue_task(task={task_id!r})" in told
+    assert MUST_TELL in str(home.model.requests[-1].messages[0].content), "a question is never kept to oneself"
+
+
+async def test_each_turn_of_a_task_is_delivered_once() -> None:
+    home = Home()
+    async with home.returns():
+        task_id = await home.task()
+        await delivered(home.journal)
+        assert home.tasks is not None
+        await home.tasks.direct(task_id, "Et les tests ?", by=MATHIS.id)
+        await home.tasks.wait(task_id)
+        await delivered(home.journal, 2)
+    async with home.returns():  # a restart
+        pass
+    assert len({e.turn_id for e in await home.journal.history(TurnDelivered)}) == 2
+    assert len(home.voice.sent) == 2
+
+
+async def test_a_question_left_unanswered_is_recalled_a_few_times_then_waits() -> None:
+    home = Home(model=ScriptedModel(*["Ton analyse attend ta réponse."] * 5))
+    async with home.returns(reminders=(timedelta(hours=3), timedelta(hours=24)), tick_s=3600) as returns:
+        task_id = await home.task(executor="asks", still_talking=False)
+        await delivered(home.journal)
+        assert home.tasks is not None
+        asked_at = home.tasks.tasks[task_id].turn.ended_at
+        assert asked_at is not None
+        await returns.remind(asked_at + timedelta(hours=1))
+        assert await home.journal.history(TaskReminded) == [], "too soon"
+        await returns.remind(asked_at + timedelta(hours=3, minutes=1))
+        await returns.remind(asked_at + timedelta(hours=4))  # nothing more is due
+        await returns.remind(asked_at + timedelta(days=5))
+        await returns.remind(asked_at + timedelta(days=9))  # past the last reminder: it waits
+        assert home.tasks.tasks[task_id].state is TaskState.WAITING
+    assert [e.count for e in await home.journal.history(TaskReminded)] == [1, 2]
+    assert "still waits for their answer to: Quelle branche ?" in str(home.model.requests[-1].messages[-1].content)
+
+
+async def test_an_archived_task_s_question_is_no_longer_recalled() -> None:
+    home = Home()
+    async with home.returns(reminders=(timedelta(hours=3),), tick_s=3600) as returns:
+        task_id = await home.task(executor="asks", still_talking=False)
+        await delivered(home.journal)
+        assert home.tasks is not None
+        await home.tasks.archive(task_id)
+        ended = home.tasks.tasks[task_id].turn.ended_at
+        assert ended is not None
+        await returns.remind(ended + timedelta(days=1))
+    assert await home.journal.history(TaskReminded) == []
 
 
 async def test_an_undeliverable_result_is_logged_and_retried_later() -> None:
     home = Home(voice=VoiceChannel(connected=False))
     home.courier.channels = {}  # nothing plugged at all
-    await home.task("t1")
+    await home.task()
     async with home.returns():
         pass
     assert len(await home.journal.history(DeliveryFailed)) == 1
-    assert await home.journal.history(TaskDelivered) == []
+    assert await home.journal.history(TurnDelivered) == []
 
     home.courier.channels = {"voice": home.voice, "telegram": home.telegram}
     async with home.returns():
@@ -256,7 +331,7 @@ async def test_an_undeliverable_result_is_logged_and_retried_later() -> None:
 async def test_a_result_with_nothing_to_tell_is_withheld_once_and_never_brought_back() -> None:
     """A search that found nothing: nothing sent, the reason kept, and a restart does not ask again."""
     home = Home(model=ScriptedModel(f"{SILENT} aucune offre sous 500 €", "Rien à signaler."))
-    await home.task("t1", notify=Notify.MESSAGE, still_talking=False)
+    await home.task(notify=Notify.MESSAGE, still_talking=False)
     async with home.returns():
         pass
     (withheld,) = await home.journal.history(DeliveryWithheld)
@@ -266,23 +341,23 @@ async def test_a_result_with_nothing_to_tell_is_withheld_once_and_never_brought_
         pass
     assert home.telegram.sent == home.voice.sent == []
     assert len(home.model.requests) == 1, "a withheld result is done: it is not written again"
-    assert await home.journal.history(TaskDelivered) == [], "nothing was passed on: the journal does not say so"
+    assert await home.journal.history(TurnDelivered) == [], "nothing was passed on: the journal does not say so"
 
 
 async def test_a_failed_task_may_not_be_left_untold() -> None:
     """Silence on a failure is not "nothing to tell": the delivery fails, and it is tried again after a restart."""
     home = Home(model=ScriptedModel(f"{SILENT} rien de neuf"))
-    await home.task("t1", status=TaskStatus.FAILED, still_talking=False)
+    await home.task(executor="fails", still_talking=False)
     async with home.returns():
         pass
-    assert await home.journal.history(DeliveryWithheld) == await home.journal.history(TaskDelivered) == []
+    assert await home.journal.history(DeliveryWithheld) == await home.journal.history(TurnDelivered) == []
     assert len(await home.journal.history(DeliveryFailed)) == 1
 
 
 async def test_what_a_person_asked_for_is_told_even_when_it_found_nothing() -> None:
     """They wait for it: the model is told it must answer, and silence is a failed delivery, not "nothing to tell"."""
     home = Home(model=ScriptedModel(f"{SILENT} rien d'autre à signaler"))
-    await home.task("t1", notify=Notify.MESSAGE, still_talking=False, by_mathis=True)
+    await home.task(notify=Notify.MESSAGE, still_talking=False, by_mathis=True)
     async with home.returns():
         pass
     assert MUST_TELL in str(home.model.requests[0].messages[0].content)
@@ -292,20 +367,7 @@ async def test_what_a_person_asked_for_is_told_even_when_it_found_nothing() -> N
 @pytest.mark.parametrize("known", [True, False])
 async def test_a_task_from_an_unknown_person_stays_in_its_conversation(known: bool) -> None:
     home = Home()
-    await home.journal.publish(
-        TaskStarted(
-            source="t",
-            task_id="t1",
-            title="X",
-            objective="x",
-            executor="h",
-            origin=VOICE,
-            requested_by=MATHIS.id if known else None,
-        )
-    )
-    await home.journal.publish(
-        TaskEnded(source="t", task_id="t1", status=TaskStatus.COMPLETED, result="ok", duration_s=1)
-    )
+    await home.task(owner=MATHIS.id if known else None, still_talking=False)
     home.voice.connected = False
     async with home.returns():
         pass
@@ -416,17 +478,20 @@ async def test_a_file_a_delegated_task_made_goes_with_the_answer_that_brings_its
                 (Attachment(kind=AttachmentKind.FILE, data=pdf, media_type="application/pdf", name="rapport.pdf"),),
             )
 
-    home = Home(model=ScriptedModel("Voici ton rapport."))
+    home = Home(model=ScriptedModel("Voici ton rapport."), executors=[Writer()])
     home.telegram.sends = frozenset({AttachmentKind.FILE})
-    async with home.returns(), TaskManager(home.journal, [Writer()], blobs=home.blobs) as tasks:
-        await tasks.delegate("Écris le rapport", title="Écris le rapport", origin=TELEGRAM, requested_by=MATHIS.id)
-        await until(home.journal, TaskDelivered)
+    async with home.returns():
+        assert home.tasks is not None
+        await home.tasks.start_task(
+            "Écris le rapport", title="Écris le rapport", origin=TELEGRAM, owner=MATHIS.id, executor="writer"
+        )
+        await delivered(home.journal)
 
     assert home.telegram.sent == [(TELEGRAM, "Voici ton rapport.")]
     assert [[(a.name, a.data) for a in files] for files in home.telegram.files] == [[("rapport.pdf", pdf)]]
     turn = str(home.model.requests[0].messages[0].content)
     assert "go with your answer" in turn and "rapport.pdf" in turn, "the model knows the file goes with its words"
-    [ended] = await home.journal.history(TaskEnded)
+    [ended] = await home.journal.history(TurnEnded)
     assert [home.blobs.blobs[f.blob.digest] for f in ended.files] == [pdf]
 
 
