@@ -149,6 +149,8 @@ UNKNOWN_TYPES = frozenset(
     {"", "application/octet-stream", "application/binary", "binary/octet-stream", "application/x-binary"}
 )
 PDF = "application/pdf"
+# Python's own table of extensions, the same on every machine (the system's files name `.ts` a Qt translation on Linux)
+_BY_NAME = mimetypes.MimeTypes()
 SNIFFED = 4096  # bytes looked at to tell a file's type
 _MAGIC = (  # what the first bytes of a file show it is
     (b"\x89PNG\r\n\x1a\n", "image/png"),
@@ -170,7 +172,7 @@ def identified(media_type: str, name: str | None, data: bytes, *, reads: Callabl
         return "image/webp"
     if b"%PDF-" in head[:1024]:  # readers accept a few bytes before the header
         return PDF
-    named = mimetypes.guess_type(name, strict=False)[0] if name else None
+    named = _BY_NAME.guess_type(name, strict=False)[0] if name else None
     if _text(head):  # a name types it only as text: a `.ts` source is no MPEG stream, a `.pdf` of text is no PDF
         return named if named is not None and named != PDF and reads(named) else "text/plain"
     return named or "application/octet-stream"
