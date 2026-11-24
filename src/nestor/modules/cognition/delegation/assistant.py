@@ -4,10 +4,10 @@ of its instructions. A person reaches only their own tasks."""
 import posixpath
 from collections.abc import Iterable, Mapping, Sequence
 
-from nestor.core import ContractError
+from nestor.core import ContractError, shorten
 from nestor.modules.channels import AttachmentKind, plain_name
 from nestor.modules.cognition.delegation.service import Directed, Task, TaskManager
-from nestor.modules.cognition.delegation.types import Notify, TaskState, TurnStatus
+from nestor.modules.cognition.delegation.types import READ_TURNS, TURN_CHARS, Notify, TaskState, TurnStatus
 from nestor.modules.cognition.model import ToolSpec
 from nestor.modules.cognition.tools import TITLE, Risk, Tool, ToolContext, ToolFailed, ToolProvider, titled
 from nestor.modules.conversation import (
@@ -52,9 +52,7 @@ NOTIFY = {
     "description": "auto: tell what it comes back with in this conversation if possible; message: in writing",
 }
 INSTRUCTION = {"type": "string", "description": "precise and verifiable: what to do, and what to report"}
-READ_TURNS = 10  # the latest turns read_task gives
 RECENT = 5  # the latest ready tasks each turn names, besides those working or waiting
-READ_CHARS = 2000  # of each instruction and report it gives
 
 
 def _spec(name: str, about: str, properties: Mapping[str, object], *required: str) -> ToolSpec:
@@ -261,9 +259,9 @@ class Delegation(ToolProvider, ContextProvider, MentionSource):
         turns = []
         for turn in task.turns[-READ_TURNS:]:
             outcome = turn.outcome
-            read: dict[str, object] = {"asked": turn.instruction[:READ_CHARS], "status": turn.status.value}
+            read: dict[str, object] = {"asked": shorten(turn.instruction, TURN_CHARS), "status": turn.status.value}
             if outcome and outcome.result:
-                read["came_back"] = outcome.result[:READ_CHARS]
+                read["came_back"] = shorten(outcome.result, TURN_CHARS)
             if outcome and outcome.question:
                 read["question"] = outcome.question
             if outcome and outcome.error:

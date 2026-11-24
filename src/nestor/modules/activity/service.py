@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 
 from nestor.core import Component, utc_now
 from nestor.modules.activity.types import Activity, AgentActivity
-from nestor.modules.cognition.delegation import TurnEnded, TurnStarted
+from nestor.modules.cognition.delegation import TaskCreated, TurnEnded, TurnStarted
 from nestor.modules.cognition.delegation.service import TaskManager
 from nestor.modules.conversation import LiveReplies, ReplyPhase
 from nestor.modules.initiative import QuietHours
@@ -50,7 +50,7 @@ class ActivityMonitor(Component):
 
     async def start(self) -> None:
         self._subscription = self.journal.subscribe(
-            SpeechActivityObserved, SatelliteDisconnected, TurnStarted, TurnEnded
+            SpeechActivityObserved, SatelliteDisconnected, TaskCreated, TurnStarted, TurnEnded
         )
         self._unlisten = self.replies.listen(self._refresh)
         self._worker = asyncio.create_task(self._follow(self._subscription), name="activity")

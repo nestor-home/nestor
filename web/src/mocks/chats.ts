@@ -3,7 +3,7 @@
  * first when it is asked to act in the house, Markdown when it lists or compares.
  */
 import type { ChatFile, ChatMessage, ChatTool, Mention } from "@/api";
-import { find, NAMED } from "@/features/chat/mentions";
+import { find, NAMED, nameKey } from "@/features/chat/mentions";
 import { connections, minutes, ROOMS, ref, services, tasks } from "./fixtures";
 import { fr } from "./french";
 import { document, household, plugged } from "./instance";
@@ -264,16 +264,6 @@ const mention = (
 
 const ME = "mathis";
 
-/** A title as a handle: `Green electricity offers` → `green-electricity-offers`. */
-const slug = (title: string) =>
-  (
-    title
-      .toLowerCase()
-      .normalize("NFKD")
-      .replace(/\p{M}/gu, "")
-      .match(/[a-z0-9]+/g) ?? []
-  ).join("-");
-
 /**
  * What Mathis, who is signed in, may name in a message, as the server lists it from the instance: the people of the
  * household, the rooms of the home, his tasks, the executors of the file with what each is for, and the services of the
@@ -288,7 +278,7 @@ function mentions(): Mention[] {
     // his own tasks, those not put away, by their title
     ...tasks()
       .filter((task) => task.owner?.id === ME && task.state !== "archived")
-      .map((task) => mention("task", slug(task.title), task.title, { detail: task.executor })),
+      .map((task) => mention("task", nameKey(task.title), task.title, { detail: task.executor })),
     ...plugged(doc)
       .filter((p) => p.slot === "executor")
       .map((p) =>

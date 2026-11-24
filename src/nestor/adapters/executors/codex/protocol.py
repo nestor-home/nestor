@@ -3,7 +3,6 @@
 from collections.abc import Mapping
 from enum import StrEnum
 
-from nestor.adapters.executors.common import step
 from nestor.adapters.executors.jsonrpc import Message
 
 COMMAND = ("codex", "app-server")
@@ -40,17 +39,17 @@ def item_step(method: str, item: Message) -> str | None:
     command may carry a secret."""
     match method, item.get("type"):
         case "item/completed", "agentMessage" if item.get("phase") == "commentary" and item.get("text"):
-            return step(str(item["text"]))
+            return str(item["text"])
         case "item/completed", "plan" if item.get("text"):
-            return step(str(item["text"]))
+            return str(item["text"])
         case "item/started", "commandExecution":
             return "running a command"
         case "item/started", "fileChange":
-            return step("editing: " + ", ".join(str(c.get("path")) for c in item.get("changes") or ()))
+            return "editing: " + ", ".join(str(c.get("path")) for c in item.get("changes") or ())
         case "item/started", "mcpToolCall":
-            return step(f"{item.get('server')}: {item.get('tool')}")
+            return f"{item.get('server')}: {item.get('tool')}"
         case "item/started", "webSearch":
-            return step(f"web search: {item.get('query')}")
+            return f"web search: {item.get('query')}"
         case "item/started", "imageGeneration":
             return "drawing an image"
         case _:

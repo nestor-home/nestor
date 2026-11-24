@@ -14,10 +14,9 @@ from typing import Any
 from nestor.adapters.executors.claude_code.cli import COMMAND, TOOLS, PermissionMode
 from nestor.adapters.executors.claude_code.stream import REPORTING, tool_step, user_message
 from nestor.adapters.executors.common import (
-    FILES_INSTRUCTIONS,
+    CODING_REPORT,
     INSTRUCTIONS,
     MAX_FILE_BYTES,
-    QUESTION_INSTRUCTIONS,
     REPORT_SCHEMA,
     Report,
     Unreadable,
@@ -39,11 +38,9 @@ from nestor.modules.cognition.delegation import (
 
 @dataclass(slots=True)
 class _Turn:
-    """A turn's process; whether it still takes instructions (until its first result); the session the next turn can
-    go on in: the one it resumed, or its own once Claude Code started it (`init`)."""
+    """A turn's process, and whether it still takes instructions (until its first result)."""
 
     child: Child
-    session: str | None
     open: bool = True
     results: list[dict[str, Any]] = field(default_factory=list)
 
@@ -101,9 +98,7 @@ class ClaudeCodeExecutor(Executor):
         try:
             folder, placed = await self._prepare(assignment)
         except OSError as error:
-            return Outcome.failed(
-                f"the task's folder could not be made: {error.strerror or error}", session=assignment.session
-            )
+            return Outcome.failed(f"the task's folder could not be made: {error.strerror or error}")
         with tempfile.TemporaryDirectory(prefix="nestor-claude-") as private:  # its key never on a command line
             servers = _mcp_config(assignment.access, Path(private)) if assignment.access else None
             return await self._run(assignment, assignment.brief(str(folder), placed), progress, servers, folder)
@@ -134,16 +129,16 @@ class ClaudeCodeExecutor(Executor):
     async def _run(
         self, assignment: Assignment, brief: str, progress: Progress, servers: Path | None, folder: Path
     ) -> Outcome:
+        """The session, the one resumed or a new one, is attached once Claude Code started it (`init`): from then on
+        the next turn goes on in it, and an instruction reaches it."""
         session = assignment.session or str(uuid.uuid4())
         try:
             child = await Child.start(
                 [*self._command, *self._arguments(assignment.session, session, servers)], cwd=folder, env=self._env
             )
         except OSError as error:
-            return Outcome.failed(f"Claude Code could not start: {error.strerror or error}", session=assignment.session)
-        turn = self._turns[session] = _Turn(child, assignment.session)
-        progress.attach(session)
-        progress(f"session {session}")
+            return Outcome.failed(f"Claude Code could not start: {error.strerror or error}")
+        turn = self._turns[session] = _Turn(child)
         try:
             assert child.process.stdin is not None
             child.process.stdin.write(user_message(brief))
@@ -151,7 +146,7 @@ class ClaudeCodeExecutor(Executor):
             await child.wait()
         except asyncio.CancelledError:
             await asyncio.shield(child.stop(self._stop_timeout_s))  # confirmed: the process has exited
-            return Outcome.stopped(session=turn.session)
+            return Outcome.stopped()
         finally:
             turn.open = False
             self._turns.pop(session, None)
@@ -160,23 +155,20 @@ class ClaudeCodeExecutor(Executor):
     async def _outcome(self, turn: _Turn, folder: Path) -> Outcome:
         """From its results: one, or more when an instruction came as the turn ended and Claude Code answered it in a
         turn of its own. Their reports are joined; the last says whether it failed or asks."""
-        session, child = turn.session, turn.child
+        child = turn.child
         if not turn.results:
             said = f": {child.said}" if child.said else ""
-            return Outcome.failed(
-                f"Claude Code ended without a result (exit {child.process.returncode}){said}", session=session
-            )
+            return Outcome.failed(f"Claude Code ended without a result (exit {child.process.returncode}){said}")
         last = turn.results[-1]
         if last.get("is_error") or last.get("subtype") != "success":
-            error = str(last.get("result") or last.get("subtype") or "Claude Code failed")
-            return Outcome.failed(error, session=session)
+            return Outcome.failed(str(last.get("result") or last.get("subtype") or "Claude Code failed"))
         reports = [Report.of(r.get("structured_output") or r.get("result") or "") for r in turn.results]
         report = Report(
             "\n\n".join(r.text for r in reports if r.text),
             tuple(f for r in reports for f in r.files),
             reports[-1].question,
         )
-        return await report.outcome(str(folder), functools.partial(self._read, folder), session=session)
+        return await report.outcome(str(folder), functools.partial(self._read, folder))
 
     def _arguments(self, resumed: str | None, session: str, servers: Path | None) -> list[str]:
         arguments = [
@@ -190,7 +182,7 @@ class ClaudeCodeExecutor(Executor):
             "--permission-mode",
             self._mode.value,
             "--append-system-prompt",
-            self._instructions + FILES_INSTRUCTIONS + QUESTION_INSTRUCTIONS,
+            self._instructions + CODING_REPORT,
             "--json-schema",
             json.dumps(REPORT_SCHEMA),
         ]
@@ -211,7 +203,7 @@ class ClaudeCodeExecutor(Executor):
     async def _follow(self, turn: _Turn, session: str, progress: Progress) -> None:
         """Reads the stream to its end, keeping each `result` message. The first ends the turn: its input is closed,
         and Claude Code exits once it has answered what was already sent."""
-        stdin = turn.child.process.stdin
+        stdin, attached = turn.child.process.stdin, False
         async for line in turn.child.lines():
             try:
                 message = json.loads(line)
@@ -219,8 +211,10 @@ class ClaudeCodeExecutor(Executor):
                 continue
             if not isinstance(message, dict):
                 continue
-            if message.get("type") == "system" and message.get("subtype") == "init":
-                turn.session = session
+            if message.get("type") == "system" and message.get("subtype") == "init" and not attached:
+                progress.attach(session, session=session)
+                progress(f"session {session}")
+                attached = True
             elif message.get("type") == "result":
                 turn.results.append(message)
                 if turn.open and stdin is not None:

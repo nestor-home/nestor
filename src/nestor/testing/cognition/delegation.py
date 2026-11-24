@@ -11,6 +11,7 @@ from nestor.modules.cognition.delegation import (
     STEER,
     Assignment,
     Executor,
+    Handle,
     Outcome,
     Progress,
     RemoteExecutor,
@@ -59,7 +60,7 @@ class ScriptedExecutor(Executor):
         self.assignments.append(assignment)
         session = assignment.session or new_id()[:8]
         done = self._working[session] = asyncio.Event()
-        progress.attach(session)
+        progress.attach(session, session=session)
         progress("started")
         try:
             with contextlib.suppress(TimeoutError):  # a turn that ran its course
@@ -67,15 +68,15 @@ class ScriptedExecutor(Executor):
                     await done.wait()
         except asyncio.CancelledError:
             self.stopped += 1
-            return Outcome.stopped(session=session) if self._confirms_stop else Outcome.failed("stop not confirmed")
+            return Outcome.stopped() if self._confirms_stop else Outcome.failed("stop not confirmed")
         finally:
             self._working.pop(session, None)
         if self._error:
-            return Outcome.failed(self._error, session=session)
+            return Outcome.failed(self._error)
         if self._asks and session not in self._asked:
             self._asked.add(session)
-            return Outcome.asked(self._asks, "halfway", session=session)
-        return Outcome.completed(self._result, session=session)
+            return Outcome.asked(self._asks, "halfway")
+        return Outcome.completed(self._result)
 
     async def steer(self, handle: str, instruction: str) -> bool:
         if handle not in self._working:
@@ -128,17 +129,18 @@ class ExecutorContract:
         async with self.executor() as executor:
             if CONTINUE not in executor.capabilities:
                 return
-            first = await executor.run(Assignment(self.instruction()), Progress())
-            assert first.session, f"an executor that continues names its session: {first}"
-            then = await executor.run(Assignment("Et ensuite ?", session=first.session), Progress())
-        assert then.status is TurnStatus.COMPLETED and then.session == first.session, (first, then)
+            first, named = await _run(executor, Assignment(self.instruction()))
+            assert named, f"an executor that continues names its session: {first}"
+            then, again = await _run(executor, Assignment("Et ensuite ?", session=named))
+        assert then.status is TurnStatus.COMPLETED and again == named, (first, then)
 
     async def test_an_instruction_reaches_the_turn_while_it_works(self) -> None:
         async with self.slow_executor() as executor:
             if STEER not in executor.capabilities:
                 return
             handles: list[str] = []
-            job = asyncio.create_task(executor.run(Assignment(self.instruction()), Progress(on_attach=handles.append)))
+            progress = Progress(on_attach=lambda handle: handles.append(handle.ref))
+            job = asyncio.create_task(executor.run(Assignment(self.instruction()), progress))
             for _ in range(500):
                 if handles:
                     break
@@ -209,16 +211,16 @@ class ScriptedRemoteExecutor(RemoteExecutor):
         self._refuses, self._confirms_stop = refuses, confirms_stop
         self._timers: set[asyncio.Task[None]] = set()
 
-    async def submit(self, assignment: Assignment) -> str:
+    async def submit(self, assignment: Assignment) -> Handle:
         if self._refuses:
             raise ProviderError(self.name, "instruction refused", transient=False)
         ref = new_id()[:8]
-        self.remote.runs[ref] = RemoteRun(assignment, assignment.session or new_id()[:8])
+        run = self.remote.runs[ref] = RemoteRun(assignment, assignment.session or new_id()[:8])
         if self._duration_s is not None:
             timer = asyncio.create_task(self._complete(ref, self._duration_s))
             self._timers.add(timer)
             timer.add_done_callback(self._timers.discard)
-        return ref
+        return Handle(ref, run.session)
 
     async def follow(self, ref: str, progress: Progress) -> Outcome:
         run = self.remote.runs[ref]
@@ -230,12 +232,8 @@ class ScriptedRemoteExecutor(RemoteExecutor):
 
     async def stop(self, ref: str) -> bool:
         if self._confirms_stop:
-            self.remote.finish(ref, Outcome.stopped(session=self.remote.runs[ref].session))
+            self.remote.finish(ref, Outcome.stopped())
         return self._confirms_stop
-
-    def session_of(self, ref: str) -> str | None:
-        run = self.remote.runs.get(ref)
-        return run.session if run else None
 
     async def steer(self, handle: str, instruction: str) -> bool:
         run = self.remote.runs.get(handle)
@@ -246,23 +244,57 @@ class ScriptedRemoteExecutor(RemoteExecutor):
 
     async def _complete(self, ref: str, after_s: float) -> None:
         await asyncio.sleep(after_s)
-        run = self.remote.runs[ref]
         if self._asks:
-            self.remote.finish(ref, Outcome.asked(self._asks, session=run.session))
+            self.remote.finish(ref, Outcome.asked(self._asks))
         else:
-            self.remote.finish(ref, Outcome.completed(self._result, session=run.session))
+            self.remote.finish(ref, Outcome.completed(self._result))
 
 
 class RemoteExecutorContract(ExecutorContract):
-    """What a `RemoteExecutor` adds to the executor contract: its turns can be followed again."""
+    """What a `RemoteExecutor` adds to the executor contract: its turns outlive Nestor, as the task manager drives
+    them (`run`, then `resume` after a restart)."""
 
     def executor(self) -> RemoteExecutor:
         raise NotImplementedError
 
+    def slow_executor(self) -> RemoteExecutor:
+        raise NotImplementedError
+
     async def test_a_turn_can_be_followed_again_without_starting_twice(self) -> None:
+        handles: list[str] = []
         async with self.executor() as executor:
-            ref = await executor.submit(Assignment(self.instruction()))
-            first = await executor.follow(ref, Progress())
+            first = await executor.run(
+                Assignment(self.instruction()), Progress(on_attach=lambda handle: handles.append(handle.ref))
+            )
+        assert handles, "a remote turn attaches its reference"
         async with self.executor() as restarted:
-            again = await restarted.follow(ref, Progress())
+            again = await restarted.resume(handles[-1], Progress())
         assert first == again and first.status is TurnStatus.COMPLETED, (first, again)
+
+    async def test_a_turn_left_as_nestor_closes_keeps_working(self) -> None:
+        async with self.slow_executor() as executor:
+            handles: list[str] = []
+            progress = Progress(on_attach=lambda handle: handles.append(handle.ref))
+            job = asyncio.create_task(executor.run(Assignment(self.instruction()), progress))
+            for _ in range(500):
+                if handles:
+                    break
+                await asyncio.sleep(0.01)
+            assert handles, "a remote turn attaches its reference"
+            progress.detach()
+            job.cancel()
+            done, _ = await asyncio.wait({job}, timeout=self.stop_timeout_s)
+            assert done and job.cancelled(), "Nestor closing goes through, the turn left working"
+            followed = asyncio.create_task(executor.resume(handles[-1], Progress()))
+            await asyncio.sleep(0.05)
+            followed.cancel()
+            done, _ = await asyncio.wait({followed}, timeout=self.stop_timeout_s)
+            assert done, f"executor still running {self.stop_timeout_s}s after it was stopped"
+        assert followed.result().status is TurnStatus.STOPPED, "still working when followed again: stopped on demand"
+
+
+async def _run(executor: Executor, assignment: Assignment) -> tuple[Outcome, str | None]:
+    """The turn's outcome, and the session it names: as it attaches, else in its outcome."""
+    named: list[str | None] = []
+    outcome = await executor.run(assignment, Progress(on_attach=lambda handle: named.append(handle.session)))
+    return outcome, outcome.session or next((s for s in reversed(named) if s), None)

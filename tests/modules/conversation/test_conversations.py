@@ -8,7 +8,7 @@ import pytest
 from nestor.core import Event, ProviderError, utc_now
 from nestor.core.events import JSON
 from nestor.modules.channels import Address, Medium
-from nestor.modules.cognition.delegation import TurnStarted
+from nestor.modules.cognition.delegation import TaskCreated
 from nestor.modules.cognition.delegation.assistant import Delegation
 from nestor.modules.cognition.delegation.service import TaskManager
 from nestor.modules.cognition.model import Role, ToolCall
@@ -196,12 +196,12 @@ async def test_every_event_of_a_turn_carries_its_conversation_and_its_turn(
     of_the_turn: list[Event] = [
         *await journal.history(ToolCalled, ToolCompleted),
         *await journal.history(MemoryRecorded),
-        *await journal.history(TurnStarted),
+        *await journal.history(TaskCreated),
     ]
     [answer] = await journal.history(AssistantTurn)  # "Merci" got no answer: nothing to log
     assert len(of_the_turn) == 6
     assert {getattr(e, "exchange", None) for e in [*of_the_turn, answer]} == {turn}
-    assert [t.asked for t in await journal.history(TurnStarted)] == [True], "Mathis asked for it: always told"
+    assert [t.asked for t in await journal.history(TaskCreated)] == [True], "Mathis asked for it: always told"
 
 
 async def test_a_fallback_and_a_cut_belong_to_the_turn_they_happened_in(

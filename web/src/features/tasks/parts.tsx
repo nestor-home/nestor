@@ -4,7 +4,7 @@
  */
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Archive, CircleHelp, Pencil, Square, Workflow } from "lucide-react";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, type ReactNode, useState } from "react";
 import { api, keys, type Task, type TaskState, type TaskThread } from "@/api";
 import { Ago } from "@/components/ago";
 import { CardHead } from "@/components/card";
@@ -42,6 +42,36 @@ export function Question({ text, className }: { text: string; className?: string
   );
 }
 
+/** The server's longest title for a task (`TITLE_CHARS`), which a rename keeps to. */
+export const TITLE_CHARS = 80;
+
+/**
+ * A task's line wherever it is shown: who does it, when it last moved, how many turns; its state first with `state`,
+ * and what each place adds after.
+ */
+export function TaskLine({
+  task,
+  state = false,
+  children,
+  className,
+}: {
+  task: Task;
+  state?: boolean;
+  children?: ReactNode;
+  className?: string;
+}) {
+  const t = useT();
+  return (
+    <span className={cn("flex flex-wrap items-center gap-x-2.5 gap-y-1", className)}>
+      {state ? <TaskStateMark state={task.state} /> : null}
+      <KindName kind={task.executor} />
+      <Ago iso={task.last_activity} />
+      {task.turns > 1 ? <span>{t("task-turns", { count: task.turns })}</span> : null}
+      {children}
+    </span>
+  );
+}
+
 /**
  * A task as a card's content: who does it and for whom, then where it stands. Waiting: its question; working: its
  * latest step and the thread that moves; otherwise its state and when it last moved.
@@ -53,13 +83,7 @@ export function TaskCardBody({ task }: { task: Task }) {
       <CardHead
         mark={<IconTile icon={Workflow} tone="task" />}
         title={task.title}
-        line={
-          <span className="flex flex-wrap items-center gap-x-2.5">
-            <KindName kind={task.executor} />
-            <Ago iso={task.last_activity} />
-            {task.turns > 1 ? <span>{t("task-turns", { count: task.turns })}</span> : null}
-          </span>
-        }
+        line={<TaskLine task={task} />}
         aside={task.owner ? <Avatar name={task.owner.name} /> : null}
       />
       {task.state === "waiting" && task.question ? (
@@ -97,26 +121,26 @@ export function Steps({ steps, live, className }: { steps: readonly string[]; li
   );
 }
 
-/** A change to a task, with what follows it everywhere: the lists and the thread read again, a notice. */
-export function useTaskChange<T>(task: Pick<Task, "id">, run: () => Promise<T>, onDone?: (result: T) => void) {
+/**
+ * A change to a task, with what follows it everywhere: the thread as the server answers it, the list read again (and
+ * the archived one when the task was or is put away), a notice.
+ */
+export function useTaskChange<T extends { task: TaskThread }>(
+  task: Pick<Task, "id" | "state">,
+  run: () => Promise<T>,
+  onDone?: (result: T) => void,
+) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: run,
     onSuccess: (result) => {
-      void queryClient.invalidateQueries({ queryKey: keys.tasks });
-      const thread = threadOf(result);
-      if (thread) queryClient.setQueryData(keys.task(task.id), thread);
+      queryClient.setQueryData(keys.task(task.id), result.task);
+      void queryClient.invalidateQueries({ queryKey: keys.tasks, exact: true });
+      if (task.state === "archived" || result.task.state === "archived")
+        void queryClient.invalidateQueries({ queryKey: keys.archivedTasks, exact: true });
       onDone?.(result);
     },
   });
-}
-
-/** The thread a change answers with: the task itself, or under `task`. */
-function threadOf(result: unknown): TaskThread | null {
-  if (!result || typeof result !== "object") return null;
-  if ("thread" in result) return result as TaskThread;
-  if ("task" in result) return (result as { task: TaskThread }).task;
-  return null;
 }
 
 /** Rename, stop and archive, each where it applies and for whoever may; `onArchived` once it is put away. */
@@ -166,7 +190,13 @@ function RenameForm({ task, onDone }: { task: Task; onDone: () => void }) {
   return (
     <form onSubmit={submit} className="grid gap-4">
       <Field label={t("task-rename-label")} htmlFor="task-title">
-        <Input id="task-title" autoFocus value={title} maxLength={120} onChange={(e) => setTitle(e.target.value)} />
+        <Input
+          id="task-title"
+          autoFocus
+          value={title}
+          maxLength={TITLE_CHARS}
+          onChange={(e) => setTitle(e.target.value)}
+        />
       </Field>
       <FormError error={rename.error} />
       <FormActions>

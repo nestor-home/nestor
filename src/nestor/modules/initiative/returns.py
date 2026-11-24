@@ -8,7 +8,7 @@ that delegates, a watch) may end in silence when there is nothing new; a failure
 import asyncio
 import contextlib
 import json
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from datetime import datetime, timedelta
 
 from nestor.core import Component, Event, PersonId, utc_now
@@ -18,8 +18,6 @@ from nestor.modules.cognition.delegation import (
     Task,
     TaskManager,
     TaskReminded,
-    TaskState,
-    TurnDelivered,
     TurnEnded,
     TurnStatus,
 )
@@ -62,22 +60,29 @@ class Returns(Component):
     ) -> None:
         self.journal, self.household, self.courier, self.tasks = journal, household, courier, tasks
         self._reminders, self._tick_s = tuple(reminders), tick_s
+        self._reminded: dict[str, int] = {}  # by turn: how many reminders of its question were given
         self._subscription: Subscription | None = None
         self._worker: asyncio.Task[None] | None = None
         self._recaller: asyncio.Task[None] | None = None
 
     async def start(self) -> None:
         self._subscription = self.journal.subscribe(TurnEnded, ToolReturned)
-        withheld = await self.journal.history(DeliveryWithheld)  # nothing to tell: done too
-        delivered = {e.turn_id for e in await self.journal.history(TurnDelivered)}
-        for ended in await self.journal.history(TurnEnded):
-            if ended.turn_id not in delivered and not _withheld_since(withheld, ended):
+        past = await self.journal.history(
+            DeliveryWithheld, TaskReminded, TurnEnded, ToolDeferred, ToolReturned, ToolResultDelivered
+        )
+        withheld = [e for e in past if isinstance(e, DeliveryWithheld)]  # nothing to tell: done too
+        for event in past:
+            if isinstance(event, TaskReminded):
+                self._reminded[event.turn_id] = max(self._reminded.get(event.turn_id, 0), event.count)
+        for ended in (e for e in past if isinstance(e, TurnEnded)):
+            task = self.tasks.tasks.get(ended.task_id)
+            turn = task.turn_of(ended.turn_id) if task else None
+            if turn is not None and turn.delivered is None and not _withheld(withheld, _about(ended)):
                 await self.turn_ended(ended)
-        told_keys = {e.about.key for e in withheld}
-        returned = {e.call_id: e for e in await self.journal.history(ToolReturned)}
-        told = {e.call_id for e in await self.journal.history(ToolResultDelivered)}
-        for deferred in await self.journal.history(ToolDeferred):
-            if deferred.call_id in told or About(Source.TOOL, deferred.call_id).key in told_keys:
+        returned = {e.call_id: e for e in past if isinstance(e, ToolReturned)}
+        told = {e.call_id for e in past if isinstance(e, ToolResultDelivered)}
+        for deferred in (e for e in past if isinstance(e, ToolDeferred)):
+            if deferred.call_id in told or _withheld(withheld, About(Source.TOOL, deferred.call_id)):
                 continue
             if (result := returned.get(deferred.call_id)) is not None:
                 await self.tool_returned(result)
@@ -115,56 +120,42 @@ class Returns(Component):
         """Tell the task's owner what its turn came back with: its report, its question, its failure. A stopped turn
         is not told: whoever stopped it was told so."""
         task = self.tasks.tasks.get(ended.task_id)
-        if ended.status is TurnStatus.STOPPED or task is None:
-            return
-        turn = next((t for t in task.turns if t.id == ended.turn_id), None)
-        if turn is None:
+        turn = task.turn_of(ended.turn_id) if task else None
+        if ended.status is TurnStatus.STOPPED or task is None or turn is None:
             return
         written = turn.notify is Notify.MESSAGE
-        about = About(Source.TASK, task.id, ended.status.value)
-        ok = ended.status is not TurnStatus.FAILED
+        about = _about(ended)
         address = await self.courier.deliver(
             self._person(task.owner),
             Notification(
                 turn_instruction(task, turn.instruction, ended, written=written),
                 about,
-                must_tell=_must_tell(ok=ok, asked=turn.asked) or ended.status is TurnStatus.ASKED,
+                must_tell=_must_tell(ok=ended.status is TurnStatus.COMPLETED, asked=turn.asked),
                 files=ended.files,
                 thread=task.thread,
             ),
             origin=task.origin,
             written=written,
         )
-        if address is not None and not await self._withheld(about, address, since=ended.at):
-            await self.journal.publish(
-                TurnDelivered(
-                    source=self.name,
-                    session=address.session,
-                    task_id=task.id,
-                    turn_id=ended.turn_id,
-                    address=address,
-                )
-            )
+        if address is not None and not await self._withheld(about, address):
+            await self.tasks.delivered(task, turn, address)
 
     async def remind(self, now: datetime | None = None) -> None:
         """Recall to their owners the questions tasks wait on, at each reminder due and not given yet."""
         now = now or utc_now()
-        reminded: dict[str, int] = {}
-        for event in await self.journal.history(TaskReminded):
-            reminded[event.turn_id] = max(reminded.get(event.turn_id, 0), event.count)
         for task in list(self.tasks.tasks.values()):
-            turn = task.turn
-            if task.state is not TaskState.WAITING or turn.ended_at is None or task.question is None:
+            if task.question is None:
                 continue
-            given = reminded.get(turn.id, 0)
+            turn = task.turn
+            assert turn.ended_at is not None  # a question ends its turn
             due = sum(1 for after in self._reminders if now - turn.ended_at >= after)
-            if due <= given:
+            if due <= self._reminded.get(turn.id, 0):
                 continue
             address = await self.courier.deliver(
                 self._person(task.owner),
                 Notification(
                     reminder_instruction(task),
-                    About(Source.TASK, task.id, "waiting"),
+                    About(Source.TASK, task.id, "waiting", turn.id),
                     must_tell=True,
                     thread=task.thread,
                 ),
@@ -174,6 +165,7 @@ class Returns(Component):
                 await self.journal.publish(
                     TaskReminded(source=self.name, session=address.session, task_id=task.id, turn_id=turn.id, count=due)
                 )
+                self._reminded[turn.id] = due
 
     async def tool_returned(self, returned: ToolReturned) -> None:
         calls = await self.journal.history(ToolDeferred, session=returned.session)
@@ -194,7 +186,7 @@ class Returns(Component):
             ),
             origin=deferred.address,
         )
-        if address is not None and not await self._withheld(about, address, since=returned.at):
+        if address is not None and not await self._withheld(about, address):
             await self.journal.publish(
                 ToolResultDelivered(
                     source=self.name,
@@ -205,11 +197,9 @@ class Returns(Component):
                 )
             )
 
-    async def _withheld(self, about: About, address: Address, *, since: datetime) -> bool:
-        """Whether there was nothing to tell about it (since it came back): then nothing was passed on, and it is
-        done all the same."""
-        withheld = await self.journal.history(DeliveryWithheld, since=since)
-        return any(e.about.key == about.key and e.address == address for e in withheld)
+    async def _withheld(self, about: About, address: Address) -> bool:
+        """Whether there was nothing to tell about it: then nothing was passed on, and it is done all the same."""
+        return _withheld(await self.journal.history(DeliveryWithheld), about, address)
 
     def _person(self, person: PersonId | None) -> Person | None:
         return self.household.person(person) if person else None
@@ -227,9 +217,19 @@ class Returns(Component):
             await self.remind()
 
 
+def _about(ended: TurnEnded) -> About:
+    """What telling a turn's end is about: the task, and that turn of it."""
+    return About(Source.TASK, ended.task_id, ended.status.value, ended.turn_id)
+
+
+def _withheld(withheld: Iterable[DeliveryWithheld], about: About, address: Address | None = None) -> bool:
+    """Whether the agent had nothing to tell about it (where it would have gone, when `address` is given)."""
+    return any(e.about.same(about) and (address is None or e.address == address) for e in withheld)
+
+
 def _must_tell(*, ok: bool, asked: bool) -> bool:
-    """A failure, or what a person asked for in their own turn, is always told: only what Nestor started by itself may
-    end in silence."""
+    """A failure, a question, or what a person asked for in their own turn, is always told: only what Nestor started
+    by itself and came back well may end in silence."""
     return not ok or asked
 
 
@@ -257,11 +257,6 @@ def reminder_instruction(task: Task) -> str:
         f'Task {task.id} ("{task.title}", {task.executor}) still waits for their answer to: {task.question}\n'
         f"Remind them in a few words; their answer goes on with continue_task(task={task.id!r})."
     )
-
-
-def _withheld_since(withheld: Sequence[DeliveryWithheld], ended: TurnEnded) -> bool:
-    key = About(Source.TASK, ended.task_id).key
-    return any(e.about.key == key and e.at >= ended.at for e in withheld)
 
 
 def _tool_instruction(deferred: ToolDeferred, returned: ToolReturned) -> str:

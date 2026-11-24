@@ -6,14 +6,12 @@ from zoneinfo import ZoneInfo
 from mcp.server.mcpserver import Context, MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 
-from nestor.core import ContractError
+from nestor.core import ContractError, shorten
 from nestor.mcp_server.access import TaskAccess
+from nestor.modules.cognition.delegation import READ_TURNS, TURN_CHARS
 from nestor.modules.memory.episodes.transcript import transcript
 
 BRIEF_LINES = 40  # of the conversation the instruction came from
-TURNS = 10  # the latest turns before this one
-TURN_CHARS = 1500  # of each instruction and what it came back with
-STEP_CHARS = 500
 
 
 def register(mcp: MCPServer, access: TaskAccess) -> None:
@@ -47,13 +45,11 @@ def register(mcp: MCPServer, access: TaskAccess) -> None:
         )
         earlier = [
             {
-                "asked": t.instruction[:TURN_CHARS],
+                "asked": shorten(t.instruction, TURN_CHARS),
                 "status": t.status.value,
-                "came_back": ((t.outcome.result or t.outcome.question or t.outcome.error or "") if t.outcome else "")[
-                    :TURN_CHARS
-                ],
+                "came_back": shorten(t.came_back, TURN_CHARS),
             }
-            for t in found.turns[:-1][-TURNS:]
+            for t in found.turns[:-1][-READ_TURNS:]
         ]
         return {
             "title": found.title,
@@ -73,7 +69,7 @@ def register(mcp: MCPServer, access: TaskAccess) -> None:
     @mcp.tool(description="Say what you are doing now, in a few words: the person and Nestor see it.")
     async def report_progress(task: str, step: str, ctx: Context) -> dict[str, object]:
         found = await access.task(ctx, task, "report_progress")
-        nestor.tasks.report(found, step.strip()[:STEP_CHARS])
+        nestor.tasks.report(found, step)
         return {"status": "noted"}
 
     @mcp.tool(

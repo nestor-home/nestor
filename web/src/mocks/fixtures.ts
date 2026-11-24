@@ -956,6 +956,7 @@ function thread(
     {
       ...rest,
       notes,
+      steers: true, // Hermes, Codex and Claude Code all take an instruction into the turn that works
       state: archived ? "archived" : "ready",
       created_at: first.started_at,
       last_activity: first.started_at,

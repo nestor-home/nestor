@@ -172,8 +172,9 @@ async def test_an_executor_works_on_its_task_through_nestor_s_tools(world: World
         assert not any("TVA" in t for t in texts), "a note stays with the task, never in anyone's memory"
         assert (await call(nestor, "task_brief", task=task))["notes"] == ["Le devis est en TVA à 20 %."]
 
-        await call(nestor, "report_progress", task=task, step="je relis les montants")
-        assert "je relis les montants" in world.nestor.tasks.tasks[task_id].turn.steps
+        await call(nestor, "report_progress", task=task, step="je relis\n  les montants " + "0" * 300)
+        said = world.nestor.tasks.tasks[task_id].turn.steps[-1]
+        assert said.startswith("je relis les montants 00") and len(said) < 200, "one short line, as the executor's own"
 
         corrected = b"%PDF-1.7 corrige" + bytes(5_000_000)  # bigger than an MCP request's usual cap
         upload = await call(nestor, "attach_file", task=task, name="devis-corrige.pdf", media_type="application/pdf")

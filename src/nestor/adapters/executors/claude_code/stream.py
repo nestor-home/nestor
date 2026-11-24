@@ -5,8 +5,6 @@ import json
 from collections.abc import Mapping
 from typing import Any
 
-from nestor.adapters.executors.common import step
-
 REPORTING = "StructuredOutput"  # the tool it ends with to give its report: not a step of the work
 
 # What a step names: what the tool acts on. Never a shell command nor its description: the journal is read by the
@@ -22,4 +20,4 @@ def user_message(text: str) -> bytes:
 def tool_step(used: Mapping[str, Any]) -> str:
     given: Mapping[str, Any] = used["input"] if isinstance(used.get("input"), dict) else {}
     shown = next((str(given[key]) for key in SHOWN_INPUT if given.get(key)), None)
-    return step(f"{used.get('name')}: {shown}" if shown else str(used.get("name")))
+    return f"{used.get('name')}: {shown}" if shown else str(used.get("name"))

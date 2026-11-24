@@ -128,7 +128,6 @@ async def test_without_a_presence_source_nobody_is_located(tmp_path: Path) -> No
 
 
 async def test_resources_say_where_they_come_from_and_what_became_of_them(tmp_path: Path) -> None:
-    from nestor.modules.cognition.delegation import TurnDelivered
     from nestor.modules.cognition.tools import ToolCalled
     from nestor.modules.initiative import WatchTriggered
     from nestor.modules.satellites import Device, Manifest
@@ -137,8 +136,7 @@ async def test_resources_say_where_they_come_from_and_what_became_of_them(tmp_pa
         nestor = admin.nestor
         quick = await nestor.tasks.start_task("Vite fait", title="Vite fait", origin=TELEGRAM, owner=MATHIS)
         await nestor.tasks.stop(quick.id)
-        turn = quick.turn.id
-        await nestor.journal.publish(TurnDelivered(source="tasks", task_id=quick.id, turn_id=turn, address=TELEGRAM))
+        await nestor.tasks.delivered(quick, quick.turn, TELEGRAM)
         watch = await nestor.watch_book.create(
             Watch(title="Le colis", what="le colis", owner=MATHIS, created_in=TELEGRAM)
         )

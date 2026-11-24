@@ -1343,7 +1343,7 @@ export const handlers = [
       people: signedIn()?.person ? [signedIn()?.person as In<"PersonRef">] : [],
       links: { task: task.id },
     });
-    return json(task satisfies In<"TaskThreadOut">);
+    return json({ task } satisfies In<"TaskChangedOut">);
   }),
 
   http.post(`${API}/tasks/:id/instructions`, async ({ request, params }) => {
@@ -1356,7 +1356,7 @@ export const handlers = [
     const { text } = (await request.json()) as In<"InstructionIn">;
     await delay(300);
     const working = task.thread.at(-1);
-    if (working?.status === "running") {
+    if (working?.status === "running" && task.steers) {
       // the executor takes it into the turn that works
       working.steered.push({ instruction: text, by: person, at: new Date().toISOString() });
       journalize({
@@ -1368,6 +1368,8 @@ export const handlers = [
       });
       return json({ task, steered: true } satisfies In<"DirectedOut">);
     }
+    // an executor that cannot take it in stops the turn that works, and starts the next with it
+    stopWorking(task);
     task.thread.push({
       id: newId("u"),
       instruction: text,
@@ -1418,7 +1420,7 @@ export const handlers = [
       people: signedIn()?.person ? [signedIn()?.person as In<"PersonRef">] : [],
       links: { task: task.id },
     });
-    return json(task satisfies In<"TaskThreadOut">);
+    return json({ task } satisfies In<"TaskChangedOut">);
   }),
 
   http.get(`${API}/tasks/:id/turns/:turn/files/:index`, ({ request, params }) => {

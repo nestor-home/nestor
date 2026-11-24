@@ -1,6 +1,6 @@
 /**
  * Where a person writes to a task, in the name of their person: while it works, the words reorient the work in
- * progress (steering); while it waits, they answer its question; otherwise they open the next turn of the same
+ * progress (steering), or start it again with them when its executor cannot steer; while it waits, they answer its question; otherwise they open the next turn of the same
  * thread. Enter sends, Shift+Enter goes to the line.
  */
 import { ArrowUp, MessageSquareReply } from "lucide-react";
@@ -16,14 +16,20 @@ import { useCan } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import { useTaskChange } from "./parts";
 
-/** What writing does, by where the task stands. */
-const MODE = { working: "steer", waiting: "answer", ready: "continue", archived: "reopen" } as const;
+/**
+ * What writing does, by where the task stands: while it works, it reorients the turn if the executor takes an
+ * instruction in (`steers`), else it stops that turn and starts the next with it.
+ */
+function modeOf(task: Task) {
+  if (task.state === "working") return task.steers ? "steer" : "restart";
+  return ({ waiting: "answer", ready: "continue", archived: "reopen" } as const)[task.state];
+}
 
 export function TaskComposer({ task, onSent, className }: { task: Task; onSent?: () => void; className?: string }) {
   const t = useT();
   const notify = useNotify();
   const [text, setText] = useState("");
-  const mode = MODE[task.state];
+  const mode = modeOf(task);
   const send = useTaskChange(
     task,
     () => api.directTask(task.id, text.trim()),
@@ -75,7 +81,7 @@ export function TaskComposer({ task, onSent, className }: { task: Task; onSent?:
 export function WriteToTask({ task }: { task: Task }) {
   const t = useT();
   if (!useCan("tasks:write")) return null;
-  const mode = MODE[task.state];
+  const mode = modeOf(task);
   return (
     <FormDialog
       trigger={

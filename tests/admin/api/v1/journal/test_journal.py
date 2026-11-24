@@ -308,10 +308,18 @@ async def test_the_important_events_are_told_in_the_readers_language(tmp_path: P
             PresenceChanged(source="presence", person=mathis, home=False),
             PresenceChanged(source="presence", person=mathis, home=True),
             PresenceChanged(source="presence", person=PersonId("ghost"), home=None),
-            TaskCreated(source="tasks", task_id="t1", title="Analyse du dépôt", executor="hermes", origin=MATHIS_CHAT),
-            TurnStarted(source="tasks", task_id="t1", turn_id="u1", instruction="Analyse"),
+            TaskCreated(
+                source="tasks",
+                task_id="t1",
+                title="Analyse du dépôt",
+                executor="hermes",
+                origin=MATHIS_CHAT,
+                turn_id="u1",
+                instruction="Analyse le dépôt",
+            ),
+            TurnStarted(source="tasks", task_id="t1", turn_id="u2", instruction="Analyse"),
             TurnEnded(
-                source="tasks", task_id="t1", turn_id="u1", status=TurnStatus.FAILED, error="quota", duration_s=12
+                source="tasks", task_id="t1", turn_id="u2", status=TurnStatus.FAILED, error="quota", duration_s=12
             ),
             WatchCreated(source="watch-book", watch_id="w3", title="Colis", what="le colis", kinds=(), once=True),
             ScheduleCreated(
@@ -382,6 +390,7 @@ async def test_the_important_events_are_told_in_the_readers_language(tmp_path: P
         said = "\n".join(f"{i['text']}\n{i['detail_text']}" for i in found)
         for sentence in (  # what Fluent formats: plurals, decimals, percentages, a long text cut short
             "« Newsletter » vérifié pour 1 veille : aucune ne correspond",
+            "Tâche t1 ouverte avec hermes : Analyse du dépôt\nAnalyse le dépôt",  # its first instruction with it
             "Tâche t1 : nouvelle consigne\nAnalyse",  # what it was asked, beside the line
             "Veille créée : Colis\nle colis",
             "Rappel régulier programmé : Plantes\nArrose",
@@ -389,7 +398,7 @@ async def test_the_important_events_are_told_in_the_readers_language(tmp_path: P
             "2 personnes vues par reachy-salon",
             "1 personne vue par reachy-salon",
             "Confiance : 87\N{NO-BREAK SPACE}%",
-            "bla …",
+            "bla bla…",
         ):
             assert sentence in said, sentence
         interrupted = next(i for i in found if i["detail"] == "Je surveille.")

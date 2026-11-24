@@ -133,6 +133,7 @@ export function stress(db: Db, now = Date.now()): void {
     id: `t-${"0123456789abcdef".repeat(2)}`,
     title: `${LONG_WORD} for ${LONG_NAME}`,
     executor: "hermes",
+    steers: true,
     state: "waiting",
     owner: MARIE,
     origin: { session: "s-stress", channel: "web" },

@@ -14,11 +14,11 @@ from nestor.admin.api.v1.access import reachable_task, reaches_task
 from nestor.admin.api.v1.errors import ApiError, not_found
 from nestor.admin.api.v1.security import Caller, allowed
 from nestor.admin.api.v1.shared import People
-from nestor.admin.api.v1.tasks.afterwards import Afterwards
 from nestor.admin.api.v1.tasks.schemas import (
     DirectedOut,
     InstructionIn,
     StopOut,
+    TaskChangedOut,
     TaskEditIn,
     TaskOut,
     TasksOut,
@@ -28,34 +28,28 @@ from nestor.admin.state import AdminState, state
 from nestor.core import ContractError
 from nestor.http import file_response
 from nestor.modules.accounts import Scope
-from nestor.modules.cognition import TaskState, TurnStatus
+from nestor.modules.cognition import TurnStatus
 from nestor.modules.cognition.delegation import Directed, Task
 
 router = APIRouter(tags=["tasks"])
 Manager = Annotated[Caller, Depends(allowed(Scope.TASKS_MANAGE, Scope.TASKS_MANAGE_OWN))]
-ORDER = {TaskState.WAITING: 0, TaskState.WORKING: 1, TaskState.READY: 2, TaskState.ARCHIVED: 3}
 
 
 @router.get("/tasks")
 async def list_tasks(request: Request, caller: Manager, archived: bool = False) -> TasksOut:
     """The tasks the caller reaches that are not archived: waiting on someone first, then working, then the latest
     active; with `archived`, the archived ones only, the latest first."""
-    admin = state(request)
-    people = People(admin.nestor.household)
-    found = [
-        t
-        for t in admin.nestor.tasks.tasks.values()
-        if reaches_task(caller, t) and (t.state is TaskState.ARCHIVED) == archived
-    ]
-    found.sort(key=lambda t: (ORDER[t.state], -(t.last_activity or t.created_at).timestamp()))
-    return TasksOut(tasks=[TaskOut.of(t, people) for t in found])
+    nestor = state(request).nestor
+    people, tasks = People(nestor.household), nestor.tasks
+    found = [t for t in tasks.of(archived=archived) if reaches_task(caller, t)]
+    return TasksOut(tasks=[TaskOut.of(t, people, tasks.executors.get(t.executor)) for t in found])
 
 
 @router.get("/tasks/{task_id}")
 async def get_task(request: Request, caller: Manager, task_id: str) -> TaskThreadOut:
     """One task with its thread; 404 when unknown or out of reach."""
     admin = state(request)
-    return await _thread(admin, reachable_task(admin, caller, task_id))
+    return _thread(admin, reachable_task(admin, caller, task_id))
 
 
 @router.post("/tasks/{task_id}/instructions")
@@ -70,7 +64,7 @@ async def direct_task(request: Request, caller: Manager, task_id: str, body: Ins
         directed = await admin.nestor.tasks.direct(task.id, body.text.strip(), by=caller.person, asked=True)
     except ContractError:
         raise not_found("task_unknown") from None
-    return DirectedOut(task=await _thread(admin, task), steered=directed is Directed.STEERED)
+    return DirectedOut(task=_thread(admin, task), steered=directed is Directed.STEERED)
 
 
 @router.post("/tasks/{task_id}/stop")
@@ -79,27 +73,27 @@ async def stop_task(request: Request, caller: Manager, task_id: str) -> StopOut:
     admin = state(request)
     task = reachable_task(admin, caller, task_id)
     outcome = await admin.nestor.tasks.stop(task.id, by=caller.person)
-    return StopOut(task=await _thread(admin, task), confirmed=outcome.status is TurnStatus.STOPPED)
+    return StopOut(task=_thread(admin, task), confirmed=outcome.status is TurnStatus.STOPPED)
 
 
 @router.patch("/tasks/{task_id}")
-async def rename_task(request: Request, caller: Manager, task_id: str, body: TaskEditIn) -> TaskThreadOut:
+async def rename_task(request: Request, caller: Manager, task_id: str, body: TaskEditIn) -> TaskChangedOut:
     admin = state(request)
     task = reachable_task(admin, caller, task_id)
     try:
         await admin.nestor.tasks.rename(task.id, body.title, by=caller.person)
     except ContractError:
         raise ApiError(422, "invalid") from None
-    return await _thread(admin, task)
+    return TaskChangedOut(task=_thread(admin, task))
 
 
 @router.post("/tasks/{task_id}/archive")
-async def archive_task(request: Request, caller: Manager, task_id: str) -> TaskThreadOut:
+async def archive_task(request: Request, caller: Manager, task_id: str) -> TaskChangedOut:
     """Put a task away, its working turn stopped first; an instruction opens it again."""
     admin = state(request)
     task = reachable_task(admin, caller, task_id)
     await admin.nestor.tasks.archive(task.id, by=caller.person)
-    return await _thread(admin, task)
+    return TaskChangedOut(task=_thread(admin, task))
 
 
 @router.get(
@@ -111,7 +105,7 @@ async def get_task_file(request: Request, caller: Manager, task_id: str, turn_id
     """A file of a turn (`TurnOut.files`); 404 when the task is out of reach or has no such file."""
     admin = state(request)
     task = reachable_task(admin, caller, task_id)
-    turn = next((t for t in task.turns if t.id == turn_id), None)
+    turn = task.turn_of(turn_id)
     files = (*turn.given, *turn.files) if turn else ()
     if not 0 <= index < len(files):
         raise not_found("attachment_unknown")
@@ -123,5 +117,7 @@ async def get_task_file(request: Request, caller: Manager, task_id: str, turn_id
     return file_response(data, file.blob.media_type, file.name)
 
 
-async def _thread(admin: AdminState, task: Task) -> TaskThreadOut:
-    return TaskThreadOut.full(task, People(admin.nestor.household), await Afterwards.of(admin))
+def _thread(admin: AdminState, task: Task) -> TaskThreadOut:
+    nestor = admin.nestor
+    executor = nestor.tasks.executors.get(task.executor)
+    return TaskThreadOut.full(task, People(nestor.household), executor, nestor.spoken_channels())

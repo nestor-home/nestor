@@ -15,7 +15,7 @@ from nestor.adapters.executors.claude_code import ClaudeCodeExecutor, ClaudeCode
 from nestor.core import Health
 from nestor.core.i18n import Locale, Message
 from nestor.modules.channels import AttachmentKind
-from nestor.modules.cognition.delegation import Assignment, NestorAccess, Progress, TurnStatus
+from nestor.modules.cognition.delegation import Assignment, Handle, NestorAccess, Progress, TurnStatus
 from nestor.modules.journal import BlobRef, FileRef
 from nestor.runtime import Services
 from nestor.testing.cognition import ExecutorContract
@@ -86,9 +86,13 @@ async def test_the_session_runs_where_and_how_the_configuration_says(tmp_path: P
 
 async def test_the_report_comes_back_with_its_files_and_the_tool_calls_are_progress(tmp_path: Path) -> None:
     steps: list[str] = []
+    handles: list[Handle] = []
     async with claude(tmp_path) as executor:
-        outcome = await executor.run(Assignment("Écris le rapport.", folder="task-1"), Progress(steps.append))
-    assert (outcome.result, outcome.session) == ("Rapport écrit.", steps[0].removeprefix("session "))
+        outcome = await executor.run(
+            Assignment("Écris le rapport.", folder="task-1"), Progress(steps.append, handles.append)
+        )
+    assert outcome.result == "Rapport écrit."
+    assert [h.session for h in handles] == [steps[0].removeprefix("session ")], "its session, as it started it"
     assert [(f.name, f.kind, f.media_type, f.data) for f in outcome.files] == [
         ("rapport.md", AttachmentKind.FILE, "text/markdown", b"# Rapport")
     ]
@@ -99,42 +103,42 @@ async def test_the_report_comes_back_with_its_files_and_the_tool_calls_are_progr
 async def test_a_turn_given_its_session_resumes_it_in_the_task_s_folder(tmp_path: Path) -> None:
     record = tmp_path / "record.json"
     seen = []
+    handles: list[Handle] = []
     async with claude(tmp_path, record=("--record", str(record))) as executor:
-        first = await executor.run(Assignment("Écris le rapport.", folder="task-1"), Progress())
+        await executor.run(Assignment("Écris le rapport.", folder="task-1"), Progress(on_attach=handles.append))
         seen.append(json.loads(record.read_text()))
-        then = await executor.run(Assignment("Raccourcis-le.", first.session, folder="task-1"), Progress())
+        first = handles[-1].session
+        await executor.run(Assignment("Raccourcis-le.", first, folder="task-1"), Progress(on_attach=handles.append))
         seen.append(json.loads(record.read_text()))
     arguments: list[str] = seen[1]["arguments"]
-    assert first.session and then.session == first.session
-    assert arguments[arguments.index("--resume") + 1] == first.session and "--session-id" not in arguments
+    assert first and handles[-1].session == first
+    assert arguments[arguments.index("--resume") + 1] == first and "--session-id" not in arguments
     assert seen[1]["cwd"] == seen[0]["cwd"] and "rapport.md" in seen[1]["found"], "the same folder, as it was left"
 
 
 async def test_a_report_with_a_question_ends_the_turn_on_it(tmp_path: Path) -> None:
+    handles: list[Handle] = []
     async with claude(tmp_path, "ask") as executor:
-        outcome = await executor.run(Assignment("Choisis un devis."), Progress())
+        outcome = await executor.run(Assignment("Choisis un devis."), Progress(on_attach=handles.append))
     assert (outcome.status, outcome.question, outcome.result) == (
         TurnStatus.ASKED,
         "Lequel garder ?",
         "J'ai trouvé deux devis.",
     )
-    assert outcome.session
+    assert handles[-1].session, "the answer goes on in its session"
 
 
 async def test_an_instruction_while_it_works_reaches_its_process_and_not_once_it_ended(tmp_path: Path) -> None:
-    handles: list[str] = []
+    handles: list[Handle] = []
     async with claude(tmp_path, "steered") as executor:
         job = asyncio.create_task(executor.run(Assignment("Corrige le devis."), Progress(on_attach=handles.append)))
         while not handles:
             await asyncio.sleep(0.01)
-        assert await executor.steer(handles[0], "Garde le même prix.")
+        assert await executor.steer(handles[0].ref, "Garde le même prix.")
         outcome = await asyncio.wait_for(job, 20)
-        assert not await executor.steer(handles[0], "Et la TVA ?"), "the turn has ended"
-    assert (outcome.status, outcome.result, outcome.session) == (
-        TurnStatus.COMPLETED,
-        "Fait, avec : Garde le même prix.",
-        handles[0],
-    )
+        assert not await executor.steer(handles[0].ref, "Et la TVA ?"), "the turn has ended"
+    assert (outcome.status, outcome.result) == (TurnStatus.COMPLETED, "Fait, avec : Garde le même prix.")
+    assert handles[0].session == handles[0].ref, "its handle is its session"
 
 
 @pytest.mark.parametrize(("behave", "report"), [("text", "Fini."), ("odd", '{"summary": "Fini."}'), ("huge", "Fini.")])
@@ -192,12 +196,13 @@ async def test_the_files_sent_with_a_task_wait_in_its_own_folder_and_the_brief_n
 
 
 async def test_a_stop_ends_even_a_process_that_ignores_it(tmp_path: Path) -> None:
+    handles: list[Handle] = []
     async with claude(tmp_path, "stubborn", stop_timeout_s=0.3) as executor:
-        job = asyncio.create_task(executor.run(Assignment("Corrige le test."), Progress()))
+        job = asyncio.create_task(executor.run(Assignment("Corrige le test."), Progress(on_attach=handles.append)))
         await asyncio.sleep(1.0)
         job.cancel()
         outcome = await asyncio.wait_for(job, 10)
-    assert outcome.status is TurnStatus.STOPPED and outcome.session, "stopped, its session kept to go on in"
+    assert outcome.status is TurnStatus.STOPPED and handles[-1].session, "stopped, its session kept to go on in"
 
 
 async def test_a_claude_that_is_not_installed_fails_the_task_and_is_unavailable(tmp_path: Path) -> None:

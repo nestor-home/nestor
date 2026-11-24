@@ -49,7 +49,7 @@ import { Fact, Facts, PageHeader, RowList, Section } from "@/components/page";
 import { Empty, Failure, Loading } from "@/components/states";
 import { Status } from "@/components/status";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { TaskCardBody, TaskStateMark } from "@/features/tasks/parts";
+import { TaskCardBody, TaskLine, TaskStateMark } from "@/features/tasks/parts";
 import { TaskSheet } from "@/features/tasks/tasks";
 import { CancelWatch, WatchKind, watchBrand } from "@/features/watches/parts";
 import { useT } from "@/i18n";
@@ -333,7 +333,6 @@ function TaskItem({ task, onOpen }: { task: Task; onOpen: (task: Task) => void }
 
 /** Tasks that wait for nothing, as rows: their title, who does them, when they last moved, their state. */
 function TaskRows({ tasks, onOpen }: { tasks: Task[]; onOpen: (task: Task) => void }) {
-  const t = useT();
   return (
     <RowList>
       {tasks.map((task) => (
@@ -345,12 +344,9 @@ function TaskRows({ tasks, onOpen }: { tasks: Task[]; onOpen: (task: Task) => vo
           >
             <span className="min-w-0">
               <span className="line-clamp-1 block text-ink">{task.title}</span>
-              <span className="flex flex-wrap items-center gap-x-2.5 text-meta text-ink-muted">
-                <KindName kind={task.executor} />
-                <Ago iso={task.last_activity} />
-                {task.turns > 1 ? <span>{t("task-turns", { count: task.turns })}</span> : null}
+              <TaskLine task={task} className="text-meta text-ink-muted">
                 <LastTurn task={task} />
-              </span>
+              </TaskLine>
             </span>
             {task.owner ? <Avatar name={task.owner.name} /> : <TaskStateMark state={task.state} />}
           </button>

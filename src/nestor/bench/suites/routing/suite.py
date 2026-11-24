@@ -36,7 +36,7 @@ from nestor.core import ContractError, PersonId
 from nestor.core.i18n import Locale, Message
 from nestor.modules.channels import Address, InboundMessage, Sender
 from nestor.modules.cognition import TurnStatus
-from nestor.modules.cognition.delegation import TaskCreated, TurnEnded, TurnStarted
+from nestor.modules.cognition.delegation import TaskCreated, TurnEnded
 from nestor.modules.cognition.delegation.assistant import Delegation
 from nestor.modules.cognition.delegation.service import TaskManager
 from nestor.modules.cognition.tools import Tool, Toolbox, ToolCalled, ToolContext, ToolOutput, ToolProvider
@@ -221,9 +221,16 @@ async def _seed(journal: Journal, task: Mapping[str, Any], owner: PersonId) -> s
     status = TurnStatus.ASKED if question else TurnStatus.COMPLETED
     for event in (
         TaskCreated(
-            source=NAME, task_id=task_id, title=title, executor=str(task["executor"]), owner=owner, origin=CHAT
+            source=NAME,
+            task_id=task_id,
+            title=title,
+            executor=str(task["executor"]),
+            owner=owner,
+            origin=CHAT,
+            turn_id=f"{task_id}-1",
+            instruction=title,
+            by=owner,
         ),
-        TurnStarted(source=NAME, task_id=task_id, turn_id=f"{task_id}-1", instruction=title, by=owner),
         TurnEnded(
             source=NAME,
             task_id=task_id,

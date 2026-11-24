@@ -83,6 +83,19 @@ describe("a task's page", () => {
     expect(within(dialog).getByRole("textbox")).toHaveValue("Add a fourth supplier.");
   });
 
+  it("with an executor that cannot steer, says a new instruction stops the turn at work and starts the next", async () => {
+    task("t-88b07e").steers = false;
+    const user = userEvent.setup();
+    renderApp("/tasks/t-88b07e");
+    await user.click(await screen.findByRole("button", { name: "New instruction…" }));
+    const dialog = await screen.findByRole("dialog", { name: "Give a new instruction" });
+    expect(dialog).toHaveTextContent("Stops the turn that is working and starts a new one with it.");
+    await user.type(within(dialog).getByRole("textbox", { name: "Give a new instruction…" }), "No meat.{Enter}");
+    await waitFor(() => expect(task("t-88b07e").thread).toHaveLength(2));
+    expect(task("t-88b07e").thread.map((turn) => turn.status)).toEqual(["stopped", "running"]);
+    expect(task("t-88b07e").thread.at(-1)?.instruction).toBe("No meat.");
+  });
+
   it("stops the work in progress once confirmed; the task stays, ready for more", async () => {
     const user = userEvent.setup();
     renderApp("/tasks/t-88b07e");

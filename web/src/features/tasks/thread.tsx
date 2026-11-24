@@ -4,8 +4,8 @@
  * failure) and the files it handed back, and how that reached its person. Then the notes it kept for the task.
  */
 import { CornerDownRight, NotebookPen, TriangleAlert } from "lucide-react";
-import { useEffect, useRef } from "react";
-import type { TaskFile, TaskSteer, TaskThread, TaskTurn } from "@/api";
+import { type ReactNode, useEffect, useRef } from "react";
+import type { TaskFile, TaskThread, TaskTurn } from "@/api";
 import { API_BASE } from "@/api/client";
 import { Ago } from "@/components/ago";
 import { Avatar } from "@/components/marks";
@@ -35,10 +35,22 @@ export function Thread({ task, follow = false }: { task: TaskThread; follow?: bo
     <ol className="grid gap-8" aria-label={t("task-thread")}>
       {task.thread.map((turn, index) => (
         <li key={turn.id} ref={index === task.thread.length - 1 ? end : undefined} className="grid min-w-0 gap-4">
-          <Instruction task={task} turn={turn} />
+          <Said
+            by={turn.by}
+            at={turn.started_at}
+            text={turn.instruction}
+            files={
+              <TurnFiles
+                task={task}
+                turn={turn}
+                files={turn.files.filter((f) => f.given)}
+                className="justify-items-end"
+              />
+            }
+          />
           <Work task={task} turn={turn} />
           {turn.steered.map((steer) => (
-            <Steer key={steer.at} steer={steer} />
+            <Said key={steer.at} by={steer.by} at={steer.at} text={steer.instruction} steered />
           ))}
           <Outcome task={task} turn={turn} />
         </li>
@@ -47,47 +59,53 @@ export function Thread({ task, follow = false }: { task: TaskThread; follow?: bo
   );
 }
 
-/** An instruction given while the turn worked, taken into it: who gave it and when. */
-function Steer({ steer }: { steer: TaskSteer }) {
+/**
+ * What someone said to the task, on the right as in a conversation: who and when, then the words. An instruction
+ * that opened a turn carries its files; one given while the turn worked (`steered`) is marked as such.
+ */
+function Said({
+  by,
+  at,
+  text,
+  steered = false,
+  files,
+}: {
+  by: TaskTurn["by"];
+  at: string;
+  text: string;
+  steered?: boolean;
+  files?: ReactNode;
+}) {
   const t = useT();
   const me = useMe();
   return (
-    <div className="ml-auto grid max-w-[80%] min-w-0 justify-items-end gap-1">
+    <div
+      className={cn("ml-auto grid min-w-0 justify-items-end", steered ? "max-w-[80%] gap-1" : "max-w-[88%] gap-1.5")}
+    >
       <p className="flex flex-wrap items-center justify-end gap-x-2 text-meta text-ink-muted">
-        {steer.by ? <Avatar name={steer.by.name} size="sm" /> : null}
-        <span>{steer.by?.name ?? me.assistant}</span>
-        <time dateTime={steer.at} className="tabular">
-          {hourMinute(steer.at)}
+        {by ? <Avatar name={by.name} size="sm" /> : null}
+        <span>{by?.name ?? me.assistant}</span>
+        <time dateTime={at} className="tabular">
+          {hourMinute(at)}
         </time>
-        <span className="flex items-center gap-1 text-kind-task">
-          <CornerDownRight className="size-3.5" aria-hidden="true" />
-          {t("task-steered")}
-        </span>
+        {steered ? (
+          <span className="flex items-center gap-1 text-kind-task">
+            <CornerDownRight className="size-3.5" aria-hidden="true" />
+            {t("task-steered")}
+          </span>
+        ) : null}
       </p>
-      <p className="min-w-0 rounded-2xl rounded-tr-md border border-dashed border-rule-strong px-3.5 py-2 text-body whitespace-pre-line text-ink">
-        {steer.instruction}
+      <p
+        className={cn(
+          "min-w-0 text-body whitespace-pre-line text-ink",
+          steered
+            ? "rounded-2xl rounded-tr-md border border-dashed border-rule-strong px-3.5 py-2"
+            : "rounded-3xl rounded-tr-md bg-paper-sunken px-4 py-2.5",
+        )}
+      >
+        {text}
       </p>
-    </div>
-  );
-}
-
-/** Who gave the instruction and when, the instruction itself, and what was sent with it. */
-function Instruction({ task, turn }: { task: TaskThread; turn: TaskTurn }) {
-  const me = useMe();
-  const given = turn.files.filter((f) => f.given);
-  return (
-    <div className="ml-auto grid max-w-[88%] min-w-0 justify-items-end gap-1.5">
-      <p className="flex items-center gap-2 text-meta text-ink-muted">
-        {turn.by ? <Avatar name={turn.by.name} size="sm" /> : null}
-        <span>{turn.by?.name ?? me.assistant}</span>
-        <time dateTime={turn.started_at} className="tabular">
-          {hourMinute(turn.started_at)}
-        </time>
-      </p>
-      <p className="min-w-0 rounded-3xl rounded-tr-md bg-paper-sunken px-4 py-2.5 text-body whitespace-pre-line text-ink">
-        {turn.instruction}
-      </p>
-      <TurnFiles task={task} turn={turn} files={given} className="justify-items-end" />
+      {files}
     </div>
   );
 }

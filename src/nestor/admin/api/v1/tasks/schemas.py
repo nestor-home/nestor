@@ -1,18 +1,18 @@
 """A delegated task as the admin shows it: a thread of turns with its executor."""
 
+from collections.abc import Collection
 from datetime import datetime
+from typing import Any, Self
 
 from pydantic import BaseModel, Field
 
-from nestor.admin.api.v1.shared import OriginOut, People, PersonRef
-from nestor.admin.api.v1.tasks.afterwards import Afterwards, Delivery
+from nestor.admin.api.v1.shared import Input, OriginOut, People, PersonRef
 from nestor.modules.channels import AttachmentKind
 from nestor.modules.cognition import TaskState, TurnStatus
-from nestor.modules.cognition.delegation import Steer, Task, Turn
+from nestor.modules.cognition.delegation import STEER, Executor, Steer, Task, Turn
 from nestor.modules.cognition.tools import TITLE_CHARS
 from nestor.modules.journal import FileRef
 
-STEPS = 5  # the latest steps of a turn shown
 INSTRUCTION_CHARS = 8000
 
 
@@ -20,10 +20,6 @@ class DeliveredOut(BaseModel):
     at: datetime
     channel: str
     room: str | None  # when it was said aloud
-
-    @classmethod
-    def of(cls, delivery: Delivery) -> "DeliveredOut":
-        return cls(at=delivery.at, channel=delivery.channel, room=delivery.room)
 
 
 class TaskFileOut(BaseModel):
@@ -71,7 +67,7 @@ class TurnOut(BaseModel):
     status: TurnStatus
     started_at: datetime
     ended_at: datetime | None  # None while it works
-    steps: list[str]  # the latest the executor said
+    steps: list[str]  # the latest the executor said, while it worked
     steered: list[SteeredOut]  # instructions it took while it worked, the first first
     result: str | None
     question: str | None  # what it asks its owner, when it ended on one
@@ -80,9 +76,9 @@ class TurnOut(BaseModel):
     delivered: DeliveredOut | None  # where and when what it came back with reached the owner
 
     @classmethod
-    def of(cls, turn: Turn, people: People, afterwards: Afterwards) -> "TurnOut":
-        outcome = turn.outcome
-        delivery = afterwards.delivered.get(turn.id)
+    def of(cls, turn: Turn, people: People, spoken: Collection[str]) -> "TurnOut":
+        """`spoken`: the channels that speak aloud, where a delivery is said in a room."""
+        outcome, delivery = turn.outcome, turn.delivered
         return cls(
             id=turn.id,
             instruction=turn.instruction,
@@ -90,13 +86,19 @@ class TurnOut(BaseModel):
             status=turn.status,
             started_at=turn.started_at,
             ended_at=turn.ended_at,
-            steps=turn.steps[-STEPS:],
+            steps=list(turn.steps),
             steered=[SteeredOut.of(s, people) for s in turn.steered],
             result=outcome.result if outcome else None,
             question=outcome.question if outcome else None,
             error=outcome.error if outcome else None,
             files=TaskFileOut.all(turn.given, turn.files),
-            delivered=DeliveredOut.of(delivery) if delivery else None,
+            delivered=DeliveredOut(
+                at=delivery.at,
+                channel=delivery.address.channel,
+                room=delivery.address.conversation if delivery.address.channel in spoken else None,
+            )
+            if delivery
+            else None,
         )
 
 
@@ -115,10 +117,11 @@ class TaskOut(BaseModel):
     last_status: TurnStatus  # how its latest turn stands: whether a ready task came back, failed or was stopped
     question: str | None  # what it waits on its owner for
     now: str | None  # the latest step, while it works
+    steers: bool  # an instruction given while it works reorients it, rather than stopping it and starting anew
 
     @classmethod
-    def of(cls, task: Task, people: People) -> "TaskOut":
-        turn = task.turn
+    def of(cls, task: Task, people: People, executor: Executor | None, **more: Any) -> Self:
+        """`executor`: the task's, `None` when it is no longer plugged in; `more`, the fields of a subclass."""
         return cls(
             id=task.id,
             title=task.title,
@@ -127,11 +130,13 @@ class TaskOut(BaseModel):
             owner=people.ref(task.owner),
             origin=OriginOut.of(task.origin),
             created_at=task.created_at,
-            last_activity=task.last_activity or task.created_at,
+            last_activity=task.last_activity,
             turns=len(task.turns),
-            last_status=turn.status,
+            last_status=task.turn.status,
             question=task.question,
-            now=turn.steps[-1] if task.state is TaskState.WORKING and turn.steps else None,
+            now=task.now,
+            steers=executor is not None and STEER in executor.capabilities,
+            **more,
         )
 
 
@@ -142,11 +147,9 @@ class TaskThreadOut(TaskOut):
     notes: list[str]
 
     @classmethod
-    def full(cls, task: Task, people: People, afterwards: Afterwards) -> "TaskThreadOut":
-        return cls(
-            **TaskOut.of(task, people).model_dump(),
-            thread=[TurnOut.of(t, people, afterwards) for t in task.turns],
-            notes=task.notes,
+    def full(cls, task: Task, people: People, executor: Executor | None, spoken: Collection[str]) -> "TaskThreadOut":
+        return cls.of(
+            task, people, executor, thread=[TurnOut.of(t, people, spoken) for t in task.turns], notes=list(task.notes)
         )
 
 
@@ -154,21 +157,25 @@ class TasksOut(BaseModel):
     tasks: list[TaskOut]  # waiting first, then working, then the latest active
 
 
-class InstructionIn(BaseModel):
+class InstructionIn(Input):
     """An instruction for a task: steers the turn that works, else opens the next (an answer to its question)."""
 
     text: str = Field(min_length=1, max_length=INSTRUCTION_CHARS)
 
 
-class TaskEditIn(BaseModel):
+class TaskEditIn(Input):
     title: str = Field(min_length=1, max_length=TITLE_CHARS)
 
 
-class DirectedOut(BaseModel):
+class TaskChangedOut(BaseModel):
+    """A task as a change left it (renamed, archived)."""
+
     task: TaskThreadOut
+
+
+class DirectedOut(TaskChangedOut):
     steered: bool  # True: taken into the turn that works; False: a new turn started
 
 
-class StopOut(BaseModel):
-    task: TaskThreadOut
+class StopOut(TaskChangedOut):
     confirmed: bool  # False: the executor did not confirm the stop (see the turn's `error`)

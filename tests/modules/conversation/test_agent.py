@@ -194,6 +194,27 @@ async def test_a_tool_call_without_text_makes_no_empty_message(make_agent: MakeA
     )
 
 
+class ClosingWithStop(ScriptedModel):
+    """Asks for a tool, then closes the reply with "stop" (Claude on Vertex through OpenRouter does)."""
+
+    async def stream(self, request: ModelRequest) -> AsyncGenerator[ModelOutput]:
+        self.requests.append(request)
+        if len(self.requests) == 1:
+            yield ToolCallRequested(ToolCall("c1", "light_on"))
+        else:
+            yield TextDelta("C'est allumé.")
+        yield Finished(FinishReason.STOP)
+
+
+async def test_a_tool_asked_for_runs_whatever_reason_the_reply_finishes_with(
+    make_agent: MakeAgent, journal: Journal
+) -> None:
+    agent = make_agent(model=ClosingWithStop(), tools=[tool("light_on", light_on)])
+
+    assert await agent.respond(message("Allume")).collect() == ("C'est allumé.",)
+    assert [e.name for e in await journal.history(ToolCalled)] == ["light_on"]
+
+
 async def test_voice_speaks_the_messages_as_one_text(make_agent: MakeAgent) -> None:
     reply = make_agent(model=Announcing(), tools=[tool("light_on", light_on)]).respond(message("Allume", VOICE, "mic"))
 

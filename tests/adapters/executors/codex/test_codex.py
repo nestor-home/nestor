@@ -18,7 +18,7 @@ from nestor.adapters.executors.common import MAX_FILES
 from nestor.core import ContractError, Health, ProviderError
 from nestor.core.i18n import Locale, Message
 from nestor.modules.channels import AttachmentKind
-from nestor.modules.cognition.delegation import Assignment, NestorAccess, Progress, TurnStatus
+from nestor.modules.cognition.delegation import Assignment, Handle, NestorAccess, Progress, TurnStatus
 from nestor.modules.journal import FileRef
 from nestor.runtime import Services
 from nestor.testing.cognition import RemoteExecutorContract
@@ -55,7 +55,7 @@ class TestCodexExecutor(RemoteExecutorContract):
 async def submitted(codex: FakeCodex, **options: Any) -> tuple[Any, str]:
     executor = codex.executor(**options)
     await executor.start()
-    return executor, await executor.submit(Assignment("Corrige le test."))
+    return executor, (await executor.submit(Assignment("Corrige le test."))).ref
 
 
 async def test_the_task_runs_where_and_how_the_configuration_says() -> None:
@@ -134,23 +134,26 @@ async def test_the_report_is_the_final_answer_and_what_the_agent_does_is_progres
 
 async def test_a_report_with_a_question_ends_the_turn_asked_in_its_thread() -> None:
     asking = REPORT | {"report": "J'ai trouvé deux devis.", "question": "Lequel corriger ?"}
+    handles: list[Handle] = []
     async with FakeCodex(report=asking) as codex, codex.executor() as executor:
-        outcome = await executor.run(Assignment("Corrige le devis."), Progress())
+        outcome = await executor.run(Assignment("Corrige le devis."), Progress(on_attach=handles.append))
     [thread] = codex.threads
-    assert (outcome.status, outcome.question, outcome.result, outcome.session) == (
+    assert (outcome.status, outcome.question, outcome.result) == (
         TurnStatus.ASKED,
         "Lequel corriger ?",
         "J'ai trouvé deux devis.",
-        thread,
     )
+    assert [h.session for h in handles] == [thread], "the answer goes on in its thread"
 
 
 async def test_a_later_turn_goes_on_in_the_task_s_thread_and_folder() -> None:
+    handles: list[Handle] = []
     async with FakeCodex() as codex, codex.executor() as executor:
-        first = await executor.run(Assignment("Corrige le test.", folder="task-a"), Progress())
-        then = await executor.run(Assignment("Et l'autre.", session=first.session, folder="task-a"), Progress())
+        await executor.run(Assignment("Corrige le test.", folder="task-a"), Progress(on_attach=handles.append))
+        later = Assignment("Et l'autre.", session=handles[0].session, folder="task-a")
+        await executor.run(later, Progress(on_attach=handles.append))
     [thread] = codex.threads.values()
-    assert first.session == then.session == thread.id
+    assert [h.session for h in handles] == [thread.id, thread.id]
     assert [t.objective.split("\n")[0] for t in thread.turns] == ["Corrige le test.", "Et l'autre."]
     methods = [m for m, _ in codex.requests]
     assert methods.count("thread/start") == 1 and "thread/resume" not in methods, "loaded in this session already"
@@ -159,17 +162,19 @@ async def test_a_later_turn_goes_on_in_the_task_s_thread_and_folder() -> None:
 
 async def test_a_later_turn_after_a_restart_resumes_the_thread_first() -> None:
     access = NestorAccess(url="https://nestor.example/mcp", key="nstx_secret-key")
+    handles: list[Handle] = []
     async with FakeCodex() as codex:
         async with codex.executor() as before:
-            first = await before.run(Assignment("Corrige le test."), Progress())
+            await before.run(Assignment("Corrige le test."), Progress(on_attach=handles.append))
+        first = handles[0].session
         async with codex.executor() as restarted:
-            later = Assignment("Et l'autre.", session=first.session, access=access)
+            later = Assignment("Et l'autre.", session=first, access=access)
             then = await asyncio.wait_for(restarted.run(later, Progress()), 5)  # unheard if the thread is not resumed
-    assert then.status is TurnStatus.COMPLETED and then.session == first.session
+    assert then.status is TurnStatus.COMPLETED
     after = [(m, p) for m, p in codex.requests if m in ("thread/start", "thread/resume", "turn/start")]
     assert [m for m, _ in after] == ["thread/start", "turn/start", "thread/resume", "turn/start"]
     resumed, started = after[2][1], after[3][1]
-    assert resumed["threadId"] == started["threadId"] == first.session
+    assert resumed["threadId"] == started["threadId"] == first
     assert resumed["config"]["mcp_servers"]["nestor"]["url"] == access.url, "the thread reaches Nestor again"
 
 
@@ -449,7 +454,8 @@ async def test_live_codex_writes_a_file_and_hands_it_back(tmp_path: Path) -> Non
         "codex",
         Services(data_dir=tmp_path, localizer=EchoLocalizer(), locale=Locale("en")),
     ) as executor:
-        ref = await executor.submit(Assignment("Write a file hello.txt containing the word bonjour, then report."))
-        first = await executor.follow(ref, Progress())
+        first = await executor.run(
+            Assignment("Write a file hello.txt containing the word bonjour, then report."), Progress()
+        )
     assert first.status is TurnStatus.COMPLETED, first
     assert [(f.name, f.data.strip()) for f in first.files] == [("hello.txt", b"bonjour")], json.dumps(first.result)

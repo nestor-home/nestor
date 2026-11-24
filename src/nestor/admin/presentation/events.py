@@ -14,7 +14,7 @@ from datetime import datetime
 from enum import StrEnum
 
 from nestor.admin.presentation.phrasebook import Phrasebook
-from nestor.core import ContractError, Event, Money, PersonId
+from nestor.core import ContractError, Event, Money, PersonId, shorten
 from nestor.core.i18n import Message
 from nestor.modules.accounts import (
     AccountCreated,
@@ -361,8 +361,10 @@ class EventDescriber:
             TaskCreated: lambda e: self._line(
                 e,
                 Message.of("journal-task-created", task=e.task_id, executor=e.executor, title=e.title),
-                people=[e.owner],
+                detail=e.instruction,
+                people=[e.owner, e.by],
                 channels=[e.origin],
+                attachments=_made(e.given),
             ),
             TaskRenamed: lambda e: self._line(
                 e, Message.of("journal-task-renamed", task=e.task_id, title=e.title), people=[e.by]
@@ -849,7 +851,7 @@ class EventDescriber:
         attachments: tuple[Attached, ...] = (),
     ) -> Line:
         if len(detail) > DETAIL_LIMIT:
-            detail = detail[:DETAIL_LIMIT] + "…"
+            detail = shorten(detail, DETAIL_LIMIT)
         return Line(
             at=event.at,
             kind=self._categories.get(type(event), Kind.OTHER),

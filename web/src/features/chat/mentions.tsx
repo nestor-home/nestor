@@ -14,7 +14,7 @@ export const NAMED = /(?<![\w@])(@[\p{L}\p{N}_-]*[\p{L}\p{N}_])/gu;
 const ORDER: Mention["kind"][] = ["person", "room", "task", "executor", "connection"];
 
 /** A name as the server compares it: no case, no accents, words joined by hyphens (`Salle à manger` → `salle-a-manger`). */
-function nameKey(name: string): string {
+export function nameKey(name: string): string {
   const plain = name.toLowerCase().normalize("NFKD").replace(/\p{M}/gu, "").replace(/_/g, "-");
   return (plain.match(/[a-z0-9]+/g) ?? []).join("-");
 }

@@ -198,8 +198,9 @@ async def test_the_person_answering_a_result_is_answered_with_it_in_mind() -> No
     assert [m.role for m in history] == [Role.USER, Role.ASSISTANT, Role.USER]
     assert "Report: tout est vert" in history[0].content and "not said by anyone here" in history[0].content
     [internal] = await home.journal.history(NotificationTurn)
+    [ended] = await home.journal.history(TurnEnded)
     assert (internal.about, internal.person, internal.address) == (
-        About(Source.TASK, task_id, "completed"),
+        About(Source.TASK, task_id, "completed", ended.turn_id),
         MATHIS.id,
         TELEGRAM,
     )
@@ -342,6 +343,19 @@ async def test_a_result_with_nothing_to_tell_is_withheld_once_and_never_brought_
     assert home.telegram.sent == home.voice.sent == []
     assert len(home.model.requests) == 1, "a withheld result is done: it is not written again"
     assert await home.journal.history(TurnDelivered) == [], "nothing was passed on: the journal does not say so"
+
+
+async def test_nothing_to_tell_about_one_turn_says_nothing_of_the_next() -> None:
+    home = Home(model=ScriptedModel(f"{SILENT} rien de neuf", "Ton analyse est finie : tout est vert."))
+    task_id = await home.task(notify=Notify.MESSAGE, still_talking=False)
+    async with home.returns():
+        pass
+    async with TaskManager(home.journal, home.executors, blobs=home.blobs) as tasks:  # it ends while nobody listens
+        await tasks.direct(task_id, "Et les tests ?", by=None)
+        await tasks.wait(task_id)
+    async with home.returns():
+        pass
+    assert len(home.telegram.sent) + len(home.voice.sent) == 1, "the next turn came back with news: it is told"
 
 
 async def test_a_failed_task_may_not_be_left_untold() -> None:

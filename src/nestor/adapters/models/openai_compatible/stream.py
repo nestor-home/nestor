@@ -58,9 +58,7 @@ class ChunkDecoder:
                 raise self._error("stream ended before the reply was finished", transient=True)
         for call in self._completed_calls():
             yield ToolCallRequested(call)
-        # some providers close a reply that asks for tools with "stop" (Claude on Vertex through OpenRouter)
-        reason = FinishReason.TOOL_CALLS if self._calls else _FINISH_REASONS.get(self._finish or "stop")
-        yield Finished(reason or FinishReason.STOP)
+        yield Finished(_FINISH_REASONS.get(self._finish or "stop", FinishReason.STOP))
 
     def _parse(self, data: str) -> dict[str, Any]:
         try:

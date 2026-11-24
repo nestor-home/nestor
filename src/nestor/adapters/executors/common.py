@@ -21,6 +21,7 @@ from pydantic import Field, PositiveInt
 
 from nestor.modules.channels import Attachment, AttachmentKind
 from nestor.modules.cognition import Executor, Outcome
+from nestor.modules.cognition.model import json_object
 from nestor.runtime.plugins import AdapterSettings
 
 INSTRUCTIONS = (
@@ -28,14 +29,16 @@ INSTRUCTIONS = (
     "then write a short, factual report in the language of the task: what was done or found, and what "
     "could not be. No Markdown: the assistant will say it aloud. Never claim an action you did not perform."
 )
+QUESTION_INSTRUCTIONS = (
+    " When you cannot go on without the person (a choice, a detail, an action only they can take), do not guess and "
+    "do not give up: end your turn with your question in `question` and what you did so far in `report`; leave "
+    "`question` empty otherwise. Their answer comes back as your next instruction."
+)
 FILES_INSTRUCTIONS = (
     " If you made files for the requester (a document, a picture), put them in the working directory and list "
     "their absolute paths in `files`; leave it empty otherwise."
 )
-QUESTION_INSTRUCTIONS = (
-    " When you cannot go on without the person, put your question in `question` (empty otherwise): the turn ends, and "
-    "their answer comes back as your next instruction."
-)
+CODING_REPORT = FILES_INSTRUCTIONS + QUESTION_INSTRUCTIONS  # what a coding agent's report holds (`REPORT_SCHEMA`)
 REPORT_SCHEMA: dict[str, object] = {
     "type": "object",
     "properties": {
@@ -49,7 +52,6 @@ REPORT_SCHEMA: dict[str, object] = {
     "required": ["report", "files", "question"],
     "additionalProperties": False,
 }
-MAX_STEP_LENGTH = 160
 MAX_FILES = 10
 MAX_FILE_BYTES = 20_000_000
 
@@ -67,11 +69,6 @@ class ExecutorSettings(AdapterSettings):
         executor.name = name  # two setups of one kind are two executors
         executor.sensitive, executor.archive_after_days = self.sensitive, self.archive_after_days
         return executor
-
-
-def step(text: str) -> str:
-    """A progress step as the journal keeps it: one short line."""
-    return " ".join(text.split())[:MAX_STEP_LENGTH]
 
 
 def described(error: BaseException) -> str:
@@ -95,24 +92,18 @@ class Report:
 
     @classmethod
     def of(cls, reply: object) -> "Report":
-        """From the structured report, as an object or its JSON text; any other reply is the report itself."""
-        value = reply
-        if isinstance(reply, str):
-            try:
-                value = json.loads(reply)
-            except ValueError:
-                return cls(reply)
+        """From the structured report, as an object or its JSON text, even fenced or after a sentence; any other
+        reply is the report itself."""
+        value = json_object(reply) if isinstance(reply, str) else reply
         if isinstance(value, dict) and isinstance(value.get("report"), str):
             files = value.get("files")
             listed = tuple(f for f in files if isinstance(f, str) and f) if isinstance(files, list) else ()
             question = value.get("question")
             return cls(value["report"], listed, question.strip() if isinstance(question, str) else "")
-        return cls(reply if isinstance(reply, str) else json.dumps(reply, ensure_ascii=False))
+        return cls(reply.strip() if isinstance(reply, str) else json.dumps(reply, ensure_ascii=False))
 
-    async def outcome(
-        self, root: str, read: Callable[[str], Awaitable[bytes]], *, session: str | None = None
-    ) -> Outcome:
-        """The turn's outcome: asked when it ends on a question, completed otherwise, in `session`; with the files
+    async def outcome(self, root: str, read: Callable[[str], Awaitable[bytes]]) -> Outcome:
+        """The turn's outcome: asked when it ends on a question, completed otherwise; with the files
         read back by `read` (which raises `Unreadable`, for a file too large too), only those under `root`, at most
         `MAX_FILES`. The report says which were left out and why: the assistant tells the person."""
         root = posixpath.normpath(root)
@@ -133,8 +124,8 @@ class Report:
                 files.append(attachment(path, data))
         text = f"{self.text}\nFiles left out: {'; '.join(left)}" if left else self.text
         if self.question:
-            return Outcome.asked(self.question, text, tuple(files), session=session)
-        return Outcome.completed(text, tuple(files), session=session)
+            return Outcome.asked(self.question, text, tuple(files))
+        return Outcome.completed(text, tuple(files))
 
 
 def attachment(path: str, data: bytes) -> Attachment:

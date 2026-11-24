@@ -25,7 +25,8 @@ from nestor.modules.cognition.delegation import (
     TurnStopRequested,
 )
 from nestor.modules.cognition.delegation.assistant import Delegation
-from nestor.modules.cognition.delegation.service import INTERRUPTED, NOTES, STOPPED_FOR, TaskManager
+from nestor.modules.cognition.delegation.service import INTERRUPTED, NOTES, TaskManager
+from nestor.modules.cognition.delegation.types import STOPPED_FOR
 from nestor.modules.cognition.tools import Risk, ToolContext, ToolFailed
 from nestor.modules.conversation import Attached, Conversations, TurnContext
 from nestor.modules.household import Person
@@ -97,14 +98,13 @@ async def test_a_task_runs_in_the_background_and_is_logged_turn_by_turn(journal:
     logged = await journal.history(TaskCreated, TurnStarted, TurnAttached, TurnStepped, TurnEnded)
     assert [e.event_type for e in logged] == [
         "task.created",
-        "task.turn.started",
         "task.turn.attached",
         "task.turn.step",
         "task.turn.ended",
-    ], "its steps before its end"
-    created, turn = logged[0], logged[1]
-    assert isinstance(created, TaskCreated) and isinstance(turn, TurnStarted)
-    assert (created.origin, created.owner, turn.notify, turn.by) == (VOICE, MATHIS, Notify.MESSAGE, MATHIS)
+    ], "its first turn opened with it, its steps before its end"
+    created = logged[0]
+    assert isinstance(created, TaskCreated)
+    assert (created.origin, created.owner, created.notify, created.by) == (VOICE, MATHIS, Notify.MESSAGE, MATHIS)
 
 
 async def test_a_task_goes_on_in_the_same_session_turn_after_turn(journal: Journal) -> None:
@@ -155,7 +155,8 @@ async def test_an_executor_that_cannot_be_steered_is_stopped_and_told_the_new_di
         assert await tasks.direct(task.id, "Plutôt la page contact", by=MATHIS) is Directed.STARTED
         await asyncio.sleep(0.01)
         assert [t.status for t in task.turns] == [TurnStatus.STOPPED, TurnStatus.RUNNING]
-        assert executor.instructions[-1] == STOPPED_FOR.format(instruction="Plutôt la page contact")
+        assert task.turn.instruction == "Plutôt la page contact", "journaled as the person gave it"
+        assert executor.assignments[-1].brief().startswith(STOPPED_FOR.format(instruction="Plutôt la page contact"))
         await tasks.stop(task.id)
     [steered] = await journal.history(TaskSteered)
     assert steered.taken is False and len(await journal.history(TurnStopRequested)) == 2
@@ -293,19 +294,20 @@ async def test_local_work_cut_by_a_restart_is_reported_not_lost(journal: Journal
         await asyncio.sleep(0.01)
     # the shutdown stopped it cleanly; now play a crash: a turn the journal still sees working
     await journal.publish(
-        TaskCreated(source="test", task_id="crashed", title="X", executor="scripted-executor", origin=VOICE)
+        TaskCreated(
+            source="test",
+            task_id="crashed",
+            title="X",
+            executor="scripted-executor",
+            origin=VOICE,
+            turn_id="t1",
+            instruction="x",
+        )
     )
-    await journal.publish(TurnStarted(source="test", task_id="crashed", turn_id="t1", instruction="x"))
     async with TaskManager(journal, [ScriptedExecutor()]) as restarted:
         assert restarted.tasks[task.id].turn.status is TurnStatus.STOPPED
         assert restarted.tasks["crashed"].turn.outcome == Outcome.failed(INTERRUPTED)
     assert [e.task_id for e in await journal.history(TurnEnded)] == [task.id, "crashed"]
-
-
-async def test_a_task_created_but_never_started_is_left_out_after_a_restart(journal: Journal) -> None:
-    await journal.publish(TaskCreated(source="test", task_id="half", title="X", executor="scripted", origin=VOICE))
-    async with TaskManager(journal, [ScriptedExecutor()]) as tasks:
-        assert "half" not in tasks.tasks
 
 
 async def test_a_stop_is_confirmed_or_reported_unconfirmed(journal: Journal) -> None:
@@ -567,8 +569,8 @@ async def test_each_turn_gets_a_capability_good_for_it_while_it_works() -> None:
         assert await tasks.admit("codex", given.task, "task_brief") is task
         assert await tasks.admit("hermes", given.task, "task_brief") is None, "another executor's task"
         assert await tasks.admit("codex", "nstt_guessed", "task_brief") is None
-        [turn] = [e for e in await journal.history(TurnStarted) if e.task_id == task.id]
-        assert turn.capability and given.task not in str(turn.to_record()), "only its digest is journaled"
+        [opened] = [e for e in await journal.history(TaskCreated) if e.task_id == task.id]
+        assert opened.capability and given.task not in str(opened.to_record()), "only its digest is journaled"
         remote.finish(next(iter(remote.runs)), Outcome.completed("ok"))
         await tasks.wait(task.id)
         assert await tasks.admit("codex", given.task, "task_brief") is None, "its turn ended"

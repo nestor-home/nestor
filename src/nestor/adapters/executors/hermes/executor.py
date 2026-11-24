@@ -22,6 +22,7 @@ from nestor.modules.cognition.delegation import (
     RESUME,
     STEER,
     Assignment,
+    Handle,
     NestorAccess,
     NestorTools,
     Outcome,
@@ -36,8 +37,7 @@ PROFILE = """mcp_servers:
       Authorization: "Bearer {key}"
 """
 REPORT_FORMAT = (
-    ' Your final answer is only this JSON object: {"report": "…", "question": "…"}. Never use the clarify tool: '
-    "ask in `question` instead."
+    ' Your final answer is only this JSON object: {"report": "…", "question": "…"}. Never use the clarify tool.'
 )
 
 
@@ -94,7 +94,9 @@ class HermesExecutor(RemoteExecutor):
         """The `mcp_servers` entry of the Hermes profile's `config.yaml`."""
         return PROFILE.format(url=access.url, key=access.key)
 
-    async def submit(self, assignment: Assignment) -> str:
+    async def submit(self, assignment: Assignment) -> Handle:
+        """The run, in the session of the turns before when there is one; a new session is known once Hermes names
+        it (in its reply, else in the run's state as it is followed)."""
         body: dict[str, Any] = {"model": self._model, "input": assignment.brief(), "instructions": self._instructions}
         if assignment.session is not None:
             body["session_id"] = assignment.session  # Hermes loads that session's history into the run
@@ -104,10 +106,10 @@ class HermesExecutor(RemoteExecutor):
             raise ProviderError(self.name, f"submission failed: {described(error)}", transient=True) from error
         except UnexpectedReply as error:
             raise ProviderError(self.name, f"submission refused: {error}", transient=error.retryable) from error
-        run_id = reply.get("run_id")
+        run_id, session = reply.get("run_id"), reply.get("session_id")
         if not isinstance(run_id, str) or not run_id:
             raise ProviderError(self.name, f"no run id in the submission reply: {reply}", transient=False)
-        return run_id
+        return Handle(run_id, session if isinstance(session, str) and session else assignment.session)
 
     async def follow(self, ref: str, progress: Progress) -> Outcome:
         session: str | None = None

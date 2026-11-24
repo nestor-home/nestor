@@ -3865,6 +3865,13 @@ export interface components {
             /** Components */
             components: components["schemas"]["ComponentOut"][];
         };
+        /**
+         * TaskChangedOut
+         * @description A task as a change left it (renamed, archived).
+         */
+        TaskChangedOut: {
+            task: components["schemas"]["TaskThreadOut"];
+        };
         /** TaskEditIn */
         TaskEditIn: {
             /** Title */
@@ -3919,6 +3926,8 @@ export interface components {
             question: string | null;
             /** Now */
             now: string | null;
+            /** Steers */
+            steers: boolean;
         };
         /**
          * TaskState
@@ -3956,6 +3965,8 @@ export interface components {
             question: string | null;
             /** Now */
             now: string | null;
+            /** Steers */
+            steers: boolean;
             /** Thread */
             thread: components["schemas"]["TurnOut"][];
             /** Notes */
@@ -10061,7 +10072,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TaskThreadOut"];
+                    "application/json": components["schemas"]["TaskChangedOut"];
                 };
             };
             /** @description Bad Request */
@@ -10347,7 +10358,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TaskThreadOut"];
+                    "application/json": components["schemas"]["TaskChangedOut"];
                 };
             };
             /** @description Bad Request */

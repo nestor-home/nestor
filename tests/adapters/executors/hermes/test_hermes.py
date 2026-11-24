@@ -153,7 +153,7 @@ class TestHermesExecutor(RemoteExecutorContract):
 async def test_a_new_executor_follows_a_run_still_going_to_its_end() -> None:
     server = FakeHermes(holds=True)
     async with server.executor() as executor:
-        ref = await executor.submit(Assignment("Résume les actualités."))
+        ref = (await executor.submit(Assignment("Résume les actualités."))).ref
     async with server.executor() as restarted:
         following = asyncio.create_task(restarted.follow(ref, Progress()))
         await asyncio.sleep(0.01)
@@ -166,7 +166,7 @@ async def test_tool_calls_are_reported_as_progress_steps_without_commands_or_cod
     server = FakeHermes(holds=True)
     steps: list[str] = []
     async with server.executor() as executor:
-        ref = await executor.submit(Assignment("Quel temps fait-il ?"))
+        ref = (await executor.submit(Assignment("Quel temps fait-il ?"))).ref
         following = asyncio.create_task(executor.follow(ref, Progress(steps.append)))
         await asyncio.sleep(0.01)
         server.emit(ref, "tool.started", tool="web_search", preview="météo Paris")
@@ -181,7 +181,7 @@ async def test_tool_calls_are_reported_as_progress_steps_without_commands_or_cod
 async def test_the_first_turn_starts_a_session_with_the_profile_and_instructions() -> None:
     server = FakeHermes()
     async with server.executor(instructions="Be brief.") as executor:
-        ref = await executor.submit(Assignment("Allume la lampe."))
+        ref = (await executor.submit(Assignment("Allume la lampe."))).ref
         outcome = await executor.follow(ref, Progress())
     body = server.runs[ref].body
     assert body["model"] == "Richie" and body["input"].startswith("Allume la lampe.") and "session_id" not in body
@@ -192,16 +192,16 @@ async def test_the_first_turn_starts_a_session_with_the_profile_and_instructions
 async def test_a_turn_given_its_session_goes_on_in_that_hermes_session() -> None:
     server = FakeHermes()
     async with server.executor() as executor:
-        ref = await executor.submit(Assignment("Et pour mardi ?", session="run_earlier"))
-        outcome = await executor.follow(ref, Progress())
-    assert server.runs[ref].body["session_id"] == "run_earlier"
+        handle = await executor.submit(Assignment("Et pour mardi ?", session="run_earlier"))
+        outcome = await executor.follow(handle.ref, Progress())
+    assert server.runs[handle.ref].body["session_id"] == handle.session == "run_earlier"
     assert outcome.status is TurnStatus.COMPLETED and outcome.session == "run_earlier"
 
 
 async def test_an_instruction_is_steered_into_a_running_run_and_refused_once_it_ended() -> None:
     server = FakeHermes(holds=True)
     async with server.executor() as executor:
-        ref = await executor.submit(Assignment("Cherche un vol."))
+        ref = (await executor.submit(Assignment("Cherche un vol."))).ref
         assert await executor.steer(ref, "Plutôt le matin.")
         server.emit(ref, "run.completed", output="Vol de 8 h trouvé.")
         assert not await executor.steer(ref, "Et en train ?")
@@ -212,7 +212,7 @@ async def test_an_instruction_is_steered_into_a_running_run_and_refused_once_it_
 async def test_an_instruction_hermes_could_not_deliver_is_said_in_the_outcome() -> None:
     server = FakeHermes(holds=True)
     async with server.executor() as executor:
-        ref = await executor.submit(Assignment("Cherche un vol."))
+        ref = (await executor.submit(Assignment("Cherche un vol."))).ref
         following = asyncio.create_task(executor.follow(ref, Progress()))
         await asyncio.sleep(0.01)
         server.emit(ref, "run.completed", output="Vol de 8 h trouvé.", pending_steer="Plutôt le soir.")
@@ -231,7 +231,7 @@ async def test_an_instruction_hermes_could_not_deliver_is_said_in_the_outcome() 
 async def test_a_report_ending_on_a_question_ends_the_turn_on_it(output: str) -> None:
     server = FakeHermes(holds=True)
     async with server.executor() as executor:
-        ref = await executor.submit(Assignment("Cherche un vol."))
+        ref = (await executor.submit(Assignment("Cherche un vol."))).ref
         server.emit(ref, "run.completed", output=output)
         outcome = await executor.follow(ref, Progress())
     assert outcome.status is TurnStatus.ASKED and outcome.question == "Lequel ?" and outcome.result == "Deux vols."
@@ -241,7 +241,7 @@ async def test_a_report_ending_on_a_question_ends_the_turn_on_it(output: str) ->
 async def test_a_run_that_asks_with_clarify_is_stopped_and_ends_on_its_question() -> None:
     server = FakeHermes(holds=True)
     async with server.executor() as executor:
-        ref = await executor.submit(Assignment("Réserve une table."))
+        ref = (await executor.submit(Assignment("Réserve une table."))).ref
         following = asyncio.create_task(executor.follow(ref, Progress()))
         await asyncio.sleep(0.01)
         server.emit(ref, "clarify.request", kind="clarify", question="Quel soir ?", choices=["vendredi", "samedi"])
@@ -254,7 +254,7 @@ async def test_a_run_that_asks_with_clarify_is_stopped_and_ends_on_its_question(
 async def test_a_run_found_waiting_on_clarify_after_a_restart_ends_on_its_question() -> None:
     server = FakeHermes(holds=True)
     async with server.executor() as executor:
-        ref = await executor.submit(Assignment("Réserve une table."))
+        ref = (await executor.submit(Assignment("Réserve une table."))).ref
     server.runs[ref].controls.append({"kind": "clarify", "prompt_id": "c1", "question": "Pour combien ?"})
     async with server.executor() as restarted:
         outcome = await asyncio.wait_for(restarted.follow(ref, Progress()), 1)
@@ -266,7 +266,7 @@ async def test_a_profile_with_nestor_s_tools_gets_the_task_s_capability_in_its_o
     server = FakeHermes()
     async with server.executor(nestor_mcp=True) as reaching, server.executor() as plain:
         assert (reaching.nestor_tools, plain.nestor_tools) == (NestorTools.CONFIGURED, NestorTools.NONE)
-        ref = await reaching.submit(Assignment("Cherche un vol.", task="nstt_task"))
+        ref = (await reaching.submit(Assignment("Cherche un vol.", task="nstt_task"))).ref
     assert server.runs[ref].objective.startswith("Cherche un vol.") and 'task="nstt_task"' in server.runs[ref].objective
     entry = reaching.setup(NestorAccess(url="https://nestor.example/mcp", key="nstx_k"))
     assert 'url: "https://nestor.example/mcp"' in entry and 'Authorization: "Bearer nstx_k"' in entry
@@ -303,7 +303,7 @@ async def test_a_submission_reply_without_a_run_id_is_a_provider_error(reply: by
 async def test_a_failed_run_returns_its_error(error: Any) -> None:
     server = FakeHermes(holds=True)
     async with server.executor() as executor:
-        ref = await executor.submit(Assignment("Commande des pizzas."))
+        ref = (await executor.submit(Assignment("Commande des pizzas."))).ref
         following = asyncio.create_task(executor.follow(ref, Progress()))
         await asyncio.sleep(0.01)
         server.emit(ref, "run.failed", error=error)
@@ -315,7 +315,7 @@ async def test_a_failed_run_returns_its_error(error: Any) -> None:
 async def test_a_run_that_already_failed_is_reported_failed_after_a_restart(ended: str) -> None:
     server = FakeHermes(holds=True)
     async with server.executor() as executor:
-        ref = await executor.submit(Assignment("Commande des pizzas."))
+        ref = (await executor.submit(Assignment("Commande des pizzas."))).ref
         server.emit(ref, ended)
     async with server.executor() as restarted:
         outcome = await asyncio.wait_for(restarted.follow(ref, Progress()), 1)
@@ -325,7 +325,7 @@ async def test_a_run_that_already_failed_is_reported_failed_after_a_restart(ende
 async def test_a_run_stopped_elsewhere_is_reported_stopped() -> None:
     server = FakeHermes(holds=True)
     async with server.executor() as executor:
-        ref = await executor.submit(Assignment("Cherche un vol."))
+        ref = (await executor.submit(Assignment("Cherche un vol."))).ref
         following = asyncio.create_task(executor.follow(ref, Progress()))
         await asyncio.sleep(0.01)
         server.emit(ref, "run.cancelled")
@@ -337,7 +337,7 @@ async def test_a_dropped_stream_is_a_failure_while_the_run_goes_on() -> None:
     server = FakeHermes(holds=True)
     server.drops_stream = True
     async with server.executor() as executor:
-        outcome = await executor.follow(await executor.submit(Assignment("Cherche un vol.")), Progress())
+        outcome = await executor.follow((await executor.submit(Assignment("Cherche un vol."))).ref, Progress())
     assert outcome.status is TurnStatus.FAILED and "stream ended" in (outcome.error or "")
 
 
@@ -345,7 +345,7 @@ async def test_a_run_that_finished_as_the_stream_dropped_returns_its_result() ->
     server = FakeHermes(holds=True)
     server.drops_stream, server.finishes_on_drop = True, "vol trouvé"
     async with server.executor() as executor:
-        outcome = await executor.follow(await executor.submit(Assignment("Cherche un vol.")), Progress())
+        outcome = await executor.follow((await executor.submit(Assignment("Cherche un vol."))).ref, Progress())
     assert outcome.status is TurnStatus.COMPLETED and outcome.result == "vol trouvé"
 
 
@@ -353,7 +353,7 @@ async def test_a_garbled_event_is_a_failure_not_an_exception() -> None:
     server = FakeHermes(holds=True)
     server.broken_line = "data: {not json\n\n"
     async with server.executor() as executor:
-        outcome = await executor.follow(await executor.submit(Assignment("Cherche un vol.")), Progress())
+        outcome = await executor.follow((await executor.submit(Assignment("Cherche un vol."))).ref, Progress())
     assert outcome.status is TurnStatus.FAILED and "unexpected reply" in (outcome.error or "")
 
 
@@ -374,7 +374,7 @@ async def test_an_events_endpoint_error_is_a_failure() -> None:
     async with HermesExecutor(
         BASE_URL, API_KEY, "Richie", description="", transport=httpx.MockTransport(no_events)
     ) as e:
-        outcome = await e.follow(await e.submit(Assignment("Cherche un vol.")), Progress())
+        outcome = await e.follow((await e.submit(Assignment("Cherche un vol."))).ref, Progress())
     assert outcome.status is TurnStatus.FAILED and "502" in (outcome.error or "")
 
 
@@ -387,14 +387,14 @@ async def test_losing_the_server_while_following_is_a_failure() -> None:
         return await server.handle(request)
 
     async with HermesExecutor(BASE_URL, API_KEY, "Richie", description="", transport=httpx.MockTransport(gone)) as e:
-        outcome = await e.follow(await e.submit(Assignment("Cherche un vol.")), Progress())
+        outcome = await e.follow((await e.submit(Assignment("Cherche un vol."))).ref, Progress())
     assert outcome.status is TurnStatus.FAILED and "lost contact" in (outcome.error or "")
 
 
 async def test_a_confirmed_stop_returns_true() -> None:
     server = FakeHermes(holds=True)
     async with server.executor() as executor:
-        ref = await executor.submit(Assignment("Cherche un vol."))
+        ref = (await executor.submit(Assignment("Cherche un vol."))).ref
         assert await executor.stop(ref)
     assert server.runs[ref].status == "cancelled"
 
@@ -402,12 +402,12 @@ async def test_a_confirmed_stop_returns_true() -> None:
 async def test_an_unconfirmed_stop_returns_false_after_the_timeout() -> None:
     server = FakeHermes(holds=True, confirms_stop=False)
     async with server.executor(stop_timeout_s=0.05) as executor:
-        assert not await asyncio.wait_for(executor.stop(await executor.submit(Assignment("Cherche un vol."))), 1)
+        assert not await asyncio.wait_for(executor.stop((await executor.submit(Assignment("Cherche un vol."))).ref), 1)
 
 
 async def test_stopping_a_run_that_already_finished_returns_false() -> None:
     async with FakeHermes().executor() as executor:
-        assert not await executor.stop(await executor.submit(Assignment("Dis bonjour.")))
+        assert not await executor.stop((await executor.submit(Assignment("Dis bonjour."))).ref)
 
 
 async def test_stopping_an_unknown_run_returns_false() -> None:
@@ -418,7 +418,7 @@ async def test_stopping_an_unknown_run_returns_false() -> None:
 async def test_a_stop_whose_state_cannot_be_read_returns_false() -> None:
     server = FakeHermes(holds=True, confirms_stop=False)
     async with server.executor() as executor:
-        ref = await executor.submit(Assignment("Cherche un vol."))
+        ref = (await executor.submit(Assignment("Cherche un vol."))).ref
         server.state_error = 500
         assert not await executor.stop(ref)
 
@@ -454,7 +454,7 @@ async def test_live_a_run_completes_and_can_be_followed_again() -> None:
         pytest.skip("Hermes is not configured (HERMES_BASE_URL, HERMES_API_KEY, HERMES_MODEL)")
     base_url, api_key, model = (os.environ[n] for n in names)
     async with HermesExecutor(base_url, api_key, model, description="") as executor:
-        ref = await executor.submit(Assignment("Réponds juste OK, sans utiliser d'outil."))
+        ref = (await executor.submit(Assignment("Réponds juste OK, sans utiliser d'outil."))).ref
         outcome = await asyncio.wait_for(executor.follow(ref, Progress()), 120)
     async with HermesExecutor(base_url, api_key, model, description="") as restarted:
         again = await asyncio.wait_for(restarted.follow(ref, Progress()), 30)

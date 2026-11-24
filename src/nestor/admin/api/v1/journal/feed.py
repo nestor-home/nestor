@@ -45,7 +45,7 @@ _DELIVERY = frozenset(
 )
 # what brought each kind of notification, and the field of that event naming it
 _BROUGHT_BY: dict[Source, tuple[type[Event], str]] = {
-    Source.TASK: (TurnEnded, "task_id"),
+    Source.TASK: (TurnEnded, "turn_id"),  # the part: the turn
     Source.TOOL: (ToolReturned, "call_id"),
     Source.WATCH: (WatchTriggered, "watch_id"),
     Source.SCHEDULE: (ScheduleFired, "schedule_id"),
@@ -212,8 +212,10 @@ def _cause_rule(entry: Entry) -> _Rule | None:
         return of(ToolReturned, "call_id")
     if kind == TurnStarted.event_type:
         return of(TaskCreated, "task_id")
-    if kind == TurnEnded.event_type:
-        return of(TurnStarted, "turn_id")
+    if kind == TurnEnded.event_type:  # the instruction that opened the turn: the task's first, or a later one
+        return _Rule(
+            frozenset({TaskCreated.event_type, TurnStarted.event_type}), _same("turn_id", payload.get("turn_id"))
+        )
     if kind == TurnDelivered.event_type:
         return of(TurnEnded, "turn_id")
     if kind == WatchTriggered.event_type:
@@ -240,7 +242,7 @@ def _cause_rule(entry: Entry) -> _Rule | None:
         return of(DeliveryConsidered, "about")
     if kind == DeliveryConsidered.event_type and (about := _about(entry)) is not None:
         cause, key = _BROUGHT_BY[about.source]
-        return of(cause, key, about.id)
+        return of(cause, key, about.part or about.id)
     return None
 
 
@@ -249,7 +251,9 @@ def _about(entry: Entry) -> About | None:
     about = _payload(entry).get("about")
     if not isinstance(about, dict):
         return None
-    return About(Source(str(about["source"])), str(about["id"]), str(about.get("status", "")))
+    return About(
+        Source(str(about["source"])), str(about["id"]), str(about.get("status", "")), str(about.get("part", ""))
+    )
 
 
 @dataclass(slots=True)

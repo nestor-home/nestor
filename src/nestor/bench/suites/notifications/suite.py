@@ -176,13 +176,15 @@ def _text(data: Mapping[str, Any], timezone: str = "UTC") -> str:
             error=None if status is TurnStatus.COMPLETED else str(data["error"]),
             duration_s=0.0,
         )
+        now = datetime.now(ZoneInfo(timezone))
         task = Task(
             id="bench",
             title=str(data.get("title", "Tâche")),
             executor=str(data.get("executor", "hermes")),
             owner=PERSON.id,
             origin=CHAT,
-            created_at=datetime.now(ZoneInfo(timezone)),
+            created_at=now,
+            last_activity=now,
         )
         return turn_instruction(task, str(data["objective"]), ended, written=bool(data.get("written", True)))
     if source is Source.WATCH:

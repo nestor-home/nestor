@@ -7410,7 +7410,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TaskThreadOut"
+                  "$ref": "#/components/schemas/TaskChangedOut"
                 }
               }
             }
@@ -7759,7 +7759,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TaskThreadOut"
+                  "$ref": "#/components/schemas/TaskChangedOut"
                 }
               }
             }
@@ -16659,6 +16659,7 @@
             "title": "Text"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "text"
@@ -19902,6 +19903,19 @@
         ],
         "title": "SystemOut"
       },
+      "TaskChangedOut": {
+        "properties": {
+          "task": {
+            "$ref": "#/components/schemas/TaskThreadOut"
+          }
+        },
+        "type": "object",
+        "required": [
+          "task"
+        ],
+        "title": "TaskChangedOut",
+        "description": "A task as a change left it (renamed, archived)."
+      },
       "TaskEditIn": {
         "properties": {
           "title": {
@@ -19911,6 +19925,7 @@
             "title": "Title"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "title"
@@ -20023,6 +20038,10 @@
               }
             ],
             "title": "Now"
+          },
+          "steers": {
+            "type": "boolean",
+            "title": "Steers"
           }
         },
         "type": "object",
@@ -20038,7 +20057,8 @@
           "turns",
           "last_status",
           "question",
-          "now"
+          "now",
+          "steers"
         ],
         "title": "TaskOut",
         "description": "A task in a list: how it stands, not its thread."
@@ -20122,6 +20142,10 @@
             ],
             "title": "Now"
           },
+          "steers": {
+            "type": "boolean",
+            "title": "Steers"
+          },
           "thread": {
             "items": {
               "$ref": "#/components/schemas/TurnOut"
@@ -20151,6 +20175,7 @@
           "last_status",
           "question",
           "now",
+          "steers",
           "thread",
           "notes"
         ],

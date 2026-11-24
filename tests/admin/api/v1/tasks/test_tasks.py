@@ -86,8 +86,12 @@ async def test_an_instruction_while_it_works_steers_it_and_a_stop_leaves_the_tas
     async with Harness(tmp_path) as admin:
         task = await handed(admin, "Site")
         api = await admin.api()
+        assert task.turn.ref is not None
+        given_by = {"text": "Et la page contact", "by": "lea"}
+        assert (await api.post(f"/api/v1/tasks/{task.id}/instructions", given_by)).status_code == 422, "in their name"
         directed = (await api.post(f"/api/v1/tasks/{task.id}/instructions", {"text": "Et la page contact"})).json()
         assert directed["steered"] is True and len(directed["task"]["thread"]) == 1
+        assert directed["task"]["steers"] is True, "its executor takes an instruction while it works"
         [steered] = directed["task"]["thread"][0]["steered"]
         assert (steered["instruction"], steered["by"]["id"]) == ("Et la page contact", "mathis"), "kept in the thread"
         assert admin.remote.runs[str(task.turn.ref)].steered == ["Et la page contact"]
@@ -95,10 +99,10 @@ async def test_an_instruction_while_it_works_steers_it_and_a_stop_leaves_the_tas
         stopped = (await api.post(f"/api/v1/tasks/{task.id}/stop")).json()
         assert stopped["confirmed"] is True and stopped["task"]["state"] == "ready"
         assert stopped["task"]["last_status"] == "stopped", "a ready task says how its last turn ended"
-        renamed = (await api.patch(f"/api/v1/tasks/{task.id}", {"title": "Site de la famille"})).json()
-        assert renamed["title"] == "Site de la famille"
+        renamed = (await api.patch(f"/api/v1/tasks/{task.id}", {"title": "  Site de la\nfamille "})).json()
+        assert renamed["task"]["title"] == "Site de la famille", "on one line, as every title"
         archived = (await api.post(f"/api/v1/tasks/{task.id}/archive")).json()
-        assert archived["state"] == "archived"
+        assert archived["task"]["state"] == "archived"
         assert (await api.get("/api/v1/tasks")).json()["tasks"] == [], "put away"
         assert [t["id"] for t in (await api.get("/api/v1/tasks", archived="true")).json()["tasks"]] == [task.id]
         assert task.state is TaskState.ARCHIVED

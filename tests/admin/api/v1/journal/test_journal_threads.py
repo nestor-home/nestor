@@ -105,24 +105,39 @@ async def test_a_check_that_found_nothing_chains_from_its_wake_up(tmp_path: Path
 async def test_a_task_chains_from_its_start_to_its_result(tmp_path: Path) -> None:
     async with Harness(tmp_path) as admin:
         for event in (
-            TaskCreated(source="tasks", task_id="t1", title="Analyse", executor="hermes", origin=TELEGRAM),
-            TurnStarted(source="tasks", task_id="t1", turn_id="u1", instruction="Analyse"),
+            TaskCreated(
+                source="tasks",
+                task_id="t1",
+                title="Analyse",
+                executor="hermes",
+                origin=TELEGRAM,
+                turn_id="u1",
+                instruction="Analyse",
+            ),
             TurnEnded(
                 source="tasks", task_id="t1", turn_id="u1", status=TurnStatus.COMPLETED, result="ok", duration_s=12
             ),
+            TurnStarted(source="tasks", task_id="t1", turn_id="u2", instruction="Et les tests ?"),
+            TurnEnded(
+                source="tasks", task_id="t1", turn_id="u2", status=TurnStatus.COMPLETED, result="ok", duration_s=3
+            ),
             DeliveryConsidered(
-                source="courier", about=About(Source.TASK, "t1", "completed"), reason=REASON, written=TELEGRAM
+                source="courier",
+                about=About(Source.TASK, "t1", "completed", "u1"),
+                reason=REASON,
+                written=TELEGRAM,
             ),
             TurnDelivered(source="tasks", task_id="t1", turn_id="u1", address=TELEGRAM),
         ):
             await admin.nestor.journal.publish(event)
         found = by_type(await items(await admin.api(), task="t1"))
         created, started = found["task.created"][0], found["task.turn.started"][0]
-        ended = found["task.turn.ended"][0]
-        assert started["cause"] == created["position"] and ended["cause"] == started["position"]
-        assert ended["outcome"] == {"ok": True, "duration_s": 12.0}
-        assert found["initiative.considered"][0]["cause"] == ended["position"]
-        assert found["task.turn.delivered"][0]["cause"] == ended["position"]
+        first, then = sorted(found["task.turn.ended"], key=lambda e: e["position"])
+        assert first["cause"] == created["position"], "the first turn opened with the task"
+        assert started["cause"] == created["position"] and then["cause"] == started["position"]
+        assert first["outcome"] == {"ok": True, "duration_s": 12.0}
+        assert found["initiative.considered"][0]["cause"] == first["position"], "telling the turn it is about"
+        assert found["task.turn.delivered"][0]["cause"] == first["position"]
         assert created["cause"] is None
 
 
@@ -306,9 +321,16 @@ async def test_a_file_a_tool_or_a_task_made_shows_with_its_line(made_by: str, tm
         if made_by == "task.turn.ended":
             origin = Address("telegram", "42")
             await admin.nestor.journal.publish(
-                TaskCreated(source="tasks", task_id="t1", title="Draw", executor="codex", origin=origin)
+                TaskCreated(
+                    source="tasks",
+                    task_id="t1",
+                    title="Draw",
+                    executor="codex",
+                    origin=origin,
+                    turn_id="u1",
+                    instruction="x",
+                )
             )
-            await admin.nestor.journal.publish(TurnStarted(source="tasks", task_id="t1", turn_id="u1", instruction="x"))
         await admin.nestor.journal.publish(
             ToolCompleted(
                 source="toolbox",

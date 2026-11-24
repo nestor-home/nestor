@@ -19,6 +19,7 @@ from nestor.modules.cognition.tools.types import (
     ToolFailed,
     ToolOutput,
     bounded,
+    title_of,
     titled,
 )
 
@@ -43,5 +44,6 @@ __all__ = [
     "ToolReturned",
     "Toolbox",
     "bounded",
+    "title_of",
     "titled",
 ]

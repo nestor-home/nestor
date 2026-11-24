@@ -8,7 +8,8 @@ from nestor.modules.journal import FileRef
 
 class TaskCreated(Event, event_type="task.created"):
     """A task, handed to `executor` for `owner` (`None`: for nobody in particular, a wake-up's), from `origin`, where
-    what it comes back with is told; `thread`, what that continues (a recurring wake-up: `Notification.thread`)."""
+    what it comes back with is told; `thread`, what that continues (a recurring wake-up: `Notification.thread`). It
+    starts its first turn: the fields after `thread` are that turn's, as `TurnStarted` gives a later one."""
 
     task_id: str
     title: str  # the short name the household knows it by
@@ -16,6 +17,14 @@ class TaskCreated(Event, event_type="task.created"):
     owner: PersonId | None = None
     origin: Address  # the channel conversation it was asked in
     thread: str | None = None
+    turn_id: str
+    instruction: str
+    by: PersonId | None = None
+    given: tuple[FileRef, ...] = ()
+    notify: Notify = Notify.AUTO
+    exchange: Exchange | None = None
+    capability: str | None = None
+    asked: bool = False
 
 
 class TaskRenamed(Event, event_type="task.renamed"):
@@ -33,9 +42,10 @@ class TaskArchived(Event, event_type="task.archived"):
 
 
 class TurnStarted(Event, event_type="task.turn.started"):
-    """An instruction, from `by`, with the files sent with it (`given`). `exchange` is the conversation and turn that
-    gave it, when one did; `capability`, the digest of the value its executor calls Nestor's MCP server with for it
-    (never the value); `asked`, whether a person asked for it in their own turn, rather than Nestor (a wake-up)."""
+    """An instruction that opens a later turn, from `by`, with the files sent with it (`given`). `exchange` is the
+    conversation and turn that gave it, when one did; `capability`, the digest of the value its executor calls
+    Nestor's MCP server with for it (never the value); `asked`, whether a person asked for it in their own turn,
+    rather than Nestor (a wake-up)."""
 
     task_id: str
     turn_id: str
@@ -50,11 +60,12 @@ class TurnStarted(Event, event_type="task.turn.started"):
 
 class TurnAttached(Event, event_type="task.turn.attached"):
     """The executor's handle on the turn: what follows remote work again after a restart, and what an instruction is
-    steered to."""
+    steered to; with the `executor_session` the next turn continues, when the executor knows it as the turn starts."""
 
     task_id: str
     turn_id: str
     ref: str
+    executor_session: str | None = None
 
 
 class TurnStepped(Event, event_type="task.turn.step"):

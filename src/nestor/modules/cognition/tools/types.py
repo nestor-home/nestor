@@ -102,12 +102,19 @@ TITLE: Mapping[str, object] = {
 }
 
 
+def title_of(text: object) -> str | None:
+    """A title as the household's lists keep it, whoever gives it: on one line, not empty, at most `TITLE_CHARS`;
+    `None` when `text` is not one."""
+    title = " ".join(text.split()) if isinstance(text, str) else ""
+    return title if 0 < len(title) <= TITLE_CHARS else None
+
+
 def titled(arguments: Mapping[str, object]) -> str:
     """The `title` a model gave what it creates; the call fails without one."""
-    title = arguments.get("title")
-    if not isinstance(title, str) or not title.strip() or len(title.strip()) > TITLE_CHARS:
+    title = title_of(arguments.get("title"))
+    if title is None:
         raise ToolFailed("title must be a short name, a few words")
-    return title.strip()
+    return title
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

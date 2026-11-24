@@ -4,7 +4,15 @@ import asyncio
 from abc import ABC, abstractmethod
 
 from nestor.core import Capabilities, Component, ProviderError
-from nestor.modules.cognition.delegation.types import RESUME, Assignment, NestorAccess, NestorTools, Outcome, Progress
+from nestor.modules.cognition.delegation.types import (
+    RESUME,
+    Assignment,
+    Handle,
+    NestorAccess,
+    NestorTools,
+    Outcome,
+    Progress,
+)
 
 
 class Executor(Component, ABC):
@@ -18,8 +26,8 @@ class Executor(Component, ABC):
     Contract (checked by `nestor.testing.cognition.ExecutorContract`):
     - a failure is returned as `Outcome.failed(...)`, never raised;
     - a turn that needs its owner ends with `Outcome.asked(question)`;
-    - with `CONTINUE`, the outcome names its `session`, and a turn given that session goes on in it: the executor
-      remembers the turns before;
+    - with `CONTINUE`, the turn names its session, as it attaches (`progress.attach(ref, session=…)`) or in its
+      outcome, and a turn given that session goes on in it: the executor remembers the turns before;
     - with `STEER`, the turn attaches its handle (`progress.attach`) and `steer(handle, instruction)` brings the
       instruction into it while it works, `True` once the executor took it;
     - on cancellation the executor stops the work and returns `Outcome.stopped()` only if the stop is confirmed,
@@ -50,7 +58,8 @@ class Executor(Component, ABC):
 class RemoteExecutor(Executor, ABC):
     """An executor whose work runs elsewhere and outlives Nestor: its turns survive restarts.
 
-    The task manager submits, then follows; after a restart it follows the same reference again.
+    A turn is submitted, attached, then followed; after a restart its reference is followed again (`resume`). A
+    turn cancelled while Nestor closes (`progress.detached`) is left working; cancelled otherwise, it is stopped.
     Contract (checked by `nestor.testing.cognition.RemoteExecutorContract`):
     - `submit` raises `ProviderError` when the work is refused;
     - `follow` returns the outcome of a submitted turn, and can be called again for the same one (after a restart)
@@ -61,8 +70,8 @@ class RemoteExecutor(Executor, ABC):
     capabilities = Capabilities.of(RESUME)
 
     @abstractmethod
-    async def submit(self, assignment: Assignment) -> str:
-        """Start the turn; returns its reference, which is also its handle."""
+    async def submit(self, assignment: Assignment) -> Handle:
+        """Start the turn; returns its reference, which is also its handle, and its session when it is known."""
 
     @abstractmethod
     async def follow(self, ref: str, progress: Progress) -> Outcome: ...
@@ -70,20 +79,21 @@ class RemoteExecutor(Executor, ABC):
     @abstractmethod
     async def stop(self, ref: str) -> bool: ...
 
-    def session_of(self, ref: str) -> str | None:
-        """The session the turn `ref` works in, as its outcome would name it: what a turn stopped before it reported
-        still lets the next one continue (a Codex thread). `None` when the reference does not tell."""
-        return None
-
     async def run(self, assignment: Assignment, progress: Progress) -> Outcome:
         try:
-            ref = await self.submit(assignment)
+            handle = await self.submit(assignment)
         except ProviderError as error:
-            return Outcome.failed(str(error), session=assignment.session)
-        progress.attach(ref)
+            return Outcome.failed(str(error))
+        progress.attach(handle.ref, session=handle.session)
+        return await self.resume(handle.ref, progress)
+
+    async def resume(self, ref: str, progress: Progress) -> Outcome:
+        """Follow the turn `ref` to its end; cancelled, stop it, unless Nestor is closing (`progress.detached`): then
+        the cancellation goes through and the turn keeps working, to be followed again."""
         try:
             return await self.follow(ref, progress)
         except asyncio.CancelledError:
+            if progress.detached:
+                raise
             confirmed = await asyncio.shield(self.stop(ref))
-            session = assignment.session or self.session_of(ref)
-            return Outcome.stopped(session=session) if confirmed else Outcome.failed("stop not confirmed")
+            return Outcome.stopped() if confirmed else Outcome.failed("stop not confirmed")

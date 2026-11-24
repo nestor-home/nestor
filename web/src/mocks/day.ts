@@ -342,22 +342,13 @@ export function day(now = Date.now()): JournalEvent[] {
     ago: 351.6,
     type: "task.created",
     title: `Task 3f2a1c opened with hermes: ${ENERGY_TITLE}`,
+    detail: ENERGY,
     people: [ref("mathis")],
     channels: ["telegram"],
     brand: "hermes",
+    attachments: made(ENERGY_BILLS),
     links: { ...s2, turn: "u-2", task: "t-3f2a1c" },
     cause: u2,
-  });
-  const started = ev({
-    ago: 351.59,
-    type: "task.turn.started",
-    title: "Task 3f2a1c: new instruction",
-    detail: ENERGY,
-    people: [ref("mathis")],
-    brand: "hermes",
-    attachments: made(ENERGY_BILLS),
-    links: { task: "t-3f2a1c" },
-    cause: created,
   });
   ev({
     ago: 351.5,
@@ -377,7 +368,7 @@ export function day(now = Date.now()): JournalEvent[] {
     detail: ENERGY_STEPS[0],
     brand: "hermes",
     links: { task: "t-3f2a1c" },
-    cause: started,
+    cause: created,
   });
   ev({
     ago: 318,
@@ -426,7 +417,12 @@ export function day(now = Date.now()): JournalEvent[] {
     tone: "decision",
     links: { task: "t-3f2a1c", delivery: "d-1" },
     cause: ended,
-    record: { policy: "presence", spoken: "voice:office", written: null },
+    record: {
+      about: { source: "task", id: "t-3f2a1c", status: "completed", part: "u-3f2a-1" },
+      policy: "presence",
+      spoken: "voice:office",
+      written: null,
+    },
   });
   ev({
     ago: 250.4,
@@ -852,21 +848,12 @@ export function day(now = Date.now()): JournalEvent[] {
     ago: 30.9,
     type: "task.created",
     title: `Task 4410aa opened with hermes: ${CLAIM_TITLE}`,
+    detail: CLAIM,
     people: [ref("mathis")],
     channels: ["telegram"],
     brand: "hermes",
     links: { ...s6, turn: "u-7", task: "t-4410aa" },
     cause: u7,
-  });
-  ev({
-    ago: 30.89,
-    type: "task.turn.started",
-    title: "Task 4410aa: new instruction",
-    detail: CLAIM,
-    people: [ref("mathis")],
-    brand: "hermes",
-    links: { task: "t-4410aa" },
-    cause: claim,
   });
   ev({
     ago: 30.8,
@@ -886,6 +873,7 @@ export function day(now = Date.now()): JournalEvent[] {
     detail: CLAIM_STEPS[0],
     brand: "hermes",
     links: { task: "t-4410aa" },
+    cause: claim,
   });
   ev({
     ago: 12,
@@ -941,21 +929,12 @@ export function day(now = Date.now()): JournalEvent[] {
     ago: 11.9,
     type: "task.created",
     title: `Task 88b07e opened with codex: ${SHOPPING_TITLE}`,
+    detail: SHOPPING,
     people: [ref("lea")],
     channels: ["web"],
     brand: "codex",
     links: { ...s7, turn: "u-8", task: "t-88b07e" },
     cause: u8,
-  });
-  ev({
-    ago: 11.89,
-    type: "task.turn.started",
-    title: "Task 88b07e: new instruction",
-    detail: SHOPPING,
-    people: [ref("lea")],
-    brand: "codex",
-    links: { task: "t-88b07e" },
-    cause: shopping,
   });
   ev({
     ago: 11.8,
@@ -972,6 +951,7 @@ export function day(now = Date.now()): JournalEvent[] {
     detail: SHOPPING_STEP,
     brand: "codex",
     links: { task: "t-88b07e" },
+    cause: shopping,
   });
   ev({
     ago: 5.5,
@@ -1019,21 +999,12 @@ export function day(now = Date.now()): JournalEvent[] {
     ago: 539.6,
     type: "task.created",
     title: `Task c1a9de opened with claude-code: ${DEPENDENCIES_TITLE}`,
+    detail: DEPENDENCIES,
     people: [ref("mathis")],
     channels: ["slack"],
     brand: "claude-code",
     links: { ...slack, turn: "u-s1", task: "t-c1a9de" },
     cause: askedClaude,
-  });
-  ev({
-    ago: 539.59,
-    type: "task.turn.started",
-    title: "Task c1a9de: new instruction",
-    detail: DEPENDENCIES,
-    people: [ref("mathis")],
-    brand: "claude-code",
-    links: { task: "t-c1a9de" },
-    cause: dependencies,
   });
   ev({
     ago: 539.5,
@@ -1053,6 +1024,7 @@ export function day(now = Date.now()): JournalEvent[] {
     detail: fr("Tests pass on the new versions.", "Les tests passent avec les nouvelles versions."),
     brand: "claude-code",
     links: { task: "t-c1a9de" },
+    cause: dependencies,
   });
   const updated = ev({
     ago: 521,

@@ -11,10 +11,9 @@ from typing import Any
 from nestor import __version__
 from nestor.adapters.executors.codex.protocol import COMMAND, DECLINED, ENDED, Sandbox, final_answer, item_step
 from nestor.adapters.executors.common import (
-    FILES_INSTRUCTIONS,
+    CODING_REPORT,
     INSTRUCTIONS,
     MAX_FILE_BYTES,
-    QUESTION_INSTRUCTIONS,
     REPORT_SCHEMA,
     Report,
     Unreadable,
@@ -28,6 +27,7 @@ from nestor.modules.cognition.delegation import (
     RESUME,
     STEER,
     Assignment,
+    Handle,
     NestorAccess,
     NestorTools,
     Outcome,
@@ -98,7 +98,7 @@ class CodexExecutor(RemoteExecutor):
         if rpc is not None:
             await rpc.close()
 
-    async def submit(self, assignment: Assignment) -> str:
+    async def submit(self, assignment: Assignment) -> Handle:
         """A turn in the task's thread, in the task's own folder under the working directory, where the files sent
         with the instruction are placed: the thread starts with the task's first turn, and later turns go on in it
         (resumed first when this session has not loaded it: after a restart, or on another session)."""
@@ -127,7 +127,7 @@ class CodexExecutor(RemoteExecutor):
                     "outputSchema": REPORT_SCHEMA,
                 },
             )
-            return f"{thread}:{turn['turn']['id']}:{assignment.folder}"
+            return Handle(f"{thread}:{turn['turn']['id']}:{assignment.folder}", thread)
         except (KeyError, TypeError) as error:
             raise ProviderError(self.name, f"unexpected reply from Codex: {error!r}", transient=False) from None
         except RpcError as error:
@@ -145,18 +145,13 @@ class CodexExecutor(RemoteExecutor):
                 return await self._follow(thread, turn, posixpath.join(self._cwd, folder), progress)
             except (Closed, TimeoutError, ProviderError) as error:  # the session is lost, the turn may go on
                 if (wait_s := next(waits, None)) is None:
-                    return Outcome.failed(f"lost contact with Codex: {described(error)}", session=thread)
+                    return Outcome.failed(f"lost contact with Codex: {described(error)}")
                 logger.warning("%s: lost contact with Codex, following again in %ss (%s)", self.name, wait_s, error)
                 await asyncio.sleep(wait_s)
             except RpcError as error:
-                return Outcome.failed(f"Codex refused: {error}", session=thread)
+                return Outcome.failed(f"Codex refused: {error}")
             except (KeyError, TypeError, ValueError) as error:  # not the protocol: a missing field, bad base64
-                return Outcome.failed(f"unexpected reply from Codex: {error!r}", session=thread)
-
-    def session_of(self, ref: str) -> str | None:
-        """The thread of the turn: the session the next turn goes on in."""
-        parsed = _parsed(ref)
-        return parsed[0] if parsed else None
+                return Outcome.failed(f"unexpected reply from Codex: {error!r}")
 
     async def stop(self, ref: str) -> bool:
         if (parsed := _parsed(ref)) is None:
@@ -199,12 +194,10 @@ class CodexExecutor(RemoteExecutor):
                 self._loaded.add(thread)
                 self._join(rpc, thread)
                 found = await self._turn(rpc, thread, turn)
-                if found is not None and (outcome := await self._outcome(rpc, thread, found, folder)) is not None:
+                if found is not None and (outcome := await self._outcome(rpc, found, folder)) is not None:
                     return outcome
                 if resumed["thread"]["status"]["type"] != "active":
-                    return Outcome.failed(
-                        "the Codex turn stopped before it ended (its server restarted?)", session=thread
-                    )
+                    return Outcome.failed("the Codex turn stopped before it ended (its server restarted?)")
             while (event := await events.get()) is not None:
                 method, params = event.get("method"), event.get("params") or {}
                 if params.get("turnId") == turn and method in ("item/started", "item/completed"):
@@ -213,7 +206,7 @@ class CodexExecutor(RemoteExecutor):
                 elif (
                     method == "turn/completed"
                     and params["turn"]["id"] == turn
-                    and (outcome := await self._outcome(rpc, thread, params["turn"], folder)) is not None
+                    and (outcome := await self._outcome(rpc, params["turn"], folder)) is not None
                 ):
                     return outcome
             raise Closed("the Codex session ended while the turn ran")
@@ -221,18 +214,18 @@ class CodexExecutor(RemoteExecutor):
             rpc.forget(thread)
             self._joined.discard(thread)
 
-    async def _outcome(self, rpc: StdioRpc, thread: str, turn: Message, folder: str) -> Outcome | None:
-        """The outcome of a turn of `thread` as Codex sums it up (its final answer is in the summary), `None` while it
+    async def _outcome(self, rpc: StdioRpc, turn: Message, folder: str) -> Outcome | None:
+        """The outcome of a turn as Codex sums it up (its final answer is in the summary), `None` while it
         runs."""
         match turn["status"]:
             case "completed":
                 report = Report.of(final_answer(turn))
-                return await report.outcome(folder, lambda path: self._read(rpc, folder, path), session=thread)
+                return await report.outcome(folder, lambda path: self._read(rpc, folder, path))
             case "failed":
                 error = (turn.get("error") or {}).get("message")
-                return Outcome.failed(str(error) if error else "Codex reported the turn as failed", session=thread)
+                return Outcome.failed(str(error) if error else "Codex reported the turn as failed")
             case "interrupted":
-                return Outcome.stopped(session=thread)
+                return Outcome.stopped()
             case _:
                 return None
 
@@ -299,7 +292,7 @@ class CodexExecutor(RemoteExecutor):
             "cwd": folder,
             "sandbox": self._sandbox.value,
             "approvalPolicy": "never",
-            "developerInstructions": self._instructions + FILES_INSTRUCTIONS + QUESTION_INSTRUCTIONS,
+            "developerInstructions": self._instructions + CODING_REPORT,
         }
         if self._model:
             settings["model"] = self._model

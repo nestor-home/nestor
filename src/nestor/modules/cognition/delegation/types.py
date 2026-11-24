@@ -5,7 +5,7 @@ from collections.abc import AsyncIterator, Awaitable, Callable, Sequence
 from dataclasses import dataclass, field
 from enum import StrEnum
 
-from nestor.core import Capability
+from nestor.core import Capability, shorten
 from nestor.modules.channels import Attachment
 from nestor.modules.journal import FileRef
 
@@ -49,24 +49,32 @@ BRIEF = """Nestor, the household assistant that handed you this task, gives you 
 `nestor`. Call each with task="{task}": task_brief first (who asked, the conversation it came from, the turns before \
 this one); recall for what you need to know of them; note to keep what this task will need later; report_progress at \
 each step.{links} Never write the task value anywhere else."""
-ASKING = """When you need the person to go on (a choice, a detail, an action only they can take), do not guess and do \
-not give up: end your turn with your question in `question` and what you did so far in `report`. Their answer comes \
-back as your next instruction, in this same session."""
+STOPPED_FOR = "Your previous turn was stopped for this new instruction:\n{instruction}"
 PLACED = "Files sent with this instruction, in {folder}: {names}."
 BY_LINK = """ read_file gives a link to download a file they sent (task_brief lists them), attach_file a link to \
 upload each file you make for them; each link works a few minutes, with curl or any HTTP client."""
 EARLIER = """The turns before this one, as Nestor kept them (you do not remember them):
 {turns}"""
+STEPS = 5  # the latest steps of a working turn kept in memory: what is shown of it (the journal keeps them all)
+STEP_CHARS = 160  # a step: one short line
+READ_TURNS = 10  # the latest turns read back: by the agent, by the executor, for an executor that keeps no session
+TURN_CHARS = 1500  # of each instruction and what came back, read back
+
+
+def step_line(text: str) -> str:
+    """A progress step as it is kept: one short line, empty when it says nothing."""
+    return shorten(text, STEP_CHARS)
 
 
 @dataclass(frozen=True, slots=True)
 class Assignment:
     """One turn of a task, as its executor is given it: the instruction, the session of the turns before it (`None`
-    for the first; what the executor's last outcome named), what they were (`earlier`, for an executor that cannot
-    continue a session), the task's own `folder` for an executor that works in one, the files sent with the
-    instruction, and when it reaches Nestor's tools, the turn's capability (`task`, `nstt_…`), valid while it runs,
-    and `access` when Nestor passes the server itself. `files` are references: an executor that places them in its
-    folder reads them (`placed`), one reached by link never does."""
+    for the first; what the executor attached or its last outcome named), what they were (`earlier`, for an executor
+    that cannot continue a session), the task's own `folder` for an executor that works in one, the files sent with
+    the instruction, and when it reaches Nestor's tools, the turn's capability (`task`, `nstt_…`), valid while it
+    runs, and `access` when Nestor passes the server itself. `files` are references: an executor that places them in
+    its folder reads them (`placed`), one reached by link never does. `interrupts`: the turn before was stopped for
+    this instruction, which it could not take while it worked."""
 
     instruction: str
     session: str | None = None
@@ -76,6 +84,7 @@ class Assignment:
     access: NestorAccess | None = None
     files: tuple[FileRef, ...] = ()  # names plain and none twice among a task's files
     reader: Callable[[str], Awaitable[bytes]] | None = field(default=None, repr=False, compare=False)
+    interrupts: bool = False
 
     async def placed(self) -> AsyncIterator[tuple[str, bytes]]:
         """The files sent with it, by name and content, read one at a time; one no longer stored is left out."""
@@ -88,15 +97,14 @@ class Assignment:
                 continue
 
     def brief(self, folder: str | None = None, placed: Sequence[str] = ()) -> str:
-        """The instruction, the turns before it when the executor does not keep them, the files it `placed` in its
-        `folder`, how to ask the person, and how to reach Nestor's tools when it can: the files by link, without a
-        folder."""
-        parts = [self.instruction]
+        """The instruction (said to have stopped the turn before, when it did), the turns before it when the executor
+        does not keep them, the files it `placed` in its `folder`, and how to reach Nestor's tools when it can: the
+        files by link, without a folder."""
+        parts = [STOPPED_FOR.format(instruction=self.instruction) if self.interrupts else self.instruction]
         if self.earlier:
             parts.append(EARLIER.format(turns=self.earlier))
         if folder is not None and placed:
             parts.append(PLACED.format(folder=folder, names=", ".join(placed)))
-        parts.append(ASKING)
         if self.task is not None:
             parts.append(BRIEF.format(task=self.task, links=BY_LINK if folder is None else ""))
         return "\n\n".join(parts)
@@ -113,7 +121,7 @@ class Notify(StrEnum):
 class Outcome:
     """How a turn ended: its report, the question it asks its owner, or why it failed. `files` are what the executor
     made for them (a document, a picture): they go with the answer that brings the outcome. `session` is what the
-    next turn continues, when the executor keeps one (a Codex thread, a Claude Code session)."""
+    next turn continues, when the executor names it only as the turn ends (it attaches it when it knows it sooner)."""
 
     status: TurnStatus
     result: str | None = None
@@ -141,19 +149,41 @@ class Outcome:
         return cls(TurnStatus.STOPPED, session=session)
 
 
-def _ignore(_: str) -> None:
+@dataclass(frozen=True, slots=True)
+class Handle:
+    """An executor's hold on a working turn: `ref` follows its remote work again after a restart and is what an
+    instruction is steered to; `session`, what the next turn continues, when the executor knows it as the turn
+    starts (a Codex thread, a Claude Code session)."""
+
+    ref: str
+    session: str | None = None
+
+
+def _ignore_step(_: str) -> None:
+    return None
+
+
+def _ignore_handle(_: Handle) -> None:
     return None
 
 
 class Progress:
-    """How an executor reports while a turn works: steps (`progress("searching…")`), and the handle of the turn
-    (`progress.attach(ref)`): what follows remote work again after a restart, and what an instruction is steered to."""
+    """How an executor reports while a turn works: steps (`progress("searching…")`, kept as one short line), and its
+    hold on the turn (`progress.attach(ref, session=…)`). `detached`: Nestor is closing and leaves the remote work
+    going, to follow it again on its next start: a remote turn cancelled then is not stopped."""
 
-    def __init__(self, on_step: Callable[[str], None] = _ignore, on_attach: Callable[[str], None] = _ignore) -> None:
+    def __init__(
+        self, on_step: Callable[[str], None] = _ignore_step, on_attach: Callable[[Handle], None] = _ignore_handle
+    ) -> None:
         self._on_step, self._on_attach = on_step, on_attach
+        self.detached = False
 
     def __call__(self, step: str) -> None:
-        self._on_step(step)
+        if line := step_line(step):
+            self._on_step(line)
 
-    def attach(self, ref: str) -> None:
-        self._on_attach(ref)
+    def attach(self, ref: str, *, session: str | None = None) -> None:
+        self._on_attach(Handle(ref, session))
+
+    def detach(self) -> None:
+        self.detached = True

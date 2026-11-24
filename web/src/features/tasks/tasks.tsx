@@ -6,7 +6,6 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ArrowUpRight, Workflow } from "lucide-react";
 import { isMissing, type Task, type TaskThread, taskQuery } from "@/api";
-import { Ago } from "@/components/ago";
 import { type Crumb, Crumbs } from "@/components/crumbs";
 import { Avatar } from "@/components/marks";
 import { OriginLink } from "@/components/origin-link";
@@ -19,7 +18,7 @@ import { useT } from "@/i18n";
 import { KindName } from "@/lib/brands";
 import { moment } from "@/lib/dates";
 import { TaskComposer, WriteToTask } from "./composer";
-import { TaskActions, TaskStateMark } from "./parts";
+import { TaskActions, TaskLine, TaskStateMark } from "./parts";
 import { Notes, Thread } from "./thread";
 
 export function TaskDetail({ id }: { id: string }) {
@@ -44,15 +43,7 @@ export function TaskDetail({ id }: { id: string }) {
       <PageHeader
         crumbs={<Crumbs trail={trail} />}
         title={task.title}
-        meta={
-          <>
-            <TaskStateMark state={task.state} />
-            <KindName kind={task.executor} />
-            <span>
-              <Ago iso={task.last_activity} />
-            </span>
-          </>
-        }
+        meta={<TaskLine task={task} state />}
         actions={
           <span className="flex flex-wrap gap-2">
             <WriteToTask task={task} />
@@ -122,11 +113,9 @@ export function TaskSheet({ listed, onArchived }: { listed: Task; onArchived: ()
       kind={t("act-kind-task")}
       title={task.title}
       description={
-        <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <TaskStateMark state={task.state} />
-          <KindName kind={task.executor} />
+        <TaskLine task={task} state>
           {task.owner ? <span>{t("task-for", { name: task.owner.name })}</span> : null}
-        </span>
+        </TaskLine>
       }
       actions={
         <div className="grid w-full gap-3">

@@ -6,7 +6,7 @@ from urllib.parse import quote
 
 import httpx
 
-from nestor.adapters.executors.common import Report, step
+from nestor.adapters.executors.common import Report
 from nestor.modules.cognition import Outcome
 
 # Tools whose preview says what they look at (a query, a page); any other shows its name only: a preview of the
@@ -29,7 +29,7 @@ def run_outcome(status: str, fields: dict[str, Any], session: str | None) -> Out
     undelivered = UNDELIVERED.format(text=pending) if isinstance(pending, str) and pending.strip() else None
     match status:
         case "completed":
-            report = reported(str(fields.get("output") or ""))
+            report = Report.of(str(fields.get("output") or ""))
             text = "\n".join(t for t in (report.text, undelivered) if t)
             if report.question:
                 return Outcome.asked(report.question, text, session=session)
@@ -41,20 +41,6 @@ def run_outcome(status: str, fields: dict[str, Any], session: str | None) -> Out
             return Outcome.stopped(session=session)
         case _:
             return None
-
-
-def reported(output: str) -> Report:
-    """The report a run ended with: the JSON object it was asked for, even fenced or after a sentence, else its text
-    as it is."""
-    text = output.strip()
-    start, end = text.find("{"), text.rfind("}")
-    try:
-        value = json.loads(text[start : end + 1]) if 0 <= start < end else None
-    except ValueError:
-        value = None
-    if isinstance(value, dict) and isinstance(value.get("report"), str):
-        return Report.of(value)
-    return Report(text)
 
 
 def clarified(prompt: dict[str, Any]) -> str | None:
@@ -82,7 +68,7 @@ def error_text(error: object) -> str | None:
 
 def run_step(event: dict[str, Any]) -> str:
     tool, preview = str(event.get("tool") or "tool"), event.get("preview")
-    return step(f"{tool}: {preview}" if preview and tool in SHOWN else tool)
+    return f"{tool}: {preview}" if preview and tool in SHOWN else tool
 
 
 def payload(response: httpx.Response) -> dict[str, Any]:

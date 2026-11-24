@@ -5,7 +5,7 @@ the `X-CSRF-Token` header (see `security`). `app` assembles it; each resource is
 
 - `routes.py`: the handlers alone, thin (dependencies, a call to the domain, `XOut.of`);
 - `schemas.py`: what it takes and sends, each `XOut` built from the domain by its `of`;
-- a module named for what it reads or decides, when it has one (`journal/feed.py`, `tasks/afterwards.py`).
+- a module named for what it reads or decides, when it has one (`journal/feed.py`).
 
 A resource may send another's shape (the household lists connections) by importing its `schemas.py`, and
 nothing else of it. What every resource builds on is in `shared.py` (a request body, a person, a message)

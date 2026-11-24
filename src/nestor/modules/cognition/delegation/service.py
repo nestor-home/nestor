@@ -9,12 +9,13 @@ left working (they will be followed again), local ones are stopped.
 import asyncio
 import contextlib
 import logging
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Awaitable, Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import StrEnum
+from functools import partial
 
-from nestor.core import Component, ContractError, Event, PersonId, new_id, utc_now
+from nestor.core import Component, ContractError, Event, PersonId, new_id, shorten, utc_now
 from nestor.modules.channels import Address, Attachment, Exchange
 from nestor.modules.cognition.delegation.events import (
     ExecutorCalled,
@@ -24,6 +25,7 @@ from nestor.modules.cognition.delegation.events import (
     TaskRenamed,
     TaskSteered,
     TurnAttached,
+    TurnDelivered,
     TurnEnded,
     TurnFileAdded,
     TurnStarted,
@@ -34,8 +36,13 @@ from nestor.modules.cognition.delegation.keys import ExecutorKeys, capability, d
 from nestor.modules.cognition.delegation.ports import Executor, RemoteExecutor
 from nestor.modules.cognition.delegation.types import (
     CONTINUE,
+    READ_TURNS,
+    RESUME,
     STEER,
+    STEPS,
+    TURN_CHARS,
     Assignment,
+    Handle,
     NestorTools,
     Notify,
     Outcome,
@@ -43,17 +50,16 @@ from nestor.modules.cognition.delegation.types import (
     TaskState,
     TurnStatus,
 )
+from nestor.modules.cognition.tools import title_of
 from nestor.modules.journal import BlobStore, FileRef, Journal
 
 logger = logging.getLogger(__name__)
 
 INTERRUPTED = "interrupted: Nestor stopped while the turn worked and this executor cannot resume it"
-STOPPED_FOR = "Your previous turn was stopped for this new instruction:\n{instruction}"
 NOTE_CHARS = 2000  # a note
 NOTES = 50  # kept per task: the oldest give way
-STEPS = 200  # kept per turn in memory (the journal keeps them all)
-EARLIER_CHARS = 600  # of each earlier turn's instruction and report, for an executor that keeps no session
 SWEEP_S = 3600.0  # how often ready tasks are looked at for archiving
+ORDER = {TaskState.WAITING: 0, TaskState.WORKING: 1, TaskState.READY: 2, TaskState.ARCHIVED: 3}
 
 
 class Directed(StrEnum):
@@ -72,6 +78,14 @@ class Steer:
     at: datetime
 
 
+@dataclass(frozen=True, slots=True)
+class Delivery:
+    """Where and when what a turn came back with reached its owner."""
+
+    at: datetime
+    address: Address
+
+
 @dataclass(slots=True, kw_only=True)
 class Turn:
     id: str
@@ -84,17 +98,24 @@ class Turn:
     capability: str | None = None  # the digest of what its executor calls Nestor's MCP server with for it
     asked: bool = False
     ref: str | None = None  # the executor's handle on it
-    steps: list[str] = field(default_factory=list)
+    steps: list[str] = field(default_factory=list)  # the latest `STEPS` (the journal keeps them all)
     files: list[FileRef] = field(default_factory=list)  # handed back while it worked (`attach_file`)
     steered: list[Steer] = field(default_factory=list)  # what it took while it worked
     outcome: Outcome | None = None
     ended_at: datetime | None = None
+    delivered: Delivery | None = None
     job: asyncio.Task[None] | None = field(default=None, repr=False)
-    detached: bool = False
+    progress: Progress | None = field(default=None, repr=False)
 
     @property
     def status(self) -> TurnStatus:
         return self.outcome.status if self.outcome else TurnStatus.RUNNING
+
+    @property
+    def came_back(self) -> str:
+        """What it came back with: its report, else its question, else why it failed; nothing while it works."""
+        outcome = self.outcome
+        return (outcome.result or outcome.question or outcome.error or "") if outcome else ""
 
 
 @dataclass(slots=True, kw_only=True)
@@ -105,17 +126,21 @@ class Task:
     owner: PersonId | None
     origin: Address  # where what it comes back with is told
     created_at: datetime
+    last_activity: datetime
     thread: str | None = None
     session: str | None = None  # what the next turn continues, as the executor named it
     turns: list[Turn] = field(default_factory=list)
-    notes: list[str] = field(default_factory=list)
+    notes: list[str] = field(default_factory=list)  # the latest `NOTES`
     archived: bool = False
-    last_activity: datetime | None = None
+    lock: asyncio.Lock = field(default_factory=asyncio.Lock, repr=False, compare=False)  # an instruction at a time
 
     @property
     def turn(self) -> Turn:
         """The latest turn: a task always has one."""
         return self.turns[-1]
+
+    def turn_of(self, turn_id: str) -> Turn | None:
+        return next((t for t in self.turns if t.id == turn_id), None)
 
     @property
     def state(self) -> TaskState:
@@ -132,6 +157,12 @@ class Task:
         return outcome.question if self.state is TaskState.WAITING and outcome else None
 
     @property
+    def now(self) -> str | None:
+        """What its executor says it does, while it works."""
+        steps = self.turn.steps
+        return steps[-1] if self.state is TaskState.WORKING and steps else None
+
+    @property
     def given(self) -> tuple[FileRef, ...]:
         """Every file sent with its instructions, the first first."""
         return tuple(f for turn in self.turns for f in turn.given)
@@ -146,8 +177,8 @@ class Task:
             "state": self.state.value,
             "since_s": round((utc_now() - (turn.ended_at or turn.started_at)).total_seconds()),
         }
-        if self.state is TaskState.WORKING and turn.steps:
-            found["now"] = turn.steps[-1]
+        if self.now:
+            found["now"] = self.now
         if self.question:
             found["question"] = self.question
         return found
@@ -170,11 +201,8 @@ class TaskManager(Component):
         MCP server for their tasks; without them, none does."""
         self.journal, self._blobs, self._keys = journal, blobs, keys
         self.executors: Mapping[str, Executor] = {e.name: e for e in executors}
-        self.tasks: dict[str, Task] = {}  # each with its first turn: none is seen without one
-        self._opening: dict[str, Task] = {}  # created, their first turn not recorded yet
-        self._capable: dict[str, tuple[Task, Turn]] = {}  # by the digest of a turn's capability
+        self.tasks: dict[str, Task] = {}
         self._stop_timeout_s, self._sweep_s = stop_timeout_s, sweep_s
-        self._locks: dict[str, asyncio.Lock] = {}  # one instruction at a time per task
         self._writes: asyncio.Queue[Event] = asyncio.Queue()
         self._writer: asyncio.Task[None] | None = None
         self._sweeper: asyncio.Task[None] | None = None
@@ -196,23 +224,22 @@ class TaskManager(Component):
             TurnFileAdded,
             TaskNoted,
             TurnEnded,
+            TurnDelivered,
         ):
             self._replay(event)
-        for task_id in self._opening:  # created, then Nestor stopped before its first turn was recorded
-            logger.warning("task %s was never started: left out", task_id)
-        self._opening.clear()
         for task in self.tasks.values():
             turn = task.turn
             if turn.outcome is not None:
                 continue
             executor = self.executors.get(task.executor)
             if isinstance(executor, RemoteExecutor) and turn.ref:
-                turn.job = asyncio.create_task(self._follow(task, turn, executor), name=f"task {task.id}")
+                self._launch(task, turn, partial(executor.resume, turn.ref))  # it went on while Nestor was away
             else:
-                await self._end(task, turn, Outcome.failed(INTERRUPTED, session=task.session))
+                await self._end(task, turn, Outcome.failed(INTERRUPTED))
         self._sweeper = asyncio.create_task(self._sweep(), name="task-manager archiving")
 
     async def close(self) -> None:
+        """Stop the turns that work here; leave those that work elsewhere going, to follow them again on start."""
         if self._sweeper is not None:
             self._sweeper.cancel()
             with contextlib.suppress(asyncio.CancelledError):
@@ -220,8 +247,9 @@ class TaskManager(Component):
             self._sweeper = None
         for task in self.working():
             turn = task.turn
-            if isinstance(self.executors.get(task.executor), RemoteExecutor) and turn.ref and turn.job:
-                turn.detached = True  # still working remotely: followed again on next start
+            executor = self.executors.get(task.executor)
+            if executor is not None and RESUME in executor.capabilities and turn.ref and turn.job and turn.progress:
+                turn.progress.detach()
                 turn.job.cancel()
                 with contextlib.suppress(asyncio.CancelledError):
                     await turn.job
@@ -254,21 +282,29 @@ class TaskManager(Component):
         chosen = self.executors.get(executor) if executor else self.default_executor
         if chosen is None:
             raise ContractError(f"no executor named {executor!r}" if executor else "no executor is plugged in")
+        task_id = new_id()[:8]
+        assignment = await self._assignment(chosen, task_id, instruction, tuple(given))
         created = TaskCreated(
             source=self.name,
             session=origin.session,
-            task_id=new_id()[:8],
+            task_id=task_id,
             title=title,
             executor=chosen.name,
             owner=owner,
             origin=origin,
             thread=thread,
+            turn_id=new_id()[:8],
+            instruction=instruction,
+            by=owner,
+            given=tuple(given),
+            notify=notify,
+            exchange=exchange,
+            capability=digest(assignment.task) if assignment.task else None,
+            asked=asked,
         )
         await self.journal.publish(created)
         task = self._replay(created)
-        await self._turn(
-            task, chosen, instruction, by=owner, given=given, notify=notify, exchange=exchange, asked=asked
-        )
+        self._launch(task, task.turn, partial(chosen.run, assignment))
         return task
 
     async def direct(
@@ -290,8 +326,9 @@ class TaskManager(Component):
         executor = self.executors.get(task.executor)
         if executor is None:
             raise ContractError(f"the executor {task.executor!r} of this task is no longer plugged in")
-        async with self._locks.setdefault(task.id, asyncio.Lock()):
+        async with task.lock:
             turn = task.turn
+            interrupts = False
             if turn.status is TurnStatus.RUNNING:
                 # files cannot join a turn that works: the instruction then opens the next one
                 steerable = STEER in executor.capabilities and turn.ref is not None and not given
@@ -312,10 +349,26 @@ class TaskManager(Component):
                     return Directed.STEERED
                 if turn.status is TurnStatus.RUNNING:
                     await self._stop(task, turn, by=by)
-                instruction = STOPPED_FOR.format(instruction=instruction)
-            await self._turn(
-                task, executor, instruction, by=by, given=given, notify=notify, exchange=exchange, asked=asked
+                interrupts = turn.status is TurnStatus.STOPPED
+            assignment = await self._assignment(
+                executor, task.id, instruction, tuple(given), task=task, interrupts=interrupts
             )
+            started = TurnStarted(
+                source=self.name,
+                session=task.origin.session,
+                task_id=task.id,
+                turn_id=new_id()[:8],
+                instruction=instruction,
+                by=by,
+                given=tuple(given),
+                notify=notify,
+                exchange=exchange,
+                capability=digest(assignment.task) if assignment.task else None,
+                asked=asked,
+            )
+            await self.journal.publish(started)
+            self._replay(started)
+            self._launch(task, task.turn, partial(executor.run, assignment))
             return Directed.STARTED
 
     async def stop(self, task_id: str, *, by: PersonId | None = None) -> Outcome:
@@ -329,14 +382,12 @@ class TaskManager(Component):
 
     async def rename(self, task_id: str, title: str, *, by: PersonId | None = None) -> Task:
         task = self._task(task_id)
-        title = " ".join(title.split())
-        if not title:
-            raise ContractError("a task needs a title")
-        await self.journal.publish(
-            TaskRenamed(source=self.name, session=task.origin.session, task_id=task.id, title=title, by=by)
-        )
-        task.title = title
-        return task
+        named = title_of(title)
+        if named is None:
+            raise ContractError("a task needs a short title")
+        renamed = TaskRenamed(source=self.name, session=task.origin.session, task_id=task.id, title=named, by=by)
+        await self.journal.publish(renamed)
+        return self._replay(renamed)
 
     async def archive(self, task_id: str, *, by: PersonId | None = None) -> Task:
         """Put a task away, its turn stopped first if one works; an instruction opens it again."""
@@ -344,21 +395,16 @@ class TaskManager(Component):
         if task.turn.status is TurnStatus.RUNNING:
             await self._stop(task, task.turn, by=by)
         if not task.archived:
-            await self.journal.publish(
-                TaskArchived(source=self.name, session=task.origin.session, task_id=task.id, by=by)
-            )
-            task.archived = True
+            archived = TaskArchived(source=self.name, session=task.origin.session, task_id=task.id, by=by)
+            await self.journal.publish(archived)
+            self._replay(archived)
         return task
 
     async def admit(self, executor: str, capability: str, tool: str) -> Task | None:
         """The task whose working turn `capability` is for, `None` for anything else (another executor's, a turn
         that ended), whatever is wrong; journaled as a call of `tool` either way (`ExecutorCalled`)."""
-        found = self._capable.get(digest(capability))
-        task = None
-        if found is not None:
-            candidate, turn = found
-            if candidate.executor == executor and turn.status is TurnStatus.RUNNING and candidate.turn is turn:
-                task = candidate
+        wanted = digest(capability)
+        task = next((t for t in self.working() if t.executor == executor and t.turn.capability == wanted), None)
         call = ExecutorCalled(
             source=self.name,
             session=task.origin.session if task else None,
@@ -381,8 +427,9 @@ class TaskManager(Component):
         kept = text.strip()[:NOTE_CHARS]
         if not kept:
             raise ContractError("an empty note")
-        await self.journal.publish(TaskNoted(source=self.name, session=task.origin.session, task_id=task.id, text=kept))
-        task.notes = [*task.notes, kept][-NOTES:]
+        noted = TaskNoted(source=self.name, session=task.origin.session, task_id=task.id, text=kept)
+        await self.journal.publish(noted)
+        self._replay(noted)
         return kept
 
     async def add_file(self, task: Task, file: Attachment) -> FileRef:
@@ -390,12 +437,20 @@ class TaskManager(Component):
         if self._blobs is None:
             raise ContractError("files cannot be kept here")
         kept = FileRef(await self._blobs.put(file.data, file.media_type), file.file_name)
-        turn = task.turn
-        turn.files.append(kept)
-        await self.journal.publish(
-            TurnFileAdded(source=self.name, session=task.origin.session, task_id=task.id, turn_id=turn.id, file=kept)
+        added = TurnFileAdded(
+            source=self.name, session=task.origin.session, task_id=task.id, turn_id=task.turn.id, file=kept
         )
+        await self.journal.publish(added)
+        self._replay(added)
         return kept
+
+    async def delivered(self, task: Task, turn: Turn, address: Address) -> None:
+        """What `turn` came back with reached its owner at `address`: it is never delivered again."""
+        delivered = TurnDelivered(
+            source=self.name, session=address.session, task_id=task.id, turn_id=turn.id, address=address
+        )
+        await self.journal.publish(delivered)
+        self._replay(delivered)
 
     async def wait(self, task_id: str) -> Outcome:
         """The outcome of the task's latest turn, once it ended."""
@@ -408,10 +463,15 @@ class TaskManager(Component):
     def working(self) -> list[Task]:
         return [t for t in self.tasks.values() if t.state is TaskState.WORKING]
 
-    def of(self, person: PersonId | None) -> list[Task]:
-        """The tasks `person` owns, not archived, the latest active first."""
-        found = [t for t in self.tasks.values() if t.owner == person and t.state is not TaskState.ARCHIVED]
-        return sorted(found, key=_active, reverse=True)
+    def of(self, person: PersonId | None = None, *, archived: bool = False) -> list[Task]:
+        """The tasks `person` owns (every task without one), archived or not: those not archived waiting on their
+        owner first, then working, then the latest active first; the archived ones, the latest first."""
+        found = [
+            t
+            for t in self.tasks.values()
+            if (person is None or t.owner == person) and (t.state is TaskState.ARCHIVED) == archived
+        ]
+        return sorted(found, key=lambda t: (ORDER[t.state], -t.last_activity.timestamp()))
 
     def _task(self, task_id: str) -> Task:
         task = self.tasks.get(task_id)
@@ -419,54 +479,50 @@ class TaskManager(Component):
             raise ContractError(f"no task {task_id!r}")
         return task
 
-    async def _turn(
-        self,
-        task: Task,
-        executor: Executor,
-        instruction: str,
-        *,
-        by: PersonId | None,
-        given: Sequence[FileRef],
-        notify: Notify,
-        exchange: Exchange | None,
-        asked: bool,
-    ) -> Turn:
-        assignment = await self._assignment(task, executor, instruction, tuple(given))
-        started = TurnStarted(
-            source=self.name,
-            session=task.origin.session,
-            task_id=task.id,
-            turn_id=new_id()[:8],
-            instruction=instruction,
-            by=by,
-            given=tuple(given),
-            notify=notify,
-            exchange=exchange,
-            capability=digest(assignment.task) if assignment.task else None,
-            asked=asked,
-        )
-        await self.journal.publish(started)
-        self._replay(started)
-        turn = task.turn
-        turn.job = asyncio.create_task(self._run(task, turn, executor, assignment), name=f"task {task.id}")
-        return turn
-
     async def _assignment(
-        self, task: Task, executor: Executor, instruction: str, given: tuple[FileRef, ...]
+        self,
+        executor: Executor,
+        task_id: str,
+        instruction: str,
+        given: tuple[FileRef, ...],
+        *,
+        task: Task | None = None,
+        interrupts: bool = False,
     ) -> Assignment:
-        """What `executor` is given for a turn: the session to go on in, or what the turns before were when it keeps
-        none; the task's folder and the files sent with the instruction, read only by an executor that places them;
-        and with Nestor's MCP server when it reaches it, a capability for the turn."""
+        """What `executor` is given for a turn of `task` (its first, without one): the session to go on in, or what
+        the turns before were when it keeps none; the task's folder and the files sent with the instruction, read
+        only by an executor that places them; and with Nestor's MCP server when it reaches it, a capability for the
+        turn."""
         reader = self._blobs.get if self._blobs else None
-        session = task.session if CONTINUE in executor.capabilities else None
-        earlier = "" if session or not task.turns else _earlier(task.turns)
+        session = task.session if task and CONTINUE in executor.capabilities else None
+        earlier = _earlier(task.turns) if task and not session else ""
         token, access = None, None
         if self._keys is not None and executor.nestor_tools is NestorTools.CONFIGURED:
             token = capability()  # its own configuration holds the server and its key
         elif self._keys is not None and executor.nestor_tools is NestorTools.PASSED:
             access = await self._keys.access(executor.name)
             token = capability() if access else None
-        return Assignment(instruction, session, earlier, f"task-{task.id}", token, access, given, reader)
+        return Assignment(
+            instruction, session, earlier, f"task-{task_id}", token, access, given, reader, interrupts=interrupts
+        )
+
+    def _launch(self, task: Task, turn: Turn, work: Callable[[Progress], Awaitable[Outcome]]) -> None:
+        turn.progress = self._progress(task, turn)
+        turn.job = asyncio.create_task(self._run(task, turn, work, turn.progress), name=f"task {task.id}")
+
+    async def _run(
+        self, task: Task, turn: Turn, work: Callable[[Progress], Awaitable[Outcome]], progress: Progress
+    ) -> None:
+        """The turn's work to its end, journaled; cancelled while Nestor closes on remote work, left going."""
+        try:
+            outcome = await work(progress)
+        except asyncio.CancelledError:
+            if progress.detached:
+                raise
+            outcome = Outcome.stopped()  # the stop went through before anything remote ran
+        except Exception as error:  # a broken executor must not take the assistant down
+            outcome = Outcome.failed(f"{type(error).__name__}: {error}")
+        await self._end(task, turn, outcome)
 
     async def _stop(self, task: Task, turn: Turn, *, by: PersonId | None) -> Outcome:
         assert turn.job is not None  # a working turn always has its job
@@ -477,65 +533,31 @@ class TaskManager(Component):
         done, _ = await asyncio.wait({turn.job}, timeout=self._stop_timeout_s)
         if not done:
             return Outcome.failed("stop requested, not confirmed by the executor")
-        if turn.outcome is None:  # stopped before it even started: nothing ran
-            await self._end(task, turn, Outcome.stopped(session=task.session))
+        if turn.outcome is None:  # cancelled before it even started: nothing ran
+            await self._end(task, turn, Outcome.stopped())
         assert turn.outcome is not None
         return turn.outcome
 
-    async def _run(self, task: Task, turn: Turn, executor: Executor, assignment: Assignment) -> None:
-        if not isinstance(executor, RemoteExecutor):
-            try:
-                outcome = await executor.run(assignment, self._progress(task, turn))
-            except asyncio.CancelledError:
-                outcome = Outcome.stopped(session=task.session)  # the stop went through: nothing remote ran
-            except Exception as error:  # a broken executor must not take the assistant down
-                outcome = Outcome.failed(f"{type(error).__name__}: {error}", session=task.session)
-            await self._end(task, turn, outcome)
-            return
-        try:
-            ref = await executor.submit(assignment)
-        except asyncio.CancelledError:
-            await self._end(task, turn, Outcome.stopped(session=task.session))
-            return
-        except Exception as error:
-            await self._end(task, turn, Outcome.failed(str(error), session=task.session))
-            return
-        await self._attached(task, turn, ref)
-        await self._follow(task, turn, executor)
-
-    async def _follow(self, task: Task, turn: Turn, executor: RemoteExecutor) -> None:
-        assert turn.ref is not None
-        try:
-            outcome = await executor.follow(turn.ref, self._progress(task, turn))
-        except asyncio.CancelledError:
-            if turn.detached:
-                raise
-            confirmed = await asyncio.shield(executor.stop(turn.ref))
-            session = task.session or executor.session_of(turn.ref)
-            outcome = Outcome.stopped(session=session) if confirmed else Outcome.failed("stop not confirmed")
-        except Exception as error:
-            outcome = Outcome.failed(f"{type(error).__name__}: {error}", session=task.session)
-        await self._end(task, turn, outcome)
-
-    async def _attached(self, task: Task, turn: Turn, ref: str) -> None:
-        turn.ref = ref
-        await self.journal.publish(
-            TurnAttached(source=self.name, session=task.origin.session, task_id=task.id, turn_id=turn.id, ref=ref)
-        )
-
     def _progress(self, task: Task, turn: Turn) -> Progress:
         def step(text: str) -> None:
-            turn.steps = [*turn.steps, text][-STEPS:]
+            turn.steps.append(text)
+            del turn.steps[:-STEPS]
             task.last_activity = utc_now()
             self._writes.put_nowait(
                 TurnStepped(source=self.name, session=task.origin.session, task_id=task.id, turn_id=turn.id, step=text)
             )
 
-        def attach(ref: str) -> None:  # a local executor's handle (Claude Code's session): what it is steered to
-            turn.ref = ref
-            self._writes.put_nowait(
-                TurnAttached(source=self.name, session=task.origin.session, task_id=task.id, turn_id=turn.id, ref=ref)
+        def attach(handle: Handle) -> None:
+            attached = TurnAttached(
+                source=self.name,
+                session=task.origin.session,
+                task_id=task.id,
+                turn_id=turn.id,
+                ref=handle.ref,
+                executor_session=handle.session,
             )
+            self._replay(attached)
+            self._writes.put_nowait(attached)
 
         return Progress(step, attach)
 
@@ -581,17 +603,17 @@ class TaskManager(Component):
         """Apply one of the task's events to its state: when it happens, and when the journal is read on start."""
         match event:
             case TaskCreated():
-                task = self._opening[event.task_id] = Task(
+                task = self.tasks[event.task_id] = Task(
                     id=event.task_id,
                     title=event.title,
                     executor=event.executor,
                     owner=event.owner,
                     origin=event.origin,
                     created_at=event.at,
-                    thread=event.thread,
                     last_activity=event.at,
+                    thread=event.thread,
+                    turns=[_opened(event)],
                 )
-                return task
             case TaskRenamed():
                 task = self.tasks[event.task_id]
                 task.title = event.title
@@ -599,27 +621,13 @@ class TaskManager(Component):
                 task = self.tasks[event.task_id]
                 task.archived = True
             case TurnStarted():
-                task = self.tasks.get(event.task_id) or self.tasks.setdefault(
-                    event.task_id, self._opening.pop(event.task_id)
-                )
-                turn = Turn(
-                    id=event.turn_id,
-                    instruction=event.instruction,
-                    by=event.by,
-                    started_at=event.at,
-                    given=event.given,
-                    notify=event.notify,
-                    exchange=event.exchange,
-                    capability=event.capability,
-                    asked=event.asked,
-                )
-                task.turns.append(turn)
+                task = self.tasks[event.task_id]
+                task.turns.append(_opened(event))
                 task.archived = False  # an instruction opens it again
-                if turn.capability:
-                    self._capable[turn.capability] = (task, turn)
             case TurnAttached():
                 task = self.tasks[event.task_id]
                 task.turn.ref = event.ref
+                task.session = event.executor_session or task.session
             case TaskSteered():
                 task = self.tasks[event.task_id]
                 if event.taken:
@@ -629,7 +637,8 @@ class TaskManager(Component):
                 task.turn.files.append(event.file)
             case TaskNoted():
                 task = self.tasks[event.task_id]
-                task.notes = [*task.notes, event.text][-NOTES:]
+                task.notes.append(event.text)
+                del task.notes[:-NOTES]
             case TurnEnded():
                 task = self.tasks[event.task_id]
                 turn = task.turn
@@ -639,8 +648,11 @@ class TaskManager(Component):
                 turn.ended_at = event.at
                 turn.files = list(event.files)
                 task.session = event.executor_session
-                if turn.capability:
-                    self._capable.pop(turn.capability, None)
+            case TurnDelivered():  # not an activity of the task
+                task = self.tasks[event.task_id]
+                if (turn := task.turn_of(event.turn_id)) is not None:
+                    turn.delivered = Delivery(event.at, event.address)
+                return task
             case _:
                 raise ContractError(f"not an event of a task: {type(event).__name__}")
         task.last_activity = event.at
@@ -653,8 +665,8 @@ class TaskManager(Component):
             for task in list(self.tasks.values()):
                 executor = self.executors.get(task.executor)
                 days = executor.archive_after_days if executor else None
-                idle = task.last_activity or task.created_at
-                if days is not None and task.state is TaskState.READY and now - idle > timedelta(days=days):
+                idle = now - task.last_activity
+                if days is not None and task.state is TaskState.READY and idle > timedelta(days=days):
                     with contextlib.suppress(Exception):  # the next sweep tries again
                         await self.archive(task.id)
             await asyncio.sleep(self._sweep_s)
@@ -668,20 +680,28 @@ class TaskManager(Component):
                 self._writes.task_done()
 
 
-def _active(task: Task) -> datetime:
-    return task.last_activity or task.created_at
+def _opened(event: TaskCreated | TurnStarted) -> Turn:
+    """The turn an instruction opens."""
+    return Turn(
+        id=event.turn_id,
+        instruction=event.instruction,
+        by=event.by,
+        started_at=event.at,
+        given=event.given,
+        notify=event.notify,
+        exchange=event.exchange,
+        capability=event.capability,
+        asked=event.asked,
+    )
 
 
 def _earlier(turns: Sequence[Turn]) -> str:
-    """The turns before, for an executor that keeps no session: each instruction and what came back, shortened."""
-
-    def cut(text: str | None) -> str:
-        line = " ".join((text or "").split())
-        return line if len(line) <= EARLIER_CHARS else f"{line[:EARLIER_CHARS]}…"
-
-    lines = []
-    for n, turn in enumerate(turns, 1):
-        outcome = turn.outcome
-        back = cut(outcome.result or outcome.question or outcome.error) if outcome else ""
-        lines.append(f"{n}. Asked: {cut(turn.instruction)}\n   Came back ({turn.status.value}): {back}")
-    return "\n".join(lines)
+    """The latest turns before, for an executor that keeps no session: each instruction and what came back,
+    shortened."""
+    shown = turns[-READ_TURNS:]
+    first = len(turns) - len(shown) + 1
+    return "\n".join(
+        f"{n}. Asked: {shorten(turn.instruction, TURN_CHARS)}\n"
+        f"   Came back ({turn.status.value}): {shorten(turn.came_back, TURN_CHARS)}"
+        for n, turn in enumerate(shown, first)
+    )
