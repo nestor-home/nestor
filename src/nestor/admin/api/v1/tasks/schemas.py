@@ -8,7 +8,7 @@ from nestor.admin.api.v1.shared import OriginOut, People, PersonRef
 from nestor.admin.api.v1.tasks.afterwards import Afterwards, Delivery
 from nestor.modules.channels import AttachmentKind
 from nestor.modules.cognition import TaskState, TurnStatus
-from nestor.modules.cognition.delegation import Task, Turn
+from nestor.modules.cognition.delegation import Steer, Task, Turn
 from nestor.modules.cognition.tools import TITLE_CHARS
 from nestor.modules.journal import FileRef
 
@@ -52,6 +52,18 @@ class TaskFileOut(BaseModel):
         ]
 
 
+class SteeredOut(BaseModel):
+    """An instruction the turn took while it worked."""
+
+    instruction: str
+    by: PersonRef | None
+    at: datetime
+
+    @classmethod
+    def of(cls, steer: Steer, people: People) -> "SteeredOut":
+        return cls(instruction=steer.instruction, by=people.ref(steer.by), at=steer.at)
+
+
 class TurnOut(BaseModel):
     id: str
     instruction: str
@@ -60,6 +72,7 @@ class TurnOut(BaseModel):
     started_at: datetime
     ended_at: datetime | None  # None while it works
     steps: list[str]  # the latest the executor said
+    steered: list[SteeredOut]  # instructions it took while it worked, the first first
     result: str | None
     question: str | None  # what it asks its owner, when it ended on one
     error: str | None
@@ -78,6 +91,7 @@ class TurnOut(BaseModel):
             started_at=turn.started_at,
             ended_at=turn.ended_at,
             steps=turn.steps[-STEPS:],
+            steered=[SteeredOut.of(s, people) for s in turn.steered],
             result=outcome.result if outcome else None,
             question=outcome.question if outcome else None,
             error=outcome.error if outcome else None,
@@ -98,6 +112,7 @@ class TaskOut(BaseModel):
     created_at: datetime
     last_activity: datetime
     turns: int
+    last_status: TurnStatus  # how its latest turn stands: whether a ready task came back, failed or was stopped
     question: str | None  # what it waits on its owner for
     now: str | None  # the latest step, while it works
 
@@ -114,6 +129,7 @@ class TaskOut(BaseModel):
             created_at=task.created_at,
             last_activity=task.last_activity or task.created_at,
             turns=len(task.turns),
+            last_status=turn.status,
             question=task.question,
             now=turn.steps[-1] if task.state is TaskState.WORKING and turn.steps else None,
         )

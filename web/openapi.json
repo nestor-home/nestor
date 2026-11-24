@@ -7157,7 +7157,7 @@
           "tasks"
         ],
         "summary": "List Tasks",
-        "description": "The tasks the caller reaches: waiting on someone first, then working, then the latest active; archived ones\nonly when asked.",
+        "description": "The tasks the caller reaches that are not archived: waiting on someone first, then working, then the latest\nactive; with `archived`, the archived ones only, the latest first.",
         "operationId": "listTasks",
         "parameters": [
           {
@@ -19779,6 +19779,37 @@
         ],
         "title": "Status"
       },
+      "SteeredOut": {
+        "properties": {
+          "instruction": {
+            "type": "string",
+            "title": "Instruction"
+          },
+          "by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PersonRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "instruction",
+          "by",
+          "at"
+        ],
+        "title": "SteeredOut",
+        "description": "An instruction the turn took while it worked."
+      },
       "StopOut": {
         "properties": {
           "task": {
@@ -19968,6 +19999,9 @@
             "type": "integer",
             "title": "Turns"
           },
+          "last_status": {
+            "$ref": "#/components/schemas/TurnStatus"
+          },
           "question": {
             "anyOf": [
               {
@@ -20002,6 +20036,7 @@
           "created_at",
           "last_activity",
           "turns",
+          "last_status",
           "question",
           "now"
         ],
@@ -20062,6 +20097,9 @@
             "type": "integer",
             "title": "Turns"
           },
+          "last_status": {
+            "$ref": "#/components/schemas/TurnStatus"
+          },
           "question": {
             "anyOf": [
               {
@@ -20110,6 +20148,7 @@
           "created_at",
           "last_activity",
           "turns",
+          "last_status",
           "question",
           "now",
           "thread",
@@ -20316,6 +20355,13 @@
             "type": "array",
             "title": "Steps"
           },
+          "steered": {
+            "items": {
+              "$ref": "#/components/schemas/SteeredOut"
+            },
+            "type": "array",
+            "title": "Steered"
+          },
           "result": {
             "anyOf": [
               {
@@ -20376,6 +20422,7 @@
           "started_at",
           "ended_at",
           "steps",
+          "steered",
           "result",
           "question",
           "error",

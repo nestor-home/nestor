@@ -46,7 +46,7 @@ invitation-status = { $status ->
 }
 task-state = { $state ->
     [working] working
-    [waiting] waiting for you
+    [waiting] waiting for an answer
     [ready] ready
     [archived] archived
    *[other] { $state }

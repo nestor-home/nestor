@@ -63,6 +63,15 @@ class Directed(StrEnum):
     STARTED = "started"  # opened a new turn
 
 
+@dataclass(frozen=True, slots=True)
+class Steer:
+    """An instruction a turn took while it worked."""
+
+    instruction: str
+    by: PersonId | None
+    at: datetime
+
+
 @dataclass(slots=True, kw_only=True)
 class Turn:
     id: str
@@ -77,6 +86,7 @@ class Turn:
     ref: str | None = None  # the executor's handle on it
     steps: list[str] = field(default_factory=list)
     files: list[FileRef] = field(default_factory=list)  # handed back while it worked (`attach_file`)
+    steered: list[Steer] = field(default_factory=list)  # what it took while it worked
     outcome: Outcome | None = None
     ended_at: datetime | None = None
     job: asyncio.Task[None] | None = field(default=None, repr=False)
@@ -177,7 +187,15 @@ class TaskManager(Component):
         """Rebuild the tasks from the journal and pick up the turns that were working."""
         self._writer = asyncio.create_task(self._write(), name="task-manager writer")
         for event in await self.journal.history(
-            TaskCreated, TaskRenamed, TaskArchived, TurnStarted, TurnAttached, TurnFileAdded, TaskNoted, TurnEnded
+            TaskCreated,
+            TaskRenamed,
+            TaskArchived,
+            TurnStarted,
+            TurnAttached,
+            TaskSteered,
+            TurnFileAdded,
+            TaskNoted,
+            TurnEnded,
         ):
             self._replay(event)
         for task_id in self._opening:  # created, then Nestor stopped before its first turn was recorded
@@ -279,19 +297,18 @@ class TaskManager(Component):
                 steerable = STEER in executor.capabilities and turn.ref is not None and not given
                 taken = steerable and await executor.steer(turn.ref or "", instruction)
                 taken = taken and turn.status is TurnStatus.RUNNING
-                await self.journal.publish(
-                    TaskSteered(
-                        source=self.name,
-                        session=task.origin.session,
-                        task_id=task.id,
-                        turn_id=turn.id,
-                        instruction=instruction,
-                        by=by,
-                        taken=taken,
-                    )
+                steered = TaskSteered(
+                    source=self.name,
+                    session=task.origin.session,
+                    task_id=task.id,
+                    turn_id=turn.id,
+                    instruction=instruction,
+                    by=by,
+                    taken=taken,
                 )
+                await self.journal.publish(steered)
+                self._replay(steered)
                 if taken:
-                    task.last_activity = utc_now()
                     return Directed.STEERED
                 if turn.status is TurnStatus.RUNNING:
                     await self._stop(task, turn, by=by)
@@ -603,6 +620,10 @@ class TaskManager(Component):
             case TurnAttached():
                 task = self.tasks[event.task_id]
                 task.turn.ref = event.ref
+            case TaskSteered():
+                task = self.tasks[event.task_id]
+                if event.taken:
+                    task.turn.steered.append(Steer(event.instruction, event.by, event.at))
             case TurnFileAdded():
                 task = self.tasks[event.task_id]
                 task.turn.files.append(event.file)

@@ -1058,8 +1058,8 @@ export interface paths {
         };
         /**
          * List Tasks
-         * @description The tasks the caller reaches: waiting on someone first, then working, then the latest active; archived ones
-         *     only when asked.
+         * @description The tasks the caller reaches that are not archived: waiting on someone first, then working, then the latest
+         *     active; with `archived`, the archived ones only, the latest first.
          */
         get: operations["listTasks"];
         put?: never;
@@ -3819,6 +3819,20 @@ export interface components {
          * @enum {string}
          */
         Status: "connected" | "needs_reauth" | "error";
+        /**
+         * SteeredOut
+         * @description An instruction the turn took while it worked.
+         */
+        SteeredOut: {
+            /** Instruction */
+            instruction: string;
+            by: components["schemas"]["PersonRef"] | null;
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+        };
         /** StopOut */
         StopOut: {
             task: components["schemas"]["TaskThreadOut"];
@@ -3900,6 +3914,7 @@ export interface components {
             last_activity: string;
             /** Turns */
             turns: number;
+            last_status: components["schemas"]["TurnStatus"];
             /** Question */
             question: string | null;
             /** Now */
@@ -3936,6 +3951,7 @@ export interface components {
             last_activity: string;
             /** Turns */
             turns: number;
+            last_status: components["schemas"]["TurnStatus"];
             /** Question */
             question: string | null;
             /** Now */
@@ -4015,6 +4031,8 @@ export interface components {
             ended_at: string | null;
             /** Steps */
             steps: string[];
+            /** Steered */
+            steered: components["schemas"]["SteeredOut"][];
             /** Result */
             result: string | null;
             /** Question */

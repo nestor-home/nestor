@@ -140,6 +140,7 @@ async def test_an_instruction_while_it_works_steers_the_turn(journal: Journal) -
         assert await tasks.direct(task.id, "Ajoute aussi la page contact", by=MATHIS) is Directed.STEERED
         assert len(task.turns) == 1 and task.state is TaskState.WORKING, "the same turn goes on"
         assert [i for _, i in executor.steered] == ["Ajoute aussi la page contact"]
+        assert [(s.instruction, s.by) for s in task.turn.steered] == [("Ajoute aussi la page contact", MATHIS)]
         executor.finish()
         await tasks.wait(task.id)
     [steered] = await journal.history(TaskSteered)
@@ -210,6 +211,7 @@ async def test_a_task_comes_back_after_a_restart_as_it_was(journal: Journal) -> 
         await tasks.archive(task.id)
     async with TaskManager(journal, [ScriptedExecutor()]) as restarted:
         again = restarted.tasks[task.id]
+        assert again.turns[0].steered == task.turns[0].steered
         assert (again.title, again.state, again.session, again.notes) == (
             "Site de la famille",
             TaskState.ARCHIVED,

@@ -38,14 +38,14 @@ ORDER = {TaskState.WAITING: 0, TaskState.WORKING: 1, TaskState.READY: 2, TaskSta
 
 @router.get("/tasks")
 async def list_tasks(request: Request, caller: Manager, archived: bool = False) -> TasksOut:
-    """The tasks the caller reaches: waiting on someone first, then working, then the latest active; archived ones
-    only when asked."""
+    """The tasks the caller reaches that are not archived: waiting on someone first, then working, then the latest
+    active; with `archived`, the archived ones only, the latest first."""
     admin = state(request)
     people = People(admin.nestor.household)
     found = [
         t
         for t in admin.nestor.tasks.tasks.values()
-        if reaches_task(caller, t) and (archived or t.state is not TaskState.ARCHIVED)
+        if reaches_task(caller, t) and (t.state is TaskState.ARCHIVED) == archived
     ]
     found.sort(key=lambda t: (ORDER[t.state], -(t.last_activity or t.created_at).timestamp()))
     return TasksOut(tasks=[TaskOut.of(t, people) for t in found])

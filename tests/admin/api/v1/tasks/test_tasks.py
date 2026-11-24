@@ -88,10 +88,13 @@ async def test_an_instruction_while_it_works_steers_it_and_a_stop_leaves_the_tas
         api = await admin.api()
         directed = (await api.post(f"/api/v1/tasks/{task.id}/instructions", {"text": "Et la page contact"})).json()
         assert directed["steered"] is True and len(directed["task"]["thread"]) == 1
+        [steered] = directed["task"]["thread"][0]["steered"]
+        assert (steered["instruction"], steered["by"]["id"]) == ("Et la page contact", "mathis"), "kept in the thread"
         assert admin.remote.runs[str(task.turn.ref)].steered == ["Et la page contact"]
 
         stopped = (await api.post(f"/api/v1/tasks/{task.id}/stop")).json()
         assert stopped["confirmed"] is True and stopped["task"]["state"] == "ready"
+        assert stopped["task"]["last_status"] == "stopped", "a ready task says how its last turn ended"
         renamed = (await api.patch(f"/api/v1/tasks/{task.id}", {"title": "Site de la famille"})).json()
         assert renamed["title"] == "Site de la famille"
         archived = (await api.post(f"/api/v1/tasks/{task.id}/archive")).json()

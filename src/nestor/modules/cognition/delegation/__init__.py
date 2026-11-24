@@ -27,7 +27,7 @@ from nestor.modules.cognition.delegation.events import (
 )
 from nestor.modules.cognition.delegation.keys import ExecutorKeys
 from nestor.modules.cognition.delegation.ports import Executor, RemoteExecutor
-from nestor.modules.cognition.delegation.service import Directed, Task, TaskManager, Turn
+from nestor.modules.cognition.delegation.service import Directed, Steer, Task, TaskManager, Turn
 from nestor.modules.cognition.delegation.types import (
     CONTINUE,
     RESUME,
@@ -59,6 +59,7 @@ __all__ = [
     "Outcome",
     "Progress",
     "RemoteExecutor",
+    "Steer",
     "Task",
     "TaskArchived",
     "TaskCreated",
